@@ -74,6 +74,22 @@ def test_ndarrayview_operators(device_id, precision):
     # reduction ops
     test(lambda a: a.reduce_log_sum() if isinstance(a, NDArrayView) else np.log(np.sum(np.exp(a))), [x], rtol=1e-6)
 
+    # reshape
+    test(lambda a: a.reshape((1,6)), [x])
+
+    # slice
+    test(lambda a: a[:], [x])
+    test(lambda a: a[:1], [x])
+    test(lambda a: a[1:,:], [x])
+    #test(lambda a: a[1,1], [x]) # BUGBUG: This should work
+    test(lambda a: a[:2,:], [x])
+    test(lambda a: a[1:2,:], [x])
+    test(lambda a: a[...,:], [x])
+    def atest(a,b):
+        a[1:2,:] = b
+        return a
+    test(atest, [x, np.array(13)])
+
     # in-place ops
     test(lambda a, b: a.__iadd__(b), [x, y]) 
     test(lambda a, b: a.__isub__(b), [x, y]) 

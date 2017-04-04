@@ -302,6 +302,67 @@ class NDArrayViewOpsMixin(object):
         res.numeric_operation_in_place(0.0, [self], 1.0, 2, 28) # 2 = ElementWiseOperator.opCopy, 28 = ElementWiseOperator.opLogSum
         return res
 
+    # shapes, slicing, and splicing
+    def reshape(self, new_shape): # note: this is not in-place
+        res = self.as_shape(new_shape)
+        res.__class__ = self.__class__
+        return res
+    def __setitem__(self, key, value):
+        slice = self[key]
+        slice.numeric_operation_in_place(0.0, [value], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
+    def __getitem__(self, key):
+        # BUGBUG: must implement IndexError to allow for loops
+        shape = self.shape
+        print('key', key)
+        if not isinstance(key, tuple):
+            key = (key,)
+        print('key', key)
+        start_offsets = [0,] * len(shape)
+        extents = list(shape)
+        i_off = 0
+
+        for i, s in enumerate(key):
+            print(i, s)
+            if s is Ellipsis:
+                i_off = -len(shape) # indexing from back
+                continue
+            if isinstance(s, slice):
+                begin = s.start or 0
+                end   = s.stop if s.stop is not None else shape[i]
+                print(begin, '###', shape, '###', shape[i], '###', s.stop, '###', end)
+                if s.step is not None and i[2] != 1:
+                    raise ValueError('NDArrayView: slices with steps are not supported')
+                if begin < 0:
+                    begin += shape[i]
+                if end < 0:
+                    end += shape[i]
+                start_offsets[i] = begin
+                extents[i] = end - begin
+            else:
+                start_offsets[i] = s
+                extents[i] = s+1
+        print('start', start_offsets, 'extents', extents)
+        res = self.slice_view(tuple(start_offsets), tuple(extents), self.is_read_only())
+        print(res)
+        res.__class__ = self.__class__
+        return res
+    def splice(args, axis=-1): # negative axis will insert a new axis
+        arg0 = args[0]  # for now assume that all share the same shape; use first for reference
+        shape = arg0.shape
+        # create new axis if needed. We can reshape the input to this
+        if axis < 0:
+            shape = (1,) * (-axis) + shape
+            axis = 0
+        # output
+        num_items = len(args)
+        out_shape = shape[0:axis] + (shape[axis] * num_items,) + shape[axis+1:] # output shape
+        res = NDArrayView(shape=out_shape, data_type=arg0.dtype, device=arg0.device())
+        # assign all items
+        for i in range(num_items):
+            args[i].reshape(shape)
+            res.assign(args[i].reshape(shape)) # TODO: use slice assignment
+        return res
+
 def _add_ndarrayview_ops(klass):
     for overload_name in ['__add__', '__sub__', '__mul__',
                           '__radd__', '__rmul__',
@@ -309,7 +370,8 @@ def _add_ndarrayview_ops(klass):
                           '__matmul__',
                           'dot', 'dot_transpose',
                           'sigmoid', 'tanh', 'relu',
-                          'reduce_log_sum']:
+                          'reduce_log_sum',
+                          'reshape', '__getitem__', '__setitem__', 'splice']:
         if getattr(klass, overload_name, None):
             raise ValueError('class "%s" already has operator overload "%s"' %
                              (klass, overload_name))
