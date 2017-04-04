@@ -3404,6 +3404,7 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
     CUDA_CALL(cudaFree(d_rands));
     CURAND_CALL(curandDestroyGenerator(gens));
 
+
     //ElemType* input = new ElemType[N];
     //cudaMemcpy(input, a.Data(), N * sizeof(ElemType), cudaMemcpyDeviceToHost);
     //ElemType* output = new ElemType[N];
