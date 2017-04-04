@@ -92,11 +92,48 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
         node->BeginForwardProp();
         node->CopyAccumulatorToValue();
         node->EndForwardProp();
-        node->BumpEvalTimeStamp();
     }
 
     // Update output values of nodes between accumulator nodes and evaluation nodes.
+
+    // Identify nodes that should be updated.
+    std::set<ComputationNodeBasePtr> forwardNodes;
+    net->TravserseInSortedGlobalEvalOrder(evalNodesWhichAccumulateResult, [&](const ComputationNodeBasePtr& node)
+    {
+        for (const ComputationNodeBasePtr& input : node->GetInputs())
+        {
+            if (std::find(allEpochAccumulatorNodes.begin(), allEpochAccumulatorNodes.end(), input) != allEpochAccumulatorNodes.end()
+                || forwardNodes.find(input) != forwardNodes.end())
+            {
+                forwardNodes.insert(node);
+            }
+        }
+    });
+
+    // Sort all nodes in the increasing order of current timestamps.
+    std::vector<ComputationNodeBasePtr> allNodes = net->GetAllNodes();
+    std::sort(allNodes.begin(), allNodes.end(), [](const ComputationNodeBasePtr& a, const ComputationNodeBasePtr& b)
+    {
+        return a->GetEvalTimeStamp() < b->GetEvalTimeStamp();
+    });
+
+    // Bump timestamps of nodes that should NOT be updated.
+    net->TravserseInSortedGlobalEvalOrder(evalNodesWhichAccumulateResult, [&](const ComputationNodeBasePtr& node)
+    {
+        if (forwardNodes.find(node) == forwardNodes.end())
+        {
+            node->BumpEvalTimeStamp();
+        }
+    });
+
+    // Perform the update.
     net->ForwardProp(evalNodesWhichAccumulateResult);
+
+    // Restore previous ordering of timestamps.
+    for (const ComputationNodeBasePtr& node : allNodes)
+    {
+        node->BumpEvalTimeStamp();
+    }
 }
 
 template <typename ElemType>
