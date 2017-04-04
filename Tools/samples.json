@@ -10,7 +10,7 @@
     {
         "category": [""],
         "name":  "Model Evaluation in C#",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/EvalDLL-Evaluation-on-Windows#using-the-evaldll-c-library",
+        "url":  "https://github.com/Microsoft/CNTK/wiki/EvalDll-Evaluation-on-Windows#using-the-evaldll-c-library",
         "description":  "Evaluation or inference of an already trained CNTK model in C#.",
         "language":  ["C#"],
         "type":  ["Example"]
@@ -18,7 +18,7 @@
     {
         "category": [""],
         "name":  "Model Evaluation in C++",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/Native-EvalDLL-API",
+        "url":  "https://github.com/Microsoft/CNTK/wiki/EvalDll-Native-API",
         "description":  "Evaluation or inference of an already trained CNTK model in C++.",
         "language":  ["C++"],
         "type":  ["Example"]
