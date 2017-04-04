@@ -1531,7 +1531,15 @@ namespace CNTK
         DictionaryIterator end() const { return m_dictionaryData->end(); }
         ConstDictionaryIterator cend() const { return m_dictionaryData->cend(); }
 
-        size_t Size() { return m_dictionaryData->size();  }
+        size_t Size() const { return m_dictionaryData->size();  }
+
+        std::unordered_set<std::wstring> Keys() 
+        { 
+            std::unordered_set<std::wstring> keys;
+            for (const auto& kv : *m_dictionaryData)
+                keys.insert(kv.first);
+            return keys;
+        }
 
         friend CNTK_API std::istream& operator>>(std::istream& stream, Dictionary& us);
         friend CNTK_API std::ostream& operator<<(std::ostream& stream, const Dictionary& us);
@@ -3391,20 +3399,17 @@ namespace CNTK
     ///
     /// Create an instance of the random_sample operation on specified sampling weights input vector
     ///
-    // TODO: The initial random seed should be specifiable
-    CNTK_API FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name /*= L""*/);
+    CNTK_API FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the random_sample_inclusion_frequency operation on specified sampling weights input vector
     ///
-    // TODO: The initial random seed should be specifiable
-    CNTK_API FunctionPtr RandomSampleInclusionFrequency(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name /*= L""*/);
+    CNTK_API FunctionPtr RandomSampleInclusionFrequency(const Variable& operand, size_t numSamples, bool allowDuplicates, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the dropout operation on specified tensor input operand
     ///
-    // TODO: The initial random seed should be specifiable
-    CNTK_API FunctionPtr Dropout(const Variable& operand, double dropoutRate, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Dropout(const Variable& operand, double dropoutRate, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the reshape operation on specified tensor input operand
@@ -4605,7 +4610,8 @@ namespace CNTK
         bool TrainLocalMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, bool sweepEnd, const DeviceDescriptor& computeDevice);
         bool TrainDistributedMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, bool sweepEnd, const DeviceDescriptor& computeDevice);
 
-        void Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState);
+        void Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, 
+            const Dictionary& externalState, const Dictionary& distributedState = {});
 
         void UpdateTrainingProgress(size_t numSamples, const ValuePtr& loss, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
         void AddProgressWriters(const std::vector<ProgressWriterPtr>& progressWriters);

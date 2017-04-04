@@ -573,6 +573,9 @@ public:
     }
 }
 
+
+%ignore CNTK::Dictionary::Keys;
+
 %extend CNTK::Dictionary {
     PyObject* __getitem__(const wchar_t* key) {
     PyObject *DictionaryValueToPy(const CNTK::DictionaryValue&);

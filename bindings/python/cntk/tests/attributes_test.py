@@ -62,9 +62,9 @@ def test_convolution_transpose_attributes():
 
 def test_dropout_attributes():
     x = C.input( (1, 5, 5) )
-    f = C.dropout(x, 0.5)
+    f = C.dropout(x, 0.5, 42)
     d = f.root_function.attributes
-    expected = {'dropoutRate': 0.5}
+    expected = {'dropoutRate': 0.5, 'rngSeed' : 42, 'rngOffset' : 0}
     _check(expected, d)
 
 def test_slice_attributes():
