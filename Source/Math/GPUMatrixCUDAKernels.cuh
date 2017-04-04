@@ -627,7 +627,7 @@ __global__ void _stochasticbinaryForward(const ElemType* a, ElemType* b, float* 
 	if (id >= N)
 		return;
 	ElemType exp_tmp = expf(-2.0 * a[id] * annealSlope));
-    ElemType tanh = (1 - exp_tmp) / (1 + exp_tmp)
+    ElemType tanh = (1 - exp_tmp) / (1 + exp_tmp);
 	b[id] = (rands[id] * 2 - 1) < tanh ? 1 : -1;
     //b[id] = 1;
 }
@@ -649,7 +649,7 @@ __global__ void _stochasticbinaryBackward_Anneal(const ElemType* a, const ElemTy
 	if (id >= N)
 		return;
     ElemType exp_tmp = expf(-2.0 * a[id] * annealSlope));
-    ElemType tanh = (1 - exp_tmp) / (1 + exp_tmp)
+    ElemType tanh = (1 - exp_tmp) / (1 + exp_tmp);
 	ingrad[id] = outgrad[id] * (1 - tanh^2) * annealSlope;
 }
 
