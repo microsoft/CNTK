@@ -139,8 +139,11 @@ namespace CNTK
 
     inline Microsoft::MSR::CNTK::TensorShape AsTensorViewShape(const Microsoft::MSR::CNTK::TensorShape& viewShape)
     {
-        // For TensorView shapes we pad the TensorShape to be at least rank 2
-        return viewShape.PadRank(std::max<size_t>(2, viewShape.GetRank()));
+        // Note: This function existed in the past to pad TensorShapes to rank >= 2.
+        // It is no longer necessary, so all this function does is return a copy of its input.
+        // Once it has been confirmed that this change does not cause problems in the field, we shall remove this function.
+        //return viewShape.PadRank(std::max<size_t>(2, viewShape.GetRank()));
+        return viewShape;
     }
 
     inline Microsoft::MSR::CNTK::TensorShape AsTensorViewShape(const NDShape& viewShape)

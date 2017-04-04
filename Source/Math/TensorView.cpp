@@ -331,7 +331,7 @@ static void FlattenToMatrix(TensorShape& shape, bool trans, size_t splitPoint)
 template <class ElemType>
 shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
 {
-    assert(m_shape.GetRank() == 2);
+    assert(m_shape.GetRank() == 1 || m_shape.GetRank() == 2);
     if (m_shape.GetStrides()[0] != 1 && m_shape[0] != 1)
         InvalidArgument("AsMatrix: Flattened [%s] matrix is not dense (it has a stride).", string(m_shape).c_str());
 
@@ -353,7 +353,8 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
     //    which gets reinterpreted back as a [K x J x S x T] tensor
     // In the special case of sparse matrices, this split cannot be done. E.g. in the above example, we could only multiply with a [K x I x J] tensor.
     let needsSlicing = firstColumn != 0 || numColumns != m_sob->GetNumCols();
-    let needsReshaping = m_shape[0] != m_sob->GetNumRows() || m_shape[1] != numColumns;
+    let m_shape_1 = m_shape.GetRank() > 1 ? m_shape[1] : 1;
+    let needsReshaping = m_shape[0] != m_sob->GetNumRows() || m_shape_1 != numColumns;
 
     // Note: If an output matrix is a view and needs to move to a different device, we will fail later, since the current structure cannot support that.
     // As a consequence, some configurations will simply not work currently.
@@ -365,7 +366,7 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
     else if (m_sob->GetMatrixType() != MatrixType::DENSE) // needsReshaping: not allowed for sparse matrices
         RuntimeError("AsMatrix: Sparse tensors are not supported unless they are 1D or 2D matrices.");
     else                                                  // dense can slice and reshape neutrally, but will also fail if output matrix needs to move devices
-        return make_shared<Matrix<ElemType>>(m_sob->ColumnSlice(firstColumn, numColumns).Reshaped(m_shape[0], m_shape[1]));
+        return make_shared<Matrix<ElemType>>(m_sob->ColumnSlice(firstColumn, numColumns).Reshaped(m_shape[0], m_shape_1));
 }
 
 template <class ElemType>

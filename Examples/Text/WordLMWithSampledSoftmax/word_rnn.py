@@ -93,8 +93,8 @@ def cross_entropy_with_sampled_softmax(
         I = C.Constant(np.eye(vocab_dim, dtype=np.float32))
         sample_selector = C.times(sample_selector_sparse, I)
 
-    inclusion_probs = C.random_sample_inclusion_frequency(sampling_weights, num_samples, allow_duplicates) # dense row [1 * vocab_size]
-    log_prior = C.log(inclusion_probs) # dense row [1 * vocab_dim]
+    inclusion_probs = C.random_sample_inclusion_frequency(sampling_weights, num_samples, allow_duplicates) # dense row [vocab_size]
+    log_prior = C.log(inclusion_probs) # dense row [vocab_dim]
 
 
     print("hidden_vector: "+str(hidden_vector.shape))
@@ -103,7 +103,7 @@ def cross_entropy_with_sampled_softmax(
     zS = C.times_transpose(wS, hidden_vector, name='zS1') + C.times(sample_selector, bias, name='zS2') - C.times_transpose (sample_selector, log_prior, name='zS3')# [num_samples]
 
     # Getting the weight vector for the true label. Dimension hidden_dim
-    wT = C.times(target_vector, weights, name='wT') # [1 * hidden_dim]
+    wT = C.times(target_vector, weights, name='wT') # [hidden_dim]
     zT = C.times_transpose(wT, hidden_vector, name='zT1') + C.times(target_vector, bias, name='zT2') - C.times_transpose(target_vector, log_prior, name='zT3') # [1]
 
 
