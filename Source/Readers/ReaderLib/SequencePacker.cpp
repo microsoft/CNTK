@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include "SequencePacker.h"
 #include "ReaderUtil.h"
+#include "ExceptionCapture.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -148,16 +149,15 @@ MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t str
 
     const auto& sequenceInfos = pMBLayout->GetAllSequences();
 
-    // Iterate over sequences in the layout, copy samples from the
+    // Copy samples from the
     // source sequences into the buffer (at appropriate offsets).
-    for (int i = 0; i < sequenceInfos.size(); ++i)
+
+    auto process = [&](int i) -> void
     {
         const auto& sequenceInfo = sequenceInfos[i];
         // skip gaps
         if (sequenceInfo.seqId == GAP_SEQUENCE_ID)
-        {
-            continue;
-        }
+            return;
 
         const auto& sequence = batch[sequenceInfo.seqId];
         size_t numSamples = sequence->m_numberOfSamples;
@@ -199,8 +199,15 @@ MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t str
                 RuntimeError("Storage type %d is not supported.", (int)stream->m_storageType);
             }
         }
-    }
+    };
 
+    ExceptionCapture capture;
+
+#pragma omp parallel for schedule(dynamic)
+    for (int i = 0; i < sequenceInfos.size(); ++i)
+        capture.SafeRun(process, i);
+
+    capture.RethrowIfHappened();
     return pMBLayout;
 }
 
