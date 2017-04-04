@@ -392,19 +392,24 @@ namespace CNTK
         stream->flush();
     }
 
-    /*static*/ FunctionPtr Function::LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice)
+    /*static*/ FunctionPtr Function::LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice, bool* isLegacyRetVal)
     {
         auto stream = GetFstream(modelFile, true);
-        if (!Internal::IsLegacyModel(*stream))
+        FunctionPtr loadedModel;
+        bool isLegacyModel = Internal::IsLegacyModel(*stream);
+        if (!isLegacyModel)
         {
             Dictionary model;
             *stream >> model;
-            return Function::Deserialize(model, computeDevice);
+            loadedModel = Function::Deserialize(model, computeDevice);
         }
         else
-        {
-            return Internal::LoadLegacyModel(modelFile, computeDevice);
-        }
+            loadedModel = Internal::LoadLegacyModel(modelFile, computeDevice);
+
+        if (isLegacyRetVal)
+            *isLegacyRetVal = isLegacyModel;
+
+        return loadedModel;
     }
 
     /*static*/ FunctionPtr Function::LoadModel(char *modelBuffer, size_t modelBufferLength, const DeviceDescriptor& computeDevice)
@@ -439,87 +444,114 @@ namespace CNTK
         return Function::Deserialize(model, computeDevice);
     }
 
-    void Function::RestoreModel(const std::wstring& modelFilePath)
+    void Function::RestoreFrom(const FunctionPtr& restoreFrom, bool isLegacy)
     {
-        auto stream = GetFstream(modelFilePath, true);
-        if (!Internal::IsLegacyModel(*stream))
+        if (isLegacy)
         {
-            Dictionary model;
-            *stream >> model;
-            RestoreFromCheckpoint(model);
-            return;
-        }
+            // TODO: Make sure that the loaded model is the same as the trainer's model through UID matching in the V2 format
+            // TODO: For V1 format models make sure that the loaded model is isomorphic to the trainer's model
+            auto loadedModelLeafVariables = restoreFrom->Inputs();
+            auto trainerModelLeafVariables = Inputs();
+            if (trainerModelLeafVariables.size() != loadedModelLeafVariables.size())
+                InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
+                    restoreFrom->AsString().c_str(), this->AsString().c_str());
 
-        auto loadedModelFunction = Internal::LoadLegacyModel(modelFilePath, DeviceDescriptor::CPUDevice());
+            std::map<std::wstring, Variable> loadedModelLeafVariablesMap;
+            for (auto leafVar : loadedModelLeafVariables)
+                loadedModelLeafVariablesMap[leafVar.Uid()] = leafVar;
 
-        // TODO: Make sure that the loaded model is the same as the trainer's model through UID matching in the V2 format
-        // TODO: For V1 format models make sure that the loaded model is isomorphic to the trainer's model
-        auto loadedModelLeafVariables = loadedModelFunction->Inputs();
-        auto trainerModelLeafVariables = Inputs();
-        if (trainerModelLeafVariables.size() != loadedModelLeafVariables.size())
-            InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
-                            loadedModelFunction->AsString().c_str(), this->AsString().c_str());
+            std::map<std::wstring, Variable> trainerModelLeafVariablesMap;
+            for (auto leafVar : trainerModelLeafVariables)
+                trainerModelLeafVariablesMap[leafVar.Uid()] = leafVar;
 
-        std::map<std::wstring, Variable> loadedModelLeafVariablesMap;
-        for (auto leafVar : loadedModelLeafVariables)
-            loadedModelLeafVariablesMap[leafVar.Uid()] = leafVar;
-
-        std::map<std::wstring, Variable> trainerModelLeafVariablesMap;
-        for (auto leafVar : trainerModelLeafVariables)
-            trainerModelLeafVariablesMap[leafVar.Uid()] = leafVar;
-
-        // Remove the initial state inputs of PastValue and FutureValue functions from the maps if they are a scalar constant
-        // since these are not part of the internal CNTK serialized computation graph
-        std::function<void(const std::unordered_set<FunctionPtr>&, std::map<std::wstring, Variable>&)> RemovePastAndFutureValueInitialStateScalarConstants;
-        RemovePastAndFutureValueInitialStateScalarConstants = [&RemovePastAndFutureValueInitialStateScalarConstants](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
-            for (auto funcPtr : allPrimitiveFunctions)
-            {
-                auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
-                if ((primitiveFunction->OpType() == PrimitiveOpType::PastValue) || (primitiveFunction->OpType() == PrimitiveOpType::FutureValue))
+            // Remove the initial state inputs of PastValue and FutureValue functions from the maps if they are a scalar constant
+            // since these are not part of the internal CNTK serialized computation graph
+            std::function<void(const std::unordered_set<FunctionPtr>&, std::map<std::wstring, Variable>&)> RemovePastAndFutureValueInitialStateScalarConstants;
+            RemovePastAndFutureValueInitialStateScalarConstants = [&RemovePastAndFutureValueInitialStateScalarConstants](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
+                for (auto funcPtr : allPrimitiveFunctions)
                 {
-                    auto initialStateInput = primitiveFunction->Inputs()[1];
-                    if (initialStateInput.IsConstant() && (initialStateInput.Shape().TotalSize() == 1))
-                        modelLeafVariableMap.erase(initialStateInput.Uid());
+                    auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
+                    if ((primitiveFunction->OpType() == PrimitiveOpType::PastValue) || (primitiveFunction->OpType() == PrimitiveOpType::FutureValue))
+                    {
+                        auto initialStateInput = primitiveFunction->Inputs()[1];
+                        if (initialStateInput.IsConstant() && (initialStateInput.Shape().TotalSize() == 1))
+                            modelLeafVariableMap.erase(initialStateInput.Uid());
+                    }
+                    else if (primitiveFunction->OpType() == PrimitiveOpType::Block)
+                    {
+                        auto blockFunction = dynamic_cast<const BlockFunction*>(primitiveFunction);
+                        auto blockComposite = dynamic_cast<const CompositeFunction*>(blockFunction->Composite().get());
+                        RemovePastAndFutureValueInitialStateScalarConstants(blockComposite->m_allPrimitiveFunctions, modelLeafVariableMap);
+                    }
                 }
-                else if (primitiveFunction->OpType() == PrimitiveOpType::Block)
-                {
-                    auto blockFunction = dynamic_cast<const BlockFunction*>(primitiveFunction);
-                    auto blockComposite = dynamic_cast<const CompositeFunction*>(blockFunction->Composite().get());
-                    RemovePastAndFutureValueInitialStateScalarConstants(blockComposite->m_allPrimitiveFunctions, modelLeafVariableMap);
-                }
-            }
-        };
-
-        auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
-        RemovePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
-
-        auto trainerModelCompositeFunction = dynamic_cast<CompositeFunction*>(this);
-        RemovePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctions, trainerModelLeafVariablesMap);
-
-        // Now update the trainer's model parameters and constants with those from the loaded model
-        for (auto nameVarPair : trainerModelLeafVariablesMap)
-        {
-            auto trainerModelLeafVar = nameVarPair.second;
-
-            auto areVariablesEquivalent = [](const Variable& left, const Variable& right) {
-                return Internal::AreEquivalent(left, right) && (left.Uid() == right.Uid());
             };
 
-            auto correspondingLoadedModelVar = loadedModelLeafVariablesMap.at(trainerModelLeafVar.Uid());
+            auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(restoreFrom.get());
+            RemovePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
 
-            if (!areVariablesEquivalent(correspondingLoadedModelVar, trainerModelLeafVar))
-                InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
-                                loadedModelFunction->AsString().c_str(), this->AsString().c_str());
+            auto trainerModelCompositeFunction = dynamic_cast<CompositeFunction*>(this);
+            RemovePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctions, trainerModelLeafVariablesMap);
 
-            if ((trainerModelLeafVar.IsConstant() && !Constant(trainerModelLeafVar).Value()->IsReadOnly()) || trainerModelLeafVar.IsParameter())
+            // Now update the trainer's model parameters and constants with those from the loaded model
+            for (auto nameVarPair : trainerModelLeafVariablesMap)
             {
-                auto trainerModelVarValue = trainerModelLeafVar.IsConstant() ? Constant(trainerModelLeafVar).Value() : Parameter(trainerModelLeafVar).Value();
-                auto loadedModelVarValue = correspondingLoadedModelVar.IsConstant() ? Constant(correspondingLoadedModelVar).Value() : Parameter(correspondingLoadedModelVar).Value();
-                trainerModelVarValue->CopyFrom(*loadedModelVarValue);
-            }
-        }
+                auto trainerModelLeafVar = nameVarPair.second;
 
-        trainerModelCompositeFunction->CopyState(*loadedModelCompositeFunction);
+                auto areVariablesEquivalent = [](const Variable& left, const Variable& right) {
+                    return Internal::AreEquivalent(left, right) && (left.Uid() == right.Uid());
+                };
+
+                auto correspondingLoadedModelVar = loadedModelLeafVariablesMap.at(trainerModelLeafVar.Uid());
+
+                if (!areVariablesEquivalent(correspondingLoadedModelVar, trainerModelLeafVar))
+                    InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
+                        restoreFrom->AsString().c_str(), this->AsString().c_str());
+
+                if ((trainerModelLeafVar.IsConstant() && !Constant(trainerModelLeafVar).Value()->IsReadOnly()) || trainerModelLeafVar.IsParameter())
+                {
+                    auto trainerModelVarValue = trainerModelLeafVar.IsConstant() ? Constant(trainerModelLeafVar).Value() : Parameter(trainerModelLeafVar).Value();
+                    auto loadedModelVarValue = correspondingLoadedModelVar.IsConstant() ? Constant(correspondingLoadedModelVar).Value() : Parameter(correspondingLoadedModelVar).Value();
+                    trainerModelVarValue->CopyFrom(*loadedModelVarValue);
+                }
+            }
+
+            trainerModelCompositeFunction->CopyState(*loadedModelCompositeFunction);
+        }
+        else
+        {
+            CompositeFunction* compositeFunction = dynamic_cast<CompositeFunction*>(this);
+            if (compositeFunction == nullptr)
+                InvalidArgument("Primitive Function '%S' instance cannot be restored.", this->AsString().c_str());
+
+            //TODO (backcompat): when loading a stale model we can still pass this test
+            // by patching up restored functions on the fly during deserialization (e.g., by 
+            // inserting an extra input for the sample count in case of BatchNorm).
+            if (!Internal::AreEquivalent(shared_from_this(), restoreFrom))
+                InvalidArgument("Function '%S' being restored is not equivalent (isomorphic) to the Function '%S' loaded from checkpoint.",
+                    this->AsString().c_str(), restoreFrom->AsString().c_str());
+
+            auto parameters = Parameters();
+            auto restoredParameters = restoreFrom->Parameters();
+
+            assert(parameters.size() == restoredParameters.size());
+
+            for (int i = 0; i < parameters.size(); i++)
+            {
+                assert(Internal::AreEquivalent(parameters[i], restoredParameters[i]));
+                parameters[i].Value()->CopyFrom(*(restoredParameters[i].Value().get()));
+            }
+
+            auto restoredCompositeFunction = dynamic_cast<const CompositeFunction*>(restoreFrom.get());
+            compositeFunction->CopyState(*restoredCompositeFunction);
+
+        }
+    }
+
+    void Function::RestoreModel(const std::wstring& modelFilePath)
+    {
+        bool isLegacyModel;
+        FunctionPtr loadedModelFunction = LoadModel(modelFilePath, DeviceDescriptor::CPUDevice(), &isLegacyModel);
+        RestoreFrom(loadedModelFunction, isLegacyModel);
     }
 
     Variable GetCorrespondingOutputVariableFromClone(const Variable& cloneeOutput, const FunctionPtr& cloneeFunction, const FunctionPtr& clonedFunction)
@@ -856,27 +888,7 @@ namespace CNTK
             InvalidArgument("Primitive Function '%S' instance cannot be restored from a checkpoint.", this->AsString().c_str());
 
         auto restoredFunction = Function::Deserialize(modelDictionary, DeviceDescriptor::CPUDevice());
-
-        //TODO (backcompat): when loading a stale model we can still pass this test
-        // by patching up restored functions on the fly during deserialization (e.g., by 
-        // inserting an extra input for the sample count in case of BatchNorm).
-        if (!Internal::AreEquivalent(shared_from_this(), restoredFunction))
-            InvalidArgument("Function '%S' being restored is not equivalent (isomorphic) to the Function '%S' loaded from checkpoint.",
-                            this->AsString().c_str(), restoredFunction->AsString().c_str());
-
-        auto parameters = Parameters();
-        auto restoredParameters = restoredFunction->Parameters();
-
-        assert(parameters.size() == restoredParameters.size());
-
-        for (int i = 0; i < parameters.size(); i++)
-        {
-            assert(Internal::AreEquivalent(parameters[i], restoredParameters[i]));
-            parameters[i].Value()->CopyFrom(*(restoredParameters[i].Value().get()));
-        }
-
-        auto restoredCompositeFunction = dynamic_cast<const CompositeFunction*>(restoredFunction.get());
-        compositeFunction->CopyState(*restoredCompositeFunction);
+        RestoreFrom(restoredFunction, /*isLegacy =*/ false);
     }
 
     /*static*/ FunctionPtr Function::Deserialize(const Dictionary& modelDictionary, const CNTK::DeviceDescriptor& device)

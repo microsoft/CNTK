@@ -3155,6 +3155,11 @@ namespace CNTK
         CNTK_API void SaveModel(const std::wstring& modelFile);
 
         ///
+        /// Restore the models parameters (in-place) from another Function
+        ///
+        CNTK_API void RestoreFrom(const FunctionPtr& restoreFrom, bool isLegacy);
+
+        ///
         /// Restore the models parameters (in-place) from a model file
         ///
         CNTK_API void RestoreModel(const std::wstring& modelFilePath);
@@ -3162,7 +3167,10 @@ namespace CNTK
         ///
         /// Load a Function from a model file
         ///
-        CNTK_API static FunctionPtr LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+        static FunctionPtr LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice())
+        {
+            return LoadModel(modelFile, computeDevice, nullptr);
+        }
 
         ///
         /// Load a Function from a memory buffer
@@ -3246,6 +3254,8 @@ namespace CNTK
 
     private:
         CNTK_API std::shared_ptr<std::vector<std::pair<Variable, Variable>>> BlockArgumentsMappingImpl() const;
+
+        CNTK_API static FunctionPtr LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice, bool* isLegacyRetVal);
 
         // Lazily initialize the Function's outputs on first invocation
         CNTK_API std::vector<Variable>& InitOutputs();

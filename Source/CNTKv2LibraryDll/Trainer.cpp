@@ -53,7 +53,7 @@ namespace CNTK
         combinedFunctionArgs.push_back(m_lossFunction);
         if (!m_lossFunction->Output().DynamicAxes().empty())
         {
-            m_aggregatedLossFunction = ReduceSum(lossFunction);
+            m_aggregatedLossFunction = ReduceSum(lossFunction, L"aggregateLoss");
             combinedFunctionArgs.push_back(m_aggregatedLossFunction);
             m_trainingSampleCountVar = m_lossFunction;
         }
@@ -357,7 +357,8 @@ namespace CNTK
         state[externalStatePropertyName] = externalState;
         state[distributedStatePropertyName] = distributedState;
 
-        m_combinedTrainingFunction->SaveModel(tempModelFile);
+        auto modelToSave = m_model ? m_model : m_combinedTrainingFunction;
+        modelToSave->SaveModel(tempModelFile);
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
         std::wstring tempCheckpointFile = trainerStateCheckpointFilePath + L".tmp";
 
@@ -374,7 +375,15 @@ namespace CNTK
     Dictionary Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
     {
         // Restore the model's parameters
-        m_combinedTrainingFunction->RestoreModel(modelFilePath);
+        bool isLegacyModel;
+        auto loadedModelFunction = Function::LoadModel(modelFilePath, DeviceDescriptor::CPUDevice(), &isLegacyModel);
+        FunctionPtr modelToRestore;
+        if (!isLegacyModel && m_model && Internal::AreEquivalent(loadedModelFunction, m_model))
+            modelToRestore = m_model;
+        else
+            modelToRestore = m_combinedTrainingFunction;
+
+        modelToRestore->RestoreFrom(loadedModelFunction, isLegacyModel);
 
         Dictionary checkpoint = Dictionary::Load(GetTrainerStateCheckpointFilePath(modelFilePath));
 
