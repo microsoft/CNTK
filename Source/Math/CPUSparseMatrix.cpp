@@ -703,7 +703,6 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
     memcpy(NzValues(), h_Val, sizeof(ElemType)*nz);
 }
 
-#if 0 // add it back with test
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, const ElemType* val, const size_t numBlocks, const size_t numRows, const size_t numCols)
 {
@@ -717,7 +716,6 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, c
     memcpy(GetBlockIds(), blockIds, sizeof(size_t)*(numBlocks));
     memcpy(Data(), val, sizeof(ElemType)*numBlocks*numRows);
 }
-#endif
 
 template <class ElemType>
 ElemType* CPUSparseMatrix<ElemType>::Data()  const
@@ -1401,13 +1399,13 @@ void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemT
 {
     size_t numColsNeeded = 2 * GetNumCols();
 
-    if (IsEmpty() || (GetNumCols() < numColsNeeded))
+    if (c.IsEmpty() || (c.GetNumCols() < numColsNeeded))
     {
         c.RequireSize(GetNumRows(), numColsNeeded);
         c.SetValue(0.0);
     }
 
-    if (GetNumRows() != GetNumRows() || GetNumCols() != numColsNeeded)
+    if (c.GetNumRows() != GetNumRows() || c.GetNumCols() != numColsNeeded)
         LogicError("The matrix gradients does not have expected dimensions.");
 
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
@@ -1428,13 +1426,14 @@ void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemT
         size_t start = j * len;
         for (size_t p = start; p < start + len; p++)
         {
+            size_t denseIndex = i * len + (p - start);
             ElemType g = grad[p];
-            ElemType adaSqr = rho * smoothAda[i] + (1 - rho) * g * g;
-            smoothAda[i] = adaSqr;
-            ElemType x2 = smoothX2[i];
+            ElemType adaSqr = rho * smoothAda[denseIndex] + (1 - rho) * g * g;
+            smoothAda[denseIndex] = adaSqr;
+            ElemType x2 = smoothX2[denseIndex];
             ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
-            smoothX2[i] = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
-            val[i] += deltaX;
+            smoothX2[denseIndex] = rho * smoothX2[denseIndex] + (1 - rho) * deltaX * deltaX;
+            val[denseIndex] += deltaX;
         }
     }
 }
