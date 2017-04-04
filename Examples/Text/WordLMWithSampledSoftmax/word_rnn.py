@@ -93,8 +93,8 @@ def cross_entropy_with_sampled_softmax(
         I = C.Constant(np.eye(vocab_dim, dtype=np.float32))
         sample_selector = C.times(sample_selector_sparse, I)
 
-    inclusion_probs = C.random_sample_inclusion_frequency(sampling_weights, num_samples, allow_duplicates) # dense row [1 * vocab_size]
-    log_prior = C.log(inclusion_probs) # dense row [1 * vocab_dim]
+    inclusion_probs = C.random_sample_inclusion_frequency(sampling_weights, num_samples, allow_duplicates) # dense row [vocab_size]
+    log_prior = C.log(inclusion_probs) # dense row [vocab_dim]
 
 
     print("hidden_vector: "+str(hidden_vector.shape))
