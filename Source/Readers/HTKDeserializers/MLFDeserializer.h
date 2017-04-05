@@ -6,8 +6,7 @@
 #pragma once
 
 #include <boost/noncopyable.hpp>
-#include "DataDeserializer.h"
-#include "HTKDataDeserializer.h"
+#include "HTKDeserializer.h"
 #include "CorpusDescriptor.h"
 #include "MLFUtils.h"
 #include "MLFIndexer.h"

@@ -14,7 +14,7 @@
 #include "ReaderShim.h"
 #include "HTKMLFReader.h"
 #include "HeapMemoryProvider.h"
-#include "HTKDataDeserializer.h"
+#include "HTKDeserializer.h"
 #include "MLFDeserializer.h"
 #include "StringUtil.h"
 
@@ -56,7 +56,7 @@ extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializ
 {
     if (type == L"HTKFeatureDeserializer")
     {
-        *deserializer = new HTKDataDeserializer(corpus, deserializerConfig, primary);
+        *deserializer = new HTKDeserializer(corpus, deserializerConfig, primary);
     }
     else if (type == L"HTKMLFDeserializer")
     {

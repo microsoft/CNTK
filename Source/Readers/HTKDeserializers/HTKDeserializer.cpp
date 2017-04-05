@@ -4,7 +4,7 @@
 //
 
 #include "stdafx.h"
-#include "HTKDataDeserializer.h"
+#include "HTKDeserializer.h"
 #include "ConfigHelper.h"
 #include "Basics.h"
 #include "StringUtil.h"
@@ -22,7 +22,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
 
-HTKDataDeserializer::HTKDataDeserializer(
+HTKDeserializer::HTKDeserializer(
     CorpusDescriptorPtr corpus,
     const ConfigParameters& cfg,
     bool primary)
@@ -60,7 +60,7 @@ HTKDataDeserializer::HTKDataDeserializer(
     InitializeAugmentationWindow(config.GetContextWindow());
 }
 
-HTKDataDeserializer::HTKDataDeserializer(
+HTKDeserializer::HTKDeserializer(
     CorpusDescriptorPtr corpus,
     const ConfigParameters& feature,
     const wstring& featureName,
@@ -96,7 +96,7 @@ HTKDataDeserializer::HTKDataDeserializer(
     InitializeAugmentationWindow(config.GetContextWindow());
 }
 
-void HTKDataDeserializer::InitializeAugmentationWindow(const std::pair<size_t, size_t>& augmentationWindow)
+void HTKDeserializer::InitializeAugmentationWindow(const std::pair<size_t, size_t>& augmentationWindow)
 {
     m_augmentationWindow = augmentationWindow;
 
@@ -104,42 +104,41 @@ void HTKDataDeserializer::InitializeAugmentationWindow(const std::pair<size_t, s
     // and the number of dimensions in the file.
     if (m_augmentationWindow.first == 0 && m_augmentationWindow.second == 0)
     {
-        m_augmentationWindow.first = m_augmentationWindow.second = msra::dbn::augmentationextent(m_ioFeatureDimension, m_dimension);
+        const size_t windowFrames = m_dimension / m_ioFeatureDimension; // total number of frames to generate
+        const size_t extent = windowFrames / 2;                         // extend each side by this
+
+        if (m_dimension % m_ioFeatureDimension != 0)
+            RuntimeError("HTKDeserializer: model vector size is not multiple of input features");
+
+        if (windowFrames % 2 == 0)
+            RuntimeError("HTKDeserializer: neighbor expansion of input features to '%zu' is not symmetrical", windowFrames);
+
+        m_augmentationWindow.first = m_augmentationWindow.second = extent;
     }
 }
 
 // Initializes chunks based on the configuration and utterance descriptions.
-void HTKDataDeserializer::InitializeChunkDescriptions(const vector<string>& paths)
+void HTKDeserializer::InitializeChunkDescriptions(const vector<string>& paths)
 {
     // Read utterance descriptions.
     vector<UtteranceDescription> utterances;
     utterances.reserve(paths.size());
-    size_t allUtterances = 0, allFrames = 0;
 
+    string key;
     for (const auto& u : paths)
     {
-        UtteranceDescription description(move(msra::asr::htkfeatreader::parsedpath(msra::strfun::utf16(u))));
+        key.clear();
+        UtteranceDescription description(msra::asr::htkfeatreader::parsedpath::Parse(u, key));
+
         size_t numberOfFrames = description.GetNumberOfFrames();
 
         if (m_expandToPrimary && numberOfFrames != 1)
-        {
-            RuntimeError("Expanded stream should only contain sequences of length 1, utterance '%s' has %d",
-                description.GetKey().c_str(),
-                (int)numberOfFrames);
-        }
+            RuntimeError("Expanded stream should only contain sequences of length 1, utterance '%s' has %zu",
+                key.c_str(),
+                numberOfFrames);
 
-        // For logging, also account for utterances and frames that we skip
-        allUtterances++;
-        allFrames += numberOfFrames;
-
-        string key = description.GetKey();
         if (!m_corpus->IsIncluded(key))
-        {
             continue;
-        }
-
-        // No need to store key, releasing it.
-        description.ClearLogicalPath();
 
         size_t id = m_corpus->KeyToId(key);
         description.SetId(id);
@@ -158,7 +157,6 @@ void HTKDataDeserializer::InitializeChunkDescriptions(const vector<string>& path
     // A chunk constitutes of 15 minutes
     const size_t ChunkFrames = 15 * 60 * FramesPerSec; // number of frames to target for each chunk
 
-    m_chunks.resize(0);
     m_chunks.reserve(m_totalNumberOfFrames / ChunkFrames);
 
     ChunkIdType chunkId = 0;
@@ -183,25 +181,24 @@ void HTKDataDeserializer::InitializeChunkDescriptions(const vector<string>& path
     }
 
     fprintf(stderr,
-        "HTKDataDeserializer::HTKDataDeserializer: "
-        "selected '%zu' utterances grouped into '%zu' chunks, "
+        "HTKDeserializer: selected '%zu' utterances grouped into '%zu' chunks, "
         "average chunk size: %.1f utterances, %.1f frames "
         "(for I/O: %.1f utterances, %.1f frames)\n",
         utterances.size(),
         m_chunks.size(),
         utterances.size() / (double)m_chunks.size(),
         m_totalNumberOfFrames / (double)m_chunks.size(),
-        allUtterances / (double)m_chunks.size(),
-        allFrames / (double)m_chunks.size());
+        utterances.size() / (double)m_chunks.size(),
+        m_totalNumberOfFrames / (double)m_chunks.size());
 
     if (utterances.empty())
     {
-        RuntimeError("HTKDataDeserializer: No utterances to process.");
+        RuntimeError("HTKDeserializer: No utterances to process.");
     }
 }
 
 // Describes exposed stream - a single stream of htk features.
-void HTKDataDeserializer::InitializeStreams(const wstring& featureName)
+void HTKDeserializer::InitializeStreams(const wstring& featureName)
 {
     StreamDescriptionPtr stream = make_shared<StreamDescription>();
     stream->m_id = 0;
@@ -214,19 +211,19 @@ void HTKDataDeserializer::InitializeStreams(const wstring& featureName)
 
 // Reading information about the features from the first file.
 // This information is used later to check that all features among all files have the same properties.
-void HTKDataDeserializer::InitializeFeatureInformation()
+void HTKDeserializer::InitializeFeatureInformation()
 {
     msra::util::attempt(5, [&]()
     {
         msra::asr::htkfeatreader reader;
         reader.getinfo(m_chunks.front().GetUtterance(0)->GetPath(), m_featureKind, m_ioFeatureDimension, m_samplePeriod);
-        fprintf(stderr, "HTKDataDeserializer::HTKDataDeserializer: determined feature kind as %d-dimensional '%s' with frame shift %.1f ms\n",
-            (int)m_ioFeatureDimension, m_featureKind.c_str(), m_samplePeriod / 1e4);
+        fprintf(stderr, "HTKDeserializer: determined feature kind as '%zu'-dimensional '%s' with frame shift %.1f ms\n",
+            m_ioFeatureDimension, m_featureKind.c_str(), m_samplePeriod / 1e4);
     });
 }
 
 // Gets information about available chunks.
-ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
+ChunkDescriptions HTKDeserializer::GetChunkDescriptions()
 {
     ChunkDescriptions chunks;
     chunks.reserve(m_chunks.size());
@@ -246,7 +243,7 @@ ChunkDescriptions HTKDataDeserializer::GetChunkDescriptions()
 
 // Gets sequences for a particular chunk.
 // This information is used by the randomizer to fill in current windows of sequences.
-void HTKDataDeserializer::GetSequencesForChunk(ChunkIdType chunkId, vector<SequenceDescription>& result)
+void HTKDeserializer::GetSequencesForChunk(ChunkIdType chunkId, vector<SequenceDescription>& result)
 {
     const HTKChunkDescription& chunk = m_chunks[chunkId];
     result.reserve(m_frameMode ? chunk.GetTotalFrames() : chunk.GetNumberOfUtterances());
@@ -292,7 +289,7 @@ void HTKDataDeserializer::GetSequencesForChunk(ChunkIdType chunkId, vector<Seque
 
 // A wrapper around a matrix that views it as a vector of column vectors.
 // Does not have any memory associated.
-class MatrixAsVectorOfVectors
+class MatrixAsVectorOfVectors : boost::noncopyable
 {
 public:
     MatrixAsVectorOfVectors(msra::dbn::matrixbase& m)
@@ -311,17 +308,16 @@ public:
     }
 
 private:
-    DISABLE_COPY_AND_MOVE(MatrixAsVectorOfVectors);
     msra::dbn::matrixbase& m_matrix;
 };
 
 
 // Represents a chunk data in memory. Given up to the randomizer.
 // It is up to the randomizer to decide when to release a particular chunk.
-class HTKDataDeserializer::HTKChunk : public Chunk
+class HTKDeserializer::HTKChunk : public Chunk, boost::noncopyable
 {
 public:
-    HTKChunk(HTKDataDeserializer* parent, ChunkIdType chunkId) : m_parent(parent), m_chunkId(chunkId)
+    HTKChunk(HTKDeserializer* parent, ChunkIdType chunkId) : m_parent(parent), m_chunkId(chunkId)
     {
         auto& chunkDescription = m_parent->m_chunks[chunkId];
 
@@ -347,13 +343,12 @@ public:
     }
 
 private:
-    DISABLE_COPY_AND_MOVE(HTKChunk);
-    HTKDataDeserializer* m_parent;
+    HTKDeserializer* m_parent;
     ChunkIdType m_chunkId;
 };
 
 // Gets a data chunk with the specified chunk id.
-ChunkPtr HTKDataDeserializer::GetChunk(ChunkIdType chunkId)
+ChunkPtr HTKDeserializer::GetChunk(ChunkIdType chunkId)
 {
     return make_shared<HTKChunk>(this, chunkId);
 };
@@ -479,7 +474,7 @@ static void AugmentNeighbors(const MatrixAsVectorOfVectors& utterance,
 
 // Get a sequence by its chunk id and sequence id.
 // Sequence ids are guaranteed to be unique inside a chunk.
-void HTKDataDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<SequenceDataPtr>& r)
+void HTKDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<SequenceDataPtr>& r)
 {
     const auto& chunkDescription = m_chunks[chunkId];
     size_t utteranceIndex = m_frameMode ? chunkDescription.GetUtteranceForChunkFrameIndex(id) : id;
@@ -488,9 +483,23 @@ void HTKDataDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector
 
     // wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors()
     MatrixAsVectorOfVectors utteranceFramesWrapper(utteranceFrames);
-    size_t utteranceLength = m_frameMode ? 1  : (m_expandToPrimary ? utterance->GetExpansionLength() : utterance->GetNumberOfFrames());
-    FeatureMatrix features(m_dimension, utteranceLength);
 
+    size_t utteranceLength = utterance->GetNumberOfFrames();
+    if (m_frameMode)
+    {
+        // Always return a single frame only.
+        utteranceLength = 1; 
+    }
+    else if (m_expandToPrimary)
+    {
+        if (r.empty())
+            RuntimeError("Expansion of utterance is not allowed for primary deserializer.");
+
+        // Getting the number of samples we have to extend to from the primary/first deserializer.
+        utteranceLength = r.front()->m_numberOfSamples;
+    }
+
+    FeatureMatrix features(m_dimension, utteranceLength);
     if (m_frameMode)
     {
         // For frame mode augment a single frame.
@@ -498,45 +507,30 @@ void HTKDataDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector
         auto fillIn = features.col(0);
         AugmentNeighbors(utteranceFramesWrapper, frameIndex, m_augmentationWindow.first, m_augmentationWindow.second, fillIn);
     }
-    else if (m_expandToPrimary) // Broadcast a single frame to the complete utterance.
+    else
     {
-        for (size_t resultingIndex = 0; resultingIndex < utterance->GetExpansionLength(); ++resultingIndex)
+        for (size_t resultingIndex = 0; resultingIndex < utteranceLength; ++resultingIndex)
         {
             auto fillIn = features.col(resultingIndex);
-            AugmentNeighbors(utteranceFramesWrapper, 0, m_augmentationWindow.first, m_augmentationWindow.second, fillIn);
-        }
-    }
-    else // Augment the complete utterance.
-    {
-        for (size_t frameIndex = 0; frameIndex < utterance->GetNumberOfFrames(); ++frameIndex)
-        {
-            auto fillIn = features.col(frameIndex);
-            AugmentNeighbors(utteranceFramesWrapper, frameIndex, m_augmentationWindow.first, m_augmentationWindow.second, fillIn);
+            AugmentNeighbors(utteranceFramesWrapper, m_expandToPrimary ? 0 : resultingIndex, m_augmentationWindow.first, m_augmentationWindow.second, fillIn);
         }
     }
 
     // Copy features to the sequence depending on the type.
     DenseSequenceDataPtr result;
     if (m_elementType == ElementType::tdouble)
-    {
         result = make_shared<HTKDoubleSequenceData>(features);
-    }
     else if (m_elementType == ElementType::tfloat)
-    {
         result = make_shared<HTKFloatSequenceData>(std::move(features));
-    }
     else
-    {
         LogicError("Currently, HTK Deserializer supports only double and float types.");
-    }
 
     result->m_key.m_sequence = utterance->GetId();
-
     r.push_back(result);
 }
 
 // Gets sequence description by its key.
-bool HTKDataDeserializer::GetSequenceDescription(const SequenceDescription& primary, SequenceDescription& d)
+bool HTKDeserializer::GetSequenceDescription(const SequenceDescription& primary, SequenceDescription& d)
 {
     assert(!m_primary);
     auto iter = m_keyToChunkLocation.find(primary.m_key.m_sequence);
@@ -553,31 +547,16 @@ bool HTKDataDeserializer::GetSequenceDescription(const SequenceDescription& prim
     d.m_chunkId = (ChunkIdType)chunkId;
     d.m_numberOfSamples = m_frameMode ? 1 : (uint32_t)utterance->GetNumberOfFrames();
 
-    // TODO: When we move frame mode from deserializer, expanding should go away and be done on the higher level.
-    // TODO: Currently for the frame mode the secondary deserializer does not know the size of the full utterance,
-    // becase each frame has its own sequence description. So we get the length by the max sample we have seen.
-    if (m_expandToPrimary) // Expansion, the check that all sequences are of length 0 have already been done.
-    {
-        assert(utterance->GetNumberOfFrames() == 1);
-
-        // Expanding for sequence length/or max seen frame.
-        size_t maxLength = max(primary.m_numberOfSamples, (uint32_t)primary.m_key.m_sample + 1);
-        if (utterance->GetExpansionLength() < maxLength)
-        {
-            utterance->SetExpansionLength(maxLength);
-        }
-        d.m_indexInChunk = utteranceIndexInsideChunk;
-    }
-    else if (m_frameMode) // Frame mode.
+    if (m_frameMode && !m_expandToPrimary)
     {
         d.m_indexInChunk = chunk.GetStartFrameIndexInsideChunk(utteranceIndexInsideChunk) + primary.m_key.m_sample;
 
         // Check that the sequences are equal in number of frames.
         if (primary.m_key.m_sample >= utterance->GetNumberOfFrames())
-            RuntimeError("Sequence with key '%s' has '%d' frame(s), whereas the primary sequence expects at least '%d' frames",
-                m_corpus->IdToKey(primary.m_key.m_sequence).c_str(), (int)utterance->GetNumberOfFrames(), (int)primary.m_key.m_sample + 1);
+            RuntimeError("Sequence with key '%s' has '%zu' frame(s), whereas the primary sequence expects at least '%d' frames",
+                m_corpus->IdToKey(primary.m_key.m_sequence).c_str(), utterance->GetNumberOfFrames(), primary.m_key.m_sample + 1);
     }
-    else // Utterance mode, no expansion.
+    else
     {
         d.m_indexInChunk = utteranceIndexInsideChunk;
     }
