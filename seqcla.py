@@ -39,21 +39,21 @@ def from_cntk_mb(inputs: tuple, variables: tuple):
         # unpack MBLayout
         sequences, _ = data.unpack_variable_value(var, True, data.device())
         # turn into correct NDArrayView types
-        from cntk.internal.swig_helper import map_if_possible
         has_axis = len(var.dynamic_axes) > 1
         def fix_up(data):
-            shape = data.shape().dimensions()  # drop a superfluous length dimension
+            data.__class__ = data.__class__ = cntk.core.NDArrayView
+            shape = data.shape  # drop a superfluous length dimension
             item_shape = shape[1:]
-            def wrap(data):
-                # fails with: SmallVector: index overflow
-                data.__class__ = data.__class__ = cntk.core.NDArrayView
-                return dynamite.Constant(data) # wrap in a dynamite Variable
+            #def wrap(data):
+            #    sh = data.shape
+            #    return dynamite.Constant(data) # wrap in a dynamite Variable
             if has_axis:
+                return [dynamite.Constant(data[t]) for t in range(shape[0])]
                 # BUGBUG: shape parameters are not getting reversed; doing it manually
-                return [wrap(data.slice_view(tuple(reversed((t,) + (0,) * len(item_shape))), tuple(reversed((1,) + item_shape)))) for t in range(shape[0])]
+                #return [wrap(data.slice_view(tuple(reversed((t,) + (0,) * len(item_shape))), tuple(reversed((1,) + item_shape)))) for t in range(shape[0])]
             else:
                 assert shape[0] == 1
-                return wrap(data.as_shape(item_shape))
+                return dynamite.Constant(data[0])
         return [fix_up(seq) for seq in sequences]
     return tuple(convert(inp, var) for inp, var in zip(inputs, variables))
 

@@ -78,18 +78,24 @@ def BroadcastingBinary(binary_op):
         return binary_op(a,b)
     return broadcasting_binary_op
 
+def elementwise_shape(a,b):
+    shapeA = a.shape if isinstance(a, (np.ndarray, Variable)) else ()
+    shapeB = b.shape if isinstance(b, (np.ndarray, Variable)) else ()
+    rank = max(len(shapeA), len(shapeB))
+    shapeA = (1,) * (rank - len(shapeA)) + shapeA;
+    shapeB = (1,) * (rank - len(shapeB)) + shapeB;
+    return tuple(max(dimA, dimB) for dimA, dimB in zip(shapeA,shapeB))
+
 def binary_op(opcode):
     @BroadcastingBinary
     def f(a,b):
-        return Variable((max(a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1, # broadcasting
-                             b.shape[0] if isinstance(b, (np.ndarray, Variable)) else 1
-                             ),), opcode, (a,b))
+        return Variable(elementwise_shape(a,b), opcode, (a,b))
     return f
 
-def reducing_binary_op(opcode):
+def reducing_binary_op(opcode): # (unused)
     @BroadcastingBinary
     def f(a,b):
-        return Variable((1,), opcode, (a,b))
+        return Variable((), opcode, (a,b))
     return f
 
 def unary_op(opcode):
@@ -103,24 +109,46 @@ def unary_reduction_op(opcode):
     def f(x):
         if isinstance(x, list): # broadcast along sequence
             return map(f, x)
-        return Variable((1,), opcode, (x,))  # BUGBUG: change shape to () once we support this correctly
+        return Variable((), opcode, (x,))
     return f
 
 @BroadcastingBinary
 def times(a,b):
     if hasattr(b, 'initializer'):
-        b.resize((a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1,
+        b.resize((b.shape[0] if b.shape[0] != INFER else a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1,
                   b.shape[1]))
         del b.initializer
-    return Variable((b.shape[1],), cntk.NDArrayView.dot, (a,b))
+    shapeA = a.shape if isinstance(a, (np.ndarray, Variable)) else (b.shape[0],)
+    shapeB = b.shape if isinstance(b, (np.ndarray, Variable)) else ()
+    if not (1 <= len(shapeA) <= 2) or not (1 <= len(shapeB) <= 2):
+        raise TypeError('times only supports matrices and vectors')
+    if shapeA[-1] != shapeB[0]:
+        raise TypeError('inner dimensions do not match')
+    shapeC = ()
+    if len(shapeA) == 2:
+        shapeC = shapeC + (shapeA[0],);
+    if len(shapeB) == 2:
+        shapeC = shapeC + (shapeB[1],);
+    return Variable(shapeC, cntk.NDArrayView.dot, (a,b))
 
 @BroadcastingBinary
 def times_transpose(a,b):
     if hasattr(b, 'initializer'):
         b.resize((b.shape[0],
-                  a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1))
+                  b.shape[1] if b.shape[1] != INFER else a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1))
         del b.initializer
-    return Variable((b.shape[0],), cntk.NDArrayView.dot_transpose, (a,b))
+    shapeA = a.shape if isinstance(a, (np.ndarray, Variable)) else (b.shape[1],)
+    shapeB = b.shape if isinstance(b, (np.ndarray, Variable)) else ()
+    if not (1 <= len(shapeA) <= 2) or not (1 <= len(shapeB) <= 2):
+        raise TypeError('times only supports matrices and vectors')
+    if shapeA[-1] != shapeB[-1]:
+        raise TypeError('inner dimensions do not match')
+    shapeC = ()
+    if len(shapeA) == 2:
+        shapeC = shapeC + (shapeA[0],);
+    if len(shapeB) == 2:
+        shapeC = shapeC + (shapeB[0],);
+    return Variable(shapeC, cntk.NDArrayView.dot_transpose, (a,b))
 
 plus = binary_op(cntk.NDArrayView.__add__)
 minus = binary_op(cntk.NDArrayView.__sub__)
@@ -163,7 +191,7 @@ def Dense(N, activation=identity, name=''):
 
 def RNNUnit(N, activation=sigmoid, name=''):
     W = Parameter((INFER,N), initializer=times_initializer)
-    R = Parameter((INFER,N), initializer=times_initializer)
+    R = Parameter((N,N),     initializer=times_initializer)
     b = Parameter((N,))
     @Model(W=W, R=R, b=b)
     def rnn_step(s,x):
@@ -334,7 +362,7 @@ def eval(v):
         # sparse can not be properly batched for now
         #if isinstance(v0.inputs[0], Variable) and v0.inputs[0].data.is_sparse:
         # matrix product is not correctly batched for now
-        if v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose:
+        if True: #v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose:
             for v in op_batch:
                 v.data = v._compute()  # non-batched for now
                 v.computed = True
