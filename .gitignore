@@ -217,6 +217,12 @@ FakesAssemblies/
 # Node.js Tools for Visual Studio
 .ntvs_analysis.dat
 
+# VS
+*.suo
+.suo
+*.pyc
+*.pyc.*
+
 # Visual Studio 6 build log
 *.plg
 
