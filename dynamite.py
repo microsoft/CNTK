@@ -20,7 +20,11 @@ class Variable:
         return v
     def _compute(self):
         try:
-          return self.op(*(to_data(input) for input in self.inputs))
+          data = self.op(*(to_data(input) for input in self.inputs))
+          if data.shape != self.shape: # BUGBUGBUGBUG: fix this!!! happens in __matmul__
+            data = data.reshape(self.shape)
+          assert data.shape == self.shape
+          return data
         except: # (for catching stuff in the debugger; remove this)
           raise
     def value(self):  # return the NDArrayView--computed lazily at this point if needed
@@ -330,7 +334,7 @@ def eval(v):
         # sparse can not be properly batched for now
         #if isinstance(v0.inputs[0], Variable) and v0.inputs[0].data.is_sparse:
         # matrix product is not correctly batched for now
-        if True:#v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose:
+        if v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose:
             for v in op_batch:
                 v.data = v._compute()  # non-batched for now
                 v.computed = True
@@ -342,24 +346,42 @@ def eval(v):
             shape1 = input.data.shape if isinstance(input, (Variable, np.ndarray)) else ()
             print(shape, shape1, input, input.data if isinstance(input, (Variable, np.ndarray)) else None)
             return len(input.shape) if isinstance(input, (Variable, np.ndarray)) else 0
-        new_rank = 1 + max(rank(input) for input in v0.inputs)
+        ranks = tuple(rank(input) for input in v0.inputs)
+        new_rank = 1 + max(ranks)
         # batch all inputs by adding a new batch axis
         # BUGBUG: This is wrong for matrix product (must batch differently)
         # BUGBUG: if all inputs are identical then share them
         # TODO: make this a function
-        # TODO: create a new node instead of calling the old one
         # TODO: add a new narrow(axis, index) operation for all outputs
         #       They don't get computed; instead Variable._compute() takes them into account on the fly
+        # create a new node for batching each input
         num_inputs = len(v0.inputs)
-        batched_inputs = tuple(cntk.NDArrayView.splice([to_data(v.inputs[i]) for v in op_batch],
-                                                       axis=rank(v0.inputs[i]) - new_rank)
-                               for i in range(len(v0.inputs)))
+        num_batched_ops = len(op_batch)
+        batched_inputs = tuple(Variable((num_batched_ops,) + (1,) * (new_rank - ranks[i] - 1) +  inp_i_0.shape,
+                                        lambda *args: cntk.NDArrayView.splice(args, axis=ranks[i] - new_rank),
+                                        tuple(v.inputs[i] for v in op_batch))
+                               for i, inp_i_0 in enumerate(v0.inputs))
+        for batched_input in batched_inputs: # and compute them
+            batched_input.data = batched_input._compute()
+            batched_input.computed = True
+            print('out', batched_input.data.shape)
+        #batched_inputs = splice([to_data(v.inputs[i]) for v in op_batch],
+        #                        axis=rank(v0.inputs[i]) - new_rank)
+        #xxx
+        #batched_inputs = tuple(cntk.NDArrayView.splice([to_data(v.inputs[i]) for v in op_batch],
+        #                                               axis=rank(v0.inputs[i]) - new_rank)
+        #                       for i in range(len(v0.inputs)))
+        # create a new node for the batched op
+        shape_batched = tuple(max(inp.shape[i] for inp in batched_inputs) for i in range(new_rank)) # elementwise max. Note: dimensions are aligned
+        v_batched = Variable(shape_batched, v0.op, batched_inputs)
         # now perform the operation batched
-        data = v0.op(*batched_inputs)
-        print('out', data.shape)
+        v_batched.data = v_batched._compute()
+        v_batched.computed = True
+        print('out', v_batched.data.shape)
         # and copy the results back
         for i, v in enumerate(op_batch):
-            v.data = data[i].drop_axis(0) # axis was the first axis
+            v.data = v_batched.data[i].drop_axis(0) # axis was the first axis --BUGBUG: [] should drop it already, no? cf. numpy
+            # use narrow() that also drops the batch axis
             v.computed = True
 
     # initialization
