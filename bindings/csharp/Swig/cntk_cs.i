@@ -1773,6 +1773,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 }
 
+%rename (GetDevice) CNTK::NDArrayView::Device;
+%rename (GetShape) CNTK::NDArrayView::Shape;
+%rename (_IsSparse) CNTK::NDArrayView::IsSparse;
+%rename (_IsReadOnly) CNTK::NDArrayView::IsReadOnly;
+
 %typemap(cscode) CNTK::NDArrayView %{
     public NDArrayView(NDShape viewShape, float[] dataBuffer, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, (uint)dataBuffer.Length, device, readOnly)
     {
@@ -1803,6 +1808,54 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         if (viewShape[viewShape.Rank-1] + 1 != colStarts.Length)
         {
             throw new System.ArgumentException("The length of colStarts does not match the number of rows, i.e. the dimension size of the last rank of viewShape.");
+        }
+    }
+
+    public DeviceDescriptor Device
+    {
+        get
+        {
+            return GetDevice();
+        }
+    }
+
+    public DataType DataType
+    {
+        get
+        {
+            return GetDataType();
+        }
+    }
+
+    public NDShape Shape
+    {
+        get
+        {
+            return GetShape();
+        }
+    }
+
+    public StorageFormat StorageFormat
+    {
+        get
+        {
+            return GetStorageFormat();
+        }
+    }
+
+    public bool IsSparse
+    {
+        get
+        {
+            return _IsSparse();
+        }
+    }
+
+    public bool IsReadOnly
+    {
+        get
+        {
+            return _IsReadOnly();
         }
     }
 %}
