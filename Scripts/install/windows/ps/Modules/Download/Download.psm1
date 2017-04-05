@@ -17,7 +17,7 @@ function DownloadFileWebRequest (
     } 
     catch {
       Write-Verbose "DownloadFileWebRequest failed: $_.Exception.Response.StatusCode.Value__"
-      Remove-Item -path $OutFile -Force -ErrorAction SilentlyContinue
+      Remove-Item -Path $OutFile -Force -ErrorAction SilentlyContinue
       return $false
     }
 }
@@ -39,7 +39,7 @@ function DownloadFileWebClient(
           }
       }
 
-      Remove-Item -path $OutFile -Force -ErrorAction SilentlyContinue
+      Remove-Item -Path $OutFile -Force -ErrorAction SilentlyContinue
       return $false
     }
 }
@@ -47,27 +47,27 @@ function DownloadFileWebClient(
 function Get-FileFromLocation(
     [Parameter(Mandatory=$True)][string] $SourceFile,
     [Parameter(Mandatory=$True)][string] $OutFile,
-    [switch]$WebClient,
+    [switch] $WebClient,
     [int] $Maxtry = 5,
     [int] $TryDelaySeconds = 60)
 {
     $targetDir = Split-Path $OutFile
-    if (-not (Test-Path -path $targetDir -PathType Container)) {
+    if (-not (Test-Path -Path $targetDir -PathType Container)) {
         # if we can't create the target directory, we will stop
         New-Item -ItemType Directory -Force -Path $targetDir -ErrorAction Stop
     }
     if (Test-Path -Path $OutFile) {
         # Outfile already exists
-        Write-Verbose "Copy-FileWeb: Success. [$OutFile] already exists."
+        Write-Verbose "Get-FileFromLocation: Success. [$OutFile] already exists."
         return $true
     }
-    $workFile = Get-TempFileName -filePrefix FromWeb -tempDir $targetDir
+    $workFile = Get-TempFileName -filePrefix FromLocation -tempDir $targetDir
 
     try {
-        for ($count=1; $count -le $Maxtry; $count +=1) {
+        for ($count = 1; $count -le $Maxtry; $count++) {
             Write-Verbose "Copy-FileWeb: Iteration [$count] of [$maxtry]"
             if ($count -gt 1) {
-                start-sleep -Seconds $TryDelaySeconds
+                Start-Sleep -Seconds $TryDelaySeconds
             }
             if ($WebClient) {
                 $result = DownloadFileWebClient -SourceFile $SourceFile -OutFile $workFile
@@ -80,7 +80,7 @@ function Get-FileFromLocation(
                 return $true
             }
         }
-        Write-Verbose "Copy-FileWeb: Failed"
+        Write-Verbose "Get-FileFromLocation: Failed"
         return $false
     }
     finally {
