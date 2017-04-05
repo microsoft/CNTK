@@ -352,7 +352,6 @@ class NDArrayViewOpsMixin(object):
                     end += shape[i]
                 start_offsets[i] = begin
                 extents[i]       = end - begin
-                dims_to_keep[i] = s.stop is not None
             else:
                 start_offsets[i] = s
                 extents[i]       = 1
@@ -396,7 +395,7 @@ def _add_ndarrayview_ops(klass):
                           'dot', 'dot_transpose',
                           'sigmoid', 'tanh', 'relu',
                           'reduce_log_sum',
-                          'reshape', 'drop_axis', '__getitem__', '__setitem__', 'splice']:
+                          'reshape', '__getitem__', '__setitem__', 'splice']:
         if getattr(klass, overload_name, None):
             raise ValueError('class "%s" already has operator overload "%s"' %
                              (klass, overload_name))

@@ -48,7 +48,8 @@ def test_ndarrayview_operators(device_id, precision):
     def test(what, args, rtol=0, atol=0):
         args = [arg.astype(precision, copy=True) for arg in args]
         # TensorView
-        res_tv = what(*[NDArrayView.from_dense(arg, device=cntk_device(device_id)) for arg in args]).to_ndarray()
+        args_tv = [NDArrayView.from_dense(arg) for arg in args]
+        res_tv = what(*args_tv).to_ndarray()
         # numpy
         res_np = what(*args)
         print(res_tv)
