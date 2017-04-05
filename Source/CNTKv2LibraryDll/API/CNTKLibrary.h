@@ -4475,6 +4475,14 @@ namespace CNTK
         ///
         CNTK_API void SummarizeTestProgress();
 
+        ///
+        /// Progress writers.
+        ///
+        CNTK_API const std::unordered_set<ProgressWriterPtr>& ProgressWriters() const
+        {
+            return m_progressWriters;
+        }
+
         CNTK_API virtual ~Evaluator() {}
 
     private:
@@ -4483,9 +4491,10 @@ namespace CNTK
 
         friend class TrainingSession;
 
-        // Returns aggregated evaluation criterion value and sample count.
-        std::pair<ValuePtr, size_t> TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice, bool distributed);
-        std::pair<ValuePtr, size_t> TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice, bool distributed);
+        // Returns true if testing should be continued in a distributed mode.
+        // Aggregated error and sample count can be retrieved using 'result' parameter.
+        bool TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::pair<ValuePtr, size_t>& result, const DeviceDescriptor& computeDevice, bool distributed = false);
+        bool TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, std::pair<ValuePtr, size_t>& result, const DeviceDescriptor& computeDevice, bool distributed = false);
 
         std::pair<ValuePtr, size_t> TestLocalMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice);
 
