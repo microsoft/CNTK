@@ -1,13 +1,3 @@
-# Variable: deferred computation
-# Value: GPU direct object
-#
-# >>> d = gpu(0)
-# >>> x=internal.sanitize_value((3,), a, np.float32, gpu(0))    # returns an NDArrayView
-# >>> x
-# <cntk.core.NDArrayView; proxy of <Swig Object of type 'CNTK::NDArrayViewPtr *' at 0x0000003ABB2EDBD0> >
-# >>> x.to_ndarray()
-# array([  1.,  15.,   3.], dtype=float32)
-
 import numpy as np
 import cntk  # note: keep in 'cntk' namespace in here
 import collections
@@ -15,6 +5,10 @@ from timeit import default_timer as timer
 
 INFER = 0
 times_initializer="x" # for now a dummy string that is not None
+
+# convert an input to an NDArrayView if not yet (it may be an ndarray of a Number)
+def to_data(input):
+    return input.data if isinstance(input, Variable) else cntk.NDArrayView.from_dense(np.array(input, np.float32)) # BUGBUG: device?? precision??
 
 class Variable:
     def __new__(cls, shape, op, inputs):
@@ -24,24 +18,18 @@ class Variable:
         v.inputs = inputs
         v.computed = False
         return v
-    def eval(self):
-        def to_data(nparray):
-            data = cntk.NDArrayView.from_dense(np.array(nparray, np.float32)) # BUGBUG: device?? precision??
-            #data.__class__ = cntk.cntk_py.NDArrayView
-            return data
+    def _compute(self):
         try:
-          self.data = self.op(*(input.data if isinstance(input, Variable) else
-                              to_data(input)
-                              for input in self.inputs))
+          return self.op(*(to_data(input) for input in self.inputs))
         except: # (for catching stuff in the debugger; remove this)
           raise
-        self.computed = True
-    def value(self):  # return the NDArrayView
-        if not self.computed:  # compute lazily (this is where all the difficult stuff will happen w.r.t. batching)
+    def value(self):  # return the NDArrayView--computed lazily at this point if needed
+        if not self.computed:  # lazy computation (this is where all the difficult stuff will happen w.r.t. batching)
             eval(self)
         return self.data
     def to_ndarray(self):
         return self.value().to_ndarray()
+    # operator overloads
     def __add__(self, other):
         return plus(self, other)
     def __sub__(self, other):
@@ -333,6 +321,47 @@ def eval(v):
         else:
             ready_ops[key].append(v)
 
+    # execute all operations in op_batch as one CUDA operation
+    # The data needs to be gathered first (an optimized version would make the
+    # scatter lazy and avoid it if possible)
+    def execute_batch(op_batch):
+        # all ops are the same, so use the first as the reference
+        v0 = op_batch[0]
+        # sparse can not be properly batched for now
+        #if isinstance(v0.inputs[0], Variable) and v0.inputs[0].data.is_sparse:
+        # matrix product is not correctly batched for now
+        if True:#v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose:
+            for v in op_batch:
+                v.data = v._compute()  # non-batched for now
+                v.computed = True
+            return 
+        # determine rank for new axis; we insert a new axis, and for that, all objects must use aligned indices
+        def rank(input):
+            rank = len(input.shape) if isinstance(input, (Variable, np.ndarray)) else 0
+            shape = input.shape if isinstance(input, (Variable, np.ndarray)) else ()
+            shape1 = input.data.shape if isinstance(input, (Variable, np.ndarray)) else ()
+            print(shape, shape1, input, input.data if isinstance(input, (Variable, np.ndarray)) else None)
+            return len(input.shape) if isinstance(input, (Variable, np.ndarray)) else 0
+        new_rank = 1 + max(rank(input) for input in v0.inputs)
+        # batch all inputs by adding a new batch axis
+        # BUGBUG: This is wrong for matrix product (must batch differently)
+        # BUGBUG: if all inputs are identical then share them
+        # TODO: make this a function
+        # TODO: create a new node instead of calling the old one
+        # TODO: add a new narrow(axis, index) operation for all outputs
+        #       They don't get computed; instead Variable._compute() takes them into account on the fly
+        num_inputs = len(v0.inputs)
+        batched_inputs = tuple(cntk.NDArrayView.splice([to_data(v.inputs[i]) for v in op_batch],
+                                                       axis=rank(v0.inputs[i]) - new_rank)
+                               for i in range(len(v0.inputs)))
+        # now perform the operation batched
+        data = v0.op(*batched_inputs)
+        print('out', data.shape)
+        # and copy the results back
+        for i, v in enumerate(op_batch):
+            v.data = data[i].drop_axis(0) # axis was the first axis
+            v.computed = True
+
     # initialization
     #  - determine set of consumers for each node
     #  - set not-ready-inputs counter to #inputs
@@ -341,6 +370,8 @@ def eval(v):
         if p.computed:
             continue
         p.key = (p.op, tuple(shape_of(v) for v in p.inputs)) # batch if both op and input shapes are the same
+        # TODO: for matrix mul the second arg must be the same object to allow batching
+        # TODO: must also include the storage format in the key; do this in C++ version
         p.consumers = []
         p.non_ready_inputs = 0
         for v in p.inputs:
@@ -359,8 +390,7 @@ def eval(v):
         op_batch = ready_ops[key]
         # execute it
         #print('batch of', len(op_batch), 'for op', key)
-        for v in op_batch:
-            v.eval()  # non-batched for now
+        execute_batch(op_batch)
         batches_run += 1
         # done with this one
         #  - for each member of the batched op, check each consumer whether it is now ready; if so, move to ready set
@@ -422,6 +452,5 @@ def train_minibatch(criterion, *batch_args):
     for args in zip(*batch_args):
         ce, *_ = criterion(*args)
         crit = plus(crit, ce)
-    # evaluate
-    eval(crit)
+    # the return value is not yet computed, but any access will trigger lazy computation
     return crit
