@@ -25,14 +25,18 @@
 #     If not specified, GPU will not be enabled
 #   CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
 #     defaults to /usr/local/cub-1.4.1
-#   CUDNN_PATH= path to NVIDIA cuDNN installation so $(CUDNN_PATH)/cuda/include/cudnn.h exists
+#   CUDNN_PATH= path to NVIDIA cuDNN installation so $(CUDNN_PATH)/include/cudnn.h exists
 #     CuDNN version needs to be 5.0 or higher.
 #   KALDI_PATH= Path to Kaldi
 #     If not specified, Kaldi plugins will not be built
+#   OPENFST_PATH= Path to OpenFST
+#     OpenFST is required by Kaldi Reader.
 #   OPENCV_PATH= path to OpenCV 3.1.0 installation, so $(OPENCV_PATH) exists
 #     defaults to /usr/local/opencv-3.1.0
 #   PROTOBUF_PATH= path to Protocol Buffers 3.1.0 installation, so $(PROTOBUF_PATH) exists
 #     defaults to /usr/local/protobuf-3.1.0
+#   MULTIVERSO_PATH= path to Multiverso installation or source code, so $(MULTIVERSO_PATH) exists
+#     defaults to Source/Multiverso
 #   LIBZIP_PATH= path to libzip installation, so $(LIBZIP_PATH) exists
 #     defaults to /usr/local/
 #   BOOST_PATH= path to Boost installation, so $(BOOST_PATH)/include/boost/test/unit_test.hpp
@@ -149,8 +153,8 @@ ifdef CUDA_PATH
 
 # Set up cuDNN if needed
   ifdef CUDNN_PATH
-    INCLUDEPATH += $(CUDNN_PATH)/cuda/include
-    LIBPATH += $(CUDNN_PATH)/cuda/lib64
+    INCLUDEPATH += $(CUDNN_PATH)/include
+    LIBPATH += $(CUDNN_PATH)/lib64
     LIBS_LIST += cudnn
     COMMON_FLAGS +=-DUSE_CUDNN
   endif
@@ -185,19 +189,14 @@ ifeq ("$(MATHLIB)","openblas")
   INCLUDEPATH += $(OPENBLAS_PATH)/include
   LIBPATH += $(OPENBLAS_PATH)/lib
   LIBS_LIST += openblas m pthread
-  CPPFLAGS += -DUSE_OPENBLAS
+  CPPFLAGS += -DUSE_OPENBLAS -DHAVE_OPENBLAS
 endif
 
 
 ifdef KALDI_PATH
-  ########## Copy includes and defines from $(KALDI_PATH)/src/kaldi.mk ##########
-  FSTROOT = $(KALDI_PATH)/tools/openfst
-  ATLASINC = $(KALDI_PATH)/tools/ATLAS/include
-
-  INCLUDEPATH += $(KALDI_PATH)/src $(ATLASINC) $(FSTROOT)/include
-  CPPFLAGS += -DKALDI_DOUBLEPRECISION=0 -DHAVE_POSIX_MEMALIGN -DHAVE_EXECINFO_H=1 -DHAVE_CXXABI_H -DHAVE_ATLAS -DHAVE_OPENFST_GE_10400
-
-  KALDI_LIBPATH += $(KALDI_PATH)/src/lib
+  INCLUDEPATH += $(KALDI_PATH)/include
+  CPPFLAGS += -DKALDI_DOUBLEPRECISION=0 -DHAVE_POSIX_MEMALIGN -DHAVE_EXECINFO_H=1 -DHAVE_CXXABI_H -DHAVE_OPENFST_GE_10400
+  KALDI_LIBPATH += $(KALDI_PATH)/lib
   KALDI_LIBS_LIST := kaldi-util kaldi-matrix kaldi-base kaldi-hmm kaldi-cudamatrix kaldi-nnet kaldi-lat
   KALDI_LIBS := $(addprefix -l,$(KALDI_LIBS_LIST))
 endif
@@ -316,7 +315,7 @@ SRC += $(PP_SRC)
 $(PERF_PROFILER_LIB): $(PP_OBJ)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
-	@mkdir -p $(dir $@)
+	-@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,$(RPATH)%, $(ORIGINDIR)) -o $@ $^
 
 
@@ -922,17 +921,13 @@ endif
 
 ifeq ("$(CNTK_ENABLE_1BitSGD)","true")
 
-ifeq (,$(wildcard Source/1BitSGD/*.h))
-  $(error Build with 1bit-SGD was requested but cannot find the code. Please check https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD for instructions)
-endif
-
-  INCLUDEPATH += $(SOURCEDIR)/1BitSGD 
+  INCLUDEPATH += $(ONEBITSGD_PATH)
 
   COMMON_FLAGS += -DCNTK_PARALLEL_TRAINING_SUPPORT
   # temporarily adding to 1bit, need to work with others to fix it
 endif
 
- 
+
 ########################################
 # ASGD(multiverso) setup
 ########################################
@@ -940,13 +935,9 @@ endif
 
 ifeq ("$(CNTK_ENABLE_ASGD)","true")
 
-ifeq (,$(wildcard Source/Multiverso/include/multiverso/*.h))
-  $(error Build with Multiverso was requested but cannot find the code. Please check https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#24-data-parallel-asgd to learn more.)
-endif
-
 lMULTIVERSO:=-lmultiverso
 
-INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
+INCLUDEPATH += $(MULTIVERSO_PATH)/include
 COMMON_FLAGS += -DASGD_PARALLEL_SUPPORT
 
 MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
@@ -960,11 +951,16 @@ MULTIVERSO_CMAKE_BUILDTYPE=Debug
 endif
 
 # TODO need to align Multiverso OpenMP with the one we use (libiomp). For now, disabled.
-$(MULTIVERSO_LIB): 
+$(MULTIVERSO_LIB):
+ifneq ("$(wildcard $(MULTIVERSO_PATH)/lib/libmultiverso.so)","")
+	# reuse pre-installed multiverso library to $(LIBDIR) then skip building $(MULTIVERSO_LIB) when possible
+	@mkdir -p $(LIBDIR)
+	cp $(MULTIVERSO_PATH)/lib/libmultiverso.so $(LIBDIR)
+else
 	@echo "Build Multiverso lib"
 	@mkdir -p $(LIBDIR)
 	@mkdir -p $(BINDIR)
-	@mkdir -p $(SOURCEDIR)/Multiverso/build/$(BUILDTYPE)
+	@mkdir -p $(MULTIVERSO_PATH)/build/$(BUILDTYPE)
 	@cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
 		-DCMAKE_CXX_COMPILER=$(CXX) \
 		-DOpenMP_CXX_FLAGS="" \
@@ -978,17 +974,22 @@ $(MULTIVERSO_LIB):
 		-DCMAKE_BUILD_TYPE=$(MULTIVERSO_CMAKE_BUILDTYPE) \
 		-B./Source/Multiverso/build/$(BUILDTYPE) -H./Source/Multiverso
 	@make VERBOSE=1 -C ./Source/Multiverso/build/$(BUILDTYPE) -j multiverso
+endif
 
 UNITTEST_MULTIVERSO_SRC = \
-	$(SOURCEDIR)/Multiverso/Test/unittests/test_array.cpp \
-	$(SOURCEDIR)/Multiverso/Test/unittests/test_blob.cpp \
-	$(SOURCEDIR)/Multiverso/Test/unittests/test_kv.cpp \
-	$(SOURCEDIR)/Multiverso/Test/unittests/test_message.cpp \
-	$(SOURCEDIR)/Multiverso/Test/unittests/test_multiverso.cpp \
-	$(SOURCEDIR)/Multiverso/Test/unittests/test_node.cpp \
-	$(SOURCEDIR)/Multiverso/Test/unittests/test_sync.cpp \
+	$(MULTIVERSO_PATH)/Test/unittests/test_array.cpp \
+	$(MULTIVERSO_PATH)/Test/unittests/test_blob.cpp \
+	$(MULTIVERSO_PATH)/Test/unittests/test_kv.cpp \
+	$(MULTIVERSO_PATH)/Test/unittests/test_message.cpp \
+	$(MULTIVERSO_PATH)/Test/unittests/test_multiverso.cpp \
+	$(MULTIVERSO_PATH)/Test/unittests/test_node.cpp \
+	$(MULTIVERSO_PATH)/Test/unittests/test_sync.cpp \
 
-UNITTEST_MULTIVERSO_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_MULTIVERSO_SRC))
+UNITTEST_MULTIVERSO_OBJ := $(patsubst $(MULTIVERSO_PATH)/Test/unittests/%.cpp, $(OBJDIR)/Source/Multiverso/Test/unittests/%.o, $(UNITTEST_MULTIVERSO_SRC))
+
+$(OBJDIR)/Source/Multiverso/Test/unittests/%.o: $(MULTIVERSO_PATH)/Test/unittests/%.cpp
+	-@ mkdir -p $(OBJDIR)/Source/Multiverso/Test/unittests
+	$(CXX) -c $< -o $@ $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%)
 
 UNITTEST_MULTIVERSO := $(BINDIR)/multiversotests
 

@@ -41,6 +41,14 @@ boost_check=include/boost/test/unit_test.hpp
 protobuf_path=
 protobuf_check=lib/libprotobuf.a
 
+# Multiverso library
+multiverso_path=
+multiverso_check=include/multiverso/multiverso.h
+
+# 1bitsgd library
+onebitsgd_path=
+onebitsgd_check=BlockMomentumSGD.h
+
 # MPI library
 mpi_path=
 mpi_check=include/mpi.h
@@ -48,6 +56,10 @@ mpi_check=include/mpi.h
 have_kaldi=no
 kaldi_path=
 kaldi_check=src/kaldi.mk
+
+have_openfst=no
+openfst_path=
+openfst_check=include/fst/fst.h
 
 have_buildtype=no
 buildtype=
@@ -67,7 +79,7 @@ cub_check=cub/cub.cuh
 
 have_cudnn=no
 cudnn_path=
-cudnn_check=cuda/include/cudnn.h
+cudnn_check=include/cudnn.h
 
 have_opencv=no
 opencv_path=
@@ -112,6 +124,7 @@ default_boost="boost-1.60.0"
 default_cudas="cuda-8.0 cuda-7.5"
 default_nccls="nccl"
 default_kaldis="kaldi-trunk kaldi-c024e8aa"
+default_openfst="openfst-1.6"
 default_gdk_includes="include/nvidia/gdk"
 default_gdk_nvml_libs="src/gdk/nvml/lib"
 default_cubs="cub-1.4.1"
@@ -121,6 +134,8 @@ default_protobuf="protobuf-3.1.0"
 default_libzips="libzip-1.1.2"
 default_swig="swig-3.0.10"
 default_mpi="mpi"
+default_multiverso=Source/Multiverso
+default_onebitsgd=Source/1BitSGD
 
 function default_paths ()
 {
@@ -178,6 +193,16 @@ function find_protobuf ()
     find_dir "$default_protobuf" "$protobuf_check"
 }
 
+function find_multiverso ()
+{
+    find_dir "$default_multiverso" "$multiverso_check"
+}
+
+function find_onebitsgd ()
+{
+    find_dir "$default_onebitsgd" "$onebitsgd_check"
+}
+
 function find_nccl ()
 {
     find_dir "$default_nccls" "$nccl_check"
@@ -191,6 +216,11 @@ function find_cuda ()
 function find_kaldi ()
 {
     find_dir "$default_kaldis" "$kaldi_check"
+}
+
+function find_openfst ()
+{
+    find_dir "$default_openfst" "$openfst_check"
 }
 
 function find_gdk_include ()
@@ -352,11 +382,14 @@ function show_help ()
     echo "  --with-openblas[=directory] (experimental) $(show_default $(find_openblas))"
     echo "  --with-buildtype=(debug|release) $(show_default $default_buildtype)"
     echo "  --with-kaldi[=directory] $(show_default $(find_kaldi))"
+    echo "  --with-openfst[=directory] $(show_default $(find_openfst))"
     echo "  --with-opencv[=directory] $(show_default $(find_opencv))"
     echo "  --with-libzip[=directory] $(show_default $(find_libzip))"
     echo "  --with-code-coverage[=(yes|no)] $(show_default ${default_use_code_coverage})"
     echo "  --with-boost[=directory] $(show_default $(find_boost))"
     echo "  --with-protobuf[=directory] $(show_default $(find_protobuf))"
+    echo "  --with-multiverso[=directory] $(show_default $(find_multiverso))"
+    echo "  --with-1bitsgd[=directory] $(show_default $(find_onebitsgd))"
     echo "  --with-py-versions=(space-separated list of 27, 34, 35)"
     echo "  --with-py27-path[=directory] $(show_default $(find_python 27))"
     echo "  --with-py34-path[=directory] $(show_default $(find_python 34))"
@@ -751,6 +784,46 @@ do
                 fi
              fi
              ;;
+        --with-multiverso*)
+            if test x$optarg = x
+            then
+                multiverso_path=$(find_multiverso)
+                if test x$multiverso_path = x
+                then
+                    echo "Cannot find Multiverso directory"
+                    echo "Please specify a value for --with-multiverso"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $multiverso_check) = yes
+                then
+                    multiverso_path=$optarg
+                else
+                    echo "Invalid Multiverso directory $optarg"
+                    exit 1
+                fi
+             fi
+             ;;
+        --with-1bitsgd*)
+            if test x$optarg = x
+            then
+                onebitsgd_path=$(find_onebitsgd)
+                if test x$onebitsgd_path = x
+                then
+                    echo "Cannot find 1BitSGD directory"
+                    echo "Please specify a value for --with-1bitsgd"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $onebitsgd_check) = yes
+                then
+                    onebitsgd_path=$optarg
+                else
+                    echo "Invalid 1BitSGD directory $optarg"
+                    exit 1
+                fi
+             fi
+             ;;
         --with-buildtype*)
             have_buildtype=yes
             case $optarg in
@@ -780,6 +853,27 @@ do
                     kaldi_path=$optarg
                 else
                     echo "Invalid kaldi directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
+        --with-openfst*)
+            have_openfst=yes
+            if test x$optarg = x
+            then
+                openfst_path=$(find_openfst)
+                if test x$openfst_path = x
+                then
+                    echo "Cannot find openfst directory"
+                    echo "Please specify a value for --with-openfst"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $openfst_check)
+                then
+                    openfst_path=$optarg
+                else
+                    echo "Invalid openfst directory $optarg"
                     exit 1
                 fi
             fi
@@ -1049,6 +1143,48 @@ then
     fi
 fi
 
+if test x$kaldi_path != x && test x$openfst_path = x
+then
+    openfst_path=$(find_openfst)
+    if test x$openfst_path = x
+    then
+        echo CNTK KaldiReader requires OpenFST library. Please check
+        echo https://github.com/Microsoft/CNTK/blob/master/Source/Readers/KaldiReaderReadme
+        echo to learn more.
+        exit 1
+    else
+        echo Found OpenFST library at $openfst_path
+    fi
+fi
+
+if test $enable_1bitsgd = yes && test x$onebitsgd_path = x
+then
+    onebitsgd_path=$(find_onebitsgd)
+    if test x$onebitsgd_path = x
+    then
+        echo Cannot locate 1BitSGD library. See
+        echo   https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD
+        echo for installation instructions.
+        exit 1
+    else
+        echo Found 1BitSGD library at $onebitsgd_path
+    fi
+fi
+
+if test $enable_asgd = yes && test x$multiverso_path = x
+then
+    multiverso_path=$(find_multiverso)
+    if test x$multiverso_path = x
+    then
+        echo Build with Multiverso was requested but cannot find the code. Please check
+        echo https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#24-data-parallel-asgd 
+        echo to learn more.
+        exit 1
+    else
+        echo Found Multiverso library at $multiverso_path
+    fi
+fi
+
 if test x$mpi_path = x
 then
     mpi_path=$(find_mpi)
@@ -1122,6 +1258,12 @@ if test x$boost_path != x; then
 fi
 if test x$protobuf_path != x; then
     echo PROTOBUF_PATH=$protobuf_path >> $config
+fi
+if test x$multiverso_path != x; then
+    echo MULTIVERSO_PATH=$multiverso_path >> $config
+fi
+if test x$onebitsgd_path != x; then
+    echo ONEBITSGD_PATH=$onebitsgd_path >> $config
 fi
 if test x$mpi_path != x; then
     echo MPI_PATH=$mpi_path >> $config
