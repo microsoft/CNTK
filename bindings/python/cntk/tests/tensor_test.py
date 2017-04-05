@@ -55,42 +55,48 @@ def test_ndarrayview_operators(device_id, precision):
         print(res_np)
         assert np.allclose(res_tv, res_np, rtol=rtol, atol=atol)
 
-    x = np.array([[1., 2., 3.],[4., 5., 6.]])
-    y = np.array([[13.],[42.]])
+    mat23 = np.array([[1., 2., 3.],[4., 5., 6.]]) # 3 x 2 matrix
+    col2 = np.array([[13.],[42.]])                # column vector, same height as matrix
 
-    # binary ops
-    test(lambda a, b: a + b, [x, y])
-    test(lambda a, b: a + b, [x, np.array(13)]) # scalar
-    test(lambda a, b: a - b, [x, y])
-    test(lambda a, b: a * b, [x, y])
-    test(lambda a, b: a @ b, [y.reshape(1,2), x])
-    test(lambda a, b: a.dot(b), [y.reshape(1,2), x])
-    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [y.reshape(1,2), x.transpose()])
+    # binary ops, elementwise
+    test(lambda a, b: a + b, [mat23, col2])
+    test(lambda a, b: a + b, [mat23, np.array(13)]) # scalar
+    test(lambda a, b: a - b, [mat23, col2])
+    test(lambda a, b: a * b, [mat23, col2])
+
+    # matrix product
+    test(lambda a, b: a @ b, [col2.reshape(1,2), mat23])
+    test(lambda a, b: a.dot(b), [col2.reshape(1,2), mat23])
+    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [col2.reshape(1,2), mat23.transpose()])
+    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [mat23, mat23]) # mat23 * mat23^T
+    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [mat23.transpose(), mat23.transpose()]) # mat23^T * mat23
+    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [mat23, np.array([13.,42.,1968.])]) # mat23 * row3^T
+    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [np.array([13.,42.,1968.]), mat23]) # row3 * mat23^T
 
     # unary ops
-    test(lambda a: a.sigmoid() if isinstance(a, NDArrayView) else expit(a), [x], rtol=1e-6)
-    test(lambda a: a.tanh() if isinstance(a, NDArrayView) else np.tanh(a), [x], rtol=1e-6)
-    test(lambda a: a.relu() if isinstance(a, NDArrayView) else np.maximum(a,0), [x])
+    test(lambda a: a.sigmoid() if isinstance(a, NDArrayView) else expit(a), [mat23], rtol=1e-6)
+    test(lambda a: a.tanh() if isinstance(a, NDArrayView) else np.tanh(a), [mat23], rtol=1e-6)
+    test(lambda a: a.relu() if isinstance(a, NDArrayView) else np.maximum(a,0), [mat23])
 
     # reduction ops
-    test(lambda a: a.reduce_log_sum() if isinstance(a, NDArrayView) else np.log(np.sum(np.exp(a))), [x], rtol=1e-6)
+    test(lambda a: a.reduce_log_sum() if isinstance(a, NDArrayView) else np.log(np.sum(np.exp(a))), [mat23], rtol=1e-6)
 
     # reshape
-    test(lambda a: a.reshape((1,6)), [x])
+    test(lambda a: a.reshape((1,6)), [mat23])
 
     # slice
-    test(lambda a: a[:], [x])
-    test(lambda a: a[:1], [x])
-    test(lambda a: a[1:,:], [x])
-    #test(lambda a: a[1,1], [x]) # BUGBUG: This should work
-    test(lambda a: a[:2,:], [x])
-    test(lambda a: a[1:2,:], [x])
-    test(lambda a: a[...,:], [x])
+    test(lambda a: a[:], [mat23])
+    test(lambda a: a[:1], [mat23])
+    test(lambda a: a[1:,:], [mat23])
+    #test(lambda a: a[1,1], [mat23]) # BUGBUG: This should work
+    test(lambda a: a[:2,:], [mat23])
+    test(lambda a: a[1:2,:], [mat23])
+    test(lambda a: a[...,:], [mat23])
     def atest(a,b):
         a[1:2,:] = b
         return a
-    test(atest, [x, np.array(13)])
+    test(atest, [mat23, np.array(13)])
 
     # in-place ops
-    test(lambda a, b: a.__iadd__(b), [x, y]) 
-    test(lambda a, b: a.__isub__(b), [x, y]) 
+    test(lambda a, b: a.__iadd__(b), [mat23, col2]) 
+    test(lambda a, b: a.__isub__(b), [mat23, col2]) 

@@ -790,6 +790,12 @@ namespace CNTK
         template <typename ElementType>
         Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorView();
 
+        template <typename ElementType>
+        const Microsoft::MSR::CNTK::TensorView<ElementType> NativeTensorView() const;
+
+        template <typename ElementType>
+        Microsoft::MSR::CNTK::TensorView<ElementType> WritableNativeTensorView();
+
     private:
         ::CNTK::DataType m_dataType;
         DeviceDescriptor m_device;

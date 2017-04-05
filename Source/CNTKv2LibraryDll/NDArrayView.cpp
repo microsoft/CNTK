@@ -301,6 +301,18 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);
     }
 
+    template <typename ElementType>
+    const TensorView<ElementType> NDArrayView::NativeTensorView() const
+    {
+        return TensorView<ElementType>(*GetTensorView<ElementType>(), Microsoft::MSR::CNTK::TensorShape(m_viewShape.Dimensions()));
+    }
+
+    template <typename ElementType>
+    TensorView<ElementType> NDArrayView::WritableNativeTensorView()
+    {
+        return TensorView<ElementType>(*GetWritableTensorView<ElementType>(), Microsoft::MSR::CNTK::TensorShape(m_viewShape.Dimensions()));
+    }
+
     NDArrayViewPtr NDArrayView::NumericOperationInPlace(double beta, const std::vector<NDArrayViewPtr>& inputs, double alpha, int opInt, int reductionOpInt)
     {
         const auto          op = (Microsoft::MSR::CNTK::ElementWiseOperator) (opInt);
@@ -319,13 +331,13 @@ namespace CNTK
             switch (inputs.size())
             {
             case 1:
-                GetWritableTensorView<float>()->DoUnaryOpOf((float)beta, *inputs[0]->GetTensorView<float>(), (float)alpha, op, reductionOp);
+                WritableNativeTensorView<float>().DoUnaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
                 break;
             case 2:
-                GetWritableTensorView<float>()->DoBinaryOpOf((float)beta, *inputs[0]->GetTensorView<float>(), *inputs[1]->GetTensorView<float>(), (float)alpha, op, reductionOp);
+                WritableNativeTensorView<float>().DoBinaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), inputs[1]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
                 break;
             case 3:
-                GetWritableTensorView<float>()->DoTernaryOpOf((float)beta, *inputs[0]->GetTensorView<float>(), *inputs[1]->GetTensorView<float>(), *inputs[2]->GetTensorView<float>(), (float)alpha, op, reductionOp);
+                WritableNativeTensorView<float>().DoTernaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), inputs[1]->NativeTensorView<float>(), inputs[2]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
                 break;
             }
             break;
@@ -333,13 +345,13 @@ namespace CNTK
             switch (inputs.size())
             {
             case 1:
-                GetWritableTensorView<double>()->DoUnaryOpOf((double)beta, *inputs[0]->GetTensorView<double>(), (double)alpha, op, reductionOp);
+                WritableNativeTensorView<double>().DoUnaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
                 break;
             case 2:
-                GetWritableTensorView<double>()->DoBinaryOpOf((double)beta, *inputs[0]->GetTensorView<double>(), *inputs[1]->GetTensorView<double>(), (double)alpha, op, reductionOp);
+                WritableNativeTensorView<double>().DoBinaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), inputs[1]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
                 break;
             case 3:
-                GetWritableTensorView<double>()->DoTernaryOpOf((double)beta, *inputs[0]->GetTensorView<double>(), *inputs[1]->GetTensorView<double>(), *inputs[2]->GetTensorView<double>(), (double)alpha, op, reductionOp);
+                WritableNativeTensorView<double>().DoTernaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), inputs[1]->NativeTensorView<double>(), inputs[2]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
                 break;
             }
             break;
@@ -381,13 +393,10 @@ namespace CNTK
         switch (m_dataType)
         {
         case DataType::Float:
-            // BUGBUG: the m_tensorView gets a patched shape that is padded to min 2 axes, but we need truthful shapes
-            // It doesn't seem to happen always, maybe depending on how the object is created.
-            // So maybe for now we can find a outside workaround and not commit this fix here.
-            TensorView<float>(*GetWritableTensorView<float>(), AsTensorShape(m_viewShape)).DoMatrixProductOf((float)beta, transC, TensorView<float>(*inputA->GetTensorView<float>(), AsTensorShape(inputA->Shape())), transA, TensorView<float>(*inputB->GetTensorView<float>(), AsTensorShape(inputB->Shape())), transB, (float)alpha);
+            WritableNativeTensorView<float>().DoMatrixProductOf((float)beta, transC, inputA->NativeTensorView<float>(), transA, inputB->NativeTensorView<float>(), transB, (float)alpha);
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
-            GetWritableTensorView<double>()->DoMatrixProductOf((double)beta, transC, *inputA->GetTensorView<double>(), transA, *inputB->GetTensorView<double>(), transB, (double)alpha);
+            WritableNativeTensorView<double>().DoMatrixProductOf((double)beta, transC, inputA->NativeTensorView<double>(), transA, inputB->NativeTensorView<double>(), transB, (double)alpha);
             break;
         default:
             LogicError("NDArrayView::MatrixProductInPlace: Unsupported DataType %s", DataTypeName(m_dataType));
@@ -399,25 +408,25 @@ namespace CNTK
     /*static*/ NDArrayViewPtr NDArrayView::MatrixProduct(bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank)
     {
         // shape inference
-        auto shapeA = inputA->Shape();
-        auto shapeB = inputB->Shape();
-        const bool isVec = shapeB.Rank() == 1;
-        if (isVec)
-            shapeB = NDShape({ shapeB[0], 1 });
-        const auto SwapDims = [](NDShape& shape, bool trans) 
-        {
-            if (shape.Rank() != 2)
-                LogicError("NDArrayView::MatrixProductInPlace: For now only true 2D matrices are supported, invalid shape '%S'", shape.AsString().c_str());
-            if (trans)
-                shape = NDShape({ shape[1], shape[0] });
-        };
-        SwapDims(shapeA, transA);
-        SwapDims(shapeB, transB);
-        auto shapeC = NDShape({ shapeA[0], shapeB[1] });
-        if (isVec && !transC && !transB) // TODO: get this right
-            shapeC = NDShape({ shapeC[0] });
-        else
-            SwapDims(shapeC, transC);
+        const auto& shapeA = inputA->Shape();
+        const auto& shapeB = inputB->Shape();
+        if (shapeA.Rank() != 2 && shapeA.Rank() != 1)
+            LogicError("NDArrayView::MatrixProductInPlace: For now only vectors and 2D matrices are supported, invalid shape '%S'", shapeA.AsString().c_str());
+        if (shapeB.Rank() != 2 && shapeB.Rank() != 1)
+            LogicError("NDArrayView::MatrixProductInPlace: For now only vectors and 2D matrices are supported, invalid shape '%S'", shapeB.AsString().c_str());
+        const auto innerA = transA ? shapeA[0] : shapeA[shapeA.Rank() - 1]; // inner (dot-product) dimension
+        const auto innerB = transB ? shapeB[shapeB.Rank() - 1] : shapeB[0];
+        if (innerA != innerB)
+            LogicError("NDArrayView::MatrixProductInPlace: Inner dimensions %s and %s don't match", (int)innerA, (int)innerB);
+        auto dimsC = std::vector<size_t>();  // TODO: use a different class here to avoid memory allocation?
+        // assemble the output shape from the non-inner dimensions. Note that vec^t * vec will end up with a scalar (rank 0)
+        if (shapeA.Rank() == 2)
+            dimsC.push_back(transA ? shapeA[1] : shapeA[0]);
+        if (shapeB.Rank() == 2)
+            dimsC.push_back(transB ? shapeB[0] : shapeB[1]);
+        if (transC && dimsC.size() == 2)
+            std::swap(dimsC[0], dimsC[1]); // reverse
+        const auto shapeC = NDShape(dimsC);
         // create result object; properties besides shape are inherited from input 0 for now
         NDArrayViewPtr result = MakeSharedObject<NDArrayView>(inputA->GetDataType(), inputA->GetStorageFormat(), shapeC, inputA->Device());
         // perform operation in-place on result object

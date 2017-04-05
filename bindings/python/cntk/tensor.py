@@ -277,13 +277,17 @@ class NDArrayViewOpsMixin(object):
         return self
 
     def __matmul__(self, other):
+        #shapeA = self.shape
+        #shapeB = other.shape
         if len(self.shape) == 0: # TODO: allow for scalar zero (initial_state)
             self1 = NDArrayView(shape=(other.shape[0]), data_type=other.dtype, device=other.device()) # reduce to scalar
             # BUGBUG: How to get the precision in the right way?
             # TODO: test case
             self1.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
             self = self1
-        return NDArrayViewOpsMixin._mat_prod(False, other, False, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
+        res = NDArrayViewOpsMixin._mat_prod(False, other, False, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
+        #shapeC = res.shape
+        return res
     dot = __matmul__
     def dot_transpose(self, other): # other gets transposed
         return NDArrayViewOpsMixin._mat_prod(False, other, True, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
@@ -309,17 +313,17 @@ class NDArrayViewOpsMixin(object):
         res = self.as_shape(new_shape)
         res.__class__ = self.__class__
         return res
-    def drop_axis(self, axis): # TODO: this is temporary; we should use begin_axis etc. in reshape() like CNTK V2
-        shape = self.shape
-        if axis < 0:
-            axis += len(shape)
-        assert shape[axis] == 1
-        new_shape = shape[0:axis] + shape[axis+1:]
-        return self.reshape(new_shape)
+    #def drop_axis(self, axis): # TODO: this is temporary; we should use begin_axis etc. in reshape() like CNTK V2
+    #    shape = self.shape
+    #    if axis < 0:
+    #        axis += len(shape)
+    #    assert shape[axis] == 1
+    #    new_shape = shape[0:axis] + shape[axis+1:]
+    #    return self.reshape(new_shape)
     def __setitem__(self, key, value):
-        slice = self[key]
+        slice = self.__getitem__(key, keep_singles=True)
         slice.numeric_operation_in_place(0.0, [value], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
-    def __getitem__(self, key):
+    def __getitem__(self, key, keep_singles=False):
         # BUGBUG: must implement IndexError to allow for loops
         shape = self.shape
         #print('key', key)
@@ -328,6 +332,7 @@ class NDArrayViewOpsMixin(object):
         #print('key', key)
         start_offsets = [0,] * len(shape)
         extents = list(shape)
+        dims_to_keep = [True for d in shape] # axes that get passed a single index get dropped as an axis in the result
         i_off = 0
 
         for i, s in enumerate(key):
@@ -347,12 +352,19 @@ class NDArrayViewOpsMixin(object):
                     end += shape[i]
                 start_offsets[i] = begin
                 extents[i]       = end - begin
+                dims_to_keep[i] = s.stop is not None
             else:
                 start_offsets[i] = s
                 extents[i]       = 1
+                dims_to_keep[i] = False # a single index: drop this dimension
         #print('start', start_offsets, 'extents', extents)
         res = self.slice_view(tuple(start_offsets), tuple(extents), self.is_read_only())
         res.__class__ = self.__class__
+        if not keep_singles and not all(dims_to_keep):
+            shape = res.shape
+            dims = ((dim,) * dims_to_keep[i] for i, dim in enumerate(shape))
+            shape = sum(dims, ())
+            res = res.reshape(shape)
         return res
     @staticmethod
     def splice(args, axis=-1): # negative axis will insert a new axis
