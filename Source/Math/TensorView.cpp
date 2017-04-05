@@ -76,7 +76,8 @@ static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N>
     // Trailing dimensions broadcast.
     // E.g. A(J) vs. B(J x T) will broadcast A(:) to all T columns.
     // To broadcast an A(T) to all J rows of B, use TensorShape editing to insert a dimension to get A(1,T).
-    size_t dims = 0;
+    // We require a minimum rank of 1 (rank 0 is a scalar), as some code may rely on it.
+    size_t dims = 1;
     for (size_t i = 0; i < N; i++)
         if (dims < shapes[i].GetRank())
             dims = shapes[i].GetRank();

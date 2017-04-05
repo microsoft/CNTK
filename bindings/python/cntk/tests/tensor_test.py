@@ -60,6 +60,7 @@ def test_ndarrayview_operators(device_id, precision):
 
     # binary ops
     test(lambda a, b: a + b, [x, y])
+    test(lambda a, b: a + b, [x, np.array(13)]) # scalar
     test(lambda a, b: a - b, [x, y])
     test(lambda a, b: a * b, [x, y])
     test(lambda a, b: a @ b, [y.reshape(1,2), x])
