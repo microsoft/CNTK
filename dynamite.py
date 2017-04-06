@@ -559,10 +559,19 @@ def dump_graph(v):
 def train_minibatch(criterion, *batch_args):
     # for now, manually do the batch loop
     print('batch of', len(batch_args[0]))
-    crit = 0
+    crits = []
     z = zip(*batch_args)
     for args in zip(*batch_args):
         ce, *_ = criterion(*args)
-        crit = plus(crit, ce)
+        crits.append(ce)
+    # sum up the ce values
+    # TODO: move the tree_reduce function out from here
+    f = plus
+    def tree_reduce(f, args):
+        n = len(args)
+        if   n > 2:  return f(tree_reduce(f, args[:n//2]),tree_reduce(f, args[n//2:]))
+        elif n == 2: return f(args[0],args[1])
+        else:        return args[0]
+    crit = tree_reduce(plus, crits)
     # the return value is not yet computed, but any access will trigger lazy computation
     return crit
