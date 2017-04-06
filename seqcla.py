@@ -123,7 +123,7 @@ def train(debug_output=False):
         # CNTK dynamite  --do this first before CNTK updates anything
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
         crit = dynamite.train_minibatch(dcriterion, *args)
-        print(crit.to_ndarray() / len(args[0]))
+        print(" " * 29, crit.to_ndarray() / len(args[0]))
         args = None  # deref; otherwise resize will fail
         #print('static', dmodel.__items__[0].E.data.to_ndarray())
         #print('dynamic', model.embed.E.value)

@@ -355,10 +355,13 @@ def eval(v):
         else:
             ready_ops[key].append(v)
 
+    num_evals = 0
+
     # execute all operations in op_batch as one CUDA operation
     # The data needs to be gathered first (an optimized version would make the
     # scatter lazy and avoid it if possible)
     def execute_batch(op_batch):
+        nonlocal num_evals
         # all ops are the same, so use the first as the reference
         v0 = op_batch[0]
         # sparse can not be properly batched for now
@@ -369,6 +372,7 @@ def eval(v):
             for v in op_batch:
                 v.data = v._compute()  # non-batched for now
                 v.computed = True
+                num_evals += 1
             return 
         # determine rank for new axis; we insert a new axis, and for that, all objects must use aligned indices
         def rank(input):
@@ -409,6 +413,7 @@ def eval(v):
         # now perform the operation batched
         v_batched.data = v_batched._compute()
         v_batched.computed = True
+        num_evals += 1
         #print('out', v_batched.data.shape)
         # and copy the results back
         for i, v in enumerate(op_batch):
@@ -460,8 +465,8 @@ def eval(v):
                     add_ready(p)
 
     # done
-    #print(ops_run, 'operations executed in', batches_run, 'batches')
-    #assert ops_run == expected_num_ops
+    print(ops_run, 'operations executed in', batches_run, 'batches, using an actual', num_evals, 'batched ops')
+    assert ops_run == expected_num_ops
     #for v in nodes:
     #    assert v.computed
 
