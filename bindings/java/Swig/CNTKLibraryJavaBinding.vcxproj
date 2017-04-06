@@ -65,7 +65,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>CNTKLibrary-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Cntk.Core-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>
@@ -106,7 +106,7 @@
       <FileType>Document</FileType>
       <Command>$(SolutionDir)bindings\java\Swig\generate-java-bindings.cmd $(SolutionDir)</Command>
       <Outputs>cntk_java_wrap.cxx; cntk_java_warp.h; $(SolutionDir)bindings\java\SwigProxyClasses\cntk.jar</Outputs>
-      <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)bindings\common\CNTKValueExtend.i;$(SolutionDir)bindings\common\CNTK_ExceptionHandling.i;$(SolutionDir)bindings\common\managed_language_basei;std_unordered_map.i</AdditionalInputs>
+      <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)bindings\common\CNTKValueExtend.i;$(SolutionDir)bindings\common\CNTK_ExceptionHandling.i;$(SolutionDir)bindings\common\managed_language_base.i;std_unordered_map.i</AdditionalInputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

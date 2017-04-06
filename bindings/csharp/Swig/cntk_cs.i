@@ -1,14 +1,54 @@
+%module(directors="1") Utils
+//%feature("autodoc", "1");
+
+%include <stl.i>
+%include <std_wstring.i>
+%include <std_vector.i>
+%include <std_map.i>
+%include <std_pair.i>
+%include <std_shared_ptr.i>
+%include <windows.i>
+%include <attribute.i>
 %include <arrays_csharp.i>
+#include <exception.i>
+
+// include the unordered_map.i.
 %include "std_unordered_map.i"
 
+%{
+    #include "CNTKLibrary.h"
+    #pragma warning(disable : 4100)
+%}
+
+%shared_ptr(CNTK::BackPropState);
+%shared_ptr(CNTK::Function);
+%shared_ptr(CNTK::CompositeFunction);
+%shared_ptr(CNTK::Value);
+%shared_ptr(CNTK::NDShape);
+%shared_ptr(CNTK::NDArrayView);
+%shared_ptr(CNTK::NDMask);
+%shared_ptr(std::vector<float>);
+
+%template(SizeTVectorVector) std::vector<std::vector<size_t>>;
+%template(FloatVectorVector) std::vector<std::vector<float>>;
+%template(DoubleVectorVector) std::vector<std::vector<double>>;
+
 SWIG_STD_VECTOR_ENHANCED(size_t)
+%template(SizeTVector) std::vector<size_t>;
 SWIG_STD_VECTOR_ENHANCED(double)
+%template(DoubleVector) std::vector<double>;
 SWIG_STD_VECTOR_ENHANCED(float)
+%template(FloatVector) std::vector<float>;
 SWIG_STD_VECTOR_ENHANCED(CNTK::Variable)
+%template(VariableVector) std::vector<CNTK::Variable>;
 SWIG_STD_VECTOR_ENHANCED(CNTK::Axis)
+%template(AxisVector) std::vector<CNTK::Axis>;
 SWIG_STD_VECTOR_ENHANCED(std::shared_ptr<CNTK::NDArrayView>)
+%template(NDArrayViewPtrVector) std::vector<std::shared_ptr<CNTK::NDArrayView>>;
 SWIG_STD_VECTOR_ENHANCED(bool)
+%template(BoolVector) std::vector<bool>;
 SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
+%template(DeviceDescriptorVector) std::vector<CNTK::DeviceDescriptor>;
 
 %include "managed_language_base.i"
 
