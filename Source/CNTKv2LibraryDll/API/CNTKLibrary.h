@@ -2666,7 +2666,7 @@ namespace CNTK
 
     private:
         template <typename ElementType>
-        static void AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLength);
+        static void AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLengthInCols);
 
         ///
         /// Copy the data stored in 'this' Value object to the buffer 'sequences' as a collection of variable length sequences.
