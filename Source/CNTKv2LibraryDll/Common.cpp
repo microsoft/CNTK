@@ -28,10 +28,34 @@ namespace CNTK
 {
     namespace Internal
     {
-        static std::atomic<unsigned long long> s_nextUniqueId(0);
+        static std::atomic_ullong s_nextUniqueId = ATOMIC_VAR_INIT(0);
         size_t NewUniqueId()
         {
             return s_nextUniqueId++;
+        }
+
+        static std::atomic_ullong s_currentRandomSeed = ATOMIC_VAR_INIT(0);
+
+        // This is used to generate a default seed for stateful nodes (dropout, and both
+        // flavors of random sample). As a result, in distributed environment, each worker 
+        // ends up having a different seed.
+        
+        size_t GenerateRandomSeed()
+        {
+            static size_t numWorkers = 1, rank = 0;
+            static bool initialized = false;
+            if (MPIWrapper::GetTotalNumberOfMPINodes() != 0 && !initialized) 
+            {
+                DistributedCommunicatorPtr communicator = MPICommunicator();
+                numWorkers = communicator->Workers().size();
+                rank = communicator->CurrentWorker().m_globalRank;
+
+                if (numWorkers < 1)
+                    numWorkers = 1;   
+            }
+
+            initialized = true;
+            return (numWorkers * s_currentRandomSeed++) + rank;
         }
 
         std::atomic<bool> s_reverseTensorShapesInErrorMessages(false);
@@ -402,6 +426,11 @@ namespace CNTK
             Microsoft::MSR::CNTK::TracingGPUMemoryAllocator::SetTraceLevel(traceLevel);
         }
 
+        void SetMathLibTraceLevel(int traceLevel)
+        {
+            Microsoft::MSR::CNTK::SetMathLibTraceLevel(traceLevel);
+        }
+
         void ForceDeterministicAlgorithms()
         {
             Microsoft::MSR::CNTK::Globals::ForceDeterministicAlgorithms();
@@ -432,6 +461,36 @@ namespace CNTK
         {
             return DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES;
         }
+    }
+
+    std::atomic<TraceLevel> s_traceLevel(TraceLevel::Warning);
+    void SetTraceLevel(TraceLevel value)
+    {
+        using namespace Internal;
+
+        auto previousValue = s_traceLevel.exchange(value);
+
+        if (previousValue == value)
+            return;
+
+        if (value == TraceLevel::Info)
+        {
+            // V1 does not have an intermediate trace level,
+            // the logging is either disabled (trace level = 0)
+            // or enabled (trace level != 0);
+            SetComputationNetworkTraceLevel(int(value));
+            SetMathLibTraceLevel(int(value));
+        }
+        else if (previousValue == TraceLevel::Info)
+        {
+            SetComputationNetworkTraceLevel(0);
+            SetMathLibTraceLevel(0);
+        }
+    }
+
+    TraceLevel GetTraceLevel()
+    {
+        return s_traceLevel.load();
     }
 
     /*static*/ const NDShape NDShape::Unknown(1, SentinelDimValueForUnknownShape);

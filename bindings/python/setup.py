@@ -175,7 +175,7 @@ if IS_PY2:
     cntk_install_requires.append('enum34>=1.1.6')
 
 setup(name="cntk",
-      version="2.0.beta15.0",
+      version="2.0rc1",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

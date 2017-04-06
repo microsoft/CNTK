@@ -110,7 +110,7 @@ namespace CNTK
         Dictionary SerializeBlockComposite() const;
 
         virtual Dictionary Serialize() const override;
-        
+
         virtual size_t CurrentVersion() const override { return s_serializationVersion; }
 
         static FunctionPtr DeserializeBlockComposite(const Dictionary& dict,
@@ -238,11 +238,25 @@ namespace CNTK
             return inputs;
         }
 
-        // If the network is already created, copy internal state over from the functions in the graph into the underlying network.
-        void UpdateInternalNetworkState();
 
-        // Copy state info from source function graph into' this' function graph.
+        // Copy the internal state from the network into the function graph.
+        void UpdateInternalState() const;
+
+        // Generate a dictionary representing the internal (local) state of the function graph.
+        Dictionary GetInternalState() const;
+
+        // Update the internal state using the provided dictionary. 
+        // If the network is already created, directly update its state. Otherwise, copy the state from the 
+        // dictionary into the function graph.
+        void SetInternalState(const Dictionary& state);
+
+        // Copy state info from source function graph into 'this' function graph.
+        // Both graphs must be equivalent.
         void CopyState(const CompositeFunction& source);
+
+        // This function is only needed for backwards compatibility to support deserializing composite funcitions that
+        // stored the internal state inside a dedicated value in the dictionary.
+        static void RestoreStatefulFunctions(size_t version, const Dictionary& dict, std::unordered_set<FunctionPtr> PrimitiveFunctions);
 
         static Variable GetMappingForNoOpOutput(const Variable& variable, bool recursive = false);
         static Variable GetMappingVariable(const Variable& variable, bool recursive = false);
@@ -328,6 +342,7 @@ namespace CNTK
         // Version history:
         // 1 -- initial version.
         // 2 -- add support for stateful functions (with corresponding nodes inheriting from RngUser).
-        static const size_t s_serializationVersion = 2;
+        // 3 -- store internal function state directly in the attributes dictionary.
+        static const size_t s_serializationVersion = 3;
     };
 }

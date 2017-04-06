@@ -121,3 +121,17 @@ def test_set_excluded_devices():
   assert not try_set_default_device(cpu(), False)
   set_excluded_devices([])
   assert try_set_default_device(cpu(), False)
+
+def test_setting_trace_level():
+  from cntk.logging import TraceLevel, set_trace_level, get_trace_level
+
+  value = get_trace_level();
+  assert value == TraceLevel.Warning
+  
+  for level in [TraceLevel.Info, TraceLevel.Error, TraceLevel.Warning]:
+    set_trace_level(level)
+    value = get_trace_level();
+    assert value == level
+    set_trace_level(level.value)
+    value = get_trace_level();
+    assert value == level

@@ -239,6 +239,8 @@ namespace CNTK
 
         CNTK_API size_t NewUniqueId();
 
+        CNTK_API size_t GenerateRandomSeed();
+
         // Internal hooks for testing and higher-level bindings
         // These should not be directly called by C++ API users
         CNTK_API void EnableReversingTensorShapesInErrorMessages();
@@ -260,6 +262,8 @@ namespace CNTK
         bool GetComputationNetworkTrackGapNans();
 
         CNTK_API void SetGPUMemoryAllocationTraceLevel(int traceLevel);
+
+        CNTK_API void SetMathLibTraceLevel(int traceLevel);
 
         CNTK_API void ForceDeterministicAlgorithms();
         CNTK_API bool ShouldForceDeterministicAlgorithms();
