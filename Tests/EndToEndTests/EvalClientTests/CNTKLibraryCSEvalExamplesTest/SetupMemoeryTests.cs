@@ -18,6 +18,14 @@ namespace CNTKLibraryCSEvalExamples
             {
                 Console.WriteLine("\n===== Setup memory tests using Resnet Model =====");
 
+                var data = new float[10];
+                var shape = new NDShape(1, 10);
+                var n1 = new NDArrayView(shape, data, DeviceDescriptor.CPUDevice);
+                var n2 = new NDArrayView(shape, data, DeviceDescriptor.GPUDevice(0));
+                //var n2clone = n2.DeepClone(DeviceDescriptor.CPUDevice);
+                var n1gpu = n1.DeepClone(DeviceDescriptor.GPUDevice(0));
+                var n1clone = n1gpu.DeepClone(DeviceDescriptor.CPUDevice);
+
                 var deviceList = DeviceDescriptor.AllDevices();
                 MemoryTests.Device0 = deviceList[0];
 
