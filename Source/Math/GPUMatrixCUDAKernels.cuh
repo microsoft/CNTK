@@ -1524,7 +1524,7 @@ __global__ void _fsadagrad4BlockSparseCol(CUDA_LONG size,
 
 template <class ElemType>
 __global__ void _rmsprop_init(
-    ElemType* avars, ElemType* signs, ElemType* steps,
+    ElemType* avars,
     ElemType* curr_grad,
     const CUDA_LONG N)
 {
@@ -1534,14 +1534,12 @@ __global__ void _rmsprop_init(
 
     ElemType tmp = curr_grad[i];
     avars[i] = tmp * tmp;
-    signs[i] = ElemType(0.0);
-    steps[i] = ElemType(0.02);
 }
 
 template <class ElemType>
 __global__ void _rmsprop_init4BlockSparseCol(
-    ElemType* avars, ElemType* signs, ElemType* steps,
-    ElemType* curr_grad, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+    ElemType* avars, ElemType* curr_grad, 
+    const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
     const CUDA_LONG N)
 {
     CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -1551,72 +1549,38 @@ __global__ void _rmsprop_init4BlockSparseCol(
     ElemType tmp = _getvalue4BlockSparseCol(curr_grad, colOrRow2blockId, len, i);
 
     avars[i] = tmp * tmp;
-    signs[i] = ElemType(0.0);
-    steps[i] = ElemType(0.02);
 }
 
 template <class ElemType>
 __global__ void _rmsprop(
-    ElemType* avars, ElemType* signs, ElemType* steps,
+    ElemType* avars, 
+    ElemType* moms,
+    ElemType* val,
     ElemType* curr_grad,
     const CUDA_LONG N,
-    ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN,
-    ElemType floor,
-    ElemType* upd_gpu,
-    ElemType* multipliers)
+    ElemType learnRatePerSample,
+    ElemType momentum,
+    ElemType RMS_GAMMA,
+    ElemType floor)
 {
     CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i >= N)
         return;
 
     avars[i] = RMS_GAMMA * avars[i] + (ElemType(1.0) - RMS_GAMMA) * (curr_grad[i] * curr_grad[i]);
-
-    // // grad sign base 3: 0->neg, 1->zero, 2->pos
-    // const int grad_sign = 1 + (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
-
-    // // signs[i] contains three consecutive grad_sign
-    // signs[i]  = 3*(int(signs[i]) % 9) + grad_sign;
-
-    // // update according to the following table:
-    // // (!pos,!pos,!pos) or (!neg,!neg,!neg): RMS_WGT_INC
-    // // (!neg,!neg,neg) or (!pos,!pos,pos): RMS_WGT_DEC
-    // // otherwise: no action
-
-    // switch(int(upd_gpu[int(signs[i])]))
-    // {
-    // case 0:
-    //    steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
-    //    break;
-    // case 2:
-    //    steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
-    //    break;
-    // }
-    // curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
-
-    const int grad_sign = (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
-
-    if (signs[i] * grad_sign > 0)
-        steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
-    else
-        steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
-
-    ElemType temp = steps[i] / sqrt(avars[i] + floor);
-    curr_grad[i] *= temp;
-    signs[i] = grad_sign;
-
-    if (multipliers != nullptr)
-        multipliers[i] = temp;
+    moms[i] = moms[i] * momentum + (curr_grad[i] * learnRatePerSample) / (sqrt(avars[i] + floor));
+    val[i] -= moms[i];
 }
 
 template <class ElemType>
 __global__ void _rmsprop4BlockSparseCol(
-    ElemType* avars, ElemType* signs, ElemType* steps,
+    ElemType* avars, ElemType* moms, ElemType* val,
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
     const CUDA_LONG N,
-    ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN,
-    ElemType floor,
-    ElemType* upd_gpu,
-    ElemType* multipliers)
+    ElemType learnRatePerSample,
+    ElemType momentum,
+    ElemType RMS_GAMMA,
+    ElemType floor)
 {
     CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i >= N)
@@ -1625,42 +1589,8 @@ __global__ void _rmsprop4BlockSparseCol(
     ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, i);
 
     avars[i] = RMS_GAMMA * avars[i] + (ElemType(1.0) - RMS_GAMMA) * (g * g);
-
-    // // grad sign base 3: 0->neg, 1->zero, 2->pos
-    // const int grad_sign = 1 + (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
-
-    // // signs[i] contains three consecutive grad_sign
-    // signs[i]  = 3*(int(signs[i]) % 9) + grad_sign;
-
-    // // update according to the following table:
-    // // (!pos,!pos,!pos) or (!neg,!neg,!neg): RMS_WGT_INC
-    // // (!neg,!neg,neg) or (!pos,!pos,pos): RMS_WGT_DEC
-    // // otherwise: no action
-
-    // switch(int(upd_gpu[int(signs[i])]))
-    // {
-    // case 0:
-    //    steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
-    //    break;
-    // case 2:
-    //    steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
-    //    break;
-    // }
-    // curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
-
-    const int grad_sign = (ElemType(0) < g) - (g < ElemType(0));
-
-    if (signs[i] * grad_sign > 0)
-        steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
-    else
-        steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
-
-    ElemType temp = steps[i] / sqrt(avars[i] + floor);
-    _scalevalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, i, temp);
-    signs[i] = grad_sign;
-
-    if (multipliers != nullptr)
-        multipliers[i] = temp;
+    moms[i] = moms[i] * momentum + (g * learnRatePerSample) / (sqrt(avars[i] + floor));
+    val[i] -= moms[i];
 }
 
 template <class ElemType>

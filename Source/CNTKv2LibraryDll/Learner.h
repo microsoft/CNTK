@@ -284,12 +284,14 @@ namespace CNTK
         MomentumSchedule m_varianceMomentumSchedule;
     };
 
-    class LearnerRMSProp : public LearnerBase
+    class LearnerRMSProp : public LearnerMomentumSGD
     {
     public:
 
         LearnerRMSProp(const std::vector<Parameter>& parameters,
                        const LearningRateSchedule& learningRateSchedule,
+                       const MomentumSchedule& momentumSchedule,
+                       bool unitGain,
                        double gamma, double inc, double dec, double max, double min,
                        bool needAveMultiplier,
                        AdditionalLearningOptions additionalOptions);

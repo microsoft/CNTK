@@ -2319,10 +2319,8 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {
-        double aveMultiplier = smoothedGradientValues.RmsProp(gradientValues, (ElemType) m_rpi.gamma,
-                                                        (ElemType) m_rpi.inc, (ElemType) m_rpi.max,
-                                                        (ElemType) m_rpi.dec, (ElemType) m_rpi.min, needAveMultiplier);
-        Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
+        smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learnRatePerSample, 
+                                         momentum, (ElemType) m_rpi.gamma, needAveMultiplier);
     }
 
     if (noiseStd > 0)

@@ -1452,23 +1452,21 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
 }
 
 template <class ElemType>
-ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
-                                      ElemType RMS_GAMMA,
-                                      ElemType RMS_WGT_INC,
-                                      ElemType RMS_WGT_MAX,
-                                      ElemType RMS_WGT_DEC,
-                                      ElemType RMS_WGT_MIN,
-                                      const bool needAveMultiplier)
+void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
+                                  GPUMatrix<ElemType>& functionValues, 
+                                  ElemType learnRatePerSample,
+                                  ElemType momentum,
+                                  ElemType RMS_GAMMA,
+                                  const bool needAveMultiplier)
 {
-    const ElemType floor = 1e-6f;
-    static ElemType* upd_gpu = (ElemType*) 0;
+    const ElemType floor = 1.0;
+    ElemType* curr_grad = gradients.Data();
+    ElemType* val = functionValues.Data();
 
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (GetNumElements() + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
 
-    size_t numColsNeeded = gradients.GetNumCols() * 3;
-    if (needAveMultiplier)
-        numColsNeeded += gradients.GetNumCols();
+    size_t numColsNeeded = gradients.GetNumCols() * 2;
 
     if (IsEmpty() || GetNumCols() < numColsNeeded)
     {
@@ -1476,60 +1474,17 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
         SetValue(0.0);
 
         ElemType* avars = Data();         // accumulated variances for RMS scaling
-        ElemType* signs = Data() + n;     // sign of previous gradient
-        ElemType* steps = Data() + 2 * n; // current step size
-        // Data()+3*n is temp memory used to store multipliers, no need to initialize
 
-        _rmsprop_init<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, signs, steps, gradients.Data(), n);
+        _rmsprop_init<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, gradients.Data(), n);
     }
     assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == numColsNeeded);
 
     ElemType* avars = Data();         // accumulated variances for RMS scaling
-    ElemType* signs = Data() + n;     // sign of previous gradient
-    ElemType* steps = Data() + 2 * n; // current step size
+    ElemType* moms = Data() + n;
 
-    ElemType* multipliers = nullptr;
-    if (needAveMultiplier)
-        multipliers = Data() + 3 * n; // temp memory used to store multipliers,
-
-    if (!upd_gpu)
-    {
-        const ElemType upd[] = {
-            2, 2, 0,
-            2, 2, 0,
-            1, 1, 1,
-            2, 2, 0,
-            1, 2, 1,
-            0, 2, 2,
-            1, 1, 1,
-            0, 2, 2,
-            0, 2, 2,
-        };
-
-        upd_gpu = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), 27);
-        CUDA_CALL(cudaMemcpy(upd_gpu, upd, sizeof(ElemType) * _countof(upd), cudaMemcpyHostToDevice));
-    }
-
-    _rmsprop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, signs, steps, gradients.Data(), n,
-                                                                       RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN,
-                                                                       floor, upd_gpu, multipliers);
-
-    if (!needAveMultiplier)
-        return 1;
-
-    cublasHandle_t cuHandle = GetCublasHandle(GetComputeDeviceId());
-    if (sizeof(ElemType) == sizeof(float))
-    {
-        float aveMultiplier = 0;
-        CUBLAS_CALL(cublasSasum(cuHandle, (CUDA_LONG) n, reinterpret_cast<float*>(multipliers), 1, &aveMultiplier));
-        return aveMultiplier / n;
-    }
-    else
-    {
-        double aveMultiplier = 0;
-        CUBLAS_CALL(cublasDasum(cuHandle, (CUDA_LONG) n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
-        return (ElemType) aveMultiplier / n;
-    }
+    _rmsprop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, moms, val, curr_grad, n,
+                                                                       learnRatePerSample, momentum, RMS_GAMMA,
+                                                                       floor);
 }
 
 template <class ElemType>

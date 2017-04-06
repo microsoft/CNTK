@@ -4299,6 +4299,8 @@ namespace CNTK
     ///
     CNTK_API LearnerPtr RMSPropLearner(const std::vector<Parameter>& parameters,
                                        const LearningRateSchedule& learningRateSchedule,
+                                       const MomentumSchedule& momentumSchedule,
+                                       bool unitGain,
                                        double gamma,
                                        double inc,
                                        double dec,

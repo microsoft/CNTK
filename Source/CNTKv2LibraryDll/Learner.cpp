@@ -647,10 +647,12 @@ namespace CNTK
 
     LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters,
                                    const LearningRateSchedule& learningRateSchedule,
+                                   const MomentumSchedule& momentumSchedule,
+                                   bool unitGain,
                                    double gamma, double inc, double dec, double max, double min,
                                    bool needAveMultiplier,
                                    AdditionalLearningOptions additionalOptions)
-                                   : LearnerBase(parameters, learningRateSchedule, additionalOptions, /*allocateSmoothGradients*/ false),
+                                   : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule, unitGain, additionalOptions, /*allocateSmoothGradients*/ false),
                                    m_gamma(gamma), m_inc(inc), m_dec(dec), m_max(max), m_min(min), m_needAveMultiplier(needAveMultiplier)
     {
         for (const auto& parameter : parameters)
@@ -682,15 +684,14 @@ namespace CNTK
         GET_WRITABLE_MATRICES;
 
         const auto learningRate = LearningRate(trainingSampleCount);
+        const auto momentum = MomentumValueForMB(trainingSampleCount);
 
-        const auto aveMultiplier = smoothedGradientMatrix->RmsProp(*gradientMatrix,
-                                                                   ElementType(m_gamma),
-                                                                   ElementType(m_inc),
-                                                                   ElementType(m_max),
-                                                                   ElementType(m_dec),
-                                                                   ElementType(m_min),
-                                                                   m_needAveMultiplier);
-        Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
+        smoothedGradientMatrix->RmsPropUpdate(*gradientMatrix,
+                                              *parameterMatrix,
+                                              learningRate,
+                                              momentum,
+                                              ElementType(m_gamma),
+                                              m_needAveMultiplier);
     }
 
     // Explicit template instantiations
@@ -752,11 +753,13 @@ namespace CNTK
 
     LearnerPtr RMSPropLearner(const vector<Parameter>& parameters,
                               const LearningRateSchedule& learningRateSchedule,
+                              const MomentumSchedule& momentumSchedule,
+                              bool unitGain, /*=true*/
                               double gamma, double inc, double dec, double max, double min,
                               bool needAveMultiplier /*= true*/,
                               AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        return MakeSharedObject<LearnerRMSProp>(parameters, learningRateSchedule, gamma, inc, dec, max, min, needAveMultiplier, additionalOptions);
+        return MakeSharedObject<LearnerRMSProp>(parameters, learningRateSchedule, momentumSchedule, unitGain, gamma, inc, dec, max, min, needAveMultiplier, additionalOptions);
     }
 
     LearnerPtr AdaDeltaLearner(const vector<Parameter>& parameters,

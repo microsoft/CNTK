@@ -1768,21 +1768,20 @@ void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>&
 }
 
 template <class ElemType>
-ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
+void Matrix<ElemType>::RmsPropUpdate(Matrix<ElemType>& gradients, 
+                                   Matrix<ElemType>& functionValues, 
+                                   const double learnRatePerSample,
+                                   const double momentum,
                                    ElemType RMS_GAMMA,
-                                   ElemType RMS_WGT_INC,
-                                   ElemType RMS_WGT_MAX,
-                                   ElemType RMS_WGT_DEC,
-                                   ElemType RMS_WGT_MIN,
                                    const bool needAveMultiplier)
 {
-    DecideAndMoveToRightDevice(*this, gradients);
+    DecideAndMoveToRightDevice(*this, gradients, functionValues);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
-        { return m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(CPU); },
-        { return m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(GPU); },
+        { m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, (ElemType)learnRatePerSample, (ElemType)momentum, RMS_GAMMA, needAveMultiplier); SetDataLocation(CPU); },
+        { m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learnRatePerSample, (ElemType)momentum, RMS_GAMMA, needAveMultiplier); SetDataLocation(GPU); },
         { NOT_IMPLEMENTED; },
-        { return gradients.m_GPUSparseMatrix->RmsProp(*m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(GPU); });
+        { gradients.m_GPUSparseMatrix->RmsProp(*m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learnRatePerSample, (ElemType)momentum, RMS_GAMMA, needAveMultiplier); SetDataLocation(GPU); });
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 
