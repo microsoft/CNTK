@@ -628,8 +628,8 @@ __global__ void _stochasticbinaryForward(const ElemType* a, ElemType* b, float* 
 		return;
 	ElemType exp_tmp = expf(-2.0 * a[id] * annealSlope);
     ElemType tanhx = (1 - exp_tmp) / (1 + exp_tmp);
-	b[id] = (rands[id] * 2 - 1) < tanhx ? 1 : -1;
-    //b[id] = 1;
+	//b[id] = (rands[id] * 2 - 1) < tanhx ? 1 : -1;
+    b[id] = tanhx < 0 ? -1 : 1;
 }
 
 template <class ElemType>
