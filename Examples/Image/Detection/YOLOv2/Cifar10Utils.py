@@ -5,22 +5,16 @@
 # ==============================================================================
 
 from __future__ import print_function
-import os
-import math
-import numpy as np
-import cntk
-import _cntk_py
+
 import cntk.io.transforms as xforms
 
-from cntk.layers import Convolution2D, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense, default_options, \
-    identity, Sequential, For
+from cntk.layers import identity
 from cntk.layers.typing import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
 from cntk import Trainer
 from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
 from cntk import cross_entropy_with_softmax, classification_error, relu
 from cntk.ops import Function
-from cntk.debugging import set_computation_network_trace_level
 from cntk.logging import *
 
 ########################
@@ -29,11 +23,11 @@ from cntk.logging import *
 
 # paths (are relative to current python file)
 abs_path = os.path.dirname(os.path.abspath(__file__))
-data_path = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
+data_path = os.path.join(abs_path, "..", "..", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
 
 # model dimensions
-image_height = 32*5
+image_height = 32*5 #Darknet19 scales input image down over all by a factor of 32. Furthermore it needs at least a 3x3 shape for the last conv layer. So 32*3 is requiered at least.
 image_width = 32*5
 num_channels = 3  # RGB
 num_classes = 10
@@ -88,7 +82,7 @@ def create_criterion_function(model, normalize=identity):
 
 
 ########################
-# train action  #
+# train action         #
 ########################
 
 def train_model(reader, reader_test, model, epoch_size=50000, max_epochs=80):
