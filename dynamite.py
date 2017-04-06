@@ -393,18 +393,38 @@ def eval(v):
         # create a new node for batching each input
         num_inputs = len(v0.inputs)
         num_batched_ops = len(op_batch)
-        def splice_inputs(args, rank):
-            return cntk.NDArrayView.splice(args, axis=rank - new_rank)
-        batched_inputs = tuple(Variable((num_batched_ops,) + (1,) * (new_rank - ranks[i] - 1) + (inp_i_0.shape if isinstance(inp_i_0, (Variable, np.ndarray)) else ()),
-                                        lambda *args: splice_inputs(args, ranks[i]),
-                                        #lambda *args: cntk.NDArrayView.splice(args, axis=ranks[i] - new_rank),
-                                        tuple(v.inputs[i] for v in op_batch))
+        #def splice_inputs(args, rank):
+        #    nonlocal num_gathers
+        #    arg0 = args[0]
+        #    if all(arg is arg0 for arg in args):
+        #        return arg0  # use the object itself, assuming broadcasting
+        #    return cntk.NDArrayView.splice(args, axis=rank - new_rank)
+        def make_batch(i, inp_i_0):
+            # check whether all inputs are the same (e.g. add a bias)--then don't batch
+            args = tuple(v.inputs[i] for v in op_batch)
+            arg0 = args[0]
+            padded_shape = (1,) * (new_rank - ranks[i] - 1) + (inp_i_0.shape if isinstance(inp_i_0, (Variable, np.ndarray)) else ())
+            if all(arg is arg0 for arg in args):
+                # use the object itself, assuming broadcasting
+                return Variable((1,) + padded_shape,
+                                #lambda *args: splice_inputs(args, ranks[i]),
+                                lambda arg: cntk.NDArrayView.reshape(arg, (1,) + padded_shape),
+                                [arg0])
+            else:
+                # need to do actual splice
+                nonlocal num_gathers
+                num_gathers += 1
+                return Variable((num_batched_ops,) + padded_shape,
+                                #lambda *args: splice_inputs(args, ranks[i]),
+                                lambda *args: cntk.NDArrayView.splice(args, axis=ranks[i] - new_rank),
+                                args)
+        batched_inputs = tuple(make_batch(i, inp_i_0)
                                for i, inp_i_0 in enumerate(v0.inputs))
         for batched_input in batched_inputs: # and compute them
-            batched_input.data = batched_input._compute()
-            batched_input.computed = True
-            num_gathers += 1
-            #print('out', batched_input.data.shape)
+            #if isinstance(batched_input, Variable) and not batched_input.computed: # (if already computed then no gather was necessary)
+                batched_input.data = batched_input._compute()
+                batched_input.computed = True
+                #print('out', batched_input.data.shape)
         # create a new node for the batched op
         shape_batched = (num_batched_ops,) + v0.shape
         v_batched = Variable(shape_batched, v0.op, batched_inputs)
@@ -417,6 +437,7 @@ def eval(v):
         for i, v in enumerate(op_batch):
             v.data = v_batched.data[i]
             v.computed = True
+            v.spliced_from = (v_batched, i) # remember that this was spliced
 
     # initialization
     #  - determine set of consumers for each node
