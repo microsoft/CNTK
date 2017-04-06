@@ -346,3 +346,96 @@
 
 // Exception handling
 %include "CNTK_ExceptionHandling.i"
+
+//DeviceDescriptor
+%rename (GetAllDevices) CNTK::DeviceDescriptor::AllDevices;
+%rename (GetCPUDevice) CNTK::DeviceDescriptor::CPUDevice;
+%rename (GetDeviceType) CNTK::DeviceDescriptor::Type;
+%rename (GetId) CNTK::DeviceDescriptor::Id;
+%rename (_SetExcludedDevices) CNTK::DeviceDescriptor::SetExcludedDevices;
+%rename (AreEqualDeviceDescriptor) CNTK::operator==(const DeviceDescriptor& left, const DeviceDescriptor& right);
+
+//Axis
+%rename (GetName) CNTK::Axis::Name;
+%rename (IsOrderedAxis) CNTK::Axis::IsOrdered;
+%rename (AreEqualAxis) CNTK::operator==(const Axis& first, const Axis& second);
+%ignore_function CNTK::Axis::DefaultDynamicAxis();
+%ignore_function CNTK::Axis::OperandSequenceAxis();
+%ignore_function CNTK::Axis::DefaultBatchAxis();
+%ignore_function CNTK::Axis::AllStaticAxes();
+%ignore_function CNTK::Axis::AllAxes();
+%ignore_function CNTK::Axis::DefaultInputVariableDynamicAxes();
+%ignore_function CNTK::Axis::UnknownDynamicAxes();
+
+//Function
+// Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
+%ignore CNTK::Function::LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice= DeviceDescriptor::UseDefaultDevice());
+%ignore CNTK::Function::BlockArgumentsMapping;
+%rename (GetName) CNTK::Function::Name;
+%rename (GetUid) CNTK::Function::Uid;
+%rename (GetRootFunction) CNTK::Function::RootFunction;
+%rename (GetInputs) CNTK::Function::Inputs;
+%rename (GetOutput) CNTK::Function::Output;
+%rename (GetOutputs) CNTK::Function::Outputs;
+%rename (GetArguments) CNTK::Function::Arguments;
+%rename (GetOpName) CNTK::Function::OpName;
+%rename (_Clone) CNTK::Function::Clone;
+%rename (_FindAllWithName) CNTK::Function::FindAllWithName;
+%rename (_IsComposite) CNTK::Function::IsComposite;
+%rename (_IsPrimitive) CNTK::Function::IsPrimitive;
+%rename (_IsBlock) CNTK::Function::IsBlock;
+
+// Customize type mapping for modelBuffer, used by LoadModel
+%apply char* INPUT { char* modelBuffer }
+%typemap(ctype) (char* modelBuffer) "char*"
+%typemap(imtype) (char* modelBuffer) "byte[]"
+%typemap(cstype) (char* modelBuffer) "byte[]"
+
+//Variable
+%ignore CNTK::Variable::Variable;
+%rename ("%s") CNTK::Variable::Variable(const FunctionPtr& function);
+%rename (GetShape) CNTK::Variable::Shape;
+%rename (GetName) CNTK::Variable::Name;
+%rename (GetVariableKind) CNTK::Variable::Kind;
+%rename (GetDynamicAxes) CNTK::Variable::DynamicAxes;
+%rename (_IsSparse) CNTK::Variable::IsSparse;
+%rename (_IsInput) CNTK::Variable::IsInput;
+%rename (_IsOutput) CNTK::Variable::IsOutput;
+%rename (_IsParameter) CNTK::Variable::IsParameter;
+%rename (_IsConstant) CNTK::Variable::IsConstant;
+%rename (_IsPlaceholder) CNTK::Variable::IsPlaceholder;
+%rename (GetOwner) CNTK::Variable::Owner;
+%rename (AreEqualVariable) CNTK::operator==(const Variable& first, const Variable& second);
+
+//NDShape
+%rename (GetDimensions) CNTK::NDShape::Dimensions;
+%rename (GetRank) CNTK::NDShape::Rank;
+%rename (GetTotalSize) CNTK::NDShape::TotalSize;
+%rename (AreEqualShape) CNTK::operator==(const NDShape& first, const NDShape& second);
+%rename (_IsUnknown) CNTK::NDShape::IsUnknown;
+%rename (_HasInferredDimension) CNTK::NDShape::HasInferredDimension;
+
+%ignore CNTK::NDShape::NDShape(const std::initializer_list<size_t>& dimensions);
+%ignore CNTK::NDShape::InferredDimension;
+
+//NDMask
+// Todo: add correct typemap as they might be useful for C# in future.
+%ignore_function CNTK::NDMask::DataBuffer;
+%rename (GetMaskedCount) CNTK::NDMask::MaskedCount;
+%rename (GetDevice) CNTK::NDMask::Device;
+%rename (GetShape) CNTK::NDMask::Shape;
+%rename (_InvalidateSection) CNTK::NDMask::InvalidateSection;
+%rename (_MarkSequenceBegin) CNTK::NDMask::MarkSequenceBegin;
+%rename (_InvalidateSection) CNTK::NDMask::InvalidateSection;
+
+//Value
+%apply int INPUT[]  { int *colStarts }
+%apply int INPUT[]  { int *rowIndices }
+%apply float INPUT[]  { float *nonZeroValues }
+%apply double INPUT[]  { double *nonZeroValues }
+
+%rename (GetDevice) CNTK::Value::Device;
+%rename (GetShape) CNTK::Value::Shape;
+%rename (_IsSparse) CNTK::Value::IsSparse;
+%rename (_IsReadOnly) CNTK::Value::IsReadOnly;
+%rename (_MaskedCount) CNTK::Value::MaskedCount;

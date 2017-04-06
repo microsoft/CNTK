@@ -4,13 +4,6 @@
 %include "std_unordered_map.i"
 %include "managed_language_base.i"
 
-
-%rename (GetAllDevices) CNTK::DeviceDescriptor::AllDevices;
-%rename (GetCPUDevice) CNTK::DeviceDescriptor::CPUDevice;
-%rename (GetDeviceType) CNTK::DeviceDescriptor::Type;
-%rename (GetId) CNTK::DeviceDescriptor::Id;
-%rename (AreEqualDeviceDescriptor) CNTK::operator==(const DeviceDescriptor& left, const DeviceDescriptor& right);
-
 %typemap(javacode) CNTK::DeviceDescriptor %{
 
     public java.util.ArrayList<DeviceDescriptor> getAllDevices() {
@@ -42,10 +35,6 @@
     }
 %}
 
-%rename (GetName) CNTK::Axis::Name;
-%rename (IsOrderedAxis) CNTK::Axis::IsOrdered;
-%rename (AreEqualAxis) CNTK::operator==(const Axis& first, const Axis& second);
-
 %typemap(javacode) CNTK::Axis %{
     @Override
     public boolean equals(Object o) {
@@ -70,18 +59,6 @@
         }
     }
 %}
-
-%rename (GetName) CNTK::Function::Name;
-%rename (GetUid) CNTK::Function::Uid;
-%rename (GetRootFunction) CNTK::Function::RootFunction;
-%rename (GetInputs) CNTK::Function::Inputs;
-%rename (GetOutput) CNTK::Function::Output;
-%rename (GetOutputs) CNTK::Function::Outputs;
-%rename (GetArguments) CNTK::Function::Arguments;
-%rename (GetOpName) CNTK::Function::OpName;
-%rename (_IsComposite) CNTK::Function::IsComposite;
-%rename (_IsPrimitive) CNTK::Function::IsPrimitive;
-%rename (_IsBlock) CNTK::Function::IsBlock;
 
 %typemap(javacode) CNTK::Function %{
 
@@ -145,18 +122,6 @@
     }*/
 %}
 
-%rename (GetShape) CNTK::Variable::Shape;
-%rename (GetName) CNTK::Variable::Name;
-%rename (GetVariableKind) CNTK::Variable::Kind;
-%rename (GetDynamicAxes) CNTK::Variable::DynamicAxes;
-%rename (_IsSparse) CNTK::Variable::IsSparse;
-%rename (_IsInput) CNTK::Variable::IsInput;
-%rename (_IsOutput) CNTK::Variable::IsOutput;
-%rename (_IsParameter) CNTK::Variable::IsParameter;
-%rename (_IsConstant) CNTK::Variable::IsConstant;
-%rename (_IsPlaceholder) CNTK::Variable::IsPlaceholder;
-%rename (GetOwner) CNTK::Variable::Owner;
-%rename (AreEqualVariable) CNTK::operator==(const Variable& first, const Variable& second);
 
 %typemap(javacode) CNTK::Variable %{
 
@@ -181,13 +146,6 @@
     }*/
 
 %}
-
-%rename (GetDimensions) CNTK::NDShape::Dimensions;
-%rename (GetRank) CNTK::NDShape::Rank;
-%rename (GetTotalSize) CNTK::NDShape::TotalSize;
-%rename (AreEqualShape) CNTK::operator==(const NDShape& first, const NDShape& second);
-%rename (_IsUnknown) CNTK::NDShape::IsUnknown;
-%rename (_HasInferredDimension) CNTK::NDShape::HasInferredDimension;
 
 %typemap(javacode) CNTK::NDShape %{
 
@@ -219,12 +177,6 @@
     }
 
 %}
-
-%rename (GetDevice) CNTK::Value::Device;
-%rename (GetShape) CNTK::Value::Shape;
-%rename (_IsSparse) CNTK::Value::IsSparse;
-%rename (_IsReadOnly) CNTK::Value::IsReadOnly;
-%rename (_MaskedCount) CNTK::Value::MaskedCount;
 
 %typemap(javacode) CNTK::Value %{
 /*
