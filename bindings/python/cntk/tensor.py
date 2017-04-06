@@ -369,7 +369,7 @@ class NDArrayViewOpsMixin(object):
     def splice(args, axis=-1): # negative axis will insert a new axis
         arg0 = args[0]  # for now assume that all share the same shape; use first for reference
         shape = arg0.shape
-        print(shape, arg0)
+        #print(shape, arg0)
         # create new axis if needed. We can reshape the input to this
         if axis < 0:
             shape = (1,) * (-axis) + shape
@@ -384,7 +384,7 @@ class NDArrayViewOpsMixin(object):
         for i in range(num_items):
             key = (slice(0,None),) * axis + (i,)
             res[key] = args[i].reshape(shape)
-        print('spliced', num_items, '*', shape, 'into', res.shape)
+        #print('spliced', num_items, '*', shape, 'into', res.shape)
         return res
 
 def _add_ndarrayview_ops(klass):
