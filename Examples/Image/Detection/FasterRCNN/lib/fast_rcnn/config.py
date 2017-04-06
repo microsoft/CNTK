@@ -34,8 +34,16 @@ cfg = __C
 
 __C.CNTK = edict()
 
-__C.CNTK.ROIS_PER_IMAGE = 100
-__C.CNTK.NUM_CLASSES = 17
+__C.CNTK.MAX_EPOCHS = 20
+
+grocery = True
+__C.CNTK.USE_GROCERY = grocery
+__C.CNTK.NUM_CLASSES = 17 if grocery else 21
+__C.CNTK.INPUT_ROIS_PER_IMAGE = 50
+#__C.CNTK.ROIS_PER_IMAGE = 300 --> cfg[self.phase].RPN_POST_NMS_TOP_N
+__C.CNTK.DEBUG_FWD = False
+__C.CNTK.DEBUG_BKW = False
+__C.CNTK.DEBUG_LAYERS = False
 
 
 #
@@ -124,7 +132,7 @@ __C.TRAIN.RPN_NMS_THRESH = 0.7
 # Number of top scoring boxes to keep before apply NMS to RPN proposals
 __C.TRAIN.RPN_PRE_NMS_TOP_N = 12000
 # Number of top scoring boxes to keep after applying NMS to RPN proposals
-__C.TRAIN.RPN_POST_NMS_TOP_N = 2000
+__C.TRAIN.RPN_POST_NMS_TOP_N = 300 # 2000
 # Proposal height and width both need to be greater than RPN_MIN_SIZE (at orig image scale)
 __C.TRAIN.RPN_MIN_SIZE = 16
 # Deprecated (outside weights)

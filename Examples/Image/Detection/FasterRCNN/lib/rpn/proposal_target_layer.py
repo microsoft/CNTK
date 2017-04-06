@@ -5,7 +5,8 @@
 # Written by Ross Girshick and Sean Bell
 # --------------------------------------------------------
 
-import caffe
+from cntk import output_variable, one_hot, times
+from cntk.ops.functions import UserFunction
 import yaml
 import numpy as np
 import numpy.random as npr
@@ -13,51 +14,106 @@ from fast_rcnn.config import cfg
 from fast_rcnn.bbox_transform import bbox_transform
 from utils.cython_bbox import bbox_overlaps
 
-DEBUG = False
+DEBUG = cfg["CNTK"].DEBUG_LAYERS
+debug_fwd = cfg["CNTK"].DEBUG_FWD
+debug_bkw = cfg["CNTK"].DEBUG_BKW
 
-class ProposalTargetLayer(caffe.Layer):
+class ProposalTargetLayer(UserFunction):
     """
     Assign object detection proposals to ground-truth targets. Produces proposal
     classification labels and bounding-box regression targets.
     """
 
-    def setup(self, bottom, top):
-        layer_params = yaml.load(self.param_str_)
-        self._num_classes = layer_params['num_classes']
+    def __init__(self, arg1, arg2, name='ProposalTargetLayer'):
+        super(ProposalTargetLayer, self).__init__([arg1, arg2], name=name)
 
+        # layer_params = yaml.load(self.param_str_)
+        self._num_classes = cfg["CNTK"].NUM_CLASSES # layer_params['num_classes']
+
+        cfg_key = 'TRAIN' # str(self.phase) # either 'TRAIN' or 'TEST'
+        self._rois_per_image = cfg[cfg_key].RPN_POST_NMS_TOP_N
+        #self._rois_per_image = cfg["CNTK"].ROIS_PER_IMAGE
+        self._count = 0
+        self._fg_num = 0
+        self._bg_num = 0
+
+    def infer_outputs(self):
         # sampled rois (0, x1, y1, x2, y2)
-        top[0].reshape(1, 5)
-        # labels
-        top[1].reshape(1, 1)
-        # bbox_targets
-        top[2].reshape(1, self._num_classes * 4)
-        # bbox_inside_weights
-        top[3].reshape(1, self._num_classes * 4)
-        # bbox_outside_weights
-        top[4].reshape(1, self._num_classes * 4)
+        # top[0].reshape(1, 5)
+        # for CNTK the proposal shape is [4 x roisPerImage], and mirrored in Python
+        rois_shape = (self._rois_per_image, 4)
 
-    def forward(self, bottom, top):
+        # labels
+        # top[1].reshape(1, 1)
+        # for CNTK the labels shape is [1 x roisPerImage], and mirrored in Python
+        labels_shape = (self._rois_per_image, self._num_classes)
+
+        # bbox_targets
+        #top[2].reshape(1, self._num_classes * 4)
+        bbox_targets_shape = (self._rois_per_image, self._num_classes * 4)
+
+        # bbox_inside_weights
+        #top[3].reshape(1, self._num_classes * 4)
+        bbox_inside_weights_shape = (self._rois_per_image, self._num_classes * 4)
+
+        return [output_variable(rois_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
+                                name="ptl_rois", needs_gradient=False), # , name="rpn_target_rois"
+                output_variable(labels_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
+                                name="label_targets", needs_gradient=False),
+                output_variable(bbox_targets_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
+                                name="bbox_targets", needs_gradient=False),
+                output_variable(bbox_inside_weights_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
+                                name="bbox_inside_w", needs_gradient=False)]
+
+    def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
+        if debug_fwd: print("--> Entering forward in {}".format(self.name))
+        bottom = arguments
+
         # Proposal ROIs (0, x1, y1, x2, y2) coming from RPN
         # (i.e., rpn.proposal_layer.ProposalLayer), or any other source
-        all_rois = bottom[0].data
+        all_rois = bottom[0][0,:]
         # GT boxes (x1, y1, x2, y2, label)
         # TODO(rbg): it's annoying that sometimes I have extra info before
         # and other times after box coordinates -- normalize to one format
-        gt_boxes = bottom[1].data
+        gt_boxes = bottom[1][0,:]
+
+        # For CNTK: convert and scale gt_box coords from x, y, w, h relative to x1, y1, x2, y2 absolute
+        im_width = 1000 # TODO: get image width and height OR better scale beforehand
+        im_height = 1000
+        whwh = (im_width, im_height, im_width, im_height)
+        ngtb = np.vstack((gt_boxes[:, 0], gt_boxes[:, 1], gt_boxes[:, 0] + gt_boxes[:, 2], gt_boxes[:, 1] + gt_boxes[:, 3]))
+        gt_boxes[:, :-1] = ngtb.transpose() * whwh
+
+        # remove zero padded ground truth boxes
+        keep = np.where(
+            ((gt_boxes[:,2] - gt_boxes[:,0]) > 0) &
+            ((gt_boxes[:,3] - gt_boxes[:,1]) > 0)
+        )
+        gt_boxes = gt_boxes[keep]
+
+        assert gt_boxes.shape[0] > 0, \
+            "No ground truth boxes provided"
 
         # Include ground-truth boxes in the set of candidate rois
-        zeros = np.zeros((gt_boxes.shape[0], 1), dtype=gt_boxes.dtype)
-        all_rois = np.vstack(
-            (all_rois, np.hstack((zeros, gt_boxes[:, :-1])))
-        )
+        # zeros = np.zeros((gt_boxes.shape[0], 1), dtype=gt_boxes.dtype)
+        # all_rois = np.vstack(
+        #     (all_rois, np.hstack((zeros, gt_boxes[:, :-1])))
+        # )
+        # for CNTK: add batch index axis with all zeros to both inputs
+        # -1, since caffe gt-boxes contain label as 5th dimension
+        all_rois = np.vstack((all_rois, gt_boxes[:, :-1]))
+        zeros = np.zeros((all_rois.shape[0], 1), dtype=all_rois.dtype)
+        all_rois = np.hstack((zeros, all_rois))
 
         # Sanity check: single batch only
         assert np.all(all_rois[:, 0] == 0), \
                 'Only single item batches are supported'
 
         num_images = 1
-        rois_per_image = cfg.TRAIN.BATCH_SIZE / num_images
-        fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image)
+        rois_per_image = self._rois_per_image # ??? TODO: why depending on batch size: cfg.TRAIN.BATCH_SIZE / num_images
+        fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image).astype(int)
+
+        # import pdb; pdb.set_trace()
 
         # Sample rois with classification labels and bounding box regression
         # targets
@@ -66,41 +122,75 @@ class ProposalTargetLayer(caffe.Layer):
             rois_per_image, self._num_classes)
 
         if DEBUG:
-            print 'num fg: {}'.format((labels > 0).sum())
-            print 'num bg: {}'.format((labels == 0).sum())
+            print ('num fg: {}'.format((labels > 0).sum()))
+            print ('num bg: {}'.format((labels == 0).sum()))
             self._count += 1
             self._fg_num += (labels > 0).sum()
             self._bg_num += (labels == 0).sum()
-            print 'num fg avg: {}'.format(self._fg_num / self._count)
-            print 'num bg avg: {}'.format(self._bg_num / self._count)
-            print 'ratio: {:.3f}'.format(float(self._fg_num) / float(self._bg_num))
+            print ('num fg avg: {}'.format(self._fg_num / self._count))
+            print ('num bg avg: {}'.format(self._bg_num / self._count))
+            print ('ratio: {:.3f}'.format(float(self._fg_num) / float(self._bg_num)))
+
+        # pad with zeros if too few rois were found
+        num_found_rois = rois.shape[0]
+        if num_found_rois < rois_per_image:
+            rois_padded = np.zeros((rois_per_image, rois.shape[1]), dtype=np.float32)
+            rois_padded[:num_found_rois, :] = rois
+            rois = rois_padded
+
+            labels_padded = np.zeros((rois_per_image), dtype=np.float32)
+            labels_padded[:num_found_rois] = labels
+            labels = labels_padded
+
+            bbox_targets_padded = np.zeros((rois_per_image, bbox_targets.shape[1]), dtype=np.float32)
+            bbox_targets_padded[:num_found_rois, :] = bbox_targets
+            bbox_targets = bbox_targets_padded
+
+            bbox_inside_weights_padded = np.zeros((rois_per_image, bbox_inside_weights.shape[1]), dtype=np.float32)
+            bbox_inside_weights_padded[:num_found_rois, :] = bbox_inside_weights
+            bbox_inside_weights = bbox_inside_weights_padded
+
+        # for CNTK: get rid of batch ind zeros and add batch axis
+        rois = rois[:,1:]
+        # For CNTK: for the roipooling layer convert and scale roi coords back to x, y, w, h relative from x1, y1, x2, y2 absolute
+        # TODO: this is for now done in FasterRCNN.py as part of the network to also apply this in eval
+        #rois = np.vstack((rois[:, 0], rois[:, 1], rois[:, 2] - rois[:, 0], rois[:, 3] - rois[:, 1])).transpose()
+        #rois[:,0] /= im_width
+        #rois[:,1] /= im_height
+        #rois[:,2] /= im_width
+        #rois[:,3] /= im_height
 
         # sampled rois
-        top[0].reshape(*rois.shape)
-        top[0].data[...] = rois
+        # top[0].reshape(*rois.shape)
+        # top[0].data[...] = rois
+        rois.shape = (1,) + rois.shape
+        outputs[self.outputs[0]] = np.ascontiguousarray(rois)
 
         # classification labels
-        top[1].reshape(*labels.shape)
-        top[1].data[...] = labels
+        # top[1].reshape(*labels.shape)
+        # top[1].data[...] = labels
+        labels_as_int = [i.item() for i in labels.astype(int)]
+        labels_dense = np.eye(self._num_classes, dtype=np.float32)[labels_as_int]
+        labels_dense.shape = (1,) + labels_dense.shape # batch axis
+        outputs[self.outputs[1]] = labels_dense
 
         # bbox_targets
-        top[2].reshape(*bbox_targets.shape)
-        top[2].data[...] = bbox_targets
+        # top[2].reshape(*bbox_targets.shape)
+        # top[2].data[...] = bbox_targets
+
+        bbox_targets.shape = (1,) + bbox_targets.shape # batch axis
+        outputs[self.outputs[2]] = np.ascontiguousarray(bbox_targets)
 
         # bbox_inside_weights
-        top[3].reshape(*bbox_inside_weights.shape)
-        top[3].data[...] = bbox_inside_weights
+        #top[3].reshape(*bbox_inside_weights.shape)
+        #top[3].data[...] = bbox_inside_weights
+        bbox_inside_weights.shape = (1,) + bbox_inside_weights.shape # batch axis
+        outputs[self.outputs[3]] = np.ascontiguousarray(bbox_inside_weights)
 
-        # bbox_outside_weights
-        top[4].reshape(*bbox_inside_weights.shape)
-        top[4].data[...] = np.array(bbox_inside_weights > 0).astype(np.float32)
 
-    def backward(self, top, propagate_down, bottom):
+    def backward(self, state, root_gradients, variables):
+        if debug_bkw: print("<-- Entering backward in {}".format(self.name))
         """This layer does not propagate gradients."""
-        pass
-
-    def reshape(self, bottom, top):
-        """Reshaping happens during the call to forward."""
         pass
 
 
@@ -121,7 +211,7 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
     bbox_inside_weights = np.zeros(bbox_targets.shape, dtype=np.float32)
     inds = np.where(clss > 0)[0]
     for ind in inds:
-        cls = clss[ind]
+        cls = clss[ind].astype(int)
         start = 4 * cls
         end = start + 4
         bbox_targets[ind, start:end] = bbox_target_data[ind, 1:]
@@ -137,6 +227,7 @@ def _compute_targets(ex_rois, gt_rois, labels):
     assert gt_rois.shape[1] == 4
 
     targets = bbox_transform(ex_rois, gt_rois)
+
     if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
         # Optionally normalize targets by a precomputed mean and stdev
         targets = ((targets - np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS))
@@ -149,6 +240,7 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     examples.
     """
     # overlaps: (rois x gt_boxes)
+
     overlaps = bbox_overlaps(
         np.ascontiguousarray(all_rois[:, 1:5], dtype=np.float),
         np.ascontiguousarray(gt_boxes[:, :4], dtype=np.float))
@@ -161,6 +253,7 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     # Guard against the case when an image has fewer than fg_rois_per_image
     # foreground RoIs
     fg_rois_per_this_image = min(fg_rois_per_image, fg_inds.size)
+
     # Sample foreground regions without replacement
     if fg_inds.size > 0:
         fg_inds = npr.choice(fg_inds, size=fg_rois_per_this_image, replace=False)
@@ -189,5 +282,10 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
 
     bbox_targets, bbox_inside_weights = \
         _get_bbox_regression_labels(bbox_target_data, num_classes)
+
+    # Debug code
+    temp = bbox_targets * bbox_inside_weights
+    if abs(temp).max() > 1.0:
+        import pdb; pdb.set_trace()
 
     return labels, rois, bbox_targets, bbox_inside_weights

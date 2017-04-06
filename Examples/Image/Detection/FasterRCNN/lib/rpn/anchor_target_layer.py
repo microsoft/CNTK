@@ -6,38 +6,43 @@
 # --------------------------------------------------------
 
 import os
-#import caffe
+from cntk import output_variable
+from cntk.ops.functions import UserFunction
 import yaml
-from fast_rcnn.config import cfg
 import numpy as np
 import numpy.random as npr
 from generate_anchors import generate_anchors
-from utils.cython_bbox import bbox_overlaps
+from fast_rcnn.config import cfg
 from fast_rcnn.bbox_transform import bbox_transform
+from utils.cython_bbox import bbox_overlaps
 
-DEBUG = False
+DEBUG = cfg["CNTK"].DEBUG_LAYERS
+debug_fwd = cfg["CNTK"].DEBUG_FWD
+debug_bkw = cfg["CNTK"].DEBUG_BKW
 
-class AnchorTargetLayer(caffe.Layer):
+class AnchorTargetLayer(UserFunction):
     """
     Assign anchors to ground-truth targets. Produces anchor classification
     labels and bounding-box regression targets.
     """
 
-    def setup(self, bottom, top):
-        layer_params = yaml.load(self.param_str_)
-        anchor_scales = layer_params.get('scales', (8, 16, 32))
+    def __init__(self, arg1, arg2, name='AnchorTargetLayer', im_info=None):
+        super(AnchorTargetLayer, self).__init__([arg1, arg2], name=name)
+        #layer_params = yaml.load(self.param_str_)
+        anchor_scales = (8, 16, 32) #layer_params.get('scales', (8, 16, 32))
         self._anchors = generate_anchors(scales=np.array(anchor_scales))
         self._num_anchors = self._anchors.shape[0]
-        self._feat_stride = layer_params['feat_stride']
+        self._feat_stride = 16 #layer_params['feat_stride']
+        self._im_info = im_info
 
         if DEBUG:
-            #print 'anchors:'
-            #print self._anchors
-            #print 'anchor shapes:'
-            #print np.hstack((
-            #    self._anchors[:, 2::4] - self._anchors[:, 0::4],
-            #    self._anchors[:, 3::4] - self._anchors[:, 1::4],
-            #))
+            print ('anchors:')
+            print (self._anchors)
+            print ('anchor shapes:')
+            print (np.hstack((
+                self._anchors[:, 2::4] - self._anchors[:, 0::4],
+                self._anchors[:, 3::4] - self._anchors[:, 1::4],
+            )))
             self._counts = cfg.EPS
             self._sums = np.zeros((1, 4))
             self._squared_sums = np.zeros((1, 4))
@@ -46,23 +51,35 @@ class AnchorTargetLayer(caffe.Layer):
             self._count = 0
 
         # allow boxes to sit over the edge by a small amount
-        self._allowed_border = layer_params.get('allowed_border', 0)
+        self._allowed_border = False # layer_params.get('allowed_border', 0)
 
-        height, width = bottom[0].data.shape[-2:]
-        #if DEBUG:
-            #print 'AnchorTargetLayer: height', height, 'width', width
+    def infer_outputs(self):
+        ##height, width = bottom[0].data.shape[-2:]
+        height, width = self.inputs[0].shape[-2:]
+        if DEBUG:
+            print('AnchorTargetLayer: height', height, 'width', width)
 
         A = self._num_anchors
         # labels
-        top[0].reshape(1, 1, A * height, width)
+        ##top[0].reshape(1, 1, A * height, width)
+        labelShape = (1, A, height, width)
+        # Comment: this layer uses encoded labels, while in CNTK we mostly use one hot labels
         # bbox_targets
-        top[1].reshape(1, A * 4, height, width)
+        ##top[1].reshape(1, A * 4, height, width)
+        bbox_target_shape = (1, A * 4, height, width)
         # bbox_inside_weights
-        top[2].reshape(1, A * 4, height, width)
-        # bbox_outside_weights
-        top[3].reshape(1, A * 4, height, width)
+        #top[2].reshape(1, A * 4, height, width)
+        bbox_inside_weights_shape = (1, A * 4, height, width)
 
-    def forward(self, bottom, top):
+        return [output_variable(labelShape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
+                                name="objectness_target", needs_gradient=False),
+                output_variable(bbox_target_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
+                                name="rpn_bbox_target", needs_gradient=False),
+                output_variable(bbox_inside_weights_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
+                                name="rpn_bbox_inside_w", needs_gradient=False),]
+
+    def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
+        if debug_fwd: print("--> Entering forward in {}".format(self.name))
         # Algorithm:
         #
         # for each (H, W) location i
@@ -71,23 +88,36 @@ class AnchorTargetLayer(caffe.Layer):
         # filter out-of-image anchors
         # measure GT overlap
 
-        assert bottom[0].data.shape[0] == 1, \
-            'Only single item batches are supported'
+        bottom = arguments
 
         # map of shape (..., H, W)
         height, width = bottom[0].data.shape[-2:]
         # GT boxes (x1, y1, x2, y2, label)
-        gt_boxes = bottom[1].data
+        gt_boxes = bottom[1][0,:]
         # im_info
-        im_info = bottom[2].data[0, :]
+        im_info = self._im_info
 
-        #if DEBUG:
-            #print ''
-            #print 'im_size: ({}, {})'.format(im_info[0], im_info[1])
-            #print 'scale: {}'.format(im_info[2])
-            #print 'height, width: ({}, {})'.format(height, width)
-            #print 'rpn: gt_boxes.shape', gt_boxes.shape
-            #print 'rpn: gt_boxes', gt_boxes
+        # For CNTK: convert and scale gt_box coords from x, y, w, h relative to x1, y1, x2, y2 absolute
+        im_width = 1000
+        im_height = 1000
+        whwh = (im_width, im_height, im_width, im_height) # TODO: get image width and height OR better scale beforehand
+        ngtb = np.vstack((gt_boxes[:, 0], gt_boxes[:, 1], gt_boxes[:, 0] + gt_boxes[:, 2], gt_boxes[:, 1] + gt_boxes[:, 3]))
+        gt_boxes[:, :-1] = ngtb.transpose() * whwh
+
+        # remove zero padded ground truth boxes
+        keep = np.where(
+            ((gt_boxes[:,2] - gt_boxes[:,0]) > 0) &
+            ((gt_boxes[:,3] - gt_boxes[:,1]) > 0)
+        )
+        gt_boxes = gt_boxes[keep]
+
+        if DEBUG:
+            print ('')
+            print ('im_size: ({}, {})'.format(im_info[0], im_info[1]))
+            print ('scale: {}'.format(im_info[2]))
+            print ('height, width: ({}, {})'.format(height, width))
+            print ('rpn: gt_boxes.shape', gt_boxes.shape)
+            #print ('rpn: gt_boxes', gt_boxes)
 
         # 1. Generate proposals from bbox deltas and shifted anchors
         shift_x = np.arange(0, width) * self._feat_stride
@@ -114,14 +144,14 @@ class AnchorTargetLayer(caffe.Layer):
             (all_anchors[:, 3] < im_info[0] + self._allowed_border)    # height
         )[0]
 
-        #if DEBUG:
-            #print 'total_anchors', total_anchors
-            #print 'inds_inside', len(inds_inside)
+        if DEBUG:
+            print ('total_anchors', total_anchors)
+            print ('inds_inside', len(inds_inside))
 
         # keep only inside anchors
         anchors = all_anchors[inds_inside, :]
-        #if DEBUG:
-            #print 'anchors.shape', anchors.shape
+        if DEBUG:
+            print ('anchors.shape', anchors.shape)
 
         # label: 1 is positive, 0 is negative, -1 is dont care
         labels = np.empty((len(inds_inside), ), dtype=np.float32)
@@ -177,83 +207,62 @@ class AnchorTargetLayer(caffe.Layer):
         bbox_inside_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)
         bbox_inside_weights[labels == 1, :] = np.array(cfg.TRAIN.RPN_BBOX_INSIDE_WEIGHTS)
 
-        bbox_outside_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)
-        if cfg.TRAIN.RPN_POSITIVE_WEIGHT < 0:
-            # uniform weighting of examples (given non-uniform sampling)
-            num_examples = np.sum(labels >= 0)
-            positive_weights = np.ones((1, 4)) * 1.0 / num_examples
-            negative_weights = np.ones((1, 4)) * 1.0 / num_examples
-        else:
-            assert ((cfg.TRAIN.RPN_POSITIVE_WEIGHT > 0) &
-                    (cfg.TRAIN.RPN_POSITIVE_WEIGHT < 1))
-            positive_weights = (cfg.TRAIN.RPN_POSITIVE_WEIGHT /
-                                np.sum(labels == 1))
-            negative_weights = ((1.0 - cfg.TRAIN.RPN_POSITIVE_WEIGHT) /
-                                np.sum(labels == 0))
-        bbox_outside_weights[labels == 1, :] = positive_weights
-        bbox_outside_weights[labels == 0, :] = negative_weights
-
         if DEBUG:
             self._sums += bbox_targets[labels == 1, :].sum(axis=0)
             self._squared_sums += (bbox_targets[labels == 1, :] ** 2).sum(axis=0)
             self._counts += np.sum(labels == 1)
             means = self._sums / self._counts
             stds = np.sqrt(self._squared_sums / self._counts - means ** 2)
-            #print 'means:'
-            #print means
-            #print 'stdevs:'
-            #print stds
+            print ('means:')
+            print (means)
+            print ('stdevs:')
+            print (stds)
 
         # map up to original set of anchors
         labels = _unmap(labels, total_anchors, inds_inside, fill=-1)
         bbox_targets = _unmap(bbox_targets, total_anchors, inds_inside, fill=0)
         bbox_inside_weights = _unmap(bbox_inside_weights, total_anchors, inds_inside, fill=0)
-        bbox_outside_weights = _unmap(bbox_outside_weights, total_anchors, inds_inside, fill=0)
 
         if DEBUG:
-            #print 'rpn: max max_overlap', np.max(max_overlaps)
-            #print 'rpn: num_positive', np.sum(labels == 1)
-            #print 'rpn: num_negative', np.sum(labels == 0)
+            print ('rpn: max max_overlap', np.max(max_overlaps))
+            print ('rpn: num_positive', np.sum(labels == 1))
+            print ('rpn: num_negative', np.sum(labels == 0))
             self._fg_sum += np.sum(labels == 1)
             self._bg_sum += np.sum(labels == 0)
             self._count += 1
-            #print 'rpn: num_positive avg', self._fg_sum / self._count
-            #print 'rpn: num_negative avg', self._bg_sum / self._count
+            print ('rpn: num_positive avg', self._fg_sum / self._count)
+            print ('rpn: num_negative avg', self._bg_sum / self._count)
 
         # labels
         labels = labels.reshape((1, height, width, A)).transpose(0, 3, 1, 2)
-        labels = labels.reshape((1, 1, A * height, width))
-        top[0].reshape(*labels.shape)
-        top[0].data[...] = labels
+        # labels = labels.reshape((1, 1, A * height, width))
+        # top[0].reshape(*labels.shape)
+        # top[0].data[...] = labels
+        outputs[self.outputs[0]] = np.ascontiguousarray(labels)
 
         # bbox_targets
         bbox_targets = bbox_targets \
             .reshape((1, height, width, A * 4)).transpose(0, 3, 1, 2)
-        top[1].reshape(*bbox_targets.shape)
-        top[1].data[...] = bbox_targets
+        # top[1].reshape(*bbox_targets.shape)
+        # top[1].data[...] = bbox_targets
+        outputs[self.outputs[1]] = np.ascontiguousarray(bbox_targets)
 
         # bbox_inside_weights
         bbox_inside_weights = bbox_inside_weights \
             .reshape((1, height, width, A * 4)).transpose(0, 3, 1, 2)
         assert bbox_inside_weights.shape[2] == height
         assert bbox_inside_weights.shape[3] == width
-        top[2].reshape(*bbox_inside_weights.shape)
-        top[2].data[...] = bbox_inside_weights
+        #top[2].reshape(*bbox_inside_weights.shape)
+        #top[2].data[...] = bbox_inside_weights
+        outputs[self.outputs[2]] = np.ascontiguousarray(bbox_inside_weights)
 
-        # bbox_outside_weights
-        bbox_outside_weights = bbox_outside_weights \
-            .reshape((1, height, width, A * 4)).transpose(0, 3, 1, 2)
-        assert bbox_outside_weights.shape[2] == height
-        assert bbox_outside_weights.shape[3] == width
-        top[3].reshape(*bbox_outside_weights.shape)
-        top[3].data[...] = bbox_outside_weights
+        # No state needs to be passed to backward() so we just pass None
+        return None
 
-    def backward(self, top, propagate_down, bottom):
+
+    def backward(self, state, root_gradients, variables):
+        if debug_bkw: print("<-- Entering backward in {}".format(self.name))
         """This layer does not propagate gradients."""
-        pass
-
-    def reshape(self, bottom, top):
-        """Reshaping happens during the call to forward."""
         pass
 
 

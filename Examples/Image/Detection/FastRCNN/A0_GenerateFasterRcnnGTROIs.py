@@ -10,19 +10,15 @@ locals().update(importlib.import_module("PARAMETERS").__dict__)
 ####################################
 # Parameters
 ####################################
-boSaveDebugImg = True
+train = False
 trainSubDirs = ['positive', 'negative'] # , 'testImages'
-image_sets = ["train", "test"]
+testSubDirs = ['testImages']
 
 # no need to change these parameters
 boAddSelectiveSearchROIs = True
 boAddRoisOnGrid = True
 
 
-####################################
-# Main
-####################################
-# generate ROIs using selective search and grid (for pascal we use the precomputed ROIs from Ross)
 if not datasetName.startswith("pascalVoc"):
     # init
     makeDirectory(roiDir)
@@ -31,14 +27,21 @@ if not datasetName.startswith("pascalVoc"):
     roi_minNrPixels = roi_minNrPixelsRel * roi_maxImgDim*roi_maxImgDim
     roi_maxNrPixels = roi_maxNrPixelsRel * roi_maxImgDim*roi_maxImgDim
 
-    roiPath = "{}{}.txt".format(roiDir, "train.GTRois")
-    mapPath = "{}{}.txt".format(roiDir, "train.imgMap")
+    if train:
+        roiPath = "{}{}.txt".format(roiDir, "train.GTRois")
+        mapPath = "{}{}.txt".format(roiDir, "train.imgMap")
+        sudirs = trainSubDirs
+    else:
+        roiPath = "{}{}.txt".format(roiDir, "test.GTRois")
+        mapPath = "{}{}.txt".format(roiDir, "test.imgMap")
+        sudirs = testSubDirs
+
     print(classes)
     print("writing to file {}".format(roiPath))
     cnt = 0
     with open(roiPath, 'w') as roisFile, \
          open(mapPath, 'w') as mapFile:
-            for subdir in trainSubDirs:
+            for subdir in sudirs:
                 makeDirectory(roiDir + subdir)
                 imgFilenames = getFilesInDirectory(os.path.join(imgDir, subdir), ".jpg")
 

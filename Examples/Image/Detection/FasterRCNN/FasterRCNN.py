@@ -7,6 +7,15 @@
 from __future__ import print_function
 import numpy as np
 import os, sys
+from matplotlib.pyplot import imshow, imsave
+from PIL import ImageFont
+from math import exp
+
+available_font = "arial.ttf"
+try:
+    dummy = ImageFont.truetype(available_font, 16)
+except:
+    available_font = "FreeMono.ttf"
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
@@ -16,11 +25,9 @@ sys.path.append(os.path.join(abs_path, "lib", "rpn"))
 sys.path.append(os.path.join(abs_path, "lib", "nms"))
 sys.path.append(os.path.join(abs_path, "lib", "nms", "gpu"))
 
-from cntk import *
-#from cntk import Trainer, UnitType, load_model, user_function, Axis, input, parameter, times, combine, relu, softmax, roipooling, reduce_sum, slice, splice, reshape, plus, CloneMethod
-#from cntk.ops import parameter, times, combine, relu, softmax, roipooling, reduce_sum, slice, splice, reshape, plus
-#from cntk.ops.functions import CloneMethod
-from cntk.io import MinibatchSource, ImageDeserializer, CTFDeserializer, StreamDefs, StreamDef
+from cntk import Trainer, UnitType, load_model, user_function, Axis, input, parameter, times, combine, relu, \
+    softmax, roipooling, reduce_sum, slice, splice, reshape, plus, CloneMethod, minus, element_times, alias
+from cntk.io import MinibatchSource, ImageDeserializer, CTFDeserializer, StreamDefs, StreamDef, TraceLevel
 from cntk.io.transforms import scale
 from cntk.initializer import glorot_uniform
 from cntk.layers import placeholder, Convolution, Constant
@@ -29,16 +36,19 @@ from cntk.logging import log_number_of_parameters, ProgressPrinter
 from cntk.logging.graph import find_by_name, plot, get_node_outputs
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
-from lib.rpn.cntk_anchor_target_layer import AnchorTargetLayer
-from lib.rpn.cntk_proposal_layer import ProposalLayer
-from lib.rpn.cntk_proposal_target_layer import ProposalTargetLayer
+from lib.rpn.anchor_target_layer import AnchorTargetLayer
+from lib.rpn.proposal_layer import ProposalLayer
+from lib.rpn.proposal_target_layer import ProposalTargetLayer
 from lib.rpn.cntk_smoothL1_loss import SmoothL1Loss
 from lib.rpn.cntk_ignore_label import IgnoreLabel
+from cntk_helpers import visualizeResultsFaster
+from lib.fast_rcnn.config import cfg
+from lib.fast_rcnn.bbox_transform import bbox_transform_inv
 
 ###############################################################
 ###############################################################
 make_mode = False
-graph_type = "pdf" # "png" or "pdf"
+graph_type = "png" # "png" or "pdf"
 
 # file and stream names
 map_filename_postfix = '.imgMap.txt'
@@ -47,17 +57,39 @@ features_stream_name = 'features'
 roi_stream_name = 'roiAndLabel'
 
 # from PARAMETERS.py
-base_path = "C:/src/CNTK/Examples/Image/Detection/FastRCNN/proc/Grocery_100/rois/"
-num_channels = 3
-image_height = 1000
-image_width = 1000
-num_classes = 17
-num_rois = 100
-epoch_size = 25
-num_test_images = 5
-mb_size = 1
-max_epochs = 3 # 3
-momentum_time_constant = 10
+grocery = cfg["CNTK"].USE_GROCERY
+if grocery:
+    classes = ('__background__',  # always index 0
+               'avocado', 'orange', 'butter', 'champagne', 'eggBox', 'gerkin', 'joghurt', 'ketchup',
+               'orangeJuice', 'onion', 'pepper', 'tomato', 'water', 'milk', 'tabasco', 'mustard')
+    base_path = "C:/src/CNTK/Examples/Image/Detection/FastRCNN/proc/Grocery_100/rois/"
+    num_channels = 3
+    image_height = 1000
+    image_width = 1000
+    num_classes = len(classes)
+    num_rois = cfg["CNTK"].INPUT_ROIS_PER_IMAGE
+    epoch_size = 20
+    num_test_images = 5
+    mb_size = 1
+    max_epochs = cfg["CNTK"].MAX_EPOCHS
+    momentum_time_constant = 10
+else:
+    classes = ('__background__',  # always index 0
+               'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable',
+               'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor')
+    base_path = "C:/src/CNTK/Examples/Image/DataSets/Pascal/mappings/"
+    map_filename_postfix = "val2007.txt"
+    rois_filename_postfix = "val2007_rois_topleft_wh_rel.txt"
+    num_channels = 3
+    image_height = 1000
+    image_width = 1000
+    num_classes = len(classes)
+    num_rois = cfg["CNTK"].INPUT_ROIS_PER_IMAGE
+    epoch_size = 5010
+    num_test_images = 4952
+    mb_size = 1
+    max_epochs = cfg["CNTK"].MAX_EPOCHS
+    momentum_time_constant = 10
 
 # model specific variables (only AlexNet for now)
 base_model = "AlexNet"
@@ -99,12 +131,12 @@ def create_mb_source(img_height, img_width, img_channels, n_rois, data_path):
         roiAndLabel = StreamDef(field=roi_stream_name, shape=rois_dim, is_sparse=False)))
 
     # define a composite reader
-    return MinibatchSource([image_source, roi_source], epoch_size=sys.maxsize, randomize=True)
+    return MinibatchSource([image_source, roi_source], epoch_size=sys.maxsize, randomize=True, trace_level=TraceLevel.Error)
 
 
 def create_test_mb_source(img_height, img_width, img_channels, n_rois, data_path):
     path = os.path.normpath(os.path.join(abs_path, data_path))
-    map_file = os.path.join(path, "train" + map_filename_postfix)
+    map_file = os.path.join(path, "test" + map_filename_postfix)
 
     if not os.path.exists(map_file):
         raise RuntimeError("File '%s' does not exist. "
@@ -119,7 +151,7 @@ def create_test_mb_source(img_height, img_width, img_channels, n_rois, data_path
         features = StreamDef(field='image', transforms=transforms)))
 
     # define a composite reader
-    return MinibatchSource([image_source], epoch_size=sys.maxsize, randomize=False)
+    return MinibatchSource([image_source], epoch_size=sys.maxsize, randomize=False, trace_level=TraceLevel.Error)
 
 
 # Defines the Faster R-CNN network model for detecting objects in images
@@ -135,7 +167,9 @@ def faster_rcnn_predictor(features, gt_boxes, n_classes):
 
     # Clone the conv layers and the fully connected layers of the network
     conv_layers = combine([conv_node.owner]).clone(CloneMethod.freeze, {feature_node: placeholder()})
-    fc_layers = combine([last_node.owner]).clone(CloneMethod.clone, {pool_node: placeholder()})
+    # fc_layers = combine([last_node.owner]).clone(CloneMethod.clone, {pool_node: placeholder()})
+    # TODO: reset to CloneMethod.clone. Setting to freeze for now to try learning rates
+    fc_layers = combine([last_node.owner]).clone(CloneMethod.freeze, {pool_node: placeholder()})
 
     # Create the Faster R-CNN model
     feat_norm = features - Constant(114)
@@ -143,14 +177,15 @@ def faster_rcnn_predictor(features, gt_boxes, n_classes):
 
     # RPN network
     rpn_conv_3x3  = Convolution((3,3), 256, activation=relu, pad=True, strides=1)(conv_out)
-    rpn_cls_score = Convolution((1,1), 18, activation=None) (rpn_conv_3x3) # 2(bg/fg)  * 9(anchors)
-    rpn_bbox_pred = Convolution((1,1), 36, activation=None) (rpn_conv_3x3) # 4(coords) * 9(anchors)
+    rpn_cls_score = Convolution((1,1), 18, activation=None, name="rpn_cls_score") (rpn_conv_3x3) # 2(bg/fg)  * 9(anchors)
+    rpn_bbox_pred = Convolution((1,1), 36, activation=None, name="rpn_bbox_pred") (rpn_conv_3x3) # 4(coords) * 9(anchors)
 
     # RPN targets
     # Comment: rpn_cls_score is only passed   vvv   to get width and height of the conv feature map ...
     atl = user_function(AnchorTargetLayer(rpn_cls_score, gt_boxes, im_info=im_info))
     rpn_labels = atl.outputs[0]
     rpn_bbox_targets = atl.outputs[1]
+    rpn_bbox_inside_weights = atl.outputs[2]
 
     # getting rpn class scores and rpn targets into the correct shape for ce
     # i.e., (2, 33k), where each group of two corresponds to a (bg, fg) pair for score or target
@@ -162,11 +197,11 @@ def faster_rcnn_predictor(features, gt_boxes, n_classes):
     bg_scores_rshp = reshape(bg_scores, (1,num_predictions))
     fg_scores_rshp = reshape(fg_scores, (1,num_predictions))
     rpn_cls_score_rshp = splice(bg_scores_rshp, fg_scores_rshp, axis=0)
-    rpn_cls_prob = softmax(rpn_cls_score_rshp, axis=0)
+    rpn_cls_prob = softmax(rpn_cls_score_rshp, axis=0, name="objness_softmax")
     # Reshape targets
     rpn_labels_rshp = reshape(rpn_labels, (1,num_predictions))
 
-    # Ignore predictions for the 'ignore label', i.e. set target and prediction to 0 --> needs to be softmaxed before
+    # Ignore label predictions for the 'ignore label', i.e. set target and prediction to 0 --> needs to be softmaxed before
     ignore = user_function(IgnoreLabel(rpn_cls_prob, rpn_labels_rshp, ignore_label=-1))
     rpn_cls_prob_ignore = ignore.outputs[0]
     fg_targets = ignore.outputs[1]
@@ -175,7 +210,7 @@ def faster_rcnn_predictor(features, gt_boxes, n_classes):
 
     # RPN losses
     rpn_loss_cls = cross_entropy_with_softmax(rpn_cls_prob_ignore, rpn_labels_ignore, axis=0)
-    rpn_loss_bbox = user_function(SmoothL1Loss(rpn_bbox_pred, rpn_bbox_targets))
+    rpn_loss_bbox = user_function(SmoothL1Loss(rpn_bbox_pred, rpn_bbox_targets, rpn_bbox_inside_weights))
 
     # ROI proposal
     # - ProposalLayer:
@@ -191,16 +226,25 @@ def faster_rcnn_predictor(features, gt_boxes, n_classes):
     rpn_cls_prob_reshape = reshape(rpn_cls_prob, shp)
 
     rpn_rois_raw = user_function(ProposalLayer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info=im_info))
-    rpn_rois = plus(rpn_rois_raw, 0, name='rpn_rois')
+    rpn_rois = alias(rpn_rois_raw, name='rpn_rois')
     ptl = user_function(ProposalTargetLayer(rpn_rois, gt_boxes))
     rois_raw = ptl.outputs[0]
-    rois = plus(rois_raw, 0, name='rpn_target_rois')
+    rois = alias(rois_raw, name='rpn_target_rois')
     labels = ptl.outputs[1]
     bbox_targets = ptl.outputs[2]
+    bbox_inside_weights = ptl.outputs[3]
 
     # RCNN
     # Comment: training uses 'rois' from ptl (sampled), eval uses 'rpn_rois' from proposal_layer
-    roi_out = roipooling(conv_out, rois, (roi_dim, roi_dim))
+
+    # for the roipooling layer we convert and scale roi coords back to x, y, w, h relative from x1, y1, x2, y2 absolute
+    roi_xy1 = slice(rois, 1, 0, 2)
+    roi_xy2 = slice(rois, 1, 2, 4)
+    roi_wh = minus(roi_xy2, roi_xy1)
+    roi_xywh = splice(roi_xy1, roi_wh, axis=1)
+    scaled_rois = element_times(roi_xywh, (1.0 / image_width))
+
+    roi_out = roipooling(conv_out, scaled_rois, (roi_dim, roi_dim))
     fc_out  = fc_layers(roi_out)
 
     # prediction head
@@ -215,7 +259,7 @@ def faster_rcnn_predictor(features, gt_boxes, n_classes):
 
     # loss function
     loss_cls = cross_entropy_with_softmax(cls_score, labels, axis=1)
-    loss_box = user_function(SmoothL1Loss(bbox_pred, bbox_targets))
+    loss_box = user_function(SmoothL1Loss(bbox_pred, bbox_targets, bbox_inside_weights))
 
     loss_cls_scalar = reduce_sum(loss_cls)
     loss_box_scalar = reduce_sum(loss_box)
@@ -278,15 +322,22 @@ def train_faster_rcnn(debug_output=False):
         plot(loss, os.path.join(abs_path, "graph_frcn." + graph_type))
 
     # Set learning parameters
+    # Caffe Faster R-CNN parameters are:
+    #   base_lr: 0.001
+    #   lr_policy: "step"
+    #   gamma: 0.1
+    #   stepsize: 50000
+    #   momentum: 0.9
+    #   weight_decay: 0.0005
+    # ==> CNTK: lr_per_sample = [0.001] * 10 + [0.0001] * 10 + [0.00001]
     l2_reg_weight = 0.0005
-    lr_per_sample = [0.00001] * 10 + [0.000001] * 5 + [0.0000001]
+    lr_per_sample = [0.001] * 10 + [0.0001] * 10 + [0.00001]
     lr_schedule = learning_rate_schedule(lr_per_sample, unit=UnitType.sample)
     mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
 
     # Instantiate the trainer object
-    learner = momentum_sgd(cls_score.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight)
-    ##trainer = Trainer(frcn_output, (ce, pe), learner)
-    trainer = Trainer(cls_score, (loss, pred_error), learner)
+    learner = momentum_sgd(loss.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight)
+    trainer = Trainer(None, (loss, pred_error), learner)
 
     # Get minibatches of images and perform model training
     print("Training Faster R-CNN model for %s epochs." % max_epochs)
@@ -299,6 +350,8 @@ def train_faster_rcnn(debug_output=False):
             trainer.train_minibatch(data)                                    # update model with it
             sample_count += trainer.previous_minibatch_sample_count          # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress
+            if sample_count % 100 == 0:
+                print("Processed {} samples".format(sample_count))
 
         progress_printer.epoch_summary(with_metric=True)
         if debug_output:
@@ -307,8 +360,29 @@ def train_faster_rcnn(debug_output=False):
     return loss
 
 
+def regress_rois(roi_proposals, roi_regression_factors, labels):
+    for i in range(len(labels)):
+        label = labels[i]
+        if label > 0:
+            #deltas = roi_regression_factors[i:i+1,label*4:(label+1)*4]
+            deltas = roi_regression_factors[i:i+1,(label-1)*4:label*4]
+            roi_coords = roi_proposals[i:i+1,:]
+
+            regressed_rois = bbox_transform_inv(roi_coords, deltas)
+            #import pdb; pdb.set_trace()
+
+            roi_proposals[i,:] = regressed_rois
+    return roi_proposals
+
 # Tests a Faster R-CNN model
 def eval_faster_rcnn(model, debug_output=False):
+    # get image paths
+    path = os.path.normpath(os.path.join(abs_path, base_path))
+    map_file = os.path.join(path, "test" + map_filename_postfix)
+    with open(map_file) as f:
+        content = f.readlines()
+    img_file_names = [x.split('\t')[1] for x in content]
+
     image_input = input((num_channels, image_height, image_width), dynamic_axes=[Axis.default_batch_axis()], name='img_input')
     frcn_eval = create_eval_model(model, image_input)
 
@@ -322,34 +396,54 @@ def eval_faster_rcnn(model, debug_output=False):
 
     # evaluate test images and write netwrok output to file
     print("Evaluating Faster R-CNN model for %s images." % num_test_images)
-    results_file_path = base_path + "test.z"
-    with open(results_file_path, 'wb') as results_file:
+    visualize_with_regr = True
+    visualize_without_regr = True
+    save_results_as_text = True
+
+    results_base_path = "c:/temp/grocery/" if grocery else "c:/temp/pascal/"
+    results_file_path = results_base_path + "test.z"
+    rois_file_path = results_base_path + "test.rois.txt"
+    with open(results_file_path, 'wb') as results_file, \
+        open(rois_file_path, 'wb') as rois_file:
         for i in range(0, num_test_images):
             data = test_minibatch_source.next_minibatch(1, input_map=input_map)
             output = frcn_eval.eval(data)
 
             out_dict = dict([(k.name, k) for k in output])
-            out_cls_pred = output[out_dict['cls_pred']]
-            out_rpn_rois = output[out_dict['rpn_rois']]
-            out_bbox_regr = output[out_dict['bbox_regr']]
+            out_cls_pred = output[out_dict['cls_pred']][0]
+            out_rpn_rois = output[out_dict['rpn_rois']][0]
+            out_bbox_regr = output[out_dict['bbox_regr']][0]
 
-            import pdb; pdb.set_trace()
+            imgPath = img_file_names[i]
+            labels = out_cls_pred.argmax(axis=1)
+            scores = out_cls_pred.max(axis=1).tolist()
 
-            out_values = output[0, 0].flatten()
-            np.savetxt(results_file, out_values[np.newaxis], fmt="%.6f")
-            if (i+1) % 100 == 0:
-                print("Evaluated %s images.." % (i+1))
+            if save_results_as_text:
+                out_values = out_cls_pred.flatten()
+                np.savetxt(results_file, out_values[np.newaxis], fmt="%.6f")
+                roi_values = out_rpn_rois.flatten()
+                np.savetxt(rois_file, roi_values[np.newaxis], fmt="%.1f")
+
+            if visualize_without_regr:
+                imgDebug = visualizeResultsFaster(imgPath, labels, scores, out_rpn_rois, 1000, 1000,
+                                            classes, nmsKeepIndices=None, boDrawNegativeRois=True)
+                imsave("{}{}{}".format(results_base_path, i, os.path.basename(imgPath)), imgDebug)
+
+            if visualize_with_regr:
+                # apply regression to bbox coordinates
+                regressed_rois = regress_rois(out_rpn_rois, out_bbox_regr, labels)
+
+                imgDebug = visualizeResultsFaster(imgPath, labels, scores, regressed_rois, 1000, 1000,
+                                            classes, nmsKeepIndices=None, boDrawNegativeRois=True)
+                imsave("{}{}_regr_{}".format(results_base_path, i, os.path.basename(imgPath)), imgDebug)
 
     return
-
 
 # The main method trains and evaluates a Fast R-CNN model.
 # If a trained model is already available it is loaded an no training will be performed.
 if __name__ == '__main__':
     os.chdir(base_path)
     model_path = os.path.join(abs_path, "faster_rcnn_py.model")
-
-    #import pdb; pdb.set_trace()
 
     # Train only if no model exists yet
     if os.path.exists(model_path) and make_mode:
