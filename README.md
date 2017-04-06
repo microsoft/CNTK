@@ -82,7 +82,7 @@ Cognitive Toolkit (CNTK) provides significant performance gains compared to othe
 
 > * CNTK’s LSTM performance is 5-10x faster than the other toolkits.
 > * For convolution (image tasks), CNTK is comparable, but note the authors were using CNTK 1.7.2, and current CNTK 2.0 beta 10 is over 30% faster than 1.7.2.
-> * For all networks, CTNK's performance was superior to TensorFlow performance.
+> * For all networks, CNTK's performance was superior to TensorFlow performance.
 
 Historically, CNTK has been a pioneer in optimizing performance on multi-GPU systems. We continue to maintain the edge ([NVidia news at SuperComputing 2016](http://nvidianews.nvidia.com/news/nvidia-and-microsoft-accelerate-ai-together) and [CRAY at NIPS 2016](https://www.onmsft.com/news/microsoft-and-cray-announce-partnership-to-speed-up-deep-learning-on-supercomputers)).
 
