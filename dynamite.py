@@ -400,16 +400,31 @@ def eval(v):
         #        return arg0  # use the object itself, assuming broadcasting
         #    return cntk.NDArrayView.splice(args, axis=rank - new_rank)
         def make_batch(i, inp_i_0):
+            padded_shape = (1,) * (new_rank - ranks[i] - 1) + (inp_i_0.shape if isinstance(inp_i_0, (Variable, np.ndarray)) else ())
             # check whether all inputs are the same (e.g. add a bias)--then don't batch
             args = tuple(v.inputs[i] for v in op_batch)
             arg0 = args[0]
-            padded_shape = (1,) * (new_rank - ranks[i] - 1) + (inp_i_0.shape if isinstance(inp_i_0, (Variable, np.ndarray)) else ())
+            spliced_from0 = getattr(arg0, 'spliced_from', None)
+            def p(a,b):
+                print(a,b)
+                return True
+            def m(i,arg):
+                spliced_from = getattr(arg, 'spliced_from', None)
+                matchesd = spliced_from[0] is spliced_from0[0]
+                matchesi = spliced_from0[1] == i + spliced_from[1]
+                return True
             if all(arg is arg0 for arg in args):
                 # use the object itself, assuming broadcasting
                 return Variable((1,) + padded_shape,
                                 #lambda *args: splice_inputs(args, ranks[i]),
                                 lambda arg: cntk.NDArrayView.reshape(arg, (1,) + padded_shape),
                                 [arg0])
+            elif spliced_from0 and all(hasattr(arg, 'spliced_from')
+                                       and m(i, arg)
+                                       #and arg.spliced_from[0] is spliced_from0
+                                       #and p(arg.spliced_from[1], i)
+                                       for i, arg in enumerate(args)):
+                return spliced_from0[0]  # TODO: slice if range does not match, e.g. a sub-range
             else:
                 # need to do actual splice
                 nonlocal num_gathers
