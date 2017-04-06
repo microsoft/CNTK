@@ -10,6 +10,12 @@ times_initializer="x" # for now a dummy string that is not None
 def to_data(input):
     return input.data if isinstance(input, Variable) else cntk.NDArrayView.from_dense(np.array(input, np.float32)) # BUGBUG: device?? precision??
 
+def shape_of(v):
+    if isinstance(v, (np.ndarray, Variable)):
+        return v.shape
+    else:
+        return ()
+
 class Variable:
     def __new__(cls, shape, op, inputs):
         v = object.__new__(cls)
@@ -22,7 +28,7 @@ class Variable:
         try:
           data = self.op(*(to_data(input) for input in self.inputs))
           if data.shape != self.shape:
-               print(13)
+               print(data.shape, self.shape)
           assert data.shape == self.shape # sanity check of shape inference
           return data
         except: # (for catching stuff in the debugger; remove this)
@@ -340,12 +346,6 @@ def eval(v):
     expected_num_ops = sum(1 for v in nodes if not v.computed)
 
     # management of batched operations
-    def shape_of(v):
-        if isinstance(v, (np.ndarray, Variable)):
-            return v.shape
-        else:
-            return ()
-
     ready_ops = dict()  # [key] -> list of Variables
 
     def add_ready(v):
@@ -365,11 +365,12 @@ def eval(v):
         nonlocal num_evals, num_gathers
         # all ops are the same, so use the first as the reference
         v0 = op_batch[0]
+        is_mul = v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose
         # sparse can not be properly batched for now
-        #if isinstance(v0.inputs[0], Variable) and v0.inputs[0].data.is_sparse:
         # matrix product is not correctly batched for now
         # reduction operations do not know to not reduce the batch axis for now
-        if v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose or v0.op is cntk.NDArrayView.reduce_log_sum:
+        if (isinstance(v0.inputs[0], Variable) and v0.inputs[0].data.is_sparse()) or \
+           v0.op is cntk.NDArrayView.reduce_log_sum:    # v0.op is cntk.NDArrayView.dot_transpose or 
             for v in op_batch:
                 v.data = v._compute()  # non-batched for now
                 v.computed = True
@@ -377,77 +378,95 @@ def eval(v):
             return 
         # determine rank for new axis; we insert a new axis, and for that, all objects must use aligned indices
         def rank(input):
-            #rank = len(input.shape) if isinstance(input, (Variable, np.ndarray)) else 0
-            #shape = input.shape if isinstance(input, (Variable, np.ndarray)) else ()
-            #shape1 = input.data.shape if isinstance(input, (Variable, np.ndarray)) else ()
-            #print(shape, shape1, input, input.data if isinstance(input, (Variable, np.ndarray)) else None)
             return len(input.shape) if isinstance(input, (Variable, np.ndarray)) else 0
         ranks = tuple(rank(input) for input in v0.inputs)
-        new_rank = 1 + max(ranks)
+        new_rank = 1 + (max(ranks) if not is_mul else ranks[0])
         # batch all inputs by adding a new batch axis
-        # BUGBUG: This is wrong for matrix product (must batch differently)
-        # BUGBUG: if all inputs are identical then share them
-        # TODO: make this a function
-        # TODO: add a new narrow(axis, index) operation for all outputs
-        #       They don't get computed; instead Variable._compute() takes them into account on the fly
         # create a new node for batching each input
         num_inputs = len(v0.inputs)
         num_batched_ops = len(op_batch)
-        #def splice_inputs(args, rank):
-        #    nonlocal num_gathers
-        #    arg0 = args[0]
-        #    if all(arg is arg0 for arg in args):
-        #        return arg0  # use the object itself, assuming broadcasting
-        #    return cntk.NDArrayView.splice(args, axis=rank - new_rank)
         def make_batch(i, inp_i_0):
-            padded_shape = (1,) * (new_rank - ranks[i] - 1) + (inp_i_0.shape if isinstance(inp_i_0, (Variable, np.ndarray)) else ())
-            # check whether all inputs are the same (e.g. add a bias)--then don't batch
             args = tuple(v.inputs[i] for v in op_batch)
             arg0 = args[0]
-            spliced_from0 = getattr(arg0, 'spliced_from', None)
+            # matrix product is special, in that the right argument is always shared in the batch and not applied element-wise
+            if is_mul and i == 1:
+                assert all(arg is arg0 for arg in args)
+                return arg0, False
+            inp_i_0_shape = inp_i_0.shape if isinstance(inp_i_0, (Variable, np.ndarray)) else ()
+            # check whether all inputs are the same (e.g. add a bias)--then don't batch
+            sliced_from0 = getattr(arg0, 'sliced_from', None)
             def is_consecutive(i,arg):
-                spliced_from = arg.spliced_from
-                matchesd = spliced_from[0] is     spliced_from0[0]
-                matchesi = spliced_from[1] == i + spliced_from0[1]
+                sliced_from = arg.sliced_from
+                matchesd = sliced_from[0] is     sliced_from0[0]
+                matchesi = sliced_from[1] == i + sliced_from0[1]
                 return matchesd and matchesi
             if all(arg is arg0 for arg in args):
                 # use the object itself, assuming broadcasting
-                return Variable((1,) + padded_shape,
-                                #lambda *args: splice_inputs(args, ranks[i]),
-                                lambda arg: cntk.NDArrayView.reshape(arg, (1,) + padded_shape),
-                                [arg0])
-            elif spliced_from0 and all(hasattr(arg, 'spliced_from') and is_consecutive(i, arg)
+                return arg0, False
+            elif isinstance(arg0, Variable) and all(isinstance(arg, Variable) and (arg.data is arg0.data) for arg in args):
+                # use the object itself, assuming broadcasting
+                return arg0, False
+            elif sliced_from0 and all(hasattr(arg, 'sliced_from') and is_consecutive(i, arg)
                                        for i, arg in enumerate(args)):
                 # all inputs are consecutive views onto the same object--these came out of a previous batching op
-                return spliced_from0[0]  # BUGBUG: need to slice if range does not match, e.g. a sub-range
+                res = sliced_from0[0]
+                # need to slice if range does not match, e.g. a sub-range or sub-index
+                #def lbd(arg):
+                #    return arg[sliced_from0[1]:sliced_from0[1] + num_batched_ops]
+                if res.shape[0] != num_batched_ops:
+                    res = Variable((num_batched_ops,) + res.shape[1:],
+                                   lambda arg: arg[sliced_from0[1]:sliced_from0[1] + num_batched_ops],
+                                   [res])
+                return res, True
             else:
                 # need to do actual splice
                 nonlocal num_gathers
                 num_gathers += 1
-                return Variable((num_batched_ops,) + padded_shape,
-                                #lambda *args: splice_inputs(args, ranks[i]),
+                return Variable((num_batched_ops,) + (1,) * (new_rank - ranks[i] - 1) + inp_i_0_shape,
                                 lambda *args: cntk.NDArrayView.splice(args, axis=ranks[i] - new_rank),
-                                args)
-        batched_inputs = tuple(make_batch(i, inp_i_0)
-                               for i, inp_i_0 in enumerate(v0.inputs))
+                                args), True
+        batched_inputs_hasbatch = tuple(make_batch(i, inp_i_0)
+                                     for i, inp_i_0 in enumerate(v0.inputs))
+        batched_inputs = tuple(batched_input for batched_input, hasbatch in batched_inputs_hasbatch)
+        hasbatch = any(tuple(hasbatch for batched_input, hasbatch in batched_inputs_hasbatch))
+        if hasbatch: # all inputs must be padded   --actually seems not even needed; would certainly simplify things
+            def pad_shape(i, batched_input):
+                if is_mul and i == 1:
+                    return batched_input # don't pad the matmul matrix
+                if len(batched_input.shape) != new_rank:
+                    assert batched_input.computed
+                    padded_shape = (1,) * (new_rank - ranks[i] - 1) + batched_input.shape
+                    batched_input = Variable((1,) + padded_shape,
+                                    lambda arg: cntk.NDArrayView.reshape(arg, (1,) + padded_shape),
+                                    [batched_input])
+                return batched_input
+            #batched_inputs = tuple(pad_shape(i, batched_input) for i, batched_input in enumerate(batched_inputs))
         for batched_input in batched_inputs: # and compute them
-            #if isinstance(batched_input, Variable) and not batched_input.computed: # (if already computed then no gather was necessary)
+            if isinstance(batched_input, Variable) and not batched_input.computed: # (if already computed then no gather was necessary)
                 batched_input.data = batched_input._compute()
                 batched_input.computed = True
                 #print('out', batched_input.data.shape)
         # create a new node for the batched op
-        shape_batched = (num_batched_ops,) + v0.shape
+        # In some cases, neither input got batched. In that case, just execute a single op and distribute its output
+        shape_batched = v0.shape
+        if hasbatch:
+            shape_batched = (num_batched_ops,) + shape_batched 
         v_batched = Variable(shape_batched, v0.op, batched_inputs)
         # now perform the operation batched
         v_batched.data = v_batched._compute()
+        sh = v_batched.data.shape
         v_batched.computed = True
         num_evals += 1
         #print('out', v_batched.data.shape)
         # and copy the results back
         for i, v in enumerate(op_batch):
-            v.data = v_batched.data[i]
+            if hasbatch:
+                v.sliced_from = (v_batched, i) # remember that this was sliced
+                v.data = v_batched.data[i]
+            else:
+                v.data = v_batched.data
+            assert v.shape == v.data.shape
             v.computed = True
-            v.spliced_from = (v_batched, i) # remember that this was spliced
 
     # initialization
     #  - determine set of consumers for each node
@@ -456,7 +475,12 @@ def eval(v):
     for p in nodes:
         if p.computed:
             continue
-        p.key = (p.op, tuple(shape_of(v) for v in p.inputs)) # batch if both op and input shapes are the same
+        def make_key(p):
+            if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose:
+                return (p.op, (shape_of(p.inputs[0]), id(p.inputs[1])))
+            # batch if both op and input shapes are the same
+            return (p.op, tuple(shape_of(v) for v in p.inputs))
+        p.key = make_key(p)
         # TODO: for matrix mul the second arg must be the same object to allow batching
         # TODO: must also include the storage format in the key; do this in C++ version
         p.consumers = []
@@ -534,6 +558,7 @@ def dump_graph(v):
 
 def train_minibatch(criterion, *batch_args):
     # for now, manually do the batch loop
+    print('batch of', len(batch_args[0]))
     crit = 0
     z = zip(*batch_args)
     for args in zip(*batch_args):
