@@ -44,13 +44,8 @@ def from_cntk_mb(inputs: tuple, variables: tuple):
             data.__class__ = data.__class__ = cntk.core.NDArrayView
             shape = data.shape  # drop a superfluous length dimension
             item_shape = shape[1:]
-            #def wrap(data):
-            #    sh = data.shape
-            #    return dynamite.Constant(data) # wrap in a dynamite Variable
             if has_axis:
                 return [dynamite.Constant(data[t]) for t in range(shape[0])]
-                # BUGBUG: shape parameters are not getting reversed; doing it manually
-                #return [wrap(data.slice_view(tuple(reversed((t,) + (0,) * len(item_shape))), tuple(reversed((1,) + item_shape)))) for t in range(shape[0])]
             else:
                 assert shape[0] == 1
                 return dynamite.Constant(data[0])
