@@ -81,7 +81,7 @@ class NDArrayView(cntk_py.NDArrayView):
 
     @staticmethod
     @typemap
-    def from_csr(csr_array, device=None, read_only=False, borrow=False):
+    def from_csr(csr_array, device=None, read_only=False, borrow=False, shape=None):
         '''
         Create a :class:`NDArrayView` instance from a SciPy sparse array in CSR
         format.
@@ -95,6 +95,10 @@ class NDArrayView(cntk_py.NDArrayView):
              not (default False)
             borrow (bool, default False): whether nd_arrary memory can be
              borrowed internally to speed up the data creation
+            shape (tuple, default None): shape of the created NDArrayView.
+             If unspecified, the created NDArrayView has the same shape as the csr_matrix.
+             Otherwise, an NDArrayView object of specified shape is created using csr_data.
+             The total size and number of rows of csr_data must match specified NDArrayView shape.
 
         Returns:
             :class:`NDArrayView` instance
@@ -103,10 +107,25 @@ class NDArrayView(cntk_py.NDArrayView):
             raise TypeError("only CSR is supported as of now. Please "
                             "convert your data using 'tocsr()'")
 
+        if shape is None:
+            shape = csr_array.shape
+
         if device is None:
             device = use_default_device()
 
-        return cntk_py.NDArrayView(csr_array.shape, csr_array.data,
+        if shape[-1] != csr_array.shape[-1]:
+            raise ValueError('csr_matrix row size (%d) does not match the least '
+                             'significant axis dimension (%d) of the NDArrayView shape'
+                             % (csr_array.shape[-1], shape[-1]))
+            
+        import functools, operator
+        csr_array_size = functools.reduce(operator.mul, csr_array.shape)
+        ndarrayview_size = functools.reduce(operator.mul, shape)
+        if csr_array_size != ndarrayview_size:
+            raise ValueError('csr_matrix total size (%d) does not match the total size '
+                             '(%d) of the NDArrayView shape' % (csr_array_size, ndarrayview_size))
+            
+        return cntk_py.NDArrayView(shape, csr_array.data,
                                    csr_array.indptr, csr_array.indices, device,
                                    read_only, borrow)
 
