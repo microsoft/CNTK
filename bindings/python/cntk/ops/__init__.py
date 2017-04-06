@@ -2546,6 +2546,8 @@ def _input_spec(shape, dtype=default_override_or(np.float32), needs_gradient=Fal
 def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
           dynamic_axes=[Axis.default_batch_axis()], name=''):
     '''
+    input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, dynamic_axes=[Axis.default_batch_axis()], name='')
+
     It creates an input in the network: a place where data,
     such as features and labels, should be provided.
 

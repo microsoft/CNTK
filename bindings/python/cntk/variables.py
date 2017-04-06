@@ -258,7 +258,8 @@ class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
         return cntk_py.Constant(self)
 
 class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
-    '''
+    '''__init__(self, shape=None, init=None, dtype=np.float32, device=None, name='')
+
     A trainable parameter. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that can be modified by a training
     procedure.
@@ -346,7 +347,8 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
 
 
 class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
-    '''
+    '''__init__(self, value=None, shape=None, dtype=np.float32, device=None, name='')
+
     A constant value. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that cannot be modified.
 
