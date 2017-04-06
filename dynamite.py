@@ -356,12 +356,13 @@ def eval(v):
             ready_ops[key].append(v)
 
     num_evals = 0
+    num_gathers = 0
 
     # execute all operations in op_batch as one CUDA operation
     # The data needs to be gathered first (an optimized version would make the
     # scatter lazy and avoid it if possible)
     def execute_batch(op_batch):
-        nonlocal num_evals
+        nonlocal num_evals, num_gathers
         # all ops are the same, so use the first as the reference
         v0 = op_batch[0]
         # sparse can not be properly batched for now
@@ -392,20 +393,17 @@ def eval(v):
         # create a new node for batching each input
         num_inputs = len(v0.inputs)
         num_batched_ops = len(op_batch)
-        #if v0.op == cntk.NDArrayView.__sub__:
-        #    print(14)
-        #def lbd(*args):
-        #    i = 0
-        #    res = cntk.NDArrayView.splice(args, axis=ranks[i] - new_rank)
-        #    return res
+        def splice_inputs(args, rank):
+            return cntk.NDArrayView.splice(args, axis=rank - new_rank)
         batched_inputs = tuple(Variable((num_batched_ops,) + (1,) * (new_rank - ranks[i] - 1) + (inp_i_0.shape if isinstance(inp_i_0, (Variable, np.ndarray)) else ()),
-                                        lambda *args: cntk.NDArrayView.splice(args, axis=ranks[i] - new_rank),
-                                        #lbd,
+                                        lambda *args: splice_inputs(args, ranks[i]),
+                                        #lambda *args: cntk.NDArrayView.splice(args, axis=ranks[i] - new_rank),
                                         tuple(v.inputs[i] for v in op_batch))
                                for i, inp_i_0 in enumerate(v0.inputs))
         for batched_input in batched_inputs: # and compute them
             batched_input.data = batched_input._compute()
             batched_input.computed = True
+            num_gathers += 1
             #print('out', batched_input.data.shape)
         # create a new node for the batched op
         shape_batched = (num_batched_ops,) + v0.shape
@@ -465,7 +463,7 @@ def eval(v):
                     add_ready(p)
 
     # done
-    print(ops_run, 'operations executed in', batches_run, 'batches, using an actual', num_evals, 'batched ops')
+    print(ops_run, 'operations executed in', batches_run, 'batches, using an actual', num_evals, 'batched ops and', num_gathers, 'gather ops')
     assert ops_run == expected_num_ops
     #for v in nodes:
     #    assert v.computed
