@@ -405,26 +405,21 @@ def eval(v):
             args = tuple(v.inputs[i] for v in op_batch)
             arg0 = args[0]
             spliced_from0 = getattr(arg0, 'spliced_from', None)
-            def p(a,b):
-                print(a,b)
-                return True
-            def m(i,arg):
-                spliced_from = getattr(arg, 'spliced_from', None)
-                matchesd = spliced_from[0] is spliced_from0[0]
-                matchesi = spliced_from0[1] == i + spliced_from[1]
-                return True
+            def is_consecutive(i,arg):
+                spliced_from = arg.spliced_from
+                matchesd = spliced_from[0] is     spliced_from0[0]
+                matchesi = spliced_from[1] == i + spliced_from0[1]
+                return matchesd and matchesi
             if all(arg is arg0 for arg in args):
                 # use the object itself, assuming broadcasting
                 return Variable((1,) + padded_shape,
                                 #lambda *args: splice_inputs(args, ranks[i]),
                                 lambda arg: cntk.NDArrayView.reshape(arg, (1,) + padded_shape),
                                 [arg0])
-            elif spliced_from0 and all(hasattr(arg, 'spliced_from')
-                                       and m(i, arg)
-                                       #and arg.spliced_from[0] is spliced_from0
-                                       #and p(arg.spliced_from[1], i)
+            elif spliced_from0 and all(hasattr(arg, 'spliced_from') and is_consecutive(i, arg)
                                        for i, arg in enumerate(args)):
-                return spliced_from0[0]  # TODO: slice if range does not match, e.g. a sub-range
+                # all inputs are consecutive views onto the same object--these came out of a previous batching op
+                return spliced_from0[0]  # BUGBUG: need to slice if range does not match, e.g. a sub-range
             else:
                 # need to do actual splice
                 nonlocal num_gathers
