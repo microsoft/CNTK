@@ -352,7 +352,7 @@ namespace CNTKLibraryCSEvalExamples
         /// <typeparam name="T">The data value type</typeparam>
         /// <param name="sampleSize">The size of each sample.</param>
         /// <param name="outputBuffer">The evaluation result data.</param>
-        private static void PrintOutput<T>(int sampleSize, IList<IList<T>> outputBuffer)
+        internal static void PrintOutput<T>(int sampleSize, IList<IList<T>> outputBuffer)
         {
             Console.WriteLine("The number of sequences in the batch: " + outputBuffer.Count);
             int seqNo = 0;
