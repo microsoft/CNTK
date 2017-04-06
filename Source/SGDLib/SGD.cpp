@@ -2324,6 +2324,10 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
                                                         (ElemType) m_rpi.dec, (ElemType) m_rpi.min, needAveMultiplier);
         Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
     }
+    else if (adpType == GradientsUpdateType::AdaDelta)
+    {
+        smoothedGradientValues.AdaDeltaUpdate(gradientValues, functionValues, (ElemType)m_adi.rho, (ElemType)m_adi.epsilon);
+    }
 
     if (noiseStd > 0)
     {
@@ -2706,6 +2710,7 @@ static GradientsUpdateType ParseGradUpdateType(const wstring& s)
     else if (EqualCI(s, L"adagrad"))                 return GradientsUpdateType::AdaGrad;
     else if (EqualCI(s, L"rmsProp"))                 return GradientsUpdateType::RmsProp;
     else if (EqualCI(s, L"fsAdagrad"))               return GradientsUpdateType::FSAdaGrad;
+    else if (EqualCI(s, L"adadelta"))                return GradientsUpdateType::AdaDelta;
     // legacy, deprecated
     else if (EqualCI(s, L"normal") || EqualCI(s, L"simple")) return GradientsUpdateType::None;
     else InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
@@ -2871,6 +2876,10 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_rpi.min = configSGD(L"rms_wgt_min", 0.1);
     m_rpi.max = configSGD(L"rms_wgt_max", 10.0);
     m_rpi.gamma = configSGD(L"rms_gamma", 0.99);
+
+    // extract AdaDelta parameters from config, if they exist. Default to reasonable values.
+    m_adi.rho = configSGD(L"adadelta_rho", 0.95);
+    m_adi.epsilon = configSGD(L"adadelta_epsilon", 1e-6);
 
     m_needAveMultiplier = configSGD(L"normWithAveMultiplier", true);
     m_L2RegWeight = configSGD(L"L2RegWeight", 0.0);

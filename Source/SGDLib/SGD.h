@@ -52,7 +52,8 @@ enum class GradientsUpdateType : int
     None,
     AdaGrad,
     RmsProp,
-    FSAdaGrad
+    FSAdaGrad,
+    AdaDelta
 };
 
 // modelParallelSGD can be combined with dataParallelSGD/modelAveragingSGD/blockMomentumSGD 
@@ -85,6 +86,19 @@ struct RMSPropInfo
         dec = 0.75;
         max = 10.0;
         min = 0.1;
+    }
+};
+
+// configuration parameters associated with AdaDelta learning algorithm
+struct AdaDeltaInfo
+{
+    double rho;
+    double epsilon;
+
+    AdaDeltaInfo()
+    {
+        rho = 0.95;
+        epsilon = 1e-6;
     }
 };
 
@@ -245,6 +259,7 @@ protected:
 
     GradientUpdateInfo m_gradType;
     RMSPropInfo m_rpi;
+    AdaDeltaInfo m_adi;
 
     size_t m_numMBsToShowResult = 0;
     size_t m_firstMBsToShowResult = 0;
