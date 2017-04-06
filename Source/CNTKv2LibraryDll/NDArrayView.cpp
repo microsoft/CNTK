@@ -376,10 +376,10 @@ namespace CNTK
             for (size_t k = 0; k < inputShape.Rank(); k++)
                 shape[k] = std::max(shape[k], inputShape[k]);
         }
-        // create result object; properties besides shape are inherited from input 0 for now
-        NDArrayViewPtr result = MakeSharedObject<NDArrayView>(inputs[0]->GetDataType(), inputs[0]->GetStorageFormat(), shape, inputs[0]->Device());
-        // perform operation in-place on result object
-        return result->NumericOperationInPlace(0.0/*nothing to add to*/, inputs, alpha, op, (int)Microsoft::MSR::CNTK::ElementWiseOperator::opSum/*not reducing, actually*/);
+// create result object; properties besides shape are inherited from input 0 for now
+NDArrayViewPtr result = MakeSharedObject<NDArrayView>(inputs[0]->GetDataType(), inputs[0]->GetStorageFormat(), shape, inputs[0]->Device());
+// perform operation in-place on result object
+return result->NumericOperationInPlace(0.0/*nothing to add to*/, inputs, alpha, op, (int)Microsoft::MSR::CNTK::ElementWiseOperator::opSum/*not reducing, actually*/);
     }
 
     NDArrayViewPtr NDArrayView::MatrixProductInPlace(double beta, bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha)
@@ -448,26 +448,26 @@ namespace CNTK
         bool anyPrevAxisSliced = false;
         NDShape sliceViewShape(extent);
         std::vector<size_t> endOffset(rank);
+        std::vector<size_t> lastOffset(rank);
         for (size_t i = 0; i < rank; ++i)
         {
             if ((i < sliceViewShape.Rank()) && (sliceViewShape[i] == NDShape::InferredDimension))
                 sliceViewShape[i] = Shape()[i] - startOffset[i];
 
             endOffset[i] = startOffset[i] + ((i < sliceViewShape.Rank()) ? sliceViewShape[i] : 1);
+            lastOffset[i] = endOffset[i] - 1;
 
             if (anyPrevAxisSliced && ((endOffset[i] - startOffset[i]) != 1))
                 InvalidArgument("NDArrayView::SliceView: Cannot create a slice which is not contiguous in memory. "
-                                "This NDArrayView shape = %S, slice offset = %S, slice extent = %S.",
-                                 Shape().AsString().c_str(), NDShape(startOffset).AsString().c_str(), NDShape(extent).AsString().c_str());
+                    "This NDArrayView shape = %S, slice offset = %S, slice extent = %S.",
+                    Shape().AsString().c_str(), NDShape(startOffset).AsString().c_str(), NDShape(extent).AsString().c_str());
 
             bool isCurrentAxisSliced = (startOffset[i] != 0) || (endOffset[i] != Shape()[i]);
             anyPrevAxisSliced = anyPrevAxisSliced || isCurrentAxisSliced;
         }
 
-        auto flatBufferOffset = AsTensorShape(Shape()).Locate(startOffset);
-        auto sliceViewMatrixDims = GetMatrixDimensions(sliceViewShape);
-        assert((flatBufferOffset % sliceViewMatrixDims.first) == 0);
-        auto sliceMatrixColumnOffset = flatBufferOffset / sliceViewMatrixDims.first;
+        auto flatBufferOffset = AsTensorShape(Shape()).Locate(startOffset);  // offset and length into underlying ElementType array...
+        auto flatBufferLength = AsTensorShape(Shape()).Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
         void* tensorView = nullptr;
         switch (m_dataType)
         {
@@ -475,10 +475,24 @@ namespace CNTK
         {
             auto currentMatrix = GetMatrix<float>();
             std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
-            if (sliceViewMatrixDims.first != currentMatrixDims.first)
-                LogicError("NDArrayView::SliceView: Currently only slices that can be realized as a column slice of the underlying Matrix object, are allowed.");
-
-            auto slicedMatrixView = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
+            shared_ptr<Matrix<float>> slicedMatrixView;
+            if (flatBufferOffset % currentMatrixDims.first == 0 && flatBufferLength % currentMatrixDims.first == 0)
+            {
+                // slice is a column slice
+                // We keep this separate from the case below since below
+                auto slice = currentMatrix->ColumnSlice(flatBufferOffset / currentMatrixDims.first, flatBufferLength / currentMatrixDims.first);
+                slicedMatrixView = make_shared<Matrix<float>>(std::move(slice));
+            }
+            else
+            {
+                // slice is a row slice of a single column
+                // We reshape the matrix into a flat row vector, and then slice the elements.
+                // Note that this will fail for sparse matrices, one cannot slice into columns since they are sparse.
+                auto reshapedAsRow = currentMatrix->Reshaped(1, currentMatrixDims.first * currentMatrixDims.second); // data store as one row
+                auto sliced = reshapedAsRow.ColumnSlice(flatBufferOffset, flatBufferLength); // slicing out the range
+                sliced.Reshape(flatBufferLength, 1); // and switch back to a matrix
+                slicedMatrixView = make_shared<Matrix<float>>(std::move(sliced));
+            }
             tensorView = new TensorView<float>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
             break;
         }
@@ -486,6 +500,9 @@ namespace CNTK
         {
             auto currentMatrix = GetMatrix<double>();
             std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
+            auto sliceViewMatrixDims = GetMatrixDimensions(sliceViewShape);              // slice if interpreted as Matrix
+            assert((flatBufferOffset % sliceViewMatrixDims.first) == 0);
+            auto sliceMatrixColumnOffset = flatBufferOffset / sliceViewMatrixDims.first; // Matrix column in which view begins
             if (sliceViewMatrixDims.first != currentMatrixDims.first)
                 LogicError("NDArrayView::SliceView: Currently only slices that can be realized as a column slice of the underlying Matrix object, are allowed");
 

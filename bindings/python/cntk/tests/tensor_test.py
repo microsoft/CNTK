@@ -89,7 +89,8 @@ def test_ndarrayview_operators(device_id, precision):
     test(lambda a: a[:], [mat23])
     test(lambda a: a[:1], [mat23])
     test(lambda a: a[1:,:], [mat23])
-    #test(lambda a: a[1,1], [mat23]) # BUGBUG: This should work
+    test(lambda a: a[1,1], [mat23])
+    test(lambda a: a[1:2,1], [mat23])
     test(lambda a: a[:2,:], [mat23])
     test(lambda a: a[1:2,:], [mat23])
     test(lambda a: a[...,:], [mat23])
