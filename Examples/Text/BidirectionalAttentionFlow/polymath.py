@@ -73,21 +73,16 @@ class PolyMath:
         embedded = C.splice(
             self.embed()(input_glove_words, input_nonglove_words), 
             C.reshape(self.charcnn(input_chars), self.convs))
-            
-        input_layers = C.layers.Sequential([
-            HighwayNetwork(dim=(embedded.shape[0]), highway_layers=self.highway_layers),
-            C.layers.Dropout(self.dropout),
-            OptimizedRnnStack(self.hidden_dim, bidirectional=True),
-        ])
+        highway = HighwayNetwork(dim=2*self.hidden_dim, highway_layers=self.highway_layers)(embedded)
+        highway_drop = C.layers.Dropout(self.dropout)(highway)
+        processed = OptimizedRnnStack(self.hidden_dim, bidirectional=True)(highway_drop)
         
-        qce = C.one_hot(qc_ph, num_classes=self.c_dim)
-        cce = C.one_hot(cc_ph, num_classes=self.c_dim)
+        qce = C.one_hot(qc_ph, num_classes=self.c_dim, sparse_output=True)
+        cce = C.one_hot(cc_ph, num_classes=self.c_dim, sparse_output=True)
                 
-        q_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [qgw_ph,qnw_ph,qce])))
-        c_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [cgw_ph,cnw_ph,cce])))
+        q_processed = processed.clone(C.CloneMethod.share, dict(zip(processed.placeholders, [qgw_ph,qnw_ph,qce])))
+        c_processed = processed.clone(C.CloneMethod.share, dict(zip(processed.placeholders, [cgw_ph,cnw_ph,cce])))
 
-        q_processed = input_layers(q_emb) # synth_embedding for query
-        c_processed = input_layers(c_emb) # synth_embedding for context
         return C.as_block(
             C.combine([c_processed, q_processed]),
             [(cgw_ph, cgw),(cnw_ph, cnw),(cc_ph, cc),(qgw_ph, qgw),(qnw_ph, qnw),(qc_ph, qc)],
