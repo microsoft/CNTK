@@ -469,6 +469,11 @@ return result->NumericOperationInPlace(0.0/*nothing to add to*/, inputs, alpha, 
         auto flatBufferOffset = AsTensorShape(Shape()).Locate(startOffset);  // offset and length into underlying ElementType array...
         auto flatBufferLength = AsTensorShape(Shape()).Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
         void* tensorView = nullptr;
+        // At this point, it is guaranteed that the slice is consecutive in memory. We distinguish two cases:
+        // If the slice is expressable a column slice, we will use ColumnSlice(). This will work with sparse data.
+        // If, on the other hand, it is a row slice in a single column (such as a single element), we will
+        // reshape the matrix into a flat row vector, and then slice the elements.
+        // The latter will fail for sparse matrices, as sparse columns can only be slice-viewed as an entire column.
         switch (m_dataType)
         {
         case DataType::Float:
@@ -478,19 +483,12 @@ return result->NumericOperationInPlace(0.0/*nothing to add to*/, inputs, alpha, 
             shared_ptr<Matrix<float>> slicedMatrixView;
             if (flatBufferOffset % currentMatrixDims.first == 0 && flatBufferLength % currentMatrixDims.first == 0)
             {
-                // slice is a column slice
-                // We keep this separate from the case below since below
-                auto slice = currentMatrix->ColumnSlice(flatBufferOffset / currentMatrixDims.first, flatBufferLength / currentMatrixDims.first);
-                slicedMatrixView = make_shared<Matrix<float>>(std::move(slice));
+                slicedMatrixView = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(flatBufferOffset / currentMatrixDims.first, flatBufferLength / currentMatrixDims.first));
             }
             else
             {
-                // slice is a row slice of a single column
-                // We reshape the matrix into a flat row vector, and then slice the elements.
-                // Note that this will fail for sparse matrices, one cannot slice into columns since they are sparse.
-                auto reshapedAsRow = currentMatrix->Reshaped(1, currentMatrixDims.first * currentMatrixDims.second); // data store as one row
-                auto sliced = reshapedAsRow.ColumnSlice(flatBufferOffset, flatBufferLength); // slicing out the range
-                sliced.Reshape(flatBufferLength, 1); // and switch back to a matrix
+                auto sliced = currentMatrix->Reshaped(1, currentMatrixDims.first * currentMatrixDims.second).ColumnSlice(flatBufferOffset, flatBufferLength);
+                sliced.Reshape(flatBufferLength, 1);
                 slicedMatrixView = make_shared<Matrix<float>>(std::move(sliced));
             }
             tensorView = new TensorView<float>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
@@ -498,6 +496,21 @@ return result->NumericOperationInPlace(0.0/*nothing to add to*/, inputs, alpha, 
         }
         case DataType::Double:
         {
+#if 1
+            auto currentMatrix = GetMatrix<double>();
+            std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
+            shared_ptr<Matrix<double>> slicedMatrixView;
+            if (flatBufferOffset % currentMatrixDims.first == 0 && flatBufferLength % currentMatrixDims.first == 0)
+            {
+                slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(flatBufferOffset / currentMatrixDims.first, flatBufferLength / currentMatrixDims.first));
+            }
+            else
+            {
+                auto sliced = currentMatrix->Reshaped(1, currentMatrixDims.first * currentMatrixDims.second).ColumnSlice(flatBufferOffset, flatBufferLength);
+                sliced.Reshape(flatBufferLength, 1);
+                slicedMatrixView = make_shared<Matrix<double>>(std::move(sliced));
+            }
+#else // keeping old version for easier comparison in case something goes wrong--to be deleted soon
             auto currentMatrix = GetMatrix<double>();
             std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
             auto sliceViewMatrixDims = GetMatrixDimensions(sliceViewShape);              // slice if interpreted as Matrix
@@ -507,6 +520,7 @@ return result->NumericOperationInPlace(0.0/*nothing to add to*/, inputs, alpha, 
                 LogicError("NDArrayView::SliceView: Currently only slices that can be realized as a column slice of the underlying Matrix object, are allowed");
 
             auto slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
+#endif
             tensorView = new TensorView<double>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
             break;
         }
