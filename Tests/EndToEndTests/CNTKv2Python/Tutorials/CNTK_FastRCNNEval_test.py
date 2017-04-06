@@ -12,9 +12,6 @@ import pytest
 abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Examples","Image","Detection","FastRCNN", "CNTK_FastRCNN_Eval.ipynb")
 
-# setting a large timeout in case we need to download the Fast-RCNN pretrained model
-notebook_timeoutSeconds = 1200
-
 # For now the test only supported on linux with python 3.4
 @pytest.mark.skipif(sys.version_info != (3,4),
                     reason="requires python 3.4")
