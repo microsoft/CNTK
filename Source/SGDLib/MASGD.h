@@ -410,7 +410,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     //delete[]px;
                 }
                 else
-	        {
+                {
                     commTimer.Restart();
                     m_nccl.AllReduce(mat);
                     m_nccl.Sync();
