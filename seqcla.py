@@ -32,6 +32,8 @@ def create_reader(path, is_training, input_dim, label_dim):
         labels   = StreamDef(field='y', shape=label_dim,   is_sparse=False)
     )), randomize=is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
 
+cached_eyes = dict()
+
 # convert CNTK reader's minibatch to our internal representation
 def from_cntk_mb(inputs: tuple, variables: tuple):
     def convert(self, var):
@@ -43,6 +45,16 @@ def from_cntk_mb(inputs: tuple, variables: tuple):
         def fix_up(data):
             data.__class__ = data.__class__ = cntk.core.NDArrayView
             shape = data.shape  # drop a superfluous length dimension
+            # map to dense if sparse for now, since we cannot batch sparse due to lack of CUDA kernel
+            if data.is_sparse():
+                global cached_eyes
+                dim = shape[1] # (BUGBUG: won't work for >1D sparse objects)
+                if dim not in cached_eyes:
+                    eye_np = np.array(np.eye(dim), np.float32)
+                    cached_eyes[dim] = cntk.NDArrayView.from_dense(eye_np)
+                eye = cached_eyes[dim]
+                data = data @ eye
+                assert shape == data.shape
             item_shape = shape[1:]
             if has_axis:
                 return [dynamite.Constant(data[t]) for t in range(shape[0])]
