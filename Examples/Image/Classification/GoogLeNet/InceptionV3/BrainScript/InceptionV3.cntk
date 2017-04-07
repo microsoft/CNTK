@@ -72,8 +72,6 @@ Train = {
         numMBsToShowResult = 100
         dropoutRate = 0.2
 
-        #disableRegInBatchNormalization = true
-
         autoAdjust = [
             autoAdjustLR = "adjustAfterEpoch"
             reduceLearnRateIfImproveLessThan = 1000
