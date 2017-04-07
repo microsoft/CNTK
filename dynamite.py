@@ -198,6 +198,12 @@ def Dense(N, activation=identity, name=''):
         return activation(x @ W + b)
     return dense
 
+def LogValues(): # fake layer to print the value as it passes through; for testing direct-mode values/co-routines
+    def log_values(x):
+        print(x.to_ndarray())
+        return x
+    return log_values
+
 def RNNUnit(N, activation=sigmoid, name=''):
     W = Parameter((INFER,N), initializer=times_initializer)
     R = Parameter((N,N),     initializer=times_initializer)

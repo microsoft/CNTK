@@ -70,10 +70,12 @@ cntk.Embedding = cntk.layers.Embedding
 cntk.Fold = cntk.layers.Fold
 cntk.RNNUnit = cntk.layers.RNNUnit
 cntk.Dense = cntk.layers.Dense
+cntk.LogValues = lambda: cntk.layers.identity
 def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
     return namespace.Sequential([
         namespace.Embedding(embedding_dim, name='embed'),
         namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu, name='rnn')),
+        namespace.LogValues(),
         namespace.Dense(num_output_classes, name='dense')
     ])
 
@@ -103,8 +105,8 @@ def train(debug_output=False):
 
     # share static model's parameters over to dynamic model
     # Note: This must be done in exactly this order for the matrices, otherwise it affects the result. Seems some random init happens here.
-    dmodel.__items__[2].W              .share_data_from(model.dense.W)
-    dmodel.__items__[2].b              .share_data_from(model.dense.b)
+    dmodel.__items__[3].W              .share_data_from(model.dense.W)
+    dmodel.__items__[3].b              .share_data_from(model.dense.b)
     dmodel.__items__[1].step_function.b.share_data_from(model.rnn.b  )
     dmodel.__items__[1].step_function.W.share_data_from(model.rnn.W  )
     dmodel.__items__[1].step_function.R.share_data_from(model.rnn.H  )
