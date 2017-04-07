@@ -1659,7 +1659,7 @@ void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
     _rmsprop4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
         avars, moms, val,
         Data(), ColOrRow2BlockId(), GetNumRows(),
-        n, RMS_GAMMA, floor);
+        n, learnRatePerSample, momentum, RMS_GAMMA, floor);
 }
 
 template <class ElemType>
