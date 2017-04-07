@@ -1101,6 +1101,12 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
     }
 
+    FunctionPtr BinaryOp(PrimitiveOpType op, Variable& refOperand, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { refOperand, operand };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
+    }
+
     FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::Plus, leftOperand, rightOperand, Dictionary(), name);
@@ -1580,6 +1586,11 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::StopGradient, operand, Dictionary(), name);
     }
 
+    FunctionPtr Assign(Variable& refOperand, const Variable& operand, const std::wstring& name)
+    {
+        return BinaryOp(PrimitiveOpType::Assign, refOperand, operand, Dictionary(), name);
+    }
+
     namespace Sequence
     {
         void VerifyIsSequence(const Variable& operand)
@@ -1806,12 +1817,10 @@ namespace CNTK
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name)
         {
-            if (axis == Axis::DefaultBatchAxis())
-                LogicError("ReduceElements: operand %S; Reduction along the batch axis alone is currently unsupported.", operand.AsString().c_str());
-
             if (axis.IsStaticAxis() ||
                 (axis == Axis::AllStaticAxes()) ||
                 (axis == Axis::AllAxes()) ||
+                (axis == Axis::DefaultBatchAxis()) ||
                 ((reductionOpName == PrimitiveFunction::InternalSumReductionOpName) && (axis == Axis::OperandSequenceAxis())))
             {
                 auto additionalProperties = Dictionary();

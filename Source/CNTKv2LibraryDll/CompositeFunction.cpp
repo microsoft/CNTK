@@ -939,6 +939,9 @@ namespace CNTK
             case PrimitiveOpType::StopGradient:
                 computationNodePtr = New<StopGradientNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
+            case PrimitiveOpType::Assign:
+                computationNodePtr = New<AssignNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
             default:
                 CNTK::LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
                 break;

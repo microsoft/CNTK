@@ -929,6 +929,7 @@ namespace CNTK
         CNTK_API static const int SentinelStaticAxisIndexValueForUnknownAxes;
         CNTK_API static const int SentinelEndStaticAxisIndexValue;
         CNTK_API static const int SentinelStaticAxisIndexValueForAllAxes;
+        CNTK_API static const int SentinelStaticAxisIndexValueForBatchAxis;
 
         class UniqueDynamicAxesNames
         {
@@ -968,6 +969,8 @@ namespace CNTK
                 m_name = L"AllAxes";
             else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForDynamicAxes)
                 m_name = StaticAxisNamePrefix + L"DynamicAxisSentinel";
+            else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForBatchAxis)
+                m_name = L"BatchAxisSentinel";
             else
                 LogicError("Unknown sentinel value for Axis");
         }
@@ -989,7 +992,8 @@ namespace CNTK
             return ((m_staticAxisIdx != SentinelStaticAxisIndexValueForDynamicAxes) &&
                     (m_staticAxisIdx != SentinelStaticAxisIndexValueForAllStaticAxes) &&
                     (m_staticAxisIdx != SentinelStaticAxisIndexValueForUnknownAxes) &&
-                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForAllAxes));
+                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForAllAxes) &&
+                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForBatchAxis));
         }
 
         ///
@@ -1043,6 +1047,11 @@ namespace CNTK
         /// Axis object representing all static and dynamic axes of an operand
         ///
         CNTK_API static const Axis& AllAxes();
+
+        ///
+        /// Axis object representing batch axis of an operand
+        ///
+        CNTK_API static const Axis& BatchAxis();
 
         ///
         /// Returns a new unique Dynamic axis
@@ -3866,6 +3875,11 @@ namespace CNTK
     /// Creates a new Function instance which output its input as it is and previent any gradient contribution from its output. 
     ///
     CNTK_API FunctionPtr StopGradient(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Update the content of ref to the content of the operand, and return ref also. 
+    ///
+    CNTK_API FunctionPtr Assign(Variable& ref, const Variable& operand, const std::wstring& name = L"");
 
     ///
     /// Creates a composite Function that has the specified rootFunction as its root.

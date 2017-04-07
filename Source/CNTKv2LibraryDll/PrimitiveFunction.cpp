@@ -344,6 +344,7 @@ namespace CNTK
                             outputShape = NDShape{}; // scalar
                             break;
                         case PrimitiveOpType::PackedIndex:
+                        case PrimitiveOpType::Assign:
                             assert(m_inputs.size() == 2);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[1].Shape());
                             break;

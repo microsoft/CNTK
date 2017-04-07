@@ -642,7 +642,8 @@ namespace CNTK
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForUnknownAxes = std::numeric_limits<int>::max() - 2;
     /*static*/ const int Axis::SentinelEndStaticAxisIndexValue = std::numeric_limits<int>::max() - 3;
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllAxes = std::numeric_limits<int>::max() - 4;
-    
+    /*static*/ const int Axis::SentinelStaticAxisIndexValueForBatchAxis = std::numeric_limits<int>::max() - 5;
+
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
 
     bool Axis::UniqueDynamicAxesNames::RegisterAxisName(const std::wstring& axisName)
@@ -720,6 +721,12 @@ namespace CNTK
     {
         static const Axis s_allAxes(SentinelStaticAxisIndexValueForAllAxes);
         return s_allAxes;
+    }
+
+    /*static*/ const Axis& Axis::BatchAxis()
+    {
+        static const Axis s_batchAxis(SentinelStaticAxisIndexValueForBatchAxis);
+        return s_batchAxis;
     }
 
     void Axis::RegisterAxisName(const std::wstring& axisName)

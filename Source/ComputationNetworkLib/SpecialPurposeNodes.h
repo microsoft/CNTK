@@ -1012,4 +1012,63 @@ public:
 
 template class StopGradientNode<float>;
 template class StopGradientNode<double>;
+
+// -----------------------------------------------------------------------
+// AssignNode (RefInput, Input)
+// -----------------------------------------------------------------------
+template <class ElemType>
+class AssignNode : public BinaryElementWiseNode<ElemType>
+{
+    typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName() { return L"Assign"; }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(AssignNode);
+    AssignNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        auto result = ValueFor(fr);
+        auto refValue = InputRef(0).ValueFor(fr);
+        auto inputValue = InputRef(1).ValueFor(fr);
+
+        refValue.AssignValuesOf(inputValue);
+        result.AssignValuesOf(inputValue);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        if (inputIndex == 1)
+        {
+            auto gradient = GradientFor(fr);
+            auto inputGradient = Input(1)->GradientFor(fr);
+
+            inputGradient += gradient;
+        }
+        else 
+        {
+            RuntimeError("AssignNode::BackpropTo: Unexpected first argument shouldn't ask for gradient.");
+        }
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        if (m_inputs.size() != 2)
+            InvalidArgument("Assign operation requires two inputs instead of %d.", (int)m_inputs.size());
+
+        if (Input(0)->NeedsGradient() == true)
+            InvalidArgument("Assign operation needs input type (no gradient) for the 1st input.");
+
+        if (!Input(1)->GetSampleLayout().IsElementwiseCompatibleWith(Input(0)->GetSampleLayout()))
+            InvalidArgument("AssignNode: All inputs should have same sample layout.");
+    }
+};
+
+template class AssignNode<float>;
+template class AssignNode<double>;
 } } }

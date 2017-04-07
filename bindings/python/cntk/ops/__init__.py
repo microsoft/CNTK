@@ -2783,3 +2783,33 @@ def stop_gradient(input, name=''):
     dtype = get_data_type(input)
     op = sanitize_input(input, dtype)
     return stop_gradient(op, name)
+
+@typemap
+def assign(ref, input, name=''):
+    '''
+    Assign the value in input to ref, ref need to be the same layout as input.
+
+    Example:
+        >>> dest = C.constant(shape=(3,4))
+        >>> data = C.parameter(shape=(3,4), init=2)
+        >>> C.assign(dest,data)
+        array([[ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.]], dtype=float32)
+        >>> dest.asarray()
+        array([[ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.]], dtype=float32)
+
+    Args:
+        ref: class: `~cntk.variables.Constant` or `~cntk.variables.Parameter` with needs_gradient=False.
+        input: class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import assign
+    dtype = get_data_type(input)
+    op = sanitize_input(input, dtype)
+    ref_op = sanitize_input(ref, dtype)
+    return assign(ref_op, op, name)

@@ -94,6 +94,7 @@ namespace CNTK
         {PrimitiveOpType::ELU, L"ELU"},
         {PrimitiveOpType::CosDistanceWithNegativeSamples, L"CosDistanceWithNegativeSamples"},
         {PrimitiveOpType::OneHot, L"OneHotOp" },
+        {PrimitiveOpType::Assign, L"Assign" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
