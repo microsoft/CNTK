@@ -1654,6 +1654,7 @@ void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
 
     ElemType* avars = c.Data();         // accumulated variances for RMS scaling
     ElemType* moms = c.Data() + n;
+    ElemType* val = functionValues.Data();
 
     _rmsprop4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
         avars, moms, val,
