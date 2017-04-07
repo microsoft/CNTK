@@ -17,6 +17,11 @@ def shape_of(v):
         return ()
 
 class Variable:
+    _batch_eval_fn = None   # lambda to call to yield from current coroutine
+    @staticmethod
+    def set_yield(batch_eval_fn):
+        Variable._batch_eval_fn = batch_eval_fn
+
     def __new__(cls, shape, op, inputs):
         v = object.__new__(cls)
         v.shape = shape
@@ -37,7 +42,11 @@ class Variable:
         pass
     def value(self):  # return the NDArrayView--computed lazily at this point if needed
         if not self.computed:  # lazy computation (this is where all the difficult stuff will happen w.r.t. batching)
-            eval(self)
+            if Variable._batch_eval_fn:
+                Variable._batch_eval_fn(self) # delegate to task scheduler to eval us
+                assert self.computed
+            else:
+                eval(self)
         return self.data
     def to_ndarray(self):
         return self.value().to_ndarray()
@@ -575,7 +584,11 @@ def train_minibatch(criterion, *batch_args):
                 # else yield back to the parent
             return run_coro
         greenlets = [greenlet(coro_wrapper(coro)) for coro in coros]
+        def batch_eval(v):
+            eval(v) # for now
+        Variable.set_yield(batch_eval) # enable yielded batch computation
         greenlets[0].switch(0)
+        Variable.set_yield(None) # disable yielded batch computation
         print(13)
     else:
         crits = []
