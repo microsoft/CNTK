@@ -210,6 +210,7 @@ namespace CNTK
     public:
         LearnerAdaDelta(
             const std::vector<Parameter>& parameters,
+            const LearningRateSchedule& learningRateSchedule,
             double rho, double epsilon,
             AdditionalLearningOptions additionalOptions);
 

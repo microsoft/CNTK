@@ -531,9 +531,10 @@ namespace CNTK
 
     LearnerAdaDelta::LearnerAdaDelta(
         const std::vector<Parameter>& parameters,
+        const LearningRateSchedule& learningRateSchedule,
         double rho, double epsilon,
         AdditionalLearningOptions additionalOptions)
-        : LearnerBase(parameters, LearningRateSchedule(1, LearningRateSchedule::UnitType::Sample), additionalOptions, /*allocateSmoothGradients*/ false),
+        : LearnerBase(parameters, learningRateSchedule, additionalOptions, /*allocateSmoothGradients*/ false),
         m_rho(rho), m_epsilon(epsilon)
     {
         for (const auto& parameter : parameters)
@@ -556,7 +557,9 @@ namespace CNTK
     {
         GET_WRITABLE_MATRICES
 
-        smoothedGradientMatrix->AdaDeltaUpdate(*gradientMatrix, *parameterMatrix, (ElementType)m_rho, (ElementType)m_epsilon);
+        const auto learningRate = LearningRate(trainingSampleCount);
+
+        smoothedGradientMatrix->AdaDeltaUpdate(*gradientMatrix, *parameterMatrix, (ElementType)learningRate, (ElementType)m_rho, (ElementType)m_epsilon);
     }
 
     /*static*/ const double LearnerFSAdaGrad::s_targetAdagradAvDenom = 1.0;
@@ -760,9 +763,10 @@ namespace CNTK
     }
 
     LearnerPtr AdaDeltaLearner(const vector<Parameter>& parameters,
+                               const LearningRateSchedule& learningRateSchedule,
                                double rho, double epsilon,
                                AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        return MakeSharedObject<LearnerAdaDelta>(parameters, rho, epsilon, additionalOptions);
+        return MakeSharedObject<LearnerAdaDelta>(parameters, learningRateSchedule, rho, epsilon, additionalOptions);
     }
 }

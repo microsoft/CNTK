@@ -107,8 +107,8 @@ BOOST_FIXTURE_TEST_CASE(AdaDeltaSparse, MatrixLearnerFixture)
     // run learner
     RunOnDevices([this]()
     {
-        matSG.AdaDeltaUpdate(matG, matM, 0.95f, 1e-8f);
-        matSGsparse.AdaDeltaUpdate(matGsparseBSC, matMsparse, 0.95f, 1e-8f);
+        matSG.AdaDeltaUpdate(matG, matM, 0.5f, 0.95f, 1e-8f);
+        matSGsparse.AdaDeltaUpdate(matGsparseBSC, matMsparse, 0.5f, 0.95f, 1e-8f);
 
         BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE4));
         BOOST_CHECK(matM.IsEqualTo(matMsparse, c_epsilonFloatE4));
