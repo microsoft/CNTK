@@ -475,6 +475,7 @@ def batch_eval(vars):
         for i, v in enumerate(op_batch):
             if hasbatch:
                 v.sliced_from = (v_batched, i) # remember that this was sliced
+                # BUGBUG: Instead of patching 'data', we must patch the input with a slice view, to connect backprop. Also, it's free (w.r.t. GPU).
                 v.data = v_batched.data[i]
             else:
                 v.data = v_batched.data
