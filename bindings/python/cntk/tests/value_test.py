@@ -237,4 +237,3 @@ def test_2d_sparse_sequences_value(device_id):
     x = sequence.input((2, 3))
     sequence_value = Value.create(x, [ndarrayview1, ndarrayview2], device=dev)
     assert np.array_equal(_to_dense(sequence_value.data), [[[[0, 1, 1], [0, 1, 0]], [[1, 0, 0], [1, 0, 1]]], [[[0, 1, 1], [1, 1, 0]], [[0, 0, 0], [0, 0, 0]]]])
-    
