@@ -400,7 +400,6 @@ namespace Microsoft {
                         ElemType* px = m_deltaArray;
                         ElemType* py = m_cpuAsyncBuffer[0];
                         m_workerArray->AddAsync(px, m_totalModelSize, m_addOptions[0]);
-                        WaitAll();
 
                         m_workerArray->Get(py, m_totalModelSize);
 
