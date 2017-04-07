@@ -528,6 +528,26 @@ namespace CNTK
             }
         };
 
+        static const char legacyMarker[] = { 0x42, 0x00, 0x43, 0x00, 0x4e, 0x00, 0x00, 0x00 }; // L"BCN"
+
+        bool IsLegacyModel(std::fstream& stream)
+        {
+            static const auto markerSize = sizeof(legacyMarker);
+            char buffer[markerSize];
+            const auto position = stream.tellg();
+            stream.read(buffer, markerSize);
+            stream.seekg(position);
+            return IsLegacyModel(buffer, markerSize);
+        }
+
+        bool IsLegacyModel(const char *buffer, size_t bufferSize)
+        {
+            static const auto markerSize = sizeof(legacyMarker);
+            if (bufferSize < markerSize)
+                return false;
+            return (strncmp(legacyMarker, buffer, markerSize) == 0);
+        }
+
         FunctionPtr LoadLegacyModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
         {
             ComputationNetworkPtr net = make_shared<ComputationNetwork>(AsCNTKImplDeviceId(computeDevice));

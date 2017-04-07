@@ -588,8 +588,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 %}
 
-// Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
-%ignore CNTK::Function::LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice= DeviceDescriptor::UseDefaultDevice());
 %ignore CNTK::Function::BlockArgumentsMapping;
 %rename (GetName) CNTK::Function::Name;
 %rename (GetUid) CNTK::Function::Uid;
@@ -605,7 +603,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (_IsPrimitive) CNTK::Function::IsPrimitive;
 %rename (_IsBlock) CNTK::Function::IsBlock;
 
-// Customize type mapping for modelBuffer, used by LoadModel
+// Customize type mapping for modelBuffer, used by Load
 %apply char* INPUT { char* modelBuffer }
 %typemap(ctype) (char* modelBuffer) "char*"
 %typemap(imtype) (char* modelBuffer) "byte[]"
@@ -613,9 +611,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 %typemap(cscode) CNTK::Function %{
 
-    public static Function LoadModel(byte[] modelBuffer, DeviceDescriptor computeDevice)
+    public static Function Load(byte[] modelBuffer, DeviceDescriptor computeDevice)
     {
-        return LoadModel(modelBuffer, (uint)modelBuffer.Length, computeDevice);
+        return Load(modelBuffer, (uint)modelBuffer.Length, computeDevice);
     }
 
     public string Name
@@ -1923,6 +1921,27 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return inputVector;
     }
 %}
+
+
+
+%ignore CNTK::Function::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), const Internal::UDFDeserializerPtr& deserializer);
+%ignore CNTK::Function::Load(const char* buffer, size_t length, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), const Internal::UDFDeserializerPtr& deserializer = nullptr);
+// Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
+%ignore CNTK::Function::Load(std::istream& inputStream, const DeviceDescriptor& computeDevice= DeviceDescriptor::UseDefaultDevice(), const Internal::UDFDeserializerPtr& deserializer = nullptr);
+
+%extend CNTK::Function {
+    static FunctionPtr Load(const std::wstring& filepath, 
+                            const CNTK::DeviceDescriptor& computeDevice = CNTK::DeviceDescriptor::UseDefaultDevice()) 
+    {
+        return CNTK::Function::Load(filepath, computeDevice, nullptr);
+    }
+
+    static FunctionPtr Load(const char* modelBuffer, size_t length,
+                            const CNTK::DeviceDescriptor& computeDevice = CNTK::DeviceDescriptor::UseDefaultDevice()) 
+    {
+        return CNTK::Function::Load(modelBuffer, length, computeDevice, nullptr);
+    }
+}
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"

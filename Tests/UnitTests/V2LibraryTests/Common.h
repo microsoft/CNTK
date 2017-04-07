@@ -159,8 +159,8 @@ inline void SaveAndReloadModel(FunctionPtr& functionPtr, const std::vector<Varia
            BOOST_ERROR("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
     }
 
-    functionPtr->SaveModel(tempModelPath);
-    functionPtr = Function::LoadModel(tempModelPath, device);
+    functionPtr->Save(tempModelPath);
+    functionPtr = Function::Load(tempModelPath, device);
 
     if (_wunlink(tempModelPath.c_str()) != 0)
          BOOST_ERROR("Error deleting temp model file 'feedForward.net'");

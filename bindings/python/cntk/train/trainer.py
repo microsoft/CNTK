@@ -8,7 +8,9 @@ from .. import cntk_py
 from ..device import use_default_device
 from cntk.internal import sanitize_var_map, sanitize_function, typemap, \
                           _value_as_sequence_or_array
-from ..io import _py_dict_to_cntk_dict, MinibatchData
+from cntk.internal.utils import _py_dict_to_cntk_dict
+from ..io import MinibatchData
+
 
 __doc__ = '''\
 A trainer encapsulates the overall training process and employs one or more
