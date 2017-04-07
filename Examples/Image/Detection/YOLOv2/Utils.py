@@ -9,13 +9,15 @@ from __future__ import print_function
 import cntk.io.transforms as xforms
 
 from cntk.layers import identity
-from cntk.layers.typing import *
+from cntk.layers.typing import Tensor, Signature
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
 from cntk import Trainer
 from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
-from cntk import cross_entropy_with_softmax, classification_error, relu
+from cntk import cross_entropy_with_softmax, classification_error
 from cntk.ops import Function
-from cntk.logging import *
+from cntk.logging import ProgressPrinter, log_number_of_parameters
+
+from PARAMETERS import *
 
 ########################
 # variables and paths  #
@@ -23,25 +25,26 @@ from cntk.logging import *
 
 # paths (are relative to current python file)
 abs_path = os.path.dirname(os.path.abspath(__file__))
-data_path = os.path.join(abs_path, "..", "..", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
 
 # model dimensions
-image_height = 32*5 # Darknet19 scales input image down over all by a factor of 32. \\
-image_width = 32*5  # It needs at least a 3x3 shape for the last conv layer. So 32*3 is required at least.
-num_channels = 3  # RGB
-num_classes = 10
+image_height = par_image_height # Darknet19 scales input image down over all by a factor of 32. \\
+image_width = par_image_width  # It needs at least a 3x3 shape for the last conv layer. So 32*3 is required at least.
+num_channels = par_num_channels  # RGB
+num_classes = par_num_classes
 
+#training parameters
+mb_size = par_minibatch_size
 
 ########################
 # define the reader    #
 ########################
 
-def create_reader(map_file, mean_file, is_training):
-    if not os.path.exists(map_file) or not os.path.exists(mean_file):
+def create_reader(map_file, is_training):
+    if not os.path.exists(map_file):
         raise RuntimeError(
-            "File '%s' or '%s' does not exist. Please run install_cifar10.py from DataSets/CIFAR-10 to fetch them" %
-            (map_file, mean_file))
+            "File '%s' does not exist. Please run install_cifar10.py from DataSets/CIFAR-10 to fetch them" %
+            (map_file))
 
     # transformation pipeline for the features has jitter/crop only when training
     transforms = []
@@ -51,7 +54,6 @@ def create_reader(map_file, mean_file, is_training):
         ]
     transforms += [
         xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
-        # xforms.mean(mean_file) <-- done by the net!
     ]
     # deserializer
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
@@ -85,7 +87,7 @@ def create_criterion_function(model, normalize=identity):
 # train action         #
 ########################
 
-def train_model(reader, reader_test, model, epoch_size=50000, max_epochs=80):
+def train_model(reader, model, epoch_size=50000, max_epochs=80, save_progress=False):
     # declare the model's input dimension
     # Training does not require this, but it is needed for deployment.
     model.update_signature((num_channels, image_height, image_width))
@@ -93,14 +95,6 @@ def train_model(reader, reader_test, model, epoch_size=50000, max_epochs=80):
     # criterion function. This is what is being trained trained.
     # Model gets "sandwiched" between normalization (not part of model proper) and criterion.
     criterion = create_criterion_function(model, normalize=lambda x: x / 256)
-    # debughelpers.dump_function(criterion, 'criterion')
-
-    # from cntk.logging.graph import plot
-    # plot(criterion, filename=os.path.join(model_path, "ConvNet_CIFAR10_DataAug.pdf"))
-
-    # iteration parameters
-    minibatch_size = 64
-    # epoch_size = 1000 ; max_epochs = 1 # for faster testing
 
     # learning parameters
     learner = momentum_sgd(model.parameters,
@@ -122,14 +116,15 @@ def train_model(reader, reader_test, model, epoch_size=50000, max_epochs=80):
     for epoch in range(max_epochs):  # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
-            mb = reader.next_minibatch(min(minibatch_size, epoch_size - sample_count))  # fetch minibatch.
+            mb = reader.next_minibatch(min(mb_size, epoch_size - sample_count))  # fetch minibatch.
             # trainer.train_minibatch(mb[reader.streams.features], mb[reader.streams.labels])
             trainer.train_minibatch({criterion.arguments[0]: mb[reader.streams.features],
                                      criterion.arguments[1]: mb[reader.streams.labels]})
             sample_count += mb[reader.streams.labels].num_samples  # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
-        model.save(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
+        if save_progress:
+            model.save(os.path.join(model_path, "train_model_DataAug_{}.dnn".format(epoch)))
 
     # return evaluation error.
     return loss, metric  # return values from last epoch
@@ -154,7 +149,7 @@ def Evaluator(model, criterion):
     return Trainer(model, (loss, metric), dummy_learner)
 
 
-def evaluate(reader, model):
+def evaluate_model(reader, model):
     # criterion function. This is what is being evaluated
     criterion = create_criterion_function(model, normalize=lambda x: x / 256)
 
@@ -168,7 +163,7 @@ def evaluate(reader, model):
         mb = reader.next_minibatch(minibatch_size)  # fetch minibatch
         if not mb:  # until we hit the end
             break
-        # metric = evaluator.test_minibatch(mb[reader.streams.features], mb[reader.streams.labels]) # evaluate minibatch
+
         metric = evaluator.test_minibatch({criterion.arguments[0]: mb[reader.streams.features],
                                            criterion.arguments[1]: mb[reader.streams.labels]})  # evaluate minibatch
         progress_printer.update(0, mb[reader.streams.labels].num_samples, metric)  # log progress
