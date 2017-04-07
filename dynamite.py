@@ -573,6 +573,10 @@ def train_minibatch(criterion, *batch_args):
         # create the greenlet scheduler for the coroutines
         crits = [] # resulting values that we aggregate  --TODO: this is not general enough
         current_coro_index = None # index of current batch item/coroutine
+        def yield_to_first(): # kick off the process by yielding to the first coroutine
+            nonlocal current_coro_index
+            current_coro_index = 0
+            greenlets[current_coro_index].switch()
         def yield_to_next(): # yield to the next coroutine
             nonlocal current_coro_index
             current_coro_index += 1
@@ -588,14 +592,17 @@ def train_minibatch(criterion, *batch_args):
             return run_coro
         greenlets = [greenlet(coro_wrapper(coro)) for coro in coros]
         # now run the schedule
+        pending_vars = []
         def yield_to_batch_eval(v): # facilitate yielded batch eval
+            nonlocal pending_vars
             # this schedules a Variable for computation
             # As long as we keep getting called from different coroutines, just collect these.
             # Once all coroutines have requested (or terminated), launch a batch eval of all collected ones; then reenter.
+            pending_vars.append(v)
             batch_eval([v]) # for now
+            pending_vars = []
         prev_yield_to_batch_eval = Variable.set_yield(yield_to_batch_eval) # enable yielded batch computation
-        current_coro_index = 0
-        greenlets[current_coro_index].switch()
+        yield_to_first()
         Variable.set_yield(prev_yield_to_batch_eval) # disable yielded batch computation
     else:
         crits = []
