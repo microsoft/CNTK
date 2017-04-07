@@ -95,7 +95,7 @@ def put_classifier_on_feature_extractor(featureExtractor,nrOfClasses):
 
 # Creates a Darknet19 classifier
 def create_classification_model(nrOfClasses, filter_mult=32):
-    featureExtractor = createFeatureExtractor(filter_mult)
+    featureExtractor = create_feature_extractor(filter_mult)
     return put_classifier_on_feature_extractor(featureExtractor, nrOfClasses)
 
 
