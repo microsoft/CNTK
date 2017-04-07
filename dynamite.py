@@ -27,7 +27,9 @@ class Variable:
     _batch_eval_fn = None   # lambda to call to yield from current coroutine
     @staticmethod
     def set_yield(batch_eval_fn):
+        prev = Variable._batch_eval_fn
         Variable._batch_eval_fn = batch_eval_fn
+        return prev
     def _compute(self):
         try:
           data = self.op(*(to_data(input) for input in self.inputs))
@@ -564,25 +566,37 @@ def train_minibatch(criterion, *batch_args):
     # for now, manually do the batch loop
     print('batch of', len(batch_args[0]))
     if use_coroutines:
+        # create a coroutine for each batch entry
+        # (a real implementation would switch to coroutines only upon encountering a need for the first time)
         zipped_batch_args = tuple(zip(*batch_args))
-        coros = [lambda args=args: criterion(*args)[0] for args in zipped_batch_args]
-        # Note: without the 'args=args', lambda will capture a reference to args, not its value; hence all see only its last value
-        crits = []
+        coros = [lambda args=args: criterion(*args)[0] for args in zipped_batch_args] # (without the 'args=args', lambda will capture a reference to args, not its value; hence all see only its last value)
+        # create the greenlet scheduler for the coroutines
+        crits = [] # resulting values that we aggregate  --TODO: this is not general enough
+        current_coro_index = None # index of current batch item/coroutine
+        def yield_to_next(): # yield to the next coroutine
+            nonlocal current_coro_index
+            current_coro_index += 1
+            if current_coro_index < len(greenlets):
+                greenlets[current_coro_index].switch()
+            else:
+                current_coro_index = None
         def coro_wrapper(coro):
-            def run_coro(my_id):
+            def run_coro():
                 ce = coro()
                 crits.append(ce)
-                if my_id+1 < len(greenlets):
-                    greenlets[my_id+1].switch(my_id+1)
-                # else yield back to the parent
+                yield_to_next()
             return run_coro
         greenlets = [greenlet(coro_wrapper(coro)) for coro in coros]
+        # now run the schedule
         def yield_to_batch_eval(v): # facilitate yielded batch eval
+            # this schedules a Variable for computation
+            # As long as we keep getting called from different coroutines, just collect these.
+            # Once all coroutines have requested (or terminated), launch a batch eval of all collected ones; then reenter.
             batch_eval([v]) # for now
-        Variable.set_yield(yield_to_batch_eval) # enable yielded batch computation
-        greenlets[0].switch(0)
-        Variable.set_yield(None) # disable yielded batch computation
-        print(13)
+        prev_yield_to_batch_eval = Variable.set_yield(yield_to_batch_eval) # enable yielded batch computation
+        current_coro_index = 0
+        greenlets[current_coro_index].switch()
+        Variable.set_yield(prev_yield_to_batch_eval) # disable yielded batch computation
     else:
         crits = []
         for args in zip(*batch_args):
