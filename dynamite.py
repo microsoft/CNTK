@@ -200,7 +200,8 @@ def Dense(N, activation=identity, name=''):
 
 def LogValues(): # fake layer to print the value as it passes through; for testing direct-mode values/co-routines
     def log_values(x):
-        print(x.to_ndarray())
+        x_cpu = x.to_ndarray() # force computation
+        #print(x_cpu)
         return x
     return log_values
 
@@ -554,14 +555,33 @@ def dump_graph(v):
         print_node(node)
     return len(order)
 
+from greenlet import greenlet # very lighweight coroutines
+
 def train_minibatch(criterion, *batch_args):
+    use_coroutines = True
     # for now, manually do the batch loop
     print('batch of', len(batch_args[0]))
-    crits = []
-    z = zip(*batch_args)
-    for args in zip(*batch_args):
-        ce, *_ = criterion(*args)
-        crits.append(ce)
+    if use_coroutines:
+        zipped_batch_args = tuple(zip(*batch_args))
+        coros = [lambda args=args: criterion(*args)[0] for args in zipped_batch_args]
+        # Note: without the 'args=args', lambda will capture a reference to args, not its value; hence all see only its last value
+        crits = []
+        def coro_wrapper(coro):
+            def run_coro(my_id):
+                ce = coro()
+                crits.append(ce)
+                if my_id+1 < len(greenlets):
+                    greenlets[my_id+1].switch(my_id+1)
+                # else yield back to the parent
+            return run_coro
+        greenlets = [greenlet(coro_wrapper(coro)) for coro in coros]
+        greenlets[0].switch(0)
+        print(13)
+    else:
+        crits = []
+        for args in zip(*batch_args):
+            ce, *_ = criterion(*args)
+            crits.append(ce)
     # sum up the ce values
     # TODO: move the tree_reduce function out from here
     f = plus
