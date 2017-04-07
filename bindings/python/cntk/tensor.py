@@ -302,9 +302,8 @@ class NDArrayViewOpsMixin(object):
         return NDArrayViewOpsMixin._num_op([self], 1.0, 14) # 14 = ElementWiseOperator.opLinearRectifier
 
     # reductions
-    def reduce_log_sum(self):
-        # TODO: add numeric_operation with an optional target dimension
-        res = NDArrayView(shape=(), data_type=self.dtype, device=self.device()) # reduce to scalar
+    def reduce_log_sum(self, reduce_to_shape=()):
+        res = NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device()) # reduce to scalar
         res.numeric_operation_in_place(0.0, [self], 1.0, 2, 28) # 2 = ElementWiseOperator.opCopy, 28 = ElementWiseOperator.opLogSum
         return res
 
