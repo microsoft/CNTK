@@ -1621,7 +1621,7 @@ void GPUSparseMatrix<ElemType>::Adam(
 }
 
 template <class ElemType>
-ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c, 
+void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c, 
     GPUMatrix<ElemType>& functionValues, 
     ElemType learnRatePerSample, 
     ElemType momentum,
