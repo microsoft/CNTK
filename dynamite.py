@@ -17,11 +17,6 @@ def shape_of(v):
         return ()
 
 class Variable:
-    _batch_eval_fn = None   # lambda to call to yield from current coroutine
-    @staticmethod
-    def set_yield(batch_eval_fn):
-        Variable._batch_eval_fn = batch_eval_fn
-
     def __new__(cls, shape, op, inputs):
         v = object.__new__(cls)
         v.shape = shape
@@ -29,6 +24,10 @@ class Variable:
         v.inputs = inputs
         v.computed = False
         return v
+    _batch_eval_fn = None   # lambda to call to yield from current coroutine
+    @staticmethod
+    def set_yield(batch_eval_fn):
+        Variable._batch_eval_fn = batch_eval_fn
     def _compute(self):
         try:
           data = self.op(*(to_data(input) for input in self.inputs))
@@ -46,7 +45,7 @@ class Variable:
                 Variable._batch_eval_fn(self) # delegate to task scheduler to eval us
                 assert self.computed
             else:
-                eval(self)
+                batch_eval([self])
         return self.data
     def to_ndarray(self):
         return self.value().to_ndarray()
@@ -309,14 +308,10 @@ def dump_parameters(m, root='$'):
             dump_parameters(member, root + '.' + member_name)
 
 # TODO: This is less trivial than it seems; need to double-check and test very carefully
-def topo_sort(v):
-    if not isinstance(v, (np.ndarray, Variable)):
-       return
-    visited = set() # [id(obj)]
-    stack = []
+def topo_sort(roots):
+    visited = set(id(v) for v in roots) # [id(obj)]
+    stack = roots
     order = []
-    stack.append(v)
-    visited.add(id(v))
     num_implanted = 0
     while stack:
         p = stack.pop()
@@ -355,10 +350,8 @@ def topo_sort(v):
 #     - sort each one right away into its batched group
 #     - this requires consumer sets for all nodes, and a not-ready-children counter
 #  - delete the batched group
-def eval(v):
-    if not isinstance(v, Variable):
-       return v
-    nodes = topo_sort(v)    # (it is possible to implement this without, just more complex)
+def batch_eval(vars):
+    nodes = topo_sort(vars)    # (it is possible to implement this without, just more complex)
     num_nodes = len(nodes)
     expected_num_ops = sum(1 for v in nodes if not v.computed)
 
@@ -584,9 +577,9 @@ def train_minibatch(criterion, *batch_args):
                 # else yield back to the parent
             return run_coro
         greenlets = [greenlet(coro_wrapper(coro)) for coro in coros]
-        def batch_eval(v):
-            eval(v) # for now
-        Variable.set_yield(batch_eval) # enable yielded batch computation
+        def yield_to_batch_eval(v): # facilitate yielded batch eval
+            batch_eval([v]) # for now
+        Variable.set_yield(yield_to_batch_eval) # enable yielded batch computation
         greenlets[0].switch(0)
         Variable.set_yield(None) # disable yielded batch computation
         print(13)
