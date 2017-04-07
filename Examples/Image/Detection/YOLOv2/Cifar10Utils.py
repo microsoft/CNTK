@@ -27,8 +27,8 @@ data_path = os.path.join(abs_path, "..", "..", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
 
 # model dimensions
-image_height = 32*5 #Darknet19 scales input image down over all by a factor of 32. Furthermore it needs at least a 3x3 shape for the last conv layer. So 32*3 is requiered at least.
-image_width = 32*5
+image_height = 32*5 # Darknet19 scales input image down over all by a factor of 32. \\
+image_width = 32*5  # It needs at least a 3x3 shape for the last conv layer. So 32*3 is required at least.
 num_channels = 3  # RGB
 num_classes = 10
 
@@ -51,7 +51,7 @@ def create_reader(map_file, mean_file, is_training):
         ]
     transforms += [
         xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
-        #xforms.mean(mean_file)
+        # xforms.mean(mean_file) <-- done by the net!
     ]
     # deserializer
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
