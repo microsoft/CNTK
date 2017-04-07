@@ -212,7 +212,7 @@ def test_ndarray_properties():
 def _to_dense(val):
     x = C.input(val.shape[1:], is_sparse=True)
     dense = C.times(x, C.constant(value=np.eye(val.shape[-1], dtype=np.float32)))
-    return dense.eval({x : val})
+    return dense.eval({x : val}, device=val.device)
 
 def test_ndarrayview_from_csr(device_id):
     dev = cntk_device(device_id)
@@ -230,9 +230,9 @@ def test_ndarrayview_from_csr(device_id):
 def test_2d_sparse_sequences_value(device_id):
     dev = cntk_device(device_id)
     csr_seq1 = csr(np.asarray([[0, 1, 1], [0, 1, 0], [1, 0, 0], [1, 0, 1]], dtype=np.float32))
-    ndarrayview1 = NDArrayView.from_csr(csr_seq1, shape=(2, 2, 3))
+    ndarrayview1 = NDArrayView.from_csr(csr_seq1, shape=(2, 2, 3), device=cpu())
     csr_seq2 = csr(np.asarray([[0, 1, 1], [1, 1, 0]], dtype=np.float32))
-    ndarrayview2 = NDArrayView.from_csr(csr_seq2, shape=(1, 2, 3))
+    ndarrayview2 = NDArrayView.from_csr(csr_seq2, shape=(1, 2, 3), device=cpu())
 
     x = sequence.input((2, 3))
     sequence_value = Value.create(x, [ndarrayview1, ndarrayview2], device=dev)

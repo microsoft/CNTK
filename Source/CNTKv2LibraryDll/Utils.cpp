@@ -603,7 +603,17 @@ namespace CNTK
 
         auto packedValue = dynamic_cast<PackedValue*>(value.get());
         if (packedValue && packedValue->IsPacked())
-            return packedValue->PackedData<ElementType>();
+        {
+            auto packedMatrixAndLayout = packedValue->PackedData<ElementType>();
+            if (!var.DynamicAxes().empty() && (packedMatrixAndLayout.second == nullptr))
+            {
+                auto layout = std::make_shared<MBLayout>();
+                layout->InitAsFrameMode(1);
+                packedMatrixAndLayout.second = layout;
+            }
+
+            return packedMatrixAndLayout;
+        }
 
         auto varShape = var.Shape();
         auto valueShape = value->Shape();
