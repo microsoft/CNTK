@@ -169,6 +169,7 @@ relu = unary_op(cntk.NDArrayView.relu)
 #row_slice_0 = unary_op(cntk.NDArrayView.row_slice)
 #def row_slice(x, begin, end):
 #    return row_slice_0(x) # (ignore dims for this test)
+reduction_ops = { cntk.NDArrayView.reduce_log_sum }
 reduce_log_sum = unary_reduction_op(cntk.NDArrayView.reduce_log_sum)
 
 def cross_entropy_with_softmax(output, label):
@@ -369,8 +370,7 @@ def eval(v):
         # sparse can not be properly batched for now
         # matrix product is not correctly batched for now
         # reduction operations do not know to not reduce the batch axis for now
-        if (isinstance(v0.inputs[0], Variable) and v0.inputs[0].data.is_sparse()) or \
-           v0.op is cntk.NDArrayView.reduce_log_sum:    # v0.op is cntk.NDArrayView.dot_transpose or 
+        if (isinstance(v0.inputs[0], Variable) and v0.inputs[0].data.is_sparse()):
             for v in op_batch:
                 v.data = v._compute()  # non-batched for now
                 v.computed = True
@@ -411,8 +411,6 @@ def eval(v):
                 # all inputs are consecutive views onto the same object--these came out of a previous batching op
                 res = sliced_from0[0]
                 # need to slice if range does not match, e.g. a sub-range or sub-index
-                #def lbd(arg):
-                #    return arg[sliced_from0[1]:sliced_from0[1] + num_batched_ops]
                 if res.shape[0] != num_batched_ops:
                     res = Variable((num_batched_ops,) + res.shape[1:],
                                    lambda arg: arg[sliced_from0[1]:sliced_from0[1] + num_batched_ops],
@@ -429,18 +427,6 @@ def eval(v):
                                      for i, inp_i_0 in enumerate(v0.inputs))
         batched_inputs = tuple(batched_input for batched_input, hasbatch in batched_inputs_hasbatch)
         hasbatch = any(tuple(hasbatch for batched_input, hasbatch in batched_inputs_hasbatch))
-        if hasbatch: # all inputs must be padded   --actually seems not even needed; would certainly simplify things
-            def pad_shape(i, batched_input):
-                if is_mul and i == 1:
-                    return batched_input # don't pad the matmul matrix
-                if len(batched_input.shape) != new_rank:
-                    assert batched_input.computed
-                    padded_shape = (1,) * (new_rank - ranks[i] - 1) + batched_input.shape
-                    batched_input = Variable((1,) + padded_shape,
-                                    lambda arg: cntk.NDArrayView.reshape(arg, (1,) + padded_shape),
-                                    [batched_input])
-                return batched_input
-            #batched_inputs = tuple(pad_shape(i, batched_input) for i, batched_input in enumerate(batched_inputs))
         for batched_input in batched_inputs: # and compute them
             if isinstance(batched_input, Variable) and not batched_input.computed: # (if already computed then no gather was necessary)
                 batched_input.data = batched_input._compute()
@@ -450,11 +436,17 @@ def eval(v):
         # In some cases, neither input got batched. In that case, just execute a single op and distribute its output
         shape_batched = v0.shape
         if hasbatch:
-            shape_batched = (num_batched_ops,) + shape_batched 
-        v_batched = Variable(shape_batched, v0.op, batched_inputs)
+            shape_batched = (num_batched_ops,) + shape_batched
+        def to_batched_op(op):
+            # if the operation is a reduction to (), we must modify it to not reduce over the batch axis
+            # All ops in reduction_ops are single-arg ops and are meant to accept an additional reduce_to_shape argument.
+            if hasbatch and op in reduction_ops:
+                return lambda arg: op(arg, reduce_to_shape=(num_batched_ops,1)).reshape((num_batched_ops,))
+            return op
+        v_batched = Variable(shape_batched, to_batched_op(v0.op), batched_inputs)
         # now perform the operation batched
         v_batched.data = v_batched._compute()
-        sh = v_batched.data.shape
+        #sh = v_batched.data.shape
         v_batched.computed = True
         num_evals += 1
         #print('out', v_batched.data.shape)
