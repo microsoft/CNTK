@@ -60,6 +60,9 @@ class Variable:
         return element_times(self, other)
     def __matmul__(self, other):
         return times(self, other)
+    @staticmethod
+    def splice(*args):
+        return Variable((len(args),) + args[0].shape, cntk.NDArrayView.splice, args)
 
 class Parameter(Variable):
     def __new__(cls, shape, initializer=None):
@@ -123,7 +126,11 @@ def unary_op(opcode):
         return Variable(x.shape, opcode, (x,))
     return f
 
+unary_reduction_ops = set() # unar_reduction_ops must be treated specially in batched execution; we collect them here during startup
+#{ cntk.NDArrayView.reduce_log_sum, cntk.NDArrayView.reduce_sum }
+
 def unary_reduction_op(opcode):
+    unary_reduction_ops.add(opcode)
     def f(x):
         if isinstance(x, list): # broadcast along sequence
             return map(f, x)
@@ -179,8 +186,8 @@ relu = unary_op(cntk.NDArrayView.relu)
 #row_slice_0 = unary_op(cntk.NDArrayView.row_slice)
 #def row_slice(x, begin, end):
 #    return row_slice_0(x) # (ignore dims for this test)
-reduction_ops = { cntk.NDArrayView.reduce_log_sum }
 reduce_log_sum = unary_reduction_op(cntk.NDArrayView.reduce_log_sum)
+reduce_sum     = unary_reduction_op(cntk.NDArrayView.reduce_sum)
 
 def cross_entropy_with_softmax(output, label):
     return reduce_log_sum(output) - times_transpose(label, output)
@@ -211,7 +218,7 @@ def Dense(N, activation=identity, name=''):
 def LogValues(): # fake layer to print the value as it passes through; for testing direct-mode values/co-routines
     def log_values(x):
         x_cpu = x.to_ndarray() # force computation
-        print(x_cpu)
+        #print(x_cpu)
         return x
     return log_values
 
@@ -432,7 +439,7 @@ def batch_eval(vars):
                 nonlocal num_gathers
                 num_gathers += 1
                 return Variable((num_batched_ops,) + (1,) * (new_rank - ranks[i] - 1) + inp_i_0_shape,
-                                lambda *args: cntk.NDArrayView.splice(args, axis=ranks[i] - new_rank),
+                                lambda *args: cntk.NDArrayView.splice(*args, axis=ranks[i] - new_rank),
                                 args), True
         batched_inputs_hasbatch = tuple(make_batch(i, inp_i_0)
                                      for i, inp_i_0 in enumerate(v0.inputs))
@@ -450,8 +457,8 @@ def batch_eval(vars):
             shape_batched = (num_batched_ops,) + shape_batched
         def to_batched_op(op):
             # if the operation is a reduction to (), we must modify it to not reduce over the batch axis
-            # All ops in reduction_ops are single-arg ops and are meant to accept an additional reduce_to_shape argument.
-            if hasbatch and op in reduction_ops:
+            # All ops in unary_reduction_ops are single-arg ops and are meant to accept an additional reduce_to_shape argument.
+            if hasbatch and op in unary_reduction_ops:
                 return lambda arg: op(arg, reduce_to_shape=(num_batched_ops,1)).reshape((num_batched_ops,))
             return op
         v_batched = Variable(shape_batched, to_batched_op(v0.op), batched_inputs)
@@ -613,6 +620,12 @@ def train_minibatch(criterion, *batch_args):
             ce, *_ = criterion(*args)
             crits.append(ce)
     # sum up the ce values
+    crits_batched = Variable.splice(*crits)
+    crit = reduce_sum(crits_batched)
+    return crit
+
+# left-over
+    #
     # TODO: move the tree_reduce function out from here
     f = plus
     def tree_reduce(f, args):
