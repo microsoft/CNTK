@@ -197,7 +197,7 @@ layer you need is not available, you can always write it yourself or
 write the formula directly as a CNTK expression.
 
 The Python library described here is the equivalent of BrainScript's
-`Layers Library <https://github.com/Microsoft/CNTK/wiki/BrainScript-Layers-Reference>`__.
+:cntkwiki:`Layers Library <BrainScript-Layers-Reference>`.
 
 .. _dense:
 
@@ -270,7 +270,7 @@ will have the tensor dimensions ``(..., shape[1], shape[0])``.
 CNTK's matrix product will interpret these extra output or input
 dimensions as if they were flattened into a long vector. For more
 details on this, see the documentation of
-`Times() <https://github.com/Microsoft/CNTK/wiki/Times-and-TransposeTimes>`_.
+:cntkwiki:`Times() <Times-and-TransposeTimes>`.
 
 The options ``input_rank`` and ``map_rank``, which are mutually
 exclusive, can specify that not all of the input axes of a tensor should
@@ -617,10 +617,9 @@ majority of rows would be zero, CNTK implements a specific optimization
 to represent the gradient in "row-sparse" form.
 
 Known issue: The above-mentioned row-sparse gradient form is currently
-not supported by our `1-bit
-SGD <https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#21-data-parallel-training-with-1-bit-sgd>`__
+not supported by our :cntkwiki:`1-bit SGD <Multiple-GPUs-and-machines#21-data-parallel-training-with-1-bit-sgd>`
 parallelization technique. Please use the
-`block-momentum <https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#22-block-momentum-sgd>`__
+:cntkwiki:`block-momentum <Multiple-GPUs-and-machines#22-block-momentum-sgd>`
 technique instead.
 
 Example
@@ -636,7 +635,7 @@ a 300-dimensional vector:
 
 In addition to ``is_sparse=True``, one would also typically read sparse
 data from disk. Here is an example of reading sparse text input with the
-`CNTKTextFormatReader <https://github.com/Microsoft/CNTK/wiki/BrainScript-CNTKTextFormat-Reader>`_:
+:cntkwiki:`CNTKTextFormatReader <BrainScript-CNTKTextFormat-Reader>`:
 
 ::
 
