@@ -374,25 +374,29 @@ def batch_eval(vars):
         else:
             ready_ops[key].append(v)
 
-    num_evals = 0
+    num_compute_launches = 0
     num_gathers = 0
 
     # execute all operations in op_batch as one CUDA operation
     # The data needs to be gathered first (an optimized version would make the
     # scatter lazy and avoid it if possible)
     def execute_batch(op_batch):
-        nonlocal num_evals, num_gathers
+        nonlocal num_compute_launches, num_gathers
+        if len(op_batch) == 1: # short-circuit this to avoid unnecessary splice (...actually already taken care of the check for all inputs being the same)
+            v = op_batch[0]
+            v.data = v._compute()
+            v.computed = True
+            num_compute_launches += 1
+            return
         # all ops are the same, so use the first as the reference
         v0 = op_batch[0]
         is_mul = v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose
         # sparse can not be properly batched for now
-        # matrix product is not correctly batched for now
-        # reduction operations do not know to not reduce the batch axis for now
         if (isinstance(v0.inputs[0], Variable) and v0.inputs[0].data.is_sparse()):
             for v in op_batch:
                 v.data = v._compute()  # non-batched for now
                 v.computed = True
-                num_evals += 1
+                num_compute_launches += 1
             return 
         # determine rank for new axis; we insert a new axis, and for that, all objects must use aligned indices
         def rank(input):
@@ -442,12 +446,12 @@ def batch_eval(vars):
                                 lambda *args: cntk.NDArrayView.splice(*args, axis=ranks[i] - new_rank),
                                 args), True
         batched_inputs_hasbatch = tuple(make_batch(i, inp_i_0)
-                                     for i, inp_i_0 in enumerate(v0.inputs))
+                                        for i, inp_i_0 in enumerate(v0.inputs))
         batched_inputs = tuple(batched_input for batched_input, hasbatch in batched_inputs_hasbatch)
         hasbatch = any(tuple(hasbatch for batched_input, hasbatch in batched_inputs_hasbatch))
         for batched_input in batched_inputs: # and compute them
             if isinstance(batched_input, Variable) and not batched_input.computed: # (if already computed then no gather was necessary)
-                batched_input.data = batched_input._compute()
+                batched_input.data = batched_input._compute() # these are splice or splice--don't count either in num_compute_launches
                 batched_input.computed = True
                 #print('out', batched_input.data.shape)
         # create a new node for the batched op
@@ -464,9 +468,8 @@ def batch_eval(vars):
         v_batched = Variable(shape_batched, to_batched_op(v0.op), batched_inputs)
         # now perform the operation batched
         v_batched.data = v_batched._compute()
-        #sh = v_batched.data.shape
         v_batched.computed = True
-        num_evals += 1
+        num_compute_launches += 1
         #print('out', v_batched.data.shape)
         # and copy the results back
         for i, v in enumerate(op_batch):
@@ -528,7 +531,7 @@ def batch_eval(vars):
                     add_ready(p)
 
     # done
-    print(ops_run, 'operations executed in', batches_run, 'batches, using an actual', num_evals, 'batched ops and', num_gathers, 'gather ops')
+    print(ops_run, 'operations executed in', batches_run, 'batches, using an actual', num_compute_launches, 'compute launches and', num_gathers, 'gather launches')
     assert ops_run == expected_num_ops
     #for v in nodes:
     #    assert v.computed
@@ -569,7 +572,7 @@ def dump_graph(v):
 from greenlet import greenlet # very lighweight coroutines
 
 def train_minibatch(criterion, *batch_args):
-    use_coroutines = True
+    use_coroutines = False
     # for now, manually do the batch loop
     print('batch of', len(batch_args[0]))
     if use_coroutines:
