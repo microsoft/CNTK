@@ -14,20 +14,19 @@ import cntk.io.transforms as xforms
 
 
 # Creates the feature extractor shared by the classifier (Darknet19) and the Detector (YOLOv2)
-def createFeatureExtractor(filter_multiplier=32):
+def create_feature_extractor(filter_multiplier=32):
     nfilters = filter_multiplier
     net = Sequential([
-        BatchNormalization(name="feature_layer"),
-        Convolution2D(filter_shape=(3,3),num_filters=nfilters,pad=True,activation=leaky_relu),
+        Convolution2D(filter_shape=(3,3),num_filters=nfilters,pad=True,activation=leaky_relu, name="feature_layer"),
         BatchNormalization(),
         MaxPooling(filter_shape=(2,2), strides=(2,2)),
-        #Output: in_x/2 x in_y/2 x nfilters
+        # Output: in_x/2 x in_y/2 x nfilters
 
 
         Convolution2D(filter_shape=(3, 3), num_filters=(nfilters * 2**1), pad=True, activation=leaky_relu, name="stage_1"),
         BatchNormalization(),
         MaxPooling(filter_shape=(2, 2), strides=(2, 2)),
-        #Ouptut: in_x/4 x in_y/4 x 2*nfilters
+        # Ouptut: in_x/4 x in_y/4 x 2*nfilters
 
 
         Convolution2D(filter_shape=(3, 3), num_filters=(nfilters * 2**2), pad=True, activation=leaky_relu, name="stage_2"),
@@ -74,12 +73,12 @@ def createFeatureExtractor(filter_multiplier=32):
         BatchNormalization(),
         Convolution2D(filter_shape=(3, 3), num_filters=(nfilters * 2**5), pad=True, activation=leaky_relu),
         BatchNormalization(name="featureExtractor_output")
-        #Output in_x/32 x in_y/32 x 32*nfilters
+        # Output in_x/32 x in_y/32 x 32*nfilters
     ],'featureExtractor_darknet19')
 
     return net
 
-	
+
 # Puts a classifier end to any feature extractor
 def put_classifier_on_feature_extractor(featureExtractor,nrOfClasses):
     return Sequential([
@@ -91,7 +90,7 @@ def put_classifier_on_feature_extractor(featureExtractor,nrOfClasses):
             GlobalAveragePooling()
         ]), shape=(10)),
         Activation(activation=softmax, name="classifier_output")
-    ],name="darknet19-classifier")
+    ], name="darknet19-classifier")
 
 
 # Creates a Darknet19 classifier
@@ -103,17 +102,18 @@ def create_classification_model(nrOfClasses, filter_mult=32):
 # Saves a model to the Output folder. If the models are already existing a ascending number is assigned to the model.
 def save_model(model, name="darknet19"):
     abs_path = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(abs_path, "Output", name, ".model")
+    model_path = os.path.join(abs_path, "Output", name + ".model")
     if os.path.exists(model_path):
         i = 2
         while(True):
-            model_path = os.path.join(abs_path, "Output", name,"(",i,")", ".model")
+            model_path = os.path.join(abs_path, "Output", name + "(" + str(i )+ ")" + ".model")
             if os.path.exists(model_path):
                 i += 1
             else:
                 break
     model.save(model_path)
     print("Stored model " + name + " to " + model_path)
+    return model_path
 
 
 ########################################################################################################################
@@ -121,7 +121,7 @@ def save_model(model, name="darknet19"):
 ########################################################################################################################
 
 if __name__=='__main__':
-    data_path =os.path.join("..","..","DataSets","CIFAR-10")
+    data_path =os.path.join("..", "..", "DataSets", "CIFAR-10")
 
     # create
     model = create_classification_model(num_classes)
@@ -133,7 +133,7 @@ if __name__=='__main__':
                                 False)
     print("Created Readers!")
 
-    train_model(reader, reader_test, model, max_epochs=80)
+    train_model(reader, reader_test, model, max_epochs=10)
 
     # save
     save_model(model)
@@ -142,5 +142,4 @@ if __name__=='__main__':
     reader = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
     evaluate(reader, model)
 
-    #save_model(model)
     print("Done!")
