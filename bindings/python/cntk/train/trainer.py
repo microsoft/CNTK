@@ -30,7 +30,7 @@ class Trainer(cntk_py.Trainer):
         Function with one or two outputs,
         representing loss and, if given, evaluation metric (in this order).
         Alternatively, a tuple(loss Function, evaluation Function) is also accepted.
-       parameter_learners (list): list of learners from :mod:`cntk.learner`
+       parameter_learners (list): list of learners from :mod:`cntk.learners`
        progress_writers (list): optionally, list of progress writers from :mod:`cntk.utils` to automatically track
          training progress.
 
