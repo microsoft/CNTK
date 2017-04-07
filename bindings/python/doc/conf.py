@@ -1,4 +1,6 @@
+import os
 import re
+import sys
 
 try:
     import cntk
@@ -17,6 +19,7 @@ except ImportError:
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.extlinks',
+    'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
@@ -78,6 +81,24 @@ extlinks = {
     'cntk': (source_prefix + '/%s', ''),
     'cntktut': (source_prefix + '/Tutorials/%s.ipynb', ''),
     'cntkwiki': ('https://github.com/Microsoft/CNTK/wiki/%s', 'CNTK Wiki - ')
+}
+
+# sphinx.ext.intersphinx
+# Note: to list an inventory's content: "python -m sphinx.ext.intersphinx objects.inv"
+def intersphinx_target(base):
+  # Use cached files if available
+  if 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ:
+     return os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'], 'Sphinx', base + '.inv')
+  else:
+    return None
+
+intersphinx_mapping = {
+  'python': ('https://docs.python.org/%s.%s' % sys.version_info[0:2],
+             intersphinx_target('python-%s.%s' %  sys.version_info[0:2])),
+  'numpy': ('https://docs.scipy.org/doc/numpy-1.11.0',
+            intersphinx_target('numpy-1.11')),
+  'scipy': ('https://docs.scipy.org/doc/scipy-0.17.1/reference',
+            intersphinx_target('scipy-0.17.1')),
 }
 
 # sphinx.ext.napoleon options
