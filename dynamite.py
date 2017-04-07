@@ -580,10 +580,9 @@ def train_minibatch(criterion, *batch_args):
         def yield_to_next(): # yield to the next coroutine
             nonlocal current_coro_index
             current_coro_index += 1
-            if current_coro_index < len(greenlets):
-                greenlets[current_coro_index].switch()
-            else:
-                current_coro_index = None
+            if current_coro_index == len(greenlets):
+                current_coro_index = 0
+            greenlets[current_coro_index].switch()
         def coro_wrapper(coro):
             def run_coro():
                 ce = coro()
@@ -594,13 +593,17 @@ def train_minibatch(criterion, *batch_args):
         # now run the schedule
         pending_vars = []
         def yield_to_batch_eval(v): # facilitate yielded batch eval
+            # this function gets called by Variable.value() if the value is not yet computed
             nonlocal pending_vars
             # this schedules a Variable for computation
             # As long as we keep getting called from different coroutines, just collect these.
             # Once all coroutines have requested (or terminated), launch a batch eval of all collected ones; then reenter.
             pending_vars.append(v)
-            batch_eval([v]) # for now
-            pending_vars = []
+            if current_coro_index+1 == len(greenlets): # BUGBUG: this is too simplistic; we need to carefully consider coroutines that terminate early
+                assert len(pending_vars) == len(greenlets)
+                batch_eval(pending_vars) # for now
+                pending_vars = []
+            yield_to_next()
         prev_yield_to_batch_eval = Variable.set_yield(yield_to_batch_eval) # enable yielded batch computation
         yield_to_first()
         Variable.set_yield(prev_yield_to_batch_eval) # disable yielded batch computation
