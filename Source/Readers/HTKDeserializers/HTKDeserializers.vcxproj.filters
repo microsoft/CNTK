@@ -6,9 +6,6 @@
     <ClCompile Include="ConfigHelper.cpp" />
     <ClCompile Include="HTKMLFReader.cpp" />
     <ClCompile Include="Exports.cpp" />
-    <ClCompile Include="HTKDataDeserializer.cpp">
-      <Filter>HTK</Filter>
-    </ClCompile>
     <ClCompile Include="MLFUtils.cpp">
       <Filter>MLF</Filter>
     </ClCompile>
@@ -17,6 +14,9 @@
     </ClCompile>
     <ClCompile Include="MLFDeserializer.cpp">
       <Filter>MLF</Filter>
+    </ClCompile>
+    <ClCompile Include="HTKDeserializer.cpp">
+      <Filter>HTK</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -45,9 +45,6 @@
     <ClInclude Include="HTKChunkDescription.h">
       <Filter>HTK</Filter>
     </ClInclude>
-    <ClInclude Include="HTKDataDeserializer.h">
-      <Filter>HTK</Filter>
-    </ClInclude>
     <ClInclude Include="MLFUtils.h">
       <Filter>MLF</Filter>
     </ClInclude>
@@ -59,6 +56,12 @@
     </ClInclude>
     <ClInclude Include="MLFDeserializer.h">
       <Filter>MLF</Filter>
+    </ClInclude>
+    <ClInclude Include="HTKFeaturesIO.h">
+      <Filter>HTK</Filter>
+    </ClInclude>
+    <ClInclude Include="HTKDeserializer.h">
+      <Filter>HTK</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
