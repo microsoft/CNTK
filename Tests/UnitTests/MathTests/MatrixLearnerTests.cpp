@@ -56,6 +56,20 @@ public:
         matGsparseBSC.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
         SingleMatrix::MultiplyAndAdd(matG2, false, matG1sparseCSC, true, matGsparseBSC);
     }
+
+    void RunOnDevices(std::function<void()> func)
+    {
+        for (int deviceId : {-1, 0})
+        {
+            matSG.TransferToDeviceIfNotThere(deviceId, true);
+            matSGsparse.TransferToDeviceIfNotThere(deviceId, true);
+            matM.TransferToDeviceIfNotThere(deviceId, true);
+            matMsparse.TransferToDeviceIfNotThere(deviceId, true);
+            matG.TransferToDeviceIfNotThere(deviceId, true);
+            matGsparseBSC.TransferToDeviceIfNotThere(deviceId, true);
+            func();
+        }
+    }
 };
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
@@ -91,11 +105,14 @@ BOOST_FIXTURE_TEST_CASE(RmsPropSparse, MatrixLearnerFixture)
 BOOST_FIXTURE_TEST_CASE(AdaDeltaSparse, MatrixLearnerFixture)
 {
     // run learner
-    matSG.AdaDeltaUpdate(matG, matM, 0.95f, 1e-8f);
-    matSGsparse.AdaDeltaUpdate(matGsparseBSC, matMsparse, 0.95f, 1e-8f);
+    RunOnDevices([this]()
+    {
+        matSG.AdaDeltaUpdate(matG, matM, 0.95f, 1e-8f);
+        matSGsparse.AdaDeltaUpdate(matGsparseBSC, matMsparse, 0.95f, 1e-8f);
 
-    BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE4));
-    BOOST_CHECK(matM.IsEqualTo(matMsparse, c_epsilonFloatE4));
+        BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE4));
+        BOOST_CHECK(matM.IsEqualTo(matMsparse, c_epsilonFloatE4));
+    });
 }
 
 BOOST_AUTO_TEST_SUITE_END()

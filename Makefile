@@ -270,10 +270,10 @@ ORIGINDIR:='$$ORIGIN'
 ########################################
 
 ifeq ("$(BUILDTYPE)","release")
-CNTK_COMPONENT_VERSION=2.0beta16
+CNTK_COMPONENT_VERSION=2.0rc1
 endif
 ifeq ("$(BUILDTYPE)","debug")
-CNTK_COMPONENT_VERSION=2.0beta16d
+CNTK_COMPONENT_VERSION=2.0rc1d
 endif
 
 CPPFLAGS += -DCNTK_COMPONENT_VERSION="$(CNTK_COMPONENT_VERSION)"
@@ -688,7 +688,9 @@ HTKDESERIALIZERS_SRC =\
 	$(SOURCEDIR)/Readers/HTKDeserializers/Exports.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/HTKDataDeserializer.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/HTKMLFReader.cpp \
-	$(SOURCEDIR)/Readers/HTKDeserializers/MLFDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFIndexer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFUtils.cpp \
 
 HTKDESERIALIZERS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKDESERIALIZERS_SRC))
 

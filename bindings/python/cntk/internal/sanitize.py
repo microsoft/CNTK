@@ -359,6 +359,17 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     return var_map
 
 
+def data_type_to_dtype(data_type):
+    if data_type == cntk_py.DataType_Float:
+        return np.float32
+    elif data_type == cntk_py.DataType_Double:
+        return np.float64
+    elif data_type == cntk_py.DataType_Unknown:
+        return object
+    else:
+        raise ValueError('data_type %s is not supported'%data_type)
+
+
 def sanitize_dtype_numpy(dtype):
     is_type = isinstance(dtype, type) or isinstance(dtype, np.dtype)
     is_str = is_string(dtype)
@@ -485,16 +496,23 @@ def sanitize_Function_attributes(attributes):
 
 def memoize(func):
     class memodict(dict):
-        __slots__ = ()
+        def __init__(self, f):
+            self.f = f
+        def __call__(self, *args):
+            return self[args]
         def __missing__(self, key):
-            self[key] = ret = func(key)
+            self[key] = ret = func(*key)
             return ret
-    return memodict().__getitem__
+    return memodict(func)
 
 @memoize
-def _sparse_to_dense_network_cache(input_shape):
-    from cntk.ops import times, sequence
+def _sparse_to_dense_network_cache(input_shape, is_sequence, device):
+    from cntk.ops import times, input, sequence
 
-    temp_input = sequence.input(input_shape)
+    if is_sequence:
+        temp_input = sequence.input(input_shape, is_sparse=True)
+    else:
+        temp_input = input(input_shape, is_sparse=True)
+
     eye_shape = input_shape[-1]
     return times(temp_input, np.eye(eye_shape))

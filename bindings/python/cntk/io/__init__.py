@@ -9,7 +9,7 @@ from .. import cntk_py, Value
 from ..tensor import ArrayMixin
 from cntk.internal import typemap
 from cntk.device import use_default_device
-from enum import Enum, unique
+from cntk.logging import TraceLevel, get_trace_level
 
 import numpy as np
 import uuid
@@ -107,31 +107,16 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         '''
         Whether the data in this minibatch is sparse.
         '''
-        return self.data.is_sparse()
+        return self.data.is_sparse
 
     def __len__(self):
         return self.num_sequences
-
-@unique
-class TraceLevel(Enum):
-
-    Error = cntk_py.MinibatchSourceConfig.Error
-    Warning = cntk_py.MinibatchSourceConfig.Warning
-    Info = cntk_py.MinibatchSourceConfig.Info
-
-    def __eq__(self, other):
-        if isinstance(other, TraceLevel):
-            return self.value == other.value
-        return self.value == other
-
-    def __ne__(self, other):
-        return not (self == other)
 
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
     MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT,
         randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, 
-        trace_level=cntk.io.TraceLevel.Warning, multithreaded_deserializer=False, frame_mode=False,
+        trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=False, frame_mode=False,
         truncation_length=0, randomize=None, randomization_window=None, sample_based_randomization_window=None,
         epoch_size=None)
 
@@ -156,8 +141,8 @@ class MinibatchSource(cntk_py.MinibatchSource):
           non-zero value enables randomization. 
           `randomization_window_in_chunks` and `randomization_window_in_samples` are mutually exclusive,
           an exception will be raised if both have non-zero values.
-        trace_level (an instance of :class:`cntk.io.TraceLevel`, defaults to `TraceLevel.Warning`): 
-          the output verbosity level.
+        trace_level (an instance of :class:`cntk.logging.TraceLevel`): the output verbosity level, defaults to 
+          the current logging verbosity level given by :func:`~cntk.logging.get_trace_level`.
         multithreaded_deserializer (`bool`, defaults to `False`): specifies if the deserialization should be 
           done on a single or multiple threads.
         frame_mode (`bool`, defaults to `False`): switches the frame mode on and off. If the frame mode 
@@ -167,7 +152,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
         truncation_length (`int`, defaults to `0`): truncation length in samples, non-zero value enables 
           the truncation (only applicable for BPTT, cannot be used in frame mode, an exception will be raised 
           if frame mode is enabled and the truncation length is non-zero).
-
         randomize (`bool`, defaults to `None`): !DEPRECATED! please use randomization_window_in_chunks or
           randomization_window_in_samples instead
         randomization_window (int, defaults to `None`): !DEPRECATED! please use randomization_window_in_chunks or

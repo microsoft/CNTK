@@ -20,12 +20,11 @@ public:
 
     std::mt19937_64& Generator()
     {
-        return *m_generator;
+        return m_generator;
     }
 
 private:
-    std::unique_ptr<std::mt19937_64> m_generator;
-    // TODO: why is this a ptr?
+    std::mt19937_64 m_generator;
 };
 
 }}}

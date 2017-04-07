@@ -192,7 +192,7 @@ class VariableMixin(object):
                 for axis in reversed(axes):
                     if axis.name == 'defaultBatchAxis':  # axis == Axis.default_batch_axis():  --TODO: how to do this right?
                         continue
-                    if axis.name == 'defaultDynamicAxis' or axis.name == 'staticAxis_2147483645': # TODO: how to do this right?
+                    if axis.name == 'defaultDynamicAxis' or axis.name == 'UnknownAxes': # TODO: how to do this right?
                         t = 'Sequence'
                     else:
                         t = 'SequenceOver[' + axis.name + ']'
@@ -258,7 +258,8 @@ class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
         return cntk_py.Constant(self)
 
 class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
-    '''
+    '''__init__(self, shape=None, init=None, dtype=np.float32, device=None, name='')
+
     A trainable parameter. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that can be modified by a training
     procedure.
@@ -346,7 +347,8 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
 
 
 class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
-    '''
+    '''__init__(self, value=None, shape=None, dtype=np.float32, device=None, name='')
+
     A constant value. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that cannot be modified.
 

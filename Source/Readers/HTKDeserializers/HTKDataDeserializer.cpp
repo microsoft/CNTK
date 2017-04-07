@@ -4,8 +4,6 @@
 //
 
 #include "stdafx.h"
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 #include "HTKDataDeserializer.h"
 #include "ConfigHelper.h"
 #include "Basics.h"
@@ -111,7 +109,7 @@ void HTKDataDeserializer::InitializeAugmentationWindow(const std::pair<size_t, s
 }
 
 // Initializes chunks based on the configuration and utterance descriptions.
-void HTKDataDeserializer::InitializeChunkDescriptions(const vector<wstring>& paths)
+void HTKDataDeserializer::InitializeChunkDescriptions(const vector<string>& paths)
 {
     // Read utterance descriptions.
     vector<UtteranceDescription> utterances;
@@ -120,7 +118,7 @@ void HTKDataDeserializer::InitializeChunkDescriptions(const vector<wstring>& pat
 
     for (const auto& u : paths)
     {
-        UtteranceDescription description(move(msra::asr::htkfeatreader::parsedpath(u)));
+        UtteranceDescription description(move(msra::asr::htkfeatreader::parsedpath(msra::strfun::utf16(u))));
         size_t numberOfFrames = description.GetNumberOfFrames();
 
         if (m_expandToPrimary && numberOfFrames != 1)
@@ -186,7 +184,7 @@ void HTKDataDeserializer::InitializeChunkDescriptions(const vector<wstring>& pat
 
     fprintf(stderr,
         "HTKDataDeserializer::HTKDataDeserializer: "
-        "selected %" PRIu64 " utterances grouped into %" PRIu64 " chunks, "
+        "selected '%zu' utterances grouped into '%zu' chunks, "
         "average chunk size: %.1f utterances, %.1f frames "
         "(for I/O: %.1f utterances, %.1f frames)\n",
         utterances.size(),

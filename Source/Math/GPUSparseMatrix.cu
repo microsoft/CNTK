@@ -165,6 +165,10 @@ void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCo
     {
         SetMatrixFromCSCFormat(deepCopy.ColLocation(), deepCopy.RowLocation(), deepCopy.Data(), deepCopy.GetNumElemAllocated(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
     }
+    else if (deepCopy.GetFormat() == matrixFormatSparseBlockCol)
+    {
+        SetMatrixFromSBCFormat(deepCopy.BlockIdsLocation(), deepCopy.Data(), deepCopy.GetBlockSize(), deepCopy.GetNumRows(), deepCopy.GetNumCols());
+    }
     else
         NOT_IMPLEMENTED;
 }
@@ -962,7 +966,6 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
     }
 }
 
-#if 0 // add it back with test
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, const ElemType* val, const size_t numBlocks, const size_t numRows, const size_t numCols)
 {
@@ -979,7 +982,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, c
     size_t nz = numBlocks * numRows;
     RequireSizeAndAllocate(numRows, numCols, nz, true, false);
 
-    static std::vector<GPUSPARSE_INDEX_TYPE> gpuBlockId2Col(numBlocks);
+    static std::vector<GPUSPARSE_INDEX_TYPE> gpuBlockId2Col(numCols);
     static std::vector<GPUSPARSE_INDEX_TYPE> gpuCol2BlockId(numCols);
 
     std::fill(gpuBlockId2Col.begin(), gpuBlockId2Col.end(), Id_NotAssigned);
@@ -993,10 +996,9 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, c
     }
 
     CUDA_CALL(cudaMemcpy(Data(), val, nz * sizeof(ElemType), cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpy(BlockId2ColOrRow(), &gpuBlockId2Col[0], numBlocks * sizeof(GPUSPARSE_INDEX_TYPE), cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpy(ColOrRow2BlockId(), &gpuCol2BlockId[0], numBlocks * sizeof(GPUSPARSE_INDEX_TYPE), cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(BlockId2ColOrRow(), &gpuBlockId2Col[0], numCols * sizeof(GPUSPARSE_INDEX_TYPE), cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(ColOrRow2BlockId(), &gpuCol2BlockId[0], numCols * sizeof(GPUSPARSE_INDEX_TYPE), cudaMemcpyHostToDevice));
 }
-#endif
 
 // this function will allocate memory while the caller needs to release it
 template <class ElemType>
@@ -1217,7 +1219,6 @@ void GPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, co
         c.Data(),
         a.GetNumRows(), a.GetNumCols());
 }
-
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUSparseMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, 
     ElemType scaleFactor, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
@@ -2914,9 +2915,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignOneHot(const GPUMatr
         LogicError("AssignOneHot: Matrix a is empty.");
 
     if (GetFormat() != matrixFormatSparseCSC)
-    {
         LogicError("AssignOneHot: Matrix format is not supported.");
-    }
 
     if (axis >= shape.size())
         LogicError("AssignOneHot: axis is not correct");
@@ -2927,8 +2926,11 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignOneHot(const GPUMatr
 
     int num_class = (int)shape[axis];
 
-    auto nCols = a.GetNumCols();
-    auto nRows = num_class * a.GetNumRows();
+    auto nRows = item_size * num_class;
+    auto nCols = a.GetNumElements() / item_size;
+    if (((GetNumRows() != 0) && (GetNumRows() != nRows)) || ((GetNumCols() != 0) && (GetNumCols() != nCols)))
+        LogicError("AssignOneHot: Target matrix size is not correct");
+
     this->RequireSizeAndAllocate(nRows, nCols, a.GetNumElements());
     this->PrepareDevice();
 
@@ -2940,14 +2942,12 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignOneHot(const GPUMatr
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
     _assignOneHotAsSparse<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(indices, 
-                                                                                      secondaryIndices,
-                                                                                      majorIndices,
-                                                                                      targetData,
-                                                                                      num_class,
-                                                                                      item_size,
-                                                                                      a.GetNumRows(),
-                                                                                      a.GetNumCols(),
-                                                                                      N);
+                                                                                    secondaryIndices,
+                                                                                    majorIndices,
+                                                                                    targetData,
+                                                                                    num_class,
+                                                                                    item_size,
+                                                                                    N);
 
     return *this;
 }

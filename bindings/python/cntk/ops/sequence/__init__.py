@@ -16,7 +16,8 @@ from ...default_options import get_default_override, default_override_or
 @typemap
 def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
           sequence_axis=Axis.default_dynamic_axis(), name=''):
-    '''
+    '''input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, sequence_axis=Axis.default_dynamic_axis(), name='')
+
     It creates an input in the network: a place where data,
     such as features and labels, should be provided.
 
@@ -183,8 +184,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     '''
 
     from cntk.internal import sanitize_dtype_cntk
-    from ...cntk_py import Constant
-    from cntk.cntk_py import past_value
+    from cntk.cntk_py import Constant, past_value
 
     if initial_state is None:
         initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
