@@ -925,9 +925,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (AreEqualShape) CNTK::operator==(const NDShape& first, const NDShape& second);
 %rename (_IsUnknown) CNTK::NDShape::IsUnknown;
 %rename (_HasInferredDimension) CNTK::NDShape::HasInferredDimension;
+%rename (_HasFreeDimension) CNTK::NDShape::HasFreeDimension;
 
 %ignore CNTK::NDShape::NDShape(const std::initializer_list<size_t>& dimensions);
 %ignore CNTK::NDShape::InferredDimension;
+%ignore CNTK::NDShape::FreeDimension;
 
 //
 // NDShape
@@ -984,6 +986,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     public bool HasInferredDimension
     {
         get { return _HasInferredDimension(); }
+    }
+
+    public bool HasFreeDimension
+    {
+        get { return _HasFreeDimension(); }
     }
 
     public int TotalSize
@@ -1089,6 +1096,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static readonly int InferredDimension = -1;
+    public static readonly int FreeDimension = -3;
 %}
 
 // Todo: add correct typemap as they might be useful for C# in future.

@@ -157,7 +157,7 @@ namespace CNTK
         auto tensorShape = tensorView->GetShape();
 
         // we should always reshape for rank-0, so that batch and sequence axis goes to columns
-        if (tensorShape.GetRank() <= 2 && rowColSplitPoint != 0)
+        if (tensorShape.GetRank() <= 1 && rowColSplitPoint != 0)
             return tensorView->AsMatrix();
 
         size_t splitPoint = rowColSplitPoint;

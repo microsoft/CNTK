@@ -61,7 +61,7 @@ public:
                 continue;
 
             auto argumentVar = arguments[j++];
-            auto argumentValue = ::CNTK::Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(argumentVar, input.Value(), input.GetMBLayout());
+            auto argumentValue = ::CNTK::Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(argumentVar, nullptr, input.Value(), input.GetMBLayout());
             argumentValues.insert(std::make_pair(argumentVar, argumentValue));
         }
         assert(j == arguments.size());
@@ -128,7 +128,7 @@ public:
             // input, and reuse them for subsequence inputs.
             ::CNTK::ValuePtr gradientValue;
             if (output.NeedsGradient())
-                gradientValue = ::CNTK::Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(output, *m_gradients[i], m_MBLayouts[i]);
+                gradientValue = ::CNTK::Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(output, nullptr, *m_gradients[i], m_MBLayouts[i]);
 
             outputGradientValues.insert({ output, gradientValue });
         }
@@ -192,7 +192,7 @@ public:
             }
 
             auto outputNDShape = output.Shape();
-            if (outputNDShape.IsUnknown() || outputNDShape.HasInferredDimension())
+            if (outputNDShape.IsUnknown() || outputNDShape.HasInferredDimension() || outputNDShape.HasFreeDimension())
                 LogicError("The output shape of an external user defined Function should be fully determined by the time CNTK engine validation executes");
 
             auto outputDynamicAxes = output.DynamicAxes();

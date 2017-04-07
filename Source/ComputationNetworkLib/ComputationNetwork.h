@@ -228,9 +228,9 @@ public:
     // -----------------------------------------------------------------------
 
     void CompileNetwork(); // call this after creation, Load(), and any modification
+    void ValidateNetwork();
 
 private:
-    void ValidateNetwork();
     size_t ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFirstPass, bool isFinalValidationPass);
     bool ValidateNode(ComputationNodeBasePtr node, bool isFinalValidationPass) const;
     void MarkValueNonSharableNodes();

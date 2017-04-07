@@ -408,6 +408,7 @@ namespace CNTK
     /*static*/ ComputationNodeBasePtr CompositeFunction::GetNode(const Variable& variable,
                                                                  Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
                                                                  ComputationNetworkBuilder<ElementType>& builder,
+                                                                 const std::unordered_map<Variable, Variable>& fullyDefinedArgumentsMap,    
                                                                  std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap,
                                                                  std::unordered_map<Variable, bool>& isVariableRootMap,
                                                                  const std::unordered_set<Variable>& inputsToExcludeGradientsFor)
@@ -426,9 +427,6 @@ namespace CNTK
         if (variable.Shape().IsUnknown())
             InvalidArgument("Variable '%S' with unknown shape found when compiling the Function graph.", variable.AsString().c_str());
 
-        if (variable.Shape().HasInferredDimension())
-            InvalidArgument("Variable '%S' with partially unresolved shape %S found when compiling the Function graph.", variable.AsString().c_str(), variable.Shape().AsString().c_str());
-
         if (variable.DynamicAxes() == Axis::UnknownDynamicAxes())
             InvalidArgument("Variable '%S' with unknown dynamic axes found when compiling the Function graph.", variable.AsString().c_str());
 
@@ -438,6 +436,9 @@ namespace CNTK
         std::shared_ptr<ComputationNode<ElementType>> computationNodePtr;
         if (variable.IsParameter() || variable.IsConstant())
         {
+            if ((variable.IsParameter() || variable.IsConstant()) && variable.Shape().HasInferredDimension())
+                InvalidArgument("Parameter or Constant '%S' with unresolved shape %S found when compiling the Function graph.", variable.AsString().c_str(), variable.Shape().AsString().c_str());
+
             auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name());
             computationNodePtr = builder.CreateLearnableParameter(internalNodeName, AsTensorShape(variable.Shape()));
             network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
@@ -463,6 +464,13 @@ namespace CNTK
         }
         else if (variable.IsInput())
         {
+            auto fullyDefinedArgumentVar = variable;
+            if (fullyDefinedArgumentVar.Shape().HasFreeDimension() && (fullyDefinedArgumentsMap.find(fullyDefinedArgumentVar) != fullyDefinedArgumentsMap.end()))
+                fullyDefinedArgumentVar = fullyDefinedArgumentsMap.at(fullyDefinedArgumentVar);
+
+            if (fullyDefinedArgumentVar.Shape().HasFreeDimension())
+                InvalidArgument("Input Variable '%S' with unresolved shape %S found when compiling the Function graph.", fullyDefinedArgumentVar.AsString().c_str(), fullyDefinedArgumentVar.Shape().AsString().c_str());
+
             auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name());
 
             // TODO: Input variables currently are required to have the default batch axis
@@ -486,9 +494,9 @@ namespace CNTK
                 network->AddNodeToNetAndAttachInputs(New<DynamicAxisNode<ElementType>>(network->GetDeviceId(), internalDynamicAxisName), {});
 
             if (IsSparseInput(variable))
-                computationNodePtr = builder.CreateSparseInputNode(internalNodeName, AsTensorShape(variable.Shape()), internalDynamicAxisName);
+                computationNodePtr = builder.CreateSparseInputNode(internalNodeName, AsTensorShape(fullyDefinedArgumentVar.Shape()), internalDynamicAxisName);
             else
-                computationNodePtr = builder.CreateInputNode(internalNodeName, AsTensorShape(variable.Shape()), internalDynamicAxisName);
+                computationNodePtr = builder.CreateInputNode(internalNodeName, AsTensorShape(fullyDefinedArgumentVar.Shape()), internalDynamicAxisName);
 
             if (variable.NeedsGradient() && (inputsToExcludeGradientsFor.find(variable) == inputsToExcludeGradientsFor.end()))
             {
@@ -500,7 +508,7 @@ namespace CNTK
         else
         {
             assert(variable.IsOutput());
-            auto outputVariableNode = GetOutputVariableNode(variable, network, builder, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor);
+            auto outputVariableNode = GetOutputVariableNode(variable, network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor);
             // Can be null in case of loops with f.output == f.input.
             // Such loops cannot be handled, so we leave nullptr as computational node.
             if (outputVariableNode)
@@ -1004,6 +1012,7 @@ namespace CNTK
     /*static*/ ComputationNodeBasePtr CompositeFunction::GetOutputVariableNode(const Variable& variable,
                                                                                Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
                                                                                ComputationNetworkBuilder<ElementType>& builder,
+                                                                               const std::unordered_map<Variable, Variable>& fullyDefinedArgumentsMap,
                                                                                std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap,
                                                                                std::unordered_map<Variable, bool>& isVariableRootMap,
                                                                                const std::unordered_set<Variable>& inputsToExcludeGradientsFor)
@@ -1032,7 +1041,7 @@ namespace CNTK
             if (inputVar.IsConstant() && (nonConstInputDataType != DataType::Unknown) && (inputVar.GetDataType() != nonConstInputDataType))
                 inputVar = Constant(inputVar).CloneAs(nonConstInputDataType);
 
-            auto baseNodePtr = GetNode(inputVar, network, builder, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor);
+            auto baseNodePtr = GetNode(inputVar, network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor);
             inputNodes.push_back((baseNodePtr != nullptr) ? baseNodePtr->template As<ComputationNode<ElementType>>()->shared_from_this() : nullptr);
         }
 
@@ -1046,7 +1055,7 @@ namespace CNTK
             for (auto compositeArgument : compositeArguments)
                 variableToNodeMap[compositeArgument] = variableToNodeMap.at(compositeArgument.BlockFunctionVariableMapping());
 
-            return GetNode(variable.BlockFunctionVariableMapping(), network, builder, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor);
+            return GetNode(variable.BlockFunctionVariableMapping(), network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor);
         }
         else
             computationNodePtr = CreateComputationNode(variable, function, inputNodes, network, variableToNodeMap);
@@ -1073,6 +1082,27 @@ namespace CNTK
         return result;
     }
 
+    static bool VariableShapeMatchesNodeShape(const NDShape& varShape, const TensorShape& nodeShape) 
+    {
+        if (varShape.Rank() == 0)
+            return (nodeShape.GetNumElements() == 1);
+
+        auto varShapeAsTensorShape = AsTensorShape(varShape);
+        if (!varShape.HasFreeDimension())
+            return (nodeShape == AsTensorViewShape(varShape)) || (nodeShape == varShapeAsTensorShape);
+
+        if (varShapeAsTensorShape.GetRank() != nodeShape.GetRank())
+            return false;
+
+        for (size_t i = 0; i < varShapeAsTensorShape.GetRank(); ++i)
+        {
+            if ((varShapeAsTensorShape.GetDim(i) != NDShape::FreeDimension) && (varShapeAsTensorShape.GetDim(i) != nodeShape.GetDim(i)))
+                return false;
+        }
+
+        return true;
+    }
+
     template <typename ElementType>
     ComputationNetworkPtr CompositeFunction::GetComputationNetwork(const DeviceDescriptor& device,
                                                                    const std::unordered_set<Variable>& backpropRoots,
@@ -1096,6 +1126,23 @@ namespace CNTK
             
             if (!backpropRoots.empty() && (inputsToExcludeGradientsFor != m_inputsExcludedFromGradientComputation))
                 LogicError("Function '%S': Changing the set of inputs to exclude from gradient computation, across different Forward calls on a CNTK composite Function, is currently unsupported.", AsString().c_str());
+
+            // Verify if the free dimensions of any of the arguments have changed, and if so, update the corresponding
+            // input ComputationNodes and rerun validation on the computation network
+            bool anyArgumentShapesChanged = false;
+            for (auto freeDimensionArgumentMapping : m_fullyDefinedArgumentsMap)
+            {
+                auto newShape = freeDimensionArgumentMapping.second.Shape();
+                auto argumentComputationNode = m_variableToNodeMap[freeDimensionArgumentMapping.first];
+                if (AsTensorShape(newShape) != argumentComputationNode->GetSampleLayout())
+                {
+                    argumentComputationNode->SetDims(AsTensorShape(newShape), argumentComputationNode->HasMBLayout());
+                    anyArgumentShapesChanged = true;
+                }
+            }
+
+            if (anyArgumentShapesChanged)
+                m_computationNetwork->ValidateNetwork();
         }
         else
         {
@@ -1125,11 +1172,13 @@ namespace CNTK
                                 "All Placeholders of a Function must be bound (to a variable) before performing a Forward computation.",
                                 (int)placeholders.size(), NamedListString(placeholders).c_str());
 
+            std::unordered_map<Variable, bool> isVariableRootMap;
+
             // Now recursively create the network in a top-down fashion
             auto rootFunction = RootFunction();
             auto rootFunctionOutputs = rootFunction->RawOutputs();
             for (auto rootOutput : rootFunctionOutputs)
-                GetNode(rootOutput, m_computationNetwork, builder, m_variableToNodeMap, m_isVariableRootMap, m_inputsExcludedFromGradientComputation);
+                GetNode(rootOutput, m_computationNetwork, builder, m_fullyDefinedArgumentsMap, m_variableToNodeMap, isVariableRootMap, m_inputsExcludedFromGradientComputation);
 
             // We need to patch the Computation node mappings for the arguments of block functions 
             // since for recurrent inputs, the mappings are not fully established the first time
@@ -1158,9 +1207,9 @@ namespace CNTK
             };
             PostorderTraverseVariables(rootFunction, PatchBlockArgumentsAndOutputsMapping);
 
-            std::function<bool(const Variable&)> IsVariableRoot = [this, &IsVariableRoot](const Variable& outputVar) {
+            std::function<bool(const Variable&)> IsVariableRoot = [this, &isVariableRootMap, &IsVariableRoot](const Variable& outputVar) {
                 auto mappingVariable = GetMappingVariable(outputVar);
-                return (m_isVariableRootMap[outputVar] && !IsFirstOutputOfMultiOutputUDF(mappingVariable) && ((mappingVariable == outputVar) || IsVariableRoot(mappingVariable)));
+                return (isVariableRootMap[outputVar] && !IsFirstOutputOfMultiOutputUDF(mappingVariable) && ((mappingVariable == outputVar) || IsVariableRoot(mappingVariable)));
             };
 
             // If any of the function or requested outputs is not a root node, we need to explicitly
@@ -1199,7 +1248,6 @@ namespace CNTK
                 if (std::find(currentComputationNodeInputs.begin(), currentComputationNodeInputs.end(), nullptr) != currentComputationNodeInputs.end())
                 {
                     // This ComputationNode has at least one null input which now needs to be properly attached
-
                     const PrimitiveFunction* primitiveFunc = dynamic_cast<const PrimitiveFunction*>(currentVar.Owner().get());
 
                     // Skip block primitives since they do not directly map to a computation node
@@ -1232,10 +1280,9 @@ namespace CNTK
                     auto computationNodePtr = m_variableToNodeMap.at(outputVar);
                     auto outputShape = outputVar.Shape();
                     auto computationNodeSampleLayout = computationNodePtr->GetSampleLayout();
-                    if (((outputShape.Rank() == 0) && (computationNodeSampleLayout[0] != 1)) ||
-                        ((outputShape.Rank() != 0) && (computationNodeSampleLayout != AsTensorViewShape(outputShape)) && (computationNodeSampleLayout != AsTensorShape(outputShape))))
+                    if (!VariableShapeMatchesNodeShape(outputShape, computationNodeSampleLayout))
                     {
-                        LogicError("Function '%S': The output Variable '%S' shape %S does not match the SampleLayout shape %s of the corresponding ComputationNode in the network.",
+                        LogicError("Function '%S': The output Variable '%S' shape '%S' does not match the SampleLayout shape '%s' of the corresponding ComputationNode in the network.",
                                     AsString().c_str(), outputVar.AsString().c_str(), outputShape.AsString().c_str(), ((std::string)computationNodeSampleLayout).c_str());
                     }
                 }
@@ -1293,7 +1340,11 @@ namespace CNTK
         if (!computationNode->Is<InputValueBase<ElementType>>())
             CNTK::LogicError("CompositeFunction::Forward: Illegal to populate value of a non-input Variable '%S'.", variableValue.first.AsString().c_str());
 
-        std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableValue.first, variableValue.second);
+        NDShape inferredVariableShape;
+        std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableValue.first, variableValue.second, &inferredVariableShape);
+        if (!VariableShapeMatchesNodeShape(inferredVariableShape, computationNode->GetSampleLayout()))
+            CNTK::LogicError("CompositeFunction::Forward: Inferred shape '%S' of Variable '%S' does not match the corresponding computation node shape '%S'.", 
+                             inferredVariableShape.AsString().c_str(), variableValue.first.AsString().c_str(), ((std::string)computationNode->GetSampleLayout()).c_str());
 
         // Switch the node matrix to the right matrix type
         auto& nodeData = computationNode->As<ComputationNode<ElementType>>()->Value();
@@ -1313,6 +1364,51 @@ namespace CNTK
                                 "for the Function's arguments '%S' vs. '%S', though these arguments have the same dynamic axes '%S'",
                                  variableValue.first.AsString().c_str(), layoutsPopulated.at(nodeLayout).AsString().c_str(), DynamicAxesAsString(variableValue.first.DynamicAxes()).c_str());
         }
+    }
+
+    std::unordered_map<Variable, NDShape> CompositeFunction::InferFreeDimensionsOfArguments(const std::unordered_map<Variable, ValuePtr>& arguments)
+    {
+        std::unordered_map<Variable, NDShape> inferredArgumentDimensions;
+        for (auto argumentValuePair : arguments)
+        {
+            NDShape inferredVarShape;
+            Utils::VerifyVariableValueCompatibility(argumentValuePair.first, argumentValuePair.second, &inferredVarShape);
+            if (inferredVarShape != argumentValuePair.first.Shape())
+                inferredArgumentDimensions.insert({ argumentValuePair.first , inferredVarShape });
+        }
+
+        if (!inferredArgumentDimensions.empty())
+        {
+            if (!m_latestFullyDefinedComposite)
+            {
+                assert(m_fullyDefinedArgumentsMap.empty());
+                for (auto inferredArgumentShapePair : inferredArgumentDimensions)
+                {
+                    auto fullyDefinedArgument = inferredArgumentShapePair.first.Clone();
+                    fullyDefinedArgument.m_dataFields->m_shape = inferredArgumentShapePair.second;
+                    m_fullyDefinedArgumentsMap.insert({ inferredArgumentShapePair.first, fullyDefinedArgument });
+                }
+
+                m_latestFullyDefinedComposite = this->Clone(ParameterCloningMethod::Share, m_fullyDefinedArgumentsMap);
+            }
+            else
+            {
+                bool argumentShapeChangedSinceLastTime = false;
+                for (auto inferredArgumentShapePair : inferredArgumentDimensions)
+                {
+                    if (inferredArgumentShapePair.second != m_fullyDefinedArgumentsMap[inferredArgumentShapePair.first].Shape())
+                    {
+                        argumentShapeChangedSinceLastTime = true;
+                        m_fullyDefinedArgumentsMap[inferredArgumentShapePair.first].m_dataFields->m_shape = inferredArgumentShapePair.second;
+                    }
+                }
+
+                if (argumentShapeChangedSinceLastTime)
+                    m_latestFullyDefinedComposite->ValidateOrUpdateOutputs();
+            }
+        }
+
+        return inferredArgumentDimensions;
     }
 
     void CompositeFunction::PopulateNetworkInputs(const std::unordered_map<Variable, ValuePtr>& arguments)
@@ -1347,7 +1443,11 @@ namespace CNTK
     template <typename ElementType>
     /*static*/ void CompositeFunction::PopulateComputationNodeGradient(const std::pair<Variable, ValuePtr>& variableGradient, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode)
     {
-        std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableGradient.first, variableGradient.second);
+        NDShape inferredVariableShape;
+        std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableGradient.first, variableGradient.second, &inferredVariableShape);
+        if (!VariableShapeMatchesNodeShape(inferredVariableShape, computationNode->GetSampleLayout()))
+            CNTK::LogicError("CompositeFunction::Backward: Inferred shape '%S' of Variable '%S' does not match the corresponding computation node shape '%S'.",
+                             inferredVariableShape.AsString().c_str(), variableGradient.first.AsString().c_str(), ((std::string)computationNode->GetSampleLayout()).c_str());
 
         MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
         auto nodeLayout = computationNode->GetMBLayout();
@@ -1383,7 +1483,8 @@ namespace CNTK
 
     /*static*/ void CompositeFunction::GetNodeOutputOrGradient(Variable var, ValuePtr& varValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode, bool getGradient)
     {
-        auto valueShape = PackedValue::GetUnpackedShape(var.Shape(), var.DynamicAxes(), computationNode->GetMBLayout());
+        auto varShape = GetVariableShape(var.Shape(), computationNode->GetSampleLayout());
+        auto valueShape = PackedValue::GetUnpackedShape(varShape, var.DynamicAxes(), computationNode->GetMBLayout());
         if (varValue != nullptr)
         {
             // TODO: The shape of the specified output Value object must match the actual output shape
@@ -1400,18 +1501,18 @@ namespace CNTK
         {
             auto& matrix = getGradient ? computationNode->As<ComputationNode<float>>()->Gradient() : computationNode->As<ComputationNode<float>>()->Value();
             if (varValue == nullptr)
-                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), var.DynamicAxes(), std::make_shared<Matrix<float>>(matrix.AsReference()), layout, /*readOnly =*/ false);
+                nodeValue = MakeSharedObject<PackedValue>(varShape, var.DynamicAxes(), std::make_shared<Matrix<float>>(matrix.AsReference()), layout, /*readOnly =*/ false);
             else
-                nodeValue = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(var, matrix, layout);
+                nodeValue = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(var, computationNode, matrix, layout);
             break;
         }
         case DataType::Double:
         {
             auto& matrix = getGradient ? computationNode->As<ComputationNode<double>>()->Gradient() : computationNode->As<ComputationNode<double>>()->Value();
             if (varValue == nullptr)
-                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), var.DynamicAxes(), std::make_shared<Matrix<double>>(matrix.AsReference()), layout, /*readOnly =*/ false);
+                nodeValue = MakeSharedObject<PackedValue>(varShape, var.DynamicAxes(), std::make_shared<Matrix<double>>(matrix.AsReference()), layout, /*readOnly =*/ false);
             else
-                nodeValue = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(var, matrix, layout);
+                nodeValue = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(var, computationNode, matrix, layout);
             break;
         }
         default:
@@ -1534,24 +1635,12 @@ namespace CNTK
         for (auto output : outputs)
             requestedOutputVariables.insert(output.first);
 
-        if (dataType == DataType::Float)
-            GetComputationNetwork<float>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, inputsToExcludeGradientsFor, true);
-        else if (dataType == DataType::Double)
-            GetComputationNetwork<double>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, inputsToExcludeGradientsFor, true);
-        else
-            InvalidArgument("Unsupported DataType %s", DataTypeName(dataType));
-
         std::unordered_set<Variable> functionOutputs(m_outputs.begin(), m_outputs.end());
-        std::vector<ComputationNodeBasePtr> outputsToEvaluate;
         std::unordered_set<Variable> requiredArguments;
-
         for (auto outputVariable : requestedOutputVariables)
         {
             auto& requiredArgumentsForCurrentOutput = GetArgumentDependencies(outputVariable);
             requiredArguments.insert(requiredArgumentsForCurrentOutput.begin(), requiredArgumentsForCurrentOutput.end());
-
-            auto outputComputationNode = m_variableToNodeMap.at(outputVariable);
-            outputsToEvaluate.push_back(outputComputationNode);
         }
 
         // We should have argument values supplied for all required argument dependencies for the requested outputs
@@ -1574,6 +1663,15 @@ namespace CNTK
 
         if (requiredArgumentValues.size() < arguments.size())
             fprintf(stderr, "WARNING: Function::Forward provided values for (%d) extra arguments which are not required for evaluating the specified Function outputs!\n", (int)(arguments.size() - requiredArgumentValues.size()));
+
+        auto inferredArgumentShapes = InferFreeDimensionsOfArguments(requiredArgumentValues);
+
+        if (dataType == DataType::Float)
+            GetComputationNetwork<float>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, inputsToExcludeGradientsFor, true);
+        else if (dataType == DataType::Double)
+            GetComputationNetwork<double>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, inputsToExcludeGradientsFor, true);
+        else
+            InvalidArgument("Unsupported DataType %s", DataTypeName(dataType));
 
         // Feed data into the arguments of the network
         // TODO: Avoid copying the data when possible
@@ -1598,6 +1696,10 @@ namespace CNTK
                 m_variableToNodeMap.at(parameter)->BumpEvalTimeStamp();
             }
         }
+
+        std::vector<ComputationNodeBasePtr> outputsToEvaluate;
+        for (auto outputVariable : requestedOutputVariables)
+            outputsToEvaluate.push_back(m_variableToNodeMap.at(outputVariable));
 
         // The 'outputsToRetainBackwardStateFor' nodes also need to be evaluated if not already specified in 'outputs'
         for (auto rootVarForBackprop : outputsToRetainBackwardStateFor)

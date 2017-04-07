@@ -333,6 +333,13 @@ namespace CNTK
         static const size_t InferredDimension = (size_t)-1;
 
         ///
+        /// A placeholder value to use for an axis whose dimension is unbound and is only determined
+        /// when actual data is bound to the variable. Note that since the actual dimension is bound
+        /// from actual minibatch data, the dimension can vary across different evaluations.
+        ///
+        static const size_t FreeDimension = (size_t)-3;
+
+        ///
         /// A placeholder shape to use to denote an unknown shape
         ///
         CNTK_API static const NDShape Unknown;
@@ -417,12 +424,20 @@ namespace CNTK
         }
 
         ///
+        /// Returns a boolean value indicating if the dimension size for any of the axes of 'this' shape is free (aka == NDShape::FreeDimension).
+        ///
+        bool HasFreeDimension() const
+        {
+            return (std::find(m_shapeDims.begin(), m_shapeDims.end(), (size_t)FreeDimension) != m_shapeDims.end());
+        }
+
+        ///
         /// Returns the total size of the rectangular shape that 'this' shape denotes.
         ///
         size_t TotalSize() const
         {
-            if (HasInferredDimension())
-                RuntimeError("NDShape::TotalSize: TotalSize cannot be determined for a NDShape '%S' with one or more dimensions being InferredDimension.", AsString().c_str());
+            if (HasInferredDimension() || HasFreeDimension())
+                RuntimeError("NDShape::TotalSize: TotalSize cannot be determined for a NDShape '%S' with one or more dimensions being InferredDimension or FreeDimension.", AsString().c_str());
 
             size_t totalSize = 1;
             for (auto dim : m_shapeDims)
@@ -469,10 +484,12 @@ namespace CNTK
                     if (i != 0)
                         wStrStream << L" x ";
 
-                    if (displayShape[i] != InferredDimension)
-                        wStrStream << displayShape[i];
-                    else
+                    if (displayShape[i] == InferredDimension)
                         wStrStream << "?";
+                    else if (displayShape[i] == FreeDimension)
+                        wStrStream << "*";
+                    else
+                        wStrStream << displayShape[i];
                 }
                 wStrStream << L"]";
                 return wStrStream.str();
@@ -2712,8 +2729,8 @@ namespace CNTK
         void ResizeOutputBuffer(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
             auto shape = outputVariable.Shape();
-            if (shape == NDShape::Unknown || shape.HasInferredDimension())
-                RuntimeError("The outputVariable '%S' shape '%S' is unknown shape or has inferred dimension for at least one axis.",
+            if (shape == NDShape::Unknown || shape.HasInferredDimension() || shape.HasFreeDimension())
+                RuntimeError("The outputVariable '%S' shape '%S' is unknown shape, has inferred dimension or free dimension for at least one axis.",
                               outputVariable.AsString().c_str(), shape.AsString().c_str());
 
             size_t numOfSequences;
@@ -3309,6 +3326,7 @@ namespace CNTK
         CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl(bool pythonOperandOrder = false) const;
         CNTK_API std::shared_ptr<std::vector<Variable>> OutputsImpl() const;
 
+        void ValidateOrUpdateOutputs();
         void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified, std::vector<Variable>& buffer);
 
         static void ReplacePlaceholderInPlace(Variable& var,

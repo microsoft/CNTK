@@ -721,11 +721,13 @@ public:
 
 // (size_t)-1 will result into an OverflowException
 %ignore CNTK::NDShape::InferredDimension;
+%ignore CNTK::NDShape::FreeDimension;
 //%ignore CNTK::NDShape::Dimensions;
 // FIXME: The following is not picked up yet, which is why we have to tag it to
 // the module
 //%constant long CNTK::NDShape::InferredDimension = -1;
 %constant long InferredDimension = -1;
+%constant long FreeDimension = -3;
 
 // end of NDShape
 

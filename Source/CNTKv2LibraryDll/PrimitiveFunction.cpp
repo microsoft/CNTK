@@ -425,8 +425,13 @@ namespace CNTK
                                         m_inputs[0].AsString().c_str(),
                                         m_inputs[0].Shape().AsString().c_str());
                                 // propagate as much as we can
-                                if ((ax.StaticAxisIndex() < (int)outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim))
+                                // Note: If the sliceAxisDim is a free dimension and the slice size is relative to the sliceAxisDim then the 
+                                // corresponding outputDim is also a free dimension
+                                if (((sliceAxisDim != NDShape::FreeDimension) || (((beginIndex[i] >= 0) && (endIndex[i] > 0)) || ((beginIndex[i] < 0) && (endIndex[i] <= 0)))) &&
+                                    ((ax.StaticAxisIndex() < (int)outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim)))
+                                {
                                     outputTensorShape.NarrowTo(ax.StaticAxisIndex(), realBeginIndex, realEndIndex);
+                                }
                             }
                             outputShape = AsNDShape(outputTensorShape, /*allowNonFlattenableTensorShapes = */ true);
                             break;
@@ -493,7 +498,7 @@ namespace CNTK
                             auto inputShape = m_inputs[0].Shape();
 
                             // In case of pooling if the kernel shape is unknown, then treat it as global pooling.
-                            if (poolingWindowsShape == NDShape::Unknown)
+                            if ((poolingWindowsShape == NDShape::Unknown) && !inputShape.SubShape(0, inputShape.Rank() - 1).HasFreeDimension())
                             {
                                 if ((std::find(autoPadding.begin(), autoPadding.end(), true) != autoPadding.end()) || (lowerPad.TotalSize() > 0) || (upperPad.TotalSize() > 0))
                                     RuntimeError("Padding isn't allowed for Unknown pooling window shape!");
@@ -555,14 +560,10 @@ namespace CNTK
 
                             outputShape = {};
                             if (axisIndex > 0)
-                            {
                                 outputShape = outputShape.AppendShape(inputShape.SubShape(0, axisIndex));
-                            }
                             outputShape = outputShape.AppendShape({num_class});
                             if (axisIndex < len)
-                            {
                                 outputShape = outputShape.AppendShape(inputShape.SubShape(axisIndex, len));
-                            }
 
                             break;
                         }
@@ -786,6 +787,8 @@ namespace CNTK
                             auto bidirectional = m_attributes[PrimitiveFunction::AttributeNameBidirectional].Value<bool>();
                             auto hiddenSize = m_attributes[PrimitiveFunction::AttributeNameHiddenSize].Value<size_t>();
 
+                            if (operand.Shape().HasFreeDimension())
+                                InvalidArgument("OptimizedRNNStack: Operand '%S' with free dimension is unsupported.", operand.AsString().c_str());
                             // output dims
                             outputShape = operand.Shape();
                             outputShape[0] = (bidirectional ? 2 : 1) * hiddenSize;
@@ -1013,11 +1016,13 @@ namespace CNTK
         auto dims = shape.Dimensions();
         Microsoft::MSR::CNTK::ConvolutionNodeBase<float>::FixVectorShape(filterRank, inputRank, dims, deflt, from.Dimensions());
         shape = NDShape(dims);
+        if (shape.HasFreeDimension())
+            InvalidArgument("Convolution kernel or stride/padding attribute shape has an illegal FreeDimension after shape inference.");
     }
 
-    NDShape PrimitiveFunction::ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
-                                                        std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
-                                                        bool transpose, bool inferDimensions, bool ceilOutputDim/* = false*/) const
+    /*static*/ NDShape PrimitiveFunction::ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
+        std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
+        bool transpose, bool inferDimensions, bool ceilOutputDim/* = false*/)
     {
         if (inferDimensions)
         {
@@ -1061,7 +1066,15 @@ namespace CNTK
         else
             computeOutputShapeFunc = &Microsoft::MSR::CNTK::ConvolveGeometry::ComputeInputShape;
 
-        return AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape), AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPad, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutputDim));
+        auto outputShape = AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape), AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPad, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutputDim));
+
+        // Any input dimensions that are free pass through as free
+        for (size_t i = 0; i < operandShape.Rank(); ++i)
+        {
+            if (operandShape[i] == NDShape::FreeDimension)
+                outputShape[i] = NDShape::FreeDimension;
+        }
+        return outputShape;
     }
 
     /*static*/ bool PrimitiveFunction::UpdateOperandShapes(std::vector<std::pair<Variable, NDShape>>& newOperandShapes)
@@ -1083,7 +1096,7 @@ namespace CNTK
         return anyParameterOperandDimsInferred;
     }
 
-    NDShape PrimitiveFunction::NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed, bool inferInputDimensions) const
+    /*static*/ NDShape PrimitiveFunction::NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed, bool inferInputDimensions)
     {
         assert(operands.size() > 1);
 

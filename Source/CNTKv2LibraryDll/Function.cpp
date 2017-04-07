@@ -364,6 +364,30 @@ namespace CNTK
         return updated;
     }
 
+    void Function::ValidateOrUpdateOutputs()
+    {
+        // Validate/update the output shapes, data types etc. to reflect any changes
+        // in inputs due to placeholder replacements
+        std::unordered_map<const Function*, size_t> functionVisitCounts;
+
+        // An arbitrary cap on changing output shape of recurrent nodes, to detect infinite inference loops
+        const size_t maxNumValidationPassesAllowed = 128;
+        bool recurrentNodeOutputModified = false;
+        size_t numValidationPasses = 0;
+        std::vector<Variable> outputVarBuffer;
+        outputVarBuffer.reserve(Function::MaxNumOutputs);
+        do
+        {
+            recurrentNodeOutputModified = false;
+            functionVisitCounts.clear();
+            RootFunction()->ValidateOrUpdateOutputs(functionVisitCounts, recurrentNodeOutputModified, outputVarBuffer);
+            numValidationPasses++;
+        } while (recurrentNodeOutputModified && (numValidationPasses < maxNumValidationPassesAllowed));
+
+        if (numValidationPasses >= maxNumValidationPassesAllowed)
+            LogicError("Function '%S' ReplacePlaceholders: A recurrent node output shape change happened in max allowed (%d) successive validation passes "
+                "indicating a potential infinite inference loop.", AsString().c_str(), (int)numValidationPasses);
+    }
     void Function::ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified, std::vector<Variable>& outputsUsingNewInputs)
     {
         assert(visitedFunctions.find(this) == visitedFunctions.end());
@@ -473,76 +497,75 @@ namespace CNTK
         }
 
         auto loadedModelFunction = Internal::LoadLegacyModel(modelFilePath, DeviceDescriptor::CPUDevice());
-
-        // TODO: Make sure that the loaded model is the same as the trainer's model through UID matching in the V2 format
-        // TODO: For V1 format models make sure that the loaded model is isomorphic to the trainer's model
+            // TODO: Make sure that the loaded model is the same as the trainer's model through UID matching in the V2 format
+            // TODO: For V1 format models make sure that the loaded model is isomorphic to the trainer's model
         auto loadedModelLeafVariables = loadedModelFunction->Inputs();
-        auto trainerModelLeafVariables = Inputs();
-        if (trainerModelLeafVariables.size() != loadedModelLeafVariables.size())
-            InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
+            auto trainerModelLeafVariables = Inputs();
+            if (trainerModelLeafVariables.size() != loadedModelLeafVariables.size())
+                InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
                             loadedModelFunction->AsString().c_str(), this->AsString().c_str());
 
-        std::map<std::wstring, Variable> loadedModelLeafVariablesMap;
-        for (auto leafVar : loadedModelLeafVariables)
-            loadedModelLeafVariablesMap[leafVar.Uid()] = leafVar;
+            std::map<std::wstring, Variable> loadedModelLeafVariablesMap;
+            for (auto leafVar : loadedModelLeafVariables)
+                loadedModelLeafVariablesMap[leafVar.Uid()] = leafVar;
 
-        std::map<std::wstring, Variable> trainerModelLeafVariablesMap;
-        for (auto leafVar : trainerModelLeafVariables)
-            trainerModelLeafVariablesMap[leafVar.Uid()] = leafVar;
+            std::map<std::wstring, Variable> trainerModelLeafVariablesMap;
+            for (auto leafVar : trainerModelLeafVariables)
+                trainerModelLeafVariablesMap[leafVar.Uid()] = leafVar;
 
-        // Remove the initial state inputs of PastValue and FutureValue functions from the maps if they are a scalar constant
-        // since these are not part of the internal CNTK serialized computation graph
-        std::function<void(const std::unordered_set<FunctionPtr>&, std::map<std::wstring, Variable>&)> RemovePastAndFutureValueInitialStateScalarConstants;
-        RemovePastAndFutureValueInitialStateScalarConstants = [&RemovePastAndFutureValueInitialStateScalarConstants](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
-            for (auto funcPtr : allPrimitiveFunctions)
-            {
-                auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
-                if ((primitiveFunction->OpType() == PrimitiveOpType::PastValue) || (primitiveFunction->OpType() == PrimitiveOpType::FutureValue))
+            // Remove the initial state inputs of PastValue and FutureValue functions from the maps if they are a scalar constant
+            // since these are not part of the internal CNTK serialized computation graph
+            std::function<void(const std::unordered_set<FunctionPtr>&, std::map<std::wstring, Variable>&)> RemovePastAndFutureValueInitialStateScalarConstants;
+            RemovePastAndFutureValueInitialStateScalarConstants = [&RemovePastAndFutureValueInitialStateScalarConstants](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
+                for (auto funcPtr : allPrimitiveFunctions)
                 {
-                    auto initialStateInput = primitiveFunction->Inputs()[1];
-                    if (initialStateInput.IsConstant() && (initialStateInput.Shape().TotalSize() == 1))
-                        modelLeafVariableMap.erase(initialStateInput.Uid());
+                    auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
+                    if ((primitiveFunction->OpType() == PrimitiveOpType::PastValue) || (primitiveFunction->OpType() == PrimitiveOpType::FutureValue))
+                    {
+                        auto initialStateInput = primitiveFunction->Inputs()[1];
+                        if (initialStateInput.IsConstant() && (initialStateInput.Shape().TotalSize() == 1))
+                            modelLeafVariableMap.erase(initialStateInput.Uid());
+                    }
+                    else if (primitiveFunction->OpType() == PrimitiveOpType::Block)
+                    {
+                        auto blockFunction = dynamic_cast<const BlockFunction*>(primitiveFunction);
+                        auto blockComposite = dynamic_cast<const CompositeFunction*>(blockFunction->Composite().get());
+                        RemovePastAndFutureValueInitialStateScalarConstants(blockComposite->m_allPrimitiveFunctions, modelLeafVariableMap);
+                    }
                 }
-                else if (primitiveFunction->OpType() == PrimitiveOpType::Block)
-                {
-                    auto blockFunction = dynamic_cast<const BlockFunction*>(primitiveFunction);
-                    auto blockComposite = dynamic_cast<const CompositeFunction*>(blockFunction->Composite().get());
-                    RemovePastAndFutureValueInitialStateScalarConstants(blockComposite->m_allPrimitiveFunctions, modelLeafVariableMap);
-                }
-            }
-        };
-
-        auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
-        RemovePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
-
-        auto trainerModelCompositeFunction = dynamic_cast<CompositeFunction*>(this);
-        RemovePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctions, trainerModelLeafVariablesMap);
-
-        // Now update the trainer's model parameters and constants with those from the loaded model
-        for (auto nameVarPair : trainerModelLeafVariablesMap)
-        {
-            auto trainerModelLeafVar = nameVarPair.second;
-
-            auto areVariablesEquivalent = [](const Variable& left, const Variable& right) {
-                return Internal::AreEquivalent(left, right) && (left.Uid() == right.Uid());
             };
 
-            auto correspondingLoadedModelVar = loadedModelLeafVariablesMap.at(trainerModelLeafVar.Uid());
+        auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
+            RemovePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
 
-            if (!areVariablesEquivalent(correspondingLoadedModelVar, trainerModelLeafVar))
-                InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
+            auto trainerModelCompositeFunction = dynamic_cast<CompositeFunction*>(this);
+            RemovePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctions, trainerModelLeafVariablesMap);
+
+            // Now update the trainer's model parameters and constants with those from the loaded model
+            for (auto nameVarPair : trainerModelLeafVariablesMap)
+            {
+                auto trainerModelLeafVar = nameVarPair.second;
+
+                auto areVariablesEquivalent = [](const Variable& left, const Variable& right) {
+                    return Internal::AreEquivalent(left, right) && (left.Uid() == right.Uid());
+                };
+
+                auto correspondingLoadedModelVar = loadedModelLeafVariablesMap.at(trainerModelLeafVar.Uid());
+
+                if (!areVariablesEquivalent(correspondingLoadedModelVar, trainerModelLeafVar))
+                    InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
                                 loadedModelFunction->AsString().c_str(), this->AsString().c_str());
 
-            if ((trainerModelLeafVar.IsConstant() && !Constant(trainerModelLeafVar).Value()->IsReadOnly()) || trainerModelLeafVar.IsParameter())
-            {
-                auto trainerModelVarValue = trainerModelLeafVar.IsConstant() ? Constant(trainerModelLeafVar).Value() : Parameter(trainerModelLeafVar).Value();
-                auto loadedModelVarValue = correspondingLoadedModelVar.IsConstant() ? Constant(correspondingLoadedModelVar).Value() : Parameter(correspondingLoadedModelVar).Value();
-                trainerModelVarValue->CopyFrom(*loadedModelVarValue);
+                if ((trainerModelLeafVar.IsConstant() && !Constant(trainerModelLeafVar).Value()->IsReadOnly()) || trainerModelLeafVar.IsParameter())
+                {
+                    auto trainerModelVarValue = trainerModelLeafVar.IsConstant() ? Constant(trainerModelLeafVar).Value() : Parameter(trainerModelLeafVar).Value();
+                    auto loadedModelVarValue = correspondingLoadedModelVar.IsConstant() ? Constant(correspondingLoadedModelVar).Value() : Parameter(correspondingLoadedModelVar).Value();
+                    trainerModelVarValue->CopyFrom(*loadedModelVarValue);
+                }
             }
-        }
 
-        trainerModelCompositeFunction->CopyState(*loadedModelCompositeFunction);
-    }
+            trainerModelCompositeFunction->CopyState(*loadedModelCompositeFunction);
+        }
 
     Variable GetCorrespondingOutputVariableFromClone(const Variable& cloneeOutput, const FunctionPtr& cloneeFunction, const FunctionPtr& clonedFunction)
     {
@@ -577,27 +600,8 @@ namespace CNTK
         std::unordered_set<Variable> replacedPlaceholders;
         ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
 
-        // Validate/update the output shapes, data types etc. to reflect any changes
-        // in inputs due to placeholder replacements
-        std::unordered_map<const Function*, size_t> functionVisitCounts;
-
-        // An arbitrary cap on changing output shape of recurrent nodes, to detect infinite inference loops
-        const size_t maxNumValidationPassesAllowed = 128;
-        bool recurrentNodeOutputModified = false;
-        size_t numValidationPasses = 0;
-        std::vector<Variable> outputVarBuffer;
-        outputVarBuffer.reserve(Function::MaxNumOutputs);
-        do
-        {
-            recurrentNodeOutputModified = false;
-            functionVisitCounts.clear();
-            RootFunction()->ValidateOrUpdateOutputs(functionVisitCounts, recurrentNodeOutputModified, outputVarBuffer);
-            numValidationPasses++;
-        } while (recurrentNodeOutputModified && (numValidationPasses < maxNumValidationPassesAllowed));
-
-        if (numValidationPasses >= maxNumValidationPassesAllowed)
-            LogicError("Function '%S' ReplacePlaceholders: A recurrent node output shape change happened in max allowed (%d) successive validation passes "
-                       "indicating a potential infinite inference loop.", AsString().c_str(), (int)numValidationPasses);
+        // Validate/update the output shapes, data types etc. to reflect any changes in inputs due to placeholder replacements
+        RootFunction()->ValidateOrUpdateOutputs();
 
         for (auto replacementPair : placeholderReplacements)
         {
@@ -878,7 +882,6 @@ namespace CNTK
             InvalidArgument("Primitive Function '%S' instance cannot be restored from a checkpoint.", this->AsString().c_str());
 
         auto restoredFunction = Function::Deserialize(modelDictionary, DeviceDescriptor::CPUDevice());
-
         //TODO (backcompat): when loading a stale model we can still pass this test
         // by patching up restored functions on the fly during deserialization (e.g., by 
         // inserting an extra input for the sample count in case of BatchNorm).
