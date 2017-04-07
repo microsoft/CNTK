@@ -61,4 +61,4 @@ def test_cnn_model(model_path):
   print("")
   print("Evaluation acc: {0}, loss: {1}, samples: {2} in {3} seconds".format(acc_sum/samples_sum, loss_sum/samples_sum, samples_sum, total))
 
-test_cnn_model("model/model_training.ctf_001.dnn")
+test_cnn_model("model/model_training.ctf_final.dnn")

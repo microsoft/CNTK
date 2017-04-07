@@ -34,7 +34,7 @@ def eval_and_write(model_file, node_name, output_file, minibatch_source, num_obj
             output = output_nodes.eval(mb[features_si])
 
             # write results to file
-            out_values = output[0,0].flatten()
+            out_values = output[0][0].flatten()
             np.savetxt(results_file, out_values[np.newaxis], fmt="%.6f")
 
 if __name__ == '__main__':

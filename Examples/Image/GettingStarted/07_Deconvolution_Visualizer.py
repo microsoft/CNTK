@@ -104,9 +104,9 @@ def generate_visualization(use_brain_script_model, testing=False):
                 encoder_input = output_dict[input_node_name]
                 encoder_output = output_dict[enc_node_name]
                 decoder_output = output_dict[output_node_name]
-                in_values = (encoder_input[0,0].flatten())[np.newaxis]
-                enc_values = (encoder_output[0,0].flatten())[np.newaxis]
-                out_values = (decoder_output[0,0].flatten())[np.newaxis]
+                in_values = (encoder_input[0][0].flatten())[np.newaxis]
+                enc_values = (encoder_output[0][0].flatten())[np.newaxis]
+                out_values = (decoder_output[0][0].flatten())[np.newaxis]
 
                 if not testing:
                     # write results as text and png

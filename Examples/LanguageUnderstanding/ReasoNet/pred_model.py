@@ -66,4 +66,4 @@ def pred_cnn_model(model_path, output):
   print("")
   print("Evaluated samples: {0} in {1} seconds".format(samples_sum, total))
 
-pred_cnn_model("model/model_training.ctf_001.dnn", "pred.txt")
+pred_cnn_model("model/model_training.ctf_final.dnn", "pred.txt")

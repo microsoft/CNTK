@@ -78,7 +78,7 @@ class DataReader(object):
 
             # From the end of the file there are probably some leftover lines
             if len(feature_sequences) > 0:
-                yield C.Value.one_hot(feature_sequences, self.vocab_dim), C.one_hot(label_sequences, self.vocab_dim), token_count
+                yield C.Value.one_hot(feature_sequences, self.vocab_dim), C.Value.one_hot(label_sequences, self.vocab_dim), token_count
 
 
 

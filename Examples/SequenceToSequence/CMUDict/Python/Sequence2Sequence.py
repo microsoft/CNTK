@@ -10,7 +10,7 @@ import os
 from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
 from cntk.learners import momentum_sgd, fsadagrad, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
-from cntk import input, cross_entropy_with_softmax, classification_error, sequence, \
+from cntk import Value, input, cross_entropy_with_softmax, classification_error, sequence, \
                  element_select, alias, hardmax, placeholder, combine, parameter, times, plus
 from cntk.ops.functions import CloneMethod, load_model, Function
 from cntk.initializer import glorot_uniform
@@ -392,7 +392,7 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
         att_value = q(query)
 
         # get the attention data up to the length of the output (subset of the full window)
-        att_value = att_value[0,0:len(prediction),0:len(w),0,0] # -> (len, span)
+        att_value = att_value[0][0:len(prediction),0:len(w),0,0] # -> (len, span)
 
         # set up the actual words/letters for the heatmap axis labels
         columns = [i2w[ww] for ww in prediction]
@@ -418,7 +418,7 @@ def interactive_session(s2smodel, vocab, i2w, show_attention=False):
 
     print('Enter one or more words to see their phonetic transcription.')
     while True:
-        line = input("> ")
+        line = __builtins__.input("> ")
         if line.lower() == "quit":
             break
         # tokenize. Our task is letter to sound.
