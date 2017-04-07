@@ -70,12 +70,14 @@ cntk.Embedding = cntk.layers.Embedding
 cntk.Fold = cntk.layers.Fold
 cntk.RNNUnit = cntk.layers.RNNUnit
 cntk.Dense = cntk.layers.Dense
+cntk.identity = cntk.layers.identity
 cntk.LogValues = lambda: cntk.layers.identity
 def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
     return namespace.Sequential([
         namespace.Embedding(embedding_dim, name='embed'),
         namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu, name='rnn')),
-        namespace.LogValues(),
+        namespace.identity,
+        #namespace.LogValues(),
         namespace.Dense(num_output_classes, name='dense')
     ])
 

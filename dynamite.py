@@ -211,7 +211,7 @@ def Dense(N, activation=identity, name=''):
 def LogValues(): # fake layer to print the value as it passes through; for testing direct-mode values/co-routines
     def log_values(x):
         x_cpu = x.to_ndarray() # force computation
-        #print(x_cpu)
+        print(x_cpu)
         return x
     return log_values
 
