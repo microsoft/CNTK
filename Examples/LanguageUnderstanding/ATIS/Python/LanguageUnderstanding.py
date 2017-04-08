@@ -224,6 +224,25 @@ def evaluate(reader, model):
 #############################
 
 if __name__=='__main__':
+    m = input((100,))
+    m = Convolution(filter_shape=2, num_filters=5, pad=True, name='conv1')(m)
+
+    from cntk import NDArrayView
+    def test(what, args, rtol=0, atol=0):
+        args = [arg.astype(np.float32, copy=True) for arg in args]
+        # TensorView
+        tv_args = [NDArrayView.from_dense(arg) for arg in args]
+        res_tv = what(*tv_args).to_ndarray()
+        # numpy
+        res_np = what(*args)
+        print(res_tv)
+        print(res_np)
+        assert np.allclose(res_tv, res_np, rtol=rtol, atol=atol)
+    mat23 = np.array([[1., 2., 3.],[4., 5., 6.]]) # 3 x 2 matrix
+    col2 = np.array([[13.],[42.]])                # column vector, same height as matrix
+    test(lambda a: a[1,1], [mat23]) # BUGBUG: This should work
+    test(lambda a: a[1:2,1], [mat23]) # BUGBUG: This should work
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='8')
     parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir',

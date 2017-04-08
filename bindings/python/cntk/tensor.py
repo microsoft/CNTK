@@ -302,6 +302,11 @@ class NDArrayViewOpsMixin(object):
         return NDArrayViewOpsMixin._num_op([self], 1.0, 14) # 14 = ElementWiseOperator.opLinearRectifier
 
     # reductions
+    def reduce_sum(self, reduce_to_shape=()):
+        # TODO: add a test
+        res = NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device()) # reduce to scalar
+        res.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy, 28 = ElementWiseOperator.opSum
+        return res
     def reduce_log_sum(self, reduce_to_shape=()):
         res = NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device()) # reduce to scalar
         res.numeric_operation_in_place(0.0, [self], 1.0, 2, 28) # 2 = ElementWiseOperator.opCopy, 28 = ElementWiseOperator.opLogSum
@@ -365,7 +370,7 @@ class NDArrayViewOpsMixin(object):
             res = res.reshape(shape)
         return res
     @staticmethod
-    def splice(args, axis=-1): # negative axis will insert a new axis
+    def splice(*args, axis=-1): # negative axis will insert a new axis
         arg0 = args[0]  # for now assume that all share the same shape; use first for reference
         shape = arg0.shape
         #print(shape, arg0)
@@ -393,7 +398,7 @@ def _add_ndarrayview_ops(klass):
                           '__matmul__',
                           'dot', 'dot_transpose',
                           'sigmoid', 'tanh', 'relu',
-                          'reduce_log_sum',
+                          'reduce_sum', 'reduce_log_sum',
                           'reshape', '__getitem__', '__setitem__', 'splice']:
         if getattr(klass, overload_name, None):
             raise ValueError('class "%s" already has operator overload "%s"' %
