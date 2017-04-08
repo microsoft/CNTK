@@ -558,17 +558,18 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
                                     additional_options)
 
 @typemap
-def adadelta(parameters, rho=0.95, epsilon=1e-8,
+def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95, epsilon=1e-8,
             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
             gradient_clipping_with_truncation=True):
-    '''adadelta(parameters, rho, epsilon, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+    '''adadelta(parameters, lr, rho, epsilon, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an AdaDelta learner instance to learn the parameters. See [1] for
     more information.
 
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
+        lr (output of :func:`learning_rate_schedule`): learning rate schedule.
         rho (float): exponential smooth factor for each minibatch.
         epsilon (float): epsilon for sqrt.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
@@ -600,7 +601,7 @@ def adadelta(parameters, rho=0.95, epsilon=1e-8,
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
-    return cntk_py.ada_delta_learner(parameters, rho, epsilon,
+    return cntk_py.ada_delta_learner(parameters, lr, rho, epsilon,
                                     additional_options)
 
                                     

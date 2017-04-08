@@ -1395,7 +1395,7 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
 }
 
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon)
+void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
 {
     size_t numColsNeeded = 2 * GetNumCols();
 
@@ -1433,7 +1433,7 @@ void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemT
             ElemType x2 = smoothX2[denseIndex];
             ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
             smoothX2[denseIndex] = rho * smoothX2[denseIndex] + (1 - rho) * deltaX * deltaX;
-            val[denseIndex] += deltaX;
+            val[denseIndex] += learningRate * deltaX;
         }
     }
 }
