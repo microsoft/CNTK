@@ -14,18 +14,32 @@ from timeit import default_timer as timer
 #     - chain rule: take gradient from top and multiply with gradient of node -> grad_times(set_of_params, error_signal=1)
 #     - (dp1, dp2, dp3, ...) = model''.grad_times_{p1,p2,p3}(e)    # where e=1.0 in normal backprop
 #     - hence, to compute the gradient, pick the node; choose e (typ. 1.0); and call node.grad_times({ p1, p2, p3 }, e)
+#     - ...how do we tell it where to place the gradients? It must connect to the V2 gradient NDArrayViews. Ah! Parameter Variables carry it from the start.
+#     - grad_times() will trigger batch transformation; then read off the gradient functions from the *batched* graph (; then reoptimize? try it out)
 
 # TODO:
+#  - change batch_eval to replace inputs by slice views rather than overwriting inputs' data fields
 #  - split batch_eval into
 #     - transform graph
 #        - one can imagine merging partially optimized graphs further; so no optimized flag
 #     - simplistic evaluation on that graph
 #  - implement grad_times
+#     - for now no in-place updates
+#  - longer term:
+#     - arena allocation
+#        - after batch transformation, all shapes are known --> we know the size of the arena
+#        - we can then allocate one massive chunk and create the 'data' members as slice views into it
+#          (with the exception of the parameter gradient, for which we use the gradient memory shared into the Parameter object upfront if given)
+#        - but that requires all tensor operations to take a target variable
+#        - unify NumericOp and NumericOpInPlace by passing an output variable; cf. Numpy. Reduces the surface.
+#  - move the entire stuff into Variable?? Then create outside overloads, e.g. times = Variable.__matmul__ instead of the other way round
 
 INFER = 0
 times_initializer = "(times_initializer)" # (dummy object only looked at by its object identity)
 
 # convert an input to an NDArrayView if not yet (it may be an ndarray of a Number)
+# TODO: do this early on when *creating* the Variable object, rather than when using it
+#       Also, in our own code at least, convert it to Variable outside, so that we don't repeatedly convert the same thing over.
 def to_data(input):
     return input.data if isinstance(input, Variable) else cntk.NDArrayView.from_dense(np.array(input, np.float32)) # BUGBUG: device?? precision??
 
@@ -40,7 +54,9 @@ class Variable:
         v = object.__new__(cls)
         v.shape = shape
         v.op = op
-        v.inputs = inputs
+        v.inputs = inputs  # TODO: call to_data right here, get rid of it in _compute()
+        # TODO: capture the gradient functions for all inputs that need gradients (we also need a flag for that)
+        #v.needs_gradient = True
         v.computed = False
         return v
     _batch_eval_fn = None   # lambda to call to yield from current coroutine
@@ -92,6 +108,9 @@ class Parameter(Variable):
             self.initializer = initializer
         self.computed = True # BUGBUG: but we don't have data
     def share_data_from(self, other): # keep a reference to the other Parameter's NDArrayView object
+        # TODO: also accept the parameter's gradient  --needs to expose this from C++ (or at least Python Parameter)
+        #       But they are owned by the learner, aren't they? How to get them out?
+        #       -- new method share_gradient_with(self, other)! We can propagate up whether we have a gradient, for mem sharing
         data = other.data
         data.__class__ = data.__class__ = cntk.core.NDArrayView
         self.shape = data.shape
@@ -305,6 +324,8 @@ def Sequential(functions):
 #    return map_f
 
 def Fold(step_function, initial_state=0):
+    # TODO: promote initial_state right away to a Constant() if it is a constant, to avoid repeated conversions. Same for Recurrence().
+    #initial_state = to_data(initial_state)
     @Model(step_function=step_function)
     def fold(x):
         s = initial_state  # state
