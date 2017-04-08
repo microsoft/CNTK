@@ -72,7 +72,8 @@ class Variable:
         return prev
     def _compute(self):
         try:
-          args = tuple(to_data(input) for input in self.inputs)
+          #args = tuple(to_data(input) for input in self.inputs)
+          args = tuple(input.data for input in self.inputs)
           data = self.op(*args)
           if data.shape != self.shape:
                print(data.shape, self.shape)
@@ -522,10 +523,10 @@ def batch_eval(vars):
             return op
         v_batched = Variable(shape_batched, to_batched_op(v0.op), batched_inputs)
         # now perform the operation batched
-        print(13, v_batched.op)
+        #print(13, v_batched.op)
         v_batched.data = v_batched._compute()
         v_batched.computed = True
-        print(13)
+        #print(13)
         num_compute_launches += 1
         #print('out', v_batched.data.shape)
         # and copy the results back
@@ -630,7 +631,7 @@ def dump_graph(v):
 from greenlet import greenlet # very lighweight coroutines
 
 def train_minibatch(criterion, *batch_args):
-    use_coroutines = False
+    use_coroutines = True
     # for now, manually do the batch loop
     print('batch of', len(batch_args[0]))
     if use_coroutines:
