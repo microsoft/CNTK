@@ -54,7 +54,8 @@ class Variable:
         v = object.__new__(cls)
         v.shape = shape
         v.op = op
-        v.inputs = inputs  # TODO: call to_data right here, get rid of it in _compute()
+        v.inputs = inputs# tuple(input if isinstance(input, Variable) else Constant(input) for input in inputs) # crashes Python
+                              # TODO: call to_data right here, get rid of it in _compute()
         # TODO: capture the gradient functions for all inputs that need gradients (we also need a flag for that)
         #v.needs_gradient = True
         v.computed = False
@@ -119,7 +120,9 @@ class Parameter(Variable):
         self.shape = shape
 
 class Constant(Variable):
-    def __new__(cls, data: cntk.core.NDArrayView, initializer=None):
+    def __new__(cls, data, initializer=None): # data: cntk.core.NDArrayView or number or np.ndarray
+        if not isinstance(data, cntk.NDArrayView):
+            data = cntk.NDArrayView.from_dense(np.array(data, np.float32)) # BUGBUG: device?? precision??
         v = Variable.__new__(cls, data.shape, 'Constant', [])
         v.data = data  # NDArrayView
         v.computed = True
