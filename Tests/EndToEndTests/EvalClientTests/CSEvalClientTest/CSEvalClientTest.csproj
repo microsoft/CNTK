@@ -16,6 +16,10 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
+  <PropertyGroup>
+    <CntkComponentVersion>2.0rc19</CntkComponentVersion>
+    <CntkComponentVersion Condition="$(Configuration.StartsWith('Debug'))">2.0rc19d</CntkComponentVersion>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
@@ -62,6 +66,7 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Cntk.Eval.Wrapper-$(CntkComponentVersion)" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
@@ -77,12 +82,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\..\Source\Extensibility\EvalWrapper\EvalWrapper.vcxproj">
-      <Project>{ef766cae-9cb1-494c-9153-0030631a6340}</Project>
-      <Name>EvalWrapper</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

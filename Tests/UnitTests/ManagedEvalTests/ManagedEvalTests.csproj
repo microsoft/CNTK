@@ -17,6 +17,10 @@
     <IsCodedUITest>False</IsCodedUITest>
     <TestProjectType>UnitTest</TestProjectType>
   </PropertyGroup>
+  <PropertyGroup>
+    <CntkComponentVersion>2.0rc19</CntkComponentVersion>
+    <CntkComponentVersion Condition="$(Configuration.StartsWith('Debug'))">2.0rc19d</CntkComponentVersion>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>..\..\..\x64\Debug\</OutputPath>
@@ -63,6 +67,7 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Cntk.Eval.Wrapper-$(CntkComponentVersion)" />
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
   </ItemGroup>
@@ -81,16 +86,6 @@
   <ItemGroup>
     <Compile Include="EvalManagedTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\Source\Extensibility\EvalWrapper\EvalWrapper.vcxproj">
-      <Project>{ef766cae-9cb1-494c-9153-0030631a6340}</Project>
-      <Name>EvalWrapper</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\EndToEndTests\EvalClientTests\CSEvalClientTest\CSEvalClientTest.csproj">
-      <Project>{1c6e6c53-1aa7-4b69-913e-b97bb5a872cf}</Project>
-      <Name>CSEvalClientTest</Name>
-    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

@@ -20,6 +20,10 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
+  <PropertyGroup>
+    <CntkComponentVersion>2.0rc19</CntkComponentVersion>
+    <CntkComponentVersion Condition="$(Configuration.StartsWith('Debug'))">2.0rc19d</CntkComponentVersion>
+  </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)">
     <DebugSymbols>true</DebugSymbols>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
