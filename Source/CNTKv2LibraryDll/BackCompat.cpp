@@ -23,6 +23,7 @@
 #include "PreComputeNodes.h"
 #include "DeprecatedNodes.h"
 #include "SpecialPurposeNodes.h"
+#include "SequenceReshapeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -180,6 +181,14 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNewDynamicAxes] = AsDictionaryValueVector(dynamicAxes);
 
                     opType = PrimitiveOpType::Where;
+                }
+                else if (node->OperationName() == OperationNameOf(ToSequenceNode))
+                {
+                    auto internalDynamicAxisName = node->As<ToSequenceNode<ElementType>>()->DynamicAxisName();
+                    std::vector<Axis> dynamicAxes = DynamicAxesFromInternalDynamicAxisName(internalDynamicAxisName);
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNewDynamicAxes] = AsDictionaryValueVector(dynamicAxes);
+
+                    opType = PrimitiveOpType::ToSequence;
                 }
                 else if (node->OperationName() == OperationNameOf(SliceNode))
                 {

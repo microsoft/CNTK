@@ -208,6 +208,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Softplus;
 %ignore_function CNTK::Argmax;
 %ignore_function CNTK::Argmin;
+%ignore_function CNTK::ToSequence;
 %ignore_function CNTK::AsBlock;
 %ignore_function CNTK::ReaderCrop;
 %ignore_function CNTK::ReaderMean;
@@ -302,7 +303,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Internal::PackedIndex;
 %ignore_function CNTK::Internal::GatherPacked;
 %ignore_function CNTK::Internal::ScatterPacked;
-%ignore_function CNTK::Internal::ReconcileDynamicAxis;
 %ignore_function CNTK::Internal::ReconcileDynamicAxes;
 %ignore_function CNTK::Internal::ZeroesWithDynamicAxesLike;
 %ignore_function CNTK::Internal::Where;

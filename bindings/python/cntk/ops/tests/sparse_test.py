@@ -15,6 +15,7 @@ import cntk as C
 from .ops_test_utils import cntk_device
 from cntk.axis import Axis
 from .. import constant
+from cntk.tests.test_utils import _to_dense
 
 def test_times_2d_sparse_operand(device_id):
     from .. import times
@@ -222,11 +223,6 @@ def test_2d_non_sequence_sparse_one_hot():
     indices = np.asarray([[2, 1], [0, 2], [1, 0]])
     result = sparse_one_hot.eval({x : indices}, as_numpy=False)
 
-    def _to_dense(val):
-        x = C.input(val.shape[1:], is_sparse=True)
-        dense = C.times(x, C.constant(value=np.eye(val.shape[-1], dtype=np.float32)))
-        return dense.eval({x : val})
-
     result_dense = _to_dense(result)
     assert np.array_equal(result_dense, np.eye(num_classes, dtype=np.float32)[indices])
 
@@ -238,12 +234,7 @@ def test_2d_sequence_sparse_one_hot():
     indices = [np.asarray([[2, 1], [0, 2]]), np.asarray([[1, 0]])]
     result = sparse_one_hot.eval({x : indices}, as_numpy=False)
 
-    def _to_dense(val):
-        x = C.sequence.input(val.shape[2:], is_sparse=True)
-        dense = C.times(x, C.constant(value=np.eye(val.shape[-1], dtype=np.float32)))
-        return dense.eval({x : val})
-
-    result_dense = _to_dense(result)
+    result_dense = _to_dense(result, True)
     assert np.array_equal(result_dense[0], np.eye(num_classes, dtype=np.float32)[indices[0]])
     assert np.array_equal(result_dense[1], np.eye(num_classes, dtype=np.float32)[indices[1]])
 

@@ -95,6 +95,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumClass = L"numClass";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotOutputSparse = L"oneHotOutputSparse";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotAxis = L"onehotAxis";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceAxisNamePrefix = L"sequenceAxis";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -179,7 +180,7 @@ namespace CNTK
         {
             reduceAxis(Axis::OperandSequenceAxis(), inputs[0], outputDynamicAxes);
         }
-        else if (op == PrimitiveOpType::Where)
+        else if ((op == PrimitiveOpType::Where) || (op == PrimitiveOpType::ToSequence))
         {
             if (functionConfig.Contains(PrimitiveFunction::AttributeNameNewDynamicAxes))
                 outputDynamicAxes = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameNewDynamicAxes].Value<std::vector<DictionaryValue>>());
@@ -189,8 +190,9 @@ namespace CNTK
                     outputDynamicAxes = Axis::UnknownDynamicAxes();
                 else
                 {
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameNewSequenceAxisLengthScalingFactor) &&
-                        functionConfig.Contains(PrimitiveFunction::AttributeNameNewSequenceAxisLengthAdditiveFactor))
+                    if ((op == PrimitiveOpType::Where) &&
+                        (functionConfig.Contains(PrimitiveFunction::AttributeNameNewSequenceAxisLengthScalingFactor) &&
+                        functionConfig.Contains(PrimitiveFunction::AttributeNameNewSequenceAxisLengthAdditiveFactor)))
                     {
                         size_t newSequenceAxisLengthScalingFactor = functionConfig[PrimitiveFunction::AttributeNameNewSequenceAxisLengthScalingFactor].Value<size_t>();
                         int newSequenceAxisLengthAdditiveFactor = functionConfig[PrimitiveFunction::AttributeNameNewSequenceAxisLengthAdditiveFactor].Value<int>();
@@ -200,21 +202,16 @@ namespace CNTK
                     }
                     else
                     {
-                        std::function<Variable(const Variable&)> GetActualSourceVariable;
-                        GetActualSourceVariable = [&GetActualSourceVariable](const Variable& var) -> Variable {
-                            if (var.BlockFunctionVariableMapping() == Variable())
-                                return var;
-                            else
-                                return GetActualSourceVariable(var.BlockFunctionVariableMapping());
-                        };
-
-                        auto whereNodeConditionSourceVar = GetActualSourceVariable(inputs[0]);
-                        auto whereNodeSequenceAxis = Axis(std::wstring(L"whereNodeDynamicAxis_conditionVar_") + whereNodeConditionSourceVar.Uid());
-                        outputDynamicAxes.push_back(whereNodeSequenceAxis);
+                        std::wstring axisNamePrefix = (op == PrimitiveOpType::Where) ? L"whereNodeDynamicAxis_conditionVar_" : functionConfig[PrimitiveFunction::AttributeNameSequenceAxisNamePrefix].Value<std::wstring>();
+                        auto sequenceAxis = Utils::NewDynamicAxisDerivedFromOperand(axisNamePrefix, inputs[0]);
+                        outputDynamicAxes.push_back(sequenceAxis);
                     }
 
-                    for (size_t i2 = 1; i2 < inputs[0].DynamicAxes().size(); ++i2)
-                        outputDynamicAxes.push_back(inputs[0].DynamicAxes()[i2]);
+                    auto inputDynamicAxes = inputs[0].DynamicAxes();
+                    if (op == PrimitiveOpType::Where)
+                        outputDynamicAxes.insert(outputDynamicAxes.end(), ++inputDynamicAxes.begin(), inputDynamicAxes.end());
+                    else
+                        outputDynamicAxes.insert(outputDynamicAxes.end(), inputDynamicAxes.begin(), inputDynamicAxes.end());
 
                     functionConfig[PrimitiveFunction::AttributeNameNewDynamicAxes] = AsDictionaryValueVector(outputDynamicAxes);
                 }
@@ -343,6 +340,29 @@ namespace CNTK
                         case PrimitiveOpType::Where:
                             assert(m_inputs.size() == 1);
                             outputShape = NDShape{}; // scalar
+                            break;
+                        case PrimitiveOpType::ToSequence:
+                            assert((m_inputs.size() == 1) || (m_inputs.size() == 2));
+                            if (m_inputs[0].DynamicAxes().empty())
+                                InvalidArgument("ToSequence: Operands '%S' must have dynamic axes.", NamedListString(m_inputs).c_str());
+
+                            if ((m_inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()) && (m_inputs[0].DynamicAxes().size() != 1))
+                                InvalidArgument("ToSequence Function '%S': Input operand '%S' with #dynamic axes != 1 (batch axis) is not supported.", AsString().c_str(), m_inputs[0].AsString().c_str());
+
+                            if ((m_inputs.size() == 2) &&
+                                (m_inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()) &&
+                                (m_inputs[1].DynamicAxes() != Axis::UnknownDynamicAxes()) &&
+                                (m_inputs[0].DynamicAxes() != m_inputs[1].DynamicAxes()))
+                                InvalidArgument("ToSequence Function '%S': First input operand '%S' dynamic axes '%S' do not match second input operand '%S' dynamic axes '%S' .",
+                                                AsString().c_str(), m_inputs[0].AsString().c_str(), NamedListString(m_inputs[0].DynamicAxes()).c_str(), m_inputs[1].AsString().c_str(), NamedListString(m_inputs[1].DynamicAxes()).c_str());
+
+                            if (m_inputs[0].Shape().Rank() < 1)
+                                InvalidArgument("ToSequence Function '%S': First input operand '%S' must be of rank >= 1.", AsString().c_str(), m_inputs[0].AsString().c_str());
+
+                            if ((m_inputs.size() == 2) && (m_inputs[1].Shape().TotalSize() != 1))
+                                InvalidArgument("ToSequence Function '%S': Second input operand '%S' must be a scalar.", AsString().c_str(), m_inputs[1].AsString().c_str());
+
+                            outputShape = m_inputs[0].Shape().SubShape(0, m_inputs[0].Shape().Rank() - 1);
                             break;
                         case PrimitiveOpType::PackedIndex:
                             assert(m_inputs.size() == 2);

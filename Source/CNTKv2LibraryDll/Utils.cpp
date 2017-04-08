@@ -629,7 +629,9 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape)
+    std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape,
+                                                                                                                          const std::shared_ptr<Matrix<ElementType>>& outputMatrixStorage,
+                                                                                                                          const std::shared_ptr<Matrix<ElementType>>& tempIndicesStorage)
     {
         VerifyVariableValueCompatibility(var, value, inferredVarShape);
 
@@ -739,11 +741,18 @@ namespace CNTK
             // The data needs to be rearranged since CNTK requires sequences to be interleaved across timesteps
             // Now generate the gather indices
             auto numColsPerSample = varShape.SubShape(VariableRowColSplitPoint(var)).TotalSize();
-            auto matrixData = std::make_shared<Matrix<ElementType>>(varShape.TotalSize() / numColsPerSample,
-                                                                    layout->GetNumCols() * numColsPerSample,
-                                                                    AsCNTKImplDeviceId(value->Device()),
-                                                                    value->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE,
-                                                                    AsCNTKImplMatrixFormat(value->GetStorageFormat()));
+            std::shared_ptr<Matrix<ElementType>> matrixData = outputMatrixStorage;
+            auto matrixDataNumRows = varShape.TotalSize() / numColsPerSample;
+            auto matrixDataNumCols = layout->GetNumCols() * numColsPerSample;
+            auto matrixType = value->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE;
+            auto matrixFormat = AsCNTKImplMatrixFormat(value->GetStorageFormat());
+            if (!matrixData)
+                matrixData = std::make_shared<Matrix<ElementType>>(matrixDataNumRows, matrixDataNumCols, AsCNTKImplDeviceId(value->Device()), matrixType, matrixFormat);
+            else
+            {
+                matrixData->SwitchToMatrixType(matrixType, matrixFormat, /*keepValues=*/false);
+                matrixData->Resize(matrixDataNumRows, matrixDataNumCols);
+            }
 
             std::vector<size_t> sequencesShorterThanLongestSequence;
             for (size_t i = 0; i < numSequences; ++i)
@@ -762,7 +771,12 @@ namespace CNTK
                         gatherIndicesVector[((((targetStartIdxInParallelStream + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx) * numColsPerSample) + k] = (ElementType)((((i * maxNumTimeSteps) + j) * numColsPerSample) + k);
             }
 
-            auto gatherIdxMatrix = std::make_shared<Matrix<ElementType>>(1, gatherIndicesVector.size(), gatherIndicesVector.data(), AsCNTKImplDeviceId(value->Device()));
+            auto gatherIdxMatrix = tempIndicesStorage;
+            if (!gatherIdxMatrix)
+                gatherIdxMatrix = std::make_shared<Matrix<ElementType>>(1, gatherIndicesVector.size(), gatherIndicesVector.data(), AsCNTKImplDeviceId(value->Device()));
+            else
+                gatherIdxMatrix->SetValue(1, gatherIndicesVector.size(), AsCNTKImplDeviceId(value->Device()), gatherIndicesVector.data());
+
             matrixData->DoGatherColumnsOf(0, *gatherIdxMatrix, *(value->Data()->GetMatrix<ElementType>(VariableRowColSplitPoint(var))), 1);
             return{ matrixData, layout };
         }
@@ -854,6 +868,44 @@ namespace CNTK
             varShape = GetVariableShape(var.Shape(), computationNode->GetSampleLayout());
 
         return GetValueObjectFromCNTKImplMatrixAndMBLayout(varShape, var.DynamicAxes(), matrix, layout, readOnly);
+    }
+
+    NDMaskPtr CreateMask(const std::vector<size_t>& sequenceLengths, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device)
+    {
+        size_t numSequences = sequenceLengths.size();
+
+        if (!sequenceStartFlags.empty() && (sequenceStartFlags.size() != numSequences))
+            InvalidArgument("Value::Create:: The number (%zu) of sequence start flags does not match the number (%zu) of sequences,",
+                sequenceStartFlags.size(), numSequences);
+
+        std::vector<bool> actualStarts = sequenceStartFlags;
+        if (actualStarts.empty())
+            actualStarts.resize(numSequences, true);
+
+        size_t maxSequenceLength = 0;
+        for (size_t i = 0; i < numSequences; ++i)
+            maxSequenceLength = std::max(maxSequenceLength, sequenceLengths[i]);
+
+        bool needsMask = (std::find(actualStarts.begin(), actualStarts.end(), false) != actualStarts.end());
+        needsMask = needsMask || (std::find_if(sequenceLengths.begin(), sequenceLengths.end(), [maxSequenceLength](const size_t& currentSequenceLength) {
+            return (currentSequenceLength != maxSequenceLength);
+        }) != sequenceLengths.end());
+
+        // If needed, create a mask to account for variability in lengths of specified sequences
+        NDMaskPtr deviceValueMask;
+        if (needsMask)
+        {
+            NDShape valueMaskShape = { maxSequenceLength, numSequences };
+            deviceValueMask = MakeSharedObject<NDMask>(valueMaskShape, device);
+            for (size_t i = 0; i < numSequences; ++i)
+            {
+                if (actualStarts[i])
+                    deviceValueMask->MarkSequenceBegin({ 0, i });
+                deviceValueMask->InvalidateSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+            }
+        }
+
+        return deviceValueMask;
     }
 
     template void DictionaryValue::AllocateDataPtr<NDShape>(const NDShape& value);

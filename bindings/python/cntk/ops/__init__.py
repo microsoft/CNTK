@@ -122,6 +122,30 @@ def alias(x, name=''):
     from cntk.cntk_py import alias
     x = sanitize_input(x)
     return alias(x, name)
+
+@typemap
+def reconcile_dynamic_axes(x, dynamic_axes_as, name=''):
+    '''
+     Create a new Function instance which reconciles the dynamic axes of the
+     specified tensor operands. The output of the returned Function has the sample
+     layout of the 'x' operand and the dynamic axes of the 'dynamic_axes_as' operand.
+     This operator also performs a runtime check to ensure that the dynamic axes layouts
+     of the 2 operands indeed match.
+
+    Args:
+        x: The Function/Variable, whose dynamic axes are to be reconciled
+        dynamic_axes_as: The Function/Variable, to whose dynamic axes the 
+            operand 'x''s dynamic axes are reconciled to.
+        name (str, optional): the name of the reconcile_dynamic_axes Function in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import reconcile_dynamic_axes
+    x = sanitize_input(x)
+    dynamic_axes_as = sanitize_input(dynamic_axes_as)
+    return reconcile_dynamic_axes(x, dynamic_axes_as, name)
+
 @typemap
 def labels_to_graph(labels, name=''):
     '''
@@ -2386,6 +2410,41 @@ def argmin(x, axis=None, name=''):
     x = sanitize_input(x)
     axis = sanitize_axis(axis)
     return argmin(x, axis, name)
+
+@typemap
+def to_sequence(x, sequence_lengths=None, sequence_axis_name_prefix='toSequence_', name=''):
+    '''
+    This function converts 'x' to a sequence using the most significant
+    static axis [0] as the sequence axis.
+
+    The sequenceLengths input is optional; if unspecified, all sequences are
+    assumed to be of the same length; i.e. dimensionality of the most significant
+    static axis
+
+    Example:
+        TBA.
+
+    Args:
+        x: the tensor (or its name) which is converted to a sequence
+        sequence_lengths: Optional tensor operand representing the sequence lengths.
+            if unspecified, all sequences are assumed to be of the same length; 
+            i.e. dimensionality of the most significant static axis.
+        sequence_axis_name_prefix (str, optional): prefix of the new sequence axis name.
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+
+    from cntk.cntk_py import to_sequence
+
+    x = sanitize_input(x)
+    if sequence_lengths is None:
+        return to_sequence(x, sequence_axis_name_prefix, name)
+    else:
+        sequence_lengths = sanitize_input(sequence_lengths)
+        return to_sequence(x, sequence_lengths, sequence_axis_name_prefix, name)
+
 
 #######################################################################
 # training ops

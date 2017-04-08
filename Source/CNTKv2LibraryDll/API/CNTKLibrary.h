@@ -1665,6 +1665,7 @@ namespace CNTK
         friend class BlockFunction;
         friend class Trainer;
         friend class PrimitiveFunction;
+        friend class Utils;
 
         template <typename T>
         friend struct std::hash;
@@ -3967,6 +3968,24 @@ namespace CNTK
     /// Create an instance of the CNTK built-in argmin on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
+    ///
+    CNTK_API FunctionPtr ToSequence(const Variable& operand, const std::wstring& sequenceAxisNamePrefix, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
+    /// This overload allows specifying an additional operand containing the lengths of individual sequences
+    ///
+    CNTK_API FunctionPtr ToSequence(const Variable& operand, const Variable& sequenceLengths, const std::wstring& sequenceAxisNamePrefix, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operator for reconciling the dynamic axes of the specified tensor operands.
+    /// The output of the returned Function has the sample layout of the left operand and the dynamic axes of the axesAsOperand.
+    /// It also performs a runtime check to ensure that the  dynamic axes layouts of the 2 operands indeed match.
+    ///
+    CNTK_API FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name = L"");
 
     namespace Sequence
     {
