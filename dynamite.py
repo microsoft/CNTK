@@ -43,6 +43,9 @@ times_initializer = "(times_initializer)" # (dummy object only looked at by its 
 def to_data(input):
     return input.data if isinstance(input, Variable) else cntk.NDArrayView.from_dense(np.array(input, np.float32)) # BUGBUG: device?? precision??
 
+def to_Variable(x):
+    return x if isinstance(x, Variable) else Constant(x)
+
 def shape_of(v):
     if isinstance(v, (np.ndarray, Variable)):
         return v.shape
@@ -54,8 +57,9 @@ class Variable:
         v = object.__new__(cls)
         v.shape = shape
         v.op = op
-        v.inputs = inputs# tuple(input if isinstance(input, Variable) else Constant(input) for input in inputs) # crashes Python
-                              # TODO: call to_data right here, get rid of it in _compute()
+        v.inputs = tuple(to_Variable(input) for input in inputs)
+        for inp in v.inputs:
+            assert isinstance(inp, Variable)
         # TODO: capture the gradient functions for all inputs that need gradients (we also need a flag for that)
         #v.needs_gradient = True
         v.computed = False
@@ -68,7 +72,8 @@ class Variable:
         return prev
     def _compute(self):
         try:
-          data = self.op(*(to_data(input) for input in self.inputs))
+          args = tuple(to_data(input) for input in self.inputs)
+          data = self.op(*args)
           if data.shape != self.shape:
                print(data.shape, self.shape)
           assert data.shape == self.shape # sanity check of shape inference
@@ -186,10 +191,11 @@ def times(a,b):
         del b.initializer
     shapeA = a.shape if isinstance(a, (np.ndarray, Variable)) else (b.shape[0],)
     shapeB = b.shape if isinstance(b, (np.ndarray, Variable)) else ()
-    if not (1 <= len(shapeA) <= 2) or not (1 <= len(shapeB) <= 2):
-        raise TypeError('times only supports matrices and vectors')
-    if shapeA[-1] != shapeB[0]:
-        raise TypeError('inner dimensions do not match')
+    if shapeA != ():  # this special case to allow "0" for initial_state --need to do this more nicely
+        if not (1 <= len(shapeA) <= 2) or not (1 <= len(shapeB) <= 2):
+            raise TypeError('times only supports matrices and vectors')
+        if shapeA[-1] != shapeB[0]:
+            raise TypeError('inner dimensions do not match')
     shapeC = ()
     if len(shapeA) == 2:
         shapeC = shapeC + (shapeA[0],);
@@ -328,7 +334,7 @@ def Sequential(functions):
 
 def Fold(step_function, initial_state=0):
     # TODO: promote initial_state right away to a Constant() if it is a constant, to avoid repeated conversions. Same for Recurrence().
-    #initial_state = to_data(initial_state)
+    initial_state = to_Variable(initial_state)
     @Model(step_function=step_function)
     def fold(x):
         s = initial_state  # state
@@ -337,10 +343,11 @@ def Fold(step_function, initial_state=0):
         return s[0] if isinstance(s, tuple) else s
     return fold
 
-def Recurrence(step_function):
+def Recurrence(step_function, initial_state=0):
+    initial_state = to_Variable(initial_state)
     @Model(step_function=step_function)
     def recurrence(x):
-        s = 0  # state
+        s = initial_state  # state
         out = []
         for sample in x:
             s = step_function(s, sample)
@@ -435,6 +442,8 @@ def batch_eval(vars):
             return
         # all ops are the same, so use the first as the reference
         v0 = op_batch[0]
+        for inp in v0.inputs:
+            assert isinstance(inp, Variable)
         is_mul = v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose
         # sparse can not be properly batched for now
         if (isinstance(v0.inputs[0], Variable) and v0.inputs[0].data.is_sparse()):
@@ -472,6 +481,7 @@ def batch_eval(vars):
                 return arg0, False
             elif isinstance(arg0, Variable) and all(isinstance(arg, Variable) and (arg.data is arg0.data) for arg in args):
                 # use the object itself, assuming broadcasting
+                # TODO: What case is this? It must go away if we split off transformation.
                 return arg0, False
             elif sliced_from0 and all(hasattr(arg, 'sliced_from') and is_consecutive(i, arg)
                                        for i, arg in enumerate(args)):
@@ -512,8 +522,10 @@ def batch_eval(vars):
             return op
         v_batched = Variable(shape_batched, to_batched_op(v0.op), batched_inputs)
         # now perform the operation batched
+        print(13, v_batched.op)
         v_batched.data = v_batched._compute()
         v_batched.computed = True
+        print(13)
         num_compute_launches += 1
         #print('out', v_batched.data.shape)
         # and copy the results back
