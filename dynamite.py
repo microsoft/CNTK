@@ -47,12 +47,12 @@ def to_Variable(x):
     return x if isinstance(x, Variable) else Constant(x)
 
 class Variable:
-    def __new__(cls, shape, op, inputs, kwargs=dict()):
+    def __new__(cls, shape, op, inputs, additional_args=()):
         v = object.__new__(cls)
         v.shape = shape
         v.op = op
         v.inputs = tuple(to_Variable(input) for input in inputs)
-        v.kwargs = kwargs
+        v.additional_args = additional_args
         for inp in v.inputs:
             assert isinstance(inp, Variable)
         # TODO: capture the gradient functions for all inputs that need gradients (we also need a flag for that)
@@ -61,7 +61,7 @@ class Variable:
         return v
     #def clone(self): # used for batching identical ops
     #    assert not v.computed
-    #    v = Variable(v.shape, v.op, v.inputs, v.kwargs)
+    #    v = Variable(v.shape, v.op, v.inputs, v.additional_args)
     #    return v
     _batch_eval_fn = None   # lambda to call to yield from current coroutine
     @staticmethod
@@ -73,7 +73,7 @@ class Variable:
         try:
           #args = tuple(to_data(input) for input in self.inputs)
           args = tuple(input.data for input in self.inputs)
-          data = self.op(*args, **self.kwargs)
+          data = self.op(*(args + self.additional_args))
           if data.shape != self.shape:
                print(data.shape, self.shape)
           assert data.shape == self.shape # sanity check of shape inference
@@ -82,6 +82,10 @@ class Variable:
           #return
           raise
         pass
+    def _compute_data(self):
+        assert not self.computed
+        self.data = self._compute()
+        self.computed = True
     def value(self):  # return the NDArrayView--computed lazily at this point if needed
         if not self.computed:  # lazy computation (this is where all the difficult stuff will happen w.r.t. batching)
             if Variable._batch_eval_fn:
@@ -101,11 +105,9 @@ class Variable:
         return element_times(self, other)
     def __matmul__(self, other):
         return times(self, other)
-    def _make_kwargs(**kwargs): # turn kwargs into a dict; makes it a bit easier to read
-        return kwargs
     #def __getitem__(self, key):
     #    assert isinstance(key, int)  # BUGBUG: for now; later must dupplicate the complex logic for interpreting key
-    #    return Variable(self.shape[1:], cntk.NDArrayView.__getitem__, (self,), _make_kwargs(key=key))
+    #    return Variable(self.shape[1:], cntk.NDArrayView.__getitem__, (self,), (key,))
     def _op_alias(x): # the op for alias
         return x
     #def alias(self): # wrap an identity function around ourselves
@@ -599,10 +601,11 @@ def batch_eval(vars):
                     return v.shape
                 else:
                     return ()
+            # special case for matmul: right matrix must be identical to be batchable
             if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose:
-                return (p.op, (shape_of(p.inputs[0]), id(p.inputs[1])))
+                return (p.op, ((p.inputs[0].shape, p.inputs[0].additional_args), (id(p.inputs[1]), p.inputs[1].additional_args)))
             # batch if both op and input shapes are the same
-            return (p.op, tuple(shape_of(v) for v in p.inputs))
+            return (p.op, tuple((v.shape, v.additional_args) for v in p.inputs))
         p.key = make_key(p)
         # TODO: for matrix mul the second arg must be the same object to allow batching
         # TODO: must also include the storage format in the key; do this in C++ version
