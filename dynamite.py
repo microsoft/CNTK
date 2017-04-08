@@ -535,23 +535,24 @@ def batch_eval(vars):
         # and copy the results back
         for i, v in enumerate(op_batch):
             if hasbatch:
-                v.sliced_from = (v_batched, i) # remember that this was sliced
+                #v.sliced_from = (v_batched, i) # remember that this was sliced
                 # BUGBUG: Instead of patching 'data', we must patch the input with a slice view, to connect backprop. Also, it's free (w.r.t. GPU).
-                v.data = v_batched.data[i]
-                #inp = v_batched[i]
-                inp = Variable(v0.shape, lambda arg, i=i: arg[i], (v_batched,))
-                inp.data = inp._compute()
-                inp.computed = True
-                inp.sliced_from = (v_batched, i) # remember that this was sliced
+                #v.data = v_batched.data[i]
+        v.op = op
+        v.inputs = tuple(to_Variable(input) for input in inputs)
+                input_from_batch = Variable(v0.shape, lambda arg, i=i: arg[i], (v_batched,))
+                input_from_batch.data = input_from_batch._compute()
+                input_from_batch.computed = True
+                input_from_batch.sliced_from = (v_batched, i) # remember that this was sliced
             else:
-                inp = v_batched
-                v.data = v_batched.data
-            assert v.shape == v.data.shape
-            assert v.shape == inp.shape
-            v.computed = True
-            # patch into the consumers
+                input_from_batch = v_batched
+                #v.data = v_batched.data
+            #assert v.shape == v.data.shape
+            assert v.shape == input_from_batch.shape
+            #v.computed = True
+            # redirect all consumers to take the batched input instead
             for c in v.consumers:
-                new_inputs = tuple(input if input is not v else inp for input in c.inputs)
+                new_inputs = tuple(input if input is not v else input_from_batch for input in c.inputs)
                 c.inputs = new_inputs
 
     # initialization
