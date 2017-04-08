@@ -102,7 +102,8 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
                             rank = C.Communicator.rank(),
                             gen_heartbeat = False)]
 
-    learner = C.adadelta(z.parameters, rho = training_config['rho'])
+    lr = C.learning_rate_schedule(training_config['lr'], unit=C.learners.UnitType.sample)
+    learner = C.adadelta(z.parameters, lr)
 
     if C.Communicator.num_workers() > 1:
         learner = C.data_parallel_distributed_learner(learner, num_quantization_bits=32, distributed_after=0)

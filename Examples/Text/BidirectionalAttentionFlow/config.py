@@ -21,7 +21,7 @@ training_config = {
     'log_freq'       : 10,  # in minibatchs
     'epoch_size'     : 1780, # in sequences
     'max_epochs'     : 3,
-    'rho'            : 0.5,
+    'lr'             : 0.5,
     'train_data'     : 'val.ctf',
     #'train_data'     : 'val.tsv',
     #'minibatch_seqs' : 1, # in sequences
