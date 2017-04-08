@@ -24,11 +24,6 @@ from timeit import default_timer as timer
 #    Are the root vars getting their computed flag?
 
 # TODO:
-#  - change batch_eval to replace inputs by slice views rather than overwriting inputs' data fields
-#  - complete the split of batch_eval() into
-#     - transform graph
-#        - one can imagine merging partially optimized graphs further; so no optimized flag
-#     - simplistic evaluation on that graph
 #  - implement grad_times
 #     - for now no in-place updates
 #  - longer term:
@@ -429,7 +424,7 @@ def topo_sort(roots):
 #     - sort each one right away into its batched group
 #     - this requires consumer sets for all nodes, and a not-ready-children counter
 #  - delete the batched group
-def batch_eval1(vars):
+def transform_to_batched_ops(vars):
     nodes = topo_sort(vars)    # (it is possible to implement this without, just more complex)
     num_nodes = len(nodes)
     expected_num_ops = sum(1 for v in nodes if not v.computed)
@@ -478,7 +473,7 @@ def batch_eval1(vars):
         # create a new node for batching each input
         num_inputs = len(v0.inputs)
         num_batched_ops = len(op_batch)
-        def make_batch(i, inp_i_0): # returns either arg0 or a slice/splice
+        def make_batched_input(i, inp_i_0): # returns either arg0 or a slice/splice
             args = tuple(v.inputs[i] for v in op_batch)
             arg0 = args[0]
             # matrix product is special, in that the right argument is always shared in the batch and not applied element-wise
@@ -529,7 +524,7 @@ def batch_eval1(vars):
                 return Variable((num_batched_ops,) + (1,) * (new_rank - ranks[i] - 1) + inp_i_0_shape,
                                 lambda *args: cntk.NDArrayView.splice(*args, axis=ranks[i] - new_rank),
                                 args), True
-        batched_inputs_hasbatch = tuple(make_batch(i, inp_i_0)
+        batched_inputs_hasbatch = tuple(make_batched_input(i, inp_i_0)
                                         for i, inp_i_0 in enumerate(v0.inputs))
         batched_inputs = tuple(batched_input for batched_input, hasbatch in batched_inputs_hasbatch)
         hasbatch = any(tuple(hasbatch for batched_input, hasbatch in batched_inputs_hasbatch))
@@ -550,7 +545,7 @@ def batch_eval1(vars):
             if hasbatch and op in unary_reduction_ops:
                 return lambda arg: op(arg, reduce_to_shape=(num_batched_ops,1)).reshape((num_batched_ops,))
             return op
-        v_batched = Variable(shape_batched, to_batched_op(v0.op), batched_inputs)
+        v_batched = Variable(shape_batched, to_batched_op(v0.op), batched_inputs, v0.additional_args)
         # if not hasbatch, we can just use v0 and replicate it over all others
         # now perform the operation batched
         #print(13, v_batched.op)
@@ -569,6 +564,7 @@ def batch_eval1(vars):
             else:
                 # mutate the op into an alias into the new batched op (which is actually just a clone of v0)
                 v.op = Variable._op_alias
+                v.additional_args = ()
                 # BUGBUG: commit 48b72d5b3925ca9661b3b975f6a4af13b2952648 broke batching of something, section after print() goes up from 8 to 121
             v.inputs = (v_batched,)
             #v.compute_data()
@@ -582,19 +578,12 @@ def batch_eval1(vars):
         if p.computed:
             continue
         def make_key(p):
-            #def shape_of(v):  # remove this function when no longer needed
-            #    assert isinstance(v, (np.ndarray, Variable))
-            #    if isinstance(v, (np.ndarray, Variable)):
-            #        return v.shape
-            #    else:
-            #        return ()
             # special case for matmul: right matrix must be identical to be batchable
             if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose:
                 return (p.op, ((p.inputs[0].shape, p.inputs[0].additional_args), (id(p.inputs[1]), p.inputs[1].additional_args)))
             # batch if both op and input shapes are the same
             return (p.op, tuple((v.shape, v.additional_args) for v in p.inputs))
         p.key = make_key(p)
-        # TODO: for matrix mul the second arg must be the same object to allow batching
         # TODO: must also include the storage format in the key; do this in C++ version
         p.consumers = []
         p.non_ready_inputs = 0
@@ -636,10 +625,18 @@ def batch_eval1(vars):
     #for v in nodes:
     #    assert v.computed
 
+# main evaluation function
+#  - evaluate a set of root variables
+#  - with full automatic dynamic batching
 def batch_eval(vars):
-    batch_eval1(vars)
+    # transform the graph from raw (individual batch items) to the batched graph
+    transform_to_batched_ops(vars)
+    # BUGBUG: the following fails because we have a slice() somewhere which is not hashable
+    #         It also seems to further change the graph, and results are not the same. So something is still wrong.
+    #transform_to_batched_ops(vars)
+    #transform_to_batched_ops(vars)
     # now actually compute the transformed graph
-    nodes = topo_sort(vars)    # (it is possible to implement this without, just more complex)
+    nodes = topo_sort(vars)
     num_nodes = len(nodes)
     for p in nodes:
         if not p.computed:
