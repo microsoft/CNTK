@@ -102,6 +102,9 @@ class Variable:
         return element_times(self, other)
     def __matmul__(self, other):
         return times(self, other)
+    #def __getitem__(self, key):
+    #    assert isinstance(key, int)  # BUGBUG: for now; later must dupplicate the complex logic for interpreting key
+    #    return Variable(self.shape[1:], cntk.NDArrayView.__getitem__, (self,))
     @staticmethod
     def splice(*args):
         return Variable((len(args),) + args[0].shape, cntk.NDArrayView.splice, args)
@@ -535,10 +538,21 @@ def batch_eval(vars):
                 v.sliced_from = (v_batched, i) # remember that this was sliced
                 # BUGBUG: Instead of patching 'data', we must patch the input with a slice view, to connect backprop. Also, it's free (w.r.t. GPU).
                 v.data = v_batched.data[i]
+                #inp = v_batched[i]
+                inp = Variable(v0.shape, lambda arg, i=i: arg[i], (v_batched,))
+                inp.data = inp._compute()
+                inp.computed = True
+                inp.sliced_from = (v_batched, i) # remember that this was sliced
             else:
+                inp = v_batched
                 v.data = v_batched.data
             assert v.shape == v.data.shape
+            assert v.shape == inp.shape
             v.computed = True
+            # patch into the consumers
+            for c in v.consumers:
+                new_inputs = tuple(input if input is not v else inp for input in c.inputs)
+                c.inputs = new_inputs
 
     # initialization
     #  - determine set of consumers for each node
