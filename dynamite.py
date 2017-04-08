@@ -17,9 +17,15 @@ from timeit import default_timer as timer
 #     - ...how do we tell it where to place the gradients? It must connect to the V2 gradient NDArrayViews. Ah! Parameter Variables carry it from the start.
 #     - grad_times() will trigger batch transformation; then read off the gradient functions from the *batched* graph (; then reoptimize? try it out)
 
+# BUGBUG:
+#  - transformation no longer combines the sequences after the print(), when they should all be batchable
+#    This is since commit 48b72d5b3925ca9661b3b975f6a4af13b2952648
+#    Maybe it now optimnizes the whole thing again although stuff is already executed? Some dangling ref triggering that?
+#    Are the root vars getting their computed flag?
+
 # TODO:
 #  - change batch_eval to replace inputs by slice views rather than overwriting inputs' data fields
-#  - split batch_eval into
+#  - complete the split of batch_eval() into
 #     - transform graph
 #        - one can imagine merging partially optimized graphs further; so no optimized flag
 #     - simplistic evaluation on that graph
@@ -446,7 +452,7 @@ def batch_eval(vars):
     def transform_batched_op(op_batch):
         nonlocal num_compute_launches, num_gathers
         if len(op_batch) == 1: # short-circuit this to avoid unnecessary splice (...actually already taken care of the check for all inputs being the same)
-            v = op_batch[0]
+            #v = op_batch[0]
             #v.compute_data()
             num_compute_launches += 1
             return
@@ -509,8 +515,11 @@ def batch_eval(vars):
                 # need to slice if range does not match, e.g. a sub-range or sub-index
                 if res.shape[0] != num_batched_ops:
                     res = Variable((num_batched_ops,) + res.shape[1:],
-                                   lambda arg: arg[sliced_from0[1]:sliced_from0[1] + num_batched_ops],
-                                   [res])
+                                   #lambda arg: arg[sliced_from0[1]:sliced_from0[1] + num_batched_ops],
+                                   #[res])
+                                   lambda arg: cntk.NDArrayView.__getitem__,
+                                   [res],
+                                   (slice(sliced_from0[1], sliced_from0[1] + num_batched_ops),))
                 return res, True
             else:
                 # need to do actual splice
@@ -559,6 +568,7 @@ def batch_eval(vars):
             else:
                 # mutate the op into an alias into the new batched op (which is actually just a clone of v0)
                 v.op = Variable._op_alias
+                # BUGBUG: commit 48b72d5b3925ca9661b3b975f6a4af13b2952648 broke batching of something, section after print() goes up from 8 to 121
             v.inputs = (v_batched,)
             #v.compute_data()
     # end of transform_batched_op
@@ -631,8 +641,9 @@ def batch_eval(vars):
     for p in nodes:
         if not p.computed:
             p.compute_data()
+    dump_graph(vars)
 
-def dump_graph(v):
+def dump_graph(vars):
     names = {} # [id(obj)] -> faked name
     def print_node(v):
         def name_it(v):
@@ -651,6 +662,8 @@ def dump_graph(v):
             t = name_it(v) + ": "
             t += "Parameter" if isinstance(v, Parameter) else "Variable" if isinstance(v, Variable) else "ndarray"
             t += str(v.shape)
+            if v.additional_args:
+                t += ', ' + str(v.additional_args)
             return t
         t = format_shape(v)
         try:   # BUGBUG: why does it get here with an int?
@@ -659,7 +672,7 @@ def dump_graph(v):
             pass
         print(t)
         pass
-    order = topo_sort(v)
+    order = topo_sort(vars)
     for node in order:
         print_node(node)
     return len(order)
