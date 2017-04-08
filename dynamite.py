@@ -69,7 +69,7 @@ class Variable:
         prev = Variable._batch_eval_fn
         Variable._batch_eval_fn = batch_eval_fn
         return prev
-    def _compute(self):
+    def _call_op(self):
         try:
           #args = tuple(to_data(input) for input in self.inputs)
           args = tuple(input.data for input in self.inputs)
@@ -82,9 +82,9 @@ class Variable:
           #return
           raise
         pass
-    def _compute_data(self):
+    def compute_data(self): # perform op and store result in a new field 'data'
         assert not self.computed
-        self.data = self._compute()
+        self.data = self._call_op()
         self.computed = True
     def value(self):  # return the NDArrayView--computed lazily at this point if needed
         if not self.computed:  # lazy computation (this is where all the difficult stuff will happen w.r.t. batching)
@@ -447,8 +447,7 @@ def batch_eval(vars):
         nonlocal num_compute_launches, num_gathers
         if len(op_batch) == 1: # short-circuit this to avoid unnecessary splice (...actually already taken care of the check for all inputs being the same)
             v = op_batch[0]
-            v.data = v._compute()
-            v.computed = True
+            v.compute_data()
             num_compute_launches += 1
             return
         # all ops are the same, so use the first as the reference
@@ -459,8 +458,7 @@ def batch_eval(vars):
         # sparse can not be properly batched for now
         if (isinstance(v0.inputs[0], Variable) and v0.inputs[0].data.is_sparse()):
             for v in op_batch:
-                v.data = v._compute()  # non-batched for now
-                v.computed = True
+                v._compute_data()  # non-batched for now
                 num_compute_launches += 1
             return 
         # determine rank for new axis; we insert a new axis, and for that, all objects must use aligned indices
@@ -527,8 +525,7 @@ def batch_eval(vars):
         #                    ^^ hasbatch is the same as argument == arg0; can simplify
         for batched_input in batched_inputs: # and compute them
             if isinstance(batched_input, Variable) and not batched_input.computed: # (if already computed then no gather was necessary)
-                batched_input.data = batched_input._compute() # these are splice or splice--don't count either in num_compute_launches
-                batched_input.computed = True
+                batched_input.compute_data() # these are splice or splice--don't count either in num_compute_launches
                 #print('out', batched_input.data.shape)
         # create a new node for the batched op
         # In some cases, neither input got batched. In that case, just execute a single op and distribute its output
@@ -546,9 +543,7 @@ def batch_eval(vars):
         # if not hasbatch, we can just use v0 and replicate it over all others
         # now perform the operation batched
         #print(13, v_batched.op)
-        v_batched.data = v_batched._compute()
-        v_batched.computed = True
-        #print(13)
+        v_batched.compute_data()
         num_compute_launches += 1
         #print('out', v_batched.data.shape)
         # and copy the results back
@@ -561,13 +556,12 @@ def batch_eval(vars):
                 v.sliced_from = (v_batched, i) # remember that this was sliced
                 v.op = lambda arg, i=i: arg[i]
                 v.inputs = (v_batched,)
-                v.data = v._compute()
-                v.computed = True
+                v.compute_data()
             else:
                 v.op = Variable._op_alias
                 v.inputs = (v_batched,)
-                v.data = v._compute()
-                v.computed = True
+                v.compute_data()
+                # BUGBUG: remove this and test again::
                 v.sliced_from = (v_batched, i) # remember that this was sliced
 ###                ... does not work! FIRST GET IT CORRECT AGAIN
                 # with batch, we can redirect v.
@@ -576,8 +570,7 @@ def batch_eval(vars):
                 # add Variable.clone; clone v0. Then replace all v by op=identity; then test for identity in make_batch
                 #v.op = v0.op
                 #v.inputs = v0.inputs
-                #v.data = v._compute()
-                #v.computed = True
+                #v.compute_data()
                 #v.data = v_batched.data
             #assert v.shape == v.data.shape
             #assert v.shape == input_from_batch.shape
@@ -595,12 +588,12 @@ def batch_eval(vars):
         if p.computed:
             continue
         def make_key(p):
-            def shape_of(v):  # remove this function when no longer needed
-                assert isinstance(v, (np.ndarray, Variable))
-                if isinstance(v, (np.ndarray, Variable)):
-                    return v.shape
-                else:
-                    return ()
+            #def shape_of(v):  # remove this function when no longer needed
+            #    assert isinstance(v, (np.ndarray, Variable))
+            #    if isinstance(v, (np.ndarray, Variable)):
+            #        return v.shape
+            #    else:
+            #        return ()
             # special case for matmul: right matrix must be identical to be batchable
             if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose:
                 return (p.op, ((p.inputs[0].shape, p.inputs[0].additional_args), (id(p.inputs[1]), p.inputs[1].additional_args)))
