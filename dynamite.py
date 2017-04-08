@@ -525,6 +525,7 @@ def batch_eval(vars):
                 return lambda arg: op(arg, reduce_to_shape=(num_batched_ops,1)).reshape((num_batched_ops,))
             return op
         v_batched = Variable(shape_batched, to_batched_op(v0.op), batched_inputs)
+        # if not hasbatch, we can just use v0 and replicate it over all others
         # now perform the operation batched
         #print(13, v_batched.op)
         v_batched.data = v_batched._compute()
@@ -538,22 +539,29 @@ def batch_eval(vars):
                 #v.sliced_from = (v_batched, i) # remember that this was sliced
                 # BUGBUG: Instead of patching 'data', we must patch the input with a slice view, to connect backprop. Also, it's free (w.r.t. GPU).
                 #v.data = v_batched.data[i]
-        v.op = op
-        v.inputs = tuple(to_Variable(input) for input in inputs)
-                input_from_batch = Variable(v0.shape, lambda arg, i=i: arg[i], (v_batched,))
-                input_from_batch.data = input_from_batch._compute()
-                input_from_batch.computed = True
-                input_from_batch.sliced_from = (v_batched, i) # remember that this was sliced
+                # mutate the op into a slice view into the new batched op
+                v.op = lambda arg, i=i: arg[i]
+                v.inputs = (v_batched,)
+                v.data = v._compute()
+                v.computed = True
+                v.sliced_from = (v_batched, i) # remember that this was sliced
             else:
-                input_from_batch = v_batched
+###                ... does not work! FIRST GET IT CORRECT AGAIN
+                # with batch, we can redirect v.
+                # without, all v's are identical; copying them would not give them the same identity so they would be recomputed
+                # ...so, how to make v1, v2, etc. aliases of v0, in a way that each time we look at vn, we redirect to v0?
+                v.op = v0.op
+                v.inputs = v0.inputs
+                v.data = v._compute()
+                v.computed = True
                 #v.data = v_batched.data
             #assert v.shape == v.data.shape
-            assert v.shape == input_from_batch.shape
+            #assert v.shape == input_from_batch.shape
             #v.computed = True
             # redirect all consumers to take the batched input instead
-            for c in v.consumers:
-                new_inputs = tuple(input if input is not v else input_from_batch for input in c.inputs)
-                c.inputs = new_inputs
+            #for c in v.consumers:
+            #    new_inputs = tuple(input if input is not v else input_from_batch for input in c.inputs)
+            #    c.inputs = new_inputs
 
     # initialization
     #  - determine set of consumers for each node
