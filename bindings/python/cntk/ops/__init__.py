@@ -2792,7 +2792,7 @@ def assign(ref, input, name=''):
     Example:
         >>> dest = C.constant(shape=(3,4))
         >>> data = C.parameter(shape=(3,4), init=2)
-        >>> C.assign(dest,data)
+        >>> C.assign(dest,data).eval()
         array([[ 2.,  2.,  2.,  2.],
                [ 2.,  2.,  2.,  2.],
                [ 2.,  2.,  2.,  2.]], dtype=float32)
