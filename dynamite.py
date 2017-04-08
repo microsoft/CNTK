@@ -3,8 +3,27 @@ import cntk  # note: keep in 'cntk' namespace in here
 import collections
 from timeit import default_timer as timer
 
+# Functions vs Variables:
+#  - CNTK dynamite has no functions!!! (other than Python lambdas)
+#  - forward:
+#     - raw model: model(p1, p2, p3, ..., x1, x2)
+#     - bind the parameters -> model'(x1, x2) = model(P1, P2, P3, ..., _, _)
+#     - apply to data -> model'' = model'(X1, X2) = a single value; not a function at all!
+#     - loss = model''.value     # triggers lazy evaluation; but really, it is already fully determined
+#  - backward:
+#     - chain rule: take gradient from top and multiply with gradient of node -> grad_times(set_of_params, error_signal=1)
+#     - (dp1, dp2, dp3, ...) = model''.grad_times_{p1,p2,p3}(e)    # where e=1.0 in normal backprop
+#     - hence, to compute the gradient, pick the node; choose e (typ. 1.0); and call node.grad_times({ p1, p2, p3 }, e)
+
+# TODO:
+#  - split batch_eval into
+#     - transform graph
+#        - one can imagine merging partially optimized graphs further; so no optimized flag
+#     - simplistic evaluation on that graph
+#  - implement grad_times
+
 INFER = 0
-times_initializer="x" # for now a dummy string that is not None
+times_initializer = "(times_initializer)" # (dummy object only looked at by its object identity)
 
 # convert an input to an NDArrayView if not yet (it may be an ndarray of a Number)
 def to_data(input):
@@ -190,7 +209,9 @@ reduce_log_sum = unary_reduction_op(cntk.NDArrayView.reduce_log_sum)
 reduce_sum     = unary_reduction_op(cntk.NDArrayView.reduce_sum)
 
 def cross_entropy_with_softmax(output, label):
-    return reduce_log_sum(output) - times_transpose(label, output)
+    #return reduce_log_sum(output) - times_transpose(label, output)
+    return reduce_log_sum(output) - reduce_sum(label * output)
+    # TODO: either turn this into a special ^^ operator, or allow shape to be passed to __mul__
 classification_error = cross_entropy_with_softmax  # TODO... for now
 
 def identity(x):
