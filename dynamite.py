@@ -382,7 +382,7 @@ def dump_parameters(m, root='$'):
 # TODO: This is less trivial than it seems; need to double-check and test very carefully
 def topo_sort(roots):
     visited = set(id(v) for v in roots) # [id(obj)]
-    stack = roots
+    stack = roots.copy()
     order = []
     num_implanted = 0
     while stack:
@@ -443,11 +443,11 @@ def batch_eval(vars):
     # execute all operations in op_batch as one CUDA operation
     # The data needs to be gathered first (an optimized version would make the
     # scatter lazy and avoid it if possible)
-    def execute_batch(op_batch):
+    def transform_batched_op(op_batch):
         nonlocal num_compute_launches, num_gathers
         if len(op_batch) == 1: # short-circuit this to avoid unnecessary splice (...actually already taken care of the check for all inputs being the same)
             v = op_batch[0]
-            v.compute_data()
+            #v.compute_data()
             num_compute_launches += 1
             return
         # all ops are the same, so use the first as the reference
@@ -456,11 +456,12 @@ def batch_eval(vars):
             assert isinstance(inp, Variable)
         is_mul = v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose
         # sparse can not be properly batched for now
-        if (isinstance(v0.inputs[0], Variable) and v0.inputs[0].data.is_sparse()):
-            for v in op_batch:
-                v._compute_data()  # non-batched for now
-                num_compute_launches += 1
-            return 
+        # BUGBUG: This must become part of the type, stored inside Variable not data
+        #if (isinstance(v0.inputs[0], Variable) and v0.inputs[0].data.is_sparse()):
+        #    for v in op_batch:
+        #        #v._compute_data()  # non-batched for now
+        #        num_compute_launches += 1
+        #    return 
         # determine rank for new axis; we insert a new axis, and for that, all objects must use aligned indices
         def rank(input):
             return len(input.shape) if isinstance(input, (Variable, np.ndarray)) else 0
@@ -523,9 +524,9 @@ def batch_eval(vars):
         batched_inputs = tuple(batched_input for batched_input, hasbatch in batched_inputs_hasbatch)
         hasbatch = any(tuple(hasbatch for batched_input, hasbatch in batched_inputs_hasbatch))
         #                    ^^ hasbatch is the same as argument == arg0; can simplify
-        for batched_input in batched_inputs: # and compute them
-            if isinstance(batched_input, Variable) and not batched_input.computed: # (if already computed then no gather was necessary)
-                batched_input.compute_data() # these are splice or splice--don't count either in num_compute_launches
+        #for batched_input in batched_inputs: # and compute them
+        #    if isinstance(batched_input, Variable) and not batched_input.computed: # (if already computed then no gather was necessary)
+        #        batched_input.compute_data() # these are splice or splice--don't count either in num_compute_launches
                 #print('out', batched_input.data.shape)
         # create a new node for the batched op
         # In some cases, neither input got batched. In that case, just execute a single op and distribute its output
@@ -543,7 +544,7 @@ def batch_eval(vars):
         # if not hasbatch, we can just use v0 and replicate it over all others
         # now perform the operation batched
         #print(13, v_batched.op)
-        v_batched.compute_data()
+        #v_batched.compute_data()
         num_compute_launches += 1
         #print('out', v_batched.data.shape)
         # and copy the results back
@@ -559,7 +560,8 @@ def batch_eval(vars):
                 # mutate the op into an alias into the new batched op (which is actually just a clone of v0)
                 v.op = Variable._op_alias
             v.inputs = (v_batched,)
-            v.compute_data()
+            #v.compute_data()
+    # end of transform_batched_op
 
     # initialization
     #  - determine set of consumers for each node
@@ -601,7 +603,7 @@ def batch_eval(vars):
         op_batch = ready_ops[key]
         # execute it
         #print('batch of', len(op_batch), 'for op', key)
-        execute_batch(op_batch)
+        transform_batched_op(op_batch)
         batches_run += 1
         # done with this one
         #  - for each member of the batched op, check each consumer whether it is now ready; if so, move to ready set
@@ -623,6 +625,12 @@ def batch_eval(vars):
     #for v in nodes:
     #    assert v.computed
 
+    # now actually compute the transformed graph
+    nodes = topo_sort(vars)    # (it is possible to implement this without, just more complex)
+    num_nodes = len(nodes)
+    for p in nodes:
+        if not p.computed:
+            p.compute_data()
 
 def dump_graph(v):
     names = {} # [id(obj)] -> faked name
