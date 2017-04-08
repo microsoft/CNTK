@@ -46,28 +46,23 @@ def to_data(input):
 def to_Variable(x):
     return x if isinstance(x, Variable) else Constant(x)
 
-def shape_of(v):
-    if isinstance(v, (np.ndarray, Variable)):
-        return v.shape
-    else:
-        return ()
-
 class Variable:
-    def __new__(cls, shape, op, inputs):
+    def __new__(cls, shape, op, inputs, kwargs=dict()):
         v = object.__new__(cls)
         v.shape = shape
         v.op = op
         v.inputs = tuple(to_Variable(input) for input in inputs)
+        v.kwargs = kwargs
         for inp in v.inputs:
             assert isinstance(inp, Variable)
         # TODO: capture the gradient functions for all inputs that need gradients (we also need a flag for that)
         #v.needs_gradient = True
         v.computed = False
         return v
-    def clone(self): # used for batching identical ops
-        assert not v.computed
-        v = Variable(v.shape, v.op, v.inputs)
-        return v
+    #def clone(self): # used for batching identical ops
+    #    assert not v.computed
+    #    v = Variable(v.shape, v.op, v.inputs, v.kwargs)
+    #    return v
     _batch_eval_fn = None   # lambda to call to yield from current coroutine
     @staticmethod
     def set_yield(batch_eval_fn):
@@ -78,7 +73,7 @@ class Variable:
         try:
           #args = tuple(to_data(input) for input in self.inputs)
           args = tuple(input.data for input in self.inputs)
-          data = self.op(*args)
+          data = self.op(*args, **self.kwargs)
           if data.shape != self.shape:
                print(data.shape, self.shape)
           assert data.shape == self.shape # sanity check of shape inference
@@ -106,13 +101,15 @@ class Variable:
         return element_times(self, other)
     def __matmul__(self, other):
         return times(self, other)
+    def _make_kwargs(**kwargs): # turn kwargs into a dict; makes it a bit easier to read
+        return kwargs
     #def __getitem__(self, key):
     #    assert isinstance(key, int)  # BUGBUG: for now; later must dupplicate the complex logic for interpreting key
-    #    return Variable(self.shape[1:], cntk.NDArrayView.__getitem__, (self,))
+    #    return Variable(self.shape[1:], cntk.NDArrayView.__getitem__, (self,), _make_kwargs(key=key))
     def _op_alias(x): # the op for alias
         return x
-    def alias(self): # wrap an identity function around ourselves
-        return Variable(self.shape, Variable._op_alias, (self,))
+    #def alias(self): # wrap an identity function around ourselves
+    #    return Variable(self.shape, Variable._op_alias, (self,))
     @staticmethod
     def splice(*args):
         return Variable((len(args),) + args[0].shape, cntk.NDArrayView.splice, args)
@@ -596,6 +593,12 @@ def batch_eval(vars):
         if p.computed:
             continue
         def make_key(p):
+            def shape_of(v):  # remove this function when no longer needed
+                assert isinstance(v, (np.ndarray, Variable))
+                if isinstance(v, (np.ndarray, Variable)):
+                    return v.shape
+                else:
+                    return ()
             if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose:
                 return (p.op, (shape_of(p.inputs[0]), id(p.inputs[1])))
             # batch if both op and input shapes are the same
