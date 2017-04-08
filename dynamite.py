@@ -64,6 +64,10 @@ class Variable:
         #v.needs_gradient = True
         v.computed = False
         return v
+    def clone(self): # used for batching identical ops
+        assert not v.computed
+        v = Variable(v.shape, v.op, v.inputs)
+        return v
     _batch_eval_fn = None   # lambda to call to yield from current coroutine
     @staticmethod
     def set_yield(batch_eval_fn):
@@ -105,6 +109,10 @@ class Variable:
     #def __getitem__(self, key):
     #    assert isinstance(key, int)  # BUGBUG: for now; later must dupplicate the complex logic for interpreting key
     #    return Variable(self.shape[1:], cntk.NDArrayView.__getitem__, (self,))
+    def _op_alias(x): # the op for alias
+        return x
+    def alias(self): # wrap an identity function around ourselves
+        return Variable(self.shape, Variable._op_alias, (self,))
     @staticmethod
     def splice(*args):
         return Variable((len(args),) + args[0].shape, cntk.NDArrayView.splice, args)
@@ -465,7 +473,7 @@ def batch_eval(vars):
         # create a new node for batching each input
         num_inputs = len(v0.inputs)
         num_batched_ops = len(op_batch)
-        def make_batch(i, inp_i_0):
+        def make_batch(i, inp_i_0): # returns either arg0 or a slice/splice
             args = tuple(v.inputs[i] for v in op_batch)
             arg0 = args[0]
             # matrix product is special, in that the right argument is always shared in the batch and not applied element-wise
@@ -481,12 +489,21 @@ def batch_eval(vars):
                 matchesi = sliced_from[1] == i + sliced_from0[1]
                 return matchesd and matchesi
             if all(arg is arg0 for arg in args):
-                # use the object itself, assuming broadcasting
+                # all the same args: use the object itself, assuming broadcasting
                 return arg0, False
-            elif isinstance(arg0, Variable) and all(isinstance(arg, Variable) and (arg.data is arg0.data) for arg in args):
+            elif arg0.op is Variable._op_alias and all((arg.op is Variable._op_alias and arg.inputs == arg0.inputs) for arg in args):
                 # use the object itself, assuming broadcasting
-                # TODO: What case is this? It must go away if we split off transformation.
+                # This is the case where an identical op exists in all batch items, which got batched into a single one,
+                # and the original reference was patched to an alias to that single one.
                 return arg0, False
+            #elif isinstance(arg0, Variable) and all(isinstance(arg, Variable) and (arg.data is arg0.data) for arg in args):
+            #elif all((arg.data is arg0.data) for arg in args):
+            #    # use the object itself, assuming broadcasting
+            #    # TODO: What case is this? It must go away if we split off transformation.
+            #    #   I think this is fully broadcast ops (same on all threads) that can be reduced back
+            #    # TODO: problem if fully broadcast ops happen at different times; can that be? No--if one is ready, they are all ready at once
+            #    # -> add a new mechanism like sliced_from--alias_of
+            #    return arg0, False
             elif sliced_from0 and all(hasattr(arg, 'sliced_from') and is_consecutive(i, arg)
                                        for i, arg in enumerate(args)):
                 # all inputs are consecutive views onto the same object--these came out of a previous batching op
@@ -508,6 +525,7 @@ def batch_eval(vars):
                                         for i, inp_i_0 in enumerate(v0.inputs))
         batched_inputs = tuple(batched_input for batched_input, hasbatch in batched_inputs_hasbatch)
         hasbatch = any(tuple(hasbatch for batched_input, hasbatch in batched_inputs_hasbatch))
+        #                    ^^ hasbatch is the same as argument == arg0; can simplify
         for batched_input in batched_inputs: # and compute them
             if isinstance(batched_input, Variable) and not batched_input.computed: # (if already computed then no gather was necessary)
                 batched_input.data = batched_input._compute() # these are splice or splice--don't count either in num_compute_launches
@@ -518,6 +536,7 @@ def batch_eval(vars):
         shape_batched = v0.shape
         if hasbatch:
             shape_batched = (num_batched_ops,) + shape_batched
+        # if not hasbatch then all args are just v0's, so we can just compute v0 and broadcast it --split the code
         def to_batched_op(op):
             # if the operation is a reduction to (), we must modify it to not reduce over the batch axis
             # All ops in unary_reduction_ops are single-arg ops and are meant to accept an additional reduce_to_shape argument.
@@ -540,20 +559,26 @@ def batch_eval(vars):
                 # BUGBUG: Instead of patching 'data', we must patch the input with a slice view, to connect backprop. Also, it's free (w.r.t. GPU).
                 #v.data = v_batched.data[i]
                 # mutate the op into a slice view into the new batched op
+                v.sliced_from = (v_batched, i) # remember that this was sliced
                 v.op = lambda arg, i=i: arg[i]
                 v.inputs = (v_batched,)
                 v.data = v._compute()
                 v.computed = True
-                v.sliced_from = (v_batched, i) # remember that this was sliced
             else:
+                v.op = Variable._op_alias
+                v.inputs = (v_batched,)
+                v.data = v._compute()
+                v.computed = True
+                v.sliced_from = (v_batched, i) # remember that this was sliced
 ###                ... does not work! FIRST GET IT CORRECT AGAIN
                 # with batch, we can redirect v.
                 # without, all v's are identical; copying them would not give them the same identity so they would be recomputed
                 # ...so, how to make v1, v2, etc. aliases of v0, in a way that each time we look at vn, we redirect to v0?
-                v.op = v0.op
-                v.inputs = v0.inputs
-                v.data = v._compute()
-                v.computed = True
+                # add Variable.clone; clone v0. Then replace all v by op=identity; then test for identity in make_batch
+                #v.op = v0.op
+                #v.inputs = v0.inputs
+                #v.data = v._compute()
+                #v.computed = True
                 #v.data = v_batched.data
             #assert v.shape == v.data.shape
             #assert v.shape == input_from_batch.shape
