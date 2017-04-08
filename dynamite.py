@@ -84,7 +84,8 @@ class Variable:
                print(data.shape, self.shape)
           assert data.shape == self.shape # sanity check of shape inference
           return data
-        except: # (for catching stuff in the debugger; remove this)
+        except Exception: # (for catching stuff in the debugger; remove this)
+          print('_call_op failure:', self.op, self.shape, (input.shape for input in self.inputs))
           #return
           raise
         pass
@@ -428,7 +429,7 @@ def topo_sort(roots):
 #     - sort each one right away into its batched group
 #     - this requires consumer sets for all nodes, and a not-ready-children counter
 #  - delete the batched group
-def batch_eval(vars):
+def batch_eval1(vars):
     nodes = topo_sort(vars)    # (it is possible to implement this without, just more complex)
     num_nodes = len(nodes)
     expected_num_ops = sum(1 for v in nodes if not v.computed)
@@ -517,7 +518,7 @@ def batch_eval(vars):
                     res = Variable((num_batched_ops,) + res.shape[1:],
                                    #lambda arg: arg[sliced_from0[1]:sliced_from0[1] + num_batched_ops],
                                    #[res])
-                                   lambda arg: cntk.NDArrayView.__getitem__,
+                                   cntk.NDArrayView.__getitem__,
                                    [res],
                                    (slice(sliced_from0[1], sliced_from0[1] + num_batched_ops),))
                 return res, True
@@ -635,13 +636,15 @@ def batch_eval(vars):
     #for v in nodes:
     #    assert v.computed
 
+def batch_eval(vars):
+    batch_eval1(vars)
     # now actually compute the transformed graph
     nodes = topo_sort(vars)    # (it is possible to implement this without, just more complex)
     num_nodes = len(nodes)
     for p in nodes:
         if not p.computed:
             p.compute_data()
-    dump_graph(vars)
+    #dump_graph(vars)
 
 def dump_graph(vars):
     names = {} # [id(obj)] -> faked name
