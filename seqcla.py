@@ -76,8 +76,8 @@ def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
     return namespace.Sequential([
         namespace.Embedding(embedding_dim, name='embed'),
         namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu, name='rnn')),
-        namespace.identity,
-        #namespace.LogValues(),
+        #namespace.identity,
+        namespace.LogValues(),
         namespace.Dense(num_output_classes, name='dense')
     ])
 
@@ -113,6 +113,21 @@ def train(debug_output=False):
     dmodel.__items__[1].step_function.W.share_data_from(model.rnn.W  )
     dmodel.__items__[1].step_function.R.share_data_from(model.rnn.H  )
     dmodel.__items__[0].E              .share_data_from(model.embed.E)
+    #dparameters = dmodel.get_parameters()
+    dparameters = dynamite.get_parameters(dmodel)
+    print('dynamic model has', len(dparameters), 'parameter tensors')
+
+    # testing stuff
+    #m1 = dynamite.Dense(1, activation=dynamite.sigmoid)
+    #dp1 = dynamite.get_parameters(m1)
+    #x = dynamite.Constant(np.array([1., 2., 3.]))
+    #s = m1(x)
+    #dynamite.dump_graph(s)
+    #g = s.grad_times(dp1)
+    #g0 = g[list(dp1)[0]]
+    #dynamite.dump_graph(g0)
+    #g0.get_value()
+
 
     rel_path = "../CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     reader = create_reader(os.path.dirname(os.path.abspath(__file__)) + '/' + rel_path, True, input_dim, num_output_classes)
@@ -140,7 +155,9 @@ def train(debug_output=False):
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
         crit = dynamite.train_minibatch(dcriterion, *args)
         print(" " * 29, crit.to_ndarray() / len(args[0]))
-        args = None  # deref; otherwise resize will fail
+        # compute gradients
+        #gradients = crit.grad_times(dparameters)
+        args = None  # deref; otherwise resize will fail    --veriy this; should not longer be the case
         #print('static', dmodel.__items__[0].E.data.to_ndarray())
         #print('dynamic', model.embed.E.value)
         # CNTK static

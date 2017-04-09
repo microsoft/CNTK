@@ -48,11 +48,12 @@ def to_Variable(x):
     return x if isinstance(x, Variable) else Constant(x)
 
 class Variable:
-    def __new__(cls, shape, op, inputs, additional_args=()):
+    def __new__(cls, shape, op, inputs, backprop_to_functions=None, additional_args=()):
         v = object.__new__(cls)
         v.shape = shape
         v.op = op
         v.inputs = tuple(to_Variable(input) for input in inputs)
+        v.backprop_to_functions = backprop_to_functions
         v.additional_args = additional_args
         for inp in v.inputs:
             assert isinstance(inp, Variable)
@@ -60,10 +61,6 @@ class Variable:
         #v.needs_gradient = True
         v.computed = False
         return v
-    #def clone(self): # used for batching identical ops
-    #    assert not v.computed
-    #    v = Variable(v.shape, v.op, v.inputs, v.additional_args)
-    #    return v
     _batch_eval_fn = None   # lambda to call to yield from current coroutine
     @staticmethod
     def set_yield(batch_eval_fn):
@@ -88,7 +85,8 @@ class Variable:
         assert not self.computed
         self.data = self._call_op()
         self.computed = True
-    def value(self):  # return the NDArrayView--computed lazily at this point if needed
+    #@property
+    def get_value(self):  # return the NDArrayView--computed lazily at this point if needed
         if not self.computed:  # lazy computation (this is where all the difficult stuff will happen w.r.t. batching)
             if Variable._batch_eval_fn:
                 Variable._batch_eval_fn(self) # delegate to task scheduler to eval us
@@ -97,7 +95,15 @@ class Variable:
                 batch_eval([self])
         return self.data
     def to_ndarray(self):
-        return self.value().to_ndarray()
+        return self.get_value().to_ndarray()
+    # create Variable that is the gradient of self w.r.t. a set of parameters, multiplied with error_signal
+    def backprop_to(self, i):  # get backprop function for inputs[i]
+        if not self.backprop_to_functions:
+            return lambda v, g: g # dummy for now, so that we can debug a partially implemented system
+        return self.backprop_to_functions[i]
+    def grad_times(self, set_of_params, error_signal=1):
+        error_signal = to_Variable(error_signal)
+        return create_gradient_graph(self, set_of_params, error_signal)
     # operator overloads
     def __add__(self, other):
         return plus(self, other)
@@ -109,7 +115,7 @@ class Variable:
         return times(self, other)
     #def __getitem__(self, key):
     #    assert isinstance(key, int)  # BUGBUG: for now; later must dupplicate the complex logic for interpreting key
-    #    return Variable(self.shape[1:], cntk.NDArrayView.__getitem__, (self,), (key,))
+    #    return Variable(self.shape[1:], cntk.NDArrayView.__getitem__, (self,), additional_args=(key,))
     def _op_alias(x): # the op for alias
         return x
     #def alias(self): # wrap an identity function around ourselves
@@ -178,15 +184,14 @@ def reducing_binary_op(opcode): # (unused)
         return Variable((), opcode, (a,b))
     return f
 
-def unary_op(opcode):
+def unary_op(opcode, backprop_to_functions=None):
     def f(x):
         if isinstance(x, list): # broadcast along sequence
             return map(f, x)
-        return Variable(x.shape, opcode, (x,))
+        return Variable(x.shape, opcode, (x,), backprop_to_functions=backprop_to_functions)
     return f
 
-unary_reduction_ops = set() # unar_reduction_ops must be treated specially in batched execution; we collect them here during startup
-#{ cntk.NDArrayView.reduce_log_sum, cntk.NDArrayView.reduce_sum }
+unary_reduction_ops = set() # unary_reduction_ops must be treated specially in batched execution; we collect them here during startup
 
 def unary_reduction_op(opcode):
     unary_reduction_ops.add(opcode)
@@ -240,7 +245,8 @@ minus = binary_op(cntk.NDArrayView.__sub__)
 element_times = binary_op(cntk.NDArrayView.__mul__)
 
 tanh = unary_op(cntk.NDArrayView.tanh)
-sigmoid = unary_op(cntk.NDArrayView.sigmoid)
+one = Constant(1)
+sigmoid = unary_op(cntk.NDArrayView.sigmoid, backprop_to_functions=(lambda v, g: g * (v * (one-v)),))
 relu = unary_op(cntk.NDArrayView.relu)
 #softmax = unary_op(cntk.NDArrayView.softmax)
 #row_slice_0 = unary_op(cntk.NDArrayView.row_slice)
@@ -261,6 +267,7 @@ def identity(x):
 def Model(**kwargs):
     def patch(f):
         f.__ismodel__ = True
+        f.get_parameters = get_parameters  # BUGBUG: It's not this simple. Must create a class, it seems.
         for name, value in kwargs.items():
             setattr(f, name, value) # add all as class members
         #def mygetitem(self, x):
@@ -368,6 +375,22 @@ def Recurrence(step_function, initial_state=0):
         return out
     return recurrence
 
+# returns the set of Parameter objects hanging off a model
+def get_parameters(m):
+    parameters = set()
+    for member_name in dir(m):
+        if member_name[0] == '_' and member_name != '__items__':
+            continue
+        member = getattr(m, member_name)
+        if isinstance(member, Parameter):
+            parameters.add(member)
+        elif member_name == '__items__':
+            for item in member:
+                parameters |= get_parameters(item)
+        elif hasattr(member, '__ismodel__'):
+            parameters |= get_parameters(member)
+    return parameters
+
 def dump_parameters(m, root='$'):
     for member_name in dir(m):
         if member_name[0] == '_' and member_name != '__items__':
@@ -382,7 +405,8 @@ def dump_parameters(m, root='$'):
             dump_parameters(member, root + '.' + member_name)
 
 # TODO: This is less trivial than it seems; need to double-check and test very carefully
-def topo_sort(roots):
+# BUGBUG: It indeed seems to have an error. Can we self-check?
+def topo_sort(roots: list):
     visited = set(id(v) for v in roots) # [id(obj)]
     stack = roots.copy()
     order = []
@@ -390,6 +414,7 @@ def topo_sort(roots):
     while stack:
         p = stack.pop()
         for v in p.inputs:
+            assert isinstance(v, Variable) # (should not allow anything else anymore)
             if isinstance(v, Variable):
                 if id(v) in visited:
                     continue
@@ -406,8 +431,10 @@ def topo_sort(roots):
                 del p.parent # clean up after ourselves (may not be needed)
                 num_implanted -= 1 # (sanity check only)
             p = q
+    # some checks
     assert num_implanted == 0
     assert len(order) == len(visited)
+    # ... can we just verify the basic invariant?
     return order
 
 # excecution
@@ -515,7 +542,7 @@ def transform_to_batched_ops(vars):
                                    #[res])
                                    cntk.NDArrayView.__getitem__,
                                    [res],
-                                   (slice(sliced_from0[1], sliced_from0[1] + num_batched_ops),))
+                                   additional_args=(slice(sliced_from0[1], sliced_from0[1] + num_batched_ops),))
                 return res, True
             else:
                 # need to do actual splice
@@ -545,7 +572,7 @@ def transform_to_batched_ops(vars):
             if hasbatch and op in unary_reduction_ops:
                 return lambda arg: op(arg, reduce_to_shape=(num_batched_ops,1)).reshape((num_batched_ops,))
             return op
-        v_batched = Variable(shape_batched, to_batched_op(v0.op), batched_inputs, v0.additional_args)
+        v_batched = Variable(shape_batched, to_batched_op(v0.op), batched_inputs, v0.backprop_to_functions, v0.additional_args)
         # if not hasbatch, we can just use v0 and replicate it over all others
         # now perform the operation batched
         #print(13, v_batched.op)
@@ -643,7 +670,51 @@ def batch_eval(vars):
             p.compute_data()
     #dump_graph(vars)
 
-def dump_graph(vars):
+# gradient
+# This computes the gradient of a variable (e.g. criterion) w.r.t. a set of model parameters, times an error signal.
+# Call this only once for all parameters, otherwise you will duplicate computation (no caching!).
+# Inputs:
+#  - v: variable whose gradient is to be computed
+#  - parameters: set of Parameter variables hanging off v to compute the gradient for
+#  - error_signal: to back-propagate into the root
+def create_gradient_graph(root, parameters, error_signal):
+    # batch all ops
+    # BUGBUG: This can only run once for now; so don't do it here
+    #transform_to_batched_ops((root,))
+    nodes = topo_sort([root])
+    # determine set of nodes that depend on the parameters
+    active_set = parameters.copy()
+    for node in nodes:
+        if any(input in active_set for input in node.inputs):
+            active_set.add(node)
+    if root not in active_set:
+        # root not depending on any parameter (gradient is 0; we could just return 0 for those cases, but it's likely an error)
+        raise ValueError('grad_times: variable does not depend on any of the given parameters')
+    # now build the graph backwards
+    # This is the error backpropagation algorithm in 12 lines of Python.
+    gradients = dict() # [node] -> node's gradient; that is, error_signal * droot/dnode
+    gradients[root] = error_signal
+    for node in filter(lambda node: node in active_set, reversed(nodes)):
+        g = gradients[node]
+        # backprop into each child
+        for i, input in enumerate(node.inputs):
+            if input in active_set:
+                input_g = node.backprop_to(i)(node, g)
+                if input not in gradients:
+                    gradients[input] = input_g
+                else:
+                    gradients[input] += input_g
+    print(len(active_set), len(nodes), len(gradients))
+    # gather the results
+    res = { p: gradients[p] for p in parameters } # if a parameter does not feed root, then there will be no gradient, we will fail here
+    # test computing the value of a gradient  --remove this later
+    for p, g in res.items():
+        g.get_value()
+    return res
+
+def dump_graph(vars): # vars can be a Variable or an iterable of Variables
+    if isinstance(vars, Variable):
+        vars = [vars]
     names = {} # [id(obj)] -> faked name
     def print_node(v):
         def name_it(v):
@@ -711,7 +782,7 @@ def train_minibatch(criterion, *batch_args):
         # now run the schedule
         pending_vars = []
         def yield_to_batch_eval(v): # facilitate yielded batch eval
-            # this function gets called by Variable.value() if the value is not yet computed
+            # this function gets called by Variable.get_value() if the value is not yet computed
             nonlocal pending_vars
             # this schedules a Variable for computation
             # As long as we keep getting called from different coroutines, just collect these.
