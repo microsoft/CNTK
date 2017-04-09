@@ -435,6 +435,11 @@ def topo_sort(roots: list):
     assert num_implanted == 0
     assert len(order) == len(visited)
     # ... can we just verify the basic invariant?
+    seen = set()
+    for node in order:
+        for input in node.inputs:
+            assert input in seen # node must not be referenced as an input before it was seen
+        seen.add(node)
     return order
 
 # excecution
@@ -660,6 +665,7 @@ def batch_eval(vars):
     transform_to_batched_ops(vars)
     # BUGBUG: the following fails because we have a slice() somewhere which is not hashable
     #         It also seems to further change the graph, and results are not the same. So something is still wrong.
+    #         Tested: This is not due to the topo_sort bug.
     #transform_to_batched_ops(vars)
     #transform_to_batched_ops(vars)
     # now actually compute the transformed graph
