@@ -167,7 +167,7 @@ class Variable:
     @staticmethod
     def splice(*args):
         return Variable((len(args),) + args[0].shape, cntk.NDArrayView.splice, args,
-                        backprop_to_functions=tuple(lambda v, g, i=i: g * v[i] for i in range(len(args))))
+                        backprop_to_functions=tuple(lambda v, g, i=i: g[i] * v[i] for i in range(len(args))))
     def reshape(self, shape):
         return Variable(shape, cntk.NDArrayView.reshape, (self,), additional_args=(shape,))
 
@@ -291,6 +291,8 @@ def times_backprop_to_1(v, g): # fun(v, g) -> g * dv/db
 
 @BroadcastingBinary
 def times(a,b):
+    if isinstance(a, (int, float)) and a == 0: # HACK HACK! Otherwise, backprop cannot handle this special case. Will fail for non-zero scalars
+        return 0
     if hasattr(b, 'initializer'):
         shape = (b.shape[0] if b.shape[0] != INFER else a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1,
                  b.shape[1])
@@ -358,7 +360,7 @@ reduce_log_sum = unary_reduction_op(cntk.NDArrayView.reduce_log_sum, backprop_to
 #            //         = exp(x - f)
 #            sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
 
-reduce_sum     = unary_reduction_op(cntk.NDArrayView.reduce_sum,     backprop_to_functions=(lambda v, g: g,)) # BUGBUG: this should just broadcast
+reduce_sum     = unary_reduction_op(cntk.NDArrayView.reduce_sum,     backprop_to_functions=(lambda v, g: g - zero * v.inputs[0],)) # TODO: fix this hack (which forces broadcasting)
 # maybe we get lucky, and it works without broadcasting, since reduce_log_sum() introduces the dimension
 
 #softmax = unary_op(cntk.NDArrayView.softmax)  # TODO: define this as multiple operations, exp(z-reduce_log_sum(z))
@@ -462,7 +464,7 @@ def Sequential(functions):
 
 def Fold(step_function, initial_state=0):
     # TODO: promote initial_state right away to a Constant() if it is a constant, to avoid repeated conversions. Same for Recurrence().
-    initial_state = to_Variable(initial_state)
+    #initial_state = to_Variable(initial_state)  # HACK
     @Model(step_function=step_function)
     def fold(x):
         s = initial_state  # state
@@ -819,7 +821,10 @@ def create_gradient_graph(root, parameters, error_signal):
         # backprop into each child
         for i, input in enumerate(node.inputs):
             if input in active_set:
-                input_g = node.backprop_to(i)(node, g)
+                backprop_to = node.backprop_to(i)
+                input_g = backprop_to(node, g)
+                if input.shape != input_g.shape:
+                    print(13)
                 assert input.shape == input_g.shape
                 if input not in gradients:
                     gradients[input] = input_g
