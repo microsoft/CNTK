@@ -125,11 +125,11 @@ def train(debug_output=False):
         l = dynamite.Constant(np.array([1., 0.]))
         s = dynamite.cross_entropy_with_softmax(m1(x), l)
         r = s.to_ndarray()
-        dynamite.dump_graph(s)
+        #dynamite.dump_graph(s)
         g = s.grad_times(dp1)
         for p in dp1:
             gp = g[p]
-            dynamite.dump_graph(gp)
+            #dynamite.dump_graph(gp)
             print(gp.to_ndarray())
 
     rel_path = "../CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
@@ -166,6 +166,7 @@ def train(debug_output=False):
         # CNTK static
         trainer.train_minibatch(criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]))
         progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
+        exit()
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     import copy
