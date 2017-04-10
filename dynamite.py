@@ -646,12 +646,13 @@ def transform_to_batched_ops(vars):
             num_compute_launches += 1
             # and mutate the op into a slice view into the new batched op
             for i, v in enumerate(op_batch):
+                v.replace_with(v_batched[i])
                 assert v.shape == v0.shape
-                v.op = cntk.NDArrayView.__getitem__
-                v.additional_args = (i,)
-                v.inputs = (v_batched,)
-                v.backprop_to_functions = None  # BUGBUG: we need the one from getitem once we have it
-                assert not v.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
+                #v.op = cntk.NDArrayView.__getitem__
+                #v.additional_args = (i,)
+                #v.inputs = (v_batched,)
+                #v.backprop_to_functions = None  # BUGBUG: we need the one from getitem once we have it
+                #assert not v.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
     # end of transform_batched_op
 
     # initialization
