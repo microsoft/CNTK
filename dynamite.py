@@ -3,6 +3,10 @@ import cntk  # note: keep in 'cntk' namespace in here
 import collections
 from timeit import default_timer as timer
 
+# some global settings:
+use_batching = False
+use_coroutines = True
+
 # Functions vs Variables:
 #  - CNTK dynamite has no functions!!! (other than Python lambdas)
 #  - forward:
@@ -60,10 +64,12 @@ class Variable:
     # construct by cloning another
     def clone(self):
         assert not self.computed # (for now no need to clone after values have been computed already)
+        assert not hasattr(self, 'initializer')
         return Variable(self.shape, self.op, self.inputs, self.backprop_to_functions, self.additional_args)
     # overwrite an existing Variable in-place with a new one--used by make_batched_inputs() to keep existing references alive
     def replace_with(self, other):
         assert not self.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
+        assert not hasattr(self, 'initializer')
         self.shape                 = other.shape
         self.op                    = other.op
         self.inputs                = other.inputs
@@ -165,7 +171,19 @@ class Parameter(Variable):
     def __init__(self, shape, initializer=None):
         if initializer:
             self.initializer = initializer
-        self.computed = True # BUGBUG: but we don't have data
+        self.op = Parameter._initialize
+        self.additional_args = (self,)
+        if all(dim != INFER for dim in shape):
+            self.compute_data()
+    def _initialize(self): # meant to be called from compute_data() and thusly to return a cntk.core.NDArrayView
+        assert all(dim != INFER for dim in self.shape)
+        if hasattr(self, 'initializer'):
+            data = cntk.NDArrayView.random_uniform_float(self.shape, -0.05, +0.05) # BUGBUG: device?? precision==float32??
+            del self.initializer
+        else:
+            data = cntk.NDArrayView.from_dense(np.zeros(self.shape, np.float32)) # BUGBUG: device?? precision??
+        data.__class__ = data.__class__ = cntk.core.NDArrayView
+        return data
     def share_data_from(self, other): # keep a reference to the other Parameter's NDArrayView object
         # TODO: also accept the parameter's gradient  --needs to expose this from C++ (or at least Python Parameter)
         #       But they are owned by the learner, aren't they? How to get them out?
@@ -176,11 +194,8 @@ class Parameter(Variable):
         self.data = data  # NDArrayView
     def resize(self, shape):
         self.shape = shape
-    def random_init(self):
-        data = cntk.NDArrayView.random_uniform_float(self.shape, -0.05, +0.05) # BUGBUG: device?? precision==float32??
-        #CNTK_API static NDArrayViewPtr RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
-        self.data = data  # NDArrayView
-        self.computed = True
+        if all(dim != INFER for dim in shape):
+            self.compute_data()
 
 class Constant(Variable):
     def __new__(cls, data, initializer=None): # data: cntk.core.NDArrayView or number or np.ndarray
@@ -252,8 +267,6 @@ def times(a,b):
         shape = (b.shape[0] if b.shape[0] != INFER else a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1,
                  b.shape[1])
         b.resize(shape)
-        b.random_init()
-        del b.initializer
     shapeA = a.shape if isinstance(a, (np.ndarray, Variable)) else (b.shape[0],)
     shapeB = b.shape if isinstance(b, (np.ndarray, Variable)) else ()
     if shapeA != ():  # this special case to allow "0" for initial_state --need to do this more nicely
@@ -274,8 +287,6 @@ def times_transpose(a,b):
         shape = (b.shape[0],
                  b.shape[1] if b.shape[1] != INFER else a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1)
         b.resize(shape)
-        b.random_init()
-        del b.initializer
     shapeA = a.shape if isinstance(a, (np.ndarray, Variable)) else (b.shape[1],)
     shapeB = b.shape if isinstance(b, (np.ndarray, Variable)) else ()
     if not (1 <= len(shapeA) <= 2) or not (1 <= len(shapeB) <= 2):
@@ -718,7 +729,8 @@ def transform_to_batched_ops(vars):
 #  - with full automatic dynamic batching
 def batch_eval(vars):
     # transform the graph from raw (individual batch items) to the batched graph
-    #transform_to_batched_ops(vars)
+    if use_batching:
+        transform_to_batched_ops(vars)
     # BUGBUG: the following fails because we have a slice() somewhere which is not hashable
     #         It also seems to further change the graph, and results are not the same. So something is still wrong.
     #         Tested: This is not due to the topo_sort bug.
@@ -813,7 +825,6 @@ def dump_graph(vars): # vars can be a Variable or an iterable of Variables
 from greenlet import greenlet # very lighweight coroutines
 
 def train_minibatch(criterion, *batch_args):
-    use_coroutines = True
     # for now, manually do the batch loop
     print('batch of', len(batch_args[0]))
     if use_coroutines:
