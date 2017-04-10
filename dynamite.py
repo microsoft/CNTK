@@ -743,9 +743,9 @@ def transform_to_batched_ops(vars):
         def make_key(p):
             # special case for matmul: right matrix must be identical to be batchable
             if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose:
-                return (p.op, ((p.inputs[0].shape, p.inputs[0].additional_args), (id(p.inputs[1]), p.inputs[1].additional_args)))
+                return (p.op, (p.inputs[0].shape, id(p.inputs[1])))
             # batch if both op and input shapes are the same
-            return (p.op, tuple((v.shape, v.additional_args) for v in p.inputs))
+            return (p.op, p.additional_args, tuple(v.shape for v in p.inputs))
         p.key = make_key(p)
         # TODO: must also include the storage format in the key; do this in C++ version
         p.consumers = []
