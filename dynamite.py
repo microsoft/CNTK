@@ -176,9 +176,16 @@ class Variable:
         return x
     # TODO: do the optimization here
     @staticmethod
-    def splice(*args):
-        return Variable((len(args),) + args[0].shape, cntk.NDArrayView.splice, args,
-                        backprop_to_functions=tuple(lambda v, g, i=i: g[i] * v[i] for i in range(len(args))))
+    def splice(*args, axis=-1):
+        if axis >= 0:
+            ValueError('splice: axis >= 0 case not implemented for now')
+        def kwargs(**kwargs):
+            return kwargs
+        return Variable((len(args),) + (1,) * (-1 - axis) + args[0].shape,
+                        cntk.NDArrayView.splice,
+                        args,
+                        backprop_to_functions=None if axis != -1 else tuple(lambda v, g, i=i: g[i] * v[i] for i in range(len(args))), # BUGBUG: wrong axis unless -1
+                        additional_kwargs=kwargs(axis=axis))
     def reshape(self, shape):
         return Variable(shape, cntk.NDArrayView.reshape, (self,), additional_args=(shape,))
 
@@ -710,21 +717,10 @@ def transform_to_batched_ops(vars):
                 # need to do actual splice
                 nonlocal num_gathers
                 num_gathers += 1
-                #def splice(*args):
-                #    return Variable((len(args),) + args[0].shape, cntk.NDArrayView.splice, args,
-                #                    backprop_to_functions=tuple(lambda v, g, i=i: g[i] * v[i] for i in range(len(args))))
+                assert arg0 is args[0]
                 assert num_batched_ops == len(args)
                 axis = ranks[i] - new_rank # negative; this will insert a new axis
-                if axis >= 0:
-                    ValueError('splice: axis >= 0 case not implemented for now')
-                assert arg0 is args[0]
-                def kwargs(**kwargs):
-                    return kwargs
-                return Variable((len(args),) + (1,) * (-1 - axis) + args[0].shape,
-                                #lambda *args: cntk.NDArrayView.splice(*args, axis=axis),
-                                #args)
-                                cntk.NDArrayView.splice,
-                                args, additional_kwargs=kwargs(axis=axis))
+                return Variable.splice(*args, axis=axis)
 
         num_inputs = len(v0.inputs)
         #print('start')
@@ -765,7 +761,11 @@ def transform_to_batched_ops(vars):
             if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose:
                 return (p.op, (p.inputs[0].shape, id(p.inputs[1])))
             # batch if both op and input shapes are the same
-            return (p.op, p.additional_args, p.additional_kwargs, tuple(v.shape for v in p.inputs))
+            # Python dicts are not hashable, so make additional_kwargs into a tuple if given (yuk)
+            additional_kwargs_tuplified = p.additional_kwargs
+            if additional_kwargs_tuplified:
+                additional_kwargs_tuplified = tuple((arg_name, additional_kwargs_tuplified[arg_name]) for arg_name in sorted(additional_kwargs_tuplified.keys()))
+            return (p.op, p.additional_args, additional_kwargs_tuplified, tuple(v.shape for v in p.inputs))
         p.key = make_key(p)
         # TODO: must also include the storage format in the key; do this in C++ version
         p.consumers = []
