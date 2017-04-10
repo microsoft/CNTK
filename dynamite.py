@@ -67,6 +67,22 @@ class Variable:
         assert not self.computed # (for now no need to clone after values have been computed already)
         return Variable(self.shape, self.op, self.inputs, self.backprop_to_functions, self.additional_args)
 
+    # create a batched version of this, taking all shape etc. considerations into account
+    #  - batched_inputs: for each arg of self, batch_size batch of args of operations in the batch
+    #  - batch_size: number of operations that got batched
+    def create_batched(self, batched_inputs, batch_size):
+        assert batch_size > 1
+        # create a new node for the batched op
+        # In some cases, neither input got batched. In that case, just execute a single op and distribute its output
+        shape_batched = (batch_size,) + self.shape
+        op = self.op
+        # if the operation is a reduction to (), we must modify it to not reduce over the batch axis
+        # All ops in unary_reduction_ops are single-arg ops and are meant to accept an additional reduce_to_shape argument.
+        # TODO: Do this with a per-operation function.
+        if op in unary_reduction_ops:
+            op = lambda arg, op=op: op(arg, reduce_to_shape=(batch_size,1)).reshape((batch_size,))
+        return Variable(shape_batched, op, batched_inputs, self.backprop_to_functions, self.additional_args)
+
     _batch_eval_fn = None   # lambda to call to yield from current coroutine
     @staticmethod
     def set_yield(batch_eval_fn):
@@ -120,18 +136,21 @@ class Variable:
     def __matmul__(self, other):
         return times(self, other)
     def __getitem__(self, key): # note: for now not fully supported
+        # determine the output shape
         if isinstance(key, int):
             first_dim = ()
         elif isinstance(key, slice):
             # various combinations are not yet supported
             assert key.step is None or key.step == 1
             assert key.start >= 0 and key.stop >= 0
-            if key.start == 0 and key.stop == self.shape[0]: # if we slice the whole thing, just return it
-                return self
             first_dim = (key.stop - key.start,)
         else:
             assert false # so far unsupported key type
-        return Variable(first_dim + self.shape[1:], cntk.NDArrayView.__getitem__, (self,), additional_args=(key,))
+        shape = first_dim + self.shape[1:]
+        # create the Variable; or return ourselves if we slice the whole thing anyway (it's a no-op); used by make_batched_input()
+        if shape == self.shape:
+            return self
+        return Variable(shape, cntk.NDArrayView.__getitem__, (self,), additional_args=(key,))
     def _op_alias(x): # the op for alias
         return x
     #def alias(self): # wrap an identity function around ourselves
@@ -568,32 +587,27 @@ def transform_to_batched_ops(vars):
         def make_batched_input(i, arg0): # returns either arg0 or a slice/splice
             args = tuple(v.inputs[i] for v in op_batch)
             assert arg0 == args[0]
+            # --- cases in which all are identical
             # matrix product is special, in that the right argument is always shared in the batch and not applied element-wise
             if is_mul and i == 1:
                 assert all(arg is arg0 for arg in args)
                 return arg0
             # check whether all inputs are the same (e.g. add a bias)--then don't batch
-            if all(arg is arg0 for arg in args): # all the same args: use the object itself, assuming broadcasting
+            elif all(arg is arg0 for arg in args): # all the same args: use the object itself, assuming broadcasting
                 return arg0
             elif arg0.op is Variable._op_alias and all((arg.op is Variable._op_alias and arg.inputs == arg0.inputs) for arg in args): # all aliases of the same thing
                 # This is the case where an identical op exists in all batch items, which got batched into a single one,
                 # and the original reference was patched to an alias to that single one.
                 return arg0
+            # --- case where we re-splice something previously sliced
             elif arg0.op is cntk.NDArrayView.__getitem__ and \
                  all(arg.op is cntk.NDArrayView.__getitem__ and
                      arg.inputs[0] is arg0.inputs[0] and
                      arg.additional_args[0] == i + arg0.additional_args[0]
                      for i, arg in enumerate(args)): # all inputs are consecutive views onto the same object (from a previous batching op)
-                res = arg0.inputs[0]
-                # need to slice if range does not match, e.g. a sub-range or sub-index
-                if True: #res.shape[0] != num_batched_ops:
-                    i0 = arg0.additional_args[0]
-                    res = res[i0:i0 + num_batched_ops]
-                    #res = Variable((num_batched_ops,) + res.shape[1:],  # TODO: write as an indexing operation!! Which should short-circuit if nothing is sliced
-                    #               cntk.NDArrayView.__getitem__,
-                    #               [res],
-                    #               additional_args=(slice(i0, i0 + num_batched_ops),))
-                return res
+                i0 = arg0.additional_args[0]
+                return arg0.inputs[0][i0:i0 + num_batched_ops] # it may be a sub-range, so slice it (which is a no-op if nothing is sliced)
+            # --- case where we cannot optimize and actually must perform a splice (copy) operation
             else:
                 # need to do actual splice
                 nonlocal num_gathers
@@ -623,17 +637,7 @@ def transform_to_batched_ops(vars):
                 assert not v.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
                 # BUGBUG: commit 48b72d5b3925ca9661b3b975f6a4af13b2952648 broke batching of something, section after print() goes up from 8 to 121
         else:
-            # create a new node for the batched op
-            # In some cases, neither input got batched. In that case, just execute a single op and distribute its output
-            shape_batched = (num_batched_ops,) + v0.shape
-            def to_batched_op(op):
-                # if the operation is a reduction to (), we must modify it to not reduce over the batch axis
-                # All ops in unary_reduction_ops are single-arg ops and are meant to accept an additional reduce_to_shape argument.
-                # TODO: generalize this; make it part of Variable
-                if op in unary_reduction_ops:
-                    return lambda arg: op(arg, reduce_to_shape=(num_batched_ops,1)).reshape((num_batched_ops,))
-                return op
-            v_batched = Variable(shape_batched, to_batched_op(v0.op), batched_inputs, v0.backprop_to_functions, v0.additional_args)
+            v_batched = v0.create_batched(batched_inputs, num_batched_ops)
             # now perform the operation batched
             num_compute_launches += 1
             # and mutate the op into a slice view into the new batched op
