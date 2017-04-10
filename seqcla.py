@@ -119,16 +119,18 @@ def train(debug_output=False):
 
     # testing stuff
     if True:
-        m1 = dynamite.Dense(1, activation=dynamite.sigmoid)
+        m1 = dynamite.Dense(2, activation=dynamite.relu)
         dp1 = dynamite.get_parameters(m1)
         x = dynamite.Constant(np.array([1., 2., 3.]))
-        s = m1(x)
-        r = s.get_value()
+        l = dynamite.Constant(np.array([1., 0.]))
+        s = dynamite.cross_entropy_with_softmax(m1(x), l)
+        r = s.to_ndarray()
         dynamite.dump_graph(s)
         g = s.grad_times(dp1)
-        g0 = g[list(dp1)[0]]
-        dynamite.dump_graph(g0)
-        g0.get_value()
+        for p in dp1:
+            gp = g[p]
+            dynamite.dump_graph(gp)
+            print(gp.to_ndarray())
 
     rel_path = "../CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     reader = create_reader(os.path.dirname(os.path.abspath(__file__)) + '/' + rel_path, True, input_dim, num_output_classes)
@@ -157,7 +159,7 @@ def train(debug_output=False):
         crit = dynamite.train_minibatch(dcriterion, *args)
         print(" " * 29, crit.to_ndarray() / len(args[0]))
         # compute gradients
-        #gradients = crit.grad_times(dparameters)
+        gradients = crit.grad_times(dparameters)
         args = None  # deref; otherwise resize will fail    --veriy this; should not longer be the case
         #print('static', dmodel.__items__[0].E.data.to_ndarray())
         #print('dynamic', model.embed.E.value)

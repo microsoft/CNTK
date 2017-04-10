@@ -128,6 +128,8 @@ class Variable:
     # create Variable that is the gradient of self w.r.t. a set of parameters, multiplied with error_signal
     def backprop_to(self, i):  # get backprop function for inputs[i]; each fun(v, g) -> g * dv/dinp_i
         if not self.backprop_to_functions:
+            print('backprop_to failure for', self.op)
+            raise NotImplementedError('backprop_to missing')
             return lambda v, g: g # dummy for now, so that we can debug a partially implemented system
         return self.backprop_to_functions[i]
     def grad_times(self, set_of_params, error_signal=1):
@@ -164,7 +166,8 @@ class Variable:
         return x
     @staticmethod
     def splice(*args):
-        return Variable((len(args),) + args[0].shape, cntk.NDArrayView.splice, args)
+        return Variable((len(args),) + args[0].shape, cntk.NDArrayView.splice, args,
+                        backprop_to_functions=tuple(lambda v, g, i=i: g * v[i] for i in range(len(args))))
     def reshape(self, shape):
         return Variable(shape, cntk.NDArrayView.reshape, (self,), additional_args=(shape,))
 
@@ -251,17 +254,21 @@ def unary_op(opcode, backprop_to_functions=None):
 
 unary_reduction_ops = set() # unary_reduction_ops must be treated specially in batched execution; we collect them here during startup
 
-def unary_reduction_op(opcode):
+def unary_reduction_op(opcode, backprop_to_functions=None):
     unary_reduction_ops.add(opcode)
     def f(x):
         if isinstance(x, list): # broadcast along sequence
             return map(f, x)
-        return Variable((), opcode, (x,))
+        return Variable((), opcode, (x,), backprop_to_functions=backprop_to_functions)
     return f
 
 def times_backprop_to_0(v, g): # fun(v, g) -> g * dv/da
     # BUGBUG: Must do the same dance as for times_backprop_to_1().
-    return Variable(v.shape, cntk.NDArrayView.dot_transpose, (g, v.inputs[1]))
+    a = g
+    b = v.inputs[1]
+    shapeA = a.shape
+    shapeB = b.shape
+    return Variable(v.inputs[0].shape, cntk.NDArrayView.dot_transpose, (g, v.inputs[1]))
 
 def times_backprop_to_1(v, g): # fun(v, g) -> g * dv/db
     # Nasty! The matmul gradient is no longer nice with true vectors.
@@ -273,7 +280,7 @@ def times_backprop_to_1(v, g): # fun(v, g) -> g * dv/db
         shapeA = (1,) + shapeA
         a = a.reshape(shapeA)
     if len(shapeB) == 1:
-        shapeB = shapeB + (1,)
+        shapeB = (1,) + shapeB
         b = b.reshape(shapeB)
     shapeC = (shapeA[1], shapeB[1])
     res = Variable(shapeC, cntk.NDArrayView.transpose_dot, (a, b))
@@ -321,24 +328,40 @@ def times_transpose(a,b):
         shapeC = shapeC + (shapeB[0],);
     return Variable(shapeC, cntk.NDArrayView.dot_transpose, (a,b))
 
-plus = binary_op(cntk.NDArrayView.__add__, backprop_to_functions=(lambda v, g: g, lambda v, g: g))
 zero = Constant(0)
-minus = binary_op(cntk.NDArrayView.__sub__, backprop_to_functions=(lambda v, g: g, lambda v, g: zero - g)) # TODO: need a proper negate operator, which is easy with alpha
-element_times = binary_op(cntk.NDArrayView.__mul__, backprop_to_functions=(lambda v, g: g * v.inputs[1], lambda v, g: g * v.inputs[0])) # TODO: test this
-greater = binary_op(cntk.NDArrayView.greater, backprop_to_functions=(lambda v, g: g, lambda v, g: g))
-
-tanh = unary_op(cntk.NDArrayView.tanh)
 one = Constant(1)
-sigmoid = unary_op(cntk.NDArrayView.sigmoid, backprop_to_functions=(lambda v, g: g * (v * (one-v)),))
-relu = unary_op(cntk.NDArrayView.relu, backprop_to_functions=(lambda v, g: g * (v > zero),))
-alias = unary_op(Variable._op_alias, backprop_to_functions=(lambda v, g: g,))
 
-#softmax = unary_op(cntk.NDArrayView.softmax)
-#row_slice_0 = unary_op(cntk.NDArrayView.row_slice)
-#def row_slice(x, begin, end):
-#    return row_slice_0(x) # (ignore dims for this test)
-reduce_log_sum = unary_reduction_op(cntk.NDArrayView.reduce_log_sum)
-reduce_sum     = unary_reduction_op(cntk.NDArrayView.reduce_sum)
+# BUGBUG: None of these will correctly inverse-broadcast in backprop_to(); need a way to pass size (or the buffer altogether, same as for arena allocator)
+plus          = binary_op(cntk.NDArrayView.__add__, backprop_to_functions=(lambda v, g: g, lambda v, g: g))
+minus         = binary_op(cntk.NDArrayView.__sub__, backprop_to_functions=(lambda v, g: g, lambda v, g: zero - g)) # TODO: need a proper negate operator, which is easy with alpha
+element_times = binary_op(cntk.NDArrayView.__mul__, backprop_to_functions=(lambda v, g: g * v.inputs[1], lambda v, g: g * v.inputs[0])) # TODO: test this
+greater       = binary_op(cntk.NDArrayView.greater, backprop_to_functions=(lambda v, g: g, lambda v, g: g))
+
+tanh    = unary_op(cntk.NDArrayView.tanh)
+sigmoid = unary_op(cntk.NDArrayView.sigmoid, backprop_to_functions=(lambda v, g: g * (v * (one-v)),))
+relu    = unary_op(cntk.NDArrayView.relu,    backprop_to_functions=(lambda v, g: g * (v > zero),))
+exp     = unary_op(cntk.NDArrayView.exp,     backprop_to_functions=(lambda v, g: g * v,))  # TODO: double-check this
+alias   = unary_op(Variable._op_alias,       backprop_to_functions=(lambda v, g: g,))
+
+reduce_log_sum = unary_reduction_op(cntk.NDArrayView.reduce_log_sum, backprop_to_functions=(lambda v, g: g * exp(v.inputs[0] - v),)) # TODO: check this
+# df / dx = exp(x)/exp(f)
+#         = exp(x - f)
+
+#DefTernaryOp(ElementwiseProductWithExpOfDiff, a * exp_(b - c));
+#DefTernaryOp(ElementwiseProductWithExpOfDiff, g * exp_(v.inputs[0] - v));
+
+#            auto input = InputRef(inputIndex).ValueTensorFor(rank, frInput);
+#            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+#            // Let: f(x, y, z) = log(exp x + exp y + exp z)
+#            // For the derivative we get:
+#            // df / dx = exp(x)/exp(f)
+#            //         = exp(x - f)
+#            sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
+
+reduce_sum     = unary_reduction_op(cntk.NDArrayView.reduce_sum,     backprop_to_functions=(lambda v, g: g,)) # BUGBUG: this should just broadcast
+# maybe we get lucky, and it works without broadcasting, since reduce_log_sum() introduces the dimension
+
+#softmax = unary_op(cntk.NDArrayView.softmax)  # TODO: define this as multiple operations, exp(z-reduce_log_sum(z))
 
 def cross_entropy_with_softmax(output, label):
     #return reduce_log_sum(output) - times_transpose(label, output)
@@ -764,7 +787,7 @@ def batch_eval(vars):
     for p in nodes:
         if not p.computed:
             p.compute_data()
-        print(p.data.to_ndarray())
+        #print(p.data.to_ndarray())
     #dump_graph(vars)
 
 # gradient
@@ -797,6 +820,7 @@ def create_gradient_graph(root, parameters, error_signal):
         for i, input in enumerate(node.inputs):
             if input in active_set:
                 input_g = node.backprop_to(i)(node, g)
+                assert input.shape == input_g.shape
                 if input not in gradients:
                     gradients[input] = input_g
                 else:
@@ -805,8 +829,8 @@ def create_gradient_graph(root, parameters, error_signal):
     # gather the results
     res = { p: gradients[p] for p in parameters } # if a parameter does not feed root, then there will be no gradient, we will fail here
     # test computing the value of a gradient  --remove this later
-    for p, g in res.items():
-        g.get_value()
+    #for p, g in res.items():
+    #    g.get_value()
     return res
 
 def dump_graph(vars): # vars can be a Variable or an iterable of Variables
