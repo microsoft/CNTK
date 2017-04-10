@@ -1311,11 +1311,11 @@ void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
         RequireSize(gradients.GetNumRows(), gradients.GetNumCols() * 2);
         SetValue(0.0);
 
-        ElemType* avars = Data();         // accumulated variances for RMS scaling
+        //ElemType* avars = Data();         // accumulated variances for RMS scaling
 
-        // initialize moving average of gradient-squared
-        for (long i = 0; i < n; i++)
-            avars[i] = curr_grad[i] * curr_grad[i];
+        //// initialize moving average of gradient-squared
+        //for (long i = 0; i < n; i++)
+        //    avars[i] = curr_grad[i] * curr_grad[i];
     }
 
     ElemType* avars = Data();         // accumulated variances for RMS scaling

@@ -1473,9 +1473,9 @@ void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
         RequireSize(gradients.GetNumRows(), numColsNeeded);
         SetValue(0.0);
 
-        ElemType* avars = Data();         // accumulated variances for RMS scaling
+        //ElemType* avars = Data();         // accumulated variances for RMS scaling
 
-        _rmsprop_init<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, gradients.Data(), n);
+        //_rmsprop_init<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, gradients.Data(), n);
     }
     assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == numColsNeeded);
 

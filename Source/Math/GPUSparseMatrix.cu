@@ -1645,10 +1645,10 @@ void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
         c.RequireSize(GetNumRows(), numColsNeeded);
         c.SetValue(0.0);
 
-        ElemType* avars = c.Data();         // accumulated variances for RMS scaling
+        //ElemType* avars = c.Data();         // accumulated variances for RMS scaling
 
-        _rmsprop_init4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
-            avars, Data(), ColOrRow2BlockId(), GetNumRows(), n);
+        //_rmsprop_init4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
+        //    avars, Data(), ColOrRow2BlockId(), GetNumRows(), n);
     }
     assert(c.GetNumRows() == GetNumRows() && c.GetNumCols() == numColsNeeded);
 
