@@ -501,12 +501,31 @@ def transform_to_batched_ops(vars):
 
     # execute all operations in op_batch as one CUDA operation
     # The data needs to be gathered first (an optimized version would make the
-    # scatter lazy and avoid it if possible)
+    # scatter lazy and avoid it if possible).
+    # This transforms parallel operations into a single op, as follows:
+    #  - e.g. c_r = a_r + b_r
+    #  - a = gather(a_r)
+    #  - b = gather(b_r)
+    #  - c = a+b
+    #  - c_r <- scatter_r(c)   # overwrites c_r in_place
+    # where scatter() is a slice_view().
+    # Hence, the original nodes a_r, b_r, and c_r are still valid.
+    # Specifically, references to c_r will still read out the same value; just from a modified graph.
+    # As an optimization gather(scatter_r(x)) == x (assuming the same batch depth).
+    # E.g. if we then compute e_r = c_r +_r d_r, with c_r = scatter_r(c),
+    # then gather(c_r) = c.
+    # Hence, in this case, the c_r are not actually computed, and are no longer referenced in the graph
+    # from their original location. There may be references from elsewhere.
+    # The c_r are slice_views. If they are used, they will be computed lazily, which in the case of
+    # a slice_view does nothing but creating a little view structure if the input has already computed.
+    # As for gradients, if c_r is still used elsewhere in the graph, then gradients will flow through
+    # both c and the original c_r which is now a slice_view.
+    # So removing the reference to c_r should not change anything.
+    # BUGBUG: If a_r is used at multiple places, the current optimizer will not notice, and gather it multiple times.
+    #         One fix would be to replace the a_r themselves by slice_views as well.
     def transform_batched_op(op_batch):
         nonlocal num_compute_launches, num_gathers
         if len(op_batch) == 1: # short-circuit this to avoid unnecessary splice (...actually already taken care of the check for all inputs being the same)
-            #v = op_batch[0]
-            #v.compute_data()
             num_compute_launches += 1
             return
         # all ops are the same, so use the first as the reference
@@ -533,10 +552,11 @@ def transform_to_batched_ops(vars):
         def make_batched_input(i, inp_i_0): # returns either arg0 or a slice/splice
             args = tuple(v.inputs[i] for v in op_batch)
             arg0 = args[0]
+            assert arg0 == inp_i_0
             # matrix product is special, in that the right argument is always shared in the batch and not applied element-wise
             if is_mul and i == 1:
                 assert all(arg is arg0 for arg in args)
-                return arg0, False
+                return arg0
             inp_i_0_shape = inp_i_0.shape if isinstance(inp_i_0, (Variable, np.ndarray)) else ()
             # check whether all inputs are the same (e.g. add a bias)--then don't batch
             sliced_from0 = getattr(arg0, 'sliced_from', None)
@@ -547,12 +567,12 @@ def transform_to_batched_ops(vars):
                 return matchesd and matchesi
             if all(arg is arg0 for arg in args):
                 # all the same args: use the object itself, assuming broadcasting
-                return arg0, False
+                return arg0
             elif arg0.op is Variable._op_alias and all((arg.op is Variable._op_alias and arg.inputs == arg0.inputs) for arg in args):
                 # use the object itself, assuming broadcasting
                 # This is the case where an identical op exists in all batch items, which got batched into a single one,
                 # and the original reference was patched to an alias to that single one.
-                return arg0, False
+                return arg0
             #elif isinstance(arg0, Variable) and all(isinstance(arg, Variable) and (arg.data is arg0.data) for arg in args):
             #elif all((arg.data is arg0.data) for arg in args):
             #    # use the object itself, assuming broadcasting
@@ -560,7 +580,7 @@ def transform_to_batched_ops(vars):
             #    #   I think this is fully broadcast ops (same on all threads) that can be reduced back
             #    # TODO: problem if fully broadcast ops happen at different times; can that be? No--if one is ready, they are all ready at once
             #    # -> add a new mechanism like sliced_from--alias_of
-            #    return arg0, False
+            #    return arg0
             elif sliced_from0 and all(hasattr(arg, 'sliced_from') and is_consecutive(i, arg)
                                        for i, arg in enumerate(args)):
                 # all inputs are consecutive views onto the same object--these came out of a previous batching op
@@ -573,18 +593,20 @@ def transform_to_batched_ops(vars):
                                    cntk.NDArrayView.__getitem__,
                                    [res],
                                    additional_args=(slice(sliced_from0[1], sliced_from0[1] + num_batched_ops),))
-                return res, True
+                return res
             else:
                 # need to do actual splice
                 nonlocal num_gathers
                 num_gathers += 1
                 return Variable((num_batched_ops,) + (1,) * (new_rank - ranks[i] - 1) + inp_i_0_shape,
                                 lambda *args: cntk.NDArrayView.splice(*args, axis=ranks[i] - new_rank),
-                                args), True
-        batched_inputs_hasbatch = tuple(make_batched_input(i, inp_i_0)
-                                        for i, inp_i_0 in enumerate(v0.inputs))
-        batched_inputs = tuple(batched_input for batched_input, hasbatch in batched_inputs_hasbatch)
-        hasbatch = any(tuple(hasbatch for batched_input, hasbatch in batched_inputs_hasbatch))
+                                args)
+        batched_inputs = tuple(make_batched_input(i, inp_i_0)
+                               for i, inp_i_0 in enumerate(v0.inputs))
+        # if all args are the same, make_batched_input will just return v0.inputs[i]
+        hasbatch = any(batched_inputs[i] is not inp_i_0 for i, inp_i_0 in enumerate(v0.inputs))
+        #batched_inputs = tuple(batched_input for batched_input, hasbatch in batched_inputs_hasbatch)
+        #hasbatch = any(tuple(hasbatch for batched_input, hasbatch in batched_inputs_hasbatch))
         #                    ^^ hasbatch is the same as argument == arg0; can simplify
         #for batched_input in batched_inputs: # and compute them
         #    if isinstance(batched_input, Variable) and not batched_input.computed: # (if already computed then no gather was necessary)
