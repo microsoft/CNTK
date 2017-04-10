@@ -417,7 +417,7 @@ return result->NumericOperationInPlace(0.0/*nothing to add to*/, inputs, alpha, 
         const auto innerA = transA ? shapeA[0] : shapeA[shapeA.Rank() - 1]; // inner (dot-product) dimension
         const auto innerB = transB ? shapeB[shapeB.Rank() - 1] : shapeB[0];
         if (innerA != innerB)
-            LogicError("NDArrayView::MatrixProductInPlace: Inner dimensions %s and %s don't match", (int)innerA, (int)innerB);
+            LogicError("NDArrayView::MatrixProductInPlace: Inner dimensions %d and %d don't match", (int)innerA, (int)innerB);
         auto dimsC = std::vector<size_t>();  // TODO: use a different class here to avoid memory allocation?
         // assemble the output shape from the non-inner dimensions. Note that vec^t * vec will end up with a scalar (rank 0)
         if (shapeA.Rank() == 2)

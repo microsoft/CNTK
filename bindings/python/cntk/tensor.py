@@ -277,8 +277,8 @@ class NDArrayViewOpsMixin(object):
         return self
 
     def __matmul__(self, other):
-        #shapeA = self.shape
-        #shapeB = other.shape
+        shapeA = self.shape
+        shapeB = other.shape
         if len(self.shape) == 0: # TODO: allow for scalar zero (initial_state)
             self1 = NDArrayView(shape=(other.shape[0]), data_type=other.dtype, device=other.device()) # reduce to scalar
             # BUGBUG: How to get the precision in the right way?
@@ -286,12 +286,13 @@ class NDArrayViewOpsMixin(object):
             self1.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
             self = self1
         res = NDArrayViewOpsMixin._mat_prod(False, other, False, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
-        #shapeC = res.shape
+        shapeC = res.shape
         return res
     dot = __matmul__
     def dot_transpose(self, other): # other gets transposed
         return NDArrayViewOpsMixin._mat_prod(False, other, True, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
-        # BUGBUG: fails with: DoMatrixProductOf: Ranks [5 x 1]' * [5] -> [1 x 1] mismatch.
+    def transpose_dot(self, other): # self gets transposed
+        return NDArrayViewOpsMixin._mat_prod(False, other, False, self, True, 1.0, 1) # note: shapes are swapped, so we swap the order as well
 
     # non-linearities
     def sigmoid(self):
@@ -396,7 +397,7 @@ def _add_ndarrayview_ops(klass):
                           '__radd__', '__rmul__',
                           '__iadd__', '__isub__',
                           '__matmul__',
-                          'dot', 'dot_transpose',
+                          'dot', 'dot_transpose', 'transpose_dot',
                           'sigmoid', 'tanh', 'relu',
                           'reduce_sum', 'reduce_log_sum',
                           'reshape', '__getitem__', '__setitem__', 'splice']:

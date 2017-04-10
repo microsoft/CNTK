@@ -57,22 +57,25 @@ def test_ndarrayview_operators(device_id, precision):
         assert np.allclose(res_tv, res_np, rtol=rtol, atol=atol)
 
     mat23 = np.array([[1., 2., 3.],[4., 5., 6.]]) # 3 x 2 matrix
-    col2 = np.array([[13.],[42.]])                # column vector, same height as matrix
+    col21 = np.array([[13.],[42.]])                # column vector, same height as matrix
 
     # binary ops, elementwise
-    test(lambda a, b: a + b, [mat23, col2])
+    test(lambda a, b: a + b, [mat23, col21])
     test(lambda a, b: a + b, [mat23, np.array(13)]) # scalar
-    test(lambda a, b: a - b, [mat23, col2])
-    test(lambda a, b: a * b, [mat23, col2])
+    test(lambda a, b: a - b, [mat23, col21])
+    test(lambda a, b: a * b, [mat23, col21])
 
     # matrix product
-    test(lambda a, b: a @ b, [col2.reshape(1,2), mat23])
-    test(lambda a, b: a.dot(b), [col2.reshape(1,2), mat23])
-    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [col2.reshape(1,2), mat23.transpose()])
+    test(lambda a, b: a @ b, [col21.reshape(1,2), mat23])
+    test(lambda a, b: a.dot(b), [col21.reshape(1,2), mat23])
+    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [col21.reshape(1,2), mat23.transpose()])
     test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [mat23, mat23]) # mat23 * mat23^T
     test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [mat23.transpose(), mat23.transpose()]) # mat23^T * mat23
     test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [mat23, np.array([13.,42.,1968.])]) # mat23 * row3^T
     test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [np.array([13.,42.,1968.]), mat23]) # row3 * mat23^T
+    test(lambda a, b: a.transpose_dot(b) if isinstance(a, NDArrayView) else a.transpose().dot(b), [mat23, mat23]) # mat23^T * mat23
+    test(lambda a, b: a.transpose_dot(b) if isinstance(a, NDArrayView) else a.transpose().dot(b), [col21.reshape(2), mat23])
+    test(lambda a, b: a.transpose_dot(b) if isinstance(a, NDArrayView) else a.transpose().dot(b), [col21, mat23])
 
     # unary ops
     test(lambda a: a.sigmoid() if isinstance(a, NDArrayView) else expit(a), [mat23], rtol=1e-6)
@@ -100,5 +103,5 @@ def test_ndarrayview_operators(device_id, precision):
     test(atest, [mat23, np.array(13)])
 
     # in-place ops
-    test(lambda a, b: a.__iadd__(b), [mat23, col2]) 
-    test(lambda a, b: a.__isub__(b), [mat23, col2]) 
+    test(lambda a, b: a.__iadd__(b), [mat23, col21]) 
+    test(lambda a, b: a.__isub__(b), [mat23, col21]) 
