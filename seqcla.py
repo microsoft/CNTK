@@ -159,14 +159,16 @@ def train(debug_output=False):
         crit = dynamite.train_minibatch(dcriterion, *args)
         print(" " * 29, crit.to_ndarray() / len(args[0]))
         # compute gradients
-        gradients = crit.grad_times(dparameters)
+        dgradients = crit.grad_times(dparameters)
+        for p in dparameters:
+            g = dgradients[p].get_value()
+            #print(g.to_ndarray())
         args = None  # deref; otherwise resize will fail    --veriy this; should not longer be the case
         #print('static', dmodel.__items__[0].E.data.to_ndarray())
         #print('dynamic', model.embed.E.value)
         # CNTK static
         trainer.train_minibatch(criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]))
         progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
-        exit()
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     import copy

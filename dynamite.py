@@ -199,6 +199,9 @@ class Parameter(Variable):
         data.__class__ = data.__class__ = cntk.core.NDArrayView
         self.shape = data.shape
         self.data = data  # NDArrayView
+        self.computed = True
+        if hasattr(self, 'initializer'):
+            del self.initializer
     def resize(self, shape):
         self.shape = shape
         if all(dim != INFER for dim in shape):
@@ -830,7 +833,7 @@ def create_gradient_graph(root, parameters, error_signal):
                     gradients[input] = input_g
                 else:
                     gradients[input] += input_g
-    print(len(active_set), len(nodes), len(gradients))
+    #print(len(active_set), len(nodes), len(gradients))
     # gather the results
     res = { p: gradients[p] for p in parameters } # if a parameter does not feed root, then there will be no gradient, we will fail here
     # test computing the value of a gradient  --remove this later
