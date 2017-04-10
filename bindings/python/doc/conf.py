@@ -27,10 +27,8 @@ master_doc = 'index'
 
 exclude_patterns = [
     '_build',
-    'cntk_py',
-    'tests',
-    '**/tests/*',
-    '*tests*'
+    'images',
+    'test',
 ]
 
 needs_sphinx = '1.5'
