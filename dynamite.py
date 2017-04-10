@@ -4,7 +4,7 @@ import collections
 from timeit import default_timer as timer
 
 # some global settings:
-use_batching = False
+use_batching = True
 use_coroutines = True
 
 # Functions vs Variables:
@@ -47,6 +47,7 @@ def to_Variable(x):
     return x if isinstance(x, Variable) else Constant(x)
 
 class Variable:
+    counter = 0
     # constructor
     def __new__(cls, shape, op, inputs, backprop_to_functions=None, additional_args=()):
         v = object.__new__(cls)
@@ -60,6 +61,8 @@ class Variable:
         # TODO: capture the gradient functions for all inputs that need gradients (we also need a flag for that)
         #v.needs_gradient = True
         v.computed = False
+        v._debug_tag = Variable.counter
+        Variable.counter += 1
         return v
     # construct by cloning another
     def clone(self):
@@ -176,6 +179,8 @@ class Variable:
 class Parameter(Variable):
     def __new__(cls, shape, initializer=None):
         v = Variable.__new__(cls, shape, 'Parameter', [])
+        v._debug_tag = -1
+        Variable.counter -= 1
         return v
     def __init__(self, shape, initializer=None):
         if initializer:
@@ -216,6 +221,8 @@ class Constant(Variable):
         v = Variable.__new__(cls, data.shape, 'Constant', [])
         v.data = data  # NDArrayView
         v.computed = True
+        v._debug_tag = -1
+        Variable.counter -= 1
         return v
 
 def BroadcastingBinary(binary_op):
@@ -580,6 +587,7 @@ def topo_sort(roots: list):
         for input in node.inputs:
             assert id(input) in seen # node must not be referenced as an input before it was seen
         seen.add(id(node))
+    #print(tuple(v._debug_tag for v in order))
     return order
 
 # excecution
@@ -598,6 +606,7 @@ def topo_sort(roots: list):
 #  - delete the batched group
 def transform_to_batched_ops(vars):
     nodes = topo_sort(vars)    # (it is possible to implement this without, just more complex)
+    #print(tuple(v._debug_tag for v in topo_sort(vars)))
     num_nodes = len(nodes)
     expected_num_ops = sum(1 for v in nodes if not v.computed)
 
@@ -666,7 +675,7 @@ def transform_to_batched_ops(vars):
 
         def make_batched_input(i, arg0): # returns either arg0 or a slice/splice
             args = tuple(v.inputs[i] for v in op_batch)
-            assert arg0 == args[0]
+            assert arg0 is args[0]
             # --- cases in which all are identical
             # matrix product is special, in that the right argument is always shared in the batch and not applied element-wise
             if is_mul and i == 1:
@@ -674,8 +683,9 @@ def transform_to_batched_ops(vars):
                 return arg0
             # check whether all inputs are the same (e.g. add a bias)--then don't batch
             elif all(arg is arg0 for arg in args): # all the same args: use the object itself, assuming broadcasting
+                #print(' !match')
                 return arg0
-            elif arg0.op is Variable._op_alias and all((arg.op is Variable._op_alias and arg.inputs == arg0.inputs) for arg in args): # all aliases of the same thing
+            elif arg0.op is Variable._op_alias and all((arg.op is Variable._op_alias and arg.inputs[0] is arg0.inputs[0]) for arg in args): # all aliases of the same thing
                 # This is the case where an identical op exists in all batch items, which got batched into a single one,
                 # and the original reference was patched to an alias to that single one.
                 return arg0
@@ -697,12 +707,14 @@ def transform_to_batched_ops(vars):
                                 args)
 
         num_inputs = len(v0.inputs)
+        #print('start')
         batched_inputs = tuple(make_batched_input(i, arg0)
                                for i, arg0 in enumerate(v0.inputs))
         # Note: if across the unbatched operations, all respective args are the same, make_batched_input will return the first; that is, v0.inputs[i].
 
         num_compute_launches += 1
         if all(ib is i0 for ib, i0 in zip(batched_inputs, v0.inputs)): # all unbatched ops are identical: just do it once and redistribute
+            # BUGBUG? This never triggers, actually. Do we have a case? Maybe only 0*R in RNNUnit?
             assert all(batched_inputs[i] is v0.inputs[i] for i in range(num_inputs)) # (just another way of restating the condition.. remove this)
             # since all are identical, clone v0
             v_batched = v0.clone()
@@ -771,6 +783,7 @@ def transform_to_batched_ops(vars):
                     add_ready(p)
 
     # done
+    #print(tuple(v._debug_tag for v in topo_sort(vars)))
     print(ops_run, 'operations executed in', batches_run, 'batches, using an actual', num_compute_launches, 'compute launches and', num_gathers, 'gather launches')
     assert ops_run == expected_num_ops
     #for v in nodes:
@@ -810,22 +823,23 @@ def create_gradient_graph(root, parameters, error_signal):
     #transform_to_batched_ops((root,))
     nodes = topo_sort([root])
     # determine set of nodes that depend on the parameters
-    active_set = parameters.copy()
+    active_set = { id(p) for p in parameters }
     for node in nodes:
-        if any(input in active_set for input in node.inputs):
-            active_set.add(node)
-    if root not in active_set:
+        if any(id(input) in active_set for input in node.inputs):
+            active_set.add(id(node))
+    if id(root) not in active_set:
         # root not depending on any parameter (gradient is 0; we could just return 0 for those cases, but it's likely an error)
         raise ValueError('grad_times: variable does not depend on any of the given parameters')
     # now build the graph backwards
     # This is the error backpropagation algorithm in 12 lines of Python.
     gradients = dict() # [node] -> node's gradient; that is, error_signal * droot/dnode
     gradients[root] = error_signal
-    for node in filter(lambda node: node in active_set, reversed(nodes)):
+    for node in filter(lambda node: id(node) in active_set, reversed(nodes)):
         g = gradients[node]
         # backprop into each child
         for i, input in enumerate(node.inputs):
-            if input in active_set:
+            if id(input) in active_set:
+                # TODO: need to specially handle __getitem__(), it's a splice
                 backprop_to = node.backprop_to(i)
                 input_g = backprop_to(node, g)
                 if input.shape != input_g.shape:
@@ -849,14 +863,15 @@ def dump_graph(vars): # vars can be a Variable or an iterable of Variables
     names = {} # [id(obj)] -> faked name
     def print_node(v):
         def name_it(v):
-            if id(v) in names:
-                return names[id(v)]
-            name = "v" + str(len(names))
+            #if id(v) in names:
+            #    return names[id(v)]
+            #name = "v" + str(len(names))
+            name = "v" + str(v._debug_tag)
             try:
                 name += '_' + v.op
             except:
                 pass
-            names[id(v)] = name
+            #names[id(v)] = name
             return name
         def format_shape(v):
             if not isinstance(v, (np.ndarray, Variable)):
