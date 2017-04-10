@@ -176,10 +176,10 @@ classes for our sequences. As before, we define two input variables: one for the
 that input through an LSTM recurrent neural network layer, and returns a fixed-size output from the LSTM by selecting the last hidden state of the
 LSTM::
 
-    embedded_inputs = embedding(input, embedding_dim)
-    lstm_outputs = simple_lstm(embedded_inputs, LSTM_dim, cell_dim)[0]
-    thought_vector = sequence.last(lstm_outputs)
-    return linear_layer(thought_vector, num_output_classes)
+    lstm_classifier = Sequential([Embedding(embedding_dim),
+                                  Recurrence(LSTM(LSTM_dim, cell_dim))[0],
+                                  sequence.last,
+                                  Dense(num_output_classes)])
 
 That is the entire network definition. In the second line above we select the first output from the LSTM. In
 this implementation of the LSTM this is the actual output while the second output is the state of the LSTM.

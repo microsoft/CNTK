@@ -25,16 +25,16 @@ def test_sequence_to_sequence_distributed_1bitsgd(device_id):
     params = [ "-e", "2",
                "-datadir", cmudict_dataset_directory(),
                "-q", "1",
-               "-ms", "72",
+               "-ms", "100",
                "-es", "500",
                "-device", str(device_id) ]
-    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.8622, False, 0, 2E-2)
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.8625, False, 0, 2E-2)
 
 def test_sequence_to_sequence_distributed_block_momentum(device_id):
-    params = [ "-e", "2",
+    params = [ "-e", "4",
                "-datadir", cmudict_dataset_directory(),
-               "-ms", "72",
-               "-es", "100",
+               "-ms", "100",
+               "-es", "1000",
                "-b", "3200",
                "-device", str(device_id) ]
-    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.97, False, 1, 2E-2)
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.8612, False, 1, 2E-2)

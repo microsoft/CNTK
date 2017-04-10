@@ -7,12 +7,7 @@ from cntk.learners import sgd, learning_rate_schedule, UnitType
 from cntk import input, cross_entropy_with_softmax, \
         classification_error, sequence
 from cntk.logging import ProgressPrinter
-
-abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "Examples", "common"))
-from nn import LSTMP_component_with_self_stabilization as simple_lstm
-from nn import embedding, linear_layer
-
+from cntk.layers import Sequential, Embedding, Recurrence, LSTM, Dense
 
 # Creates the reader
 def create_reader(path, is_training, input_dim, label_dim):
@@ -24,16 +19,17 @@ def create_reader(path, is_training, input_dim, label_dim):
 
 
 # Defines the LSTM model for classifying sequences
-def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim,
+def LSTM_sequence_classifier_net(input, num_output_classes, embedding_dim,
                                 LSTM_dim, cell_dim):
-    embedded_inputs = embedding(input, embedding_dim)
-    lstm_outputs = simple_lstm(embedded_inputs, LSTM_dim, cell_dim)[0]
-    thought_vector = sequence.last(lstm_outputs)
-    return linear_layer(thought_vector, num_output_classes)
+    lstm_classifier = Sequential([Embedding(embedding_dim),
+                                  Recurrence(LSTM(LSTM_dim, cell_dim))[0],
+                                  sequence.last,
+                                  Dense(num_output_classes)])
+    return lstm_classifier(input)
 
 
 # Creates and trains a LSTM sequence classification model
-def train_sequence_classifier(debug_output=False):
+def train_sequence_classifier():
     input_dim = 2000
     cell_dim = 25
     hidden_dim = 25
@@ -45,7 +41,7 @@ def train_sequence_classifier(debug_output=False):
     label = input(num_output_classes)
 
     # Instantiate the sequence classification model
-    classifier_output = LSTM_sequence_classifer_net(
+    classifier_output = LSTM_sequence_classifier_net(
         features, num_output_classes, embedding_dim, hidden_dim, cell_dim)
 
     ce = cross_entropy_with_softmax(classifier_output, label)
