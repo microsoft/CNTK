@@ -66,6 +66,14 @@ class Variable:
     def clone(self):
         assert not self.computed # (for now no need to clone after values have been computed already)
         return Variable(self.shape, self.op, self.inputs, self.backprop_to_functions, self.additional_args)
+    # overwrite an existing Variable in-place with a new one--used by make_batched_inputs() to keep existing references alive
+    def replace_with(self, other):
+        self.shape                 = other.shape
+        self.op                    = other.op
+        self.inputs                = other.inputs
+        self.backprop_to_functions = other.backprop_to_functions
+        self.additional_args       = other.additional_args
+        assert not self.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
 
     # create a batched version of this, taking all shape etc. considerations into account
     #  - batched_inputs: for each arg of self, batch_size batch of args of operations in the batch
@@ -153,8 +161,6 @@ class Variable:
         return Variable(shape, cntk.NDArrayView.__getitem__, (self,), additional_args=(key,))
     def _op_alias(x): # the op for alias
         return x
-    #def alias(self): # wrap an identity function around ourselves
-    #    return Variable(self.shape, Variable._op_alias, (self,))
     @staticmethod
     def splice(*args):
         return Variable((len(args),) + args[0].shape, cntk.NDArrayView.splice, args)
@@ -283,6 +289,8 @@ tanh = unary_op(cntk.NDArrayView.tanh)
 one = Constant(1)
 sigmoid = unary_op(cntk.NDArrayView.sigmoid, backprop_to_functions=(lambda v, g: g * (v * (one-v)),))
 relu = unary_op(cntk.NDArrayView.relu)
+alias = unary_op(Variable._op_alias, backprop_to_functions=(lambda v, g: g,))
+
 #softmax = unary_op(cntk.NDArrayView.softmax)
 #row_slice_0 = unary_op(cntk.NDArrayView.row_slice)
 #def row_slice(x, begin, end):
@@ -629,12 +637,8 @@ def transform_to_batched_ops(vars):
             # and mutate the original ops into aliases of the shared one
             # (We mutate the original one as well to keep things regular. Can be removed in the future.)
             for i, v in enumerate(op_batch):
-                # v.shape stays the same
-                v.op = Variable._op_alias
-                v.additional_args = ()
-                v.inputs = (v_batched,)
-                v.backprop_to_functions = (lambda v, g: g,)     # fun(v, g) -> g * dv/dinp_i
-                assert not v.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
+                v.replace_with(alias(v_batched))
+                assert v.shape == v0.shape
                 # BUGBUG: commit 48b72d5b3925ca9661b3b975f6a4af13b2952648 broke batching of something, section after print() goes up from 8 to 121
         else:
             v_batched = v0.create_batched(batched_inputs, num_batched_ops)
@@ -642,7 +646,7 @@ def transform_to_batched_ops(vars):
             num_compute_launches += 1
             # and mutate the op into a slice view into the new batched op
             for i, v in enumerate(op_batch):
-                # v.shape stays the same
+                assert v.shape == v0.shape
                 v.op = cntk.NDArrayView.__getitem__
                 v.additional_args = (i,)
                 v.inputs = (v_batched,)
