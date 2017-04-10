@@ -118,11 +118,12 @@ def train(debug_output=False):
     print('dynamic model has', len(dparameters), 'parameter tensors')
 
     # testing stuff
-    if False:
+    if True:
         m1 = dynamite.Dense(1, activation=dynamite.sigmoid)
         dp1 = dynamite.get_parameters(m1)
         x = dynamite.Constant(np.array([1., 2., 3.]))
         s = m1(x)
+        r = s.get_value()
         dynamite.dump_graph(s)
         g = s.grad_times(dp1)
         g0 = g[list(dp1)[0]]

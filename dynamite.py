@@ -163,6 +163,8 @@ class Variable:
     @staticmethod
     def splice(*args):
         return Variable((len(args),) + args[0].shape, cntk.NDArrayView.splice, args)
+    def reshape(self, shape):
+        return Variable(shape, cntk.NDArrayView.reshape, (self,), additional_args=(shape,))
 
 class Parameter(Variable):
     def __new__(cls, shape, initializer=None):
@@ -256,10 +258,27 @@ def unary_reduction_op(opcode):
     return f
 
 def times_backprop_to_0(v, g): # fun(v, g) -> g * dv/da
+    # BUGBUG: Must do the same dance as for times_backprop_to_1().
     return Variable(v.shape, cntk.NDArrayView.dot_transpose, (g, v.inputs[1]))
 
 def times_backprop_to_1(v, g): # fun(v, g) -> g * dv/db
-    return Variable(v.shape, cntk.NDArrayView.transpose_dot, (v.inputs[0], g))
+    # Nasty! The matmul gradient is no longer nice with true vectors.
+    a = v.inputs[0]
+    b = g
+    shapeA = a.shape
+    shapeB = b.shape
+    if len(shapeA) == 1:
+        shapeA = (1,) + shapeA
+        a = a.reshape(shapeA)
+    if len(shapeB) == 1:
+        shapeB = shapeB + (1,)
+        b = b.reshape(shapeB)
+    shapeC = (shapeA[1], shapeB[1])
+    res = Variable(shapeC, cntk.NDArrayView.transpose_dot, (a, b))
+    if res.shape != v.inputs[1].shape:
+        res = res.reshape(v.inputs[1].shape)
+    return res
+    #return Variable(v.inputs[1].shape, cntk.NDArrayView.transpose_dot, (v.inputs[0], g))
 
 @BroadcastingBinary
 def times(a,b):
