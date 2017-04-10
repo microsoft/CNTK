@@ -407,39 +407,64 @@ def dump_parameters(m, root='$'):
 # TODO: This is less trivial than it seems; need to double-check and test very carefully
 # BUGBUG: It indeed seems to have an error. Can we self-check?
 def topo_sort(roots: list):
-    visited = set(id(v) for v in roots) # [id(obj)]
-    stack = roots.copy()
     order = []
-    num_implanted = 0
-    while stack:
-        p = stack.pop()
-        for v in p.inputs:
-            assert isinstance(v, Variable) # (should not allow anything else anymore)
-            if isinstance(v, Variable):
-                if id(v) in visited:
-                    continue
-                if p:
-                    v.parent = p # once we emit the first one, we can emit its parent, too
-                    num_implanted += 1 # (sanity check only)
-                    p = None
-                stack.append(v)
-                visited.add(id(v))
-        while p:  # no children (left) to process -> we can emit this and all parents that are ready
-            order.append(p)
-            q = getattr(p, 'parent', None)
-            if q:
-                del p.parent # clean up after ourselves (may not be needed)
-                num_implanted -= 1 # (sanity check only)
-            p = q
-    # some checks
-    assert num_implanted == 0
+
+    visited = set() # [id(obj)] remembers every item that has ever been added to the work_list
+    def traverse(node):
+        if id(node) not in visited:
+            visited.add(id(node))
+            for input in node.inputs:
+                traverse(input)
+            order.append(node)
+    for input in roots:
+        traverse(input)
+    assert len(order) == len(visited)
+
+    # depth-first traversal
+    #work_list = None # (node, tail)
+    #visited = set() # [id(obj)] remembers every item that has ever been added to the work_list
+    #def schedule(inputs):
+    #    nonlocal work_list
+    #    for input in reversed(inputs):
+    #        if input not in visited:
+    #            work_list = (input, work_list) # prepend the input
+    #            visited.add(id(input))
+    #schedule(roots)
+    #while work_list:
+    #    node, work_list = work_list # pop off first item
+    #    # loop over its inputs
+    #    schedule(node.inputs)
+    #assert len(order) == len(visited)
+
+    #stack = roots.copy()
+    #num_implanted = 0
+    #while stack:
+    #    p = stack.pop()
+    #    for v in p.inputs:
+    #        if id(v) in visited:
+    #            continue
+    #        if p:
+    #            v.parent = p # once we emit the first one, we can emit its parent, too
+    #            num_implanted += 1 # (sanity check only)
+    #            p = None
+    #        stack.append(v)
+    #        visited.add(id(v))
+    #    while p:  # no children (left) to process -> we can emit this and all parents that are ready
+    #        order.append(p)
+    #        q = getattr(p, 'parent', None)
+    #        if q:
+    #            del p.parent # clean up after ourselves (may not be needed)
+    #            num_implanted -= 1 # (sanity check only)
+    #        p = q
+    ## some checks
+    #assert num_implanted == 0
     assert len(order) == len(visited)
     # ... can we just verify the basic invariant?
     seen = set()
     for node in order:
         for input in node.inputs:
-            assert input in seen # node must not be referenced as an input before it was seen
-        seen.add(node)
+            assert id(input) in seen # node must not be referenced as an input before it was seen
+        seen.add(id(node))
     return order
 
 # excecution

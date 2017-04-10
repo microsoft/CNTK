@@ -118,16 +118,16 @@ def train(debug_output=False):
     print('dynamic model has', len(dparameters), 'parameter tensors')
 
     # testing stuff
-    #m1 = dynamite.Dense(1, activation=dynamite.sigmoid)
-    #dp1 = dynamite.get_parameters(m1)
-    #x = dynamite.Constant(np.array([1., 2., 3.]))
-    #s = m1(x)
-    #dynamite.dump_graph(s)
-    #g = s.grad_times(dp1)
-    #g0 = g[list(dp1)[0]]
-    #dynamite.dump_graph(g0)
-    #g0.get_value()
-
+    if False:
+        m1 = dynamite.Dense(1, activation=dynamite.sigmoid)
+        dp1 = dynamite.get_parameters(m1)
+        x = dynamite.Constant(np.array([1., 2., 3.]))
+        s = m1(x)
+        dynamite.dump_graph(s)
+        g = s.grad_times(dp1)
+        g0 = g[list(dp1)[0]]
+        dynamite.dump_graph(g0)
+        g0.get_value()
 
     rel_path = "../CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     reader = create_reader(os.path.dirname(os.path.abspath(__file__)) + '/' + rel_path, True, input_dim, num_output_classes)
