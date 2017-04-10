@@ -178,22 +178,10 @@ class Variable:
                         additional_args=(key,))
     def _op_alias(x): # the op for alias
         return x
-    # TODO: do the optimization here
     @staticmethod
     def splice(*args, axis=-1):
         if axis >= 0:
             ValueError('splice: axis >= 0 case not implemented for now')
-        # are we re-splicing something previously sliced? Maybe we can short-circuit it.
-        # BUGBUG: This currently ignores the axis parameter.
-        arg0 = args[0]
-        if arg0.op is cntk.NDArrayView.__getitem__ and \
-             all(arg.op is cntk.NDArrayView.__getitem__ and
-                 arg.inputs[0] is arg0.inputs[0] and
-                 arg.additional_args[0] == i + arg0.additional_args[0]
-                 for i, arg in enumerate(args)): # all inputs are consecutive views onto the same object (from a previous batching op)
-            i0 = arg0.additional_args[0]
-            return arg0.inputs[0][i0:i0 + len(args)] # it may be a sub-range, so slice it (which is a no-op if nothing is sliced)
-        # nope, cannot short-circuit it. Do an actual splice().
         return Variable((len(args),) + (1,) * (-1 - axis) + args[0].shape,
                         cntk.NDArrayView.splice,
                         args,
@@ -674,12 +662,30 @@ def transform_to_batched_ops(vars):
     # BUGBUG: If a_r is used at multiple places, the current optimizer will not notice, and gather it multiple times.
     #         One fix would be to replace the a_r themselves by slice_views as well.
     def transform_batched_op(op_batch):
+        v0 = op_batch[0]
+
+        def reslicing(args):
+            # are we re-splicing something previously sliced? Maybe we can short-circuit it.
+            # BUGBUG: This currently ignores the axis parameter.
+            arg0 = args[0]
+            if arg0._debug_tag == 2368:
+                print(13)
+            return arg0.op is cntk.NDArrayView.__getitem__ and \
+                 all(arg.op is cntk.NDArrayView.__getitem__ and
+                     arg.inputs[0] is arg0.inputs[0] and
+                     arg.additional_args[0] == i + arg0.additional_args[0]
+                     for i, arg in enumerate(args)) # all inputs are consecutive views onto the same object (from a previous batching op)
         nonlocal num_compute_launches, num_gathers
         if len(op_batch) == 1: # short-circuit this to avoid unnecessary splice (...actually already taken care of the check for all inputs being the same)
+            # if the operation is a splice itself, then reassess whether it is now short-circuitable
+            if v0.op == cntk.NDArrayView.splice and reslicing(v0.inputs):
+                args = v0.inputs
+                arg0 = args[0]
+                i0 = arg0.additional_args[0]
+                return arg0.inputs[0][i0:i0 + len(args)] # it may be a sub-range, so slice it (which is a no-op if nothing is sliced)
             num_compute_launches += 1
             return
         # all ops are the same, so use the first as the reference
-        v0 = op_batch[0]
         if len(v0.inputs) > 0 and v0.inputs[0]._debug_tag == 2368:
             print(13)
         for inp in v0.inputs:
@@ -717,7 +723,11 @@ def transform_to_batched_ops(vars):
                 # This is the case where an identical op exists in all batch items, which got batched into a single one,
                 # and the original reference was patched to an alias to that single one.
                 return arg0
-            # --- case where we must splice the inputs (Variable.splice() will optimize splice from prior __getitem__() calls for us)
+            # --- are we re-splicing?
+            elif reslicing(args):
+                i0 = arg0.additional_args[0]
+                return arg0.inputs[0][i0:i0 + len(args)] # it may be a sub-range, so slice it (which is a no-op if nothing is sliced)
+            # --- case where we must splice (copy) the inputs
             else:
                 # need to do actual splice
                 axis = ranks[i] - new_rank # negative; this will insert a new axis
@@ -834,7 +844,7 @@ def batch_eval(vars):
         if not p.computed:
             p.compute_data()
         #print(p.data.to_ndarray())
-    #dump_graph(vars)
+    dump_graph(vars)
 
 # gradient
 # This computes the gradient of a variable (e.g. criterion) w.r.t. a set of model parameters, times an error signal.
