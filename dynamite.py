@@ -48,12 +48,13 @@ def to_Variable(x):
     return x if isinstance(x, Variable) else Constant(x)
 
 class Variable:
+    # constructor
     def __new__(cls, shape, op, inputs, backprop_to_functions=None, additional_args=()):
         v = object.__new__(cls)
         v.shape = shape
         v.op = op
         v.inputs = tuple(to_Variable(input) for input in inputs)
-        v.backprop_to_functions = backprop_to_functions
+        v.backprop_to_functions = backprop_to_functions  # tuple of fun(v, g) -> g * dv/dinp_i
         v.additional_args = additional_args
         for inp in v.inputs:
             assert isinstance(inp, Variable)
@@ -61,6 +62,11 @@ class Variable:
         #v.needs_gradient = True
         v.computed = False
         return v
+    # construct by cloning another
+    def clone(self):
+        assert not self.computed # (for now no need to clone after values have been computed already)
+        return Variable(self.shape, self.op, self.inputs, self.backprop_to_functions, self.additional_args)
+
     _batch_eval_fn = None   # lambda to call to yield from current coroutine
     @staticmethod
     def set_yield(batch_eval_fn):
@@ -97,7 +103,7 @@ class Variable:
     def to_ndarray(self):
         return self.get_value().to_ndarray()
     # create Variable that is the gradient of self w.r.t. a set of parameters, multiplied with error_signal
-    def backprop_to(self, i):  # get backprop function for inputs[i]
+    def backprop_to(self, i):  # get backprop function for inputs[i]; each fun(v, g) -> g * dv/dinp_i
         if not self.backprop_to_functions:
             return lambda v, g: g # dummy for now, so that we can debug a partially implemented system
         return self.backprop_to_functions[i]
@@ -547,17 +553,15 @@ def transform_to_batched_ops(vars):
         new_rank = 1 + (max(ranks) if not is_mul else ranks[0])
         # batch all inputs by adding a new batch axis
         # create a new node for batching each input
-        num_inputs = len(v0.inputs)
         num_batched_ops = len(op_batch)
-        def make_batched_input(i, inp_i_0): # returns either arg0 or a slice/splice
+
+        def make_batched_input(i, arg0): # returns either arg0 or a slice/splice
             args = tuple(v.inputs[i] for v in op_batch)
-            arg0 = args[0]
-            assert arg0 == inp_i_0
+            assert arg0 == args[0]
             # matrix product is special, in that the right argument is always shared in the batch and not applied element-wise
             if is_mul and i == 1:
                 assert all(arg is arg0 for arg in args)
                 return arg0
-            inp_i_0_shape = inp_i_0.shape if isinstance(inp_i_0, (Variable, np.ndarray)) else ()
             # check whether all inputs are the same (e.g. add a bias)--then don't batch
             sliced_from0 = getattr(arg0, 'sliced_from', None)
             def is_consecutive(i,arg):
@@ -573,23 +577,13 @@ def transform_to_batched_ops(vars):
                 # This is the case where an identical op exists in all batch items, which got batched into a single one,
                 # and the original reference was patched to an alias to that single one.
                 return arg0
-            #elif isinstance(arg0, Variable) and all(isinstance(arg, Variable) and (arg.data is arg0.data) for arg in args):
-            #elif all((arg.data is arg0.data) for arg in args):
-            #    # use the object itself, assuming broadcasting
-            #    # TODO: What case is this? It must go away if we split off transformation.
-            #    #   I think this is fully broadcast ops (same on all threads) that can be reduced back
-            #    # TODO: problem if fully broadcast ops happen at different times; can that be? No--if one is ready, they are all ready at once
-            #    # -> add a new mechanism like sliced_from--alias_of
-            #    return arg0
             elif sliced_from0 and all(hasattr(arg, 'sliced_from') and is_consecutive(i, arg)
                                        for i, arg in enumerate(args)):
                 # all inputs are consecutive views onto the same object--these came out of a previous batching op
                 res = sliced_from0[0]
                 # need to slice if range does not match, e.g. a sub-range or sub-index
                 if res.shape[0] != num_batched_ops:
-                    res = Variable((num_batched_ops,) + res.shape[1:],
-                                   #lambda arg: arg[sliced_from0[1]:sliced_from0[1] + num_batched_ops],
-                                   #[res])
+                    res = Variable((num_batched_ops,) + res.shape[1:],  # TODO: write as an indexing operation!!
                                    cntk.NDArrayView.__getitem__,
                                    [res],
                                    additional_args=(slice(sliced_from0[1], sliced_from0[1] + num_batched_ops),))
@@ -598,55 +592,55 @@ def transform_to_batched_ops(vars):
                 # need to do actual splice
                 nonlocal num_gathers
                 num_gathers += 1
-                return Variable((num_batched_ops,) + (1,) * (new_rank - ranks[i] - 1) + inp_i_0_shape,
+                return Variable((num_batched_ops,) + (1,) * (new_rank - ranks[i] - 1) + arg0.shape,
                                 lambda *args: cntk.NDArrayView.splice(*args, axis=ranks[i] - new_rank),
                                 args)
-        batched_inputs = tuple(make_batched_input(i, inp_i_0)
-                               for i, inp_i_0 in enumerate(v0.inputs))
-        # if all args are the same, make_batched_input will just return v0.inputs[i]
-        hasbatch = any(batched_inputs[i] is not inp_i_0 for i, inp_i_0 in enumerate(v0.inputs))
-        #batched_inputs = tuple(batched_input for batched_input, hasbatch in batched_inputs_hasbatch)
-        #hasbatch = any(tuple(hasbatch for batched_input, hasbatch in batched_inputs_hasbatch))
-        #                    ^^ hasbatch is the same as argument == arg0; can simplify
-        #for batched_input in batched_inputs: # and compute them
-        #    if isinstance(batched_input, Variable) and not batched_input.computed: # (if already computed then no gather was necessary)
-        #        batched_input.compute_data() # these are splice or splice--don't count either in num_compute_launches
-                #print('out', batched_input.data.shape)
-        # create a new node for the batched op
-        # In some cases, neither input got batched. In that case, just execute a single op and distribute its output
-        shape_batched = v0.shape
-        if hasbatch:
-            shape_batched = (num_batched_ops,) + shape_batched
-        # if not hasbatch then all args are just v0's, so we can just compute v0 and broadcast it --split the code
-        def to_batched_op(op):
-            # if the operation is a reduction to (), we must modify it to not reduce over the batch axis
-            # All ops in unary_reduction_ops are single-arg ops and are meant to accept an additional reduce_to_shape argument.
-            if hasbatch and op in unary_reduction_ops:
-                return lambda arg: op(arg, reduce_to_shape=(num_batched_ops,1)).reshape((num_batched_ops,))
-            return op
-        v_batched = Variable(shape_batched, to_batched_op(v0.op), batched_inputs, v0.backprop_to_functions, v0.additional_args)
-        # if not hasbatch, we can just use v0 and replicate it over all others
-        # now perform the operation batched
-        #print(13, v_batched.op)
-        #v_batched.compute_data()
-        num_compute_launches += 1
-        #print('out', v_batched.data.shape)
-        # and copy the results back
-        # We update the node in-place instead of replacing it and updating graph references.
-        # That is because user code may also hold references that must remain valid.
-        for i, v in enumerate(op_batch):
-            if hasbatch:
-                # mutate the op into a slice view into the new batched op
-                v.sliced_from = (v_batched, i) # remember that this was sliced
-                v.op = cntk.NDArrayView.__getitem__
-                v.additional_args = (i,)
-            else:
-                # mutate the op into an alias into the new batched op (which is actually just a clone of v0)
+
+        num_inputs = len(v0.inputs)
+        batched_inputs = tuple(make_batched_input(i, arg0)
+                               for i, arg0 in enumerate(v0.inputs))
+        # Note: if across the unbatched operations, all respective args are the same, make_batched_input will return the first; that is, v0.inputs[i].
+
+        if all(ib is i0 for ib, i0 in zip(batched_inputs, v0.inputs)): # all unbatched ops are identical: just do it once and redistribute
+            assert all(batched_inputs[i] is v0.inputs[i] for i in range(num_inputs)) # (just another way of restating the condition.. remove this)
+            v_batched = v0.clone()
+            # now perform the operation batched
+            num_compute_launches += 1
+            # and mutate the original ops into aliases of the shared one
+            # (We mutate the original one as well to keep things regular. Can be removed in the future.)
+            for i, v in enumerate(op_batch):
+                # v.shape stays the same
                 v.op = Variable._op_alias
                 v.additional_args = ()
+                v.inputs = (v_batched,)
+                v.backprop_to_functions = (lambda v, g: g,)     # fun(v, g) -> g * dv/dinp_i
+                assert not v.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
                 # BUGBUG: commit 48b72d5b3925ca9661b3b975f6a4af13b2952648 broke batching of something, section after print() goes up from 8 to 121
-            v.inputs = (v_batched,)
-            #v.compute_data()
+        else:
+            # create a new node for the batched op
+            # In some cases, neither input got batched. In that case, just execute a single op and distribute its output
+            shape_batched = (num_batched_ops,) + v0.shape
+            def to_batched_op(op):
+                # if the operation is a reduction to (), we must modify it to not reduce over the batch axis
+                # All ops in unary_reduction_ops are single-arg ops and are meant to accept an additional reduce_to_shape argument.
+                # TODO: generalize this; make it part of Variable
+                if op in unary_reduction_ops:
+                    return lambda arg: op(arg, reduce_to_shape=(num_batched_ops,1)).reshape((num_batched_ops,))
+                return op
+            v_batched = Variable(shape_batched, to_batched_op(v0.op), batched_inputs, v0.backprop_to_functions, v0.additional_args)
+            # now perform the operation batched
+            num_compute_launches += 1
+            # and mutate the op into a slice view into the new batched op
+            for i, v in enumerate(op_batch):
+                # set a mark for subsequent operations to discover this easily
+                # STUPID-- we can just test for __getitem__, and read out additional_args and v.inputs. Duh
+                v.sliced_from = (v_batched, i)
+                # v.shape stays the same
+                v.op = cntk.NDArrayView.__getitem__
+                v.additional_args = (i,)
+                v.inputs = (v_batched,)
+                v.backprop_to_functions = None  # BUGBUG: we need the one from getitem once we have it
+                assert not v.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
     # end of transform_batched_op
 
     # initialization
