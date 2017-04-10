@@ -161,7 +161,9 @@ class Variable:
         # create the Variable; or return ourselves if we slice the whole thing anyway (it's a no-op); used by make_batched_input()
         if shape == self.shape:
             return self
-        return Variable(shape, cntk.NDArrayView.__getitem__, (self,), additional_args=(key,))
+        return Variable(shape, cntk.NDArrayView.__getitem__, (self,),
+                        backprop_to_functions=(), # BUGBUG: Cannot back-prop into a huge matrix I just sliced from; needs in-place semantics!!!
+                        additional_args=(key,))
     def _op_alias(x): # the op for alias
         return x
     @staticmethod
