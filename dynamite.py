@@ -663,31 +663,27 @@ def transform_to_batched_ops(vars):
     #         One fix would be to replace the a_r themselves by slice_views as well.
     def transform_batched_op(op_batch):
         v0 = op_batch[0]
-
-        def reslicing(args):
-            # are we re-splicing something previously sliced? Maybe we can short-circuit it.
+        def reslicing(args): # helper to test whether we are re-splicing something previously sliced (then we can short-circuit it)
             # BUGBUG: This currently ignores the axis parameter.
             arg0 = args[0]
-            if arg0._debug_tag == 2368:
-                print(13)
             return arg0.op is cntk.NDArrayView.__getitem__ and \
                  all(arg.op is cntk.NDArrayView.__getitem__ and
                      arg.inputs[0] is arg0.inputs[0] and
                      arg.additional_args[0] == i + arg0.additional_args[0]
-                     for i, arg in enumerate(args)) # all inputs are consecutive views onto the same object (from a previous batching op)
+                     for i, arg in enumerate(args)) # returns True if all inputs are consecutive views onto the same object (from a previous batching op)
         nonlocal num_compute_launches, num_gathers
         if len(op_batch) == 1: # short-circuit this to avoid unnecessary splice (...actually already taken care of the check for all inputs being the same)
-            # if the operation is a splice itself, then reassess whether it is now short-circuitable
+            # if the operation is a splice itself, then reassess whether it is now short-circuitable (applies to the final loss aggregation)
             if v0.op == cntk.NDArrayView.splice and reslicing(v0.inputs):
                 args = v0.inputs
                 arg0 = args[0]
                 i0 = arg0.additional_args[0]
-                return arg0.inputs[0][i0:i0 + len(args)] # it may be a sub-range, so slice it (which is a no-op if nothing is sliced)
+                v_batched = arg0.inputs[0][i0:i0 + len(args)] # it may be a sub-range, so slice it (which is a no-op if nothing is sliced)
+                v0.replace_with(v_batched)
+                return
             num_compute_launches += 1
             return
         # all ops are the same, so use the first as the reference
-        if len(v0.inputs) > 0 and v0.inputs[0]._debug_tag == 2368:
-            print(13)
         for inp in v0.inputs:
             assert isinstance(inp, Variable)
         is_mul = v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose or v0.op is cntk.NDArrayView.transpose_dot
@@ -844,7 +840,7 @@ def batch_eval(vars):
         if not p.computed:
             p.compute_data()
         #print(p.data.to_ndarray())
-    dump_graph(vars)
+    #dump_graph(vars)
 
 # gradient
 # This computes the gradient of a variable (e.g. criterion) w.r.t. a set of model parameters, times an error signal.
@@ -896,7 +892,7 @@ def create_gradient_graph(root, parameters, error_signal):
 def dump_graph(vars): # vars can be a Variable or an iterable of Variables
     if isinstance(vars, Variable):
         vars = [vars]
-    names = {} # [id(obj)] -> faked name
+    #names = {} # [id(obj)] -> faked name
     def print_node(v):
         def name_it(v):
             #if id(v) in names:
