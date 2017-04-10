@@ -38,12 +38,7 @@ from timeit import default_timer as timer
 INFER = 0
 times_initializer = "(times_initializer)" # (dummy object only looked at by its object identity)
 
-# convert an input to an NDArrayView if not yet (it may be an ndarray of a Number)
-# TODO: do this early on when *creating* the Variable object, rather than when using it
-#       Also, in our own code at least, convert it to Variable outside, so that we don't repeatedly convert the same thing over.
-def to_data(input):
-    return input.data if isinstance(input, Variable) else cntk.NDArrayView.from_dense(np.array(input, np.float32)) # BUGBUG: device?? precision??
-
+# make sure something is a variable; numbers and Numpy arrays get converted here
 def to_Variable(x):
     return x if isinstance(x, Variable) else Constant(x)
 
@@ -68,12 +63,12 @@ class Variable:
         return Variable(self.shape, self.op, self.inputs, self.backprop_to_functions, self.additional_args)
     # overwrite an existing Variable in-place with a new one--used by make_batched_inputs() to keep existing references alive
     def replace_with(self, other):
+        assert not self.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
         self.shape                 = other.shape
         self.op                    = other.op
         self.inputs                = other.inputs
         self.backprop_to_functions = other.backprop_to_functions
         self.additional_args       = other.additional_args
-        assert not self.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
 
     # create a batched version of this, taking all shape etc. considerations into account
     #  - batched_inputs: for each arg of self, batch_size batch of args of operations in the batch
@@ -99,7 +94,6 @@ class Variable:
         return prev
     def _call_op(self):
         try:
-          #args = tuple(to_data(input) for input in self.inputs)
           args = tuple(input.data for input in self.inputs)
           data = self.op(*(args + self.additional_args))
           if data.shape != self.shape:
@@ -108,7 +102,6 @@ class Variable:
           return data
         except Exception: # (for catching stuff in the debugger; remove this)
           print('_call_op failure:', self.op, self.shape, (input.shape for input in self.inputs))
-          #return
           raise
         pass
     def compute_data(self): # perform op and store result in a new field 'data'
@@ -629,30 +622,24 @@ def transform_to_batched_ops(vars):
                                for i, arg0 in enumerate(v0.inputs))
         # Note: if across the unbatched operations, all respective args are the same, make_batched_input will return the first; that is, v0.inputs[i].
 
+        num_compute_launches += 1
         if all(ib is i0 for ib, i0 in zip(batched_inputs, v0.inputs)): # all unbatched ops are identical: just do it once and redistribute
             assert all(batched_inputs[i] is v0.inputs[i] for i in range(num_inputs)) # (just another way of restating the condition.. remove this)
+            # since all are identical, clone v0
             v_batched = v0.clone()
-            # now perform the operation batched
-            num_compute_launches += 1
             # and mutate the original ops into aliases of the shared one
             # (We mutate the original one as well to keep things regular. Can be removed in the future.)
             for i, v in enumerate(op_batch):
                 v.replace_with(alias(v_batched))
-                assert v.shape == v0.shape
                 # BUGBUG: commit 48b72d5b3925ca9661b3b975f6a4af13b2952648 broke batching of something, section after print() goes up from 8 to 121
         else:
+            # create a batched operation that matches the v0
             v_batched = v0.create_batched(batched_inputs, num_batched_ops)
-            # now perform the operation batched
-            num_compute_launches += 1
-            # and mutate the op into a slice view into the new batched op
+            # and mutate all ops into a slice views into the new batched op
             for i, v in enumerate(op_batch):
                 v.replace_with(v_batched[i])
-                assert v.shape == v0.shape
-                #v.op = cntk.NDArrayView.__getitem__
-                #v.additional_args = (i,)
-                #v.inputs = (v_batched,)
-                #v.backprop_to_functions = None  # BUGBUG: we need the one from getitem once we have it
-                #assert not v.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
+        for i, v in enumerate(op_batch):
+            assert v.shape == v0.shape
     # end of transform_batched_op
 
     # initialization
