@@ -140,6 +140,8 @@ class Variable:
         return minus(self, other)
     def __mul__(self, other):
         return element_times(self, other)
+    def __gt__(self, other):
+        return greater(self, other)
     def __matmul__(self, other):
         return times(self, other)
     def __getitem__(self, key): # note: for now not fully supported
@@ -323,11 +325,12 @@ plus = binary_op(cntk.NDArrayView.__add__, backprop_to_functions=(lambda v, g: g
 zero = Constant(0)
 minus = binary_op(cntk.NDArrayView.__sub__, backprop_to_functions=(lambda v, g: g, lambda v, g: zero - g)) # TODO: need a proper negate operator, which is easy with alpha
 element_times = binary_op(cntk.NDArrayView.__mul__, backprop_to_functions=(lambda v, g: g * v.inputs[1], lambda v, g: g * v.inputs[0])) # TODO: test this
+greater = binary_op(cntk.NDArrayView.greater, backprop_to_functions=(lambda v, g: g, lambda v, g: g))
 
 tanh = unary_op(cntk.NDArrayView.tanh)
 one = Constant(1)
 sigmoid = unary_op(cntk.NDArrayView.sigmoid, backprop_to_functions=(lambda v, g: g * (v * (one-v)),))
-relu = unary_op(cntk.NDArrayView.relu)
+relu = unary_op(cntk.NDArrayView.relu, backprop_to_functions=(lambda v, g: g * (v > zero),))
 alias = unary_op(Variable._op_alias, backprop_to_functions=(lambda v, g: g,))
 
 #softmax = unary_op(cntk.NDArrayView.softmax)
@@ -761,6 +764,7 @@ def batch_eval(vars):
     for p in nodes:
         if not p.computed:
             p.compute_data()
+        print(p.data.to_ndarray())
     #dump_graph(vars)
 
 # gradient
