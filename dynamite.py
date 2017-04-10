@@ -206,17 +206,17 @@ def elementwise_shape(a,b):
     shapeB = (1,) * (rank - len(shapeB)) + shapeB;
     return tuple(max(dimA, dimB) for dimA, dimB in zip(shapeA,shapeB))
 
-def binary_op(opcode):
+def binary_op(opcode, backprop_to_functions=None):
     @BroadcastingBinary
     def f(a,b):
-        return Variable(elementwise_shape(a,b), opcode, (a,b))
+        return Variable(elementwise_shape(a,b), opcode, (a,b), backprop_to_functions=backprop_to_functions)
     return f
 
-def reducing_binary_op(opcode): # (unused)
-    @BroadcastingBinary
-    def f(a,b):
-        return Variable((), opcode, (a,b))
-    return f
+#def reducing_binary_op(opcode): # (unused)
+#    @BroadcastingBinary
+#    def f(a,b):
+#        return Variable((), opcode, (a,b))
+#    return f
 
 def unary_op(opcode, backprop_to_functions=None):
     def f(x):
@@ -234,6 +234,12 @@ def unary_reduction_op(opcode):
             return map(f, x)
         return Variable((), opcode, (x,))
     return f
+
+def times_backprop_to_0(v, g): # fun(v, g) -> g * dv/da
+    return Variable(shapeC, cntk.NDArrayView.dot_transpose, (g,v.inputs[1]))
+
+def times_backprop_to_1(v, g): # fun(v, g) -> g * dv/db
+    return Variable(shapeC, cntk.NDArrayView.transpose_dot, (v.inputs[0], g))
 
 @BroadcastingBinary
 def times(a,b):
@@ -253,7 +259,7 @@ def times(a,b):
         shapeC = shapeC + (shapeA[0],);
     if len(shapeB) == 2:
         shapeC = shapeC + (shapeB[1],);
-    return Variable(shapeC, cntk.NDArrayView.dot, (a,b))
+    return Variable(shapeC, cntk.NDArrayView.dot, (a,b), backprop_to_functions=(times_backprop_to_0, times_backprop_to_1))
 
 @BroadcastingBinary
 def times_transpose(a,b):
@@ -274,9 +280,10 @@ def times_transpose(a,b):
         shapeC = shapeC + (shapeB[0],);
     return Variable(shapeC, cntk.NDArrayView.dot_transpose, (a,b))
 
-plus = binary_op(cntk.NDArrayView.__add__)
-minus = binary_op(cntk.NDArrayView.__sub__)
-element_times = binary_op(cntk.NDArrayView.__mul__)
+plus = binary_op(cntk.NDArrayView.__add__, backprop_to_functions=(lambda v, g: g, lambda v, g: g))
+zero = Constant(0)
+minus = binary_op(cntk.NDArrayView.__sub__, backprop_to_functions=(lambda v, g: g, lambda v, g: zero - g)) # TODO: need a proper negate operator, which is easy with alpha
+element_times = binary_op(cntk.NDArrayView.__mul__, backprop_to_functions=(lambda v, g: g * v.inputs[1], lambda v, g: g * v.inputs[0])) # TODO: test this
 
 tanh = unary_op(cntk.NDArrayView.tanh)
 one = Constant(1)
