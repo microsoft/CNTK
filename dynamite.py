@@ -49,13 +49,14 @@ def to_Variable(x):
 class Variable:
     counter = 0
     # constructor
-    def __new__(cls, shape, op, inputs, backprop_to_functions=None, additional_args=()):
+    def __new__(cls, shape, op, inputs, backprop_to_functions=None, additional_args=(), additional_kwargs=None):
         v = object.__new__(cls)
         v.shape = shape
         v.op = op
         v.inputs = tuple(to_Variable(input) for input in inputs)
         v.backprop_to_functions = backprop_to_functions  # tuple of fun(v, g) -> g * dv/dinp_i
-        v.additional_args = additional_args
+        v.additional_args   = additional_args
+        v.additional_kwargs = additional_kwargs
         for inp in v.inputs:
             assert isinstance(inp, Variable)
         # TODO: capture the gradient functions for all inputs that need gradients (we also need a flag for that)
@@ -78,6 +79,7 @@ class Variable:
         self.inputs                = other.inputs
         self.backprop_to_functions = other.backprop_to_functions
         self.additional_args       = other.additional_args
+        self.additional_kwargs     = other.additional_kwargs
 
     # create a batched version of this, taking all shape etc. considerations into account
     #  - batched_inputs: for each arg of self, batch_size batch of args of operations in the batch
@@ -93,7 +95,7 @@ class Variable:
         # TODO: Do this with a per-operation function.
         if op in unary_reduction_ops:
             op = lambda arg, op=op: op(arg, reduce_to_shape=(batch_size,1)).reshape((batch_size,))
-        return Variable(shape_batched, op, batched_inputs, self.backprop_to_functions, self.additional_args)
+        return Variable(shape_batched, op, batched_inputs, self.backprop_to_functions, self.additional_args, self.additional_kwargs)
 
     _batch_eval_fn = None   # lambda to call to yield from current coroutine
     @staticmethod
@@ -104,7 +106,10 @@ class Variable:
     def _call_op(self):
         try:
           args = tuple(input.data for input in self.inputs)
-          data = self.op(*(args + self.additional_args))
+          if self.additional_kwargs:
+              data = self.op(*(args + self.additional_args), **self.additional_kwargs)
+          else:
+              data = self.op(*(args + self.additional_args))
           if data.shape != self.shape:
                print(data.shape, self.shape)
           assert data.shape == self.shape # sanity check of shape inference
@@ -131,7 +136,7 @@ class Variable:
     # create Variable that is the gradient of self w.r.t. a set of parameters, multiplied with error_signal
     def backprop_to(self, i):  # get backprop function for inputs[i]; each fun(v, g) -> g * dv/dinp_i
         if not self.backprop_to_functions:
-            print('backprop_to failure for', self.op)
+            print('backprop_to failure for', self.op, 'node tag', self._debug_tag)
             raise NotImplementedError('backprop_to missing')
             return lambda v, g: g # dummy for now, so that we can debug a partially implemented system
         return self.backprop_to_functions[i]
@@ -169,6 +174,7 @@ class Variable:
                         additional_args=(key,))
     def _op_alias(x): # the op for alias
         return x
+    # TODO: do the optimization here
     @staticmethod
     def splice(*args):
         return Variable((len(args),) + args[0].shape, cntk.NDArrayView.splice, args,
@@ -654,6 +660,8 @@ def transform_to_batched_ops(vars):
             return
         # all ops are the same, so use the first as the reference
         v0 = op_batch[0]
+        if len(v0.inputs) > 0 and v0.inputs[0]._debug_tag == 2368:
+            print(13)
         for inp in v0.inputs:
             assert isinstance(inp, Variable)
         is_mul = v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose or v0.op is cntk.NDArrayView.transpose_dot
@@ -702,9 +710,21 @@ def transform_to_batched_ops(vars):
                 # need to do actual splice
                 nonlocal num_gathers
                 num_gathers += 1
-                return Variable((num_batched_ops,) + (1,) * (new_rank - ranks[i] - 1) + arg0.shape,
-                                lambda *args: cntk.NDArrayView.splice(*args, axis=ranks[i] - new_rank),
-                                args)
+                #def splice(*args):
+                #    return Variable((len(args),) + args[0].shape, cntk.NDArrayView.splice, args,
+                #                    backprop_to_functions=tuple(lambda v, g, i=i: g[i] * v[i] for i in range(len(args))))
+                assert num_batched_ops == len(args)
+                axis = ranks[i] - new_rank # negative; this will insert a new axis
+                if axis >= 0:
+                    ValueError('splice: axis >= 0 case not implemented for now')
+                assert arg0 is args[0]
+                def kwargs(**kwargs):
+                    return kwargs
+                return Variable((len(args),) + (1,) * (-1 - axis) + args[0].shape,
+                                #lambda *args: cntk.NDArrayView.splice(*args, axis=axis),
+                                #args)
+                                cntk.NDArrayView.splice,
+                                args, additional_kwargs=kwargs(axis=axis))
 
         num_inputs = len(v0.inputs)
         #print('start')
@@ -745,7 +765,7 @@ def transform_to_batched_ops(vars):
             if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose:
                 return (p.op, (p.inputs[0].shape, id(p.inputs[1])))
             # batch if both op and input shapes are the same
-            return (p.op, p.additional_args, tuple(v.shape for v in p.inputs))
+            return (p.op, p.additional_args, p.additional_kwargs, tuple(v.shape for v in p.inputs))
         p.key = make_key(p)
         # TODO: must also include the storage format in the key; do this in C++ version
         p.consumers = []
@@ -882,6 +902,8 @@ def dump_graph(vars): # vars can be a Variable or an iterable of Variables
             t += str(v.shape)
             if v.additional_args:
                 t += ', ' + str(v.additional_args)
+            if v.additional_kwargs:
+                t += ', ' + str(v.additional_kwargs)
             return t
         t = format_shape(v)
         try:   # BUGBUG: why does it get here with an int?
