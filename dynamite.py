@@ -101,7 +101,7 @@ class Variable:
           assert data.shape == self.shape # sanity check of shape inference
           return data
         except Exception: # (for catching stuff in the debugger; remove this)
-          print('_call_op failure:', self.op, self.shape, (input.shape for input in self.inputs))
+          print('_call_op failure:', self.op, self.shape, tuple(input.shape for input in self.inputs))
           raise
         pass
     def compute_data(self): # perform op and store result in a new field 'data'
@@ -176,6 +176,11 @@ class Parameter(Variable):
         self.data = data  # NDArrayView
     def resize(self, shape):
         self.shape = shape
+    def random_init(self):
+        data = cntk.NDArrayView.random_uniform_float(self.shape, -0.05, +0.05) # BUGBUG: device?? precision==float32??
+        #CNTK_API static NDArrayViewPtr RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+        self.data = data  # NDArrayView
+        self.computed = True
 
 class Constant(Variable):
     def __new__(cls, data, initializer=None): # data: cntk.core.NDArrayView or number or np.ndarray
@@ -236,16 +241,18 @@ def unary_reduction_op(opcode):
     return f
 
 def times_backprop_to_0(v, g): # fun(v, g) -> g * dv/da
-    return Variable(shapeC, cntk.NDArrayView.dot_transpose, (g,v.inputs[1]))
+    return Variable(v.shape, cntk.NDArrayView.dot_transpose, (g, v.inputs[1]))
 
 def times_backprop_to_1(v, g): # fun(v, g) -> g * dv/db
-    return Variable(shapeC, cntk.NDArrayView.transpose_dot, (v.inputs[0], g))
+    return Variable(v.shape, cntk.NDArrayView.transpose_dot, (v.inputs[0], g))
 
 @BroadcastingBinary
 def times(a,b):
     if hasattr(b, 'initializer'):
-        b.resize((b.shape[0] if b.shape[0] != INFER else a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1,
-                  b.shape[1]))
+        shape = (b.shape[0] if b.shape[0] != INFER else a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1,
+                 b.shape[1])
+        b.resize(shape)
+        b.random_init()
         del b.initializer
     shapeA = a.shape if isinstance(a, (np.ndarray, Variable)) else (b.shape[0],)
     shapeB = b.shape if isinstance(b, (np.ndarray, Variable)) else ()
@@ -264,8 +271,10 @@ def times(a,b):
 @BroadcastingBinary
 def times_transpose(a,b):
     if hasattr(b, 'initializer'):
-        b.resize((b.shape[0],
-                  b.shape[1] if b.shape[1] != INFER else a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1))
+        shape = (b.shape[0],
+                 b.shape[1] if b.shape[1] != INFER else a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1)
+        b.resize(shape)
+        b.random_init()
         del b.initializer
     shapeA = a.shape if isinstance(a, (np.ndarray, Variable)) else (b.shape[1],)
     shapeB = b.shape if isinstance(b, (np.ndarray, Variable)) else ()
@@ -709,7 +718,7 @@ def transform_to_batched_ops(vars):
 #  - with full automatic dynamic batching
 def batch_eval(vars):
     # transform the graph from raw (individual batch items) to the batched graph
-    transform_to_batched_ops(vars)
+    #transform_to_batched_ops(vars)
     # BUGBUG: the following fails because we have a slice() somewhere which is not hashable
     #         It also seems to further change the graph, and results are not the same. So something is still wrong.
     #         Tested: This is not due to the topo_sort bug.
