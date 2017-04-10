@@ -119,9 +119,19 @@ class Variable:
         return element_times(self, other)
     def __matmul__(self, other):
         return times(self, other)
-    #def __getitem__(self, key):
-    #    assert isinstance(key, int)  # BUGBUG: for now; later must dupplicate the complex logic for interpreting key
-    #    return Variable(self.shape[1:], cntk.NDArrayView.__getitem__, (self,), additional_args=(key,))
+    def __getitem__(self, key): # note: for now not fully supported
+        if isinstance(key, int):
+            first_dim = ()
+        elif isinstance(key, slice):
+            # various combinations are not yet supported
+            assert key.step is None or key.step == 1
+            assert key.start >= 0 and key.stop >= 0
+            if key.start == 0 and key.stop == self.shape[0]: # if we slice the whole thing, just return it
+                return self
+            first_dim = (key.stop - key.start,)
+        else:
+            assert false # so far unsupported key type
+        return Variable(first_dim + self.shape[1:], cntk.NDArrayView.__getitem__, (self,), additional_args=(key,))
     def _op_alias(x): # the op for alias
         return x
     #def alias(self): # wrap an identity function around ourselves
@@ -563,45 +573,26 @@ def transform_to_batched_ops(vars):
                 assert all(arg is arg0 for arg in args)
                 return arg0
             # check whether all inputs are the same (e.g. add a bias)--then don't batch
-
-
-#                v.sliced_from = (v_batched, i)
-#                # v.shape stays the same
-#                v.op = cntk.NDArrayView.__getitem__
-#                v.additional_args = (i,)
-#                v.inputs = (v_batched,)
-#                v.backprop_to_functions = None  # BUGBUG: we need the one from getitem once we have it
-#                assert not v.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
-
-
-
-            def is_consecutive(i,arg):
-                if arg.op is not cntk.NDArrayView.__getitem__:
-                    return False
-                sliced_from0 = (arg0.inputs[0], arg0.additional_args[0]) #getattr(arg0, 'sliced_from', None)
-                sliced_from = (arg.inputs[0], arg.additional_args[0])    #arg.sliced_from  # (v_batched, i)
-                matchesd = sliced_from[0] is     sliced_from0[0]
-                matchesi = sliced_from[1] == i + sliced_from0[1]
-                return matchesd and matchesi
-            if all(arg is arg0 for arg in args):
-                # all the same args: use the object itself, assuming broadcasting
+            if all(arg is arg0 for arg in args): # all the same args: use the object itself, assuming broadcasting
                 return arg0
-            elif arg0.op is Variable._op_alias and all((arg.op is Variable._op_alias and arg.inputs == arg0.inputs) for arg in args):
-                # use the object itself, assuming broadcasting
+            elif arg0.op is Variable._op_alias and all((arg.op is Variable._op_alias and arg.inputs == arg0.inputs) for arg in args): # all aliases of the same thing
                 # This is the case where an identical op exists in all batch items, which got batched into a single one,
                 # and the original reference was patched to an alias to that single one.
                 return arg0
-            elif arg0.op is cntk.NDArrayView.__getitem__ and all(is_consecutive(i, arg)
-                                                                 for i, arg in enumerate(args)):
-                # all inputs are consecutive views onto the same object--these came out of a previous batching op
-                res = arg0.inputs[0] #sliced_from0[0]
+            elif arg0.op is cntk.NDArrayView.__getitem__ and \
+                 all(arg.op is cntk.NDArrayView.__getitem__ and
+                     arg.inputs[0] is arg0.inputs[0] and
+                     arg.additional_args[0] == i + arg0.additional_args[0]
+                     for i, arg in enumerate(args)): # all inputs are consecutive views onto the same object (from a previous batching op)
+                res = arg0.inputs[0]
                 # need to slice if range does not match, e.g. a sub-range or sub-index
-                if res.shape[0] != num_batched_ops:
+                if True: #res.shape[0] != num_batched_ops:
                     i0 = arg0.additional_args[0]
-                    res = Variable((num_batched_ops,) + res.shape[1:],  # TODO: write as an indexing operation!!
-                                   cntk.NDArrayView.__getitem__,
-                                   [res],
-                                   additional_args=(slice(i0, i0 + num_batched_ops),))
+                    res = res[i0:i0 + num_batched_ops]
+                    #res = Variable((num_batched_ops,) + res.shape[1:],  # TODO: write as an indexing operation!! Which should short-circuit if nothing is sliced
+                    #               cntk.NDArrayView.__getitem__,
+                    #               [res],
+                    #               additional_args=(slice(i0, i0 + num_batched_ops),))
                 return res
             else:
                 # need to do actual splice
@@ -647,9 +638,6 @@ def transform_to_batched_ops(vars):
             num_compute_launches += 1
             # and mutate the op into a slice view into the new batched op
             for i, v in enumerate(op_batch):
-                # set a mark for subsequent operations to discover this easily
-                # STUPID-- we can just test for __getitem__, and read out additional_args and v.inputs. Duh
-                #v.sliced_from = (v_batched, i)
                 # v.shape stays the same
                 v.op = cntk.NDArrayView.__getitem__
                 v.additional_args = (i,)
