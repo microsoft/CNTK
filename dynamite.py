@@ -611,7 +611,7 @@ def transform_to_batched_ops(vars):
     expected_num_ops = sum(1 for v in nodes if not v.computed)
 
     # management of batched operations
-    ready_ops = dict()  # [key] -> list of Variables
+    ready_ops = dict()  # [key] -> list of Variables   --note: non-deterministic in Python!
 
     def add_ready(v):
         key = v.key
@@ -656,7 +656,7 @@ def transform_to_batched_ops(vars):
         v0 = op_batch[0]
         for inp in v0.inputs:
             assert isinstance(inp, Variable)
-        is_mul = v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose
+        is_mul = v0.op is cntk.NDArrayView.dot or v0.op is cntk.NDArrayView.dot_transpose or v0.op is cntk.NDArrayView.transpose_dot
         # sparse can not be properly batched for now
         # BUGBUG: This must become part of the type, stored inside Variable not data
         #if (isinstance(v0.inputs[0], Variable) and v0.inputs[0].data.is_sparse()):
@@ -722,13 +722,13 @@ def transform_to_batched_ops(vars):
             # (We mutate the original one as well to keep things regular. Can be removed in the future.)
             for i, v in enumerate(op_batch):
                 v.replace_with(alias(v_batched))
-                # BUGBUG: commit 48b72d5b3925ca9661b3b975f6a4af13b2952648 broke batching of something, section after print() goes up from 8 to 121
         else:
             # create a batched operation that matches the v0
             v_batched = v0.create_batched(batched_inputs, num_batched_ops)
             # and mutate all ops into a slice views into the new batched op
             for i, v in enumerate(op_batch):
                 v.replace_with(v_batched[i])
+                # BUGBUG: commit 48b72d5b3925ca9661b3b975f6a4af13b2952648 broke batching of something, section after print() goes up from 8 to 121
         for i, v in enumerate(op_batch):
             assert v.shape == v0.shape
     # end of transform_batched_op
@@ -762,7 +762,8 @@ def transform_to_batched_ops(vars):
     ops_run = 0
     while ready_ops:
         # select the largest ready batch size
-        key = max(ready_ops.keys(), key=(lambda key: len(ready_ops[key])))
+        # Note: We use _debug_tag here to make it deterministic.
+        key = max(ready_ops.keys(), key=(lambda key: (len(ready_ops[key]), ready_ops[key][0]._debug_tag)))
         op_batch = ready_ops[key]
         # execute it
         #print('batch of', len(op_batch), 'for op', key)
