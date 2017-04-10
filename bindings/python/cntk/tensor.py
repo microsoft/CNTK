@@ -263,6 +263,8 @@ class NDArrayViewOpsMixin(object):
         return NDArrayViewOpsMixin._num_op([self, other], 1.0, 25) # 25 = ElementWiseOperator.opDifference
     def __mul__(self, other):
         return NDArrayViewOpsMixin._num_op([self, other], 1.0, 26) # 26 = ElementWiseOperator.opElementwiseProduct
+    def greater(self, other):   # __gt__ somehow fails, already exists in cntk_py version
+        return NDArrayViewOpsMixin._num_op([self, other], 1.0, 35) # 35 = ElementWiseOperator.opGreater
 
     # so far these make no sense since we don't type-cast anyway
     __radd__ = __add__
@@ -301,6 +303,8 @@ class NDArrayViewOpsMixin(object):
         return NDArrayViewOpsMixin._num_op([self], 1.0,  9) #  9 = ElementWiseOperator.opTanh
     def relu(self):
         return NDArrayViewOpsMixin._num_op([self], 1.0, 14) # 14 = ElementWiseOperator.opLinearRectifier
+    def exp(self):
+        return NDArrayViewOpsMixin._num_op([self], 1.0, 12) # 12 = ElementWiseOperator.opExp
 
     # reductions
     def reduce_sum(self, reduce_to_shape=()):
@@ -393,12 +397,12 @@ class NDArrayViewOpsMixin(object):
         return res
 
 def _add_ndarrayview_ops(klass):
-    for overload_name in ['__add__', '__sub__', '__mul__',
+    for overload_name in ['__add__', '__sub__', '__mul__', 'greater',
                           '__radd__', '__rmul__',
                           '__iadd__', '__isub__',
                           '__matmul__',
                           'dot', 'dot_transpose', 'transpose_dot',
-                          'sigmoid', 'tanh', 'relu',
+                          'sigmoid', 'tanh', 'relu', 'exp',
                           'reduce_sum', 'reduce_log_sum',
                           'reshape', '__getitem__', '__setitem__', 'splice']:
         if getattr(klass, overload_name, None):
