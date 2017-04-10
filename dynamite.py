@@ -46,6 +46,10 @@ times_initializer = "(times_initializer)" # (dummy object only looked at by its 
 def to_Variable(x):
     return x if isinstance(x, Variable) else Constant(x)
 
+# a little helper to pass 'additional_kwargs' easily
+def as_kwargs(**kwargs):
+    return kwargs
+
 class Variable:
     counter = 0
     # constructor
@@ -179,13 +183,22 @@ class Variable:
     def splice(*args, axis=-1):
         if axis >= 0:
             ValueError('splice: axis >= 0 case not implemented for now')
-        def kwargs(**kwargs):
-            return kwargs
+        # are we re-splicing something previously sliced? Maybe we can short-circuit it.
+        # BUGBUG: This currently ignores the axis parameter.
+        arg0 = args[0]
+        if arg0.op is cntk.NDArrayView.__getitem__ and \
+             all(arg.op is cntk.NDArrayView.__getitem__ and
+                 arg.inputs[0] is arg0.inputs[0] and
+                 arg.additional_args[0] == i + arg0.additional_args[0]
+                 for i, arg in enumerate(args)): # all inputs are consecutive views onto the same object (from a previous batching op)
+            i0 = arg0.additional_args[0]
+            return arg0.inputs[0][i0:i0 + len(args)] # it may be a sub-range, so slice it (which is a no-op if nothing is sliced)
+        # nope, cannot short-circuit it. Do an actual splice().
         return Variable((len(args),) + (1,) * (-1 - axis) + args[0].shape,
                         cntk.NDArrayView.splice,
                         args,
                         backprop_to_functions=None if axis != -1 else tuple(lambda v, g, i=i: g[i] * v[i] for i in range(len(args))), # BUGBUG: wrong axis unless -1
-                        additional_kwargs=kwargs(axis=axis))
+                        additional_kwargs=as_kwargs(axis=axis))
     def reshape(self, shape):
         return Variable(shape, cntk.NDArrayView.reshape, (self,), additional_args=(shape,))
 
@@ -704,23 +717,15 @@ def transform_to_batched_ops(vars):
                 # This is the case where an identical op exists in all batch items, which got batched into a single one,
                 # and the original reference was patched to an alias to that single one.
                 return arg0
-            # --- case where we re-splice something previously sliced
-            elif arg0.op is cntk.NDArrayView.__getitem__ and \
-                 all(arg.op is cntk.NDArrayView.__getitem__ and
-                     arg.inputs[0] is arg0.inputs[0] and
-                     arg.additional_args[0] == i + arg0.additional_args[0]
-                     for i, arg in enumerate(args)): # all inputs are consecutive views onto the same object (from a previous batching op)
-                i0 = arg0.additional_args[0]
-                return arg0.inputs[0][i0:i0 + num_batched_ops] # it may be a sub-range, so slice it (which is a no-op if nothing is sliced)
-            # --- case where we cannot optimize and actually must perform a splice (copy) operation
+            # --- case where we must splice the inputs (Variable.splice() will optimize splice from prior __getitem__() calls for us)
             else:
                 # need to do actual splice
-                nonlocal num_gathers
-                num_gathers += 1
-                assert arg0 is args[0]
-                assert num_batched_ops == len(args)
                 axis = ranks[i] - new_rank # negative; this will insert a new axis
-                return Variable.splice(*args, axis=axis)
+                res = Variable.splice(*args, axis=axis)
+                if res.op == cntk.NDArrayView.splice: # if not, it was short-circuited, so don't count it
+                    nonlocal num_gathers
+                    num_gathers += 1
+                return res
 
         num_inputs = len(v0.inputs)
         #print('start')
