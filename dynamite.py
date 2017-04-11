@@ -84,6 +84,26 @@ class Variable:
         self.backprop_to_functions = other.backprop_to_functions
         self.additional_args       = other.additional_args
         self.additional_kwargs     = other.additional_kwargs
+    def type_as_string(v):
+        t = "v" + str(v._debug_tag) + ": "
+        t += "Parameter" if isinstance(v, Parameter) else "Constant" if isinstance(v, Constant) else "Variable"
+        t += str(v.shape)
+        return t
+    def op_as_string(v):
+        t = str(v.op) # e.g. "<function NDArrayViewOpsMixin.__getitem__ at 0x000000453A649158>"
+        ts = t.split(' ')
+        if ts[0] == '<function':
+            t = ts[1]
+        return t
+    def signature_as_string(v):
+        t = v.type_as_string()
+        t += " = " + v.op_as_string() + "(" + ", ".join([inp.type_as_string() for inp in v.inputs])
+        if v.additional_args:
+            t += '; ' + str(v.additional_args)
+        if v.additional_kwargs:
+            t += '; ' + ', '.join(name + '=' + str(val) for name, val in v.additional_kwargs.items())
+        t += ")"
+        return t
 
     # create a batched version of this, taking all shape etc. considerations into account
     #  - batched_inputs: for each arg of self, batch_size batch of args of operations in the batch
@@ -840,7 +860,7 @@ def batch_eval(vars):
         if not p.computed:
             p.compute_data()
         #print(p.data.to_ndarray())
-    #dump_graph(vars)
+    dump_graph(vars)
 
 # gradient
 # This computes the gradient of a variable (e.g. criterion) w.r.t. a set of model parameters, times an error signal.
@@ -875,7 +895,7 @@ def create_gradient_graph(root, parameters, error_signal):
                 backprop_to = node.backprop_to(i)
                 input_g = backprop_to(node, g)
                 if input.shape != input_g.shape:
-                    print(13)
+                    print('gradient shape', input_g.shape, "came back different from input's shape", input.shape, 'for input', i, 'of op', node.op)
                 assert input.shape == input_g.shape
                 if input not in gradients:
                     gradients[input] = input_g
@@ -892,41 +912,8 @@ def create_gradient_graph(root, parameters, error_signal):
 def dump_graph(vars): # vars can be a Variable or an iterable of Variables
     if isinstance(vars, Variable):
         vars = [vars]
-    #names = {} # [id(obj)] -> faked name
-    def print_node(v):
-        def name_it(v):
-            #if id(v) in names:
-            #    return names[id(v)]
-            #name = "v" + str(len(names))
-            name = "v" + str(v._debug_tag)
-            try:
-                name += '_' + v.op
-            except:
-                pass
-            #names[id(v)] = name
-            return name
-        def format_shape(v):
-            if not isinstance(v, (np.ndarray, Variable)):
-                return str(v) # e.g. a constant
-            t = name_it(v) + ": "
-            t += "Parameter" if isinstance(v, Parameter) else "Variable" if isinstance(v, Variable) else "ndarray"
-            t += str(v.shape)
-            if v.additional_args:
-                t += ', ' + str(v.additional_args)
-            if v.additional_kwargs:
-                t += ', ' + str(v.additional_kwargs)
-            return t
-        t = format_shape(v)
-        try:   # BUGBUG: why does it get here with an int?
-            t += " = " + str(v.op) + "(" + ", ".join([format_shape(inp) for inp in v.inputs]) + ")"
-        except AttributeError:
-            pass
-        print(t)
-        pass
-    order = topo_sort(vars)
-    for node in order:
-        print_node(node)
-    return len(order)
+    for node in topo_sort(vars):
+        print(node.signature_as_string())
 
 from greenlet import greenlet # very lighweight coroutines
 
