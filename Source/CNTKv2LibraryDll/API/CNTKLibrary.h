@@ -4207,6 +4207,14 @@ namespace CNTK
             return m_sampleCount;
         }
 
+        ///
+        /// Specifies progress writers that should be used to report any relevant stats.
+        ///
+        void AddProgressWriters(const std::vector<ProgressWriterPtr>& progressWriters)
+        {
+            m_progressWriters.insert(progressWriters.begin(), progressWriters.end());
+        }
+
     protected:
         ///
         /// Retrieves and returns current value from the training parameter schedule.
@@ -4214,14 +4222,8 @@ namespace CNTK
         template <typename ElementType>
         ElementType GetCurrentTrainingParameterValue(const TrainingParameterSchedule<ElementType>& schedule) const
         {
-            if (schedule.IsSweepBased())
-            {
-                return schedule[m_sweepCount];
-            }
-            else
-            {
-                return schedule[m_sampleCount];
-            }
+            auto count = schedule.IsSweepBased() ? m_sweepCount : m_sampleCount;
+            return schedule[count];
         }
 
         Learner(const std::vector<Parameter>& parameters, const LearningRateSchedule& learningRateSchedule)
@@ -4237,6 +4239,7 @@ namespace CNTK
         size_t m_sampleCount;
         size_t m_minibatchCount;
         size_t m_sweepCount;
+        mutable std::unordered_set<ProgressWriterPtr> m_progressWriters;
     };
 
     ///
@@ -5382,6 +5385,11 @@ namespace CNTK
         ///
         CNTK_API virtual void OnWriteTestSummary(size_t /*samples*/, size_t /*updates*/, size_t /*summaries*/,
                                                  double /*aggregateMetric*/, size_t /*elapsedMilliseconds*/) {};
+
+        ///
+        /// Writes out the string key together with the specified value.
+        ///
+        CNTK_API virtual void Write(const std::wstring& /*key*/, double /*value*/) {};
 
         ///
         /// Returns the total number of training progress updates received by the progress writer.
