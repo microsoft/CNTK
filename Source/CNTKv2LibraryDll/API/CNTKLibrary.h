@@ -5189,6 +5189,30 @@ namespace CNTK
     };
 
     ///
+    /// Configuration for adaptive learning rate.
+    ///
+    struct AdaptiveLearningRateConfig
+    {
+        CNTK_API AdaptiveLearningRateConfig(
+            size_t frequencyInSamples = 0,
+            double decreaseIfImproveLessThan = 0,
+            double decreaseFactor = 0.618,
+            double increaseIfImproveMoreThan = std::numeric_limits<double>::infinity(),
+            double increaseFactor = 1.382,
+            bool loadBestModel = true,
+            bool useEvalCriterion = false);
+
+    private:
+        size_t m_frequencyInSamples;
+        double m_decreaseIfImproveLessThan;
+        double m_decreaseFactor;
+        double m_increaseIfImproveMoreThan;
+        double m_increaseFactor;
+        bool m_loadBestModel;
+        bool m_useEvalCriterion;
+    };
+
+    ///
     /// Base abstract class that represents a training session.
     /// Derived classes can redefine different aspects of training, overriding base virtual methods (GetMinibatchSize, OnMinibatchStart, etc.)
     ///
@@ -5221,7 +5245,8 @@ namespace CNTK
             size_t progressFrequency,
             const CheckpointConfig& checkpointing,
             const CrossValidationConfig& crossValidation,
-            const TestConfig& test);
+            const TestConfig& test,
+            const AdaptiveLearningRateConfig& adaptiveLearningRate);
 
         ///
         /// Runs the session.
@@ -5321,6 +5346,7 @@ namespace CNTK
         CheckpointConfig m_checkpoint;
         CrossValidationConfig m_cv;
         TestConfig m_test;
+        AdaptiveLearningRateConfig m_adaptiveLearningRate;
     };
 
     CNTK_API void PrintBuiltInfo();
@@ -5453,7 +5479,8 @@ namespace CNTK
         size_t progressFrequency,
         const CheckpointConfig& checkpointing = { L"" },
         const CrossValidationConfig& crossValidation = { nullptr },
-        const TestConfig& test = { nullptr });
+        const TestConfig& test = { nullptr },
+        const AdaptiveLearningRateConfig& adaptiveLearningRate = {});
 }
 
 

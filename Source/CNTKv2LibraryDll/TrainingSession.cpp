@@ -22,6 +22,23 @@ namespace CNTK
             find_if(s.begin(), s.end(), [](wchar_t c) { return !isdigit(c); }) == s.end();
     }
 
+    AdaptiveLearningRateConfig::AdaptiveLearningRateConfig(
+        size_t frequencyInSamples,
+        double decreaseIfImproveLessThan,
+        double decreaseFactor,
+        double increaseIfImproveMoreThan,
+        double increaseFactor,
+        bool loadBestModel,
+        bool useEvalCriterion) :
+        m_frequencyInSamples(frequencyInSamples),
+        m_decreaseIfImproveLessThan(decreaseIfImproveLessThan),
+        m_decreaseFactor(decreaseFactor),
+        m_increaseIfImproveMoreThan(increaseIfImproveMoreThan),
+        m_increaseFactor(increaseFactor),
+        m_loadBestModel(loadBestModel),
+        m_useEvalCriterion(useEvalCriterion)
+    {}
+
     CheckpointConfig::CheckpointConfig(
         const std::wstring& checkPointFileName,
         size_t checkpointFrequencyInSamples,
@@ -71,7 +88,8 @@ namespace CNTK
         size_t progressFrequency,
         const CheckpointConfig& checkpointing,
         const CrossValidationConfig& crossValidation,
-        const TestConfig& test)
+        const TestConfig& test,
+        const AdaptiveLearningRateConfig& adaptiveLearningRate)
     {
         return MakeSharedObject<TrainingSession>(trainer,
             trainingSource,
@@ -79,7 +97,8 @@ namespace CNTK
             inputVarToStream,
             maxNumTrainingSamples,
             progressFrequency,
-            checkpointing, crossValidation, test);
+            checkpointing, crossValidation,
+            test, adaptiveLearningRate);
     }
 
     TrainingSession::TrainingSession(
@@ -91,7 +110,8 @@ namespace CNTK
         size_t progressFrequency,
         const CheckpointConfig& checkpointing,
         const CrossValidationConfig& crossValidation,
-        const TestConfig& test) :
+        const TestConfig& test,
+        const AdaptiveLearningRateConfig& adaptiveLearningRate) :
         m_trainer(trainer),
         m_source(trainingSource),
         m_mbSize(minibatchSizeSchedule),
@@ -103,7 +123,8 @@ namespace CNTK
         m_parallelAfterSamples(0),
         m_workerRank(0),
         m_numberOfWorkers(1),
-        m_test(test)
+        m_test(test),
+        m_adaptiveLearningRate(adaptiveLearningRate)
     {
         if (!m_trainer)
             InvalidArgument("Trainer must not be null.");
