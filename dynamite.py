@@ -85,8 +85,8 @@ class Variable:
         self.additional_args       = other.additional_args
         self.additional_kwargs     = other.additional_kwargs
     def type_as_string(v):
-        t = "v" + str(v._debug_tag) + ": "
-        t += "Parameter" if isinstance(v, Parameter) else "Constant" if isinstance(v, Constant) else "Variable"
+        t = "p" if isinstance(v, Parameter) else "c" if isinstance(v, Constant) else "v"
+        t += "{:05}".format(v._debug_tag) + ':'
         t += str(v.shape)
         return t
     def op_as_string(v):
@@ -97,7 +97,7 @@ class Variable:
         return t
     def signature_as_string(v):
         t = v.type_as_string()
-        t += " = " + v.op_as_string() + "(" + ", ".join([inp.type_as_string() for inp in v.inputs])
+        t += " = " + v.op_as_string() + " (" + ", ".join([inp.type_as_string() for inp in v.inputs])
         if v.additional_args:
             t += '; ' + str(v.additional_args)
         if v.additional_kwargs:
@@ -212,10 +212,7 @@ class Variable:
 
 class Parameter(Variable):
     def __new__(cls, shape, initializer=None):
-        v = Variable.__new__(cls, shape, 'Parameter', [])
-        v._debug_tag = -1
-        Variable.counter -= 1
-        return v
+        return Variable.__new__(cls, shape, 'Parameter', [])
     def __init__(self, shape, initializer=None):
         if initializer:
             self.initializer = initializer
@@ -255,8 +252,6 @@ class Constant(Variable):
         v = Variable.__new__(cls, data.shape, 'Constant', [])
         v.data = data  # NDArrayView
         v.computed = True
-        v._debug_tag = -1
-        Variable.counter -= 1
         return v
 
 def BroadcastingBinary(binary_op):
