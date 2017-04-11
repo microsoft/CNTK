@@ -4,12 +4,18 @@
   <Import Project="$(SolutionDir)\CNTK.Common.props" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
     <ProjectGuid>{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF}</ProjectGuid>
     <IntermediateOutputPath>$(SolutionDir)\$(Platform)\.build\$(Configuration)\$(MSBuildProjectDirectory.Substring($(SolutionDir.Length)))\obj\</IntermediateOutputPath>
     <BaseIntermediateOutputPath>$(SolutionDir)\$(Platform)\.build\$(Configuration)\$(MSBuildProjectDirectory.Substring($(SolutionDir.Length)))\obj\</BaseIntermediateOutputPath>
     <OutputPath>$(SolutionDir)\$(Platform)\$(Configuration)\</OutputPath>
     <OutputType>Exe</OutputType>
+	<ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+	<PlatformTarget>x64</PlatformTarget>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClientTest</RootNamespace>
     <AssemblyName>CSEvalClientTest</AssemblyName>
@@ -17,53 +23,33 @@
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup>
-    <CntkComponentVersion>2.0rc19</CntkComponentVersion>
-    <CntkComponentVersion Condition="$(Configuration.StartsWith('Debug'))">2.0rc19d</CntkComponentVersion>
+    <CntkComponentVersion>2.0rc23</CntkComponentVersion>
+    <CntkComponentVersion Condition="$(DebugBuild)">2.0rc23d</CntkComponentVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
-    <PlatformTarget>x64</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug_CpuOnly|x64'">
     <DebugSymbols>true</DebugSymbols>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>DEBUG;TRACE;CPUONLY</DefineConstants>
     <DebugType>full</DebugType>
-    <PlatformTarget>x64</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
-    <PlatformTarget>x64</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_CpuOnly|x64'">
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;CPUONLY</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
-    <PlatformTarget>x64</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_NoOpt|x64'">
     <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Optimize>false</Optimize>
     <DebugType>pdbonly</DebugType>
-    <PlatformTarget>x64</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Cntk.Eval.Wrapper-$(CntkComponentVersion)" />

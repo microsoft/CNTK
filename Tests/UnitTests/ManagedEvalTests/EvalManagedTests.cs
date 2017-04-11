@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Drawing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Drawing.Imaging;
