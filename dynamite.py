@@ -84,25 +84,28 @@ class Variable:
         self.backprop_to_functions = other.backprop_to_functions
         self.additional_args       = other.additional_args
         self.additional_kwargs     = other.additional_kwargs
-    def type_as_string(v):
-        t = "p" if isinstance(v, Parameter) else "c" if isinstance(v, Constant) else "v"
-        t += "{:05}".format(v._debug_tag) + ':'
-        t += str(v.shape)
+    def type_as_string(self):
+        t = "P" if isinstance(self, Parameter) else "C" if isinstance(self, Constant) else "V"
+        t += "{:05}".format(self._debug_tag) + ':'
+        t += str(self.shape)
         return t
-    def op_as_string(v):
-        t = str(v.op) # e.g. "<function NDArrayViewOpsMixin.__getitem__ at 0x000000453A649158>"
+    def op_as_string(self):
+        t = str(self.op)
         ts = t.split(' ')
-        if ts[0] == '<function':
+        if ts[0] == '<function': # e.g. "<function NDArrayViewOpsMixin.__getitem__ at 0x000000453A649158>"
             t = ts[1]
         return t
-    def signature_as_string(v):
-        t = v.type_as_string()
-        t += " = " + v.op_as_string() + " (" + ", ".join([inp.type_as_string() for inp in v.inputs])
-        if v.additional_args:
-            t += '; ' + str(v.additional_args)
-        if v.additional_kwargs:
-            t += '; ' + ', '.join(name + '=' + str(val) for name, val in v.additional_kwargs.items())
-        t += ")"
+    def signature_as_string(self):
+        t = self.type_as_string()
+        t += " = " + self.op_as_string()
+        if self.inputs:
+            t += " (" + ", ".join([inp.type_as_string() for inp in self.inputs])
+        if self.additional_args:
+            t += '; ' + str(self.additional_args)
+        if self.additional_kwargs:
+            t += '; ' + ', '.join(name + '=' + str(val) for name, val in self.additional_kwargs.items())
+        if self.inputs:
+            t += ")"
         return t
 
     # create a batched version of this, taking all shape etc. considerations into account
@@ -386,23 +389,17 @@ relu    = unary_op(cntk.NDArrayView.relu,    backprop_to_functions=(lambda v, g:
 exp     = unary_op(cntk.NDArrayView.exp,     backprop_to_functions=(lambda v, g: g * v,))  # TODO: double-check this
 alias   = unary_op(Variable._op_alias,       backprop_to_functions=(lambda v, g: g,))
 
-reduce_log_sum = unary_reduction_op(cntk.NDArrayView.reduce_log_sum, backprop_to_functions=(lambda v, g: g * exp(v.inputs[0] - v),)) # TODO: check this
-# df / dx = exp(x)/exp(f)
-#         = exp(x - f)
 
-#DefTernaryOp(ElementwiseProductWithExpOfDiff, a * exp_(b - c));
-#DefTernaryOp(ElementwiseProductWithExpOfDiff, g * exp_(v.inputs[0] - v));
 
-#            auto input = InputRef(inputIndex).ValueTensorFor(rank, frInput);
-#            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
-#            // Let: f(x, y, z) = log(exp x + exp y + exp z)
-#            // For the derivative we get:
-#            // df / dx = exp(x)/exp(f)
-#            //         = exp(x - f)
-#            sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
-
-reduce_sum     = unary_reduction_op(cntk.NDArrayView.reduce_sum,     backprop_to_functions=(lambda v, g: g - zero * v.inputs[0],)) # TODO: fix this hack (which forces broadcasting)
-# maybe we get lucky, and it works without broadcasting, since reduce_log_sum() introduces the dimension
+def _pad_unreduce(v, g): # pad 'g' to the right number of axes for un-reducing in gradient of reduce_X_sum()
+    input_rank  = len(v.inputs[0].shape)
+    output_rank = len(v.shape)
+    num_reduced_dims = input_rank - output_rank
+    assert num_reduced_dims > 0 # (something must have gotten reduced)
+    padded_g_shape = g.shape + (1,) * num_reduced_dims # add 1-dims that got reduced away
+    return g.reshape(padded_g_shape)
+reduce_sum     = unary_reduction_op(cntk.NDArrayView.reduce_sum,     backprop_to_functions=(lambda v, g: _pad_unreduce(v, g) - zero * v.inputs[0],)) # TODO: fix this hack (which forces broadcasting)
+reduce_log_sum = unary_reduction_op(cntk.NDArrayView.reduce_log_sum, backprop_to_functions=(lambda v, g: _pad_unreduce(v, g) * exp(v.inputs[0] - _pad_unreduce(v, v)),)) # df / dx = exp(x)/exp(f) = exp(x - f)  --TODO: check this
 
 #softmax = unary_op(cntk.NDArrayView.softmax)  # TODO: define this as multiple operations, exp(z-reduce_log_sum(z))
 
@@ -855,7 +852,7 @@ def batch_eval(vars):
         if not p.computed:
             p.compute_data()
         #print(p.data.to_ndarray())
-    dump_graph(vars)
+    #dump_graph(vars)
 
 # gradient
 # This computes the gradient of a variable (e.g. criterion) w.r.t. a set of model parameters, times an error signal.
@@ -890,7 +887,8 @@ def create_gradient_graph(root, parameters, error_signal):
                 backprop_to = node.backprop_to(i)
                 input_g = backprop_to(node, g)
                 if input.shape != input_g.shape:
-                    print('gradient shape', input_g.shape, "came back different from input's shape", input.shape, 'for input', i, 'of op', node.op)
+                    dump_graph(input_g)
+                    print('gradient shape', input_g.shape, "came back different from input's shape", input.shape, 'for input', i, 'of op', node.signature_as_string())
                 assert input.shape == input_g.shape
                 if input not in gradients:
                     gradients[input] = input_g
