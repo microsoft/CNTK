@@ -53,7 +53,7 @@ namespace CNTK
         combinedFunctionArgs.push_back(m_lossFunction);
         if (!m_lossFunction->Output().DynamicAxes().empty())
         {
-            m_aggregatedLossFunction = ReduceSum(lossFunction);
+            m_aggregatedLossFunction = ReduceSum(lossFunction, L"aggregateLoss");
             combinedFunctionArgs.push_back(m_aggregatedLossFunction);
             m_trainingSampleCountVar = m_lossFunction;
         }
@@ -100,6 +100,11 @@ namespace CNTK
             fprintf(stderr, "[Note:] Trainer ctor: %d of the model parameters are not covered by any of the specified Learners; these parameters will not be learned\n", (int)m_modelParametersNotCoveredByLearners.size());
 
         m_distributed = m_parameterLearners->IsDistributed();
+
+        for (auto& learner : m_parameterLearners->ParameterLearners())
+        {
+            learner->AddProgressWriters(progressWriters);
+        }
     }
 
     static bool IsAtSweepEnd(const std::unordered_map<Variable, MinibatchData>& arguments)
@@ -263,6 +268,10 @@ namespace CNTK
 
     void Trainer::AddProgressWriters(const std::vector<ProgressWriterPtr>& progressWriters)
     {
+        for (auto& learner : m_parameterLearners->ParameterLearners()) 
+        {
+            learner->AddProgressWriters(progressWriters);
+        }
         m_progressWriters.insert(progressWriters.begin(), progressWriters.end());
     }
 

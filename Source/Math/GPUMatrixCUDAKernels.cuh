@@ -5250,7 +5250,7 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
 
 template <class ElemType>
 __global__ void _adadelta(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
-    ElemType rho, ElemType epsilon)
+    ElemType learningRate, ElemType rho, ElemType epsilon)
 {
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
@@ -5271,7 +5271,7 @@ __global__ void _adadelta(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, E
         }
 
         smoothX2[idx] = rho * smoothX2[idx] + (1.0f - rho) * deltaX * deltaX;
-        val[idx] += deltaX;
+        val[idx] += learningRate * deltaX;
     }
 }
 
@@ -5279,7 +5279,7 @@ template <class ElemType>
 __global__ void _adadelta4BlockSparseCol(CUDA_LONG size,
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
     ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
-    ElemType rho, ElemType epsilon)
+    ElemType learningRate, ElemType rho, ElemType epsilon)
 {
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
@@ -5300,7 +5300,7 @@ __global__ void _adadelta4BlockSparseCol(CUDA_LONG size,
         }
 
         smoothX2[idx] = rho * smoothX2[idx] + (1.0f - rho) * deltaX * deltaX;
-        val[idx] += deltaX;
+        val[idx] += learningRate * deltaX;
     }
 }
 

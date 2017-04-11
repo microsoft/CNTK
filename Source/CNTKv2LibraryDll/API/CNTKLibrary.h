@@ -2666,7 +2666,7 @@ namespace CNTK
 
     private:
         template <typename ElementType>
-        static void AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLength);
+        static void AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLengthInCols);
 
         ///
         /// Copy the data stored in 'this' Value object to the buffer 'sequences' as a collection of variable length sequences.
@@ -4207,6 +4207,14 @@ namespace CNTK
             return m_sampleCount;
         }
 
+        ///
+        /// Specifies progress writers that should be used to report any relevant stats.
+        ///
+        void AddProgressWriters(const std::vector<ProgressWriterPtr>& progressWriters)
+        {
+            m_progressWriters.insert(progressWriters.begin(), progressWriters.end());
+        }
+
     protected:
         ///
         /// Retrieves and returns current value from the training parameter schedule.
@@ -4214,14 +4222,8 @@ namespace CNTK
         template <typename ElementType>
         ElementType GetCurrentTrainingParameterValue(const TrainingParameterSchedule<ElementType>& schedule) const
         {
-            if (schedule.IsSweepBased())
-            {
-                return schedule[m_sweepCount];
-            }
-            else
-            {
-                return schedule[m_sampleCount];
-            }
+            auto count = schedule.IsSweepBased() ? m_sweepCount : m_sampleCount;
+            return schedule[count];
         }
 
         Learner(const std::vector<Parameter>& parameters, const LearningRateSchedule& learningRateSchedule)
@@ -4237,6 +4239,7 @@ namespace CNTK
         size_t m_sampleCount;
         size_t m_minibatchCount;
         size_t m_sweepCount;
+        mutable std::unordered_set<ProgressWriterPtr> m_progressWriters;
     };
 
     ///
@@ -4311,6 +4314,7 @@ namespace CNTK
     /// Create an instance of the CNTK built-in AdaDelta learner.
     ///
     CNTK_API LearnerPtr AdaDeltaLearner(const std::vector<Parameter>& parameters,
+                                        const LearningRateSchedule& learningRateSchedule,
                                         double rho = 0.95,
                                         double epsilon = 1e-8,
                                         AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
@@ -4475,6 +4479,14 @@ namespace CNTK
         ///
         CNTK_API void SummarizeTestProgress();
 
+        ///
+        /// Progress writers.
+        ///
+        CNTK_API const std::unordered_set<ProgressWriterPtr>& ProgressWriters() const
+        {
+            return m_progressWriters;
+        }
+
         CNTK_API virtual ~Evaluator() {}
 
     private:
@@ -4483,9 +4495,10 @@ namespace CNTK
 
         friend class TrainingSession;
 
-        // Returns aggregated evaluation criterion value and sample count.
-        std::pair<ValuePtr, size_t> TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice, bool distributed);
-        std::pair<ValuePtr, size_t> TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice, bool distributed);
+        // Returns true if testing should be continued in a distributed mode.
+        // Aggregated error and sample count can be retrieved using 'result' parameter.
+        bool TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::pair<ValuePtr, size_t>& result, const DeviceDescriptor& computeDevice, bool distributed = false);
+        bool TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, std::pair<ValuePtr, size_t>& result, const DeviceDescriptor& computeDevice, bool distributed = false);
 
         std::pair<ValuePtr, size_t> TestLocalMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice);
 
@@ -5372,6 +5385,11 @@ namespace CNTK
         ///
         CNTK_API virtual void OnWriteTestSummary(size_t /*samples*/, size_t /*updates*/, size_t /*summaries*/,
                                                  double /*aggregateMetric*/, size_t /*elapsedMilliseconds*/) {};
+
+        ///
+        /// Writes out the string key together with the specified value.
+        ///
+        CNTK_API virtual void Write(const std::wstring& /*key*/, double /*value*/) {};
 
         ///
         /// Returns the total number of training progress updates received by the progress writer.

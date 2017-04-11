@@ -7,6 +7,7 @@
 
 #include "CNTKLibrary.h"
 #include "Constants.h"
+#include "NcclComm.h"
 #include <MatrixQuantizerImpl.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -87,6 +88,9 @@ namespace CNTK
         size_t m_packThresholdSizeInBytes;
         std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> m_aggregationBufferFloat;
         std::unique_ptr<Microsoft::MSR::CNTK::Matrix<double>> m_aggregationBufferDouble;
+
+        // NcclComm
+        std::unique_ptr<Microsoft::MSR::CNTK::NcclComm> m_nccl;
 
     protected:
         DeviceDescriptor GetNonCPUDevice(const std::vector<NDArrayViewPtr>& values)
