@@ -56,7 +56,7 @@ def from_cntk_mb(inputs: tuple, variables: tuple):
                 data = data @ eye
                 assert shape == data.shape
             else: # if dense then we clone it so that we won't hold someone else's reference
-                data = data.deep_clone()  # (note: untested)
+                data = data.deep_clone()
                 data.__class__ = cntk.core.NDArrayView
             item_shape = shape[1:]  # drop a superfluous length dimension
             if has_axis:
