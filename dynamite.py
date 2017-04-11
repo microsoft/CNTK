@@ -86,8 +86,10 @@ class Variable:
         self.additional_kwargs     = other.additional_kwargs
     def type_as_string(self):
         t = "P" if isinstance(self, Parameter) else "C" if isinstance(self, Constant) else "V"
-        t += "{:05}".format(self._debug_tag) + ':'
-        t += str(self.shape)
+        t += "{:05}".format(self._debug_tag)
+        if self.computed:
+            t += '*'
+        t += ':' + str(self.shape)
         return t
     def op_as_string(self):
         t = str(self.op)
@@ -790,6 +792,9 @@ def transform_to_batched_ops(vars):
         if p.computed:
             continue
         def make_key(p):
+            # special case for __getitem__: it's free and can always run first
+            if p.op is cntk.NDArrayView.__getitem__:
+                return (cntk.NDArrayView.__getitem__,)
             # special case for matmul: right matrix must be identical to be batchable
             if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose:
                 return (p.op, (p.inputs[0].shape, id(p.inputs[1])))
@@ -807,7 +812,7 @@ def transform_to_batched_ops(vars):
             if isinstance(v, Variable) and not v.computed:
                 v.consumers.append(p) # (due to topo sort, v is already initialized)
                 p.non_ready_inputs += 1
-        if p.non_ready_inputs == 0:
+        if p.non_ready_inputs == 0: # create initial set of ready ops
             add_ready(p)  # a leaf that's ready to go: make it part of the initial ready set
 
     # execute as long as still anything pending
@@ -821,6 +826,7 @@ def transform_to_batched_ops(vars):
         # execute it
         #print('batch of', len(op_batch), 'for op', key)
         transform_batched_op(op_batch)
+        # BUGBUG: Does not consider the case of multiple consumers of the same variable; we will currently redo the gather op
         batches_run += 1
         # done with this one
         #  - for each member of the batched op, check each consumer whether it is now ready; if so, move to ready set

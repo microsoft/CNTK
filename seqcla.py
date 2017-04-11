@@ -163,6 +163,7 @@ def train(debug_output=False):
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
         crit = dynamite.train_minibatch(dcriterion, *args)
         print(" " * 29, crit.to_ndarray() / len(args[0]))
+        #dynamite.dump_graph(crit)
         # compute gradients
         #dgradients = crit.grad_times(dparameters)
         #for p in dparameters:
