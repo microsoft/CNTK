@@ -265,15 +265,10 @@ def generate_random_data(sample_size, feature_dim, num_classes):
      class_ind = [Y == class_number for class_number in range(num_classes)]
      Y = np.asarray(np.hstack(class_ind), dtype=np.float32)
      return X, Y
-
-
-
 def test_learner_empy_parameters_list():
     lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
     with pytest.raises(ValueError):
         learner = C.sgd([], lr_per_sample)
-
-
 def ffnet():
     inputs = 3
     outputs = 3
@@ -325,3 +320,17 @@ def test_sgd_with_noise():
     ffnet()
     # We just verify that we did not crash
     assert(True)
+
+def test_0d_1d_parameter_set_value():
+    x = C.input(2)
+    w_0d = C.parameter(())
+    op = x + w_0d
+    w_0d_grad = op.grad({x : np.asarray([1, 2], dtype=np.float32)}, wrt=[w_0d], as_numpy=False)
+    w_0d.value = w_0d_grad.data
+    assert w_0d.value == 2.
+
+    w_1d = C.parameter((2))
+    op = x + w_1d
+    w_1d_grad = op.grad({x : np.asarray([1, 2], dtype=np.float32)}, wrt=[w_1d], as_numpy=False)
+    w_1d.value = w_1d_grad.data
+    assert np.array_equal(w_1d.value, [1., 1.])
