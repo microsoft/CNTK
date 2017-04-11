@@ -14,8 +14,8 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-	<CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-	<ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <ErrorReport>prompt</ErrorReport>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CNTKLibraryCSEvalExamples</RootNamespace>
     <AssemblyName>CNTKLibraryCSEvalExamplesTest</AssemblyName>
@@ -23,8 +23,8 @@
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup>
-    <CntkComponentVersion>2.0rc23</CntkComponentVersion>
-    <CntkComponentVersion Condition="$(DebugBuild)">2.0rc23d</CntkComponentVersion>
+    <CntkCsAssemblyVersion>2.0rc30</CntkCsAssemblyVersion>
+    <CntkCsAssemblyVersion Condition="$(DebugBuild)">2.0rc30d</CntkCsAssemblyVersion>
   </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)">
     <DebugSymbols>true</DebugSymbols>
@@ -44,7 +44,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <Optimize>true</Optimize>
-	<DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_CpuOnly|x64'">
     <Optimize>true</Optimize>
@@ -52,10 +52,10 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_NoOpt|x64'">
     <Optimize>false</Optimize>
-	<DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Cntk.Core.Managed-$(CntkComponentVersion), Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64" />
+    <Reference Include="Cntk.Core.Managed-$(CntkCsAssemblyVersion), Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64" />
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
   </ItemGroup>
@@ -80,6 +80,7 @@
   <Target Name="Build" Condition="$(HasSwig)" DependsOnTargets="$(BuildDependsOn)" />
   <Target Name="CheckDependencies">
     <Warning Condition="!$(HasSwig)" Text="The project requires SWIG to be installed. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#optional-cntk-cnet-library-for-evaluation for installation instructions." />
+    <Error Condition="'$(CntkCsAssemblyVersion)' != '$(CntkComponentVersion)'" Text="The CntkCsAssemblyVersion in this project must be the same as the CntkComponentVersion in CNTK.Common.props." />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
