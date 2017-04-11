@@ -769,6 +769,8 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
     bool sampleSeparatorHasShape  = sampleSeparator.find("%x")  != sampleSeparator.npos;
     bool sequencePrologueHasSeqId = sequencePrologue.find("%d") != sequencePrologue.npos;
     bool sampleSeparatorHasSeqId  = sampleSeparator.find("%d")  != sampleSeparator.npos;
+    bool sequencePrologueHasSeqKey = sequencePrologue.find("%k") != sequencePrologue.npos;
+    bool sampleSeparatorHasSeqKey = sampleSeparator.find("%k") != sampleSeparator.npos;
 
     for (size_t s = 0; s < sequences.size(); s++)
     {
@@ -818,10 +820,17 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
                 sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%d", sh);
         }
 
+        if (getKeyById)
+        {
+            if (sequencePrologueHasSeqKey)
+                seqProl = msra::strfun::ReplaceAll<std::string>(seqProl, "%k", getKeyById(seqInfo.seqId));
+            if (sampleSeparatorHasSeqKey)
+                sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%k", getKeyById(seqInfo.seqId));
+        }
+
         if (s > 0)
             fprintfOrDie(f, "%s", sequenceSeparator.c_str());
-        if (getKeyById)
-            fprintfOrDie(f, "%s ", getKeyById(seqInfo.seqId).c_str());
+
         fprintfOrDie(f, "%s", seqProl.c_str());
 
         // output it according to our format specification

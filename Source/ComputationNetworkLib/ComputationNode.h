@@ -1754,7 +1754,7 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         size_t matrixSize = m_sampleLayout.GetNumElements();
-        if (IsValueSharable())
+        if (IsValueSharable() && !m_isValueSparse)
             RequestMatrixFromPool(m_value, matrixPool, matrixSize, HasMBLayout());
         else
             CreateMatrixIfNull(m_value);
@@ -1764,7 +1764,7 @@ public:
     // don't release matrices that need to be used in the gradient computation
     virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
     {
-        if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE) && IsValueSharable())
+        if (!IsOutputNeededDuringBackprop() && !m_isValueSparse && IsValueSharable())
             ReleaseMatrixToPool(m_value, matrixPool);
     }
 
@@ -1794,7 +1794,7 @@ public:
 
             // Release the Value matrix only if the output value is needed during backprop
             // since in the case it isn't used, we release it during forward prop itself
-            if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE && IsValueSharable())
+            if (IsOutputNeededDuringBackprop() && !m_isValueSparse && IsValueSharable())
                 ReleaseMatrixToPool(m_value, matrixPool);
         }
     }

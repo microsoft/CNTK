@@ -1789,15 +1789,15 @@ ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
 template <class ElemType>
 void Matrix<ElemType>::AdaDeltaUpdate(Matrix<ElemType>& gradients,
     Matrix<ElemType>& functionValues,
-    ElemType rho, ElemType epsilon)
+    ElemType learningRate, ElemType rho, ElemType epsilon)
 {
     DecideAndMoveToRightDevice(*this, gradients);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
-    { return m_CPUMatrix->AdaDelta(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, rho, epsilon); SetDataLocation(CPU); },
-    { return m_GPUMatrix->AdaDelta(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, rho, epsilon); SetDataLocation(GPU); },
-    { return gradients.m_CPUSparseMatrix->AdaDelta(*m_CPUMatrix, *functionValues.m_CPUMatrix, rho, epsilon); SetDataLocation(CPU); },
-    { return gradients.m_GPUSparseMatrix->AdaDelta(*m_GPUMatrix, *functionValues.m_GPUMatrix, rho, epsilon); SetDataLocation(GPU); });
+    { return m_CPUMatrix->AdaDelta(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon); SetDataLocation(CPU); },
+    { return m_GPUMatrix->AdaDelta(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon); SetDataLocation(GPU); },
+    { return gradients.m_CPUSparseMatrix->AdaDelta(*m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon); SetDataLocation(CPU); },
+    { return gradients.m_GPUSparseMatrix->AdaDelta(*m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon); SetDataLocation(GPU); });
 }
 
 template <class ElemType>

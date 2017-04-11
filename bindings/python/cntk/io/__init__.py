@@ -127,7 +127,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
           returns empty minibatches on subsequent calls to GetNextMinibatch(). `max_samples` and `max_sweeps`
           are mutually exclusive, an exception will be raised if both have non-default values.
           **Important:** 
-          `See <https://github.com/Microsoft/CNTK/wiki/BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`__ 
+          Click :cntkwiki:`here <BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`
           for a description of input and label samples.
         max_sweeps (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of of sweeps over 
           the input dataset After this number has been reached, the reader returns empty minibatches on 
@@ -298,7 +298,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
             minibatch_size_in_samples (int): number of samples to retrieve for
               the next minibatch. Must be > 0.
               **Important:**
-              Click `here <https://github.com/Microsoft/CNTK/wiki/BrainScript-minibatchSize-and-Python-minibatch_size_in_samples-in-CNTK>`__ for a full description of this parameter. 
+              Click :cntkwiki:`here <BrainScript-minibatchSize-and-Python-minibatch_size_in_samples-in-CNTK>` for a full description of this parameter. 
             input_map (dict): mapping of :class:`~cntk.variables.Variable`
               to :class:`~cntk.cntk_py.StreamInformation` which will be used to convert the
               returned data.
@@ -460,7 +460,7 @@ def ImageDeserializer(filename, streams):
          classes
 
     See also:
-        `Image reader definition <https://github.com/microsoft/cntk/wiki/BrainScript-Image-reader>`_
+        :cntkwiki:`Image reader definition <BrainScript-Image-reader>`
     '''
     image_stream_name = None
 
@@ -497,7 +497,7 @@ def CTFDeserializer(filename, streams):
         filename (str): file name containing the text input
 
     See also:
-        `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/BrainScript-CNTKTextFormat-Reader>`_
+        :cntkwiki:`CNTKTextReader format <BrainScript-CNTKTextFormat-Reader>`
     '''
     for k,s in streams.items():
         if s.stream_alias is None:
@@ -638,7 +638,7 @@ def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
 
     Returns:
         str:
-        String representation in `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/BrainScript-CNTKTextFormat-Reader>`_
+        String representation in :cntkwiki:`CNTKTextReader format <BrainScript-CNTKTextFormat-Reader>`
     '''
 
     max_seq_length = max(len(t) for t in alias_tensor_map.values())

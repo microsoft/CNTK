@@ -46,6 +46,7 @@ template <class ElemType>
 EpochAccumulatorNode<ElemType>::EpochAccumulatorNode(DEVICEID_TYPE deviceId, const wstring& name)
     : Base(deviceId, name), m_numSamples(0)
 {
+    m_accumulator = make_shared<Matrix<ElemType>>(deviceId);
 }
 
 template <class ElemType>
@@ -70,8 +71,7 @@ void EpochAccumulatorNode<ElemType>::OnEpochStart()
 template <class ElemType>
 void EpochAccumulatorNode<ElemType>::ForwardPropNonLooping()
 {
-    size_t rank = DetermineElementwiseTensorRank();
-    auto accumulator = DataTensorFor(m_accumulator, rank, FrameRange());
+    TensorView<ElemType> accumulator = EnsureAccumlator();
     UpdateRunningAverage(InputRef(0), accumulator, m_numSamples);
     CopyAccumulatorToValue();
 }
@@ -106,13 +106,17 @@ void EpochAccumulatorNode<ElemType>::Validate(bool isFinalValidationPass)
 }
 
 template <class ElemType>
-void EpochAccumulatorNode<ElemType>::RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+TensorView<ElemType> EpochAccumulatorNode<ElemType>::EnsureAccumlator()
 {
-    Base::RequestMatricesBeforeForwardProp(matrixPool);
-    RequestMatrixFromPool(m_accumulator, matrixPool);
-    const size_t sampleSize = GetSampleLayout().GetNumElements();
-    m_accumulator->Resize(sampleSize, 1);
-    Reset();
+    if (m_accumulator->HasNoElements())
+    {
+        // Accumulator has not been resized yet, allocate with necessary size.
+        const size_t sampleSize = GetSampleLayout().GetNumElements();
+        m_accumulator->Resize(sampleSize, 1);
+        Reset();
+    }
+    size_t rank = DetermineElementwiseTensorRank();
+    return DataTensorFor(m_accumulator, rank, FrameRange());
 }
 
 template <class ElemType>

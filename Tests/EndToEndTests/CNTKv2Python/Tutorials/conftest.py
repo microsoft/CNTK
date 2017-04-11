@@ -70,7 +70,7 @@ def nb(tmpdir_factory, request, device_id):
     except AttributeError:
         pass
 
-    timeoutSeconds = 300
+    timeoutSeconds = 450
     try:
         timeoutSeconds = int(getattr(request.module, "notebook_timeoutSeconds"))
     except AttributeError:

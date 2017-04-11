@@ -119,10 +119,9 @@ ParameterTensor = _make_tensor_meta('ParameterTensor', is_sparse=False , dynamic
 '''
 Meta class to denote a parameter tensor (no batch axis). Use with dimensions, e.g. ``ParameterTensor[512,256]``.
 '''
+
+# Meta class to denote a data tensor (with batch axis) with unspecified dimensions.
 tensor = Tensor[-2] # TODO: find the correct symbol for the sentinel value
-'''
-Meta class to denote a data tensor (with batch axis) with unspecified dimensions.
-'''
 
 def _make_seq_meta(cls_name, axes):
     class SeqMeta(type):
@@ -182,7 +181,7 @@ def Signature(*args, **kwargs):
      # is identical to:
      def sqr(x):
          return x*x
-     sqr.__annotations__ = {'x': int}``
+     sqr.__annotations__ = {'x': int}
     '''
     # this function returns another function which is the actual decorator applied to the def:
     def add_annotations(f):

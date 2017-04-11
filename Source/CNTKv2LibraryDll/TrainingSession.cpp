@@ -238,15 +238,22 @@ namespace CNTK
             size_t totalNumberOfSamples = 0;
             size_t numberOfMinibatches = 0;
 
+            std::pair<ValuePtr, size_t> errorAndCount;
             auto checkpoint = m_cv.m_source->GetCheckpointState();
-            while (GetCrossValidationMinibatch(minibatch, m_cv.m_mbSize[totalNumberOfSamples], computeDevice), !minibatch.empty())
+            bool shouldCV = true;
+            while (shouldCV)
             {
+                GetCrossValidationMinibatch(minibatch, m_cv.m_mbSize[totalNumberOfSamples], computeDevice);
+
                 // TODO: it may be slow to rely on TestMinibatch to return error each time, since it may require transfer
-                // of error from the GPU each time.
-                auto result = m_trainer->TestMinibatch(minibatch, computeDevice, false);
-                accumulatedError += result.first->AsScalar<double>();
-                totalNumberOfSamples += result.second;
-                numberOfMinibatches++;
+                // of error from the GPU each time, accumulatedError can be allocated on GPU
+                shouldCV = m_trainer->TestMinibatch(minibatch, errorAndCount, computeDevice, m_numberOfWorkers != 1);
+                if (shouldCV)
+                {
+                    accumulatedError += errorAndCount.first->AsScalar<double>();
+                    totalNumberOfSamples += errorAndCount.second;
+                    numberOfMinibatches++;
+                }
             }
 
             m_cv.m_source->RestoreFromCheckpoint(checkpoint);
@@ -266,10 +273,13 @@ namespace CNTK
 
         std::unordered_map<Variable, ValuePtr> minibatch;
         size_t totalNumberOfSamples = 0;
-        while (GetNextMinibatch(m_test.m_source, minibatch, m_test.m_mbSize[totalNumberOfSamples], 0, 1, computeDevice), !minibatch.empty())
+        bool shouldTest = true;
+        std::pair<ValuePtr, size_t> errorAndCount;
+        while (shouldTest)
         {
-            auto result = m_trainer->TestMinibatch(minibatch, computeDevice, false);
-            totalNumberOfSamples += result.second;
+            GetNextMinibatch(m_test.m_source, minibatch, m_test.m_mbSize[totalNumberOfSamples], m_workerRank, m_numberOfWorkers, computeDevice);
+            shouldTest = m_trainer->TestMinibatch(minibatch, errorAndCount, computeDevice, m_numberOfWorkers != 1);
+            totalNumberOfSamples += errorAndCount.second;
         }
 
         m_trainer->SummarizeTestProgress();
@@ -298,8 +308,7 @@ namespace CNTK
 
     void TrainingSession::GetCrossValidationMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice)
     {
-        // TODO: Support distributed cross-validation, when TestMinibatch supports it.
-        GetNextMinibatch(m_cv.m_source, minibatch, maxMbSize, 0, 1, computeDevice);
+        GetNextMinibatch(m_cv.m_source, minibatch, maxMbSize, m_workerRank, m_numberOfWorkers, computeDevice);
     }
 
     void TrainingSession::GetNextMinibatch(const MinibatchSourcePtr& source, std::unordered_map<Variable, ValuePtr>& minibatch, size_t mbSize, size_t workerRank, size_t numberOfWorkers, const DeviceDescriptor& computeDevice)

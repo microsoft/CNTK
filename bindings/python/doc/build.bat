@@ -6,8 +6,10 @@ set PATH=%CD%\..;%CD%\..\..\..\x64\Release;%PATH%
 
 @REM TODO better align conf.py exclude with excluded paths here
 sphinx-apidoc.exe ..\cntk -o . -f ^
+  ..\cntk\cntk_py.py ^
   ..\cntk\tests ^
   ..\cntk\debugging\tests ^
+  ..\cntk\eval\tests ^
   ..\cntk\internal\tests ^
   ..\cntk\io\tests ^
   ..\cntk\layers\tests ^
