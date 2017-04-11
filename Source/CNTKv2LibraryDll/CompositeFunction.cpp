@@ -1788,13 +1788,9 @@ namespace CNTK
         // TODO: Avoid copying the data when possible
         PopulateNetworkInputs(requiredArgumentValues);
 
-        // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
-        // This mask is regenerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
-        // w.r.t. inputs to force evaluation in each minibatch
-        list<ComputationNodeBasePtr> dropoutNodes = m_computationNetwork->GetNodesWithType(OperationNameOf(DropoutNode));
-        for (auto& nodeIter : dropoutNodes)
-            nodeIter->SetEvalTimeStampOutdatedWrtAll();
-        
+        // Copy all new values for 'dirty' attributes from functions into corresponding network nodes.
+        ApplyAttributeUpdates();
+
         // Bump the timestamp of the parameter nodes whose values have changed
         for (auto& timeStampRecord : m_lastRecordedTimeStamps)
         {
@@ -1822,6 +1818,11 @@ namespace CNTK
         // Reset the timestamps of all backward roots to record an update in one or more inputs
         for (auto& backpropRoot : m_currentBackpropRoots)
             m_variableToNodeMap.at(backpropRoot)->SetEvalTimeStampOutdatedWrtAll();
+
+        // Reset the timestamps of all dropout node to force recomputation of the (random) dropout mask.
+        list<ComputationNodeBasePtr> dropoutNodes = m_computationNetwork->GetNodesWithType<DropoutNodeBase>();
+        for (auto& dropout : dropoutNodes)
+            dropout->SetEvalTimeStampOutdatedWrtAll();
 
         // Free any previous references to the matrix storage associated with the outputsToEvaluate
         ClearExistingOutputOrGradientStorageReferences();
@@ -1902,5 +1903,52 @@ namespace CNTK
         }
 
         // TODO: How to deal with the specified 'computeDevice'
+    }
+
+    void CompositeFunction::ApplyAttributeUpdates()
+    {
+        // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
+        // This mask is regenerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
+        // w.r.t. inputs to force evaluation in each minibatch
+        for (auto varNodePair : m_variableToNodeMap)
+        {
+            auto var = varNodePair.first;
+            if (!var.IsOutput())
+                continue;
+
+            auto function = var.Owner();
+
+            if (function->m_dirtyAttributes.empty())
+                continue;
+
+            auto node = varNodePair.second;
+
+            for (const wstring& attribute : function->m_dirtyAttributes)
+            {
+                if (attribute == PrimitiveFunction::AttributeNameDropoutRate)
+                {
+                    auto dropoutRate = function->m_attributes[attribute].Value<double>();
+                    auto dropoutPtr = dynamic_cast<DropoutNodeBase*>(node.get());
+                    assert(dropoutPtr != nullptr);
+                    dropoutPtr->SetDropoutRate(dropoutRate);
+                }
+                else if (attribute == PrimitiveFunction::AttributeNameRngSeed) 
+                {
+                    auto seed = function->m_attributes[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
+                    auto rngUserPtr = dynamic_cast<RngUser*>(node.get());
+                    assert(rngUserPtr != nullptr);
+                    rngUserPtr->SetRngState(seed);
+                }
+                else 
+                {
+                    // Should never happen.
+                    LogicError("ApplyAttributeUpdates: function '%S' specified an unsupported attribute '%S'.",
+                        function->AsString().c_str(), attribute.c_str());
+                }
+            }
+
+            function->m_dirtyAttributes.clear();
+            node->SetEvalTimeStampOutdatedWrtAll();
+        }
     }
 }

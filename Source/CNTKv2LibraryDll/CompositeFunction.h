@@ -252,6 +252,9 @@ namespace CNTK
         // Copy the internal state from the network into the function graph.
         void UpdateInternalState() const;
 
+        // Copy all new values for 'dirty' attributes from functions into corresponding network nodes.
+        void ApplyAttributeUpdates();
+
         // Generate a dictionary representing the internal (local) state of the function graph.
         Dictionary GetInternalState() const;
 

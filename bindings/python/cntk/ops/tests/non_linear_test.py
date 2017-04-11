@@ -187,6 +187,51 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
     assert(abs(resulted_non_zeros - expected_non_zeros) <
            max_off)
 
+
+def test_changing_dropout_rate():
+    from cntk import dropout, input
+
+    resulted_non_zeros = 0
+
+    shape = (100,100)
+    dtype = np.float32
+    value = np.ones(shape=shape, dtype=dtype)
+
+    a = input(shape=shape, needs_gradient=True, dtype=dtype)
+    dropout_node = dropout(a, dropout_rate=0.1)
+
+    value.shape = (1,) + value.shape
+
+    for dropout_rate in [0.0, 0.25,  0.5, 0.78, 0.99999]:
+        dropout_node.set_attribute('dropoutRate', dropout_rate)
+        forward, _ = cntk_eval(dropout_node, {a: value}, dtype, backward_pass=True)
+        resulted_non_zeros = np.count_nonzero(forward[dropout_node.output])
+        if (dropout_rate == 0):
+            assert resulted_non_zeros == value.size
+        
+        assert np.isclose((1-dropout_rate), resulted_non_zeros* 1.0/ value.size, atol=0.01)
+
+def test_dropout_random_mask_is_recomputed_on_forward_pass():
+    from cntk import dropout, input
+
+    shape = (100,100)
+    dtype = np.float32
+    value = np.ones(shape=shape, dtype=dtype)
+
+    a = input(shape=shape, needs_gradient=True, dtype=dtype)
+    dropout_node = dropout(a, dropout_rate=0.1)
+    network = dropout_node + constant(0)
+
+    value.shape = (1,) + value.shape
+
+    _, forward = network.forward({a: value}, network.outputs, network.outputs)
+    non_zeros_1 = forward[network.output] > 0.0
+
+    _, forward = network.forward({a: value}, network.outputs, network.outputs)
+    non_zeros_2 = forward[network.output] > 0.0
+
+    assert not (non_zeros_1 == non_zeros_2).all()
+
 def test_op_dropout_with_explicit_seed(device_id, precision):
     from cntk import combine, dropout
 

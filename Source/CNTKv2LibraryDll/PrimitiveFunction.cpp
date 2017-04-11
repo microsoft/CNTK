@@ -1247,4 +1247,24 @@ namespace CNTK
 
         return dummyOutputVariable.Shape();
     }
+
+    void PrimitiveFunction::SetDropoutRate(double dropoutRate)
+    {
+        if (OpType() != PrimitiveOpType::Dropout)
+            LogicError("Cannot set dropout rate on '%S' function.", OpName().c_str());
+
+        m_attributes[AttributeNameDropoutRate] = dropoutRate;
+        m_dirtyAttributes.insert(AttributeNameDropoutRate);
+    }
+
+    void PrimitiveFunction::SetRandomSeed(size_t seed)
+    {
+        if (!(OpType() == PrimitiveOpType::Dropout ||
+            OpType() == PrimitiveOpType::RandomSample ||
+            OpType() == PrimitiveOpType::RandomSampleInclusionFrequency))
+            LogicError("Cannot set random seed on '%S' function.", OpName().c_str());
+
+        m_attributes[AttributeNameRngSeed] = seed;
+        m_dirtyAttributes.insert(AttributeNameRngSeed);
+    }
 }

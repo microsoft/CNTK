@@ -741,9 +741,12 @@ namespace CNTK
             return MakeSharedObject<PrimitiveFunction>(OpType(), clonedInputs, Dictionary(Attributes()), Name());
         }
 
+        void SetDropoutRate(double dropoutRate);
+
+        void SetRandomSeed(size_t seed);
+
     private:
         PrimitiveOpType m_op;
-
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
         // version 1: initial version.
