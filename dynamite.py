@@ -138,7 +138,8 @@ class Variable:
           else:
               data = self.op(*(args + self.additional_args))
           if data.shape != self.shape:
-               print(data.shape, self.shape)
+              dump_graph(self)
+              print(data.shape, self.shape)
           assert data.shape == self.shape # sanity check of shape inference
           return data
         except Exception: # (for catching stuff in the debugger; remove this)
@@ -164,7 +165,7 @@ class Variable:
     def backprop_to(self, i):  # get backprop function for inputs[i]; each fun(v, g) -> g * dv/dinp_i
         if not self.backprop_to_functions:
             dump_graph(self)
-            print('backprop_to failure for', self.signature_as_string())
+            print('backprop_to() missing for', self.signature_as_string())
             raise NotImplementedError('backprop_to missing')
         return self.backprop_to_functions[i]
     def grad_times(self, set_of_params, error_signal=1):
@@ -682,6 +683,8 @@ def transform_to_batched_ops(vars):
     #         One fix would be to replace the a_r themselves by slice_views as well.
     def transform_batched_op(op_batch):
         v0 = op_batch[0]
+        if v0.op == cntk.NDArrayView.__getitem__: # __getitem__() is not an operation and thus cannot be parallelized
+            return
         def reslicing(args): # helper to test whether we are re-splicing something previously sliced (then we can short-circuit it)
             # BUGBUG: This currently ignores the axis parameter.
             arg0 = args[0]

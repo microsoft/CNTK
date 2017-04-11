@@ -36,15 +36,15 @@ cached_eyes = dict()
 
 # convert CNTK reader's minibatch to our internal representation
 def from_cntk_mb(inputs: tuple, variables: tuple):
-    def convert(self, var):
-        data = self.data.deep_clone()  # make a copy since Reader will reuse it, and may get tripped up by sharing
+    def convert(self, var): # var is for reference to know the axis
+        data = self.data
         # unpack MBLayout
         sequences, _ = data.unpack_variable_value(var, True, data.device())
         # turn into correct NDArrayView types
         has_axis = len(var.dynamic_axes) > 1
         def fix_up(data):
-            data.__class__ = data.__class__ = cntk.core.NDArrayView
-            shape = data.shape  # drop a superfluous length dimension
+            data.__class__ = cntk.core.NDArrayView # data came in as base type
+            shape = data.shape
             # map to dense if sparse for now, since we cannot batch sparse due to lack of CUDA kernel
             if data.is_sparse():
                 global cached_eyes
@@ -55,9 +55,14 @@ def from_cntk_mb(inputs: tuple, variables: tuple):
                 eye = cached_eyes[dim]
                 data = data @ eye
                 assert shape == data.shape
-            item_shape = shape[1:]
+            else: # if dense then we clone it so that we won't hold someone else's reference
+                data = data.deep_clone()  # (note: untested)
+                data.__class__ = cntk.core.NDArrayView
+            item_shape = shape[1:]  # drop a superfluous length dimension
             if has_axis:
-                return [dynamite.Constant(data[t]) for t in range(shape[0])]
+                seq = dynamite.Constant(data) # turn into a tensor object
+                res = [seq[t] for t in range(shape[0])] # slice it
+                return res
             else:
                 assert shape[0] == 1
                 return dynamite.Constant(data[0])
@@ -118,7 +123,7 @@ def train(debug_output=False):
     print('dynamic model has', len(dparameters), 'parameter tensors')
 
     # testing stuff
-    if True:
+    if False:
         m1 = dynamite.Dense(2, activation=dynamite.relu)
         dp1 = dynamite.get_parameters(m1)
         x = dynamite.Constant(np.array([1., 2., 3.]))
@@ -159,10 +164,10 @@ def train(debug_output=False):
         crit = dynamite.train_minibatch(dcriterion, *args)
         print(" " * 29, crit.to_ndarray() / len(args[0]))
         # compute gradients
-        dgradients = crit.grad_times(dparameters)
-        for p in dparameters:
-            g = dgradients[p].get_value()
-            #print(g.to_ndarray())
+        #dgradients = crit.grad_times(dparameters)
+        #for p in dparameters:
+        #    g = dgradients[p].get_value()
+        #    #print(g.to_ndarray())
         args = None  # deref; otherwise resize will fail    --veriy this; should not longer be the case
         #print('static', dmodel.__items__[0].E.data.to_ndarray())
         #print('dynamic', model.embed.E.value)
