@@ -4311,6 +4311,7 @@ namespace CNTK
     /// Create an instance of the CNTK built-in AdaDelta learner.
     ///
     CNTK_API LearnerPtr AdaDeltaLearner(const std::vector<Parameter>& parameters,
+                                        const LearningRateSchedule& learningRateSchedule,
                                         double rho = 0.95,
                                         double epsilon = 1e-8,
                                         AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());

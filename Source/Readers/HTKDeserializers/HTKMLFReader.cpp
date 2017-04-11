@@ -6,7 +6,7 @@
 #include "stdafx.h"
 #include "HTKMLFReader.h"
 #include "Config.h"
-#include "HTKDataDeserializer.h"
+#include "HTKDeserializer.h"
 #include "MLFDeserializer.h"
 #include "ConfigHelper.h"
 #include "Bundler.h"
@@ -43,7 +43,7 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
     // TODO: should we make this explicit configuration parameter
     for (const auto& featureName : featureNames)
     {
-        auto deserializer = std::make_shared<HTKDataDeserializer>(corpus, readerConfig(featureName), featureName, primary);
+        auto deserializer = std::make_shared<HTKDeserializer>(corpus, readerConfig(featureName), featureName, primary);
         primary = false;
         featureDeserializers.push_back(deserializer);
     }

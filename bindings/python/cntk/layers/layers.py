@@ -338,7 +338,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
      reduction_rank (`int`, defaults to 1): set to 0 if input items are scalars (input has no depth axis), e.g. an audio signal or a black-and-white image
       that is stored with tensor shape (H,W) instead of (1,H,W)
      transpose_weight (bool, defaults to `False`): When this is `True` this is convolution, otherwise this is correlation (which is common for most toolkits)
-     max_temp_mem_size_in_samples (int, defaults to 0): Limits the amount of memory for intermiadate convolution results.  A value of 0 means, memory is automatically managed.
+     max_temp_mem_size_in_samples (int, defaults to 0): Limits the amount of memory for intermediate convolution results.  A value of 0 means, memory is automatically managed.
      name (str, defaults to ''): the name of the function instance in the network
 
     Returns:
@@ -680,7 +680,6 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
     Returns:
         :class:`~cntk.ops.functions.Function` that accepts one argument and applies the convolution operation to it
     '''
-
     activation = get_default_override(ConvolutionTranspose, activation=activation)
     init       = get_default_override(ConvolutionTranspose, init=init)
     pad        = get_default_override(ConvolutionTranspose, pad=pad)
@@ -1055,11 +1054,14 @@ def Dropout(dropout_rate=None,
         A function that accepts one argument and applies the operation to it
     '''
     if dropout_rate is None and keep_prob is None:
-        raise ValueError("Dense: either dropout_rate or keep_prob must be specified.")
+        raise ValueError("Dropout: either dropout_rate or keep_prob must be specified.")
     elif dropout_rate is not None and keep_prob is not None:
-        raise ValueError("Dense: dropout_rate and keep_prob cannot be specified at the same time.")
+        raise ValueError("Dropout: dropout_rate and keep_prob cannot be specified at the same time.")
     elif keep_prob is not None:
+        if keep_prob < 0.0 or keep_prob >= 1.0:
+            raise ValueError("Dropout: keep_prob must be in the interval [0,1)")
         dropout_rate = 1-keep_prob
+
     @BlockFunction('Dropout', name)
     def dropout_f(x):
         return dropout(x, dropout_rate=dropout_rate, seed=seed)

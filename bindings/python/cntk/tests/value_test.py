@@ -7,11 +7,12 @@ import pytest
 import numpy as np
 import scipy.sparse as sparse
 import cntk as C
+
 csr = sparse.csr_matrix
 
 from ..core import *
 from cntk.tests.test_utils import *
-from cntk.ops.tests.ops_test_utils import compare_lists_of_np_arrays
+from cntk.ops.tests.ops_test_utils import compare_lists_of_np_arrays, cntk_device
 from cntk import *
 from cntk.internal import _value_as_sequence_or_array
 from cntk import asarray, asvalue
@@ -206,3 +207,33 @@ def test_ndarray_properties():
     assert ndav.is_sparse == False
 
     assert ndav.dtype == np.float32
+
+
+def _to_dense(val):
+    x = C.input(val.shape[1:], is_sparse=True)
+    dense = C.times(x, C.constant(value=np.eye(val.shape[-1], dtype=np.float32)))
+    return dense.eval({x : val}, device=val.device)
+
+def test_ndarrayview_from_csr(device_id):
+    dev = cntk_device(device_id)
+    csr_data = csr(np.asarray([[0, 1, 1], [0, 1, 0], [1, 0, 0], [1, 0, 1]], dtype=np.float32))
+    ndarrayview = NDArrayView.from_csr(csr_data, shape=(2, 2, 3))
+    assert np.array_equal(_to_dense(ndarrayview), [[[0, 1, 1], [0, 1, 0]], [[1, 0, 0], [1, 0, 1]]])
+    
+    with pytest.raises(ValueError):
+        ndarrayview = NDArrayView.from_csr(csr_data, shape=(3, 2, 3))
+
+    with pytest.raises(ValueError):
+        ndarrayview = NDArrayView.from_csr(csr_data, shape=(2, 2, 4))
+ 
+
+def test_2d_sparse_sequences_value(device_id):
+    dev = cntk_device(device_id)
+    csr_seq1 = csr(np.asarray([[0, 1, 1], [0, 1, 0], [1, 0, 0], [1, 0, 1]], dtype=np.float32))
+    ndarrayview1 = NDArrayView.from_csr(csr_seq1, shape=(2, 2, 3), device=cpu())
+    csr_seq2 = csr(np.asarray([[0, 1, 1], [1, 1, 0]], dtype=np.float32))
+    ndarrayview2 = NDArrayView.from_csr(csr_seq2, shape=(1, 2, 3), device=cpu())
+
+    x = sequence.input((2, 3))
+    sequence_value = Value.create(x, [ndarrayview1, ndarrayview2], device=dev)
+    assert np.array_equal(_to_dense(sequence_value.data), [[[[0, 1, 1], [0, 1, 0]], [[1, 0, 0], [1, 0, 1]]], [[[0, 1, 1], [1, 1, 0]], [[0, 0, 0], [0, 0, 0]]]])

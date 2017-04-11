@@ -11,19 +11,20 @@
 #include "UtteranceDescription.h"
 #include "HTKChunkDescription.h"
 #include "ConfigHelper.h"
+#include <boost/noncopyable.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // Class represents an HTK deserializer.
 // Provides a set of chunks/sequences to the upper layers.
-class HTKDataDeserializer : public DataDeserializerBase
+class HTKDeserializer : public DataDeserializerBase, private boost::noncopyable
 {
 public:
     // Expects new configuration.
-    HTKDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
+    HTKDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
 
     // TODO: Should be removed, when legacy config goes away, expects configuration in a legacy mode.
-    HTKDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& featureConfig, const std::wstring& featureName, bool primary);
+    HTKDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& featureConfig, const std::wstring& featureName, bool primary);
 
     // Get information about chunks.
     virtual ChunkDescriptions GetChunkDescriptions() override;
@@ -39,7 +40,6 @@ public:
 
 private:
     class HTKChunk;
-    DISABLE_COPY_AND_MOVE(HTKDataDeserializer);
 
     // Initialization functions.
     void InitializeChunkDescriptions(const std::vector<std::string>& paths);
@@ -87,6 +87,6 @@ private:
     bool m_expandToPrimary;
 };
 
-typedef std::shared_ptr<HTKDataDeserializer> HTKDataDeserializerPtr;
+typedef std::shared_ptr<HTKDeserializer> HTKDeserializerPtr;
 
 }}}

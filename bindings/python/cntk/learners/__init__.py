@@ -464,8 +464,7 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          These can be obtained by the root operator's ``parameters``.
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
         momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
-         For additional information, please refer to the `wiki
-         <https://github.com/Microsoft/CNTK/wiki/BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+         For additional information, please refer to the :cntkwiki:`this CNTK Wiki article <BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`.
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
          to the value returned by :func:`default_unit_gain_value`.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
@@ -515,8 +514,7 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          These can be obtained by the root operator's ``parameters``.
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
         momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
-         For additional information, please refer to the `wiki
-         <https://github.com/Microsoft/CNTK/wiki/BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+         For additional information, please refer to the :cntkwiki:`this CNTK Wiki article <BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`.
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults
          to the value returned by :func:`default_unit_gain_value`.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
@@ -560,17 +558,18 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
                                     additional_options)
 
 @typemap
-def adadelta(parameters, rho=0.95, epsilon=1e-8,
+def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95, epsilon=1e-8,
             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
             gradient_clipping_with_truncation=True):
-    '''adadelta(parameters, rho, epsilon, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+    '''adadelta(parameters, lr, rho, epsilon, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an AdaDelta learner instance to learn the parameters. See [1] for
     more information.
 
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
+        lr (output of :func:`learning_rate_schedule`): learning rate schedule.
         rho (float): exponential smooth factor for each minibatch.
         epsilon (float): epsilon for sqrt.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
@@ -602,7 +601,7 @@ def adadelta(parameters, rho=0.95, epsilon=1e-8,
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
-    return cntk_py.ada_delta_learner(parameters, rho, epsilon,
+    return cntk_py.ada_delta_learner(parameters, lr, rho, epsilon,
                                     additional_options)
 
                                     
@@ -670,8 +669,7 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          These can be obtained by the root operator's ``parameters``.
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
         momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
-         For additional information, please refer to the `wiki
-         <https://github.com/Microsoft/CNTK/wiki/BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+         For additional information, please refer to the :cntkwiki:`this CNTK Wiki article <BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`.
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
          to the value returned by :func:`default_unit_gain_value`.
         variance_momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults 
@@ -724,8 +722,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          These can be obtained by the root operator's ``parameters``.
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
         momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
-         For additional information, please refer to the `wiki
-         <https://github.com/Microsoft/CNTK/wiki/BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+         For additional information, please refer to the :cntkwiki:`this CNTK Wiki article <BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`.
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults
          to the value returned by :func:`default_unit_gain_value`.
         variance_momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults

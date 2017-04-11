@@ -95,7 +95,8 @@
     <ClInclude Include="..\..\Common\Include\ExceptionWithCallStack.h" />
     <ClInclude Include="HTKChunkDescription.h" />
     <ClInclude Include="ConfigHelper.h" />
-    <ClInclude Include="HTKDataDeserializer.h" />
+    <ClInclude Include="HTKDeserializer.h" />
+    <ClInclude Include="HTKFeaturesIO.h" />
     <ClInclude Include="HTKMLFReader.h" />
     <ClInclude Include="MLFDeserializer.h" />
     <ClInclude Include="MLFUtils.h" />
@@ -111,7 +112,7 @@
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeader />
     </ClCompile>
-    <ClCompile Include="HTKDataDeserializer.cpp" />
+    <ClCompile Include="HTKDeserializer.cpp" />
     <ClCompile Include="HTKMLFReader.cpp" />
     <ClCompile Include="MLFDeserializer.cpp" />
     <ClCompile Include="MLFUtils.cpp" />
