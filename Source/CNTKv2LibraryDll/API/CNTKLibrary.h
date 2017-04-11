@@ -929,7 +929,6 @@ namespace CNTK
         CNTK_API static const int SentinelStaticAxisIndexValueForUnknownAxes;
         CNTK_API static const int SentinelEndStaticAxisIndexValue;
         CNTK_API static const int SentinelStaticAxisIndexValueForAllAxes;
-        CNTK_API static const int SentinelStaticAxisIndexValueForBatchAxis;
 
         class UniqueDynamicAxesNames
         {
@@ -969,8 +968,6 @@ namespace CNTK
                 m_name = L"AllAxes";
             else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForDynamicAxes)
                 m_name = StaticAxisNamePrefix + L"DynamicAxisSentinel";
-            else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForBatchAxis)
-                m_name = L"BatchAxisSentinel";
             else
                 LogicError("Unknown sentinel value for Axis");
         }
@@ -992,8 +989,7 @@ namespace CNTK
             return ((m_staticAxisIdx != SentinelStaticAxisIndexValueForDynamicAxes) &&
                     (m_staticAxisIdx != SentinelStaticAxisIndexValueForAllStaticAxes) &&
                     (m_staticAxisIdx != SentinelStaticAxisIndexValueForUnknownAxes) &&
-                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForAllAxes) &&
-                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForBatchAxis));
+                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForAllAxes));
         }
 
         ///
@@ -1047,11 +1043,6 @@ namespace CNTK
         /// Axis object representing all static and dynamic axes of an operand
         ///
         CNTK_API static const Axis& AllAxes();
-
-        ///
-        /// Axis object representing batch axis of an operand
-        ///
-        CNTK_API static const Axis& BatchAxis();
 
         ///
         /// Returns a new unique Dynamic axis
