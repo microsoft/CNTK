@@ -270,10 +270,10 @@ ORIGINDIR:='$$ORIGIN'
 ########################################
 
 ifeq ("$(BUILDTYPE)","release")
-CNTK_COMPONENT_VERSION=2.0beta16
+CNTK_COMPONENT_VERSION=2.0rc1
 endif
 ifeq ("$(BUILDTYPE)","debug")
-CNTK_COMPONENT_VERSION=2.0beta16d
+CNTK_COMPONENT_VERSION=2.0rc1d
 endif
 
 CPPFLAGS += -DCNTK_COMPONENT_VERSION="$(CNTK_COMPONENT_VERSION)"
@@ -469,6 +469,7 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDArrayView.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDMask.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Trainer.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Evaluator.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Utils.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Value.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Variable.cpp \
@@ -686,9 +687,11 @@ HTKDESERIALIZERS_SRC =\
 	$(SOURCEDIR)/Readers/HTKMLFReader/HTKMLFWriter.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/ConfigHelper.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/Exports.cpp \
-	$(SOURCEDIR)/Readers/HTKDeserializers/HTKDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/HTKDeserializer.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/HTKMLFReader.cpp \
-	$(SOURCEDIR)/Readers/HTKDeserializers/MLFDataDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFIndexer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFUtils.cpp \
 
 HTKDESERIALIZERS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKDESERIALIZERS_SRC))
 

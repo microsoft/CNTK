@@ -9,6 +9,7 @@
 #include "Common.h"
 
 using namespace CNTK;
+using namespace std;
 using namespace std::placeholders;
 
 extern bool Is1bitSGDAvailable();
@@ -35,14 +36,23 @@ namespace
     const size_t numMinibatchesToTrain = (numSamplesPerSweep * numSweepsToTrainWith) / minibatchSize;
     const size_t totalNumberOfSamples = numSamplesPerSweep * numSweepsToTrainWith;
 
+
+    const std::wstring g_attributeNameRngSeed = L"rngSeed";
+    const std::wstring g_attributeNameRngOffset = L"rngOffset";
+    
+    inline MinibatchSourcePtr GetMinibatchSource(const FeedForwardClassifier& classifier)
+    {
+        return TextFormatMinibatchSource(g_inputFile,
+            { { g_featureStreamName, classifier.inputDim },
+              { g_labelsStreamName, classifier.ouputDim } },
+            totalNumberOfSamples, true);
+    }
+
     void LoopBasedOnSamples(const std::wstring& name, const DeviceDescriptor& device, std::function<DistributedLearnerPtr(LearnerPtr)> factory, const FeedForwardClassifier& classifier)
     {
         printf("Training loop thru samples with %ls.\n", name.c_str());
 
-        auto minibatchSource = TextFormatMinibatchSource(g_inputFile,
-            { { g_featureStreamName, classifier.inputDim }, { g_labelsStreamName, classifier.ouputDim } },
-            totalNumberOfSamples,
-            true);
+        auto minibatchSource = GetMinibatchSource(classifier);
 
         auto featureStreamInfo = minibatchSource->StreamInfo(g_featureStreamName);
         auto labelStreamInfo = minibatchSource->StreamInfo(g_labelsStreamName);
@@ -52,17 +62,14 @@ namespace
         auto trainer = CreateTrainer(classifier.output, classifier.trainingLoss, classifier.prediction, { factory({ SGDLearner(classifier.output->Parameters(), LearningRatePerSampleSchedule(learningRatePerSample)) }) });
         size_t checkpointFrequency = 7000;
 
-        TrainingSessionPtr session = CreateBasicTrainingSession(
-            minibatchSource,
+        TrainingSessionPtr session = CreateTrainingSession(
             trainer,
-            { { classifier.features, featureStreamInfo }, { classifier.labels, labelStreamInfo } },
+            minibatchSource,
             MinibatchSizeSchedule(minibatchSize),
-            checkpointFrequency,
-            L"test",
-            nullptr,
-            MinibatchSizeSchedule(1),
-            0,
-            false);
+            { { classifier.features, featureStreamInfo }, { classifier.labels, labelStreamInfo } },
+            std::numeric_limits<size_t>::max(),
+            std::numeric_limits<size_t>::max(),
+            CheckpointConfig(L"test", checkpointFrequency, false));
 
         session->Train(device);
     }
@@ -136,5 +143,94 @@ void TestFrameMode()
             }
         }
     }
+    sync->Barrier();
+}
+
+
+void TestDistributedCheckpointing()
+{
+    std::vector<DeviceDescriptor> devices;
+    if (ShouldRunOnCpu())
+        devices.push_back(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnGpu())
+        devices.push_back(DeviceDescriptor::GPUDevice(0));
+
+    auto sync = MPICommunicator();
+
+    auto numWorkers = sync->Workers().size();
+    auto workerRank = sync->CurrentWorker().m_globalRank;
+
+    for (auto device : devices)
+    {
+
+        auto ff = BuildFeedForwardClassifier(device);
+        ff.output = Dropout(ff.output, 0.5);
+        ff.trainingLoss = CNTK::CrossEntropyWithSoftmax(ff.output, ff.labels, L"lossFunction");
+        ff.prediction = CNTK::ClassificationError(ff.output, ff.labels, L"classificationError");
+
+        {
+            auto& attributes = ff.output->RootFunction()->Attributes();
+            size_t seed = attributes[g_attributeNameRngSeed].Value<size_t>();
+            // Check that (1) the seed is in the attributes dictionary and 
+            // (2) the auto-generated seed value reflects the workerRank.
+            if (numWorkers > 1 && seed % numWorkers != workerRank)
+                ReportFailure("Unexpected seed value");
+        }
+
+        auto learner = SGDLearner(ff.output->Parameters(), LearningRatePerSampleSchedule(0.02));
+        auto distributedLearner = CreateDataParallelDistributedLearner(MPICommunicator(), learner, 0);
+        auto trainer = CreateTrainer(ff.output, ff.trainingLoss, ff.prediction, { distributedLearner });
+
+        auto minibatchSource = GetMinibatchSource(ff);
+
+        auto featureStreamInfo = minibatchSource->StreamInfo(g_featureStreamName);
+        auto labelStreamInfo = minibatchSource->StreamInfo(g_labelsStreamName);
+
+        vector<double> expectedLoss(100);
+        for (int i = 0; i < 100; i++)
+        {
+            if (i % 10 == 0)
+            {
+                auto checkpoint = minibatchSource->GetCheckpointState();
+                trainer->SaveCheckpoint(L"distributed_checkpoint_test." + to_wstring(i), checkpoint);
+            }
+
+            auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+            unordered_map<Variable, MinibatchData> minibatch = { { ff.features, minibatchData[featureStreamInfo] },{ ff.labels, minibatchData[labelStreamInfo] } };
+
+            trainer->TrainMinibatch(minibatch, device);
+            expectedLoss[i] = trainer->PreviousMinibatchLossAverage();
+        }
+
+        for (int i = 0; i < 100; i++)
+        {
+            if (i % 10 == 0)
+            {
+                auto checkpoint = trainer->RestoreFromCheckpoint(L"distributed_checkpoint_test." + to_wstring(i));
+                minibatchSource->RestoreFromCheckpoint(checkpoint);
+           
+                auto& attributes = ff.output->RootFunction()->Attributes();
+                size_t seed = attributes[g_attributeNameRngSeed].Value<size_t>();
+                size_t offset = attributes[g_attributeNameRngOffset].Value<size_t>();
+                
+                // Check that the worker-specific seed value was properly restored from the checkpoint.
+                if (numWorkers > 1 && seed % numWorkers != workerRank)
+                    ReportFailure("Unexpected seed value");
+                // Check the offset and verify that it changes depending on the number of processed minibatches.
+                if (offset != i * minibatchSize * ff.inputDim)
+                    ReportFailure("Unexpected seed value");
+            }
+
+            auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+            unordered_map<Variable, MinibatchData> minibatch = { { ff.features, minibatchData[featureStreamInfo] },{ ff.labels, minibatchData[labelStreamInfo] } };
+
+            trainer->TrainMinibatch(minibatch, device);
+            auto loss = trainer->PreviousMinibatchLossAverage();
+
+            FloatingPointCompare(loss, expectedLoss[i], "Post checkpoint restoration training loss does not match expectation");
+           
+        }
+    }
+
     sync->Barrier();
 }

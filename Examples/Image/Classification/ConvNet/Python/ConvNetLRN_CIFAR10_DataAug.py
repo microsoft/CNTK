@@ -52,7 +52,7 @@ def create_reader(map_file, mean_file, is_training):
 # where a_{x,y}^i is the activity of a neuron comoputed by applying kernel i at position (x,y)
 # N is the total number of kernals, n is half normalization width.
 def LocalResponseNormalization(k, n, alpha, beta, name=''):
-    x = cntk.layers.Placeholder(name='lrn_arg')
+    x = cntk.placeholder(name='lrn_arg')
     x2 = cntk.square(x)
     # reshape to insert a fake singleton reduction dimension after the 3th axis (channel axis). Note Python axis order and BrainScript are reversed.
     x2s = cntk.reshape(x2, (1, cntk.InferredDimension), 0, 1)
@@ -67,7 +67,7 @@ def LocalResponseNormalization(k, n, alpha, beta, name=''):
 
 # Train and evaluate the network.
 def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_epochs = 80):
-    _cntk_py.set_computation_network_trace_level(1)
+    _cntk_py.set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
     input_var = cntk.input((num_channels, image_height, image_width))

@@ -17,6 +17,6 @@ testCases:
   Epochs must be finished with expected results:
     patterns:
       - Finished Epoch[{{integer}} of {{integer}}]
-      - cr = {{float,tolerance=.1%}} * {{integer}}
+      - cr = {{float,tolerance=2.5%}} * {{integer}}
       - Err = {{float,tolerance=.1%}} * {{integer}}
       - learningRatePerSample = {{float,tolerance=0.001%}}

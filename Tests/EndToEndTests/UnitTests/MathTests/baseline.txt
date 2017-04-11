@@ -3,8 +3,8 @@ CPU info:
     Hardware threads: 24
     Total Memory: 264172964 kB
 -------------------------------------------------------------------
+Running 155 test cases...
 ===== Tensor test 'elementwise addition'
-Running 150 test cases...
  [512 x 256] [512 x 256] -> [512 x 256] 	// GPU
     [512 x 256] [512 x 256] -> [512 x 256] 	// CPU
    
@@ -160,18 +160,18 @@ Running 150 test cases...
 371.6577148438	
 -903.1638183594	
 ...
-MultiplyAndAdd Directly:  0.000040 seconds
-MultiplyAndAdd With ColumnSlice:  0.002050 seconds
-MultiplyAndAdd With ColumnSlice&:  0.002118 seconds
-MultiplyAndAdd With AssignColumnSlice:  0.002191 seconds
-AssignSigmoidOf With ColumnSlice:  0.002206 seconds
-AssignSigmoidOf With AssignColumnSlice:  0.015601 seconds
-testRnnForwardPropSRP:  0.001586 seconds
-TestOldRnnForwardPropSRP:  0.008699 seconds
+MultiplyAndAdd Directly:  0.000044 seconds
+MultiplyAndAdd With ColumnSlice:  0.006462 seconds
+MultiplyAndAdd With ColumnSlice&:  0.006471 seconds
+MultiplyAndAdd With AssignColumnSlice:  0.006301 seconds
+AssignSigmoidOf With ColumnSlice:  0.006234 seconds
+AssignSigmoidOf With AssignColumnSlice:  0.006213 seconds
+testRnnForwardPropSRP:  0.003358 seconds
+TestOldRnnForwardPropSRP:  0.030918 seconds
 
 Test module "MathTests" has passed with:
-  150 test cases out of 150 passed
-  13210418 assertions out of 13210418 passed
+  155 test cases out of 155 passed
+  13210481 assertions out of 13210481 passed
 
   Test suite "BatchNormalizationSuite" has passed with:
     2 test cases out of 2 passed
@@ -234,8 +234,8 @@ Test module "MathTests" has passed with:
       770 assertions out of 770 passed
 
   Test suite "CPUMatrixSuite" has passed with:
-    32 test cases out of 32 passed
-    5248666 assertions out of 5248666 passed
+    36 test cases out of 36 passed
+    5248732 assertions out of 5248732 passed
 
     Test case "CPUMatrixSuite/CPUMatrixConstructorNoFlags" has passed with:
       8 assertions out of 8 passed
@@ -294,6 +294,9 @@ Test module "MathTests" has passed with:
     Test case "CPUMatrixSuite/CPUMatrixAdam" has passed with:
       4 assertions out of 4 passed
 
+    Test case "CPUMatrixSuite/CPUMatrixOneHot" has passed with:
+      3 assertions out of 3 passed
+
     Test case "CPUMatrixSuite/CPUSparseMatrixColumnSlice" has passed with:
       1 assertion out of 1 passed
 
@@ -302,15 +305,21 @@ Test module "MathTests" has passed with:
 
     Test case "CPUMatrixSuite/CPUSparseMatrixMultiplyAndAdd" has passed with:
       20000 assertions out of 20000 passed
-      
+
     Test case "CPUMatrixSuite/CPUSparseMatrixDoGatherColumnsOf" has passed with:
       50 assertions out of 50 passed
+
+    Test case "CPUMatrixSuite/CPUSparseMatrixOneHot" has passed with:
+      5 assertions out of 5 passed
 
     Test case "CPUMatrixSuite/MatrixMultiplyTest" has passed with:
       1484 assertions out of 1484 passed
 
     Test case "CPUMatrixSuite/MatrixMultiplyAndPlusAndMinus" has passed with:
       1050120 assertions out of 1050120 passed
+
+    Test case "CPUMatrixSuite/MatrixColumnwiseScaleAndWeightedAdd" has passed with:
+      8 assertions out of 8 passed
 
     Test case "CPUMatrixSuite/MatrixScaleAndAdd" has passed with:
       1572864 assertions out of 1572864 passed
@@ -382,8 +391,8 @@ Test module "MathTests" has passed with:
     Test case "MathTensorTests/OldRnnForwardProp" has passed
 
   Test suite "GPUMatrixSuite" has passed with:
-    57 test cases out of 57 passed
-    1263769 assertions out of 1263769 passed
+    59 test cases out of 59 passed
+    1263774 assertions out of 1263774 passed
 
     Test case "GPUMatrixSuite/GPUBlasMultiplyAndWeightedAdd" has passed with:
       1 assertion out of 1 passed
@@ -453,6 +462,9 @@ Test module "MathTests" has passed with:
     Test case "GPUMatrixSuite/GPUMatrixAdam" has passed with:
       4 assertions out of 4 passed
 
+    Test case "GPUMatrixSuite/GPUMatrixOneHot" has passed with:
+      3 assertions out of 3 passed
+
     Test case "GPUMatrixSuite/GPUSparseMatrixConstructorsAndInitializers" has passed with:
       10 assertions out of 10 passed
 
@@ -509,6 +521,9 @@ Test module "MathTests" has passed with:
 
     Test case "GPUMatrixSuite/GPUSparseTensorShuffleScaleAndAdd" has passed with:
       2 assertions out of 2 passed
+
+    Test case "GPUMatrixSuite/GPUSparseMatrixOneHot" has passed with:
+      8 assertions out of 8 passed
 
     Test case "GPUMatrixSuite/MatrixDataSynchronization_DefaultBehaviorTestForConstructors" has passed with:
       15 assertions out of 15 passed

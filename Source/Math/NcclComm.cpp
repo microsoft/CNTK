@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+// Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
@@ -58,7 +58,7 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     if (res != ncclSuccess)
       RuntimeError("NcclComm failed to initialize ncclComm_t: %s", ncclGetErrorString(res));
 
-    cudaStreamCreateWithFlags(&m_stream, cudaStreamNonBlocking)
+    cudaStreamCreateWithFlags(&m_stream, cudaStreamDefault)
         || "cudaStreamCreateWithFlags failed";
     fprintf(stderr, "NcclComm: initialized\n");
 }
@@ -76,17 +76,17 @@ bool NcclComm::IsSupported()
     return m_ncclComm != nullptr;
 }
 
-void NcclComm::AllReduceImpl(void* buffer, size_t count, DataType dtype)
+void NcclComm::AllReduceImpl(void* inputbuffer, void *outputbuffer, size_t count, DataType dtype)
 {
     ncclResult_t res;
     if (dtype == DataType::FLOAT)
     {
-        res = ncclAllReduce(buffer, buffer, count, ncclFloat, ncclSum, m_ncclComm, m_stream);
+        res = ncclAllReduce(inputbuffer, outputbuffer, count, ncclFloat, ncclSum, m_ncclComm, m_stream);
     }
     else
     {
         assert(dtype == DataType::DOUBLE);
-        res = ncclAllReduce(buffer, buffer, count, ncclDouble, ncclSum, m_ncclComm, m_stream);
+        res = ncclAllReduce(inputbuffer, outputbuffer, count, ncclDouble, ncclSum, m_ncclComm, m_stream);
     }
 
     if (res != ncclSuccess)

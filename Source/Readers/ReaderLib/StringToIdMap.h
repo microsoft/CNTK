@@ -85,7 +85,7 @@ private:
     DISABLE_COPY_AND_MOVE(TStringToIdMap);
 
     std::map<TString, size_t> m_values;
-    std::vector<const TString*> m_indexedValues;
+    std::deque<const TString*> m_indexedValues;
 };
 
 typedef TStringToIdMap<std::wstring> WStringToIdMap;

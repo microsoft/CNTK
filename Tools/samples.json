@@ -9,18 +9,10 @@
     },
     {
         "category": [""],
-        "name":  "Model Evaluation in C#",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/EvalDLL-Evaluation-on-Windows#using-the-evaldll-c-library",
-        "description":  "Evaluation or inference of an already trained CNTK model in C#.",
+        "name":  "Model Evaluation in C++/C#",
+        "url":  "https://github.com/Microsoft/CNTK/wiki/CNTK-Eval-Examples",
+        "description":  "Evaluation or inference of an already trained CNTK model in C++/C#.",
         "language":  ["C#"],
-        "type":  ["Example"]
-    },
-    {
-        "category": [""],
-        "name":  "Model Evaluation in C++",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/Native-EvalDLL-API",
-        "description":  "Evaluation or inference of an already trained CNTK model in C++.",
-        "language":  ["C++"],
         "type":  ["Example"]
     },
     {
@@ -30,6 +22,14 @@
         "description":  "Transfer Learning: adapt a pretrained model to a new classification task.",
         "language":  ["Python"],
         "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "Transfer Learning",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_301_Image_Recognition_with_Deep_Transfer_Learning.ipynb",
+        "description":  "Recognize flowers and animals in natural scene images using deep transfer learning with pre-trained ResNet data.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"]
     },
     {
         "category": ["Image"],

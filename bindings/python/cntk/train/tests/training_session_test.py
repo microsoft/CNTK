@@ -8,6 +8,9 @@ import os
 import math
 import re
 import numpy as np
+from os import listdir
+from shutil import copyfile
+from os.path import isfile, join
 from cntk import Function, sequence
 from cntk import times, sequence, as_block, element_select
 from cntk.ops.tests.ops_test_utils import cntk_device
@@ -51,7 +54,7 @@ ctf_data = '''\
 '''
 
 
-def mb_source(tmpdir, fileprefix, epoch_size=FULL_DATA_SWEEP):
+def mb_source(tmpdir, fileprefix, max_samples=FULL_DATA_SWEEP):
     ctf_file = str(tmpdir / (fileprefix + '2seqtest.txt'))
     with open(ctf_file, 'w') as f:
         f.write(ctf_data)
@@ -60,7 +63,7 @@ def mb_source(tmpdir, fileprefix, epoch_size=FULL_DATA_SWEEP):
         features=StreamDef(field='S0', shape=input_dim, is_sparse=True),
         labels=StreamDef(field='S1', shape=input_dim, is_sparse=True)
     )),
-        randomize=False, epoch_size=epoch_size)
+        randomize=False, max_samples=max_samples)
     return mbs
 
 
@@ -80,9 +83,8 @@ def create_sample_model(device, writer=None):
 
 
 class MockProgressWriter(cntk_py.ProgressWriter):
-
     def __init__(self, expected_test_summary=None, training_summary_counter=0):
-        super(MockProgressWriter, self).__init__(1, 0, 1, 0)
+        super(MockProgressWriter, self).__init__(1, 0, 1, 0, sys.maxsize, 0)
         self.training_summary_counter = training_summary_counter
         self.test_summary_counter = 0
         self.expected_test_summary = expected_test_summary
@@ -118,7 +120,7 @@ def test_session_sanity_check(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs,
-        var_to_stream=input_map,
+        model_inputs_to_streams=input_map,
         mb_size=4
     ).train(device)
 
@@ -126,7 +128,7 @@ def test_session_sanity_check(tmpdir, device_id):
 def test_session_max_samples(tmpdir, device_id):
     device = cntk_device(device_id)
     t, feature, label = create_sample_model(device)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
 
     input_map = {
         feature: mbs.streams.features,
@@ -135,7 +137,7 @@ def test_session_max_samples(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs,
-        var_to_stream=input_map,
+        model_inputs_to_streams=input_map,
         mb_size=4, max_samples=20
     ).train(device)
 
@@ -146,7 +148,7 @@ def test_session_cross_validation_at_end(tmpdir, device_id):
     device = cntk_device(device_id)
     writer = MockProgressWriter(expected_test_summary=[[92, 25]])
     t, feature, label = create_sample_model(device, writer)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     mbs1 = mb_source(tmpdir, "cv")
 
     input_map = {
@@ -156,7 +158,7 @@ def test_session_cross_validation_at_end(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs, 
-        mb_size=4, var_to_stream=input_map,
+        mb_size=4, model_inputs_to_streams=input_map,
         max_samples=20,
         cv_config = CrossValidationConfig(source=mbs1)
     ).train(device)
@@ -169,7 +171,7 @@ def test_session_cross_validation_3_times(tmpdir, device_id):
     device = cntk_device(device_id)
     writer = MockProgressWriter(expected_test_summary=[[92, 25], [92, 25], [92, 25]])
     t, feature, label = create_sample_model(device, writer)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     mbs1 = mb_source(tmpdir, "cv")
 
     input_map = {
@@ -179,7 +181,7 @@ def test_session_cross_validation_3_times(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs, 
-        mb_size=4, var_to_stream=input_map,
+        mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60,
         cv_config = CrossValidationConfig(source=mbs1, frequency=20, mb_size=2),
     ).train(device)
@@ -189,13 +191,10 @@ def test_session_cross_validation_3_times(tmpdir, device_id):
 
 
 def test_session_cross_validation_3_times_checkpoints_2_save_all(tmpdir, device_id):
-    from os import listdir
-    from os.path import isfile, join
-
     device = cntk_device(device_id)
     writer = MockProgressWriter(expected_test_summary=[[92, 25], [92, 25], [92, 25]])
     t, feature, label = create_sample_model(device, writer)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     mbs1 = mb_source(tmpdir, "cv")
 
     input_map = {
@@ -207,7 +206,7 @@ def test_session_cross_validation_3_times_checkpoints_2_save_all(tmpdir, device_
 
     training_session(
         trainer=t, mb_source=mbs,
-        mb_size=4, var_to_stream=input_map,
+        mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60,
         checkpoint_config = CheckpointConfig(frequency=35, preserve_all=True,
                                              filename=str(tmpdir / "checkpoint_save_all")),
@@ -230,13 +229,10 @@ def test_session_cross_validation_3_times_checkpoints_2_save_all(tmpdir, device_
 
 
 def test_session_progress_print(tmpdir, device_id):
-    from os import listdir
-    from os.path import isfile, join
-
     device = cntk_device(device_id)
     writer = MockProgressWriter()
     t, feature, label = create_sample_model(device, writer)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
 
     input_map = {
         feature: mbs.streams.features,
@@ -248,22 +244,18 @@ def test_session_progress_print(tmpdir, device_id):
     training_session(
         trainer=t, mb_source=mbs, 
         mb_size=minibatch_size_schedule(4),
-        var_to_stream=input_map, max_samples=60,
+        model_inputs_to_streams=input_map, max_samples=60,
         progress_frequency=10
     ).train(device)
 
     assert(writer.training_summary_counter == 6)
 
 
-def test_session_restart_from_checkpoint(tmpdir, device_id):
-    from os import listdir
-    from shutil import copyfile
-    from os.path import isfile, join
-
+def test_session_restart_from_end_checkpoint(tmpdir, device_id):
     device = cntk_device(device_id)
     writer = MockProgressWriter()
     t, feature, label = create_sample_model(device, writer)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
 
     input_map = {
         feature: mbs.streams.features,
@@ -272,13 +264,57 @@ def test_session_restart_from_checkpoint(tmpdir, device_id):
 
     test_dir = str(tmpdir)
 
-    training_session(
-        trainer=t, mb_source=mbs,
-        mb_size=4, var_to_stream=input_map,
-        max_samples=60,
-        checkpoint_config = CheckpointConfig(frequency=35, preserve_all=True,
-                                             filename=str(tmpdir / "restart_from_checkpoint")),
-        progress_frequency = 35
+    training_session(trainer=t, mb_source=mbs,
+        mb_size=4, model_inputs_to_streams=input_map,
+        max_samples=60, progress_frequency=20,
+        checkpoint_config = CheckpointConfig(frequency=20,
+                                             filename=str(tmpdir / "restart_from_checkpoint"))
+    ).train(device)
+
+    candidates = [f for f in listdir(test_dir) if isfile(
+        join(test_dir, f)) and f.startswith("restart_from_checkpoint")]
+
+    assert(len(candidates) == 2)
+    assert("restart_from_checkpoint" in candidates)
+    assert("restart_from_checkpoint" in candidates)
+
+    # remove information from the mock printer
+    writer.minibatch_info = []
+    writer.training_summary_counter = 0
+    writer.testing_summary_counter = 0
+
+    # restoring from a particular checkpoint should not cause any training
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
+    training_session(trainer=t, mb_source=mbs,
+        mb_size=4, model_inputs_to_streams=input_map,
+        max_samples=60, progress_frequency=20,
+        checkpoint_config = CheckpointConfig(frequency=35, restore=True,
+                                             filename=str(tmpdir / "restart_from_checkpoint"))
+    ).train(device)
+
+    assert(len(writer.minibatch_info) == 0)
+    assert(writer.training_summary_counter == 0)
+    assert(writer.testing_summary_counter == 0)
+
+
+def test_session_restart_from_checkpoint_preserve_all(tmpdir, device_id):
+    device = cntk_device(device_id)
+    writer = MockProgressWriter()
+    t, feature, label = create_sample_model(device, writer)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
+
+    input_map = {
+        feature: mbs.streams.features,
+        label: mbs.streams.labels
+    }
+
+    test_dir = str(tmpdir)
+
+    training_session(trainer=t, mb_source=mbs,
+        mb_size=4, model_inputs_to_streams=input_map,
+        max_samples=60, progress_frequency = 20,
+        checkpoint_config = CheckpointConfig(frequency=20, preserve_all=True,
+                                             filename=str(tmpdir / "restart_from_checkpoint"))
     ).train(device)
 
     candidates = [f for f in listdir(test_dir) if isfile(
@@ -290,57 +326,87 @@ def test_session_restart_from_checkpoint(tmpdir, device_id):
     assert("restart_from_checkpoint1" in candidates)
     assert("restart_from_checkpoint1.ckp" in candidates)
 
+    assert("restart_from_checkpoint2" in candidates)
+    assert("restart_from_checkpoint2.ckp" in candidates)
+
     assert("restart_from_checkpoint" in candidates)
     assert("restart_from_checkpoint" in candidates)
 
-    # rename 0 checkpoint
-    copyfile(str(tmpdir / "restart_from_checkpoint0"),
-             str(tmpdir / "saved_restart_from_checkpoint0"))
-    copyfile(str(tmpdir / "restart_from_checkpoint0.ckp"),
-             str(tmpdir / "saved_restart_from_checkpoint0.ckp"))
-
-    # remove everything except for 0
+    # remove everything except for 1
     for f in candidates:
-        os.remove(str(tmpdir / f))
+        if f != "restart_from_checkpoint1" and f != "restart_from_checkpoint1.ckp":
+            os.remove(str(tmpdir / f))
 
-    # remove information about 0 epoch from the mock printer
-    first_run_minibatch_info = [i for i in writer.minibatch_info if i[0] != 0]
+    # remove information about 1 and 2 epoch from the mock printer
+    first_run_minibatch_info = [i for i in writer.minibatch_info if i[0] != 0 and i[0] != 1]
     writer.minibatch_info = []
-    writer.training_summary_counter = 1
+    writer.training_summary_counter = 2
 
-    # restoring from a particular checkpoint and again save everything from
-    # the second epoch
-
+    # restoring from a particular checkpoint and again save everything from the 3 epoch
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     training_session(
         trainer=t, mb_source=mbs,
-        mb_size=4, var_to_stream=input_map,
-        max_samples=60,
-        checkpoint_config = CheckpointConfig(frequency=35, restore=True, preserve_all= True,
-                                             filename=str(tmpdir / "saved_restart_from_checkpoint0")),
-        progress_frequency=35
+        mb_size=4, model_inputs_to_streams=input_map,
+        max_samples=60, progress_frequency=20,
+        checkpoint_config = CheckpointConfig(frequency=20, restore=True, preserve_all= True,
+                                             filename=str(tmpdir / "restart_from_checkpoint"))
     ).train(device)
 
+    candidates = [f for f in listdir(test_dir) if isfile(
+        join(test_dir, f)) and f.startswith("restart_from_checkpoint")]
+
+    assert("restart_from_checkpoint1" in candidates)
+    assert("restart_from_checkpoint1.ckp" in candidates)
+
+    assert("restart_from_checkpoint2" in candidates)
+    assert("restart_from_checkpoint2.ckp" in candidates)
+
+    assert("restart_from_checkpoint" in candidates)
+    assert("restart_from_checkpoint.ckp" in candidates)
+
+    assert(len(candidates) == 6)
+    assert(first_run_minibatch_info == writer.minibatch_info)
+
+    # remove everything except for 1
+    for f in candidates:
+        if f != "restart_from_checkpoint1" and f != "restart_from_checkpoint1.ckp":
+            os.remove(str(tmpdir / f))
+
+    # remove information about 1 and 2 epoch from the mock printer
+    writer.minibatch_info = []
+    writer.training_summary_counter = 2
+
+    # renaming checkpoint 1 to generic one
+    os.rename(str(tmpdir / "restart_from_checkpoint1"), str(tmpdir / "restart_from_checkpoint"))
+    os.rename(str(tmpdir / "restart_from_checkpoint1.ckp"), str(tmpdir / "restart_from_checkpoint.ckp"))
+
+    # restoring from a particular checkpoint and again save everything from the 3 epoch
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
+    training_session(
+        trainer=t, mb_source=mbs,
+        mb_size=4, model_inputs_to_streams=input_map,
+        max_samples=60, progress_frequency=20,
+        checkpoint_config = CheckpointConfig(frequency=20, restore=True, preserve_all= True,
+                                             filename=str(tmpdir / "restart_from_checkpoint"))
+    ).train(device)
 
     candidates = [f for f in listdir(test_dir) if isfile(
-        join(test_dir, f)) and f.startswith("saved_restart_from_checkpoint0")]
+        join(test_dir, f)) and f.startswith("restart_from_checkpoint")]
 
-    assert("saved_restart_from_checkpoint00" not in candidates)
-    assert("saved_restart_from_checkpoint00.ckp" not in candidates)
+    assert("restart_from_checkpoint2" in candidates)
+    assert("restart_from_checkpoint2.ckp" in candidates)
 
-    assert("saved_restart_from_checkpoint01" in candidates)
-    assert("saved_restart_from_checkpoint01.ckp" in candidates)
+    assert("restart_from_checkpoint" in candidates)
+    assert("restart_from_checkpoint.ckp" in candidates)
 
-    assert("saved_restart_from_checkpoint0" in candidates)
-    assert("saved_restart_from_checkpoint0.ckp" in candidates)
-
+    assert(len(candidates) == 4)
     assert(first_run_minibatch_info == writer.minibatch_info)
 
 
 def test_session_cv_callback_3_times(tmpdir, device_id):
-
     device = cntk_device(device_id)
     t, feature, label = create_sample_model(device)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
 
     input_map = {
         feature: mbs.streams.features,
@@ -359,7 +425,7 @@ def test_session_cv_callback_3_times(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs, mb_size=4,
-        var_to_stream=input_map, max_samples=60,
+        model_inputs_to_streams=input_map, max_samples=60,
         cv_config = CrossValidationConfig(frequency=20, callback=cv_callback)
     ).train(device)
     assert counter == [3]
@@ -368,7 +434,7 @@ def test_session_cv_callback_3_times(tmpdir, device_id):
 def test_session_cv_callback_with_cross_validation_3_times(tmpdir, device_id):
     device = cntk_device(device_id)
     t, feature, label = create_sample_model(device)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     cv_mbs = mb_source(tmpdir, "cv")
 
     input_map = {
@@ -393,7 +459,7 @@ def test_session_cv_callback_with_cross_validation_3_times(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs, mb_size=4,
-        var_to_stream=input_map, max_samples=60,
+        model_inputs_to_streams=input_map, max_samples=60,
         cv_config = CrossValidationConfig(frequency=20, callback=cv_callback)
     ).train(device)
 
@@ -401,10 +467,9 @@ def test_session_cv_callback_with_cross_validation_3_times(tmpdir, device_id):
 
 
 def test_session_cv_callback_early_exit(tmpdir, device_id):
-
     device = cntk_device(device_id)
     t, feature, label = create_sample_model(device)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
 
     input_map = {
         feature: mbs.streams.features,
@@ -412,7 +477,6 @@ def test_session_cv_callback_early_exit(tmpdir, device_id):
     }
 
     counter = [0]
-
     def cv_callback(index, average_error, num_samples, num_mb):
         assert(counter[0] == index)
         assert average_error == 0
@@ -423,7 +487,7 @@ def test_session_cv_callback_early_exit(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs, mb_size=4,
-        var_to_stream=input_map,
+        model_inputs_to_streams=input_map,
         max_samples=60,
         cv_config = CrossValidationConfig(frequency=20, callback=cv_callback)
     ).train(device)
@@ -434,7 +498,7 @@ def test_session_with_test(tmpdir, device_id):
     device = cntk_device(device_id)
     writer = MockProgressWriter(expected_test_summary=[[92, 25]])
     t, feature, label = create_sample_model(device, writer)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     mbs1 = mb_source(tmpdir, "test")
 
     input_map = {
@@ -444,7 +508,7 @@ def test_session_with_test(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs, 
-        mb_size=4, var_to_stream=input_map,
+        mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60,
         test_config = TestConfig(source=mbs1, mb_size=2),
     ).train(device)

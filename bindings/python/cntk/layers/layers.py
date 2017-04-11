@@ -10,10 +10,11 @@
 from __future__ import division
 import numpy as np
 from ..ops.functions import Function
-from ..variables import Variable, Record
+from ..variables import Variable, Record, Constant
 from ..ops import parameter, input, placeholder, combine
 from ..ops import times, element_times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
 from cntk.internal import _as_tuple
+from cntk.cntk_py import sentinel_value_for_auto_select_random_seed as SentinelValueForAutoSelectRandomSeed
 from .blocks import *
 from .higher_order_layers import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # helpers
@@ -34,7 +35,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
 
     Example:
      >>> f = Dense(5, activation=C.relu)
-     >>> x = Input(3)
+     >>> x = input(3)
      >>> h = f(x)
      >>> h.shape
          (5,)
@@ -141,7 +142,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     Example:
      >>> # learnable embedding
      >>> f = Embedding(5)
-     >>> x = Input(3)
+     >>> x = input(3)
      >>> e = f(x)
      >>> e.shape
          (5,)
@@ -153,18 +154,15 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
      >>> f.E.value
          array([[ 0.5,  0.3,  0.1,  0.4,  0.2],
                 [ 0.7,  0.6,  0.3,  0.2,  0.9]], dtype=float32)
-     >>> x = Input(2, is_sparse=True)
+     >>> x = input(2, is_sparse=True)
      >>> e = f(x)
      >>> e.shape
          (5,)
      >>> e(C.Value.one_hot([[1], [0], [0], [1]], num_classes=2))
-     array([[[ 0.7,  0.6,  0.3,  0.2,  0.9]],
-     <BLANKLINE>
-            [[ 0.5,  0.3,  0.1,  0.4,  0.2]],
-     <BLANKLINE>
-            [[ 0.5,  0.3,  0.1,  0.4,  0.2]],
-     <BLANKLINE>
-            [[ 0.7,  0.6,  0.3,  0.2,  0.9]]], dtype=float32)
+     array([[ 0.7,  0.6,  0.3,  0.2,  0.9],
+            [ 0.5,  0.3,  0.1,  0.4,  0.2],
+            [ 0.5,  0.3,  0.1,  0.4,  0.2],
+            [ 0.7,  0.6,  0.3,  0.2,  0.9]], dtype=float32)
 
     Args:
      shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
@@ -211,9 +209,9 @@ def _window(x, axis, begin, end, step, stride, initial_state=None):
     helper to expand a sequence into a window, splicing them along the given axis (which must already exist)
     '''
     shifted = [
-        past_value(x, initial_state=initial_state, time_step=-t) if t < 0 else
+        sequence.past_value(x, initial_state=initial_state, time_step=-t) if t < 0 else
         x                                                        if t == 0 else
-        future_value(x, initial_state=initial_state, time_step=t)
+        sequence.future_value(x, initial_state=initial_state, time_step=t)
         for t in range(begin, end, step)
     ]
     r = splice(*shifted, axis=axis)
@@ -297,7 +295,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
     Example:
      >>> # 2D convolution of 5x4 receptive field with output feature-map depth 128:
      >>> f = Convolution((5,4), 128, activation=C.relu)
-     >>> x = Input((3,480,640))  # 3-channel color image
+     >>> x = input((3,480,640))  # 3-channel color image
      >>> h = f(x)
      >>> h.shape
          (128, 476, 637)
@@ -306,7 +304,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
 
      >>> # 2D convolution over a one-channel black-and-white image, padding, and stride 2 along width dimension
      >>> f = Convolution((3,3), 128, reduction_rank=0, pad=True, strides=(1,2), activation=C.relu)
-     >>> x = Input((480,640))
+     >>> x = input((480,640))
      >>> h = f(x)
      >>> h.shape
          (128, 480, 320)
@@ -316,7 +314,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
      >>> # 3D convolution along dynamic axis over a sequence of 2D color images
      >>> from cntk.layers.typing import Sequence, Tensor
      >>> f = Convolution((2,5,4), 128, sequential=True, activation=C.relu) # over 2 consecutive frames
-     >>> x = Input(**Sequence[Tensor[3,480,640]])  # a variable-length video of 640x480 RGB images
+     >>> x = input(**Sequence[Tensor[3,480,640]])  # a variable-length video of 640x480 RGB images
      >>> h = f(x)
      >>> h.shape   # this is the shape per video frame: 637x476 activation vectors of length 128 each
          (128, 476, 637)
@@ -340,7 +338,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
      reduction_rank (`int`, defaults to 1): set to 0 if input items are scalars (input has no depth axis), e.g. an audio signal or a black-and-white image
       that is stored with tensor shape (H,W) instead of (1,H,W)
      transpose_weight (bool, defaults to `False`): When this is `True` this is convolution, otherwise this is correlation (which is common for most toolkits)
-     max_temp_mem_size_in_samples (int, defaults to 0): Limits the amount of memory for intermiadate convolution results.  A value of 0 means, memory is automatically managed.
+     max_temp_mem_size_in_samples (int, defaults to 0): Limits the amount of memory for intermediate convolution results.  A value of 0 means, memory is automatically managed.
      name (str, defaults to ''): the name of the function instance in the network
 
     Returns:
@@ -427,8 +425,9 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
             lpad = (filter_shape[-filter_rank]-1) // 2  # even frames: take from right; odd frames: symmetric
             x = _window(x, axis=-filter_rank, begin=-lpad, end=-lpad+filter_shape[-filter_rank], step=1, stride=strides[-filter_rank], initial_state=None)
         # actual convolution
+        sequential_emulated_axis = len(pad) - filter_rank if sequential else None # static-axis convolution must not pad the simulated sequential dimension (it must reduce to 1)
         r = convolution (W, x,
-                         strides=strides, sharing=sharing, auto_padding=pad,
+                         strides=strides, sharing=sharing, auto_padding=tuple(p if i != sequential_emulated_axis else False for i, p in enumerate(pad)),
                          # TODO: can we rename auto_padding to pad?
                          max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         # if sequential and not padding, then strip the extraneous boundary values
@@ -651,7 +650,7 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
     Example:
      >>> # 2D convolution transpose of 3x4 receptive field with output feature-map depth 128:
      >>> f = ConvolutionTranspose((3,4), 128, activation=C.relu)
-     >>> x = Input((3,480,640))  # 3-channel color image
+     >>> x = input((3,480,640))  # 3-channel color image
      >>> h = f(x)
      >>> h.shape
          (128, 482, 643)
@@ -681,7 +680,6 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
     Returns:
         :class:`~cntk.ops.functions.Function` that accepts one argument and applies the convolution operation to it
     '''
-
     activation = get_default_override(ConvolutionTranspose, activation=activation)
     init       = get_default_override(ConvolutionTranspose, init=init)
     pad        = get_default_override(ConvolutionTranspose, pad=pad)
@@ -862,7 +860,7 @@ def MaxPooling(filter_shape,  # shape of receptive field, e.g. (3,3)
 
     Example:
      >>> f = MaxPooling((3,3), strides=2)  # reduce dimensionality by 2, pooling over windows of 3x3
-     >>> h = Input((32,240,320))  # e.g. 32-dim feature map
+     >>> h = input((32,240,320))  # e.g. 32-dim feature map
      >>> hp = f(h)
      >>> hp.shape  # spatial dimension has been halved due to stride, and lost one due to 3x3 window without padding
          (32, 119, 159)
@@ -914,7 +912,7 @@ def AveragePooling(filter_shape,  # shape of receptive field, e.g. (3,3)
 
     Example:
      >>> f = AveragePooling((3,3), strides=2)  # reduce dimensionality by 2, pooling over windows of 3x3
-     >>> h = Input((32,240,320))  # e.g. 32-dim feature map
+     >>> h = input((32,240,320))  # e.g. 32-dim feature map
      >>> hp = f(h)
      >>> hp.shape  # spatial dimension has been halved due to stride, and lost one due to 3x3 window without padding
          (32, 119, 159)
@@ -1013,8 +1011,6 @@ def GlobalAveragePooling(name=''):
 def MaxUnpooling(filter_shape,  # shape of receptive field, e.g. (3,3)
                  strides=1,
                  pad=False,
-                 lower_pad=0,
-                 upper_pad=0, 
                  name=''):
 
     strides     = _pad_to_shape(filter_shape, strides, 'strides')
@@ -1022,13 +1018,15 @@ def MaxUnpooling(filter_shape,  # shape of receptive field, e.g. (3,3)
 
     @BlockFunction('MaxUnpooling', name)
     def maxunpool(x, y):
-        return unpooling (x, y, PoolingType_Max, filter_shape, strides=strides, auto_padding=pad,
-                         lower_pad=_as_tuple(lower_pad), upper_pad=_as_tuple(upper_pad))
+        return unpooling (x, y, PoolingType_Max, filter_shape, strides=strides, auto_padding=pad)
     return maxunpool
 
 
 # TODO: should the rate(s) be default_options?
-def Dropout(dropout_rate=None, keep_prob=None, name=''):
+def Dropout(dropout_rate=None, 
+            keep_prob=None,
+            seed = SentinelValueForAutoSelectRandomSeed,
+            name=''):
     '''
     Layer factory function to create a drop-out layer.
 
@@ -1038,16 +1036,17 @@ def Dropout(dropout_rate=None, keep_prob=None, name=''):
 
     Example:
      >>> f = Dropout(0.2)   # "drop 20% of activations"
-     >>> h = Input(3)
+     >>> h = input(3)
      >>> hd = f(h)
 
      >>> f = Dropout(keep_prob=0.8)   # "keep 80%"
-     >>> h = Input(3)
+     >>> h = input(3)
      >>> hd = f(h)
 
     Args:
      dropout_rate (float): probability of dropping out an element, mutually exclusive with ``keep_prob``
      keep_prob (float): probability of keeping an element, mutually exclusive with ``dropout_rate``
+     seed (int): random seed.
      name (str, defaults to ''): the name of the function instance in the network
 
     Returns:
@@ -1055,14 +1054,17 @@ def Dropout(dropout_rate=None, keep_prob=None, name=''):
         A function that accepts one argument and applies the operation to it
     '''
     if dropout_rate is None and keep_prob is None:
-        raise ValueError("Dense: either dropout_rate or keep_prob must be specified.")
+        raise ValueError("Dropout: either dropout_rate or keep_prob must be specified.")
     elif dropout_rate is not None and keep_prob is not None:
-        raise ValueError("Dense: dropout_rate and keep_prob cannot be specified at the same time.")
+        raise ValueError("Dropout: dropout_rate and keep_prob cannot be specified at the same time.")
     elif keep_prob is not None:
+        if keep_prob < 0.0 or keep_prob >= 1.0:
+            raise ValueError("Dropout: keep_prob must be in the interval [0,1)")
         dropout_rate = 1-keep_prob
+
     @BlockFunction('Dropout', name)
     def dropout_f(x):
-        return dropout(x, dropout_rate=dropout_rate)
+        return dropout(x, dropout_rate=dropout_rate, seed=seed)
     return dropout_f
 
 

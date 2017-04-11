@@ -52,11 +52,10 @@ MinibatchSourcePtr CreateCifarMinibatchSource(size_t epochSize)
     deserializerConfiguration[L"file"] = mapFilePath;
     deserializerConfiguration[L"input"] = inputStreamsConfig;
 
-    Dictionary minibatchSourceConfiguration;
-    minibatchSourceConfiguration[L"epochSize"] = epochSize;
-    minibatchSourceConfiguration[L"deserializers"] = std::vector<DictionaryValue>({ deserializerConfiguration });
+    MinibatchSourceConfig config({ deserializerConfiguration });
+    config.maxSamples = epochSize;
 
-    return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
+    return CreateCompositeMinibatchSource(config);
 }
 
 Constant GetProjectionMap(size_t outputDim, size_t inputDim, const DeviceDescriptor& device)

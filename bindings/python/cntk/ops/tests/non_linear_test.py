@@ -186,6 +186,41 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
     assert(abs(resulted_non_zeros - expected_non_zeros) <
            max_off)
 
+def test_op_dropout_with_explicit_seed(device_id, precision):
+    from cntk import combine, dropout, input
+
+    value = np.ones(shape=(10,10), dtype=PRECISION_TO_TYPE[precision])
+
+    a = input(shape=value.shape,
+              dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+              needs_gradient=True,
+              name='a')
+
+    seed = 123;
+
+    dropout_nodes= [
+        dropout(a, dropout_rate=0.5, seed=seed),
+        dropout(a, dropout_rate=0.5, seed=seed),
+        dropout(a, dropout_rate=0.5, seed=seed+1),
+        dropout(a, dropout_rate=0.5)
+    ]
+
+    value.shape = (1, 1) + value.shape
+    forward_input = {a: value}
+    results = []
+    for node in dropout_nodes:
+        forward, backward = cntk_eval(node,
+                                      forward_input,
+                                      precision,
+                                      cntk_device(device_id),
+                                      backward_pass=True)
+
+        results.append(forward[node.output])
+    
+    assert np.allclose(results[0], results[1])
+    assert not np.allclose(results[0], results[2])
+    assert not np.allclose(results[0], results[3])
+
 
 @pytest.mark.parametrize("dropout_rate", [-0.1, 1.0, 100])
 def test_op_dropout_bad_input(dropout_rate):
@@ -441,11 +476,11 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
 
     expected_forward = AA(forward)
 
-    scale        = Parameter(init=AA([init_scale], dtype=dtype), device=dev)
-    bias         = Parameter(init=AA([init_bias], dtype=dtype), device=dev)
-    run_mean     = constant(mean, shape=(1), device=dev)
-    run_variance = constant(var,  shape=(1), device=dev)
-    run_count    = constant(0,               device=dev)
+    scale        = Parameter(init=AA([init_scale], dtype=dtype), dtype=dtype, device=dev)
+    bias         = Parameter(init=AA([init_bias], dtype=dtype), dtype=dtype, device=dev)
+    run_mean     = constant(mean, shape=(1), dtype=dtype, device=dev)
+    run_variance = constant(var,  shape=(1), dtype=dtype, device=dev)
+    run_count    = constant(0,               dtype=dtype, device=dev)
 
     from cntk import batch_normalization, input
 

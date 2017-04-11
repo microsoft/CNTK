@@ -147,6 +147,54 @@ BOOST_FIXTURE_TEST_CASE(CPUSparseMatrixDoGatherColumnsOf, RandomSeedFixture)
     }
 }
 
+BOOST_FIXTURE_TEST_CASE(CPUSparseMatrixOneHot, RandomSeedFixture)
+{
+    const size_t num_class = 6;
+    DenseMatrix m0(2, 2);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(1, 0) = 3;
+    m0(1, 1) = 4;
+    
+    vector<size_t> shape(3);
+    shape[0] = num_class; shape[1] = 2; shape[2] = 2;
+
+    SparseMatrix sm(MatrixFormat::matrixFormatSparseCSC);
+    sm.AssignOneHot(m0, shape, 0);
+    
+    BOOST_CHECK(sm.NzCount() == 4);
+    BOOST_CHECK(sm(1, 0) == 1);
+    BOOST_CHECK(sm(2, 2) == 1);
+    BOOST_CHECK(sm(3, 1) == 1);
+    BOOST_CHECK(sm(4, 3) == 1);
+
+    vector<size_t> shape2(3);
+    shape2[0] = 2; shape2[1] = num_class; shape2[2] = 2;
+    SparseMatrix sm2(MatrixFormat::matrixFormatSparseCSC);
+    sm2.AssignOneHot(m0, shape2, 1);
+
+    BOOST_CHECK(sm2.NzCount() == 4);
+    BOOST_CHECK(sm2(2, 0) == 1);
+    BOOST_CHECK(sm2(4, 1) == 1);
+    BOOST_CHECK(sm2(7, 0) == 1);
+    BOOST_CHECK(sm2(9, 1) == 1);
+
+    DenseMatrix dirtyMatrix(2, 2);
+    dirtyMatrix(0, 0) = 1;
+    dirtyMatrix(0, 1) = -1;
+    dirtyMatrix(1, 0) = 7;
+    dirtyMatrix(1, 1) = 4;
+    
+    SparseMatrix sm3(MatrixFormat::matrixFormatSparseCSC);
+    sm3.AssignOneHot(dirtyMatrix, shape, 0);
+
+    BOOST_CHECK(sm3.NzCount() == 4);
+    BOOST_CHECK(sm3(1, 0) == 1);
+    BOOST_CHECK(sm3(0, 2) == 0);
+    BOOST_CHECK(sm3(0, 1) == 0);
+    BOOST_CHECK(sm3(4, 3) == 1);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 }
 } } }

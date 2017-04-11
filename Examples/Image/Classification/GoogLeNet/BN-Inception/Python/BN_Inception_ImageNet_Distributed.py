@@ -64,7 +64,7 @@ def create_image_mb_source(map_file, mean_file, is_training, total_number_of_sam
             features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
             labels   = StreamDef(field='label', shape=num_classes))),
         randomize = is_training,
-        epoch_size=total_number_of_samples,
+        max_samples=total_number_of_samples,
         multithreaded_deserializer = True)
 
 # Create the network.
@@ -137,7 +137,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 
     training_session = cntk.training_session(
         trainer = trainer, mb_source = train_source, 
-        var_to_stream = input_map, 
+        model_inputs_to_streams = input_map, 
         mb_size = minibatch_size,
         checkpoint_config = CheckpointConfig(frequency=epoch_size, filename=os.path.join(model_path, model_name), restore=restore),
         progress_frequency = epoch_size,

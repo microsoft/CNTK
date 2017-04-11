@@ -40,7 +40,7 @@ def create_mb_source(features_file, labels_file, label_mapping_filem, total_numb
         awesome_labels = StreamDef(shape=num_classes, mlf=labels_file)))
 
     # Enabling BPTT with truncated_length > 0
-    return MinibatchSource([fd,ld], truncation_length=250, epoch_size=total_number_of_samples)
+    return MinibatchSource([fd,ld], truncation_length=250, max_samples=total_number_of_samples)
 
 def create_recurrent_network():
     # Input variables denoting the features and label data
@@ -93,7 +93,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
     training_session(
         trainer=trainer,
         mb_source = train_source,
-        var_to_stream = input_map,
+        model_inputs_to_streams = input_map,
         mb_size = minibatch_size,
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(frequency = epoch_size,

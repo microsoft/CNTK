@@ -10,7 +10,7 @@ from cntk import *
 
 def test_outputs():
     fwd_state = placeholder("placeholder")
-    prev_state = past_value(fwd_state, name="prev_state")
+    prev_state = sequence.past_value(fwd_state, name="prev_state")
     z = abs(prev_state, "abs")
     output = z.output
     z = z.replace_placeholders({fwd_state: z.output})
@@ -38,7 +38,7 @@ def test_1d_NDArrayView_copy():
     w = parameter(init=np.asarray([1]))
     w.set_value(result_slice)
     
-    assert np.array_equal(w.value, np.asarray(result_slice))
+    assert np.array_equal(w.value, result_slice.asarray())
 
 def test_sequences_packed_in_single_ndarray():
     dim = 2

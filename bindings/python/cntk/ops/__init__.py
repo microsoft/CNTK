@@ -15,7 +15,8 @@ from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitiz
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
-
+from ..cntk_py import sentinel_value_for_auto_select_random_seed as SentinelValueForAutoSelectRandomSeed
+from ..default_options import get_default_override, default_override_or
 
 TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
@@ -171,8 +172,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
 
 @typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
-                auto_padding=[True], lower_pad=(0,), upper_pad=(0,), 
-                max_temp_mem_size_in_samples=0, name=''):
+                auto_padding=[True], max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -215,8 +215,6 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
          pixels outside the area are assumed zero ("padded with zeroes"). Without padding, the kernels are only shifted over
          positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
          the input dimension. The last value that lines up with the number of input channels must be false.
-        lower_pad: precise lower padding for each input dimension.
-        upper_pad : precise upper padding for each input dimension.
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -227,14 +225,13 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     '''
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
-    strides, sharing, auto_padding, lower_pad, upper_pad = sanitize_convolution_args(strides, sharing, auto_padding, lower_pad, upper_pad)
+    strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
     return convolution(convolution_map, operand, strides, sharing, auto_padding,
-                       lower_pad, upper_pad, max_temp_mem_size_in_samples, name)
+                       max_temp_mem_size_in_samples, name)
 
 @typemap
 def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True],
-                          auto_padding=[True], lower_pad=(0,), upper_pad=(0,), output_shape=None, 
-                          max_temp_mem_size_in_samples=0, name=''):
+                          auto_padding=[True], output_shape=None, max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the transposed convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -278,8 +275,6 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
          pixels outside the area are assumed zero ("padded with zeroes"). Without padding, the kernels are only shifted over
          positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
          the input dimension. The last value that lines up with the number of input channels must be false.
-        lower_pad: precise lower padding for each input dimension.
-        upper_pad : precise upper padding for each input dimension.
         output_shape: user expected output shape after convolution transpose. 
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
@@ -291,13 +286,12 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     '''
     from cntk.cntk_py import convolution_transpose
     operand = sanitize_input(operand)
-    strides, sharing, auto_padding, lower_pad, upper_pad = sanitize_convolution_args(strides, sharing, auto_padding, lower_pad, upper_pad)
+    strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
     if output_shape is None: 
         output_shape = (0,)
     output_shape = sanitize_shape(output_shape)
     return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding,
-                                 lower_pad, upper_pad, output_shape, 
-                                 max_temp_mem_size_in_samples, name)
+                                 output_shape, max_temp_mem_size_in_samples, name)
 
 @typemap
 def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
@@ -333,7 +327,7 @@ AVG_POOLING = PoolingType_Average
 
 @typemap
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
-            lower_pad=(0,), upper_pad=(0,), ceil_out_dim=False, include_pad=False, name=''):
+            ceil_out_dim=False, include_pad=False, name=''):
     '''
     The pooling operations compute a new tensor by selecting the maximum or average value in the pooling input.
     In the case of average pooling with padding, the average is only over the valid region.
@@ -356,8 +350,6 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
         pooling_window_shape: dimensions of the pooling window
         strides (default 1): strides.
         auto_padding (default [False,]): automatic padding flags for each input dimension.
-        lower_pad (default (0,)): precise lower padding for each input dimension
-        upper_pad (default (0,)): precise upper padding for each input dimension
         ceil_out_dim (default False): ceiling while computing output size
         include_pad(default False): include pad while average pooling
         name (str, optional): the name of the Function instance in the network
@@ -366,9 +358,9 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     '''
     from cntk.cntk_py import pooling
     operand = sanitize_input(operand)
-    pooling_window_shape, strides, auto_padding, lower_pad, upper_pad = sanitize_pooling_args(pooling_window_shape, strides, auto_padding, lower_pad, upper_pad)
+    pooling_window_shape, strides, auto_padding = sanitize_pooling_args(pooling_window_shape, strides, auto_padding)
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
-                   lower_pad, upper_pad, ceil_out_dim, include_pad, name)
+                   ceil_out_dim, include_pad, name)
 
 
 MAX_UNPOOLING = PoolingType_Max
@@ -376,7 +368,7 @@ MAX_UNPOOLING = PoolingType_Max
 
 @typemap
 def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, strides=(1,), auto_padding=[False],
-            lower_pad=(0,), upper_pad=(0,), name=''):
+              name=''):
     '''
     Unpools the ``operand`` using information from ``pooling_input``. Unpooling mirrors the operations
     performed by pooling and depends on the values provided to the corresponding pooling operation. The output
@@ -400,8 +392,6 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
         unpooling_window_shape: dimensions of the unpooling window
         strides (default 1): strides.
         auto_padding: automatic padding flags for each input dimension.
-        lower_pad: precise lower padding for each input dimension
-        upper_pad: precise upper padding for each input dimension
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -409,10 +399,9 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
     from cntk.cntk_py import unpooling
     operand = sanitize_input(operand)
     pooling_input = sanitize_input(pooling_input)
-    unpooling_window_shape, strides, auto_padding, lower_pad, upper_pad = sanitize_pooling_args(unpooling_window_shape, strides, auto_padding, lower_pad, upper_pad)
+    unpooling_window_shape, strides, auto_padding = sanitize_pooling_args(unpooling_window_shape, strides, auto_padding)
     return unpooling(operand, pooling_input, unpooling_type,
-                     unpooling_window_shape, strides, auto_padding,
-                     lower_pad, upper_pad, name)
+                     unpooling_window_shape, strides, auto_padding, name)
 
 
 @typemap
@@ -1645,6 +1634,8 @@ def element_select(flag, value_if_true, value_if_false, name=''):
 @typemap
 def future_value(x, initial_state=None, time_step=1, name=''):
     '''
+    DEPRECATED.
+
     This function returns the future value w.r.t. ``x``. It is most often used when
     creating RNNs. The resulting tensor has the same shape as the input but is
     the next logical sample. The ``time_step`` parameter is the number of steps
@@ -1661,7 +1652,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
         >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
         >>> y = C.future_value(x) # using initial state of 0 by default
         >>> y.eval({x:x0})
-        array([[[[  6.,   7.],
+        [array([[[  6.,   7.],
                  [  8.,   9.],
                  [ 10.,  11.]],
         <BLANKLINE>
@@ -1675,7 +1666,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
         <BLANKLINE>
                 [[  0.,   0.],
                  [  0.,   0.],
-                 [  0.,   0.]]]], dtype=float32)
+                 [  0.,   0.]]], dtype=float32)]
 
     Args:
         x: the tensor (or its name) from which the future value is obtained.
@@ -1686,20 +1677,18 @@ def future_value(x, initial_state=None, time_step=1, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
 
-    from cntk.internal import sanitize_dtype_cntk
-    from ..cntk_py import Constant
-    from cntk.cntk_py import future_value
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use '
+            'sequence.future_value() instead.', DeprecationWarning)
 
-    if initial_state is None:
-        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
-
-    x = sanitize_input(x)
-    return future_value(x, initial_state, time_step, name)
+    return sequence.future_value(x, initial_state, time_step, name)
 
 
 @typemap
 def past_value(x, initial_state=None, time_step=1, name=''):
     '''
+    DEPRECATED.
+
     This function returns the past value w.r.t. ``x``. It is most often used when
     creating RNNs. The resulting tensor has the same shape as the input but is
     the previous logical sample. The ``time_step`` parameter is the number of steps
@@ -1712,9 +1701,8 @@ def past_value(x, initial_state=None, time_step=1, name=''):
 
     Example:
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
-        >>> from cntk.layers import Input
         >>> from cntk.layers.typing import Tensor, Sequence
-        >>> x = Input(**Sequence[Tensor[3,2]])
+        >>> x = input(**Sequence[Tensor[3,2]])
         >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
         >>> x0
         array([[[[  0.,   1.],
@@ -1736,7 +1724,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
         >>> # this demonstrates how past_value shifts the sequence by one, padding with initial_state
         >>> y = C.past_value(x) # initial_state is 0 by default
         >>> y.eval({x:x0})
-        array([[[[  0.,   0.],
+        [array([[[  0.,   0.],
                  [  0.,   0.],
                  [  0.,   0.]],
         <BLANKLINE>
@@ -1750,10 +1738,10 @@ def past_value(x, initial_state=None, time_step=1, name=''):
         <BLANKLINE>
                 [[ 12.,  13.],
                  [ 14.,  15.],
-                 [ 16.,  17.]]]], dtype=float32)
+                 [ 16.,  17.]]], dtype=float32)]
 
         >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
-        >>> s = Input(**Tensor[3,2])  # not a Sequence[], e.g. a final encoder hidden state
+        >>> s = input(**Tensor[3,2])  # not a Sequence[], e.g. a final encoder hidden state
         >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,1,3,2))
         >>> s0
         array([[[[ 0. ,  0.5],
@@ -1761,7 +1749,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
                  [ 2. ,  2.5]]]], dtype=float32)
         >>> y = C.past_value(x, initial_state=s)
         >>> y.eval({x:x0, s:s0}) # same as the previous example except for the first time step
-        array([[[[  0. ,   0.5],
+        [array([[[  0. ,   0.5],
                  [  1. ,   1.5],
                  [  2. ,   2.5]],
         <BLANKLINE>
@@ -1775,7 +1763,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
         <BLANKLINE>
                 [[ 12. ,  13. ],
                  [ 14. ,  15. ],
-                 [ 16. ,  17. ]]]], dtype=float32)
+                 [ 16. ,  17. ]]], dtype=float32)]
 
     Args:
         x: the tensor (or its name) from which the past value is obtained
@@ -1787,17 +1775,11 @@ def past_value(x, initial_state=None, time_step=1, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
 
-    from cntk.internal import sanitize_dtype_cntk
-    from ..cntk_py import Constant
-    from cntk.cntk_py import past_value
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use '
+            'sequence.past_value() instead.', DeprecationWarning)
 
-    if initial_state is None:
-        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
-    else:
-        initial_state = sanitize_input(initial_state)
-
-    x = sanitize_input(x)
-    return past_value(x, initial_state, time_step, name)
+    return sequence.past_value(x, initial_state, time_step, name)
 
 
 # TODO: does this belong into .sequence?
@@ -2061,6 +2043,38 @@ def splice(*inputs, **kw_axis_name):
 
     return splice(inputs, axis, name) # C++ projection expects inputs as a list
 
+@typemap
+def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
+    '''
+    Create one hot tensor based on the input tensor
+
+    Example:
+        >>> data = np.asarray([[1, 2],
+        ...                    [4, 5]], dtype=np.float32)
+
+        >>> x = C.input((2,))
+        >>> C.one_hot(x, 6, False).eval({x:data})
+        array([[[ 0.,  1.,  0.,  0.,  0.,  0.],
+                [ 0.,  0.,  1.,  0.,  0.,  0.]],
+        <BLANKLINE>
+                [[ 0.,  0.,  0.,  0.,  1.,  0.],
+                 [ 0.,  0.,  0.,  0.,  0.,  1.]]], dtype=float32)
+
+    Args:
+        x: input tensor, the value must be positive integer and less than num_class
+        num_classes: the number of class in one hot tensor
+        sparse_output: if set as True, we will create the one hot tensor as sparse.
+		axis: The axis to fill (default: -1, a new inner-most axis).
+        name (str, optional, keyword only): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import one_hot_op
+    x = sanitize_input(x)
+    axis = sanitize_axis(axis)
+    return one_hot_op(x, num_classes, sparse_output, axis, name)
+
 ##########################################################################
 # reduction ops
 ##########################################################################
@@ -2081,31 +2095,31 @@ def reduce_sum(x, axis=None, name=''):
         >>> x0 = np.arange(16,dtype=np.float32).reshape(2,2,2,2)
         >>> # reduce over all static axes
         >>> C.reduce_mean(x).eval({x:x0})
-        array([[  1.5,   5.5],
-               [  9.5,  13.5]], dtype=float32)
+        [array([  1.5,   5.5], dtype=float32),
+         array([  9.5,  13.5], dtype=float32)]
         >>> # reduce over specified axes
         >>> C.reduce_mean(x,axis=0).eval({x:x0})
-        array([[[[  1.,   2.]],
+        [array([[[  1.,   2.]],
         <BLANKLINE>
-                [[  5.,   6.]]],
+                [[  5.,   6.]]], dtype=float32),
         <BLANKLINE>
         <BLANKLINE>
-               [[[  9.,  10.]],
+         array([[[  9.,  10.]],
         <BLANKLINE>
-                [[ 13.,  14.]]]], dtype=float32)
+                [[ 13.,  14.]]], dtype=float32)]
         >>> C.reduce_mean(x,axis=1).eval({x:x0})
-        array([[[[  0.5],
+        [array([[[  0.5],
                  [  2.5]],
         <BLANKLINE>
                 [[  4.5],
-                 [  6.5]]],
+                 [  6.5]]], dtype=float32),
         <BLANKLINE>
         <BLANKLINE>
-               [[[  8.5],
+         array([[[  8.5],
                  [ 10.5]],
         <BLANKLINE>
                 [[ 12.5],
-                 [ 14.5]]]], dtype=float32)
+                 [ 14.5]]], dtype=float32)]
         >>> # reduce over all axes
         >>> np.round(C.reduce_mean(x, axis=C.Axis.all_axes()).eval({x:x0}),5)
         7.5
@@ -2370,7 +2384,12 @@ def argmin(x, axis=None, name=''):
 #######################################################################
 
 @typemap
-def random_sample(weights, num_samples, allow_duplicates, name=''):
+def random_sample(
+    weights, 
+    num_samples, 
+    allow_duplicates, 
+    seed = SentinelValueForAutoSelectRandomSeed, 
+    name=''):
     '''
     Estimates inclusion frequencies for random sampling with or without
     replacement.
@@ -2391,6 +2410,8 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
         num_samples (int): number of expected samples
         allow_duplicates (bool): If sampling is done
             with replacement (`True`) or without (`False`).
+        seed (int): random seed.
+        name (:class:`str`, optional): the name of the Function instance in the network.
 
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -2399,14 +2420,15 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
     from cntk.cntk_py import random_sample
     weights = sanitize_input(weights)
 
-    return random_sample(weights, num_samples, allow_duplicates, name)
+    return random_sample(weights, num_samples, allow_duplicates, seed, name)
 
 
 @typemap
 def random_sample_inclusion_frequency(
     weights, 
     num_samples, 
-    allow_duplicates, 
+    allow_duplicates,
+    seed = SentinelValueForAutoSelectRandomSeed,
     name=''):
     '''
     For weighted sampling with the specifed sample size (`num_samples`)
@@ -2425,6 +2447,8 @@ def random_sample_inclusion_frequency(
         num_samples (int): number of expected samples
         allow_duplicates (bool): If sampling is done
          with replacement (`True`) or without (`False`).
+        seed (int): random seed.
+        name (:class:`str`, optional): the name of the Function instance in the network.
 
     Example:
         >>> import numpy as np
@@ -2457,11 +2481,12 @@ def random_sample_inclusion_frequency(
         weights, 
         num_samples, 
         allow_duplicates, 
+        seed,
         name)
 
 
 @typemap
-def dropout(x, dropout_rate=0.0, name=''):
+def dropout(x, dropout_rate=0.0, seed = SentinelValueForAutoSelectRandomSeed, name=''):
     '''
     Each element of the input is independently set to 0 with probabily ``dropout_rate``
     or to 1 / (1 - ``dropout_rate``) times its original value (with probability 1-``dropout_rate``).
@@ -2487,6 +2512,7 @@ def dropout(x, dropout_rate=0.0, name=''):
     Args:
         x: input tensor
         dropout_rate (float, [0,1)): probability that an element of ``x`` will be set to zero
+        seed (int): random seed.
         name (:class:`str`, optional): the name of the Function instance in the network
 
     Returns:
@@ -2498,7 +2524,7 @@ def dropout(x, dropout_rate=0.0, name=''):
     from cntk.cntk_py import dropout
     x = sanitize_input(x)
 
-    return dropout(x, dropout_rate, name)
+    return dropout(x, dropout_rate, seed, name)
 
 ##########################################################################
 # variables_and_parameters ops
@@ -2507,10 +2533,21 @@ def dropout(x, dropout_rate=0.0, name=''):
 from cntk.device import use_default_device
 from cntk.axis import Axis
 
+def _input_spec(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
+                dynamic_axes=[Axis.default_batch_axis()], name=''):
+    '''
+    We need _input_spec because input is python built-in and because of typemap, must remain
+    in sync with input.
+    TODO: Investigate to remove it.
+    '''
+    pass
+
 @typemap
-def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
+def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
           dynamic_axes=[Axis.default_batch_axis()], name=''):
     '''
+    input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, dynamic_axes=[Axis.default_batch_axis()], name='')
+
     It creates an input in the network: a place where data,
     such as features and labels, should be provided.
 
@@ -2527,9 +2564,9 @@ def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
     '''
     from cntk.cntk_py import input_variable
     from cntk.internal import sanitize_shape, sanitize_dtype_cntk
-
+    
     shape = sanitize_shape(shape)
-
+    dtype = get_default_override(_input_spec, dtype=dtype)
     if dtype is None:
         dtype = np.float32
     dtype = sanitize_dtype_cntk(dtype)

@@ -46,10 +46,10 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Get shape data for the input variable
                 NDShape inputShape = inputVar.Shape;
-                uint imageWidth = inputShape[0];
-                uint imageHeight = inputShape[1];
-                uint imageChannels = inputShape[2];
-                uint imageSize = inputShape.TotalSize;
+                int imageWidth = inputShape[0];
+                int imageHeight = inputShape[1];
+                int imageChannels = inputShape[2];
+                int imageSize = inputShape.TotalSize;
 
                 // The model has only one output.
                 // If the model have more than one output, use the following way to get output variable by name.
@@ -80,11 +80,10 @@ namespace CNTKLibraryCSEvalExamples
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                 // Get evaluate result as dense output
-                var outputBuffer = new List<List<float>>();
                 var outputVal = outputDataMap[outputVar];
-                outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
-                PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+                PrintOutput(outputVar.Shape.TotalSize, outputData);
             }
             catch (Exception ex)
             {
@@ -129,10 +128,10 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Get shape data for the input variable
                 NDShape inputShape = inputVar.Shape;
-                uint imageWidth = inputShape[0];
-                uint imageHeight = inputShape[1];
-                uint imageChannels = inputShape[2];
-                uint imageSize = inputShape.TotalSize;
+                int imageWidth = inputShape[0];
+                int imageHeight = inputShape[1];
+                int imageChannels = inputShape[2];
+                int imageSize = inputShape.TotalSize;
 
                 // The model has only one output.
                 // If the model have more than one output, use the following way to get output variable by name.
@@ -167,12 +166,11 @@ namespace CNTKLibraryCSEvalExamples
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                 // Retrieve the evaluation result.
-                var outputBuffer = new List<List<float>>();
                 var outputVal = outputDataMap[outputVar];
-                outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
                 // Output result
-                PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+                PrintOutput(outputVar.Shape.TotalSize, outputData);
             }
             catch (Exception ex)
             {
@@ -222,10 +220,10 @@ namespace CNTKLibraryCSEvalExamples
             // Get shape data for the input variable
             var input = rootFunc.Arguments.Single();
             NDShape inputShape = input.Shape;
-            uint imageWidth = inputShape[0];
-            uint imageHeight = inputShape[1];
-            uint imageChannels = inputShape[2];
-            uint imageSize = inputShape.TotalSize;
+            int imageWidth = inputShape[0];
+            int imageHeight = inputShape[1];
+            int imageChannels = inputShape[2];
+            int imageSize = inputShape.TotalSize;
             Object lockObj = new object();
 
             // Start to evaluate samples in parallel.
@@ -258,15 +256,14 @@ namespace CNTKLibraryCSEvalExamples
                     evaluatorFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                     // Get evaluate result as dense output
-                    var outputBuffer = new List<List<float>>();
                     var outputVal = outputDataMap[outputVar];
-                    outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+                    var outputData = outputVal.GetDenseData<float>(outputVar);
 
                     // Serialize output
                     lock (lockObj)
                     {
                         Console.WriteLine(string.Format("Evaluation result for {0}:", image));
-                        PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+                        PrintOutput(outputVar.Shape.TotalSize, outputData);
                     }
                 }
                 finally
@@ -303,10 +300,10 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Get shape data for the input variable
                 NDShape inputShape = inputVar.Shape;
-                uint imageWidth = inputShape[0];
-                uint imageHeight = inputShape[1];
-                uint imageChannels = inputShape[2];
-                uint imageSize = inputShape.TotalSize;
+                int imageWidth = inputShape[0];
+                int imageHeight = inputShape[1];
+                int imageChannels = inputShape[2];
+                int imageSize = inputShape.TotalSize;
 
                 // The model has only one output.
                 // If the model have more than one output, use the following way to get output variable by name.
@@ -337,11 +334,10 @@ namespace CNTKLibraryCSEvalExamples
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                 // Get evaluate result as dense output
-                var outputBuffer = new List<List<float>>();
                 var outputVal = outputDataMap[outputVar];
-                outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
-                PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+                PrintOutput(outputVar.Shape.TotalSize, outputData);
             }
             catch (Exception ex)
             {
@@ -356,11 +352,11 @@ namespace CNTKLibraryCSEvalExamples
         /// <typeparam name="T">The data value type</typeparam>
         /// <param name="sampleSize">The size of each sample.</param>
         /// <param name="outputBuffer">The evaluation result data.</param>
-        private static void PrintOutput<T>(uint sampleSize, List<List<T>> outputBuffer)
+        internal static void PrintOutput<T>(int sampleSize, IList<IList<T>> outputBuffer)
         {
             Console.WriteLine("The number of sequences in the batch: " + outputBuffer.Count);
             int seqNo = 0;
-            uint outputSampleSize = sampleSize;
+            int outputSampleSize = sampleSize;
             foreach (var seq in outputBuffer)
             {
                 if (seq.Count % outputSampleSize != 0)
@@ -369,8 +365,8 @@ namespace CNTKLibraryCSEvalExamples
                 }
 
                 Console.WriteLine(String.Format("Sequence {0} contains {1} samples.", seqNo++, seq.Count / outputSampleSize));
-                uint i = 0;
-                uint sampleNo = 0;
+                int i = 0;
+                int sampleNo = 0;
                 foreach (var element in seq)
                 {
                     if (i++ % outputSampleSize == 0)
@@ -404,6 +400,8 @@ namespace CNTKLibraryCSEvalExamples
         {
             try
             {
+                Console.WriteLine("\n===== Evaluate single sequence using one-hot vector =====");
+
                 // The model atis.dnn is trained by <CNTK>/Examples/LanguageUnderstanding/ATIS/Python/LanguageUnderstanding.py
                 // Please see README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS about how to train the model.
                 string modelFilePath = "atis.dnn";
@@ -418,14 +416,12 @@ namespace CNTKLibraryCSEvalExamples
                 var vocabToIndex = buildVocabIndex(vocabFile);
                 var indexToSlots = buildSlotIndex(labelFile);
 
-                Console.WriteLine("\n===== Evaluate single sequence using one-hot vector =====");
-
                 // Get input variable
                 var inputVar = modelFunc.Arguments.Single();
-                uint vocabSize = inputVar.Shape.TotalSize;
+                int vocabSize = inputVar.Shape.TotalSize;
 
                 var inputSentence = "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS";
-                var seqData = new List<uint>();
+                var seqData = new List<int>();
                 // SeqStartFlagBatch is used to indicate whether this sequence is a new sequence (true) or concatenating the previous sequence (false).
                 var seqStartFlag = true;
                 // Get the index of each word in the sentence.
@@ -456,9 +452,8 @@ namespace CNTKLibraryCSEvalExamples
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                 // Get output result
-                var outputData = new List<List<float>>();
-                Value outputVal = outputDataMap[outputVar];
-                outputVal.CopyVariableValueTo(outputVar, outputData);
+                var outputVal = outputDataMap[outputVar];
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
                 // output the result
                 var outputSampleSize = (int)outputVar.Shape.TotalSize;
@@ -513,6 +508,8 @@ namespace CNTKLibraryCSEvalExamples
         {
             try
             {
+                Console.WriteLine("\n===== Evaluate batch of sequences with variable length using one-hot vector =====");
+
                 // The model atis.dnn is trained by <CNTK>/Examples/LanguageUnderstanding/ATIS/Python/LanguageUnderstanding.py
                 // Please see README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS about how to train the model.
                 string modelFilePath = "atis.dnn";
@@ -527,16 +524,14 @@ namespace CNTKLibraryCSEvalExamples
                 var vocabToIndex = buildVocabIndex(vocabFile);
                 var indexToSlots = buildSlotIndex(labelFile);
 
-                Console.WriteLine("\n===== Evaluate batch of sequences with variable length using one-hot vector =====");
-
                 // Get input variable
                 var inputVar = modelFunc.Arguments.Single();
-                uint vocabSize = inputVar.Shape.TotalSize;
+                int vocabSize = inputVar.Shape.TotalSize;
 
                 // Prepare the input data.
                 // Each sample is represented by an index to the onehot vector, so the index of the non-zero value of each sample is saved in the inner list.
                 // The outer list represents sequences contained in the batch.
-                var inputBatch = new List<List<uint>>();
+                var inputBatch = new List<List<int>>();
                 // SeqStartFlagBatch is used to indicate whether this sequence is a new sequence (true) or concatenating the previous sequence (false).
                 var seqStartFlagBatch = new List<bool>();
 
@@ -553,7 +548,7 @@ namespace CNTKLibraryCSEvalExamples
                     // Get the index of each word in the sentence.
                     var substring = inputSentences[seqIndex].Split(' ');
                     inputWords.Add(substring);
-                    var seqData = new List<uint>();
+                    var seqData = new List<int>();
                     foreach (var str in substring)
                     {
                         var index = vocabToIndex[str];
@@ -580,9 +575,8 @@ namespace CNTKLibraryCSEvalExamples
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                 // Get evaluation result.
-                var outputData = new List<List<float>>();
                 var outputVal = outputDataMap[outputVar];
-                outputVal.CopyVariableValueTo(outputVar, outputData);
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
                 // output the result
                 var outputSampleSize = (int)outputVar.Shape.TotalSize;
@@ -640,6 +634,8 @@ namespace CNTKLibraryCSEvalExamples
         {
             try
             {
+                Console.WriteLine("\n===== Evaluate single sequence using sparse input =====");
+
                 // The model atis.dnn is trained by <CNTK>/Examples/LanguageUnderstanding/ATIS/Python/LanguageUnderstanding.py
                 // Please see README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS about how to train the model.
                 string modelFilePath = "atis.dnn";
@@ -654,17 +650,15 @@ namespace CNTKLibraryCSEvalExamples
                 var vocabToIndex = buildVocabIndex(vocabFile);
                 var indexToSlots = buildSlotIndex(labelFile);
 
-                Console.WriteLine("\n===== Evaluate single sequence using sparse input =====");
-
                 // Get input variable
                 var inputVar = modelFunc.Arguments.Single();
-                uint vocabSize = inputVar.Shape.TotalSize;
+                int vocabSize = inputVar.Shape.TotalSize;
 
                 var inputSentence = "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS";
 
                 // Get the index of each word in the sentence.
                 string[] inputWords = inputSentence.Split(' ');
-                var seqLen = (uint)inputWords.Length;
+                var seqLen = inputWords.Length;
                 // For this example, only 1 non-zero value for each sample.
                 var numNonZeroValues = seqLen * 1;
                 var colStarts = new int[seqLen + 1];
@@ -681,10 +675,10 @@ namespace CNTKLibraryCSEvalExamples
                     rowIndices[count] = nonZeroValueIndex;
                     colStarts[count] = count;
                 }
-                colStarts[count] = (int)numNonZeroValues;
+                colStarts[count] = numNonZeroValues;
 
                 // Create input value using OneHot vector data.
-                var inputValue = Value.CreateSequence<float>(vocabSize, seqLen, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device);
+                var inputValue = Value.CreateSequence<float>(vocabSize, seqLen, colStarts, rowIndices, nonZeroValues, device);
 
                 // Build input data map.
                 var inputDataMap = new Dictionary<Variable, Value>();
@@ -700,12 +694,11 @@ namespace CNTKLibraryCSEvalExamples
                 // Evalaute the model.
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
-                // Get output result
-                var outputData = new List<List<float>>();
-                Value outputVal = outputDataMap[outputVar];
-                outputVal.CopyVariableValueTo(outputVar, outputData);
+                // Get result
+                var outputVal = outputDataMap[outputVar];
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
-                // output the result
+                // Output the result
                 var outputSampleSize = (int)outputVar.Shape.TotalSize;
                 if (outputData.Count != 1)
                 {
@@ -750,7 +743,7 @@ namespace CNTKLibraryCSEvalExamples
         /// </summary>
         /// <param name="filePath">The file to check.</param>
         /// <param name="errorMsg">The message to write on console if the file does not exist.</param>
-        private static void ThrowIfFileNotExist(string filePath, string errorMsg)
+        internal static void ThrowIfFileNotExist(string filePath, string errorMsg)
         {
             if (!File.Exists(filePath))
             {
@@ -762,13 +755,12 @@ namespace CNTKLibraryCSEvalExamples
             }
         }
 
-
-        private static Dictionary<string, uint> buildVocabIndex(string filePath)
+        private static Dictionary<string, int> buildVocabIndex(string filePath)
         {
-            var vocab = new Dictionary<string, uint>();
+            var vocab = new Dictionary<string, int>();
 
             string[] lines = File.ReadAllLines(filePath);
-            for (uint idx = 0; idx < (uint)lines.Count(); idx++)
+            for (int idx = 0; idx < lines.Count(); idx++)
                 vocab.Add(lines[idx], idx);
 
             return vocab;

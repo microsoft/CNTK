@@ -110,7 +110,7 @@ namespace CNTK
         Dictionary SerializeBlockComposite() const;
 
         virtual Dictionary Serialize() const override;
-        
+
         virtual size_t CurrentVersion() const override { return s_serializationVersion; }
 
         static FunctionPtr DeserializeBlockComposite(const Dictionary& dict,
@@ -128,28 +128,54 @@ namespace CNTK
         template <typename FunctionType>
         static void PreorderTraverseVariables(const FunctionPtr& rootFunction, const FunctionType& functor, bool pythonOperandOrder = false)
         {
+            TraverseVariables(rootFunction, functor, pythonOperandOrder, /*preOrder =*/ true);
+        }
+
+        template <typename FunctionType>
+        static void PostorderTraverseVariables(const FunctionPtr& rootFunction, const FunctionType& functor, bool pythonOperandOrder = false)
+        {
+            TraverseVariables(rootFunction, functor, pythonOperandOrder, /*preOrder =*/ false);
+        }
+
+        template <typename FunctionType>
+        static void TraverseVariables(const FunctionPtr& rootFunction, const FunctionType& functor, bool pythonOperandOrder, bool preOrder)
+        {
             std::unordered_set<FunctionPtr> visitedFunctions;
-            PreorderTraverseVariables(rootFunction, visitedFunctions, functor, pythonOperandOrder);
+            TraverseVariables(rootFunction, visitedFunctions, functor, pythonOperandOrder, preOrder);
         }
 
         // Recursively traverses the Function graph underlying the 'rootFunction' invoking the provided functor for all visited nodes in the graph.
         template <typename FunctionType>
-        static void PreorderTraverseVariables(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor, bool pythonOperandOrder = false)
+        static void TraverseVariables(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor, bool pythonOperandOrder, bool preOrder)
         {
             visitedFunctions.insert(rootFunction);
             auto rootFunctionOutputs = rootFunction->InitOutputs();
-            for (const auto& rootOutput : rootFunctionOutputs)
-                functor(rootOutput);
+
+            if (preOrder)
+            {
+                for (const auto& rootOutput : rootFunctionOutputs)
+                    functor(rootOutput);
+            }
 
             auto rootFunctionInputs = rootFunction->Inputs(pythonOperandOrder);
             for (const auto& rootInput : rootFunctionInputs)
             {
-                functor(rootInput);
-                if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
+                if (rootInput.IsOutput())
                 {
-                    const auto& function = rootInput.Owner();
-                    PreorderTraverseVariables(function, visitedFunctions, functor, pythonOperandOrder);
+                    if (visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
+                    {
+                        const auto& function = rootInput.Owner();
+                        TraverseVariables(function, visitedFunctions, functor, pythonOperandOrder, preOrder);
+                    }
                 }
+                else
+                    functor(rootInput);
+            }
+
+            if (!preOrder)
+            {
+                for (const auto& rootOutput : rootFunctionOutputs)
+                    functor(rootOutput);
             }
         }
 
@@ -201,22 +227,36 @@ namespace CNTK
             vector<FunctionPtr> functions;
             std::vector<Variable> inputs;
             std::unordered_set<Variable> uniqueInputs;
-            PreorderTraverseVariables(rootFunction, visitedFunctions, [&inputs, &uniqueInputs](const Variable& var) {
+            TraverseVariables(rootFunction, visitedFunctions, [&inputs, &uniqueInputs](const Variable& var) {
                 if (!var.IsOutput() && uniqueInputs.find(var) == uniqueInputs.end())
                 {
                     inputs.push_back(var);
                     uniqueInputs.insert(var);
                 }
-           }, pythonOperandOrder);
+           }, pythonOperandOrder, /*preOrder =*/ true);
 
             return inputs;
         }
 
-        // If the network is already created, copy internal state over from the functions in the graph into the underlying network.
-        void UpdateInternalNetworkState();
 
-        // Copy state info from source function graph into' this' function graph.
+        // Copy the internal state from the network into the function graph.
+        void UpdateInternalState() const;
+
+        // Generate a dictionary representing the internal (local) state of the function graph.
+        Dictionary GetInternalState() const;
+
+        // Update the internal state using the provided dictionary. 
+        // If the network is already created, directly update its state. Otherwise, copy the state from the 
+        // dictionary into the function graph.
+        void SetInternalState(const Dictionary& state);
+
+        // Copy state info from source function graph into 'this' function graph.
+        // Both graphs must be equivalent.
         void CopyState(const CompositeFunction& source);
+
+        // This function is only needed for backwards compatibility to support deserializing composite funcitions that
+        // stored the internal state inside a dedicated value in the dictionary.
+        static void RestoreStatefulFunctions(size_t version, const Dictionary& dict, std::unordered_set<FunctionPtr> PrimitiveFunctions);
 
         static Variable GetMappingForNoOpOutput(const Variable& variable, bool recursive = false);
         static Variable GetMappingVariable(const Variable& variable, bool recursive = false);
@@ -302,6 +342,7 @@ namespace CNTK
         // Version history:
         // 1 -- initial version.
         // 2 -- add support for stateful functions (with corresponding nodes inheriting from RngUser).
-        static const size_t s_serializationVersion = 2;
+        // 3 -- store internal function state directly in the attributes dictionary.
+        static const size_t s_serializationVersion = 3;
     };
 }

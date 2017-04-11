@@ -107,7 +107,7 @@ public:
                      ElemType RMS_WGT_MIN,
                      const bool needAveMultiplier);
 
-    void AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon);
+    void AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
 
     void Reshape(const size_t numRows, const size_t numCols);
 
@@ -267,6 +267,8 @@ public:
     ElemType SumOfElements() const;    // sum of all elements
     CPUMatrix<ElemType>& AssignSumOfElements(const CPUMatrix<ElemType>& a);
 
+    CPUMatrix<ElemType>& AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
+
     bool IsEqualTo(const CPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
     static void VectorSum(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c, const bool isColWise);
@@ -385,9 +387,9 @@ public:
 
     void MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, const CPUMatrix<ElemType>& poolInput, CPUMatrix<ElemType>& input) const;
 
-    void AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output, const bool poolPadMode) const;
+    void AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output, const bool poolIncludePad) const;
     void AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
-                                CPUMatrix<ElemType>& grad, const bool poolPadMode) const;
+                                CPUMatrix<ElemType>& grad, const bool poolIncludePad) const;
 
     void BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runVariance,
                                    CPUMatrix<ElemType>& out, double epsilon, CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const;
@@ -409,6 +411,8 @@ public:
     static void Multiply(const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, CPUMatrix<ElemType>& c);
     static void Multiply(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
     static void Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType beta, CPUMatrix<ElemType>& c);
+
+    static void ColumnwiseScaleAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& v, ElemType beta, CPUMatrix<ElemType>& c);
 
     static void ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);
     static void AddScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);

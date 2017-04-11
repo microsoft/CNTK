@@ -591,10 +591,8 @@ public:
                     Matrix<ElemType> gradient = GradientFor(fr);
                     Matrix<ElemType> inputValue = InputRef(1 - inputIndex).ValueFor(fr);
                     Matrix<ElemType> inputGradient = InputRef(inputIndex).GradientFor(fr);
-                    Matrix<ElemType> gradientDiagonal(gradient.GetNumCols(), gradient.GetNumCols(), gradient.GetDeviceId());
-                    gradientDiagonal.SetDiagonalValue(gradient);
-                    Matrix<ElemType>::MultiplyAndWeightedAdd(
-                        (ElemType)1.0, inputValue, false, gradientDiagonal, true,
+                    Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd(
+                        (ElemType)1.0, inputValue, gradient,
                         Input(inputIndex)->ParentOverwritesGradient() ? (ElemType)0.0 : (ElemType)1.0,
                         inputGradient);
                     // TODO: better move this special-casing into TensorView::AssignElementwiseProductOf()
@@ -1722,10 +1720,9 @@ public:
 
     virtual void Validate(bool isFinalValidationPass);
 
-    // Request matrices needed to do node function value evaluation.
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override;
-
-    // We don't release accumulator as it is needed after forward pass.
+    // Returns tensor view for the accumulator matrix. If accumulator matrix memory is not allocated
+    // accumulator matrix will be resized (memory will be allocated).
+    TensorView<ElemType> EnsureAccumlator();
 
 protected:
 

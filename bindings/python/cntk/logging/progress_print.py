@@ -48,10 +48,14 @@ class ProgressPrinter(cntk_py.ProgressWriter):
           test results.
         test_first (`int`, default 0): similar to ``first``, but applies to printing intermediate test results.
         metric_is_pct (`bool`, default True): Treat metric as a percentage for output purposes.
+        distributed_freq (`int` or `None`, default `None`): similar to ``freq``, but applies to printing distributed-training 
+          worker synchronization info.
+        distributed_first (`int`, default 0): similar to ``first``, but applies to printing distributed-training 
+          worker synchronization info.
     '''
 
     def __init__(self, freq=None, first=0, tag='', log_to_file=None, rank=None, gen_heartbeat=False, num_epochs=300,
-                 test_freq=None, test_first=0, metric_is_pct=True):
+                 test_freq=None, test_first=0, metric_is_pct=True, distributed_freq=None, distributed_first=0):
         '''
         Constructor.
         '''
@@ -61,7 +65,10 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         if test_freq is None:
             test_freq = sys.maxsize
 
-        super(ProgressPrinter, self).__init__(freq, first, test_freq, test_first)
+        if distributed_freq is None:
+            distributed_freq = sys.maxsize
+
+        super(ProgressPrinter, self).__init__(freq, first, test_freq, test_first, distributed_freq, distributed_first)
 
         self.loss_since_start = 0
         self.metric_since_start = 0
@@ -86,6 +93,8 @@ class ProgressPrinter(cntk_py.ProgressWriter):
             self.metric_multiplier = 100.0
         else:
             self.metric_multiplier = 1.0
+
+        self.__disown__()
 
         # print out data about CNTK build
         cntk_py.print_built_info()
@@ -200,6 +209,10 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         self.metric_since_last = 0
         self.samples_since_last = 0
         return ret
+
+    def write(self, key, value):
+        # Override for ProgressWriter.write method.
+        self.___logprint("{}: {}".format(key, value))
 
     def ___logprint(self, logline):
         if self.log_to_file == None:
@@ -328,6 +341,10 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         # Override for ProgressWriter.on_write_test_update.
         self.___write_progress_update(samples, updates, None, aggregate_metric, self.test_freq, 'Evaluation ')
 
+    def on_write_distributed_sync_update(self, samples, updates, aggregate_metric):
+        # Override for ProgressWriter.on_write_distributed_sync_update.
+        self.___logprint("Distributed training: #Syncs elapsed = {}, #Samples elapsed = {}".format(updates[1] - updates[0], samples[1] - samples[0]))
+
     def ___write_progress_update(self, samples, updates, aggregate_loss, aggregate_metric, frequency, name):
         format_str = ' '
         format_args = []
@@ -428,11 +445,12 @@ class TensorBoardProgressWriter(cntk_py.ProgressWriter):
         if freq is None:
             freq = sys.maxsize
 
-        super(TensorBoardProgressWriter, self).__init__(freq, 0, sys.maxsize, 0)
+        super(TensorBoardProgressWriter, self).__init__(freq, 0, sys.maxsize, 0, sys.maxsize, 0)
 
         # Only log either when rank is not specified or when rank is 0.
         self.writer = cntk_py.TensorBoardFileWriter(log_dir, model) if not rank else None
         self.closed = False
+        self.__disown__()
 
     def write_value(self, name, value, step):
         '''

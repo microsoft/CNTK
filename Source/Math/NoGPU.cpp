@@ -212,12 +212,10 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 {
 }
 
-#if 0
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t*, const ElemType*, const size_t, const size_t, const size_t)
 {
 }
-#endif
 
 // forward pass from feature to hidden layer
 template <class ElemType>
@@ -230,6 +228,11 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
                                                const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, GPUSparseMatrix<ElemType>& c)
+{
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& v, ElemType beta, GPUMatrix<ElemType>& c)
 {
 }
 
@@ -273,7 +276,7 @@ ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>&, ElemType, Elem
 }
 
 template<class ElemType>
-void GPUSparseMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>&c, GPUMatrix<ElemType>&functionValues, ElemType rho, ElemType epsilon)
+void GPUSparseMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>&c, GPUMatrix<ElemType>&functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
 {
 }
 
@@ -737,6 +740,12 @@ void GPUSparseMatrix<ElemType>::ConvertBuffer(OutType* outBuffer, const InType* 
 {
 }
 
+template <class ElemType>
+GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
+{
+    return *this;
+}
+
 #pragma endregion Helper Functions
 
 template class MATH_API GPUSparseMatrix<short>;
@@ -1101,7 +1110,7 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, ElemType R
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon)
+void GPUMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
 {
 }
 
@@ -1946,6 +1955,11 @@ void GPUMatrix<ElemType>::Multiply(const GPUMatrix<ElemType>& /*a*/, const GPUMa
 {
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& v, ElemType beta, GPUMatrix<ElemType>& c)
+{
+}
+
 /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + c</summary>
 /// if a is a column vector, add to all columns of c
 /// if a is a row vector, add to all rows of c
@@ -2140,6 +2154,12 @@ GPUMatrix<ElemType> GPUMatrix<ElemType>::RandomUniform(const size_t rows, const 
 {
     GPUMatrix<ElemType> mat(0);
     return mat;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
+{
+    return *this;
 }
 
 template <class ElemType>

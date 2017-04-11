@@ -1390,7 +1390,7 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon)
+void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
@@ -1418,7 +1418,7 @@ void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<Ele
         ElemType x2 = smoothX2[i];
         ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
         smoothX2[i] = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
-        val[i] += deltaX;
+        val[i] += learningRate * deltaX;
     }
 }
 
@@ -2942,6 +2942,43 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSumOfElements(const CPUMatrix<El
     auto& us = *this;
     us.RequireSize(1, 1);
     us(0, 0) = a.SumOfElements();
+
+    return *this;
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
+{
+    if (a.IsEmpty())
+        LogicError("AssignOneHot: Matrix a is empty.");
+
+    if (axis >= shape.size())
+        LogicError("AssignOneHot: axis is not correct");
+    
+    size_t item_size = 1;
+    for (size_t i = 0; i < shape.size() && i < axis; i++)
+        item_size *= shape[i];
+
+    size_t num_class = shape[axis];
+
+    auto& us = *this;
+    auto nCols = a.GetNumCols();
+    auto nRows = num_class * a.GetNumRows();
+    us.RequireSize(nRows, nCols);
+    
+    ElemType* bufPtr = Data();
+    ElemType* aBufPtr = a.Data();
+    memset(bufPtr, 0, sizeof(ElemType) * nRows *nCols);
+#pragma omp parallel for
+    for (long i = 0; i < a.GetNumElements(); i++)
+    {
+        if (aBufPtr[i] >= 0 && aBufPtr[i] < num_class)
+        {
+            size_t block_id = i / item_size;
+            size_t item_id = i % item_size;
+            bufPtr[block_id * num_class * item_size + item_id + item_size * (size_t)aBufPtr[i]] = 1;
+        }
+    }
 
     return *this;
 }
@@ -4583,7 +4620,7 @@ void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPU
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output, const bool poolPadMode) const
+void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output, const bool poolIncludePad) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
@@ -4605,8 +4642,8 @@ void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, 
                 sum += (*this)(colBase + dcol, sample);
             }
             // Note that we divide by size which is the number of actual elements (does not include padding).
-            // if poolPadMode == true, use avg_pool_include_pad
-            if (poolPadMode)
+            // if poolIncludePad == true, use avg_pool_include_pad
+            if (poolIncludePad)
                 size = indices(0, 0);
             output(row, sample) = sum / size;
         }
@@ -4614,7 +4651,7 @@ void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, 
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad, const bool poolPadMode) const
+void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad, const bool poolIncludePad) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
@@ -4627,7 +4664,7 @@ void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol,
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
             int tmp = size;
-            if (poolPadMode)
+            if (poolIncludePad)
                 size = indices(0, 0);
             assert(size > 0);
             ElemType g = (*this)(row, sample) / size;
@@ -4797,6 +4834,29 @@ void CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMat
 #pragma omp parallel for
         foreach_coord (i, j, c)
             c(i, j) = b(i, j) * f + c(i, j) * beta;
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& v, ElemType beta, CPUMatrix<ElemType>& c)
+{
+    if (v.GetNumRows() != 1 && v.GetNumCols() != 1)
+        InvalidArgument("the argument v must be a vector"); // v is a vector
+
+    if (beta == 0)
+        c.RequireSize(a.GetNumRows(), a.GetNumCols());
+    else
+        c.VerifySize(a.GetNumRows(), a.GetNumCols()); // Can't resize if beta != 0
+
+    const ElemType* vd = v.Data();
+
+    if (beta == 0) // don't even read the memory if beta is 0
+#pragma omp parallel for
+        foreach_coord(i, j, c)
+            c(i, j) = alpha * a(i, j) * vd[j];
+    else
+#pragma omp parallel for
+        foreach_coord(i, j, c)
+            c(i, j) = alpha * a(i, j) * vd[j] + c(i, j) * beta;
 }
 
 /* compute singular value decomposition as

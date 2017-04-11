@@ -176,6 +176,29 @@ public:
         });
     }
 
+    template <class NODESET_FROM, class NODESET_TO> // version that takes both initial and final set of nodes
+    void ForwardPropFromTo(const NODESET_FROM& nodesFrom, const NODESET_TO& nodesTo)
+    {
+        // Compute the set of nodes to do forward on.
+        std::set<ComputationNodeBasePtr> nodesToForward;
+        TravserseInSortedGlobalEvalOrder(nodesTo, [&](const ComputationNodeBasePtr& node) {
+            for (const ComputationNodeBasePtr& input : node->GetInputs())
+            {
+                if (std::find(nodesFrom.begin(), nodesFrom.end(), input) != nodesFrom.end()
+                    || nodesToForward.find(input) != nodesToForward.end())
+                {
+                    nodesToForward.insert(node);
+                }
+            }
+        });
+
+        // Perform forward on resulting nodes in global evaluation order.
+        for (const auto& node : SortByGlobalEvalOrder(nodesToForward))
+        {
+            ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(node, FrameRange(nullptr));
+        }
+    }
+
     static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr>& nodes);
     void ResetEvalTimeStamps();
 

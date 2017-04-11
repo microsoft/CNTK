@@ -117,7 +117,7 @@
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" "$(TargetDir)"</Command>
+      <Command>if exist "$(NvmlDll)" xcopy /I /D /Y "$(NvmlDll)" "$(TargetDir)"</Command>
       <Message>Copying NVidia GDK extension DLL to target folder</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -156,6 +156,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Evaluator.cpp" />
     <ClCompile Include="Function.cpp" />
     <ClCompile Include="Learner.cpp" />
     <ClCompile Include="MinibatchSource.cpp" />

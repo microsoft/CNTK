@@ -1804,15 +1804,15 @@ ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
 template <class ElemType>
 void Matrix<ElemType>::AdaDeltaUpdate(Matrix<ElemType>& gradients,
     Matrix<ElemType>& functionValues,
-    ElemType rho, ElemType epsilon)
+    ElemType learningRate, ElemType rho, ElemType epsilon)
 {
     DecideAndMoveToRightDevice(*this, gradients);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
-    { return m_CPUMatrix->AdaDelta(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, rho, epsilon); SetDataLocation(CPU); },
-    { return m_GPUMatrix->AdaDelta(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, rho, epsilon); SetDataLocation(GPU); },
-    { return gradients.m_CPUSparseMatrix->AdaDelta(*m_CPUMatrix, *functionValues.m_CPUMatrix, rho, epsilon); SetDataLocation(CPU); },
-    { return gradients.m_GPUSparseMatrix->AdaDelta(*m_GPUMatrix, *functionValues.m_GPUMatrix, rho, epsilon); SetDataLocation(GPU); });
+    { return m_CPUMatrix->AdaDelta(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon); SetDataLocation(CPU); },
+    { return m_GPUMatrix->AdaDelta(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon); SetDataLocation(GPU); },
+    { return gradients.m_CPUSparseMatrix->AdaDelta(*m_CPUMatrix, *functionValues.m_CPUMatrix, learningRate, rho, epsilon); SetDataLocation(CPU); },
+    { return gradients.m_GPUSparseMatrix->AdaDelta(*m_GPUMatrix, *functionValues.m_GPUMatrix, learningRate, rho, epsilon); SetDataLocation(GPU); });
 }
 
 template <class ElemType>
@@ -3318,6 +3318,35 @@ ElemType Matrix<ElemType>::SumOfElements() const
 }
 
 template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, vector<size_t>& shape, size_t axis, bool is_sparse)
+{
+    if (a.IsEmpty())
+        LogicError("AssignOneHot: Matrix a is empty.");
+
+    if (axis >= shape.size())
+        LogicError("AssignOneHot: axis is not correct");
+
+    if (a.GetMatrixType() == SPARSE)
+        NOT_IMPLEMENTED;
+
+    //todo: sparse matrix type
+    if (is_sparse && GetMatrixType() != SPARSE)
+    {
+        SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
+    }
+    
+    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this,
+        this,
+        m_CPUMatrix->AssignOneHot(*a.m_CPUMatrix, shape, axis),
+        m_GPUMatrix->AssignOneHot(*a.m_GPUMatrix, shape, axis),
+        m_CPUSparseMatrix->AssignOneHot(*a.m_CPUMatrix, shape, axis),
+        m_GPUSparseMatrix->AssignOneHot(*a.m_GPUMatrix, shape, axis)
+        );
+
+    return *this;
+}
+
+template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignSumOfElements(const Matrix<ElemType>& a)
 {
     if (a.IsEmpty())
@@ -4553,7 +4582,7 @@ void Matrix<ElemType>::MaxUnpooling(const Matrix<int>& mpRowCol, const Matrix<in
 }
 
 template <class ElemType>
-void Matrix<ElemType>::AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output, const bool poolPadMode) const
+void Matrix<ElemType>::AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output, const bool poolIncludePad) const
 {
     assert(mpRowCol.GetNumCols() == 1);
     assert(mpRowIndices.GetNumCols() == 1);
@@ -4564,14 +4593,14 @@ void Matrix<ElemType>::AveragePoolingForward(const Matrix<int>& mpRowCol, const 
     // REVIEW alexeyk: add sparse version.
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->AveragePoolingForward(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(output.m_CPUMatrix), poolPadMode),
+                            m_CPUMatrix->AveragePoolingForward(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(output.m_CPUMatrix), poolIncludePad),
                             m_GPUMatrix->AveragePoolingForward(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(output.m_GPUMatrix)),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
 
 template <class ElemType>
-void Matrix<ElemType>::AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad, const bool poolPadMode) const
+void Matrix<ElemType>::AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad, const bool poolIncludePad) const
 {
     assert(mpRowCol.GetNumCols() == 1);
     assert(mpRowIndices.GetNumCols() == 1);
@@ -4582,7 +4611,7 @@ void Matrix<ElemType>::AveragePoolingBackward(const Matrix<int>& mpRowCol, const
     // REVIEW alexeyk: add sparse version.
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->AveragePoolingBackward(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(grad.m_CPUMatrix), poolPadMode),
+                            m_CPUMatrix->AveragePoolingBackward(*(mpRowCol.m_CPUMatrix), *(mpRowIndices.m_CPUMatrix), *(indices.m_CPUMatrix), *(grad.m_CPUMatrix), poolIncludePad),
                             m_GPUMatrix->AveragePoolingBackward(*(mpRowCol.m_GPUMatrix), *(mpRowIndices.m_GPUMatrix), *(indices.m_GPUMatrix), *(grad.m_GPUMatrix)),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
@@ -4938,6 +4967,25 @@ void Matrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemT
     {
         NOT_IMPLEMENTED;
     }
+}
+
+/// <summary>Columnwise scale with col-major matrix and accumulate.</summary>
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="v">Input scale vector for each column of a</param>
+/// <param name="beta">Scalar</param>
+/// <param name="c">Resulting matrix, the same shape as a</param>
+template <class ElemType>
+void Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& v, ElemType beta, Matrix<ElemType>& c)
+{
+    DecideAndMoveToRightDevice(a, v, c);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+        nullptr,
+        CPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_CPUMatrix, *v.m_CPUMatrix, beta, *c.m_CPUMatrix),
+        GPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_GPUMatrix, *v.m_GPUMatrix, beta, *c.m_GPUMatrix),
+        CPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_CPUSparseMatrix, *v.m_CPUMatrix, beta, *c.m_CPUMatrix),
+        GPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, *v.m_GPUMatrix, beta, *c.m_GPUMatrix));
 }
 
 /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + c</summary>

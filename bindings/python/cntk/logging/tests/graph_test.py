@@ -4,6 +4,7 @@
 # ==============================================================================
 
 import numpy as np
+import pytest
 from ..graph import *
 from cntk.ops import *
 from cntk.axis import Axis
@@ -49,7 +50,8 @@ def _simple_dict():
     d['root'] = d['op2']
 
     d['target'] = input((), name='label')
-    d['all'] = combine([d['root'], minus(d['target'], constant(1, name='c2'), name='minus')], name='all')
+    d['all'] = combine([d['root'], minus(
+        d['target'], constant(1, name='c2'), name='minus')], name='all')
 
     return d
 
@@ -82,16 +84,17 @@ def test_find_nodes():
 
     assert find_by_name(d['root'], 'none') is None
 
+
 def test_find_nodes_returning_proper_types():
     d = _graph_dict()
 
     c1 = find_by_name(d['root'], 'c1')
     assert isinstance(c1, Constant)
-    assert np.allclose(c1.value, np.zeros((2,3))+6)
+    assert np.allclose(c1.value, np.zeros((2, 3)) + 6)
 
     p1 = find_by_name(d['root'], 'p1')
     assert isinstance(p1, Parameter)
-    assert np.allclose(p1.value, np.zeros((3,2))+7)
+    assert np.allclose(p1.value, np.zeros((3, 2)) + 7)
 
 
 def test_plot():
@@ -106,9 +109,82 @@ def test_plot():
     assert t in m
     assert m.find(p) < m.find(t)
 
-def test_depth_first_search():
+
+@pytest.mark.parametrize("depth", [
+    (-1), (0), (1), (5)])
+def test_depth_first_search(depth):
+    '''
+    For graphs without blocks, depth should not make any difference.
+    '''
     d = _simple_dict()
 
-    found = depth_first_search(d['all'], lambda x:True)
+    found = depth_first_search(d['all'], lambda x: True, depth=depth)
     found_names = [v.name for v in found]
-    assert found_names == ['all', 'op2', 'op1', 'i1', 'c1', 'p1', 'minus', 'label', 'c2']
+    assert found_names == ['all', 'op2', 'op1',
+                           'i1', 'c1', 'p1', 'minus', 'label', 'c2']
+
+
+@pytest.mark.parametrize("depth,prefix_count", [
+    (0, {
+            "Input('image'":1,
+            "Dense:":1,
+            "MaxPooling:":1,
+            "Convolution:":1,
+            "Parameter('W'":2,
+            "Parameter('b'":2,
+            }),
+     (-1, {
+            "Input('image'":1,
+            "Dense:":1,
+            "MaxPooling:":1,
+            "Convolution:":1,
+            "Parameter('W'":2,
+            "Parameter('b'":2,
+            # in addition to depth=0...
+            "Plus:":1,
+            "Times":1,
+            }),
+     (1, {
+            "Input('image'":1,
+            "Dense:":1,
+            "MaxPooling:":1,
+            "Convolution:":1,
+            "Parameter('W'":2,
+            "Parameter('b'":2,
+            "Plus:":1,
+            "Times":1,
+            }),
+     (2, {
+            "Input('image'":1,
+            "Dense:":1,
+            "MaxPooling:":1,
+            "Convolution:":1,
+            "Parameter('W'":2,
+            "Parameter('b'":2,
+            "Plus:":1,
+            "Times":1,
+            # in addition to depth=1...
+            "Pooling: Placeholder(": 1,
+            }),
+     ])
+def test_depth_first_search_blocks(depth, prefix_count):
+    from cntk.layers import Sequential, Convolution, MaxPooling, Dense
+    from cntk.default_options import default_options
+
+    with default_options(activation=relu):
+        image_to_vec = Sequential ([
+            Convolution((5,5), 32, pad=True),
+            MaxPooling((3,3), strides=(2,2)),
+            Dense(10, activation=None)
+            ]
+        )
+
+    in1 = input(shape=(3, 256, 256), name='image')
+    img = image_to_vec(in1)
+
+    found = depth_first_search(img, lambda x: True, depth=depth)
+    found_str = [str(v) for v in found]
+
+    assert len(found) == sum(prefix_count.values())
+    for prefix, count in prefix_count.items():
+        assert sum(f.startswith(prefix) for f in found_str) == count

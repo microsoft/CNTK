@@ -37,6 +37,7 @@ Readme text
 *.i text
 
 *.sh text eol=lf
+*.awk text eol=lf
 build-and-test text eol=lf
 configure text eol=lf
 generate_build_info text eol=lf

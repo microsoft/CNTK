@@ -68,6 +68,7 @@
 %warnfilter(401) CNTK::NDMask;
 %warnfilter(401) CNTK::Function;
 %warnfilter(401) CNTK::Trainer;
+%warnfilter(401) CNTK::Evaluator;
 %warnfilter(401) CNTK::Value;
 %warnfilter(401) CNTK::BackPropState;
 %warnfilter(401) CNTK::MinibatchSource;
@@ -94,7 +95,8 @@
 // consumption in proxy objects.
 %rename(train_minibatch_overload_for_minibatchdata) CNTK::Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
 %rename(train_minibatch_overload_for_minibatchdata) CNTK::Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>&, std::unordered_map<Variable, ValuePtr>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
-%rename(test_minibatch_overload_for_minibatchdata) CNTK::Trainer::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
+%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
+%rename(test_minibatch_overload_for_minibatchdata) CNTK::Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>&, std::unordered_map<Variable, ValuePtr>& , const DeviceDescriptor& = DeviceDescriptor::UseDefaultDevice());
 
 %rename(l1_regularization_weight) CNTK::AdditionalLearningOptions::l1RegularizationWeight;
 %rename(l2_regularization_weight) CNTK::AdditionalLearningOptions::l2RegularizationWeight;
@@ -127,6 +129,7 @@
 %template() std::vector<std::shared_ptr<CNTK::Learner>>;
 %template() std::vector<std::shared_ptr<CNTK::DistributedLearner>>;
 %template() std::vector<std::shared_ptr<CNTK::Trainer>>;
+%template() std::vector<std::shared_ptr<CNTK::Evaluator>>;
 %template() std::vector<std::shared_ptr<CNTK::ProgressWriter>>;
 %template() std::pair<double, double>;
 %template() std::pair<size_t, double>;
@@ -570,6 +573,9 @@ public:
     }
 }
 
+
+%ignore CNTK::Dictionary::Keys;
+
 %extend CNTK::Dictionary {
     PyObject* __getitem__(const wchar_t* key) {
     PyObject *DictionaryValueToPy(const CNTK::DictionaryValue&);
@@ -638,6 +644,7 @@ public:
 %feature("director") CNTK::ProgressWriter;
 %ignore CNTK::ProgressWriter::UpdateTraining;
 %ignore CNTK::ProgressWriter::UpdateTest;
+%ignore CNTK::ProgressWriter::UpdateDistributedSync;
 %ignore CNTK::ProgressWriter::WriteTrainingSummary;
 %ignore CNTK::ProgressWriter::WriteTestSummary;
 
@@ -1331,6 +1338,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %unordered_map_ref_conversion(CNTK::Variable,          $descriptor(CNTK::Variable *),          CNTK::Variable,       $descriptor(CNTK::Variable *));
 
 %shared_ptr(CNTK::IDictionarySerializable)
+%shared_ptr(CNTK::Evaluator)
 %shared_ptr(CNTK::Trainer)
 %shared_ptr(CNTK::TrainingSession)
 %shared_ptr(CNTK::Function)
@@ -1702,6 +1710,7 @@ DATA_TYPE.__eq__ = lambda a,b: (a is not None and b is not None and EQ(a,b)) or 
 %py_repr_for(Parameter)
 %py_repr_for(Constant)
 %py_repr_for(Function)
+%py_repr_for(Axis)
 
 %py_eq_for(Variable, Variable_eq)
 %py_hash_for(Variable)
@@ -1731,12 +1740,12 @@ StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and
 }
 
 %pythoncode %{
-from .tensor import _add_tensor_ops, _add_array_interface
+from .tensor import _add_tensor_ops, _add_asarray
 for klass in [Function, Variable]:
     _add_tensor_ops(klass)
 
-for klass in [Variable, Value, NDArrayView, NDMask]:
-    _add_array_interface(klass)
+for klass in [Constant, Parameter, Value, NDArrayView, NDMask, MinibatchData]:
+    _add_asarray(klass)
 
 enable_reversing_tensor_shapes_in_error_messages()
 %}

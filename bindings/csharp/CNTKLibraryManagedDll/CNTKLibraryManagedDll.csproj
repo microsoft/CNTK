@@ -60,8 +60,9 @@
     <Compile Include="SwigProxyClasses\Axis.cs" />
     <Compile Include="SwigProxyClasses\AxisVector.cs" />
     <Compile Include="SwigProxyClasses\BoolVector.cs" />
-    <Compile Include="SwigProxyClasses\CNTKLib.cs" />
-    <Compile Include="SwigProxyClasses\CNTKLibPINVOKE.cs" />
+    <Compile Include="SwigProxyClasses\TraceLevel.cs" />
+    <Compile Include="SwigProxyClasses\Utils.cs" />
+    <Compile Include="SwigProxyClasses\UtilsPINVOKE.cs" />
     <Compile Include="SwigProxyClasses\DataType.cs" />
     <Compile Include="SwigProxyClasses\DeviceDescriptor.cs" />
     <Compile Include="SwigProxyClasses\DeviceDescriptorVector.cs" />
@@ -71,10 +72,9 @@
     <Compile Include="SwigProxyClasses\FloatVector.cs" />
     <Compile Include="SwigProxyClasses\FloatVectorVector.cs" />
     <Compile Include="SwigProxyClasses\Function.cs" />
-    <Compile Include="SwigProxyClasses\IntVector.cs" />
     <Compile Include="SwigProxyClasses\MaskKind.cs" />
     <Compile Include="SwigProxyClasses\NDArrayView.cs" />
-    <Compile Include="SwigProxyClasses\NDArrayViewVector.cs" />
+    <Compile Include="SwigProxyClasses\NDArrayViewPtrVector.cs" />
     <Compile Include="SwigProxyClasses\NDMask.cs" />
     <Compile Include="SwigProxyClasses\NDShape.cs" />
     <Compile Include="SwigProxyClasses\ParameterCloningMethod.cs" />
