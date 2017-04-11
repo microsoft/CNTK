@@ -163,9 +163,9 @@ class Variable:
     # create Variable that is the gradient of self w.r.t. a set of parameters, multiplied with error_signal
     def backprop_to(self, i):  # get backprop function for inputs[i]; each fun(v, g) -> g * dv/dinp_i
         if not self.backprop_to_functions:
-            print('backprop_to failure for', self.op, 'node tag', self._debug_tag)
+            dump_graph(self)
+            print('backprop_to failure for', self.signature_as_string())
             raise NotImplementedError('backprop_to missing')
-            return lambda v, g: g # dummy for now, so that we can debug a partially implemented system
         return self.backprop_to_functions[i]
     def grad_times(self, set_of_params, error_signal=1):
         error_signal = to_Variable(error_signal)
@@ -212,6 +212,8 @@ class Variable:
                         additional_kwargs=as_kwargs(axis=axis))
     def reshape(self, shape):
         return Variable(shape, cntk.NDArrayView.reshape, (self,), additional_args=(shape,))
+    def reduce_sum_to_shape(self, shape):
+        return Variable(shape, cntk.NDArrayView.reduce_sum, (self,), additional_args=(shape,))
 
 class Parameter(Variable):
     def __new__(cls, shape, initializer=None):
@@ -377,11 +379,16 @@ def times_transpose(a,b):
 zero = Constant(0)
 one = Constant(1)
 
+def _unbroadcast(input, g): # reduce 'g' to shape of input; for gradients of broadcasting operations
+    if g.shape != input.shape:
+        g = g.reduce_sum_to_shape(input.shape)
+    return g
+
 # BUGBUG: None of these will correctly inverse-broadcast in backprop_to(); need a way to pass size (or the buffer altogether, same as for arena allocator)
-plus          = binary_op(cntk.NDArrayView.__add__, backprop_to_functions=(lambda v, g: g, lambda v, g: g))
-minus         = binary_op(cntk.NDArrayView.__sub__, backprop_to_functions=(lambda v, g: g, lambda v, g: zero - g)) # TODO: need a proper negate operator, which is easy with alpha
-element_times = binary_op(cntk.NDArrayView.__mul__, backprop_to_functions=(lambda v, g: g * v.inputs[1], lambda v, g: g * v.inputs[0])) # TODO: test this
-greater       = binary_op(cntk.NDArrayView.greater, backprop_to_functions=(lambda v, g: g, lambda v, g: g))
+plus          = binary_op(cntk.NDArrayView.__add__, backprop_to_functions=(lambda v, g: _unbroadcast(v.inputs[0], g),               lambda v, g: _unbroadcast(v.inputs[1], g)))
+minus         = binary_op(cntk.NDArrayView.__sub__, backprop_to_functions=(lambda v, g: _unbroadcast(v.inputs[0], g),               lambda v, g: _unbroadcast(v.inputs[1], zero - g))) # TODO: need a proper negate operator, which is easy with alpha
+element_times = binary_op(cntk.NDArrayView.__mul__, backprop_to_functions=(lambda v, g: _unbroadcast(v.inputs[0], g * v.inputs[1]), lambda v, g: _unbroadcast(v.inputs[1], g * v.inputs[0]))) # TODO: test this
+greater       = binary_op(cntk.NDArrayView.greater)  #, backprop_to_functions=(lambda v, g: g, lambda v, g: g))
 
 tanh    = unary_op(cntk.NDArrayView.tanh)
 sigmoid = unary_op(cntk.NDArrayView.sigmoid, backprop_to_functions=(lambda v, g: g * (v * (one-v)),))
