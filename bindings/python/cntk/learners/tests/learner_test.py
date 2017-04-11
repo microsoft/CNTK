@@ -10,6 +10,7 @@ from .. import *
 from cntk import parameter, input
 
 import pytest
+import sys
 
 LR_SCHEDULE_PARAMS = [
         ((0.2, UnitType.sample), [0.2]),
@@ -126,7 +127,7 @@ def test_learner_update():
 class TestProgressWriter(cntk_py.ProgressWriter):
 
     def __init__(self):
-        super(TestProgressWriter, self).__init__(1, 0, 1, 0)
+        super(TestProgressWriter, self).__init__(1, 0, 1, 0, sys.maxsize, 0)
         self.log_output = []
         self.__disown__()
 

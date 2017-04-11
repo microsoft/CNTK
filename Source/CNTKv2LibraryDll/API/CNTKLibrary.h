@@ -382,12 +382,18 @@ namespace CNTK
         ///
         /// Returns a reference to dimension size for the specified axis.
         ///
-        size_t& operator[](size_t axisId) { return m_shapeDims[axisId]; }
+        size_t& operator[](size_t axisId) 
+        {
+            return m_shapeDims.at(axisId); 
+        }
 
         ///
         /// Returns the dimension size for the specified axis.
         ///
-        size_t operator[](size_t axisId) const { return m_shapeDims[axisId]; }
+        size_t operator[](size_t axisId) const 
+        {
+            return m_shapeDims.at(axisId); 
+        }
 
         ///
         /// Creates and returns a new NDShape instance with the same dimensions as 'this' shape's specified axis range [beginAxisId, endAxisId).

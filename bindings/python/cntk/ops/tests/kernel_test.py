@@ -528,3 +528,17 @@ def test_convolution_transpose_with_output(input_size, conv_size, result, device
 
     unittest_helper(input_op, forward_input, expected_forward,
                     None, device_id=device_id, precision=precision)
+
+
+def test_conv_incorrect_shapes():
+    input = C.input(())    
+    with pytest.raises(ValueError):
+        h = C.layers.Convolution(filter_shape=(5,5), num_filters=8, strides=(1,1), pad=True)(input)
+    with pytest.raises(ValueError):
+        h = C.layers.MaxPooling(filter_shape=(2,2), strides=(2,2))(input)
+
+    input = C.input(28)    
+    with pytest.raises(ValueError):
+        h = C.layers.Convolution(filter_shape=(5,5), num_filters=8, strides=(1,1), pad=True)(input)
+    with pytest.raises(ValueError):
+        h = C.layers.MaxPooling(filter_shape=(2,2), strides=(2,2))(input)
