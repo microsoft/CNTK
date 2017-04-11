@@ -14,6 +14,15 @@ namespace CNTK
 {
     using namespace std;
 
+    enum Actions
+    {
+        Checkpoint,
+        CrossValidate,
+        AdaptLearningRate,
+        Summarize,
+        End
+    };
+
     const static std::wstring s_trainingMinibatchSource = L"TrainingMinibatchSource";
 
     inline bool isNumber(const std::wstring& s)
@@ -30,7 +39,7 @@ namespace CNTK
         double increaseFactor,
         bool loadBestModel,
         bool useEvalCriterion) :
-        m_frequencyInSamples(frequencyInSamples),
+        m_frequency(frequencyInSamples),
         m_decreaseIfImproveLessThan(decreaseIfImproveLessThan),
         m_decreaseFactor(decreaseFactor),
         m_increaseIfImproveMoreThan(increaseIfImproveMoreThan),
@@ -153,88 +162,66 @@ namespace CNTK
             }
         }
 
-        // Fill-in required actions.
-        if (m_checkpoint.m_frequency != 0)
-            m_actions.push_back({ m_checkpoint.m_frequency, 0, 0,
-                [this](size_t currentIndex, const DeviceDescriptor&)
-                {
-                    SaveCheckpoint(currentIndex);
-                    // enable profiler after the first checkpoint
-                    // This has effect only if the profiler is globally enabled by StartProfiler()
-                    Microsoft::MSR::CNTK::ProfilerEnable(true);
-                    return true;
-                } });
-
-        // Report progress before we run cross validation if any.
-        if (m_progressFrequency != 0)
-        {
-            m_actions.push_back({ m_progressFrequency, 0, 0,
-                [this](size_t currentIndex, const DeviceDescriptor&) { ReportProgress(currentIndex); return true; } });
-        }
-
-        if (m_cv.m_frequency != 0)
-            m_actions.push_back({ m_cv.m_frequency , 0, 0,
-                [this](size_t currentIndex, const DeviceDescriptor& d) { return CrossValidate(currentIndex, d); } });
+        // Initializing actions.
+        m_actions.resize(Actions::End);
+        m_actions[Actions::Checkpoint] = { m_checkpoint.m_frequency };
+        m_actions[Actions::Summarize] = { m_progressFrequency };
+        m_actions[Actions::CrossValidate] = { m_cv.m_frequency };
+        m_actions[Actions::AdaptLearningRate] = { m_adaptiveLearningRate.m_frequency };
     }
 
     void TrainingSession::Train(const DeviceDescriptor& computeDevice)
     {
-        std::unordered_map<Variable, ValuePtr> minibatch;
-        bool shouldTrain = m_maxNumSamples > 0;
-
         // Let's try to restore if required.
         size_t restoredNumberOfSamples = 0;
-        if (m_checkpoint.m_restore && !m_checkpoint.m_fileName.empty())
+        if (m_checkpoint.ShouldRestore())
         {
             RestoreFromCheckpoint();
             restoredNumberOfSamples = m_trainer->TotalNumberOfSamplesSeen();
         }
 
+        // This has effect only if the profiler is globally enabled by StartProfiler()
+        Microsoft::MSR::CNTK::ProfilerEnable(true);
+
         // Main train loop.
-        bool earlyExit = false;
-        while (shouldTrain)
+        std::unordered_map<Variable, ValuePtr> minibatch;
+        while (TrainMinibatch(minibatch, computeDevice))
         {
-            // Get next minibatch.
-            size_t samplesLeft = earlyExit || m_maxNumSamples <= Trainer()->TotalNumberOfSamplesSeen()
-                ? 0
-                : m_maxNumSamples - Trainer()->TotalNumberOfSamplesSeen();
-
-            // Note that in case of distributed training we don't want to stop if the local minibatch
-            // is empty - it is possible that the other workers are still processing their minibatches.
-            GetTrainingMinibatch(minibatch, samplesLeft, computeDevice);
-
-            // Train on the minibatch.
-            OnMinibatchStart();
-            shouldTrain = Trainer()->TrainMinibatch(minibatch, computeDevice);
-            earlyExit |= !OnMinibatchEnd(); // If the callback wants to have early exit - we stop training.
-
+            auto numSamples = m_trainer->TotalNumberOfSamplesSeen();
             auto profMisc = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainPost);
 
-            // Peform actions if required.
-            size_t totalNumberOfSamples = Trainer()->TotalNumberOfSamplesSeen();
-            for (auto& action : m_actions)
-            {
-                size_t index = totalNumberOfSamples / action.frequency;
-                if (index != action.currentIndex)
-                {
-                    // If any action wants to have early exit - we stop training.
-                    earlyExit |= !action.action(action.currentIndex, computeDevice);
+            // Perform checkpointing if required.
+            if (m_actions[Actions::Checkpoint].Required(numSamples))
+                Checkpoint();
 
-                    action.currentIndex = index;
-                    action.sampleCountWhenLastCalled = totalNumberOfSamples;
-                }
-            }
+            // Print out summary if required.
+            if (m_actions[Actions::Summarize].Required(numSamples))
+                ReportProgress();
+
+            // Cross validation if required.
+            if (m_actions[Actions::CrossValidate].Required(numSamples))
+                CrossValidate(computeDevice);
+
+            // Adapt learning rate if required.
+            if (m_actions[Actions::AdaptLearningRate].Required(numSamples))
+                AdaptLearningRate();
         }
 
-        if (restoredNumberOfSamples != Trainer()->TotalNumberOfSamplesSeen())
+        // In case we did some training make sure we flush everything
+        // even if frequency was not reached.
+        if (restoredNumberOfSamples != m_trainer->TotalNumberOfSamplesSeen())
         {
-            // Let's do all actions on the last probably a partial data at the end.
-            for (auto& action: m_actions)
-            {
-                if (Trainer()->TotalNumberOfSamplesSeen() % action.frequency != 0 &&
-                    Trainer()->TotalNumberOfSamplesSeen() != action.sampleCountWhenLastCalled)
-                    action.action(action.currentIndex, computeDevice);
-            }
+            auto numSamples = m_trainer->TotalNumberOfSamplesSeen();
+            if (m_actions[Actions::Checkpoint].LastRequired(numSamples))
+                Checkpoint();
+
+            // Print out summary if required.
+            if (m_actions[Actions::Summarize].LastRequired(numSamples))
+                m_trainer->SummarizeTrainingProgress();
+
+            // Cross validation if required.
+            if (m_actions[Actions::CrossValidate].LastRequired(numSamples))
+                CrossValidate(computeDevice);
         }
 
         // In case of incremental - save final checkpoint.
@@ -249,9 +236,51 @@ namespace CNTK
         Test(computeDevice);
     }
 
-    // TODO: Possibly expose a limiting counter on the number of samples for validation.
-    bool TrainingSession::CrossValidate(size_t currentIndex, const DeviceDescriptor& computeDevice)
+    bool TrainingSession::TrainMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, const DeviceDescriptor& computeDevice)
     {
+        // Calculate samples left.
+        size_t samplesLeft = 0;
+        if(!m_finished && m_maxNumSamples > m_trainer->TotalNumberOfSamplesSeen())
+            samplesLeft = m_maxNumSamples - m_trainer->TotalNumberOfSamplesSeen();
+
+        // Note that in case of distributed training we don't want to stop if the local minibatch
+        // is empty - it is possible that the other workers are still processing their minibatches.
+        GetTrainingMinibatch(minibatch, samplesLeft, computeDevice);
+
+        OnMinibatchStart();
+
+        // Train on the minibatch, decision whether to stop
+        // is made only by the trainer.
+        bool shouldTrain = m_trainer->TrainMinibatch(minibatch, computeDevice);
+
+        // If the callback wants to have early exit,
+        // we stop delivering data for this worker.
+        m_finished |= !OnMinibatchEnd();
+
+        return shouldTrain;
+    }
+
+    void TrainingSession::Checkpoint()
+    {
+        auto& action = m_actions[Actions::Checkpoint];
+        size_t currentIndex = action.m_currentIndex;
+
+        OnCheckpointStart(currentIndex);
+        Dictionary externalState;
+        externalState[s_trainingMinibatchSource] = m_source->GetCheckpointState();
+
+        wstring checkpointFile = m_checkpoint.m_fileName;
+        if (m_checkpoint.m_preserveAll)
+            checkpointFile += std::to_wstring(currentIndex);
+        m_trainer->SaveCheckpoint(checkpointFile, externalState);
+        OnCheckpointEnd(currentIndex);
+
+        action.Update(m_trainer->TotalNumberOfSamplesSeen());
+    }
+
+    void TrainingSession::CrossValidate(const DeviceDescriptor& computeDevice)
+    {
+        auto& action = m_actions[Actions::CrossValidate];
         if (m_cv.m_source) // Running cross validation
         {
             std::unordered_map<Variable, ValuePtr> minibatch;
@@ -279,13 +308,18 @@ namespace CNTK
 
             m_cv.m_source->RestoreFromCheckpoint(checkpoint);
             Trainer()->SummarizeTestProgress();
-            return OnCrossValidationEnd(currentIndex, accumulatedError / totalNumberOfSamples, totalNumberOfSamples, numberOfMinibatches);
+            m_finished |= !OnCrossValidationEnd(action.m_currentIndex, accumulatedError / totalNumberOfSamples, totalNumberOfSamples, numberOfMinibatches);
         }
         else // Only invoking the callback.
         {
-            return OnCrossValidationEnd(currentIndex, 0, 0, 0);
+            m_finished |= !OnCrossValidationEnd(action.m_currentIndex, 0, 0, 0);
         }
+
+        action.Update(m_trainer->TotalNumberOfSamplesSeen());
     }
+
+    void TrainingSession::AdaptLearningRate()
+    {}
 
     void TrainingSession::Test(const DeviceDescriptor& computeDevice)
     {
@@ -306,9 +340,10 @@ namespace CNTK
         m_trainer->SummarizeTestProgress();
     }
 
-    inline void TrainingSession::ReportProgress(size_t /*currentIndex*/)
+    inline void TrainingSession::ReportProgress()
     {
-        Trainer()->SummarizeTrainingProgress();
+        m_trainer->SummarizeTrainingProgress();
+        m_actions[Actions::Summarize].Update(m_trainer->TotalNumberOfSamplesSeen());
     }
 
     void TrainingSession::GetTrainingMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice)
@@ -352,19 +387,6 @@ namespace CNTK
     {
         Dictionary externalState = Trainer()->RestoreFromCheckpoint(checkpointFileName);
         m_source->RestoreFromCheckpoint(externalState[s_trainingMinibatchSource].Value<Dictionary>());
-    }
-
-    void TrainingSession::SaveCheckpoint(size_t currentIndex)
-    {
-        OnCheckpointStart(currentIndex);
-        Dictionary externalState;
-        externalState[s_trainingMinibatchSource] = m_source->GetCheckpointState();
-
-        wstring checkpointFile = m_checkpoint.m_fileName;
-        if (m_checkpoint.m_preserveAll)
-            checkpointFile += std::to_wstring(currentIndex);
-        Trainer()->SaveCheckpoint(checkpointFile, externalState);
-        OnCheckpointEnd(currentIndex);
     }
 
     void TrainingSession::SaveFinalCheckpoint()
@@ -443,7 +465,7 @@ namespace CNTK
         if (restoreFile.empty()) // Nothing to restore.
             return;
 
-        // TODO: Should have proper loggin instead.
+        // TODO: Should have proper logging instead.
         fprintf(stderr, "Restoring training session from the checkpoint '%ls'\n", restoreFile.c_str());
 
         this->RestoreFromCheckpoint(restoreFile);
@@ -452,8 +474,8 @@ namespace CNTK
         size_t totalNumberOfSamples = Trainer()->TotalNumberOfSamplesSeen();
         for (auto& action : m_actions)
         {
-            action.currentIndex = totalNumberOfSamples / action.frequency;
-            action.sampleCountWhenLastCalled = totalNumberOfSamples - totalNumberOfSamples % action.frequency;
+            action.m_currentIndex = totalNumberOfSamples / action.m_frequency;
+            action.m_sampleCountWhenLastCalled = totalNumberOfSamples - totalNumberOfSamples % action.m_frequency;
         }
     }
 }

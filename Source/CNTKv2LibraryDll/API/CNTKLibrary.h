@@ -5161,6 +5161,11 @@ namespace CNTK
             bool restoreFromCheckpointIfExists = true,
             bool preserveAllCheckpoints = false);
 
+        bool ShouldRestore() const
+        {
+            return m_restore && !m_fileName.empty();
+        }
+
     private:
         friend class TrainingSession;
         const std::wstring m_fileName;
@@ -5203,7 +5208,9 @@ namespace CNTK
             bool useEvalCriterion = false);
 
     private:
-        size_t m_frequencyInSamples;
+        friend class TrainingSession;
+
+        size_t m_frequency;
         double m_decreaseIfImproveLessThan;
         double m_decreaseFactor;
         double m_increaseIfImproveMoreThan;
@@ -5218,14 +5225,6 @@ namespace CNTK
     ///
     class TrainingSession
     {
-        struct PeriodicAction
-        {
-            size_t frequency;
-            size_t currentIndex;
-            size_t sampleCountWhenLastCalled;
-            std::function<bool(size_t currentIndex, const DeviceDescriptor&)> action;
-        };
-
     public:
         ///
         /// Constructor of the training session:
@@ -5312,8 +5311,41 @@ namespace CNTK
         TrainerPtr Trainer() const { return m_trainer; }
 
     private:
+        struct PeriodicAction
+        {
+            size_t m_frequency;
+            size_t m_currentIndex;
+            size_t m_sampleCountWhenLastCalled;
+
+            bool Required(size_t numSamples) const
+            {
+                return m_frequency && (numSamples / m_frequency) != m_currentIndex;
+            }
+
+            bool LastRequired(size_t numSamples) const
+            {
+                return numSamples % m_frequency != 0 && numSamples != m_sampleCountWhenLastCalled;
+            }
+
+            void Update(size_t numSamples)
+            {
+                size_t index = numSamples / m_frequency;
+                assert(index != m_currentIndex);
+                m_currentIndex = index;
+                m_sampleCountWhenLastCalled = numSamples;
+            }
+        };
+
         /// Disallow copy and move construction and assignment
         TrainingSession(const TrainingSession&) = delete; TrainingSession& operator=(const TrainingSession&) = delete; TrainingSession& operator=(TrainingSession&&) = delete; TrainingSession(TrainingSession&&) = delete;
+
+        /// High level auxilary functions.
+        bool TrainMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, const DeviceDescriptor& computeDevice);
+        void Checkpoint();
+        void CrossValidate(const DeviceDescriptor& computeDevice);
+        void AdaptLearningRate();
+        void ReportProgress();
+        void Test(const DeviceDescriptor& computeDevice);
 
         // Auxilary functions.
         void GetNextMinibatch(const MinibatchSourcePtr& source, std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, size_t workerRank, size_t numberOfWorkers, const DeviceDescriptor& computeDevice);
@@ -5321,13 +5353,9 @@ namespace CNTK
         void GetCrossValidationMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice);
 
         void RestoreFromCheckpoint();
-        void SaveCheckpoint(size_t currentIndex);
         void SaveFinalCheckpoint();
 
-        bool CrossValidate(size_t currentIndex, const DeviceDescriptor& computeDevice);
-        void ReportProgress(size_t currentIndex);
-        void Test(const DeviceDescriptor& computeDevice);
-
+    private:
         size_t m_parallelAfterSamples;
         size_t m_workerRank;
         size_t m_numberOfWorkers;
@@ -5341,6 +5369,9 @@ namespace CNTK
         const std::unordered_map<Variable, StreamInformation> m_varToStream;
         const size_t m_maxNumSamples;
         const size_t m_progressFrequency;
+
+        // Flag indicating that current work has finished training.
+        bool m_finished;
 
         // Additional configuration.
         CheckpointConfig m_checkpoint;
