@@ -6,6 +6,7 @@
 
 from __future__ import division, print_function
 import numpy as np
+import cntk as C
 from .. import *
 from cntk import parameter, input
 
@@ -16,9 +17,6 @@ import cntk as C
 from cntk.logging import ProgressPrinter
 from cntk.learners import sgd, learning_rate_schedule, UnitType
 from cntk.layers import Dense, Sequential
-
-
-
 LR_SCHEDULE_PARAMS = [
         ((0.2, UnitType.sample), [0.2]),
         ((0.2, UnitType.sample), [0.2, 0.2, 0.2, 0.2]),
@@ -68,7 +66,7 @@ def test_learner_init():
 
     learner = sgd(res.parameters, lr=learning_rate_schedule(0.1, UnitType.sample))
     assert learner.learning_rate() == 0.1
-
+    
     learner.reset_learning_rate(learning_rate_schedule([1,2,3], UnitType.minibatch));
     assert learner.learning_rate() == 1.0
 
@@ -116,7 +114,7 @@ def test_learner_init():
     assert not use_mean_gradient_value
 
     adadelta(res.parameters, lr_per_sample)
-
+    
     set_default_use_mean_gradient_value(True)
     use_mean_gradient_value = default_use_mean_gradient_value()
     assert use_mean_gradient_value
@@ -167,14 +165,14 @@ def test_learner_logging():
     writer = TestProgressWriter();
     lr_values = [0.3, 0.2, 0.1, 0]
     m_values = [0.6, 0.7, 0.8]
-    learner = momentum_sgd(z.parameters,
+    learner = momentum_sgd(z.parameters, 
                   learning_rate_schedule(lr_values, UnitType.sample, 1),
                   momentum_schedule(m_values, 1))
     trainer = Trainer(z, (ce, errs), [learner], writer)
 
     for i in range(10):
         trainer.train_minibatch({features: [[2.]], labels: [[1.]]})
-
+    
     assert len(writer.log_output) == len(lr_values + m_values)
 
     values = [j for i in zip(lr_values,m_values) for j in i] + [0]
@@ -235,7 +233,7 @@ def test_sweep_based_schedule(tmpdir, device_id):
     }
 
     # fetch minibatch (first sequence)
-    data = mbs.next_minibatch(1, input_map=input_map)
+    data = mbs.next_minibatch(1, input_map=input_map) 
     trainer.train_minibatch(data)
     assert learner.learning_rate() == 0.3
 
@@ -267,6 +265,14 @@ def generate_random_data(sample_size, feature_dim, num_classes):
      class_ind = [Y == class_number for class_number in range(num_classes)]
      Y = np.asarray(np.hstack(class_ind), dtype=np.float32)
      return X, Y
+
+
+
+def test_learner_empy_parameters_list():
+    lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
+    with pytest.raises(ValueError):
+        learner = C.sgd([], lr_per_sample)
+
 
 def ffnet():
     inputs = 3
