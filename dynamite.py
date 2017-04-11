@@ -124,24 +124,16 @@ class Variable:
         # TODO: Do this with a per-operation function.
         if op in unary_reduction_ops:
             # E.g. (44,5) --> (44,); or two reductions in parallel, (2,44,25) --> (2,25).
-            input_shape = batched_inputs[0].shape
-            assert input_shape[0] == batch_size # (must be since it was just batched to this batch_size)
-            if input_shape == (2,44,25):
+            if batched_inputs[0].shape == (2,44,25):
                 print(13)
-            red_op = op
+            reduction_op = op
             def reduce_batch(arg):
-                assert arg is batched_inputs[0].data
-                ash = arg.shape
-                assert ash == input_shape
+                input_shape = arg.shape
                 num_ones_to_insert = len(input_shape) - len(self.shape) - 1
                 assert num_ones_to_insert > 0
                 reduce_via_shape = (batch_size,) + (1,) * num_ones_to_insert + self.shape # intermediate
-                res = red_op(arg, reduce_to_shape=reduce_via_shape)
-                rsh = res.shape
-                assert rsh == reduce_via_shape
+                res = reduction_op(arg, reduce_to_shape=reduce_via_shape)
                 res = res.reshape(shape_batched)
-                osh = res.shape
-                assert osh == shape_batched
                 return res
             return Variable(shape_batched, reduce_batch, batched_inputs, self.backprop_to_functions)
         return Variable(shape_batched, op, batched_inputs, self.backprop_to_functions, self.additional_args, self.additional_kwargs)
