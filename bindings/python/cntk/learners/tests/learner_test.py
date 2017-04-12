@@ -139,6 +139,36 @@ def test_learner_update():
     assert learner.learning_rate() == 0.4
 
 
+def test_noise_injection_with_checkpointing():
+    from cntk import initializer
+    shape = (100,100)
+    
+    w1 = parameter(shape=shape, init=initializer.glorot_uniform(seed=123))
+    w2 = parameter(shape=shape, init=initializer.glorot_uniform(seed=123))
+    w3 = parameter(shape=shape, init=initializer.glorot_uniform(seed=123))
+    
+    lr=learning_rate_schedule(0.5, UnitType.sample)
+    m=momentum_schedule(0.99)
+
+    learner1 = momentum_sgd([w1], lr, m, gaussian_noise_injection_std_dev=0.5)
+    learner2 = momentum_sgd([w2], lr, m, gaussian_noise_injection_std_dev=0.5)
+    learner3 = momentum_sgd([w3], lr, m, gaussian_noise_injection_std_dev=0.5)
+
+    assert np.allclose(w1.value, w2.value) and np.allclose(w1.value, w3.value)
+
+    for i in range(10):
+        checkpoint = learner1.create_checkpoint()
+
+        v =  np.float32(np.random.rand(100,100))
+    
+        learner1.update({w1: v}, 1)
+        learner2.update({w2: v}, 1)
+        assert not np.allclose(w1.value, w2.value)
+
+        learner3.restore_from_checkpoint(checkpoint)
+        learner3.update({w3: v}, 1)
+        assert np.allclose(w1.value, w3.value)
+
 class TestProgressWriter(cntk_py.ProgressWriter):
 
     def __init__(self):

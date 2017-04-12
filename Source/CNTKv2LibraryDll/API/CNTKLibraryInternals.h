@@ -246,7 +246,7 @@ namespace CNTK
 
         CNTK_API size_t NewUniqueId();
 
-        CNTK_API size_t GenerateRandomSeed();
+        CNTK_API size_t GenerateRandomSeed(bool perWorkerLocalValue = false);
 
         // Internal hooks for testing and higher-level bindings
         // These should not be directly called by C++ API users
@@ -278,7 +278,11 @@ namespace CNTK
         CNTK_API void EnableSynchronousGPUKernelExecution();
         CNTK_API bool IsSynchronousGPUKernelExecutionEnabled();
 
-        CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
+        CNTK_API unsigned long GetRandomSeed();
+        CNTK_API void SetFixedRandomSeed(unsigned long value);
+        CNTK_API bool IsRandomSeedFixed();
+        // If SetFixedRandomSeed has been called before, this will clear the 'fixed' flag.
+        CNTK_API void ResetRandomSeed(unsigned long value = 0);
 
         CNTK_API void EnableForwardValuesSharing();
         CNTK_API void DisableForwardValuesSharing();

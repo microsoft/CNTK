@@ -345,22 +345,36 @@ std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool read
 #endif
 }
 
+void ForceInitParameters(FunctionPtr f) 
+{
+    for (const auto& p : f->Parameters()) 
+        UNUSED(p.Value()); 
+}
+
 FunctionPtr BuildFFClassifierNet(const Variable& inputVar, size_t numOutputClasses, const DeviceDescriptor& device, unsigned long seed = 1)
 {
-    Internal::SetFixedRandomSeed(seed);
+    Internal::ResetRandomSeed(seed);
     const size_t numHiddenLayers = 2;
     const size_t hiddenLayersDim = 32;
     auto nonLinearity = std::bind(Sigmoid, std::placeholders::_1, L"");
-    return FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, nonLinearity, L"classifierOutput");
+    auto f = FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, nonLinearity,
+        L"classifierOutput", SentinelValueForAutoSelectRandomSeed);
+    // initialize the function parameters right away, using the current seed value.
+    ForceInitParameters(f);
+    return f;
 }
 
 FunctionPtr BuildLSTMClassifierNet(const Variable& inputVar, const size_t numOutputClasses, const DeviceDescriptor& device, unsigned long seed = 1)
 {
-    Internal::SetFixedRandomSeed(seed);
+    Internal::ResetRandomSeed(seed);
     const size_t cellDim = 25;
     const size_t hiddenDim = 25;
     const size_t embeddingDim = 50;
-    return LSTMSequenceClassifierNet(inputVar, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
+    auto f = LSTMSequenceClassifierNet(inputVar, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, 
+        L"classifierOutput", SentinelValueForAutoSelectRandomSeed);
+    // initialize the function parameters right away, using the current seed value.
+    ForceInitParameters(f);
+    return f;
 }
 
 void TestFunctionSaveAndLoad(const FunctionPtr& function, const DeviceDescriptor& device)
@@ -391,13 +405,11 @@ void TestFunctionSaveAndLoad(const FunctionPtr& function, const DeviceDescriptor
 
 void TestFunctionsForEquality(const DeviceDescriptor& device)
 {
-    // TODO: add GPU version (need to reset cuda random generator each time a new function is created).
-    assert(device.Type() == DeviceKind::CPU);
-
     auto inputVar = InputVariable({ 2 }, false, DataType::Float, L"features");
 
     auto f1 = BuildFFClassifierNet(inputVar, 3, device, /*seed*/ 1);
     auto f2 = BuildFFClassifierNet(inputVar, 3, device, /*seed*/ 1);
+    
     if (!AreEqual(f1, f2))
     {
         BOOST_ERROR("TestFunctionsForEquality: two functions built with the same seed values are not identical.");
@@ -405,6 +417,7 @@ void TestFunctionsForEquality(const DeviceDescriptor& device)
 
     auto f3 = BuildFFClassifierNet(inputVar, 3, device, /*seed*/ 2);
     auto f4 = BuildFFClassifierNet(inputVar, 3, device, /*seed*/ 3);
+
     if (AreEqual(f3, f4))
     {
         BOOST_ERROR("TestFunctionsForEquality: two functions built with different seed values are identical.");
@@ -974,6 +987,10 @@ BOOST_AUTO_TEST_CASE(LargeLernerSerializationInCpu)
 BOOST_AUTO_TEST_CASE(FunctionsForEquality)
 {
     TestFunctionsForEquality(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnGpu())
+    {
+        TestFunctionsForEquality(DeviceDescriptor::GPUDevice(0));
+    }
 }
 
 BOOST_AUTO_TEST_CASE(FunctionSerializationInCPU)

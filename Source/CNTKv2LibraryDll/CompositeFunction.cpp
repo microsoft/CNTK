@@ -321,7 +321,7 @@ namespace CNTK
 
                 // Create state from scratch, so that function attributes contain all the required key-value pairs.
                 Dictionary state;
-                state[PrimitiveFunction::AttributeNameRngSeed] = Internal::GenerateRandomSeed();
+                state[PrimitiveFunction::AttributeNameRngSeed] = Internal::GenerateRandomSeed(true);
                 state[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
                 primitiveFunction->SetState(state);
             }

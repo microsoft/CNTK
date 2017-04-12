@@ -64,6 +64,8 @@ namespace CNTK
 
         std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
 
+        mutable size_t m_noiseInjectionSeed;
+
         // The following four static protected methods expose private methods of NDArrayView class
         // (which declares LearnerBase as friend class), so that they are available to subclasses.
         template <typename ElementType>

@@ -1067,8 +1067,8 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameAllowDuplicates] = allowDuplicates;
 
         if (seed == SentinelValueForAutoSelectRandomSeed)
-            seed = Internal::GenerateRandomSeed();
-        
+            seed = Internal::GenerateRandomSeed(true);
+
         additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
         additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
 
@@ -1082,7 +1082,7 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameAllowDuplicates] = allowDuplicates;
 
         if (seed == SentinelValueForAutoSelectRandomSeed)
-            seed = Internal::GenerateRandomSeed();
+            seed = Internal::GenerateRandomSeed(true);
 
         additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
         additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
@@ -1096,8 +1096,8 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameDropoutRate] = dropoutRate;
 
         if (seed == SentinelValueForAutoSelectRandomSeed)
-            seed = Internal::GenerateRandomSeed();
-        
+            seed = Internal::GenerateRandomSeed(true);
+
         additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
         additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
 
