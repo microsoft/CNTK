@@ -729,7 +729,7 @@ class Function(cntk_py.Function):
         return var_gradients
 
     @typemap
-    def grad(self, at, wrt=None, outputs=None, device=None, as_numpy=True):
+    def grad(self, at, wrt=None, outputs=None, device=None, as_numpy=True, grad_root=None):
         '''
         Computes the gradient of this Function at location ``at`` with respect to ``wrt``.
         The Function must have a single output.
@@ -784,7 +784,10 @@ class Function(cntk_py.Function):
         output_map = {v: None for v in outputs}
         wrt_map = {v: None for v in wrt}
 
-        super(Function, self).gradients(in_var_map, wrt_map, output_map, device)
+        if grad_root is None:
+            super(Function, self).gradients(in_var_map, wrt_map, output_map, device)
+        else:
+            super(Function, self).gradients(in_var_map, grad_root, wrt_map, output_map, device)
 
         if as_numpy:
             for k in output_map:
