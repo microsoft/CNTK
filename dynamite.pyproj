@@ -27,8 +27,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="dynamite\dynamite.py" />
+    <Compile Include="dynamite\variable.py" />
     <Compile Include="dynamite\layers.py" />
+    <Compile Include="dynamite\__init__.py" />
     <Compile Include="seqcla.py" />
     <Compile Include="test.py" />
   </ItemGroup>
