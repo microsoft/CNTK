@@ -729,7 +729,7 @@ def print_graph_stats(vars):
     num_getitems = stats['G'] if 'G' in stats else 0
     num_splices  = stats['S'] if 'S' in stats else 0
     total = num_params + num_consts + num_vars + num_getitems + num_splices
-    print(total, 'nodes,', (num_vars, num_splices, num_getitems), '(#compute, #splice, #slice), ', (num_params, num_consts), '(parameters, constants)')
+    print(total, 'nodes,', (num_vars, num_splices, num_getitems), '(#compute, #splice, #slice),', (num_params, num_consts), '(parameters, constants)')
 
 def transform_to_batched_ops(vars):
     nodes = topo_sort(vars)    # (it is possible to implement this without, just more complex)
@@ -893,11 +893,17 @@ def transform_to_batched_ops(vars):
             if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose:
                 return (False, p.op, (p.inputs[0].shape, id(p.inputs[1])))
             # batch if both op and input shapes are the same
+            # Python slices are not hashable
+            additional_args_sanitized = p.additional_args
+            additional_args_sanitized = tuple(
+                arg if not isinstance(arg, slice) else str(arg)
+                for arg in additional_args_sanitized
+            )
             # Python dicts are not hashable, so make additional_kwargs into a tuple if given (yuk)
             additional_kwargs_tuplified = p.additional_kwargs
             if additional_kwargs_tuplified:
                 additional_kwargs_tuplified = tuple((arg_name, additional_kwargs_tuplified[arg_name]) for arg_name in sorted(additional_kwargs_tuplified.keys()))
-            return (False, p.op, p.additional_args, additional_kwargs_tuplified, tuple(v.shape for v in p.inputs))
+            return (False, p.op, additional_args_sanitized, additional_kwargs_tuplified, tuple(v.shape for v in p.inputs))
         p.key = make_key(p)
         # TODO: must also include the storage format in the key; do this in C++ version
         p.consumers = []
