@@ -214,7 +214,7 @@ class Variable:
     def grad_times(self, set_of_params, error_signal=1):
         error_signal = to_Variable(error_signal)
         return create_gradient_graph(self, set_of_params, error_signal)
-    # operator overloads
+    # operator overloads (infix ops)
     def __add__(self, other):
         return plus(self, other)
     def __sub__(self, other):
@@ -225,6 +225,17 @@ class Variable:
         return greater(self, other)
     def __matmul__(self, other):
         return times(self, other)
+    # operator overloads (reverse infix ops)
+    def __radd__(self, other):
+        return Variable.__add__(other, self)
+    def __rsub__(self, other):
+        return Variable.__sub__(other, self)
+    def __rmul__(self, other):
+        return Variable.__mul__(other, self)
+    def __rgt__(self, other):
+        return Variable.__gt__(other, self)
+    def __rmatmul__(self, other):
+        return Variable.__matmul__(other, self)
     def _place_item(input, g, key): # BUGBUG: highly inefficient
         # BUGBUG: Cannot back-prop into a huge matrix I just sliced from; needs in-place semantics!!!
         res = input - input  # create a zero of the right size
@@ -785,10 +796,10 @@ ops_with_out = { cntk.NDArrayView.__add__, cntk.NDArrayView.__sub__, cntk.NDArra
 }
 def batch_eval(vars):
     # transform the graph from raw (individual batch items) to the batched graph
-    #print_graph_stats(vars)
+    print_graph_stats(vars)
     if use_batching:
         transform_to_batched_ops(vars)
-        #print_graph_stats(vars)
+        print_graph_stats(vars)
         #transform_to_batched_ops(vars) # verify that the second time does not change it any further
         #print_graph_stats(vars)
     #print('--- after another transform ---')

@@ -37,18 +37,6 @@ def BroadcastingUnary(unary_op):
 #        return binary_op(a,b)
 #    return broadcasting_binary_op
 
-def Model(**kwargs):
-    def patch(f):
-        f.__ismodel__ = True
-        f.get_parameters = get_parameters  # BUGBUG: It's not this simple. Must create a class, it seems.
-        for name, value in kwargs.items():
-            setattr(f, name, value) # add all as class members
-        #def mygetitem(self, x):
-        #    x
-        #f.__getitem__ = mygetitem
-        return f
-    return patch
-
 # --- layers
 
 def identity(x):
@@ -77,7 +65,8 @@ def RNNUnit(N, activation=sigmoid, name=''):
     b = Parameter((N,))
     @Model(W=W, R=R, b=b)
     def rnn_step(s,x):
-        return activation(plus(plus(times(s,R), times(x,W)), b))
+        return activation(x @ W + b + s @ R)  # this ordering should allow the first two to be batched
+        #return activation(s @ R + x @ W + b)
     return rnn_step
 
 def LSTM(N, activation=sigmoid):
@@ -157,9 +146,24 @@ def Recurrence(step_function, initial_state=0):
         return out
     return recurrence
 
+def Model(**kwargs):
+    def patch(f):
+        f.__ismodel__ = True
+        f.get_parameters      = lambda: _Model_get_parameters(f)
+        f.get_parameter_names = lambda: _Model_get_parameter_names(f)
+        for name, value in kwargs.items():
+            setattr(f, name, value) # add all as class members
+        #def mygetitem(self, x):
+        #    x
+        #f.__getitem__ = mygetitem
+        return f
+    return patch
+
+# --- Model decorator
+
 # returns the set of Parameter objects hanging off a model
 # Returned as a tuple, since sets in Python have non-deterministic ordering.
-def get_parameters(m):
+def _Model_get_parameters(m):
     parameters = []
     for member_name in dir(m):
         if member_name[0] == '_' and member_name != '__items__':
@@ -169,13 +173,13 @@ def get_parameters(m):
             parameters.append(member)
         elif member_name == '__items__':
             for item in member:
-                parameters.extend(get_parameters(item))
+                parameters.extend(_Model_get_parameters(item))
         elif hasattr(member, '__ismodel__'):
-            parameters.extend(get_parameters(member))
+            parameters.extend(_Model_get_parameters(member))
     return tuple(parameters)
 
 # returns a dict [parameter] -> its name in the hierarchy
-def get_parameter_names(m, root='_'):
+def _Model_get_parameter_names(m, root='_'):
     parameter_names = dict()
     for member_name in dir(m):
         if member_name[0] == '_' and member_name != '__items__':
@@ -185,12 +189,13 @@ def get_parameter_names(m, root='_'):
             parameter_names[member] = root + '.' + member_name
         elif member_name == '__items__':
             for i, item in enumerate(member):
-                parameter_names.update(get_parameter_names(item, '{}[{}]'.format(root, i)))
+                parameter_names.update(_Model_get_parameter_names(item, '{}[{}]'.format(root, i)))
         elif hasattr(member, '__ismodel__'):
-            parameter_names.update(get_parameter_names(member, root + '.' + member_name))
+            parameter_names.update(_Model_get_parameter_names(member, root + '.' + member_name))
     return parameter_names
 
-def dump_parameters(m, root='$'):
+# (delete this if no longer needed)
+def delete_this_dump_parameters(m, root='$'):
     for member_name in dir(m):
         if member_name[0] == '_' and member_name != '__items__':
             continue

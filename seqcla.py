@@ -126,9 +126,8 @@ def train(debug_output=False):
         model.rnn.H  : dmodel.__items__[1].step_function.R,
         model.embed.E: dmodel.__items__[0].E              
     }
-    #dparameters = dmodel.get_parameters()
-    dparameters = dynamite.get_parameters(dmodel)
-    dparam_names = dynamite.get_parameter_names(dmodel)
+    dparameters = dmodel.get_parameters()
+    dparam_names = dmodel.get_parameter_names()
     print('dynamic model has', len(dparameters), 'parameter tensors:', ', '.join(name + str(param.shape) for param, name in dparam_names.items()))
 
     # testing stuff
