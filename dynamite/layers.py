@@ -16,11 +16,12 @@ from .variable import *
 # --- decorators
 
 # decorators for layers that accept tensors as well as collections, such as Embedding() and Dense()
+# TODO: this map() operation should be batch_map, in case the function passed in yields. We'd need a nested scheduler for that.
 def BroadcastingUnary(unary_op):
     # BUGBUG: testing for nested sequences must know how to align... how to do that?
     def broadcasting_unary_op(x):
         if isinstance(x, (list, tuple)): # broadcast along sequence
-            return map(broadcasting_unary_op, x) # recursive, to support collections of collections  --TODO: test this
+            return map(broadcasting_unary_op, x) # recursive, to support collections of collections  --TODO: batch_map()
         return unary_op(x)
     return broadcasting_unary_op
 

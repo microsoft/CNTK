@@ -775,6 +775,7 @@ def transform_to_batched_ops(vars):
 # main evaluation function
 #  - evaluate a set of root variables
 #  - with full automatic dynamic batching
+import time
 from operator import mul as mul_operator
 from functools import reduce as functools_reduce
 ops_with_out = { cntk.NDArrayView.__add__, cntk.NDArrayView.__sub__, cntk.NDArrayView.__mul__, cntk.NDArrayView.greater,
@@ -813,6 +814,8 @@ def batch_eval(vars):
     #print('arena size', mem_offset)
     arena = cntk.NDArrayView((mem_offset,))
     # execution
+    num_ops = 0
+    start = time.time()
     for p in nodes:
         if not p.computed:
             out = None
@@ -821,7 +824,13 @@ def batch_eval(vars):
                 out = arena[mem_offset:mem_offset + p.mem_size]
                 out = out.reshape(p.shape)
             p.compute_data(out=out)
+            num_ops += 1
         #print(p.data.to_ndarray())
+    end = time.time()
+    dummy = vars[0].to_ndarray()
+    end2 = time.time()
+    print('{:.4f} ms in {} ops'.format((end-start) * 1000, num_ops))
+    print('{:.4f} ms in {} ops'.format((end2-start) * 1000, num_ops))
     #dump_graph(vars)
     #transform_to_batched_ops(vars) # this shows that transforming after actually computing is correct
 
