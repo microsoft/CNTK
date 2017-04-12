@@ -93,7 +93,11 @@ class Variable:
         self.additional_args       = other.additional_args
         self.additional_kwargs     = other.additional_kwargs
     def type_as_char(self):
-        return "P" if isinstance(self, Parameter) else "C" if isinstance(self, Constant) else "G" if self.op is cntk.NDArrayView.__getitem__ else "V"
+        return "P" if isinstance(self, Parameter)             else \
+               "C" if isinstance(self, Constant)              else \
+               "G" if self.op is cntk.NDArrayView.__getitem__ else \
+               "S" if self.op is cntk.NDArrayView.splice      else \
+               "V"
     def type_as_string(self, expand_getitem=False):
         if self.op == cntk.NDArrayView.__getitem__ and expand_getitem:
             t = self.inputs[0].type_as_string() + '[' + str(self.additional_args[0]) + ']'
@@ -710,6 +714,17 @@ def topo_sort(roots: list):
 #     - sort each one right away into its batched group
 #     - this requires consumer sets for all nodes, and a not-ready-children counter
 #  - delete the batched group
+def print_graph_stats(vars):
+    from collections import Counter
+    stats = Counter(t.type_as_char() for t in topo_sort(vars))
+    num_params   = stats['P'] if 'P' in stats else 0
+    num_consts   = stats['C'] if 'C' in stats else 0
+    num_vars     = stats['V'] if 'V' in stats else 0
+    num_getitems = stats['G'] if 'G' in stats else 0
+    num_splices  = stats['S'] if 'S' in stats else 0
+    total = num_params + num_consts + num_vars + num_getitems + num_splices
+    print(total, 'nodes,', (num_vars, num_splices, num_getitems), '(#compute, #splice, #slice), ', (num_params, num_consts), '(parameters, constants)')
+
 def transform_to_batched_ops(vars):
     nodes = topo_sort(vars)    # (it is possible to implement this without, just more complex)
     #print(tuple(v._debug_tag for v in topo_sort(vars)))
@@ -777,7 +792,7 @@ def transform_to_batched_ops(vars):
             return
         # __getitem__() is not an operation and thus cannot be parallelized
         # splice() should be excluded if it came out of this function; for now we exclude all
-        if v0.op == cntk.NDArrayView.__getitem__ or p.op is cntk.NDArrayView.splice:
+        if v0.op is cntk.NDArrayView.__getitem__ or v0.op is cntk.NDArrayView.splice:
             return
         # all ops are the same, so use the first as the reference
         for inp in v0.inputs:
@@ -917,7 +932,7 @@ def transform_to_batched_ops(vars):
 
     # done
     #print(tuple(v._debug_tag for v in topo_sort(vars)))
-    print(ops_run, 'operations executed in', batches_run, 'batches, using an actual', num_compute_launches, 'compute launches and', num_gathers, 'gather launches')
+    #print(ops_run, 'operations executed in', batches_run, 'batches, using an actual', num_compute_launches, 'compute launches and', num_gathers, 'gather launches')
     assert ops_run == expected_num_ops
     #for v in nodes:
     #    assert v.computed
@@ -927,12 +942,14 @@ def transform_to_batched_ops(vars):
 #  - with full automatic dynamic batching
 def batch_eval(vars):
     # transform the graph from raw (individual batch items) to the batched graph
+    print_graph_stats(vars)
     if use_batching:
         transform_to_batched_ops(vars)
-    # BUGBUG: the following fails because we have a slice() somewhere which is not hashable
-    #         It also seems to further change the graph, and results are not the same. So something is still wrong.
-    #         Tested: This is not due to the topo_sort bug.
-    #transform_to_batched_ops(vars)
+        print_graph_stats(vars)
+        transform_to_batched_ops(vars) # verify that the second time does not change it any further
+        print_graph_stats(vars)
+    #print('--- after another transform ---')
+    #dump_graph(vars, skip_free=True)
     #transform_to_batched_ops(vars)
     # now actually compute the transformed graph
     nodes = topo_sort(vars)
@@ -942,6 +959,7 @@ def batch_eval(vars):
             p.compute_data()
         #print(p.data.to_ndarray())
     #dump_graph(vars)
+    #transform_to_batched_ops(vars) # this shows that transforming after actually computing is correct
 
 # gradient
 # This computes the gradient of a variable (e.g. criterion) w.r.t. a set of model parameters, times an error signal.
@@ -995,7 +1013,7 @@ def dump_graph(vars, skip_free=False): # vars can be a Variable or an iterable o
     if isinstance(vars, Variable):
         vars = [vars]
     for node in topo_sort(vars):
-        if not skip_free or node.type_as_char() == 'V':
+        if not skip_free or node.type_as_char() in {'V', 'S'}:
             print(node.signature_as_string(expand_getitem=True))
 
 ##############################################################################
