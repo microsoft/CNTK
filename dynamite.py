@@ -92,11 +92,16 @@ class Variable:
         self.backprop_to_functions = other.backprop_to_functions
         self.additional_args       = other.additional_args
         self.additional_kwargs     = other.additional_kwargs
-    def type_as_string(self):
-        t = "P" if isinstance(self, Parameter) else "C" if isinstance(self, Constant) else "V"
-        t += "{:05}".format(self._debug_tag)
-        if self.computed:
-            t += '*'
+    def type_as_char(self):
+        return "P" if isinstance(self, Parameter) else "C" if isinstance(self, Constant) else "G" if self.op is cntk.NDArrayView.__getitem__ else "V"
+    def type_as_string(self, expand_getitem=False):
+        if self.op == cntk.NDArrayView.__getitem__ and expand_getitem:
+            t = self.inputs[0].type_as_string() + '[' + str(self.additional_args[0]) + ']'
+        else:
+            t = self.type_as_char()
+            t += "{:05}".format(self._debug_tag)
+            if self.computed:
+                t += '*'
         t += ':' + str(self.shape)
         return t
     def op_as_string(self):
@@ -105,11 +110,11 @@ class Variable:
         if ts[0] == '<function': # e.g. "<function NDArrayViewOpsMixin.__getitem__ at 0x000000453A649158>"
             t = ts[1]
         return t
-    def signature_as_string(self):
-        t = self.type_as_string()
+    def signature_as_string(self, expand_getitem=False):
+        t = self.type_as_string(expand_getitem=expand_getitem)
         t += " = " + self.op_as_string()
         if self.inputs:
-            t += " (" + ", ".join([inp.type_as_string() for inp in self.inputs])
+            t += " (" + ", ".join([inp.type_as_string(expand_getitem=expand_getitem) for inp in self.inputs])
         if self.additional_args:
             t += '; ' + str(self.additional_args)
         if self.additional_kwargs:
@@ -859,16 +864,16 @@ def transform_to_batched_ops(vars):
         def make_key(p):
             # special case for __getitem__: it's free and can always run first
             if p.op is cntk.NDArrayView.__getitem__:
-                return (cntk.NDArrayView.__getitem__,)
+                return (True, cntk.NDArrayView.__getitem__,) # True makes it be preferred always as a batch op
             # special case for matmul: right matrix must be identical to be batchable
             if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose:
-                return (p.op, (p.inputs[0].shape, id(p.inputs[1])))
+                return (False, p.op, (p.inputs[0].shape, id(p.inputs[1])))
             # batch if both op and input shapes are the same
             # Python dicts are not hashable, so make additional_kwargs into a tuple if given (yuk)
             additional_kwargs_tuplified = p.additional_kwargs
             if additional_kwargs_tuplified:
                 additional_kwargs_tuplified = tuple((arg_name, additional_kwargs_tuplified[arg_name]) for arg_name in sorted(additional_kwargs_tuplified.keys()))
-            return (p.op, p.additional_args, additional_kwargs_tuplified, tuple(v.shape for v in p.inputs))
+            return (False, p.op, p.additional_args, additional_kwargs_tuplified, tuple(v.shape for v in p.inputs))
         p.key = make_key(p)
         # TODO: must also include the storage format in the key; do this in C++ version
         p.consumers = []
@@ -983,11 +988,12 @@ def create_gradient_graph(root, parameters, error_signal):
     #    g.get_value()
     return res
 
-def dump_graph(vars): # vars can be a Variable or an iterable of Variables
+def dump_graph(vars, skip_free=False): # vars can be a Variable or an iterable of Variables
     if isinstance(vars, Variable):
         vars = [vars]
     for node in topo_sort(vars):
-        print(node.signature_as_string())
+        if not skip_free or node.type_as_char() == 'V':
+            print(node.signature_as_string(expand_getitem=True))
 
 ##############################################################################
 #
