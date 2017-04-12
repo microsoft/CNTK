@@ -59,7 +59,7 @@ def as_kwargs(**kwargs):
     return kwargs
 
 class Variable:
-    counter = 0
+    generation_counter = 0
     # constructor
     def __new__(cls, shape, op, inputs, backprop_to_functions=None, additional_args=(), additional_kwargs=None):
         v = object.__new__(cls)
@@ -74,14 +74,17 @@ class Variable:
         # TODO: capture the gradient functions for all inputs that need gradients (we also need a flag for that)
         #v.needs_gradient = True
         v.computed = False
-        v._debug_tag = Variable.counter
-        Variable.counter += 1
+        v.generation_id = Variable.generation_counter # unique id, also useful for topo-sort
+        Variable.generation_counter += 1
         return v
     # construct by cloning another
     def clone(self):
         assert not self.computed # (for now no need to clone after values have been computed already)
         assert not hasattr(self, 'initializer')
-        return Variable(self.shape, self.op, self.inputs, self.backprop_to_functions, self.additional_args)
+        res = Variable(self.shape, self.op, self.inputs, self.backprop_to_functions, self.additional_args)
+        self.generation_id = Variable.generation_counter # must get a new unique id
+        Variable.generation_counter += 1
+        return res
     # overwrite an existing Variable in-place with a new one--used by make_batched_inputs() to keep existing references alive
     def replace_with(self, other):
         assert not self.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
@@ -92,6 +95,8 @@ class Variable:
         self.backprop_to_functions = other.backprop_to_functions
         self.additional_args       = other.additional_args
         self.additional_kwargs     = other.additional_kwargs
+        self.generation_id = Variable.generation_counter # BUGBUG: This screws up the idea of the gen id for topo-sort... :(
+        Variable.generation_counter += 1
     def type_as_char(self):
         return "P" if isinstance(self, Parameter)             else \
                "C" if isinstance(self, Constant)              else \
@@ -103,7 +108,7 @@ class Variable:
             t = self.inputs[0].type_as_string() + '[' + str(self.additional_args[0]) + ']'
         else:
             t = self.type_as_char()
-            t += "{:05}".format(self._debug_tag)
+            t += "{:05}".format(self.generation_id)
             if self.computed:
                 t += '*'
         t += ':' + str(self.shape)
@@ -696,8 +701,9 @@ def topo_sort(roots: list):
     for node in order:
         for input in node.inputs:
             assert id(input) in seen # node must not be referenced as an input before it was seen
+            #assert input.generation_id < node.generation_id # generation_ids are sorted   .. NOT! :(
         seen.add(id(node))
-    #print(tuple(v._debug_tag for v in order))
+    #print(tuple(v.generation_id for v in order))
     return order
 
 # excecution
@@ -727,7 +733,7 @@ def print_graph_stats(vars):
 
 def transform_to_batched_ops(vars):
     nodes = topo_sort(vars)    # (it is possible to implement this without, just more complex)
-    #print(tuple(v._debug_tag for v in topo_sort(vars)))
+    #print(tuple(v.generation_id for v in topo_sort(vars)))
     num_nodes = len(nodes)
     expected_num_ops = sum(1 for v in nodes if not v.computed)
 
@@ -908,8 +914,8 @@ def transform_to_batched_ops(vars):
     ops_run = 0
     while ready_ops:
         # select the largest ready batch size
-        # Note: We use _debug_tag here to make it deterministic.
-        key = max(ready_ops.keys(), key=(lambda key: (len(ready_ops[key]), ready_ops[key][0]._debug_tag)))
+        # Note: We use generation_id here to make it deterministic.
+        key = max(ready_ops.keys(), key=(lambda key: (len(ready_ops[key]), ready_ops[key][0].generation_id)))
         op_batch = ready_ops[key]
         # execute it
         #print('batch of', len(op_batch), 'for op', key)
@@ -931,7 +937,7 @@ def transform_to_batched_ops(vars):
                     add_ready(p)
 
     # done
-    #print(tuple(v._debug_tag for v in topo_sort(vars)))
+    #print(tuple(v.generation_id for v in topo_sort(vars)))
     #print(ops_run, 'operations executed in', batches_run, 'batches, using an actual', num_compute_launches, 'compute launches and', num_gathers, 'gather launches')
     assert ops_run == expected_num_ops
     #for v in nodes:
