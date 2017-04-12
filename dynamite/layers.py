@@ -65,8 +65,7 @@ def RNNUnit(N, activation=sigmoid, name=''):
     b = Parameter((N,))
     @Model(W=W, R=R, b=b)
     def rnn_step(s,x):
-        return activation(x @ W + b + s @ R)  # this ordering should allow the first two to be batched
-        #return activation(s @ R + x @ W + b)
+        return activation(x @ W + b + s @ R)  # this ordering allows the first two to be batched
     return rnn_step
 
 def LSTM(N, activation=sigmoid):
