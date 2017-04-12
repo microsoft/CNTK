@@ -4344,7 +4344,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::ScatterAccordingIndices(const GPUMatri
     int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
     _scatterAccordingIndices<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (indicesBufPtr, valueBufPtr, buffer, row_elements, num_indices, N);
 
->>>>>>> gather gpu impl and ut
     return *this;
 }
 
