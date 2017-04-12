@@ -288,18 +288,6 @@ class Constant(Variable):
         v.computed = True
         return v
 
-#def BroadcastingBinary(binary_op):
-#    # BUGBUG: testing for nested sequences must know how to align... how to do that?
-#    def broadcasting_binary_op(a,b):
-#        if isinstance(a, list):
-#            if isinstance(b, list):
-#                return [broadcasting_binary_op(x,y) for x,y in zip(a,b)]
-#            return map(lambda sample: broadcasting_binary_op(sample, b), a)
-#        elif isinstance(b, list):
-#            return map(lambda sample: broadcasting_binary_op(a, sample), b)
-#        return binary_op(a,b)
-#    return broadcasting_binary_op
-
 def elementwise_shape(a,b):
     shapeA = a.shape if isinstance(a, (np.ndarray, Variable)) else ()
     shapeB = b.shape if isinstance(b, (np.ndarray, Variable)) else ()
@@ -319,14 +307,6 @@ def binary_op(opcode, backprop_to_functions=None):
 #    def f(a,b):
 #        return Variable((), opcode, (a,b))
 #    return f
-
-def BroadcastingUnary(unary_op):
-    # BUGBUG: testing for nested sequences must know how to align... how to do that?
-    def broadcasting_unary_op(x):
-        if isinstance(x, (list, tuple)): # broadcast along sequence
-            return map(unary_op, x)
-        return unary_op(x)
-    return broadcasting_unary_op
 
 def unary_op(opcode, backprop_to_functions=None):
     def f(x):
@@ -453,14 +433,39 @@ def cross_entropy_with_softmax(output, label):
     # TODO: either turn this into a special ^^ operator, or allow shape to be passed to __mul__
 classification_error = cross_entropy_with_softmax  # TODO... for now
 
-def identity(x):
-    return x
-
 ##############################################################################
 #
 # Dynamite layers library
 #
 ##############################################################################
+
+# Layers are function objects that contain parameters and form a hierarchy that
+# can be traversed in order to identity model parameters, e.g. for training or persisting.
+# The layers library here is a functional wrapper over the Variable class.
+# The Variable class knows nothing about the layers.
+
+# --- decorators
+
+# decorators for layers that accept tensors as well as collections, such as Embedding() and Dense()
+def BroadcastingUnary(unary_op):
+    # BUGBUG: testing for nested sequences must know how to align... how to do that?
+    def broadcasting_unary_op(x):
+        if isinstance(x, (list, tuple)): # broadcast along sequence
+            return map(broadcasting_unary_op, x) # recursive, to support collections of collections  --TODO: test this
+        return unary_op(x)
+    return broadcasting_unary_op
+
+#def BroadcastingBinary(binary_op):
+#    # BUGBUG: testing for nested sequences must know how to align... how to do that?
+#    def broadcasting_binary_op(a,b):
+#        if isinstance(a, list):
+#            if isinstance(b, list):
+#                return [broadcasting_binary_op(x,y) for x,y in zip(a,b)]
+#            return map(lambda sample: broadcasting_binary_op(sample, b), a)
+#        elif isinstance(b, list):
+#            return map(lambda sample: broadcasting_binary_op(a, sample), b)
+#        return binary_op(a,b)
+#    return broadcasting_binary_op
 
 def Model(**kwargs):
     def patch(f):
@@ -473,6 +478,11 @@ def Model(**kwargs):
         #f.__getitem__ = mygetitem
         return f
     return patch
+
+# --- layers
+
+def identity(x):
+    return x
 
 def Dense(N, activation=identity, name=''):
     W = Parameter((INFER,N), initializer=times_initializer)
@@ -547,11 +557,12 @@ def Sequential(functions):
         return x
     return seq
 
-#def Map(map_function):
-#    @Model(map_function=map_function)
-#    def map_f(x):
-#        return map(map_function, x)
-#    return map_f
+def Map(map_function): # TODO: this has never been tested
+    @Model(map_function=map_function)
+    @BroadcastingUnary # this realizes the (nested) map
+    def map_f(x):
+        return map_function(x)
+    return BroadcastingUnary(f)
 
 def Fold(step_function, initial_state=0):
     # TODO: promote initial_state right away to a Constant() if it is a constant, to avoid repeated conversions. Same for Recurrence().
