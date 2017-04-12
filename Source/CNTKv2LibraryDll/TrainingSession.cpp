@@ -133,7 +133,8 @@ namespace CNTK
         m_workerRank(0),
         m_numberOfWorkers(1),
         m_test(test),
-        m_adaptiveLearningRate(adaptiveLearningRate)
+        m_adaptiveLearningRate(adaptiveLearningRate),
+        m_finished(false)
     {
         if (!m_trainer)
             InvalidArgument("Trainer must not be null.");
@@ -319,7 +320,9 @@ namespace CNTK
     }
 
     void TrainingSession::AdaptLearningRate()
-    {}
+    {
+
+    }
 
     void TrainingSession::Test(const DeviceDescriptor& computeDevice)
     {
@@ -474,6 +477,9 @@ namespace CNTK
         size_t totalNumberOfSamples = Trainer()->TotalNumberOfSamplesSeen();
         for (auto& action : m_actions)
         {
+            if (!action.m_frequency)
+                continue;
+
             action.m_currentIndex = totalNumberOfSamples / action.m_frequency;
             action.m_sampleCountWhenLastCalled = totalNumberOfSamples - totalNumberOfSamples % action.m_frequency;
         }

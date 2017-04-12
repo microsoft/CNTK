@@ -113,6 +113,17 @@ class TestConfig(cntk_py.TestConfig):
 
         super(TestConfig, self).__init__(source, schedule)
 
+class AdaptiveLearningRateConfig(cntk_py.AdaptiveLearningRateConfig):
+    '''
+    A configuration for the adaptive learning rate.
+
+    Args:
+        source (:class:`~cntk.io.MinibatchSource`): minibatch source used for testing
+        schedule (:class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch schedule for testing
+    '''
+    def __init__(self):
+        super(AdaptiveLearningRateConfig, self).__init__()
+
 class TrainingSession(cntk_py.TrainingSession):
     '''
     The instance of the class should be created by using :func:`~cntk.train.training_session.training_session` function.
@@ -137,7 +148,8 @@ class TrainingSession(cntk_py.TrainingSession):
                  progress_frequency, 
                  checkpoint_config,
                  cv_config,
-                 test_config):
+                 test_config,
+                 adaptive_learning_rate_config):
 
         if trainer is None:
             raise ValueError("Trainer must not be None.")
@@ -173,7 +185,8 @@ class TrainingSession(cntk_py.TrainingSession):
             progress_frequency, 
             checkpoint_config,
             cv_config,
-            test_config)
+            test_config,
+            adaptive_learning_rate_config)
 
     @typemap
     def train(self, device=None):
@@ -287,5 +300,7 @@ def training_session(trainer,
     if test_config is None:
        test_config = TestConfig(source=None)
 
+    adaptive_learning_rate_config = AdaptiveLearningRateConfig()
+
     return TrainingSession(trainer, mb_source, mb_size, model_inputs_to_streams, max_samples,
-                           progress_frequency, checkpoint_config, cv_config, test_config)
+                           progress_frequency, checkpoint_config, cv_config, test_config, adaptive_learning_rate_config)

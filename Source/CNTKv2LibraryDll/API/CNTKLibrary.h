@@ -5324,11 +5324,13 @@ namespace CNTK
 
             bool LastRequired(size_t numSamples) const
             {
-                return numSamples % m_frequency != 0 && numSamples != m_sampleCountWhenLastCalled;
+                return m_frequency && numSamples % m_frequency != 0 && numSamples != m_sampleCountWhenLastCalled;
             }
 
             void Update(size_t numSamples)
             {
+                if (!m_frequency)
+                    LogicError("Update cannot be called with frequency 0.");
                 size_t index = numSamples / m_frequency;
                 assert(index != m_currentIndex);
                 m_currentIndex = index;
