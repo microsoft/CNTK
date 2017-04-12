@@ -12,7 +12,7 @@ import collections
 # TODO: move to contrib/dynamite/variable.py ; import .tensor_ops
 
 # some global settings for playing with different configs:
-use_batching = True
+use_batching = False
 use_coroutines = True
 
 # Functions vs Variables:
@@ -29,22 +29,7 @@ use_coroutines = True
 #     - ...how do we tell it where to place the gradients? It must connect to the V2 gradient NDArrayViews. Ah! Parameter Variables carry it from the start.
 #     - grad_times() will trigger batch transformation; then read off the gradient functions from the *batched* graph (; then reoptimize? try it out)
 
-# BUGBUG:
-#  - transformation no longer combines the sequences after the print(), when they should all be batchable
-#    This is since commit 48b72d5b3925ca9661b3b975f6a4af13b2952648
-#    Maybe it now optimnizes the whole thing again although stuff is already executed? Some dangling ref triggering that?
-#    Are the root vars getting their computed flag?
-
 # TODO:
-#  - implement grad_times
-#     - for now no in-place updates
-#  - longer term:
-#     - arena allocation
-#        - after batch transformation, all shapes are known --> we know the size of the arena
-#        - we can then allocate one massive chunk and create the 'data' members as slice views into it
-#          (with the exception of the parameter gradient, for which we use the gradient memory shared into the Parameter object upfront if given)
-#        - but that requires all tensor operations to take a target variable
-#        - unify NumericOp and NumericOpInPlace by passing an output variable; cf. Numpy. Reduces the surface.
 #  - move the entire stuff into Variable?? Then create outside overloads, e.g. times = Variable.__matmul__ instead of the other way round
 
 # TODO: where to move these?
@@ -60,6 +45,7 @@ def as_kwargs(**kwargs):
     return kwargs
 
 class Variable:
+
     # ------------------------------------------------------------------------
     # construction
     # ------------------------------------------------------------------------
@@ -82,6 +68,7 @@ class Variable:
         v.generation_id = Variable.generation_counter # unique id, also useful for topo-sort
         Variable.generation_counter += 1
         return v
+
     # construct by cloning another
     def clone(self):
         assert not self.computed # (for now no need to clone after values have been computed already)
@@ -90,6 +77,7 @@ class Variable:
         self.generation_id = Variable.generation_counter # must get a new unique id
         Variable.generation_counter += 1
         return res
+
     # overwrite an existing Variable in-place with a new one--used by make_batched_inputs() to keep existing references alive
     def replace_with(self, other):
         assert not self.computed  # TODO: is it possible that all or some have been computed at this point? Maybe some?
@@ -113,6 +101,7 @@ class Variable:
                "G" if self.op is cntk.NDArrayView.__getitem__ else \
                "S" if self.op is cntk.NDArrayView.splice      else \
                "V"
+
     def type_as_string(self, expand_getitem=False):
         if self.op == cntk.NDArrayView.__getitem__ and expand_getitem:
             t = self.inputs[0].type_as_string() + '[' + str(self.additional_args[0]) + ']'
@@ -123,12 +112,14 @@ class Variable:
                 t += '*'
         t += ':' + str(self.shape)
         return t
+
     def op_as_string(self):
         t = str(self.op)
         ts = t.split(' ')
         if ts[0] == '<function': # e.g. "<function NDArrayViewOpsMixin.__getitem__ at 0x000000453A649158>"
             t = ts[1]
         return t
+
     def signature_as_string(self, expand_getitem=False):
         t = self.type_as_string(expand_getitem=expand_getitem)
         t += " = " + self.op_as_string()
@@ -160,8 +151,6 @@ class Variable:
         # TODO: Do this with a per-operation function.
         if op in unary_reduction_ops:
             # E.g. (44,5) --> (44,); or two reductions in parallel, (2,44,25) --> (2,25).
-            if batched_inputs[0].shape == (2,44,25):
-                print(13)
             reduction_op = op
             def reduce_batch(arg):
                 input_shape = arg.shape
@@ -197,7 +186,8 @@ class Variable:
           print('_call_op failure:', self.op, self.shape, tuple(input.shape for input in self.inputs))
           raise
         pass
-    def compute_data(self, out=None): # perform op and store result in a new field 'data'
+
+    def _compute_data(self, out=None): # perform op and store result in a new field 'data'
         assert not self.computed
         self.data = self._call_op(out=out)
         self.computed = True
@@ -338,8 +328,8 @@ class Parameter(Variable):
         self.op = Parameter._initialize
         self.additional_args = (self,)
         if all(dim != INFER for dim in shape):
-            self.compute_data()
-    def _initialize(self): # meant to be called from compute_data() and thusly to return a cntk.core.NDArrayView
+            self._compute_data()
+    def _initialize(self): # meant to be called from _compute_data() and thusly to return a cntk.core.NDArrayView
         assert all(dim != INFER for dim in self.shape)
         if hasattr(self, 'initializer'):
             data = cntk.NDArrayView.random_uniform_float(self.shape, -0.05, +0.05) # BUGBUG: device?? precision==float32??
@@ -362,7 +352,7 @@ class Parameter(Variable):
     def resize(self, shape):
         self.shape = shape
         if all(dim != INFER for dim in shape):
-            self.compute_data()
+            self._compute_data()
 
 class Constant(Variable):
     def __new__(cls, data, initializer=None): # data: cntk.core.NDArrayView or number or np.ndarray
@@ -875,7 +865,7 @@ def evaluate_graph(vars):
             if mem_offset != -1:
                 out = arena[mem_offset:mem_offset + p.mem_size]
                 out = out.reshape(p.shape)
-            p.compute_data(out=out)
+            p._compute_data(out=out)
             num_ops += 1
         #print(p.data.to_ndarray())
     end = time.time()
