@@ -226,7 +226,10 @@ AllocatedElemType* TracingGPUMemoryAllocator::AllocateNoTrace(int deviceId, size
     AllocatedElemType* deviceBufferPtr;
 
     PrepareDevice(deviceId);
-    CUDA_CALL(cudaMalloc((void**) &deviceBufferPtr, sizeof(AllocatedElemType) * numElements));
+    // In case numElements is odd we allocate a buffer with one more element. The reason is 
+    // we might call curandGenerateNormal (e.g. for Gaussian noise injection) which would fail
+    // if the number of elements it needs to generate is odd.
+    CUDA_CALL(cudaMalloc((void**) &deviceBufferPtr, sizeof(AllocatedElemType) * (numElements + (numElements % 2))));
 
     return deviceBufferPtr;
 }
@@ -1326,10 +1329,15 @@ void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
     CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
 
     // TODO: Why not use SyncGuard?
+
+    // curandGenerateNormal can return the error CURAND_STATUS_LENGTH_NOT_MULTIPLE if GetNumElements() is odd.
+    // To avoid this we always allocate a buffer of even size and potentially generate one more random element.
+    auto n = GetNumElements();
+    n += n % 2;
     if (sizeof(ElemType) == sizeof(float))
-        CURAND_CALL(curandGenerateNormal(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(Data()), GetNumElements(), (float) mean, (float) sigma));
+        CURAND_CALL(curandGenerateNormal(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(Data()), n, (float) mean, (float) sigma));
     else
-        CURAND_CALL(curandGenerateNormalDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(Data()), GetNumElements(), (double) mean, (double) sigma));
+        CURAND_CALL(curandGenerateNormalDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(Data()), n, (double) mean, (double) sigma));
     // CURAND_CALL(curandDestroyGenerator(gen));
 }
 
