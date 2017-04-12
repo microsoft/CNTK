@@ -4,7 +4,6 @@ import gym
 import numpy as np
 from cntk import Signature, TensorBoardProgressWriter
 from cntk.core import Value
-from cntk.device import set_default_device, cpu, gpu
 from cntk.initializer import he_uniform
 from cntk.layers import Convolution2D, Dense, default_options
 from cntk.layers.typing import Tensor
@@ -239,7 +238,7 @@ class DeepQAgent(object):
     """
     def __init__(self, input_shape, nb_actions,
                  gamma=0.99, explorer=LinearEpsilonAnnealingExplorer(1, 0.1, 1000000),
-                 learning_rate=0.00025, momentum=0.95, minibatch_size=32, device_id=-1,
+                 learning_rate=0.00025, momentum=0.95, minibatch_size=32,
                  train_after=200000, train_interval=4, target_update_interval=10000,
                  monitor=True):
         self.input_shape = input_shape
@@ -259,9 +258,6 @@ class DeepQAgent(object):
         # Metrics accumulator
         self._episode_rewards, self._episode_q_means, self._episode_q_stddev = [], [], []
 
-        # CNTK Device setup
-        set_default_device(cpu() if device_id == -1 else gpu(device_id))
-
         # Action Value model (used by agent to interact with the environment)
         with default_options(activation=relu, init=he_uniform()):
             self._action_value_net = Sequential([
@@ -276,10 +272,11 @@ class DeepQAgent(object):
         # Return the indexes of the maximum expectation from the network
         self._choose_action = argmax(self._action_value_net, name='q_values_argmax')
 
-        # Target model (used to compute target QValues in training process, updated less frequently)
+        # Target model
+        # (used to compute target QValues in training, updated less frequently)
         self._target_net = self._action_value_net.clone(CloneMethod.freeze)
 
-        # # Define the function that will compute the target q_values as part of the computation graph
+        # # Function computing qvalues targets as part of the computation graph
         @Function
         @Signature(post_states=Tensor[input_shape], rewards=Tensor[()], terminals=Tensor[()])
         def compute_q_targets(post_states, rewards, terminals):
@@ -297,7 +294,7 @@ class DeepQAgent(object):
             # Compute the q_targets
             q_targets = compute_q_targets(post_states, rewards, terminals)
 
-            # actions is a sparse One Hot encoding of the action done by the agent
+            # actions is a sparse 1-hot encoding of the action done by the agent
             q_acted = reduce_sum(self._action_value_net(pre_states) * actions, axis=0)
 
             # Define training criterion as the Huber Loss function
@@ -431,7 +428,6 @@ def as_ale_input(environment):
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-e', '--epoch', default=100, type=int, help='Number of epochs to run (epoch = 250k actions')
-    parser.add_argument('-d', '--device', default=-1, type=int, help='-1 for CPU, >= 0 for GPU mapping GPU id')
     parser.add_argument('-p', '--plot', action='store_true', default=True, help='Flag for enabling Tensorboard')
     parser.add_argument('env', default='Pong-v3', type=str, metavar='N', nargs='?', help='Gym Atari environment to run')
 
@@ -441,7 +437,7 @@ if __name__ == '__main__':
     env = gym.make(args.env)
 
     # 2. Make agent
-    agent = DeepQAgent((4, 84, 84), env.action_space.n, device_id=args.device, monitor=args.plot)
+    agent = DeepQAgent((4, 84, 84), env.action_space.n, monitor=args.plot)
 
     # Train
     current_step = 0
