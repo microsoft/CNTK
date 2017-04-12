@@ -829,8 +829,8 @@ def batch_eval(vars):
     end = time.time()
     dummy = vars[0].to_ndarray()
     end2 = time.time()
-    print('{:.4f} ms in {} ops'.format((end-start) * 1000, num_ops))
-    print('{:.4f} ms in {} ops'.format((end2-start) * 1000, num_ops))
+    #print('{:.4f} ms in {} ops'.format((end-start) * 1000, num_ops))
+    #print('{:.4f} ms in {} ops'.format((end2-start) * 1000, num_ops))
     #dump_graph(vars)
     #transform_to_batched_ops(vars) # this shows that transforming after actually computing is correct
 
