@@ -126,15 +126,15 @@ if __name__ == '__main__':
 
     # create
     model = create_classification_model_darknet19(num_classes) # num_classes from Utils
-    #  and normalizes the input features by subtracting 114
-    model = Sequential([[lambda x: (x - par_input_bias)] ,model])
+    #  and normalizes the input features by subtracting 114 and dividing by 256
+    model2 = Sequential([[lambda x: (x - par_input_bias)], [lambda x: (x / 256)] , model])
     print("Created Model!")
 
     # train
     reader = create_reader(os.path.join(data_path, par_trainset_label_file),  is_training=True)
     print("Created Readers!")
 
-    train_model(reader, model, max_epochs=par_max_epochs, exponentShift=-1)
+    train_model(reader, model2, max_epochs=par_max_epochs, exponentShift=-1)
     # save
     save_model(model, "darknet19_" + par_dataset_name)
 
@@ -143,7 +143,7 @@ if __name__ == '__main__':
 
     # test
     reader = create_reader(os.path.join(data_path, par_testset_label_file), is_training=False)
-    evaluate_model(reader, model)
+    evaluate_model(reader, model2)
 
     print("Done!")
 

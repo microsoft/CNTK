@@ -94,7 +94,7 @@ def train_model(reader, model, epoch_size=50000, max_epochs=par_max_epochs, save
 
     # criterion function. This is what is being trained trained.
     # Model gets "sandwiched" between normalization (not part of model proper) and criterion.
-    criterion = create_criterion_function(model, normalize=lambda x: x / 256)
+    criterion = create_criterion_function(model)
 
     # learning parameters
     learner = momentum_sgd(model.parameters,
@@ -152,7 +152,7 @@ def Evaluator(model, criterion):
 
 def evaluate_model(reader, model):
     # criterion function. This is what is being evaluated
-    criterion = create_criterion_function(model, normalize=lambda x: x / 256)
+    criterion = create_criterion_function(model)
 
     # process minibatches and perform evaluation
     evaluator = Evaluator(None, criterion)
