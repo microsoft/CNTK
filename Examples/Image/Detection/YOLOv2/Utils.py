@@ -34,7 +34,7 @@ num_channels = par_num_channels  # RGB
 num_classes = par_num_classes
 
 #training parameters
-mb_size = par_minibatch_size
+__mb_size = par_minibatch_size # copy on import
 
 ########################
 # define the reader    #
@@ -87,7 +87,7 @@ def create_criterion_function(model, normalize=identity):
 # train action         #
 ########################
 
-def train_model(reader, model, epoch_size=50000, max_epochs=80, save_progress=False):
+def train_model(reader, model, epoch_size=50000, max_epochs=par_max_epochs, save_progress=False, mb_size=__mb_size, exponentShift = 0):
     # declare the model's input dimension
     # Training does not require this, but it is needed for deployment.
     model.update_signature((num_channels, image_height, image_width))
@@ -99,8 +99,9 @@ def train_model(reader, model, epoch_size=50000, max_epochs=80, save_progress=Fa
     # learning parameters
     learner = momentum_sgd(model.parameters,
                            lr=learning_rate_schedule(
-                               [0.0015625] * 20 + [0.00046875] * 20 + [0.00015625] * 20 + [0.000046875] * 10 + [
-                                   0.000015625], unit=UnitType.sample, epoch_size=epoch_size),
+                               [0.0015625 * 10**exponentShift] * 20 + [0.00046875 * 10**exponentShift] * 20
+                                + [0.00015625 * 10**exponentShift] * 20 + [0.000046875 * 10**exponentShift] * 10
+                                + [0.000015625 * 10**exponentShift], unit=UnitType.sample, epoch_size=epoch_size),
                            momentum=momentum_as_time_constant_schedule([0] * 20 + [600] * 20 + [1200],
                                                                        epoch_size=epoch_size),
                            l2_regularization_weight=0.002)
@@ -112,7 +113,7 @@ def train_model(reader, model, epoch_size=50000, max_epochs=80, save_progress=Fa
     log_number_of_parameters(model);
     print()
     progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
-
+    print("Minibatch size is " + str(mb_size))
     for epoch in range(max_epochs):  # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
@@ -159,7 +160,7 @@ def evaluate_model(reader, model):
     progress_printer = ProgressPrinter(tag='Evaluation', num_epochs=1)
 
     while True:
-        minibatch_size = 16
+        minibatch_size = __mb_size
         mb = reader.next_minibatch(minibatch_size)  # fetch minibatch
         if not mb:  # until we hit the end
             break
