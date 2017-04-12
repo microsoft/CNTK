@@ -81,8 +81,8 @@ def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
     return namespace.Sequential([
         namespace.Embedding(embedding_dim, name='embed'),
         namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu, name='rnn')),
-        #namespace.identity,
-        namespace.LogValues(),
+        namespace.identity,
+        #namespace.LogValues(),
         namespace.Dense(num_output_classes, name='dense')
     ])
 
@@ -166,13 +166,26 @@ def train(debug_output=False):
     if debug_output:
         training_progress_output_freq = training_progress_output_freq/3
 
+    import time
     for i in range(251):
         mb = reader.next_minibatch(minibatch_size)
 
+        def log_time(dur):
+            dur_per_sample = dur / len(args[0])
+            samples_per_second = 1 / dur_per_sample
+            print('{:.2f} ms, {:.1f} samples/s'.format(dur * 1000, samples_per_second))
+
         # CNTK dynamite  --do this first before CNTK updates anything
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
+        gstart = time.time()
         crit = dynamite.train_minibatch(dcriterion, *args)
-        print(" " * 29, crit.to_ndarray() / len(args[0]))
+        gend = time.time()
+        log_time(gend-gstart)
+        dstart = time.time()
+        crit_nd = crit.to_ndarray()
+        dend = time.time()
+        log_time(dend-dstart)
+        print(" " * 29, crit_nd / len(args[0]))
         #dynamite.dump_graph(crit, skip_free=True)
         # compute gradients
         #dgradients = crit.grad_times(dparameters)
@@ -197,8 +210,11 @@ def train(debug_output=False):
         #    assert np.allclose(p_data, dp_data, rtol=1e-5)
 
         # CNTK static, original example
+        start = time.time()
         trainer.train_minibatch(criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]))
         progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
+        end = time.time()
+        log_time(end-start)
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     import copy

@@ -1,7 +1,7 @@
 import numpy as np
 import cntk  # note: keep in 'cntk' namespace in here
 import collections
-from timeit import default_timer as timer
+#from timeit import default_timer as timer
 
 ##############################################################################
 #
@@ -979,14 +979,20 @@ def transform_to_batched_ops(vars):
 #  - with full automatic dynamic batching
 from operator import mul as mul_operator
 from functools import reduce as functools_reduce
+ops_with_out = { cntk.NDArrayView.__add__, cntk.NDArrayView.__sub__, cntk.NDArrayView.__mul__, cntk.NDArrayView.greater,
+    cntk.NDArrayView.dot, cntk.NDArrayView.dot_transpose, cntk.NDArrayView.transpose_dot,
+    cntk.NDArrayView.sigmoid, cntk.NDArrayView.tanh, cntk.NDArrayView.relu, cntk.NDArrayView.exp #,
+    # later:
+    #cntk.NDArrayView.reduce_sum, cntk.NDArrayView.reduce_log_sum, cntk.NDArrayView.splice
+}
 def batch_eval(vars):
     # transform the graph from raw (individual batch items) to the batched graph
-    print_graph_stats(vars)
+    #print_graph_stats(vars)
     if use_batching:
         transform_to_batched_ops(vars)
-        print_graph_stats(vars)
-        transform_to_batched_ops(vars) # verify that the second time does not change it any further
-        print_graph_stats(vars)
+        #print_graph_stats(vars)
+        #transform_to_batched_ops(vars) # verify that the second time does not change it any further
+        #print_graph_stats(vars)
     #print('--- after another transform ---')
     #dump_graph(vars, skip_free=True)
     #transform_to_batched_ops(vars)
@@ -994,28 +1000,29 @@ def batch_eval(vars):
     nodes = topo_sort(vars)
     num_nodes = len(nodes)
     # simple arena allocation
+    # So far this makes no difference in runtime. Maybe the CUDA allocator is already sync-free?
     mem_offset = 0
     for p in nodes:
         if not p.computed:
-            p.mem = -1 # no memory by default
-            out = None
-            # TODO: memory allocation here once out is pushed through
-            if p.op == cntk.NDArrayView.__add__:
-                num_elements = functools_reduce(mul_operator, p.shape, 1)
-                print('allocating', num_elements, ' for shape', p.shape)
-                p.mem = mem_offset
-                p.num = num_elements
-                mem_offset += num_elements
+            if p.op in ops_with_out:
+                mem_size = functools_reduce(mul_operator, p.shape, 1)
+                #print('allocating', mem_size, ' for shape', p.shape, 'node', p.op_as_string())
+                p.mem_offset = mem_offset
+                p.mem_size = mem_size
+                mem_offset += mem_size
+            else:
+                p.mem_offset = -1 # no arena memory for this op
+                #print('no arena allocation for node', p.op_as_string())
+    #print('arena size', mem_offset)
     arena = cntk.NDArrayView((mem_offset,))
     # execution
     for p in nodes:
         if not p.computed:
             out = None
-            mem = p.mem
-            if mem != -1:
-                out = arena[mem:mem+p.num]
+            mem_offset = p.mem_offset
+            if mem_offset != -1:
+                out = arena[mem_offset:mem_offset + p.mem_size]
                 out = out.reshape(p.shape)
-                pass
             p.compute_data(out=out)
         #print(p.data.to_ndarray())
     #dump_graph(vars)
