@@ -3,6 +3,12 @@ import cntk  # note: keep in 'cntk' namespace in here
 import collections
 from timeit import default_timer as timer
 
+##############################################################################
+#
+# Dynamite Variable type, part 1
+#
+##############################################################################
+
 # some global settings:
 use_batching = True
 use_coroutines = True
@@ -282,17 +288,17 @@ class Constant(Variable):
         v.computed = True
         return v
 
-def BroadcastingBinary(binary_op):
-    # BUGBUG: testing for nested sequences must know how to align... how to do that?
-    def broadcasting_binary_op(a,b):
-        if isinstance(a, list):
-            if isinstance(b, list):
-                return [broadcasting_binary_op(x,y) for x,y in zip(a,b)]
-            return map(lambda sample: broadcasting_binary_op(sample, b), a)
-        elif isinstance(b, list):
-            return map(lambda sample: broadcasting_binary_op(a, sample), b)
-        return binary_op(a,b)
-    return broadcasting_binary_op
+#def BroadcastingBinary(binary_op):
+#    # BUGBUG: testing for nested sequences must know how to align... how to do that?
+#    def broadcasting_binary_op(a,b):
+#        if isinstance(a, list):
+#            if isinstance(b, list):
+#                return [broadcasting_binary_op(x,y) for x,y in zip(a,b)]
+#            return map(lambda sample: broadcasting_binary_op(sample, b), a)
+#        elif isinstance(b, list):
+#            return map(lambda sample: broadcasting_binary_op(a, sample), b)
+#        return binary_op(a,b)
+#    return broadcasting_binary_op
 
 def elementwise_shape(a,b):
     shapeA = a.shape if isinstance(a, (np.ndarray, Variable)) else ()
@@ -303,7 +309,7 @@ def elementwise_shape(a,b):
     return tuple(max(dimA, dimB) for dimA, dimB in zip(shapeA,shapeB))
 
 def binary_op(opcode, backprop_to_functions=None):
-    @BroadcastingBinary
+    #@BroadcastingBinary
     def f(a,b):
         return Variable(elementwise_shape(a,b), opcode, (a,b), backprop_to_functions=backprop_to_functions)
     return f
@@ -314,10 +320,18 @@ def binary_op(opcode, backprop_to_functions=None):
 #        return Variable((), opcode, (a,b))
 #    return f
 
+def BroadcastingUnary(unary_op):
+    # BUGBUG: testing for nested sequences must know how to align... how to do that?
+    def broadcasting_unary_op(x):
+        if isinstance(x, (list, tuple)): # broadcast along sequence
+            return map(unary_op, x)
+        return unary_op(x)
+    return broadcasting_unary_op
+
 def unary_op(opcode, backprop_to_functions=None):
     def f(x):
-        if isinstance(x, list): # broadcast along sequence
-            return map(f, x)
+        #if isinstance(x, list): # broadcast along sequence
+        #    return map(f, x)
         return Variable(x.shape, opcode, (x,), backprop_to_functions=backprop_to_functions)
     return f
 
@@ -326,8 +340,8 @@ unary_reduction_ops = set() # unary_reduction_ops must be treated specially in b
 def unary_reduction_op(opcode, backprop_to_functions=None):
     unary_reduction_ops.add(opcode)
     def f(x):
-        if isinstance(x, list): # broadcast along sequence
-            return map(f, x)
+        #if isinstance(x, list): # broadcast along sequence
+        #    return map(f, x)
         return Variable((), opcode, (x,), backprop_to_functions=backprop_to_functions)
     return f
 
@@ -358,7 +372,7 @@ def times_backprop_to_1(v, g): # fun(v, g) -> g * dv/db
     return res
     #return Variable(v.inputs[1].shape, cntk.NDArrayView.transpose_dot, (v.inputs[0], g))
 
-@BroadcastingBinary
+#@BroadcastingBinary
 def times(a,b):
     if isinstance(a, (int, float)) and a == 0: # HACK HACK! Otherwise, backprop cannot handle this special case. Will fail for non-zero scalars
         return 0
@@ -380,7 +394,7 @@ def times(a,b):
         shapeC = shapeC + (shapeB[1],);
     return Variable(shapeC, cntk.NDArrayView.dot, (a,b), backprop_to_functions=(times_backprop_to_0, times_backprop_to_1))
 
-@BroadcastingBinary
+#@BroadcastingBinary
 def times_transpose(a,b):
     if hasattr(b, 'initializer'):
         shape = (b.shape[0],
@@ -442,6 +456,12 @@ classification_error = cross_entropy_with_softmax  # TODO... for now
 def identity(x):
     return x
 
+##############################################################################
+#
+# Dynamite layers library
+#
+##############################################################################
+
 def Model(**kwargs):
     def patch(f):
         f.__ismodel__ = True
@@ -458,11 +478,13 @@ def Dense(N, activation=identity, name=''):
     W = Parameter((INFER,N), initializer=times_initializer)
     b = Parameter((N,))
     @Model(W=W, b=b)
+    @BroadcastingUnary
     def dense(x):
         return activation(x @ W + b)
     return dense
 
 def LogValues(): # fake layer to print the value as it passes through; for testing direct-mode values/co-routines
+    @BroadcastingUnary
     def log_values(x):
         x_cpu = x.to_ndarray() # force computation
         #print(x_cpu)
@@ -512,6 +534,7 @@ def LSTM(N, activation=sigmoid):
 def Embedding(N, name=''):
     E = Parameter((INFER,N), initializer=times_initializer)
     @Model(E=E)
+    @BroadcastingUnary
     def embedding(x):
         return times(x,E)
     return embedding
@@ -581,6 +604,13 @@ def dump_parameters(m, root='$'):
                 dump_parameters(item, '{}[{}]'.format(root, i))
         elif hasattr(member, '__ismodel__'):
             dump_parameters(member, root + '.' + member_name)
+
+##############################################################################
+#
+# Dynamite Variable type, part 2 (execution)
+# TODO: move up once it works, then merge into class Variable
+#
+##############################################################################
 
 # TODO: This is less trivial than it seems; need to double-check and test very carefully
 # BUGBUG: It indeed seems to have an error. Can we self-check?
@@ -943,6 +973,12 @@ def dump_graph(vars): # vars can be a Variable or an iterable of Variables
         vars = [vars]
     for node in topo_sort(vars):
         print(node.signature_as_string())
+
+##############################################################################
+#
+# Dynamite Variable type, part 3 (higher-level interfaces)
+#
+##############################################################################
 
 from greenlet import greenlet # very lighweight coroutines
 
