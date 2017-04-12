@@ -3195,6 +3195,27 @@ namespace CNTK
         ///
         static const int MaxNumOutputs = 64;
 
+    public:
+
+        ///
+        /// Registers a native user-defined Function that can be subsequently instantiated using the Function::NativeUserFunction method.
+        ///
+        // TODO: Do we need an Unregister to unload the module?
+        CNTK_API static void RegisterNativeUserFunction(const std::wstring& uniqueOpName, const std::wstring& moduleName, const std::wstring& factoryMethodName);
+
+        ///
+        /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
+        ///
+        CNTK_API static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName = L"");
+
+        ///
+        /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
+        ///
+        inline static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const std::wstring& userFunctionInstanceName = L"")
+        {
+            return NativeUserFunction(opName, operands, Dictionary(), userFunctionInstanceName);
+        }
+
     protected:
         static bool IsArgument(const Variable& var)
         {
@@ -3299,6 +3320,9 @@ namespace CNTK
 
     public:
         CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
+
+    private:
+        static UserFunctionFactoryPtr s_userFunctionFactory;
 
     private:
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);

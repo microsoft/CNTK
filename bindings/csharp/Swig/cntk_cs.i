@@ -121,6 +121,8 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Function::Function;
 %ignore_function CNTK::Function::RestoreFromCheckpoint;
 %ignore_function CNTK::Function::Gradients;
+%ignore_function CNTK::Function::RegisterNativeUserFunction;
+%ignore_function CNTK::Function::NativeUserFunction;
 
 %ignore_class CNTK::Parameter;
 %ignore_class CNTK::Constant;

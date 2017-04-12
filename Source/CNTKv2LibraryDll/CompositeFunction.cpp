@@ -1437,7 +1437,8 @@ namespace CNTK
         {
             // Only gradients corresponding to inputs of the network can be obtained
             if (std::find(networkInputs.begin(), networkInputs.end(), gradientVarValuePair.first) == networkInputs.end())
-                InvalidArgument("Gradient requested for Variable '%S' which is not an input of the Function '%S'.", gradientVarValuePair.first.AsString().c_str(), this->AsString().c_str());
+                InvalidArgument("Gradient requested for Variable '%S' which is not a leaf input (Input, Parameter or Constant) of the Function '%S'; this is currently unsupported.",
+                                gradientVarValuePair.first.AsString().c_str(), this->AsString().c_str());
 
             // Gradients can only be obtained for parameter variables or input variables that NeedsGradient
             if (!gradientVarValuePair.first.NeedsGradient() || (m_inputsExcludedFromGradientComputation.find(gradientVarValuePair.first) != m_inputsExcludedFromGradientComputation.end()))
