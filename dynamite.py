@@ -9,7 +9,9 @@ from timeit import default_timer as timer
 #
 ##############################################################################
 
-# some global settings:
+# TODO: move to contrib/dynamite/variable.py ; import .tensor_ops
+
+# some global settings for playing with different configs:
 use_batching = True
 use_coroutines = True
 
@@ -438,6 +440,8 @@ classification_error = cross_entropy_with_softmax  # TODO... for now
 # Dynamite layers library
 #
 ##############################################################################
+
+# TODO: move to contrib/dynamite/layers.py ; import .variable
 
 # Layers are function objects that contain parameters and form a hierarchy that
 # can be traversed in order to identity model parameters, e.g. for training or persisting.
