@@ -166,7 +166,7 @@ class Variable:
         prev = Variable._batch_eval_fn
         Variable._batch_eval_fn = batch_eval_fn
         return prev
-    def _call_op(self):
+    def _call_op(self, out=None):
         try:
           args = tuple(input.data for input in self.inputs)
           if self.additional_kwargs:
@@ -183,9 +183,9 @@ class Variable:
           print('_call_op failure:', self.op, self.shape, tuple(input.shape for input in self.inputs))
           raise
         pass
-    def compute_data(self): # perform op and store result in a new field 'data'
+    def compute_data(self, out=None): # perform op and store result in a new field 'data'
         assert not self.computed
-        self.data = self._call_op()
+        self.data = self._call_op(out=out)
         self.computed = True
     #@property
     def get_value(self):  # return the NDArrayView--computed lazily at this point if needed
@@ -987,7 +987,9 @@ def batch_eval(vars):
     num_nodes = len(nodes)
     for p in nodes:
         if not p.computed:
-            p.compute_data()
+            out = None
+            # TODO: memory allocation here once out is pushed through
+            p.compute_data(out=out)
         #print(p.data.to_ndarray())
     #dump_graph(vars)
     #transform_to_batched_ops(vars) # this shows that transforming after actually computing is correct
@@ -1064,53 +1066,58 @@ from greenlet import greenlet # very lighweight coroutines
 def train_minibatch(criterion, *batch_args):
     # for now, manually do the batch loop
     print('batch of', len(batch_args[0]))
-    if use_coroutines:
-        # create a coroutine for each batch entry
-        # (a real implementation would switch to coroutines only upon encountering a need for the first time)
-        zipped_batch_args = tuple(zip(*batch_args))
-        coros = [lambda args=args: criterion(*args)[0] for args in zipped_batch_args] # (without the 'args=args', lambda will capture a reference to args, not its value; hence all see only its last value)
-        # create the greenlet scheduler for the coroutines
-        crits = [] # resulting values that we aggregate  --TODO: this is not general enough
-        current_coro_index = None # index of current batch item/coroutine
-        def yield_to_first(): # kick off the process by yielding to the first coroutine
-            nonlocal current_coro_index
-            current_coro_index = 0
-            greenlets[current_coro_index].switch()
-        def yield_to_next(): # yield to the next coroutine
-            nonlocal current_coro_index
-            current_coro_index += 1
-            if current_coro_index == len(greenlets):
+    def MyMap(criterion, batch_args):
+        crits = [] # results of map operation
+        if use_coroutines:
+            # create a coroutine for each batch entry
+            # (a real implementation would switch to coroutines only upon encountering a need for the first time)
+            zipped_batch_args = tuple(zip(*batch_args))
+            coros = [lambda args=args: criterion(*args)[0] for args in zipped_batch_args] # (without the 'args=args', lambda will capture a reference to args, not its value; hence all see only its last value)
+            # create the greenlet scheduler for the coroutines
+            current_coro_index = None # index of current batch item/coroutine
+            def yield_to_first(): # kick off the process by yielding to the first coroutine
+                nonlocal current_coro_index
                 current_coro_index = 0
-            greenlets[current_coro_index].switch()
-        def coro_wrapper(coro):
-            def run_coro():
-                ce = coro()
-                crits.append(ce)
+                greenlets[current_coro_index].switch()
+            def yield_to_next(): # yield to the next coroutine
+                nonlocal current_coro_index
+                current_coro_index += 1
+                if current_coro_index == len(greenlets):
+                    current_coro_index = 0
+                greenlets[current_coro_index].switch()
+            def coro_wrapper(coro):
+                def run_coro():
+                    ce = coro()
+                    crits.append(ce)
+                    yield_to_next()
+                return run_coro
+            greenlets = [greenlet(coro_wrapper(coro)) for coro in coros]
+            # now run the schedule
+            pending_vars = []
+            def yield_to_batch_eval(v): # facilitate yielded batch eval
+                # this function gets called by Variable.get_value() if the value is not yet computed
+                nonlocal pending_vars
+                # this schedules a Variable for computation
+                # As long as we keep getting called from different coroutines, just collect these.
+                # Once all coroutines have requested (or terminated), launch a batch eval of all collected ones; then reenter.
+                pending_vars.append(v)
+                if current_coro_index+1 == len(greenlets): # BUGBUG: this is too simplistic; we need to carefully consider coroutines that terminate early
+                    assert len(pending_vars) == len(greenlets)
+                    batch_eval(pending_vars) # for now
+                    pending_vars = []
                 yield_to_next()
-            return run_coro
-        greenlets = [greenlet(coro_wrapper(coro)) for coro in coros]
-        # now run the schedule
-        pending_vars = []
-        def yield_to_batch_eval(v): # facilitate yielded batch eval
-            # this function gets called by Variable.get_value() if the value is not yet computed
-            nonlocal pending_vars
-            # this schedules a Variable for computation
-            # As long as we keep getting called from different coroutines, just collect these.
-            # Once all coroutines have requested (or terminated), launch a batch eval of all collected ones; then reenter.
-            pending_vars.append(v)
-            if current_coro_index+1 == len(greenlets): # BUGBUG: this is too simplistic; we need to carefully consider coroutines that terminate early
-                assert len(pending_vars) == len(greenlets)
-                batch_eval(pending_vars) # for now
-                pending_vars = []
-            yield_to_next()
-        prev_yield_to_batch_eval = Variable.set_yield(yield_to_batch_eval) # enable yielded batch computation
-        yield_to_first()
-        Variable.set_yield(prev_yield_to_batch_eval) # disable yielded batch computation
-    else:
-        crits = []
-        for args in zip(*batch_args):
-            ce, *_ = criterion(*args)
-            crits.append(ce)
+            prev_yield_to_batch_eval = Variable.set_yield(yield_to_batch_eval) # enable yielded batch computation
+            yield_to_first()
+            Variable.set_yield(prev_yield_to_batch_eval) # disable yielded batch computation
+        else: # vanilla form
+            for args in zip(*batch_args):
+                ce, *_ = criterion(*args)
+                crits.append(ce)
+        return crits
+
+    # perform the parallel map
+    crits = MyMap(criterion, batch_args)
+
     # sum up the ce values
     crits_batched = Variable.splice(*crits)
     crit = reduce_sum(crits_batched)
