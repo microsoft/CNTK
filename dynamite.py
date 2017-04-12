@@ -12,7 +12,7 @@ from timeit import default_timer as timer
 # TODO: move to contrib/dynamite/variable.py ; import .tensor_ops
 
 # some global settings for playing with different configs:
-use_batching = True
+use_batching = False
 use_coroutines = True
 
 # Functions vs Variables:
@@ -81,7 +81,7 @@ class Variable:
     def clone(self):
         assert not self.computed # (for now no need to clone after values have been computed already)
         assert not hasattr(self, 'initializer')
-        res = Variable(self.shape, self.op, self.inputs, self.backprop_to_functions, self.additional_args)
+        res = Variable(self.shape, self.op, self.inputs, backprop_to_functions=self.backprop_to_functions, additional_args=self.additional_args, additional_kwargs=self.additional_kwargs)
         self.generation_id = Variable.generation_counter # must get a new unique id
         Variable.generation_counter += 1
         return res
@@ -157,8 +157,8 @@ class Variable:
                 res = reduction_op(arg, reduce_to_shape=reduce_via_shape)
                 res = res.reshape(shape_batched)
                 return res
-            return Variable(shape_batched, reduce_batch, batched_inputs, self.backprop_to_functions)
-        return Variable(shape_batched, op, batched_inputs, self.backprop_to_functions, self.additional_args, self.additional_kwargs)
+            return Variable(shape_batched, reduce_batch, batched_inputs, backprop_to_functions=self.backprop_to_functions)
+        return Variable(shape_batched, op, batched_inputs, backprop_to_functions=self.backprop_to_functions, additional_args=self.additional_args, additional_kwargs=self.additional_kwargs)
 
     _batch_eval_fn = None   # lambda to call to yield from current coroutine
     @staticmethod
@@ -258,7 +258,7 @@ class Variable:
     def reshape(self, shape):
         return Variable(shape, cntk.NDArrayView.reshape, (self,), additional_args=(shape,))
     def reduce_sum_to_shape(self, shape):
-        return Variable(shape, cntk.NDArrayView.reduce_sum, (self,), additional_args=(shape,))
+        return Variable(shape, cntk.NDArrayView.reduce_sum, (self,), additional_kwargs=as_kwargs(reduce_to_shape=shape))
 
 class Parameter(Variable):
     def __new__(cls, shape, initializer=None):
@@ -623,7 +623,7 @@ def get_parameters(m):
     return tuple(parameters)
 
 # returns a dict [parameter] -> its name in the hierarchy
-def get_parameter_names(m, root='.'):
+def get_parameter_names(m, root='_'):
     parameter_names = dict()
     for member_name in dir(m):
         if member_name[0] == '_' and member_name != '__items__':
@@ -1016,8 +1016,10 @@ def create_gradient_graph(root, parameters, error_signal):
     # This is the error backpropagation algorithm in 12 lines of Python.
     gradients = dict() # [node] -> node's gradient; that is, error_signal * droot/dnode
     gradients[root] = error_signal
+    g_used = set() # (sanity check only)
     for node in filter(lambda node: id(node) in active_set, reversed(nodes)):
         g = gradients[node]
+        g_used.add(id(node))
         # backprop into each child
         for i, input in enumerate(node.inputs):
             if id(input) in active_set:
@@ -1031,7 +1033,11 @@ def create_gradient_graph(root, parameters, error_signal):
                 if input not in gradients:
                     gradients[input] = input_g
                 else:
-                    gradients[input] += input_g
+                    assert id(input) not in g_used # ensure traversal order is correct (it really should!)
+                    # BUGBUG: we must collate dyadic matrix aggregations into a single matmul (or can we rely on batching in forward?)
+                    # --> an aggregate operator, which inspects the input; should also separate different kinds of ops it seems,
+                    #     so maybe when use use a gradient, just call the transform function on it?
+                    gradients[input] = gradients[input] + input_g  # TODO: change back to +=
     #print(len(active_set), len(nodes), len(gradients))
     # gather the results
     res = { p: gradients[p] for p in parameters } # if a parameter does not feed root, then there will be no gradient, we will fail here

@@ -168,56 +168,33 @@ def train(debug_output=False):
 
     for i in range(251):
         mb = reader.next_minibatch(minibatch_size)
+
         # CNTK dynamite  --do this first before CNTK updates anything
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
         crit = dynamite.train_minibatch(dcriterion, *args)
         print(" " * 29, crit.to_ndarray() / len(args[0]))
         #dynamite.dump_graph(crit, skip_free=True)
         # compute gradients
-        dgradients = crit.grad_times(dparameters)
-        for p in dparameters:
-            print('gradient for', dparam_names[p])
-            g = dgradients[p].get_value()
-            #print(g.to_ndarray())
-        #print('static', dmodel.__items__[0].E.data.to_ndarray())
-        #print('dynamic', model.embed.E.value)
-
-        # CNTK static, manual fw/bw/update
-        grads = combine([criterion.outputs[0]]).grad(at=criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]), wrt=model.parameters, as_numpy=False)
-        for p in model.parameters:
-            dp = parameter_map[p]
-            p_data = grads[p].data.to_ndarray()
-            dp_data = dgradients[dp].data.to_ndarray()
-            print('### gradient for', dparam_names[dp], '(CNTK static vs. dynamite)')
-            print(p_data)
-            print(dp_data)
-            grads
-
-#    def grad(self, at, wrt=None, outputs=None, device=None, as_numpy=True):
-        '''
-        Computes the gradient of this Function at location ``at`` with respect to ``wrt``.
-        The Function must have a single output.
-
-
-        std::unordered_map<Variable, ValuePtr> parameterGradients;
-        ExecuteForwardBackward(arguments, outputsToFetch, computeDevice, parameterGradients);
-        void ExecuteForwardBackward(
-            const std::unordered_map<Variable, ValuePtr>& arguments,
-            std::unordered_map<Variable, ValuePtr>& outputsToFetch,
-            const DeviceDescriptor& computeDevice,
-            std::unordered_map<Variable, ValuePtr>& parameterGradients);
-
-        auto backPropSate = m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice, { m_aggregatedLossFunction }, m_modelParametersNotCoveredByLearners);
-        m_combinedTrainingFunction->Backward(backPropSate, { { m_aggregatedLossFunction, m_rootGradientValue } }, parameterGradients);
-
-        auto profWeights = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainWeights);
-
-        std::unordered_map<Parameter, NDArrayViewPtr> gradients;
-        for (const auto& parameter : m_learnerParameters)
-            gradients[parameter] = parameterGradients[parameter]->Data();
-        return m_parameterLearners->Update(gradients, m_prevMinibatchNumSamples, sweepEnd);
-'''
-
+        #dgradients = crit.grad_times(dparameters)
+        ##dynamite.batch_eval([dgradients[p] for p in dparameters]) # compute all in a single shot, to see if it makes a difference --does not
+        #for p in dparameters:
+        #    print('gradient for', dparam_names[p])
+        #    g = dgradients[p].get_value()
+        #    #print(g.to_ndarray())
+        #
+        ## CNTK static, manual fw/bw/update
+        #grads = combine([criterion.outputs[0]]).grad(at=criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]), wrt=model.parameters, as_numpy=False)
+        #for p in model.parameters:
+        #    dp = parameter_map[p]
+        #    p_data = grads[p].data.to_ndarray()
+        #    dp_data = dgradients[dp].data.to_ndarray()
+        #    print('### gradient for', dparam_names[dp], '(CNTK static vs. dynamite)')
+        #    print(p_data)
+        #    print(dp_data)
+        #    dynamite.dump_graph(dgradients[dp], skip_free=True)
+        #    exit()
+        #    # Dense.W fails when not using batching; but is OK without batching, so some gradient is just wrong
+        #    assert np.allclose(p_data, dp_data, rtol=1e-5)
 
         # CNTK static, original example
         trainer.train_minibatch(criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]))
