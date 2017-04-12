@@ -47,6 +47,7 @@ use_coroutines = True
 #        - unify NumericOp and NumericOpInPlace by passing an output variable; cf. Numpy. Reduces the surface.
 #  - move the entire stuff into Variable?? Then create outside overloads, e.g. times = Variable.__matmul__ instead of the other way round
 
+# TODO: where to move these?
 INFER = 0
 times_initializer = "(times_initializer)" # (dummy object only looked at by its object identity)
 
@@ -59,11 +60,11 @@ def as_kwargs(**kwargs):
     return kwargs
 
 class Variable:
-    generation_counter = 0
-
     # ------------------------------------------------------------------------
     # construction
     # ------------------------------------------------------------------------
+
+    generation_counter = 0
 
     def __new__(cls, shape, op, inputs, backprop_to_functions=None, additional_args=(), additional_kwargs=None):
         v = object.__new__(cls)
@@ -239,6 +240,20 @@ class Variable:
         error_signal = to_Variable(error_signal)
         return create_gradient_graph(self, set_of_params, error_signal)
 
+    @staticmethod
+    def _op_aggregate(*args, out=None): # NDArrayView operation to aggregate many inputs
+        arg0 = args[0]  # for now assume that all share the same shape; use first for reference
+        num_items = len(args)
+        if num_items == 1:
+            return arg0
+        res = out or cntk.NDArrayView(shape=arg0.shape, data_type=arg0.dtype, device=arg0.device()) # note: we may broadcast, so arg0.shape may be wrong; doesn't matter, we should have 'out' always anyway
+        for i in range(num_items):
+            if i == 0:
+                res[:] = args[i] # assign
+            else:
+                res += args[i] # aggregate
+        return res
+
     # ------------------------------------------------------------------------
     # operator overloads (infix ops)
     # ------------------------------------------------------------------------
@@ -269,9 +284,13 @@ class Variable:
     # slicing, splicing, reshaping
     # ------------------------------------------------------------------------
 
-    def _place_item(input, g, key): # BUGBUG: highly inefficient
+    def _op_place_item(input, g, key, out=None): # computation of gradient of __getitem__(); BUGBUG: highly inefficient
         # BUGBUG: Cannot back-prop into a huge matrix I just sliced from; needs in-place semantics!!!
-        res = input - input  # create a zero of the right size
+        if out:
+            res = out
+            res -= res
+        else:
+            res = input - input  # create a zero of the right size
         res[key] = g         # copy the slice there
         return res
     def __getitem__(self, key): # note: for now not fully supported
@@ -291,7 +310,7 @@ class Variable:
             return self
         return Variable(shape, cntk.NDArrayView.__getitem__, (self,),
                         backprop_to_functions=(
-                            lambda v, g: Variable(v.inputs[0].shape, Variable._place_item, (v.inputs[0], g,),
+                            lambda v, g: Variable(v.inputs[0].shape, Variable._op_place_item, (v.inputs[0], g,),
                                                   additional_args=(key,)),),
                         additional_args=(key,))
     def _op_alias(x): # the op for alias
@@ -813,7 +832,8 @@ from functools import reduce as functools_reduce
 ops_with_out = { cntk.NDArrayView.__add__, cntk.NDArrayView.__sub__, cntk.NDArrayView.__mul__, cntk.NDArrayView.greater,
     cntk.NDArrayView.dot, cntk.NDArrayView.dot_transpose, cntk.NDArrayView.transpose_dot,
     cntk.NDArrayView.sigmoid, cntk.NDArrayView.tanh, cntk.NDArrayView.relu, cntk.NDArrayView.exp,
-    cntk.NDArrayView.reduce_sum, cntk.NDArrayView.reduce_log_sum, cntk.NDArrayView.splice
+    cntk.NDArrayView.reduce_sum, cntk.NDArrayView.reduce_log_sum, cntk.NDArrayView.splice,
+    Variable._op_aggregate, Variable._op_place_item
 }
 def evaluate_graph(vars):
     # transform the graph from raw (individual batch items) to the batched graph
@@ -905,13 +925,16 @@ def create_gradient_graph(root, parameters, error_signal):
                     print('gradient shape', input_g.shape, "came back different from input's shape", input.shape, 'for input', i, 'of op', node.signature_as_string())
                 assert input.shape == input_g.shape
                 if input not in gradients:
-                    gradients[input] = input_g
+                    gradients[input] = Variable(input.shape, Variable._op_aggregate, (input_g,))
                 else:
                     assert id(input) not in g_used # ensure traversal order is correct (it really should!)
                     # BUGBUG: we must collate dyadic matrix aggregations into a single matmul (or can we rely on batching in forward?)
                     # --> an aggregate operator, which inspects the input; should also separate different kinds of ops it seems,
                     #     so maybe when use use a gradient, just call the transform function on it?
-                    gradients[input] = gradients[input] + input_g  # TODO: change back to +=
+                    g = gradients[input]
+                    assert g.op is Variable._op_aggregate
+                    g.inputs += (input_g,)  # note: these are tuples, so this will be N^2 effort; better use a list
+                    #gradients[input] = gradients[input] + input_g  # TODO: change back to +=
     #print(len(active_set), len(nodes), len(gradients))
     # gather the results
     res = { p: gradients[p] for p in parameters } # if a parameter does not feed root, then there will be no gradient, we will fail here
