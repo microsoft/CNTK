@@ -758,6 +758,8 @@ class Function(cntk_py.Function):
             as_numpy (bool, default `True`): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
              costly conversion but returns a somewhat opaque object.
+			grad_root (variable, optional): specify the root of gradients calculation. 
+			  If not specified, the output of this function will be used as gradient root.
 
         Returns:
             dict or NumPy Array or a tuple of these: Dict with keys of ``wrt`` variables and gradient values of
