@@ -234,6 +234,8 @@ def _add_asarray(klass):
 
 # --- experimental direct-mode support for simple NDArrayView operations ---
 
+# TODO: move this to contrib/tensor_ops.py
+
 from cntk.core import NDArrayView
 
 # TODO: change all of these here to return core.NDArrayView, not cntk_py.NDArrayView
@@ -246,25 +248,33 @@ class NDArrayViewOpsMixin(object):
     '''
 
     @staticmethod
-    def _num_op(*args):
-        res = NDArrayView.numeric_operation(*args)
-        res.__class__ = args[0][0].__class__
+    def _num_op(out, *args):
+        if out:
+            out.numeric_operation_in_place(0, *(args + (24,))) # 24 = ElementWiseOperator.opSum, a dummy here
+            res = out # the return value is out but as the underlying raw class type
+        else:
+            res = NDArrayView.numeric_operation(*args)
+            res.__class__ = args[0][0].__class__ # upgrade the type
         return res
     @staticmethod
-    def _mat_prod(*args):
-        res = NDArrayView.matrix_product(*args)
-        res.__class__ = args[1].__class__
+    def _mat_prod(out, *args):
+        if out:
+            out.matrix_product_in_place(0, *args)
+            res = out
+        else:
+            res = NDArrayView.matrix_product(*(args + (1,))) # last arg is output rank
+            res.__class__ = args[1].__class__
         return res
 
     # infix operators
-    def __add__(self, other):
-        return NDArrayViewOpsMixin._num_op([self, other], 1.0, 24) # 24 = ElementWiseOperator.opSum
-    def __sub__(self, other):
-        return NDArrayViewOpsMixin._num_op([self, other], 1.0, 25) # 25 = ElementWiseOperator.opDifference
-    def __mul__(self, other):
-        return NDArrayViewOpsMixin._num_op([self, other], 1.0, 26) # 26 = ElementWiseOperator.opElementwiseProduct
-    def greater(self, other):   # __gt__ somehow fails, already exists in cntk_py version
-        return NDArrayViewOpsMixin._num_op([self, other], 1.0, 35) # 35 = ElementWiseOperator.opGreater
+    def __add__(self, other, out=None):
+        return NDArrayViewOpsMixin._num_op(out, [self, other], 1.0, 24) # 24 = ElementWiseOperator.opSum
+    def __sub__(self, other, out=None):
+        return NDArrayViewOpsMixin._num_op(out, [self, other], 1.0, 25) # 25 = ElementWiseOperator.opDifference
+    def __mul__(self, other, out=None):
+        return NDArrayViewOpsMixin._num_op(out, [self, other], 1.0, 26) # 26 = ElementWiseOperator.opElementwiseProduct
+    def greater(self, other, out=None):   # __gt__ somehow fails, already exists in cntk_py version
+        return NDArrayViewOpsMixin._num_op(out, [self, other], 1.0, 35) # 35 = ElementWiseOperator.opGreater
 
     # so far these make no sense since we don't type-cast anyway
     __radd__ = __add__
@@ -278,7 +288,7 @@ class NDArrayViewOpsMixin(object):
         self.numeric_operation_in_place(1.0, [other], -1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
         return self
 
-    def __matmul__(self, other):
+    def __matmul__(self, other, out=None):
         shapeA = self.shape
         shapeB = other.shape
         if len(self.shape) == 0: # TODO: allow for scalar zero (initial_state)
@@ -287,38 +297,38 @@ class NDArrayViewOpsMixin(object):
             # TODO: test case
             self1.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
             self = self1
-        res = NDArrayViewOpsMixin._mat_prod(False, other, False, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
+        res = NDArrayViewOpsMixin._mat_prod(out, False, other, False, self, False, 1.0) # note: shapes are swapped, so we swap the order as well
         shapeC = res.shape
         return res
     dot = __matmul__
-    def dot_transpose(self, other): # other gets transposed
-        return NDArrayViewOpsMixin._mat_prod(False, other, True, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
-    def transpose_dot(self, other): # self gets transposed
-        return NDArrayViewOpsMixin._mat_prod(False, other, False, self, True, 1.0, 1) # note: shapes are swapped, so we swap the order as well
+    def dot_transpose(self, other, out=None): # other gets transposed
+        return NDArrayViewOpsMixin._mat_prod(out, False, other, True, self, False, 1.0) # note: shapes are swapped, so we swap the order as well
+    def transpose_dot(self, other, out=None): # self gets transposed
+        return NDArrayViewOpsMixin._mat_prod(out, False, other, False, self, True, 1.0) # note: shapes are swapped, so we swap the order as well
 
     # non-linearities
-    def sigmoid(self):
-        return NDArrayViewOpsMixin._num_op([self], 1.0,  8) #  8 = ElementWiseOperator.opSigmoid
-    def tanh(self):
-        return NDArrayViewOpsMixin._num_op([self], 1.0,  9) #  9 = ElementWiseOperator.opTanh
-    def relu(self):
-        return NDArrayViewOpsMixin._num_op([self], 1.0, 14) # 14 = ElementWiseOperator.opLinearRectifier
-    def exp(self):
-        return NDArrayViewOpsMixin._num_op([self], 1.0, 12) # 12 = ElementWiseOperator.opExp
+    def sigmoid(self, out=None):
+        return NDArrayViewOpsMixin._num_op(out, [self], 1.0,  8) #  8 = ElementWiseOperator.opSigmoid
+    def tanh(self, out=None):
+        return NDArrayViewOpsMixin._num_op(out, [self], 1.0,  9) #  9 = ElementWiseOperator.opTanh
+    def relu(self, out=None):
+        return NDArrayViewOpsMixin._num_op(out, [self], 1.0, 14) # 14 = ElementWiseOperator.opLinearRectifier
+    def exp(self, out=None):
+        return NDArrayViewOpsMixin._num_op(out, [self], 1.0, 12) # 12 = ElementWiseOperator.opExp
 
     # reductions
-    def reduce_sum(self, reduce_to_shape=()):
+    def reduce_sum(self, reduce_to_shape=(), out=None):
         # TODO: add a test
-        res = NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device()) # reduce to scalar
+        res = out or NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device()) # reduce to scalar
         res.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy, 28 = ElementWiseOperator.opSum
         return res
-    def reduce_log_sum(self, reduce_to_shape=()):
-        res = NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device()) # reduce to scalar
+    def reduce_log_sum(self, reduce_to_shape=(), out=None):
+        res = out or NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device()) # reduce to scalar
         res.numeric_operation_in_place(0.0, [self], 1.0, 2, 28) # 2 = ElementWiseOperator.opCopy, 28 = ElementWiseOperator.opLogSum
         return res
 
     # shapes, slicing, and splicing
-    def reshape(self, new_shape): # note: this is not in-place
+    def reshape(self, new_shape): # note: this is not in-place (unlike Matrix::Reshape())
         res = self.as_shape(new_shape)
         res.__class__ = self.__class__
         return res
@@ -375,7 +385,7 @@ class NDArrayViewOpsMixin(object):
             res = res.reshape(shape)
         return res
     @staticmethod
-    def splice(*args, axis=-1): # negative axis will insert a new axis
+    def splice(*args, axis=-1, out=None): # negative axis will insert a new axis
         arg0 = args[0]  # for now assume that all share the same shape; use first for reference
         shape = arg0.shape
         #print(shape, arg0)
@@ -386,7 +396,7 @@ class NDArrayViewOpsMixin(object):
         # output
         num_items = len(args)
         out_shape = shape[0:axis] + (shape[axis] * num_items,) + shape[axis+1:] # output shape
-        res = NDArrayView(shape=out_shape, data_type=arg0.dtype, device=arg0.device())
+        res = out or NDArrayView(shape=out_shape, data_type=arg0.dtype, device=arg0.device())
         # BUGBUG: this cannot be done for sparse; so we need a C++ implementation of this that works very differently
         #res = NDArrayView(arg0.dtype, arg0.get_storage_format(), out_shape, arg0.device())
         # assign all items
