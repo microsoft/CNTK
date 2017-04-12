@@ -321,6 +321,7 @@ class Constant(Variable):
         v.computed = True
         return v
 
+# helper to determine the shape of an elementwise operation
 def elementwise_shape(a,b):
     shapeA = a.shape if isinstance(a, (np.ndarray, Variable)) else ()
     shapeB = b.shape if isinstance(b, (np.ndarray, Variable)) else ()
@@ -330,7 +331,6 @@ def elementwise_shape(a,b):
     return tuple(max(dimA, dimB) for dimA, dimB in zip(shapeA,shapeB))
 
 def binary_op(opcode, backprop_to_functions=None):
-    #@BroadcastingBinary
     def f(a,b):
         return Variable(elementwise_shape(a,b), opcode, (a,b), backprop_to_functions=backprop_to_functions)
     return f
@@ -343,8 +343,6 @@ def binary_op(opcode, backprop_to_functions=None):
 
 def unary_op(opcode, backprop_to_functions=None):
     def f(x):
-        #if isinstance(x, list): # broadcast along sequence
-        #    return map(f, x)
         return Variable(x.shape, opcode, (x,), backprop_to_functions=backprop_to_functions)
     return f
 
@@ -353,8 +351,6 @@ unary_reduction_ops = set() # unary_reduction_ops must be treated specially in b
 def unary_reduction_op(opcode, backprop_to_functions=None):
     unary_reduction_ops.add(opcode)
     def f(x):
-        #if isinstance(x, list): # broadcast along sequence
-        #    return map(f, x)
         return Variable((), opcode, (x,), backprop_to_functions=backprop_to_functions)
     return f
 
@@ -385,7 +381,6 @@ def times_backprop_to_1(v, g): # fun(v, g) -> g * dv/db
     return res
     #return Variable(v.inputs[1].shape, cntk.NDArrayView.transpose_dot, (v.inputs[0], g))
 
-#@BroadcastingBinary
 def times(a,b):
     if isinstance(a, (int, float)) and a == 0: # HACK HACK! Otherwise, backprop cannot handle this special case. Will fail for non-zero scalars
         return 0
@@ -407,7 +402,6 @@ def times(a,b):
         shapeC = shapeC + (shapeB[1],);
     return Variable(shapeC, cntk.NDArrayView.dot, (a,b), backprop_to_functions=(times_backprop_to_0, times_backprop_to_1))
 
-#@BroadcastingBinary
 def times_transpose(a,b):
     if hasattr(b, 'initializer'):
         shape = (b.shape[0],
@@ -489,22 +483,7 @@ def topo_sort(roots: list):
         traverse(input)
     assert len(order) == len(visited)
 
-    # depth-first traversal
-    #work_list = None # (node, tail)
-    #visited = set() # [id(obj)] remembers every item that has ever been added to the work_list
-    #def schedule(inputs):
-    #    nonlocal work_list
-    #    for input in reversed(inputs):
-    #        if input not in visited:
-    #            work_list = (input, work_list) # prepend the input
-    #            visited.add(id(input))
-    #schedule(roots)
-    #while work_list:
-    #    node, work_list = work_list # pop off first item
-    #    # loop over its inputs
-    #    schedule(node.inputs)
-    #assert len(order) == len(visited)
-
+    # old routine without stack that sometimes gave wrong result; if we face stack problems, then fix this up
     #stack = roots.copy()
     #num_implanted = 0
     #while stack:
@@ -528,7 +507,6 @@ def topo_sort(roots: list):
     ## some checks
     #assert num_implanted == 0
     assert len(order) == len(visited)
-    # ... can we just verify the basic invariant?
     seen = set()
     for node in order:
         for input in node.inputs:
@@ -537,6 +515,17 @@ def topo_sort(roots: list):
         seen.add(id(node))
     #print(tuple(v.generation_id for v in order))
     return order
+
+def print_graph_stats(vars):
+    from collections import Counter
+    stats = Counter(t.type_as_char() for t in topo_sort(vars))
+    num_params   = stats['P'] if 'P' in stats else 0
+    num_consts   = stats['C'] if 'C' in stats else 0
+    num_vars     = stats['V'] if 'V' in stats else 0
+    num_getitems = stats['G'] if 'G' in stats else 0
+    num_splices  = stats['S'] if 'S' in stats else 0
+    total = num_params + num_consts + num_vars + num_getitems + num_splices
+    print(total, 'nodes,', (num_vars, num_splices, num_getitems), '(#compute, #splice, #slice),', (num_params, num_consts), '(parameters, constants)')
 
 # excecution
 #  - prep: for all nodes,
@@ -552,17 +541,6 @@ def topo_sort(roots: list):
 #     - sort each one right away into its batched group
 #     - this requires consumer sets for all nodes, and a not-ready-children counter
 #  - delete the batched group
-def print_graph_stats(vars):
-    from collections import Counter
-    stats = Counter(t.type_as_char() for t in topo_sort(vars))
-    num_params   = stats['P'] if 'P' in stats else 0
-    num_consts   = stats['C'] if 'C' in stats else 0
-    num_vars     = stats['V'] if 'V' in stats else 0
-    num_getitems = stats['G'] if 'G' in stats else 0
-    num_splices  = stats['S'] if 'S' in stats else 0
-    total = num_params + num_consts + num_vars + num_getitems + num_splices
-    print(total, 'nodes,', (num_vars, num_splices, num_getitems), '(#compute, #splice, #slice),', (num_params, num_consts), '(parameters, constants)')
-
 def transform_to_batched_ops(vars):
     nodes = topo_sort(vars)    # (it is possible to implement this without, just more complex)
     #print(tuple(v.generation_id for v in topo_sort(vars)))
@@ -707,7 +685,6 @@ def transform_to_batched_ops(vars):
             # and mutate all ops into a slice views into the new batched op
             for i, v in enumerate(op_batch):
                 v.replace_with(v_batched[i])
-                # BUGBUG: commit 48b72d5b3925ca9661b3b975f6a4af13b2952648 broke batching of something, section after print() goes up from 8 to 121
         for i, v in enumerate(op_batch):
             assert v.shape == v0.shape
     # end of transform_batched_op
