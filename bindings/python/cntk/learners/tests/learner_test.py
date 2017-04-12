@@ -10,6 +10,7 @@ from .. import *
 from cntk import parameter, input
 
 import pytest
+import sys
 
 LR_SCHEDULE_PARAMS = [
         ((0.2, UnitType.sample), [0.2]),
@@ -121,6 +122,48 @@ def test_learner_update():
     assert learner.learning_rate() == 0.3
     x = learner.update({w: np.asarray([[2.]], dtype=np.float32)}, 100)
     assert learner.learning_rate() == 0.4
+
+
+class TestProgressWriter(cntk_py.ProgressWriter):
+
+    def __init__(self):
+        super(TestProgressWriter, self).__init__(1, 0, 1, 0, sys.maxsize, 0)
+        self.log_output = []
+        self.__disown__()
+
+    def write(self, key, value):
+        self.log_output.append(float(value))
+
+def test_learner_logging():
+    from cntk import Trainer
+    from cntk.logging import ProgressPrinter
+    from cntk import cross_entropy_with_softmax, classification_error
+
+    features = input(shape=(1,), needs_gradient=True, name='a')
+    w_init = 1
+    w = parameter(shape=(1,), init=w_init)
+    z = features * w
+    labels = input(shape=(1,), name='b')
+    ce = cross_entropy_with_softmax(z, labels)
+    errs = classification_error(z, labels)
+
+    writer = TestProgressWriter();
+    lr_values = [0.3, 0.2, 0.1, 0]
+    m_values = [0.6, 0.7, 0.8]
+    learner = momentum_sgd(z.parameters, 
+                  learning_rate_schedule(lr_values, UnitType.sample, 1),
+                  momentum_schedule(m_values, 1))
+    trainer = Trainer(z, (ce, errs), [learner], writer)
+
+    for i in range(10):
+        trainer.train_minibatch({features: [[2.]], labels: [[1.]]})
+    
+    assert len(writer.log_output) == len(lr_values + m_values)
+
+    values = [j for i in zip(lr_values,m_values) for j in i] + [0]
+
+    for i in range(len(values)):
+        assert (values[i] == writer.log_output[i])
 
 def test_training_parameter_schedule():
     training_parameter_schedule(0.01, unit='minibatch')

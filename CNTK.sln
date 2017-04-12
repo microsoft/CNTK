@@ -1040,12 +1040,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HelloWorld-LogisticRegressi
 		Tutorials\HelloWorld-LogisticRegression\Train_cntk_text.txt = Tutorials\HelloWorld-LogisticRegression\Train_cntk_text.txt
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "common", "common", "{9A7E977F-0A11-43F6-8FBB-D5697E7DC9B2}"
-	ProjectSection(SolutionItems) = preProject
-		Examples\common\__init__.py = Examples\common\__init__.py
-		Examples\common\nn.py = Examples\common\nn.py
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Regression", "Regression", "{B1F7024F-51E9-43E7-99BE-8190CBC0B129}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Image\Regression\README.md = Examples\Image\Regression\README.md
@@ -2124,7 +2118,6 @@ Global
 		{A22E7B97-B4D2-43EA-AD53-307FA767A38D} = {305456F0-D9DE-4452-87BE-1C9F3C34C14F}
 		{2DD4DF97-4379-4D5F-9C1D-7AAC59E47796} = {305456F0-D9DE-4452-87BE-1C9F3C34C14F}
 		{8D116405-E726-4BF9-B2F7-30CA52CD59C7} = {305456F0-D9DE-4452-87BE-1C9F3C34C14F}
-		{9A7E977F-0A11-43F6-8FBB-D5697E7DC9B2} = {47755F2E-D674-4175-9E38-8EA053455072}
 		{B1F7024F-51E9-43E7-99BE-8190CBC0B129} = {9BDFA4BE-790E-408F-915B-5979BB5078C6}
 		{219A815E-11F4-4C01-9025-342B07768399} = {9BDFA4BE-790E-408F-915B-5979BB5078C6}
 		{8A624183-63DB-4221-81CD-E8577AD72868} = {9BDFA4BE-790E-408F-915B-5979BB5078C6}

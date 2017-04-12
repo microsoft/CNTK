@@ -640,7 +640,7 @@ namespace CNTK
                                 for (size_t i2 = 0; i2 < kernelRank; ++i2)
                                     m_inputs[0].m_dataFields->m_shape[i2] = kernelShape[i2];
                             }
-                            if (transpose && m_inputs[0].m_dataFields->m_shape[kernelRank] == NDShape::InferredDimension)
+                            if (transpose && (m_inputs[0].Shape().Rank() > kernelRank) && (m_inputs[0].Shape()[kernelRank] == NDShape::InferredDimension))
                                 m_inputs[0].m_dataFields->m_shape[kernelRank] = outputMapCount[outputMapCount.Rank()-1]; 
 
                             m_attributes[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
@@ -1015,8 +1015,8 @@ namespace CNTK
     }
 
     NDShape PrimitiveFunction::ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
-        std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
-        bool transpose, bool inferDimensions, bool ceilOutputDim/* = false*/) const
+                                                        std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
+                                                        bool transpose, bool inferDimensions, bool ceilOutputDim/* = false*/) const
     {
         if (inferDimensions)
         {
@@ -1035,7 +1035,7 @@ namespace CNTK
             // picking the corresponding operand shape dimensionality
             // This is done by shrinking the filter rank and let the dimensions be inferred from the operand's shape
             // TODO: Should we do this for all of the axes in kernelShape that have a dimensionailty of NDShape::InferredDimension?
-            if (kernelShape[filterRank - 1] == NDShape::InferredDimension)
+            if ((filterRank > 0) && (kernelShape[filterRank - 1] == NDShape::InferredDimension))
             {
                 filterRank--;
                 kernelShape = kernelShape.SubShape(0, filterRank);

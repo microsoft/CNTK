@@ -10,6 +10,7 @@ Unit tests for the function class.
 
 import numpy as np
 import pytest
+import cntk as C
 from ..functions import *
 from ...train.trainer import *
 from ...initializer import glorot_uniform
@@ -396,4 +397,27 @@ def test_constant_data_type_mismatch():
 
     with pytest.raises(ValueError):
         b.eval({i:[[np.asarray(np.random.rand(5,5),dtype=np.float32)]]})
-    
+
+def test_update_signature():
+    from cntk.layers.typing import Tensor
+
+    input_dim = 14
+
+    @Function
+    def f(x):
+        return x*x
+
+    f.update_signature(Tensor[input_dim])
+
+    assert f.outputs[0].shape == (input_dim,)
+    assert f.x.shape == (input_dim,)
+
+
+def test_transpose_0d_1d_operands():
+    x1 = C.input(())
+    with pytest.raises(ValueError):
+        transpose_0d = C.transpose(x1)
+
+    x2 = C.input(2)
+    with pytest.raises(ValueError):
+        transpose_1d = C.transpose(x2)

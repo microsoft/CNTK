@@ -1,3 +1,5 @@
+import re
+
 try:
     import cntk
 except ImportError:
@@ -31,7 +33,7 @@ exclude_patterns = [
     '*tests*'
 ]
 
-needs_sphinx = '1.3'
+needs_sphinx = '1.5'
 
 # TODO nitpick_ignore
 
@@ -51,6 +53,20 @@ add_module_names = False
 # The theme to use for HTML and HTML Help pages.
 html_theme = "sphinx_rtd_theme"
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+
+# Linkcheck builder options
+def re_exact_match(s):
+  return re.compile('^' + re.escape(s) + '$')
+
+linkcheck_anchors_ignore = [
+  # Important: Github Wiki anchors (for sections refs) yield errors in
+  # link-checking and need to be manually checked. Current exception to make
+  # the build pass are listed here:
+  re_exact_match('21-data-parallel-training-with-1-bit-sgd'),
+  re_exact_match('22-block-momentum-sgd'),
+  re_exact_match('converting-learning-rate-and-momentum-parameters-from-other-toolkits'),
+  re_exact_match('for-python'),
+]
 
 source_prefix = 'https://github.com/Microsoft/CNTK/blob/'
 if module_is_unreleased():

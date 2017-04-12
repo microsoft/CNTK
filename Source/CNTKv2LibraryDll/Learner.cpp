@@ -243,6 +243,8 @@ namespace CNTK
 
     /*virtual*/ bool LearnerBase::Update(unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd) /*override*/
     {
+        ReportTrainingParameterValue(m_learningRateSchedule, L"Learning rate");
+
         if (LearningRate(trainingSampleCount) == 0.0)
         {
             return false;
@@ -405,6 +407,28 @@ namespace CNTK
         }
     }
 
+    void LearnerBase::ReportTrainingParameterValue(const TrainingParameterSchedule<double>& schedule, const wstring& name) const
+    {
+        double value = GetCurrentTrainingParameterValue(schedule);
+
+        auto iter = m_trainingParametersMap.find(name);
+        if (iter == m_trainingParametersMap.end() || iter->second != value)
+        {
+            m_trainingParametersMap[name] = value;
+
+            wstringstream stream;
+            stream << name;
+            if (schedule.Unit() == TrainingParameterSchedule<double>::UnitType::Minibatch)
+                stream << L" per minibatch";
+            else
+                stream << L" per sample";
+            wstring prefix = stream.str();
+
+            for (auto& writer : m_progressWriters)
+                writer->Write(prefix, value);
+        }
+    }
+
     LearnerSGD::LearnerSGD(const std::vector<Parameter>& parameters, 
                            const LearningRateSchedule& learningRateSchedule, 
                            AdditionalLearningOptions additionalOptions,
@@ -453,6 +477,8 @@ namespace CNTK
     /*virtual*/ void LearnerMomentumSGD::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
                                                 const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
     {
+        ReportTrainingParameterValue(m_momentumSchedule, L"Momentum");
+
         DISPATCH_TO_TYPED_UPDATE_FUNCTION;
     }
 

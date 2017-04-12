@@ -1720,10 +1720,9 @@ public:
 
     virtual void Validate(bool isFinalValidationPass);
 
-    // Request matrices needed to do node function value evaluation.
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override;
-
-    // We don't release accumulator as it is needed after forward pass.
+    // Returns tensor view for the accumulator matrix. If accumulator matrix memory is not allocated
+    // accumulator matrix will be resized (memory will be allocated).
+    TensorView<ElemType> EnsureAccumlator();
 
 protected:
 
