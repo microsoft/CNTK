@@ -57,7 +57,7 @@ def create_feature_extractor(filter_multiplier=32):
             BatchNormalization(),
             Convolution2D(filter_shape=(1, 1), num_filters=(filter_multiplier * 2**3), pad=True),
             BatchNormalization(),
-            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**4), pad=True),
+            Convolution2D(filter_shape=(3, 3), num_filters=(filter_multiplier * 2**4), pad=True, name="YOLOv2PasstroughSource"),
             BatchNormalization(),
             MaxPooling(filter_shape=(2, 2), strides=(2, 2)),
             # Output in_x/32 x in_y/32 x 16*nfilters
@@ -79,11 +79,11 @@ def create_feature_extractor(filter_multiplier=32):
     return net
 
 
-# Puts a classifier end to any feature extractor and normalizes the input features by subtracting 114
+# Puts a classifier end to any feature extractor
 def put_classifier_on_feature_extractor(featureExtractor,nrOfClasses):
     return Sequential([
         reshape(x=Sequential([
-            [lambda x: x - 114],
+            # [lambda x: x - 114],
             featureExtractor,
             Convolution2D(filter_shape=(1, 1), num_filters=nrOfClasses, pad=True, activation=identity,
                           name="classifier_input"),
@@ -119,25 +119,27 @@ def save_model(model, name="darknet19"):
 ########################################################################################################################
 
 if __name__ == '__main__':
+    from cntk.cntk_py import force_deterministic_algorithms
+    force_deterministic_algorithms()
 
-    data_path = par_data_path #from PARAMETERS
+    data_path = par_data_path # from PARAMETERS
 
     # create
     model = create_classification_model_darknet19(num_classes) # num_classes from Utils
+    #  and normalizes the input features by subtracting 114
+    model = Sequential([[lambda x: (x - par_input_bias)] ,model])
     print("Created Model!")
 
     # train
     reader = create_reader(os.path.join(data_path, par_trainset_label_file),  is_training=True)
-    reader_test = create_reader(os.path.join(data_path, par_testset_label_file), is_training=False)
     print("Created Readers!")
 
-    train_model(reader, model, max_epochs=par_max_epochs)
-
+    train_model(reader, model, max_epochs=par_max_epochs, exponentShift=-1)
     # save
     save_model(model, "darknet19_" + par_dataset_name)
 
-    # from cntk.logging.graph import plot
-    # plot(model, filename=os.path.join(par_abs_path, "darknet19_" + par_dataset_name + "_DataAug.png"))
+    from cntk.logging.graph import plot
+    plot(model, filename=os.path.join(par_abs_path, "darknet19_" + par_dataset_name + "_DataAug.pdf"))
 
     # test
     reader = create_reader(os.path.join(data_path, par_testset_label_file), is_training=False)
