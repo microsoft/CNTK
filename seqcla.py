@@ -173,7 +173,7 @@ def train(debug_output=False):
         def log_time(dur):
             dur_per_sample = dur / len(args[0])
             samples_per_second = 1 / dur_per_sample
-            print('{:.2f} ms, {:.1f} samples/s'.format(dur * 1000, samples_per_second))
+            #print('{:.2f} ms, {:.1f} samples/s'.format(dur * 1000, samples_per_second))
 
         # CNTK dynamite  --do this first before CNTK updates anything
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
@@ -205,7 +205,6 @@ def train(debug_output=False):
         #    print(p_data)
         #    print(dp_data)
         #    dynamite.dump_graph(dgradients[dp], skip_free=True)
-        #    exit()
         #    # Dense.W fails when not using batching; but is OK without batching, so some gradient is just wrong
         #    assert np.allclose(p_data, dp_data, rtol=1e-5)
 
