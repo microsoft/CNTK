@@ -622,6 +622,22 @@ def get_parameters(m):
             parameters.extend(get_parameters(member))
     return tuple(parameters)
 
+# returns a dict [parameter] -> its name in the hierarchy
+def get_parameter_names(m, root='.'):
+    parameter_names = dict()
+    for member_name in dir(m):
+        if member_name[0] == '_' and member_name != '__items__':
+            continue
+        member = getattr(m, member_name)
+        if isinstance(member, Parameter):
+            parameter_names[member] = root + '.' + member_name
+        elif member_name == '__items__':
+            for i, item in enumerate(member):
+                parameter_names.update(get_parameter_names(item, '{}[{}]'.format(root, i)))
+        elif hasattr(member, '__ismodel__'):
+            parameter_names.update(get_parameter_names(member, root + '.' + member_name))
+    return parameter_names
+
 def dump_parameters(m, root='$'):
     for member_name in dir(m):
         if member_name[0] == '_' and member_name != '__items__':
@@ -797,9 +813,10 @@ def transform_to_batched_ops(vars):
                 return
             num_compute_launches += 1
             return
-        # __getitem__() is not an operation and thus cannot be parallelized
+        # __getitem__() is not an actual operation (just a view) and thus cannot be parallelized;
+        # reshape() the same;
         # splice() should be excluded if it came out of this function; for now we exclude all
-        if v0.op is cntk.NDArrayView.__getitem__ or v0.op is cntk.NDArrayView.splice:
+        if v0.op is cntk.NDArrayView.__getitem__ or v0.op is cntk.NDArrayView.reshape or v0.op is cntk.NDArrayView.splice:
             return
         # all ops are the same, so use the first as the reference
         for inp in v0.inputs:
@@ -827,6 +844,8 @@ def transform_to_batched_ops(vars):
             # --- cases in which all are identical
             # matrix product is special, in that the right argument is always shared in the batch and not applied element-wise
             if is_mul and i == 1:
+                if not all(arg is arg0 for arg in args):
+                    dump_graph(op_batch, skip_free=True)
                 assert all(arg is arg0 for arg in args)
                 return arg0
             # check whether all inputs are the same (e.g. add a bias)--then don't batch
@@ -886,12 +905,11 @@ def transform_to_batched_ops(vars):
         if p.computed:
             continue
         def make_key(p):
-            # special case for __getitem__: it's free and can always run first
-            # TODO: may need to add others as well, such as reshape()
-            if p.op is cntk.NDArrayView.__getitem__:
-                return (True, cntk.NDArrayView.__getitem__,) # True makes it be preferred always as a batch op
+            # special case for __getitem__ and reshape: they are free and can always run first
+            if p.op is cntk.NDArrayView.__getitem__ or p.op is cntk.NDArrayView.reshape:
+                return (True, p.op,) # True gives it highest priority as a batch op
             # special case for matmul: right matrix must be identical to be batchable
-            if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose:
+            if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose or p.op is cntk.NDArrayView.transpose_dot:
                 return (False, p.op, (p.inputs[0].shape, id(p.inputs[1])))
             # batch if both op and input shapes are the same
             # Python slices are not hashable

@@ -120,7 +120,8 @@ def train(debug_output=False):
     dmodel.__items__[0].E              .share_data_from(model.embed.E)
     #dparameters = dmodel.get_parameters()
     dparameters = dynamite.get_parameters(dmodel)
-    print('dynamic model has', len(dparameters), 'parameter tensors')
+    dparam_names = dynamite.get_parameter_names(dmodel)
+    print('dynamic model has', len(dparameters), 'parameter tensors:', ', '.join(name + str(param.shape) for param, name in dparam_names.items()))
 
     # testing stuff
     if False:
@@ -164,12 +165,12 @@ def train(debug_output=False):
         crit = dynamite.train_minibatch(dcriterion, *args)
         print(" " * 29, crit.to_ndarray() / len(args[0]))
         #dynamite.dump_graph(crit, skip_free=True)
-        #dynamite.dump_graph(crit)
         # compute gradients
-        #dgradients = crit.grad_times(dparameters)
-        #for p in dparameters:
-        #    g = dgradients[p].get_value()
-        #    #print(g.to_ndarray())
+        dgradients = crit.grad_times(dparameters)
+        for p in dparameters:
+            print('gradient for', dparam_names[p])
+            g = dgradients[p].get_value()
+            #print(g.to_ndarray())
         args = None  # deref; otherwise resize will fail    --veriy this; should not longer be the case
         #print('static', dmodel.__items__[0].E.data.to_ndarray())
         #print('dynamic', model.embed.E.value)
