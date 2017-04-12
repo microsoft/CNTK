@@ -606,20 +606,21 @@ def Recurrence(step_function, initial_state=0):
     return recurrence
 
 # returns the set of Parameter objects hanging off a model
+# Returned as a tuple, since sets in Python have non-deterministic ordering.
 def get_parameters(m):
-    parameters = set()
+    parameters = []
     for member_name in dir(m):
         if member_name[0] == '_' and member_name != '__items__':
             continue
         member = getattr(m, member_name)
         if isinstance(member, Parameter):
-            parameters.add(member)
+            parameters.append(member)
         elif member_name == '__items__':
             for item in member:
-                parameters |= get_parameters(item)
+                parameters.extend(get_parameters(item))
         elif hasattr(member, '__ismodel__'):
-            parameters |= get_parameters(member)
-    return parameters
+            parameters.extend(get_parameters(member))
+    return tuple(parameters)
 
 def dump_parameters(m, root='$'):
     for member_name in dir(m):
@@ -978,7 +979,7 @@ def batch_eval(vars):
 # Call this only once for all parameters, otherwise you will duplicate computation (no caching!).
 # Inputs:
 #  - v: variable whose gradient is to be computed
-#  - parameters: set of Parameter variables hanging off v to compute the gradient for
+#  - parameters: list (set) of Parameter variables hanging off v to compute the gradient for
 #  - error_signal: to back-propagate into the root
 def create_gradient_graph(root, parameters, error_signal):
     # batch all ops
