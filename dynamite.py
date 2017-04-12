@@ -169,10 +169,16 @@ class Variable:
     def _call_op(self, out=None):
         try:
           args = tuple(input.data for input in self.inputs)
-          if self.additional_kwargs:
-              data = self.op(*(args + self.additional_args), **self.additional_kwargs)
+          if out:
+              if self.additional_kwargs:
+                  data = self.op(*(args + self.additional_args), out=out, **self.additional_kwargs)
+              else:
+                  data = self.op(*(args + self.additional_args), out=out)
           else:
-              data = self.op(*(args + self.additional_args))
+              if self.additional_kwargs:
+                  data = self.op(*(args + self.additional_args), **self.additional_kwargs)
+              else:
+                  data = self.op(*(args + self.additional_args))
           if data.shape != self.shape:
               dump_graph(self, skip_free=True)
               print(data.shape, self.shape)
@@ -989,6 +995,8 @@ def batch_eval(vars):
         if not p.computed:
             out = None
             # TODO: memory allocation here once out is pushed through
+            if p.op == cntk.NDArrayView.__add__:
+                out = cntk.NDArrayView(p.shape)
             p.compute_data(out=out)
         #print(p.data.to_ndarray())
     #dump_graph(vars)
