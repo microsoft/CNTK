@@ -60,7 +60,11 @@ def as_kwargs(**kwargs):
 
 class Variable:
     generation_counter = 0
-    # constructor
+
+    # ------------------------------------------------------------------------
+    # construction
+    # ------------------------------------------------------------------------
+
     def __new__(cls, shape, op, inputs, backprop_to_functions=None, additional_args=(), additional_kwargs=None):
         v = object.__new__(cls)
         v.shape = shape
@@ -97,6 +101,11 @@ class Variable:
         self.additional_kwargs     = other.additional_kwargs
         self.generation_id = Variable.generation_counter # BUGBUG: This screws up the idea of the gen id for topo-sort... :(
         Variable.generation_counter += 1
+
+    # ------------------------------------------------------------------------
+    # logging
+    # ------------------------------------------------------------------------
+
     def type_as_char(self):
         return "P" if isinstance(self, Parameter)             else \
                "C" if isinstance(self, Constant)              else \
@@ -132,6 +141,10 @@ class Variable:
             t += ")"
         return t
 
+    # ------------------------------------------------------------------------
+    # execution, node level
+    # ------------------------------------------------------------------------
+
     # create a batched version of this, taking all shape etc. considerations into account
     #  - batched_inputs: for each arg of self, batch_size batch of args of operations in the batch
     #  - batch_size: number of operations that got batched
@@ -160,12 +173,6 @@ class Variable:
             return Variable(shape_batched, reduce_batch, batched_inputs, backprop_to_functions=self.backprop_to_functions)
         return Variable(shape_batched, op, batched_inputs, backprop_to_functions=self.backprop_to_functions, additional_args=self.additional_args, additional_kwargs=self.additional_kwargs)
 
-    _batch_eval_fn = None   # lambda to call to yield from current coroutine
-    @staticmethod
-    def set_yield(batch_eval_fn):
-        prev = Variable._batch_eval_fn
-        Variable._batch_eval_fn = batch_eval_fn
-        return prev
     def _call_op(self, out=None):
         try:
           args = tuple(input.data for input in self.inputs)
@@ -193,17 +200,34 @@ class Variable:
         assert not self.computed
         self.data = self._call_op(out=out)
         self.computed = True
-    #@property
+
+    # ------------------------------------------------------------------------
+    # execution, graph-level operations
+    # ------------------------------------------------------------------------
+
+    _batch_eval_fn = None   # lambda to call to yield from current coroutine
+    @staticmethod
+    def set_yield(batch_eval_fn):
+        prev = Variable._batch_eval_fn
+        Variable._batch_eval_fn = batch_eval_fn
+        return prev
+
     def get_value(self):  # return the NDArrayView--computed lazily at this point if needed
         if not self.computed:  # lazy computation (this is where all the difficult stuff will happen w.r.t. batching)
             if Variable._batch_eval_fn:
                 Variable._batch_eval_fn(self) # delegate to task scheduler to eval us
                 assert self.computed
             else:
-                batch_eval([self])
+                evaluate_graph([self])
         return self.data
+
     def to_ndarray(self):
         return self.get_value().to_ndarray()
+
+    # ------------------------------------------------------------------------
+    # gradients
+    # ------------------------------------------------------------------------
+
     # create Variable that is the gradient of self w.r.t. a set of parameters, multiplied with error_signal
     def backprop_to(self, i):  # get backprop function for inputs[i]; each fun(v, g) -> g * dv/dinp_i
         if not self.backprop_to_functions:
@@ -214,7 +238,11 @@ class Variable:
     def grad_times(self, set_of_params, error_signal=1):
         error_signal = to_Variable(error_signal)
         return create_gradient_graph(self, set_of_params, error_signal)
+
+    # ------------------------------------------------------------------------
     # operator overloads (infix ops)
+    # ------------------------------------------------------------------------
+
     def __add__(self, other):
         return plus(self, other)
     def __sub__(self, other):
@@ -236,6 +264,11 @@ class Variable:
         return Variable.__gt__(other, self)
     def __rmatmul__(self, other):
         return Variable.__matmul__(other, self)
+
+    # ------------------------------------------------------------------------
+    # slicing, splicing, reshaping
+    # ------------------------------------------------------------------------
+
     def _place_item(input, g, key): # BUGBUG: highly inefficient
         # BUGBUG: Cannot back-prop into a huge matrix I just sliced from; needs in-place semantics!!!
         res = input - input  # create a zero of the right size
@@ -320,6 +353,13 @@ class Constant(Variable):
         v.data = data  # NDArrayView
         v.computed = True
         return v
+
+##############################################################################
+#
+# operators
+# TODO: move into class
+#
+##############################################################################
 
 # helper to determine the shape of an elementwise operation
 def elementwise_shape(a,b):
@@ -434,6 +474,9 @@ minus         = binary_op(cntk.NDArrayView.__sub__, backprop_to_functions=(lambd
 element_times = binary_op(cntk.NDArrayView.__mul__, backprop_to_functions=(lambda v, g: _unbroadcast(v.inputs[0], g * v.inputs[1]), lambda v, g: _unbroadcast(v.inputs[1], g * v.inputs[0]))) # TODO: test this
 greater       = binary_op(cntk.NDArrayView.greater)  #, backprop_to_functions=(lambda v, g: g, lambda v, g: g))
 
+
+# TODO: all explicit calls here must be moved (1) into Variable for base functionality; and (2) to Layers with broadcasting wrapper
+
 tanh    = unary_op(cntk.NDArrayView.tanh)
 sigmoid = unary_op(cntk.NDArrayView.sigmoid, backprop_to_functions=(lambda v, g: g * (v * (one-v)),))
 relu    = unary_op(cntk.NDArrayView.relu,    backprop_to_functions=(lambda v, g: g * (v > zero),))
@@ -462,7 +505,7 @@ classification_error = cross_entropy_with_softmax  # TODO... for now
 
 ##############################################################################
 #
-# Dynamite Variable type, part 2 (execution)
+# execution
 # TODO: move up once it works, then merge into class Variable
 #
 ##############################################################################
@@ -766,12 +809,13 @@ def transform_to_batched_ops(vars):
 import time
 from operator import mul as mul_operator
 from functools import reduce as functools_reduce
+# TODO: find a nicer way of doing this automatically
 ops_with_out = { cntk.NDArrayView.__add__, cntk.NDArrayView.__sub__, cntk.NDArrayView.__mul__, cntk.NDArrayView.greater,
     cntk.NDArrayView.dot, cntk.NDArrayView.dot_transpose, cntk.NDArrayView.transpose_dot,
     cntk.NDArrayView.sigmoid, cntk.NDArrayView.tanh, cntk.NDArrayView.relu, cntk.NDArrayView.exp,
     cntk.NDArrayView.reduce_sum, cntk.NDArrayView.reduce_log_sum, cntk.NDArrayView.splice
 }
-def batch_eval(vars):
+def evaluate_graph(vars):
     # transform the graph from raw (individual batch items) to the batched graph
     print_graph_stats(vars)
     if use_batching:
@@ -923,7 +967,7 @@ def map_batch(f, batch_args):
             pending_vars.append(v)
             if current_coro_index+1 == len(greenlets): # BUGBUG: this is too simplistic; we need to carefully consider coroutines that terminate early
                 assert len(pending_vars) == len(greenlets)
-                batch_eval(pending_vars) # for now
+                evaluate_graph(pending_vars) # for now
                 pending_vars = []
             yield_to_next()
         prev_yield_to_batch_eval = Variable.set_yield(yield_to_batch_eval) # enable yielded batch computation
@@ -937,7 +981,7 @@ def map_batch(f, batch_args):
 
 ##############################################################################
 #
-# Dynamite Variable type, part 3 (higher-level interfaces)
+# higher-level interfaces
 #
 ##############################################################################
 
