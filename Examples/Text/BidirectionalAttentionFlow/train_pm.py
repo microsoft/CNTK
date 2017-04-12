@@ -153,6 +153,11 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     if profiling:
         C.debugging.stop_profiler()
         
+def cdp(begin, end):
+    running_max_begin = C.layers.Recurrence(C.element_max, initial_state=-float("inf"))(begin)
+    return C.layers.Fold(C.element_max, initial_state=C.constant(-1e+30))(running_max_begin + end)
+    #return C.sequence.reduce_max(running_max_begin + end)
+        
 def test(test_data, model_path, config_file):
     polymath = PolyMath(config_file)
     model = C.load_model(os.path.join(model_path, model_name))
@@ -162,39 +167,86 @@ def test(test_data, model_path, config_file):
     mb_source, input_map = create_mb_and_map(loss, test_data, polymath, randomize=False, repeat=False)
     label_ab = argument_by_name(loss, 'ab')
     label_ae = argument_by_name(loss, 'ae')
-    f1_func = polymath.f1_score(label_ab, label_ae, ab, ae)
-    f1, precision, recall, has_overlap, start_match, end_match = f1_func.outputs
-    em = C.greater_equal(f1, 1)
-    test_func = C.splice(
-        C.reduce_sum(loss, C.Axis.all_axes()),
-        C.reduce_sum(f1, C.Axis.all_axes()), # we should have reduction over batch axis but keep static axis
-        C.reduce_sum(em, C.Axis.all_axes()),
-        C.reduce_sum(precision, C.Axis.all_axes()),
-        C.reduce_sum(recall, C.Axis.all_axes()),
-        C.reduce_sum(has_overlap, C.Axis.all_axes()),
-        C.reduce_sum(start_match, C.Axis.all_axes()),
-        C.reduce_sum(end_match, C.Axis.all_axes()))
     
+    abi = C.input_variable(1, dynamic_axes=label_ab.dynamic_axes, needs_gradient=True)
+    aei = C.input_variable(1, dynamic_axes=label_ae.dynamic_axes, needs_gradient=True)
+    
+    best_span_score = cdp(abi, aei)
+    
+    pspan = C.layers.Recurrence(C.plus)(abi - C.past_value(aei))
+    gspan = C.layers.Recurrence(C.plus)(label_ab - C.past_value(label_ae))
+    print(pspan)
+    print(gspan)
+    cspan = C.element_min(pspan, gspan)
+    all_spans = C.splice(pspan,gspan,cspan)
+    all_lens = C.sequence.reduce_sum(all_spans)
+    
+    
+    """    
+        f1_func = polymath.f1_score(label_ab, label_ae, ab, ae)
+        f1, precision, recall, has_overlap, start_match, end_match = f1_func.outputs
+        em = C.greater_equal(f1, 1)
+        test_func = C.splice(
+            C.reduce_sum(loss, C.Axis.all_axes()),
+            C.reduce_sum(f1, C.Axis.all_axes()), # we should have reduction over batch axis but keep static axis
+            C.reduce_sum(em, C.Axis.all_axes()),
+            C.reduce_sum(precision, C.Axis.all_axes()),
+            C.reduce_sum(recall, C.Axis.all_axes()),
+            C.reduce_sum(has_overlap, C.Axis.all_axes()),
+            C.reduce_sum(start_match, C.Axis.all_axes()),
+            C.reduce_sum(end_match, C.Axis.all_axes()))
+    """
+
     # Evaluation parameters
     minibatch_size = 8192
     num_sequences = 0
+    
+    """
     stat_sum = np.zeros(test_func.shape)
-
+    """
+    
     C.debugging.start_profiler()
     C.debugging.enable_profiler()
+    
+    """
+        while True:
+            data = mb_source.next_minibatch(minibatch_size, input_map=input_map)
+            if not data or not (label_ab in data) or data[label_ab].num_sequences == 0:
+                break
+            test_results = test_func.eval(data)
+            stat_sum += test_results
+            num_sequences += data[label_ab].num_sequences
+    """
+    
+    stat_sum = np.zeros(5)
 
+            
     while True:
         data = mb_source.next_minibatch(minibatch_size, input_map=input_map)
         if not data or not (label_ab in data) or data[label_ab].num_sequences == 0:
             break
-        test_results = test_func.eval(data)
-        stat_sum += test_results
-        num_sequences += data[label_ab].num_sequences
+        out = model.eval(data, outputs=[ab,ae], as_numpy=False)
+        for p in out:
+            print(p,out[p])
+        g = best_span_score.grad({abi:out[ab], aei:out[ae]}, wrt=[abi,aei], as_numpy=False)
         
+        other_input_map = {abi: g[abi], aei: g[aei], label_ab: data[label_ab], label_ae: data[label_ae]}
+        for jj,(plen,glen,clen) in enumerate(all_lens.eval(other_input_map)):
+            if plen == 0:
+                print(pspan.eval(other_input_map)[jj])
+                import pdb
+                pdb.set_trace()
+                print(np.sum(g[abi].as_sequences(abi)[jj]))
+                print(np.sum(g[aei].as_sequences(aei)[jj]))
+            test_results = np.array([2.0 * clen / (glen +  plen), float(clen == plen == glen), clen / plen, clen / glen, float(clen > 0)])
+            num_sequences += 1
+            stat_sum += test_results
+
     C.debugging.stop_profiler()
 
     stat_avg = stat_sum / num_sequences
-
+    
+    """
     print("Tested {} sequences, loss {:.4f}, F1 {:.4f}, EM {:.4f}, precision {:4f}, recall {:4f} hasOverlap {:4f}, start_match {:4f}, end_match {:4f}".format(
             num_sequences,
             stat_avg[0],
@@ -205,6 +257,15 @@ def test(test_data, model_path, config_file):
             stat_avg[5],
             stat_avg[6],
             stat_avg[7]))
+    """
+    
+    print("Tested {} sequences, F1 {:.4f}, EM {:.4f}, precision {:4f}, recall {:4f} hasOverlap {:4f}".format(
+            num_sequences,
+            stat_avg[0],
+            stat_avg[1],
+            stat_avg[2],
+            stat_avg[3],
+            stat_avg[4]))
 
 if __name__=='__main__':
     # default Paths relative to current python file.

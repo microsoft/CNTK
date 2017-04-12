@@ -245,9 +245,13 @@ class PolyMath:
         end_prob = C.slice(vw,1,1,2)
         joint_prob_mask = C.constant(np.asarray(np.triu(np.ones(self.max_context_len)),dtype=np.float32), shape=(self.max_context_len, self.max_context_len)) # start <= end
         joint_prob = C.times_transpose(start_prob, end_prob) * joint_prob_mask
+        joint_prob = print_node(joint_prob)
         joint_prob_loc = C.equal(joint_prob, C.reduce_max(joint_prob, axis=C.Axis.all_static_axes()))
+
         start_pos = C.argmax(C.reduce_max(joint_prob_loc,1),0)
         end_pos = C.argmax(C.reduce_max(joint_prob_loc,0),1)
+        start_pos = print_node(start_pos)
+        end_pos = print_node(end_pos)
         
         gt_start = C.argmax(C.slice(vw,1,2,3),0)
         gt_end = C.argmax(C.slice(vw,1,3,4),0)
