@@ -8,6 +8,7 @@ LogFileName="ASGDMultiGPU"
 Instances=2
 NumCPUThreads=$(threadsPerInstance $Instances)
 parallelizationMethod="DataParallelASGD"
+DeleteExistingModels=0 
 
 # cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
 cntkmpirun "-n $Instances" 03_ResNet-parallel.cntk "numCPUThreads=$NumCPUThreads precision=float parallelTrain=true minibatch=256 epochsize=12 asyncBuffer=\"false\" parallelizationMethod=$parallelizationMethod"
