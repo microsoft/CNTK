@@ -165,12 +165,12 @@ class Variable:
           else:
               data = self.op(*(args + self.additional_args))
           if data.shape != self.shape:
-              dump_graph(self)
+              dump_graph(self, skip_free=True)
               print(data.shape, self.shape)
           assert data.shape == self.shape # sanity check of shape inference
           return data
         except Exception: # (for catching stuff in the debugger; remove this)
-          dump_graph(self)
+          dump_graph(self, skip_free=True)
           print('_call_op failure:', self.op, self.shape, tuple(input.shape for input in self.inputs))
           raise
         pass
@@ -192,7 +192,7 @@ class Variable:
     # create Variable that is the gradient of self w.r.t. a set of parameters, multiplied with error_signal
     def backprop_to(self, i):  # get backprop function for inputs[i]; each fun(v, g) -> g * dv/dinp_i
         if not self.backprop_to_functions:
-            dump_graph(self)
+            dump_graph(self, skip_free=True)
             print('backprop_to() missing for', self.signature_as_string())
             raise NotImplementedError('backprop_to missing')
         return self.backprop_to_functions[i]
@@ -755,8 +755,6 @@ def transform_to_batched_ops(vars):
     #         One fix would be to replace the a_r themselves by slice_views as well.
     def transform_batched_op(op_batch):
         v0 = op_batch[0]
-        if v0.op == cntk.NDArrayView.__getitem__: # __getitem__() is not an operation and thus cannot be parallelized
-            return
         def reslicing(args): # helper to test whether we are re-splicing something previously sliced (then we can short-circuit it)
             # BUGBUG: This currently ignores the axis parameter.
             arg0 = args[0]
@@ -776,6 +774,10 @@ def transform_to_batched_ops(vars):
                 v0.replace_with(v_batched)
                 return
             num_compute_launches += 1
+            return
+        # __getitem__() is not an operation and thus cannot be parallelized
+        # splice() should be excluded if it came out of this function; for now we exclude all
+        if v0.op == cntk.NDArrayView.__getitem__ or p.op is cntk.NDArrayView.splice:
             return
         # all ops are the same, so use the first as the reference
         for inp in v0.inputs:
@@ -863,6 +865,7 @@ def transform_to_batched_ops(vars):
             continue
         def make_key(p):
             # special case for __getitem__: it's free and can always run first
+            # TODO: may need to add others as well, such as reshape()
             if p.op is cntk.NDArrayView.__getitem__:
                 return (True, cntk.NDArrayView.__getitem__,) # True makes it be preferred always as a batch op
             # special case for matmul: right matrix must be identical to be batchable
@@ -973,7 +976,7 @@ def create_gradient_graph(root, parameters, error_signal):
                 backprop_to = node.backprop_to(i)
                 input_g = backprop_to(node, g)
                 if input.shape != input_g.shape:
-                    dump_graph(input_g)
+                    dump_graph(input_g, skip_free=True)
                     print('gradient shape', input_g.shape, "came back different from input's shape", input.shape, 'for input', i, 'of op', node.signature_as_string())
                 assert input.shape == input_g.shape
                 if input not in gradients:
