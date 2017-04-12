@@ -977,6 +977,8 @@ def transform_to_batched_ops(vars):
 # main evaluation function
 #  - evaluate a set of root variables
 #  - with full automatic dynamic batching
+from operator import mul as mul_operator
+from functools import reduce as functools_reduce
 def batch_eval(vars):
     # transform the graph from raw (individual batch items) to the batched graph
     print_graph_stats(vars)
@@ -991,12 +993,29 @@ def batch_eval(vars):
     # now actually compute the transformed graph
     nodes = topo_sort(vars)
     num_nodes = len(nodes)
+    # simple arena allocation
+    mem_offset = 0
     for p in nodes:
         if not p.computed:
+            p.mem = -1 # no memory by default
             out = None
             # TODO: memory allocation here once out is pushed through
             if p.op == cntk.NDArrayView.__add__:
-                out = cntk.NDArrayView(p.shape)
+                num_elements = functools_reduce(mul_operator, p.shape, 1)
+                print('allocating', num_elements, ' for shape', p.shape)
+                p.mem = mem_offset
+                p.num = num_elements
+                mem_offset += num_elements
+    arena = cntk.NDArrayView((mem_offset,))
+    # execution
+    for p in nodes:
+        if not p.computed:
+            out = None
+            mem = p.mem
+            if mem != -1:
+                out = arena[mem:mem+p.num]
+                out = out.reshape(p.shape)
+                pass
             p.compute_data(out=out)
         #print(p.data.to_ndarray())
     #dump_graph(vars)
