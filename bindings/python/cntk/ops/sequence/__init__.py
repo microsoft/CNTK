@@ -573,7 +573,7 @@ def reduce_sum(seq, name=''):
 @typemap
 def reduce_max(x, name=''):
   """
-  Get the max value in the sequence values
+  Compute the max values along a sequence
 
   Args:
     x: input sequence
@@ -581,19 +581,23 @@ def reduce_max(x, name=''):
   Returns:
     The max value in the input sequence
   """
-  from ...ops import element_select, placeholder, greater 
-  m = placeholder(shape=(1,), dynamic_axes = x.dynamic_axes, name='max')
-  o = element_select(greater(x, future_value(m)), x, future_value(m))
-  rlt = o.replace_placeholders({m:sanitize_input(o)})
-  max_out = first(rlt) 
-  return sanitize_input(max_out)
-
+  from ...ops import element_max, placeholder
+  from ...cntk_py import Constant
+  from cntk.internal import sanitize_dtype_cntk
+  m = placeholder(shape=x.shape, dynamic_axes=x.dynamic_axes, name='max')
+  o = element_max(x, future_value(m, initial_state=Constant.scalar(sanitize_dtype_cntk(np.float32), -float("inf"))))
+  rlt = o.replace_placeholders({m: o})
+  return first(rlt)
+    
 @typemap
 def softmax(x, name = ''):
   """
-  Compute softmax along with a squence values
+  Compute the softmax along a sequence
   """
-  from ...ops import element_divide, exp 
-  x_exp = exp((x-broadcast_as(reduce_max(x), x))*10)
-  x_softmax = element_divide(x_exp, broadcast_as(reduce_sum(x_exp), x), name = name)
-  return x_softmax
+  from ...ops import element_divide, exp, log_add_exp, placeholder
+  from ...cntk_py import Constant
+  from cntk.internal import sanitize_dtype_cntk
+  z = placeholder(shape=x.shape, dynamic_axes=x.dynamic_axes, name='logZ')
+  logz = log_add_exp(x, past_value(z, initial_state=Constant.scalar(sanitize_dtype_cntk(np.float32), -float("inf"))))
+  logz.replace_placeholders({z:logz})
+  return exp(x-broadcast_as(last(logz), x))
