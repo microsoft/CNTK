@@ -171,7 +171,6 @@ def train(debug_output=False):
             print('gradient for', dparam_names[p])
             g = dgradients[p].get_value()
             #print(g.to_ndarray())
-        args = None  # deref; otherwise resize will fail    --veriy this; should not longer be the case
         #print('static', dmodel.__items__[0].E.data.to_ndarray())
         #print('dynamic', model.embed.E.value)
         # CNTK static
