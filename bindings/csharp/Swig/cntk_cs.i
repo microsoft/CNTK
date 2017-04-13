@@ -1751,7 +1751,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
 %ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, const void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device);
 %ignore CNTK::NDArrayView::NDArrayView(double value, DataType dataType = DataType::Float, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), bool readOnly = false);
-%igore_function CNTK::NDArrayView::SliceView;
 
 %extend CNTK::NDArrayView {
     NDArrayView(const NDShape& viewShape, float *dataBuffer, size_t numBufferElements, const DeviceDescriptor& device, bool readOnly = false)
@@ -1789,12 +1788,14 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     {
         return new CNTK::NDArrayView(viewShape, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device, readOnly);
     }
+
 }
 
 %rename (GetDevice) CNTK::NDArrayView::Device;
 %rename (GetShape) CNTK::NDArrayView::Shape;
 %rename (_IsSparse) CNTK::NDArrayView::IsSparse;
 %rename (_IsReadOnly) CNTK::NDArrayView::IsReadOnly;
+%rename (_SliceView) CNTK::NDArrayView::SliceView;
 
 %typemap(cscode) CNTK::NDArrayView %{
     public NDArrayView(NDShape viewShape, float[] dataBuffer, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, (uint)dataBuffer.Length, device, readOnly)
@@ -1875,6 +1876,31 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         {
             return _IsReadOnly();
         }
+    }
+
+    public NDArrayView SliceView(System.Collections.Generic.IEnumerable<int> startOffset, System.Collections.Generic.IEnumerable<int> extent, bool readOnly = false)
+    {
+        var startOffsetVector = new SizeTVector();
+        foreach (var offset in startOffset)
+        {
+            if (offset < 0)
+            {
+                throw new System.ArgumentException("The paraemter startOffset cannot contain a negative value");
+            }
+            startOffsetVector.Add((uint)offset);
+        }
+
+        var extentVector = new SizeTVector();
+        foreach (var element in extent)
+        {
+            if (element < 0)
+            {
+                throw new System.ArgumentException("The paraemter extent cannot contain a negative value");
+            }
+            extentVector.Add((uint)element);
+        }
+
+        return _SliceView(startOffsetVector, extentVector, readOnly);
     }
 %}
 
