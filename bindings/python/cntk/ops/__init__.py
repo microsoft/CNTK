@@ -2189,8 +2189,6 @@ def reduce_log_sum_exp(x, axis=None, name=''):
 def reduce_mean(x, axis=None, name=''):
     '''
     Computes the mean of the input tensor's elements across the specified axis.
-    If ``axis=Axis.default_batch_axis()`` is specified, then the reduction
-    will happen across the batch axis (In this case the input can't be a sequence).
 
     Example:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
@@ -2203,13 +2201,6 @@ def reduce_mean(x, axis=None, name=''):
         array([[ 12.5],
                [ 35. ],
                [ 57.5]], dtype=float32)
-
-        >>> # reduce over batch axis
-        >>> xv = C.input((2,2))
-        >>> xd = np.arange(8,dtype=np.float32).reshape(2,2,2)
-        >>> C.reduce_mean(xv,axis=C.Axis.default_batch_axis()).eval({xv:xd})
-        array([[ 2.,  3.],
-               [ 4.,  5.]], dtype=float32)
 
     Args:
         x: input tensor
@@ -2232,8 +2223,6 @@ def reduce_mean(x, axis=None, name=''):
 def reduce_max(x, axis=None, name=''):
     '''
     Computes the max of the input tensor's elements across the specified axis.
-    If ``axis=Axis.default_batch_axis()`` is specified, then the reduction
-    will happen across the batch axis (In this case the input can't be a sequence)
 
     Example:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
@@ -2246,13 +2235,6 @@ def reduce_max(x, axis=None, name=''):
         array([[ 20.],
                [ 40.],
                [ 60.]], dtype=float32)
-
-        >>> # reduce over batch axis
-        >>> xv = C.input((2,2))
-        >>> xd = np.arange(8,dtype=np.float32).reshape(2,2,2)
-        >>> C.reduce_max(xv,axis=C.Axis.default_batch_axis()).eval({xv:xd})
-        array([[ 4.,  5.],
-               [ 6.,  7.]], dtype=float32)
 
     Args:
         x: input tensor
@@ -2275,8 +2257,6 @@ def reduce_max(x, axis=None, name=''):
 def reduce_min(x, axis=None, name=''):
     '''
     Computes the min of the input tensor's elements across the specified axis.
-    If ``axis=Axis.default_batch_axis()`` is specified, then the reduction
-    will happen across the batch axis (In this case the input can't be a sequence).
 
     Example:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
@@ -2289,13 +2269,6 @@ def reduce_min(x, axis=None, name=''):
         array([[ 10.],
                [ 30.],
                [ 50.]], dtype=float32)
-
-        >>> # reduce over batch axis
-        >>> xv = C.input((2,2))
-        >>> xd = np.arange(8,dtype=np.float32).reshape(2,2,2)
-        >>> C.reduce_min(xv,axis=C.Axis.default_batch_axis()).eval({xv:xd})
-        array([[ 0.,  1.],
-               [ 2.,  3.]], dtype=float32)
 
     Args:
         x: input tensor
