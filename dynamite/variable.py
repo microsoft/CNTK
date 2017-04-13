@@ -6,7 +6,7 @@ import collections
 # some global settings we can control from outside, e.g. for debugging
 class VariableGlobalConfig:
     use_batching = True
-    use_coroutines = True
+    use_coroutines = False
     enable_tracing = False
 
 # TODO: move to contrib/dynamite/variable.py ; import .tensor_ops
@@ -589,7 +589,7 @@ def topo_sort(roots: list):
     #print(tuple(v.generation_id for v in order))
     return order
 
-def print_graph_stats(vars):
+def print_graph_stats(vars, tag=''):
     from collections import Counter
     nodes = topo_sort(vars)
     stats = Counter(v.type_as_char() for v in nodes)
@@ -600,7 +600,7 @@ def print_graph_stats(vars):
     num_splices  = stats['S'] if 'S' in stats else 0
     num_spliced_items = sum(v.shape[0] for v in nodes if v.type_as_char() == 'S')
     total = num_params + num_consts + num_vars + num_getitems + num_splices
-    print(total, 'nodes,', (num_vars, num_splices, num_spliced_items, num_getitems), '(#compute, #splice, #spliced_items, #slice),', (num_params, num_consts), '(parameters, constants)')
+    print(tag, total, 'nodes,', (num_vars, num_splices, num_spliced_items, num_getitems), '(#compute, #splice, #spliced_items, #slice),', (num_params, num_consts), '(parameters, constants)')
 
 # excecution
 #  - prep: for all nodes,
@@ -660,6 +660,8 @@ def transform_to_batched_ops(vars):
     # BUGBUG: If a_r is used at multiple places, the current optimizer will not notice, and gather it multiple times.
     #         One fix would be to replace the a_r themselves by slice_views as well.
     def transform_batched_op(op_batch):
+        # TODO: discover order on all inputs; if any reverse and no non-reversed then
+        #    op_batch = reversed(op_batch)
         v0 = op_batch[0]
         def reslicing(args): # helper to test whether we are re-splicing something previously sliced (then we can short-circuit it)
             # BUGBUG: This currently ignores the axis parameter.
@@ -850,10 +852,10 @@ ops_with_out = { cntk.NDArrayView.__add__, cntk.NDArrayView.__sub__, cntk.NDArra
 }
 def evaluate_graph(vars):
     # transform the graph from raw (individual batch items) to the batched graph
-    print_graph_stats(vars)
+    print_graph_stats(vars, 'RAW:    ')
     if VariableGlobalConfig.use_batching:
         transform_to_batched_ops(vars)
-        print_graph_stats(vars)
+        print_graph_stats(vars, 'BATCHED:')
         #transform_to_batched_ops(vars) # verify that the second time does not change it any further
         #print_graph_stats(vars)
     #print('--- after another transform ---')
