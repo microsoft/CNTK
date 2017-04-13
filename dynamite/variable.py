@@ -69,8 +69,6 @@ class Variable:
         # TODO: capture the gradient functions for all inputs that need gradients (we also need a flag for that)
         #v.needs_gradient = True
         v.computed = False
-        if Variable.generation_counter == 2117:
-            print(13)
         v.generation_id = Variable.generation_counter # unique id, also useful for topo-sort
         Variable.generation_counter += 1
         return v
@@ -97,8 +95,6 @@ class Variable:
         self.computed              = other.computed
         if self.computed:
             self.data              = other.data
-        if Variable.generation_counter == 2117:
-            print(13)
         self.generation_id = Variable.generation_counter # BUGBUG: This screws up the idea of the gen id for topo-sort... :(
         Variable.generation_counter += 1
 

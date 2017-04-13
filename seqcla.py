@@ -118,7 +118,7 @@ def train(debug_output=False):
     dmodel.__items__[1].step_function.W.share_data_from(model.rnn.W  )
     dmodel.__items__[1].step_function.R.share_data_from(model.rnn.H  )
     dmodel.__items__[0].E              .share_data_from(model.embed.E)
-    parameter_map = {
+    parameter_map = { # [static Parameter] -> dynamite.Parameter
         model.dense.W: dmodel.__items__[3].W              ,
         model.dense.b: dmodel.__items__[3].b              ,
         model.rnn.b  : dmodel.__items__[1].step_function.b,
@@ -127,7 +127,9 @@ def train(debug_output=False):
         model.embed.E: dmodel.__items__[0].E              
     }
     dparameters = dmodel.get_parameters()
-    dparam_names = dmodel.get_parameter_names()
+    dparam_names = dmodel.get_parameter_names() # [dynamite.Parameter] -> name
+    for p, dp in parameter_map.items():
+        print(p.shape, dp.shape, p.name, dparam_names[dp])
     print('dynamic model has', len(dparameters), 'parameter tensors:', ', '.join(name + str(param.shape) for param, name in dparam_names.items()))
 
     # testing stuff
@@ -150,8 +152,8 @@ def train(debug_output=False):
 
     lr_per_sample = learning_rate_schedule(0.05, UnitType.sample)
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(None, criterion,
-                      sgd(model.parameters, lr=lr_per_sample))
+    learner = sgd(model.parameters, lr=lr_per_sample)
+    trainer = Trainer(None, criterion, learner)
 
     # process minibatches and perform model training
     training_progress_output_freq = 10
@@ -213,12 +215,23 @@ def train(debug_output=False):
             # Dense.W fails when not using batching; but is OK without batching, so some gradient is just wrong
             assert np.allclose(p_data, dp_data, atol=1e-5)
 
+        # model update from dynamic
+        #for p in model.parameters:
+        #    g = dgradients[parameter_map[p]].get_value()
+        #    p, dp
+        #    print(p.shape, g.shape, p.name)
+        #param_map = { p: dgradients[parameter_map[p]].get_value()  }
+        param_map = { p: dgradients[parameter_map[p]].get_value() for p in model.parameters }
+        for p, g in param_map.items():
+            print(p.shape, g.shape, p.name)
+        learner.update(param_map, len(args[0]))
+
         # CNTK static, original example
-        start = time.time()
-        trainer.train_minibatch(criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]))
-        progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
-        end = time.time()
-        log_time(end-start)
+        #start = time.time()
+        #trainer.train_minibatch(criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]))
+        #progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
+        #end = time.time()
+        #log_time(end-start)
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     import copy
