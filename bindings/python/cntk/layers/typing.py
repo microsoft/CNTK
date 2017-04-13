@@ -8,14 +8,14 @@
 The CNTK typing module contains basic CNTK type meta-classes for :func:`~cntk.functions.Function.update_signature` and type signatures for the CNTK :class:`~cntk.functions.Function` decorator.
 
 The type of a CNTK :class:`~cntk.variables.Variable` is defined by five properties: `shape`, `dynamic_axes`, `is_sparse`, `dtype`, and `needs_gradient`.
-Some API functions accept these variables as independent arguments, e.g. :class:`~cntk.Input`.
+Some API functions accept these variables as independent arguments, e.g. :class:`~cntk.input`.
 The typing module provides a Pythonic way to represent the variable type properties as a single data object.
 
 Python type syntax can be used to create such a record for the three main properties, `shape`, `dynamic_axes`, and `is_sparse`,
 using :class:`~cntk.layers.typing.Tensor`,  :class:`~cntk.layers.typing.SparseTensor`,  :class:`~cntk.layers.typing.ParameterTensor`,
 :class:`~cntk.layers.typing.Sequence`,  and :class:`~cntk.layers.typing.SequenceOver`.
 
-We have a new type system in the layers module to make the input type more readable. This new type system is subject to change, please give us feedback on github or stackoverflow
+Note: This new type system may undergo changes. Please give us feedback on github or stackoverflow
 
 Example:
     >>> # Tensor[...] denotes a data variable (with implied batch dimension)
@@ -80,6 +80,25 @@ Example:
     ...     return cross_entropy_with_softmax(output, label)
     >>> debugging.dump_signature(criterion)
     Function(input: SequenceOver[inputAxis][Tensor[128]], label: Tensor[10]) -> Tensor[1]
+
+The following lists a few common errors with these types:
+
+Example:
+    >>> # types are abstract, they cannot be instantiated directly
+    >>> from cntk.layers.typing import Tensor
+    >>> try:
+    ...     inp = Tensor[32]()   # attempt to create an instance of type Tensor[32]
+    ... except TypeError as e:
+    ...     print('ERROR:', e)
+    ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(Tensor[32])'.
+
+    >>> # types are not inputs
+    >>> try:
+    ...     inp = Tensor[32]
+    ...     y = sigmoid(inp)
+    ... except ValueError as e:
+    ...     print('ERROR:', e)
+    ERROR: Input is a type object (Tensor[32]). Did you mean to pass 'input(Tensor[32])'?
 
 Using Python type syntax, besides being more concise and easier to memorize, has the added benefit of beign able to more easily talk about types of CNTK objects,
 very similar to how one would talk about the types of Python objects (e.g. `List[Tuple[int,float]]`).

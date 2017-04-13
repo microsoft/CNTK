@@ -175,10 +175,10 @@ class VariableMixin(object):
             >>> try:
             ...     inp = Tensor[32]()
             ... except TypeError as e:
-            ...     print(e)
-            Can't instantiate abstract class Tensor[32]. Please use input('Tensor[32]').
+            ...     print('ERROR:', e)
+            ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(Tensor[32])'.
             '''
-            raise TypeError("Can't instantiate abstract class " + str(self) + ". Please use input('" + str(self) + "').")
+            raise TypeError("Can't instantiate abstract class " + str(self) + ". Please use 'input(" + str(self) + ")'.")
 
         def __str__(self):
             '''

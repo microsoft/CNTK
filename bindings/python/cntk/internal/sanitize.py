@@ -95,6 +95,9 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
                    Function, cntk_py.Function)):
         return arg
 
+    if isinstance(arg, Variable._Type):
+        raise ValueError("Input is a type object (" + str(arg) + "). Did you mean to pass 'input(" + str(arg) + ")'?")
+
     # maybe a Python list that we can interpret as a NumPy array?
     if isinstance(arg, list) and not arg:
         raise ValueError('input is empty')
