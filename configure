@@ -45,6 +45,11 @@ protobuf_check=lib/libprotobuf.a
 mpi_path=
 mpi_check=include/mpi.h
 
+# Cuda-aware MPI
+# OPENMPI can auto-detect but not MVAPICH2
+cuda_gdr=no
+default_cuda_gdr=$cuda_gdr
+
 have_kaldi=no
 kaldi_path=
 kaldi_check=src/kaldi.mk
@@ -341,6 +346,7 @@ function show_help ()
     echo "  --cuda[=(yes|no)] use cuda GPU $(show_default $(default_use_cuda))"
     echo "  --python[=(yes|no)] with Python bindings $(show_default $(default_use_python))"
     echo "  --mpi[=(yes|no)] use MPI communication $(show_default ${default_use_mpi})"
+    echo "  --gdr[=(yes|no)] use GPUDirect RDMA $(show_default ${default_cuda_gdr})"
     echo "  --with-cuda[=directory] $(show_default $(find_cuda))"
     echo "  --with-cub[=directory] $(show_default $(find_cub))"
     echo "  --with-gdk-include[=directory] $(show_default $(find_gdk_include))"
@@ -530,6 +536,17 @@ do
                 have_mpi=$optarg
             else
                 echo "Invalid value for --mpi $optarg"
+                show_help
+                exit
+            fi
+            ;;
+
+        --gdr*)
+            if test x$optarg = xyes || test x$optarg = xno
+            then
+                cuda_gdr=$optarg
+            else
+                echo "Invalid value for --gdr $optarg"
                 show_help
                 exit
             fi
@@ -1083,6 +1100,11 @@ if test $have_mpi = yes ; then
     echo HAS_MPI=1 >> $config
 else
     echo HAS_MPI=0 >> $config
+fi
+if test $cuda_gdr = yes ; then
+    echo CUDA_GDR=1 >> $config
+else
+    echo CUDA_GDR=0 >> $config
 fi
 if test $enable_cuda = yes ; then
     echo CUDA_PATH=$cuda_path >> $config
