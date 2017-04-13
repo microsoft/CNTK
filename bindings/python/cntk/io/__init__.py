@@ -497,8 +497,7 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
         if number_of_workers != 1 or worker_rank != 0:
             raise ValueError("User defined minibatch source do not support distribution yet. Stay tuned.")
 
-        for k, v in self.next_minibatch(mb_size_in_samples, device).items():
-            info_map[k] = v
+        info_map.update(self.next_minibatch(mb_size_in_samples, device))
 
     def __getitem__(self, name):
         '''
