@@ -1421,6 +1421,11 @@ namespace CNTK
     //
     class SwigMinibatchSource final : public CNTK::MinibatchSource
     {
+        std::unordered_set<StreamInformation> m_streamInfos;
+        std::once_flag m_streamInfosInitFlag;
+
+        std::unordered_map<StreamInformation, MinibatchData> m_minibatchData;
+
     public:
         SwigMinibatchSource() { }
 
@@ -1438,104 +1443,89 @@ namespace CNTK
         // Making these protected to prevent them to be caught by Swig's
         // director support, because the "nodirector" feature has issues seperating
         // based on signature.
-        CNTK_API const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(
+        const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(
             size_t minibatchSizeInSequences,
             size_t minibatchSizeInSamples,
             const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
-        virtual const std::unordered_set<StreamInformation>& StreamInfos() override {
-            static std::vector<StreamInformation> streamInfoList;
+        const std::unordered_set<StreamInformation>& StreamInfos() override
+        {
+            std::call_once(m_streamInfosInitFlag, [this]() {
+                PyObject *pylist = PyList_New(0);
 
-            PyObject *pylist = PyList_New(0);
-			Py_INCREF(pylist);
-            StreamInfos(pylist);
+                // Necassary due to SWIG convention, it seems the reference is stolen by the function,
+                // though I could not find any explicit confirmation of this.
+                Py_INCREF(pylist);
+                // Actually calling the python side.
+                StreamInfos(pylist);
 
-            static std::unordered_set<StreamInformation> streamInfos;
-            streamInfos.clear();
+                PyObject *item = nullptr;
+                PyObject *iterator = PyObject_GetIter(pylist);
+                if (!iterator)
+                    SWIG_Error(SWIG_ValueError, "cannot convert list element to CNTK::StreamInformation");
 
-            PyObject *item;
+                while ((item = PyIter_Next(iterator)))
+                {
+                    StreamInformation* var = nullptr;
+                    int res = SWIG_ConvertPtr(item, (void**)&var, SWIGTYPE_p_CNTK__StreamInformation,  SWIG_POINTER_IMPLICIT_CONV);
+                    if (!SWIG_IsOK(res))
+                        SWIG_Error(SWIG_ArgError(res), "cannot convert list element to CNTK::StreamInformation");
+                    if (!var)
+                        SWIG_Error(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::StreamInformation");
 
-            PyObject *iterator = PyObject_GetIter(pylist);
-            if (iterator == NULL) {
-                SWIG_Error(SWIG_ValueError, "cannot convert list element to CNTK::StreamInformation");
-            }
-
-            while ((item = PyIter_Next(iterator))) {
-                void *raw_var = 0 ;
-                int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__StreamInformation,  SWIG_POINTER_IMPLICIT_CONV);
-                if (!SWIG_IsOK(res1)) {
-                    SWIG_Error(SWIG_ArgError(res1), "cannot convert list element to CNTK::StreamInformation");
+                    m_streamInfos.insert(*var);
+                    Py_DECREF(item);
                 }
-                if (!raw_var) {
-                    SWIG_Error(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::StreamInformation");
-                }
 
-                CNTK::StreamInformation* var = reinterpret_cast<CNTK::StreamInformation*>(raw_var);
+                Py_DECREF(iterator);
+                Py_DECREF(pylist);
+            });
 
-                streamInfos.insert(*var);
-
-                Py_DECREF(item);
-            }
-
-            Py_DECREF(iterator);
-			Py_DECREF(pylist);
-
-            return streamInfos;
+            return m_streamInfos;
         }
 
-        virtual const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(
+        const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(
             size_t minibatchSizeInSamples,
             size_t minibatchSizeInSequences,
             size_t numberOfWorkers,
             size_t workerRank,
-            const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) {
-
+            const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) override 
+        {
             PyObject* pyInfoMap = PyDict_New();
+
+            // Necassary due to SWIG convention, it seems the reference is stolen by the function,
+            // though I could not find any explicit confirmation of this.
+            Py_INCREF(pyInfoMap);
+            // Actually calling the python side.
             _GetNextMinibatch(pyInfoMap, minibatchSizeInSamples, minibatchSizeInSequences, numberOfWorkers, workerRank, device);
 
-            static std::unordered_map<StreamInformation, MinibatchData> infoMap;
-            infoMap.clear();
+            m_minibatchData.clear();
 
+            // key and value references are borrowed, no need to decrement them.
             PyObject *key, *value;
             Py_ssize_t pos = 0;
 
-            while (PyDict_Next(pyInfoMap, &pos, &key, &value)) {
-                printf("key %lli\n", key->ob_refcnt);
-                printf("value %lli\n", value->ob_refcnt);
-                void *raw_key = 0 ;
-                int res = SWIG_ConvertPtr(key, &raw_key, SWIGTYPE_p_CNTK__StreamInformation,  0);
-                if (!SWIG_IsOK(res)) {
+            while (PyDict_Next(pyInfoMap, &pos, &key, &value))
+            {
+                StreamInformation* stream = nullptr;
+                int res = SWIG_ConvertPtr(key, (void**)&stream, SWIGTYPE_p_CNTK__StreamInformation,  0);
+                if (!SWIG_IsOK(res))
                     SWIG_Error(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInformation");
-                }
-                if (!raw_key) {
+                if (!stream)
                     SWIG_Error(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInformation");
-                }
 
-                CNTK::StreamInformation* sinfo = reinterpret_cast<CNTK::StreamInformation*>(raw_key);
-
-                void *raw_value = 0 ;
-                res = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_CNTK__MinibatchData,  0);
-                if (!SWIG_IsOK(res)) {
+                CNTK::MinibatchData *data = nullptr;
+                res = SWIG_ConvertPtr(value, (void**)&data, SWIGTYPE_p_CNTK__MinibatchData,  0);
+                if (!SWIG_IsOK(res))
                     SWIG_Error(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::MinibatchData");
-                }
-                if (!raw_value) {
+                if (!data)
                     SWIG_Error(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::MinibatchData");
-                }
 
-                CNTK::MinibatchData* mbdata = reinterpret_cast<CNTK::MinibatchData*>(raw_value);
-
-                printf("raw_key: %p\n", (void*)raw_key);
-                printf("raw_value: %p\n", (void*)raw_value);
-                printf("sinfo: %p\n", (void*)sinfo);
-                printf("mbdata: %p\n", (void*)mbdata);
-                auto p = std::make_pair(*sinfo, *mbdata);
-                printf("---\n");
-                infoMap.insert(p);
+                m_minibatchData.insert(std::make_pair(*stream, *data));
             }
 
             Py_DECREF(pyInfoMap);
-
-            return infoMap;
+            return m_minibatchData;
         }
     };
 }
