@@ -5,7 +5,7 @@ import collections
 
 # some global settings we can control from outside, e.g. for debugging
 class VariableGlobalConfig:
-    use_batching = False
+    use_batching = True
     use_coroutines = True
     enable_tracing = False
 
@@ -591,14 +591,16 @@ def topo_sort(roots: list):
 
 def print_graph_stats(vars):
     from collections import Counter
-    stats = Counter(t.type_as_char() for t in topo_sort(vars))
+    nodes = topo_sort(vars)
+    stats = Counter(v.type_as_char() for v in nodes)
     num_params   = stats['P'] if 'P' in stats else 0
     num_consts   = stats['C'] if 'C' in stats else 0
     num_vars     = stats['V'] if 'V' in stats else 0
     num_getitems = stats['G'] if 'G' in stats else 0
     num_splices  = stats['S'] if 'S' in stats else 0
+    num_spliced_items = sum(v.shape[0] for v in nodes if v.type_as_char() == 'S')
     total = num_params + num_consts + num_vars + num_getitems + num_splices
-    print(total, 'nodes,', (num_vars, num_splices, num_getitems), '(#compute, #splice, #slice),', (num_params, num_consts), '(parameters, constants)')
+    print(total, 'nodes,', (num_vars, num_splices, num_spliced_items, num_getitems), '(#compute, #splice, #spliced_items, #slice),', (num_params, num_consts), '(parameters, constants)')
 
 # excecution
 #  - prep: for all nodes,
