@@ -571,33 +571,33 @@ def reduce_sum(seq, name=''):
     return sequence_reduce_sum(seq, name)
 
 @typemap
-def reduce_max(x, name=''):
-  """
-  Compute the max values along a sequence
+def reduce_max(seq, name=''):
+    '''
+    Computes the max of the input sequence's elements across the sequence axis.
 
-  Args:
-    x: input sequence
-    name: the name of the operator
-  Returns:
-    The max value in the input sequence
-  """
-  from ...ops import element_max, placeholder
-  from ...cntk_py import Constant
-  from cntk.internal import sanitize_dtype_cntk
-  m = placeholder(shape=x.shape, dynamic_axes=x.dynamic_axes, name='max')
-  o = element_max(x, future_value(m, initial_state=Constant.scalar(sanitize_dtype_cntk(np.float32), -float("inf"))))
-  rlt = o.replace_placeholders({m: o})
-  return first(rlt)
-    
+    Args:
+        seq: sequence input tensor
+        name (`str`, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sequence_reduce_max
+    seq = sanitize_input(seq, get_data_type(seq))
+    return sequence_reduce_max(seq, name)
+
 @typemap
-def softmax(x, name = ''):
-  """
-  Compute the softmax along a sequence
-  """
-  from ...ops import element_divide, exp, log_add_exp, placeholder
-  from ...cntk_py import Constant
-  from cntk.internal import sanitize_dtype_cntk
-  z = placeholder(shape=x.shape, dynamic_axes=x.dynamic_axes, name='logZ')
-  logz = log_add_exp(x, past_value(z, initial_state=Constant.scalar(sanitize_dtype_cntk(np.float32), -float("inf"))))
-  logz.replace_placeholders({z:logz})
-  return exp(x-broadcast_as(last(logz), x))
+def softmax(seq, name = ''):
+    '''
+    Computes the softmax of the input across the sequence axis.
+
+    Args:
+        seq: sequence input tensor
+        name (`str`, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sequence_softmax
+    seq = sanitize_input(seq, get_data_type(seq))
+    return sequence_softmax(seq, name)
