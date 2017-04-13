@@ -9,7 +9,7 @@ The CNTK typing module contains basic CNTK type meta-classes for :func:`~cntk.fu
 
 The type of a CNTK :class:`~cntk.variables.Variable` is defined by five properties: `shape`, `dynamic_axes`, `is_sparse`, `dtype`, and `needs_gradient`.
 Some API functions accept these variables as independent arguments, e.g. :class:`~cntk.Input`.
-The typing module provides a Pythonic way to group the variable type properties into a data structure :class:`~cntk.variables.Variable.Type`.
+The typing module provides a Pythonic way to represent the variable type properties as a single data object.
 
 Python type syntax can be used to create such a record for the three main properties, `shape`, `dynamic_axes`, and `is_sparse`,
 using :class:`~cntk.layers.typing.Tensor`,  :class:`~cntk.layers.typing.SparseTensor`,  :class:`~cntk.layers.typing.ParameterTensor`,
@@ -44,7 +44,7 @@ Example:
 
     >>> # This is just the same as saying
     >>> f = Dense(500)
-    >>> f.update_signature(Variable.Type(shape=(13,42), dynamic_axes=[Axis.default_batch_axis()]))
+    >>> _ = f.replace_placeholders({f.arguments[0]: C.input(shape=(13,42), dynamic_axes=[Axis.default_batch_axis()])})
     >>> f.shape
     (500,)
 
@@ -88,7 +88,7 @@ In functional programming, it has been observed that getting the types of functi
 
 Note that the type syntax does not allow to specify the special-purpose type property `needs_gradient`,
 nor to `dtype` which instead should be specified as a global setting.
-If these properties are needed, please use construct a :class:`~cntk.variables.Variable.Type` directly.
+If these properties are needed, please use construct an input using :func:`~cntk.input_var` and get its type property.
 '''
 
 from ..axis import Axis
@@ -100,7 +100,7 @@ def _make_tensor_meta(cls_name, **kwargs):
     class TensorMeta(type):
         def __getitem__(self, shape):
             shape = sanitize_shape(shape)
-            return Variable.Type(shape, **kwargs) # inject it for @Function 
+            return Variable._Type(shape, **kwargs) # inject it for @Function 
     return TensorMeta(cls_name, (), {})
 
 # Tensor and SparseTensor contain only a batch axis.
@@ -126,7 +126,7 @@ tensor = Tensor[-2] # TODO: find the correct symbol for the sentinel value
 def _make_seq_meta(cls_name, axes):
     class SeqMeta(type):
         def __getitem__(self, item_type):
-            return Variable.Type(**item_type.updated_with(dynamic_axes=axes))
+            return Variable._Type(**item_type.updated_with(dynamic_axes=axes))
     return SeqMeta(cls_name, (), {})
 
 Sequence = _make_seq_meta('Sequence', Axis.default_input_variable_dynamic_axes())

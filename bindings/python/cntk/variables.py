@@ -145,7 +145,7 @@ class VariableMixin(object):
         '''
         return super(VariableMixin, self).uid()
 
-    class Type(Record):
+    class _Type(Record):
         '''
         Describes a Variable's type; that is, all arguments to instantiate a Placeholder or Input.
         These are meant to be passed to update_signature.
@@ -163,7 +163,7 @@ class VariableMixin(object):
                 r['is_sparse'] = is_sparse
             if dynamic_axes is not None:
                 r['dynamic_axes'] = dynamic_axes
-            super(Variable.Type, self).__init__(**r)
+            super(Variable._Type, self).__init__(**r)
 
         def __str__(self):
             '''
@@ -203,9 +203,9 @@ class VariableMixin(object):
     @property
     def type(self):
         '''
-        The complete type of the data represented by this Variable as a single Variable.Type instance.
+        The complete type of the data represented by this Variable as a single object that has data members of the same name.
         '''
-        return Variable.Type(shape=self.shape, dtype=self.dtype, needs_gradient=self.needs_gradient, is_sparse=self.is_sparse, dynamic_axes=self.dynamic_axes)
+        return Variable._Type(shape=self.shape, dtype=self.dtype, needs_gradient=self.needs_gradient, is_sparse=self.is_sparse, dynamic_axes=self.dynamic_axes)
 
 
 
