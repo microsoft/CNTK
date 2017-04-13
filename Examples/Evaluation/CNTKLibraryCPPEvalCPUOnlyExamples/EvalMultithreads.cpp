@@ -482,7 +482,7 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
 void MultiThreadsEvaluation(bool isGPUAvailable)
 {
     // The number of threads running evaluation in parallel.
-    const int numOfThreads = 2;
+    const int numOfThreads = 1;
 
     fprintf(stderr, "\n##### Run evaluation on %s device with %d parallel evaluation thread(s). #####\n", isGPUAvailable ? "GPU" : "CPU", numOfThreads);
 
