@@ -67,9 +67,9 @@ namespace CNTK
         /// </summary>
         /// <param name="dataType">The data type whose size is to be returned.</param>
         /// <returns></returns>
-        public static uint DataTypeSize(DataType dataType)
+        public static int DataTypeSize(DataType dataType)
         {
-            return CNTKLib.DataTypeSize(dataType);
+            return (int)CNTKLib.DataTypeSize(dataType);
         }
 
         /// <summary>
