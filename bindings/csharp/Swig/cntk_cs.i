@@ -1758,24 +1758,26 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     {
         if (device.Type() == CNTK::DeviceKind::GPU)
         {
-            auto cpuView = new CNTK::NDArrayView<float>(viewShape, dataBuffer, numBufferElements, DeviceDescriptor::CPUDevice, readOnly);
-            cpuView->ChangeDevice(device);
-            return cpuView;
+            auto cpuView = new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
+            auto gpuView = new CNTK::NDArrayView(cpuView->GetDataType(), cpuView->GetStorageFormat(), viewShape, device);
+            gpuView->CopyFrom(*cpuView);
+            return gpuView;
         }
         else
-            return new NDArrayView<float>(viewShape, dataBuffer, numBufferElements, device, readOnly);
+            return new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, device, readOnly);
     }
 
     NDArrayView(const NDShape& viewShape, double *dataBuffer, size_t numBufferElements, const DeviceDescriptor& device, bool readOnly = false)
     {
         if (device.Type() == CNTK::DeviceKind::GPU)
         {
-            auto cpuView = new CNTK::NDArrayView<double>(viewShape, dataBuffer, numBufferElements, DeviceDescriptor::CPUDevice, readOnly);
-            cpuView->ChangeDevice(device);
-            return cpuView;
+            auto cpuView = new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
+            auto gpuView = new CNTK::NDArrayView(cpuView->GetDataType(), cpuView->GetStorageFormat(), viewShape, device);
+            gpuView->CopyFrom(*cpuView);
+            return gpuView;
         }
         else
-            return new NDArrayView<double>(viewShape, dataBuffer, numBufferElements, device, readOnly);
+            return new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, device, readOnly);
     }
 
     NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false)
