@@ -128,8 +128,8 @@ def train(debug_output=False):
     }
     dparameters = dmodel.get_parameters()
     dparam_names = dmodel.get_parameter_names() # [dynamite.Parameter] -> name
-    for p, dp in parameter_map.items():
-        print(p.shape, dp.shape, p.name, dparam_names[dp])
+    #for p, dp in parameter_map.items():
+    #    print(p.shape, dp.shape, p.name, dparam_names[dp])
     print('dynamic model has', len(dparameters), 'parameter tensors:', ', '.join(name + str(param.shape) for param, name in dparam_names.items()))
 
     # testing stuff
@@ -204,7 +204,7 @@ def train(debug_output=False):
             if dpname == '_[0].E':
                 continue  # cannot convert sparse gradient to numpy
             dp = dgradients[dp] # find the gradient for the parameter
-            print('### gradient for', dpname, '(CNTK static vs. dynamite)')
+            #print('### gradient for', dpname, '(CNTK static vs. dynamite)')
             #dynamite.dump_graph(dp, skip_free=True)
             p_data = grads[p].data.to_ndarray()
             #dynamite.VariableGlobalConfig.enable_tracing = True
@@ -215,23 +215,19 @@ def train(debug_output=False):
             # Dense.W fails when not using batching; but is OK without batching, so some gradient is just wrong
             assert np.allclose(p_data, dp_data, atol=1e-5)
 
-        # model update from dynamic
-        #for p in model.parameters:
-        #    g = dgradients[parameter_map[p]].get_value()
-        #    p, dp
-        #    print(p.shape, g.shape, p.name)
-        #param_map = { p: dgradients[parameter_map[p]].get_value()  }
-        param_map = { p: dgradients[parameter_map[p]].get_value() for p in model.parameters }
-        for p, g in param_map.items():
-            print(p.shape, g.shape, p.name)
-        learner.update(param_map, len(args[0]))
-
-        # CNTK static, original example
-        #start = time.time()
-        #trainer.train_minibatch(criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]))
-        #progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
-        #end = time.time()
-        #log_time(end-start)
+        if True:
+            # model update from dynamic
+            param_map = { p: dgradients[parameter_map[p]].get_value() for p in model.parameters }
+            #for p, g in param_map.items():
+            #    print(p.shape, g.shape, p.name)
+            learner.update(param_map, len(args[0]))
+        else:
+            # CNTK static, original example
+            start = time.time()
+            trainer.train_minibatch(criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]))
+            progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
+            end = time.time()
+            log_time(end-start)
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     import copy
