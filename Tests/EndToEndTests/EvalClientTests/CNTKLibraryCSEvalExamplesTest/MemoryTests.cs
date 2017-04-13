@@ -18,6 +18,7 @@ namespace CNTKLibraryCSEvalExamples
         {
             using (var test = new SetupMemoeryTests())
             {
+                test.NDArrayViewTest(device);
                 test.SetupUsingResetModel(device);
             }
 

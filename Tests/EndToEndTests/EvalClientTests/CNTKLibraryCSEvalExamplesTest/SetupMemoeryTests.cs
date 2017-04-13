@@ -12,19 +12,21 @@ namespace CNTKLibraryCSEvalExamples
         {
         }
 
+        // Todo: move it to separate unit tests.
+        public void NDArrayViewTest(DeviceDescriptor device)
+        {
+            var data = new float[10];
+            var shape = new NDShape(1, 10);
+            var n1 = new NDArrayView(shape, data, device);
+            var n1Clone = n1.DeepClone(device);
+            var n1CloneCPU = n1.DeepClone(DeviceDescriptor.CPUDevice);
+        }
+
         public void SetupUsingResetModel(DeviceDescriptor device)
         {
             try
             {
                 Console.WriteLine("\n===== Setup memory tests using Resnet Model =====");
-
-                var data = new float[10];
-                var shape = new NDShape(1, 10);
-                var n1 = new NDArrayView(shape, data, DeviceDescriptor.CPUDevice);
-                var n2 = new NDArrayView(shape, data, DeviceDescriptor.GPUDevice(0));
-                //var n2clone = n2.DeepClone(DeviceDescriptor.CPUDevice);
-                var n1gpu = n1.DeepClone(DeviceDescriptor.GPUDevice(0));
-                var n1clone = n1gpu.DeepClone(DeviceDescriptor.CPUDevice);
 
                 var deviceList = DeviceDescriptor.AllDevices();
                 MemoryTests.Device0 = deviceList[0];
