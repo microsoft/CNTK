@@ -1,4 +1,11 @@
-﻿using System;
+﻿//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+// SetupMemoryTests.cs -- Setup Memory safety tests
+//
+
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -15,11 +22,31 @@ namespace CNTKLibraryCSEvalExamples
         // Todo: move it to separate unit tests.
         public void NDArrayViewTest(DeviceDescriptor device)
         {
+            Console.WriteLine("Test creating NDArrayView on devices.");
+
             var data = new float[10];
             var shape = new NDShape(1, 10);
             var n1 = new NDArrayView(shape, data, device);
             var n1Clone = n1.DeepClone(device);
             var n1CloneCPU = n1.DeepClone(DeviceDescriptor.CPUDevice);
+
+            Console.WriteLine("n1: on " + n1.Device.AsString() + ", Storage:" + n1.StorageFormat + ", Shape:" + n1.Shape.AsString());
+            Console.WriteLine("n1Clone: on " + n1Clone.Device.AsString() + ", Storage:" + n1Clone.StorageFormat + ", Shape:" + n1Clone.Shape.AsString());
+            Console.WriteLine("n1CloneCPU: on " + n1CloneCPU.Device.AsString() + ", Storage:" + n1CloneCPU.StorageFormat + ", Shape:" + n1CloneCPU.Shape.AsString());
+
+            int[] dimensions = { 4, 5 };
+            var shape2 = NDShape.CreateNDShape(dimensions);
+            float[] nonZeroValues = { 1, 5, 4, 2, 3, 9, 7, 8, 6 };
+            int[] rowIndices = { 0, 2, 0, 1, 1, 3, 2, 2, 3 };
+            int[] colStarts = { 0, 2, 4, 6, 7, 9};
+            var s1 = new NDArrayView(shape2, colStarts, rowIndices, nonZeroValues, device, true);
+            var s1Clone = s1.DeepClone(device);
+            var s1DenseCPU = new NDArrayView(DataType.Float, StorageFormat.Dense, shape2, DeviceDescriptor.CPUDevice);
+            s1DenseCPU.CopyFrom(s1);
+
+            Console.WriteLine("s1: on " + s1.Device.AsString() + ", Storage:" + s1.StorageFormat + ", Shape:" + s1.Shape.AsString());
+            Console.WriteLine("s1Clone: on " + s1Clone.Device.AsString() + ", Storage:" + s1Clone.StorageFormat + ", Shape:" + s1Clone.Shape.AsString());
+            Console.WriteLine("s1DenseCPU: on " + s1DenseCPU.Device.AsString() + ", Storage:" + s1DenseCPU.StorageFormat + ", Shape:" + s1DenseCPU.Shape.AsString());
         }
 
         public void SetupUsingResetModel(DeviceDescriptor device)
