@@ -21,6 +21,8 @@ set p_CNTK_PY_VERSIONS=%~6
 set p_CNTK_PY27_PATH=%~7
 set p_CNTK_PY34_PATH=%~8
 set p_CNTK_PY35_PATH=%~9
+shift
+set p_CNTK_PY36_PATH=%~9
 
 REM Construct p_CNTK_PY_VERSIONS if not explicitly defined
 REM (Note: to disable Python build completely, no CNTK_PYx_PATH variable must be defined)
@@ -29,11 +31,12 @@ if not defined p_CNTK_PY_VERSIONS (
   if defined p_CNTK_PY27_PATH set p_CNTK_PY_VERSIONS=!p_CNTK_PY_VERSIONS! 27
   if defined p_CNTK_PY34_PATH set p_CNTK_PY_VERSIONS=!p_CNTK_PY_VERSIONS! 34
   if defined p_CNTK_PY35_PATH set p_CNTK_PY_VERSIONS=!p_CNTK_PY_VERSIONS! 35
+  if defined p_CNTK_PY36_PATH set p_CNTK_PY_VERSIONS=!p_CNTK_PY_VERSIONS! 36
 )
 
 REM Validate p_CNTK_PY_VERSIONS contents.
 for %%p in (%p_CNTK_PY_VERSIONS%) do (
-  if not "%%~p" == "27" if not "%%~p" == "34" if not "%%~p" == "35" echo Build for unsupported Python version '%%~p' requested, stopping&exit /b 1
+  if not "%%~p" == "27" if not "%%~p" == "34" if not "%%~p" == "35" if not "%%~p" == "36" echo Build for unsupported Python version '%%~p' requested, stopping&exit /b 1
 )
 
 REM Validate p_CNTK_PY_VERSIONS contents.
