@@ -261,7 +261,7 @@ def dynamic_axes(self):
         {
             delete cpuView;
         }
-		
+        
         return ndarray;
     }
 }
@@ -649,7 +649,7 @@ public:
 
 %feature("director:except") {
     if ($error != NULL) {
-		PyErr_Print();
+        PyErr_Print();
         throw Swig::DirectorMethodException();
     }
 }
@@ -950,37 +950,37 @@ public:
 
         PyObject *listItem;
         while ((listItem = PyIter_Next(listIterator))) {
-			PyObject *iterator = PyObject_GetIter(listItem);
-			if (iterator == NULL) {
-				SWIG_exception_fail(SWIG_ValueError, "cannot convert tuple element to CNTK::Variable");
-			}
+            PyObject *iterator = PyObject_GetIter(listItem);
+            if (iterator == NULL) {
+                SWIG_exception_fail(SWIG_ValueError, "cannot convert tuple element to CNTK::Variable");
+            }
 
-			std::vector<CNTK::Variable> varPair;
-			PyObject *item;
-			while ((item = PyIter_Next(iterator))) {
-				void *raw_var = 0 ;
-				int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  SWIG_POINTER_IMPLICIT_CONV);
-				if (!SWIG_IsOK(res1)) {
-					SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert tuple element to CNTK::Variable");
-				}
-				if (!raw_var) {
-					SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a tuple element to CNTK::Variable");
-				}
+            std::vector<CNTK::Variable> varPair;
+            PyObject *item;
+            while ((item = PyIter_Next(iterator))) {
+                void *raw_var = 0 ;
+                int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  SWIG_POINTER_IMPLICIT_CONV);
+                if (!SWIG_IsOK(res1)) {
+                    SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert tuple element to CNTK::Variable");
+                }
+                if (!raw_var) {
+                    SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a tuple element to CNTK::Variable");
+                }
 
-				CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
-				varPair.push_back(*var);
+                CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
+                varPair.push_back(*var);
 
-				Py_DECREF(item);
-			}
+                Py_DECREF(item);
+            }
 
-			if (varPair.size() != 2) {
-				SWIG_exception_fail(SWIG_ValueError, "tuple element has more than 2 elements");
-			}
+            if (varPair.size() != 2) {
+                SWIG_exception_fail(SWIG_ValueError, "tuple element has more than 2 elements");
+            }
 
-			vec->push_back({varPair[0], varPair[1]});
+            vec->push_back({varPair[0], varPair[1]});
 
-			Py_DECREF(iterator);
-			Py_DECREF(listItem);
+            Py_DECREF(iterator);
+            Py_DECREF(listItem);
         }
 
         Py_DECREF(listIterator);
