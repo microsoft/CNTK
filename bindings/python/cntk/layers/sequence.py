@@ -528,10 +528,10 @@ def UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name
      name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.functions.Function(initial_state, dynamic_axis_like)`: 
-         A function that accepts two arguments (`initial state` and `dynamic_axis_like`), and performs the unfold operation on it.
-         The `initial state` argument is the initial state for the recurrence.
-         The `dynamic_axis_like` must be a sequence and provides a reference for the maximum length of the output sequence.
+        :class:`~cntk.ops.functions.Function`:
+        A function that accepts two arguments (`initial state` and `dynamic_axis_like`), and performs the unfold operation on it.
+        The `initial state` argument is the initial state for the recurrence.
+        The `dynamic_axis_like` must be a sequence and provides a reference for the maximum length of the output sequence.
     '''
 
     generator_function = _sanitize_function(generator_function)
