@@ -88,7 +88,7 @@ In functional programming, it has been observed that getting the types of functi
 
 Note that the type syntax does not allow to specify the special-purpose type property `needs_gradient`,
 nor to `dtype` which instead should be specified as a global setting.
-If these properties are needed, please use construct an input using :func:`~cntk.input_var` and get its type property.
+If these properties are needed on a type object, please use construct an input using :func:`~cntk.input_var` and get its `type` property.
 '''
 
 from ..axis import Axis
