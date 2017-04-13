@@ -722,6 +722,32 @@ def minus(left, right, name=''):
     right = sanitize_input(right, dtype)
     return minus(left, right, name)
 
+@typemap
+def pow(base, exponent, name=''):
+    '''
+    The output of this operation is base raised to the power of exponent. It supports broadcasting.
+
+    Example:
+        >>> C.pow([1, 2, 3], [3, 2, 1]).eval()
+        array([ 1.,  4.,  3.], dtype=float32)
+
+        >>> C.pow([[0.5,2],[4,1]], -2).eval()
+        array([[ 4.    ,  0.25  ],
+               [ 0.0625,  1.    ]], dtype=float32)
+
+    Args:
+        base: base tensor
+        exponent: exponent tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+
+    from cntk.cntk_py import pow
+    dtype = get_data_type(base, exponent)
+    base = sanitize_input(base, dtype)
+    exponent = sanitize_input(exponent, dtype)
+    return pow(base, exponent, name)
 
 @associative_multi_arg
 @typemap

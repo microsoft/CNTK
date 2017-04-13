@@ -3480,6 +3480,10 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr LogAddExp(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
 
+    /// Create an instance of the CNTK built-in elementwise tensor operation that computes the leftOperand raised to the power of the right operand.
+    ///
+    CNTK_API FunctionPtr Pow(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in elementwise multiplication operation on specified tensor input operands.
     ///
