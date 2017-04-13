@@ -487,6 +487,11 @@ namespace CNTK
             return dynamicAxes[0].Name();
     }
 
+    bool IsPackedValue(const ValuePtr& value)
+    {
+        auto packedValue = dynamic_pointer_cast<PackedValue>(value);
+        return (packedValue != nullptr) && packedValue->IsPacked();
+    }
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes) 
     {
         size_t maxNumTimeSteps = 1;
@@ -520,10 +525,8 @@ namespace CNTK
         if (var.GetDataType() != value->GetDataType())
             LogicError("The Variable '%S' DataType %s does not match the corresponding Value's DataType %s", var.AsString().c_str(), DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
 
-        auto packedValue = dynamic_cast<PackedValue*>(value.get());
-        bool isPackedValue = (packedValue != nullptr) && packedValue->IsPacked();
-
         // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error even for packed value objects?
+        bool isPackedValue = IsPackedValue(value);
         if (!isPackedValue)
         {
             if (IsSparseInput(var) && !value->IsSparse())

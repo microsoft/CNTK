@@ -1,4 +1,4 @@
-#include "UserMatrixMultiplicationOp.h"
+#include "../CPP/UserMatrixMultiplicationOp.h"
 
 using namespace CNTK;
 

@@ -26,7 +26,7 @@
     <ClCompile Include="CPPExtensibilityExamplesLibrary.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="UserMatrixMultiplicationOp.h" />
+    <ClInclude Include="../CPP/UserMatrixMultiplicationOp.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4cf94a50-0d17-432a-8b5a-8458e91c44a6}</ProjectGuid>

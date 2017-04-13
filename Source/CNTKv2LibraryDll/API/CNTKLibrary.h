@@ -2571,6 +2571,8 @@ namespace CNTK
         ///
         virtual void CopyFrom(const Value& source);
 
+        virtual void Erase();
+
         ///
         /// Unpacks sequences in 'this' Value as a vector of NDArrayView objects, each represeting a sequence in the 
         /// batch of sequences that 'this' Value object contains data for.

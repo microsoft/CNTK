@@ -20,7 +20,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="UserMatrixMultiplicationOp.h">
+    <ClInclude Include="../CPP/UserMatrixMultiplicationOp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
