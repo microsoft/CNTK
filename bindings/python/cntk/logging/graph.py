@@ -5,7 +5,7 @@
 # ==============================================================================
 
 import os
-from cntk.ops import Variable
+from cntk.variables import Variable
 
 
 def depth_first_search(root, visitor, depth=0):

@@ -815,6 +815,74 @@ void TestCheckpointingWithStatefulNodes(const DeviceDescriptor& device)
     }
 }
 
+
+void TestCheckpointingWithStatefulNodesAndExplicitSeeds(const DeviceDescriptor& device)
+{
+    auto featureStreamName = L"features";
+    auto labelsStreamName = L"labels";
+
+    size_t inputDim = 784;
+    size_t numOutputClasses = 10;
+    auto features = InputVariable({ inputDim }, false /*isSparse*/, DataType::Float, featureStreamName);
+    auto labels = InputVariable({ numOutputClasses }, DataType::Float, labelsStreamName);
+
+    auto net1 = BuildFFClassifierNet(features, numOutputClasses, device, 1);
+    auto net2 = net1->Clone(ParameterCloningMethod::Clone, { { features , features } });
+    auto net3 = net1->Clone(ParameterCloningMethod::Clone, { { features , features } });
+    
+    auto trainer1 = BuildTrainer(Dropout(net1, 0.5, 123), labels);
+    auto trainer2 = BuildTrainer(Dropout(net2, 0.5, 123), labels);
+    auto trainer3 = BuildTrainer(Dropout(net3, 0.5, 321), labels);
+
+    const size_t minibatchSize = 50;
+    const size_t maxSamples = 150;
+    auto minibatchSource = TextFormatMinibatchSource(L"Train-28x28_cntk_text.txt", { { featureStreamName, inputDim },{ labelsStreamName, numOutputClasses } }, 2 * maxSamples, false);
+    
+    auto featureStreamInfo = minibatchSource->StreamInfo(features);
+    auto labelStreamInfo = minibatchSource->StreamInfo(labels);
+
+    for (int i = 0; i < maxSamples; i+=minibatchSize)
+    {
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        unordered_map<Variable, MinibatchData> minibatch = { { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } };
+
+        trainer1->TrainMinibatch(minibatch, device);
+        trainer2->TrainMinibatch(minibatch, device);
+        trainer3->TrainMinibatch(minibatch, device);
+        auto loss1 = trainer1->PreviousMinibatchLossAverage();
+        auto loss2 = trainer2->PreviousMinibatchLossAverage();
+        auto loss3 = trainer3->PreviousMinibatchLossAverage();
+        FloatingPointCompare(loss1, loss2, "Training loss does not match expectation");
+        BOOST_TEST((abs(loss1 - loss2) <= abs(loss2 - loss3)));
+    }
+
+    trainer1->SaveCheckpoint(L"seeded_stateful_nodes.model");
+    auto state = minibatchSource->GetCheckpointState();
+
+    vector<double> expectedLoss;
+    for (int i = 0; i < maxSamples; i += minibatchSize)
+    {
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        unordered_map<Variable, MinibatchData> minibatch = { { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } };
+
+        trainer1->TrainMinibatch(minibatch, device);
+        expectedLoss.push_back(trainer1->PreviousMinibatchLossAverage());
+    }
+
+    trainer1->RestoreFromCheckpoint(L"seeded_stateful_nodes.model");
+    minibatchSource->RestoreFromCheckpoint(state);
+
+    for (int i = 0; i*minibatchSize < maxSamples; i++)
+    {
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        unordered_map<Variable, MinibatchData> minibatch = { { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } };
+
+        trainer1->TrainMinibatch(minibatch, device);
+        double loss = trainer1->PreviousMinibatchLossAverage();
+        FloatingPointCompare(loss, expectedLoss[i], "Post checkpoint restoration training loss does not match expectation");
+    }
+}
+
 void TestLoadingModelFromMemoryBuffer()
 {
     ifstream modelFileStream("batch.norm.no.sample.count.v2.bin", ifstream::binary);
@@ -990,6 +1058,18 @@ BOOST_AUTO_TEST_CASE(CheckpointingWithStatefulNodesInGPU)
 {
     if (ShouldRunOnGpu())
         TestCheckpointingWithStatefulNodes(DeviceDescriptor::GPUDevice(0));
+}
+
+
+BOOST_AUTO_TEST_CASE(CheckpointingWithStatefulNodesAndExplicitSeedsOnCPU)
+{
+     TestCheckpointingWithStatefulNodesAndExplicitSeeds(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(CheckpointingWithStatefulNodesAndExplicitSeedsOnGPU)
+{
+    if (ShouldRunOnGpu())
+        TestCheckpointingWithStatefulNodesAndExplicitSeeds(DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

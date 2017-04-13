@@ -20,5 +20,6 @@ def _value_as_sequence_or_array(val, var):
     if has_seq_axis:
         return _value_as_sequence(val, var)
     else:
+        map_if_possible(val)
         return val.asarray()
 

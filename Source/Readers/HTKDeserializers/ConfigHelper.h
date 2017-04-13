@@ -50,7 +50,7 @@ public:
     std::vector<std::wstring> GetMlfPaths() const;
 
     // Gets utterance paths from the configuration.
-    std::vector<std::wstring> GetSequencePaths();
+    std::vector<std::string> GetSequencePaths();
 
     // Gets randomization window.
     size_t GetRandomizationWindow();
@@ -65,7 +65,7 @@ private:
     DISABLE_COPY_AND_MOVE(ConfigHelper);
 
     // Expands ... in the name of the feature path.
-    void ExpandDotDotDot(std::wstring& featPath, const std::wstring& scpPath, std::wstring& scpDirCached);
+    void ExpandDotDotDot(std::string& featPath, const std::string& scpPath, std::string& scpDirCached);
 
     const ConfigParameters& m_config;
 };

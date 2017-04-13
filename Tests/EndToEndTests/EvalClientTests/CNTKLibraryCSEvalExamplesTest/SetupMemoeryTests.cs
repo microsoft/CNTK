@@ -69,6 +69,8 @@ namespace CNTKLibraryCSEvalExamples
                 var outputVal = outputDataMap[outputVar];
                 var outputData = outputVal.GetDenseData<float>(outputVar);
 
+                MemoryTests.OutputVal = outputVal;
+
                 Console.WriteLine("\nTest object reference inside SetupUsingResetModel.\n");
                 MemoryTests.WriteOutputs();
             }

@@ -11,7 +11,9 @@ from scipy import sparse
 from . import cntk_py
 from .device import use_default_device, cpu, DeviceKind
 from cntk.internal import typemap
-from cntk.internal.sanitize import sanitize_batch, _sparse_to_dense_network_cache
+from cntk.internal.sanitize import sanitize_batch,\
+                                   _sparse_to_dense_network_cache,\
+                                   data_type_to_dtype
 
 
 def _is_c_contiguous(data):
@@ -79,7 +81,7 @@ class NDArrayView(cntk_py.NDArrayView):
 
     @staticmethod
     @typemap
-    def from_csr(csr_array, device=None, read_only=False, borrow=False):
+    def from_csr(csr_array, device=None, read_only=False, borrow=False, shape=None):
         '''
         Create a :class:`NDArrayView` instance from a SciPy sparse array in CSR
         format.
@@ -93,6 +95,10 @@ class NDArrayView(cntk_py.NDArrayView):
              not (default False)
             borrow (bool, default False): whether nd_arrary memory can be
              borrowed internally to speed up the data creation
+            shape (tuple, default None): shape of the created NDArrayView.
+             If unspecified, the created NDArrayView has the same shape as the csr_matrix.
+             Otherwise, an NDArrayView object of specified shape is created using csr_data.
+             The total size and number of rows of csr_data must match specified NDArrayView shape.
 
         Returns:
             :class:`NDArrayView` instance
@@ -101,10 +107,25 @@ class NDArrayView(cntk_py.NDArrayView):
             raise TypeError("only CSR is supported as of now. Please "
                             "convert your data using 'tocsr()'")
 
+        if shape is None:
+            shape = csr_array.shape
+
         if device is None:
             device = use_default_device()
 
-        return cntk_py.NDArrayView(csr_array.shape, csr_array.data,
+        if shape[-1] != csr_array.shape[-1]:
+            raise ValueError('csr_matrix row size (%d) does not match the least '
+                             'significant axis dimension (%d) of the NDArrayView shape'
+                             % (csr_array.shape[-1], shape[-1]))
+            
+        import functools, operator
+        csr_array_size = functools.reduce(operator.mul, csr_array.shape)
+        ndarrayview_size = functools.reduce(operator.mul, shape)
+        if csr_array_size != ndarrayview_size:
+            raise ValueError('csr_matrix total size (%d) does not match the total size '
+                             '(%d) of the NDArrayView shape' % (csr_array_size, ndarrayview_size))
+            
+        return cntk_py.NDArrayView(shape, csr_array.data,
                                    csr_array.indptr, csr_array.indices, device,
                                    read_only, borrow)
 
@@ -179,6 +200,7 @@ class NDArrayView(cntk_py.NDArrayView):
                 list(reversed(extent)),
                 read_only)
 
+    @property
     @typemap
     def device(self):
         '''
@@ -186,16 +208,33 @@ class NDArrayView(cntk_py.NDArrayView):
         '''
         return super(NDArrayView, self).device()
 
+    @property
+    def is_sparse(self):
+        '''
+        Whether the data is sparse or dense
+        '''
+        return super(NDArrayView, self).is_sparse()
+
+    @property
+    def is_read_only(self):
+        '''
+        Whether the data is read-only
+        '''
+        return super(NDArrayView, self).is_read_only()
+
+    @property
+    def dtype(self):
+        '''
+        NumPy data type of the instance
+        '''
+        return data_type_to_dtype(self.get_data_type())
+
 
 class Value(cntk_py.Value):
     '''
     Internal representation of minibatch data.
 
     Args:
-        shape (tuple): shape of the value
-        value (None or value that can be cast to NumPy array): the value to
-         be converted
-        dtype: data type (np.float32 or np.float64)
         batch: batch input for `var`.
          It can be:
 
@@ -211,23 +250,15 @@ class Value(cntk_py.Value):
          should be put on
     '''
 
-    def __init__(self, shape=None, dtype=None, batch=None, seq_starts=None, device=None):
+    def __init__(self, batch, seq_starts=None, device=None):
         if device is None:
             device = use_default_device()
 
-        if shape and dtype:
-            # FIXME is this needed?
-            ndav = NDArrayView(shape, dtype, device)
-
-        elif batch:
-            if isinstance(batch, np.ndarray):
-                ndav = NDArrayView.from_dense(batch, device)
-            else:
-                ndav = batch
-
+        if isinstance(batch, np.ndarray):
+            ndav = NDArrayView.from_dense(batch, device)
         else:
-            raise ValueError('either shape and dtype or batch must be'
-                             'provided')
+            ndav = batch
+
 
         if seq_starts:
             super(Value, self).__init__(ndav, seq_starts)
@@ -244,16 +275,16 @@ class Value(cntk_py.Value):
             of NumPy arrays (if dense) or a SciPy CSR array (if sparse) will be
             returned. Otherwise, the arrays will be returned directly.
         '''
-        if self.is_sparse():
+        if self.is_sparse:
             if variable is None:
                 raise ValueError('cannot convert sparse value to sequences '
-                                 'wihtout the corresponding variable')
-            network = _sparse_to_dense_network_cache(variable.shape)
+                                 'without the corresponding variable')
+            network = _sparse_to_dense_network_cache(variable.shape, True, self.device)
 
             warnings.warn('converting Value object to CSR format might be slow')
 
             # TODO: Add direct conversion, since creating an intermediate array might be slow
-            dense_data = network.eval(self, device=self.device())
+            dense_data = network.eval(self, device=self.device)
             return [sparse.csr_matrix(seq) for seq in dense_data]
 
         else:
@@ -380,6 +411,16 @@ class Value(cntk_py.Value):
 
             if seq_starts:
                 data = list(np.atleast_1d(data))
+            else:
+                data = Value._as_best_data_type(var, data)
+                ndav = NDArrayView.from_data(data, device)
+
+                return cntk_py.Value(ndav)
+
+        if isinstance(data, sparse.csr_matrix):
+            if seq_starts:
+                raise ValueError('seq_starts are not supported with data specified as a single '
+                                 'SciPy sparse CSR matrix. Please provide a list instead')
             else:
                 data = Value._as_best_data_type(var, data)
                 ndav = NDArrayView.from_data(data, device)
@@ -534,6 +575,35 @@ class Value(cntk_py.Value):
         Number of samples in this value object.
         '''
         return self.shape[0]
+
+    @property
+    @typemap
+    def device(self):
+        '''
+        Retrieves the :class:`~cntk.device.DeviceDescriptor` instance.
+        '''
+        return super(Value, self).device()
+
+    @property
+    def is_sparse(self):
+        '''
+        Whether the data is sparse or dense
+        '''
+        return super(Value, self).is_sparse()
+
+    @property
+    def is_read_only(self):
+        '''
+        Whether the data is read-only
+        '''
+        return super(Value, self).is_read_only()
+
+    @property
+    def dtype(self):
+        '''
+        NumPy data type of the instance
+        '''
+        return data_type_to_dtype(self.get_data_type())
 
 
 def user_function(user_func):

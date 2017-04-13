@@ -68,7 +68,7 @@ def _get_initial_state_or_default(initial_state):
 
 def BlockFunction(op_name, name):
     '''
-    Decorator for defining a @Function as a BlockFunction. Same as @Function, but wrap the content into an as_block().
+    Decorator for defining a @Function as a BlockFunction. Same as @Function, but wrap the content into an :func:`~cntk.ops.as_block`.
     '''
     return lambda f: Function(f, make_block=True, op_name=op_name, name=name)
 
@@ -86,7 +86,7 @@ def _inject_name(f, name):
 def ForwardDeclaration(name='forward_declaration'):
     '''
     Helper for recurrent network declarations.
-    Returns a placeholder variable with an added method resolve_to() to be called
+    Returns a placeholder variable with an added method ``resolve_to()`` to be called
     at the end to close the loop.
     This is used for explicit graph building with recurrent connections.
 

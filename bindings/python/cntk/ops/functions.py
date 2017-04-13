@@ -4,7 +4,7 @@ from cntk.internal import map_if_possible, typemap, sanitize_var_map,\
                           sanitize_batch, sanitize_dtype_cntk, _as_tuple,\
                           sanitize_variable_value_dict,\
                           sanitize_Function_attributes,\
-                          _value_as_sequence_or_array, _value_as_sequence
+                          _value_as_sequence_or_array
 from cntk.internal.utils import get_python_function_arguments, map_function_arguments
 from ..variables import Record, Variable
 from enum import Enum, unique
@@ -801,7 +801,9 @@ class Function(cntk_py.Function):
     @typemap
     def inputs(self):
         '''
-        List of all input variables of this function.
+        List of variables that are inputs of this function.
+        Note that 'inputs' here denotes all Variables that feed into this Function
+        including any Parameter/Constant Variables that are children of this Function.
         '''
         return super(Function, self).inputs(True)
 

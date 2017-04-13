@@ -8,7 +8,6 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <fstream>
-#include "Utils.h"
 
 namespace CNTK
 {

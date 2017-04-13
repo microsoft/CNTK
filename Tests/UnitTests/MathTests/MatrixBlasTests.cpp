@@ -119,6 +119,37 @@ BOOST_FIXTURE_TEST_CASE(MatrixMultiplyAndPlusAndMinus, RandomSeedFixture)
     }
 }
 
+BOOST_FIXTURE_TEST_CASE(MatrixColumnwiseScaleAndWeightedAdd, RandomSeedFixture)
+{
+    size_t m = 256;
+    size_t n = 64;
+    for(int deviceId : {-1, 0})
+    {
+        SingleMatrix singleMatrixA(deviceId);
+        singleMatrixA.AssignTruncateBottomOf(SingleMatrix::RandomUniform(m, n, deviceId, -200, 1, IncrementCounter()), 0);
+        const SingleMatrix singleMatrixB = SingleMatrix::RandomUniform(n, 1, deviceId, 0, 1, IncrementCounter());
+        SingleMatrix singleMatrixAcsc = singleMatrixA.DeepClone();
+        singleMatrixAcsc.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
+
+        SingleMatrix singleMatrixCexpected = SingleMatrix::RandomUniform(m, n, deviceId, 0, 1, IncrementCounter());
+        SingleMatrix singleMatrixCdense = singleMatrixCexpected.DeepClone();
+        SingleMatrix singleMatrixCsparse = singleMatrixCexpected.DeepClone();
+
+        SingleMatrix singleMatrixBdiag(n, n, deviceId);
+        singleMatrixBdiag.SetValue(0);
+        singleMatrixBdiag.SetDiagonalValue(singleMatrixB);
+        for(float beta : {0.0f, 1.0f})
+        {
+            SingleMatrix::MultiplyAndWeightedAdd(1, singleMatrixA, false, singleMatrixBdiag, false, beta, singleMatrixCexpected);
+            SingleMatrix::ColumnwiseScaleAndWeightedAdd(1, singleMatrixA, singleMatrixB, beta, singleMatrixCdense);
+            SingleMatrix::ColumnwiseScaleAndWeightedAdd(1, singleMatrixAcsc, singleMatrixB, beta, singleMatrixCsparse);
+
+            BOOST_CHECK(singleMatrixCexpected.IsEqualTo(singleMatrixCdense, c_epsilonFloatE4));
+            BOOST_CHECK(singleMatrixCexpected.IsEqualTo(singleMatrixCsparse, c_epsilonFloatE4));
+        }
+    }
+}
+
 BOOST_FIXTURE_TEST_CASE(MatrixScaleAndAdd, RandomSeedFixture)
 {
     std::mt19937 rng(0);

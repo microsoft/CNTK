@@ -1390,7 +1390,7 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon)
+void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
@@ -1418,7 +1418,7 @@ void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<Ele
         ElemType x2 = smoothX2[i];
         ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
         smoothX2[i] = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
-        val[i] += deltaX;
+        val[i] += learningRate * deltaX;
     }
 }
 
@@ -4834,6 +4834,29 @@ void CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMat
 #pragma omp parallel for
         foreach_coord (i, j, c)
             c(i, j) = b(i, j) * f + c(i, j) * beta;
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& v, ElemType beta, CPUMatrix<ElemType>& c)
+{
+    if (v.GetNumRows() != 1 && v.GetNumCols() != 1)
+        InvalidArgument("the argument v must be a vector"); // v is a vector
+
+    if (beta == 0)
+        c.RequireSize(a.GetNumRows(), a.GetNumCols());
+    else
+        c.VerifySize(a.GetNumRows(), a.GetNumCols()); // Can't resize if beta != 0
+
+    const ElemType* vd = v.Data();
+
+    if (beta == 0) // don't even read the memory if beta is 0
+#pragma omp parallel for
+        foreach_coord(i, j, c)
+            c(i, j) = alpha * a(i, j) * vd[j];
+    else
+#pragma omp parallel for
+        foreach_coord(i, j, c)
+            c(i, j) = alpha * a(i, j) * vd[j] + c(i, j) * beta;
 }
 
 /* compute singular value decomposition as
