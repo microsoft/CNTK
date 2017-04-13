@@ -317,6 +317,7 @@ class NDArrayViewOpsMixin(object):
         return NDArrayViewOpsMixin._num_op(out, [self], 1.0, 12) # 12 = ElementWiseOperator.opExp
 
     # reductions
+    # TODO: add copy_to_shape() or something, which is the same as reduce_sum but with a non-optional parameter
     def reduce_sum(self, reduce_to_shape=(), out=None):
         # TODO: add a test
         res = out or NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device()) # reduce to scalar
@@ -328,7 +329,9 @@ class NDArrayViewOpsMixin(object):
         return res
 
     # shapes, slicing, and splicing
-    def reshape(self, new_shape): # note: this is not in-place (unlike Matrix::Reshape())
+    def reshape(self, new_shape): # note: this is not in-place (unlike Matrix::Reshape()); rename to reshaped()? reshaped_as()?
+        if self.shape == new_shape:
+            return self
         res = self.as_shape(new_shape)
         res.__class__ = self.__class__
         return res
