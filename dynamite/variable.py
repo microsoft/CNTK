@@ -69,6 +69,8 @@ class Variable:
         # TODO: capture the gradient functions for all inputs that need gradients (we also need a flag for that)
         #v.needs_gradient = True
         v.computed = False
+        if Variable.generation_counter == 2117:
+            print(13)
         v.generation_id = Variable.generation_counter # unique id, also useful for topo-sort
         Variable.generation_counter += 1
         return v
@@ -92,6 +94,11 @@ class Variable:
         self.backprop_to_functions = other.backprop_to_functions
         self.additional_args       = other.additional_args
         self.additional_kwargs     = other.additional_kwargs
+        self.computed              = other.computed
+        if self.computed:
+            self.data              = other.data
+        if Variable.generation_counter == 2117:
+            print(13)
         self.generation_id = Variable.generation_counter # BUGBUG: This screws up the idea of the gen id for topo-sort... :(
         Variable.generation_counter += 1
 
@@ -137,6 +144,9 @@ class Variable:
             t += ")"
         return t
 
+    def dump_graph(self, skip_free=False):
+        dump_graph([self], skip_free)
+
     # ------------------------------------------------------------------------
     # execution, node level
     # ------------------------------------------------------------------------
@@ -181,12 +191,12 @@ class Variable:
               else:
                   data = self.op(*(args + self.additional_args))
           if data.shape != self.shape:
-              dump_graph(self, skip_free=True)
+              self.dump_graph(skip_free=True)
               print(data.shape, self.shape)
           assert data.shape == self.shape # sanity check of shape inference
           return data
         except Exception: # (for catching stuff in the debugger; remove this)
-          dump_graph(self, skip_free=True)
+          self.dump_graph(skip_free=True)
           print('_call_op failure:', self.op, self.shape, tuple(input.shape for input in self.inputs))
           raise
         pass
@@ -226,7 +236,7 @@ class Variable:
     # create Variable that is the gradient of self w.r.t. a set of parameters, multiplied with error_signal
     def backprop_to(self, i):  # get backprop function for inputs[i]; each fun(v, g) -> g * dv/dinp_i
         if not self.backprop_to_functions:
-            dump_graph(self, skip_free=True)
+            self.dump_graph(skip_free=True)
             print('backprop_to() missing for', self.signature_as_string())
             raise NotImplementedError('backprop_to missing')
         return self.backprop_to_functions[i]
@@ -319,13 +329,17 @@ class Variable:
         return Variable((len(args),) + (1,) * (-1 - axis) + args[0].shape,
                         cntk.NDArrayView.splice,
                         args,
-                        backprop_to_functions=None if axis != -1 else tuple(lambda v, g, i=i: g[i] * v[i] for i in range(len(args))), # BUGBUG: wrong axis unless -1
+                        backprop_to_functions=None if axis != -1 else tuple(lambda v, g, i=i: g[i].reshape(args[i].shape) for i in range(len(args))), # BUGBUG: wrong axis unless -1
                         additional_kwargs=as_kwargs(axis=axis))
 
     def reshape(self, shape):
+        if shape == self.shape:
+            return self
         return Variable(shape, cntk.NDArrayView.reshape, (self,), additional_args=(shape,))
 
     def reduce_sum_to_shape(self, shape):
+        if shape == self.shape:
+            return self
         return Variable(shape, cntk.NDArrayView.reduce_sum, (self,), additional_kwargs=as_kwargs(reduce_to_shape=shape))
 
 class Parameter(Variable):
@@ -503,14 +517,16 @@ alias   = unary_op(Variable._op_alias,       backprop_to_functions=(lambda v, g:
 
 
 
-def _pad_unreduce(v, g): # pad 'g' to the right number of axes for un-reducing in gradient of reduce_X_sum(); makes g broadcastable into v.inputs[0].shape
-    input_rank  = len(v.inputs[0].shape)
-    output_rank = len(v.shape)
+def _pad_unreduce(ref, g): # pad 'g' to the right number of axes for un-reducing in gradient of reduce_X_sum(); makes g broadcastable into ref.inputs[0].shape
+    input_rank  = len(ref.inputs[0].shape)
+    output_rank = len(ref.shape)
     num_reduced_dims = input_rank - output_rank
     assert num_reduced_dims > 0 # (something must have gotten reduced)
     padded_g_shape = g.shape + (1,) * num_reduced_dims # add 1-dims that got reduced away
     return g.reshape(padded_g_shape)
-reduce_sum     = unary_reduction_op(cntk.NDArrayView.reduce_sum,     backprop_to_functions=(lambda v, g: _pad_unreduce(v, g) + zero * v.inputs[0],)) # TODO: fix this hack (which forces broadcasting)
+def _broadcast_to(ref, g): # broadcast g to shape of 'ref'
+    return g.reduce_sum_to_shape(ref.shape)  # hack: when given a shape, reduce_sum can actually broadcast...
+reduce_sum     = unary_reduction_op(cntk.NDArrayView.reduce_sum,     backprop_to_functions=(lambda v, g: _broadcast_to(v.inputs[0], _pad_unreduce(v, g)),))
 reduce_log_sum = unary_reduction_op(cntk.NDArrayView.reduce_log_sum, backprop_to_functions=(lambda v, g: _pad_unreduce(v, g) * exp(v.inputs[0] - _pad_unreduce(v, v)),)) # df / dx = exp(x)/exp(f) = exp(x - f)  --TODO: check this
 
 #softmax = unary_op(cntk.NDArrayView.softmax)  # TODO: define this as multiple operations, exp(z-reduce_log_sum(z))
@@ -879,7 +895,7 @@ def evaluate_graph(vars):
             num_ops += 1
             if VariableGlobalConfig.enable_tracing:
                 val = p.data.to_ndarray()
-                print('--- trace', p.type_as_string())
+                print('--- trace', p.signature_as_string(expand_getitem=True))
                 print(val)
         #print(p.data.to_ndarray())
     end = time.time()
@@ -915,8 +931,13 @@ def create_gradient_graph(root, parameters, error_signal):
     gradients = dict() # [node] -> node's gradient; that is, error_signal * droot/dnode
     gradients[root] = error_signal
     g_used = set() # (sanity check only)
+    def optimize_aggregate_in_place(v):
+        if v.op == Variable._op_aggregate:
+            if len(v.inputs) == 1:
+                v.replace_with(v.inputs[0])
+        return v
     for node in filter(lambda node: id(node) in active_set, reversed(nodes)):
-        g = gradients[node]
+        g = optimize_aggregate_in_place(gradients[node])
         g_used.add(id(node))
         # backprop into each child
         for i, input in enumerate(node.inputs):
@@ -935,13 +956,15 @@ def create_gradient_graph(root, parameters, error_signal):
                     # BUGBUG: we must collate dyadic matrix aggregations into a single matmul (or can we rely on batching in forward?)
                     # --> an aggregate operator, which inspects the input; should also separate different kinds of ops it seems,
                     #     so maybe when use use a gradient, just call the transform function on it?
-                    g = gradients[input]
-                    assert g.op is Variable._op_aggregate
-                    g.inputs += (input_g,)  # note: these are tuples, so this will be N^2 effort; better use a list
+                    input_g_aggregate = gradients[input]
+                    assert input_g_aggregate.op is Variable._op_aggregate
+                    input_g_aggregate.inputs += (input_g,)  # note: these are tuples, so this will be N^2 effort; better use a list
+                    if input_g_aggregate.shape !=  input_g.shape: # some are broadcasting
+                        input_g_aggregate.shape = elementwise_shape(input_g_aggregate.shape, input_g.shape)
                     #gradients[input] = gradients[input] + input_g  # TODO: change back to +=
     #print(len(active_set), len(nodes), len(gradients))
     # gather the results
-    res = { p: gradients[p] for p in parameters } # if a parameter does not feed root, then there will be no gradient, we will fail here
+    res = { p: optimize_aggregate_in_place(gradients[p]) for p in parameters } # if a parameter does not feed root, then there will be no gradient, we will fail here
     # test computing the value of a gradient  --remove this later
     #for p, g in res.items():
     #    g.get_value()
