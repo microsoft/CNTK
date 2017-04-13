@@ -52,6 +52,21 @@ OverloadUnaryMathFns(log1p);
 
 #pragma pop_macro("OverloadUnaryMathFns")
 
+#pragma push_macro("OverloadBinaryMathFns")
+#define OverloadBinaryMathFns(x)         \
+    DECL float x##_(float f, float y)    \
+    {                                    \
+        return x##f(f, y);               \
+    }                                    \
+    DECL double x##_(double f, double y) \
+    {                                    \
+        return x(f, y);                  \
+    }
+
+OverloadBinaryMathFns(pow);
+
+#pragma pop_macro("OverloadBinaryMathFns")
+
 // -----------------------------------------------------------------------
 // additional functions that are standard in our context
 // -----------------------------------------------------------------------
@@ -156,6 +171,12 @@ DECL ElemType LogAdd(ElemType x, ElemType y)
     }
 
     return x + log1p_(exp_(y - x));
+}
+
+template <typename ElemType>
+DECL ElemType Pow(ElemType x, ElemType y)
+{
+    return pow_(x, y);
 }
 
 // IndexElement reindexes a tensor along one dimension.
