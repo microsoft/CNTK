@@ -5,8 +5,8 @@
 # ==============================================================================
 
 '''
-blocks -- basic building blocks that are semantically not layers (not used in a layered fashion)
-          e.g. the LSTM
+Basic building blocks that are semantically not layers (not used in a layered fashion),
+e.g. the LSTM block.
 '''
 
 from __future__ import division

@@ -4,7 +4,9 @@
 # for full license information.
 # ==============================================================================
 
-# sequence -- first/higher-order functions over sequences, like Recurrence()
+'''
+First / higher-order functions over sequences, like :func:`Recurrence`.
+'''
 
 from ..variables import Record
 from ..ops import combine, splice, sequence

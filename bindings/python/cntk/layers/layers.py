@@ -4,8 +4,10 @@
 # for full license information.
 # ==============================================================================
 
-# layers -- blocks in the network that are used layer-like, i.e. layered on top of each other
-#           e.g. a fully connected layer with non-linearity
+'''
+Blocks in the network that are used layer-like, i.e. layered on top of each other
+e.g. a fully connected layer with non-linearity.
+'''
 
 from __future__ import division
 import numpy as np
