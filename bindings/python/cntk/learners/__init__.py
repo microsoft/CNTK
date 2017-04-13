@@ -441,7 +441,7 @@ def sgd(parameters, lr,
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_average_gradient_value()`.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
@@ -494,7 +494,7 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_average_gradient_value()`.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the
@@ -547,7 +547,7 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_average_gradient_value()`.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the
@@ -605,7 +605,7 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_average_gradient_value()`.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
@@ -655,7 +655,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_average_gradient_value()`.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
@@ -713,7 +713,7 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping 
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_average_gradient_value()`.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
@@ -769,7 +769,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_average_gradient_value()`.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
@@ -829,7 +829,7 @@ def rmsprop(parameters, lr,
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
-         Defaults to the value returned by :func:`default_average_gradient_value()`.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
