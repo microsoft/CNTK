@@ -22,5 +22,5 @@ dependencies:
   - sphinx==1.4.8
   - sphinx-rtd-theme==0.1.9
   - twine==1.8.1
-  - gym['atari']==0.8.1
+  - gym["atari"]==0.8.1
   - pydot-ng==1.0.0
