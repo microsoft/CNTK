@@ -42,13 +42,19 @@ def BroadcastingUnary(unary_op):
 def identity(x):
     return x
 
-def Dense(N, activation=identity, name=''):
+def Dense(N, bias=True, activation=identity, name=''):
     W = Parameter((INFER,N), initializer=times_initializer)
-    b = Parameter((N,))
-    @Model(W=W, b=b)
-    @BroadcastingUnary
-    def dense(x):
-        return activation(x @ W + b)
+    if bias:
+        b = Parameter((N,))
+        @Model(W=W, b=b)
+        @BroadcastingUnary
+        def dense(x):
+            return activation(x @ W + b)
+    else:
+        @Model(W=W)
+        @BroadcastingUnary
+        def dense(x):
+            return activation(x @ W)
     return dense
 
 def LogValues(): # fake layer to print the value as it passes through; for testing direct-mode values/co-routines

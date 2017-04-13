@@ -131,9 +131,9 @@ def train(debug_output=False):
     print('dynamic model has', len(dparameters), 'parameter tensors:', ', '.join(name + str(param.shape) for param, name in dparam_names.items()))
 
     # testing stuff
-    if False:
+    if True:
         m1 = dynamite.Dense(2, activation=dynamite.relu)
-        dp1 = dynamite.get_parameters(m1)
+        dp1 = m1.get_parameters()
         x = dynamite.Constant(np.array([1., 2., 3.]))
         l = dynamite.Constant(np.array([1., 0.]))
         s = dynamite.cross_entropy_with_softmax(m1(x), l)
@@ -172,7 +172,7 @@ def train(debug_output=False):
         def log_time(dur):
             dur_per_sample = dur / len(args[0])
             samples_per_second = 1 / dur_per_sample
-            #print('{:.2f} ms, {:.1f} samples/s'.format(dur * 1000, samples_per_second))
+            print('{:.2f} ms, {:.1f} samples/s'.format(dur * 1000, samples_per_second))
 
         # CNTK dynamite  --do this first before CNTK updates anything
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
@@ -187,25 +187,26 @@ def train(debug_output=False):
         print(" " * 29, crit_nd / len(args[0]))
         #dynamite.dump_graph(crit, skip_free=True)
         # compute gradients
-        #dgradients = crit.grad_times(dparameters)
-        ##dynamite.batch_eval([dgradients[p] for p in dparameters]) # compute all in a single shot, to see if it makes a difference --does not
-        #for p in dparameters:
-        #    print('gradient for', dparam_names[p])
-        #    g = dgradients[p].get_value()
-        #    #print(g.to_ndarray())
-        #
-        ## CNTK static, manual fw/bw/update
-        #grads = combine([criterion.outputs[0]]).grad(at=criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]), wrt=model.parameters, as_numpy=False)
-        #for p in model.parameters:
-        #    dp = parameter_map[p]
-        #    p_data = grads[p].data.to_ndarray()
-        #    dp_data = dgradients[dp].data.to_ndarray()
-        #    print('### gradient for', dparam_names[dp], '(CNTK static vs. dynamite)')
-        #    print(p_data)
-        #    print(dp_data)
-        #    dynamite.dump_graph(dgradients[dp], skip_free=True)
-        #    # Dense.W fails when not using batching; but is OK without batching, so some gradient is just wrong
-        #    assert np.allclose(p_data, dp_data, rtol=1e-5)
+        dgradients = crit.grad_times(dparameters)
+        #dynamite.batch_eval([dgradients[p] for p in dparameters]) # compute all in a single shot, to see if it makes a difference --does not
+        #dynamite.VariableGlobalConfig.enable_tracing = True
+        for p in dparameters:
+            print('gradient for', dparam_names[p])
+            g = dgradients[p].get_value()
+            #print(g.to_ndarray())
+
+        # CNTK static, manual fw/bw/update
+        grads = combine([criterion.outputs[0]]).grad(at=criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]), wrt=model.parameters, as_numpy=False)
+        for p in model.parameters:
+            dp = parameter_map[p]
+            p_data = grads[p].data.to_ndarray()
+            dp_data = dgradients[dp].data.to_ndarray()
+            print('### gradient for', dparam_names[dp], '(CNTK static vs. dynamite)')
+            print(p_data)
+            print(dp_data)
+            dynamite.dump_graph(dgradients[dp], skip_free=True)
+            # Dense.W fails when not using batching; but is OK without batching, so some gradient is just wrong
+            assert np.allclose(p_data, dp_data, rtol=1e-5)
 
         # CNTK static, original example
         start = time.time()

@@ -3,17 +3,15 @@ import cntk  # note: keep in 'cntk' namespace in here
 import collections
 #from timeit import default_timer as timer
 
-##############################################################################
-#
-# Dynamite Variable type, part 1
-#
-##############################################################################
+# some global settings we can control from outside, e.g. for debugging
+class VariableGlobalConfig:
+    use_batching = False
+    use_coroutines = True
+    enable_tracing = False
 
 # TODO: move to contrib/dynamite/variable.py ; import .tensor_ops
 
 # some global settings for playing with different configs:
-use_batching = False
-use_coroutines = True
 
 # Functions vs Variables:
 #  - CNTK dynamite has no functions!!! (other than Python lambdas)
@@ -43,6 +41,12 @@ def to_Variable(x):
 # a little helper to pass 'additional_kwargs' easily
 def as_kwargs(**kwargs):
     return kwargs
+
+##############################################################################
+#
+# Dynamite Variable type
+#
+##############################################################################
 
 class Variable:
 
@@ -283,6 +287,7 @@ class Variable:
             res = input - input  # create a zero of the right size
         res[key] = g         # copy the slice there
         return res
+
     def __getitem__(self, key): # note: for now not fully supported
         # determine the output shape
         if isinstance(key, int):
@@ -303,8 +308,10 @@ class Variable:
                             lambda v, g: Variable(v.inputs[0].shape, Variable._op_place_item, (v.inputs[0], g,),
                                                   additional_args=(key,)),),
                         additional_args=(key,))
+
     def _op_alias(x): # the op for alias
         return x
+
     @staticmethod
     def splice(*args, axis=-1):
         if axis >= 0:
@@ -314,8 +321,10 @@ class Variable:
                         args,
                         backprop_to_functions=None if axis != -1 else tuple(lambda v, g, i=i: g[i] * v[i] for i in range(len(args))), # BUGBUG: wrong axis unless -1
                         additional_kwargs=as_kwargs(axis=axis))
+
     def reshape(self, shape):
         return Variable(shape, cntk.NDArrayView.reshape, (self,), additional_args=(shape,))
+
     def reduce_sum_to_shape(self, shape):
         return Variable(shape, cntk.NDArrayView.reduce_sum, (self,), additional_kwargs=as_kwargs(reduce_to_shape=shape))
 
@@ -494,14 +503,14 @@ alias   = unary_op(Variable._op_alias,       backprop_to_functions=(lambda v, g:
 
 
 
-def _pad_unreduce(v, g): # pad 'g' to the right number of axes for un-reducing in gradient of reduce_X_sum()
+def _pad_unreduce(v, g): # pad 'g' to the right number of axes for un-reducing in gradient of reduce_X_sum(); makes g broadcastable into v.inputs[0].shape
     input_rank  = len(v.inputs[0].shape)
     output_rank = len(v.shape)
     num_reduced_dims = input_rank - output_rank
     assert num_reduced_dims > 0 # (something must have gotten reduced)
     padded_g_shape = g.shape + (1,) * num_reduced_dims # add 1-dims that got reduced away
     return g.reshape(padded_g_shape)
-reduce_sum     = unary_reduction_op(cntk.NDArrayView.reduce_sum,     backprop_to_functions=(lambda v, g: _pad_unreduce(v, g) - zero * v.inputs[0],)) # TODO: fix this hack (which forces broadcasting)
+reduce_sum     = unary_reduction_op(cntk.NDArrayView.reduce_sum,     backprop_to_functions=(lambda v, g: _pad_unreduce(v, g) + zero * v.inputs[0],)) # TODO: fix this hack (which forces broadcasting)
 reduce_log_sum = unary_reduction_op(cntk.NDArrayView.reduce_log_sum, backprop_to_functions=(lambda v, g: _pad_unreduce(v, g) * exp(v.inputs[0] - _pad_unreduce(v, v)),)) # df / dx = exp(x)/exp(f) = exp(x - f)  --TODO: check this
 
 #softmax = unary_op(cntk.NDArrayView.softmax)  # TODO: define this as multiple operations, exp(z-reduce_log_sum(z))
@@ -828,7 +837,7 @@ ops_with_out = { cntk.NDArrayView.__add__, cntk.NDArrayView.__sub__, cntk.NDArra
 def evaluate_graph(vars):
     # transform the graph from raw (individual batch items) to the batched graph
     print_graph_stats(vars)
-    if use_batching:
+    if VariableGlobalConfig.use_batching:
         transform_to_batched_ops(vars)
         print_graph_stats(vars)
         #transform_to_batched_ops(vars) # verify that the second time does not change it any further
@@ -864,9 +873,14 @@ def evaluate_graph(vars):
             mem_offset = p.mem_offset
             if mem_offset != -1:
                 out = arena[mem_offset:mem_offset + p.mem_size]
-                out = out.reshape(p.shape)
+                if out.shape != p.shape:
+                    out = out.reshape(p.shape)
             p._compute_data(out=out)
             num_ops += 1
+            if VariableGlobalConfig.enable_tracing:
+                val = p.data.to_ndarray()
+                print('--- trace', p.type_as_string())
+                print(val)
         #print(p.data.to_ndarray())
     end = time.time()
     dummy = vars[0].to_ndarray()
@@ -945,7 +959,7 @@ from greenlet import greenlet # very lighweight coroutines
 # apply f() to a batch of arguments, with automatic batch parallelism (coroutines)
 def map_batch(f, batch_args):
     result = [] # results of map operation
-    if use_coroutines:
+    if VariableGlobalConfig.use_coroutines:
         # create a coroutine for each batch entry
         # (a real implementation would switch to coroutines only upon encountering a need for the first time)
         zipped_batch_args = tuple(zip(*batch_args))
