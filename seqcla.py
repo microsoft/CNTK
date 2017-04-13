@@ -131,7 +131,7 @@ def train(debug_output=False):
     print('dynamic model has', len(dparameters), 'parameter tensors:', ', '.join(name + str(param.shape) for param, name in dparam_names.items()))
 
     # testing stuff
-    if True:
+    if False:
         m1 = dynamite.Dense(2, activation=dynamite.relu)
         dp1 = m1.get_parameters()
         x = dynamite.Constant(np.array([1., 2., 3.]))
@@ -189,24 +189,29 @@ def train(debug_output=False):
         # compute gradients
         dgradients = crit.grad_times(dparameters)
         #dynamite.batch_eval([dgradients[p] for p in dparameters]) # compute all in a single shot, to see if it makes a difference --does not
-        #dynamite.VariableGlobalConfig.enable_tracing = True
-        for p in dparameters:
-            print('gradient for', dparam_names[p])
-            g = dgradients[p].get_value()
+        #for p in dparameters:
+        #    print('gradient for', dparam_names[p])
+        #    g = dgradients[p].get_value()
             #print(g.to_ndarray())
 
         # CNTK static, manual fw/bw/update
         grads = combine([criterion.outputs[0]]).grad(at=criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]), wrt=model.parameters, as_numpy=False)
         for p in model.parameters:
-            dp = parameter_map[p]
+            dp = parameter_map[p] # map parameter from static to Dynamite gradients
+            dpname = dparam_names[dp]
+            if dpname == '_[0].E':
+                continue  # cannot convert sparse gradient to numpy
+            dp = dgradients[dp] # find the gradient for the parameter
+            print('### gradient for', dpname, '(CNTK static vs. dynamite)')
+            #dynamite.dump_graph(dp, skip_free=True)
             p_data = grads[p].data.to_ndarray()
-            dp_data = dgradients[dp].data.to_ndarray()
-            print('### gradient for', dparam_names[dp], '(CNTK static vs. dynamite)')
-            print(p_data)
-            print(dp_data)
-            dynamite.dump_graph(dgradients[dp], skip_free=True)
+            #dynamite.VariableGlobalConfig.enable_tracing = True
+            dp_data = dp.to_ndarray() # this will trigger computation
+            #print(p_data)
+            #print(dp_data)
+            #exit()
             # Dense.W fails when not using batching; but is OK without batching, so some gradient is just wrong
-            assert np.allclose(p_data, dp_data, rtol=1e-5)
+            assert np.allclose(p_data, dp_data, atol=1e-5)
 
         # CNTK static, original example
         start = time.time()
