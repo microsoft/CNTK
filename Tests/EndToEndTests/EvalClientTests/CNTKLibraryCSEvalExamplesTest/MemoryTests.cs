@@ -38,11 +38,11 @@ namespace CNTKLibraryCSEvalExamples
             {
                 Console.WriteLine("Device0: " + Device0.AsString() + "Type: " + Device0.Type);
                 Console.WriteLine("Axis0: " + Axis0.Name + "IsStaticAxis: " + Axis0.IsStatic);
-                Console.WriteLine("OutputVar: " + OutputVar.AsString() + "Name: " + OutputVar.Name + "Kind: " + Utils.VariableKindName(OutputVar.Kind) + "Shape: " + OutputVar.Shape.AsString());
-                Console.WriteLine("OutputVar0: " + OutputVar0.AsString() + "Name: " + OutputVar0.Name + "Kind: " + Utils.VariableKindName(OutputVar0.Kind) + "Shape: " + OutputVar0.Shape.AsString());
-                Console.WriteLine("InputVar0: " + InputVar0.AsString() + "Name: " + InputVar0.Name + "Kind: " + Utils.VariableKindName(InputVar0.Kind) + "Shape: " + InputVar0.Shape.AsString());
-                Console.WriteLine("ArgumentVar0: " + ArgumentVar0.AsString() + "Name: " + ArgumentVar0.Name + "Kind: " + Utils.VariableKindName(ArgumentVar0.Kind) + "Shape: " + ArgumentVar0.Shape.AsString());
-                Console.WriteLine("OutputVal: " + "Device: " + OutputVal.Device.AsString() + "Storage: " + OutputVal.StorgeFormat + "Shape: " + OutputVal.Shape.AsString() + "Data:");
+                Console.WriteLine("OutputVar: " + OutputVar.AsString() + "Name: " + OutputVar.Name + ", Kind: " + Utils.VariableKindName(OutputVar.Kind) + ", Shape: " + OutputVar.Shape.AsString());
+                Console.WriteLine("OutputVar0: " + OutputVar0.AsString() + "Name: " + OutputVar0.Name + ", Kind: " + Utils.VariableKindName(OutputVar0.Kind) + ", Shape: " + OutputVar0.Shape.AsString());
+                Console.WriteLine("InputVar0: " + InputVar0.AsString() + "Name: " + InputVar0.Name + ", Kind: " + Utils.VariableKindName(InputVar0.Kind) + ", Shape: " + InputVar0.Shape.AsString());
+                Console.WriteLine("ArgumentVar0: " + ArgumentVar0.AsString() + "Name: " + ArgumentVar0.Name + ", Kind: " + Utils.VariableKindName(ArgumentVar0.Kind) + ", Shape: " + ArgumentVar0.Shape.AsString());
+                Console.WriteLine("OutputVal: " + "Device: " + OutputVal.Device.AsString() + "Storage: " + OutputVal.StorgeFormat + ", Shape: " + OutputVal.Shape.AsString() + "Data:");
                 var outputData = OutputVal.GetDenseData<float>(OutputVar);
                 CNTKLibraryManagedExamples.PrintOutput(OutputVar.Shape.TotalSize, outputData);
             }
