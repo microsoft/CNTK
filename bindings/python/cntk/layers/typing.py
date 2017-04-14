@@ -86,6 +86,7 @@ The following lists a few common errors with CNTK type objects:
 Example:
     >>> # types are abstract, they cannot be instantiated directly
     >>> from cntk.layers.typing import Tensor
+    >>> from __future__ import print_function
     >>> try:
     ...     inp = Tensor[32]()   # attempt to create an instance of type Tensor[32]
     ... except TypeError as e:

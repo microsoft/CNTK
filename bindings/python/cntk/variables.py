@@ -172,6 +172,7 @@ class VariableMixin(object):
 
             Example:
             >>> from cntk.layers.typing import Tensor
+            >>> from __future__ import print_function
             >>> try:
             ...     inp = Tensor[32]()
             ... except TypeError as e:
@@ -224,8 +225,8 @@ class VariableMixin(object):
         >>> x = C.input(13, name='my_input')
         >>> x
         Input('my_input', [#], [13])
-        >>> x.type.shape, x.type.dtype, x.type.dynamic_axes, x.type.is_sparse, x.type.needs_gradient
-        ((13,), <class 'numpy.float32'>, (Axis('defaultBatchAxis'),), False, False)
+        >>> x.type.shape, x.type.dynamic_axes, x.type.is_sparse, x.type.needs_gradient
+        ((13,), (Axis('defaultBatchAxis'),), False, False)
         '''
         return Variable._Type(shape=self.shape, dtype=self.dtype, needs_gradient=self.needs_gradient, is_sparse=self.is_sparse, dynamic_axes=self.dynamic_axes)
 
