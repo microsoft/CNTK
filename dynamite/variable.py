@@ -146,6 +146,9 @@ class Variable:
     def dump_graph(self, skip_free=False):
         dump_graph([self], skip_free)
 
+    def __repr__(self):
+        return self.signature_as_string()
+
     # ------------------------------------------------------------------------
     # execution, node level
     # ------------------------------------------------------------------------
@@ -817,7 +820,7 @@ def transform_to_batched_ops(vars):
                 )
             return (False, p.op, additional_args_sanitized, additional_kwargs_tuplified, tuple(v.shape for v in p.inputs))
         p.key = make_key(p)
-        s = { p.key } # verify that it is hashable
+        dummy_set_key_test = { p.key } # verify that it is hashable
         # TODO: must also include the storage format in the key; do this in C++ version
         p.consumers = []
         p.non_ready_inputs = 0
@@ -854,13 +857,6 @@ def transform_to_batched_ops(vars):
                 p.non_ready_inputs -= 1
                 if p.non_ready_inputs == 0:
                     add_ready(p)
-
-    # done
-    #print(tuple(v.generation_id for v in topo_sort(vars)))
-    #print(ops_run, 'operations executed in', batches_run, 'batches, using an actual', num_compute_launches, 'compute launches and', num_gathers, 'gather launches')
-    assert ops_run == expected_num_ops
-    #for v in nodes:
-    #    assert v.computed
 
 # main evaluation function
 #  - evaluate a set of root variables
@@ -971,7 +967,7 @@ def create_gradient_graph(root, parameters, error_signal):
         if place_item_args:
             # we must make sure that all input slices are filled exactly once; then this is a splice operation
             place_item_args = [Variable(shape, Variable._op_aggregate_place_items,
-                                        tuple(arg.inputs[1] for arg in place_item_args), # (input[0] is the self-reference to the node to get its shape)
+                                        tuple(arg.inputs[1] for arg in place_item_args), # (input[0] is the self-reference that allows _op_place_item() to know the output shape)
                                         additional_kwargs=as_kwargs(shape=shape, keys=tuple(arg.additional_args for arg in place_item_args)))]
         # ...deal with other special kinds
         # _op_aggregate in the end

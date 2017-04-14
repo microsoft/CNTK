@@ -227,9 +227,9 @@ def train(debug_output=False):
                 # Dense.W fails when not using batching; but is OK without batching, so some gradient is just wrong
                 assert np.allclose(p_data, dp_data, atol=1e-5)
                 print('## OK', i, dpname)
-                #if dpname == "_[1].step_function.W":
-                #    dynamite.dump_graph(dp, skip_free=True)
-                #    exit()
+                if dpname == "_[1].step_function.W":
+                    dynamite.dump_graph(dp, skip_free=True)
+                    exit()
 
             # model update from dynamic
             param_map = { p: dgradients[parameter_map[p]].get_value() for p in model.parameters }
