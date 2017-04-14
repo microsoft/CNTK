@@ -12,11 +12,36 @@ import numpy as np
 import pytest
 import cntk as C
 
-def test_assign_fw():
+def test_assign_basic():
     dest = C.constant(shape=(3,4))
     data = C.parameter(shape=(3,4), init=2)
     result = C.assign(dest,data).eval()
 
     assert np.array_equal(dest.asarray(), data.asarray())
     assert np.array_equal(result, data.asarray())
+
+
+def test_assign_basic_param():
+    dest = C.parameter(shape=(3,4))
+    data = C.parameter(shape=(3,4), init=2)
+    result = C.assign(dest,data).eval()
+
+    assert np.array_equal(dest.asarray(), data.asarray())
+    assert np.array_equal(result, data.asarray())
+
+
+def test_assign_deterministic():
+    dest = C.parameter(shape=(3,4), init=0)
+    data = C.parameter(shape=(3,4), init=2)
+
+    a = C.assign(dest, data)
+    y = dest + data
+    result = C.combine([y, a]).eval()
+
+    assert np.array_equal(result[y.output], data.asarray())
+    assert np.array_equal(dest.asarray(), data.asarray())
+    assert np.array_equal(y.eval(), data.asarray() + 2)
+
+
+
 
