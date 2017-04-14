@@ -86,11 +86,10 @@ The following lists a few common errors with CNTK type objects:
 Example:
     >>> # types are abstract, they cannot be instantiated directly
     >>> from cntk.layers.typing import Tensor
-    >>> from __future__ import print_function
     >>> try:
     ...     inp = Tensor[32]()   # attempt to create an instance of type Tensor[32]
     ... except TypeError as e:
-    ...     print('ERROR:', e)
+    ...     print('ERROR: ' + str(e))
     ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(Tensor[32])'.
 
     >>> # types are not inputs
@@ -98,7 +97,7 @@ Example:
     ...     inp = Tensor[32]
     ...     y = sigmoid(inp)
     ... except ValueError as e:
-    ...     print('ERROR:', e)
+    ...     print('ERROR: ' + str(e))
     ERROR: Input is a type object (Tensor[32]). Did you mean to pass 'input(Tensor[32])'?
 
 Using Python type syntax, besides being more concise and easier to memorize, has the added benefit of beign able to more easily talk about types of CNTK objects,

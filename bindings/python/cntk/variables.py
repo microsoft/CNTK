@@ -172,11 +172,10 @@ class VariableMixin(object):
 
             Example:
             >>> from cntk.layers.typing import Tensor
-            >>> from __future__ import print_function
             >>> try:
             ...     inp = Tensor[32]()
             ... except TypeError as e:
-            ...     print('ERROR:', e)
+            ...     print('ERROR: ' + str(e))
             ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(Tensor[32])'.
             '''
             raise TypeError("Can't instantiate abstract class " + str(self) + ". Please use 'input(" + str(self) + ")'.")
