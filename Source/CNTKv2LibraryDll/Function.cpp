@@ -9,11 +9,24 @@
 #include "CompositeFunction.h"
 #include "BlockFunction.h"
 #include "Utils.h"
+#include "UserFunctionFactory.h"
 
 using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    /*static*/ UserFunctionFactoryPtr Function::s_userFunctionFactory = std::make_shared<UserFunctionFactory>();
+
+    /*static*/ void Function::RegisterNativeUserFunction(const std::wstring& uniqueOpName, const std::wstring& moduleName, const std::wstring& factoryMethodName)
+    {
+        s_userFunctionFactory->Register(uniqueOpName, moduleName, factoryMethodName);
+    }
+
+    /*static*/ FunctionPtr Function::NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName)
+    {
+        return AsComposite(s_userFunctionFactory->CreateInstance(opName, operands, functionConfig, userFunctionInstanceName), userFunctionInstanceName);
+    }
+
     std::vector<Variable>& Function::InitOutputs()
     {
         std::call_once(m_outputsInitFlag, [this]() {
