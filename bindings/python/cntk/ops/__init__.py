@@ -9,7 +9,7 @@ import numpy as np
 import numbers
 from numbers import Number
 from . import sequence
-from .functions import CloneMethod, Function, load_model
+from .functions import CloneMethod, Function, load_model, register_native_user_function, native_user_function
 from ..variables import Variable, Parameter, Constant
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args
 from cntk.internal.utils import get_data_type

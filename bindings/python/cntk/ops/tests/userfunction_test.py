@@ -10,6 +10,8 @@ Unit tests for function extension
 from __future__ import division, print_function
 import numpy as np
 import pytest
+import os 
+import cntk as C
 
 from cntk import *
 from cntk.train.trainer import *
@@ -418,3 +420,14 @@ def test_udf_output_needs_no_gradient():
     assert np.allclose(gradients[op.arguments[1]], [[[0., 0.], [0., 0.]]])
 
     assert np.allclose(result, [[[6., 8.], [10., 12.]]])
+
+def test_native_user_function():
+    ops.register_native_user_function('NativeUserTimesFunction', 'Cntk.ExtensibilityExamples-' + C.__version__.rstrip('+'), 'CreateUserTimesFunction')
+    dev = cpu()
+    x = input((2))
+    w = parameter((2, 2), init=np.asarray([[0.5, 2], [-0.5, 1.5]], dtype=np.float32), device=dev)
+    op = ops.native_user_function('NativeUserTimesFunction', [w, x])
+
+    x_data = NDArrayView.from_dense(np.asarray([[0.1, 0.2], [-0.1, 0.3]], dtype=np.float32), device=dev)
+    result = op.eval({x : x_data}, device=dev)
+    assert np.allclose(result, [[-0.05, 0.5], [-0.2, 0.25]])

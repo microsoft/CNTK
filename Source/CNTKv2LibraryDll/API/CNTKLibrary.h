@@ -2571,6 +2571,8 @@ namespace CNTK
         ///
         virtual void CopyFrom(const Value& source);
 
+        virtual void Erase();
+
         ///
         /// Unpacks sequences in 'this' Value as a vector of NDArrayView objects, each represeting a sequence in the 
         /// batch of sequences that 'this' Value object contains data for.
@@ -3195,6 +3197,27 @@ namespace CNTK
         ///
         static const int MaxNumOutputs = 64;
 
+    public:
+
+        ///
+        /// Registers a native user-defined Function that can be subsequently instantiated using the Function::NativeUserFunction method.
+        ///
+        // TODO: Do we need an Unregister to unload the module?
+        CNTK_API static void RegisterNativeUserFunction(const std::wstring& uniqueOpName, const std::wstring& moduleName, const std::wstring& factoryMethodName);
+
+        ///
+        /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
+        ///
+        CNTK_API static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName = L"");
+
+        ///
+        /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
+        ///
+        inline static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const std::wstring& userFunctionInstanceName = L"")
+        {
+            return NativeUserFunction(opName, operands, Dictionary(), userFunctionInstanceName);
+        }
+
     protected:
         static bool IsArgument(const Variable& var)
         {
@@ -3299,6 +3322,9 @@ namespace CNTK
 
     public:
         CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
+
+    private:
+        static UserFunctionFactoryPtr s_userFunctionFactory;
 
     private:
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
@@ -4140,6 +4166,10 @@ namespace CNTK
 #endif
         double gradientClippingThresholdPerSample = std::numeric_limits<double>::infinity();
         bool gradientClippingWithTruncation = true;
+
+        // This option results in the mean value of the gradients across the samples in the minibatch to be used by the learner.
+        // The mean gradient is computed by dividing the gradient values accumulated across all samples by the actual number of samples (labels) in the minibatch.
+        bool useMeanGradient = false;
     };
 
     ///  
@@ -4151,6 +4181,16 @@ namespace CNTK
     /// Sets globally default unit-gain flag value.
     ///
     CNTK_API void SetDefaultUnitGainValue(bool value);
+
+    ///  
+    /// Returns true if by default input gradient to learner is averaged.
+    ///
+    CNTK_API bool DefaultUseMeanGradientValue();
+
+    ///  
+    /// Sets globally default useMeanGradient value.
+    ///
+    CNTK_API void SetDefaultUseMeanGradientValue(bool value);
 
     ///
     /// Abstraction for learning a subset of parameters of a learnable Function using first order gradient values.

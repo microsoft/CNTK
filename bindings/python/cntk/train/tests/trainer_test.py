@@ -310,7 +310,7 @@ def test_disallow_seq_starts_with_Value_objects():
 
 def test_scalar_input():
     scalar = input((1,), dtype=np.float32, name='tscalar')
-    op = scalar + 1
+    op = scalar + parameter(init=np.asarray([1]), dtype=np.float32)
 
     lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
     trainer = Trainer(op, (op, None), sgd(op.parameters, lr_per_sample))
@@ -319,7 +319,7 @@ def test_scalar_input():
     
 def test_empty_minibatch():
     scalar = input((1,), dtype=np.float32, name='tscalar')
-    op = scalar + 1
+    op = scalar + parameter(init=np.asarray([1]), dtype=np.float32)
 
     lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
     trainer = Trainer(op, (op, None), sgd(op.parameters, lr_per_sample))
