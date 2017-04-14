@@ -1717,12 +1717,12 @@ namespace CNTK
             auto operandPlaceholder = PlaceholderVariable(L"operand");
 
             auto p = PlaceholderLike(operand);
-            auto minusInf = Constant::Scalar(operand.GetDataType(), -std::numeric_limits<float>::infinity());
-            auto nextP = FutureValue(p, minusInf);
-            auto gt = Greater(operandPlaceholder, nextP);
-            auto runningMax = ElementSelect(gt, operandPlaceholder, nextP);
+            auto minusInf = Constant::Scalar(-std::numeric_limits<float>::infinity());
+            auto prevP = PastValue(p, minusInf);
+            auto gt = Greater(operandPlaceholder, prevP);
+            auto runningMax = ElementSelect(gt, operandPlaceholder, prevP);
             runningMax->ReplacePlaceholders({ {p, runningMax} });
-            return AsBlock(Sequence::First(runningMax), { {operandPlaceholder, operand } }, L"Sequence::ReduceMax", name);
+            return AsBlock(Sequence::Last(runningMax), { {operandPlaceholder, operand } }, L"Sequence::ReduceMax", name);
         }
 
         FunctionPtr Softmax(const Variable& operand, const std::wstring& name)
@@ -1730,7 +1730,7 @@ namespace CNTK
             auto operandPlaceholder = PlaceholderVariable(L"operand");
 
             auto p = PlaceholderLike(operand);
-            auto minusInf = Constant::Scalar(operand.GetDataType(), -std::numeric_limits<float>::infinity());
+            auto minusInf = Constant::Scalar(-std::numeric_limits<float>::infinity());
             auto runningLogSumExp = LogAddExp(operandPlaceholder, PastValue(p, minusInf));
             runningLogSumExp->ReplacePlaceholders({ { p, runningLogSumExp } });
             auto logZ = BroadcastAs(Sequence::Last(runningLogSumExp), operandPlaceholder);
