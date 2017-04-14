@@ -89,7 +89,7 @@ def load_embedding(embedding_path, vocab_path, dim, init=None):
 
 def project_cosine(project_dim, init = glorot_uniform(), name=''):
   """
-  Compute the project cosine similarity of two input sequences, 
+  Compute the project cosine similarity of two input sequences,
   where each of the input will be projected to a new dimention space (project_dim) via Wi/Wm
   """
   Wi = Parameter(_INFERRED + (project_dim,), init = init, name='Wi')
@@ -98,7 +98,7 @@ def project_cosine(project_dim, init = glorot_uniform(), name=''):
   status = placeholder(name='status')
   memory = placeholder(name='memory')
 
-  projected_status = times(status, Wi, name = 'projected_status')   
+  projected_status = times(status, Wi, name = 'projected_status')
   projected_memory = times(memory, Wm, name = 'projected_memory')
   status_br = sequence.broadcast_as(projected_status, projected_memory, name='status_broadcast')
   sim = cosine_distance(status_br, projected_memory, name= name)
@@ -106,11 +106,11 @@ def project_cosine(project_dim, init = glorot_uniform(), name=''):
 
 def attention_score(att_dim, init = glorot_uniform(), name=''):
   """
-  Compute the attention score, 
+  Compute the attention score,
   where each of the input will be projected to a new dimention space (att_dim) via Wi/Wm
   """
   sim = project_cosine(att_dim, init, name= name+ '_sim')
-  return sequence.softmax(sim, name = name)
+  return sequence.softmax(10*sim, name = name)
 
 def termination_gate(init = glorot_uniform(), name=''):
   return Dense(1, activation = sigmoid, init=init, name= name)

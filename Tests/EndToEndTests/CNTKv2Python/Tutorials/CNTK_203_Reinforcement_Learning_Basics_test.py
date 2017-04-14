@@ -6,6 +6,12 @@
 
 import os
 import re
+import sys
+
+abs_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(abs_path)
+
+from nb_helper import get_output_stream_from_cell
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_203_Reinforcement_Learning_Basics.ipynb")
@@ -18,9 +24,5 @@ def test_cntk_203_reinforcement_learning_basics_noErrors(nb):
     assert errors == []
 
 def test_cntk_203_reinforcement_learning_basics_tasks_are_solved(nb):
-    testCells = [cell for cell in nb.cells
-                 if cell.cell_type == 'code' and
-                     len(cell.outputs) > 0 and
-                     'text' in cell.outputs[0] and
-                     re.search('Task solved in[ :]', cell.outputs[0]['text'])]
+    testCells = [cell for cell in nb.cells if re.search('Task solved in[ :]', get_output_stream_from_cell(cell))]
     assert len(testCells) == 2

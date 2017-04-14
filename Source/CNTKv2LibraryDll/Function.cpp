@@ -9,11 +9,24 @@
 #include "CompositeFunction.h"
 #include "BlockFunction.h"
 #include "Utils.h"
+#include "UserFunctionFactory.h"
 
 using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    /*static*/ UserFunctionFactoryPtr Function::s_userFunctionFactory = std::make_shared<UserFunctionFactory>();
+
+    /*static*/ void Function::RegisterNativeUserFunction(const std::wstring& uniqueOpName, const std::wstring& moduleName, const std::wstring& factoryMethodName)
+    {
+        s_userFunctionFactory->Register(uniqueOpName, moduleName, factoryMethodName);
+    }
+
+    /*static*/ FunctionPtr Function::NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName)
+    {
+        return AsComposite(s_userFunctionFactory->CreateInstance(opName, operands, functionConfig, userFunctionInstanceName), userFunctionInstanceName);
+    }
+
     std::vector<Variable>& Function::InitOutputs()
     {
         std::call_once(m_outputsInitFlag, [this]() {
@@ -1710,6 +1723,31 @@ namespace CNTK
         FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)
         {
             return ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, name);
+        }
+
+        FunctionPtr ReduceMax(const Variable& operand, const std::wstring& name)
+        {
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+
+            auto p = PlaceholderLike(operand);
+            auto minusInf = Constant::Scalar(-std::numeric_limits<float>::infinity());
+            auto prevP = PastValue(p, minusInf);
+            auto gt = Greater(operandPlaceholder, prevP);
+            auto runningMax = ElementSelect(gt, operandPlaceholder, prevP);
+            runningMax->ReplacePlaceholders({ {p, runningMax} });
+            return AsBlock(Sequence::Last(runningMax), { {operandPlaceholder, operand } }, L"Sequence::ReduceMax", name);
+        }
+
+        FunctionPtr Softmax(const Variable& operand, const std::wstring& name)
+        {
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+
+            auto p = PlaceholderLike(operand);
+            auto minusInf = Constant::Scalar(-std::numeric_limits<float>::infinity());
+            auto runningLogSumExp = LogAddExp(operandPlaceholder, PastValue(p, minusInf));
+            runningLogSumExp->ReplacePlaceholders({ { p, runningLogSumExp } });
+            auto logZ = BroadcastAs(Sequence::Last(runningLogSumExp), operandPlaceholder);
+            return AsBlock(Exp(operandPlaceholder - logZ), { { operandPlaceholder, operand } }, L"Sequence::Softmax", name);
         }
     }
 

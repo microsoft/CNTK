@@ -404,6 +404,12 @@ namespace CNTK
     {
     }
 
+    /*virtual*/ void Value::Erase()
+    {
+        m_data = nullptr;
+        m_mask = nullptr;
+    }
+
     /*virtual*/ NDArrayViewPtr Value::Data() const
     {
         // TODO: Check if this is a derived type and throw an exception in that case

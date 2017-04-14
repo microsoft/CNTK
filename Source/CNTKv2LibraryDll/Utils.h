@@ -360,10 +360,13 @@ namespace CNTK
         NDShape kernelShape = convolutionMapShape.SubShape(0, operandShape.Rank());
         auto outputMapCount = convolutionMapShape.SubShape(kernelShape.Rank());
         auto shapeRank = operandShape.Rank(); 
-        NDShape paddedOutputMapCount(shapeRank, 1);
-        for (size_t i = 0; i < outputMapCount.Rank(); ++i)
-            paddedOutputMapCount[shapeRank - 1 - i] = outputMapCount[outputMapCount.Rank() - 1 - i];
-        if (transpose && paddedOutputMapCount[shapeRank - 1] == NDShape::InferredDimension)  // conovlution transpose, the mapCount in depth is derived from operandShape 
+        NDShape paddedOutputMapCount;
+        if (shapeRank > outputMapCount.Rank())
+            paddedOutputMapCount = NDShape(shapeRank - outputMapCount.Rank(), 1);
+
+        paddedOutputMapCount = paddedOutputMapCount.AppendShape(outputMapCount);
+
+        if (transpose && (shapeRank > 0) && (paddedOutputMapCount[shapeRank - 1] == NDShape::InferredDimension))  // convolution transpose, the mapCount in depth is derived from operandShape 
             paddedOutputMapCount[shapeRank - 1] = operandShape[shapeRank - 1];
 
         return{ paddedOutputMapCount, kernelShape };
@@ -506,7 +509,13 @@ namespace CNTK
             if (axis == Axis::EndStaticAxis())
                 axis = Axis((int)operandShape.Rank());
             else if (axis.StaticAxisIndex() < 0)
-                axis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
+            {
+                auto normalizedAxis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
+                if (normalizedAxis.StaticAxisIndex() < 0)
+                    InvalidArgument("Axis '%S' is out of bounds of the operand shape '%S' it applies to.", axis.AsString().c_str(), operandShape.AsString().c_str());
+                else
+                    axis = normalizedAxis;
+            }
         }
 
         return axis;
@@ -579,6 +588,8 @@ namespace CNTK
     {
         return ShapeRowColSplitPoint(var.Shape(), var.IsSparse());
     }
+
+    bool IsPackedValue(const ValuePtr& value);
 
     // Helper class to manage a collection of learners.
     class Learners
