@@ -193,7 +193,9 @@ def train(debug_output=False):
         if expected_losses: # test
             loss_ex, *expected_losses = expected_losses
             assert np.allclose(loss, loss_ex, atol=1e-5)
-            print('ok')
+            print('-- GRADIENT OK! --', i)
+        else:
+            return
 
         #dynamite.dump_graph(crit, skip_free=True)
         #exit()
@@ -224,9 +226,9 @@ def train(debug_output=False):
                 #exit()
                 # Dense.W fails when not using batching; but is OK without batching, so some gradient is just wrong
                 assert np.allclose(p_data, dp_data, atol=1e-5)
-                if dpname == "_[1].step_function.W":
-                    dynamite.dump_graph(dp, skip_free=True)
-                    exit()
+                #if dpname == "_[1].step_function.W":
+                #    dynamite.dump_graph(dp, skip_free=True)
+                #    exit()
 
             # model update from dynamic
             param_map = { p: dgradients[parameter_map[p]].get_value() for p in model.parameters }
