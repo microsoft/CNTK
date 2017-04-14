@@ -935,13 +935,24 @@ def create_gradient_graph(root, parameters, error_signal):
     if id(root) not in active_set:
         # root not depending on any parameter (gradient is 0; we could just return 0 for those cases, but it's likely an error)
         raise ValueError('grad_times: variable does not depend on any of the given parameters')
+    # function to create the actual aggregation operation for each gradient
+    def create_aggregate(args): # list[Variable] -> Variable:
+        g = Variable(args[0].shape, Variable._op_aggregate, tuple(reversed(args)))
+        # single aggregate should be short-circuited
+        #if len(g.inputs) == 1:
+        #    g.replace_with(g.inputs[0])
+        #    return
+        # all args are _place_item
+        #if all(inp.op is Variable._op_place_item for inp in g.inputs):
+        #    pass
+        return g
     # now build the graph backwards
     # This is the error backpropagation algorithm in 12 lines of Python.
-    gradients = dict() # [node] -> node's gradient := error_signal * droot/dnode
-    gradients[root] = Variable(root.shape, Variable._op_aggregate, (error_signal,))
+    gradients = dict() # [node] -> list(node's incoming gradients) := error_signal * droot/dnode
+    gradients[root] = [error_signal]
     g_used = set() # (sanity check only)
     for node in filter(lambda node: id(node) in active_set, reversed(nodes)):
-        g = gradients[node]
+        g = create_aggregate(gradients[node])
         g_used.add(id(node))
         # backprop into each child
         for i, input in enumerate(node.inputs):
@@ -954,19 +965,16 @@ def create_gradient_graph(root, parameters, error_signal):
                     print('gradient shape', input_g.shape, "came back different from input's shape", input.shape, 'for input', i, 'of op', node.signature_as_string())
                 assert input.shape == input_g.shape
                 if input not in gradients:
-                    gradients[input] = Variable(input.shape, Variable._op_aggregate, (input_g,))
+                    gradients[input] = [input_g]
                 else:
                     assert id(input) not in g_used # ensure traversal order is correct (it really should!)
                     # BUGBUG: we must collate dyadic matrix aggregations into a single matmul (or can we rely on batching in forward?)
                     # --> an aggregate operator, which inspects the input; should also separate different kinds of ops it seems,
                     #     so maybe when use use a gradient, just call the transform function on it?
-                    input_g_aggregate = gradients[input]
-                    input_g_aggregate.inputs = (input_g,) + input_g_aggregate.inputs  # note: these are tuples, so this will be N^2 effort; better use a list
-                    assert input_g_aggregate.shape == input_g.shape
-                    assert input_g_aggregate.shape == input.shape
+                    gradients[input].append(input_g)
     #print(len(active_set), len(nodes), len(gradients))
     # gather the results
-    res = { p: gradients[p] for p in parameters } # if a parameter does not feed root, then there will be no gradient, we will fail here
+    res = { p: create_aggregate(gradients[p]) for p in parameters } # if a parameter does not feed root, then there will be no gradient, we will fail here
     # test computing the value of a gradient  --remove this later
     #for p, g in res.items():
     #    g.get_value()

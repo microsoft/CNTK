@@ -193,7 +193,7 @@ def train(debug_output=False):
         if expected_losses: # test
             loss_ex, *expected_losses = expected_losses
             assert np.allclose(loss, loss_ex, atol=1e-5)
-            print('-- GRADIENT OK! --', i)
+            print('# OK', i)
         else:
             return
 
@@ -226,6 +226,7 @@ def train(debug_output=False):
                 #exit()
                 # Dense.W fails when not using batching; but is OK without batching, so some gradient is just wrong
                 assert np.allclose(p_data, dp_data, atol=1e-5)
+                print('## OK', i, dpname)
                 #if dpname == "_[1].step_function.W":
                 #    dynamite.dump_graph(dp, skip_free=True)
                 #    exit()
