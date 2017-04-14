@@ -199,8 +199,6 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
 def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
                     init, init_bias,
                     enable_self_stabilization,
-                    init_W = glorot_uniform(),
-                    init_H = glorot_uniform(),
                     name=''):
     '''
     Helper to create a recurrent block of type 'LSTM', 'GRU', or RNNUnit.
@@ -234,8 +232,8 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 
     # parameters
     b  = Parameter(            cell_shape_stacked,   init=init_bias, name='b')                              # bias
-    W  = Parameter(_INFERRED + cell_shape_stacked,   init=init_W,    name='W')                              # input
-    H  = Parameter(shape     + cell_shape_stacked_H, init=init_H,    name='H')                              # hidden-to-hidden
+    W  = Parameter(_INFERRED + cell_shape_stacked,   init=init,      name='W')                              # input
+    H  = Parameter(shape     + cell_shape_stacked_H, init=init,      name='H')                              # hidden-to-hidden
     H1 = Parameter(shape     + cell_shape,           init=init,      name='H1') if type == 'GRU' else None  # hidden-to-hidden
     Ci = Parameter(            cell_shape,           init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
     Cf = Parameter(            cell_shape,           init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
@@ -282,7 +280,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         # TODO: should both activations be replaced?
         bit = it * activation (bit_proj)              # applied to tanh of input network
 
-        ft = sigmoid (peep (ft_proj, dcs, Cf) + 1)    # forget-me-not gate(t)
+        ft = sigmoid (peep (ft_proj, dcs, Cf))        # forget-me-not gate(t)
         bft = ft * dc                                 # applied to cell(t-1)
 
         ct = bft + bit                                # c(t) is sum of both
@@ -357,7 +355,6 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 
 def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peepholes=default_override_or(False),
          init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
-         init_W=default_override_or(glorot_uniform()), init_H=default_override_or(glorot_uniform()),
          enable_self_stabilization=default_override_or(False),
          name=''):
     '''
@@ -396,7 +393,7 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
     enable_self_stabilization = get_default_override(LSTM, enable_self_stabilization=enable_self_stabilization)
 
     return _RecurrentBlock('LSTM', shape, cell_shape, activation=activation, use_peepholes=use_peepholes,
-                           init=init, init_bias=init_bias, init_W=init_W, init_H=init_H,
+                           init=init, init_bias=init_bias,
                            enable_self_stabilization=enable_self_stabilization, name=name)
 
 
