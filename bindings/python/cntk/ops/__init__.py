@@ -2796,7 +2796,10 @@ def stop_gradient(input, name=''):
 @typemap
 def assign(ref, input, name=''):
     '''
-    Assign the value in input to ref, ref need to be the same layout as input.
+    Assign the value in input to ref and return the new value, ref need to be the same layout as input.
+    During forward pass, ref will get the new value after the forward pass finish, so that any part of
+    the graph that depend on ref will get the old value. To get the new value, use the one returned by 
+    the assign node. The reason for that is to make ``assign`` have a deterministic behavior.
 
     Example:
         >>> dest = C.constant(shape=(3,4))
@@ -2810,8 +2813,30 @@ def assign(ref, input, name=''):
                [ 2.,  2.,  2.,  2.],
                [ 2.,  2.,  2.,  2.]], dtype=float32)
 
+        >>> dest = C.parameter(shape=(3,4), init=0)
+        >>> a = C.assign(dest, data)
+        >>> y = dest + data
+        >>> result = C.combine([y, a]).eval()
+        >>> result[y.output]
+        array([[ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.]], dtype=float32)
+        >>> dest.asarray()
+        array([[ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.]], dtype=float32)
+        >>> result = C.combine([y, a]).eval()
+        >>> result[y.output]
+        array([[ 4.,  4.,  4.,  4.],
+               [ 4.,  4.,  4.,  4.],
+               [ 4.,  4.,  4.,  4.]], dtype=float32)
+        >>> dest.asarray()
+        array([[ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.]], dtype=float32)
+
     Args:
-        ref: class: `~cntk.variables.Constant` or `~cntk.variables.Parameter` with needs_gradient=False.
+        ref: class: `~cntk.variables.Constant` or `~cntk.variables.Parameter`.
         input: class:`~cntk.ops.functions.Function` that outputs a tensor
         name (str, optional): the name of the Function instance in the network
     Returns:

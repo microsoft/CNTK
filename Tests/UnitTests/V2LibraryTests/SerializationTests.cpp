@@ -330,7 +330,8 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::ELU) == 65 &&
                   static_cast<size_t>(PrimitiveOpType::ForwardBackward) == 66 &&
                   static_cast<size_t>(PrimitiveOpType::CosDistanceWithNegativeSamples) == 67 &&
-                  static_cast<size_t>(PrimitiveOpType::OneHot) == 68,
+                  static_cast<size_t>(PrimitiveOpType::OneHot) == 68 &&
+                  static_cast<size_t>(PrimitiveOpType::Assign) == 69,
                   "PrimitiveOpType enum value was modified.");
 }
 
