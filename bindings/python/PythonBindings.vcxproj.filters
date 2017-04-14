@@ -356,5 +356,8 @@
     <None Include="cntk\ops\tests\stop_gradient_test.py">
       <Filter>cntk\ops\tests</Filter>
     </None>
+    <None Include="cntk\io\transforms.py">
+      <Filter>cntk\io</Filter>
+    </None>
   </ItemGroup>
 </Project>

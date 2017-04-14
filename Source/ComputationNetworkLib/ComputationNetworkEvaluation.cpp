@@ -701,7 +701,7 @@ void ComputationNetwork::ValidateNetwork()
             RuntimeError("%ls operation has 0 elements", node->NodeName().c_str());
     }
     if (TraceLevel() > 0)
-    fprintf(stderr, "\n\n");
+        fprintf(stderr, "\n\n");
 
     // logging the non-default-layout nodes
     vector<ComputationNodeBasePtr> nonDefaultNodes;
