@@ -166,9 +166,6 @@ namespace CNTK
                              std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
                              const DeviceDescriptor& computeDevice)
     {
-        if (!this->IsComposite())
-            LogicError("Function '%S': Currently 'Gradients' method is only supported for composite Functions.", AsString().c_str());
-
         auto gradientRoot = Output();
         Gradients(arguments, gradientRoot, gradients, outputsToEvaluate, computeDevice);
     }
