@@ -752,6 +752,9 @@ namespace CNTK
             case PrimitiveOpType::LogPlus:
                 computationNodePtr = New<LogPlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
+            case PrimitiveOpType::Pow:
+                computationNodePtr = New<PowNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
             case PrimitiveOpType::Minus:
                 computationNodePtr = New<MinusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;

@@ -159,6 +159,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Minus;
 %ignore_function CNTK::operator-;
 %ignore_function CNTK::LogAddExp;
+%ignore_function CNTK::Pow;
 %ignore_function CNTK::ElementTimes;
 %ignore_function CNTK::ElementDivide;
 %ignore_function CNTK::Equal;
