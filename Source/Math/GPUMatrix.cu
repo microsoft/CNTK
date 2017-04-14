@@ -220,6 +220,9 @@ void TracingGPUMemoryAllocator::Free(int deviceId, AllocatedElemType* bufferPtr,
     }
 }
 
+// Computes the smallest multiple of k greater or equal to n
+static inline size_t asMultipleOf(size_t n, size_t k) { return n + n % k;  }
+
 template <typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::AllocateNoTrace(int deviceId, size_t numElements)
 {
@@ -229,7 +232,7 @@ AllocatedElemType* TracingGPUMemoryAllocator::AllocateNoTrace(int deviceId, size
     // In case numElements is odd we allocate a buffer with one more element. The reason is 
     // we might call curandGenerateNormal (e.g. for Gaussian noise injection) which would fail
     // if the number of elements it needs to generate is odd.
-    CUDA_CALL(cudaMalloc((void**) &deviceBufferPtr, sizeof(AllocatedElemType) * (numElements + (numElements % 2))));
+    CUDA_CALL(cudaMalloc((void**) &deviceBufferPtr, sizeof(AllocatedElemType) * asMultipleOf(numElements, 2)));
 
     return deviceBufferPtr;
 }
@@ -1332,8 +1335,7 @@ void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
 
     // curandGenerateNormal can return the error CURAND_STATUS_LENGTH_NOT_MULTIPLE if GetNumElements() is odd.
     // To avoid this we always allocate a buffer of even size and potentially generate one more random element.
-    auto n = GetNumElements();
-    n += n % 2;
+    auto n = asMultipleOf(GetNumElements(), 2);
     if (sizeof(ElemType) == sizeof(float))
         CURAND_CALL(curandGenerateNormal(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(Data()), n, (float) mean, (float) sigma));
     else
