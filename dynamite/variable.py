@@ -937,15 +937,20 @@ def create_gradient_graph(root, parameters, error_signal):
         raise ValueError('grad_times: variable does not depend on any of the given parameters')
     # function to create the actual aggregation operation for each gradient
     def create_aggregate(args): # list[Variable] -> Variable:
-        g = Variable(args[0].shape, Variable._op_aggregate, tuple(reversed(args)))
-        # single aggregate should be short-circuited
-        #if len(g.inputs) == 1:
-        #    g.replace_with(g.inputs[0])
-        #    return
+        # BUGBUG: we must collate dyadic matrix aggregations into a single matmul (or can we rely on batching in forward?)
+        # --> an aggregate operator, which inspects the input; should also separate different kinds of ops it seems,
+        #     so maybe when use use a gradient, just call the transform function on it?
+        # short-circuit singleton aggregate
+        if len(args) == 1:
+            return args[0]
         # all args are _place_item
-        #if all(inp.op is Variable._op_place_item for inp in g.inputs):
-        #    pass
-        return g
+        if all(inp.op is Variable._op_place_item for inp in g.inputs):
+            # we must make sure that all input slices are filled exactly once; then this is a splice operation
+            pass
+        # nothing to optimize: generate _op_aggregate
+        # TODO: can this be done via splice()? Will require an extra mem copy.
+        #        Or maybe just discover consecutive _place_item calls?
+        return Variable(args[0].shape, Variable._op_aggregate, tuple(reversed(args)))
     # now build the graph backwards
     # This is the error backpropagation algorithm in 12 lines of Python.
     gradients = dict() # [node] -> list(node's incoming gradients) := error_signal * droot/dnode
@@ -968,16 +973,9 @@ def create_gradient_graph(root, parameters, error_signal):
                     gradients[input] = [input_g]
                 else:
                     assert id(input) not in g_used # ensure traversal order is correct (it really should!)
-                    # BUGBUG: we must collate dyadic matrix aggregations into a single matmul (or can we rely on batching in forward?)
-                    # --> an aggregate operator, which inspects the input; should also separate different kinds of ops it seems,
-                    #     so maybe when use use a gradient, just call the transform function on it?
                     gradients[input].append(input_g)
-    #print(len(active_set), len(nodes), len(gradients))
     # gather the results
     res = { p: create_aggregate(gradients[p]) for p in parameters } # if a parameter does not feed root, then there will be no gradient, we will fail here
-    # test computing the value of a gradient  --remove this later
-    #for p, g in res.items():
-    #    g.get_value()
     return res
 
 def dump_graph(vars, skip_free=False): # vars can be a Variable or an iterable of Variables
