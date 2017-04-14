@@ -1072,7 +1072,7 @@ def map_batch(f, batch_args):
 
 def train_minibatch(criterion, *batch_args):
     # for now, manually do the batch loop
-    print('batch of', len(batch_args[0]))
+    print('\n-------------------- batch of', len(batch_args[0]), '--------------------\n')
     # perform the parallel map
     crits = map_batch(criterion, batch_args)
     crits = tuple(crit[0] for crit in crits) # pick out first item as criterion --TODO: generalize this
