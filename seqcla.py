@@ -193,6 +193,7 @@ def train(debug_output=False):
         if expected_losses: # test
             loss_ex, *expected_losses = expected_losses
             assert np.allclose(loss, loss_ex, atol=1e-5)
+            print('ok')
 
         #dynamite.dump_graph(crit, skip_free=True)
         # compute gradients
@@ -203,7 +204,7 @@ def train(debug_output=False):
         #    g = dgradients[p].get_value()
             #print(g.to_ndarray())
 
-        if False:
+        if True:
             # CNTK static, manual fw/bw/update
             grads = combine([criterion.outputs[0]]).grad(at=criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]), wrt=model.parameters, as_numpy=False)
             for p in model.parameters:

@@ -932,16 +932,11 @@ def create_gradient_graph(root, parameters, error_signal):
         raise ValueError('grad_times: variable does not depend on any of the given parameters')
     # now build the graph backwards
     # This is the error backpropagation algorithm in 12 lines of Python.
-    gradients = dict() # [node] -> node's gradient; that is, error_signal * droot/dnode
-    gradients[root] = error_signal
+    gradients = dict() # [node] -> (node's gradient, arg count); gradient := error_signal * droot/dnode
+    gradients[root] = (error_signal, 1)
     g_used = set() # (sanity check only)
-    def optimize_aggregate_in_place(v):
-        if v.op == Variable._op_aggregate:
-            if len(v.inputs) == 1:
-                v.replace_with(v.inputs[0])
-        return v
     for node in filter(lambda node: id(node) in active_set, reversed(nodes)):
-        g = optimize_aggregate_in_place(gradients[node])
+        g, _ = gradients[node]
         g_used.add(id(node))
         # backprop into each child
         for i, input in enumerate(node.inputs):
@@ -954,21 +949,27 @@ def create_gradient_graph(root, parameters, error_signal):
                     print('gradient shape', input_g.shape, "came back different from input's shape", input.shape, 'for input', i, 'of op', node.signature_as_string())
                 assert input.shape == input_g.shape
                 if input not in gradients:
-                    gradients[input] = Variable(input.shape, Variable._op_aggregate, (input_g,))
+                    gradients[input] = (input_g, 1) # the "1" means we got only one (no aggregate needed as of now; this may change later)
                 else:
                     assert id(input) not in g_used # ensure traversal order is correct (it really should!)
                     # BUGBUG: we must collate dyadic matrix aggregations into a single matmul (or can we rely on batching in forward?)
                     # --> an aggregate operator, which inspects the input; should also separate different kinds of ops it seems,
                     #     so maybe when use use a gradient, just call the transform function on it?
-                    input_g_aggregate = gradients[input]
-                    assert input_g_aggregate.op is Variable._op_aggregate
-                    input_g_aggregate.inputs += (input_g,)  # note: these are tuples, so this will be N^2 effort; better use a list
-                    if input_g_aggregate.shape !=  input_g.shape: # some are broadcasting
-                        input_g_aggregate.shape = elementwise_shape(input_g_aggregate.shape, input_g.shape)
-                    #gradients[input] = gradients[input] + input_g  # TODO: change back to +=
+                    input_g_aggregate, count = gradients[input]
+                    assert count == 1 or input_g_aggregate.op is Variable._op_aggregate
+                    if count == 1: # we got more than one incoming gradient: must upgrade to an aggregation
+                        #input_g_aggregate = Variable(input.shape, Variable._op_aggregate, (input_g_aggregate, input_g))
+                        input_g_aggregate = Variable(input.shape, Variable._op_aggregate, (input_g, input_g_aggregate))
+                    else:
+                        #input_g_aggregate.inputs = input_g_aggregate.inputs + (input_g,)  # note: these are tuples, so this will be N^2 effort; better use a list
+                        input_g_aggregate.inputs = (input_g,) + input_g_aggregate.inputs  # note: these are tuples, so this will be N^2 effort; better use a list
+                    gradients[input] = (input_g_aggregate, count + 1)
+                    assert len(input_g_aggregate.inputs) == count + 1
+                    assert input_g_aggregate.shape == input_g.shape
+                    assert input_g_aggregate.shape == input.shape
     #print(len(active_set), len(nodes), len(gradients))
     # gather the results
-    res = { p: optimize_aggregate_in_place(gradients[p]) for p in parameters } # if a parameter does not feed root, then there will be no gradient, we will fail here
+    res = { p: gradients[p][0] for p in parameters } # if a parameter does not feed root, then there will be no gradient, we will fail here
     # test computing the value of a gradient  --remove this later
     #for p, g in res.items():
     #    g.get_value()
