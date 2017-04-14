@@ -210,6 +210,9 @@ namespace CNTK
                              : Learner(parameters, learningRateSchedule),
                              m_additionalOptions(additionalOptions)
     {
+        if (parameters.empty())
+            InvalidArgument("The parameters list specified to a Learner must not be empty.");
+
         std::unordered_set<Parameter> uniqueParameters(parameters.begin(), parameters.end());
 
         if (uniqueParameters.size() != parameters.size())
