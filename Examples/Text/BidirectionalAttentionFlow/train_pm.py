@@ -101,6 +101,8 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
                             log_to_file = log_file,
                             rank = C.Communicator.rank(),
                             gen_heartbeat = False)]
+                            
+    C.set_default_use_mean_gradient_value(True)
 
     lr = C.learning_rate_schedule(training_config['lr'], unit=C.learners.UnitType.sample)
     learner = C.adadelta(z.parameters, lr)

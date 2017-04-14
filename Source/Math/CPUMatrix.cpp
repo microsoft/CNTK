@@ -1415,9 +1415,10 @@ void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<Ele
         ElemType g = grad[i];
         ElemType adaSqr = rho * smoothAda[i] + (1 - rho) * g * g;
         smoothAda[i] = adaSqr;
-        ElemType x2 = smoothX2[i];
+        ElemType& x2 = smoothX2[i];
         ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
-        smoothX2[i] = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
+        x2 = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
+        deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g; // following tensorflow to calculate X again
         val[i] += learningRate * deltaX;
     }
 }
