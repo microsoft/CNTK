@@ -77,6 +77,8 @@ def _inject_name(f, name):
     Call this at the end of any layer or block that takes an optional name argument.
     '''
     if name:
+        if not isinstance(f, Function):
+            f = Function(f)
         if len(f.outputs) == 1:
             f = alias(f, name=name)
         else:
