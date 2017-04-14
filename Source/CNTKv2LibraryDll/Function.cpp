@@ -1717,7 +1717,7 @@ namespace CNTK
             auto operandPlaceholder = PlaceholderVariable(L"operand");
 
             auto p = PlaceholderLike(operand);
-            auto minusInf = Constant(operand.Shape(), -std::numeric_limits<float>::infinity());
+            auto minusInf = Constant::Scalar(operand.GetDataType(), -std::numeric_limits<float>::infinity());
             auto nextP = FutureValue(p, minusInf);
             auto gt = Greater(operandPlaceholder, nextP);
             auto runningMax = ElementSelect(gt, operandPlaceholder, nextP);
@@ -1730,7 +1730,7 @@ namespace CNTK
             auto operandPlaceholder = PlaceholderVariable(L"operand");
 
             auto p = PlaceholderLike(operand);
-            auto minusInf = Constant(operand.Shape(), -std::numeric_limits<float>::infinity());
+            auto minusInf = Constant::Scalar(operand.GetDataType(), -std::numeric_limits<float>::infinity());
             auto runningLogSumExp = LogAddExp(operandPlaceholder, PastValue(p, minusInf));
             runningLogSumExp->ReplacePlaceholders({ { p, runningLogSumExp } });
             auto logZ = BroadcastAs(Sequence::Last(runningLogSumExp), operandPlaceholder);
