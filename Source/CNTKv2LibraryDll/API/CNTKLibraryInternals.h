@@ -212,6 +212,13 @@ namespace CNTK
     class Accumulator;
     typedef std::shared_ptr<Accumulator> AccumulatorPtr;
 
+    class UserFunctionFactory;
+    typedef std::shared_ptr<UserFunctionFactory> UserFunctionFactoryPtr;
+
+    class PackedValue;
+    typedef std::shared_ptr<PackedValue> PackedValuePtr;
+    typedef std::weak_ptr<PackedValue> PackedValueWeakPtr;
+
     struct MinibatchSourceConfig;
 
     namespace Internal

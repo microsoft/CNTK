@@ -55,14 +55,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="SwigProxyClasses\Axis.cs" />
     <Compile Include="SwigProxyClasses\AxisVector.cs" />
     <Compile Include="SwigProxyClasses\BoolVector.cs" />
-    <Compile Include="SwigProxyClasses\TraceLevel.cs" />
-    <Compile Include="SwigProxyClasses\Utils.cs" />
-    <Compile Include="SwigProxyClasses\UtilsPINVOKE.cs" />
+    <Compile Include="SwigProxyClasses\CNTKLib.cs" />
+    <Compile Include="SwigProxyClasses\CNTKLibPINVOKE.cs" />
     <Compile Include="SwigProxyClasses\DataType.cs" />
     <Compile Include="SwigProxyClasses\DeviceDescriptor.cs" />
     <Compile Include="SwigProxyClasses\DeviceDescriptorVector.cs" />
@@ -81,6 +81,7 @@
     <Compile Include="SwigProxyClasses\SizeTVector.cs" />
     <Compile Include="SwigProxyClasses\SizeTVectorVector.cs" />
     <Compile Include="SwigProxyClasses\StorageFormat.cs" />
+    <Compile Include="SwigProxyClasses\TraceLevel.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapVariableValuePtr.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapVariableVariable.cs" />
     <Compile Include="SwigProxyClasses\Value.cs" />

@@ -571,29 +571,33 @@ def reduce_sum(seq, name=''):
     return sequence_reduce_sum(seq, name)
 
 @typemap
-def reduce_max(x, name=''):
-  """
-  Get the max value in the sequence values
+def reduce_max(seq, name=''):
+    '''
+    Computes the max of the input sequence's elements across the sequence axis.
 
-  Args:
-    x: input sequence
-    name: the name of the operator
-  Returns:
-    The max value in the input sequence
-  """
-  from ...ops import element_select, placeholder, greater 
-  m = placeholder(shape=(1,), dynamic_axes = x.dynamic_axes, name='max')
-  o = element_select(greater(x, future_value(m)), x, future_value(m))
-  rlt = o.replace_placeholders({m:sanitize_input(o)})
-  max_out = first(rlt) 
-  return sanitize_input(max_out)
+    Args:
+        seq: sequence input tensor
+        name (`str`, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sequence_reduce_max
+    seq = sanitize_input(seq, get_data_type(seq))
+    return sequence_reduce_max(seq, name)
 
 @typemap
-def softmax(x, name = ''):
-  """
-  Compute softmax along with a squence values
-  """
-  from ...ops import element_divide, exp 
-  x_exp = exp((x-broadcast_as(reduce_max(x), x))*10)
-  x_softmax = element_divide(x_exp, broadcast_as(reduce_sum(x_exp), x), name = name)
-  return x_softmax
+def softmax(seq, name = ''):
+    '''
+    Computes the softmax of the input across the sequence axis.
+
+    Args:
+        seq: sequence input tensor
+        name (`str`, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sequence_softmax
+    seq = sanitize_input(seq, get_data_type(seq))
+    return sequence_softmax(seq, name)
