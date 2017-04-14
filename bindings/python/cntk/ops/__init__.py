@@ -1702,7 +1702,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     Example:
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
         >>> from cntk.layers.typing import Tensor, Sequence
-        >>> x = input(**Sequence[Tensor[3,2]])
+        >>> x = input(Sequence[Tensor[3,2]])
         >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
         >>> x0
         array([[[[  0.,   1.],
@@ -1741,7 +1741,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
                  [ 16.,  17.]]], dtype=float32)]
 
         >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
-        >>> s = input(**Tensor[3,2])  # not a Sequence[], e.g. a final encoder hidden state
+        >>> s = input(Tensor[3,2])  # not a Sequence[], e.g. a final encoder hidden state
         >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,1,3,2))
         >>> s0
         array([[[[ 0. ,  0.5],
