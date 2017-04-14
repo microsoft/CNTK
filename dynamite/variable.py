@@ -257,6 +257,18 @@ class Variable:
                 res += args[i] # aggregate
         return res
 
+    @staticmethod
+    def _op_aggregate_place_items(*args, shape=None, keys=None, out=None):
+        if out:
+            assert shape == out.shape
+            res = out
+        else:
+            res = cntk.NDArrayView(shape)  # create a zero of the right size
+        res -= res  # zero it out (can we use .setvalue?)
+        for key, arg in zip(keys, args):
+            res[key] += arg         # backprop the slice there
+        return res
+
     # ------------------------------------------------------------------------
     # operator overloads (infix ops)
     # ------------------------------------------------------------------------
@@ -287,6 +299,7 @@ class Variable:
     # slicing, splicing, reshaping
     # ------------------------------------------------------------------------
 
+    @staticmethod
     def _op_place_item(input, g, key, out=None): # computation of gradient of __getitem__(); BUGBUG: highly inefficient
         # BUGBUG: Cannot back-prop into a huge matrix I just sliced from; needs in-place semantics!!!
         if out:
@@ -790,17 +803,21 @@ def transform_to_batched_ops(vars):
                 return (False, p.op, (p.inputs[0].shape, id(p.inputs[1])))
             # batch if both op and input shapes are the same
             # Python slices are not hashable
+            def make_hashable(arg):
+                return tuple(make_hashable(arg1) for arg1 in arg) if isinstance(arg, tuple) else \
+                       str(arg)                                   if isinstance(arg, slice) else \
+                       arg
             additional_args_sanitized = p.additional_args
-            additional_args_sanitized = tuple(
-                arg if not isinstance(arg, slice) else str(arg)
-                for arg in additional_args_sanitized
-            )
+            additional_args_sanitized = tuple(make_hashable(arg) for arg in additional_args_sanitized)
             # Python dicts are not hashable, so make additional_kwargs into a tuple if given (yuk)
             additional_kwargs_tuplified = p.additional_kwargs
             if additional_kwargs_tuplified:
-                additional_kwargs_tuplified = tuple((arg_name, additional_kwargs_tuplified[arg_name]) for arg_name in sorted(additional_kwargs_tuplified.keys()))
+                additional_kwargs_tuplified = tuple(
+                    (arg_name, make_hashable(additional_kwargs_tuplified[arg_name])) for arg_name in sorted(additional_kwargs_tuplified.keys())
+                )
             return (False, p.op, additional_args_sanitized, additional_kwargs_tuplified, tuple(v.shape for v in p.inputs))
         p.key = make_key(p)
+        s = { p.key } # verify that it is hashable
         # TODO: must also include the storage format in the key; do this in C++ version
         p.consumers = []
         p.non_ready_inputs = 0
@@ -856,7 +873,7 @@ ops_with_out = { cntk.NDArrayView.__add__, cntk.NDArrayView.__sub__, cntk.NDArra
     cntk.NDArrayView.dot, cntk.NDArrayView.dot_transpose, cntk.NDArrayView.transpose_dot,
     cntk.NDArrayView.sigmoid, cntk.NDArrayView.tanh, cntk.NDArrayView.relu, cntk.NDArrayView.exp,
     cntk.NDArrayView.reduce_sum, cntk.NDArrayView.reduce_log_sum, cntk.NDArrayView.splice,
-    Variable._op_aggregate, Variable._op_place_item
+    Variable._op_aggregate, Variable._op_aggregate_place_items, Variable._op_place_item
 }
 def evaluate_graph(vars):
     # transform the graph from raw (individual batch items) to the batched graph
@@ -943,14 +960,28 @@ def create_gradient_graph(root, parameters, error_signal):
         # short-circuit singleton aggregate
         if len(args) == 1:
             return args[0]
-        # all args are _place_item
-        if all(inp.op is Variable._op_place_item for inp in g.inputs):
+        shape = args[0].shape
+        args = list(reversed(args)) # we traversed backwards; undo that
+        # split args into different types that we deal with separately
+        place_item_args = [arg for arg in args if arg.op is Variable._op_place_item]
+        # ...other special kinds, e.g. matrix products
+        other_args =      [arg for arg in args if arg.op is not Variable._op_place_item] # all others
+        assert len(place_item_args) + len(other_args) == len(args) # check that we got them all
+        # deal with _place_item()
+        if place_item_args:
             # we must make sure that all input slices are filled exactly once; then this is a splice operation
-            pass
-        # nothing to optimize: generate _op_aggregate
-        # TODO: can this be done via splice()? Will require an extra mem copy.
-        #        Or maybe just discover consecutive _place_item calls?
-        return Variable(args[0].shape, Variable._op_aggregate, tuple(reversed(args)))
+            place_item_args = [Variable(shape, Variable._op_aggregate_place_items,
+                                        tuple(arg.inputs[1] for arg in place_item_args), # (input[0] is the self-reference to the node to get its shape)
+                                        additional_kwargs=as_kwargs(shape=shape, keys=tuple(arg.additional_args for arg in place_item_args)))]
+        # ...deal with other special kinds
+        # _op_aggregate in the end
+        args = place_item_args + other_args
+        if len(args) == 1:
+            return args[0]
+        elif len(args) == 2:
+            return args[0] + args[1]
+        else:
+            return Variable(shape, Variable._op_aggregate, tuple(args))
     # now build the graph backwards
     # This is the error backpropagation algorithm in 12 lines of Python.
     gradients = dict() # [node] -> list(node's incoming gradients) := error_signal * droot/dnode

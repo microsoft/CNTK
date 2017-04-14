@@ -243,6 +243,7 @@ def train(debug_output=False):
             progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
             end = time.time()
             log_time(end-start)
+        #args = None # deref; seems sometimes needed in case an error is thrown in the middle
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     import copy
