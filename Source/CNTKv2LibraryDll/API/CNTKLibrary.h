@@ -3949,6 +3949,10 @@ namespace CNTK
         ///
         CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name = L"");
 
+        CNTK_API FunctionPtr ReduceMax(const Variable& operand, const std::wstring& name = L"");
+
+        CNTK_API FunctionPtr Softmax(const Variable& operand, const std::wstring& name = L"");
+
         CNTK_API FunctionPtr First(const Variable& operand, const std::wstring& name = L"");
         CNTK_API FunctionPtr Last(const Variable& operand, const std::wstring& name = L"");
 
