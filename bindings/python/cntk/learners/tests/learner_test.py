@@ -104,6 +104,16 @@ def test_learner_init():
     lr_per_sample = learning_rate_schedule([0.1, 0.2], UnitType.sample, 100)
     rmsprop(res.parameters, lr_per_sample, gamma, inc, dec, max, min, True)
 
+    set_default_use_mean_gradient_value(False)
+    use_mean_gradient_value = default_use_mean_gradient_value()
+    assert not use_mean_gradient_value
+
+    adadelta(res.parameters, lr_per_sample)
+    
+    set_default_use_mean_gradient_value(True)
+    use_mean_gradient_value = default_use_mean_gradient_value()
+    assert use_mean_gradient_value
+
     adadelta(res.parameters, lr_per_sample)
 
 def test_learner_update():

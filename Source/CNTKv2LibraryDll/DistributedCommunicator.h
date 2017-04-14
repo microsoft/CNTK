@@ -8,6 +8,7 @@
 #include "CNTKLibrary.h"
 #include "Constants.h"
 #include "NcclComm.h"
+#include "MPIWrapper.h"
 #include <MatrixQuantizerImpl.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -120,16 +121,22 @@ namespace CNTK
 
         Microsoft::MSR::CNTK::MPIWrapperPtr m_mpi;
 
+        bool ShouldCopyDataToCPU(NDArrayViewPtr inputValue);
+        void CopyDataFromGPUToCPU(std::vector<NDArrayViewPtr>& inputValues);
+
         template <typename ElemType>
-        std::unique_ptr<Microsoft::MSR::CNTK::Matrix<ElemType>> setContinousBuffer(std::vector<size_t>& packedGradientsIndex, size_t packedGradientsSizeInBytes,
+        std::unique_ptr<Microsoft::MSR::CNTK::Matrix<ElemType>> SetContinuousBuffer(std::vector<size_t>& packedGradientsIndex, size_t packedGradientsSizeInBytes,
             const std::vector<NDArrayViewPtr>& inputValues, const std::vector<NDArrayViewPtr>& outputValues,
             std::vector<NDArrayViewPtr>& valuesToAggregate, std::vector<NDArrayViewPtr>& valuesAfterAggregate);
 
         template <typename ElemType>
-        void packToContinousBuffer(Microsoft::MSR::CNTK::Matrix<ElemType>* aggregationBuffer, std::vector<size_t>& packedGradientsIndex,
+        void PackToContinuousBuffer(Microsoft::MSR::CNTK::Matrix<ElemType>* aggregationBuffer, std::vector<size_t>& packedGradientsIndex,
             const std::vector<NDArrayViewPtr>& inputValues, const std::vector<NDArrayViewPtr>& outputValues, std::vector<NDArrayViewPtr>& valuesToAggregate, std::vector<NDArrayViewPtr>& valuesAfterAggregate);
 
         template <typename ElemType>
-        void unpackFromContinousBuffer(Microsoft::MSR::CNTK::Matrix<ElemType>* aggregationBuffer, const std::vector<NDArrayViewPtr>& outputValues, std::vector<size_t>& packedGradientsIndex);
+        void UnpackFromContinuousBuffer(Microsoft::MSR::CNTK::Matrix<ElemType>* aggregationBuffer, const std::vector<NDArrayViewPtr>& outputValues, std::vector<size_t>& packedGradientsIndex);
+
+        template <typename ElemType>
+        void AllReduceGradients(ElemType* inputData, ElemType* outputData, size_t numElements, std::vector<MPI_Request> &allReduceRequests, bool dataOnCPU);
     };
 }
