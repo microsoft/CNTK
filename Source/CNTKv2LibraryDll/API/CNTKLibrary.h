@@ -2943,6 +2943,12 @@ namespace CNTK
                                 std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
                                 const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
+        CNTK_API void Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
+                                Variable& gradientRoot,
+                                std::unordered_map<Variable, ValuePtr>& gradients,
+                                std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
+                                const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
         ///
         /// Compute the gradients of the output of this Function, w.r.t. the specified input variables in 'gradients'
         /// at the specified 'arguments' values for the Function inputs
