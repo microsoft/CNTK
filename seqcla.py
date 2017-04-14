@@ -39,14 +39,14 @@ def from_cntk_mb(inputs: tuple, variables: tuple):
     def convert(self, var): # var is for reference to know the axis
         data = self.data
         # unpack MBLayout
-        sequences, _ = data.unpack_variable_value(var, True, data.device())
+        sequences, _ = data.unpack_variable_value(var, True, data.device)
         # turn into correct NDArrayView types
         has_axis = len(var.dynamic_axes) > 1
         def fix_up(data):
             data.__class__ = cntk.core.NDArrayView # data came in as base type
             shape = data.shape
             # map to dense if sparse for now, since we cannot batch sparse due to lack of CUDA kernel
-            if data.is_sparse():
+            if data.is_sparse:
                 global cached_eyes
                 dim = shape[1] # (BUGBUG: won't work for >1D sparse objects)
                 if dim not in cached_eyes:
@@ -81,8 +81,8 @@ def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
     return namespace.Sequential([
         namespace.Embedding(embedding_dim, name='embed'),
         namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu, name='rnn')),
-        namespace.identity,
-        #namespace.LogValues(),
+        #namespace.identity,
+        namespace.LogValues(),
         namespace.Dense(num_output_classes, name='dense')
     ])
 

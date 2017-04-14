@@ -130,7 +130,7 @@ def Map(map_function): # TODO: this has never been tested
 
 def Fold(step_function, initial_state=0):
     # TODO: promote initial_state right away to a Constant() if it is a constant, to avoid repeated conversions. Same for Recurrence().
-    #initial_state = to_Variable(initial_state)  # HACK
+    #initial_state = sanitize_input(initial_state)  # HACK
     @Model(step_function=step_function)
     def fold(x):
         s = initial_state  # state
@@ -140,7 +140,7 @@ def Fold(step_function, initial_state=0):
     return fold
 
 def Recurrence(step_function, initial_state=0):
-    #initial_state = to_Variable(initial_state)
+    #initial_state = sanitize_input(initial_state)
     @Model(step_function=step_function)
     def recurrence(x):
         s = initial_state  # state

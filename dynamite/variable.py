@@ -6,7 +6,7 @@ import collections
 # some global settings we can control from outside, e.g. for debugging
 class VariableGlobalConfig:
     use_batching = True
-    use_coroutines = False
+    use_coroutines = True
     enable_tracing = False
 
 # TODO: move to contrib/dynamite/variable.py ; import .tensor_ops
@@ -35,8 +35,11 @@ INFER = 0
 times_initializer = "(times_initializer)" # (dummy object only looked at by its object identity)
 
 # make sure something is a variable; numbers and Numpy arrays get converted here
-def to_Variable(x):
-    return x if isinstance(x, Variable) else Constant(x)
+# We also short-circuit aliases.
+def sanitize_input(x):
+    return Constant(x) if not isinstance(x, Variable) else \
+           x.inputs[0] if x.op is Variable._op_alias  else \
+           x
 
 # a little helper to pass 'additional_kwargs' easily
 def as_kwargs(**kwargs):
@@ -60,13 +63,12 @@ class Variable:
         v = object.__new__(cls)
         v.shape = shape
         v.op = op
-        v.inputs = tuple(to_Variable(input) for input in inputs)
+        v.inputs = tuple(sanitize_input(input) for input in inputs)
         v.backprop_to_functions = backprop_to_functions  # tuple of fun(v, g) -> g * dv/dinp_i
         v.additional_args   = additional_args
         v.additional_kwargs = additional_kwargs
         for inp in v.inputs:
             assert isinstance(inp, Variable)
-        # TODO: capture the gradient functions for all inputs that need gradients (we also need a flag for that)
         #v.needs_gradient = True
         v.computed = False
         v.generation_id = Variable.generation_counter # unique id, also useful for topo-sort
@@ -237,7 +239,7 @@ class Variable:
             raise NotImplementedError('backprop_to missing')
         return self.backprop_to_functions[i]
     def grad_times(self, set_of_params, error_signal=1):
-        error_signal = to_Variable(error_signal)
+        error_signal = sanitize_input(error_signal)
         return create_gradient_graph(self, set_of_params, error_signal)
 
     @staticmethod
@@ -246,7 +248,7 @@ class Variable:
         num_items = len(args)
         if num_items == 1:
             return arg0
-        res = out or cntk.NDArrayView(shape=arg0.shape, data_type=arg0.dtype, device=arg0.device()) # note: we may broadcast, so arg0.shape may be wrong; doesn't matter, we should have 'out' always anyway
+        res = out or cntk.NDArrayView(shape=arg0.shape, data_type=arg0.dtype, device=arg0.device) # note: we may broadcast, so arg0.shape may be wrong; doesn't matter, we should have 'out' always anyway
         for i in range(num_items):
             if i == 0:
                 res[:] = args[i] # assign
