@@ -1017,12 +1017,12 @@ template class StopGradientNode<double>;
 // AssignNode (RefInput, Input)
 // -----------------------------------------------------------------------
 template <class ElemType>
-class AssignNode : public BinaryElementWiseNode<ElemType>
+class AssignNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
 {
-    typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"Assign"; }
+
     shared_ptr<Matrix<ElemType>> m_result;
-    FrameRange m_fr;
 
 public:
     DeclareConstructorFromConfigWithNumInputs(AssignNode);
@@ -1031,40 +1031,38 @@ public:
     {
     }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void UpdateFunctionMBSize() override
+    {
+        m_result->Resize(Input(0)->Value());
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         SetRunPostForwardProp(true);
 
-        m_fr = fr;
-        auto result = ValueFor(fr);
-        auto refValue = InputRef(0).ValueFor(fr);
-        auto inputValue = InputRef(1).ValueFor(fr);
-
-        if (m_result == nullptr)
-            m_result = std::make_shared<Matrix<ElemType>>(refValue.GetNumRows(), refValue.GetNumCols(), refValue.GetDeviceId(), refValue.GetMatrixType(), refValue.GetFormat());
-        else if ((m_result->GetNumRows() != refValue.GetNumRows()) && (m_result->GetNumCols() != refValue.GetNumCols()))
-            m_result->Resize(m_result->GetNumRows(), refValue.GetNumCols());
+        auto& result = Value();
+        auto& inputValue = InputRef(1).Value();
 
         m_result->AssignValuesOf(inputValue);
         result.AssignValuesOf(inputValue);
     }
 
-    virtual void /*ComputationNode::*/ PostForwardProp() override
+    virtual void /*ComputationNodeNonLooping::*/ PostForwardProp() override
     {
         SetRunPostForwardProp(false);
 
-        auto refValue = InputRef(0).ValueFor(m_fr);
+        auto& refValue = InputRef(0).Value();
         refValue.AssignValuesOf(*m_result);
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // TODO: define the backprop behavior for the assign node.
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        Base::Validate(isFinalValidationPass);
+        ValidateBinaryZip(isFinalValidationPass, false);
 
         if (m_inputs.size() != 2)
             InvalidArgument("Assign operation requires two inputs instead of %d.", (int)m_inputs.size());
@@ -1072,6 +1070,23 @@ public:
         if (!Input(1)->GetSampleLayout().IsElementwiseCompatibleWith(Input(0)->GetSampleLayout()))
             InvalidArgument("AssignNode: All inputs should have same sample layout.");
     }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_result, matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_result, matrixPool);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 };
 
 template class AssignNode<float>;
