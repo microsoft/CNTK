@@ -79,7 +79,6 @@ ASYM_CONVOLUTION_DATA = [
 ]
 # this test handles convolution with asymmetric padding, in particular, with auto_padding is set to True
 # and the kernel shape is even
-@pytest.mark.skip(reason="Reference model takes too long to run causing timeout, needs further investigation")
 @pytest.mark.parametrize("input_size, conv_size, result", ASYM_CONVOLUTION_DATA)
 def test_asym_convolution(input_size, conv_size, result, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
