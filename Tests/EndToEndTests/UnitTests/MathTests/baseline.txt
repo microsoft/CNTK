@@ -523,7 +523,7 @@ Test module "MathTests" has passed with:
       2 assertions out of 2 passed
 
     Test case "GPUMatrixSuite/GPUSparseMatrixOneHot" has passed with:
-      2 assertions out of 2 passed
+      8 assertions out of 8 passed
 
     Test case "GPUMatrixSuite/MatrixDataSynchronization_DefaultBehaviorTestForConstructors" has passed with:
       15 assertions out of 15 passed

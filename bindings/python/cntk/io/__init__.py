@@ -9,7 +9,7 @@ from .. import cntk_py, Value
 from ..tensor import ArrayMixin
 from cntk.internal import typemap
 from cntk.device import use_default_device
-from enum import Enum, unique
+from cntk.logging import TraceLevel, get_trace_level
 
 import numpy as np
 import uuid
@@ -107,33 +107,14 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         '''
         Whether the data in this minibatch is sparse.
         '''
-        return self.data.is_sparse()
+        return self.data.is_sparse
 
     def __len__(self):
         return self.num_sequences
 
-@unique
-class TraceLevel(Enum):
-
-    Error = cntk_py.MinibatchSourceConfig.Error
-    Warning = cntk_py.MinibatchSourceConfig.Warning
-    Info = cntk_py.MinibatchSourceConfig.Info
-
-    def __eq__(self, other):
-        if isinstance(other, TraceLevel):
-            return self.value == other.value
-        return self.value == other
-
-    def __ne__(self, other):
-        return not (self == other)
-
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
-    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT,
-        randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, 
-        trace_level=cntk.io.TraceLevel.Warning, multithreaded_deserializer=False, frame_mode=False,
-        truncation_length=0, randomize=None, randomization_window=None, sample_based_randomization_window=None,
-        epoch_size=None)
+    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=False, frame_mode=False, truncation_length=0, randomize=None, randomization_window=None, sample_based_randomization_window=None, epoch_size=None)
 
     Args:
         deserializers (a single deserializer or a `list`): deserializers to be used in the composite reader
@@ -142,7 +123,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
           returns empty minibatches on subsequent calls to GetNextMinibatch(). `max_samples` and `max_sweeps`
           are mutually exclusive, an exception will be raised if both have non-default values.
           **Important:** 
-          `See <https://github.com/Microsoft/CNTK/wiki/BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`__ 
+          Click :cntkwiki:`here <BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`
           for a description of input and label samples.
         max_sweeps (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of of sweeps over 
           the input dataset After this number has been reached, the reader returns empty minibatches on 
@@ -156,8 +137,8 @@ class MinibatchSource(cntk_py.MinibatchSource):
           non-zero value enables randomization. 
           `randomization_window_in_chunks` and `randomization_window_in_samples` are mutually exclusive,
           an exception will be raised if both have non-zero values.
-        trace_level (an instance of :class:`cntk.io.TraceLevel`, defaults to `TraceLevel.Warning`): 
-          the output verbosity level.
+        trace_level (an instance of :class:`cntk.logging.TraceLevel`): the output verbosity level, defaults to 
+          the current logging verbosity level given by :func:`~cntk.logging.get_trace_level`.
         multithreaded_deserializer (`bool`, defaults to `False`): specifies if the deserialization should be 
           done on a single or multiple threads.
         frame_mode (`bool`, defaults to `False`): switches the frame mode on and off. If the frame mode 
@@ -167,7 +148,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
         truncation_length (`int`, defaults to `0`): truncation length in samples, non-zero value enables 
           the truncation (only applicable for BPTT, cannot be used in frame mode, an exception will be raised 
           if frame mode is enabled and the truncation length is non-zero).
-
         randomize (`bool`, defaults to `None`): !DEPRECATED! please use randomization_window_in_chunks or
           randomization_window_in_samples instead
         randomization_window (int, defaults to `None`): !DEPRECATED! please use randomization_window_in_chunks or
@@ -314,7 +294,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
             minibatch_size_in_samples (int): number of samples to retrieve for
               the next minibatch. Must be > 0.
               **Important:**
-              Click `here <https://github.com/Microsoft/CNTK/wiki/BrainScript-minibatchSize-and-Python-minibatch_size_in_samples-in-CNTK>`__ for a full description of this parameter. 
+              Click :cntkwiki:`here <BrainScript-minibatchSize-and-Python-minibatch_size_in_samples-in-CNTK>` for a full description of this parameter. 
             input_map (dict): mapping of :class:`~cntk.variables.Variable`
               to :class:`~cntk.cntk_py.StreamInformation` which will be used to convert the
               returned data.
@@ -476,7 +456,7 @@ def ImageDeserializer(filename, streams):
          classes
 
     See also:
-        `Image reader definition <https://github.com/microsoft/cntk/wiki/BrainScript-Image-reader>`_
+        :cntkwiki:`Image reader definition <BrainScript-Image-reader>`
     '''
     image_stream_name = None
 
@@ -513,7 +493,7 @@ def CTFDeserializer(filename, streams):
         filename (str): file name containing the text input
 
     See also:
-        `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/BrainScript-CNTKTextFormat-Reader>`_
+        :cntkwiki:`CNTKTextReader format <BrainScript-CNTKTextFormat-Reader>`
     '''
     for k,s in streams.items():
         if s.stream_alias is None:
@@ -654,7 +634,7 @@ def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
 
     Returns:
         str:
-        String representation in `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/BrainScript-CNTKTextFormat-Reader>`_
+        String representation in :cntkwiki:`CNTKTextReader format <BrainScript-CNTKTextFormat-Reader>`
     '''
 
     max_seq_length = max(len(t) for t in alias_tensor_map.values())

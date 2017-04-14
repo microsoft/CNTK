@@ -152,13 +152,18 @@ def convnet_cifar10_dataaug(train_data, test_data, mean_data, minibatch_size=64,
 
     network = create_conv_network()
 
+    distributed_sync_report_freq = None
+    if block_size is not None:
+        distributed_sync_report_freq = 1
+
     progress_writers = [cntk.logging.ProgressPrinter(
         freq=num_mbs_per_log,
         tag='Training',
         log_to_file=log_to_file,
         rank=cntk.train.distributed.Communicator.rank(),
         gen_heartbeat=gen_heartbeat,
-        num_epochs=max_epochs)]
+        num_epochs=max_epochs,
+        distributed_freq=distributed_sync_report_freq)]
 
     if tensorboard_logdir is not None:
         progress_writers.append(cntk.logging.TensorBoardProgressWriter(

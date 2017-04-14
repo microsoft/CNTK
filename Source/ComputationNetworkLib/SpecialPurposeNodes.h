@@ -784,10 +784,15 @@ class ForwardBackwardNode : public  ComputationNodeNonLooping<ElemType>, public 
         return L"ForwardBackward";
     }
 public:
-    DeclareConstructorFromConfigWithNumInputs(ForwardBackwardNode);
     ForwardBackwardNode(DEVICEID_TYPE deviceId, const wstring & name, size_t blankTokenId=SIZE_MAX, int delayConstraint=-1) :
         Base(deviceId, name), m_blankTokenId(blankTokenId), m_delayConstraint(delayConstraint)
     {
+    }
+
+    ForwardBackwardNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : ForwardBackwardNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"blankTokenId"), configp->Get(L"delayConstraint"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     // Compute gradients to input observations, the weights to the observations, and the class log posterior probabilites

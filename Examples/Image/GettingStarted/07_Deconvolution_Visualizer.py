@@ -11,7 +11,7 @@ from cntk import load_model
 from cntk.ops import combine
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 from PIL import Image
-from cntk import graph
+from cntk.logging import graph
 
 
 # Paths relative to current python file.
@@ -48,9 +48,7 @@ def save_as_png(val_array, img_file_name, dim=28):
     im2 = im.resize((224,224))
     im2.save(img_file_name)
 
-
-if __name__ == '__main__':
-    use_brain_script_model = True
+def generate_visualization(use_brain_script_model, testing=False):
     num_objects_to_eval = 5
 
     if (use_brain_script_model):
@@ -64,9 +62,9 @@ if __name__ == '__main__':
         model_file_name = "07_Deconvolution_PY.model"
         encoder_output_file_name = "encoder_output_PY.txt"
         decoder_output_file_name = "decoder_output_PY.txt"
-        enc_node_name = "Pooling27"
-        input_node_name = "ElementTimes4"
-        output_node_name = "Convolution53"
+        enc_node_name = "pooling_node"
+        input_node_name = "input_node"
+        output_node_name = "output_node"
 
     # define location of output, model and data and check existence
     output_path = os.path.join(abs_path, "Output")
@@ -110,15 +108,20 @@ if __name__ == '__main__':
                 enc_values = (encoder_output[0,0].flatten())[np.newaxis]
                 out_values = (decoder_output[0,0].flatten())[np.newaxis]
 
-                # write results as text and png
-                np.savetxt(decoder_text_file, out_values, fmt="%.6f")
-                np.savetxt(encoder_text_file, enc_values, fmt="%.6f")
-                save_as_png(in_values,  os.path.join(output_path, "imageAutoEncoder_%s__input.png" % i))
-                save_as_png(out_values, os.path.join(output_path, "imageAutoEncoder_%s_output.png" % i))
+                if not testing:
+                    # write results as text and png
+                    np.savetxt(decoder_text_file, out_values, fmt="%.6f")
+                    np.savetxt(encoder_text_file, enc_values, fmt="%.6f")
+                    save_as_png(in_values,  os.path.join(output_path, "imageAutoEncoder_%s__input.png" % i))
+                    save_as_png(out_values, os.path.join(output_path, "imageAutoEncoder_%s_output.png" % i))
 
-                # visualizing the encoding is only possible and meaningful with a single conv filter
-                enc_dim = 7
-                if(enc_values.size == enc_dim*enc_dim):
-                    save_as_png(enc_values, os.path.join(output_path, "imageAutoEncoder_%s_encoding.png" % i), dim=enc_dim)
+                    # visualizing the encoding is only possible and meaningful with a single conv filter
+                    enc_dim = 7
+                    if(enc_values.size == enc_dim*enc_dim):
+                        save_as_png(enc_values, os.path.join(output_path, "imageAutoEncoder_%s_encoding.png" % i), dim=enc_dim)
 
     print("Done. Wrote output to %s" % output_path)
+
+if __name__ == '__main__':
+    use_brain_script_model = True
+    generate_visualization(use_brain_script_model)

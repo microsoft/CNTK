@@ -821,6 +821,9 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
+
+        Base::m_isValueSparse = m_sparse;
+
         if (m_offset < 0)
         {
             CalculateAxisOffset();

@@ -487,6 +487,11 @@ namespace CNTK
             return dynamicAxes[0].Name();
     }
 
+    bool IsPackedValue(const ValuePtr& value)
+    {
+        auto packedValue = dynamic_pointer_cast<PackedValue>(value);
+        return (packedValue != nullptr) && packedValue->IsPacked();
+    }
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes) 
     {
         size_t maxNumTimeSteps = 1;
@@ -520,10 +525,8 @@ namespace CNTK
         if (var.GetDataType() != value->GetDataType())
             LogicError("The Variable '%S' DataType %s does not match the corresponding Value's DataType %s", var.AsString().c_str(), DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
 
-        auto packedValue = dynamic_cast<PackedValue*>(value.get());
-        bool isPackedValue = (packedValue != nullptr) && packedValue->IsPacked();
-
         // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error even for packed value objects?
+        bool isPackedValue = IsPackedValue(value);
         if (!isPackedValue)
         {
             if (IsSparseInput(var) && !value->IsSparse())
@@ -563,6 +566,16 @@ namespace CNTK
             InvalidArgument("Value rank (%d) should be larger than the Variable rank (%d) at most by number of dynamic axes (%d); Variable = '%S', Value shape = '%S'.",
                             (int)valueShape.Rank(), (int)varShape.Rank(), (int)numDynamicAxes, var.AsString().c_str(), valueShape.AsString().c_str());
 
+        if (valueShape.Rank() > (varShape.Rank() + numDynamicAxes))
+        {
+            for (size_t i = 0; i < (maxAddionalValueAxes - numDynamicAxes); ++i)
+            {
+                if (valueShape[varShape.Rank() + i] != 1)
+                    InvalidArgument("Value rank (%d) should be larger than the Variable rank (%d) at most by number of dynamic axes (%d); Variable = '%S', Value shape = '%S'.",
+                                    (int)valueShape.Rank(), (int)varShape.Rank(), (int)numDynamicAxes, var.AsString().c_str(), valueShape.AsString().c_str());
+            }
+        }
+
         if (valueShape.SubShape(0, varShape.Rank()) != varShape)
         {
             InvalidArgument("The %s dimensions of the Value shape '%S' do not match the Variable '%S' shape '%S'.",
@@ -593,7 +606,17 @@ namespace CNTK
 
         auto packedValue = dynamic_cast<PackedValue*>(value.get());
         if (packedValue && packedValue->IsPacked())
-            return packedValue->PackedData<ElementType>();
+        {
+            auto packedMatrixAndLayout = packedValue->PackedData<ElementType>();
+            if (!var.DynamicAxes().empty() && (packedMatrixAndLayout.second == nullptr))
+            {
+                auto layout = std::make_shared<MBLayout>();
+                layout->InitAsFrameMode(1);
+                packedMatrixAndLayout.second = layout;
+            }
+
+            return packedMatrixAndLayout;
+        }
 
         auto varShape = var.Shape();
         auto valueShape = value->Shape();

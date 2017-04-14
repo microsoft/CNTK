@@ -176,7 +176,9 @@ class ArrayMixin(object):
 
         elif isinstance(self, (cntk.cntk_py.NDArrayView, cntk.cntk_py.NDMask)):
             ndav = self
-            if isinstance(self, cntk.cntk_py.NDArrayView):
+            if isinstance(self, cntk.NDArrayView):
+                is_sparse = ndav.is_sparse
+            elif isinstance(self, cntk.cntk_py.NDArrayView):
                 is_sparse = ndav.is_sparse()
             else:
                 is_sparse = False
@@ -192,12 +194,12 @@ class ArrayMixin(object):
             else:
                 value = self
 
-            is_sparse = value.is_sparse()
-
             if isinstance(value, cntk.Value):
+                is_sparse = value.is_sparse
                 has_mask = super(cntk.Value, value).mask() is not None
                 ndav = value.data
-            elif isinstance(value, cntk.cntk_py.Value):
+            else:
+                is_sparse = value.is_sparse()
                 has_mask = value.mask() is not None
                 ndav = value.data()
 
@@ -208,15 +210,27 @@ class ArrayMixin(object):
 
         if is_sparse:
             from cntk.internal.sanitize import _sparse_to_dense_network_cache
-            network = _sparse_to_dense_network_cache((ndav.shape[-1],))
 
+            device = self.device
+            if callable(device):
+                device = device()
+
+            network = _sparse_to_dense_network_cache(ndav.shape[1:], False,
+                                                     device)
             warnings.warn('converting Value object to CSR format might be slow')
 
-            dense_data = network.eval(self, device=self.device())
+            dense_data = network.eval(self, device=device)
+
+            def to_csr(dense_data):
+                if len(dense_data.shape) > 2:
+                    raise ValueError('Cannot convert a sparse NDArrayView or Value object '
+                                     'with shape %s of rank > 2 to a scipy.csr matrix.' % str(dense_data.shape))
+                return sparse.csr_matrix(dense_data)
+
             if isinstance(dense_data, list):
-                result = [sparse.csr_matrix(d) for d in dense_data]
+                result = [to_csr(d) for d in dense_data]
             else:
-                result = sparse.csr_matrix(dense_data)
+                result = to_csr(dense_data)
 
         else:
             result = ndav.to_ndarray()
@@ -292,7 +306,7 @@ class NDArrayViewOpsMixin(object):
         shapeA = self.shape
         shapeB = other.shape
         if len(self.shape) == 0: # TODO: allow for scalar zero (initial_state)
-            self1 = NDArrayView(shape=(other.shape[0]), data_type=other.dtype, device=other.device()) # reduce to scalar
+            self1 = NDArrayView(shape=(other.shape[0]), data_type=other.dtype, device=other.device) # reduce to scalar
             # BUGBUG: How to get the precision in the right way?
             # TODO: test case
             self1.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
@@ -320,11 +334,11 @@ class NDArrayViewOpsMixin(object):
     # TODO: add copy_to_shape() or something, which is the same as reduce_sum but with a non-optional parameter
     def reduce_sum(self, reduce_to_shape=(), out=None):
         # TODO: add a test
-        res = out or NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device()) # reduce to scalar
+        res = out or NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device) # reduce to scalar
         res.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy, 28 = ElementWiseOperator.opSum
         return res
     def reduce_log_sum(self, reduce_to_shape=(), out=None):
-        res = out or NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device()) # reduce to scalar
+        res = out or NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device) # reduce to scalar
         res.numeric_operation_in_place(0.0, [self], 1.0, 2, 28) # 2 = ElementWiseOperator.opCopy, 28 = ElementWiseOperator.opLogSum
         return res
 
@@ -379,7 +393,7 @@ class NDArrayViewOpsMixin(object):
                 extents[i]       = 1
                 dims_to_keep[i] = False # a single index: drop this dimension
         #print('start', start_offsets, 'extents', extents)
-        res = self.slice_view(tuple(start_offsets), tuple(extents), self.is_read_only())
+        res = self.slice_view(tuple(start_offsets), tuple(extents), self.is_read_only)
         res.__class__ = self.__class__
         if not keep_singles and not all(dims_to_keep):
             shape = res.shape
@@ -399,9 +413,9 @@ class NDArrayViewOpsMixin(object):
         # output
         num_items = len(args)
         out_shape = shape[0:axis] + (shape[axis] * num_items,) + shape[axis+1:] # output shape
-        res = out or NDArrayView(shape=out_shape, data_type=arg0.dtype, device=arg0.device())
+        res = out or NDArrayView(shape=out_shape, data_type=arg0.dtype, device=arg0.device)
         # BUGBUG: this cannot be done for sparse; so we need a C++ implementation of this that works very differently
-        #res = NDArrayView(arg0.dtype, arg0.get_storage_format(), out_shape, arg0.device())
+        #res = NDArrayView(arg0.dtype, arg0.get_storage_format(), out_shape, arg0.device)
         # assign all items
         for i in range(num_items):
             key = (slice(0,None),) * axis + (i,)

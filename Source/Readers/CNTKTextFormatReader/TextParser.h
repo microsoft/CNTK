@@ -104,8 +104,8 @@ private:
 
     std::unique_ptr<Indexer> m_indexer;
 
-    int64_t m_fileOffsetStart;
-    int64_t m_fileOffsetEnd;
+    size_t m_fileOffsetStart;
+    size_t m_fileOffsetEnd;
 
     // TODO: not DRY (same in the Indexer), needs refactoring
     unique_ptr<char[]> m_buffer;
@@ -173,8 +173,9 @@ private:
     // Returns true if the trace level is greater or equal to 'Warning'
     bool inline ShouldWarn() { m_hadWarnings = true; return m_traceLevel >= Warning; }
 
-    // Given a descriptor, retrieves the data for the corresponding sequence from the file.
-    SequenceBuffer LoadSequence(const SequenceDescriptor& descriptor);
+    // Given a descriptor and the file offset of the containing chunk,
+    // retrieves the data for the corresponding sequence from the file.
+    SequenceBuffer LoadSequence(const SequenceDescriptor& descriptor, size_t chunkOffset);
 
     // Given a descriptor, retrieves the data for the corresponding chunk from the file.
     void LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor);

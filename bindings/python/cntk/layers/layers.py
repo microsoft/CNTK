@@ -14,6 +14,7 @@ from ..variables import Variable, Record, Constant
 from ..ops import parameter, input, placeholder, combine
 from ..ops import times, element_times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
 from cntk.internal import _as_tuple
+from cntk.cntk_py import sentinel_value_for_auto_select_random_seed as SentinelValueForAutoSelectRandomSeed
 from .blocks import *
 from .higher_order_layers import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # helpers
@@ -337,7 +338,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
      reduction_rank (`int`, defaults to 1): set to 0 if input items are scalars (input has no depth axis), e.g. an audio signal or a black-and-white image
       that is stored with tensor shape (H,W) instead of (1,H,W)
      transpose_weight (bool, defaults to `False`): When this is `True` this is convolution, otherwise this is correlation (which is common for most toolkits)
-     max_temp_mem_size_in_samples (int, defaults to 0): Limits the amount of memory for intermiadate convolution results.  A value of 0 means, memory is automatically managed.
+     max_temp_mem_size_in_samples (int, defaults to 0): Limits the amount of memory for intermediate convolution results.  A value of 0 means, memory is automatically managed.
      name (str, defaults to ''): the name of the function instance in the network
 
     Returns:
@@ -679,7 +680,6 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
     Returns:
         :class:`~cntk.ops.functions.Function` that accepts one argument and applies the convolution operation to it
     '''
-
     activation = get_default_override(ConvolutionTranspose, activation=activation)
     init       = get_default_override(ConvolutionTranspose, init=init)
     pad        = get_default_override(ConvolutionTranspose, pad=pad)
@@ -1023,7 +1023,10 @@ def MaxUnpooling(filter_shape,  # shape of receptive field, e.g. (3,3)
 
 
 # TODO: should the rate(s) be default_options?
-def Dropout(dropout_rate=None, keep_prob=None, name=''):
+def Dropout(dropout_rate=None, 
+            keep_prob=None,
+            seed = SentinelValueForAutoSelectRandomSeed,
+            name=''):
     '''
     Layer factory function to create a drop-out layer.
 
@@ -1043,6 +1046,7 @@ def Dropout(dropout_rate=None, keep_prob=None, name=''):
     Args:
      dropout_rate (float): probability of dropping out an element, mutually exclusive with ``keep_prob``
      keep_prob (float): probability of keeping an element, mutually exclusive with ``dropout_rate``
+     seed (int): random seed.
      name (str, defaults to ''): the name of the function instance in the network
 
     Returns:
@@ -1050,14 +1054,17 @@ def Dropout(dropout_rate=None, keep_prob=None, name=''):
         A function that accepts one argument and applies the operation to it
     '''
     if dropout_rate is None and keep_prob is None:
-        raise ValueError("Dense: either dropout_rate or keep_prob must be specified.")
+        raise ValueError("Dropout: either dropout_rate or keep_prob must be specified.")
     elif dropout_rate is not None and keep_prob is not None:
-        raise ValueError("Dense: dropout_rate and keep_prob cannot be specified at the same time.")
+        raise ValueError("Dropout: dropout_rate and keep_prob cannot be specified at the same time.")
     elif keep_prob is not None:
+        if keep_prob < 0.0 or keep_prob >= 1.0:
+            raise ValueError("Dropout: keep_prob must be in the interval [0,1)")
         dropout_rate = 1-keep_prob
+
     @BlockFunction('Dropout', name)
     def dropout_f(x):
-        return dropout(x, dropout_rate=dropout_rate)
+        return dropout(x, dropout_rate=dropout_rate, seed=seed)
     return dropout_f
 
 

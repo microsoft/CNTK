@@ -14,8 +14,49 @@ MODULE_DIR="$(python -c "import cntk, os, sys; sys.stdout.write(os.path.dirname(
 
 cd ../../../../bindings/python/doc
 
-sphinx-apidoc "$MODULE_DIR" -o . -f $(find "$MODULE_DIR" -type d -name tests)
-make html SPHINXOPTS="-W -j $(nproc)"
+if [ "$OS" == "Windows_NT" ]; then
+  NORM_PATH="cygpath -aw --file -"
+  # In our test env, DOS find.exe may come first in path, make sure we don't use it:
+  FIND=/bin/find
+else
+  NORM_PATH=cat
+  FIND=find
+fi
+
+sphinx-apidoc "$MODULE_DIR" -o . -f "$MODULE_DIR/cntk_py.py" $($FIND "$MODULE_DIR" -type d -name tests | $NORM_PATH)
+
+sphinx-build -b html -d _build/doctrees -W -j $(nproc) . _build/html
+
+# Note: there's currently no way to disable the below checks on a per-instance basis.
+# If they yield false positives, they need to be refined, or disabled if this
+# is not possible.
+
+ERROR=0
+
+# (Using "grep -a" below because of Windows test environment setup.)
+
+if grep -aE " at 0x[0-9a-fA-F]{8}" _build/html/*.html; then
+  echo Object addresses leaked into documentation, please fix \(e.g., by
+  echo   repeating the signature at the beginning of the docstring\).
+  ((ERROR++))
+fi
+
+if grep -a '``' _build/html/*.html; then
+  echo Double back-ticks leaked into the documentation. Please check.
+  ((ERROR++))
+fi
+
+if grep -a ':[a-z][a-z]*:'; then
+   echo Unrendered content leaked into the documentation. Please check.
+   ((ERROR++))
+fi
+
+# TODO no BUGBUG or similar in rendered content
+
+((ERROR == 0)) || {
+  echo Error\(s\) occurred, stopping.
+  false
+}
 
 set +x
 echo "__COMPLETED__"

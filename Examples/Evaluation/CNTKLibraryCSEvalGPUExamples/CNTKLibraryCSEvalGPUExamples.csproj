@@ -39,8 +39,8 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CNTKLibraryManaged-2.0, Version=1.0.0.0, Culture=neutral, PublicKeyToken=a82c1f3f67b62253, processorArchitecture=AMD64">
-      <HintPath>..\packages\CNTK.GPU.2.0-beta15\lib\net45\x64\CNTKLibraryManaged-2.0.dll</HintPath>
+    <Reference Include="Cntk.Core.Managed-2.0rc1, Version=1.0.0.0, Culture=neutral, PublicKeyToken=a82c1f3f67b62253, processorArchitecture=AMD64">
+      <HintPath>..\packages\CNTK.GPU.2.0-rc1\lib\net45\x64\Cntk.Core.Managed-2.0rc1.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -62,12 +62,12 @@
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="..\packages\CNTK.GPU.2.0-beta15\build\net45\CNTK.GPU.targets" Condition="Exists('..\packages\CNTK.GPU.2.0-beta15\build\net45\CNTK.GPU.targets')" />
+  <Import Project="..\packages\CNTK.GPU.2.0-rc1\build\net45\CNTK.GPU.targets" Condition="Exists('..\packages\CNTK.GPU.2.0-rc1\build\net45\CNTK.GPU.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\CNTK.GPU.2.0-beta15\build\net45\CNTK.GPU.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.GPU.2.0-beta15\build\net45\CNTK.GPU.targets'))" />
+    <Error Condition="!Exists('..\packages\CNTK.GPU.2.0-rc1\build\net45\CNTK.GPU.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.GPU.2.0-rc1\build\net45\CNTK.GPU.targets'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

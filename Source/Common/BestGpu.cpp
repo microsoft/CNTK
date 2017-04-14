@@ -352,7 +352,12 @@ void BestGpu::Init()
     // get the count of objects
     cudaError_t err = cudaGetDeviceCount(&m_deviceCount);
     if (err != cudaSuccess)
+    {
+        if (GetMathLibTraceLevel() > 0)
+            fprintf(stderr, "BestGpu::Init() cudaGetDeviceCount failed with the error code %d.\n", (int)err);
+
         m_deviceCount = 0; // if this fails, we have no GPUs
+    }
 
     ProcessorData pdEmpty = {0};
     for (int i = 0; i < m_deviceCount; i++)

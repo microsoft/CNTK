@@ -3,7 +3,7 @@
 # for full license information.
 # ==============================================================================
 
-__version__ = '2.0.beta15.0+'
+__version__ = '2.0rc1+'
 
 import numpy as np
 
@@ -22,6 +22,7 @@ from .learners import *
 from .losses import *
 from .metrics import *
 from .initializer import *
+from .default_options import *
 
 from . import debugging
 from . import logging

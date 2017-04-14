@@ -99,12 +99,12 @@
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\packages\CNTK.GPU.2.0-beta15\build\native\CNTK.GPU.targets" Condition="Exists('..\packages\CNTK.GPU.2.0-beta15\build\native\CNTK.GPU.targets')" />
+    <Import Project="..\packages\CNTK.GPU.2.0-rc1\build\native\CNTK.GPU.targets" Condition="Exists('..\packages\CNTK.GPU.2.0-rc1\build\native\CNTK.GPU.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\CNTK.GPU.2.0-beta15\build\native\CNTK.GPU.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.GPU.2.0-beta15\build\native\CNTK.GPU.targets'))" />
+    <Error Condition="!Exists('..\packages\CNTK.GPU.2.0-rc1\build\native\CNTK.GPU.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CNTK.GPU.2.0-rc1\build\native\CNTK.GPU.targets'))" />
   </Target>
 </Project>

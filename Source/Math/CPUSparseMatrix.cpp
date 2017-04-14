@@ -181,6 +181,9 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatr
     if (a.IsEmpty())
         LogicError("AssignOneHot: Matrix a is empty.");
 
+    if (GetFormat() != matrixFormatSparseCSC)
+        LogicError("AssignOneHot: Matrix format is not supported.");
+
     if (axis >= shape.size())
         LogicError("AssignOneHot: axis is not correct");
 
@@ -189,52 +192,43 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatr
         item_size *= (int)shape[i];
 
     int num_class = (int)shape[axis];
-    auto& us = *this;
-    auto nCols = a.GetNumCols();
-    auto nRows = num_class * a.GetNumRows();
-    us.RequireSize(nRows, nCols);
+
+    auto nRows = item_size * num_class;
+    auto nCols = a.GetNumElements() / item_size;
+    if (((GetNumRows() != 0) && (GetNumRows() != nRows)) || ((GetNumCols() != 0) && (GetNumCols() != nCols)))
+        LogicError("AssignOneHot: Target matrix size is not correct");
+
     RequireSizeAndAllocate(nRows, nCols, a.GetNumElements());
 
     CPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
     CPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
     ElemType* data = NzValues();
     ElemType* indices = a.Data();
-    //only support CSC now
-    if (GetFormat() == matrixFormatSparseCSC)
-    {
 #pragma omp parallel for
-        for (long i = 0; i < a.GetNumElements(); i++)
+    for (long i = 0; i < a.GetNumElements(); i++)
+    {
+        int block_id = i / item_size;
+        int item_id = i % item_size;
+        // for invalid indices, theorically they should not belong to nz elements.
+        // but if we scan the indices to count the valid indices number,
+        // it will be difficult for parallel calculation, especially on GPU.
+        // here we chose to keep those elements in nz element list, but with value 0 an at row 0
+        if (indices[i] >= 0 && indices[i] < num_class)
         {
-            int block_id = i / item_size;
-            int item_id = i % item_size;
-            // for invalid indices, theorically they should not belong to nz elements.
-            // but if we scan the indices to count the valid indices number,
-            // it will be difficult for parallel calculation, especially on GPU.
-            // here we chose to keep those elements in nz element list, but with value 0
-            // it is tricky, but the data view is correct.
-            if (indices[i] >= 0 && indices[i] < num_class)
-            {
-                data[i] = 1;
-                majorIndices[i] = (block_id * num_class * item_size + item_id + item_size * (int)indices[i]) % nRows;
-            }
-            else
-            {
-                data[i] = 0;
-                majorIndices[i] = (block_id * num_class * item_size + item_id) % nRows;
-            }
-            size_t colIndex = i / a.GetNumRows();
-            secondaryIndices[colIndex + 1]++;
+            data[i] = 1;
+            majorIndices[i] = ((int)indices[i] * item_size) + item_id;
+        }
+        else
+        {
+            data[i] = 0;
+            majorIndices[i] = item_id;
         }
 
-        for (long i = 1; i < nCols + 1; i++)
-        {
-            secondaryIndices[i] += secondaryIndices[i - 1];
-        }
+        if (item_id == 0)
+            secondaryIndices[block_id + 1] = item_size * (block_id + 1);
     }
-    else
-    {
-        LogicError("AssignOneHot: Matrix format is not supported.");
-    }
+
+    secondaryIndices[0] = 0;
 
     return *this;
 }
@@ -709,7 +703,6 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
     memcpy(NzValues(), h_Val, sizeof(ElemType)*nz);
 }
 
-#if 0 // add it back with test
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, const ElemType* val, const size_t numBlocks, const size_t numRows, const size_t numCols)
 {
@@ -723,7 +716,6 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, c
     memcpy(GetBlockIds(), blockIds, sizeof(size_t)*(numBlocks));
     memcpy(Data(), val, sizeof(ElemType)*numBlocks*numRows);
 }
-#endif
 
 template <class ElemType>
 ElemType* CPUSparseMatrix<ElemType>::Data()  const
@@ -1403,17 +1395,17 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
 }
 
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon)
+void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
 {
     size_t numColsNeeded = 2 * GetNumCols();
 
-    if (IsEmpty() || (GetNumCols() < numColsNeeded))
+    if (c.IsEmpty() || (c.GetNumCols() < numColsNeeded))
     {
         c.RequireSize(GetNumRows(), numColsNeeded);
         c.SetValue(0.0);
     }
 
-    if (GetNumRows() != GetNumRows() || GetNumCols() != numColsNeeded)
+    if (c.GetNumRows() != GetNumRows() || c.GetNumCols() != numColsNeeded)
         LogicError("The matrix gradients does not have expected dimensions.");
 
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
@@ -1434,13 +1426,14 @@ void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemT
         size_t start = j * len;
         for (size_t p = start; p < start + len; p++)
         {
+            size_t denseIndex = i * len + (p - start);
             ElemType g = grad[p];
-            ElemType adaSqr = rho * smoothAda[i] + (1 - rho) * g * g;
-            smoothAda[i] = adaSqr;
-            ElemType x2 = smoothX2[i];
+            ElemType adaSqr = rho * smoothAda[denseIndex] + (1 - rho) * g * g;
+            smoothAda[denseIndex] = adaSqr;
+            ElemType x2 = smoothX2[denseIndex];
             ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
-            smoothX2[i] = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
-            val[i] += deltaX;
+            smoothX2[denseIndex] = rho * smoothX2[denseIndex] + (1 - rho) * deltaX * deltaX;
+            val[denseIndex] += learningRate * deltaX;
         }
     }
 }

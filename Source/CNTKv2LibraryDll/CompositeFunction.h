@@ -10,6 +10,7 @@
 #include "PrimitiveFunction.h"
 #include "ComputationNetwork.h"
 #include "BackCompat.h"
+#include "Value.h"
 
 namespace CNTK
 {
@@ -110,7 +111,7 @@ namespace CNTK
         Dictionary SerializeBlockComposite() const;
 
         virtual Dictionary Serialize() const override;
-        
+
         virtual size_t CurrentVersion() const override { return s_serializationVersion; }
 
         static FunctionPtr DeserializeBlockComposite(const Dictionary& dict,
@@ -238,11 +239,25 @@ namespace CNTK
             return inputs;
         }
 
-        // If the network is already created, copy internal state over from the functions in the graph into the underlying network.
-        void UpdateInternalNetworkState();
 
-        // Copy state info from source function graph into' this' function graph.
+        // Copy the internal state from the network into the function graph.
+        void UpdateInternalState() const;
+
+        // Generate a dictionary representing the internal (local) state of the function graph.
+        Dictionary GetInternalState() const;
+
+        // Update the internal state using the provided dictionary. 
+        // If the network is already created, directly update its state. Otherwise, copy the state from the 
+        // dictionary into the function graph.
+        void SetInternalState(const Dictionary& state);
+
+        // Copy state info from source function graph into 'this' function graph.
+        // Both graphs must be equivalent.
         void CopyState(const CompositeFunction& source);
+
+        // This function is only needed for backwards compatibility to support deserializing composite funcitions that
+        // stored the internal state inside a dedicated value in the dictionary.
+        static void RestoreStatefulFunctions(size_t version, const Dictionary& dict, std::unordered_set<FunctionPtr> PrimitiveFunctions);
 
         static Variable GetMappingForNoOpOutput(const Variable& variable, bool recursive = false);
         static Variable GetMappingVariable(const Variable& variable, bool recursive = false);
@@ -295,6 +310,18 @@ namespace CNTK
 
         std::unordered_map<Variable, uint64_t> GetCurrentBackpropRootsTimeStamps() const;
 
+        void ClearExistingOutputOrGradientStorageReferences()
+        {
+            for (auto& existingStorageWeakReference : m_existingNetworkStorageReferences)
+            {
+                auto existingStorageReference = existingStorageWeakReference.lock();
+                if (existingStorageReference)
+                    existingStorageReference->Erase();
+            }
+
+            m_existingNetworkStorageReferences.clear();
+        }
+
     private:
 
         // Set of all primitive functions in the graph underlying 'this' Function. Also keeps the primitive Function objects alive 
@@ -308,6 +335,9 @@ namespace CNTK
         std::unordered_map<Variable, bool> m_isVariableRootMap;
 
         Microsoft::MSR::CNTK::ComputationNetworkPtr m_computationNetwork;
+
+        // Map to keep track of any references to network output/gradient storage handed out so far
+        std::vector<PackedValueWeakPtr> m_existingNetworkStorageReferences;
 
         // The backpropRoots sepecified in the most recent 'Forward' call on 'this' Function.
         // This indicates for which of its roots has 'this' Function retained required intermediate 
@@ -328,6 +358,7 @@ namespace CNTK
         // Version history:
         // 1 -- initial version.
         // 2 -- add support for stateful functions (with corresponding nodes inheriting from RngUser).
-        static const size_t s_serializationVersion = 2;
+        // 3 -- store internal function state directly in the attributes dictionary.
+        static const size_t s_serializationVersion = 3;
     };
 }

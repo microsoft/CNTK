@@ -54,6 +54,12 @@ namespace CNTK
             return learningRate;
         }
 
+        void ReportTrainingParameterValue(const TrainingParameterSchedule<double>& schedule, const std::wstring& name) const;
+
+        // A map cointaining hyperparameter names and corresponging values that's used to track and report changes 
+        // in hyperparameter values.
+        mutable std::map <std::wstring, double> m_trainingParametersMap;
+
         AdditionalLearningOptions m_additionalOptions;
 
         std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
@@ -210,6 +216,7 @@ namespace CNTK
     public:
         LearnerAdaDelta(
             const std::vector<Parameter>& parameters,
+            const LearningRateSchedule& learningRateSchedule,
             double rho, double epsilon,
             AdditionalLearningOptions additionalOptions);
 

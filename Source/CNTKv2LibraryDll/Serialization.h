@@ -41,6 +41,8 @@ namespace CNTK
     const std::wstring blockFunctionOpNameKey = L"block_function_op_name";
     const std::wstring blockFunctionCompositeArgumentsMapKeysKey = L"block_function_composite_arguments_map_keys";
     const std::wstring blockFunctionCompositeArgumentsMapValuesKey = L"block_function_composite_arguments_map_values";
+    const std::wstring internalWorkerStateKey = L"internal_worker_state";
+    const std::wstring externalWorkerStateKey = L"external_worker_state";
 
     template <typename T> 
     inline std::string GetVersionsString(size_t currentVersion, size_t dictVersion)
