@@ -1122,7 +1122,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         {
             if (element < 0)
             {
-                throw new System.ArgumentException("The paraemter diemnsions cannot contain a negative value");
+                throw new System.ArgumentException("The argument cannot contain a negative value");
             }
             inputVector.Add((uint)element);
         }
@@ -1880,27 +1880,25 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public NDArrayView SliceView(System.Collections.Generic.IEnumerable<int> startOffset, System.Collections.Generic.IEnumerable<int> extent, bool readOnly = false)
     {
-        var startOffsetVector = new SizeTVector();
-        foreach (var offset in startOffset)
-        {
-            if (offset < 0)
-            {
-                throw new System.ArgumentException("The paraemter startOffset cannot contain a negative value");
-            }
-            startOffsetVector.Add((uint)offset);
-        }
+        var startOffsetVector = AsSizeTVector(startOffset);
 
-        var extentVector = new SizeTVector();
-        foreach (var element in extent)
+        var extentVector = AsSizeTVector(extent);
+
+        return _SliceView(startOffsetVector, extentVector, readOnly);
+    }
+
+    private static SizeTVector AsSizeTVector(System.Collections.Generic.IEnumerable<int> input)
+    {
+        var inputVector = new SizeTVector();
+        foreach (var element in input)
         {
             if (element < 0)
             {
-                throw new System.ArgumentException("The paraemter extent cannot contain a negative value");
+                throw new System.ArgumentException("The argument cannot contain a negative value");
             }
-            extentVector.Add((uint)element);
+            inputVector.Add((uint)element);
         }
-
-        return _SliceView(startOffsetVector, extentVector, readOnly);
+        return inputVector;
     }
 %}
 
