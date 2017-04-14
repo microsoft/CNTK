@@ -81,8 +81,8 @@ def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
     return namespace.Sequential([
         namespace.Embedding(embedding_dim, name='embed'),
         namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu, name='rnn')),
-        namespace.identity,
-        #namespace.LogValues(),
+        #namespace.identity,
+        namespace.LogValues(),
         namespace.Dense(num_output_classes, name='dense')
     ])
 
@@ -196,6 +196,7 @@ def train(debug_output=False):
             print('ok')
 
         #dynamite.dump_graph(crit, skip_free=True)
+        #exit()
         # compute gradients
         dgradients = crit.grad_times(dparameters)
         #dynamite.batch_eval([dgradients[p] for p in dparameters]) # compute all in a single shot, to see if it makes a difference --does not
@@ -210,11 +211,11 @@ def train(debug_output=False):
             for p in model.parameters:
                 dp = parameter_map[p] # map parameter from static to Dynamite gradients
                 dpname = dparam_names[dp]
+                print(dpname)
                 if dpname == '_[0].E':
                     continue  # cannot convert sparse gradient to numpy
                 dp = dgradients[dp] # find the gradient for the parameter
                 #print('### gradient for', dpname, '(CNTK static vs. dynamite)')
-                #dynamite.dump_graph(dp, skip_free=True)
                 p_data = grads[p].data.to_ndarray()
                 #dynamite.VariableGlobalConfig.enable_tracing = True
                 dp_data = dp.to_ndarray() # this will trigger computation
@@ -223,6 +224,9 @@ def train(debug_output=False):
                 #exit()
                 # Dense.W fails when not using batching; but is OK without batching, so some gradient is just wrong
                 assert np.allclose(p_data, dp_data, atol=1e-5)
+                if dpname == "_[1].step_function.W":
+                    dynamite.dump_graph(dp, skip_free=True)
+                    exit()
 
             # model update from dynamic
             param_map = { p: dgradients[parameter_map[p]].get_value() for p in model.parameters }
