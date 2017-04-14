@@ -81,7 +81,7 @@ Example:
     >>> debugging.dump_signature(criterion)
     Function(input: SequenceOver[inputAxis][Tensor[128]], label: Tensor[10]) -> Tensor[1]
 
-The following lists a few common errors with these types:
+The following lists a few common errors with CNTK type objects:
 
 Example:
     >>> # types are abstract, they cannot be instantiated directly

@@ -2543,32 +2543,64 @@ def _input_spec(shape, dtype=default_override_or(np.float32), needs_gradient=Fal
     pass
 
 @typemap
-def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
+def input(type=None, shape=None, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
           dynamic_axes=[Axis.default_batch_axis()], name=''):
     '''
-    input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, dynamic_axes=[Axis.default_batch_axis()], name='')
+    input(type=None, shape=None, dtype=np.float32, needs_gradient=False, is_sparse=False, dynamic_axes=[Axis.default_batch_axis()], type=None, name='')
 
-    It creates an input in the network: a place where data,
+    Creates an input in the network: a place where data,
     such as features and labels, should be provided.
 
     Args:
-        shape (tuple or int): the shape of the input tensor
+        type (cntk.layers.typing type, optional): type of input, specifed using `cntk.layers.typing`
+        shape (tuple or int, optional): the shape of the input tensor. Either 'shape' or 'type' must be given.
         dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, sequence axis)
         name (str, optional): the name of the Function instance in the network
 
+    Example:
+    >>> inp1 = C.input(13)
+    >>> print(inp1.type)
+    Tensor[13]
+    >>> inp2 = C.input((13,42))
+    >>> print(inp2.type)
+    Tensor[13,42]
+    >>> inp3 = C.input(300000, is_sparse=True)
+    >>> print(inp3.type)
+    SparseTensor[300000]
+    >>> inp4 = C.sequence.input(shape=(300000), is_sparse=True)
+    >>> print(inp4.type)
+    Sequence[SparseTensor[300000]]
+    >>> from cntk.layers.typing import *
+    >>> inp5 = C.input(Sequence[SparseTensor[300000]])
+    >>> print(inp5.type)
+    Sequence[SparseTensor[300000]]
+
     Returns:
         :class:`~cntk.variables.Variable`
     '''
     from cntk.cntk_py import input_variable
     from cntk.internal import sanitize_shape, sanitize_dtype_cntk
-    
-    shape = sanitize_shape(shape)
+
     dtype = get_default_override(_input_spec, dtype=dtype)
     if dtype is None:
         dtype = np.float32
+    if isinstance(type, (int, tuple)): # a shape was passed as the first argument
+        type = Variable._Type(type)
+
+    if type: # if type is given, then its members override all other arguments
+        shape          = getattr(type, 'shape',          shape)
+        dtype          = getattr(type, 'dtype',          dtype)
+        dynamic_axes   = getattr(type, 'dynamic_axes',   dynamic_axes)
+        is_sparse      = getattr(type, 'is_sparse',      is_sparse)
+        needs_gradient = getattr(type, 'needs_gradient', needs_gradient)
+
+    if shape is None:
+        raise ValueError('shape or type.shape must be provided')
+
+    shape = sanitize_shape(shape)
     dtype = sanitize_dtype_cntk(dtype)
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
 

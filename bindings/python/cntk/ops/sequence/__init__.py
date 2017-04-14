@@ -33,7 +33,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
         :class:`~cntk.variables.Variable`
     '''
     from ... import input
-    return input(shape, dtype, needs_gradient, is_sparse, [Axis.default_batch_axis(), sequence_axis], name)
+    return input(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse, dynamic_axes=[Axis.default_batch_axis(), sequence_axis], name=name)
 
 ##########################################################################
 # sequence ops
