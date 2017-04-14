@@ -29,6 +29,8 @@
 %rename(times_transpose) CNTK::TransposeTimes;
 %rename(sequence_slice) CNTK::Sequence::Slice;
 %rename(sequence_reduce_sum) CNTK::Sequence::ReduceSum;
+%rename(sequence_reduce_max) CNTK::Sequence::ReduceMax;
+%rename(sequence_softmax) CNTK::Sequence::Softmax;
 %rename(momentum_as_time_constant_schedule) CNTK::MomentumAsTimeConstantSchedule;
 %rename(ctf_deserializer) CNTK::CTFDeserializer;
 %rename(htk_feature_deserializer) CNTK::HTKFeatureDeserializer;
