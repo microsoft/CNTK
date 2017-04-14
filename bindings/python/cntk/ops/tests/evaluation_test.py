@@ -57,7 +57,7 @@ def test_eval_not_all_outputs():
     assert np.array_equal(result, np.asarray([[1.]]))
 
 def test_grad_custimized_root():
-    x = C.Input(1)
+    x = C.input(shape=(1,), needs_gradient=True)
     y = C.sqrt(x)
     y2 = C.log(x)
     combine = C.combine([y.output, y2.output])
