@@ -81,8 +81,8 @@ def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
     return namespace.Sequential([
         namespace.Embedding(embedding_dim, name='embed'),
         namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu, name='rnn')),
-        #namespace.identity,
-        namespace.LogValues(),
+        namespace.identity,
+        #namespace.LogValues(),
         namespace.Dense(num_output_classes, name='dense')
     ])
 
@@ -167,6 +167,8 @@ def train(debug_output=False):
     if debug_output:
         training_progress_output_freq = training_progress_output_freq/3
 
+    expected_losses = [ 1.589759, 1.497586, 1.520561, 2.354308, 1.712215, 1.268698, 1.161497, 1.473921, 1.283860, 1.153169 ] # first 10 MBs from CNTK static
+
     import time
     for i in range(251):
         mb = reader.next_minibatch(minibatch_size)
@@ -186,7 +188,12 @@ def train(debug_output=False):
         crit_nd = crit.to_ndarray()
         dend = time.time()
         log_time(dend-dstart)
-        print(" " * 29, crit_nd / len(args[0]))
+        loss = crit_nd / len(args[0])
+        print(" " * 29, loss)
+        if expected_losses: # test
+            loss_ex, *expected_losses = expected_losses
+            assert np.allclose(loss, loss_ex, atol=1e-5)
+
         #dynamite.dump_graph(crit, skip_free=True)
         # compute gradients
         dgradients = crit.grad_times(dparameters)

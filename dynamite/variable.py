@@ -5,9 +5,10 @@ import collections
 
 # some global settings we can control from outside, e.g. for debugging
 class VariableGlobalConfig:
-    use_batching = True
+    use_batching = False
     use_coroutines = True
     enable_tracing = False
+    use_arena_allocator = False
 
 # TODO: move to contrib/dynamite/variable.py ; import .tensor_ops
 
@@ -871,7 +872,7 @@ def evaluate_graph(vars):
     mem_offset = 0
     for p in nodes:
         if not p.computed:
-            if p.op in ops_with_out:
+            if VariableGlobalConfig.use_arena_allocator and p.op in ops_with_out:
                 mem_size = functools_reduce(mul_operator, p.shape, 1)
                 #print('allocating', mem_size, ' for shape', p.shape, 'node', p.op_as_string())
                 p.mem_offset = mem_offset
@@ -881,7 +882,8 @@ def evaluate_graph(vars):
                 p.mem_offset = -1 # no arena memory for this op
                 #print('no arena allocation for node', p.op_as_string())
     #print('arena size', mem_offset)
-    arena = cntk.NDArrayView((mem_offset,))
+    if mem_offset:
+        arena = cntk.NDArrayView((mem_offset,))
     # execution
     num_ops = 0
     start = time.time()
