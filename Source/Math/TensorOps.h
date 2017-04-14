@@ -248,7 +248,7 @@ DefBinaryOp(Difference, a - b);
 DefBinaryOp(ElementwiseProduct, a* b);
 DefBinaryOp(ElementwiseQuotient, ClippedQuotient(a, b));
 DefBinaryOp(LogSum, LogAdd(a, b));
-DefBinaryOp(Pow, pow_(a, b)); // Because we compile with fast math
+DefBinaryOp(Pow, pow_(a, b));
 DefBinaryOp(Max, a > b ? a : b);
 DefBinaryOp(Min, a < b ? a : b);
 DefBinaryOp(Equal, a == b);
