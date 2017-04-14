@@ -1599,6 +1599,7 @@ namespace CNTK
         ScopedNetworkOperationMode modeGuard(m_computationNetwork, outputsToRetainBackwardStateFor.empty() ? NetworkOperationMode::inferring : NetworkOperationMode::training);
 
         m_computationNetwork->ForwardProp(outputsToEvaluate);
+        m_computationNetwork->PostForwardProp(outputsToEvaluate);
 
         GetNetworkOutputs(outputs);
 

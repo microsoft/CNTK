@@ -11,7 +11,6 @@ Unit tests for the assign operation.
 import numpy as np
 import pytest
 import cntk as C
-from cntk.axis import Axis
 
 def test_assign_fw():
     dest = C.constant(shape=(3,4))

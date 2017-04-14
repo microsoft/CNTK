@@ -1021,6 +1021,8 @@ class AssignNode : public BinaryElementWiseNode<ElemType>
 {
     typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
     static const std::wstring TypeName() { return L"Assign"; }
+    shared_ptr<Matrix<ElemType>> m_result;
+    FrameRange m_fr;
 
 public:
     DeclareConstructorFromConfigWithNumInputs(AssignNode);
@@ -1031,27 +1033,33 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
+        SetRunPostForwardProp(true);
+
+        m_fr = fr;
         auto result = ValueFor(fr);
         auto refValue = InputRef(0).ValueFor(fr);
         auto inputValue = InputRef(1).ValueFor(fr);
 
-        refValue.AssignValuesOf(inputValue);
+        if (m_result == nullptr)
+            m_result = std::make_shared<Matrix<ElemType>>(refValue.GetNumRows(), refValue.GetNumCols(), refValue.GetDeviceId(), refValue.GetMatrixType(), refValue.GetFormat());
+        else if ((m_result->GetNumRows() != refValue.GetNumRows()) && (m_result->GetNumCols() != refValue.GetNumCols()))
+            m_result->Resize(m_result->GetNumRows(), refValue.GetNumCols());
+
+        m_result->AssignValuesOf(inputValue);
         result.AssignValuesOf(inputValue);
+    }
+
+    virtual void /*ComputationNode::*/ PostForwardProp() override
+    {
+        SetRunPostForwardProp(false);
+
+        auto refValue = InputRef(0).ValueFor(m_fr);
+        refValue.AssignValuesOf(*m_result);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        if (inputIndex == 1)
-        {
-            auto gradient = GradientFor(fr);
-            auto inputGradient = Input(1)->GradientFor(fr);
-
-            inputGradient += gradient;
-        }
-        else 
-        {
-            RuntimeError("AssignNode::BackpropTo: Unexpected first argument shouldn't ask for gradient.");
-        }
+        // TODO: define the backprop behavior for the assign node.
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -1060,9 +1068,6 @@ public:
 
         if (m_inputs.size() != 2)
             InvalidArgument("Assign operation requires two inputs instead of %d.", (int)m_inputs.size());
-
-        if (Input(0)->NeedsGradient() == true)
-            InvalidArgument("Assign operation needs input type (no gradient) for the 1st input.");
 
         if (!Input(1)->GetSampleLayout().IsElementwiseCompatibleWith(Input(0)->GetSampleLayout()))
             InvalidArgument("AssignNode: All inputs should have same sample layout.");

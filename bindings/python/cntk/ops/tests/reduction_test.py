@@ -251,11 +251,11 @@ def test_op_reduce_over_batch_axis(input_data, device_id, precision):
 
     def min_max_bwd(x, f):
         forward_array = np.asarray(f, dtype=dt)
-        max_elements = forward_array.reshape(forward_array.size).tolist()
+        min_max_elements = forward_array.reshape(forward_array.size).tolist()
 
-        # place 1.0s where maximum elements are
+        # place 1.0s where minimum or maximum elements are
         backward = np.zeros_like(x)
-        for element in max_elements:
+        for element in min_max_elements:
             backward += np.asarray(x == element)
 
         return backward

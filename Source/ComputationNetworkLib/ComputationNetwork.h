@@ -135,6 +135,9 @@ public:
     // main entry point for forward prop
     void ForwardProp(const ComputationNodeBasePtr rootNode);
 
+    // main entry point for post forward prop
+    void PostForwardProp(const ComputationNodeBasePtr rootNode);
+
     // main entry point for backprop
     void Backprop(const ComputationNodeBasePtr rootNode);
 
@@ -173,6 +176,14 @@ public:
     {
         TravserseInSortedGlobalEvalOrder(nodes, [](const ComputationNodeBasePtr& node) {
             PARTraversalFlowControlNode::ForwardProp(node, FrameRange(nullptr));
+        });
+    }
+
+    template <class NODESET> // version that takes multiple nodes
+    void PostForwardProp(const NODESET& nodes)
+    {
+        TravserseInSortedGlobalEvalOrder(nodes, [](const ComputationNodeBasePtr& node) {
+            PARTraversalFlowControlNode::PostForwardProp(node);
         });
     }
 
@@ -1156,22 +1167,21 @@ protected:
         }
 
         static void ForwardProp(const ComputationNodeBasePtr& node, const FrameRange& fr);
+        static void PostForwardProp(const ComputationNodeBasePtr& node);
 
         virtual void BeginForwardProp() override {}
         virtual void ForwardProp(const FrameRange&) override;
-        virtual void EndForwardProp() override
-        {
-        }
-        virtual void BeginBackprop() override
-        {
-        }
+        virtual void EndForwardProp() override {}
+
+        virtual void PostForwardProp() override;
+
+        virtual void BeginBackprop() override {}
         virtual void BackpropTo(const size_t inputIndex, const FrameRange&) override
         {
             NOT_IMPLEMENTED;
         } // ugh, call Backprop() instead
-        virtual void EndBackprop() override
-        {
-        }
+        virtual void EndBackprop() override {}
+
         virtual void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);

@@ -688,6 +688,7 @@ namespace CNTK
         // Version 6: Add argmax and argmin to ReduceElement.
         // Version 8: Add ELU node.
         // Version 9: Add OneHot node.
-        static const size_t s_serializationVersion = 9;
+        // Version 10: Add Assign node.
+        static const size_t s_serializationVersion = 10;
     };
 }
