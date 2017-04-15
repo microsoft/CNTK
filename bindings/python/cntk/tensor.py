@@ -324,12 +324,10 @@ class NDArrayViewOpsMixin(object):
     # TODO: add copy_to_shape() or something, which is the same as reduce_sum but with a non-optional parameter
     def reduce_sum(self, reduce_to_shape=(), out=None):
         out = out or NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device) # reduce to scalar
-        res = NDArrayViewOpsMixin._num_op(out, [self], 1.0, 2, reductionOp=24) # 2 = ElementWiseOperator.opCopy, 24 = ElementWiseOperator.opSum
-        return res
+        return NDArrayViewOpsMixin._num_op(out, [self], 1.0, 2, reductionOp=24) # 2 = ElementWiseOperator.opCopy, 24 = ElementWiseOperator.opSum
     def reduce_log_sum(self, reduce_to_shape=(), out=None):
         out = out or NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device) # reduce to scalar
-        res = NDArrayViewOpsMixin._num_op(out, [self], 1.0, 2, reductionOp=28) # 2 = ElementWiseOperator.opCopy, 24 = ElementWiseOperator.opLogSum
-        return res
+        return NDArrayViewOpsMixin._num_op(out, [self], 1.0, 2, reductionOp=28) # 2 = ElementWiseOperator.opCopy, 24 = ElementWiseOperator.opLogSum
 
     # shapes, slicing, and splicing
     def reshape(self, new_shape): # note: this is not in-place (unlike Matrix::Reshape()); rename to reshaped()? reshaped_as()?
@@ -349,7 +347,7 @@ class NDArrayViewOpsMixin(object):
         slice = self.__getitem__(key, keep_singles=True)
         return NDArrayViewOpsMixin._num_op(slice, [value], 1.0, 2) # 2 = ElementWiseOperator.opCopy
     def __getitem__(self, key, keep_singles=False):
-        # BUGBUG: must implement IndexError to allow for loops
+        # BUGBUG: according to some Python docs, we must implement IndexError to allow for loops
         shape = self.shape
         #print('key', key)
         if not isinstance(key, tuple):
