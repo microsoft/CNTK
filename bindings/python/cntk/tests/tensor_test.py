@@ -103,6 +103,9 @@ def test_ndarrayview_operators(device_id, precision):
         return a
     test(atest, [mat23, np.array(13)])
 
+    # splice
+    test(lambda *args: NDArrayView.splice(*args) if isinstance(args[0], NDArrayView) else np.concatenate((args[0][np.newaxis,:], args[1][np.newaxis,:])), [mat23, 1.1*mat23])
+
     # in-place ops
     test(lambda a, b: a.__iadd__(b), [mat23, col21]) 
     test(lambda a, b: a.__isub__(b), [mat23, col21]) 

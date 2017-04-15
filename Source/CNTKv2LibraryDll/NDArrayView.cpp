@@ -362,24 +362,28 @@ namespace CNTK
         return this->shared_from_this(); // return ourselves to allow for chaining
     }
 
-    /*static*/ NDArrayViewPtr NDArrayView::NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int op)
+    /*static*/ NDArrayViewPtr NDArrayView::NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int op, NDArrayViewPtr out, double beta)
     {
-        // for element-wise operations, the output shape is the axis-wise max over all inputs
-        // TODO: eventually, this must be reconciled with all the shape-inference code
-        size_t rank = 0;
-        for (const auto& input : inputs)
-            rank = std::max(rank, input->Shape().Rank());
-        NDShape shape(rank, 1);
-        for (const auto& input : inputs)
+        if (!out)
         {
-            const auto& inputShape = input->Shape();
-            for (size_t k = 0; k < inputShape.Rank(); k++)
-                shape[k] = std::max(shape[k], inputShape[k]);
+            // for element-wise operations, the output shape is the axis-wise max over all inputs
+            // TODO: eventually, this must be reconciled with all the shape-inference code
+            size_t rank = 0;
+            for (const auto& input : inputs)
+                rank = std::max(rank, input->Shape().Rank());
+            NDShape shape(rank, 1);
+            for (const auto& input : inputs)
+            {
+                const auto& inputShape = input->Shape();
+                for (size_t k = 0; k < inputShape.Rank(); k++)
+                    shape[k] = std::max(shape[k], inputShape[k]);
+            }
+            // create result object; properties besides shape are inherited from input 0 for now
+            out = MakeSharedObject<NDArrayView>(inputs[0]->GetDataType(), inputs[0]->GetStorageFormat(), shape, inputs[0]->Device());
+            beta = 0; // newly created object is assumed 0
         }
-// create result object; properties besides shape are inherited from input 0 for now
-NDArrayViewPtr result = MakeSharedObject<NDArrayView>(inputs[0]->GetDataType(), inputs[0]->GetStorageFormat(), shape, inputs[0]->Device());
-// perform operation in-place on result object
-return result->NumericOperationInPlace(0.0/*nothing to add to*/, inputs, alpha, op, (int)Microsoft::MSR::CNTK::ElementWiseOperator::opSum/*not reducing, actually*/);
+        // perform operation in-place on result object
+        return out->NumericOperationInPlace(beta, inputs, alpha, op, (int)Microsoft::MSR::CNTK::ElementWiseOperator::opSum/*not reducing, actually*/);
     }
 
     NDArrayViewPtr NDArrayView::MatrixProductInPlace(double beta, bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha)
@@ -405,32 +409,68 @@ return result->NumericOperationInPlace(0.0/*nothing to add to*/, inputs, alpha, 
         return this->shared_from_this(); // return ourselves to allow for chaining
     }
 
-    /*static*/ NDArrayViewPtr NDArrayView::MatrixProduct(bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank)
+    /*static*/ NDArrayViewPtr NDArrayView::MatrixProduct(bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank, NDArrayViewPtr out, double beta)
     {
-        // shape inference
-        const auto& shapeA = inputA->Shape();
-        const auto& shapeB = inputB->Shape();
-        if (shapeA.Rank() != 2 && shapeA.Rank() != 1)
-            LogicError("NDArrayView::MatrixProductInPlace: For now only vectors and 2D matrices are supported, invalid shape '%S'", shapeA.AsString().c_str());
-        if (shapeB.Rank() != 2 && shapeB.Rank() != 1)
-            LogicError("NDArrayView::MatrixProductInPlace: For now only vectors and 2D matrices are supported, invalid shape '%S'", shapeB.AsString().c_str());
-        const auto innerA = transA ? shapeA[0] : shapeA[shapeA.Rank() - 1]; // inner (dot-product) dimension
-        const auto innerB = transB ? shapeB[shapeB.Rank() - 1] : shapeB[0];
-        if (innerA != innerB)
-            LogicError("NDArrayView::MatrixProductInPlace: Inner dimensions %d and %d don't match", (int)innerA, (int)innerB);
-        auto dimsC = std::vector<size_t>();  // TODO: use a different class here to avoid memory allocation?
-        // assemble the output shape from the non-inner dimensions. Note that vec^t * vec will end up with a scalar (rank 0)
-        if (shapeA.Rank() == 2)
-            dimsC.push_back(transA ? shapeA[1] : shapeA[0]);
-        if (shapeB.Rank() == 2)
-            dimsC.push_back(transB ? shapeB[0] : shapeB[1]);
-        if (transC && dimsC.size() == 2)
-            std::swap(dimsC[0], dimsC[1]); // reverse
-        const auto shapeC = NDShape(dimsC);
-        // create result object; properties besides shape are inherited from input 0 for now
-        NDArrayViewPtr result = MakeSharedObject<NDArrayView>(inputA->GetDataType(), inputA->GetStorageFormat(), shapeC, inputA->Device());
+        if (!out)
+        {
+            // shape inference
+            const auto& shapeA = inputA->Shape();
+            const auto& shapeB = inputB->Shape();
+            if (shapeA.Rank() != 2 && shapeA.Rank() != 1)
+                LogicError("NDArrayView::MatrixProductInPlace: For now only vectors and 2D matrices are supported, invalid shape '%S'", shapeA.AsString().c_str());
+            if (shapeB.Rank() != 2 && shapeB.Rank() != 1)
+                LogicError("NDArrayView::MatrixProductInPlace: For now only vectors and 2D matrices are supported, invalid shape '%S'", shapeB.AsString().c_str());
+            const auto innerA = transA ? shapeA[0] : shapeA[shapeA.Rank() - 1]; // inner (dot-product) dimension
+            const auto innerB = transB ? shapeB[shapeB.Rank() - 1] : shapeB[0];
+            if (innerA != innerB)
+                LogicError("NDArrayView::MatrixProductInPlace: Inner dimensions %d and %d don't match", (int)innerA, (int)innerB);
+            auto dimsC = std::vector<size_t>();  // TODO: use a different class here to avoid memory allocation?
+            // assemble the output shape from the non-inner dimensions. Note that vec^t * vec will end up with a scalar (rank 0)
+            if (shapeA.Rank() == 2)
+                dimsC.push_back(transA ? shapeA[1] : shapeA[0]);
+            if (shapeB.Rank() == 2)
+                dimsC.push_back(transB ? shapeB[0] : shapeB[1]);
+            if (transC && dimsC.size() == 2)
+                std::swap(dimsC[0], dimsC[1]); // reverse
+            const auto shapeC = NDShape(dimsC);
+            // create result object; properties besides shape are inherited from input 0 for now
+            out = MakeSharedObject<NDArrayView>(inputA->GetDataType(), inputA->GetStorageFormat(), shapeC, inputA->Device());
+            beta = 0; // newly created object is assumed 0
+        }
         // perform operation in-place on result object
-        return result->MatrixProductInPlace(0.0/*nothing to add to*/, transC, inputA, transA, inputB, transB, alpha);
+        return out->MatrixProductInPlace(beta, transC, inputA, transA, inputB, transB, alpha);
+    }
+
+    // TODO: move the Python code down here first, then test. Then optimize.
+    /*static*/ NDArrayViewPtr NDArrayView::SpliceFrom(const std::vector<NDArrayViewPtr>& inputs, int axis, NDArrayViewPtr out, double beta)
+    {
+        size_t numInputs = inputs.size();
+        auto dims = inputs[0]->Shape().Dimensions();
+        if (axis < dims.size())
+            LogicError("Splice: currently only splicing in a new slowest-changing axis is supported");
+        if (axis >= dims.size())
+            dims.resize(axis + 1, 1);
+        dims[axis] *= numInputs;
+        NDShape shape(dims);
+        if (!out)
+        {
+            out = MakeSharedObject<NDArrayView>(inputs[0]->GetDataType(), inputs[0]->GetStorageFormat(), shape, inputs[0]->Device());
+            beta = 0;
+        }
+        else if (shape != out->Shape())
+            RuntimeError("Splice: output object has wrong shape");
+        // for now copy all slices one by one
+        // TODO: change into a single CUDA-kernel launch; needs new kernel and to transfer pointers array to GPU
+        std::vector<size_t> startOffset(dims.size(), 0);
+        auto extent = dims;
+        extent[axis] = 1;
+        for (auto i = 0; i < numInputs; i++)
+        {
+            startOffset[axis] = i;
+            auto targetSlice = out->SliceView(startOffset, extent, false); // we copy inputs[i] to this slice
+            NumericOperation({ inputs[i] }, /*alpha=*/1.0, (int)Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, targetSlice);
+        }
+        return out;
     }
 
     NDArrayViewPtr NDArrayView::SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly) const

@@ -403,6 +403,10 @@ class NDArrayViewOpsMixin(object):
         return res
     @staticmethod
     def splice(*args, axis=-1, out=None): # negative axis will insert a new axis
+        # BUGBUG: axis=-1 conflicts with numpy's meaning, which will reference from the end. Maybe use None instead?
+        # TODO: just move to NDArrayView
+        axis = len(args[0].shape) - 1 - axis # swap to C++ API convention
+        return NDArrayView.splice_from(args, axis, out)
         arg0 = args[0]  # for now assume that all share the same shape; use first for reference
         shape = arg0.shape
         #print(shape, arg0)
@@ -432,7 +436,8 @@ def _add_ndarrayview_ops(klass):
                           'sigmoid', 'tanh', 'relu', 'exp',
                           'reduce_sum', 'reduce_log_sum',
                           'reshape', '__getitem__', '__setitem__', 'splice']:
-        if getattr(klass, overload_name, None):
-            raise ValueError('class "%s" already has operator overload "%s"' %
-                             (klass, overload_name))
+        # bring this back in once C++ splice() is functional
+        #if getattr(klass, overload_name, None):
+        #    raise ValueError('class "%s" already has operator overload "%s"' %
+        #                     (klass, overload_name))
         setattr(klass, overload_name, NDArrayViewOpsMixin.__dict__[overload_name])
