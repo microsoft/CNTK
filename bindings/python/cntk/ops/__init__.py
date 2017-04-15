@@ -2088,7 +2088,7 @@ def reduce_sum(x, axis=None, name=''):
     equivalent with specifying ``axis=Axis.all_static_axes()``. If 
     ``axis=Axis.all_axes()`` is specified, then the output is a scalar which is the sum of all the 
     elements in the minibatch. And if ``axis=Axis.default_batch_axis()`` is specified, then the reduction
-    will happen across the batch axis (In this case the input can't be a sequence).
+    will happen across the batch axis (In this case the input must not be a sequence).
 
     Example:
         >>> x = C.sequence.input((2,2))
@@ -2797,9 +2797,22 @@ def stop_gradient(input, name=''):
 def assign(ref, input, name=''):
     '''
     Assign the value in input to ref and return the new value, ref need to be the same layout as input.
+    Both ref and input can't have dynamic axis and broadcast isn't supported for the assign operator.
     During forward pass, ref will get the new value after the forward pass finish, so that any part of
     the graph that depend on ref will get the old value. To get the new value, use the one returned by 
     the assign node. The reason for that is to make ``assign`` have a deterministic behavior.
+
+    If not computing gradients, the ref will be assigned the new value after the forward pass over the 
+    entire Function graph is complete; i.e. all uses of ref in the forward pass will use the original 
+    (pre-assignment) value of ref.
+
+    If computing gradients, the assignment to ref will happen after completing both the forward and 
+    backward passes over the entire Function graph.
+
+    The ref must be a Parameter or Constant. If the same ref is used in multiple assign operations, 
+    then the order in which the assignment happens is non-deterministic and the final value can be 
+    either of the assignments unless an order is established using a data dependence between the 
+    assignments.
 
     Example:
         >>> dest = C.constant(shape=(3,4))

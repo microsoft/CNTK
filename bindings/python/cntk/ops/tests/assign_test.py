@@ -11,37 +11,57 @@ Unit tests for the assign operation.
 import numpy as np
 import pytest
 import cntk as C
+from .ops_test_utils import unittest_helper, _test_unary_op, AA, precision, PRECISION_TO_TYPE, constant
+from cntk.internal import sanitize_dtype_cntk
 
-def test_assign_basic():
-    dest = C.constant(shape=(3,4))
-    data = C.parameter(shape=(3,4), init=2)
-    result = C.assign(dest,data).eval()
+ASSIGN_TEST_OPERANDS = [
+    #(input_data)
+    ([[1]]),
+    ([[1,2],[4,5]]),
+    ([[[1,2],[3,4]],[[5,6],[7,8]]]),
+    ([[[[1,2],[3,4]],[[5,6],[7,8]]],[[[9,10],[11,12]],[[13,14],[15,16]]]]),
+]
 
-    assert np.array_equal(dest.asarray(), data.asarray())
-    assert np.array_equal(result, data.asarray())
+@pytest.mark.parametrize("input_data", ASSIGN_TEST_OPERANDS)
+def test_assign_to_constant(input_data, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    data = AA(input_data, dtype=dt)
 
+    value = C.parameter(init=data)
+    dest = C.constant(shape=data.shape, dtype=dt)
+    assign_op = C.assign(dest, value)
 
-def test_assign_basic_param():
-    dest = C.parameter(shape=(3,4))
-    data = C.parameter(shape=(3,4), init=2)
-    result = C.assign(dest,data).eval()
+    result = assign_op.eval()
 
-    assert np.array_equal(dest.asarray(), data.asarray())
-    assert np.array_equal(result, data.asarray())
+    assert np.array_equal(dest.asarray(), data)
+    assert np.array_equal(result, data)
 
+@pytest.mark.parametrize("input_data", ASSIGN_TEST_OPERANDS)
+def test_assign_to_param(input_data, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    data = AA(input_data, dtype=dt)
 
-def test_assign_deterministic():
-    dest = C.parameter(shape=(3,4), init=0)
-    data = C.parameter(shape=(3,4), init=2)
+    value = C.parameter(init=data)
+    dest = C.parameter(shape=data.shape, dtype=dt)
+    assign_op = C.assign(dest, value)
 
-    a = C.assign(dest, data)
-    y = dest + data
-    result = C.combine([y, a]).eval()
+    result = assign_op.eval()
 
-    assert np.array_equal(result[y.output], data.asarray())
-    assert np.array_equal(dest.asarray(), data.asarray())
-    assert np.array_equal(y.eval(), data.asarray() + 2)
+    assert np.array_equal(dest.asarray(), data)
+    assert np.array_equal(result, data)
 
+@pytest.mark.parametrize("input_data", ASSIGN_TEST_OPERANDS)
+def test_assign_dependency(input_data, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    data = AA(input_data, dtype=dt)
 
+    value = C.parameter(init=data)
+    dest = C.parameter(shape=data.shape, dtype=dt)
+    assign_op = C.assign(dest, value)
+    y = dest + value
 
+    result = C.combine([y, assign_op]).eval()
 
+    assert np.array_equal(result[y.output], data)
+    assert np.array_equal(dest.asarray(), data)
+    assert np.array_equal(y.eval(), data + data)

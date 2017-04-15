@@ -1830,17 +1830,6 @@ namespace CNTK
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name)
         {
-            if (axis == Axis::DefaultBatchAxis())
-            {
-                auto dynamicAxes = operand.DynamicAxes();
-
-                if (std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis()) == dynamicAxes.end())
-                    LogicError("ReduceElements: operand %S; No batch axis found during reduction along the batch axis.", operand.AsString().c_str());
-
-                if (dynamicAxes.size() > 1)
-                    LogicError("ReduceElements: operand %S; Reduction along the batch axis on input sequence is currently unsupported.", operand.AsString().c_str());
-            }
-
             if (axis.IsStaticAxis() ||
                 (axis == Axis::AllStaticAxes()) ||
                 (axis == Axis::AllAxes()) ||

@@ -1065,7 +1065,10 @@ public:
         ValidateBinaryZip(isFinalValidationPass, false);
 
         if (m_inputs.size() != 2)
-            InvalidArgument("Assign operation requires two inputs instead of %d.", (int)m_inputs.size());
+            InvalidArgument("AssignNode: Assign operation requires two inputs instead of %d.", (int)m_inputs.size());
+
+        if (Input(0)->HasMBLayout() || Input(1)->HasMBLayout())
+            InvalidArgument("AssignNode: None of the inputs can have dynamic axes.");
 
         if (!Input(1)->GetSampleLayout().IsElementwiseCompatibleWith(Input(0)->GetSampleLayout()))
             InvalidArgument("AssignNode: All inputs should have same sample layout.");

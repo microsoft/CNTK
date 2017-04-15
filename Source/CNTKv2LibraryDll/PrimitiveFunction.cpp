@@ -344,8 +344,13 @@ namespace CNTK
                             outputShape = NDShape{}; // scalar
                             break;
                         case PrimitiveOpType::PackedIndex:
+                            assert(m_inputs.size() == 2);
+                            outputShape = UnaryElementwiseOpOutputShape(m_inputs[1].Shape());
+                            break;
                         case PrimitiveOpType::Assign:
                             assert(m_inputs.size() == 2);
+                            if (!m_inputs[0].DynamicAxes().empty() || !m_inputs[1].DynamicAxes().empty())
+                                InvalidArgument("AssignNode: None of the operands '%S' can have dynamic axes.", NamedListString(m_inputs).c_str());
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[1].Shape());
                             break;
                         case PrimitiveOpType::ScatterPacked:
@@ -696,6 +701,17 @@ namespace CNTK
                             auto reductionAxis = NormalizeAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0]);
                             if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
                                 outputShape = {};
+                            else if (reductionAxis == Axis::DefaultBatchAxis())
+                            {
+                                auto dynamicAxes = m_inputs[0].DynamicAxes();
+                                if (std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis()) == dynamicAxes.end())
+                                    LogicError("ReduceElements: operand %S; No batch axis found during reduction along the batch axis.", m_inputs[0].AsString().c_str());
+
+                                if (dynamicAxes.size() > 1)
+                                    LogicError("ReduceElements: operand %S; Reduction along the batch axis on input sequence is currently unsupported.", m_inputs[0].AsString().c_str());
+
+                                outputShape = m_inputs[0].Shape();
+                            }
                             else if (reductionAxis.IsDynamicAxis())
                                 outputShape = m_inputs[0].Shape();
                             else
