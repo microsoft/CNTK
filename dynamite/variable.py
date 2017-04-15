@@ -143,7 +143,7 @@ class Variable:
             t += ")"
         return t
 
-    def dump_graph(self, skip_free=False):
+    def dump_graph(self, skip_free=True):
         dump_graph([self], skip_free)
 
     def __repr__(self):
@@ -193,12 +193,12 @@ class Variable:
               else:
                   data = self.op(*(args + self.additional_args))
           if data.shape != self.shape:
-              self.dump_graph(skip_free=True)
+              self.dump_graph()
               print(data.shape, self.shape)
           assert data.shape == self.shape # sanity check of shape inference
           return data
         except Exception: # (for catching stuff in the debugger; remove this)
-          self.dump_graph(skip_free=True)
+          self.dump_graph()
           print('_call_op failure:', self.op, self.shape, tuple(input.shape for input in self.inputs))
           raise
         pass
@@ -238,7 +238,7 @@ class Variable:
     # create Variable that is the gradient of self w.r.t. a set of parameters, multiplied with error_signal
     def backprop_to(self, i):  # get backprop function for inputs[i]; each fun(v, g) -> g * dv/dinp_i
         if not self.backprop_to_functions:
-            self.dump_graph(skip_free=True)
+            self.dump_graph()
             print('backprop_to() missing for', self.signature_as_string())
             raise NotImplementedError('backprop_to missing')
         return self.backprop_to_functions[i]
@@ -739,7 +739,7 @@ def transform_to_batched_ops(vars):
             # matrix product is special, in that the right argument is always shared in the batch and not applied element-wise
             if is_mul and i == 1:
                 if not all(arg is arg0 for arg in args):
-                    dump_graph(op_batch, skip_free=True)
+                    dump_graph(op_batch)
                 assert all(arg is arg0 for arg in args)
                 return arg0
             # check whether all inputs are the same (e.g. add a bias)--then don't batch
@@ -880,7 +880,7 @@ def evaluate_graph(vars):
         #transform_to_batched_ops(vars) # verify that the second time does not change it any further
         #print_graph_stats(vars)
     #print('--- after another transform ---')
-    #dump_graph(vars, skip_free=True)
+    #dump_graph(vars)
     #transform_to_batched_ops(vars)
     # now actually compute the transformed graph
     nodes = topo_sort(vars)
@@ -935,6 +935,8 @@ def evaluate_graph(vars):
 #  - v: variable whose gradient is to be computed
 #  - parameters: list (set) of Parameter variables hanging off v to compute the gradient for
 #  - error_signal: to back-propagate into the root
+# Output:
+#  - map [param] -> its gradient Variable
 def create_gradient_graph(root, parameters, error_signal):
     # batch all ops
     # BUGBUG: This can only run once for now; so don't do it here
@@ -993,7 +995,7 @@ def create_gradient_graph(root, parameters, error_signal):
                 backprop_to = node.backprop_to(i)
                 input_g = backprop_to(node, g)
                 if input.shape != input_g.shape:
-                    dump_graph(input_g, skip_free=True)
+                    dump_graph(input_g)
                     print('gradient shape', input_g.shape, "came back different from input's shape", input.shape, 'for input', i, 'of op', node.signature_as_string())
                 assert input.shape == input_g.shape
                 if input not in gradients:
@@ -1005,7 +1007,7 @@ def create_gradient_graph(root, parameters, error_signal):
     res = { p: create_aggregate(gradients[p]) for p in parameters } # if a parameter does not feed root, then there will be no gradient, we will fail here
     return res
 
-def dump_graph(vars, skip_free=False): # vars can be a Variable or an iterable of Variables
+def dump_graph(vars, skip_free=True): # vars can be a Variable or an iterable of Variables
     if isinstance(vars, Variable):
         vars = [vars]
     for node in topo_sort(vars):

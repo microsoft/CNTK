@@ -147,6 +147,51 @@ def train(debug_output=False):
             #dynamite.dump_graph(gp)
             print(gp.to_ndarray())
 
+    # testing a tree model
+    if True:
+        e1 = dynamite.Embedding(3)
+        r1 = dynamite.RNNUnit(3, dynamite.relu)
+        e1(1)
+        c1 = dynamite.Constant(np.array([1., 2., 3.]))
+        r1(c1, c1) # seems shape inference does not work properly since it is done after batching
+        import random
+        random.seed(1)
+        n = 0
+        def gen_tree(depth): # randomly generate a tree
+            nonlocal n
+            if depth == 1 or (random.randrange(4) > 0 and depth < 4):
+                return (gen_tree(depth+1), gen_tree(depth+1))
+            else:
+                n += 1
+                return np.array([n]) # BUGBUG: times() shape inference not working if input is scalar
+        batch = [gen_tree(1) for i in range(20)]
+        #inp = ((4,6),((1,3),(2,1)))
+        def tree_node(arg):
+            if isinstance(arg, tuple):
+                return r1(tree_node(arg[0]), tree_node(arg[1]))
+            else:
+                return e1(arg)
+        d1 = dynamite.Dense(1)
+        z = dynamite.reduce_sum(dynamite.Variable.splice(*dynamite.map_batch(lambda inp: d1(tree_node(inp)), [batch])))
+        #dynamite.dump_graph(z)
+        dynamite.print_graph_stats([z], '\n############## LOSS, unbatched\n')
+        #z.get_value()
+        dynamite.print_graph_stats([z], '\n############## LOSS, batched\n')
+        #dynamite.dump_graph(z)
+        #print(z.to_ndarray())
+        # gradients
+        dp1 = e1.get_parameters() + r1.get_parameters() + d1.get_parameters()
+        grads = z.grad_times(dp1)
+        grad_vars = tuple(grads.values())
+        #print('### GRADIENT')
+        #dynamite.dump_graph(grad_vars)
+        dynamite.print_graph_stats(grad_vars + (z,), '\n############## plus GRADIENTS, unbatched\n')
+        #for g in grad_vars:
+        #    g.get_value()
+        #dynamite.dump_graph(grad_vars)
+        dynamite.print_graph_stats(grad_vars + (z,), '\n############## LOSS and GRADIENTS, batched\n')
+        pass
+
     rel_path = "../CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     reader = create_reader(os.path.dirname(os.path.abspath(__file__)) + '/' + rel_path, True, input_dim, num_output_classes)
 
@@ -197,7 +242,7 @@ def train(debug_output=False):
         else:
             return
 
-        #dynamite.dump_graph(crit, skip_free=True)
+        #crit.dump_graph()
         #exit()
         # compute gradients
         dgradients = crit.grad_times(dparameters)
@@ -228,7 +273,7 @@ def train(debug_output=False):
                 assert np.allclose(p_data, dp_data, atol=1e-5)
                 print('## OK', i, dpname)
                 #if dpname == "_[1].step_function.W":
-                #    dynamite.dump_graph(dp, skip_free=True)
+                #    dp.dump_graph(dp)
                 #    exit()
 
             # model update from dynamic
