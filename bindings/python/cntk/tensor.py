@@ -284,13 +284,10 @@ class NDArrayViewOpsMixin(object):
     __rmul__ = __mul__
 
     # in-place variants
-    # these only differ in passing 'self' instead of 'out'  --NOT CORRECT; we want actual copy with beta=1  --TODO!
-    def __iadd__(self, other):
-        #self.numeric_operation_in_place(1.0, [other], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
-        return NDArrayViewOpsMixin._num_op(self, [self, other], 1.0, 24) # 24 = ElementWiseOperator.opSum
-    def __isub__(self, other): # realized as an in-place add-to with alpha=-1
-        #self.numeric_operation_in_place(1.0, [other], -1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
-        return NDArrayViewOpsMixin._num_op(self, [self, other], 1.0, 25) # 25 = ElementWiseOperator.opDifference
+    def __iadd__(self, other): # realized as an in-place copy with beta=1
+        return NDArrayViewOpsMixin._num_op(self, [other],  1.0, 2, beta=1.0) # 2 = ElementWiseOperator.opCopy, 24 = ElementWiseOperator.opSum
+    def __isub__(self, other): # realized as an in-place copy with beta=1 and alpha=-1
+        return NDArrayViewOpsMixin._num_op(self, [other], -1.0, 2, beta=1.0) # 2 = ElementWiseOperator.opCopy, 24 = ElementWiseOperator.opSum
 
     # TODO: reconcile this behavior with numpy's, which interprets higher axes in weird ways
     def __matmul__(self, other, out=None):
