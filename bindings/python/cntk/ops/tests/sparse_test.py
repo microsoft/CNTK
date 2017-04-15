@@ -290,3 +290,4 @@ def test_sparse_block_row_input(device_id):
     grad_i = C.input(w.shape)
     new_param_value = (0.01*grad_i + w).eval({grad_i : w_grad_value}, device=dev)
     assert np.array_equal(new_param_value, np.asarray([[[ 0.01, 1.01], [2., 3.], [4.01, 5.01]]], dtype=np.float32))
+ 
