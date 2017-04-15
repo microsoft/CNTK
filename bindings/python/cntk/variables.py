@@ -29,6 +29,7 @@ class Record(dict):
 
     def __setattr__(self, key, value):
         raise AttributeError('record is immutable')
+
     def updated_with(self, **kwargs):
         '''
         Create a new Record from an existing one with members modified or added.
@@ -331,7 +332,11 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
     @property
     def value(self):
         '''
-        NumPy array of the value
+        Value of the Parameter
+
+        Args:
+          getter: gets the Parameter's value as a NumPy array
+          setter: sets the Parameter's value to the provided NumPy array
         '''
         return super(Parameter, self).value().to_ndarray()
 

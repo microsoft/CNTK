@@ -811,6 +811,13 @@ class Function(cntk_py.Function):
     def name(self):
         '''
         Name of this function
+
+        Args:
+          getter (str): returns the name of the function.
+          setter (str): sets the name of the function. Setting the name of a
+           Function is only allowed if the Function does not already have a
+           name. Calling this method, when this Function already has a name,
+           results in an exception.
         '''
         return super(Function, self).name()
 
