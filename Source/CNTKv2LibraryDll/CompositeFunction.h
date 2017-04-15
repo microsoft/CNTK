@@ -10,6 +10,7 @@
 #include "PrimitiveFunction.h"
 #include "ComputationNetwork.h"
 #include "BackCompat.h"
+#include "Value.h"
 
 namespace CNTK
 {
@@ -309,6 +310,18 @@ namespace CNTK
 
         std::unordered_map<Variable, uint64_t> GetCurrentBackpropRootsTimeStamps() const;
 
+        void ClearExistingOutputOrGradientStorageReferences()
+        {
+            for (auto& existingStorageWeakReference : m_existingNetworkStorageReferences)
+            {
+                auto existingStorageReference = existingStorageWeakReference.lock();
+                if (existingStorageReference)
+                    existingStorageReference->Erase();
+            }
+
+            m_existingNetworkStorageReferences.clear();
+        }
+
     private:
 
         // Set of all primitive functions in the graph underlying 'this' Function. Also keeps the primitive Function objects alive 
@@ -322,6 +335,9 @@ namespace CNTK
         std::unordered_map<Variable, bool> m_isVariableRootMap;
 
         Microsoft::MSR::CNTK::ComputationNetworkPtr m_computationNetwork;
+
+        // Map to keep track of any references to network output/gradient storage handed out so far
+        std::vector<PackedValueWeakPtr> m_existingNetworkStorageReferences;
 
         // The backpropRoots sepecified in the most recent 'Forward' call on 'this' Function.
         // This indicates for which of its roots has 'this' Function retained required intermediate 

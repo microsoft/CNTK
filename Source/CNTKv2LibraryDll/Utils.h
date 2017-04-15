@@ -589,6 +589,8 @@ namespace CNTK
         return ShapeRowColSplitPoint(var.Shape(), var.IsSparse());
     }
 
+    bool IsPackedValue(const ValuePtr& value);
+
     // Helper class to manage a collection of learners.
     class Learners
     {

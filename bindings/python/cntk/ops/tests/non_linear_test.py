@@ -497,3 +497,28 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
     forward_input = {a: t}
 
     unittest_helper(op_node, forward_input, expected_forward, expected_backward=None, device_id=device_id, precision=precision)
+
+TENSOR_PAIRS = [
+    ([0.3], [0.1]),
+    ([[0.1]], [[0.3]]),
+    ([[1.5, 2.1]], [[-2., -3.]]),
+    ([[1., 2.], [3., 4.], [1., 2.]],
+     [[2., 2.], [3., 1.], [-1., -2.]])
+]
+
+@pytest.mark.parametrize("base, exponent", TENSOR_PAIRS)
+def test_op_pow(base, exponent, device_id, precision):
+    dt =  PRECISION_TO_TYPE[precision]
+    base = AA(base,dtype=dt)
+    exponent = AA(exponent,dtype=dt)
+    expected_forward = base ** exponent
+
+    expected_backward = {
+            'left_arg':  [exponent * base**(exponent-1)],
+            'right_arg': [expected_forward * np.log(base)]
+        }
+
+    from .. import pow
+    _test_binary_op(precision, device_id, pow,
+                    base, exponent,
+                    AA([expected_forward]), expected_backward)

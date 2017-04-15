@@ -2571,6 +2571,8 @@ namespace CNTK
         ///
         virtual void CopyFrom(const Value& source);
 
+        virtual void Erase();
+
         ///
         /// Unpacks sequences in 'this' Value as a vector of NDArrayView objects, each represeting a sequence in the 
         /// batch of sequences that 'this' Value object contains data for.
@@ -2941,6 +2943,12 @@ namespace CNTK
                                 std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
                                 const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
+        CNTK_API void Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
+                                Variable& gradientRoot,
+                                std::unordered_map<Variable, ValuePtr>& gradients,
+                                std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
+                                const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
         ///
         /// Compute the gradients of the output of this Function, w.r.t. the specified input variables in 'gradients'
         /// at the specified 'arguments' values for the Function inputs
@@ -3195,6 +3203,27 @@ namespace CNTK
         ///
         static const int MaxNumOutputs = 64;
 
+    public:
+
+        ///
+        /// Registers a native user-defined Function that can be subsequently instantiated using the Function::NativeUserFunction method.
+        ///
+        // TODO: Do we need an Unregister to unload the module?
+        CNTK_API static void RegisterNativeUserFunction(const std::wstring& uniqueOpName, const std::wstring& moduleName, const std::wstring& factoryMethodName);
+
+        ///
+        /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
+        ///
+        CNTK_API static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName = L"");
+
+        ///
+        /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
+        ///
+        inline static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const std::wstring& userFunctionInstanceName = L"")
+        {
+            return NativeUserFunction(opName, operands, Dictionary(), userFunctionInstanceName);
+        }
+
     protected:
         static bool IsArgument(const Variable& var)
         {
@@ -3299,6 +3328,9 @@ namespace CNTK
 
     public:
         CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
+
+    private:
+        static UserFunctionFactoryPtr s_userFunctionFactory;
 
     private:
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
@@ -3479,6 +3511,10 @@ namespace CNTK
     /// Create an instance of the CNTK built-in elementwise tensor operation that computes the log of the sum of the exponentials of the specified input operands.
     ///
     CNTK_API FunctionPtr LogAddExp(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    /// Create an instance of the CNTK built-in elementwise tensor operation that computes the leftOperand raised to the power of the right operand.
+    ///
+    CNTK_API FunctionPtr Pow(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise multiplication operation on specified tensor input operands.
@@ -3922,6 +3958,10 @@ namespace CNTK
         /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the operands lone dynamic sequence axis
         ///
         CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name = L"");
+
+        CNTK_API FunctionPtr ReduceMax(const Variable& operand, const std::wstring& name = L"");
+
+        CNTK_API FunctionPtr Softmax(const Variable& operand, const std::wstring& name = L"");
 
         CNTK_API FunctionPtr First(const Variable& operand, const std::wstring& name = L"");
         CNTK_API FunctionPtr Last(const Variable& operand, const std::wstring& name = L"");

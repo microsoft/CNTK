@@ -729,7 +729,7 @@ class Function(cntk_py.Function):
         return var_gradients
 
     @typemap
-    def grad(self, at, wrt=None, outputs=None, device=None, as_numpy=True):
+    def grad(self, at, wrt=None, outputs=None, device=None, as_numpy=True, grad_root=None):
         '''
         Computes the gradient of this Function at location ``at`` with respect to ``wrt``.
         The Function must have a single output.
@@ -758,6 +758,8 @@ class Function(cntk_py.Function):
             as_numpy (bool, default `True`): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
              costly conversion but returns a somewhat opaque object.
+            grad_root (variable, optional): specify the root of gradients calculation. 
+             If not specified, the output of this function will be used as gradient root.
 
         Returns:
             dict or NumPy Array or a tuple of these: Dict with keys of ``wrt`` variables and gradient values of
@@ -784,7 +786,10 @@ class Function(cntk_py.Function):
         output_map = {v: None for v in outputs}
         wrt_map = {v: None for v in wrt}
 
-        super(Function, self).gradients(in_var_map, wrt_map, output_map, device)
+        if grad_root is None:
+            super(Function, self).gradients(in_var_map, wrt_map, output_map, device)
+        else:
+            super(Function, self).gradients(in_var_map, grad_root, wrt_map, output_map, device)
 
         if as_numpy:
             for k in output_map:
@@ -1088,6 +1093,45 @@ class Function(cntk_py.Function):
         if not device:
             device = DeviceDescriptor.use_default_device()
         return cntk_py.Function.load_model(filename, device)
+
+@typemap
+def register_native_user_function(op_name, module_name, factory_method_name):
+    '''
+    Registers a native user-defined Function that can be subsequently instantiated
+    using the 'native_user_function' method.
+
+    Args:
+        op_name (str): Name of the native user-defined Function to register.
+         This name must be unique and an error will be reported if it matches
+         the 'op_name' specified for a previously registered native user-defined Function.
+        module_name (str): Name of the module containing the factory method for creating 
+         instances of the native user-defined Function being registered. This is typically
+         the name of a DLL/so which exports a factory method for creating instances of the
+         native user-defined Function.
+        factory_method_name (str): Name of the factory method for creating instances of the native
+         user-defined Function being registered. This method must be an exported method of the
+         specified module.
+    '''
+    return cntk_py.Function_register_native_user_function(op_name, module_name, factory_method_name)
+
+@typemap
+def native_user_function(op_name, operands, user_function_instance_name=''):
+    '''
+    Creates an instance of a user-defined Function previously registered using the
+    'register_native_user_function' method.
+
+    Args:
+        op_name (str): Name of the native user-defined Function to instantiate.
+         This name must be the name that was used when registering the native user-function 
+         with the 'register_native_user_function' method.
+        operands (list): input operands of the new instance of the native user-defined Function.
+        user_function_instance_name (str): Name of the instance of the created native 
+         user-defined Function.
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    return cntk_py.Function_native_user_function(op_name, operands, user_function_instance_name)
 
 @typemap
 def load_model(filename, device=None):

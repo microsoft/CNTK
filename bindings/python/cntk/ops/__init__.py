@@ -9,7 +9,7 @@ import numpy as np
 import numbers
 from numbers import Number
 from . import sequence
-from .functions import CloneMethod, Function, load_model
+from .functions import CloneMethod, Function, load_model, register_native_user_function, native_user_function
 from ..variables import Variable, Parameter, Constant
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args
 from cntk.internal.utils import get_data_type
@@ -722,6 +722,32 @@ def minus(left, right, name=''):
     right = sanitize_input(right, dtype)
     return minus(left, right, name)
 
+@typemap
+def pow(base, exponent, name=''):
+    '''
+    The output of this operation is base raised to the power of exponent. It supports broadcasting.
+
+    Example:
+        >>> C.pow([1, 2, 3], [3, 2, 1]).eval()
+        array([ 1.,  4.,  3.], dtype=float32)
+
+        >>> C.pow([[0.5,2],[4,1]], -2).eval()
+        array([[ 4.    ,  0.25  ],
+               [ 0.0625,  1.    ]], dtype=float32)
+
+    Args:
+        base: base tensor
+        exponent: exponent tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+
+    from cntk.cntk_py import pow
+    dtype = get_data_type(base, exponent)
+    base = sanitize_input(base, dtype)
+    exponent = sanitize_input(exponent, dtype)
+    return pow(base, exponent, name)
 
 @associative_multi_arg
 @typemap
