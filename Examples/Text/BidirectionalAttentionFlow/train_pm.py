@@ -121,7 +121,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     model = C.combine(list(z.outputs) + [loss.output])
     label_ab = argument_by_name(loss, 'ab')
     
-    if restore:
+    if restore and os.path.isfile(model_file):
         trainer.restore_from_checkpoint(model_file)
 
     best_val_err = 100
@@ -147,7 +147,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
             if best_val_err > val_err:
                 best_val_err = val_err
                 best_since = 0
-                if C.Communicator.is_main():
+                if C.Communicator.rank() == 0:
                     trainer.save_checkpoint(model_file+'.best')
                     trainer.save_checkpoint(model_file)
             else:
