@@ -100,7 +100,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
                             tag = 'Training',
                             log_to_file = log_file,
                             rank = C.Communicator.rank(),
-                            gen_heartbeat = False)]
+                            gen_heartbeat = True)]
 
     C.set_default_use_mean_gradient_value(True)
     lr = C.learning_rate_schedule(training_config['lr'], unit=C.learners.UnitType.sample)
@@ -123,16 +123,17 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 
     best_val_err = 100
     best_since = 0
-    if train_data_ext == '.ctf':    
+    stop_after = training_config['stop_after']
+    if train_data_ext == '.ctf':
         mb_source, input_map = create_mb_and_map(loss, train_data_file, polymath)
 
-        minibatch_size = training_config['minibatch_size'] # number of samples
+        minibatch_size = training_config['minibatch_size'] * C.Communicator.num_workers() # number of samples
         epoch_size = training_config['epoch_size']
         
         for epoch in range(max_epochs):
             num_seq = 0
             while True:
-                data = mb_source.next_minibatch(minibatch_size, input_map=input_map)
+                data = mb_source.next_minibatch(minibatch_size, input_map=input_map, num_data_partitions=C.Communicator.num_workers(), partition_index=C.Communicator.rank())
                 trainer.train_minibatch(data)
                 num_seq += data[label_ab].num_sequences
                 if num_seq >= epoch_size:
@@ -143,12 +144,14 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
             if best_val_err > val_err:
                 best_val_err = val_err
                 best_since = 0
-                if C.distributed.Communicator.rank() == 0:
-                    model.save(model_file + '{}'.format(epoch))
+                if C.Communicator.rank() == 0:
+                    model.save(model_file+'.best')
+                    trainer.save_checkpoint(model_file+'.best')
+                    trainer.save_checkpoint(model_file)
             else:
                 best_since += 1
-                if best_since > 10:
-                    break # stop training when val_err goes up
+                if best_since > stop_after:
+                    break # stop training when val_err did not go down for stop_after epochs
 
             if profiling:
                 C.debugging.enable_profiler()

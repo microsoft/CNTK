@@ -17,11 +17,12 @@ model_config = {
 }
 
 training_config = {
-    'minibatch_size' : 2500, # in samples
-    'log_freq'       : 20,   # in minibatchs
-    'epoch_size'     : 1780, # in sequences
-    'max_epochs'     : 100,
+    'minibatch_size' : 4096,  # in samples
+    'log_freq'       : 100,   # in minibatchs
+    'epoch_size'     : 85540, # in sequences
+    'max_epochs'     : 300,
     'lr'             : 0.5,
-    'train_data'     : 'val.ctf',
+    'train_data'     : 'train.ctf',
     'val_data'       : 'val.ctf',
+    'stop_after'     : 10,    # num epochs to stop if no CV improvement
 }
