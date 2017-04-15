@@ -419,7 +419,7 @@ def _add_ndarrayview_ops(klass):
                           'reduce_sum', 'reduce_log_sum',
                           'reshape', '__getitem__', '__setitem__', 'splice']:
         # bring this back in once C++ splice() is functional
-        #if getattr(klass, overload_name, None):
-        #    raise ValueError('class "%s" already has operator overload "%s"' %
-        #                     (klass, overload_name))
+        if getattr(klass, overload_name, None):
+            raise ValueError('class "%s" already has operator overload "%s"' %
+                             (klass, overload_name))
         setattr(klass, overload_name, NDArrayViewOpsMixin.__dict__[overload_name])
