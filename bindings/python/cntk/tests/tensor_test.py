@@ -49,8 +49,9 @@ def test_ndarrayview_operators(device_id, precision):
         args = [arg.astype(precision, copy=True) for arg in args]
         # TensorView
         args_tv = [NDArrayView.from_dense(arg) for arg in args]
-        res_tv = what(*args_tv).to_ndarray()
-        #assert isinstance(res_tv, NDArrayView) # make sure we don't get a cntk_py version back  --TODO: figure out why this does not work
+        res_tv = what(*args_tv)
+        assert isinstance(res_tv, NDArrayView) # make sure we don't get a cntk_py version back  --TODO: figure out why this does not work
+        res_tv = res_tv.to_ndarray()
         # numpy
         res_np = what(*args)
         print(res_tv)
