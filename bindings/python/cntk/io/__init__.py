@@ -476,9 +476,14 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
         '''
         return super(UserMinibatchSource, self).stream_info(name)
 
-    def next_minibatch(self, num_samples, device=None):
+    def next_minibatch(self, num_samples, number_of_workers, worker_rank, device=None):
         '''
         Function to be implemented by the user.
+
+        Args:
+            num_samples (int): number of samples to return
+            number_of_workers (int): number of workers in total
+            worker_rank (int): worker for which the data is to be returned
 
         Returns:
             mapping of :class:`StreamInformation` to :class:`MinibatchData`
@@ -488,10 +493,6 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
     def _next_minibatch(self, info_map, mb_size_in_sequences,
             mb_size_in_samples, number_of_workers, worker_rank, device):
         # mbsize_in_sequences is ignored
-
-        # TODO support distribution
-        if number_of_workers != 1 or worker_rank != 0:
-            raise ValueError("User defined minibatch source do not support distribution yet. Stay tuned.")
 
         info_map.update(self.next_minibatch(mb_size_in_samples, device))
 

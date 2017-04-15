@@ -608,7 +608,7 @@ class MyDataSource(UserMinibatchSource):
     def stream_infos(self):
         return [self.fsi, self.lsi]
 
-    def next_minibatch(self, num_samples, device=None):
+    def next_minibatch(self, num_samples, number_of_workers=1, worker_rank=0, device=None):
         features = []
         labels = []
 
