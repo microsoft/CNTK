@@ -347,26 +347,21 @@ class NDArrayViewOpsMixin(object):
         slice = self.__getitem__(key, keep_singles=True)
         return NDArrayViewOpsMixin._num_op(slice, [value], 1.0, 2) # 2 = ElementWiseOperator.opCopy
     def __getitem__(self, key, keep_singles=False):
-        # BUGBUG: according to some Python docs, we must implement IndexError to allow for loops
         shape = self.shape
-        #print('key', key)
         if not isinstance(key, tuple):
             key = (key,)
-        #print('key', key)
         start_offsets = [0,] * len(shape)
         extents = list(shape)
         dims_to_keep = [True for d in shape] # axes that get passed a single index get dropped as an axis in the result
         i_off = 0
 
         for i, s in enumerate(key):
-            #print(i, s)
             if s is Ellipsis:
                 i_off = -len(shape) # indexing from back
                 continue
             if isinstance(s, slice):
                 begin = s.start or 0
                 end   = s.stop if s.stop is not None else shape[i]
-                #print(begin, '###', shape, '###', shape[i], '###', s.stop, '###', end)
                 if s.step is not None and i[2] != 1:
                     raise ValueError('NDArrayView: slices with steps are not supported')
                 if begin < 0:
@@ -379,7 +374,9 @@ class NDArrayViewOpsMixin(object):
                 start_offsets[i] = s
                 extents[i]       = 1
                 dims_to_keep[i] = False # a single index: drop this dimension
-        #print('start', start_offsets, 'extents', extents)
+            if start_offsets[i] >= shape[i]:
+                raise IndexError('IndexError: index {} is out of bounds for axis {} with size {}'.format(start_offsets[i], i, shape[i]))
+            # TODO: if start_offset + extent exceeds, we must cut (limit to valid range) 
         res = self.slice_view(tuple(start_offsets), tuple(extents), self.is_read_only)
         res.__class__ = self.__class__
         if not keep_singles and not all(dims_to_keep):

@@ -105,6 +105,11 @@ def test_ndarrayview_operators(device_id, precision):
         a[1:2,:] = b
         return a
     test(atest, [mat23, np.array(13)])
+    def itest(a):
+        for x in a:
+            x[:] = x + x
+        return a
+    test(itest, [mat23]) # test loop over first index, IndexError
 
     # splice
     test(lambda *args: NDArrayView.splice(*args) if isinstance(args[0], NDArrayView) else np.concatenate((args[0][np.newaxis,:], args[1][np.newaxis,:])), [mat23, 1.1*mat23])
