@@ -404,27 +404,9 @@ class NDArrayViewOpsMixin(object):
     @staticmethod
     def splice(*args, axis=-1, out=None): # negative axis will insert a new axis
         # BUGBUG: axis=-1 conflicts with numpy's meaning, which will reference from the end. Maybe use None instead?
-        # TODO: just move to NDArrayView
         axis = len(args[0].shape) - 1 - axis # swap to C++ API convention
-        return NDArrayView.splice_from(args, axis, out)
-        arg0 = args[0]  # for now assume that all share the same shape; use first for reference
-        shape = arg0.shape
-        #print(shape, arg0)
-        # create new axis if needed. We can reshape the input to this
-        if axis < 0:
-            shape = (1,) * (-axis) + shape
-            axis = 0
-        # output
-        num_items = len(args)
-        out_shape = shape[0:axis] + (shape[axis] * num_items,) + shape[axis+1:] # output shape
-        res = out or NDArrayView(shape=out_shape, data_type=arg0.dtype, device=arg0.device)
-        # BUGBUG: this cannot be done for sparse; so we need a C++ implementation of this that works very differently
-        #res = NDArrayView(arg0.dtype, arg0.get_storage_format(), out_shape, arg0.device)
-        # assign all items
-        for i in range(num_items):
-            key = (slice(0,None),) * axis + (i,)
-            res[key] = args[i].reshape(shape)
-        #print('spliced', num_items, '*', shape, 'into', res.shape)
+        res = NDArrayView.splice_from(args, axis, out)
+        res.__class__ = args[0].__class__
         return res
 
 def _add_ndarrayview_ops(klass):

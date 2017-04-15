@@ -461,6 +461,7 @@ namespace CNTK
             RuntimeError("Splice: output object has wrong shape");
         // for now copy all slices one by one
         // TODO: change into a single CUDA-kernel launch; needs new kernel and to transfer pointers array to GPU
+        // BUGBUG: this cannot be done for sparse; so we need a C++ implementation of this that works very differently
         std::vector<size_t> startOffset(dims.size(), 0);
         auto extent = dims;
         extent[axis] = 1;
