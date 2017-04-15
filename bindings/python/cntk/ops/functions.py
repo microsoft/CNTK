@@ -114,7 +114,7 @@ class Function(cntk_py.Function):
         from .. import placeholder, input
         def make_arg_variable(name, annotations):
             from ..variables import Variable
-            if isinstance(annotations.get(name, None), Variable.Type):
+            if isinstance(annotations.get(name, None), Variable._Type):
                 var_type = annotations[name]
                 return input(name=name, **var_type)
             else:
@@ -252,7 +252,7 @@ class Function(cntk_py.Function):
             from ..variables import Variable
             if isinstance(arg_type, (int, tuple)): # just passed a shape
                 return input(shape=_as_tuple(arg_type), name=name)
-            elif isinstance(arg_type, Variable.Type): # full type given as Tensor(...)
+            elif isinstance(arg_type, Variable._Type): # full type given as Tensor(...)
                 return input(name=name, **arg_type)
             else:
                 raise TypeError("update_signature() expects arguments of type int, tuple of int, or Type.Variable")
