@@ -252,9 +252,6 @@ def _add_asarray(klass):
 
 from cntk.core import NDArrayView
 
-# TODO: change all of these here to return core.NDArrayView, not cntk_py.NDArrayView
-# TODO: change dynamite.py to use core.NDArrayView as well
-# TODO: fix matrix-product dims: (1) allow scalars; (2) transpose dims failed (Ranks [5 x 1]' * [5] -> [1 x 1] mismatch.)
 class NDArrayViewOpsMixin(object):
     '''
     This class defines math overloads so that CNTK NDArrayViews can be operated on in math

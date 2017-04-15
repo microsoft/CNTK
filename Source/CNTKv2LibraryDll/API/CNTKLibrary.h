@@ -723,30 +723,12 @@ namespace CNTK
         CNTK_API NDArrayViewPtr Alias(bool readOnly = false) const;
 
         ///
-        /// Performs a numeric operation in-place, *this = beta * *this + alpha * reductionOp(op(inputs)).
-        /// *this must have the desired shape. Broadcasting and reduction rules apply.
-        /// For beta=0, *this may contain uninitialized/undefined values.
-        /// TODO: remove this
-        ///
-        CNTK_API NDArrayViewPtr NumericOperationInPlace(double beta, const std::vector<NDArrayViewPtr>& inputs, double alpha, int op, int reductionOp);
-
-        ///
         /// Performs a numeric operation, returning NDArrayView(beta * *this + alpha * op(inputs)).
         /// The result is shaped according to broadcasting rules.
         /// If 'out' is not povided, a new object with correct shape will be created.
         /// For beta=0, 'out' may contain uninitialized/undefined values.
         ///
-        CNTK_API static NDArrayViewPtr NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int op, NDArrayViewPtr out = nullptr, double beta = 0);
-
-        ///
-        /// Performs a numeric operation in-place, *this = beta * *this + alpha * trC(alpha * trA(inputA) * trB(inputB)).
-        /// where trX is transposition if transX is true.
-        /// *this must have the correct output shape.
-        /// If 'out' is not povided, a new object with correct shape will be created.
-        /// For beta=0, 'out; may contain uninitialized/undefined values.
-        /// TODO: remove this
-        ///
-        CNTK_API NDArrayViewPtr MatrixProductInPlace(double beta, bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha);
+        CNTK_API static NDArrayViewPtr NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int op, NDArrayViewPtr out = nullptr, double beta = 0, int reductionOp = -1);
 
         ///
         /// Performs the matrix product, returning NDArrayView(beta * *this + alpha * trC(alpha * trA(inputA) * trB(inputB)))
@@ -755,9 +737,7 @@ namespace CNTK
         ///
         CNTK_API static NDArrayViewPtr MatrixProduct(bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank, NDArrayViewPtr out = nullptr, double beta = 0);
 
-        // TODO: Above, all in-place versions should just call the static version passing out=this; the non-in-place gets a beta.
-
-        ///
+		///
         /// Splices inputs along an axis.
         /// Specifying an axis outside the valid range will insert such an axis; a negative value will shift the axis indices in the result.
         /// (Currently, all inputs must have identical dimensions. In the future, we may allow different dims along the splice axis.)
