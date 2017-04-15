@@ -122,6 +122,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     label_ab = argument_by_name(loss, 'ab')
 
     best_val_err = 100
+    best_since = 0
     if train_data_ext == '.ctf':    
         mb_source, input_map = create_mb_and_map(loss, train_data_file, polymath)
 
@@ -141,10 +142,13 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
             val_err = test_model(os.path.join(data_path, training_config['val_data']), model, polymath)
             if best_val_err > val_err:
                 best_val_err = val_err
+                best_since = 0
                 if C.distributed.Communicator.rank() == 0:
                     model.save(model_file + '{}'.format(epoch))
             else:
-                break # stop training when val_err goes up
+                best_since += 1
+                if best_since > 10:
+                    break # stop training when val_err goes up
 
             if profiling:
                 C.debugging.enable_profiler()
