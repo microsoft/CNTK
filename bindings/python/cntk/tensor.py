@@ -259,22 +259,14 @@ class NDArrayViewOpsMixin(object):
     '''
 
     @staticmethod
-    def _num_op(out, *args):
-        if out:
-            out.numeric_operation_in_place(0, *(args + (24,))) # 24 = ElementWiseOperator.opSum, a dummy here
-            res = out # the return value is out but as the underlying raw class type
-        else:
-            res = NDArrayView.numeric_operation(*args)
-            res.__class__ = args[0][0].__class__ # upgrade the type
+    def _num_op(out, *args, beta=0, reductionOp=-1): # -1 will default to ElementWiseOperator.opSum
+        res = NDArrayView.numeric_operation(*(args + (out, beta, reductionOp)))
+        res.__class__ = args[0][0].__class__ # upgrade the type
         return res
     @staticmethod
     def _mat_prod(out, *args):
-        if out:
-            out.matrix_product_in_place(0, *args)
-            res = out
-        else:
-            res = NDArrayView.matrix_product(*(args + (1,))) # last arg is output rank
-            res.__class__ = args[1].__class__
+        res = NDArrayView.matrix_product(*(args + (1, out))) # last arg is output rank
+        res.__class__ = args[1].__class__
         return res
 
     # infix operators
@@ -292,13 +284,15 @@ class NDArrayViewOpsMixin(object):
     __rmul__ = __mul__
 
     # in-place variants
+    # these only differ in passing 'self' instead of 'out'  --NOT CORRECT; we want actual copy with beta=1  --TODO!
     def __iadd__(self, other):
-        self.numeric_operation_in_place(1.0, [other], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
-        return self
+        #self.numeric_operation_in_place(1.0, [other], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
+        return NDArrayViewOpsMixin._num_op(self, [self, other], 1.0, 24) # 24 = ElementWiseOperator.opSum
     def __isub__(self, other): # realized as an in-place add-to with alpha=-1
-        self.numeric_operation_in_place(1.0, [other], -1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
-        return self
+        #self.numeric_operation_in_place(1.0, [other], -1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
+        return NDArrayViewOpsMixin._num_op(self, [self, other], 1.0, 25) # 25 = ElementWiseOperator.opDifference
 
+    # TODO: reconcile this behavior with numpy's, which interprets higher axes in weird ways
     def __matmul__(self, other, out=None):
         shapeA = self.shape
         shapeB = other.shape
@@ -306,7 +300,9 @@ class NDArrayViewOpsMixin(object):
             self1 = NDArrayView(shape=(other.shape[0]), data_type=other.dtype, device=other.device) # reduce to scalar
             # BUGBUG: How to get the precision in the right way?
             # TODO: test case
-            self1.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
+            # TODO: combine with reduce_sum()
+            #self1.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
+            NDArrayViewOpsMixin._num_op(self1, [self], 1.0, 2, reductionOp=24) # 2 = ElementWiseOperator.opCopy, 24 = ElementWiseOperator.opSum
             self = self1
         res = NDArrayViewOpsMixin._mat_prod(out, False, other, False, self, False, 1.0) # note: shapes are swapped, so we swap the order as well
         shapeC = res.shape
@@ -330,13 +326,12 @@ class NDArrayViewOpsMixin(object):
     # reductions
     # TODO: add copy_to_shape() or something, which is the same as reduce_sum but with a non-optional parameter
     def reduce_sum(self, reduce_to_shape=(), out=None):
-        # TODO: add a test
-        res = out or NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device) # reduce to scalar
-        res.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy, 28 = ElementWiseOperator.opSum
+        out = out or NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device) # reduce to scalar
+        res = NDArrayViewOpsMixin._num_op(out, [self], 1.0, 2, reductionOp=24) # 2 = ElementWiseOperator.opCopy, 24 = ElementWiseOperator.opSum
         return res
     def reduce_log_sum(self, reduce_to_shape=(), out=None):
-        res = out or NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device) # reduce to scalar
-        res.numeric_operation_in_place(0.0, [self], 1.0, 2, 28) # 2 = ElementWiseOperator.opCopy, 28 = ElementWiseOperator.opLogSum
+        out = out or NDArrayView(shape=reduce_to_shape, data_type=self.dtype, device=self.device) # reduce to scalar
+        res = NDArrayViewOpsMixin._num_op(out, [self], 1.0, 2, reductionOp=28) # 2 = ElementWiseOperator.opCopy, 24 = ElementWiseOperator.opLogSum
         return res
 
     # shapes, slicing, and splicing
@@ -355,7 +350,7 @@ class NDArrayViewOpsMixin(object):
     #    return self.reshape(new_shape)
     def __setitem__(self, key, value):
         slice = self.__getitem__(key, keep_singles=True)
-        slice.numeric_operation_in_place(0.0, [value], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
+        return NDArrayViewOpsMixin._num_op(slice, [value], 1.0, 2) # 2 = ElementWiseOperator.opCopy
     def __getitem__(self, key, keep_singles=False):
         # BUGBUG: must implement IndexError to allow for loops
         shape = self.shape

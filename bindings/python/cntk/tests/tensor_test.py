@@ -50,6 +50,7 @@ def test_ndarrayview_operators(device_id, precision):
         # TensorView
         args_tv = [NDArrayView.from_dense(arg) for arg in args]
         res_tv = what(*args_tv).to_ndarray()
+        #assert isinstance(res_tv, NDArrayView) # make sure we don't get a cntk_py version back  --TODO: figure out why this does not work
         # numpy
         res_np = what(*args)
         print(res_tv)
@@ -78,12 +79,13 @@ def test_ndarrayview_operators(device_id, precision):
     test(lambda a, b: a.transpose_dot(b) if isinstance(a, NDArrayView) else a.transpose().dot(b), [col21, mat23])
 
     # unary ops
-    test(lambda a: a.sigmoid() if isinstance(a, NDArrayView) else expit(a), [mat23], rtol=1e-6)
-    test(lambda a: a.tanh() if isinstance(a, NDArrayView) else np.tanh(a), [mat23], rtol=1e-6)
-    test(lambda a: a.relu() if isinstance(a, NDArrayView) else np.maximum(a,0), [mat23])
-    test(lambda a: a.exp() if isinstance(a, NDArrayView) else np.exp(a), [mat23], rtol=1e-6)
+    test(lambda a: a.sigmoid() if isinstance(a, NDArrayView) else expit(a),        [mat23], rtol=1e-6)
+    test(lambda a: a.tanh()    if isinstance(a, NDArrayView) else np.tanh(a),      [mat23], rtol=1e-6)
+    test(lambda a: a.relu()    if isinstance(a, NDArrayView) else np.maximum(a,0), [mat23])
+    test(lambda a: a.exp()     if isinstance(a, NDArrayView) else np.exp(a),       [mat23], rtol=1e-6)
 
     # reduction ops
+    test(lambda a: a.reduce_sum()     if isinstance(a, NDArrayView) else np.sum(a),                 [mat23], rtol=1e-6)
     test(lambda a: a.reduce_log_sum() if isinstance(a, NDArrayView) else np.log(np.sum(np.exp(a))), [mat23], rtol=1e-6)
 
     # reshape
