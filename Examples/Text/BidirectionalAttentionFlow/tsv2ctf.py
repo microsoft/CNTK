@@ -14,6 +14,7 @@ sanitize = str.maketrans({"|": None, "\n": None})
 tsvs = 'train', 'dev', 'val'
 unk = '<unk>'
 eos = '</s>'
+EMPTY_TOKEN = '<NULL>'
 pad = ' '  # used for padding has to be single char and match with format specifier below
 # pad (or trim) to word_size characters
 pad_spec = '{0:<%d.%d}' % (word_size, word_size)
@@ -72,6 +73,10 @@ def tsv_iter(line, vocab, chars, is_test=False):
     qtokens = query.split(' ')
     if len(qtokens) > max_query_len:
         raise ValueError('input query exceeds max_query_len: %d' % len(qtokens))
+
+    #replace EMPTY_TOKEN with ''
+    ctokens = [t if t != EMPTY_TOKEN else '' for t in ctokens]
+    qtokens = [t if t != EMPTY_TOKEN else '' for t in qtokens]
 
     atokens = answer.split(' ')
     cwids = [vocab.get(t.lower(), unk_w) for t in ctokens]
