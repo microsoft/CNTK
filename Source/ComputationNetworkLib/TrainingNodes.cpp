@@ -258,8 +258,7 @@ void RandomSampleInclusionFrequencyNode<ElemType>::Validate(bool isFinalValidati
     size_t nClasses = dims[0];
 
     // Output: one vector containing the estimated in sample frequency for each class.
-    //SetDims(TensorShape(nClasses, 1), false);
-    SetDims(TensorShape(nClasses), false);
+    SetDims(TensorShape(nClasses, 1), false);
 }
 
 template class RandomSampleInclusionFrequencyNode<float>;
