@@ -86,7 +86,7 @@ def create_tsv_reader(func, tsv_file, polymath, seqs):
                         argument_by_name(func, 'ae' ): answer_end }
             
 
-def train(data_path, model_path, log_file, config_file, restore=False, profiling=False):
+def train(data_path, model_path, log_file, config_file, restore=False, profiling=False, gen_heartbeat=False):
     polymath = PolyMath(config_file)
     z, loss = polymath.model()
     training_config = importlib.import_module(config_file).training_config
@@ -100,7 +100,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
                             tag = 'Training',
                             log_to_file = log_file,
                             rank = C.Communicator.rank(),
-                            gen_heartbeat = True)]
+                            gen_heartbeat = gen_heartbeat)]
 
     C.set_default_use_mean_gradient_value(True)
     lr = C.learning_rate_schedule(training_config['lr'], unit=C.learners.UnitType.sample)
@@ -120,6 +120,9 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     model_file = os.path.join(model_path, model_name)
     model = C.combine(list(z.outputs) + [loss.output])
     label_ab = argument_by_name(loss, 'ab')
+    
+    if restore:
+        trainer.restore_from_checkpoint(model_file)
 
     best_val_err = 100
     best_since = 0
@@ -144,8 +147,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
             if best_val_err > val_err:
                 best_val_err = val_err
                 best_since = 0
-                if C.Communicator.rank() == 0:
-                    model.save(model_file+'.best')
+                if C.Communicator.is_main():
                     trainer.save_checkpoint(model_file+'.best')
                     trainer.save_checkpoint(model_file)
             else:
@@ -265,6 +267,7 @@ if __name__=='__main__':
     parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False, default=None)
     parser.add_argument('-logdir', '--logdir', help='Log file', required=False, default=None)
     parser.add_argument('-profile', '--profile', help="Turn on profiling", action='store_true', default=False)
+    parser.add_argument('-genheartbeat', '--genheartbeat', help="Turn on heart-beat for philly", action='store_true', default=False)
     parser.add_argument('-config', '--config', help='Config file', required=False, default='config')
     parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', action='store_true')
     parser.add_argument('-test', '--test', help='Test data file', required=False, default=None)
@@ -282,8 +285,9 @@ if __name__=='__main__':
         try:
             train(data_path, model_path, args['logdir'], args['config'],
                 restore = not args['restart'],
-                profiling = args['profile'])
+                profiling = args['profile'],
+                gen_heartbeat = args['genheartbeat'])
         finally:
-            C.distributed.Communicator.finalize()
+            C.Communicator.finalize()
     else:
         test(test_data, model_path, args['config'])
