@@ -118,22 +118,36 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     train_data_ext = os.path.splitext(train_data_file)[-1].lower()
     
     model_file = os.path.join(model_path, model_name)
-    
+    model = C.combine(list(z.outputs) + [loss.output])
+    label_ab = argument_by_name(loss, 'ab')
+
+    best_val_err = 100
     if train_data_ext == '.ctf':    
         mb_source, input_map = create_mb_and_map(loss, train_data_file, polymath)
 
         minibatch_size = training_config['minibatch_size'] # number of samples
         epoch_size = training_config['epoch_size']
         
-        C.training_session(
-            trainer=trainer,
-            mb_source = mb_source,
-            mb_size = minibatch_size,
-            model_inputs_to_streams = input_map,
-            max_samples = epoch_size * max_epochs,
-            checkpoint_config = C.CheckpointConfig(filename = model_file, restore=restore),
-            progress_frequency = epoch_size
-        ).train()
+        for epoch in range(max_epochs):
+            num_seq = 0
+            while True:
+                data = mb_source.next_minibatch(minibatch_size, input_map=input_map)
+                trainer.train_minibatch(data)
+                num_seq += data[label_ab].num_sequences
+                if num_seq >= epoch_size:
+                    break
+
+            trainer.summarize_training_progress()
+            val_err = test_model(os.path.join(data_path, training_config['val_data']), model, polymath)
+            if best_val_err > val_err:
+                best_val_err = val_err
+                if C.distributed.Communicator.rank() == 0:
+                    model.save(model_file + '{}'.format(epoch))
+            else:
+                break # stop training when val_err goes up
+
+            if profiling:
+                C.debugging.enable_profiler()
     else:
         if train_data_ext != '.tsv':
             raise Exception("Unsupported format")
@@ -149,7 +163,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
             if profiling:
                 C.debugging.enable_profiler()
 
-        C.combine(z, loss).save(model_file)
+        model.save(model_file)
     
     if profiling:
         C.debugging.stop_profiler()
@@ -158,9 +172,7 @@ def symbolic_best_span(begin, end):
     running_max_begin = C.layers.Recurrence(C.element_max, initial_state=-float("inf"))(begin)
     return C.layers.Fold(C.element_max, initial_state=C.constant(-1e+30))(running_max_begin + end)
         
-def test(test_data, model_path, config_file):
-    polymath = PolyMath(config_file)
-    model = C.load_model(os.path.join(model_path, model_name))
+def test_model(test_data, model, polymath):
     begin_logits = model.outputs[0]
     end_logits   = model.outputs[1]
     loss         = model.outputs[2]
@@ -227,7 +239,13 @@ def test(test_data, model_path, config_file):
             stat_avg[4],
             stat_avg[5],
             stat_avg[6]))
+            
+    return loss_avg
 
+def test(test_data, model_path, config_file):
+    polymath = PolyMath(config_file)
+    model = C.load_model(os.path.join(model_path, model_name))
+    test_model(test_data, model, polymath)
 
 if __name__=='__main__':
     # default Paths relative to current python file.
