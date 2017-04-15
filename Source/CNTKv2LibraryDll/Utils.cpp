@@ -943,7 +943,7 @@ namespace CNTK
             InvalidArgument("Attempting to accumulate a null Value.");
 
         bool copied = false;
-        if (!Data() ||
+        if (m_isUninitialized ||
             GetDataType() != delta->GetDataType() ||
             Shape() != delta->Shape() ||
             Device() != device ||
@@ -953,6 +953,7 @@ namespace CNTK
             m_data = MakeSharedObject<NDArrayView>(delta->GetDataType(), delta->Shape(), device);
             m_mask = delta->Mask();
             ResetToZero();
+            m_isUninitialized = false;
         }
 
         if (delta->GetDataType() == DataType::Float)
@@ -974,19 +975,13 @@ namespace CNTK
 
     void Accumulator::ResetToZero()
     {
-        if (Data() == nullptr)
-        {
+        if (m_isUninitialized)
             return;
-        }
 
         if (GetDataType() == DataType::Float)
-        {
             Data()->SetValue(0.0f);
-        }
         else
-        {
             Data()->SetValue(0.0);
-        }
     }
 
     std::wstring DynamicAxesAsString(const std::vector<Axis>& axes, bool rowMajor)
@@ -1018,5 +1013,4 @@ namespace CNTK
         wss << "]";
         return wss.str();
     }
-
 }

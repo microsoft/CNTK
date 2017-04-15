@@ -265,10 +265,14 @@ def generate_random_data(sample_size, feature_dim, num_classes):
      class_ind = [Y == class_number for class_number in range(num_classes)]
      Y = np.asarray(np.hstack(class_ind), dtype=np.float32)
      return X, Y
+
+
 def test_learner_empy_parameters_list():
     lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
     with pytest.raises(ValueError):
         learner = C.sgd([], lr_per_sample)
+
+
 def ffnet():
     inputs = 3
     outputs = 3

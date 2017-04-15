@@ -41,6 +41,7 @@ namespace CNTK
             {
                 m_packedData = nullptr;
                 m_packedDataLayout = nullptr;
+                m_isPacked = false;
             }
             else
                 Value::Erase();

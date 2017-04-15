@@ -2508,22 +2508,22 @@ namespace CNTK
         ///
         /// Returns the descriptor of the device that 'this' Value resides on
         ///
-        virtual DeviceDescriptor Device() const { return m_data->Device(); }
+        virtual DeviceDescriptor Device() const { return Data()->Device(); }
 
         ///
         /// Returns the data type of 'this' Value's contents.
         ///
-        virtual DataType GetDataType() const { return m_data->GetDataType(); }
+        virtual DataType GetDataType() const { return Data()->GetDataType(); }
 
         ///
         /// Returns the storage format of 'this' Value.
         ///
-        virtual StorageFormat GetStorageFormat() const { return m_data->GetStorageFormat(); }
+        virtual StorageFormat GetStorageFormat() const { return Data()->GetStorageFormat(); }
 
         ///
         /// Returns the shape 'this' Value.
         ///
-        virtual const NDShape& Shape() const { return m_data->Shape(); }
+        virtual const NDShape& Shape() const { return Data()->Shape(); }
 
         ///
         /// Returns a boolean indicating if 'this' Value contains data in sparse storage format.
@@ -2533,7 +2533,7 @@ namespace CNTK
         ///
         /// Returns a boolean indicating if 'this' Value is read-only.
         ///
-        virtual bool IsReadOnly() const { return m_data->IsReadOnly(); }
+        virtual bool IsReadOnly() const { return Data()->IsReadOnly(); }
 
         ///
         /// Returns the number of masked/invalid values
@@ -2847,7 +2847,8 @@ namespace CNTK
         /// to each leaf variable of the Function of VariableKind 'Input'.
         /// The variables specified in the 'outputs' map denote the subset of 'this' Function's output variables that the caller wants to obtain values of. 
         /// Callers may specify the storage to be used for storing the 'outputs' Values or pass null in which case the implementation allocates the actual storage
-        /// for the 'outputs' for which the ValuePtr mapping was left null by the caller.
+        /// for the 'outputs' for which the ValuePtr mapping was left null by the caller. If a null Value was specified, the implementation created Value objects 
+        /// are temporary and only guaranteed to be valid until the next Forward/Backward call. You must explicitly clone the temporay Values if they need to be accessed later.
         /// The optional 'outputsToRetainBackwardStateFor' parameter specifies the subset of the Function's output variables for which gradients will be specified
         /// in a subsequent Backward call for backpropagation.
         /// The method returns a BackPropState object containing all intermediate variable values needed during backpropagation of gradients from the 
@@ -2866,7 +2867,8 @@ namespace CNTK
         /// Backpropagates supplied 'rootGradientValues' for one or more of the output variables of the Function, to produce gradient Values
         /// corresponding to the specified set of input variables in 'backPropagatedGradientValuesForInputs'.
         /// Callers may specify the actual storage to be used for storing the 'backPropagatedGradientValuesForInputs' Values or leave them to be null
-        /// in which case the implementation allocates the actual storage for storing the gradients.
+        /// in which case the implementation allocates the actual storage for storing the gradients. If a null Value was specified, the implementation created Value objects 
+        /// are temporary and only guaranteed to be valid until the next Forward/Backward call. You must explicitly clone the temporay Values if they need to be accessed later.
         /// In case an existing storage is specified, the gradients are aggregated with existing values in the specified storage.
         /// The 'state' parameter is an instance of an BackPropState instance obtained from a previous call to the Forward method on 'this; Function for the 
         /// computation that this gradient backpropagation corresponds to.
@@ -2880,7 +2882,8 @@ namespace CNTK
         /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values for each input of the Function.
         /// The variables specified in the 'outputs' map denote the subset of 'this' Function's output variables that the caller wants to obtain values of. 
         /// Callers may specify the storage to be used for storing the 'outputs' Values or pass null in which case the implementation allocates the actual storage
-        /// for the 'outputs' for which the ValuePtr mapping was left null by the caller.
+        /// for the 'outputs' for which the ValuePtr mapping was left null by the caller.  If a null Value was specified, the implementation created Value objects 
+        /// are temporary and only guaranteed to be valid until the next Forward/Backward call. You must explicitly clone the temporay Values if they need to be accessed later.
         /// The optional 'outputsToRetainBackwardStateFor' parameter specifies the subset of the Function's output variables for which gradients will be specified
         /// in a subsequent Backward call for backpropagation.
         /// The method returns a BackPropState object containing all intermediate variable values needed during backpropagation of gradients from the 

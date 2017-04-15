@@ -525,7 +525,9 @@ class Function(cntk_py.Function):
              to be performed.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
+             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
+             You must explicitly clone the temporay Value objects if they need to be accessed later.
 
         Note:
              See :meth:`~cntk.ops.functions.Function.forward` for examples on
@@ -650,7 +652,9 @@ class Function(cntk_py.Function):
              computation is. If `None`, the default device is used.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
+             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
+             You must explicitly clone the temporay Value objects if they need to be accessed later.
 
         Returns:
              A tuple (BackPropState, map of outputs to NumPy arrays). The
@@ -705,7 +709,9 @@ class Function(cntk_py.Function):
              the gradients have to be computed.
             as_numpy (bool): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
+             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
+             You must explicitly clone the temporay Value objects if they need to be accessed later.
 
         Note:
              See :meth:`~cntk.ops.functions.Function.forward` for more examples
@@ -757,7 +763,9 @@ class Function(cntk_py.Function):
              computation is performed. If `None`, the default device is used.
             as_numpy (bool, default `True`): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
+             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
+             You must explicitly clone the temporay Value objects if they need to be accessed later.
             grad_root (variable, optional): specify the root of gradients calculation. 
              If not specified, the output of this function will be used as gradient root.
 
