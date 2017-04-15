@@ -114,7 +114,7 @@ class Function(cntk_py.Function):
         from .. import placeholder, input
         def make_arg_variable(name, annotations):
             from ..variables import Variable
-            if isinstance(annotations.get(name, None), Variable.Type):
+            if isinstance(annotations.get(name, None), Variable._Type):
                 var_type = annotations[name]
                 return input(name=name, **var_type)
             else:
@@ -252,7 +252,7 @@ class Function(cntk_py.Function):
             from ..variables import Variable
             if isinstance(arg_type, (int, tuple)): # just passed a shape
                 return input(shape=_as_tuple(arg_type), name=name)
-            elif isinstance(arg_type, Variable.Type): # full type given as Tensor(...)
+            elif isinstance(arg_type, Variable._Type): # full type given as Tensor(...)
                 return input(name=name, **arg_type)
             else:
                 raise TypeError("update_signature() expects arguments of type int, tuple of int, or Type.Variable")
@@ -525,7 +525,9 @@ class Function(cntk_py.Function):
              to be performed.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
+             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
+             You must explicitly clone the temporay Value objects if they need to be accessed later.
 
         Note:
              See :meth:`~cntk.ops.functions.Function.forward` for examples on
@@ -650,7 +652,9 @@ class Function(cntk_py.Function):
              computation is. If `None`, the default device is used.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
+             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
+             You must explicitly clone the temporay Value objects if they need to be accessed later.
 
         Returns:
              A tuple (BackPropState, map of outputs to NumPy arrays). The
@@ -705,7 +709,9 @@ class Function(cntk_py.Function):
              the gradients have to be computed.
             as_numpy (bool): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
+             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
+             You must explicitly clone the temporay Value objects if they need to be accessed later.
 
         Note:
              See :meth:`~cntk.ops.functions.Function.forward` for more examples
@@ -729,7 +735,7 @@ class Function(cntk_py.Function):
         return var_gradients
 
     @typemap
-    def grad(self, at, wrt=None, outputs=None, device=None, as_numpy=True):
+    def grad(self, at, wrt=None, outputs=None, device=None, as_numpy=True, grad_root=None):
         '''
         Computes the gradient of this Function at location ``at`` with respect to ``wrt``.
         The Function must have a single output.
@@ -757,7 +763,11 @@ class Function(cntk_py.Function):
              computation is performed. If `None`, the default device is used.
             as_numpy (bool, default `True`): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
+             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
+             You must explicitly clone the temporay Value objects if they need to be accessed later.
+            grad_root (variable, optional): specify the root of gradients calculation. 
+             If not specified, the output of this function will be used as gradient root.
 
         Returns:
             dict or NumPy Array or a tuple of these: Dict with keys of ``wrt`` variables and gradient values of
@@ -784,7 +794,10 @@ class Function(cntk_py.Function):
         output_map = {v: None for v in outputs}
         wrt_map = {v: None for v in wrt}
 
-        super(Function, self).gradients(in_var_map, wrt_map, output_map, device)
+        if grad_root is None:
+            super(Function, self).gradients(in_var_map, wrt_map, output_map, device)
+        else:
+            super(Function, self).gradients(in_var_map, grad_root, wrt_map, output_map, device)
 
         if as_numpy:
             for k in output_map:

@@ -412,6 +412,14 @@ namespace CNTK
 
     /*virtual*/ NDArrayViewPtr Value::Data() const
     {
+        if (!m_data)
+        {
+            RuntimeError("This Value object is invalid and can no longer be accessed. This usually happens when a temporary Value object returned by the CNTK library"
+                          " is not cloned and accessed later after it has been erased by the library. The Value objects created inside and returned by the library from APIs "
+                          "like Forward, Backward etc. are temporary and are only guaranteed to be valid until the next Forward/Backward call. If you want to access the Values "
+                          "later, you must explicitly clone them.");
+        }
+
         // TODO: Check if this is a derived type and throw an exception in that case
         return m_data;
     }

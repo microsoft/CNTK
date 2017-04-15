@@ -752,6 +752,9 @@ namespace CNTK
             case PrimitiveOpType::LogPlus:
                 computationNodePtr = New<LogPlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
+            case PrimitiveOpType::Pow:
+                computationNodePtr = New<PowNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
             case PrimitiveOpType::Minus:
                 computationNodePtr = New<MinusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
@@ -1425,9 +1428,9 @@ namespace CNTK
     void CompositeFunction::GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs)
     {
         // Now copy the Forward values of output nodes from the network to outputs' Value objects
-        for (auto outputVarValuePair : outputs)
+        for (auto& outputVarValuePair : outputs)
         {
-            auto& valuePtr = outputs[outputVarValuePair.first];
+            auto& valuePtr = outputVarValuePair.second;
             auto node = m_variableToNodeMap.at(outputVarValuePair.first);
             bool noValueStrorageProvided = (valuePtr == nullptr);
             GetNodeOutputOrGradient(outputVarValuePair.first, valuePtr, node, false /*getGradient*/);
@@ -1442,7 +1445,7 @@ namespace CNTK
     {
         auto networkInputs = this->Inputs();
         // Now copy the gradient values of input nodes of the network to gradients' Value objects
-        for (auto gradientVarValuePair : gradients)
+        for (auto& gradientVarValuePair : gradients)
         {
             // Only gradients corresponding to inputs of the network can be obtained
             if (std::find(networkInputs.begin(), networkInputs.end(), gradientVarValuePair.first) == networkInputs.end())
@@ -1461,7 +1464,7 @@ namespace CNTK
                 LogicError("Function '%S': Backpropagated gradient value cannot be read from a Variable '%S' whose ComputationNode has NeedsGradient set to false.",
                             AsString().c_str(), gradientVarValuePair.first.AsString().c_str());
 
-            auto& valuePtr = gradients[gradientVarValuePair.first];
+            auto& valuePtr = gradientVarValuePair.second;
             bool noValueStrorageProvided = (valuePtr == nullptr);
             GetNodeOutputOrGradient(gradientVarValuePair.first, valuePtr, computationNodePtr, true /*getGradient*/);
 
