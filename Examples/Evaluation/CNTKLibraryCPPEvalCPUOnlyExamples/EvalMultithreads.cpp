@@ -435,23 +435,31 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
         ValuePtr inputValue = Value::CreateBatch(inputVar.Shape(), inputData, device);
         ValuePtr inputValue2 = Value::CreateBatch(inputVar.Shape(), inputData2, device);
 
-        ValuePtr outputValue;
-        std::unordered_map<Variable, ValuePtr> outputs = {{outputVar, outputValue}};
+        ValuePtr outputValue1;
+        ValuePtr outputValue2;
+        /*std::unordered_map<Variable, ValuePtr> outputs = {{outputVar, outputValue}};
         evalFunc->Forward({{inputVar, inputValue}}, outputs, device);
-        evalFunc->Forward({ { inputVar, inputValue2 } }, outputs, device);
+        evalFunc->Forward({ { inputVar, inputValue2 } }, outputs, device);*/
+        std::unordered_map<Variable, ValuePtr> output1 = { { outputVar, outputValue1 } };
+        std::unordered_map<Variable, ValuePtr> output2 = { { outputVar, outputValue2 } };
+        evalFunc->Forward({ { inputVar, inputValue } }, output1, device);
+        evalFunc->Forward({ { inputVar, inputValue2 } }, output2, device);
 
-        std::vector<std::vector<float>> outputData;
-        outputs[outputVar]->CopyVariableValueTo(outputVar, outputData);
+        std::vector<std::vector<float>> outputData1;
+        
+        output1[outputVar]->CopyVariableValueTo(outputVar, outputData1);
+        std::vector<std::vector<float>> outputData2;
+        output2[outputVar]->CopyVariableValueTo(outputVar, outputData2);
 
         fprintf(stderr, "Evaluation result:\n");
         for (size_t i = 0; i < numSamples; i++)
         {
             fprintf(stderr, "Iteration:%lu, Sample %lu:\n", (unsigned long)t, (unsigned long)i);
             fprintf(stderr, "Ouput:");
-            assert(outputVar.Shape().TotalSize() == outputData[i].size());
-            for (size_t j = 0; j < outputData[i].size(); j++)
+            assert(outputVar.Shape().TotalSize() == outputData1[i].size());
+            for (size_t j = 0; j < outputData1[i].size(); j++)
             {
-                fprintf(stderr, "%f ", outputData[i][j]);
+                fprintf(stderr, "%f ", outputData1[i][j]);
             }
             fprintf(stderr, "\n");
         }
