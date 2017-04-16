@@ -440,6 +440,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         tensorBoardWriter = make_shared<::CNTK::Internal::TensorBoardFileWriter>(m_tensorBoardLogDir, net);
     }
 
+    bool learningRateAdjusted = false;
+
     // --- MAIN EPOCH LOOP
     for (int i = startEpoch; i < (int) m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
     {
@@ -476,7 +478,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                                          m_batchNormalizationBlendTimeConstant[i], prevNormalizationBlendTimeConstant);
         
         // learning rate adjustment
-        if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || i < m_learningRatesParam.size())
+        if ((m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || i < m_learningRatesParam.size()) && !learningRateAdjusted)
         {
             // BUGBUG: GetNumParallelSequences() returns 1 under certain situations; it seems when restarting from checkpoint
             learnRatePerSample = GetLearningRatePerSample(i /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequencesForFixingBPTTMode());
@@ -699,8 +701,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                            (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
         }
 
+        learningRateAdjusted = false;
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
-            m_learningRatesParam.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
+            i > 0 && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
         {
             if (std::isnan(avgCriterion) || (prevCriterion - avgCriterion < 0 && prevCriterion != numeric_limits<double>::infinity()))
             {
@@ -710,13 +713,20 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     auto bestModelPath = GetModelNameForEpoch(i - m_learnRateAdjustInterval);
                     LOGPRINTF(stderr, "Loading (rolling back to) previous model with best training-criterion value: %ls.\n", bestModelPath.c_str());
                     net->RereadPersistableParameters<ElemType>(bestModelPath);
+                    double oldLearnRatePerSample = 0;
                     LoadCheckPointInfo(i - m_learnRateAdjustInterval,
                                        /*out*/ totalTrainingSamplesSeen,
-                                       /*out*/ learnRatePerSample,
+                                       /*out*/ oldLearnRatePerSample,
                                        smoothedGradients,
                                        smoothedCounts,
                                        /*out*/ prevCriterion,
                                        /*out*/ m_prevChosenMinibatchSize);
+
+                    if (m_learnRateAdjustInterval > 1)
+                    {
+                        learnRatePerSample = oldLearnRatePerSample;
+                    }
+
                     loadedPrevModel = true;
                 }
             }
@@ -746,6 +756,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 if (learnRateReduced)
                 {
                     learnRatePerSample *= m_learnRateDecreaseFactor;
+                    learningRateAdjusted = true;
                     LOGPRINTF(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
                 }
             }
@@ -757,12 +768,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 {
 
                     learnRatePerSample *= m_learnRateDecreaseFactor;
+                    learningRateAdjusted = true;
                     LOGPRINTF(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
                 }
                 else if (prevCriterion - avgCriterion > m_increaseLearnRateIfImproveMoreThan * prevCriterion &&
                          prevCriterion != numeric_limits<double>::infinity())
                 {
                     learnRatePerSample *= m_learnRateIncreaseFactor;
+                    learningRateAdjusted = true;
                     LOGPRINTF(stderr, "learnRatePerSample increased to %.8g\n", learnRatePerSample);
                 }
             }
