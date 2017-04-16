@@ -58,6 +58,7 @@ namespace CNTKLibraryCSEvalExamples
                 Console.WriteLine("Memory Tests Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
                 throw ex;
             }
+            Console.WriteLine("\nAll saved object references are printed.");
         }
     }
 }

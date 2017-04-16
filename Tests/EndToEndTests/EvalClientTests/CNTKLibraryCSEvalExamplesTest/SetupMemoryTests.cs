@@ -139,8 +139,8 @@ namespace CNTKLibraryCSEvalExamples
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Exception caught :" + ex.Message + ex.GetType());
-                    exceptionCaught = true;
+                    if (ex is ApplicationException && ex.Message.StartsWith("This Value object is invalid and can no longer be accessed."))
+                        exceptionCaught = true;
                 }
                 if (exceptionCaught == false)
                 {
