@@ -414,22 +414,21 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
 template <class ElemType>
 void TensorView<ElemType>::DoGatherBatchOf(size_t numItems, const std::function<const TensorView&(size_t)>& inputs)
 {
-    // naive implementation
-    let batchAxis = m_shape.GetRank() - 1;
-    if (m_shape[batchAxis] != numItems) // TODO: add more into to the error
+    // This is implemented by assigning matrix column slices. So we first must bring our shapes into the right form.
+    // (As a consequence, it will not work with strided TensorViews. If that is needed, please implement it using tensor assignments.)
+    if (m_shape.GetRank() == 0 || m_shape[m_shape.GetRank() - 1] != numItems) // TODO: add more into to the error
         InvalidArgument("DoGatherBatchOf: Dimension of slowest-changing axis of output must match the number of inputs to batch.");
+    auto outShape = m_shape;
+    outShape.FlattenTo2DInPlace(outShape.GetRank() - 1, "DoGatherBatchOf"); // now batch dimension is the column dimension
+    let outMatrix = Reshaped(outShape).AsMatrix();
+    // naive implementation
     for (auto i = 0; i < numItems; i++)
     {
-        // output slice
-        auto outShape = m_shape;
-        outShape.NarrowTo(batchAxis, i, i+1); // this is the slice we must assign to
-        let outSlice = Reshaped(outShape); // note: Reshape(), despite its name, actually accepts a slice as well --TODO: name it better
         // input slice
         let& inSlice = inputs(i);
-        // assign as matrix assignment
-        let outMatrix = outSlice.AsMatrix();
-        let inMatrix  = inSlice.AsMatrix();
-        outMatrix->AssignValuesOf(*inMatrix);
+        let inMatrix = inSlice.AsMatrix()->Reshaped(outMatrix->GetNumRows(), 1);
+        // assign as column assignment
+        outMatrix->SetColumnSlice(inMatrix, i, 1);
     }
 }
 
