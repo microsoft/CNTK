@@ -738,12 +738,13 @@ namespace CNTK
         CNTK_API static NDArrayViewPtr MatrixProduct(bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank, NDArrayViewPtr out = nullptr, double beta = 0);
 
 		///
-        /// Splices inputs along an axis.
+        /// Batch all inputs into a single tensor, along a newly created axis.
         /// Specifying an axis outside the valid range will insert such an axis; a negative value will shift the axis indices in the result.
         /// (Currently, all inputs must have identical dimensions. In the future, we may allow different dims along the splice axis.)
         /// If out is not provided, a new object is created.
+		/// This differs from the splice operation in that it always splices into a new axis, and all items must have identical dimensions in all axes.
         ///
-        CNTK_API static NDArrayViewPtr SpliceFrom(const std::vector<NDArrayViewPtr>& inputs, int axis, NDArrayViewPtr out = nullptr, double beta = 0);
+        CNTK_API static NDArrayViewPtr GatherBatch(const std::vector<NDArrayViewPtr>& inputs, int axis, NDArrayViewPtr out = nullptr);
 
         ///
         /// Creates a new NDArrayView which is an alias of a slice of 'this' view; i.e. a new view over the underlying data

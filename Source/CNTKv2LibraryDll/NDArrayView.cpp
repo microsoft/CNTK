@@ -315,8 +315,8 @@ namespace CNTK
 
     /*static*/ NDArrayViewPtr NDArrayView::NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int opInt, NDArrayViewPtr out, double beta, int reductionOpInt)
     {
-		// create result object if not given
-		if (!out)
+        // create result object if not given
+        if (!out)
         {
             // for element-wise operations, the output shape is the axis-wise max over all inputs
             // TODO: eventually, this must be reconciled with all the shape-inference code
@@ -335,7 +335,7 @@ namespace CNTK
             beta = 0; // newly created object is already 0
         }
         // perform operation in-place on result object
-		const auto          op =                        (Microsoft::MSR::CNTK::ElementWiseOperator) (opInt);
+        const auto          op = (Microsoft::MSR::CNTK::ElementWiseOperator) (opInt);
         const auto reductionOp = reductionOpInt != -1 ? (Microsoft::MSR::CNTK::ElementWiseOperator) (reductionOpInt) : Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
         if (inputs.size() < 1 || inputs.size() > 3)
             LogicError("NDArrayView::NumericOperation: Invalid number of inputs: %d", (int)inputs.size());
@@ -351,13 +351,13 @@ namespace CNTK
             switch (inputs.size())
             {
             case 1:
-				out->WritableNativeTensorView<float>().DoUnaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
+                out->WritableNativeTensorView<float>().DoUnaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
                 break;
             case 2:
-				out->WritableNativeTensorView<float>().DoBinaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), inputs[1]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
+                out->WritableNativeTensorView<float>().DoBinaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), inputs[1]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
                 break;
             case 3:
-				out->WritableNativeTensorView<float>().DoTernaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), inputs[1]->NativeTensorView<float>(), inputs[2]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
+                out->WritableNativeTensorView<float>().DoTernaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), inputs[1]->NativeTensorView<float>(), inputs[2]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
                 break;
             }
             break;
@@ -365,13 +365,13 @@ namespace CNTK
             switch (inputs.size())
             {
             case 1:
-				out->WritableNativeTensorView<double>().DoUnaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
+                out->WritableNativeTensorView<double>().DoUnaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
                 break;
             case 2:
-				out->WritableNativeTensorView<double>().DoBinaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), inputs[1]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
+                out->WritableNativeTensorView<double>().DoBinaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), inputs[1]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
                 break;
             case 3:
-				out->WritableNativeTensorView<double>().DoTernaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), inputs[1]->NativeTensorView<double>(), inputs[2]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
+                out->WritableNativeTensorView<double>().DoTernaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), inputs[1]->NativeTensorView<double>(), inputs[2]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
                 break;
             }
             break;
@@ -384,20 +384,20 @@ namespace CNTK
 
     /*static*/ NDArrayViewPtr NDArrayView::MatrixProduct(bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank, NDArrayViewPtr out, double beta)
     {
-		// create result object if not given
+        // create result object if not given
         if (!out)
         {
             // shape inference
             const auto& shapeA = inputA->Shape();
             const auto& shapeB = inputB->Shape();
             if (shapeA.Rank() != 2 && shapeA.Rank() != 1)
-                LogicError("NDArrayView::MatrixProduct: For now only vectors and 2D matrices are supported, invalid shape '%S'", shapeA.AsString().c_str());
+                LogicError("NDArrayView::MatrixProduct: For now only vectors and 2D matrices are supported, invalid shape '%S'.", shapeA.AsString().c_str());
             if (shapeB.Rank() != 2 && shapeB.Rank() != 1)
-                LogicError("NDArrayView::MatrixProduct: For now only vectors and 2D matrices are supported, invalid shape '%S'", shapeB.AsString().c_str());
+                LogicError("NDArrayView::MatrixProduct: For now only vectors and 2D matrices are supported, invalid shape '%S'.", shapeB.AsString().c_str());
             const auto innerA = transA ? shapeA[0] : shapeA[shapeA.Rank() - 1]; // inner (dot-product) dimension
             const auto innerB = transB ? shapeB[shapeB.Rank() - 1] : shapeB[0];
             if (innerA != innerB)
-                LogicError("NDArrayView::MatrixProduct: Inner dimensions %d and %d don't match", (int)innerA, (int)innerB);
+                LogicError("NDArrayView::MatrixProduct: Inner dimensions %d and %d don't match.", (int)innerA, (int)innerB);
             auto dimsC = std::vector<size_t>();  // TODO: use a different class here to avoid memory allocation?
             // assemble the output shape from the non-inner dimensions. Note that vec^t * vec will end up with a scalar (rank 0)
             if (shapeA.Rank() == 2)
@@ -409,47 +409,72 @@ namespace CNTK
             const auto shapeC = NDShape(dimsC);
             // create result object; properties besides shape are inherited from input 0 for now
             out = MakeSharedObject<NDArrayView>(inputA->GetDataType(), inputA->GetStorageFormat(), shapeC, inputA->Device());
-			beta = 0; // newly created object is already 0
-		}
-		// types must match
-		for (const auto& input : { inputA, inputB })
-		{
-			if (input->m_dataType != out->m_dataType)
-				LogicError("NDArrayView::MatrixProduct: Input argument's DataType %s differs from result's DataType %s", DataTypeName(input->m_dataType), DataTypeName(out->m_dataType));
-		}
-		switch (out->m_dataType)
-		{
-		case DataType::Float:
-			out->WritableNativeTensorView<float>().DoMatrixProductOf((float)beta, transC, inputA->NativeTensorView<float>(), transA, inputB->NativeTensorView<float>(), transB, (float)alpha);
-			break;
-		case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
-			out->WritableNativeTensorView<double>().DoMatrixProductOf((double)beta, transC, inputA->NativeTensorView<double>(), transA, inputB->NativeTensorView<double>(), transB, (double)alpha);
-			break;
-		default:
-			LogicError("NDArrayView::MatrixProduct: Unsupported DataType %s", DataTypeName(out->m_dataType));
-			break;
-		}
-		return out->shared_from_this(); // return ourselves to allow for chaining
-	}
+            beta = 0; // newly created object is already 0
+        }
+        // types must match
+        for (const auto& input : { inputA, inputB })
+        {
+            if (input->m_dataType != out->m_dataType)
+                LogicError("NDArrayView::MatrixProduct: Input argument's DataType %s differs from result's DataType %s", DataTypeName(input->m_dataType), DataTypeName(out->m_dataType));
+        }
+        switch (out->m_dataType)
+        {
+        case DataType::Float:
+            out->WritableNativeTensorView<float>().DoMatrixProductOf((float)beta, transC, inputA->NativeTensorView<float>(), transA, inputB->NativeTensorView<float>(), transB, (float)alpha);
+            break;
+        case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
+            out->WritableNativeTensorView<double>().DoMatrixProductOf((double)beta, transC, inputA->NativeTensorView<double>(), transA, inputB->NativeTensorView<double>(), transB, (double)alpha);
+            break;
+        default:
+            LogicError("NDArrayView::MatrixProduct: Unsupported DataType %s", DataTypeName(out->m_dataType));
+            break;
+        }
+        return out->shared_from_this(); // return ourselves to allow for chaining
+    }
 
-    // TODO: move the Python code down here first, then test. Then optimize.
-    /*static*/ NDArrayViewPtr NDArrayView::SpliceFrom(const std::vector<NDArrayViewPtr>& inputs, int axis, NDArrayViewPtr out, double beta)
+    /*static*/ NDArrayViewPtr NDArrayView::GatherBatch(const std::vector<NDArrayViewPtr>& inputs, int axis, NDArrayViewPtr out)
     {
         size_t numInputs = inputs.size();
-        auto dims = inputs[0]->Shape().Dimensions();
+        const auto& input0 = *inputs[0];
+        auto dims = input0.Shape().Dimensions();
         if (axis < dims.size())
-            LogicError("Splice: currently only splicing in a new slowest-changing axis is supported");
+            LogicError("NDArrayView::GatherBatch: Currently only splicing in a new slowest-changing axis is supported.");
         if (axis >= dims.size())
-            dims.resize(axis + 1, 1);
-        dims[axis] *= numInputs;
+            dims.resize(axis, 1); // pad if needed
+        dims.push_back(numInputs);
+        assert(dims[axis] = numInputs);
         NDShape shape(dims);
+        // create new object or verify shape
         if (!out)
-        {
-            out = MakeSharedObject<NDArrayView>(inputs[0]->GetDataType(), inputs[0]->GetStorageFormat(), shape, inputs[0]->Device());
-            beta = 0;
-        }
+            out = MakeSharedObject<NDArrayView>(input0.GetDataType(), input0.GetStorageFormat(), shape, input0.Device());
         else if (shape != out->Shape())
-            RuntimeError("Splice: output object has wrong shape");
+            RuntimeError("NDArrayView::GatherBatch: Output object has wrong shape."); // TODO: show the actual dimensions
+                // perform the operation
+        // the underlying TensorView call expects a functor to access the tensorview items
+        // The TensorView it returns have padded dimensions.
+        switch (out->m_dataType)
+        {
+        case DataType::Float:
+            out->WritableNativeTensorView<float>().DoGatherBatchOf(numInputs, [&](size_t i) -> const TensorView<float>&
+            {
+                const auto& input = *inputs[i];
+                if (input.m_dataType != input0.m_dataType)
+                    LogicError("NDArrayView::GatherBatch: Input argument's DataType %s differs from first input's DataType %s.", DataTypeName(input.m_dataType), DataTypeName(input0.m_dataType));
+                if (input.Shape() != input0.Shape())
+                    LogicError("NDArrayView::GatherBatch: Input argument's shape differs from first input's shape.");
+                return *input.GetTensorView<float>();
+            });
+            break;
+        case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
+            // TODO: update once this is confirmed to work
+            //out->WritableNativeTensorView<double>().DoMatrixProductOf((double)beta, transC, inputA->NativeTensorView<double>(), transA, inputB->NativeTensorView<double>(), transB, (double)alpha);
+            //break;
+        default:
+            LogicError("NDArrayView::MatrixProduct: Unsupported DataType %s", DataTypeName(out->m_dataType));
+            break;
+        }
+
+#if 0 // old version
         // for now copy all slices one by one
         // TODO: change into a single CUDA-kernel launch; needs new kernel and to transfer pointers array to GPU
         // BUGBUG: this cannot be done for sparse; so we need a C++ implementation of this that works very differently
@@ -462,6 +487,7 @@ namespace CNTK
             auto targetSlice = out->SliceView(startOffset, extent, false); // we copy inputs[i] to this slice
             NumericOperation({ inputs[i] }, /*alpha=*/1.0, (int)Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, targetSlice);
         }
+#endif
         return out;
     }
 

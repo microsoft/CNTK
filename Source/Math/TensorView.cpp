@@ -407,6 +407,32 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
         Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *B, !transB, *A, !transA, beta, *C, pQuantizedMultiplier);
 }
 
+// -------------------------------------------------------------------
+// gather batch -- splice multiple TensorViews into a batch
+// -------------------------------------------------------------------
+
+template <class ElemType>
+void TensorView<ElemType>::DoGatherBatchOf(size_t numItems, const std::function<const TensorView&(size_t)>& inputs)
+{
+    // naive implementation
+    let batchAxis = m_shape.GetRank() - 1;
+    if (m_shape[batchAxis] != numItems) // TODO: add more into to the error
+        InvalidArgument("DoGatherBatchOf: Dimension of slowest-changing axis of output must match the number of inputs to batch.");
+    for (auto i = 0; i < numItems; i++)
+    {
+        // output slice
+        auto outShape = m_shape;
+        outShape.NarrowTo(batchAxis, i, i+1); // this is the slice we must assign to
+        let outSlice = Reshaped(outShape); // note: Reshape(), despite its name, actually accepts a slice as well --TODO: name it better
+        // input slice
+        let& inSlice = inputs(i);
+        // assign as matrix assignment
+        let outMatrix = outSlice.AsMatrix();
+        let inMatrix  = inSlice.AsMatrix();
+        outMatrix->AssignValuesOf(*inMatrix);
+    }
+}
+
 template class TensorView<float>;
 template class TensorView<double>;
 

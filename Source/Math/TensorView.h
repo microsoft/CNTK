@@ -55,6 +55,8 @@ public:
     }
 
     // reshaped view
+    // Contrary to what the name implies, 'shape' can also be a slice.
+    // TODO: better rename this
     TensorView<ElemType> Reshaped(const TensorShape& shape) const
     {
         return TensorView(*this, shape);
@@ -152,6 +154,15 @@ public:
     void DoMatrixProductOf(ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier = nullptr);
     void AssignMatrixProductOf(           bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier = nullptr) { DoMatrixProductOf(0, transC, a, transA, b, transB, alpha, pQuantizedMultiplier); }
     void AddMatrixProductOf   (           bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
+
+    // -------------------------------------------------------------------
+    // gather batch -- splice multiple TensorViews into a batch
+    // Result overwrites 'this'. 'this' must have at least one extra trailing axis, which becomes the batch axis.
+    // Instead of passing TensorView objects, a functor is passed, to avoid an unnecessary malloc().
+    // For efficient interopt with NDArrayView, tensor shapes are not verified, only the resulting matrix shapes.
+    // -------------------------------------------------------------------
+
+    void DoGatherBatchOf(size_t numItems, const std::function<const TensorView&(size_t)>& inputs);
 
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
     const TensorShape& GetShape() const { return m_shape; }
