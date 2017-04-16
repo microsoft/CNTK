@@ -449,9 +449,9 @@ namespace CNTK
             out = MakeSharedObject<NDArrayView>(input0.GetDataType(), input0.GetStorageFormat(), shape, input0.Device());
         else if (shape != out->Shape())
             RuntimeError("NDArrayView::GatherBatch: Output object has wrong shape."); // TODO: show the actual dimensions
-                // perform the operation
-        // the underlying TensorView call expects a functor to access the tensorview items
-        // The TensorView it returns have padded dimensions.
+        // perform the operation
+        // The underlying TensorView call expects a functor to access the TensorView items.
+        // The TensorView it returns have padded dimensions, so we can reuse the existing TensorView object.
         switch (out->m_dataType)
         {
         case DataType::Float:
@@ -466,28 +466,20 @@ namespace CNTK
             });
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
-            // TODO: update once this is confirmed to work
-            //out->WritableNativeTensorView<double>().DoMatrixProductOf((double)beta, transC, inputA->NativeTensorView<double>(), transA, inputB->NativeTensorView<double>(), transB, (double)alpha);
-            //break;
+            out->WritableNativeTensorView<double>().DoGatherBatchOf(numInputs, [&](size_t i) -> const TensorView<double>&
+            {
+                const auto& input = *inputs[i];
+                if (input.m_dataType != input0.m_dataType)
+                    LogicError("NDArrayView::GatherBatch: Input argument's DataType %s differs from first input's DataType %s.", DataTypeName(input.m_dataType), DataTypeName(input0.m_dataType));
+                if (input.Shape() != input0.Shape())
+                    LogicError("NDArrayView::GatherBatch: Input argument's shape differs from first input's shape.");
+                return *input.GetTensorView<double>();
+            });
+            break;
         default:
             LogicError("NDArrayView::MatrixProduct: Unsupported DataType %s", DataTypeName(out->m_dataType));
             break;
         }
-
-#if 0 // old version
-        // for now copy all slices one by one
-        // TODO: change into a single CUDA-kernel launch; needs new kernel and to transfer pointers array to GPU
-        // BUGBUG: this cannot be done for sparse; so we need a C++ implementation of this that works very differently
-        std::vector<size_t> startOffset(dims.size(), 0);
-        auto extent = dims;
-        extent[axis] = 1;
-        for (auto i = 0; i < numInputs; i++)
-        {
-            startOffset[axis] = i;
-            auto targetSlice = out->SliceView(startOffset, extent, false); // we copy inputs[i] to this slice
-            NumericOperation({ inputs[i] }, /*alpha=*/1.0, (int)Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, targetSlice);
-        }
-#endif
         return out;
     }
 
