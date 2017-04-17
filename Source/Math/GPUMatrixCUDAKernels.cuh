@@ -627,7 +627,7 @@ __global__ void _stochasticbinaryForward(const ElemType* a, ElemType* b, float* 
 	if (id >= N)
 		return;
 	ElemType sigma = 1. / (1. + exp(-a[id] * annealSlope));
-	b[id] = rands[id] < sigma ? 1 : 0;
+	b[id] = rands[id] < sigma ? 1 : -1;
     //b[id] = 1;
 }
 
