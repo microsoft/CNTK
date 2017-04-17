@@ -13,7 +13,12 @@ def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect
     Args:
         crop_type (str, default 'center'): 'center', 'randomside', 'randomarea',
           or 'multiview10'.  'randomside' and 'randomarea' are usually used during
-          training, while 'center' and 'multiview10' are usually used during testing.
+          training.  If either 'randomside' and 'randomarea' are set, Horizontal 
+          flipping will be enabled and the image will be randomly flipped in 
+          horizontal direction. Horizontal flipping is another popular data augmentation 
+          technique and should be used if images exhibit vertical symmetry, 
+          for example, like many real-world objects. 
+          'center' and 'multiview10' are usually used during testing.
           Random cropping is a popular data augmentation technique used to improve
           generalization of the DNN.
         crop_size (`int`, default 0): crop size in pixels. Ignored if set to 0.
