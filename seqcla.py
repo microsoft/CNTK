@@ -234,6 +234,7 @@ def train(debug_output=False):
         dstart = time.time()
         crit_nd = crit.to_ndarray()
         dend = time.time()
+        #crit.dump_graph()
         print(crit.get_value().device)
         log_time(dend-dstart)
         loss = crit_nd / len(args[0])

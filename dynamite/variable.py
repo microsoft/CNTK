@@ -688,6 +688,12 @@ def transform_to_batched_ops(vars):
         # TODO: discover order on all inputs; if any reverse and no non-reversed then
         #    op_batch = reversed(op_batch)
         v0 = op_batch[0]
+        # barrier() is just a dummy to control batching
+        if v0.op is Variable._op_barrier:
+            for v in op_batch: # mutate to an alias, now that the barrier's work is done
+                v.op = Variable._op_alias
+                v.additional_args = ()
+            return
         def reslicing(args): # helper to test whether we are re-splicing something previously sliced (then we can short-circuit it)
             # BUGBUG: This currently ignores the axis parameter.
             arg0 = args[0]
@@ -806,10 +812,13 @@ def transform_to_batched_ops(vars):
         def make_key(p):
             # special case for __getitem__ and reshape: they are free and can always run first
             if p.op is cntk.NDArrayView.__getitem__ or p.op is cntk.NDArrayView.reshape:
-                return (True, p.op,) # True gives it highest priority as a batch op
+                return (1, p.op,) # 1 gives it highest priority as a batch op
+            # special case for _op_barrier: they are free but should always run last
+            if p.op is Variable._op_barrier:
+                return (-1, p.op, p.additional_args) # -1 gives it lowest priority as a batch op
             # special case for matmul: right matrix must be identical to be batchable
             if p.op is cntk.NDArrayView.dot or p.op is cntk.NDArrayView.dot_transpose or p.op is cntk.NDArrayView.transpose_dot:
-                return (False, p.op, (p.inputs[0].shape, id(p.inputs[1])))
+                return (0, p.op, (p.inputs[0].shape, id(p.inputs[1])))
             # batch if both op and input shapes are the same
             # Python slices are not hashable
             def make_hashable(arg):
@@ -824,7 +833,7 @@ def transform_to_batched_ops(vars):
                 additional_kwargs_tuplified = tuple(
                     (arg_name, make_hashable(additional_kwargs_tuplified[arg_name])) for arg_name in sorted(additional_kwargs_tuplified.keys())
                 )
-            return (False, p.op, additional_args_sanitized, additional_kwargs_tuplified, tuple(v.shape for v in p.inputs))
+            return (0, p.op, additional_args_sanitized, additional_kwargs_tuplified, tuple(v.shape for v in p.inputs))
         p.key = make_key(p)
         dummy_set_key_test = { p.key } # verify that it is hashable
         # TODO: must also include the storage format in the key; do this in C++ version
@@ -843,7 +852,7 @@ def transform_to_batched_ops(vars):
     while ready_ops:
         # select the largest ready batch size
         # Note: We use generation_id here to make it deterministic.
-        key = max(ready_ops.keys(), key=(lambda key: (len(ready_ops[key]), ready_ops[key][0].generation_id)))
+        key = max(ready_ops.keys(), key=(lambda key: (key[0], len(ready_ops[key]), ready_ops[key][0].generation_id)))
         op_batch = ready_ops[key]
         # execute it
         #print('batch of', len(op_batch), 'for op', key)
