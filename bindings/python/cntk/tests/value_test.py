@@ -237,3 +237,16 @@ def test_2d_sparse_sequences_value(device_id):
     x = sequence.input((2, 3))
     sequence_value = Value.create(x, [ndarrayview1, ndarrayview2], device=dev)
     assert np.array_equal(_to_dense(sequence_value.data), [[[[0, 1, 1], [0, 1, 0]], [[1, 0, 0], [1, 0, 1]]], [[[0, 1, 1], [1, 1, 0]], [[0, 0, 0], [0, 0, 0]]]])
+
+
+def test_as_shape_to_1d(device_id):
+    dev = cntk_device(device_id)
+    x = C.input(1)
+    w_1d = C.parameter((1), device=dev)
+    assert np.array_equal(w_1d.value, [0])
+
+    op = x * 0.1
+    value = op.eval({x:np.asarray([[1]], dtype=np.float32)}, as_numpy=False, device=dev)
+    value = value.data.as_shape(value.data.shape[1:])
+    w_1d.value = value
+    assert np.array_equal(w_1d.value, np.asarray([0.1], dtype=np.float32))
