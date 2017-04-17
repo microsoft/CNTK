@@ -863,16 +863,6 @@ void Matrix<ElemType>::GatherBatch(const std::function<shared_ptr<Matrix<ElemTyp
                 // TODO: check device or move
                 return *input->m_GPUMatrix;
             });
-            // ...
-            // GPU version, naive: (same as CPU)
-            //for (auto i = 0; i < numItems; i++)
-            //{
-            //    let input = (i == 0) ? input0 : inputs(i);
-            //    if (input->GetNumRows() != input0->GetNumRows() || input->GetNumCols() != input0->GetNumCols())
-            //        InvalidArgument("GatherBatch: All inputs must have the same dimensions.");
-            //    let numInCols = input0->GetNumCols();
-            //    SetColumnSlice(*input, i * numInCols, numInCols);
-            //}
         },
         { NOT_IMPLEMENTED; },
         { NOT_IMPLEMENTED; });
