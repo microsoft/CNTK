@@ -5271,6 +5271,16 @@ __global__ void _adadelta(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, E
         }
 
         smoothX2[idx] = rho * smoothX2[idx] + (1.0f - rho) * deltaX * deltaX;
+
+        if (sizeof(ElemType) == sizeof(double))
+        {
+            deltaX = -sqrt(smoothX2[idx] + epsilon) * rsqrt(adaSqr + epsilon) * g;
+        }
+        else
+        {
+            deltaX = -sqrtf(smoothX2[idx] + epsilon) * rsqrtf(adaSqr + epsilon) * g;
+        }
+
         val[idx] += learningRate * deltaX;
     }
 }
@@ -5300,6 +5310,16 @@ __global__ void _adadelta4BlockSparseCol(CUDA_LONG size,
         }
 
         smoothX2[idx] = rho * smoothX2[idx] + (1.0f - rho) * deltaX * deltaX;
+
+        if (sizeof(ElemType) == sizeof(double))
+        {
+            deltaX = -sqrt(smoothX2[idx] + epsilon) * rsqrt(adaSqr + epsilon) * g;
+        }
+        else
+        {
+            deltaX = -sqrtf(smoothX2[idx] + epsilon) * rsqrtf(adaSqr + epsilon) * g;
+        }
+
         val[idx] += learningRate * deltaX;
     }
 }
