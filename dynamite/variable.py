@@ -447,15 +447,16 @@ def unary_reduction_op(opcode, backprop_to_functions=None):
         return Variable((), opcode, (x,), backprop_to_functions=backprop_to_functions)
     return f
 
-def times_backprop_to_0(v, g): # fun(v, g) -> g * dv/da
-    # BUGBUG: Must do the same dance as for times_backprop_to_1().
+def _op_times_backprop_to_0(v, g): # fun(v, g) -> g * dv/da
+    # BUGBUG: Must do the same dance as for _op_times_backprop_to_1().
     a = g
     b = v.inputs[1]
     shapeA = a.shape
     shapeB = b.shape
     return Variable(v.inputs[0].shape, cntk.NDArrayView.dot_transpose, (g, v.inputs[1]))
 
-def times_backprop_to_1(v, g): # fun(v, g) -> g * dv/db
+def _op_times_backprop_to_1(v, g): # fun(v, g) -> g * dv/db
+    # This is the gradient into the matrix, which is v.inputs[1].
     # Nasty! The matmul gradient is no longer nice with true vectors.
     a = v.inputs[0]
     b = g
@@ -493,7 +494,7 @@ def times(a,b):
         shapeC = shapeC + (shapeA[0],);
     if len(shapeB) == 2:
         shapeC = shapeC + (shapeB[1],);
-    return Variable(shapeC, cntk.NDArrayView.dot, (a,b), backprop_to_functions=(times_backprop_to_0, times_backprop_to_1))
+    return Variable(shapeC, cntk.NDArrayView.dot, (a,b), backprop_to_functions=(_op_times_backprop_to_0, _op_times_backprop_to_1))
 
 def times_transpose(a,b):
     if hasattr(b, 'initializer'):
@@ -511,7 +512,7 @@ def times_transpose(a,b):
         shapeC = shapeC + (shapeA[0],);
     if len(shapeB) == 2:
         shapeC = shapeC + (shapeB[0],);
-    return Variable(shapeC, cntk.NDArrayView.dot_transpose, (a,b))
+    return Variable(shapeC, cntk.NDArrayView.dot_transpose, (a,b)) # note: no gradient for now
 
 zero = Constant(0)
 one = Constant(1)
@@ -683,7 +684,10 @@ def transform_to_batched_ops(vars):
     # both c and the original c_r which is now a slice_view.
     # So removing the reference to c_r should not change anything.
     # BUGBUG: If a_r is used at multiple places, the current optimizer will not notice, and gather it multiple times.
-    #         One fix would be to replace the a_r themselves by slice_views as well.
+    #         We should create a hash table that keeps splice ops and discovers repeated ones.
+    #         Basically for all operations we generate here. Or maybe just put them back into ready_ops for reconsideration?
+    # BUGBUG: Backprop into parameters does not correctly batch. That's an aggregate over matrix products,
+    #         which we could pre-gather before the matrix product. Not happening now because they are of varying length.
     def transform_batched_op(op_batch):
         # TODO: discover order on all inputs; if any reverse and no non-reversed then
         #    op_batch = reversed(op_batch)

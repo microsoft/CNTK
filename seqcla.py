@@ -173,11 +173,14 @@ def train(debug_output=False):
                 return r1(tree_node(arg[0]), tree_node(arg[1]))
             else:
                 return e1(arg)
+        b1 = dynamite.Barrier()
+        # Observation: barrier does not change forward (we got lucky), and does not work for backprop.
+        # We should inject a barrier for backprop into shared matrices.
         d1 = dynamite.Dense(1)
-        z = dynamite.reduce_sum(dynamite.Variable.splice(*dynamite.map_batch(lambda inp: d1(tree_node(inp)), [batch])))
+        z = dynamite.reduce_sum(dynamite.Variable.splice(*dynamite.map_batch(lambda inp: d1(b1(tree_node(inp))), [batch])))
         #dynamite.dump_graph(z)
         dynamite.print_graph_stats([z], '\n############## LOSS, unbatched\n')
-        #z.get_value()
+        z.get_value()
         dynamite.print_graph_stats([z], '\n############## LOSS, batched\n')
         #dynamite.dump_graph(z)
         #print(z.to_ndarray())
@@ -188,8 +191,8 @@ def train(debug_output=False):
         #print('### GRADIENT')
         #dynamite.dump_graph(grad_vars)
         dynamite.print_graph_stats(grad_vars + (z,), '\n############## plus GRADIENTS, unbatched\n')
-        #for g in grad_vars:
-        #    g.get_value()
+        for g in grad_vars:
+            g.get_value()
         #dynamite.dump_graph(grad_vars)
         dynamite.print_graph_stats(grad_vars + (z,), '\n############## LOSS and GRADIENTS, batched\n')
         pass
@@ -256,7 +259,7 @@ def train(debug_output=False):
         #    g = dgradients[p].get_value()
             #print(g.to_ndarray())
 
-        if False:
+        if True:
             # CNTK static, manual fw/bw/update
             grads = combine([criterion.outputs[0]]).grad(at=criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]), wrt=model.parameters, as_numpy=False)
             for p in model.parameters:
