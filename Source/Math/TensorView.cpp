@@ -412,23 +412,39 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
 // -------------------------------------------------------------------
 
 template <class ElemType>
-void TensorView<ElemType>::DoGatherBatchOf(size_t numItems, const std::function<const TensorView&(size_t)>& inputs)
+void TensorView<ElemType>::DoGatherBatchOf(const std::function<const TensorView&(size_t)>& inputs)
 {
     // This is implemented by assigning matrix column slices. So we first must bring our shapes into the right form.
+    // The mapping to matrix shapes is driven by the first input.
+    // The output matrix shape will that of the first input's concatenated numItems times.
+    // This dance is done so that we can batch sparse vectors and even sparse ND objects one day.
+    // (We can't right now since the underlying Matrix function will not yet implement the sparse version.)
     // (As a consequence, it will not work with strided TensorViews. If that is needed, please implement it using tensor assignments.)
-    if (m_shape.GetRank() == 0 || m_shape[m_shape.GetRank() - 1] != numItems) // TODO: add more into to the error
-        InvalidArgument("DoGatherBatchOf: Dimension of slowest-changing axis of output must match the number of inputs to batch.");
-    auto outShape = m_shape;
-    outShape.FlattenTo2DInPlace(outShape.GetRank() - 1, "DoGatherBatchOf"); // now batch dimension is the column dimension
-    let outMatrix = Reshaped(outShape).AsMatrix();
-    // naive implementation
+    if (m_shape.GetRank() == 0)
+        InvalidArgument("DoGatherBatchOf: Output must have a batch dimension that is equal to the number of items to batch.");
+    let numItems = m_shape[m_shape.GetRank()]; // last axis of output is batch dimension
+    // check dimensions --TODO: This check is a bit too permissive. Fix this one day.
+    let& input0 = inputs(0);
+    if (input0.m_shape.GetNumElements() * numItems != m_shape.GetNumElements())
+        InvalidArgument("DoGatherBatchOf: Output must have a batch dimension that is equal to the number of items to batch.");
+    // create a matrix view for the output that is the same as numItems inputs as matrix concatenated
+    let input0AsMatrix = input0.AsMatrix();
+    auto outputAsMatrix = AsMatrix()->Reshaped(input0AsMatrix->GetNumRows(), input0AsMatrix->GetNumCols() * numItems);
+    //outputAsMatrix->GatherBatch([&](size_t i) -> const Matrix<ElemType>
+    //{
+    //    return inputs(i).AsMatrix()->Reshaped(outputAsMatrix->GetNumRows(), 1);
+    //});
+    // naive implementation --TODO: move this down into Matrix
     for (auto i = 0; i < numItems; i++)
     {
         // input slice
-        let& inSlice = inputs(i);
-        let inMatrix = inSlice.AsMatrix()->Reshaped(outMatrix->GetNumRows(), 1);
+        let& input = (i == 0) ? input0 : inputs(i); // (only call each one once, avoid assumptions on statefulness)
+        if (input.m_shape != input0.m_shape)
+            InvalidArgument("DoGatherBatchOf: All inputs must have the same shape.");
+        let inputAsMatrix = input.AsMatrix();
+        let numInCols = inputAsMatrix->GetNumCols();
         // assign as column assignment
-        outMatrix->SetColumnSlice(inMatrix, i, 1);
+        outputAsMatrix.SetColumnSlice(*inputAsMatrix, i * numInCols, numInCols);
     }
 }
 

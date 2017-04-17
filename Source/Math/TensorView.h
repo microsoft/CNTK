@@ -159,10 +159,10 @@ public:
     // gather batch -- splice multiple TensorViews into a batch
     // Result overwrites 'this'. 'this' must have at least one extra trailing axis, which becomes the batch axis.
     // Instead of passing TensorView objects, a functor is passed, to avoid an unnecessary malloc().
-    // For efficient interopt with NDArrayView, tensor shapes are not verified, only the resulting matrix shapes.
+    // For efficient interop with NDArrayView, tensor shapes may have additional padded 1-dimensions.
     // -------------------------------------------------------------------
 
-    void DoGatherBatchOf(size_t numItems, const std::function<const TensorView&(size_t)>& inputs);
+    void DoGatherBatchOf(const std::function<const TensorView&(size_t)>& inputs);
 
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
     const TensorShape& GetShape() const { return m_shape; }

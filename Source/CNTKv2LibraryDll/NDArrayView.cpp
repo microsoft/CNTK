@@ -455,7 +455,7 @@ namespace CNTK
         switch (out->m_dataType)
         {
         case DataType::Float:
-            out->WritableNativeTensorView<float>().DoGatherBatchOf(numInputs, [&](size_t i) -> const TensorView<float>&
+            out->WritableNativeTensorView<float>().DoGatherBatchOf([&](size_t i) -> const TensorView<float>&
             {
                 const auto& input = *inputs[i];
                 if (input.m_dataType != input0.m_dataType)
@@ -466,7 +466,7 @@ namespace CNTK
             });
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
-            out->WritableNativeTensorView<double>().DoGatherBatchOf(numInputs, [&](size_t i) -> const TensorView<double>&
+            out->WritableNativeTensorView<double>().DoGatherBatchOf([&](size_t i) -> const TensorView<double>&
             {
                 const auto& input = *inputs[i];
                 if (input.m_dataType != input0.m_dataType)

@@ -831,6 +831,13 @@ void Matrix<ElemType>::CopyColumnsStrided(const Matrix<ElemType>& fromMatrix, si
 }
 
 template <class ElemType>
+void Matrix<ElemType>::GatherBatch(const std::function<shared_ptr<Matrix<ElemType>>(size_t)>& inputs)
+{
+    // TODO: complete this; first move down the caller's loop here
+    inputs;
+}
+
+template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::Diagonal() const
 {
     int devId = GetDeviceId();
