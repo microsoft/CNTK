@@ -833,8 +833,16 @@ void Matrix<ElemType>::CopyColumnsStrided(const Matrix<ElemType>& fromMatrix, si
 template <class ElemType>
 void Matrix<ElemType>::GatherBatch(const std::function<shared_ptr<Matrix<ElemType>>(size_t)>& inputs)
 {
+    let input0 = inputs(0);
+    let numItems = GetNumCols() / input0->GetNumCols();
     // TODO: complete this; first move down the caller's loop here
-    inputs;
+    // naive implementation --TODO: move this down into Matrix
+    for (auto i = 0; i < numItems; i++)
+    {
+        let input = (i == 0) ? input0 : inputs(i);
+        let numInCols = input0->GetNumCols();
+        SetColumnSlice(*input, i * numInCols, numInCols);
+    }
 }
 
 template <class ElemType>

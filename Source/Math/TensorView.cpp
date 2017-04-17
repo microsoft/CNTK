@@ -422,17 +422,23 @@ void TensorView<ElemType>::DoGatherBatchOf(const std::function<const TensorView&
     // (As a consequence, it will not work with strided TensorViews. If that is needed, please implement it using tensor assignments.)
     if (m_shape.GetRank() == 0)
         InvalidArgument("DoGatherBatchOf: Output must have a batch dimension that is equal to the number of items to batch.");
-    let numItems = m_shape[m_shape.GetRank()]; // last axis of output is batch dimension
+    let numItems = m_shape[m_shape.GetRank() - 1]; // last axis of output is batch dimension
     // check dimensions --TODO: This check is a bit too permissive. Fix this one day.
     let& input0 = inputs(0);
     if (input0.m_shape.GetNumElements() * numItems != m_shape.GetNumElements())
         InvalidArgument("DoGatherBatchOf: Output must have a batch dimension that is equal to the number of items to batch.");
     // create a matrix view for the output that is the same as numItems inputs as matrix concatenated
     let input0AsMatrix = input0.AsMatrix();
-    auto outputAsMatrix = AsMatrix()->Reshaped(input0AsMatrix->GetNumRows(), input0AsMatrix->GetNumCols() * numItems);
+    auto outputReshaped = Reshaped(TensorShape(input0AsMatrix->GetNumRows(), input0AsMatrix->GetNumCols() * numItems));
+    auto outputAsMatrix = outputReshaped.AsMatrix();
     //outputAsMatrix->GatherBatch([&](size_t i) -> const Matrix<ElemType>
     //{
     //    return inputs(i).AsMatrix()->Reshaped(outputAsMatrix->GetNumRows(), 1);
+    // input slice
+    //let& input = (i == 0) ? input0 : inputs(i); // (only call each one once, avoid assumptions on statefulness)
+    //if (input.m_shape != input0.m_shape)
+    //    InvalidArgument("DoGatherBatchOf: All inputs must have the same shape.");
+    //let inputAsMatrix = input.AsMatrix();
     //});
     // naive implementation --TODO: move this down into Matrix
     for (auto i = 0; i < numItems; i++)
@@ -444,7 +450,7 @@ void TensorView<ElemType>::DoGatherBatchOf(const std::function<const TensorView&
         let inputAsMatrix = input.AsMatrix();
         let numInCols = inputAsMatrix->GetNumCols();
         // assign as column assignment
-        outputAsMatrix.SetColumnSlice(*inputAsMatrix, i * numInCols, numInCols);
+        outputAsMatrix->SetColumnSlice(*inputAsMatrix, i * numInCols, numInCols);
     }
 }
 
