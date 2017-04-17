@@ -9,6 +9,8 @@
 #include "InputAndParamNodes.h"
 #include "ComputationNetworkBuilder.h" // TODO: We should only pull in NewComputationNodeFromConfig(). Nodes should not know about network at large.
 #include "TensorShape.h"
+#include <chrono>
+using namespace std::chrono;
 
 #ifndef let
 #define let const auto
@@ -653,6 +655,17 @@ template <class ElemType>
 
     // and make sure dimensions are what we expect
     VerifyDataSize(Value());
+
+    FILE* f = _wfopen(L"profile_log.txt", L"at");
+    if (f == NULL)
+    {
+        RuntimeError("Error: ProfilerGenerateDetailFile: Cannot create file <%ls>.\n", "profile_log.txt");
+    }
+
+    milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+
+    fprintfOrDie(f, "FwStart,%ls,%ls,%d\n", NodeName().c_str(), OperationName().c_str(), ms.count());
+    fclose(f);
 }
 
 template <class ElemType>
@@ -668,6 +681,17 @@ template <class ElemType>
 
         InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
     }
+
+    FILE* f = _wfopen(L"profile_log.txt", L"at");
+    if (f == NULL)
+    {
+        RuntimeError("Error: ProfilerGenerateDetailFile: Cannot create file <%ls>.\n", "profile_log.txt");
+    }
+
+    milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+
+    fprintfOrDie(f, "FwEnd,%ls,%ls,%d\n", NodeName().c_str(), OperationName().c_str(), ms.count());
+    fclose(f);
 
     // tracing
     Trace();
@@ -704,6 +728,17 @@ template <class ElemType>
                 VerifyValueShape(InputRef(i));
         }
     }
+
+    FILE* f = _wfopen(L"profile_log.txt", L"at");
+    if (f == NULL)
+    {
+        RuntimeError("Error: ProfilerGenerateDetailFile: Cannot create file <%ls>.\n", "profile_log.txt");
+    }
+
+    milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+
+    fprintfOrDie(f, "BwStart,%ls,%ls,%d\n", NodeName().c_str(), OperationName().c_str(), ms.count());
+    fclose(f);
 }
 
 template <class ElemType>
@@ -726,6 +761,17 @@ template <class ElemType>
             }
         }
     }
+
+    FILE* f = _wfopen(L"profile_log.txt", L"at");
+    if (f == NULL)
+    {
+        RuntimeError("Error: ProfilerGenerateDetailFile: Cannot create file <%ls>.\n", "profile_log.txt");
+    }
+
+    milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+
+    fprintfOrDie(f, "BwEnd,%ls,%ls,%d\n", NodeName().c_str(), OperationName().c_str(), ms.count());
+    fclose(f);
 }
 
 template <class ElemType>

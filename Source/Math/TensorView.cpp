@@ -331,7 +331,10 @@ static void FlattenToMatrix(TensorShape& shape, bool trans, size_t splitPoint)
 template <class ElemType>
 shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
 {
-    assert(m_shape.GetRank() == 2);
+    if (m_shape.GetRank() != 2)
+        return m_sob;
+    //assert(m_shape.GetRank() == 2);
+
     if (m_shape.GetStrides()[0] != 1 && m_shape[0] != 1)
         InvalidArgument("AsMatrix: Flattened [%s] matrix is not dense (it has a stride).", string(m_shape).c_str());
 
