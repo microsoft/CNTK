@@ -650,7 +650,7 @@ __global__ void _stochasticbinaryBackward_Anneal(const ElemType* a, const ElemTy
 		return;
     ElemType exp_tmp = expf(-2.0 * a[id] * annealSlope);
     ElemType tanhx = (1 - exp_tmp) / (1 + exp_tmp);
-	ingrad[id] = outgrad[id] * (1. - tanhx * tanhx) * annealSlope;
+	ingrad[id] = outgrad[id] * (1. + tanhx * tanhx) * annealSlope;
 }
 
 
