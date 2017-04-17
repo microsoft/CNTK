@@ -42,6 +42,18 @@ def BroadcastingUnary(unary_op):
 def identity(x):
     return x
 
+class BarrierTagCounter:
+    tag_counter = 0
+
+def Barrier():
+    tag = BarrierTagCounter.tag_counter
+    BarrierTagCounter.tag_counter += 1
+    # TODO: does the tag need to be serialized?
+    @BroadcastingUnary
+    def barrier(x):
+        return x.barrier(tag)
+    return barrier
+
 def Dense(N, bias=True, activation=identity, name=''):
     W = Parameter((INFER,N), initializer=times_initializer)
     if bias:

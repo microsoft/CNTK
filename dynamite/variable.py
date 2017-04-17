@@ -337,6 +337,12 @@ class Variable:
     def _op_alias(x): # the op for alias
         return x
 
+    def _op_barrier(x, tag): # the op for alias --tag is only used for batching and otherwise ignored
+        return x
+
+    def barrier(self, tag):
+        return Variable(self.shape, Variable._op_barrier, (self,), additional_args=(tag,), backprop_to_functions=(lambda v, g: g,))
+
     @staticmethod
     def splice(*args, axis=-1):
         if axis >= 0:

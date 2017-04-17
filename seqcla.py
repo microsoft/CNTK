@@ -77,12 +77,14 @@ cntk.RNNUnit = cntk.layers.RNNUnit
 cntk.Dense = cntk.layers.Dense
 cntk.identity = cntk.layers.identity
 cntk.LogValues = lambda: cntk.layers.identity
+cntk.Barrier = lambda: cntk.layers.identity
 def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
     return namespace.Sequential([
         namespace.Embedding(embedding_dim, name='embed'),
         namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu, name='rnn')),
         #namespace.identity,
-        namespace.LogValues(),
+        #namespace.LogValues(),
+        namespace.Barrier(),
         namespace.Dense(num_output_classes, name='dense')
     ])
 
@@ -221,7 +223,7 @@ def train(debug_output=False):
         def log_time(dur):
             dur_per_sample = dur / len(args[0])
             samples_per_second = 1 / dur_per_sample
-            #print('{:.2f} ms, {:.1f} samples/s'.format(dur * 1000, samples_per_second))
+            print('{:.2f} ms, {:.1f} samples/s'.format(dur * 1000, samples_per_second))
 
         # CNTK dynamite  --do this first before CNTK updates anything
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
@@ -232,6 +234,7 @@ def train(debug_output=False):
         dstart = time.time()
         crit_nd = crit.to_ndarray()
         dend = time.time()
+        print(crit.get_value().device)
         log_time(dend-dstart)
         loss = crit_nd / len(args[0])
         print(" " * 29, loss)
@@ -252,7 +255,7 @@ def train(debug_output=False):
         #    g = dgradients[p].get_value()
             #print(g.to_ndarray())
 
-        if True:
+        if False:
             # CNTK static, manual fw/bw/update
             grads = combine([criterion.outputs[0]]).grad(at=criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]), wrt=model.parameters, as_numpy=False)
             for p in model.parameters:
