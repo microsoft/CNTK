@@ -836,19 +836,40 @@ void Matrix<ElemType>::GatherBatch(const std::function<shared_ptr<Matrix<ElemTyp
     let input0 = inputs(0);
     let numItems = GetNumCols() / input0->GetNumCols();
     if (numItems * input0->GetNumCols() != GetNumCols())
-        InvalidArgument("x");
+        InvalidArgument("GatherBatch: Number of output columns is incompatible with the first input.");
     if (GetNumRows() != input0->GetNumRows())
-        InvalidArgument("x2");
-    // TODO: complete this; first move down the caller's loop here
-    // naive implementation --TODO: move this down into Matrix
-    for (auto i = 0; i < numItems; i++)
-    {
-        let input = (i == 0) ? input0 : inputs(i);
-        if (input->GetNumRows() != input0->GetNumRows() || input->GetNumCols() != input0->GetNumCols())
-            InvalidArgument("x3");
-        let numInCols = input0->GetNumCols();
-        SetColumnSlice(*input, i * numInCols, numInCols);
-    }
+        InvalidArgument("GatherBatch: First input is incompatible with output.");
+
+    // we dispatch on the first input (determines where the operation will run)
+    // Output will be generated there; all other inputs must be on the same device.
+    DISPATCH_MATRIX_ON_FLAG(input0, this,
+        {
+            // CPU version: copying naively is fine
+            // TODO: do we need to switch it to CPU first; or verify whether SetColumnSlice() did?
+            for (auto i = 0; i < numItems; i++)
+            {
+                let input = (i == 0) ? input0 : inputs(i);
+                if (input->GetNumRows() != input0->GetNumRows() || input->GetNumCols() != input0->GetNumCols())
+                    InvalidArgument("GatherBatch: All inputs must have the same dimensions.");
+                let numInCols = input0->GetNumCols();
+                SetColumnSlice(*input, i * numInCols, numInCols);
+            }
+        },
+        {
+            // GPU version: perform as a singe CUDA launch
+            // ...
+            // GPU version, naive: (same as CPU)
+            for (auto i = 0; i < numItems; i++)
+            {
+                let input = (i == 0) ? input0 : inputs(i);
+                if (input->GetNumRows() != input0->GetNumRows() || input->GetNumCols() != input0->GetNumCols())
+                    InvalidArgument("GatherBatch: All inputs must have the same dimensions.");
+                let numInCols = input0->GetNumCols();
+                SetColumnSlice(*input, i * numInCols, numInCols);
+            }
+        },
+        { NOT_IMPLEMENTED; },
+        { NOT_IMPLEMENTED; });
 }
 
 template <class ElemType>
