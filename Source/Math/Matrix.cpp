@@ -835,11 +835,17 @@ void Matrix<ElemType>::GatherBatch(const std::function<shared_ptr<Matrix<ElemTyp
 {
     let input0 = inputs(0);
     let numItems = GetNumCols() / input0->GetNumCols();
+    if (numItems * input0->GetNumCols() != GetNumCols())
+        InvalidArgument("x");
+    if (GetNumRows() != input0->GetNumRows())
+        InvalidArgument("x2");
     // TODO: complete this; first move down the caller's loop here
     // naive implementation --TODO: move this down into Matrix
     for (auto i = 0; i < numItems; i++)
     {
         let input = (i == 0) ? input0 : inputs(i);
+        if (input->GetNumRows() != input0->GetNumRows() || input->GetNumCols() != input0->GetNumCols())
+            InvalidArgument("x3");
         let numInCols = input0->GetNumCols();
         SetColumnSlice(*input, i * numInCols, numInCols);
     }

@@ -431,27 +431,26 @@ void TensorView<ElemType>::DoGatherBatchOf(const std::function<const TensorView&
     let input0AsMatrix = input0.AsMatrix();
     auto outputReshaped = Reshaped(TensorShape(input0AsMatrix->GetNumRows(), input0AsMatrix->GetNumCols() * numItems));
     auto outputAsMatrix = outputReshaped.AsMatrix();
-    //outputAsMatrix->GatherBatch([&](size_t i) -> const Matrix<ElemType>
-    //{
-    //    return inputs(i).AsMatrix()->Reshaped(outputAsMatrix->GetNumRows(), 1);
-    // input slice
-    //let& input = (i == 0) ? input0 : inputs(i); // (only call each one once, avoid assumptions on statefulness)
-    //if (input.m_shape != input0.m_shape)
-    //    InvalidArgument("DoGatherBatchOf: All inputs must have the same shape.");
-    //let inputAsMatrix = input.AsMatrix();
-    //});
-    // naive implementation --TODO: move this down into Matrix
-    for (auto i = 0; i < numItems; i++)
+    outputAsMatrix->GatherBatch([&](size_t i)
     {
-        // input slice
         let& input = (i == 0) ? input0 : inputs(i); // (only call each one once, avoid assumptions on statefulness)
         if (input.m_shape != input0.m_shape)
-            InvalidArgument("DoGatherBatchOf: All inputs must have the same shape.");
-        let inputAsMatrix = input.AsMatrix();
-        let numInCols = inputAsMatrix->GetNumCols();
-        // assign as column assignment
-        outputAsMatrix->SetColumnSlice(*inputAsMatrix, i * numInCols, numInCols);
-    }
+            InvalidArgument("DoGatherBatchOf: All inputs must have the same shape. Input %d has shape %s vs. Input 0's shape of %s.",
+                            (int)i, string(input.m_shape).c_str(), string(input0.m_shape).c_str());
+        return input.AsMatrix();
+    });
+    //// naive implementation --TODO: move this down into Matrix
+    //for (auto i = 0; i < numItems; i++)
+    //{
+    //    // input slice
+    //    let& input = (i == 0) ? input0 : inputs(i); // (only call each one once, avoid assumptions on statefulness)
+    //    if (input.m_shape != input0.m_shape)
+    //        InvalidArgument("DoGatherBatchOf: All inputs must have the same shape.");
+    //    let inputAsMatrix = input.AsMatrix();
+    //    let numInCols = inputAsMatrix->GetNumCols();
+    //    // assign as column assignment
+    //    outputAsMatrix->SetColumnSlice(*inputAsMatrix, i * numInCols, numInCols);
+    //}
 }
 
 template class TensorView<float>;

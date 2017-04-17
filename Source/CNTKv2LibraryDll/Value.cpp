@@ -222,6 +222,7 @@ namespace CNTK
                 valueData = sequences[0];
 
             // We can use the original buffer directly but need to reshape to the valueDataShape
+            // BUGBUG: Do we need the native shape or the V1-compatible one? It looks like we create a Value directly from this.
             valueData = valueData->AsShape(valueDataShape);
         }
         else

@@ -591,7 +591,10 @@ namespace CNTK
                             (int)newShape.TotalSize(), newShape.AsString().c_str());
         }
 
-        auto newTensorShape = AsTensorShape(newShape);
+        //auto newTensorShape = AsTensorShape(newShape);
+        // ^^ This led to a non-padded shape, which caused an inconsistency.
+        //    I have not found any place that seems to rely on this, so I presume this was an unintended oversight.
+        auto newTensorShape = AsTensorViewShape(newShape);
         void* tensorView = nullptr;
         switch (m_dataType)
         {
