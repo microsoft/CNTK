@@ -636,7 +636,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetColumnSlice(const GPUMatrix<ElemTyp
         LogicError("The number of rows in source and destination matrices do not match");
 
     if (m_numRows * numCols > 0) // TODO: remove if unnecessary
-        CUDA_CALL(cudaMemcpy(Data() + m_sliceViewOffset + LocateColumn(startColumn), fromMatrix.Data(), sizeof(ElemType) * m_numRows * numCols, cudaMemcpyDeviceToDevice));
+        CUDA_CALL(cudaMemcpy(Data() + LocateColumn(startColumn), fromMatrix.Data(), sizeof(ElemType) * m_numRows * numCols, cudaMemcpyDeviceToDevice));
     return *this;
 }
 
@@ -658,6 +658,28 @@ void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatr
         PrepareDevice();
         SyncGuard syncGuard;
         _copyColumnsStrided<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), fromMatrix.Data(), N, (CUDA_LONG) m_numRows, (CUDA_LONG) destNumColsStride, (CUDA_LONG) srcNumColsStride);
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::GatherBatch(const std::function<const GPUMatrix<ElemType>&(size_t)>& inputs)
+{
+    let input0 = inputs(0);
+    let numItems = GetNumCols() / input0.GetNumCols();
+    if (numItems * input0.GetNumCols() != GetNumCols())
+        InvalidArgument("GatherBatch: Number of output columns is incompatible with the first input.");
+    if (GetNumRows() != input0.GetNumRows())
+        InvalidArgument("GatherBatch: First input is incompatible with output.");
+
+    // GPU version, naive: (same as CPU)
+    for (auto i = 0; i < numItems; i++)
+    {
+        let& input = (i == 0) ? input0 : inputs(i);
+        if (input.GetNumRows() != input0.GetNumRows() || input.GetNumCols() != input0.GetNumCols())
+            InvalidArgument("GatherBatch: All inputs must have the same dimensions.");
+        let numInCols = input0.GetNumCols();
+        let startColumn = i * numInCols;
+        CUDA_CALL(cudaMemcpy(Data() + LocateColumn(startColumn), input.Data(), sizeof(ElemType) * m_numRows * numInCols, cudaMemcpyDeviceToDevice));
     }
 }
 
