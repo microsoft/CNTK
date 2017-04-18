@@ -339,6 +339,9 @@ class Variable:
                                                   additional_args=(key,)),),
                         additional_args=(key,))
 
+    def __len__(self):
+        return self.shape[0]
+
     def _op_alias(x): # the op for alias
         return x
 

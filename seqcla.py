@@ -61,6 +61,10 @@ def from_cntk_mb(inputs: tuple, variables: tuple):
             item_shape = shape[1:]  # drop a superfluous length dimension
             if has_axis:
                 seq = dynamite.Constant(data) # turn into a tensor object
+                #return seq
+                # BUGBUG: ^^ this fails in a batched __matmul__ of (13,4,2000)
+                #         It batched all 4-word sequences for embeddding. Which is bad, it should batch all words for that.
+                #         I.e. to allow this, we must repeatedly batch--newly batched ops go into the list again or something. 
                 res = [seq[t] for t in range(shape[0])] # slice it
                 return res
             else:
@@ -83,8 +87,8 @@ def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
         namespace.Embedding(embedding_dim, name='embed'),
         namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu, name='rnn')),
         #namespace.identity,
-        #namespace.LogValues(),
-        namespace.Barrier(),
+        namespace.LogValues(),
+        #namespace.Barrier(),
         namespace.Dense(num_output_classes, name='dense')
     ])
 
@@ -150,7 +154,7 @@ def train(debug_output=False):
             print(gp.to_ndarray())
 
     # testing a tree model
-    if True:
+    if False:
         e1 = dynamite.Embedding(3)
         r1 = dynamite.RNNUnit(3, dynamite.relu)
         e1(1)
