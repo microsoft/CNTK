@@ -262,6 +262,7 @@ class Variable:
 
     @staticmethod
     def _op_aggregate_place_items(*args, shape=None, keys=None, out=None):
+        # TODO: if inputs are consecutive, then we can splice() them instead
         if out:
             assert shape == out.shape
             res = out
@@ -313,17 +314,21 @@ class Variable:
         res[key] = g         # copy the slice there
         return res
 
-    def __getitem__(self, key): # note: for now not fully supported
+    def __getitem__(self, key): # note: for now only one index (the first) is supported
         # determine the output shape
         if isinstance(key, int):
+            start = key
             first_dim = ()
         elif isinstance(key, slice):
             # various combinations are not yet supported
             assert key.step is None or key.step == 1
             assert key.start >= 0 and key.stop >= 0
             first_dim = (key.stop - key.start,)
+            start = key.start
         else:
             assert false # so far unsupported key type
+        if start >= self.shape[0]:
+            raise IndexError('IndexError: index {} is out of bounds for axis {} with size {}'.format(start, 0, self.shape[0]))
         shape = first_dim + self.shape[1:]
         # create the Variable; or return ourselves if we slice the whole thing anyway (it's a no-op); used by make_batched_input()
         if shape == self.shape:
@@ -346,12 +351,19 @@ class Variable:
     @staticmethod
     def splice(*args, axis=-1):
         if axis >= 0:
-            ValueError('splice: axis >= 0 case not implemented for now')
+            # concat case:
+            if axis > 0:
+                raise ValueError('splice: axis > 0 case not implemented for now')
+            # ... for now implement as full expansion into __getitem__() calls followed by splice
+            #     But this can be pushed down into an op to reduce this to a few assignments.
+            args = tuple(slice for arg in args for slice in arg)
+            axis = -1
+        # gather-batch equal-dimension inputs
         return Variable((len(args),) + (1,) * (-1 - axis) + args[0].shape,
                         cntk.NDArrayView.splice,
                         args,
                         backprop_to_functions=None if axis != -1 else tuple(lambda v, g, i=i: g[i].reshape(args[i].shape) for i in range(len(args))), # BUGBUG: wrong axis unless -1
-                        additional_kwargs=as_kwargs(axis=axis))
+                    additional_kwargs=as_kwargs(axis=axis))
 
     def reshape(self, shape):
         if shape == self.shape:
@@ -980,19 +992,35 @@ def create_gradient_graph(root, parameters, error_signal):
         shape = args[0].shape
         args = list(reversed(args)) # we traversed backwards; undo that
         # split args into different types that we deal with separately
-        place_item_args = [arg for arg in args if arg.op is Variable._op_place_item]
-        # ...other special kinds, e.g. matrix products
-        other_args =      [arg for arg in args if arg.op is not Variable._op_place_item] # all others
-        assert len(place_item_args) + len(other_args) == len(args) # check that we got them all
+        place_item_ops         = [arg for arg in args if arg.op is Variable._op_place_item]
+        transpose_dot_item_ops = [arg for arg in args if arg.op is cntk.NDArrayView.transpose_dot]
+        reduce_sum_item_ops    = [arg for arg in args if arg.op is cntk.NDArrayView.reduce_sum]
+        other_ops              = [arg for arg in args if arg.op is not Variable._op_place_item     and
+                                                         arg.op is not cntk.NDArrayView.reduce_sum and
+                                                         arg.op is not cntk.NDArrayView.transpose_dot] # all others
+        assert len(place_item_ops) + len(transpose_dot_item_ops) + len(reduce_sum_item_ops) + len(other_ops) == len(args) # check that we got them all
         # deal with _place_item()
-        if place_item_args:
+        if place_item_ops:
             # we must make sure that all input slices are filled exactly once; then this is a splice operation
-            place_item_args = [Variable(shape, Variable._op_aggregate_place_items,
-                                        tuple(arg.inputs[1] for arg in place_item_args), # (input[0] is the self-reference that allows _op_place_item() to know the output shape)
-                                        additional_kwargs=as_kwargs(shape=shape, keys=tuple(arg.additional_args for arg in place_item_args)))]
-        # ...deal with other special kinds
+            place_item_ops = [Variable(shape, Variable._op_aggregate_place_items,
+                                        tuple(arg.inputs[1] for arg in place_item_ops), # (input[0] is the self-reference that allows _op_place_item() to know the output shape)
+                                        additional_kwargs=as_kwargs(shape=shape, keys=tuple(arg.additional_args for arg in place_item_ops)))]
+        # matrix product (backprop into matrix; both inputs have batch dimension)
+        if transpose_dot_item_ops:
+            arg0 = Variable.splice(*(v.inputs[0] for v in transpose_dot_item_ops), axis=0)
+            arg1 = Variable.splice(*(v.inputs[1] for v in transpose_dot_item_ops), axis=0)
+            # BUGBUG: review how many dims overlap
+            transpose_dot_item_ops = [ Variable(tuple(reversed(arg0.shape[1:])) + arg1.shape[1:], cntk.NDArrayView.transpose_dot, (arg0, arg1)) ] # reduce into a single op on spliced inputs
+        # reduce_sum
+        if reduce_sum_item_ops      and False:
+            v0 = reduce_sum_item_ops[0]
+            reduce_to_shape0 = v0.additional_kwargs['reduce_to_shape']
+            assert(all(v.additional_kwargs['reduce_to_shape'] == reduce_to_shape0 for v in reduce_sum_item_ops)) # all must be of the same shape
+            arg0 = Variable.splice(*(v.inputs[0] for v in reduce_sum_item_ops), axis=0)
+            reduce_sum_item_ops = [ Variable(reduce_to_shape0, v0.op, (arg0,), additional_kwargs=v0.additional_kwargs) ]
+            ## TODO: does this make sense to combine? We'd be splicing the unreduced ones
         # _op_aggregate in the end
-        args = place_item_args + other_args
+        args = place_item_ops + transpose_dot_item_ops + reduce_sum_item_ops + other_ops
         if len(args) == 1:
             return args[0]
         elif len(args) == 2:
@@ -1092,8 +1120,6 @@ def map_batch(f, batch_args):
 ##############################################################################
 
 def train_minibatch(criterion, *batch_args):
-    # for now, manually do the batch loop
-    print('\n-------------------- batch of', len(batch_args[0]), '--------------------\n')
     # perform the parallel map
     crits = map_batch(criterion, batch_args)
     crits = tuple(crit[0] for crit in crits) # pick out first item as criterion --TODO: generalize this

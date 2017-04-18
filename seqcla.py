@@ -230,6 +230,10 @@ def train(debug_output=False):
 
         # CNTK dynamite  --do this first before CNTK updates anything
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
+        this_batch_size = len(args[0])
+        this_num_tokens = sum(len(arg0) for arg0 in args[0])
+        this_max_len = max(len(arg0) for arg0 in args[0])
+        print('\n-------------------- batch of', this_batch_size, 'with', this_num_tokens, 'tokens, max len', this_max_len, ', av len', this_num_tokens / this_batch_size, '--------------------\n')
         gstart = time.time()
         crit = dynamite.train_minibatch(dcriterion, *args)
         gend = time.time()
@@ -282,6 +286,8 @@ def train(debug_output=False):
                 #if dpname == "_[1].step_function.W":
                 #    dp.dump_graph(dp)
                 #    exit()
+            # total stats
+            dynamite.print_graph_stats(dgradients[parameter_map[p]] for p in model.parameters)
 
             # model update from dynamic
             param_map = { p: dgradients[parameter_map[p]].get_value() for p in model.parameters }
