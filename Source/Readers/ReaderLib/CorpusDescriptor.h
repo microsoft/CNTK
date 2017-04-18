@@ -37,6 +37,13 @@ public:
         return m_numericSequenceKeys;
     }
 
+    size_t Add(const std::string& key)
+    {
+        if (IsNumericSequenceKeys())
+            LogicError("String key should not be used with numeric corpus.");
+        return m_keyToIdMap.AddValue(key);
+    }
+
     // By default include all sequences.
     CorpusDescriptor(bool numericSequenceKeys, size_t maxSequenceLength)
         : m_includeAll(true),
@@ -66,13 +73,12 @@ public:
                 // The function has to provide a size_t unique "hash" for the input key
                 // If we see the key for the first time, we add it to the registry.
                 // Otherwise we retrieve the hash value for the key from the registry.
-
                 if (m_maxSequenceLength != SIZE_MAX && key.size() > m_maxSequenceLength)
                 {
                     std::string shortedKey(key.begin() + key.size() - m_maxSequenceLength, key.end());
-                    return m_keyToIdMap.AddIfNotExists(shortedKey);
+                    return m_keyToIdMap[shortedKey];
                 }
-                return m_keyToIdMap.AddIfNotExists(key);
+                return m_keyToIdMap[key];
             };
 
             IdToKey = [this](size_t id)

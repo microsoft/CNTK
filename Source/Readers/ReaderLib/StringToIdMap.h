@@ -25,17 +25,20 @@ public:
     {}
 
     // Adds string value to the registry.
-    void AddValue(const TString& value)
+    size_t AddValue(const TString& value)
     {
-        auto iter = m_values.insert(std::make_pair(value, m_indexedValues.size()));
-        m_indexedValues.push_back(&((iter.first)->first));
+        m_dirty = true;
+        m_values.push_back(std::make_pair(value, m_indexedValues.size()));
+        m_indexedValues.push_back(&m_values.back().first);
+        return m_indexedValues.size() - 1;
     }
 
     // Tries to get a value by id.
     bool TryGet(const TString& value, size_t& id) const
     {
-        const auto& it = m_values.find(value);
-        if (it == m_values.end())
+        sortIfNeeded();
+        auto it = std::lower_bound(m_values.begin(), m_values.end(), std::make_pair(value, 0), [](const TElement& a, const TElement& b) { return a.first < b.first; });
+        if (it->first != value)
         {
             return false;
         }
@@ -46,23 +49,13 @@ public:
         }
     }
 
-    // Get integer id for the string value, adding if not exists.
-    size_t AddIfNotExists(const TString& value)
-    {
-        const auto& it = m_values.find(value);
-        if (it == m_values.end())
-        {
-            AddValue(value);
-            return m_values[value];
-        }
-        return it->second;
-    }
-
     // Get integer id for the string value.
     size_t operator[](const TString& value) const
     {
-        const auto& it = m_values.find(value);
-        assert(it != m_values.end());
+        sortIfNeeded();
+        auto it = std::lower_bound(m_values.begin(), m_values.end(), std::make_pair(value, 0), [](const TElement& a, const TElement& b) { return a.first < b.first; });
+        if (it->first != value)
+            return SIZE_MAX;
         return it->second;
     }
 
@@ -74,17 +67,22 @@ public:
         return *m_indexedValues[id];
     }
 
-    // Checks whether the value exists.
-    bool Contains(const TString& value) const
+private:
+    void sortIfNeeded() const
     {
-        return m_values.find(value) != m_values.end();
+        if (!m_dirty)
+            return;
+
+        std::sort(m_values.begin(), m_values.end(), [](const TElement& a, const TElement& b) { return a.first < b.first; });
+        m_dirty = false;
     }
 
-private:
     // TODO: Move NonCopyable as a separate class to Basics.h
     DISABLE_COPY_AND_MOVE(TStringToIdMap);
 
-    std::map<TString, size_t> m_values;
+    mutable bool m_dirty;
+    typedef std::pair<TString, size_t> TElement;
+    mutable std::deque<TElement> m_values;
     std::deque<const TString*> m_indexedValues;
 };
 

@@ -140,7 +140,12 @@ void HTKDeserializer::InitializeChunkDescriptions(const vector<string>& paths)
         if (!m_corpus->IsIncluded(key))
             continue;
 
-        size_t id = m_corpus->KeyToId(key);
+        size_t id = 0;
+        if (m_primary)
+            id = m_corpus->Add(key);
+        else
+            id = m_corpus->KeyToId(key);
+
         description.SetId(id);
         utterances.push_back(description);
         m_totalNumberOfFrames += numberOfFrames;
