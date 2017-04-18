@@ -4,7 +4,7 @@ import os
 import numpy as np
 import cntk as ct
 
-from cntk.utils import _as_tuple
+from cntk.internal import _as_tuple
 
 def conv2d(input, num_filters, filter_shape, strides=(1,1), pad=True, mask_type=None, bias=True, input_condition=None, nonlinearity=ct.relu, init=ct.glorot_uniform()):
     '''

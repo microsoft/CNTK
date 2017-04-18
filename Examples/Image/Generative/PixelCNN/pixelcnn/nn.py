@@ -3,14 +3,14 @@ import os
 
 import numpy as np
 import cntk as ct
-from cntk.utils import _as_tuple
+from cntk.internal import _as_tuple
 
 #
 # Porting https://github.com/openai/pixel-cnn/blob/master/pixel_cnn_pp/nn.py to CNTK and add
 # some extra primitives and wrappers.
 #
 
-global_init = ct.normal(0.05)
+global_init = ct.normal(0.05) # paper 0.05
 
 def maximum(l, r):
     return ct.element_select(ct.greater(l, r), l, r)
@@ -35,8 +35,17 @@ def log_prob_from_logits(x):
     m = ct.reduce_max(x, axis)
     return x - m - ct.log(ct.reduce_sum(ct.exp(x-m), axis=axis))
 
-def l2_normalize(x, dim, epsilon=1e-12):
-    return x / ct.sqrt(maximum(ct.reduce_sum(x*x), epsilon))
+def l2_normalize(x, axis=None, epsilon=1e-12):
+    return x / ct.sqrt(maximum(ct.reduce_sum(x*x, axis=axis), epsilon))
+
+def moments(x, axes=None):
+    _axes = _as_tuple(axes)
+    m_init = x
+    for axis in _axes:
+        m_init = ct.reduce_mean(m_init, axis=axes)
+    v_init = (x - m_init) * (x - m_init)
+
+    return m_init, v_init
 
 def bnorm(input, num_filters):
     '''
@@ -60,64 +69,108 @@ def bnorm(input, num_filters):
                                   normalization_time_constant=4096, 
                                   use_cudnn_engine=True)
 
-def dense(input, num_units, nonlinearity = None, init=global_init):
-    input_shape  = input.shape            # (3, HW)
-    output_shape = _as_tuple(num_units)
+def dense(x, num_units, nonlinearity=None, init=global_init, init_scale=1., first_run=False):
+    x_shape  = x.shape
 
-    b = ct.parameter(output_shape+(input_shape[1],), name='b')
-    W = ct.parameter(output_shape+(input_shape[0],), init=init, name='W')  # (n,3)
+    b = ct.parameter((num_units), name='b')
+    g = ct.parameter((num_units, 1.), init=init, name='g')
+    V = ct.parameter((num_units, x_shape[0]), init=init, name='V')
 
-    W = l2_normalize(W, 0)
-    linear = b + ct.times(W, input)  # (n, HW)
+    if first_run:
+        # use weight normalization (Salimans & Kingma, 2016)
+        V_norm = V / ct.sqrt(maximum(ct.reduce_sum(V*V, axis=1), 1e-12))        
+        x_init = ct.times(V_norm, x)
+        m_init, v_init = moments(x_init, axes=(ct.Axis.default_batch_axis()))
+        scale_init = init_scale / ct.sqrt(v_init + 1e-10)
+
+        linear = ct.reshape(scale_init, (num_units, 1.)) * (x_init - ct.reshape(m_init, (num_units, 1.)))
+    else:
+        # use weight normalization (Salimans & Kingma, 2016)
+        linear = ct.times(V, x)
+        scaler = g / ct.sqrt(maximum(ct.reduce_sum(ct.square(V), axis=1), 1e-12))
+
+        linear = ct.reshape(scaler, (num_units, 1.)) * linear + ct.reshape(b, (num_units, 1.))
 
     if nonlinearity == None:
         return linear
 
     return nonlinearity(linear)
 
-def conv2d(input, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinearity=None, init=global_init):
+def conv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinearity=None, init=global_init, init_scale=1., first_run=False):
     '''
     Convolution layer.
     '''
     output_channels_shape = _as_tuple(num_filters)
-    input_channels_shape  = _as_tuple(input.shape[0])
+    x_channels_shape  = _as_tuple(x.shape[0])
 
-    V = ct.parameter(output_channels_shape + input_channels_shape + filter_shape, init=init, name='V')
+    V = ct.parameter(output_channels_shape + x_channels_shape + filter_shape, init=init, name='V')
     g = ct.parameter(output_channels_shape + (1,) * (1+len(filter_shape)), init=init, name='g')
     b = ct.parameter(output_channels_shape + (1,) * len(filter_shape), name='b')
 
-    V_norm = V / ct.sqrt(maximum(ct.reduce_sum(ct.reduce_sum(V*V, axis=2), axis=3), 1e-12))
-    W = g * V_norm
+    if first_run:
+        # use weight normalization (Salimans & Kingma, 2016)
+        V_norm = V / ct.sqrt(maximum(ct.reduce_sum(ct.reduce_sum(ct.reduce_sum(V*V, axis=0), axis=2), axis=3), 1e-12))        
+        x_init = ct.convolution(V_norm, x, strides=x_channels_shape + strides, auto_padding=_as_tuple(pad)) + b
 
-    linear = ct.convolution(W, input, strides=input_channels_shape + strides, auto_padding=_as_tuple(pad)) + b
+        m_init, v_init = moments(x_init, axes=(1,2,ct.Axis.default_batch_axis()))
+        scale_init = init_scale / ct.sqrt(v_init + 1e-8)
+
+        #TODO: initialize g and b with scale_init
+        linear = ct.reshape(scale_init, m_init.shape) * (x_init - m_init)
+
+    else:
+        # use weight normalization (Salimans & Kingma, 2016)
+        V_norm = V / ct.sqrt(maximum(ct.reduce_sum(ct.reduce_sum(ct.reduce_sum(V*V, axis=0), axis=2), axis=3), 1e-12))
+        W = g * V_norm
+
+        linear = ct.convolution(W, x, strides=x_channels_shape + strides, auto_padding=_as_tuple(pad)) + b
 
     # Batchnormalization
-    linear = bnorm(linear, num_filters)
+    # linear = bnorm(linear, num_filters)
 
     if nonlinearity == None:
         return linear
 
     return nonlinearity(linear)
 
-def deconv2d(input, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinearity=None, init=global_init):
+def deconv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinearity=None, init=global_init, init_scale=1., first_run=False):
     '''
     Deconvolution layer.
     '''
     output_channels_shape = _as_tuple(num_filters)
-    input_shape           = input.shape    
-    input_channels_shape  = _as_tuple(input.shape[0])
+    x_shape               = x.shape    
+    x_channels_shape      = _as_tuple(x.shape[0])
 
-    V = ct.parameter(input_channels_shape + output_channels_shape + filter_shape, init=init, name='V')
+    if pad:
+        output_shape = (x_shape[1] * strides[0], x_shape[2] * strides[1], num_filters)
+    else:
+        output_shape = (x_shape[1] * strides[0] + filter_shape[0] - 1, x_shape[2] * strides[1] + filter_shape[1] - 1, num_filters)
+    output_shape = None
+
+    V = ct.parameter(x_channels_shape + output_channels_shape + filter_shape, init=init, name='V')
     g = ct.parameter((1,) + output_channels_shape + (1,) * len(filter_shape), init=init, name='g')
     b = ct.parameter(output_channels_shape + (1,) * len(filter_shape), name='b')
 
-    V_norm = V / ct.sqrt(maximum(ct.reduce_sum(ct.reduce_sum(V*V, axis=2), axis=3), 1e-12))
-    W = g * V_norm
-    
-    linear = ct.convolution(W, input, strides=input_channels_shape + strides, auto_padding=_as_tuple(pad), transpose=True) + b
+    if first_run:
+        # use weight normalization (Salimans & Kingma, 2016)
+        V_norm = V / ct.sqrt(maximum(ct.reduce_sum(ct.reduce_sum(ct.reduce_sum(V*V, axis=0), axis=2), axis=3), 1e-12))        
+        x_init = ct.convolution_transpose(V_norm, x, strides=x_channels_shape + strides, output_shape=output_shape, auto_padding=_as_tuple(pad)) + b
+
+        m_init, v_init = moments(x_init, axes=(1,2,ct.Axis.default_batch_axis()))
+        scale_init = init_scale / ct.sqrt(v_init + 1e-8)
+
+        #TODO: initialize g and b with scale_init
+        linear = ct.reshape(scale_init, m_init.shape) * (x_init - m_init)
+
+    else:
+        # use weight normalization (Salimans & Kingma, 2016)
+        V_norm = V / ct.sqrt(maximum(ct.reduce_sum(ct.reduce_sum(ct.reduce_sum(V*V, axis=0), axis=2), axis=3), 1e-12))
+        W = g * V_norm
+
+        linear = ct.convolution_transpose(W, x, strides=x_channels_shape + strides, output_shape=output_shape, auto_padding=_as_tuple(pad)) + b
 
     # Batchnormalization
-    linear = bnorm(linear, num_filters)
+    # linear = bnorm(linear, num_filters)
 
     if nonlinearity == None:
         return linear
@@ -132,7 +185,7 @@ def nin(x, num_units, **kwargs):
     x = dense(x, num_units, **kwargs)
     return ct.reshape(x, (num_units,)+s[1:])
 
-def gated_resnet(x, a=None, h=None, nonlinearity=concat_elu, conv=conv2d, init=global_init, dropout_p=0.):
+def gated_resnet(x, a=None, h=None, nonlinearity=concat_elu, conv=conv2d, init=global_init, dropout_p=0., first_run=False):
     xs = x.shape
     num_filters = xs[0]
 

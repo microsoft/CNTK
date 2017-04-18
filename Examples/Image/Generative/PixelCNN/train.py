@@ -59,19 +59,30 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     pe = ct.relu(1.0) # dummy value to make reporting progress happy.
 
     # training config
-    minibatch_size = 16 if (model == 'pixelcnnpp') else 64
+    epoch_size     = 50000    
+    minibatch_size = 12 if (model == 'pixelcnnpp') else 64
+
 
     # Set learning parameters
-    lr_per_sample    = 0.00001 if (model == 'pixelcnnpp') else 0.000001
-    lr_schedule      = ct.learning_rate_schedule(lr_per_sample, unit=ct.learner.UnitType.sample)
+    lr_init          = 0.00001
+    lr_decay         = 0.999995
+    lr_per_sample    = lr_init
+    lr_schedule      = ct.learning_rate_schedule(lr_per_sample, unit=ct.UnitType.sample)
     mm_time_constant = 4096
-    mm_schedule      = ct.learner.momentum_as_time_constant_schedule(mm_time_constant)
+    mm_schedule      = ct.momentum_as_time_constant_schedule(mm_time_constant)
 
     # Print progress
-    progress_writers = [ct.ProgressPrinter(tag='Training', num_epochs=max_epochs)] # freq=100
+    progress_writers = [ct.logging.ProgressPrinter(tag='Training', freq=100, num_epochs=max_epochs)] # freq=100
 
     # trainer object
-    learner = ct.learner.adam_sgd(z.parameters, lr=lr_schedule, momentum=mm_schedule, low_memory=False)
+    learner = ct.learners.adam(z.parameters, 
+                               lr=lr_schedule, 
+                               momentum=mm_schedule,
+                               unit_gain=False,
+                               # l1_regularization_weight = 0.001
+                               # l2_regularization_weight = 0.001,
+                               gradient_clipping_threshold_per_sample=100
+                               )
     trainer = ct.Trainer(z, (ce, pe), [learner], progress_writers)
 
     # define mapping from reader streams to network inputs
@@ -80,10 +91,9 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
         label_var: reader_train.streams.labels
     }
 
-    ct.utils.log_number_of_parameters(z); print()
+    ct.logging.log_number_of_parameters(z); print()
 
     # perform model training
-    epoch_size     = 50000
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         training_loss = 0
@@ -101,6 +111,8 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
                 trainer.train_minibatch({input_var:data[input_var].value, target_var:target})
             else:
                 trainer.train_minibatch({input_var:data[input_var].value})
+                # lr_per_sample *= lr_decay
+                # learner.reset_learning_rate(ct.learning_rate_schedule(lr_per_sample, unit=ct.UnitType.sample))
 
             t2 = time.perf_counter()
 
@@ -114,11 +126,14 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
             for y in range(image_height):
                 for x in range(image_width):
                     new_x_gen    = z.eval({input_var:[x_gen]})
-                    new_x_gen_np = np.asarray(sp.np_sample_from_discretized_mix_logistic(new_x_gen, nr_logistic_mix))
-                    x_gen[:,y,x] = new_x_gen_np[:,y,x]
-            x_gen += -1 # [0, 2]
-            x_gen *= 127.5
-            image = Image.fromarray(np.ascontiguousarray(np.transpose(x_gen, (1, 2, 0))).astype('uint8'))
+                    new_x_gen_np = np.asarray(sp.np_sample_from_discretized_mix_logistic(new_x_gen[0], nr_logistic_mix))
+                    x_gen[0,y,x] = new_x_gen_np[0,y,x]
+                    x_gen[1,y,x] = new_x_gen_np[1,y,x]
+                    x_gen[2,y,x] = new_x_gen_np[2,y,x]
+
+            norm_image  = sp.scale_to_unit_interval(np.ascontiguousarray(np.transpose(x_gen, (1, 2, 0)), dtype=np.float32)) # [0,1]
+            norm_image *= 255.0
+            image = Image.fromarray(np.asarray(norm_image, dtype=np.uint8))
             image.save("image_{}.png".format(epoch))
         t4 = time.perf_counter()
 

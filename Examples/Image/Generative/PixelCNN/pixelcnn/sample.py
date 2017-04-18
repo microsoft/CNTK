@@ -5,8 +5,18 @@ import numpy as np
 import cntk as ct
 from . import nn as nn
 
+def scale_to_unit_interval(ndar, eps=1e-8):
+  """ 
+  From https://github.com/openai/pixel-cnn/blob/master/pixel_cnn_pp/plotting.py 
+  Scales all values in the ndarray ndar to be between 0 and 1
+  """
+  ndar = ndar.copy()
+  ndar -= ndar.min()
+  ndar *= 1.0 / (ndar.max() + eps)
+  return ndar
+
 def np_sample_from_discretized_mix_logistic(l,nr_mix=10):
-    l = np.reshape(l, l[0,0,:,:,:].shape)
+    l = np.reshape(l, l[0,:,:,:].shape)
     l = np.ascontiguousarray(np.transpose(l, (1,2,0))) # From CHW to HWC
     ls = l.shape
     xs = ls[:-1] + (3,)
