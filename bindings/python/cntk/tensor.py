@@ -385,6 +385,8 @@ class NDArrayViewOpsMixin(object):
             shape = sum(dims, ())
             res = res.reshape(shape)
         return res
+    def __len__(self):
+        return self.shape[0]
     @staticmethod
     def splice(*args, axis=-1, out=None): # negative axis will insert a new axis
         # TODO: rename this to reflect its limited functionality
@@ -402,7 +404,7 @@ def _add_ndarrayview_ops(klass):
                           'dot', 'dot_transpose', 'transpose_dot',
                           'sigmoid', 'tanh', 'relu', 'exp',
                           'reduce_sum', 'reduce_log_sum',
-                          'reshape', '__getitem__', '__setitem__', 'splice']:
+                          'reshape', '__getitem__', '__setitem__', 'splice', '__len__']:
         # bring this back in once C++ splice() is functional
         if getattr(klass, overload_name, None):
             raise ValueError('class "%s" already has operator overload "%s"' %
