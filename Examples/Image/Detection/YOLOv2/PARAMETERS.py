@@ -13,7 +13,7 @@ par_dataset_name = "CIFAR10"
 par_trainset_label_file = "train_map.txt"
 par_testset_label_file = "test_map.txt"
 par_abs_path = os.path.dirname(os.path.abspath(__file__))
-par_max_epochs = 20
+par_max_epochs = 80
 
 if(par_dataset_name == "CIFAR10"):
     par_image_height = 32*3  # Darknet19 scales input image down over all by a factor of 32. \\

@@ -40,7 +40,7 @@ __mb_size = par_minibatch_size # copy on import
 # define the reader    #
 ########################
 
-def create_reader(map_file, is_training):
+def create_reader(map_file, is_training, is_distributed = False):
     if not os.path.exists(map_file):
         raise RuntimeError(
             "File '%s' does not exist. Please run install_cifar10.py from DataSets/CIFAR-10 to fetch them" %
@@ -59,7 +59,8 @@ def create_reader(map_file, is_training):
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
         features=StreamDef(field='image', transforms=transforms),  # first column in map file is referred to as 'image'
         labels=StreamDef(field='label', shape=num_classes))),  # and second as 'label'
-                           randomize=is_training, max_sweeps=INFINITELY_REPEAT if is_training else 1)
+                           randomize=is_training, max_sweeps=INFINITELY_REPEAT if is_training else 1,
+                           multithreaded_deserializer=is_distributed)
 
 
 ########################
@@ -105,6 +106,32 @@ def train_model(reader, model, epoch_size=50000, max_epochs=par_max_epochs, save
                            momentum=momentum_as_time_constant_schedule([0] * 20 + [600] * 20 + [1200],
                                                                        epoch_size=epoch_size),
                            l2_regularization_weight=0.002)
+
+    #from cntk.learners import adam
+    #learner = adam(model.parameters,
+     #              lr = learning_rate_schedule( [0.1 * 0.5 ** 1]*2+
+      #                                          [0.1 * 0.5 ** 2]*2+
+       #                                         [0.1 * 0.5 ** 3]*2+
+        #                                        [0.1 * 0.5 ** 4]*2+
+         #                                       [0.1 * 0.5 ** 5]*2+
+          #                                      [0.1 * 0.5 ** 6]*2+
+           #                                     [0.1 * 0.5 ** 7]*2+
+            #                                    [0.1 * 0.5 ** 8]*2+
+             #                                   [0.1 * 0.5 ** 9]*2,
+         #                                       [0.1 * 0.5 ** 10]*1+
+          #                                      [0.1 * 0.5 ** 11]*1+
+           #                                     [0.1 * 0.5 ** 12]*1+
+            #                                    [0.1 * 0.5 ** 13]*1+
+             #                                   [0.1 * 0.5 ** 14]*1+
+              #                                  [0.1 * 0.5 ** 15]*1+
+               ##                                 [0.1 * 0.5 ** 16]*1+
+                 #                               [0.1 * 0.5 ** 17]*1+
+                  #                              [0.1 * 0.5 ** 18]*1+
+                   #                             [0.1 * 0.5 ** 19]*1+
+                    #                            [0.1 * 0.5 ** 20],
+       #                                         unit=UnitType.minibatch, epoch_size=epoch_size),
+        #            momentum = momentum_as_time_constant_schedule([0], epoch_size=epoch_size)
+         #          )
 
     # trainer object
     trainer = Trainer(None, criterion, learner)
