@@ -1012,4 +1012,64 @@ public:
 
 template class StopGradientNode<float>;
 template class StopGradientNode<double>;
+
+// -----------------------------------------------------------------------
+// OutputMultiplexerNode(userDefinedV2FunctionNode, outputIndex)
+// ComputationNode for selecting one of the multiple outputs of UserDefinedV2FunctionNode
+// This is needed since the CNTK computation engin natively does not support
+// nodes with multiple outputs and hence, we need a separate node to multiplex 
+// the additional outputs.
+// -----------------------------------------------------------------------
+
+// TODO: We currently only support external nodes that cannot be part of CNTK recurrent loops
+template <class ElemType>
+class OutputMultiplexerNode final : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"OutputMultiplexer"; }
+
+public:
+    OutputMultiplexerNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputIndex = 0)
+        : Base(deviceId, name), m_outputIndex(outputIndex)
+    {
+        if (outputIndex == 0)
+            LogicError("OutputMultiplexerNode ctor must not be instantiated with outputIndex == 0");
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        // TODO: We should avoid this copy but that requires carefully managing the 
+        // lifetimes of the Value objects since to be able to directly use the 
+        // input Value as its output, we have to make sure that the input's Value
+        // is not reused until all dependents of this node are finished.
+        auto inputNode = Input(0)->template As<MultiOutputNode<ElemType>>();
+        Value().AssignValuesOf(*inputNode->m_outputsValue[m_outputIndex]);
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        // TODO: We should avoid this copy but that requires carefully managing the 
+        // lifetimes of the Gradient objects since to be able to directly use the 
+        // Gradient as input's gradient, we have to make sure that the Gradient
+        // is not reused until all the inputs are finished backpropagating to their inputs.
+        auto inputNode = Input(0)->template As<MultiOutputNode<ElemType>>();
+        inputNode->m_outputsGradient[m_outputIndex]->SetValue(Gradient());
+    }
+
+    virtual void Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        auto inputNode = Input(0)->template As<MultiOutputNode<ElemType>>();
+        m_pMBLayout = inputNode->m_outputsMBLayout[m_outputIndex];
+        SetDims(inputNode->m_outputsShape[m_outputIndex], HasMBLayout());
+    }
+
+private:
+    size_t m_outputIndex;
+};
+
+template class OutputMultiplexerNode<float>;
+template class OutputMultiplexerNode<double>;
+
 } } }

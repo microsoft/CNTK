@@ -1007,7 +1007,7 @@ namespace CNTK
                 while (outputs[i] != variable) i++;
                 assert(i < outputs.size());
 
-                computationNodePtr = New<SelectUserDefinedV2FunctionOutputNode<ElementType>>(network->GetDeviceId(), CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name()), i);
+                computationNodePtr = New<OutputMultiplexerNode<ElementType>>(network->GetDeviceId(), CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name()), i);
                 inputNodesBasePtrs = { variableToNodeMap[outputs[0]] };
             }
         }

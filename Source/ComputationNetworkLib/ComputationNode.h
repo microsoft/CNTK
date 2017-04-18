@@ -1758,6 +1758,18 @@ public:
             RequestMatrixFromPool(m_value, matrixPool, matrixSize, HasMBLayout());
         else
             CreateMatrixIfNull(m_value);
+
+        auto multiOutputNode = dynamic_cast<MultiOutputNode<ElemType>*>(this);
+        if (multiOutputNode)
+        {
+            for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+            {
+                if (!multiOutputNode->m_outputsIsValueSparse[i])
+                    RequestMatrixFromPool(multiOutputNode->m_outputsValue[i], matrixPool);
+                else
+                    CreateMatrixIfNull(multiOutputNode->m_outputsValue[i]);
+            }
+        }
     }
 
     // release temp matrices that are only used by forward computation
@@ -1782,6 +1794,13 @@ public:
     {
         size_t matrixSize = m_sampleLayout.GetNumElements();
         RequestMatrixFromPool(m_gradient, matrixPool, matrixSize, HasMBLayout());
+
+        auto multiOutputNode = dynamic_cast<MultiOutputNode<ElemType>*>(this);
+        if (multiOutputNode)
+        {
+            for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+                RequestMatrixFromPool(multiOutputNode->m_outputsGradient[i], matrixPool);
+        }
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1796,6 +1815,19 @@ public:
             // since in the case it isn't used, we release it during forward prop itself
             if (IsOutputNeededDuringBackprop() && !m_isValueSparse && IsValueSharable())
                 ReleaseMatrixToPool(m_value, matrixPool);
+
+            auto multiOutputNode = dynamic_cast<MultiOutputNode<ElemType>*>(this);
+            if (multiOutputNode)
+            {
+                for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+                    ReleaseMatrixToPool(multiOutputNode->m_outputsGradient[i], matrixPool);
+
+                for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+                {
+                    if (!multiOutputNode->m_outputsIsValueSparse[i])
+                        ReleaseMatrixToPool(multiOutputNode->m_outputsValue[i], matrixPool);
+                }
+            }
         }
     }
 
@@ -2170,29 +2202,6 @@ protected: public:                                     // needed in ComputationN
 // To resolve, call AttachInputs()
 // TODO: This is a bit indirect. Can it be done more nicely?
 struct ILateAttachingNode { virtual void LateAttachInputs() = 0; };
-template <class N>
-class LateAttachingNode : public N, public ILateAttachingNode
-{
-    typedef typename N::OurElemType ElemType;
-    function<void(ComputationNode<ElemType>*)> attachInputs;
-
-public:
-    // constructor
-    template <class... _Types>
-    LateAttachingNode(DEVICEID_TYPE deviceId, const wstring& name, const function<void(ComputationNode<ElemType>*)>& attachInputs, _Types&&... _Args)
-        : attachInputs(attachInputs), N(deviceId, name, forward<_Types>(_Args)...)
-    {
-    }
-    // the one member that does the work
-    void /*ILateAttachingNode::*/ LateAttachInputs()
-    {
-        attachInputs(dynamic_cast<N*>(this));
-        attachInputs = [](ComputationNode<ElemType>*)
-        {
-            LogicError("LateAttachingNode::AttachInputs: must only be called once");
-        };
-    }
-};
 
 // =======================================================================
 // IRecurrentNode -- interface implemented by ComputationNodes that can be recurrent
@@ -2219,6 +2228,30 @@ struct IPreComputeNode
     // call this with 'false' at start and with 'true' at end
     // This is used for resetting and updating from accumulators.
     virtual void MarkComputed(const bool hasComputed) = 0;
+};
+
+template <typename ElemType>
+struct MultiOutputNode
+{
+public:
+    MultiOutputNode(size_t numOutputs)
+        : m_numOutputs(numOutputs)
+    {
+        m_outputsShape.resize(m_numOutputs);
+        m_outputsHasNewMBLayout.resize(m_numOutputs);
+        m_outputsMBLayout.resize(m_numOutputs);
+        m_outputsIsValueSparse.resize(m_numOutputs, false);
+        m_outputsValue.resize(m_numOutputs);
+        m_outputsGradient.resize(m_numOutputs);
+    }
+
+    size_t m_numOutputs;
+    std::vector<TensorShape> m_outputsShape;
+    std::vector<bool> m_outputsHasNewMBLayout;
+    std::vector<std::shared_ptr<MBLayout>> m_outputsMBLayout;
+    std::vector<bool> m_outputsIsValueSparse;
+    std::vector<std::shared_ptr<Matrix<ElemType>>> m_outputsValue;
+    std::vector<std::shared_ptr<Matrix<ElemType>>> m_outputsGradient;
 };
 
 // =======================================================================
