@@ -41,6 +41,13 @@ public:
     {
         if (IsNumericSequenceKeys())
             LogicError("String key should not be used with numeric corpus.");
+
+        if (m_maxSequenceLength != SIZE_MAX && key.size() > m_maxSequenceLength)
+        {
+            std::string shortedKey(key.begin() + key.size() - m_maxSequenceLength, key.end());
+            return m_keyToIdMap.AddValue(shortedKey);
+        }
+
         return m_keyToIdMap.AddValue(key);
     }
 
