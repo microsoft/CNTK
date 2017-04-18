@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class CorpusDescriptor
 {
 public:
-    CorpusDescriptor(const std::wstring& file, bool numericSequenceKeys) : CorpusDescriptor(numericSequenceKeys)
+    CorpusDescriptor(const std::wstring& file, bool numericSequenceKeys, size_t maxSequenceLength) : CorpusDescriptor(numericSequenceKeys, maxSequenceLength)
     {
         m_includeAll = false;
 
@@ -38,7 +38,10 @@ public:
     }
 
     // By default include all sequences.
-    CorpusDescriptor(bool numericSequenceKeys) : m_includeAll(true), m_numericSequenceKeys(numericSequenceKeys)
+    CorpusDescriptor(bool numericSequenceKeys, size_t maxSequenceLength)
+        : m_includeAll(true),
+        m_numericSequenceKeys(numericSequenceKeys),
+        m_maxSequenceLength(maxSequenceLength)
     {
         if (numericSequenceKeys)
         {
@@ -63,6 +66,12 @@ public:
                 // The function has to provide a size_t unique "hash" for the input key
                 // If we see the key for the first time, we add it to the registry.
                 // Otherwise we retrieve the hash value for the key from the registry.
+
+                if (m_maxSequenceLength != SIZE_MAX && key.size() > m_maxSequenceLength)
+                {
+                    std::string shortedKey(key.begin() + key.size() - m_maxSequenceLength, key.end());
+                    return m_keyToIdMap.AddIfNotExists(shortedKey);
+                }
                 return m_keyToIdMap.AddIfNotExists(key);
             };
 
@@ -101,6 +110,7 @@ private:
     bool m_numericSequenceKeys;
     bool m_includeAll;
     std::set<size_t> m_sequenceIds;
+    size_t m_maxSequenceLength;
 
     StringToIdMap m_keyToIdMap;
 };
