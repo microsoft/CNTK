@@ -314,7 +314,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
      >>> # 3D convolution along dynamic axis over a sequence of 2D color images
      >>> from cntk.layers.typing import Sequence, Tensor
      >>> f = Convolution((2,5,4), 128, sequential=True, activation=C.relu) # over 2 consecutive frames
-     >>> x = input(Sequence[Tensor[3,480,640]])  # a variable-length video of 640x480 RGB images
+     >>> x = input(**Sequence[Tensor[3,480,640]])  # a variable-length video of 640x480 RGB images
      >>> h = f(x)
      >>> h.shape   # this is the shape per video frame: 637x476 activation vectors of length 128 each
          (128, 476, 637)

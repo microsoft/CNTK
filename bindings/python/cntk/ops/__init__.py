@@ -1726,27 +1726,9 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     or input data (which has a batch dimension, as needed for sequence-to-sequence models).
 
     Example:
-        >>> # create example input: one sequence with 4 tensors of shape (3, 2)
-        >>> from cntk.layers.typing import Tensor, Sequence
-        >>> x = input(Sequence[Tensor[3,2]])
+        >>> x = C.sequence.input(shape=(3,2))
+        >>> # Create one sequence with 4 tensors of shape (3, 2)
         >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
-        >>> x0
-        array([[[[  0.,   1.],
-                 [  2.,   3.],
-                 [  4.,   5.]],
-        <BLANKLINE>
-                [[  6.,   7.],
-                 [  8.,   9.],
-                 [ 10.,  11.]],
-        <BLANKLINE>
-                [[ 12.,  13.],
-                 [ 14.,  15.],
-                 [ 16.,  17.]],
-        <BLANKLINE>
-                [[ 18.,  19.],
-                 [ 20.,  21.],
-                 [ 22.,  23.]]]], dtype=float32)
-
         >>> # this demonstrates how past_value shifts the sequence by one, padding with initial_state
         >>> y = C.past_value(x) # initial_state is 0 by default
         >>> y.eval({x:x0})
@@ -1765,31 +1747,6 @@ def past_value(x, initial_state=None, time_step=1, name=''):
                 [[ 12.,  13.],
                  [ 14.,  15.],
                  [ 16.,  17.]]], dtype=float32)]
-
-        >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
-        >>> s = input(Tensor[3,2])  # not a Sequence[], e.g. a final encoder hidden state
-        >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,1,3,2))
-        >>> s0
-        array([[[[ 0. ,  0.5],
-                 [ 1. ,  1.5],
-                 [ 2. ,  2.5]]]], dtype=float32)
-        >>> y = C.past_value(x, initial_state=s)
-        >>> y.eval({x:x0, s:s0}) # same as the previous example except for the first time step
-        [array([[[  0. ,   0.5],
-                 [  1. ,   1.5],
-                 [  2. ,   2.5]],
-        <BLANKLINE>
-                [[  0. ,   1. ],
-                 [  2. ,   3. ],
-                 [  4. ,   5. ]],
-        <BLANKLINE>
-                [[  6. ,   7. ],
-                 [  8. ,   9. ],
-                 [ 10. ,  11. ]],
-        <BLANKLINE>
-                [[ 12. ,  13. ],
-                 [ 14. ,  15. ],
-                 [ 16. ,  17. ]]], dtype=float32)]
 
     Args:
         x: the tensor (or its name) from which the past value is obtained
