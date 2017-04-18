@@ -18,6 +18,48 @@ from ... import sequence, input
 from .ops_test_utils import cntk_device
 from cntk.tests.test_utils import _to_dense, _to_csr
 
+
+def test_lstm_over_lstm_thought_vectors(device_id):
+    dev = cntk_device(device_id)
+    input_vocab_size=3
+    emb_dim = 2
+    hidden_dim = 2
+    num_labels = 2
+    x_seq_input = C.sequence.input((C.FreeDimension, input_vocab_size), is_sparse=True, name='features')
+    x_secondary_seq_lens = C.input((), name='sequence_lengths')
+    label_seq_input = C.sequence.input(num_labels, is_sparse=True, sequence_axis=Axis('label_sequence'), name='labels')
+    with C.default_options(initial_state=0.1):
+        model = C.layers.Embedding(emb_dim, name='embed')(x_seq_input)
+        model = C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=False)(model)
+        model = C.sequence.last(model)
+        model = C.to_sequence(model, x_secondary_seq_lens)
+        model = C.reconcile_dynamic_axes(model, label_seq_input)
+        model = C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=False)(model)
+        model = C.layers.Dense(num_labels, name='classify')(model)
+
+    z = model
+    ce = C.cross_entropy_with_softmax(z, label_seq_input)
+
+    seq1_data = [[[0, 1, 1], [0, 1, 0], [1, 0, 0]], [[1, 1, 0], [0, 0, 1], [1, 0, 1]], [[1, 0, 0], [0, 0, 1], [1, 1, 0]]]
+    csr_seq1 = _to_csr(seq1_data)
+    ndarrayview1 = C.NDArrayView.from_csr(csr_seq1, shape=(3, 3, 3), device=C.cpu())
+    seq2_data = [[[0, 0, 1], [0, 1, 1], [1, 0, 1]], [[0, 1, 0], [1, 0, 1], [0, 0, 0]]]
+    csr_seq2 = _to_csr(seq2_data)
+    ndarrayview2 = C.NDArrayView.from_csr(csr_seq2, shape=(2, 3, 3), device=C.cpu())
+    x_seq_data = C.Value.create(C.sequence.input((3, 3), is_sparse=True), [ndarrayview1, ndarrayview2], device=C.cpu()).data
+    x_seq_lens_data = np.asarray([3, 2], dtype=np.float32)
+
+    seq1_label_data = [[0, 1], [0, 1], [1, 0]]
+    seq2_label_data = [[1, 0], [0, 1]]
+    label_seq_data = [_to_csr(seq1_label_data), _to_csr(seq2_label_data)]
+    param_grads, loss_result = ce.grad({x_seq_input : x_seq_data, x_secondary_seq_lens : x_seq_lens_data, label_seq_input : label_seq_data},
+                                       wrt=ce.parameters, outputs=[ce], as_numpy=False)
+    
+    loss_result = loss_result.as_sequences()
+    assert np.allclose(loss_result[0], [[0.703254], [0.701883], [0.683452]], atol=0.03)
+    assert np.allclose(loss_result[1], [[0.682687], [0.696831]], atol=0.03)
+
+
 def test_sequence_max():
   np.random.seed(0)
   a = np.float32(np.random.rand(20,100,8))
@@ -132,43 +174,3 @@ def test_to_sequence_backprop(device_id):
             grad_value = param_grads_2[param].asarray()
             assert np.array_equal(reference_grad_value, grad_value)
 
-
-def test_lstm_over_lstm_thought_vectors(device_id):
-    dev = cntk_device(device_id)
-    input_vocab_size=3
-    emb_dim = 2
-    hidden_dim = 2
-    num_labels = 2
-    x_seq_input = C.sequence.input((C.FreeDimension, input_vocab_size), is_sparse=True, name='features')
-    x_secondary_seq_lens = C.input((), name='sequence_lengths')
-    label_seq_input = C.sequence.input(num_labels, is_sparse=True, sequence_axis=Axis('label_sequence'), name='labels')
-    with C.default_options(initial_state=0.1):
-        model = C.layers.Embedding(emb_dim, name='embed')(x_seq_input)
-        model = C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=False)(model)
-        model = C.sequence.last(model)
-        model = C.to_sequence(model, x_secondary_seq_lens)
-        model = C.reconcile_dynamic_axes(model, label_seq_input)
-        model = C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=False)(model)
-        model = C.layers.Dense(num_labels, name='classify')(model)
-
-    z = model
-    ce = C.cross_entropy_with_softmax(z, label_seq_input)
-
-    seq1_data = [[[0, 1, 1], [0, 1, 0], [1, 0, 0]], [[1, 1, 0], [0, 0, 1], [1, 0, 1]], [[1, 0, 0], [0, 0, 1], [1, 1, 0]]]
-    csr_seq1 = _to_csr(seq1_data)
-    ndarrayview1 = C.NDArrayView.from_csr(csr_seq1, shape=(3, 3, 3), device=C.cpu())
-    seq2_data = [[[0, 0, 1], [0, 1, 1], [1, 0, 1]], [[0, 1, 0], [1, 0, 1], [0, 0, 0]]]
-    csr_seq2 = _to_csr(seq2_data)
-    ndarrayview2 = C.NDArrayView.from_csr(csr_seq2, shape=(2, 3, 3), device=C.cpu())
-    x_seq_data = C.Value.create(C.sequence.input((3, 3), is_sparse=True), [ndarrayview1, ndarrayview2], device=C.cpu()).data
-    x_seq_lens_data = np.asarray([3, 2], dtype=np.float32)
-
-    seq1_label_data = [[0, 1], [0, 1], [1, 0]]
-    seq2_label_data = [[1, 0], [0, 1]]
-    label_seq_data = [_to_csr(seq1_label_data), _to_csr(seq2_label_data)]
-    param_grads, loss_result = ce.grad({x_seq_input : x_seq_data, x_secondary_seq_lens : x_seq_lens_data, label_seq_input : label_seq_data},
-                                       wrt=ce.parameters, outputs=[ce], as_numpy=False)
-    
-    loss_result = loss_result.as_sequences()
-    assert np.allclose(loss_result[0], [[0.703254], [0.701883], [0.683452]])
-    assert np.allclose(loss_result[1], [[0.682687], [0.696831]])

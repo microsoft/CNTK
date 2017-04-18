@@ -226,8 +226,8 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_tempScatterIndices, matrixPool);
-        RequestMatrixFromPool(m_tempUnpackedData, matrixPool);
+        RequestMatrixFromPool(m_tempScatterIndices, matrixPool, 1, HasMBLayout());
+        RequestMatrixFromPool(m_tempUnpackedData, matrixPool, GetSampleLayout().GetNumElements(), HasMBLayout());
     }
 
     void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
@@ -240,7 +240,7 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_tempGatherIndices, matrixPool);
+        RequestMatrixFromPool(m_tempGatherIndices, matrixPool, 1, InputRef(0).HasMBLayout());
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
@@ -385,7 +385,7 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_tempGatherIndices, matrixPool);
+        RequestMatrixFromPool(m_tempGatherIndices, matrixPool, 1, HasMBLayout());
     }
 
     void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
@@ -397,8 +397,8 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_tempScatterIndices, matrixPool);
-        RequestMatrixFromPool(m_tempUnpackedData, matrixPool);
+        RequestMatrixFromPool(m_tempScatterIndices, matrixPool, 1, HasMBLayout());
+        RequestMatrixFromPool(m_tempUnpackedData, matrixPool, GetSampleLayout().GetNumElements(), HasMBLayout());
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override

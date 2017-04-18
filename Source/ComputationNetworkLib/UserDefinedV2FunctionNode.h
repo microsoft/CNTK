@@ -41,7 +41,7 @@ public:
 
     virtual void ForwardPropNonLooping() override
     {
-        m_outputsValue[0] = m_value;
+        this->m_outputsValue[0] = m_value;
 
         // Get the arguments of the external function
         auto arguments = m_externalFunction->Arguments();
@@ -79,21 +79,21 @@ public:
         {
             auto output = outputs[i];
             auto outputMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElemType>(output, outputValues[output]);
-            m_outputsValue[i]->SetValue(*outputMatrixAndLayout.first);
+            this->m_outputsValue[i]->SetValue(*outputMatrixAndLayout.first);
 
-            if ((m_outputsMBLayout[i] != nullptr) && (outputMatrixAndLayout.second == nullptr))
+            if ((this->m_outputsMBLayout[i] != nullptr) && (outputMatrixAndLayout.second == nullptr))
                 LogicError("The UserDefinedFunction node has a non-null output MBLayout but none found from the (%S) user Function::Forward output Value", m_externalFunction->Name().c_str());
-            else if ((m_outputsMBLayout[i] == nullptr) && (outputMatrixAndLayout.second != nullptr))
+            else if ((this->m_outputsMBLayout[i] == nullptr) && (outputMatrixAndLayout.second != nullptr))
                 LogicError("The UserDefinedFunction node does not have an output MBLayout but the (%S) user Function::Forward output Value have a non-null layout", m_externalFunction->Name().c_str());
-            else if ((m_outputsMBLayout[i] == nullptr) && (outputMatrixAndLayout.second == nullptr))
+            else if ((this->m_outputsMBLayout[i] == nullptr) && (outputMatrixAndLayout.second == nullptr))
                 ;
             else
             {
-                if (m_outputsHasNewMBLayout[i])
-                    m_outputsMBLayout[i]->CopyFrom(outputMatrixAndLayout.second);
+                if (this->m_outputsHasNewMBLayout[i])
+                    this->m_outputsMBLayout[i]->CopyFrom(outputMatrixAndLayout.second);
                 else
                 {
-                    if (*m_outputsMBLayout[i] != *outputMatrixAndLayout.second)
+                    if (*this->m_outputsMBLayout[i] != *outputMatrixAndLayout.second)
                         LogicError("The MBLayout of the output computed by the external function (%S) does not match the expected MBLayout", m_externalFunction->Name().c_str());
                 }
             }
@@ -105,7 +105,7 @@ public:
         if (m_currentBackpropStatePtr == nullptr)
             return;
 
-        m_outputsGradient[0] = m_gradient;
+        this->m_outputsGradient[0] = m_gradient;
 
         std::unordered_map<::CNTK::Variable, ::CNTK::ValuePtr> outputGradientValues;
         auto outputs = m_externalFunction->Outputs();
@@ -122,7 +122,7 @@ public:
             // input, and reuse them for subsequence inputs.
             ::CNTK::ValuePtr gradientValue;
             if (output.NeedsGradient())
-                gradientValue = ::CNTK::Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(output, nullptr, *m_outputsGradient[i], m_outputsMBLayout[i]);
+                gradientValue = ::CNTK::Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(output, nullptr, *this->m_outputsGradient[i], this->m_outputsMBLayout[i]);
 
             outputGradientValues.insert({ output, gradientValue });
         }
@@ -192,8 +192,8 @@ public:
             auto outputDynamicAxes = output.DynamicAxes();
             if (outputDynamicAxes.empty())
             {
-                m_outputsHasNewMBLayout[i] = true;
-                m_outputsMBLayout[i] = nullptr;
+                this->m_outputsHasNewMBLayout[i] = true;
+                this->m_outputsMBLayout[i] = nullptr;
             }
             else
             {
@@ -209,28 +209,28 @@ public:
                     auto argumentVar = argumentVariables[j];
                     if (argumentVar.DynamicAxes() == outputDynamicAxes)
                     {
-                        m_outputsMBLayout[i] = input.GetMBLayout();
+                        this->m_outputsMBLayout[i] = input.GetMBLayout();
                         break;
                     }
 
                     j++;
                 }
 
-                if (!m_outputsMBLayout[i])
+                if (!this->m_outputsMBLayout[i])
                 {
-                    m_outputsMBLayout[i] = make_shared<MBLayout>(); // this generates a new layout
-                    m_outputsMBLayout[i]->SetUniqueAxisName(InternalDynamicAxisNameFromDynamicAxes(output.DynamicAxes()));
-                    m_outputsHasNewMBLayout[i] = true;
+                    this->m_outputsMBLayout[i] = make_shared<MBLayout>(); // this generates a new layout
+                    this->m_outputsMBLayout[i]->SetUniqueAxisName(InternalDynamicAxisNameFromDynamicAxes(output.DynamicAxes()));
+                    this->m_outputsHasNewMBLayout[i] = true;
                 }
                 else
-                    m_outputsHasNewMBLayout[i] = false;
+                    this->m_outputsHasNewMBLayout[i] = false;
 
-                m_outputsShape[i] = ::CNTK::AsTensorShape(outputNDShape);
+                this->m_outputsShape[i] = ::CNTK::AsTensorShape(outputNDShape);
             }
 
             if (i == 0)
             {
-                m_pMBLayout = m_outputsMBLayout[i];
+                m_pMBLayout = this->m_outputsMBLayout[i];
                 SetDims(::CNTK::AsTensorShape(outputNDShape), HasMBLayout());
             }
         }

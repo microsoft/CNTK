@@ -1175,6 +1175,33 @@ struct ITakesDynamicAxis
 };
 
 // =======================================================================
+// Nodes that have multiple outputs must derive from this.
+// =======================================================================
+template <typename ElemType>
+struct MultiOutputNode
+{
+public:
+    MultiOutputNode(size_t numOutputs)
+        : m_numOutputs(numOutputs)
+    {
+        m_outputsShape.resize(m_numOutputs);
+        m_outputsHasNewMBLayout.resize(m_numOutputs);
+        m_outputsMBLayout.resize(m_numOutputs);
+        m_outputsIsValueSparse.resize(m_numOutputs, false);
+        m_outputsValue.resize(m_numOutputs);
+        m_outputsGradient.resize(m_numOutputs);
+    }
+
+    size_t m_numOutputs;
+    std::vector<TensorShape> m_outputsShape;
+    std::vector<bool> m_outputsHasNewMBLayout;
+    std::vector<std::shared_ptr<MBLayout>> m_outputsMBLayout;
+    std::vector<bool> m_outputsIsValueSparse;
+    std::vector<std::shared_ptr<Matrix<ElemType>>> m_outputsValue;
+    std::vector<std::shared_ptr<Matrix<ElemType>>> m_outputsGradient;
+};
+
+// =======================================================================
 // ComputationNode -- abstract base class for computation nodes, deriving
 // from CompuationNodeBase, parameterized by float vs. double
 // =======================================================================
@@ -1765,7 +1792,7 @@ public:
             for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
             {
                 if (!multiOutputNode->m_outputsIsValueSparse[i])
-                    RequestMatrixFromPool(multiOutputNode->m_outputsValue[i], matrixPool);
+                    RequestMatrixFromPool(multiOutputNode->m_outputsValue[i], matrixPool, multiOutputNode->m_outputsShape[i].GetNumElements(), multiOutputNode->m_outputsMBLayout[i] != nullptr);
                 else
                     CreateMatrixIfNull(multiOutputNode->m_outputsValue[i]);
             }
@@ -1799,7 +1826,7 @@ public:
         if (multiOutputNode)
         {
             for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
-                RequestMatrixFromPool(multiOutputNode->m_outputsGradient[i], matrixPool);
+                RequestMatrixFromPool(multiOutputNode->m_outputsGradient[i], matrixPool, multiOutputNode->m_outputsShape[i].GetNumElements(), multiOutputNode->m_outputsMBLayout[i] != nullptr);
         }
     }
 
@@ -2228,30 +2255,6 @@ struct IPreComputeNode
     // call this with 'false' at start and with 'true' at end
     // This is used for resetting and updating from accumulators.
     virtual void MarkComputed(const bool hasComputed) = 0;
-};
-
-template <typename ElemType>
-struct MultiOutputNode
-{
-public:
-    MultiOutputNode(size_t numOutputs)
-        : m_numOutputs(numOutputs)
-    {
-        m_outputsShape.resize(m_numOutputs);
-        m_outputsHasNewMBLayout.resize(m_numOutputs);
-        m_outputsMBLayout.resize(m_numOutputs);
-        m_outputsIsValueSparse.resize(m_numOutputs, false);
-        m_outputsValue.resize(m_numOutputs);
-        m_outputsGradient.resize(m_numOutputs);
-    }
-
-    size_t m_numOutputs;
-    std::vector<TensorShape> m_outputsShape;
-    std::vector<bool> m_outputsHasNewMBLayout;
-    std::vector<std::shared_ptr<MBLayout>> m_outputsMBLayout;
-    std::vector<bool> m_outputsIsValueSparse;
-    std::vector<std::shared_ptr<Matrix<ElemType>>> m_outputsValue;
-    std::vector<std::shared_ptr<Matrix<ElemType>>> m_outputsGradient;
 };
 
 // =======================================================================
