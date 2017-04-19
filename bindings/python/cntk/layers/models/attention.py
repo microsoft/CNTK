@@ -5,7 +5,7 @@
 # ==============================================================================
 
 '''
-attention -- standard attention model
+Standard attention model.
 '''
 
 from __future__ import division

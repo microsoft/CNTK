@@ -5,8 +5,8 @@
 # ==============================================================================
 
 '''
-higher_order_layers -- higher-order functions, like Sequential() and ResNetBlock().
-Note that sequential higher-order functions like Recurrence() are in sequence.py.
+Higher-order functions, like :func:`Sequential` and :func:`ResNetBlock`. Note that
+sequential higher-order functions like :func:`~cntk.layers.sequence.Recurrence` are in :mod:`cntk.layers.sequence`.
 '''
 
 from types import FunctionType

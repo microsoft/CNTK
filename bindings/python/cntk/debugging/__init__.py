@@ -4,15 +4,15 @@
 # for full license information.
 # ==============================================================================
 
+'''
+Helper functions for debugging graphs.
+'''
+
 from __future__ import division
 from __future__ import print_function
 
 from .debug import *
 from .profiler import *
-
-'''
-Helper functions for debugging graphs.
-'''
 
 def dump_signature(root, tag=None):
     '''
