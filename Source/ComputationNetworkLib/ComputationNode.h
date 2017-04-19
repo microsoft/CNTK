@@ -160,7 +160,7 @@ struct ComputationNetworkOwnedNodeState
     friend class ComputationNetwork;
 
     ComputationNetworkOwnedNodeState()
-        : m_needsGradient(false), m_valueSharable(true), m_parentOverwritesGradient(false)
+        : m_needsGradient(false), m_needsDynamicValidation(false), m_valueSharable(true), m_parentOverwritesGradient(false)
     {
         PurgeStateForFormingRecurrentLoops();
         m_isPartOfLoop = false;
@@ -170,6 +170,7 @@ struct ComputationNetworkOwnedNodeState
     {
         other.m_isPartOfLoop                  = m_isPartOfLoop;
         other.m_needsGradient                 = m_needsGradient;
+        other.m_needsDynamicValidation        = m_needsDynamicValidation;
         other.m_valueSharable                 = m_valueSharable;
         other.m_traceNodeValueReal            = m_traceNodeValueReal;
         other.m_traceNodeValueAsCategoryLabel = m_traceNodeValueAsCategoryLabel;
@@ -202,6 +203,7 @@ struct ComputationNetworkOwnedNodeState
 
 protected:                // TODO: should be fully encapsulated here
     bool m_needsGradient; // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
+    bool m_needsDynamicValidation;
 
     bool m_valueSharable; // a flag is needed for memory share.
                           // If it is false (e.g., LearnableParameters/InputValue and those nodes are solely induced by LearnableParameters),
@@ -653,6 +655,9 @@ public:
     }
 
     bool NeedsGradient() const { return m_needsGradient; }
+
+    void MarkNeedsDynamicValidation() { m_needsDynamicValidation = true; }
+    virtual bool NeedsDynamicValidation() const { return m_needsDynamicValidation; }
 
     void SetLearningRateMultiplier(float f) 
     { 

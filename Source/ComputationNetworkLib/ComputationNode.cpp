@@ -615,6 +615,9 @@ template <class ElemType>
 {
     Base::BeginForwardProp();
 
+    if (NeedsDynamicValidation())
+        Validate(/*isFinalValidationPass =*/ true);
+
     // update the actual m_value allocation
     if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
         UpdateFunctionValuesSize();

@@ -505,6 +505,9 @@ namespace CNTK
                 // gradients are not computed for Input nodes
                 computationNodePtr->SetLearningRateMultiplier(0.00001f);
             }
+
+            if (variable.Shape().HasFreeDimension())
+                computationNodePtr->MarkNeedsDynamicValidation();
         }
         else
         {
@@ -1137,20 +1140,13 @@ namespace CNTK
 
             // Verify if the free dimensions of any of the arguments have changed, and if so, update the corresponding
             // input ComputationNodes and rerun validation on the computation network
-            bool anyArgumentShapesChanged = false;
             for (auto freeDimensionArgumentMapping : m_fullyDefinedArgumentsMap)
             {
                 auto newShape = freeDimensionArgumentMapping.second.Shape();
                 auto argumentComputationNode = m_variableToNodeMap[freeDimensionArgumentMapping.first];
                 if (AsTensorShape(newShape) != argumentComputationNode->GetSampleLayout())
-                {
                     argumentComputationNode->SetDims(AsTensorShape(newShape), argumentComputationNode->HasMBLayout());
-                    anyArgumentShapesChanged = true;
-                }
             }
-
-            if (anyArgumentShapesChanged)
-                m_computationNetwork->ValidateNetwork();
         }
         else
         {
