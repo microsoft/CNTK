@@ -7,9 +7,8 @@
 from __future__ import print_function
 import numpy as np
 import os, sys
-from matplotlib.pyplot import imshow, imsave
+from matplotlib.pyplot import imsave
 from PIL import ImageFont
-from math import exp
 
 available_font = "arial.ttf"
 try:
@@ -33,7 +32,7 @@ from cntk.initializer import glorot_uniform
 from cntk.layers import placeholder, Convolution, Constant
 from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule
 from cntk.logging import log_number_of_parameters, ProgressPrinter
-from cntk.logging.graph import find_by_name, plot, get_node_outputs
+from cntk.logging.graph import find_by_name, plot
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
 from lib.rpn.anchor_target_layer import AnchorTargetLayer
@@ -50,56 +49,66 @@ from lib.fast_rcnn.bbox_transform import bbox_transform_inv
 make_mode = False
 graph_type = "png" # "png" or "pdf"
 
-# file and stream names
-map_filename_postfix = '.imgMap.txt'
-rois_filename_postfix = '.GTRois.txt'
+# stream names and paths
 features_stream_name = 'features'
 roi_stream_name = 'roiAndLabel'
+output_path = os.path.join(abs_path, "Output")
 
-# from PARAMETERS.py
-grocery = cfg["CNTK"].USE_GROCERY
-if grocery:
+num_input_rois = cfg["CNTK"].INPUT_ROIS_PER_IMAGE
+num_channels = 3
+image_height = 1000
+image_width = 1000
+mb_size = 1
+max_epochs = cfg["CNTK"].MAX_EPOCHS
+
+# dataset specific parameters
+dataset = cfg["CNTK"].DATASET
+if dataset == "Grocery":
     classes = ('__background__',  # always index 0
                'avocado', 'orange', 'butter', 'champagne', 'eggBox', 'gerkin', 'joghurt', 'ketchup',
                'orangeJuice', 'onion', 'pepper', 'tomato', 'water', 'milk', 'tabasco', 'mustard')
-    base_path = "C:/src/CNTK/Examples/Image/Detection/FastRCNN/proc/Grocery_100/rois/"
-    num_channels = 3
-    image_height = 1000
-    image_width = 1000
+    base_path = os.path.join(abs_path, "Data", "Grocery")
+    train_map_file = os.path.join(base_path, "train.imgMap.txt")
+    test_map_file = os.path.join(base_path, "test.imgMap.txt")
+    train_roi_file = os.path.join(base_path, "train.GTRois.txt")
+    test_roi_file = os.path.join(base_path, "test.GTRois.txt")
     num_classes = len(classes)
-    num_rois = cfg["CNTK"].INPUT_ROIS_PER_IMAGE
     epoch_size = 20
     num_test_images = 5
-    mb_size = 1
-    max_epochs = cfg["CNTK"].MAX_EPOCHS
     momentum_time_constant = 10
-else:
+elif dataset == "Pascal":
     classes = ('__background__',  # always index 0
                'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable',
                'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor')
-    base_path = "C:/src/CNTK/Examples/Image/DataSets/Pascal/mappings/"
-    map_filename_postfix = "val2007.txt"
-    rois_filename_postfix = "val2007_rois_topleft_wh_rel.txt"
-    num_channels = 3
-    image_height = 1000
-    image_width = 1000
+    base_path = os.path.join(abs_path, "Data", "Pascal")
+    train_map_file = os.path.join(base_path, "trainval2007.txt")
+    test_map_file = os.path.join(base_path, "test2007.txt")
+    train_roi_file = os.path.join(base_path, "trainval2007_rois_topleft_wh_rel.txt")
+    test_roi_file = os.path.join(base_path, "test2007_rois_topleft_wh_rel.txt")
     num_classes = len(classes)
-    num_rois = cfg["CNTK"].INPUT_ROIS_PER_IMAGE
     epoch_size = 5010
     num_test_images = 4952
-    mb_size = 1
-    max_epochs = cfg["CNTK"].MAX_EPOCHS
     momentum_time_constant = 10
+else:
+    raise ValueError('unknown data set: %s' % dataset)
 
-# model specific variables (only AlexNet for now)
-base_model = "AlexNet"
+# model specific variables
+base_model = cfg["CNTK"].BASE_MODEL
+model_folder = os.path.join(abs_path, "..", "..", "PretrainedModels")
 if base_model == "AlexNet":
-    base_model_file = "C:/src/CNTK/Examples/Image/PretrainedModels/AlexNet.model"
+    base_model_file = os.path.join(model_folder, "AlexNet.model")
     feature_node_name = "features"
     last_conv_node_name = "conv5.y"
     pool_node_name = "pool3"
     last_hidden_node_name = "h2_d"
     roi_dim = 6
+elif base_model == "VGG16":
+    base_model_file = os.path.join(model_folder, "VGG16_ImageNet.model")
+    feature_node_name = "data"
+    last_conv_node_name = "conv5_3"
+    pool_node_name = "pool5"
+    last_hidden_node_name = "drop7"
+    roi_dim = 7
 else:
     raise ValueError('unknown base model: %s' % base_model)
 ###############################################################
@@ -107,47 +116,40 @@ else:
 
 
 # Instantiates a composite minibatch source for reading images, roi coordinates and roi labels for training Fast R-CNN
-def create_mb_source(img_height, img_width, img_channels, n_rois, data_path):
+def create_mb_source(img_height, img_width, img_channels, n_rois):
     rois_dim = 5 * n_rois
 
-    path = os.path.normpath(os.path.join(abs_path, data_path))
-    map_file = os.path.join(path, "train" + map_filename_postfix)
-    roi_file = os.path.join(path, "train" + rois_filename_postfix)
-
-    if not os.path.exists(map_file) or not os.path.exists(roi_file):
+    if not os.path.exists(train_map_file) or not os.path.exists(train_roi_file):
         raise RuntimeError("File '%s' or '%s' does not exist. "
                            "Please run install_fastrcnn.py from Examples/Image/Detection/FastRCNN to fetch them" %
-                           (map_file, roi_file))
+                           (train_map_file, train_roi_file))
 
     # read images
     transforms = [scale(width=img_width, height=img_height, channels=img_channels,
                         scale_mode="pad", pad_value=114, interpolations='linear')]
 
-    image_source = ImageDeserializer(map_file, StreamDefs(
+    image_source = ImageDeserializer(train_map_file, StreamDefs(
         features = StreamDef(field='image', transforms=transforms)))
 
     # read rois and labels
-    roi_source = CTFDeserializer(roi_file, StreamDefs(
+    roi_source = CTFDeserializer(train_roi_file, StreamDefs(
         roiAndLabel = StreamDef(field=roi_stream_name, shape=rois_dim, is_sparse=False)))
 
     # define a composite reader
     return MinibatchSource([image_source, roi_source], epoch_size=sys.maxsize, randomize=True, trace_level=TraceLevel.Error)
 
 
-def create_test_mb_source(img_height, img_width, img_channels, n_rois, data_path):
-    path = os.path.normpath(os.path.join(abs_path, data_path))
-    map_file = os.path.join(path, "test" + map_filename_postfix)
-
-    if not os.path.exists(map_file):
+def create_test_mb_source(img_height, img_width, img_channels):
+    if not os.path.exists(test_map_file):
         raise RuntimeError("File '%s' does not exist. "
                            "Please run install_fastrcnn.py from Examples/Image/Detection/FastRCNN to fetch them" %
-                           (map_file))
+                           (test_map_file))
 
     # read images
     transforms = [scale(width=img_width, height=img_height, channels=img_channels,
                         scale_mode="pad", pad_value=114, interpolations='linear')]
 
-    image_source = ImageDeserializer(map_file, StreamDefs(
+    image_source = ImageDeserializer(test_map_file, StreamDefs(
         features = StreamDef(field='image', transforms=transforms)))
 
     # define a composite reader
@@ -227,7 +229,7 @@ def faster_rcnn_predictor(features, gt_boxes, n_classes):
 
     rpn_rois_raw = user_function(ProposalLayer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info=im_info))
     rpn_rois = alias(rpn_rois_raw, name='rpn_rois')
-    ptl = user_function(ProposalTargetLayer(rpn_rois, gt_boxes))
+    ptl = user_function(ProposalTargetLayer(rpn_rois, gt_boxes, num_classes=num_classes))
     rois_raw = ptl.outputs[0]
     rois = alias(rois_raw, name='rpn_target_rois')
     labels = ptl.outputs[1]
@@ -275,7 +277,7 @@ def faster_rcnn_predictor(features, gt_boxes, n_classes):
 def create_eval_model(model, image_input):
     # modify Faster RCNN model by excluding target layers and losses
     feature_node = find_by_name(model, "img_input")
-    conv_node = find_by_name(model, "conv5.y")
+    conv_node = find_by_name(model, last_conv_node_name)
     rpn_roi_node = find_by_name(model, "rpn_rois")
     rpn_target_roi_node = find_by_name(model, "rpn_target_rois")
     cls_score_node = find_by_name(model, "cls_score")
@@ -301,14 +303,14 @@ def create_eval_model(model, image_input):
 # Trains a Faster R-CNN model
 def train_faster_rcnn(debug_output=False):
     if debug_output:
-        print("Storing graphs and intermediate models to %s." % os.path.join(abs_path))
+        print("Storing graphs and models to %s." % output_path)
 
     # Create the minibatch source
-    minibatch_source = create_mb_source(image_height, image_width, num_channels, num_rois, base_path)
+    minibatch_source = create_mb_source(image_height, image_width, num_channels, num_input_rois)
 
     # Input variables denoting features and labeled ground truth rois (as 5-tuples per roi)
     image_input = input((num_channels, image_height, image_width), dynamic_axes=[Axis.default_batch_axis()], name='img_input')
-    roi_input   = input((num_rois, 5), dynamic_axes=[Axis.default_batch_axis()])
+    roi_input   = input((num_input_rois, 5), dynamic_axes=[Axis.default_batch_axis()])
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -319,7 +321,7 @@ def train_faster_rcnn(debug_output=False):
     # Instantiate the Faster R-CNN prediction model and loss function
     cls_score, loss, pred_error = faster_rcnn_predictor(image_input, roi_input, num_classes)
     if debug_output:
-        plot(loss, os.path.join(abs_path, "graph_frcn." + graph_type))
+        plot(loss, os.path.join(output_path, "graph_frcn_train." + graph_type))
 
     # Set learning parameters
     # Caffe Faster R-CNN parameters are:
@@ -354,8 +356,8 @@ def train_faster_rcnn(debug_output=False):
                 print("Processed {} samples".format(sample_count))
 
         progress_printer.epoch_summary(with_metric=True)
-        if debug_output:
-            cls_score.save(os.path.join(abs_path, "frcn_py_%s.model" % (epoch+1)))
+        if False and debug_output:
+            cls_score.save(os.path.join(output_path, "frcn_py_%s.model" % (epoch+1)))
 
     return loss
 
@@ -369,7 +371,6 @@ def regress_rois(roi_proposals, roi_regression_factors, labels):
             roi_coords = roi_proposals[i:i+1,:]
 
             regressed_rois = bbox_transform_inv(roi_coords, deltas)
-            #import pdb; pdb.set_trace()
 
             roi_proposals[i,:] = regressed_rois
     return roi_proposals
@@ -377,19 +378,18 @@ def regress_rois(roi_proposals, roi_regression_factors, labels):
 # Tests a Faster R-CNN model
 def eval_faster_rcnn(model, debug_output=False):
     # get image paths
-    path = os.path.normpath(os.path.join(abs_path, base_path))
-    map_file = os.path.join(path, "test" + map_filename_postfix)
-    with open(map_file) as f:
+    with open(test_map_file) as f:
         content = f.readlines()
-    img_file_names = [x.split('\t')[1] for x in content]
+    img_base_path = os.path.dirname(os.path.abspath(test_map_file))
+    img_file_names = [os.path.join(img_base_path, x.split('\t')[1]) for x in content]
 
     image_input = input((num_channels, image_height, image_width), dynamic_axes=[Axis.default_batch_axis()], name='img_input')
     frcn_eval = create_eval_model(model, image_input)
 
     if debug_output:
-        plot(frcn_eval, os.path.join(abs_path, "graph_frcn_eval." + graph_type))
+        plot(frcn_eval, os.path.join(output_path, "graph_frcn_eval." + graph_type))
 
-    test_minibatch_source = create_test_mb_source(image_height, image_width, num_channels, num_rois, base_path)
+    test_minibatch_source = create_test_mb_source(image_height, image_width, num_channels)
     input_map = {
         image_input: test_minibatch_source[features_stream_name],
     }
@@ -400,9 +400,9 @@ def eval_faster_rcnn(model, debug_output=False):
     visualize_without_regr = True
     save_results_as_text = True
 
-    results_base_path = "c:/temp/grocery/" if grocery else "c:/temp/pascal/"
-    results_file_path = results_base_path + "test.z"
-    rois_file_path = results_base_path + "test.rois.txt"
+    results_base_path = os.path.join(output_path, dataset)
+    results_file_path = os.path.join(results_base_path, "test.z")
+    rois_file_path = os.path.join(results_base_path, "test.rois.txt")
     with open(results_file_path, 'wb') as results_file, \
         open(rois_file_path, 'wb') as rois_file:
         for i in range(0, num_test_images):
@@ -427,7 +427,7 @@ def eval_faster_rcnn(model, debug_output=False):
             if visualize_without_regr:
                 imgDebug = visualizeResultsFaster(imgPath, labels, scores, out_rpn_rois, 1000, 1000,
                                             classes, nmsKeepIndices=None, boDrawNegativeRois=True)
-                imsave("{}{}{}".format(results_base_path, i, os.path.basename(imgPath)), imgDebug)
+                imsave("{}/{}{}".format(results_base_path, i, os.path.basename(imgPath)), imgDebug)
 
             if visualize_with_regr:
                 # apply regression to bbox coordinates
@@ -435,7 +435,7 @@ def eval_faster_rcnn(model, debug_output=False):
 
                 imgDebug = visualizeResultsFaster(imgPath, labels, scores, regressed_rois, 1000, 1000,
                                             classes, nmsKeepIndices=None, boDrawNegativeRois=True)
-                imsave("{}{}_regr_{}".format(results_base_path, i, os.path.basename(imgPath)), imgDebug)
+                imsave("{}/{}_regr_{}".format(results_base_path, i, os.path.basename(imgPath)), imgDebug)
 
     return
 
@@ -443,7 +443,14 @@ def eval_faster_rcnn(model, debug_output=False):
 # If a trained model is already available it is loaded an no training will be performed.
 if __name__ == '__main__':
     os.chdir(base_path)
-    model_path = os.path.join(abs_path, "faster_rcnn_py.model")
+    if not os.path.exists(os.path.join(abs_path, "Output")):
+        os.makedirs(os.path.join(abs_path, "Output"))
+    if not os.path.exists(os.path.join(abs_path, "Output", "Grocery")):
+        os.makedirs(os.path.join(abs_path, "Output", "Grocery"))
+    if not os.path.exists(os.path.join(abs_path, "Output", "Pascal")):
+        os.makedirs(os.path.join(abs_path, "Output", "Pascal"))
+
+    model_path = os.path.join(abs_path, "Output", "faster_rcnn_py.model")
 
     # Train only if no model exists yet
     if os.path.exists(model_path) and make_mode:

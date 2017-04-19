@@ -24,15 +24,14 @@ class ProposalTargetLayer(UserFunction):
     classification labels and bounding-box regression targets.
     """
 
-    def __init__(self, arg1, arg2, name='ProposalTargetLayer'):
+    def __init__(self, arg1, arg2, name='ProposalTargetLayer', num_classes=2):
         super(ProposalTargetLayer, self).__init__([arg1, arg2], name=name)
 
         # layer_params = yaml.load(self.param_str_)
-        self._num_classes = cfg["CNTK"].NUM_CLASSES # layer_params['num_classes']
+        self._num_classes = num_classes # layer_params['num_classes']
 
         cfg_key = 'TRAIN' # str(self.phase) # either 'TRAIN' or 'TEST'
         self._rois_per_image = cfg[cfg_key].RPN_POST_NMS_TOP_N
-        #self._rois_per_image = cfg["CNTK"].ROIS_PER_IMAGE
         self._count = 0
         self._fg_num = 0
         self._bg_num = 0

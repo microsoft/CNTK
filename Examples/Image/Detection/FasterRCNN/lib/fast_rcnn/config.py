@@ -34,11 +34,9 @@ cfg = __C
 
 __C.CNTK = edict()
 
+__C.CNTK.DATASET = "Grocery" # "Grocery" or "Pascal"
+__C.CNTK.BASE_MODEL = "VGG16" # "VGG16" or "AlexNet"
 __C.CNTK.MAX_EPOCHS = 20
-
-grocery = True
-__C.CNTK.USE_GROCERY = grocery
-__C.CNTK.NUM_CLASSES = 17 if grocery else 21
 __C.CNTK.INPUT_ROIS_PER_IMAGE = 50
 #__C.CNTK.ROIS_PER_IMAGE = 300 --> cfg[self.phase].RPN_POST_NMS_TOP_N
 __C.CNTK.DEBUG_FWD = False

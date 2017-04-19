@@ -37,7 +37,7 @@ new_output_node_name = "prediction"
 
 # Learning parameters
 max_epochs = 20
-mb_size = 50
+mb_size = 5
 lr_per_mb = [0.2]*10 + [0.1]
 momentum_per_mb = 0.9
 l2_reg_weight = 0.0005
@@ -46,6 +46,9 @@ l2_reg_weight = 0.0005
 _base_model_file = os.path.join(base_folder, "..", "PretrainedModels", "ResNet_18.model")
 _feature_node_name = "features"
 _last_hidden_node_name = "z.x"
+_base_model_file = os.path.join(base_folder, "..", "PretrainedModels", "VGG16.cntkmodel")
+_feature_node_name = "data"
+_last_hidden_node_name = "drop6"
 _image_height = 224
 _image_width = 224
 _num_channels = 3
@@ -71,6 +74,7 @@ def create_mb_source(map_file, image_width, image_height, num_channels, num_clas
 # Creates the network model for transfer learning
 def create_model(base_model_file, feature_node_name, last_hidden_node_name, num_classes, input_features, freeze=False):
     # Load the pretrained classification net and find nodes
+    import pdb; pdb.set_trace()
     base_model   = load_model(base_model_file)
     feature_node = find_by_name(base_model, feature_node_name)
     last_node    = find_by_name(base_model, last_hidden_node_name)
