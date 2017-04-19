@@ -107,7 +107,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     learner = C.adadelta(z.parameters, lr)
 
     if C.Communicator.num_workers() > 1:
-        learner = C.data_parallel_distributed_learner(learner, num_quantization_bits=32, distributed_after=0)
+        learner = C.block_momentum_distributed_learner(learner, block_size=training_config['block_size'], distributed_after=training_config['distributed_after'])
 
     trainer = C.Trainer(z, (loss, None), learner, progress_writers)
 
@@ -124,23 +124,27 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     if restore and os.path.isfile(model_file):
         trainer.restore_from_checkpoint(model_file)
 
-    best_val_err = 100
-    best_since = 0
-    stop_after = training_config['stop_after']
+    epoch_stat = {
+        'best_val_err' : 100,
+        'best_since'   : 0,
+        'val_since'    : 0}
     
-    def post_epoch_work():
+    def post_epoch_work(epoch_stat):
         trainer.summarize_training_progress()
-        val_err = test_model(os.path.join(data_path, training_config['val_data']), model, polymath)
-        if best_val_err > val_err:
-            best_val_err = val_err
-            best_since = 0
-            if C.Communicator.rank() == 0:
+        epoch_stat['val_since'] += 1
+
+        if epoch_stat['val_since'] == training_config['val_interval']:
+            epoch_stat['val_since'] = 0
+            val_err = test_model(os.path.join(data_path, training_config['val_data']), model, polymath)
+            if epoch_stat['best_val_err'] > val_err:
+                epoch_stat['best_val_err'] = val_err
+                epoch_stat['best_since'] = 0
                 trainer.save_checkpoint(model_file+'.best')
                 trainer.save_checkpoint(model_file)
-        else:
-            best_since += 1
-            if best_since > stop_after:
-                return False
+            else:
+                epoch_stat['best_since'] += 1
+                if best_since > stop_after:
+                    return False
 
         if profiling:
             C.debugging.enable_profiler()
@@ -161,7 +165,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
                 num_seq += data[label_ab].num_sequences
                 if num_seq >= epoch_size:
                     break
-            if not post_epoch_work():
+            if not post_epoch_work(epoch_stat):
                 break
     else:
         if train_data_ext != '.tsv':
@@ -173,7 +177,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
             tsv_reader = create_tsv_reader(loss, train_data_file, polymath, minibatch_seqs)
             for data in tsv_reader:
                 trainer.train_minibatch(data)                                   # update model with it
-            if not post_epoch_work():
+            if not post_epoch_work(epoch_stat):
                 break
 
     if profiling:

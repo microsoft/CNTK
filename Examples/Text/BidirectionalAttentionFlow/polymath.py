@@ -32,6 +32,7 @@ class PolyMath:
         self.char_emb_dim = model_config['char_emb_dim']
         self.highway_layers = model_config['highway_layers']
         self.two_step = model_config['two_step']
+        self.use_cudnn = model_config['use_cudnn']
 
     def charcnn(self, x):
         conv_out = C.layers.Sequential([
@@ -75,7 +76,7 @@ class PolyMath:
             self.embed()(input_glove_words, input_nonglove_words))
         highway = HighwayNetwork(dim=2*self.hidden_dim, highway_layers=self.highway_layers)(embedded)
         highway_drop = C.layers.Dropout(self.dropout)(highway)
-        processed = OptimizedRnnStack(self.hidden_dim, bidirectional=True)(highway_drop)
+        processed = OptimizedRnnStack(self.hidden_dim, bidirectional=True, use_cudnn=self.use_cudnn)(highway_drop)
         
         qce = C.one_hot(qc_ph, num_classes=self.c_dim, sparse_output=True)
         cce = C.one_hot(cc_ph, num_classes=self.c_dim, sparse_output=True)
@@ -141,9 +142,9 @@ class PolyMath:
 		# todo: use dropout in optimized_rnn_stack from cudnn once API exposes it
         mod_context = C.layers.Sequential([
             C.layers.Dropout(self.dropout),
-            OptimizedRnnStack(self.hidden_dim, bidirectional=True),
+            OptimizedRnnStack(self.hidden_dim, bidirectional=True, use_cudnn=self.use_cudnn),
             C.layers.Dropout(self.dropout),
-            OptimizedRnnStack(self.hidden_dim, bidirectional=True)])(att_context)
+            OptimizedRnnStack(self.hidden_dim, bidirectional=True, use_cudnn=self.use_cudnn)])(att_context)
     
         return C.as_block(
             mod_context,
@@ -164,7 +165,7 @@ class PolyMath:
             att_mod_ctx = C.sequence.reduce_sum(mod_context * start_prob)
         att_mod_ctx_expanded = C.sequence.broadcast_as(att_mod_ctx, att_context)
         end_input = C.splice(att_context, mod_context, att_mod_ctx_expanded, mod_context * att_mod_ctx_expanded)
-        m2 = OptimizedRnnStack(self.hidden_dim, bidirectional=True)(end_input)
+        m2 = OptimizedRnnStack(self.hidden_dim, bidirectional=True, use_cudnn=self.use_cudnn)(end_input)
         end_logits = C.layers.Dense(1)(C.dropout(C.splice(m2, att_context), self.dropout))
 
         return C.as_block(
