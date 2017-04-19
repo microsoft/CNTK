@@ -48,7 +48,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         std::string KeyOf(const SequenceDescriptor& s) const
         {
-            return m_deserializer.m_corpus->IdToKey(s.m_key.m_sequence);
+            return m_deserializer.m_corpus->IdToKey(s.m_key);
         }
 
         void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
@@ -83,7 +83,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t labelDimension = m_deserializer.m_labelGenerator->LabelDimension();
             if (classId >= labelDimension)
                 RuntimeError(
-                    "Image with id '%s' has invalid class id '%" PRIu64 "'. It is exceeding the label dimension of '%" PRIu64,
+                    "Image with id '%s' has invalid class id '%zu'. It is exceeding the label dimension of '%zu'",
                     KeyOf(sequence).c_str(), classId, labelDimension);
 
             // Let's find the end of the label, we still expect to find the data afterwards.
@@ -107,14 +107,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             cv::Mat image;
             if (!DecodeBase64(imageStart, currentSequence, decodedImage))
             {
-                fprintf(stderr, "WARNING: Cannot decode sequence with id %" PRIu64 " in the input file '%ls'\n", sequence.m_key.m_sequence, m_deserializer.m_fileName.c_str());
+                fprintf(stderr, "WARNING: Cannot decode sequence with id %zu in the input file '%ls'\n", sequence.m_key, m_deserializer.m_fileName.c_str());
             }
             else
             {
                 image = cv::imdecode(decodedImage, m_deserializer.m_grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
             }
 
-            m_deserializer.PopulateSequenceData(image, classId, copyId, sequence.m_key, result);
+            m_deserializer.PopulateSequenceData(image, classId, copyId, { sequence.m_key, 0 }, result);
         }
     };
 
@@ -190,7 +190,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     currentId,
                     s.m_numberOfSamples,
                     chunkId,
-                    s.m_key
+                    { s.m_key, 0 }
                 });
 
                 currentId++;
@@ -221,7 +221,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         result.m_chunkId = sequenceLocation->second.first;
         result.m_indexInChunk = sequenceLocation->second.second;
-        result.m_key = sequence.m_key;
+        result.m_key = { sequence.m_key, 0 };
         result.m_numberOfSamples = sequence.m_numberOfSamples;
         return true;
     }
