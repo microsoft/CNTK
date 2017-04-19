@@ -71,8 +71,8 @@ class PolyMath:
         # we need to reshape because GlobalMaxPooling/reduce_max is retaining a trailing singleton dimension
         # todo GlobalPooling/reduce_max should have a keepdims default to False
         embedded = C.splice(
-            self.embed()(input_glove_words, input_nonglove_words), 
-            C.reshape(self.charcnn(input_chars), self.convs))
+            C.reshape(self.charcnn(input_chars), self.convs),
+            self.embed()(input_glove_words, input_nonglove_words))
         highway = HighwayNetwork(dim=2*self.hidden_dim, highway_layers=self.highway_layers)(embedded)
         highway_drop = C.layers.Dropout(self.dropout)(highway)
         processed = OptimizedRnnStack(self.hidden_dim, bidirectional=True)(highway_drop)
@@ -80,8 +80,8 @@ class PolyMath:
         qce = C.one_hot(qc_ph, num_classes=self.c_dim, sparse_output=True)
         cce = C.one_hot(cc_ph, num_classes=self.c_dim, sparse_output=True)
                 
-        q_processed = processed.clone(C.CloneMethod.share, dict(zip(processed.placeholders, [qgw_ph,qnw_ph,qce])))
-        c_processed = processed.clone(C.CloneMethod.share, dict(zip(processed.placeholders, [cgw_ph,cnw_ph,cce])))
+        q_processed = processed.clone(C.CloneMethod.share, {input_chars:qce, input_glove_words:qgw_ph, input_nonglove_words:qnw_ph})
+        c_processed = processed.clone(C.CloneMethod.share, {input_chars:cce, input_glove_words:cgw_ph, input_nonglove_words:cnw_ph})
 
         return C.as_block(
             C.combine([c_processed, q_processed]),
@@ -165,7 +165,7 @@ class PolyMath:
         att_mod_ctx_expanded = C.sequence.broadcast_as(att_mod_ctx, att_context)
         end_input = C.splice(att_context, mod_context, att_mod_ctx_expanded, mod_context * att_mod_ctx_expanded)
         m2 = OptimizedRnnStack(self.hidden_dim, bidirectional=True)(end_input)
-        end_logits = C.layers.Dense(1)(C.dropout(C.splice(att_context, m2), self.dropout))
+        end_logits = C.layers.Dense(1)(C.dropout(C.splice(m2, att_context), self.dropout))
 
         return C.as_block(
             C.combine([start_logits, end_logits]),
@@ -245,13 +245,9 @@ class PolyMath:
         end_prob = C.slice(vw,1,1,2)
         joint_prob_mask = C.constant(np.asarray(np.triu(np.ones(self.max_context_len)),dtype=np.float32), shape=(self.max_context_len, self.max_context_len)) # start <= end
         joint_prob = C.times_transpose(start_prob, end_prob) * joint_prob_mask
-        joint_prob = print_node(joint_prob)
         joint_prob_loc = C.equal(joint_prob, C.reduce_max(joint_prob, axis=C.Axis.all_static_axes()))
-
         start_pos = C.argmax(C.reduce_max(joint_prob_loc,1),0)
         end_pos = C.argmax(C.reduce_max(joint_prob_loc,0),1)
-        start_pos = print_node(start_pos)
-        end_pos = print_node(end_pos)
         
         gt_start = C.argmax(C.slice(vw,1,2,3),0)
         gt_end = C.argmax(C.slice(vw,1,3,4),0)

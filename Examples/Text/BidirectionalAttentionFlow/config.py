@@ -1,5 +1,5 @@
 data_config = {
-    'word_size' : 20,
+    'word_size' : 16,
     'word_count_threshold' : 10,
     'char_count_threshold' : 50,
     'max_context_len' : 870,

@@ -12,8 +12,8 @@ max_query_len = data_config['max_query_len']
 
 sanitize = str.maketrans({"|": None, "\n": None})
 tsvs = 'train', 'dev', 'val'
-unk = '<unk>'
-eos = '</s>'
+unk = '<UNK>'
+pad = '<PAD>'
 EMPTY_TOKEN = '<NULL>'
 pad = ' '  # used for padding has to be single char and match with format specifier below
 # pad (or trim) to word_size characters
@@ -44,8 +44,9 @@ def populate_dicts(files):
     known =len(vocab)
 
     # add the special markers
+    _ = vocab[pad]
     _ = vocab[unk]
-    _ = vocab[eos]
+    _ = chars[pad]
     _ = chars[unk]
 
     #finally add all words that are not in yet
@@ -130,10 +131,10 @@ def tsv_to_ctf(f, g, vocab, chars, is_test):
                     out.append('|qgw {}:{}'.format(qwid, 1))
                     out.append('|qnw {}:{}'.format(0, 0))
             if ccid is not None:
-                outc = ' '.join(['%d' % c for c in ccid+[-1]*max(word_size - len(ccid), 0)])
+                outc = ' '.join(['%d' % c for c in ccid+[0]*max(word_size - len(ccid), 0)])
                 out.append('|cc %s' % outc)
             if qcid is not None:
-                outq = ' '.join(['%d' % c for c in qcid+[-1]*max(word_size - len(qcid), 0)])
+                outq = ' '.join(['%d' % c for c in qcid+[0]*max(word_size - len(qcid), 0)])
                 out.append('|qc %s' % outq)
             g.write('\t'.join(out))
             g.write('\n')
