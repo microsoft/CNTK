@@ -80,7 +80,7 @@ MinibatchSourceConfig GetHTKMinibatchSourceConfig(size_t featureDim, size_t numO
     auto labelMappingFile = L"state.list";
 
     Deserializer featureDeserializer = HTKFeatureDeserializer({ HTKFeatureConfiguration(L"features", featuresFilePath, featureDim, 0, 0, false) });
-    Deserializer labelDeserializer = HTKMLFDeserializer(L"labels", labelMappingFile, numOutputClasses, { labelsFilePath });
+    Deserializer labelDeserializer = HTKMLFDeserializer(L"labels", labelMappingFile, numOutputClasses, false, { labelsFilePath });
 
     MinibatchSourceConfig config({ featureDeserializer, labelDeserializer }, randomize);
     config.maxSamples = epochSize;
