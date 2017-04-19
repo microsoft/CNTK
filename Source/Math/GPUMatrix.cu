@@ -27,7 +27,8 @@
 #include "CntkBatchNormalization.cuh"
 #include "Convolution.cuh"
 #include "CuDnnRNN.h"
-
+#include <random>
+#include <chrono>
 #pragma comment(lib, "cudart.lib") // instruct linker to reference these libs
 #pragma comment(lib, "cublas.lib")
 #pragma comment(lib, "cusparse.lib")
@@ -3390,28 +3391,38 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
     size_t n = a.GetNumCols();
     CUDA_LONG N = (CUDA_LONG)(m*n);
 
-    auto seed = (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
+    /*curand starts*/
+    //auto seed = (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
+    //float *d_rands;
+    //curandGenerator_t gens;
+    //CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
+    //CURAND_CALL(curandCreateGenerator(&gens, CURAND_RNG_PSEUDO_DEFAULT));
+    //CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gens, seed));
+    //CURAND_CALL(curandGenerateUniform(gens, d_rands, N));
+    /*curand ends*/
+
+    float *rands = new float[N];
+    std::random_device rd;
+    std::default_random_engine generator((rd()));
+    std::uniform_real_distribution<float> dis(0., 1.);
+    for (int i = 0; i < N; i++) {
+        rands[i] = dis(generator);
+    }
     float *d_rands;
-    curandGenerator_t gens;
     CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
-    CURAND_CALL(curandCreateGenerator(&gens, CURAND_RNG_PSEUDO_DEFAULT));
-    CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gens, seed));
-    CURAND_CALL(curandGenerateUniform(gens, d_rands, N));
+    CUDA_CALL(cudaMemcpy(d_rands, rands, sizeof(float)*N, cudaMemcpyHostToDevice));
+    
+
+    //fprintf(stderr, "%f %f %f %f %f \n", rands[0], rands[1], rands[2], rands[3], rands[4]);
+    
+    delete[] rands;
 
     size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
     _stochasticbinaryForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), d_rands, N, annealSlope);
+   
     CUDA_CALL(cudaFree(d_rands));
-    CURAND_CALL(curandDestroyGenerator(gens));
-
-    //ElemType* input = new ElemType[N];
-    //cudaMemcpy(input, a.Data(), N * sizeof(ElemType), cudaMemcpyDeviceToHost);
-    //ElemType* output = new ElemType[N];
-    //cudaMemcpy(output, b.Data(), N * sizeof(ElemType), cudaMemcpyDeviceToHost);
-    //for (int i = 0; i < 20; i++) if (std::isnan(input[i]) || std::isnan(output[i])) fprintf(stderr, "in %f out %f ", input[i], output[i]);
-    ////fprintf(stderr, "\n");
-    //delete[] input;
-    //delete[] output;
+    //CURAND_CALL(curandDestroyGenerator(gens));
 }
 
 template <class ElemType>
@@ -3438,7 +3449,6 @@ void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a,
             _stochasticbinaryBackward_Anneal<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N, annealSlope);
         }
     }
-
     //ElemType* inputs = new ElemType[N];
     //cudaMemcpy(inputs, a.Data(), N * sizeof(ElemType), cudaMemcpyDeviceToHost);
     //ElemType* ingrads = new ElemType[N];
