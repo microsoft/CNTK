@@ -11,7 +11,7 @@ import numpy as np
 from os import listdir
 from shutil import copyfile
 from os.path import isfile, join
-from cntk import Function, sequence
+from cntk import Function
 from cntk import times, sequence, as_block, element_select
 from cntk.ops.tests.ops_test_utils import cntk_device
 from ..trainer import *

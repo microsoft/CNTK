@@ -477,7 +477,7 @@ namespace CNTK
             });
             break;
         default:
-            LogicError("NDArrayView::MatrixProduct: Unsupported DataType %s", DataTypeName(out->m_dataType));
+            LogicError("NDArrayView::GatherBatch: Unsupported DataType %s", DataTypeName(out->m_dataType));
             break;
         }
         return out;
@@ -487,13 +487,13 @@ namespace CNTK
     {
         auto rank = Shape().Rank();
         if (startOffset.size() != rank)
-            InvalidArgument("SliceView: Rank (%d) of the NDArrayView does not match the dimensionality (%d) of the specified slice offset.", (int)rank, (int)startOffset.size());
+            InvalidArgument("NDArrayView::SliceView: Rank (%d) of the NDArrayView does not match the dimensionality (%d) of the specified slice offset.", (int)rank, (int)startOffset.size());
 
         if (extent.size() > rank)
-            InvalidArgument("SliceView: Dimensionality (%d) of the specified slice extent exceeds the rank (%d) of this NDArrayView.", (int)extent.size(), (int)rank);
+            InvalidArgument("NDArrayView::SliceView: Dimensionality (%d) of the specified slice extent exceeds the rank (%d) of this NDArrayView.", (int)extent.size(), (int)rank);
 
         if (std::find(extent.begin(), extent.end(), 0) != extent.end())
-            InvalidArgument("SliceView: Specified slice extent is zero along at least one of the axes.");
+            InvalidArgument("NDArrayView::SliceView: Specified slice extent is zero along at least one of the axes.");
 
         bool anyPrevAxisSliced = false;
         NDShape sliceViewShape(extent);
@@ -508,7 +508,7 @@ namespace CNTK
             lastOffset[i] = endOffset[i] - 1;
 
             if (anyPrevAxisSliced && ((endOffset[i] - startOffset[i]) != 1))
-                InvalidArgument("SliceView: Cannot create a slice which is not contiguous in memory. "
+                InvalidArgument("NDArrayView::SliceView: Cannot create a slice which is not contiguous in memory. "
                     "This NDArrayView shape = %S, slice offset = %S, slice extent = %S.",
                     Shape().AsString().c_str(), NDShape(startOffset).AsString().c_str(), NDShape(extent).AsString().c_str());
 
@@ -591,9 +591,6 @@ namespace CNTK
                             (int)newShape.TotalSize(), newShape.AsString().c_str());
         }
 
-        //auto newTensorShape = AsTensorShape(newShape);
-        // ^^ This led to a non-padded shape, which caused an inconsistency.
-        //    I have not found any place that seems to rely on this, so I presume this was an unintended oversight.
         auto newTensorShape = AsTensorViewShape(newShape);
         void* tensorView = nullptr;
         switch (m_dataType)

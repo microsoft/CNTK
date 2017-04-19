@@ -179,16 +179,25 @@ namespace CNTK
                              std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
                              const DeviceDescriptor& computeDevice)
     {
+        auto gradientRoot = Output();
+        Gradients(arguments, gradientRoot, gradients, outputsToEvaluate, computeDevice);
+    }
+
+    void Function::Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
+                             Variable& gradientRoot,
+                             std::unordered_map<Variable, ValuePtr>& gradients,
+                             std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
+                             const DeviceDescriptor& computeDevice)
+    {
         if (!this->IsComposite())
             LogicError("Function '%S': Currently 'Gradients' method is only supported for composite Functions.", AsString().c_str());
 
-        auto gradientRoot = Output();
         auto outputs = outputsToEvaluate;
         if (outputsToEvaluate.find(gradientRoot) == outputsToEvaluate.end())
-            outputs.insert({ gradientRoot , nullptr });
+            outputs.insert({gradientRoot , nullptr});
 
         // TODO: Exclude inputs not belonging to 'gradients' from the gradient computation
-        auto backPropState = this->Forward(arguments, outputs, computeDevice, { gradientRoot });
+        auto backPropState = this->Forward(arguments, outputs, computeDevice, {gradientRoot});
 
         for (auto outputVarValuePair : outputsToEvaluate)
             outputsToEvaluate[outputVarValuePair.first] = outputs[outputVarValuePair.first];
@@ -197,7 +206,7 @@ namespace CNTK
         auto rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(gradientRoot.GetDataType(), gradientRootOutputValue->Shape(), computeDevice), gradientRootOutputValue->Mask());
         rootGradientValue->Data()->SetValue(1.0f);
 
-        this->Backward(backPropState, { { gradientRoot, rootGradientValue } }, gradients);
+        this->Backward(backPropState, {{gradientRoot, rootGradientValue}}, gradients);
     }
 
     void Function::SetName(const std::wstring& name)
@@ -1124,6 +1133,11 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::LogPlus, leftOperand, rightOperand, Dictionary(), name);
     }
 
+    FunctionPtr Pow(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
+    {
+        return BinaryOp(PrimitiveOpType::Pow, leftOperand, rightOperand, Dictionary(), name);
+    }
+
     FunctionPtr Minus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::Minus, leftOperand, rightOperand, Dictionary(), name);
@@ -1723,6 +1737,31 @@ namespace CNTK
         FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)
         {
             return ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, name);
+        }
+
+        FunctionPtr ReduceMax(const Variable& operand, const std::wstring& name)
+        {
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+
+            auto p = PlaceholderLike(operand);
+            auto minusInf = Constant::Scalar(-std::numeric_limits<float>::infinity());
+            auto prevP = PastValue(p, minusInf);
+            auto gt = Greater(operandPlaceholder, prevP);
+            auto runningMax = ElementSelect(gt, operandPlaceholder, prevP);
+            runningMax->ReplacePlaceholders({ {p, runningMax} });
+            return AsBlock(Sequence::Last(runningMax), { {operandPlaceholder, operand } }, L"Sequence::ReduceMax", name);
+        }
+
+        FunctionPtr Softmax(const Variable& operand, const std::wstring& name)
+        {
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+
+            auto p = PlaceholderLike(operand);
+            auto minusInf = Constant::Scalar(-std::numeric_limits<float>::infinity());
+            auto runningLogSumExp = LogAddExp(operandPlaceholder, PastValue(p, minusInf));
+            runningLogSumExp->ReplacePlaceholders({ { p, runningLogSumExp } });
+            auto logZ = BroadcastAs(Sequence::Last(runningLogSumExp), operandPlaceholder);
+            return AsBlock(Exp(operandPlaceholder - logZ), { { operandPlaceholder, operand } }, L"Sequence::Softmax", name);
         }
     }
 

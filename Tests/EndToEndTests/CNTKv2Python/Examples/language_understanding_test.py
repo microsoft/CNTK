@@ -237,13 +237,11 @@ def test_language_understanding(device_id):
 
     # test of the example itself
     # this emulates the main code in the PY file
-    if device_id >= 0: # sparse Adam currently does not run on CPU
+    if device_id >= 0: # sparse FSAdagrad currently does not run on CPU
         reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
         model = create_model_function()
         loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
-        #raise ValueError()
-        expected_avg = [0.15570838301766451, 10.7846451368305728]
-        expected_avg = [0.529053, 9.70/100]
+        expected_avg = [0.09698114255561419, 0.5290531086061565]
         assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
         # test

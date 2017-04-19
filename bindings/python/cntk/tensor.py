@@ -211,7 +211,7 @@ class ArrayMixin(object):
         if is_sparse:
             from cntk.internal.sanitize import _sparse_to_dense_network_cache
 
-            device = self.device
+            device = ndav.device
             if callable(device):
                 device = device()
 
@@ -277,7 +277,7 @@ class NDArrayViewOpsMixin(object):
     def __mul__(self, other, out=None):
         return NDArrayViewOpsMixin._num_op(out, [self, other], 1.0, 26) # 26 = ElementWiseOperator.opElementwiseProduct
     def greater(self, other, out=None):   # __gt__ somehow fails, already exists in cntk_py version
-        return NDArrayViewOpsMixin._num_op(out, [self, other], 1.0, 35) # 35 = ElementWiseOperator.opGreater
+        return NDArrayViewOpsMixin._num_op(out, [self, other], 1.0, 36) # 36 = ElementWiseOperator.opGreater
 
     # so far these make no sense since we don't type-cast anyway
     __radd__ = __add__

@@ -117,14 +117,15 @@ class NDArrayView(cntk_py.NDArrayView):
             raise ValueError('csr_matrix row size (%d) does not match the least '
                              'significant axis dimension (%d) of the NDArrayView shape'
                              % (csr_array.shape[-1], shape[-1]))
-            
-        import functools, operator
+           
+        import functools
+        import operator
         csr_array_size = functools.reduce(operator.mul, csr_array.shape)
         ndarrayview_size = functools.reduce(operator.mul, shape)
         if csr_array_size != ndarrayview_size:
             raise ValueError('csr_matrix total size (%d) does not match the total size '
                              '(%d) of the NDArrayView shape' % (csr_array_size, ndarrayview_size))
-            
+ 
         return cntk_py.NDArrayView(shape, csr_array.data,
                                    csr_array.indptr, csr_array.indices, device,
                                    read_only, borrow)
@@ -258,7 +259,6 @@ class Value(cntk_py.Value):
             ndav = NDArrayView.from_dense(batch, device)
         else:
             ndav = batch
-
 
         if seq_starts:
             super(Value, self).__init__(ndav, seq_starts)
@@ -473,7 +473,7 @@ class Value(cntk_py.Value):
             >>> z.eval({i0: value})
             [array([[ 0.,  1.,  0.,  0.,  0.,  0.],
                     [ 0.,  0.,  0.,  0.,  0.,  0.],
-                    [ 0.,  0.,  0.,  0.,  0.,  1.]], dtype=float32), 
+                    [ 0.,  0.,  0.,  0.,  0.,  1.]], dtype=float32),
              array([[ 0.,  0.,  0.,  0.,  1.,  0.]], dtype=float32)]
             <BLANKLINE>
             >>> num_classes = 6
@@ -486,13 +486,14 @@ class Value(cntk_py.Value):
             [array([[[ 0.,  1.,  0.,  0.,  0.,  0.],
                      [ 0.,  0.,  0.,  0.,  0.,  1.]],
                     [[ 0.,  0.,  0.,  1.,  0.,  0.],
-                     [ 0.,  0.,  1.,  0.,  0.,  0.]]], dtype=float32), 
+                     [ 0.,  0.,  1.,  0.,  0.,  0.]]], dtype=float32),
              array([[[ 0.,  0.,  0.,  0.,  1.,  0.],
                      [ 0.,  1.,  0.,  0.,  0.,  0.]]], dtype=float32)]
 
         Args:
             batch (list of lists of integers): batch input data of indices
-            sample_shape (int or tuple): number of classes or shape of each sample whose trailing axis is one_hot
+            sample_shape (int or tuple): number of classes or shape of each
+             sample whose trailing axis is one_hot
             dtype (`np.float32`, `np.float64`, default None): data type
             device (:class:`~cntk.device.DeviceDescriptor`, default None): device
              this value should be put on
@@ -531,7 +532,6 @@ class Value(cntk_py.Value):
             value = cntk_py.Value.create_one_hot_double(
                 sample_shape, batch, device, False)
         return value
-
 
     @property
     def shape(self):

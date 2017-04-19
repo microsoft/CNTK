@@ -2538,22 +2538,22 @@ namespace CNTK
         ///
         /// Returns the descriptor of the device that 'this' Value resides on
         ///
-        virtual DeviceDescriptor Device() const { return m_data->Device(); }
+        virtual DeviceDescriptor Device() const { return Data()->Device(); }
 
         ///
         /// Returns the data type of 'this' Value's contents.
         ///
-        virtual DataType GetDataType() const { return m_data->GetDataType(); }
+        virtual DataType GetDataType() const { return Data()->GetDataType(); }
 
         ///
         /// Returns the storage format of 'this' Value.
         ///
-        virtual StorageFormat GetStorageFormat() const { return m_data->GetStorageFormat(); }
+        virtual StorageFormat GetStorageFormat() const { return Data()->GetStorageFormat(); }
 
         ///
         /// Returns the shape 'this' Value.
         ///
-        virtual const NDShape& Shape() const { return m_data->Shape(); }
+        virtual const NDShape& Shape() const { return Data()->Shape(); }
 
         ///
         /// Returns a boolean indicating if 'this' Value contains data in sparse storage format.
@@ -2563,7 +2563,7 @@ namespace CNTK
         ///
         /// Returns a boolean indicating if 'this' Value is read-only.
         ///
-        virtual bool IsReadOnly() const { return m_data->IsReadOnly(); }
+        virtual bool IsReadOnly() const { return Data()->IsReadOnly(); }
 
         ///
         /// Returns the number of masked/invalid values
@@ -2877,7 +2877,8 @@ namespace CNTK
         /// to each leaf variable of the Function of VariableKind 'Input'.
         /// The variables specified in the 'outputs' map denote the subset of 'this' Function's output variables that the caller wants to obtain values of. 
         /// Callers may specify the storage to be used for storing the 'outputs' Values or pass null in which case the implementation allocates the actual storage
-        /// for the 'outputs' for which the ValuePtr mapping was left null by the caller.
+        /// for the 'outputs' for which the ValuePtr mapping was left null by the caller. If a null Value was specified, the implementation created Value objects 
+        /// are temporary and only guaranteed to be valid until the next Forward/Backward call. You must explicitly clone the temporay Values if they need to be accessed later.
         /// The optional 'outputsToRetainBackwardStateFor' parameter specifies the subset of the Function's output variables for which gradients will be specified
         /// in a subsequent Backward call for backpropagation.
         /// The method returns a BackPropState object containing all intermediate variable values needed during backpropagation of gradients from the 
@@ -2896,7 +2897,8 @@ namespace CNTK
         /// Backpropagates supplied 'rootGradientValues' for one or more of the output variables of the Function, to produce gradient Values
         /// corresponding to the specified set of input variables in 'backPropagatedGradientValuesForInputs'.
         /// Callers may specify the actual storage to be used for storing the 'backPropagatedGradientValuesForInputs' Values or leave them to be null
-        /// in which case the implementation allocates the actual storage for storing the gradients.
+        /// in which case the implementation allocates the actual storage for storing the gradients. If a null Value was specified, the implementation created Value objects 
+        /// are temporary and only guaranteed to be valid until the next Forward/Backward call. You must explicitly clone the temporay Values if they need to be accessed later.
         /// In case an existing storage is specified, the gradients are aggregated with existing values in the specified storage.
         /// The 'state' parameter is an instance of an BackPropState instance obtained from a previous call to the Forward method on 'this; Function for the 
         /// computation that this gradient backpropagation corresponds to.
@@ -2910,7 +2912,8 @@ namespace CNTK
         /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values for each input of the Function.
         /// The variables specified in the 'outputs' map denote the subset of 'this' Function's output variables that the caller wants to obtain values of. 
         /// Callers may specify the storage to be used for storing the 'outputs' Values or pass null in which case the implementation allocates the actual storage
-        /// for the 'outputs' for which the ValuePtr mapping was left null by the caller.
+        /// for the 'outputs' for which the ValuePtr mapping was left null by the caller.  If a null Value was specified, the implementation created Value objects 
+        /// are temporary and only guaranteed to be valid until the next Forward/Backward call. You must explicitly clone the temporay Values if they need to be accessed later.
         /// The optional 'outputsToRetainBackwardStateFor' parameter specifies the subset of the Function's output variables for which gradients will be specified
         /// in a subsequent Backward call for backpropagation.
         /// The method returns a BackPropState object containing all intermediate variable values needed during backpropagation of gradients from the 
@@ -2969,6 +2972,12 @@ namespace CNTK
         /// at the specified 'arguments' values for the Function inputs
         ///
         CNTK_API void Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
+                                std::unordered_map<Variable, ValuePtr>& gradients,
+                                std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
+                                const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        CNTK_API void Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
+                                Variable& gradientRoot,
                                 std::unordered_map<Variable, ValuePtr>& gradients,
                                 std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
                                 const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
@@ -3536,6 +3545,10 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr LogAddExp(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
 
+    /// Create an instance of the CNTK built-in elementwise tensor operation that computes the leftOperand raised to the power of the right operand.
+    ///
+    CNTK_API FunctionPtr Pow(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in elementwise multiplication operation on specified tensor input operands.
     ///
@@ -3978,6 +3991,10 @@ namespace CNTK
         /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the operands lone dynamic sequence axis
         ///
         CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name = L"");
+
+        CNTK_API FunctionPtr ReduceMax(const Variable& operand, const std::wstring& name = L"");
+
+        CNTK_API FunctionPtr Softmax(const Variable& operand, const std::wstring& name = L"");
 
         CNTK_API FunctionPtr First(const Variable& operand, const std::wstring& name = L"");
         CNTK_API FunctionPtr Last(const Variable& operand, const std::wstring& name = L"");
@@ -4822,7 +4839,7 @@ namespace CNTK
 
         ///
         /// Reads a minibatch that contains data for all input streams.
-        /// The minibatch size is specified terms of #samples and/or #sequences for the primary input stream; value of 0 for #samples/#sequences means unspecified.
+        /// The minibatch size is specified in terms of #samples and/or #sequences for the primary input stream; value of 0 for #samples/#sequences means unspecified.
         /// In case the size is specified in terms of both #sequences and #samples, the smaller of the 2 is taken.
         /// An empty map is returned when the MinibatchSource has no more data to return.
         ///
@@ -4833,7 +4850,7 @@ namespace CNTK
 
         ///
         /// Same as above but allows to specify partition of data in a distributed environment.
-        /// Depending on the number of workers the data is splitted in different partitions,
+        /// Depending on the number of workers the data is split in different partitions,
         /// and depending on the worker rank, only a particular partition is read.
         ///
         CNTK_API virtual const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(

@@ -159,6 +159,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Minus;
 %ignore_function CNTK::operator-;
 %ignore_function CNTK::LogAddExp;
+%ignore_function CNTK::Pow;
 %ignore_function CNTK::ElementTimes;
 %ignore_function CNTK::ElementDivide;
 %ignore_function CNTK::Equal;
@@ -724,14 +725,19 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return _Clone(ParameterCloningMethod.Share);
     }
 
-    public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> arguments, System.Collections.Generic.IDictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
+    public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> inputs, System.Collections.Generic.IDictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
+    {
+        Evaluate(inputs, outputs, false, computeDevice);
+    }
+
+    public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> inputs, System.Collections.Generic.IDictionary<Variable, Value> outputs, bool createPersistentOutputValues, DeviceDescriptor computeDevice)
     {
         // Evaluate the rootFunction.
-        var argMap = new UnorderedMapVariableValuePtr();
+        var inMap = new UnorderedMapVariableValuePtr();
         var outMap = new UnorderedMapVariableValuePtr();
-        foreach (var p in arguments)
+        foreach (var p in inputs)
         {
-            argMap.Add(p.Key, p.Value);
+            inMap.Add(p.Key, p.Value);
         }
 
         foreach (var p in outputs)
@@ -739,12 +745,19 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
             outMap.Add(p.Key, p.Value);
         }
 
-        Evaluate(argMap, outMap, computeDevice);
+        Evaluate(inMap, outMap, computeDevice);
 
         foreach (var p in outMap)
         {
-            // for shared_ptr<Value>, the p.Value returns a copy, so it is safe to use it directly in outputs.
-            outputs[p.Key] = p.Value;
+            if (createPersistentOutputValues && (outputs[p.Key] == null))
+            {
+                outputs[p.Key] = p.Value.DeepClone();
+            }
+            else
+            { 
+                // for shared_ptr<Value>, the p.Value returns a copy, so it is safe to use it directly in outputs.
+                outputs[p.Key] = p.Value;
+            }
         }
     }
 
@@ -1122,7 +1135,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         {
             if (element < 0)
             {
-                throw new System.ArgumentException("The paraemter diemnsions cannot contain a negative value");
+                throw new System.ArgumentException("The argument cannot contain a negative value");
             }
             inputVector.Add((uint)element);
         }
@@ -1751,17 +1764,32 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
 %ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, const void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device);
 %ignore CNTK::NDArrayView::NDArrayView(double value, DataType dataType = DataType::Float, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), bool readOnly = false);
-%igore_function CNTK::NDArrayView::SliceView;
 
 %extend CNTK::NDArrayView {
     NDArrayView(const NDShape& viewShape, float *dataBuffer, size_t numBufferElements, const DeviceDescriptor& device, bool readOnly = false)
     {
-        return new CNTK::NDArrayView(CNTK::DataType::Float, viewShape, dataBuffer, numBufferElements * sizeof(float), device, readOnly);
+        if (device.Type() == CNTK::DeviceKind::GPU)
+        {
+            auto cpuView = new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
+            auto gpuView = new CNTK::NDArrayView(cpuView->GetDataType(), cpuView->GetStorageFormat(), viewShape, device);
+            gpuView->CopyFrom(*cpuView);
+            return gpuView;
+        }
+        else
+            return new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, device, readOnly);
     }
 
     NDArrayView(const NDShape& viewShape, double *dataBuffer, size_t numBufferElements, const DeviceDescriptor& device, bool readOnly = false)
     {
-        return new CNTK::NDArrayView(CNTK::DataType::Double, viewShape, dataBuffer, numBufferElements * sizeof(double), device, readOnly);
+        if (device.Type() == CNTK::DeviceKind::GPU)
+        {
+            auto cpuView = new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
+            auto gpuView = new CNTK::NDArrayView(cpuView->GetDataType(), cpuView->GetStorageFormat(), viewShape, device);
+            gpuView->CopyFrom(*cpuView);
+            return gpuView;
+        }
+        else
+            return new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, device, readOnly);
     }
 
     NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false)
@@ -1773,12 +1801,14 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     {
         return new CNTK::NDArrayView(viewShape, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device, readOnly);
     }
+
 }
 
 %rename (GetDevice) CNTK::NDArrayView::Device;
 %rename (GetShape) CNTK::NDArrayView::Shape;
 %rename (_IsSparse) CNTK::NDArrayView::IsSparse;
 %rename (_IsReadOnly) CNTK::NDArrayView::IsReadOnly;
+%rename (_SliceView) CNTK::NDArrayView::SliceView;
 
 %typemap(cscode) CNTK::NDArrayView %{
     public NDArrayView(NDShape viewShape, float[] dataBuffer, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, (uint)dataBuffer.Length, device, readOnly)
@@ -1859,6 +1889,29 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         {
             return _IsReadOnly();
         }
+    }
+
+    public NDArrayView SliceView(System.Collections.Generic.IEnumerable<int> startOffset, System.Collections.Generic.IEnumerable<int> extent, bool readOnly = false)
+    {
+        var startOffsetVector = AsSizeTVector(startOffset);
+
+        var extentVector = AsSizeTVector(extent);
+
+        return _SliceView(startOffsetVector, extentVector, readOnly);
+    }
+
+    private static SizeTVector AsSizeTVector(System.Collections.Generic.IEnumerable<int> input)
+    {
+        var inputVector = new SizeTVector();
+        foreach (var element in input)
+        {
+            if (element < 0)
+            {
+                throw new System.ArgumentException("The argument cannot contain a negative value");
+            }
+            inputVector.Add((uint)element);
+        }
+        return inputVector;
     }
 %}
 
