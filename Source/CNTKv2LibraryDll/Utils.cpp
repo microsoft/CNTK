@@ -487,6 +487,11 @@ namespace CNTK
             return dynamicAxes[0].Name();
     }
 
+    bool IsPackedValue(const ValuePtr& value)
+    {
+        auto packedValue = dynamic_pointer_cast<PackedValue>(value);
+        return (packedValue != nullptr) && packedValue->IsPacked();
+    }
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes) 
     {
         size_t maxNumTimeSteps = 1;
@@ -520,10 +525,8 @@ namespace CNTK
         if (var.GetDataType() != value->GetDataType())
             LogicError("The Variable '%S' DataType %s does not match the corresponding Value's DataType %s", var.AsString().c_str(), DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
 
-        auto packedValue = dynamic_cast<PackedValue*>(value.get());
-        bool isPackedValue = (packedValue != nullptr) && packedValue->IsPacked();
-
         // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error even for packed value objects?
+        bool isPackedValue = IsPackedValue(value);
         if (!isPackedValue)
         {
             if (IsSparseInput(var) && !value->IsSparse())
@@ -940,7 +943,7 @@ namespace CNTK
             InvalidArgument("Attempting to accumulate a null Value.");
 
         bool copied = false;
-        if (!Data() ||
+        if (m_isUninitialized ||
             GetDataType() != delta->GetDataType() ||
             Shape() != delta->Shape() ||
             Device() != device ||
@@ -950,6 +953,7 @@ namespace CNTK
             m_data = MakeSharedObject<NDArrayView>(delta->GetDataType(), delta->Shape(), device);
             m_mask = delta->Mask();
             ResetToZero();
+            m_isUninitialized = false;
         }
 
         if (delta->GetDataType() == DataType::Float)
@@ -971,19 +975,13 @@ namespace CNTK
 
     void Accumulator::ResetToZero()
     {
-        if (Data() == nullptr)
-        {
+        if (m_isUninitialized)
             return;
-        }
 
         if (GetDataType() == DataType::Float)
-        {
             Data()->SetValue(0.0f);
-        }
         else
-        {
             Data()->SetValue(0.0);
-        }
     }
 
     std::wstring DynamicAxesAsString(const std::vector<Axis>& axes, bool rowMajor)
@@ -1015,5 +1013,4 @@ namespace CNTK
         wss << "]";
         return wss.str();
     }
-
 }

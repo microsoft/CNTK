@@ -589,6 +589,8 @@ namespace CNTK
         return ShapeRowColSplitPoint(var.Shape(), var.IsSparse());
     }
 
+    bool IsPackedValue(const ValuePtr& value);
+
     // Helper class to manage a collection of learners.
     class Learners
     {
@@ -666,7 +668,7 @@ namespace CNTK
     class Accumulator : public Value
     {
     public:
-        Accumulator() : Value(nullptr), m_numUpdates(0) {}
+        Accumulator() : Value(nullptr), m_numUpdates(0), m_isUninitialized(true) {}
 
         void Update(const ValuePtr& delta, const DeviceDescriptor& device);
         void Reset();
@@ -674,6 +676,7 @@ namespace CNTK
     private:
         void ResetToZero();
 
+        bool m_isUninitialized;
         size_t   m_numUpdates;
     };
 

@@ -752,6 +752,9 @@ namespace CNTK
             case PrimitiveOpType::LogPlus:
                 computationNodePtr = New<LogPlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
+            case PrimitiveOpType::Pow:
+                computationNodePtr = New<PowNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
             case PrimitiveOpType::Minus:
                 computationNodePtr = New<MinusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
@@ -1425,19 +1428,29 @@ namespace CNTK
     void CompositeFunction::GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs)
     {
         // Now copy the Forward values of output nodes from the network to outputs' Value objects
-        for (auto outputVarValuePair : outputs)
-            GetNodeOutputOrGradient(outputVarValuePair.first, outputs[outputVarValuePair.first], m_variableToNodeMap.at(outputVarValuePair.first), false /*getGradient*/);
+        for (auto& outputVarValuePair : outputs)
+        {
+            auto& valuePtr = outputVarValuePair.second;
+            auto node = m_variableToNodeMap.at(outputVarValuePair.first);
+            bool noValueStrorageProvided = (valuePtr == nullptr);
+            GetNodeOutputOrGradient(outputVarValuePair.first, valuePtr, node, false /*getGradient*/);
+
+            auto packedVarValue = std::dynamic_pointer_cast<PackedValue>(valuePtr);
+            if (noValueStrorageProvided && packedVarValue && packedVarValue->IsPacked())
+                m_existingNetworkStorageReferences.push_back(packedVarValue);
+        }
     }
 
     void CompositeFunction::GetNetworkGradients(std::unordered_map<Variable, ValuePtr>& gradients)
     {
         auto networkInputs = this->Inputs();
         // Now copy the gradient values of input nodes of the network to gradients' Value objects
-        for (auto gradientVarValuePair : gradients)
+        for (auto& gradientVarValuePair : gradients)
         {
             // Only gradients corresponding to inputs of the network can be obtained
             if (std::find(networkInputs.begin(), networkInputs.end(), gradientVarValuePair.first) == networkInputs.end())
-                InvalidArgument("Gradient requested for Variable '%S' which is not an input of the Function '%S'.", gradientVarValuePair.first.AsString().c_str(), this->AsString().c_str());
+                InvalidArgument("Gradient requested for Variable '%S' which is not a leaf input (Input, Parameter or Constant) of the Function '%S'; this is currently unsupported.",
+                                gradientVarValuePair.first.AsString().c_str(), this->AsString().c_str());
 
             // Gradients can only be obtained for parameter variables or input variables that NeedsGradient
             if (!gradientVarValuePair.first.NeedsGradient() || (m_inputsExcludedFromGradientComputation.find(gradientVarValuePair.first) != m_inputsExcludedFromGradientComputation.end()))
@@ -1451,7 +1464,13 @@ namespace CNTK
                 LogicError("Function '%S': Backpropagated gradient value cannot be read from a Variable '%S' whose ComputationNode has NeedsGradient set to false.",
                             AsString().c_str(), gradientVarValuePair.first.AsString().c_str());
 
-            GetNodeOutputOrGradient(gradientVarValuePair.first, gradients[gradientVarValuePair.first], computationNodePtr, true /*getGradient*/);
+            auto& valuePtr = gradientVarValuePair.second;
+            bool noValueStrorageProvided = (valuePtr == nullptr);
+            GetNodeOutputOrGradient(gradientVarValuePair.first, valuePtr, computationNodePtr, true /*getGradient*/);
+
+            auto packedVarValue = std::dynamic_pointer_cast<PackedValue>(valuePtr);
+            if (noValueStrorageProvided && packedVarValue && packedVarValue->IsPacked())
+                m_existingNetworkStorageReferences.push_back(packedVarValue);
         }
     }
 
@@ -1591,7 +1610,8 @@ namespace CNTK
         for (auto& backpropRoot : m_currentBackpropRoots)
             m_variableToNodeMap.at(backpropRoot)->SetEvalTimeStampOutdatedWrtAll();
 
-        // TODO: Verify that values were supplied for all inputs that requested outputs depend on
+        // Free any previous references to the matrix storage associated with the outputsToEvaluate
+        ClearExistingOutputOrGradientStorageReferences();
 
         ScopedNetworkOperationMode modeGuard(m_computationNetwork, outputsToRetainBackwardStateFor.empty() ? NetworkOperationMode::inferring : NetworkOperationMode::training);
 

@@ -378,7 +378,7 @@ namespace CNTK
                             (int)newShape.TotalSize(), newShape.AsString().c_str());
         }
 
-        auto newTensorShape = AsTensorShape(newShape);
+        auto newTensorShape = AsTensorViewShape(newShape);
         void* tensorView = nullptr;
         switch (m_dataType)
         {

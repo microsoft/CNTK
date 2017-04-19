@@ -60,7 +60,7 @@ Remove-Item $baseDropPath\cntk\*.pdb
 Remove-Item $baseDropPath\cntk\python -Recurse
 
 # Keep EvalDll.lib
-Remove-Item $baseDropPath\cntk\*.lib  -Exclude EvalDll.lib, CNTKLibrary-2.0.lib
+Remove-Item $baseDropPath\cntk\*.lib  -Exclude Cntk.Eval-*.lib, Cntk.Core-*.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items

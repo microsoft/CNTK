@@ -72,6 +72,19 @@ def set_default_unit_gain_value(value):
     '''
     cntk_py.set_default_unit_gain_value(value)
 
+def default_use_mean_gradient_value():
+    '''
+    Returns true if by default input gradient to learner is averaged.
+    '''
+    return cntk_py.default_use_mean_gradient_value()
+
+
+def set_default_use_mean_gradient_value(value):
+    '''
+    Sets globally default use_mean_gradient_value.
+    '''
+    cntk_py.set_default_use_mean_gradient_value(value)
+
 # an internal method to verify that the learning rate schedule
 # has a proper (per-sample or per-MB schedule) type and raise
 # an exception otherwise
@@ -407,7 +420,7 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=None):
 def sgd(parameters, lr,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-        gradient_clipping_with_truncation=True):
+        gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
     '''sgd(parameters, lr, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an SGD learner instance to learn the parameters. See [1] for more
     information on how to set the parameters.
@@ -427,6 +440,8 @@ def sgd(parameters, lr,
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
+        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
@@ -447,6 +462,7 @@ def sgd(parameters, lr,
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.use_mean_gradient = use_mean_gradient
 
     return cntk_py.sgd_learner(parameters, lr, additional_options)
 
@@ -455,7 +471,7 @@ def sgd(parameters, lr,
 def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
                  l1_regularization_weight=0.0, l2_regularization_weight=0.0,
                  gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-                 gradient_clipping_with_truncation=True):
+                 gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
     '''momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(), l1_regularization_weight=0.0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates a Momentum SGD learner instance to learn the parameters.
 
@@ -477,6 +493,8 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
+        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the
@@ -494,7 +512,8 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-
+    additional_options.use_mean_gradient = use_mean_gradient
+    
     return cntk_py.momentum_sgd_learner(parameters, lr, momentum, unit_gain,
                                         additional_options)
 
@@ -503,7 +522,7 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
 def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
              l1_regularization_weight=0.0, l2_regularization_weight=0.0,
              gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-             gradient_clipping_with_truncation=True):
+             gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
     '''nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates a Nesterov SGD learner instance to learn the parameters. This was
     originally proposed by Nesterov [1] in 1983 and then shown to work well in
@@ -527,6 +546,8 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
+        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the
@@ -553,6 +574,7 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.use_mean_gradient = use_mean_gradient
 
     return cntk_py.nesterov_learner(parameters, lr, momentum, unit_gain,
                                     additional_options)
@@ -561,7 +583,7 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
 def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95, epsilon=1e-8,
             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-            gradient_clipping_with_truncation=True):
+            gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
     '''adadelta(parameters, lr, rho, epsilon, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an AdaDelta learner instance to learn the parameters. See [1] for
     more information.
@@ -582,6 +604,8 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
+        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
@@ -600,6 +624,7 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.use_mean_gradient = use_mean_gradient
 
     return cntk_py.ada_delta_learner(parameters, lr, rho, epsilon,
                                     additional_options)
@@ -609,7 +634,7 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
 def adagrad(parameters, lr, need_ave_multiplier=True,
             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-            gradient_clipping_with_truncation=True):
+            gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
     '''adagrad(parameters, lr, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an AdaGrad learner instance to learn the parameters. See [1] for
     more information.
@@ -629,6 +654,8 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
+        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
@@ -650,6 +677,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.use_mean_gradient = use_mean_gradient
 
     return cntk_py.ada_grad_learner(parameters, lr, need_ave_multiplier,
                                     additional_options)
@@ -660,7 +688,7 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
               variance_momentum=momentum_as_time_constant_schedule(720000),
               l1_regularization_weight=0.0, l2_regularization_weight=0.0,
               gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-              gradient_clipping_with_truncation=True):
+              gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
     '''fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an FSAdaGrad learner instance to learn the parameters.
 
@@ -684,6 +712,8 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping 
          with truncation
+        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
@@ -702,6 +732,7 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.use_mean_gradient = use_mean_gradient
 
     return cntk_py.fsada_grad_learner(parameters, lr, momentum, unit_gain,
                                       variance_momentum, additional_options)
@@ -712,7 +743,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          variance_momentum=momentum_as_time_constant_schedule(720000),
          l1_regularization_weight=0.0, l2_regularization_weight=0.0,
          gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-         gradient_clipping_with_truncation=True):
+         gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
     '''adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an Adam learner instance to learn the parameters. See [1] for more
     information.
@@ -737,6 +768,8 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
+        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
@@ -759,7 +792,8 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
-
+    additional_options.use_mean_gradient = use_mean_gradient
+    
     return cntk_py.adam_learner(parameters, lr, momentum, unit_gain,
                                 variance_momentum, additional_options)
 
@@ -770,7 +804,7 @@ def rmsprop(parameters, lr,
             need_ave_multiplier=True,
             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-            gradient_clipping_with_truncation=True):
+            gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
     '''rmsprop(parameters, lr, gamma, inc, dec, max, min, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an RMSProp learner instance to learn the parameters.
 
@@ -794,6 +828,8 @@ def rmsprop(parameters, lr,
          per sample, defaults to infinity
         gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
+        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
+         Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
@@ -809,6 +845,7 @@ def rmsprop(parameters, lr,
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.use_mean_gradient = use_mean_gradient
 
     return cntk_py.rmsprop_learner(parameters, lr, gamma, inc, dec, max, min,
                                    need_ave_multiplier, additional_options)
