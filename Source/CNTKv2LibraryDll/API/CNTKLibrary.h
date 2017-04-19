@@ -5120,7 +5120,7 @@ namespace CNTK
     /// 
     /// Create an HTKMLFDeserializer with the specified options
     /// 
-    CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, bool phoneBoundaries, const std::vector<std::wstring>& mlfFiles);
+    CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries = false);
 
     /// 
     /// Instantiate the CNTK built-in text format minibatch source

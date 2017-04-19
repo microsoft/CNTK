@@ -386,7 +386,7 @@ namespace CNTK
         return htk;
     }
 
-    Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, bool phoneBoundaries, const std::vector<std::wstring>& mlfFiles)
+    Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries)
     {
         Deserializer htk;
         Dictionary stream;
