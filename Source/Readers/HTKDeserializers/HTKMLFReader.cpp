@@ -33,7 +33,7 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
     }
 
     bool useNumericSequenceKeys = readerConfig(L"useNumericSequenceKeys", false);
-    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
+    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys, false);
 
     std::vector<IDataDeserializerPtr> featureDeserializers;
     std::vector<IDataDeserializerPtr> labelDeserializers;

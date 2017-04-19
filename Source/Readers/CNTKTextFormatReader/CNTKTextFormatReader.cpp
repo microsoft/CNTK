@@ -27,7 +27,7 @@ CNTKTextFormatReader::CNTKTextFormatReader(const ConfigParameters& config)
 
     try
     {
-        auto corpus = make_shared<CorpusDescriptor>(true);
+        auto corpus = make_shared<CorpusDescriptor>(true, false);
         if (configHelper.GetElementType() == ElementType::tfloat)
             m_deserializer = make_shared<TextParser<float>>(corpus, configHelper, true);
         else

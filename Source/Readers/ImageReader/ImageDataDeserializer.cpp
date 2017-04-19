@@ -105,7 +105,7 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
         RuntimeError("Unsupported label element type '%d'.", (int)label->m_elementType);
     }
 
-    CreateSequenceDescriptions(std::make_shared<CorpusDescriptor>(false), configHelper.GetMapPath(), labelDimension, configHelper.IsMultiViewCrop());
+    CreateSequenceDescriptions(std::make_shared<CorpusDescriptor>(false, false), configHelper.GetMapPath(), labelDimension, configHelper.IsMultiViewCrop());
 }
 
 // Descriptions of chunks exposed by the image reader.

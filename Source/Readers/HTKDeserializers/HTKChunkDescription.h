@@ -43,9 +43,9 @@ public:
     HTKChunkDescription(ChunkIdType chunkId) : m_chunkId(chunkId) { };
 
     // Gets number of utterances in the chunk.
-    size_t GetNumberOfUtterances() const
+    uint32_t GetNumberOfUtterances() const
     {
-        return m_utterances.size();
+        return static_cast<uint32_t>(m_utterances.size());
     }
 
     ChunkIdType GetChunkId() const
@@ -64,6 +64,8 @@ public:
         m_firstFrames.push_back(m_totalFrames);
         m_totalFrames += utterance.GetNumberOfFrames();
         m_utterances.push_back(std::move(utterance));
+        if (m_utterances.size() > std::numeric_limits<uint32_t>::max())
+            RuntimeError("Chunk overflow happened: too many utterances.");
     }
 
     // Gets total number of frames in the chunk.

@@ -101,7 +101,7 @@ public:
                 i,
                 m_sequenceLength,
                 (ChunkIdType) (i / m_numSequencesPerChunk),
-                KeyType(0, i)
+                KeyType(0, static_cast<uint32_t>(i))
             });
         }
 
@@ -157,7 +157,7 @@ public:
                 i,
                 m_sequenceLength,
                 chunkId,
-                { 0, i }
+                { 0, static_cast<uint32_t>(i) }
             });
         }
     }
@@ -975,7 +975,7 @@ BOOST_AUTO_TEST_CASE(DefaultCorpusDescriptor)
 
     string randomKey(10, (char)distr(rng));
 
-    CorpusDescriptor corpus(false);
+    CorpusDescriptor corpus(false, false);
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded(randomKey));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded(""));
 }
@@ -986,7 +986,7 @@ BOOST_AUTO_TEST_CASE(NumericCorpusDescriptor)
     std::mt19937 rng(seed);
     boost::random::uniform_int_distribution<size_t> distr;
 
-    CorpusDescriptor corpus(true);
+    CorpusDescriptor corpus(true, false);
     for (int i = 0; i < 10; ++i)
     {
         auto value = distr(rng);
@@ -1006,7 +1006,7 @@ BOOST_AUTO_TEST_CASE(LiteralCorpusDescriptor)
 
     string randomKey(10, (char)distr(rng));
 
-    CorpusDescriptor corpus(false);
+    CorpusDescriptor corpus(false, false);
     BOOST_CHECK(100 != corpus.KeyToId("100"));
     BOOST_CHECK_NO_THROW(corpus.KeyToId("not a number"));
 }
@@ -1019,7 +1019,7 @@ BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
     fwrite("4\n", sizeof(char), 2, test);
     fclose(test);
 
-    CorpusDescriptor corpus(L"test.tmp", true);
+    CorpusDescriptor corpus(L"test.tmp", true, false);
     BOOST_CHECK_EQUAL(false, corpus.IsIncluded("0"));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded("1"));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded("2"));

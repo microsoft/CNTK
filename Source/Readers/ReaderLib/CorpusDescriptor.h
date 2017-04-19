@@ -20,8 +20,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // TODO: Extract an interface.
 class CorpusDescriptor
 {
+    size_t Hash(const std::string& key)
+    {
+        size_t result = 5381;
+        for (const auto& c : key)
+            result = ((result << 5) + result) ^ c;
+        return result;
+    }
+
 public:
-    CorpusDescriptor(const std::wstring& file, bool numericSequenceKeys) : CorpusDescriptor(numericSequenceKeys)
+    CorpusDescriptor(const std::wstring& file, bool numericSequenceKeys, bool useHash) : CorpusDescriptor(numericSequenceKeys, useHash)
     {
         m_includeAll = false;
 
@@ -38,7 +46,8 @@ public:
     }
 
     // By default include all sequences.
-    CorpusDescriptor(bool numericSequenceKeys) : m_includeAll(true), m_numericSequenceKeys(numericSequenceKeys)
+    CorpusDescriptor(bool numericSequenceKeys, bool useHash)
+        : m_includeAll(true), m_numericSequenceKeys(numericSequenceKeys), m_useHash(useHash)
     {
         if (numericSequenceKeys)
         {
@@ -60,6 +69,9 @@ public:
         {
             KeyToId = [this](const std::string& key)
             {
+                if (m_useHash)
+                    return Hash(key);
+
                 // The function has to provide a size_t unique "hash" for the input key
                 // If we see the key for the first time, we add it to the registry.
                 // Otherwise we retrieve the hash value for the key from the registry.
@@ -68,6 +80,9 @@ public:
 
             IdToKey = [this](size_t id)
             {
+                if (m_useHash)
+                    RuntimeError("Retrieving of original sequence id is not supported with hash on.");
+
                 // This will throw if the id is not present.
                 return m_keyToIdMap[id];
             };
@@ -100,8 +115,9 @@ private:
     DISABLE_COPY_AND_MOVE(CorpusDescriptor);
     bool m_numericSequenceKeys;
     bool m_includeAll;
-    std::set<size_t> m_sequenceIds;
+    bool m_useHash;
 
+    std::set<size_t> m_sequenceIds;
     StringToIdMap m_keyToIdMap;
 };
 

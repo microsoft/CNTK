@@ -22,6 +22,7 @@
 #include <wchar.h>
 #include "simplesenonehmm.h"
 #include <array>
+#include <boost/algorithm/string.hpp>
 
 namespace msra { namespace asr {
 
@@ -159,6 +160,24 @@ protected:
 // are sequential anyway. In conjunction with a big buffer, this makes a huge difference.
 // ===========================================================================
 
+template<typename T>
+inline void optimized_split(const char* begin, const char* end, const std::vector<bool> delim_hash, std::vector<T>& result)
+{
+    const char* start = begin;
+    while(begin != end)
+    {
+        if (delim_hash[*begin])
+        {
+            result.push_back(boost::make_iterator_range(start, begin));
+            start = begin + 1;
+        }
+        ++begin;
+    }
+
+    // Adding last.
+    result.push_back(boost::make_iterator_range(start, end));
+}
+
 class htkfeatreader : protected htkfeatio
 {
     // information on current file
@@ -184,7 +203,7 @@ public:
     struct parsedpath
     {
         // Note: This is not thread-safe
-        static std::unordered_map<std::wstring, unsigned int> archivePathStringMap;
+        static std::unordered_map<std::string, unsigned int> archivePathStringMap;
         static std::vector<std::wstring> archivePathStringVector;
 
         uint32_t s, e;       // first and last frame inside the archive file; (0, INT_MAX) if not given
@@ -206,15 +225,30 @@ public:
             RuntimeError("parsedpath: malformed path '%s'", path.c_str());
         }
 
-        // consume and return up to 'delim'; remove from 'input' (we try to avoid C++0x here for VS 2008 compat)
-        static string consume(string& input, const char* delim)
+        static inline const char* consume(const char* begin, const char* end, const std::vector<bool>& delim_hash, boost::iterator_range<const char*>& result)
         {
-            vector<string> parts = msra::strfun::split(input, delim); // (not very efficient, but does not matter here)
-            if (parts.size() == 1)
-                input.clear(); // not found: consume to end
-            else
-                input = parts[1]; // found: break at delimiter
-            return parts[0];
+            const char* start = begin;
+            while (begin != end)
+            {
+                if (delim_hash[*begin])
+                {
+                    result = boost::make_iterator_range(start, begin);
+                    return begin + 1;
+                }
+
+                ++begin;
+            }
+
+            result = boost::make_iterator_range(begin, end);
+            return end;
+        }
+
+        static std::vector<bool> delim_hash(const std::vector<char>& values)
+        {
+            std::vector<bool> delim_equal(256, false);
+            for(const auto& c: values)
+                delim_equal[c] = true;
+            return delim_equal;
         }
 
     public:
@@ -222,30 +256,48 @@ public:
         // Can be used implicitly e.g. by passing a string to open().
         static parsedpath Parse(const string& pathParam, string& logicalPath)
         {
-            parsedpath result;
+            const static string ubyte("-ubyte");
 
-            string xpath(pathParam);
+            const static std::vector<bool> delim_equal = delim_hash({ '=' });
+            const static std::vector<bool> delim_left_bracket = delim_hash({ '[' });
+            const static std::vector<bool> delim_comma = delim_hash({ ',' });
+            const static std::vector<bool> delim_right_bracket = delim_hash({ ']' });
+
+            parsedpath result;
             string archivepath;
 
             // parse out logical path
-            logicalPath = consume(xpath, "=");
+            //vector<boost::iterator_range<const char*>> tokens;
+
+            //auto container = boost::make_iterator_range(pathParam.data(), pathParam.data() + pathParam.size());
+            //optimized_split(pathParam.data(), pathParam.data() + pathParam.size(), delim_equal, tokens);
+            //boost::split(tokens, container, boost::is_any_of("="));
+            auto start = pathParam.data();
+            auto end = start + pathParam.size();
+            boost::iterator_range<const char*> token;
+
+            start = consume(start, end, delim_equal, token);
+            logicalPath.assign(token.begin(), token.end());
+
             result.isidxformat = false;
-            if (xpath.empty()) // no '=' detected: pass entire file (it's not an archive)
+            if (start == end) // no '=' detected: pass entire file (it's not an archive)
             {
                 archivepath = logicalPath;
                 result.s = 0;
                 result.e = UINT_MAX;
                 result.isarchive = false;
+
                 // check for "-ubyte" suffix in path name => it is an idx file
-                string ubyte("-ubyte");
                 size_t pos = archivepath.size() >= ubyte.size() ? archivepath.size() - ubyte.size() : 0;
                 string suffix = archivepath.substr(pos, ubyte.size());
                 result.isidxformat = ubyte == suffix;
             }
             else // a=b[s,e] syntax detected
             {
-                archivepath = consume(xpath, "[");
-                if (xpath.empty()) // actually it's only a=b
+                //vector<boost::iterator_range<const char*>> otherTokens;
+                start = consume(start, end, delim_left_bracket, token);
+                archivepath.assign(token.begin(), token.end());
+                if (start == end) // actually it's only a=b
                 {
                     result.s = 0;
                     result.e = UINT_MAX;
@@ -253,19 +305,21 @@ public:
                 }
                 else
                 {
-                    result.s = msra::strfun::toint(consume(xpath, ",").c_str());
-                    if (xpath.empty())
+                    start = consume(start, end, delim_comma, token);
+                    if (start == end)
                         malformed(pathParam);
-                    result.e = msra::strfun::toint(consume(xpath, "]").c_str());
-                    // TODO \r should be handled elsewhere; refine this
-                    if (!xpath.empty() && xpath != "\r")
+
+                    result.s = msra::strfun::toint(token.begin());
+                    start = consume(start, end, delim_right_bracket, token);
+                    if (start != end && *start != '\r')
                         malformed(pathParam);
+
+                    result.e = msra::strfun::toint(token.begin());
                     result.isarchive = true;
                 }
             }
 
-            auto warchivepath = msra::strfun::utf16(archivepath);
-            auto iter = archivePathStringMap.find(warchivepath);
+            auto iter = archivePathStringMap.find(archivepath);
             if (iter != archivePathStringMap.end())
             {
                 result.archivePathIdx = iter->second;
@@ -273,8 +327,8 @@ public:
             else
             {
                 result.archivePathIdx = (unsigned int)archivePathStringMap.size();
-                archivePathStringMap[warchivepath] = result.archivePathIdx;
-                archivePathStringVector.push_back(warchivepath);
+                archivePathStringMap[archivepath] = result.archivePathIdx;
+                archivePathStringVector.push_back(msra::strfun::utf16(archivepath));
             }
 
             logicalPath = logicalPath.substr(0, logicalPath.find_last_of("."));

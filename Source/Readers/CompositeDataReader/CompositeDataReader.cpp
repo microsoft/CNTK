@@ -40,7 +40,9 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         ContainsDeserializer(config, L"ImageDeserializer");
 
     useNumericSequenceKeys = config(L"useNumericSequenceKeys", useNumericSequenceKeys);
-    m_corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
+
+    bool useHash = config(L"hashSequenceKeys", false);
+    m_corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys, useHash);
 
     // Identifying packing mode.
     bool frameMode = config(L"frameMode", false);
