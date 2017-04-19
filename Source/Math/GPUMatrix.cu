@@ -28,6 +28,8 @@
 #include "Convolution.cuh"
 #include "CuDnnRNN.h"
 
+#include <random>
+
 #pragma comment(lib, "cudart.lib") // instruct linker to reference these libs
 #pragma comment(lib, "cublas.lib")
 #pragma comment(lib, "cusparse.lib")
@@ -3390,19 +3392,31 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
     size_t n = a.GetNumCols();
     CUDA_LONG N = (CUDA_LONG)(m*n);
 
-    auto seed = (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
+    //auto seed = (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
+    //float *d_rands;
+    //curandGenerator_t gens;
+    //CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
+    //CURAND_CALL(curandCreateGenerator(&gens, CURAND_RNG_PSEUDO_DEFAULT));
+    //CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gens, seed));
+    //CURAND_CALL(curandGenerateUniform(gens, d_rands, N));
+
+    float *rands = new float[N];
+    std::random_device rd;
+    std::default_random_engine generator((rd()));
+    std::uniform_real_distribution<float> dis(0., 1.);
+    for (int i = 0; i < N; i++) {
+        rands[i] = dis(generator);
+    }
     float *d_rands;
-    curandGenerator_t gens;
     CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
-    CURAND_CALL(curandCreateGenerator(&gens, CURAND_RNG_PSEUDO_DEFAULT));
-    CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gens, seed));
-    CURAND_CALL(curandGenerateUniform(gens, d_rands, N));
+    CUDA_CALL(cudaMemcpy(d_rands, rands, sizeof(float)*N, cudaMemcpyHostToDevice));
+    delete[] rands;
 
     size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
     _stochasticbinaryForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), d_rands, N, annealSlope);
     CUDA_CALL(cudaFree(d_rands));
-    CURAND_CALL(curandDestroyGenerator(gens));
+    //CURAND_CALL(curandDestroyGenerator(gens));
 
 
     //ElemType* input = new ElemType[N];
