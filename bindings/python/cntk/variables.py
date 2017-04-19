@@ -217,7 +217,7 @@ class VariableMixin(object):
             return s
 
     @property
-    def type(self):
+    def _type(self):
         '''
         The complete type of the data represented by this Variable as a single object that has data members of the same name.
 
@@ -225,7 +225,7 @@ class VariableMixin(object):
         >>> x = C.input(13, name='my_input')
         >>> x
         Input('my_input', [#], [13])
-        >>> x.type.shape, x.type.dynamic_axes, x.type.is_sparse, x.type.needs_gradient
+        >>> x._type.shape, x._type.dynamic_axes, x._type.is_sparse, x._type.needs_gradient
         ((13,), (Axis('defaultBatchAxis'),), False, False)
         '''
         return Variable._Type(shape=self.shape, dtype=self.dtype, needs_gradient=self.needs_gradient, is_sparse=self.is_sparse, dynamic_axes=self.dynamic_axes)
