@@ -67,15 +67,15 @@ def create_tsv_reader(func, tsv_file, polymath, seqs):
                 batch['qcids'].append(qcids)
             
             if len(batch) > 0:
-                context_g_words  = C.one_hot([[C.ONE_HOT_SKIP if i >= polymath.wg_dim else i for i in cwids] for cwids in batch['cwids']], polymath.wg_dim)
-                context_ng_words = C.one_hot([[C.ONE_HOT_SKIP if i < polymath.wg_dim else i - polymath.wg_dim for i in cwids] for cwids in batch['cwids']], polymath.wn_dim)
-                query_g_words    = C.one_hot([[C.ONE_HOT_SKIP if i >= polymath.wg_dim else i for i in qwids] for qwids in batch['qwids']], polymath.wg_dim)
-                query_ng_words   = C.one_hot([[C.ONE_HOT_SKIP if i < polymath.wg_dim else i - polymath.wg_dim for i in qwids] for qwids in batch['qwids']], polymath.wn_dim)
-                context_chars = [[cc for cc in ccids+[-1]*max(0,polymath.word_size-len(ccids))] for ccids in batch['ccids']]
-                query_chars   = [[qc for qc in qcids+[-1]*max(0,polymath.word_size-len(qcids))] for qcids in batch['qcids']]
-                answer_begin = batch['baidx']
-                answer_end = batch['eaidx']
-
+                context_g_words  = C.Value.one_hot([[C.Value.ONE_HOT_SKIP if i >= polymath.wg_dim else i for i in cwids] for cwids in batch['cwids']], polymath.wg_dim)
+                context_ng_words = C.Value.one_hot([[C.Value.ONE_HOT_SKIP if i < polymath.wg_dim else i - polymath.wg_dim for i in cwids] for cwids in batch['cwids']], polymath.wn_dim)
+                query_g_words    = C.Value.one_hot([[C.Value.ONE_HOT_SKIP if i >= polymath.wg_dim else i for i in qwids] for qwids in batch['qwids']], polymath.wg_dim)
+                query_ng_words   = C.Value.one_hot([[C.Value.ONE_HOT_SKIP if i < polymath.wg_dim else i - polymath.wg_dim for i in qwids] for qwids in batch['qwids']], polymath.wn_dim)
+                context_chars = [np.asarray([[[c for c in cc+[0]*max(0,polymath.word_size-len(cc))]] for cc in ccid], dtype=np.float32) for ccid in batch['ccids']]
+                query_chars   = [np.asarray([[[c for c in qc+[0]*max(0,polymath.word_size-len(qc))]] for qc in qcid], dtype=np.float32) for qcid in batch['qcids']]
+                answer_begin = [np.asarray(ab, dtype=np.float32) for ab in batch['baidx']]
+                answer_end   = [np.asarray(ae, dtype=np.float32) for ae in batch['eaidx']]
+                
                 yield { argument_by_name(func, 'cgw'): context_g_words,
                         argument_by_name(func, 'qgw'): query_g_words,
                         argument_by_name(func, 'cnw'): context_ng_words,
@@ -127,6 +127,26 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     best_val_err = 100
     best_since = 0
     stop_after = training_config['stop_after']
+    
+    def post_epoch_work():
+        trainer.summarize_training_progress()
+        val_err = test_model(os.path.join(data_path, training_config['val_data']), model, polymath)
+        if best_val_err > val_err:
+            best_val_err = val_err
+            best_since = 0
+            if C.Communicator.rank() == 0:
+                trainer.save_checkpoint(model_file+'.best')
+                trainer.save_checkpoint(model_file)
+        else:
+            best_since += 1
+            if best_since > stop_after:
+                return False
+
+        if profiling:
+            C.debugging.enable_profiler()
+        
+        return True
+    
     if train_data_ext == '.ctf':
         mb_source, input_map = create_mb_and_map(loss, train_data_file, polymath)
 
@@ -141,22 +161,8 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
                 num_seq += data[label_ab].num_sequences
                 if num_seq >= epoch_size:
                     break
-
-            trainer.summarize_training_progress()
-            val_err = test_model(os.path.join(data_path, training_config['val_data']), model, polymath)
-            if best_val_err > val_err:
-                best_val_err = val_err
-                best_since = 0
-                if C.Communicator.rank() == 0:
-                    trainer.save_checkpoint(model_file+'.best')
-                    trainer.save_checkpoint(model_file)
-            else:
-                best_since += 1
-                if best_since > stop_after:
-                    break # stop training when val_err did not go down for stop_after epochs
-
-            if profiling:
-                C.debugging.enable_profiler()
+            if not post_epoch_work():
+                break
     else:
         if train_data_ext != '.tsv':
             raise Exception("Unsupported format")
@@ -167,13 +173,9 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
             tsv_reader = create_tsv_reader(loss, train_data_file, polymath, minibatch_seqs)
             for data in tsv_reader:
                 trainer.train_minibatch(data)                                   # update model with it
+            if not post_epoch_work():
+                break
 
-            trainer.summarize_training_progress()
-            if profiling:
-                C.debugging.enable_profiler()
-
-        model.save(model_file)
-    
     if profiling:
         C.debugging.stop_profiler()
         

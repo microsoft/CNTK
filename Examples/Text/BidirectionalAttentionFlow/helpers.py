@@ -54,7 +54,7 @@ class LambdaFunc(C.ops.functions.UserFunction):
     def __init__(self,
             arg,
             when=lambda arg: True,
-            execute=lambda arg: print(arg.shape, arg),
+            execute=lambda arg: print((len(arg), arg[0].shape,) if type(arg) == list else (1, arg.shape,), arg),
             name=''):
         self.when = when
         self.execute = execute
