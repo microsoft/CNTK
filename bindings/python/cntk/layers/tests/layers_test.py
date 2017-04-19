@@ -639,7 +639,7 @@ def test_sequential_convolution_without_reduction_dim():
 
     # these cases failed before
     emb_dim = 10
-    x = input(Sequence[Tensor[20]])
+    x = input(**Sequence[Tensor[20]])
     m = Embedding(emb_dim)(x)
     m = Convolution(filter_shape=3, sequential=True)(m)
 

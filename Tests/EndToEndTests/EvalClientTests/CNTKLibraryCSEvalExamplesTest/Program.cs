@@ -56,6 +56,8 @@ namespace CNTKLibraryCSEvalExamples
                 // Run memory tests.
                 MemoryTests.ValidateObjectReferences(device);
                 CNTKLibraryManagedExamples.EvaluationBatchOfImages(device);
+
+                MemoryTests.WriteOutputs();
                 CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(device);
                 // Run memory tests again.
                 MemoryTests.ValidateObjectReferences(device);
