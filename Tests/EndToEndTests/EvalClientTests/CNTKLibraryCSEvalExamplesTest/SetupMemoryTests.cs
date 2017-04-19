@@ -79,8 +79,6 @@ namespace CNTKLibraryCSEvalExamples
                 int imageHeight = inputShape[1];
                 int imageChannels = inputShape[2];
                 int imageSize = inputShape.TotalSize;
-                var inputDataMap = new Dictionary<Variable, Value>();
-                var outputDataMap = new Dictionary<Variable, Value>();
 
                 var imageList = new List<string>() { "00000.png", "00001.png", "00002.png" };
                 foreach (var image in imageList)
@@ -89,24 +87,67 @@ namespace CNTKLibraryCSEvalExamples
                 }
                 Bitmap bmp, resized;
                 List<float> resizedCHW;
-                var seqData = new List<float>();
+                var seqData1 = new List<float>();
+                var seqData2 = new List<float>();
                 for (int sampleIndex = 0; sampleIndex < imageList.Count; sampleIndex++)
                 {
                     bmp = new Bitmap(Bitmap.FromFile(imageList[sampleIndex]));
                     resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
                     resizedCHW = resized.ParallelExtractCHW();
-                    seqData.AddRange(resizedCHW);
+                    if (sampleIndex < imageList.Count - 1)
+                        seqData1.AddRange(resizedCHW);
+                    seqData2.AddRange(resizedCHW);
                 }
 
-                var inputVal = Value.CreateBatch(inputVar.Shape, seqData, device);
-                inputDataMap.Add(inputVar, inputVal);
-                outputDataMap.Add(outputVar, null);
-                modelFunc.Evaluate(inputDataMap, outputDataMap, device);
+                var inputDataMap1 = new Dictionary<Variable, Value>();
+                var outputDataMap1 = new Dictionary<Variable, Value>();
+                var inputVal1 = Value.CreateBatch(inputVar.Shape, seqData1, device);
+                inputDataMap1.Add(inputVar, inputVal1);
+                outputDataMap1.Add(outputVar, null);
 
-                var outputVal = outputDataMap[outputVar];
-                var outputData = outputVal.GetDenseData<float>(outputVar);
+                // Using temprary Value object returned by Evaluate().
+                modelFunc.Evaluate(inputDataMap1, outputDataMap1, device);
+                var outputVal1 = outputDataMap1[outputVar];
+                var outputData1 = outputVal1.GetDenseData<float>(outputVar);
 
-                MemoryTests.OutputVal = outputVal;
+                // Using cloned persistent Value object returned by Evaluate().
+                var outputDataMap1WithClone = new Dictionary<Variable, Value>();
+                outputDataMap1WithClone.Add(outputVar, null);
+                modelFunc.Evaluate(inputDataMap1, outputDataMap1WithClone, true, device);
+
+                // Using temprary Value object which overwrites the one returned by the previous Evaluate().
+                var inputDataMap2 = new Dictionary<Variable, Value>();
+                var outputDataMap2 = new Dictionary<Variable, Value>();
+                var inputVal2 = Value.CreateBatch(inputVar.Shape, seqData2, device);
+                inputDataMap2.Add(inputVar, inputVal2);
+                outputDataMap2.Add(outputVar, null);
+                modelFunc.Evaluate(inputDataMap2, outputDataMap2, device);
+
+                // Test access to the persistent Value object, which should be still valid.
+                var outputVal1WithClone = outputDataMap1WithClone[outputVar];
+                var outputData1WithClone = outputVal1WithClone.GetDenseData<float>(outputVar);
+
+                // Test access to the temprary Value object returned by the latest Evaluate().
+                var outputVal2 = outputDataMap2[outputVar];
+                var outputData2 = outputVal2.GetDenseData<float>(outputVar);
+
+                // Test access to the temprary Value object returned by the previous Evaluate(), which is not valid any more.
+                bool exceptionCaught = false;
+                try 
+                {
+                    var data = outputVal1.GetDenseData<float>(outputVar);
+                }
+                catch (Exception ex)
+                {
+                    if (ex is ApplicationException && ex.Message.StartsWith("This Value object is invalid and can no longer be accessed."))
+                        exceptionCaught = true;
+                }
+                if (exceptionCaught == false)
+                {
+                    throw new ApplicationException("The expected exception has not been caught.");
+                }
+
+                MemoryTests.OutputVal = outputVal1WithClone;
 
                 Console.WriteLine("\nTest object reference inside SetupUsingResetModel.\n");
                 MemoryTests.WriteOutputs();

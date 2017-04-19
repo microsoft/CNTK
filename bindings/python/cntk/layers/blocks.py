@@ -5,8 +5,8 @@
 # ==============================================================================
 
 '''
-blocks -- basic building blocks that are semantically not layers (not used in a layered fashion)
-          e.g. the LSTM
+Basic building blocks that are semantically not layers (not used in a layered fashion),
+e.g. the LSTM block.
 '''
 
 from __future__ import division
@@ -95,7 +95,7 @@ def ForwardDeclaration(name='forward_declaration'):
     Example:
      >>> # create a graph with a recurrent loop to compute the length of an input sequence
      >>> from cntk.layers.typing import *
-     >>> x = C.input(Sequence[Tensor[2]])
+     >>> x = C.input(**Sequence[Tensor[2]])
      >>> ones_like_input = sequence.broadcast_as(1, x)  # sequence of scalar ones of same length as input
      >>> out_fwd = ForwardDeclaration()  # placeholder for the state variables
      >>> out = sequence.past_value(out_fwd, initial_state=0) + ones_like_input

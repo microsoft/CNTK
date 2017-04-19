@@ -380,7 +380,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Gets current position in the minibatch source.
 
         Args:
-            getter: Minibatch position :class:`~cntk.cntk_py.Dictionary` on the
+            getter (:class:`~cntk.cntk_py.Dictionary`): minibatch position on the
              global timeline.
             setter (:class:`~cntk.cntk_py.Dictionary`): position returned by
              the getter

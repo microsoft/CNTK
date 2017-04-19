@@ -2,10 +2,11 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// CPUMatrix.cpp : full implementation of all matrix functions on the CPU side
+// CPUMatrix.h : template implementation of all matrix functions on the CPU side
 //
 
-#include "stdafx.h"
+#pragma once
+
 #include "Basics.h"
 #include "File.h"
 
@@ -65,18 +66,6 @@
     }
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-int MATH_API TracingGPUMemoryAllocator::m_traceLevel = 0;
-
-void TracingGPUMemoryAllocator::SetTraceLevel(int traceLevel)
-{
-    m_traceLevel = traceLevel;
-}
-
-bool TracingGPUMemoryAllocator::IsTraceEnabled()
-{
-    return (m_traceLevel > 0);
-}
 
 #pragma region Helpful Enum Definitions
 enum class MatrixOrder
@@ -5924,7 +5913,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOfWithShift(const 
 #pragma endregion Static BLAS Functions
 
 // 'double' version of LogAdd
-double LogAddD(double x, double y)
+inline double LogAddD(double x, double y)
 {
     return LogAdd(x, y);
 }
@@ -7184,12 +7173,6 @@ void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseO
         }
     }
 }
-
-// =======================================================================
-// explicit instantiations
-// =======================================================================
-template class MATH_API CPUMatrix<float>;
-template class MATH_API CPUMatrix<double>;
 
 // We use Matrix<char> as the backing store for QuantizedMatrix
 // Let's explicitly instantiate the methods we need for that purpose

@@ -1535,7 +1535,7 @@ def sqrt(x, name=''):
 
     Note:
         CNTK returns zero for sqrt of negative nubmers, this will be changed to
-        retrun NaN
+        return NaN
     '''
     from cntk.cntk_py import sqrt
     x = sanitize_input(x)
@@ -1726,27 +1726,9 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     or input data (which has a batch dimension, as needed for sequence-to-sequence models).
 
     Example:
-        >>> # create example input: one sequence with 4 tensors of shape (3, 2)
-        >>> from cntk.layers.typing import Tensor, Sequence
-        >>> x = input(Sequence[Tensor[3,2]])
+        >>> x = C.sequence.input(shape=(3,2))
+        >>> # Create one sequence with 4 tensors of shape (3, 2)
         >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
-        >>> x0
-        array([[[[  0.,   1.],
-                 [  2.,   3.],
-                 [  4.,   5.]],
-        <BLANKLINE>
-                [[  6.,   7.],
-                 [  8.,   9.],
-                 [ 10.,  11.]],
-        <BLANKLINE>
-                [[ 12.,  13.],
-                 [ 14.,  15.],
-                 [ 16.,  17.]],
-        <BLANKLINE>
-                [[ 18.,  19.],
-                 [ 20.,  21.],
-                 [ 22.,  23.]]]], dtype=float32)
-
         >>> # this demonstrates how past_value shifts the sequence by one, padding with initial_state
         >>> y = C.past_value(x) # initial_state is 0 by default
         >>> y.eval({x:x0})
@@ -1767,7 +1749,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
                  [ 16.,  17.]]], dtype=float32)]
 
         >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
-        >>> s = input(Tensor[3,2])  # not a Sequence[], e.g. a final encoder hidden state
+        >>> s = C.input(shape=(3,2))  # not a sequence, e.g. a final encoder hidden state
         >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,1,3,2))
         >>> s0
         array([[[[ 0. ,  0.5],
@@ -2569,64 +2551,32 @@ def _input_spec(shape, dtype=default_override_or(np.float32), needs_gradient=Fal
     pass
 
 @typemap
-def input(type=None, shape=None, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
+def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
           dynamic_axes=[Axis.default_batch_axis()], name=''):
     '''
-    input(type=None, shape=None, dtype=np.float32, needs_gradient=False, is_sparse=False, dynamic_axes=[Axis.default_batch_axis()], type=None, name='')
+    input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, dynamic_axes=[Axis.default_batch_axis()], name='')
 
-    Creates an input in the network: a place where data,
+    It creates an input in the network: a place where data,
     such as features and labels, should be provided.
 
     Args:
-        type (cntk.layers.typing type, optional): type of input, specifed using `cntk.layers.typing`
-        shape (tuple or int, optional): the shape of the input tensor. Either 'shape' or 'type' must be given.
+        shape (tuple or int): the shape of the input tensor
         dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, sequence axis)
         name (str, optional): the name of the Function instance in the network
 
-    Example:
-    >>> inp1 = C.input(13)
-    >>> print(inp1.type)
-    Tensor[13]
-    >>> inp2 = C.input((13,42))
-    >>> print(inp2.type)
-    Tensor[13,42]
-    >>> inp3 = C.input(300000, is_sparse=True)
-    >>> print(inp3.type)
-    SparseTensor[300000]
-    >>> inp4 = C.sequence.input(shape=(300000), is_sparse=True)
-    >>> print(inp4.type)
-    Sequence[SparseTensor[300000]]
-    >>> from cntk.layers.typing import *
-    >>> inp5 = C.input(Sequence[SparseTensor[300000]])
-    >>> print(inp5.type)
-    Sequence[SparseTensor[300000]]
-
     Returns:
         :class:`~cntk.variables.Variable`
     '''
     from cntk.cntk_py import input_variable
     from cntk.internal import sanitize_shape, sanitize_dtype_cntk
-
+    
+    shape = sanitize_shape(shape)
     dtype = get_default_override(_input_spec, dtype=dtype)
     if dtype is None:
         dtype = np.float32
-    if isinstance(type, (int, tuple)): # a shape was passed as the first argument
-        type = Variable._Type(type)
-
-    if type: # if type is given, then its members override all other arguments
-        shape          = getattr(type, 'shape',          shape)
-        dtype          = getattr(type, 'dtype',          dtype)
-        dynamic_axes   = getattr(type, 'dynamic_axes',   dynamic_axes)
-        is_sparse      = getattr(type, 'is_sparse',      is_sparse)
-        needs_gradient = getattr(type, 'needs_gradient', needs_gradient)
-
-    if shape is None:
-        raise ValueError('shape or type.shape must be provided')
-
-    shape = sanitize_shape(shape)
     dtype = sanitize_dtype_cntk(dtype)
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
 
@@ -2653,7 +2603,7 @@ def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=Fals
         name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Variable`
+        :class:`~cntk.variables.Variable`
     '''
     import warnings
     warnings.warn('This will be removed in future versions. Please use '
@@ -2734,7 +2684,7 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
         name (str, optional): the name of the placeholder variable in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Variable`
+        :class:`~cntk.variables.Variable`
     '''
     import warnings
     warnings.warn('This will be removed in future versions. Please use '

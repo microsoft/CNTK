@@ -725,14 +725,19 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return _Clone(ParameterCloningMethod.Share);
     }
 
-    public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> arguments, System.Collections.Generic.IDictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
+    public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> inputs, System.Collections.Generic.IDictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
+    {
+        Evaluate(inputs, outputs, false, computeDevice);
+    }
+
+    public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> inputs, System.Collections.Generic.IDictionary<Variable, Value> outputs, bool createPersistentOutputValues, DeviceDescriptor computeDevice)
     {
         // Evaluate the rootFunction.
-        var argMap = new UnorderedMapVariableValuePtr();
+        var inMap = new UnorderedMapVariableValuePtr();
         var outMap = new UnorderedMapVariableValuePtr();
-        foreach (var p in arguments)
+        foreach (var p in inputs)
         {
-            argMap.Add(p.Key, p.Value);
+            inMap.Add(p.Key, p.Value);
         }
 
         foreach (var p in outputs)
@@ -740,12 +745,19 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
             outMap.Add(p.Key, p.Value);
         }
 
-        Evaluate(argMap, outMap, computeDevice);
+        Evaluate(inMap, outMap, computeDevice);
 
         foreach (var p in outMap)
         {
-            // for shared_ptr<Value>, the p.Value returns a copy, so it is safe to use it directly in outputs.
-            outputs[p.Key] = p.Value;
+            if (createPersistentOutputValues && (outputs[p.Key] == null))
+            {
+                outputs[p.Key] = p.Value.DeepClone();
+            }
+            else
+            { 
+                // for shared_ptr<Value>, the p.Value returns a copy, so it is safe to use it directly in outputs.
+                outputs[p.Key] = p.Value;
+            }
         }
     }
 

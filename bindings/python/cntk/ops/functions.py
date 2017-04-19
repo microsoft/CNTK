@@ -766,17 +766,17 @@ class Function(cntk_py.Function):
              costly conversion but returns a somewhat opaque object. Also, the Value objects 
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
-            grad_root (variable, optional): specify the root of gradients calculation. 
+            grad_root (:class:`~cntk.variables.Variable`, optional): specify the root of gradients calculation. 
              If not specified, the output of this function will be used as gradient root.
 
         Returns:
             dict or NumPy Array or a tuple of these: Dict with keys of ``wrt`` variables and gradient values of
-             ``wrt`` variables. A single NumPy array if there is only one gradient value.
-             If ``outputs`` were specified (to fetch values for), this method returns a tuple where the 2nd element
-             of the tuple is the ``outputs`` values; a dict with keys of specified ``outputs`` variables and
-             values of computed ``outputs``, or a single NumPy array if there is only one output value.
-             Each element has the same shape as the ``wrt`` or ``outputs`` variables including dynamic axes
-             (such as the batch axis).
+            ``wrt`` variables. A single NumPy array if there is only one gradient value.
+            If ``outputs`` were specified (to fetch values for), this method returns a tuple where the 2nd element
+            of the tuple is the ``outputs`` values; a dict with keys of specified ``outputs`` variables and
+            values of computed ``outputs``, or a single NumPy array if there is only one output value.
+            Each element has the same shape as the ``wrt`` or ``outputs`` variables including dynamic axes
+            (such as the batch axis).
         '''
         if device is None:
             device = DeviceDescriptor.use_default_device()
@@ -836,14 +836,6 @@ class Function(cntk_py.Function):
 
     @name.setter
     def name(self, function_name):
-        '''
-        Sets the name of this Function.
-        Setting the name of a Function is only allowed if the Function does not already have a name.
-        Calling this method, when this Function already has a name, results in an exception.
-
-        Args:
-            function_name (`str`): name for this Function.
-        '''
         super(Function, self).set_name(function_name)
 
     @property
