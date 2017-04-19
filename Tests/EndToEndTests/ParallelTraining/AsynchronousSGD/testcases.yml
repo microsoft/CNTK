@@ -1,9 +1,8 @@
 dataDir: .
 
 tags:
-     # TODO: Enable windows test when Jenkins ready
-     - bvt-p (build_sku == 'gpu') and (os == 'linux') and (device == 'gpu') and (flavor == 'debug')
-     - nightly-p (build_sku == 'gpu') and (os == 'linux') and (device == 'gpu')
+     - bvt-p (build_sku == 'gpu') and (device == 'gpu') and ((os == 'linux') or (flavor == 'release'))
+     - nightly-p (build_sku == 'gpu') and (device == 'gpu')
 
 testCases:
   Must train epochs in exactly same order and parameters for each MPI Rank:
@@ -19,7 +18,6 @@ testCases:
       - CE = {{float,tolerance=2}}
       - Err = {{float,tolerance=2}}
 
-  # Due to the unstableness of ASGD at early stage, we should enlarge the tolerance.
   Per-minibatch training results must match for each MPI Rank:
     patterns:
       - ^MPI Rank {{integer}}
