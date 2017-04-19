@@ -154,15 +154,19 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     if train_data_ext == '.ctf':
         mb_source, input_map = create_mb_and_map(loss, train_data_file, polymath)
 
-        minibatch_size = training_config['minibatch_size'] * C.Communicator.num_workers() # number of samples
+        minibatch_size = training_config['minibatch_size'] # number of samples
         epoch_size = training_config['epoch_size']
         
         for epoch in range(max_epochs):
             num_seq = 0
             while True:
-                data = mb_source.next_minibatch(minibatch_size, input_map=input_map, num_data_partitions=C.Communicator.num_workers(), partition_index=C.Communicator.rank())
+                if trainer.total_number_of_samples_seen >= training_config['distributed_after']:
+                    data = mb_source.next_minibatch(minibatch_size*C.Communicator.num_workers(), input_map=input_map, num_data_partitions=C.Communicator.num_workers(), partition_index=C.Communicator.rank())
+                else:
+                    data = mb_source.next_minibatch(minibatch_size, input_map=input_map)
+                
                 trainer.train_minibatch(data)
-                num_seq += data[label_ab].num_sequences
+                num_seq += trainer.previous_minibatch_sample_count
                 if num_seq >= epoch_size:
                     break
             if not post_epoch_work(epoch_stat):
