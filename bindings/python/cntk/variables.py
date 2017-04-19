@@ -217,7 +217,7 @@ class VariableMixin(object):
             return s
 
     @property
-    def type(self):
+    def _type(self):
         '''
         The complete type of the data represented by this Variable as a single object that has data members of the same name.
 

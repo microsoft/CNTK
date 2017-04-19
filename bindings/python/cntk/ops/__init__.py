@@ -1748,6 +1748,31 @@ def past_value(x, initial_state=None, time_step=1, name=''):
                  [ 14.,  15.],
                  [ 16.,  17.]]], dtype=float32)]
 
+        >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
+        >>> s = C.input(shape=(3,2))  # not a sequence, e.g. a final encoder hidden state
+        >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,1,3,2))
+        >>> s0
+        array([[[[ 0. ,  0.5],
+                 [ 1. ,  1.5],
+                 [ 2. ,  2.5]]]], dtype=float32)
+        >>> y = C.past_value(x, initial_state=s)
+        >>> y.eval({x:x0, s:s0}) # same as the previous example except for the first time step
+        [array([[[  0. ,   0.5],
+                 [  1. ,   1.5],
+                 [  2. ,   2.5]],
+        <BLANKLINE>
+                [[  0. ,   1. ],
+                 [  2. ,   3. ],
+                 [  4. ,   5. ]],
+        <BLANKLINE>
+                [[  6. ,   7. ],
+                 [  8. ,   9. ],
+                 [ 10. ,  11. ]],
+        <BLANKLINE>
+                [[ 12. ,  13. ],
+                 [ 14. ,  15. ],
+                 [ 16. ,  17. ]]], dtype=float32)]
+
     Args:
         x: the tensor (or its name) from which the past value is obtained
         initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
