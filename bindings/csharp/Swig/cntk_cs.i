@@ -730,7 +730,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         Evaluate(inputs, outputs, false, computeDevice);
     }
 
-    public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> inputs, System.Collections.Generic.IDictionary<Variable, Value> outputs, bool cloneValueObjects, DeviceDescriptor computeDevice)
+    public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> inputs, System.Collections.Generic.IDictionary<Variable, Value> outputs, bool createPersistentOutputValues, DeviceDescriptor computeDevice)
     {
         // Evaluate the rootFunction.
         var inMap = new UnorderedMapVariableValuePtr();
@@ -749,7 +749,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
         foreach (var p in outMap)
         {
-            if (cloneValueObjects && (outputs[p.Key] == null))
+            if (createPersistentOutputValues && (outputs[p.Key] == null))
             {
                 outputs[p.Key] = p.Value.DeepClone();
             }
