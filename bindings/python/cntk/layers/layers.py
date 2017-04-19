@@ -429,7 +429,9 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
         # actual convolution
         sequential_emulated_axis = len(pad) - filter_rank if sequential else None # static-axis convolution must not pad the simulated sequential dimension (it must reduce to 1)
         r = convolution (W, x,
-                         strides=strides, sharing=sharing, auto_padding=tuple(p if i != sequential_emulated_axis else False for i, p in enumerate(pad)),
+                         strides=strides, sharing=sharing,
+                         auto_padding=(False,) * reduction_rank  # BUGBUG: convolution() has no reduction_rank parameter, so we must pass an explicit False for the reduction axis
+                                      + tuple(p if i != sequential_emulated_axis else False for i, p in enumerate(pad)),
                          # TODO: can we rename auto_padding to pad?
                          max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         # if sequential and not padding, then strip the extraneous boundary values
