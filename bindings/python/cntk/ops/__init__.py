@@ -1535,7 +1535,7 @@ def sqrt(x, name=''):
 
     Note:
         CNTK returns zero for sqrt of negative nubmers, this will be changed to
-        retrun NaN
+        return NaN
     '''
     from cntk.cntk_py import sqrt
     x = sanitize_input(x)
@@ -2603,7 +2603,7 @@ def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=Fals
         name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Variable`
+        :class:`~cntk.variables.Variable`
     '''
     import warnings
     warnings.warn('This will be removed in future versions. Please use '
@@ -2684,7 +2684,7 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
         name (str, optional): the name of the placeholder variable in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Variable`
+        :class:`~cntk.variables.Variable`
     '''
     import warnings
     warnings.warn('This will be removed in future versions. Please use '

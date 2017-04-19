@@ -5,7 +5,7 @@
 # ==============================================================================
 
 '''
-The CNTK typing module contains basic CNTK type meta-classes for :func:`~cntk.functions.Function.update_signature` and type signatures for the CNTK :class:`~cntk.functions.Function` decorator.
+The CNTK typing module contains basic CNTK type meta-classes for :func:`~cntk.functions.Function.update_signature` and type signatures for the CNTK :class:`~cntk.ops.functions.Function` decorator.
 
 The type of a CNTK :class:`~cntk.variables.Variable` is defined by five properties: `shape`, `dynamic_axes`, `is_sparse`, `dtype`, and `needs_gradient`.
 Some API functions accept these variables as independent arguments, e.g. :class:`~cntk.input`.
