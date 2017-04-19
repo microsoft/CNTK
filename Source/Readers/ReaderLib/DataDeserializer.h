@@ -61,7 +61,7 @@ typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 // Defines sequence data and its layout.
 // Currently CNTK supports dense and sparse sequences (csc).
 // The storageType in the corresponding stream description identifies what type of SequenceData
-// data deserializer or transformer can provide provides.
+// data deserializer or transformer provides.
 // The layout of samples are described in the sampleLayout.
 // All samples in the sequence should have the same layout.
 // TODO: add type casts (As<T>() or AsRef<>() or AsPtr<>()) to subclasses as members here.

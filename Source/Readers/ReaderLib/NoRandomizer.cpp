@@ -54,7 +54,11 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
 {
     m_config = config;
 
-    if (m_config.m_totalEpochSizeInSamples == requestDataSize)
+    if (config.m_totalEpochSizeInSweeps != g_infinity)
+    {
+        m_config.m_totalEpochSizeInSamples = m_sweepSizeInSamples * config.m_totalEpochSizeInSweeps;
+    }
+    else if (m_config.m_totalEpochSizeInSamples == requestDataSize)
         m_config.m_totalEpochSizeInSamples = m_sweepSizeInSamples;
 
     SetCurrentSamplePosition(m_config.m_totalEpochSizeInSamples * config.m_epochIndex);

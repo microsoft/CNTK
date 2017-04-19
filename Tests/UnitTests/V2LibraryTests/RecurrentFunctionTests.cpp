@@ -385,19 +385,22 @@ BOOST_AUTO_TEST_CASE(SimpleRecurrenceInCPU)
 
 BOOST_AUTO_TEST_CASE(SimpleRecurrenceInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestSimpleRecurrence<double>(11, 9, 16, 7, DeviceDescriptor::GPUDevice(0), true, 5, true, false);
 }
 
 BOOST_AUTO_TEST_CASE(SimpleLargeRecurrenceInCPU)
 {
-    TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::CPUDevice(), true, 2, false, true, true);
-    TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::CPUDevice(), false, 2, true, true);
+    if (ShouldRunOnCpu())
+    {
+        TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::CPUDevice(), true, 2, false, true, true);
+        TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::CPUDevice(), false, 2, true, true);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(SimpleLargeRecurrenceInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::GPUDevice(0), false, 3, false, true);
         TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::GPUDevice(0), true, 3, true, true, true);
@@ -406,12 +409,13 @@ BOOST_AUTO_TEST_CASE(SimpleLargeRecurrenceInGPU)
 
 BOOST_AUTO_TEST_CASE(RecurrentNetworkCreationInCPU)
 {
-    TestRecurrentNetworkCreation<double>(DeviceDescriptor::CPUDevice(), false);
+    if (ShouldRunOnCpu())
+        TestRecurrentNetworkCreation<double>(DeviceDescriptor::CPUDevice(), false);
 }
 
 BOOST_AUTO_TEST_CASE(RecurrentNetworkCreationInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0), true);
 }
 

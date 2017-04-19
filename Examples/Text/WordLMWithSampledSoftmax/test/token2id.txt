@@ -1,0 +1,9 @@
+this	0
+text	1
+is	2
+only	3
+for	4
+regression	5
+test	6
+<eos>	7
+bla	8

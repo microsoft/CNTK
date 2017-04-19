@@ -653,6 +653,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
         Resize(a.GetNumRows(), idx.GetNumCols());
 
     auto& us = *this;
+    // race-condition consideration: Since this loops over independent output columns, this has no race condition. Cf. DoScatterColumnsOf().
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jOut, us)
     {
@@ -685,7 +686,9 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     // Scatter may add more than one source column to the same target, so we must pre-scale with beta, and then just keep adding.
     Scale(beta, us); // if beta is 0, then this will be a memset()
 
-#pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
+    // race-condition consideration: If idx[] references the same target column multiple times, this can have a race condition,
+    // and hence cannot use parallelism.
+//#pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jIn, a)
     {
         auto jOutF = idx(0, jIn);           // this is the column we copy/add into
@@ -736,32 +739,35 @@ void CPUMatrix<ElemType>::SetValue(const ElemType v)
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val)
+void CPUMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry)
 {
-    if (GetNumCols() != columnsMask.GetNumCols())
-        RuntimeError("Matrix and column mask must have equal number of columns");
+    if (GetNumCols() != (columnsMask.GetNumCols() * numColsPerMaskEntry))
+        RuntimeError("MaskColumnsValue: Matrix number of columns must equal 'column mask number of columns * numColsPerMaskEntry'.");
 
     auto& us = *this;
-    long n = (long) GetNumCols(), m = (long) GetNumRows();
+    long n = (long)columnsMask.GetNumCols(), m = (long) GetNumRows();
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
         if (columnsMask(0, j) == 1)
             continue;
 
-        // four-way unrolling
-        for (size_t i = 0; i < (m & ~3); i += 4)
+        for (long k = 0; k < numColsPerMaskEntry; ++k)
         {
-            us(i, j) = val;
-            us(i + 1, j) = val;
-            us(i + 2, j) = val;
-            us(i + 3, j) = val;
-        }
+            // four-way unrolling
+            for (size_t i = 0; i < (m & ~3); i += 4)
+            {
+                us(i,     (j * numColsPerMaskEntry) + k) = val;
+                us(i + 1, (j * numColsPerMaskEntry) + k) = val;
+                us(i + 2, (j * numColsPerMaskEntry) + k) = val;
+                us(i + 3, (j * numColsPerMaskEntry) + k) = val;
+            }
 
-        // handle remaining
-        for (size_t i = m & ~3; i < m; i++)
-        {
-            us(i, j) = val;
+            // handle remaining
+            for (size_t i = m & ~3; i < m; i++)
+            {
+                us(i, (j * numColsPerMaskEntry) + k) = val;
+            }
         }
     }
 }
@@ -821,7 +827,8 @@ void CPUMatrix<ElemType>::SetColumn(const CPUMatrix<ElemType>& valMat, size_t j)
 {
     if (IsEmpty())
         LogicError("SetColumn: Matrix is empty.");
-    assert(valMat.GetNumRows() == GetNumRows() && valMat.GetNumCols() == 1);
+    if (valMat.GetNumRows() != GetNumRows() || valMat.GetNumCols() != 1)
+        LogicError("The valMat matrix has incorrect number of rows or columns.");
 
     auto& us = *this;
     long m = (long) GetNumRows();
@@ -1099,7 +1106,8 @@ void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
         LogicError("SetUniformRandomValue: Matrix is empty.");
 
     CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&rngHandle);
-    assert(cpuRNGHandle != nullptr);
+    if (cpuRNGHandle == nullptr)
+        LogicError("rngHandle must be a CPURNGHandle.");
 
     auto& us = *this;
     boost::random::uniform_real_distribution<ElemType> r(0, 1);
@@ -1139,7 +1147,8 @@ ElemType CPUMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& gradients, const bool
         SetValue(0.0);
     }
 
-    assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols());
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != gradients.GetNumCols())
+        LogicError("The matrix gradients must have the same rows and columns as this matrix.");
 
     ElemType *a = Data(), *d_v = gradients.Data();
     size_t n = GetNumElements();
@@ -1211,7 +1220,8 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
         SetValue(0.0);
     }
 
-    assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
+        LogicError("The matrix gradients does not have expected dimensions.");
 
     size_t n = gradients.GetNumElements();
     ElemType* grad = gradients.Data();
@@ -1259,7 +1269,8 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
         SetValue(0.0);
     }
 
-    assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
+        LogicError("The matrix gradients does not have expected dimensions.");
 
     size_t n = gradients.GetNumElements();
     ElemType* grad = gradients.Data();
@@ -1316,7 +1327,8 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
     ElemType* signs = Data() + n;     // sign of previous gradient
     ElemType* steps = Data() + 2 * n; // current step size
 
-    assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols() * 3);
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != gradients.GetNumCols() * 3)
+        LogicError("The matrix gradients does not have expected dimensions.");
 
     ElemType ONE_MINUS_GAMMA = ElemType(1.0) - RMS_GAMMA;
     // int upd[] = {
@@ -1378,9 +1390,41 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
 }
 
 template <class ElemType>
+void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
+{
+    size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+    if (IsEmpty() || (GetNumCols() < numColsNeeded))
+    {
+        RequireSize(gradients.GetNumRows(), numColsNeeded);
+        SetValue(0.0);
+    }
+
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
+        LogicError("The matrix gradients does not have expected dimensions.");
+
+    size_t n = gradients.GetNumElements();
+    ElemType* grad = gradients.Data();
+    ElemType* smoothAda = Data();
+    ElemType* smoothX2 = Data() + n;
+    ElemType* val = functionValues.Data();
+#pragma omp parallel for
+    // TODO: Unroll 4-times for better performance leveraging vectorization
+    for (long i = 0; i < n; i++)
+    {
+        ElemType g = grad[i];
+        ElemType adaSqr = rho * smoothAda[i] + (1 - rho) * g * g;
+        smoothAda[i] = adaSqr;
+        ElemType x2 = smoothX2[i];
+        ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
+        smoothX2[i] = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
+        val[i] += learningRate * deltaX;
+    }
+}
+
+template <class ElemType>
 void CPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 {
-    assert(numRows * numCols == GetNumElements());
     if (numRows * numCols != GetNumElements())
         InvalidArgument("Reshape: Total number of elements does not match.");
 
@@ -1482,6 +1526,7 @@ void CPUMatrix<ElemType>::CopySection(size_t /*numRows*/, size_t /*numCols*/, El
 template <class ElemType>
 inline size_t CPUMatrix<ElemType>::LocateColumn(const size_t col) const
 {
+    // For performance reason avoid extra validation in release.
     assert(col == 0 || col < GetNumCols());
     return col * m_numRows; // matrix in column-wise storage
 }
@@ -1489,7 +1534,9 @@ inline size_t CPUMatrix<ElemType>::LocateColumn(const size_t col) const
 template <class ElemType>
 inline size_t CPUMatrix<ElemType>::LocateElement(const size_t row, const size_t col) const
 {
+    // For performance reason avoid extra validation in release.
     assert(row < m_numRows);
+
     return LocateColumn(col) + row; // matrix in column-wise storage
 }
 
@@ -1832,7 +1879,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOf(const CPUMatrix
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AssignElementProductOf: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
         InvalidArgument("AssignElementProductOf: The input matrix dimensions do not match.");
 
@@ -1868,7 +1914,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddElementProductOf(const CPUMatrix<El
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AddElementProductOf: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
         InvalidArgument("AddElementProductOf : The input matrix dimensions do not match.");
 
@@ -1907,7 +1952,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementDivisionOf(const CPUMatri
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AssignElementDivisionOf: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
         InvalidArgument("AssignElementDivisionOf : The input matrix dimensions do not match.");
 
@@ -1938,7 +1982,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ColumnElementMultiplyWith(const CPUMat
     if (a.IsEmpty() || IsEmpty())
         LogicError("ColumnElementMultiplyWith: Matrix is empty.");
 
-    assert(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1);
     if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
         InvalidArgument("ColumnElementMultiplyWith: The input matrix should be a col vector and match [this]'s rows.");
 
@@ -1972,7 +2015,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::RowElementMultiplyWith(const CPUMatrix
     if (a.IsEmpty() || IsEmpty())
         LogicError("RowElementMultiplyWith: Matrix is empty.");
 
-    assert(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols());
     if (!(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols()))
         InvalidArgument("RowElementMultiplyWith: The input matrix should be a row vector and match [this]'s columns.");
 
@@ -2007,7 +2049,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::RowElementDivideBy(const CPUMatrix<Ele
     if (a.IsEmpty() || IsEmpty())
         LogicError("RowElementDivideBy: Matrix is empty.");
 
-    assert(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols());
     if (!(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols()))
         InvalidArgument("RowElementDivideBy: The input matrix should be a row vector and match [this]'s columns.");
 
@@ -2046,7 +2087,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ColumnElementDivideBy(const CPUMatrix<
     if (a.IsEmpty() || IsEmpty())
         LogicError("ColumnElementDivideBy: Matrix is empty.");
 
-    assert(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1);
     if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
         InvalidArgument("ColumnElementDivideBy: The input matrix should be a col vector and match [this]'s rows.");
 
@@ -2907,6 +2947,43 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSumOfElements(const CPUMatrix<El
 }
 
 template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
+{
+    if (a.IsEmpty())
+        LogicError("AssignOneHot: Matrix a is empty.");
+
+    if (axis >= shape.size())
+        LogicError("AssignOneHot: axis is not correct");
+    
+    size_t item_size = 1;
+    for (size_t i = 0; i < shape.size() && i < axis; i++)
+        item_size *= shape[i];
+
+    size_t num_class = shape[axis];
+
+    auto& us = *this;
+    auto nCols = a.GetNumCols();
+    auto nRows = num_class * a.GetNumRows();
+    us.RequireSize(nRows, nCols);
+    
+    ElemType* bufPtr = Data();
+    ElemType* aBufPtr = a.Data();
+    memset(bufPtr, 0, sizeof(ElemType) * nRows *nCols);
+#pragma omp parallel for
+    for (long i = 0; i < a.GetNumElements(); i++)
+    {
+        if (aBufPtr[i] >= 0 && aBufPtr[i] < num_class)
+        {
+            size_t block_id = i / item_size;
+            size_t item_id = i % item_size;
+            bufPtr[block_id * num_class * item_size + item_id + item_size * (size_t)aBufPtr[i]] = 1;
+        }
+    }
+
+    return *this;
+}
+
+template <class ElemType>
 bool CPUMatrix<ElemType>::IsEqualTo(const CPUMatrix<ElemType>& a, const ElemType threshold /*= 1e-8*/) const
 {
     return AreEqual(*this, a, threshold);
@@ -3145,7 +3222,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignKhatriRaoProductOf(const CPUMatr
         LogicError("AssignKhatriRaoProductOf: Matrix is empty.");
 
     long cols = (long) a.GetNumCols();
-    assert(cols == b.GetNumCols());
     if (cols != b.GetNumCols())
         InvalidArgument("a.GetNumCols() != b.GetNumCols()");
 
@@ -3184,7 +3260,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddColumnReshapeProductOf(const CPUMat
         LogicError("AddColumnReshapeProductOf: Matrix is empty.");
 
     long cols = (long) a.GetNumCols();
-    assert(cols == b.GetNumCols());
     if (cols != b.GetNumCols())
         InvalidArgument("AddColumnReshapeProductOf: a.GetNumCols() != b.GetNumCols()");
 
@@ -3418,7 +3493,8 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
     auto& us = *this;
     const int m = (int) GetNumRows();
     const int n = (int) GetNumCols();
-    assert(topK <= m);
+    if (topK > m)
+        InvalidArgument("VectorMax: TopK must be less or equal than the number of rows");
 
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
@@ -3722,7 +3798,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignPackedConvolutionInput(const CPU
                                                                        const size_t kernelWidth, const size_t kernelHeight, const size_t horizontalSubsample, const size_t verticalSubsample,
                                                                        const bool zeroPadding)
 {
-    assert(verticalSubsample <= kernelHeight && horizontalSubsample <= kernelWidth);
+    if (verticalSubsample > kernelHeight || horizontalSubsample > kernelWidth)
+        LogicError("Arguments verticalSubsample (or horitzontalSubsample) must be less or equal than kernelHeight (or kernelWidth).");
 
     const size_t packedInputRows = kernelWidth * kernelHeight * inputChannels;
     const size_t packedInputColsPerSample = outputWidth * outputHeight; // output size per channel
@@ -3796,7 +3873,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::UnpackConvolutionInput(CPUMatrix<ElemT
                                                                  const size_t kernelWidth, const size_t kernelHeight, const size_t horizontalSubsample, const size_t verticalSubsample,
                                                                  const bool zeroPadding) const
 {
-    assert(verticalSubsample <= kernelHeight && horizontalSubsample <= kernelWidth);
+    if (verticalSubsample > kernelHeight || horizontalSubsample > kernelWidth)
+        LogicError("Arguments verticalSubsample (or horizonSubsample) must be less than or equal to kernelHeight (or kernelWidth).");
 
     const size_t packedInputColsPerSample = outputWidth * outputHeight; // output size per channel
     const size_t inputDim = inputWidth * inputHeight * inputChannels;
@@ -4179,12 +4257,14 @@ template <class ElemType>
 void CPUMatrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapInCount, size_t mapOutCount, const CPUMatrix<int>& mpRowCol,
                                                   const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
 {
-    assert((mpRowCol.GetNumRows() % mapOutCount) == 0);
+    if (mpRowCol.GetNumRows() % mapOutCount != 0)
+        InvalidArgument("The number of rows in mpRowCol must be multiple of mapOutCount.");
     size_t mapOutSize = mpRowCol.GetNumRows() / mapOutCount;
     size_t batchSize = GetNumCols();
 
     size_t kernelSize = runs(1, 0);
-    assert((kernelSize % mapInCount) == 0);
+    if (kernelSize % mapInCount != 0)
+        InvalidArgument("kernelSize must be multiple of mapInCount.");
     size_t kernelMapSize = kernelSize / mapInCount;
 
 #pragma omp parallel for
@@ -4540,7 +4620,7 @@ void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPU
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
+void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output, const bool poolIncludePad) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
@@ -4562,13 +4642,16 @@ void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, 
                 sum += (*this)(colBase + dcol, sample);
             }
             // Note that we divide by size which is the number of actual elements (does not include padding).
+            // if poolIncludePad == true, use avg_pool_include_pad
+            if (poolIncludePad)
+                size = indices(0, 0);
             output(row, sample) = sum / size;
         }
     }
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad) const
+void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad, const bool poolIncludePad) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
@@ -4580,8 +4663,12 @@ void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol,
 
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
+            int tmp = size;
+            if (poolIncludePad)
+                size = indices(0, 0);
             assert(size > 0);
             ElemType g = (*this)(row, sample) / size;
+            size = tmp;
             for (int i = 0; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
@@ -4598,7 +4685,8 @@ void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& s
                                                     CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runVariance, CPUMatrix<ElemType>& out, double epsilon,
                                                     CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const
 {
-    assert((GetNumRows() % scale.GetNumRows()) == 0);
+    if (GetNumRows() % scale.GetNumRows() != 0)
+        LogicError("The number of rows of this matrx must be multiple of the number of rows of the scale matrix.");
 
     if (!inferenceOnly || expAvgFactor != 0 || blendFactor != 1)
         RuntimeError("Batch normalization training on CPU is not yet implemented.");
@@ -4698,7 +4786,6 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
     }
 
     assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
-    assert(k == l);
     if (k != l)
         InvalidArgument("CPUMatrix<ElemType>::MultiplyAndWeightedAdd : The inner dimensions of a and b must match.");
 
@@ -4735,7 +4822,8 @@ template <class ElemType>
 void CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b,
                                                     ElemType beta, CPUMatrix<ElemType>& c)
 {
-    assert(a.GetNumElements() == 1); // a is a scalar
+    if (a.GetNumElements() != 1)
+        InvalidArgument("the argument a must be a scalar"); // a is a scalar
 
     ElemType f = alpha * a.Get00Element();
     if (beta == 0) // don't even read the memory if beta is 0
@@ -4746,6 +4834,29 @@ void CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMat
 #pragma omp parallel for
         foreach_coord (i, j, c)
             c(i, j) = b(i, j) * f + c(i, j) * beta;
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& v, ElemType beta, CPUMatrix<ElemType>& c)
+{
+    if (v.GetNumRows() != 1 && v.GetNumCols() != 1)
+        InvalidArgument("the argument v must be a vector"); // v is a vector
+
+    if (beta == 0)
+        c.RequireSize(a.GetNumRows(), a.GetNumCols());
+    else
+        c.VerifySize(a.GetNumRows(), a.GetNumCols()); // Can't resize if beta != 0
+
+    const ElemType* vd = v.Data();
+
+    if (beta == 0) // don't even read the memory if beta is 0
+#pragma omp parallel for
+        foreach_coord(i, j, c)
+            c(i, j) = alpha * a(i, j) * vd[j];
+    else
+#pragma omp parallel for
+        foreach_coord(i, j, c)
+            c(i, j) = alpha * a(i, j) * vd[j] + c(i, j) * beta;
 }
 
 /* compute singular value decomposition as
@@ -4890,9 +5001,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNCEDerivative(const CPUMatrix<El
                             c(dim, sample) -= a(dim, instance_id) * tmp(sample_id, instance_id);
                 }
     }
-    else
+    else if (inputIndex == 3)
     {
-        assert(inputIndex == 3);
         // Assume only one block in k direction.
         // We don't need to explicitly block in the j direction.
         for (int instance_id = 0; instance_id < batch_size; instance_id++)
@@ -4902,6 +5012,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNCEDerivative(const CPUMatrix<El
                 c(0, sample) -= tmp(sample_id, instance_id);
             }
     }
+    else 
+        InvalidArgument("The argument inputIndex must be 1 or 2 or 3.");
     return *this;
 }
 
@@ -4987,7 +5099,6 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
         const int incy = 1;
 
         assert(m > 0 && n > 0 && len > 0); // converting from size_t to int may cause overflow
-        assert((int) c.GetNumRows() == m && (int) c.GetNumCols() == n);
         if ((int) c.GetNumRows() != m || (int) c.GetNumCols() != n)
             InvalidArgument("Dimension of matrix c does not match dimension of matrix a.");
 
@@ -5026,7 +5137,6 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
     else if (a.GetNumCols() == 1) // col vector, add it to all columns
     {
         int m = (int) c.GetNumRows();
-        assert(m == (int) a.GetNumRows());
         if (m != (int) a.GetNumRows())
             InvalidArgument("To add column vector, rows should match.");
 
@@ -5054,7 +5164,6 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
     {
         int m = (int) c.GetNumRows();
         int n = (int) c.GetNumCols();
-        assert(n == (int) a.GetNumCols());
         if (n != (int) a.GetNumCols())
             InvalidArgument("To add row vector, cols should match.");
 
@@ -5088,9 +5197,6 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
 template <class ElemType>
 void CPUMatrix<ElemType>::AddScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumRows() == c.GetNumRows() &&
-           a.GetNumCols() == b.GetNumCols() && a.GetNumCols() == c.GetNumCols());
-
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumRows() == c.GetNumRows() &&
           a.GetNumCols() == b.GetNumCols() && a.GetNumCols() == c.GetNumCols()))
     {
@@ -5129,11 +5235,9 @@ void CPUMatrix<ElemType>::AddScaledDifference(const ElemType alpha, const CPUMat
 template <class ElemType>
 void CPUMatrix<ElemType>::AssignScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
-
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
     {
-        InvalidArgument("AssignScaledDifference:  a, b must have same dimension.");
+        InvalidArgument("AssignScaledDifference: a, b must have same dimension.");
     }
 
     if (a.IsEmpty())
@@ -5209,8 +5313,7 @@ void CPUMatrix<ElemType>::AssignElementToElement(const CPUMatrix<ElemType>& a, c
 template <class ElemType>
 void CPUMatrix<ElemType>::AddScaledDifference(const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
-    assert(alpha.GetNumElements() == 1);
-    if (!(alpha.GetNumElements() == 1))
+    if (alpha.GetNumElements() != 1)
         InvalidArgument("AddScaledDifference:  alpha must be a 1X1 matrix.");
 
     AddScaledDifference(alpha(0, 0), a, b, c);
@@ -5225,8 +5328,7 @@ void CPUMatrix<ElemType>::AddScaledDifference(const CPUMatrix<ElemType>& alpha, 
 template <class ElemType>
 void CPUMatrix<ElemType>::AssignScaledDifference(const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
-    assert(alpha.GetNumElements() == 1);
-    if (!(alpha.GetNumElements() == 1))
+    if (alpha.GetNumElements() != 1)
         InvalidArgument("AddScaledDifference:  alpha must be a 1X1 matrix.");
 
     AssignScaledDifference(alpha(0, 0), a, b, c);
@@ -5329,7 +5431,6 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
     const int l = (int) b.GetNumCols();
 
     assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
-    assert(m == k && n == l);                 // converting from size_t to int may cause overflow
     if (m != k || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
@@ -5400,7 +5501,6 @@ ElemType CPUMatrix<ElemType>::InnerProductOfMatrices(const CPUMatrix<ElemType>& 
     const int l = (int) b.GetNumCols();
 
     assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
-    assert(m == k && n == l);                 // converting from size_t to int may cause overflow
     if (m != k || n != l)
         InvalidArgument("InnerProductOfMatrices: Matrices a and b should have same dimension.");
 
@@ -5576,7 +5676,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(con
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AssignElementProductOfWithShiftNeg: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
         InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix dimensions do not match.");
 
@@ -5620,7 +5719,6 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
     const int l = (int) b.GetNumCols();
 
     assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
-    assert(m == k && n == l);                 // converting from size_t to int may cause overflow
     if (m != k || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
@@ -5761,7 +5859,6 @@ void CPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const CPUMatrix<Ele
     const int l = (int) b.GetNumCols();
 
     assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
-    assert(m == 1 && n == l);                 // converting from size_t to int may cause overflow
     if (m != 1 || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
@@ -5800,8 +5897,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOfWithShift(const 
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AssignElementProductOfWithShiftNeg: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
-    if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+    if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
         InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix dimensions do not match.");
 
     if (a.GetNumRows() != 1)
@@ -5870,161 +5966,347 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
     }
 };
 
+// Calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
+// prob (input): the posterior output from the network
+// alpha (output): alpha for forward-backward calculation. 
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+// uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// numChannels (input): channel number in this minibatch
+// uttNum (input): number of utterances
+// t (input): time stamp to process
+// maxPhoneNum (input): the max number of phones between utterances
+// totalPhoneNum (input): the total number of phones of all utterances
+// blankTokenId (input): id of the CTC blank token
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
+//      Alpha and Beta scores outside of the delay boundary are set to zero.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding.
+//      delayConstraint=-1 means no constraint
 template<class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
-    const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
-    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const std::vector<size_t>& uttMap, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
-    const std::vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const int delayConstraint, const bool isColWise)
+void _assignAlphaScore(
+    const ElemType *prob,
+    ElemType *alphaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttFrameNum,
+    const std::vector<size_t>& uttBeginFrame,
+    const std::vector<size_t>& uttPhoneNum,
+    size_t numChannels,
+    const size_t uttNum,
+    const size_t  t,
+    const size_t maxPhoneNum, // Maximum length of utterance in this MB
+    const size_t totalPhoneNum, // Total number of phones
+    const size_t blankTokenId,
+    const int delayConstraint)
 {
-    // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
-    if (isColWise)
-    {
-        vector<size_t> curPhoneSeq;
-        
-        auto &us = *this;
-        size_t s, s2;
-        size_t senoneid, t;
-        ElemType ascore;
-        double x, y;
-        size_t senonenum, frameNum;
+    for (size_t uttId = 0;uttId < uttNum;uttId++) {
 
-        for (size_t uttId = 0;uttId < uttFrameNum.size(); uttId++) {
-            senonenum = uttPhoneNum[uttId];
-            frameNum = uttFrameNum[uttId];
+        // Number of phones and frames in this utterance
+        size_t frameNum = uttFrameNum[uttId];
+        if (t >= frameNum) continue;
 
-            // Populate utterance
-            // Using loop instead of memcpy for clarity
-            curPhoneSeq.reserve(senonenum);
-            for (size_t i =0;i < senonenum;i++)
-                curPhoneSeq.push_back(phoneSeq(i, uttId));
+        size_t phoneNum = uttPhoneNum[uttId];
 
-            if (frameNum > 1)
+#pragma omp parallel for
+        for (int phoneSeqId = 1;phoneSeqId < phoneNum - 1;phoneSeqId++) {
+            // Index of the label in the sequence
+
+            // Current and previous phone indices in phoneSeq matrix
+            size_t labelid = uttId*maxPhoneNum + phoneSeqId;
+
+            // Actual current phone label
+            size_t phoneId = (size_t)(phoneSeq[labelid]);
+
+            // Index of the current frame in minibatch
+            size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+
+            // Index of probability of observing phoneId at frame timeId
+            size_t probId = timeId*totalPhoneNum + phoneId;
+
+            size_t alphaId = maxPhoneNum* timeId + phoneSeqId; // alpha_t(s)
+
+            if (t == 0)
             {
-                //initialize alpha
-                for (s = 1; s < 3; s++)
+                // Initialize recursion
+                if (phoneSeqId == 1 || phoneSeqId == 2)
                 {
-                    senoneid = curPhoneSeq[s];
-                    alpha(s, 0) = prob(senoneid, 0);
+                    alphaScore[alphaId] = prob[probId];
                 }
-                alpha(senonenum - 1, 0) = LZERO;
-                //initialize beta
-                for (s = senonenum - 3; s < senonenum - 1; s++)
+            }
+            else
+            {
+                if (phoneSeqId >= 1)
                 {
-                    senoneid = curPhoneSeq[s];
-                    beta(s, frameNum - 1) = prob(senoneid, frameNum - 1);
-                }
-                beta(senonenum - 1, frameNum - 1) = LZERO;
+                    size_t timeId_1 = timeId - numChannels; // Index corresponding to (t-1)
+                    size_t alphaId_0 = maxPhoneNum* timeId_1 + phoneSeqId; // alpha_{t-1}(s)
+                    size_t alphaId_1 = alphaId_0 - 1; // alpha_{t-1}(s-1)
+                    size_t alphaId_2 = alphaId_0 - 2; // alpha_{t-1}(s-2)
+                    ElemType x = LZERO;
 
-                //cal alpha
-                for (t = 1; t < frameNum; t++)
-                {
-                    for (s = 1; s < senonenum - 1; s++)
+                    ElemType ascore;
+                    if (phoneSeqId > 2)
                     {
-                        senoneid = curPhoneSeq[s];
-                        x = LZERO;
-                        for (s2 = s - 1; s2 <= s; s2++)
+                        size_t labelid_2 = labelid - 2;
+                        // if current label is not blank and not equal prev non-blank label
+                        if ((size_t)(phoneSeq[labelid]) != blankTokenId && phoneId != (size_t)(phoneSeq[labelid_2]))
                         {
-                            if (s2 > 0)
-                            {
-                                y = alpha(s2, t - 1);
-                                x = LogAddD(x, y);
-                            }
+                            x = LogAdd(x, alphaScore[alphaId_2]);
                         }
-
-                        if (senoneid != prob.GetNumRows() - 1 && s - 2 > 0 && senoneid != curPhoneSeq[s - 2])
-                        {
-                            y = alpha(s - 2, t - 1);
-                            x = LogAddD(x, y);
-                        }
-                        if (senoneid != SIZE_MAX)
-                            ascore = prob(senoneid, t);
-                        else
-                            ascore = 0;
-                        alpha(s, t) = (float)x + ascore;
                     }
 
-                }
-                //exit senone
-                x = LZERO;
-                for (s2 = senonenum - 3; s2 < senonenum - 1; s2++)
-                {
-                    y = alpha(s2, frameNum - 1);
-                    x = LogAddD(x, y);
-                }
-                alpha(senonenum - 1, frameNum - 1) = (float)x;
-
-                totalScore = -alpha(senonenum - 1, frameNum - 1);
-
-                //cal beta
-                for (t = frameNum - 2; t >= 0; t--)
-                {
-
-                    for (s = 1; s < senonenum - 1; s++)
+                    if (phoneSeqId > 1)
                     {
-                        senoneid = curPhoneSeq[s];
-                        x = LZERO;
-                        for (s2 = s; s2 <= s + 1; s2++)
-                        {
-                            if (s2 < senonenum - 1)
-                            {
-                                y = beta(s2, t + 1);
-                                x = LogAddD(x, y);
-                            }
-                        }
-                        if (senoneid != prob.GetNumRows() - 1 && s + 2 < senonenum - 1 && senoneid != curPhoneSeq[s + 2])
-                        {
-                            y = beta(s + 2, t + 1);
-                            x = LogAddD(x, y);
-                        }
-
-                        if (senoneid != SIZE_MAX)
-                            ascore = prob(senoneid, t);
-                        else
-                            ascore = 0;
-                        beta(s, t) = (float)x + ascore;
-
-                    }
-                    if (t == 0)
-                        break;
-                }
-                //entry senone
-                x = LZERO;
-                for (s2 = 1; s2 < 3; s2++)
-                {
-                    y = beta(s2, 0);
-                    x = LogAddD(x, y);
-                }
-                beta(0, 0) = (float)x;
-                for (t = 0; t < frameNum; t++)
-                {
-                    //cal zt
-                    double Zt = LZERO;
-                    for (s = 1; s < senonenum - 1; s++)
-                    {
-                        senoneid = curPhoneSeq[s];
-                        Zt = LogAddD(Zt, (alpha(s, t) + beta(s, t) - prob(senoneid, t)));
+                        x = LogAdd(x, alphaScore[alphaId_1]);
                     }
 
-                    for (s = 1; s < senonenum - 1; s++)
+                    x = LogAdd(x, alphaScore[alphaId_0]);
+
+                    if (phoneId != SIZE_MAX)
+                        ascore = prob[probId]; // Probability of observing given label at given time
+                    else
+                        ascore = 0;
+                    alphaScore[alphaId] = (ElemType)x + ascore;
+                    if (delayConstraint != -1)
                     {
-                        senoneid = curPhoneSeq[s];
-                        if (senoneid != SIZE_MAX)
+                        size_t labelid_r = labelid + 2;
+                        size_t phoneBoundId_r = (size_t)(phoneBound[labelid_r]);
+                        if (phoneId == blankTokenId)
                         {
-                            ElemType logoccu = alpha(s, t) + beta(s, t) - prob(senoneid, t) - (float)Zt;
-                            if (logoccu < LOG_OF_EPS_IN_LOG)
-                                us(senoneid, t) += 0.0f;
-                            else
-                                us(senoneid, t) += exp(logoccu);
+                            // only constraint right side
+                            if (t > phoneBoundId_r + delayConstraint - 1)
+                                alphaScore[alphaId] = LZERO;
+                        }
+                        else if (phoneId != blankTokenId)
+                        {
+                            if (t > phoneBoundId_r + delayConstraint)
+                                alphaScore[alphaId] = LZERO;
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+}
+
+// Calculate beta in forward-backward calculation, equation (10), (11) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// See _assignAlphaScore for the explanation of parameters
+template<class ElemType>
+void _assignBetaScore(
+    const ElemType *prob,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttFrameNum,
+    const std::vector<size_t>& uttBeginFrame,
+    const std::vector<size_t>& uttPhoneNum,
+    const size_t numChannels,
+    const size_t uttNum,
+    const long  t,
+    const size_t maxPhoneNum,
+    const size_t totalPhoneNum,
+    const size_t blankTokenId,
+    const int delayConstraint)
+{
+    for (size_t uttId = 0;uttId < uttNum;uttId++) {
+
+        // Number of phones and frames in this utterance
+        size_t frameNum = uttFrameNum[uttId];
+        if (t >= frameNum) continue;
+
+        size_t phoneNum = uttPhoneNum[uttId];
+
+#pragma omp parallel for
+        for (int phoneSeqId = 1;phoneSeqId < phoneNum - 1;phoneSeqId++) {
+
+            size_t labelid = uttId*maxPhoneNum + phoneSeqId;
+            size_t labelid_2 = labelid + 2;
+            size_t phoneId = (LONG64)(phoneSeq[labelid]);
+            size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+            size_t probId = timeId*totalPhoneNum + phoneId;
+            size_t betaid = maxPhoneNum* timeId + phoneSeqId;
+            size_t timeId_1 = timeId + numChannels;
+            size_t betaid_0 = maxPhoneNum* timeId_1 + phoneSeqId;
+            size_t betaid_1 = betaid_0 + 1;
+            size_t betaid_2 = betaid_0 + 2;
+
+            if (t == frameNum - 1)
+            {
+                if (phoneSeqId == phoneNum - 3 || phoneSeqId == phoneNum - 2)
+                {
+                    betaScore[betaid] = prob[probId];
+                }
+            }
+            else
+            {
+                if (phoneSeqId >= 1)
+                {
+                    ElemType x = LZERO;
+                    ElemType ascore;
+                    if (phoneSeqId < phoneNum - 3)
+                    {
+                        if (phoneSeq[labelid] != blankTokenId && phoneId != phoneSeq[labelid_2])
+                        {
+                            x = LogAdd(x, betaScore[betaid_2]);
+                        }
+                    }
+
+                    if (phoneSeqId < phoneNum - 2)
+                    {
+                        x = LogAdd(x, betaScore[betaid_1]);
+                    }
+
+                    x = LogAdd(x, betaScore[betaid_0]);
+
+                    if (phoneId != SIZE_MAX)
+                        ascore = prob[probId];
+                    else
+                        ascore = 0;
+                    betaScore[betaid] = (ElemType)x + ascore;
+                    if (delayConstraint != -1)
+                    {
+                        size_t phoneBoundId_r = (size_t)(phoneBound[labelid_2]);
+                        if (phoneId == blankTokenId)
+                        {
+                            if (t > phoneBoundId_r + delayConstraint - 1)
+                                betaScore[betaid] = LZERO;
+                        }
+                        else if (phoneId != blankTokenId)
+                        {
+                            if (t > phoneBoundId_r + delayConstraint)
+                                betaScore[betaid] = LZERO;
                         }
                     }
                 }
             }
         }
+    }
+}
+
+// Calculate CTC score. equation (8) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+template<class ElemType>
+void _assignTotalScore(ElemType *betaScore,
+    std::vector<ElemType>& totalScore,
+    const size_t uttNum,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttBeginFrame,
+    const size_t numChannels,
+    const size_t maxPhoneNum)
+{
+#pragma omp parallel for
+    for (int uttId = 0; uttId < uttNum; uttId++) {
+        if (uttId < uttNum)
+        {
+            LONG64 alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
+
+            betaScore[alphaId_0] = LogAdd(betaScore[alphaId_0 + 1], betaScore[alphaId_0 + 2]);
+            totalScore[uttId] = betaScore[alphaId_0];
+        }
+    }
+}
+
+// Calculate derivative, equation (15) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// See _assignAlphaScore for the explanation of parameters
+template<class ElemType>
+void _assignCTCScore(
+    ElemType *CTCscore,
+    ElemType *prob,
+    ElemType *alphaScore,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    const size_t uttNum,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttBeginFrame,
+    const std::vector<size_t>& uttPhoneNum,
+    const std::vector<size_t>& uttFrameNum,
+    const size_t numChannels,
+    const size_t maxPhoneNum,
+    const size_t totalPhoneNum)
+{
+    for (size_t uttId = 0;uttId < uttNum;uttId++) {
+#pragma omp parallel for
+        for (int t = 0; t < uttFrameNum[uttId]; t++) {
+            size_t phoneNum = uttPhoneNum[uttId];
+            size_t alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
+            size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+            ElemType P_lx = betaScore[alphaId_0];
+
+            for (int s = 1; s < phoneNum - 1; s++)
+            {
+                long phoneId = phoneSeq[uttId*maxPhoneNum + s];
+                size_t alphaId = maxPhoneNum* timeId + s;
+                size_t probId = timeId*totalPhoneNum + phoneId;
+
+                if (phoneId != SIZE_MAX)
+                {
+                    ElemType logoccu = alphaScore[alphaId] + betaScore[alphaId] - prob[probId] - (ElemType)P_lx;
+                    CTCscore[probId] = LogAdd(CTCscore[probId], logoccu);
+                }
+            }
+
+            for (int s = 0; s < totalPhoneNum; s++)
+            {
+                size_t probId = timeId*totalPhoneNum + s;
+                ElemType logoccu = CTCscore[probId];
+                if (logoccu < LZERO)
+                    CTCscore[probId] = 0.0f;
+                else
+                    CTCscore[probId] = exp(logoccu);
+            }
+        }
+    }
+}
+
+template<class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
+    const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
+    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const std::vector<size_t>& uttToChanInd, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
+    const std::vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
+{
+    // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
+    if (isColWise)
+    {
+        // Total number of phones
+        size_t totalPhoneNum = prob.GetNumRows();
+        size_t uttNum = uttFrameNum.size();
+
+        // Max number of phones in utterances in this minibatch
+        size_t maxPhoneNum = phoneSeq.GetNumRows();
+
+        for (size_t t = 0; t < maxFrameNum; t++)
+        {
+            _assignAlphaScore(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
+                uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
+        }
+
+        for (LONG64 t = maxFrameNum - 1; t >= 0; t--)
+        {
+            _assignBetaScore(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
+                uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
+        }
+
+        std::vector<ElemType> scores(uttNum);
+        _assignTotalScore(beta.Data(), scores, uttNum, uttToChanInd, uttBeginFrame, numParallelSequences, maxPhoneNum);
+
+        _assignCTCScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttToChanInd,
+            uttBeginFrame, uttPhoneNum, uttFrameNum, numParallelSequences, maxPhoneNum, totalPhoneNum);
+
+        for (size_t utt = 0; utt < uttNum; utt++)
+        {
+            totalScore += scores[utt];
+        }
+
         return *this;
 
     }
-     else {
-         LogicError("Only ColWise minibatch layout is supported.");
+    else {
+        LogicError("Only ColWise minibatch layout is supported.");
     }
 
     return *this;

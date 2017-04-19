@@ -52,11 +52,10 @@ MinibatchSourcePtr CreateCifarMinibatchSource(size_t epochSize)
     deserializerConfiguration[L"file"] = mapFilePath;
     deserializerConfiguration[L"input"] = inputStreamsConfig;
 
-    Dictionary minibatchSourceConfiguration;
-    minibatchSourceConfiguration[L"epochSize"] = epochSize;
-    minibatchSourceConfiguration[L"deserializers"] = std::vector<DictionaryValue>({ deserializerConfiguration });
+    MinibatchSourceConfig config({ deserializerConfiguration });
+    config.maxSamples = epochSize;
 
-    return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
+    return CreateCompositeMinibatchSource(config);
 }
 
 Constant GetProjectionMap(size_t outputDim, size_t inputDim, const DeviceDescriptor& device)
@@ -122,7 +121,7 @@ FunctionPtr ResNetClassifier(Variable input, size_t numOutputClasses, const Devi
     return Plus(Times(outTimesParams, pool), outBiasParams, outputName);
 }
 
-void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndReLoad)
+void TrainResNetCifarClassifier(const DeviceDescriptor& device, bool testSaveAndReLoad)
 {
     auto minibatchSource = CreateCifarMinibatchSource(SIZE_MAX);
     auto imageStreamInfo = minibatchSource->StreamInfo(L"features");
@@ -175,5 +174,5 @@ void TrainCifarResnet()
 {
     fprintf(stderr, "\nTrainCifarResnet..\n");
 
-    TrainResNetCifarClassifer(DeviceDescriptor::GPUDevice(0), true /*testSaveAndReLoad*/);
+    TrainResNetCifarClassifier(DeviceDescriptor::GPUDevice(0), true /*testSaveAndReLoad*/);
 }

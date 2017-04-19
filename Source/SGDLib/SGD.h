@@ -26,6 +26,11 @@ using namespace std; // ugh! TODO: get rid of this from .h files!!!
 #define CNTK_CHECKPOINT_VERSION_2 2      
 #define CURRENT_CNTK_CHECKPOINT_VERSION CNTK_CHECKPOINT_VERSION_2
 
+namespace CNTK { namespace Internal {
+    // Forward declarations.
+    class TensorBoardFileWriter;
+    typedef std::shared_ptr<TensorBoardFileWriter> TensorBoardFileWriterPtr;
+}}
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -200,6 +205,9 @@ protected:
     intargvector m_numSamples4Search;
     size_t m_numBestSearchEpoch;
 
+    // Threshold size in bytes for single gradient to do packing
+    size_t m_packThresholdSizeInBytes;
+
     LearningRateSearchAlgorithm m_autoLearnRateSearchType;
 
     AdaptationRegType m_adaptationRegType;
@@ -241,6 +249,9 @@ protected:
     size_t m_numMBsToShowResult = 0;
     size_t m_firstMBsToShowResult = 0;
     int m_numMBsToCUDAProfile;
+
+    std::wstring m_tensorBoardLogDir;
+    size_t m_tensorBoardNumMBsToLogResult;
 
     bool m_doGradientCheck;
     double m_gradientCheckSigDigit;
@@ -487,7 +498,9 @@ protected:
                          /*out*/ EpochCriterion& epochCriterion,
                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                          const std::string& prefixMsg = "",
-                         const size_t maxNumberOfSamples = SIZE_MAX);
+                         const size_t maxNumberOfSamples = SIZE_MAX,
+                         const size_t totalMBsSeenBefore = 0,
+                         ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter = nullptr);
 
     void InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);

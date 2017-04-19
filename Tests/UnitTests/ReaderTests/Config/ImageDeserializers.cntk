@@ -2,6 +2,8 @@ RootDir = .
 precision = "float"
 
 MapFile="testMustSubstituteThis"
+SecondMapFile="testMustSubstituteThis"
+Deserializer="ImageDeserializer"
 
 ImageAndImageReaderSimple_Test = [
 
@@ -12,61 +14,36 @@ reader = [
 
         deserializers = (
             [
-                type = "ImageDeserializer"
-                module = "ImageReader"
+                type = "$Deserializer$" ; module = "ImageReader"
                 file = "$MapFile$"
 
                 input = [
                     features1 = [
                         transforms = (
-                            [
-                                type = "Crop"
-                                cropType = "Center"
-                                sideRatio = 1.0
-                                jitterType = "UniRatio"
-                            ]:[
-                                type = "Scale"
-                                width = 4
-                                height = 8
-                                channels = 3
-                                interpolations = "linear"
-                            ]:[
-                                type = "Mean"
-                            ]:[
-                                type = "Transpose"
-                            ]
+                            [ type = "Crop"  ; cropType = "Center" ; sideRatio = 1.0 ; jitterType = "UniRatio" ]:
+                            [ type = "Scale" ; width = 4 ; height = 8 ; channels = 3 ; interpolations = "linear" ]:
+                            [ type = "Mean" ]:
+                            [ type = "Transpose" ]
                         )
                     ]
 
-                    labels1 = [
-                        labelDim = 4
-                    ]
+                    labels1 = [ labelDim = 4 ]
                 ]
             ]:[
-                type = "ImageDeserializer"
+                type = "$Deserializer$"
                 module = "ImageReader"
-                file = "$RootDir$/ImageReaderSimple_map.txt"
+                file = "$SecondMapFile$"
 
                 input = [
                     features2 = [
                         transforms = (
-                            [
-                                type = "Scale"
-                                width = 4
-                                height = 8
-                                channels = 3
-                                interpolations = "linear"
-                            ]:[
-                                type = "Mean"
-                            ]:[
-                                type = "Transpose"
-                            ]
+                            [ type = "Scale" ; width = 4 ; height = 8 ; channels = 3 ; interpolations = "linear" ]:
+                            [ type = "Mean" ]:
+                            [ type = "Transpose" ]
                         )
                     ]
 
-                    labels2 = [
-                        labelDim = 4
-                    ]
+                    labels2 = [ labelDim = 4 ]
                 ]
             ]
         )
@@ -106,6 +83,35 @@ SimpleZip = {
                 }
                 lables = { labelDim = 4 }
             }
+        })
+    }
+}
+
+TwoStreamsSameName= {
+    reader = {
+        deserializers = ({
+            type = "ImageDeserializer" ;  module = "ImageReader"
+            file = "$MapFile$"
+
+            input = { 
+                feature = {
+                    transforms (
+                        { type = "Transpose" }
+                    )
+                } 
+                labels1 = { labelDim = 4 } 
+            }
+        }:{
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$MapFile$"
+
+            input = { 
+                feature = {
+                    transforms (
+                        { type = "Transpose" }
+                    )
+                } 
+                labels2 = { labelDim = 4 } }
         })
     }
 }

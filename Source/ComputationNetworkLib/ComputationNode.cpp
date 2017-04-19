@@ -105,8 +105,15 @@ template<class ElemType>
     }
 
     std::shared_ptr<Matrix<ElemType>> unpackedData;
-    if ((maxNumTimeSteps == 1) || (numSequences == 1))
+    if ((maxNumTimeSteps == 1) || (numSequences == 1) || (batchMajor && (layout->GetNumParallelSequences() == layout->GetNumSequences())))
+    {
         unpackedData = std::make_shared<Matrix<ElemType>>(packedData.AsReference());
+
+        if (maskGaps && layout && layout->HasGaps())
+        {
+            MaskMissingColumnsTo<ElemType>(*unpackedData, layout, FrameRange(layout), 0);
+        }
+    }
     else
     {
         unpackedData = unpackedDataStorage;
@@ -158,6 +165,7 @@ template<class ElemType>
 template<class ElemType>
 /*static*/ void ComputationNode<ElemType>::BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
                                                              const MBLayoutPtr& inputLayout,
+                                                             ElemType beta,
                                                              Matrix<ElemType>& broadcastTo,
                                                              const FrameRange& targetFrameRange,
                                                              const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage)
@@ -200,8 +208,12 @@ template<class ElemType>
     else
         gatherIdxMatrix->SetValue(1, broadcastTo.GetNumCols(), broadcastTo.GetDeviceId(), gatherIndicesVector.data());
 
-    broadcastTo.DoGatherColumnsOf(0, *gatherIdxMatrix, dataToBroadcast, 1);
+    broadcastTo.DoGatherColumnsOf(beta, *gatherIdxMatrix, dataToBroadcast, 1);
 }
+
+/*static*/ const std::wstring ComputationNodeBase::DefaultDynamicAxisName = L"*";
+/*static*/ const std::wstring ComputationNodeBase::DefaultNoSequenceAxisName = L"__noSequenceAxis";
+
 
 // -----------------------------------------------------------------------
 // subroutines for Validate() implementations
@@ -602,6 +614,96 @@ const std::string ComputationNodeBase::ShapeDescription() const
 }
 
 template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::BeginForwardProp()
+{
+    Base::BeginForwardProp();
+
+    // update the actual m_value allocation
+    if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
+        UpdateFunctionValuesSize();
+
+    // give nodes a chance to update their internal state that may also have to match MB size
+    UpdateFunctionMBSize();
+
+    // and make sure dimensions are what we expect
+    VerifyDataSize(Value());
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::EndForwardProp()
+{
+    Base::EndForwardProp();
+
+    if (HasEnvironmentPtr() && Environment().trackGapNans)
+    {
+        MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+        if (Value().HasNan("EndForwardProp"))
+        {
+            LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
+        }
+        InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
+    }
+
+    // tracing
+    Trace();
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::BeginBackprop()
+{
+    Base::BeginBackprop();
+
+    if (NeedsGradient())
+    {
+        // Verify that the shapes of the output/input Value matrices that the gradient backprop for this node needs
+        // are intact and have not been erroneously reshaped due to incorrect memory sharing
+        auto VerifyValueShape = [](const ComputationNode<ElemType>& node) {
+            size_t rows, cols;
+            node.DetermineDataSize(rows, cols);
+
+            auto& valueMatrix = node.Value();
+            if ((valueMatrix.GetNumRows() != rows) || (valueMatrix.GetNumCols() != cols))
+            {
+                LogicError("%ls %ls operation found to have incorrect Value() matrix shape %lu x %lu during backprop; expected shape is %lu x %lu. "
+                    "This may be due to incorrect memory sharing.",
+                    node.NodeName().c_str(), node.OperationName().c_str(), valueMatrix.GetNumRows(), valueMatrix.GetNumCols(), rows, cols);
+            }
+        };
+
+        if (IsOutputNeededDuringBackprop())
+            VerifyValueShape(*this);
+
+        for (size_t i = 0; i < m_inputs.size(); i++)
+        {
+            if (InputUsedInComputingInputNodesGradients(i))
+                VerifyValueShape(InputRef(i));
+        }
+    }
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::EndBackprop()
+{
+    Base::EndBackprop();
+
+    if (HasEnvironmentPtr() && Environment().trackGapNans)
+    {
+        for (size_t i = 0; i < m_inputs.size(); i++)
+        {
+            ComputationNodePtr child = Input(i);
+            if (child->m_needsGradient)
+            {
+                child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+                if (child->Gradient().HasNan("EndBackprop"))
+                {
+                    LogicError("%ls %ls operation unexpectedly produced NaN gradients.", child->NodeName().c_str(), child->OperationName().c_str());
+                }
+            }
+        }
+    }
+}
+
+template <class ElemType>
 /*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, const bool printMetadata, File& fstream) const
 {
     if (printMetadata)
@@ -667,6 +769,8 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
     bool sampleSeparatorHasShape  = sampleSeparator.find("%x")  != sampleSeparator.npos;
     bool sequencePrologueHasSeqId = sequencePrologue.find("%d") != sequencePrologue.npos;
     bool sampleSeparatorHasSeqId  = sampleSeparator.find("%d")  != sampleSeparator.npos;
+    bool sequencePrologueHasSeqKey = sequencePrologue.find("%k") != sequencePrologue.npos;
+    bool sampleSeparatorHasSeqKey = sampleSeparator.find("%k") != sampleSeparator.npos;
 
     for (size_t s = 0; s < sequences.size(); s++)
     {
@@ -716,10 +820,17 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
                 sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%d", sh);
         }
 
+        if (getKeyById)
+        {
+            if (sequencePrologueHasSeqKey)
+                seqProl = msra::strfun::ReplaceAll<std::string>(seqProl, "%k", getKeyById(seqInfo.seqId));
+            if (sampleSeparatorHasSeqKey)
+                sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%k", getKeyById(seqInfo.seqId));
+        }
+
         if (s > 0)
             fprintfOrDie(f, "%s", sequenceSeparator.c_str());
-        if (getKeyById)
-            fprintfOrDie(f, "%s ", getKeyById(seqInfo.seqId).c_str());
+
         fprintfOrDie(f, "%s", seqProl.c_str());
 
         // output it according to our format specification

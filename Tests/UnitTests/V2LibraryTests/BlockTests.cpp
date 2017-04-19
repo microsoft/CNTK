@@ -120,12 +120,13 @@ BOOST_AUTO_TEST_SUITE(BlockSuite)
 
 BOOST_AUTO_TEST_CASE(BlocksWithRecurrence)
 {
-    TestBlocksWithRecurrence(7, 5, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestBlocksWithRecurrence(7, 5, DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(ChangingParameterValuesInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestBlocksWithRecurrence(11, 15, DeviceDescriptor::GPUDevice(0));
 }
 

@@ -68,7 +68,7 @@ def format_output_line(img_name, true_class, probs, class_mapping, top_n=3):
 
 
 if __name__ == '__main__':
-    set_default_device(gpu(0))
+    try_set_default_device(gpu(0))
     # check for model and data existence
     if not (os.path.exists(base_model_file) and os.path.exists(train_image_folder) and os.path.exists(test_image_folder)):
         print("Please run 'python install_data_and_model.py' first to get the required data and model.")

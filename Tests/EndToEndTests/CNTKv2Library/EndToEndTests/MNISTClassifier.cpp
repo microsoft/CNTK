@@ -10,7 +10,7 @@ using namespace CNTK;
 
 using namespace std::placeholders;
 
-void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
+void TrainSimpleFeedForwardClassifier(const DeviceDescriptor& device)
 {
     const size_t inputDim = 2;
     const size_t numOutputClasses = 2;
@@ -137,9 +137,8 @@ void MNISTClassifierTests()
 {
     fprintf(stderr, "\nMNISTClassifierTests..\n");
 
-    TrainSimpleFeedForwardClassifer(DeviceDescriptor::CPUDevice());
-    if (IsGPUAvailable())
-    {
+    if (ShouldRunOnCpu())
+        TrainSimpleFeedForwardClassifier(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnGpu())
         TrainMNISTClassifier(DeviceDescriptor::GPUDevice(0));
-    }
 }

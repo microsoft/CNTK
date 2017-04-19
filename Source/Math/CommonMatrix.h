@@ -85,11 +85,11 @@ enum ElementWiseOperator
     // unary (or binary with constant parameter)
     opCopy,
     opNegate, opNot, opAbs, opFloor, opReciprocal,
-    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin,
+    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opExponentialLinearUnit,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
-    opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine,
+    opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative,
     // binary
-    opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum,
+    opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum, opPow,
     opMax, opMin, opArgmax, opArgmin,
     opLess, opEqual, opGreater, opGreaterEqual, opNotEqual, opLessEqual, // Note: must obey this order: (sgn(a-b) == -1, 0, +1), (sgn(a-b) != -1, 0, +1)
     opAnd, opOr, opXor, opMaskNegative,
@@ -98,6 +98,7 @@ enum ElementWiseOperator
     opElementwiseProductWithCosDerivative, opElementwiseProductWithSinDerivative,
     opElementwiseProductWithAbsDerivative, opElementwiseProductWithSqrtDerivative,
     opElementwiseProductWithReciprocalDerivative, opSqrOfDifference,
+    opElementwiseProductWithExponentialLinearUnitDerivativeFromOutput,
     // binary ops for indexing
     // opIndex,
     // ternary
@@ -107,6 +108,8 @@ enum ElementWiseOperator
     opCopyIfEqual,
     opElementwiseProductWithExpOfDiff, /* a * exp(b - c) */
     opElementwiseProductWithQuotient, /* a * (b / c) */
+    opElementwiseProductWithPowExponentDerivative, /* a * b * log(c) */
+    opElementwiseProductWithPowBaseDerivative,  /* a * c * pow(b, c-1) */
     // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
 };
 
@@ -114,53 +117,56 @@ enum ElementWiseOperator
 #define ForAllNullaryOps(Macro) \
     Macro(ConstOne);
 
-#define ForAllUnaryOps(Macro) \
-    Macro(Copy);              \
-    Macro(Negate);            \
-    Macro(Not);               \
-    Macro(Abs);               \
-    Macro(Floor);             \
-    Macro(Reciprocal);        \
-    Macro(Sigmoid);           \
-    Macro(Tanh);              \
-    Macro(Sqr);               \
-    Macro(Sqrt);              \
-    Macro(Exp);               \
-    Macro(Log);               \
-    Macro(LinearRectifier);   \
-    Macro(Cosine);            \
-    Macro(Sin);
+#define ForAllUnaryOps(Macro)     \
+    Macro(Copy);                  \
+    Macro(Negate);                \
+    Macro(Not);                   \
+    Macro(Abs);                   \
+    Macro(Floor);                 \
+    Macro(Reciprocal);            \
+    Macro(Sigmoid);               \
+    Macro(Tanh);                  \
+    Macro(Sqr);                   \
+    Macro(Sqrt);                  \
+    Macro(Exp);                   \
+    Macro(Log);                   \
+    Macro(LinearRectifier);       \
+    Macro(Cosine);                \
+    Macro(Sin);                   \
+    Macro(ExponentialLinearUnit);
 
-#define ForAllBinaryOps(Macro)                                        \
-    Macro(CopyIf);                                                    \
-    Macro(CopyIfNot);                                                 \
-    Macro(Sum);                                                       \
-    Macro(Difference);                                                \
-    Macro(ElementwiseProduct);                                        \
-    Macro(ElementwiseQuotient);                                       \
-    Macro(LogSum);                                                    \
-    Macro(Max);                                                       \
-    Macro(Min);                                                       \
-    Macro(Equal);                                                     \
-    Macro(NotEqual);                                                  \
-    Macro(Greater);                                                   \
-    Macro(Less);                                                      \
-    Macro(GreaterEqual);                                              \
-    Macro(LessEqual);                                                 \
-    Macro(And);                                                       \
-    Macro(Or);                                                        \
-    Macro(Xor);                                                       \
-    Macro(MaskNegative);                                              \
-    Macro(ElementwiseProductWithSigmoidDerivativeFromOutput);         \
-    Macro(ElementwiseProductWithTanhDerivativeFromOutput);            \
-    Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput); \
-    Macro(ElementwiseProductWithLogDerivativeFromOutput);             \
-    Macro(ElementwiseProductWithCosDerivative);                       \
-    Macro(ElementwiseProductWithSinDerivative);                       \
-    Macro(ElementwiseProductWithAbsDerivative);                       \
-    Macro(ElementwiseProductWithReciprocalDerivative);                \
-    Macro(ElementwiseProductWithSqrtDerivative);                      \
-    Macro(SqrOfDifference);                                           \
+#define ForAllBinaryOps(Macro)                                               \
+    Macro(CopyIf);                                                           \
+    Macro(CopyIfNot);                                                        \
+    Macro(Sum);                                                              \
+    Macro(Difference);                                                       \
+    Macro(ElementwiseProduct);                                               \
+    Macro(ElementwiseQuotient);                                              \
+    Macro(LogSum);                                                           \
+    Macro(Pow);                                                              \
+    Macro(Max);                                                              \
+    Macro(Min);                                                              \
+    Macro(Equal);                                                            \
+    Macro(NotEqual);                                                         \
+    Macro(Greater);                                                          \
+    Macro(Less);                                                             \
+    Macro(GreaterEqual);                                                     \
+    Macro(LessEqual);                                                        \
+    Macro(And);                                                              \
+    Macro(Or);                                                               \
+    Macro(Xor);                                                              \
+    Macro(MaskNegative);                                                     \
+    Macro(ElementwiseProductWithSigmoidDerivativeFromOutput);                \
+    Macro(ElementwiseProductWithTanhDerivativeFromOutput);                   \
+    Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput);        \
+    Macro(ElementwiseProductWithLogDerivativeFromOutput);                    \
+    Macro(ElementwiseProductWithCosDerivative);                              \
+    Macro(ElementwiseProductWithSinDerivative);                              \
+    Macro(ElementwiseProductWithAbsDerivative);                              \
+    Macro(ElementwiseProductWithReciprocalDerivative);                       \
+    Macro(ElementwiseProductWithSqrtDerivative);                             \
+    Macro(SqrOfDifference);                                                  \
+    Macro(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput);
     //Macro(Index);
 
 #define ForAllTernaryOps(Macro)                         \
@@ -169,7 +175,9 @@ enum ElementWiseOperator
     Macro(Clip);                                        \
     Macro(ElementwiseProductWithLogSumDerivative);      \
     Macro(ElementwiseProductWithExpOfDiff);             \
-    Macro(ElementwiseProductWithQuotient);
+    Macro(ElementwiseProductWithQuotient);              \
+    Macro(ElementwiseProductWithPowExponentDerivative); \
+    Macro(ElementwiseProductWithPowBaseDerivative);
 
 // -----------------------------------------------------------------------
 // various enums to describe

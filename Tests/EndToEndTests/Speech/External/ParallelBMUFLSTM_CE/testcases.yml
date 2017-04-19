@@ -1,6 +1,6 @@
 dataDir: ../../Data
 tags:
-     - bvt-s (build_sku == '1bitsgd') and (device == 'gpu') and (flavor == 'release')
+     - bvt-s (build_sku == '1bitsgd') and (device == 'gpu') and ((flavor == 'debug') ^ (os == 'windows'))
      - nightly-s (build_sku == '1bitsgd') and (device == 'gpu')
 
 testCases:
@@ -10,7 +10,7 @@ testCases:
       - ^MPI Rank {{integer}}
       - Finished Epoch[{{integer}} of {{integer}}]
       - cr = {{float,tolerance=1%}} * {{integer}}
-      - Err = {{float,tolerance=1%}} * {{integer}} 
+      - Err = {{float,tolerance=1%}} * {{integer}}
       - totalSamplesSeen = {{integer}}
       - learningRatePerSample = {{float,tolerance=0.001%}}
 

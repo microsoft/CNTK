@@ -75,7 +75,7 @@ NDArrayViewPtr CreateNDArrayView()
     auto numAxes = (rng() % maxNumAxes) + 1;
     auto device = DeviceDescriptor::CPUDevice();
 
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         if (rng() % 2 == 0)
         {
@@ -325,10 +325,15 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::NDCG) == 60 &&
                   static_cast<size_t>(PrimitiveOpType::EditDistanceError) == 61 &&
                   static_cast<size_t>(PrimitiveOpType::NoOp) == 62 &&
-                  static_cast<size_t>(PrimitiveOpType::LabelsToGraph) == 63,
+                  static_cast<size_t>(PrimitiveOpType::LabelsToGraph) == 63 &&
+                  static_cast<size_t>(PrimitiveOpType::StopGradient) == 64 &&
+                  static_cast<size_t>(PrimitiveOpType::ELU) == 65 &&
+                  static_cast<size_t>(PrimitiveOpType::ForwardBackward) == 66 &&
+                  static_cast<size_t>(PrimitiveOpType::CosDistanceWithNegativeSamples) == 67 &&
+                  static_cast<size_t>(PrimitiveOpType::OneHot) == 68 &&
+                  static_cast<size_t>(PrimitiveOpType::Pow) == 69,
                   "PrimitiveOpType enum value was modified.");
 }
-
 
 std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly)
 {
@@ -355,7 +360,7 @@ FunctionPtr BuildLSTMClassifierNet(const Variable& inputVar, const size_t numOut
     const size_t cellDim = 25;
     const size_t hiddenDim = 25;
     const size_t embeddingDim = 50;
-    return LSTMSequenceClassiferNet(inputVar, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
+    return LSTMSequenceClassifierNet(inputVar, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
 }
 
 void TestFunctionSaveAndLoad(const FunctionPtr& function, const DeviceDescriptor& device)
@@ -634,7 +639,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     const size_t numOutputClasses = 5;
 
     auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, L"features");
-    auto classifierOutput = LSTMSequenceClassiferNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
+    auto classifierOutput = LSTMSequenceClassifierNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
 
     auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels", { Axis::DefaultBatchAxis() });
     auto trainingLoss = CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
@@ -811,7 +816,124 @@ void TestCheckpointingWithStatefulNodes(const DeviceDescriptor& device)
     }
 }
 
+
+void TestCheckpointingWithStatefulNodesAndExplicitSeeds(const DeviceDescriptor& device)
+{
+    auto featureStreamName = L"features";
+    auto labelsStreamName = L"labels";
+
+    size_t inputDim = 784;
+    size_t numOutputClasses = 10;
+    auto features = InputVariable({ inputDim }, false /*isSparse*/, DataType::Float, featureStreamName);
+    auto labels = InputVariable({ numOutputClasses }, DataType::Float, labelsStreamName);
+
+    auto net1 = BuildFFClassifierNet(features, numOutputClasses, device, 1);
+    auto net2 = net1->Clone(ParameterCloningMethod::Clone, { { features , features } });
+    auto net3 = net1->Clone(ParameterCloningMethod::Clone, { { features , features } });
+    
+    auto trainer1 = BuildTrainer(Dropout(net1, 0.5, 123), labels);
+    auto trainer2 = BuildTrainer(Dropout(net2, 0.5, 123), labels);
+    auto trainer3 = BuildTrainer(Dropout(net3, 0.5, 321), labels);
+
+    const size_t minibatchSize = 50;
+    const size_t maxSamples = 150;
+    auto minibatchSource = TextFormatMinibatchSource(L"Train-28x28_cntk_text.txt", { { featureStreamName, inputDim },{ labelsStreamName, numOutputClasses } }, 2 * maxSamples, false);
+    
+    auto featureStreamInfo = minibatchSource->StreamInfo(features);
+    auto labelStreamInfo = minibatchSource->StreamInfo(labels);
+
+    for (int i = 0; i < maxSamples; i+=minibatchSize)
+    {
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        unordered_map<Variable, MinibatchData> minibatch = { { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } };
+
+        trainer1->TrainMinibatch(minibatch, device);
+        trainer2->TrainMinibatch(minibatch, device);
+        trainer3->TrainMinibatch(minibatch, device);
+        auto loss1 = trainer1->PreviousMinibatchLossAverage();
+        auto loss2 = trainer2->PreviousMinibatchLossAverage();
+        auto loss3 = trainer3->PreviousMinibatchLossAverage();
+        FloatingPointCompare(loss1, loss2, "Training loss does not match expectation");
+        BOOST_TEST((abs(loss1 - loss2) <= abs(loss2 - loss3)));
+    }
+
+    trainer1->SaveCheckpoint(L"seeded_stateful_nodes.model");
+    auto state = minibatchSource->GetCheckpointState();
+
+    vector<double> expectedLoss;
+    for (int i = 0; i < maxSamples; i += minibatchSize)
+    {
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        unordered_map<Variable, MinibatchData> minibatch = { { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } };
+
+        trainer1->TrainMinibatch(minibatch, device);
+        expectedLoss.push_back(trainer1->PreviousMinibatchLossAverage());
+    }
+
+    trainer1->RestoreFromCheckpoint(L"seeded_stateful_nodes.model");
+    minibatchSource->RestoreFromCheckpoint(state);
+
+    for (int i = 0; i*minibatchSize < maxSamples; i++)
+    {
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        unordered_map<Variable, MinibatchData> minibatch = { { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } };
+
+        trainer1->TrainMinibatch(minibatch, device);
+        double loss = trainer1->PreviousMinibatchLossAverage();
+        FloatingPointCompare(loss, expectedLoss[i], "Post checkpoint restoration training loss does not match expectation");
+    }
+}
+
+void TestLoadingModelFromMemoryBuffer()
+{
+    ifstream modelFileStream("batch.norm.no.sample.count.v2.bin", ifstream::binary);
+    modelFileStream.seekg(0, modelFileStream.end);
+    size_t length = modelFileStream.tellg();
+    modelFileStream.seekg(0, modelFileStream.beg);
+    char* modelBuffer = new char[length];
+    modelFileStream.read(modelBuffer, length);
+
+    auto model = Function::LoadModel(modelBuffer, length);
+    if (model == nullptr) {
+        ReportFailure("Failed to load a V2 model from memory buffer.");
+    }
+    delete[] modelBuffer;
+}
+
+void TestLoadingModelFromMemoryBufferWithException()
+{
+    ifstream modelFileStream("batch.norm.no.sample.count.v1.bin", ifstream::binary);
+    modelFileStream.seekg(0, modelFileStream.end);
+    size_t length = modelFileStream.tellg();
+    modelFileStream.seekg(0, modelFileStream.beg);
+    char* modelBuffer = new char[length];
+    modelFileStream.read(modelBuffer, length);
+
+    VerifyException([&length]() {
+        Function::LoadModel(nullptr, length);
+    }, "Was able to load model from nullptr memory buffer.");
+
+    VerifyException([&modelBuffer]() {
+        Function::LoadModel(modelBuffer, 0);
+    }, "Was able to load model from nullptr memory buffer.");
+
+    VerifyException([&modelBuffer, &length]() {
+        Function::LoadModel(modelBuffer, length);
+    }, "Was able to load legacy model from memory buffer."); 
+    delete[] modelBuffer;
+}
+
 BOOST_AUTO_TEST_SUITE(SerializationSuite)
+
+BOOST_AUTO_TEST_CASE(LoadingModelFromMemoryBuffer)
+{
+    TestLoadingModelFromMemoryBuffer();
+}
+
+BOOST_AUTO_TEST_CASE(LoadingModelFromMemoryBufferWithException)
+{
+    TestLoadingModelFromMemoryBufferWithException();
+}
 
 BOOST_AUTO_TEST_CASE(LoadingAModelWithALoadBatchNormFunction)
 {
@@ -881,16 +1003,32 @@ BOOST_AUTO_TEST_CASE(CheckpointingWithStatefulNodesInCPU)
 
 BOOST_AUTO_TEST_CASE(LearnerSerializationInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestLearnerSerialization<float>(5, DeviceDescriptor::GPUDevice(0));
         TestLearnerSerialization<double>(10, DeviceDescriptor::GPUDevice(0));
     }
 }
 
+BOOST_AUTO_TEST_CASE(LearnerSerializationBackcompat)
+{
+    auto device = DeviceDescriptor::CPUDevice();
+    auto net = BuildLSTMClassifierNet(InputVariable({ 3 }, DataType::Float), 2, device);
+    auto learner = MomentumSGDLearner(net->Parameters(), LearningRatePerSampleSchedule(0.005),
+        MomentumAsTimeConstantSchedule(900), /*unitGainMomentum = */true);
+
+    BOOST_ASSERT(learner->TotalNumberOfSamplesSeen() == 0);
+
+    // this checkpoint contains smoothed gradients serialized as a dict, not
+    // a vector (the current format).
+    auto checkpoint = Dictionary::Load(L"learner.checkpoint.backcompat.bin");
+    learner->RestoreFromCheckpoint(checkpoint);
+    BOOST_TEST(learner->TotalNumberOfSamplesSeen() > 0);
+}
+
 BOOST_AUTO_TEST_CASE(FunctionSerializationInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestFunctionSerialization(DeviceDescriptor::GPUDevice(0));
     }
@@ -898,7 +1036,7 @@ BOOST_AUTO_TEST_CASE(FunctionSerializationInGPU)
 
 BOOST_AUTO_TEST_CASE(ModelSerializationDuringTrainingInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestModelSerializationDuringTraining(DeviceDescriptor::GPUDevice(0));
     }
@@ -906,21 +1044,33 @@ BOOST_AUTO_TEST_CASE(ModelSerializationDuringTrainingInGPU)
 
 BOOST_AUTO_TEST_CASE(CheckpointingInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestCheckpointing(DeviceDescriptor::GPUDevice(0));
 }
 
 
 BOOST_AUTO_TEST_CASE(LegacyModelSavingInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestLegacyModelSaving(DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(CheckpointingWithStatefulNodesInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestCheckpointingWithStatefulNodes(DeviceDescriptor::GPUDevice(0));
+}
+
+
+BOOST_AUTO_TEST_CASE(CheckpointingWithStatefulNodesAndExplicitSeedsOnCPU)
+{
+     TestCheckpointingWithStatefulNodesAndExplicitSeeds(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(CheckpointingWithStatefulNodesAndExplicitSeedsOnGPU)
+{
+    if (ShouldRunOnGpu())
+        TestCheckpointingWithStatefulNodesAndExplicitSeeds(DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

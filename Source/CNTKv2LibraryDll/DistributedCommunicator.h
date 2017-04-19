@@ -6,6 +6,9 @@
 #pragma once
 
 #include "CNTKLibrary.h"
+#include "Constants.h"
+#include "NcclComm.h"
+#include "MPIWrapper.h"
 #include <MatrixQuantizerImpl.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -20,7 +23,7 @@ namespace CNTK
     class MPICommunicatorImpl : public DistributedCommunicator, public std::enable_shared_from_this<MPICommunicatorImpl>
     {
     public:
-        MPICommunicatorImpl();
+        MPICommunicatorImpl(size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES);
 
         virtual const std::unordered_set<DistributedWorkerDescriptor>& Workers() const override;
 
@@ -82,6 +85,14 @@ namespace CNTK
         // TODO: these two are always parallel, merge them together?
         std::vector<std::shared_ptr<Microsoft::MSR::CNTK::GPUDataTransferer>> m_gpuDataTransferers;
 
+        // Threshold size of a gradient to be packed
+        size_t m_packThresholdSizeInBytes;
+        std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> m_aggregationBufferFloat;
+        std::unique_ptr<Microsoft::MSR::CNTK::Matrix<double>> m_aggregationBufferDouble;
+
+        // NcclComm
+        std::unique_ptr<Microsoft::MSR::CNTK::NcclComm> m_nccl;
+
     protected:
         DeviceDescriptor GetNonCPUDevice(const std::vector<NDArrayViewPtr>& values)
         {
@@ -109,5 +120,23 @@ namespace CNTK
         void CheckWorkers(const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers);
 
         Microsoft::MSR::CNTK::MPIWrapperPtr m_mpi;
+
+        bool ShouldCopyDataToCPU(NDArrayViewPtr inputValue);
+        void CopyDataFromGPUToCPU(std::vector<NDArrayViewPtr>& inputValues);
+
+        template <typename ElemType>
+        std::unique_ptr<Microsoft::MSR::CNTK::Matrix<ElemType>> SetContinuousBuffer(std::vector<size_t>& packedGradientsIndex, size_t packedGradientsSizeInBytes,
+            const std::vector<NDArrayViewPtr>& inputValues, const std::vector<NDArrayViewPtr>& outputValues,
+            std::vector<NDArrayViewPtr>& valuesToAggregate, std::vector<NDArrayViewPtr>& valuesAfterAggregate);
+
+        template <typename ElemType>
+        void PackToContinuousBuffer(Microsoft::MSR::CNTK::Matrix<ElemType>* aggregationBuffer, std::vector<size_t>& packedGradientsIndex,
+            const std::vector<NDArrayViewPtr>& inputValues, const std::vector<NDArrayViewPtr>& outputValues, std::vector<NDArrayViewPtr>& valuesToAggregate, std::vector<NDArrayViewPtr>& valuesAfterAggregate);
+
+        template <typename ElemType>
+        void UnpackFromContinuousBuffer(Microsoft::MSR::CNTK::Matrix<ElemType>* aggregationBuffer, const std::vector<NDArrayViewPtr>& outputValues, std::vector<size_t>& packedGradientsIndex);
+
+        template <typename ElemType>
+        void AllReduceGradients(ElemType* inputData, ElemType* outputData, size_t numElements, std::vector<MPI_Request> &allReduceRequests, bool dataOnCPU);
     };
 }

@@ -481,8 +481,8 @@ public:
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
     // tokensToIgnore - list of samples to ignore during edit distance evaluation
-    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 0.0f, float delPen = 0.0f, float insPen = 0.0f, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
-        : Base(deviceId, name), m_SubPen(subPen), m_DelPen(delPen), m_InsPen(insPen), m_SquashInputs(squashInputs), m_tokensToIgnore(tokensToIgnore)
+    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 1.0f, float delPen = 1.0f, float insPen = 1.0f, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
+        : Base(deviceId, name), m_subPen(subPen), m_delPen(delPen), m_insPen(insPen), m_squashInputs(squashInputs), m_tokensToIgnore(tokensToIgnore)
     {
     }
 
@@ -511,7 +511,7 @@ public:
 
         MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
         MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
-        Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_SubPen, m_DelPen, m_InsPen, m_SquashInputs, m_tokensToIgnore);
+        Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_subPen, m_delPen, m_insPen, m_squashInputs, m_tokensToIgnore);
     }
 
     virtual void Validate(bool isFinalValidationPass) override
@@ -540,10 +540,10 @@ public:
             node->m_maxIndexes0 = m_maxIndexes0;
             node->m_maxIndexes1 = m_maxIndexes1;
             node->m_maxValues = m_maxValues;
-            node->m_SquashInputs = m_SquashInputs;
-            node->m_SubPen = m_SubPen;
-            node->m_DelPen = m_DelPen;
-            node->m_InsPen = m_InsPen;
+            node->m_squashInputs = m_squashInputs;
+            node->m_subPen = m_subPen;
+            node->m_delPen = m_delPen;
+            node->m_insPen = m_insPen;
             node->m_tokensToIgnore = m_tokensToIgnore;
         }
     }
@@ -686,19 +686,39 @@ public:
         return (ElemType)(wrongSampleNum * totalframeNum / totalSampleNum);
     }
 
-    float SubstitutionPenalty() const { return m_SubPen; }
-    float DeletionPenalty() const { return m_DelPen; }
-    float InsertionPenalty() const { return m_InsPen; }
-    bool SquashInputs() const { return m_SquashInputs; }
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_subPen;
+        fstream << m_delPen;
+        fstream << m_insPen;
+        fstream << m_squashInputs;
+        fstream << m_tokensToIgnore;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_subPen;
+        fstream >> m_delPen;
+        fstream >> m_insPen;
+        fstream >> m_squashInputs;
+        fstream >> m_tokensToIgnore;
+    }
+
+    float SubstitutionPenalty() const { return m_subPen; }
+    float DeletionPenalty() const { return m_delPen; }
+    float InsertionPenalty() const { return m_insPen; }
+    bool SquashInputs() const { return m_squashInputs; }
     std::vector<size_t> TokensToIgnore() const { return m_tokensToIgnore; }
 
 private:
     shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
     shared_ptr<Matrix<ElemType>> m_maxValues;
-    bool m_SquashInputs;
-    float m_SubPen;
-    float m_DelPen;
-    float m_InsPen;
+    bool m_squashInputs;
+    float m_subPen;
+    float m_delPen;
+    float m_insPen;
     std::vector<size_t> m_tokensToIgnore;
 
     // Clear out_SampleSeqVec and extract a vector of samples from the matrix into out_SampleSeqVec.
@@ -740,6 +760,115 @@ private:
 
 template class EditDistanceErrorNode<float>;
 template class EditDistanceErrorNode<double>;
+
+// OneHotNode will create corresponding one hot tensor based on the input tensor. 
+template <class ElemType>
+class OneHotNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"OneHot";
+    }
+
+public:
+    OneHotNode(DEVICEID_TYPE deviceId, size_t num_class, bool is_sparse, int axis, const wstring& name) : Base(deviceId, name)
+    {
+        m_num_class = num_class;
+        m_sparse = is_sparse;
+        m_axis = axis;
+        m_offset = -1;
+    }
+    //do we really need this?
+    OneHotNode(DEVICEID_TYPE deviceId, const wstring& name) : OneHotNode(deviceId, 0, false, -1, name)
+    {
+    }
+
+    OneHotNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : OneHotNode(configp->Get(L"deviceId"), configp->Get(L"numClass"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        auto& dims = GetSampleLayout().GetDims();
+        vector<size_t> shape;
+        shape.assign(dims.begin(), dims.end());
+        
+        if (m_offset < 0)
+        {
+            CalculateAxisOffset();
+        }
+
+        auto& output = Value();
+        output.AssignOneHot(InputRef(0).Value(), shape, m_offset, m_sparse);
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        LogicError("The node \"%ls\" can be used in training, but it does not participate in gradient propagation.", OperationName().c_str());
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override {
+        return false;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        Base::m_isValueSparse = m_sparse;
+
+        if (m_offset < 0)
+        {
+            CalculateAxisOffset();
+        }
+
+        const auto& inputSampleLayout = Input(0)->GetSampleLayout();
+        const auto& inputDims = inputSampleLayout.GetDims();
+        SmallVector<size_t> dims;
+        if (m_offset > 0)
+        {
+            dims.append(inputDims.begin(), inputDims.begin() + m_offset);
+        }
+        dims.push_back(m_num_class);
+        if (m_offset != inputDims.size())
+        {
+            dims.append(inputDims.begin() + m_offset, inputDims.end());
+        }
+
+        auto sampleLayout = TensorShape(dims);
+
+        m_pMBLayout = Input(0)->GetMBLayout();
+        SetDims(sampleLayout, HasMBLayout());
+    }
+
+protected:
+
+    void CalculateAxisOffset()
+    {
+        if (m_offset < 0)
+        {
+            const auto& inputSampleLayout = Input(0)->GetSampleLayout();
+            const auto& inputDims = inputSampleLayout.GetDims();
+            size_t len = inputDims.size();
+            m_offset = m_axis < 0 ? (len + 1 + m_axis) % (len + 1) : m_axis % (len + 1);
+        }
+    }
+
+    size_t m_num_class;
+    bool m_sparse;
+    int m_axis;
+    int m_offset;
+};
+
+template class OneHotNode<float>;
+template class OneHotNode<double>;
 
 #ifdef COMING_SOON
 

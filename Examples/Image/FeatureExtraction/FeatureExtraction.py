@@ -7,10 +7,9 @@
 from __future__ import print_function
 import os
 import numpy as np
-from cntk import load_model, graph
-from cntk.ops import combine
-from cntk import graph
-from cntk.graph import get_node_outputs
+from cntk import load_model, combine
+from cntk.logging import graph
+from cntk.logging.graph import get_node_outputs
 import cntk.io.transforms as xforms
 
 def create_mb_source(image_height, image_width, num_channels, map_file):

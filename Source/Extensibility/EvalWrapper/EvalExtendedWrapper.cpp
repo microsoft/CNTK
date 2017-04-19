@@ -31,6 +31,7 @@ using namespace std;
 using namespace System;
 using namespace System::Collections::Generic;
 using namespace System::Collections;
+using namespace System::Runtime::InteropServices;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Extensibility { namespace Managed {
 
@@ -291,19 +292,18 @@ public:
             throw gcnew ObjectDisposedException("Object has been disposed.");
         }
 
+        // Hold all buffers that should be pinned during native operations
+        List<GCHandle>^ pinnedGCHandleList = gcnew List<GCHandle>;
+
         try
         {
             Native::ValueRefs<ElemType> stdInputs;
             Native::ValueRefs<ElemType> stdOutputs;
 
-            // Hold gc objects in the stack, while performing native actions
-            vector<gcroot<cli::array<ElemType>^>> pinBuffers;
-            vector<gcroot<cli::array<int>^>> pinIndices;
-
             // Map the managed space into the native space, results will be written directly into the managed memory space
             // https://msdn.microsoft.com/en-us/library/1dz8byfh.aspx
-            TransferVectorsToValueBuffers(inputs, stdInputs, pinBuffers, pinIndices, StorageType::Sparse);
-            TransferVectorsToValueBuffers(outputs, stdOutputs, pinBuffers, pinIndices, StorageType::Dense);
+            TransferVectorsToValueBuffers(inputs, stdInputs, pinnedGCHandleList, StorageType::Sparse);
+            TransferVectorsToValueBuffers(outputs, stdOutputs, pinnedGCHandleList, StorageType::Dense);
 
             try
             {
@@ -323,6 +323,13 @@ public:
         catch (Exception^)
         {
             throw;
+        }
+        finally
+        {
+            for each (auto h in pinnedGCHandleList)
+            {
+                h.Free();
+            }
         }
     }
 
@@ -431,37 +438,31 @@ private:
         }
     }
 
-    void PinBuffer(cli::array<ElemType>^ itemBuffer, vector<gcroot<cli::array<ElemType>^>>& pinBuffers, Native::ValueBuffer<ElemType, Native::VectorRef>* vb, StorageType storageType, int bufferSize)
+    void PinBuffer(cli::array<ElemType>^ itemBuffer, List<GCHandle>^ pinnedGCHandleList, Native::ValueBuffer<ElemType, Native::VectorRef>* vb, StorageType storageType, int bufferSize)
     {
-        // gcroot object manages the pointer so that it always corresponds to the correct managed location (even after gc relocation)
-        gcroot<cli::array<ElemType>^> pBuf(itemBuffer);
-        pin_ptr<ElemType> pp = &(pBuf[0]);
-        pinBuffers.push_back(pBuf);
+        GCHandle h = GCHandle::Alloc(itemBuffer, GCHandleType::Pinned);
+        pinnedGCHandleList->Add(h);
+        ElemType* pp = reinterpret_cast<ElemType *>(h.AddrOfPinnedObject().ToPointer());
         vb->m_buffer.InitFrom(pp, bufferSize, storageType == StorageType::Sparse ? bufferSize : 0);
-        pp = nullptr;
     }
 
-    void PinIndices(cli::array<int>^ itemBuffer, vector<gcroot<cli::array<int>^>>& pinBuffers, Native::ValueBuffer<ElemType, Native::VectorRef>* vb, StorageType storageType, int bufferSize)
+    void PinIndices(cli::array<int>^ itemBuffer, List<GCHandle>^ pinnedGCHandleList, Native::ValueBuffer<ElemType, Native::VectorRef>* vb, StorageType storageType, int bufferSize)
     {
-        // gcroot object manages the pointer so that it always corresponds to the correct managed location (even after gc relocation)
-        gcroot<cli::array<int>^> pBuf(itemBuffer);
-        pin_ptr<int> pp = &(pBuf[0]);
-        pinBuffers.push_back(pBuf);
+        GCHandle h = GCHandle::Alloc(itemBuffer, GCHandleType::Pinned);
+        pinnedGCHandleList->Add(h);
+        int* pp = reinterpret_cast<int *>(h.AddrOfPinnedObject().ToPointer());
         vb->m_indices.InitFrom(pp, bufferSize, storageType == StorageType::Sparse ? bufferSize : 0);
-        pp = nullptr;
     }
 
-    void PinColIndices(cli::array<int>^ itemBuffer, vector<gcroot<cli::array<int>^>>& pinBuffers, Native::ValueBuffer<ElemType, Native::VectorRef>* vb, StorageType storageType, int bufferSize)
+    void PinColIndices(cli::array<int>^ itemBuffer, List<GCHandle>^ pinnedGCHandleList, Native::ValueBuffer<ElemType, Native::VectorRef>* vb, StorageType storageType, int bufferSize)
     {
-        // gcroot object manages the pointer so that it always corresponds to the correct managed location (even after gc relocation)
-        gcroot<cli::array<int>^> pBuf(itemBuffer);
-        pin_ptr<int> pp = &(pBuf[0]);
-        pinBuffers.push_back(pBuf);
+        GCHandle h = GCHandle::Alloc(itemBuffer, GCHandleType::Pinned);
+        pinnedGCHandleList->Add(h);
+        int* pp = reinterpret_cast<int *>(h.AddrOfPinnedObject().ToPointer());
         vb->m_colIndices.InitFrom(pp, bufferSize, storageType == StorageType::Sparse ? bufferSize : 0);
-        pp = nullptr;
     }
 
-    void TransferVectorsToValueBuffers(cli::array<ValueBuffer<ElemType>^>^ list, Native::ValueRefs<ElemType>& valueRefs, vector<gcroot<cli::array<ElemType>^>>& pinBuffers, vector<gcroot<cli::array<int>^>>& pinIndices, StorageType storageType)
+    void TransferVectorsToValueBuffers(cli::array<ValueBuffer<ElemType>^>^ list, Native::ValueRefs<ElemType>& valueRefs, List<GCHandle>^ pinnedGCHandleList, StorageType storageType)
     {
         for each (auto item in list)
         {
@@ -476,16 +477,16 @@ private:
                 throw gcnew CNTKRuntimeException("Invalid buffer (empty) for argument into ForwardPass", String::Empty);
             }
 
-            PinBuffer(item->Buffer, pinBuffers, &vb, storageType, bufferSize);
+            PinBuffer(item->Buffer, pinnedGCHandleList, &vb, storageType, bufferSize);
 
             if (item->Indices != nullptr)
             {
-                PinIndices(item->Indices, pinIndices, &vb, storageType, bufferSize);
+                PinIndices(item->Indices, pinnedGCHandleList, &vb, storageType, bufferSize);
             }
 
             if (item->ColIndices != nullptr)
             {
-                PinColIndices(item->ColIndices, pinIndices, &vb, storageType, numElements);
+                PinColIndices(item->ColIndices, pinnedGCHandleList, &vb, storageType, numElements);
             }
 
             valueRefs.push_back(vb);

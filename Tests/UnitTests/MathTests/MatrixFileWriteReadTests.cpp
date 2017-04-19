@@ -8,9 +8,6 @@
 #include "../../../Source/Math/GPUMatrix.h"
 #include "../../Common/Include/fileutil.h"
 #include "../../Common/Include/File.h"
-// ToDo: CPP files directly included, use common library in the future if possible
-#include "../../Common/File.cpp"
-#include "../../Common/fileutil.cpp"
 
 #include <string>
 

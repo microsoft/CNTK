@@ -1,8 +1,8 @@
 from __future__ import print_function
 import numpy as np
 import cntk as C
-from cntk.learner import sgd, learning_rate_schedule, UnitType
-from cntk.utils import ProgressPrinter
+from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk.logging import ProgressPrinter
 from cntk.layers import Dense, Sequential
 
 def generate_random_data(sample_size, feature_dim, num_classes):
@@ -25,8 +25,8 @@ def ffnet():
     hidden_dimension = 50
 
     # input variables denoting the features and label data
-    features = C.input_variable((inputs), np.float32)
-    label = C.input_variable((outputs), np.float32)
+    features = C.input((inputs), np.float32)
+    label = C.input((outputs), np.float32)
 
     # Instantiate the feedforward classification model
     my_model = Sequential ([
@@ -39,20 +39,22 @@ def ffnet():
 
     # Instantiate the trainer object to drive the model training
     lr_per_minibatch = learning_rate_schedule(0.125, UnitType.minibatch)
-    trainer = C.Trainer(z, (ce, pe), [sgd(z.parameters, lr=lr_per_minibatch)])
+    progress_printer = ProgressPrinter(0)
+    trainer = C.Trainer(z, (ce, pe), [sgd(z.parameters, lr=lr_per_minibatch)], [progress_printer])
 
     # Get minibatches of training data and perform model training
     minibatch_size = 25
     num_minibatches_to_train = 1024
 
-    pp = ProgressPrinter(0)
+    aggregate_loss = 0.0
     for i in range(num_minibatches_to_train):
         train_features, labels = generate_random_data(minibatch_size, inputs, outputs)
         # Specify the mapping of input variables in the model to actual minibatch data to be trained with
         trainer.train_minibatch({features : train_features, label : labels})
-        pp.update_with_trainer(trainer)
+        sample_count = trainer.previous_minibatch_sample_count
+        aggregate_loss += trainer.previous_minibatch_loss_average * sample_count
 
-    last_avg_error = pp.avg_loss_since_start()
+    last_avg_error = aggregate_loss / trainer.total_number_of_samples_seen
 
     test_features, test_labels = generate_random_data(minibatch_size, inputs, outputs)
     avg_error = trainer.test_minibatch({features : test_features, label : test_labels})

@@ -15,30 +15,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class BinaryDataChunk : public Chunk, public std::enable_shared_from_this<Chunk>
 {
 public:
-    explicit BinaryDataChunk(ChunkIdType chunkId, size_t startSequence, size_t numSequences, unique_ptr<byte[]> buffer, std::vector<BinaryDataDeserializerPtr> deserializer)
-        : m_chunkId(chunkId), m_startSequence(startSequence), m_numSequences(numSequences), m_buffer(std::move(buffer)), m_deserializers(deserializer)
-    {
-    }
+    explicit BinaryDataChunk(ChunkIdType chunkId,
+        size_t numSequences, 
+        unique_ptr<byte[]> buffer, 
+        std::vector<BinaryDataDeserializerPtr> deserializer)
+        : m_chunkId(chunkId),
+        m_numSequences(numSequences), 
+        m_buffer(std::move(buffer)), 
+        m_deserializers(deserializer)
+    { }
 
-    // Gets sequences by id.
-    void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
+    // Gets a sequence using its index inside the chunk.
+    void GetSequence(size_t sequenceIdx, std::vector<SequenceDataPtr>& result) override
     {
         // Check if we've already parsed the chunk. If not, parse it.
         if (m_data.size() == 0)
             ParseChunk();
+
         assert(m_data.size() != 0);
+
         // resize the output to have the same dimensionality
         result.resize(m_data.size());
         // now copy the decoded sequences
-        for (size_t c = 0; c < m_data.size(); c++)
-            result[c] = m_data[c].at(sequenceId - m_startSequence);
+        for (size_t i = 0; i < m_data.size(); i++)
+            result[i] = m_data[i].at(sequenceIdx);
     }
 
-    uint32_t GetNumSamples(size_t sequenceId)
+    uint32_t GetNumSamples(size_t sequenceIdx)
     {
         uint32_t numSamples = 0;
-        for (size_t c = 0; c < m_data.size(); c++)
-            numSamples = max(numSamples, m_data[c].at(sequenceId)->m_numberOfSamples);
+        for (size_t i = 0; i < m_data.size(); i++)
+            numSamples = max(numSamples, m_data[i].at(sequenceIdx)->m_numberOfSamples);
         return numSamples;
     }
 
@@ -50,15 +57,13 @@ protected:
         // the number of bytes of buffer that have been processed by the deserializer so far
         size_t bytesProcessed = 0;
         // Now call all of the deserializers on the chunk, in order
-        for (size_t c = 0; c < m_deserializers.size(); c++)
-            bytesProcessed += m_deserializers[c]->GetSequenceDataForChunk(m_numSequences, (byte*)m_buffer.get() + bytesProcessed, m_data[c]);
+        for (size_t i = 0; i < m_deserializers.size(); i++)
+            bytesProcessed += m_deserializers[i]->GetSequenceDataForChunk(m_numSequences, m_buffer.get() + bytesProcessed, m_data[i]);
     }
 
     // chunk id (copied from the descriptor)
     ChunkIdType m_chunkId;
 
-    // start id for sequences in this chunk. 
-    size_t m_startSequence;
     // num sequences in this chunk. Note this should be in the chunk, but for simplicity it is in the offsets table
     // so we must tell the chunk where it starts.
     size_t m_numSequences;

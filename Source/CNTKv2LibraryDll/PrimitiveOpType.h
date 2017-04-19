@@ -72,9 +72,17 @@ namespace CNTK
         NDCG = 60,
         EditDistanceError = 61,
         NoOp = 62,
-        LabelsToGraph = 63
-        // New op types should only be appended to the end of this list.
+        LabelsToGraph = 63,
+        StopGradient = 64,
+        ELU = 65,
+        ForwardBackward = 66,
+        CosDistanceWithNegativeSamples = 67,
+        OneHot = 68,
+        Pow = 69,
+        // New op types should only be appended to the end of this list 
+        UnknownOP
+        // and UnknownOP should always be last.
         // If you append here, also add checks in SerializationTests (CheckEnumValuesNotModified)
-        // and bump up PrimitiveFunction::s_serializationVersion and update PrimitiveFunction::Deserialize
+        // and bump up PrimitiveFunction::s_serializationVersion
     };
 }

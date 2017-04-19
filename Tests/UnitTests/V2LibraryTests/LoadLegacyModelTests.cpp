@@ -38,9 +38,9 @@ void TestLoadLegacyModelWithPrecompute(const DeviceDescriptor& device)
     FunctionPtr loss = FindVariableByName(outputs, L"CrossEntropyWithSoftmax");
     FunctionPtr eval = FindVariableByName(outputs, L"EvalClassificationError");
 
-    Dictionary frameModeConfig;
-    frameModeConfig[L"frameMode"] = true;
-    auto minibatchSource = CreateHTKMinibatchSource(baseFeaturesDim, numOutputClasses, frameModeConfig, MinibatchSource::InfinitelyRepeat, true);
+    auto config = GetHTKMinibatchSourceConfig(baseFeaturesDim, numOutputClasses);
+    config.isFrameModeEnabled = true;
+    auto minibatchSource = CreateCompositeMinibatchSource(config);
 
     const size_t minbatchSize = 256;
     size_t numMinibatches = 10;
@@ -68,12 +68,13 @@ BOOST_AUTO_TEST_SUITE(LoadLegacyModelSuite)
 
 BOOST_AUTO_TEST_CASE(LoadLegacyModelWithPrecomputeInCPU)
 {
-    TestLoadLegacyModelWithPrecompute(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestLoadLegacyModelWithPrecompute(DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(LoadLegacyModelWithPrecomputeInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestLoadLegacyModelWithPrecompute(DeviceDescriptor::GPUDevice(0));
 }
 

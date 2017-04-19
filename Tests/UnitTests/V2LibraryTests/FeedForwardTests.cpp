@@ -324,6 +324,132 @@ void TestReduceableTransposeTimes(size_t inputDim,
     }
 }
 
+template <typename ElementType>
+void TestTimesReduceSequenceAxis(
+    size_t inputDimM,
+    size_t inputDimK,
+    bool isLeftSparse,
+    bool isRightSparse,
+    const std::vector<size_t>& sequencesLength,
+    const DeviceDescriptor& device,
+    unsigned int seed = 1)
+{
+    const int NumInputs = 2;
+
+    enum class FuncType : int
+    {
+        Times_ReduceSequenceAxis = 0,
+        ReduceSumTimes,
+        TotalTypes,
+    };
+
+    Variable inputVar[NumInputs] = 
+    {
+        inputDimK > 1 ?
+            InputVariable({ inputDimM, inputDimK }, isLeftSparse, AsDataType<ElementType>(), /*needsGradient*/ !isLeftSparse, L"inputLeft") :
+            InputVariable({ inputDimM }, isLeftSparse, AsDataType<ElementType>(), /*needsGradient*/ !isLeftSparse, L"inputLeft"),
+        InputVariable({ inputDimK }, isRightSparse, AsDataType<ElementType>(), /*needsGradient*/ !isRightSparse, L"inputRight")
+    };
+
+    FunctionPtr funcs[(int)FuncType::TotalTypes]=
+    {
+        Times(inputVar[0], inputVar[1], 1, TimesReduceSequenceAxisWithoutInferredInputRank),
+        Sequence::ReduceSum(Times(inputVar[0], inputVar[1]))
+    };
+
+    size_t maxTimestepsPerSequence = 0;
+    for (auto s : sequencesLength)
+    {
+        maxTimestepsPerSequence = std::max(maxTimestepsPerSequence, s);
+    }
+    size_t numSequences = sequencesLength.size();
+
+    ValuePtr inputValue[NumInputs];
+    NDShape  inputShape[NumInputs];
+    bool     inputSparse[NumInputs] = {isLeftSparse, isRightSparse};
+    srand(seed);
+    for(int inputIndex = 0; inputIndex < NumInputs; ++inputIndex)
+    {
+        auto inputVarShape = inputVar[inputIndex].Shape();
+        inputShape[inputIndex] = inputVarShape.AppendShape({maxTimestepsPerSequence, numSequences});
+        inputValue[inputIndex] = GenerateSequences<ElementType>(sequencesLength, inputVarShape, DeviceDescriptor::CPUDevice(), inputSparse[inputIndex]);
+    }
+
+    std::unordered_map<Variable, ValuePtr> inputMap = { { inputVar[0], inputValue[0] },{ inputVar[1], inputValue[1] } };
+
+    std::vector<ElementType> outputData[(int)FuncType::TotalTypes];
+    ValuePtr outputValue[(int)FuncType::TotalTypes];
+    NDShape outputShape = funcs[0]->Output().Shape().AppendShape({ numSequences });
+
+    std::vector<ElementType> inputGradientData[(int)FuncType::TotalTypes][NumInputs];
+    ValuePtr inputGradientValue[(int)FuncType::TotalTypes][NumInputs];
+
+    std::vector<ElementType> rootGradientsData(outputShape.TotalSize(), 1);
+    ValuePtr rootGradientValue;
+    if (device.Type() == DeviceKind::CPU)
+        rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), device, true));
+    else
+    {
+        NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true);
+        NDArrayViewPtr gpuArrayView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), outputShape, device);
+        gpuArrayView->CopyFrom(*cpuArrayView);
+        rootGradientValue = MakeSharedObject<Value>(gpuArrayView);
+    }
+
+    for(int f = 0; f < (int)FuncType::TotalTypes; ++f)
+    {
+        outputData[f] = std::vector<ElementType>(outputShape.TotalSize());
+        outputValue[f] = 
+            MakeSharedObject<Value>(
+                MakeSharedObject<NDArrayView>(
+                    outputShape, outputData[f].data(),
+                    outputShape.TotalSize(),
+                    DeviceDescriptor::CPUDevice()));
+
+        // forward
+        std::unordered_map<Variable, ValuePtr> outputMap = { { funcs[f]->Output(), outputValue[f] } };
+        auto backpropState =
+            funcs[f]->Forward(
+                inputMap,
+                outputMap,
+                device,
+                { funcs[f]->Output() });
+
+        // backward
+        for(int inputIndex = 0; inputIndex < NumInputs; ++inputIndex)
+        {
+            inputGradientData[f][inputIndex] = std::vector<ElementType>(inputVar[inputIndex].Shape().TotalSize() * maxTimestepsPerSequence * numSequences, std::numeric_limits<ElementType>::quiet_NaN());
+            if (device.Type() == DeviceKind::CPU)
+            {
+                inputGradientValue[f][inputIndex] = MakeSharedObject<Value>(
+                    MakeSharedObject<NDArrayView>(inputShape[inputIndex], inputGradientData[f][inputIndex].data(), inputGradientData[f][inputIndex].size(), device),
+                    inputValue[inputIndex]->Mask());
+            }
+            else
+            {
+                NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(inputShape[inputIndex], inputGradientData[f][inputIndex].data(), inputGradientData[f][inputIndex].size(), DeviceDescriptor::CPUDevice());
+                NDArrayViewPtr gpuArrayView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), inputShape[inputIndex], device);
+                gpuArrayView->CopyFrom(*cpuArrayView);
+                inputGradientValue[f][inputIndex] = MakeSharedObject<Value>(
+                    gpuArrayView,
+                    inputValue[inputIndex]->Mask());
+            }
+        }
+        std::unordered_map<Variable, ValuePtr> gradientMap;
+        if (!isLeftSparse) gradientMap.insert(std::make_pair(inputVar[0], inputGradientValue[f][0]));
+        if (!isRightSparse) gradientMap.insert(std::make_pair(inputVar[1], inputGradientValue[f][1]));
+        funcs[f]->Backward(backpropState, { { funcs[f]->Output(), rootGradientValue } }, gradientMap);
+    }
+
+    FloatingPointVectorCompare(outputData[(int)FuncType::Times_ReduceSequenceAxis], outputData[(int)FuncType::ReduceSumTimes], "Forward results do not match expected results for Sequence::ReduceSum(Times())");
+
+    for (int inputIndex = 0; inputIndex < NumInputs; ++inputIndex)
+    {
+        if (inputSparse[inputIndex]) continue;
+        FloatingPointVectorCompare(inputGradientData[(int)FuncType::Times_ReduceSequenceAxis][inputIndex], inputGradientData[(int)FuncType::ReduceSumTimes][inputIndex], "Backprop results do not match expected results for Sequence::ReduceSum(Times())");
+    }
+}
+
 BOOST_AUTO_TEST_SUITE(FeedForwardSuite)
 
 BOOST_AUTO_TEST_CASE(FFTimesAndPlusInCPU)
@@ -336,9 +462,30 @@ BOOST_AUTO_TEST_CASE(ReduceableTransposeTimesInCPU)
     TestReduceableTransposeTimes<double>(4, 5, DeviceDescriptor::CPUDevice(), 3);
 }
 
+BOOST_AUTO_TEST_CASE(TimesReduceSequenceAxis)
+{
+    if (ShouldRunOnGpu())
+    {
+        TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20, 7, 8 }, DeviceDescriptor::GPUDevice(0));
+        TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20 }, DeviceDescriptor::GPUDevice(0));
+        TestTimesReduceSequenceAxis<double>(345, 1, false, false, { 7, 8 }, DeviceDescriptor::GPUDevice(0));
+        TestTimesReduceSequenceAxis<double>(345, 1, true, false, { 7, 8 }, DeviceDescriptor::GPUDevice(0));
+        TestTimesReduceSequenceAxis<double>(345, 1, true, false, { 7 }, DeviceDescriptor::GPUDevice(0));
+    }
+
+    if (ShouldRunOnCpu())
+    {
+        TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20, 7, 8 }, DeviceDescriptor::CPUDevice());
+        TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20 }, DeviceDescriptor::CPUDevice());
+        TestTimesReduceSequenceAxis<double>(345, 1, false, false, { 7, 8 }, DeviceDescriptor::CPUDevice());
+        TestTimesReduceSequenceAxis<double>(345, 1, true, false, { 7, 8 }, DeviceDescriptor::CPUDevice());
+        TestTimesReduceSequenceAxis<double>(345, 1, true, false, { 7 }, DeviceDescriptor::CPUDevice());
+    }
+}
+
 BOOST_AUTO_TEST_CASE(FFTimesAndPlusInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false, true);
         TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false, false);
@@ -347,7 +494,7 @@ BOOST_AUTO_TEST_CASE(FFTimesAndPlusInGPU)
 
 BOOST_AUTO_TEST_CASE(FFNetworkCreationInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), true);
         TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), false);
@@ -356,8 +503,11 @@ BOOST_AUTO_TEST_CASE(FFNetworkCreationInGPU)
 
 BOOST_AUTO_TEST_CASE(FFNetworkCreationInCPU)
 {
-    TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), false);
-    TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), true);
+    if (ShouldRunOnCpu())
+    {
+        TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), false);
+        TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), true);
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

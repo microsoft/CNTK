@@ -2,8 +2,15 @@
 
 The UCF11 dataset (http://crcv.ucf.edu/data/UCF_YouTube_Action.php) for action recognition is one of the most widely used video dataset for experimenting with different classification algorithms. UCF11 contains 1160 videos, each is labeled to one of the following 11 action categories: biking/cycling, diving, golf swinging, horse back riding, soccer juggling, swinging, tennis swinging, trampoline jumping, volleyball spiking, and walking with a dog.
 
-UCF11 dataset is not included in the CNTK distribution but can be easily
-downloaded and converted to CNTK-supported format by running the following Python command:
+## Setup
+
+UCF11 dataset is not included in the CNTK distribution but can be easily be
+downloaded and converted to CNTK-supported format. But first let's install our dependency, all examples, including the setup script, depend on `imageio` package, to install imageio do the following:
+
+* For Anaconda: `conda install -c pyzo imageio`
+* For pip: `pip install imageio`
+
+Now we are ready to download and setup UCF11 dataset by running the following Python command:
 
 `python install_ucf11.py`
 

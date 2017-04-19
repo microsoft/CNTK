@@ -48,8 +48,12 @@
 #define CNTK_MODEL_VERSION_16 16 // save/load rng state for Dropout and RandomSample nodes.
 #define CNTK_MODEL_VERSION_17 17 // use 8 bytes for rng seeds on both platforms
 #define CNTK_MODEL_VERSION_18 18 // reserving 18 for dilated convolution, write out one more TensorShape 
-#define CNTK_MODEL_VERSION_19 19 // batch norm: add an input parameter to store running mean sample count.
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_19
+#define CNTK_MODEL_VERSION_19 19 // batch norm: flag whether running mean count is 0
+#define CNTK_MODEL_VERSION_20 20 // adding output shape to convolution node
+#define CNTK_MODEL_VERSION_21 21 // pooling: add a ceilOutDim to decide whether ceil or floor while computing the output size
+#define CNTK_MODEL_VERSION_22 22 // Slice and pad accepts multiple axes 
+#define CNTK_MODEL_VERSION_23 23 // pooling: add include pad func for average pooling
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_23
 
 
 // helper mode for debugging
@@ -304,7 +308,7 @@ public:
 
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
         m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0),
-        m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
+        m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name), m_isValueSparse(false)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
         // we store a unique numeric number for every node that is constructed, as a debugging aid
@@ -695,6 +699,11 @@ public:
                 if (child->GetSampleMatrixNumRows() == 0)
                     RuntimeError("%ls: input %ls %ls has 0 elements.", NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
         }
+
+        // By default the only case when the Value of a node is sparse 
+        // is when the node has a single input with sparse Value
+        if ((GetNumInputs() == 1) && m_inputs[0]->IsValueSparse())
+            m_isValueSparse = true;
     }
 
 protected:
@@ -819,6 +828,9 @@ public:
         return EnumerateNodes(std::vector<ComputationNodeBasePtr>{shared_from_this()});
     }
 
+    static const std::wstring DefaultDynamicAxisName;
+    static const std::wstring DefaultNoSequenceAxisName;
+
 private:
     // Recursive part of EnumerateNodes().
     void EnumerateNodesRec(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result) /*const*/ // const not working due to shared_from_this()
@@ -888,6 +900,8 @@ public:
     // Helper that returns [a x b x c], including dynamic axes.
     const std::string ShapeDescription() const;
 
+    bool IsValueSparse() const { return m_isValueSparse; }
+
     // debugging helper
     size_t m_uniqueNumericId; // (a unique handle for debugging)
 protected:
@@ -902,6 +916,8 @@ protected:
 
     // inputs
     std::vector<ComputationNodeBasePtr> m_inputs;
+
+    bool m_isValueSparse;
 
     // dimensions and layout
     // Data is stored as a Matrix object, but often it is interpreted as a tensor.
@@ -1414,13 +1430,13 @@ public:
     // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
     void InvalidateMissingValueColumns(const FrameRange& fr) override final
     {
-        // fprintf(stderr, "invalidating %ls %ls m_value column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
-        MaskMissingColumnsTo(*m_value, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
+        if (m_value->GetMatrixType() != SPARSE) // Sparse matrices can only be masked with 0s
+            MaskMissingColumnsTo(*m_value, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
     }
     void InvalidateMissingGradientColumns(const FrameRange& fr) override final
     {
-        // fprintf(stderr, "invalidating %ls %ls m_gradient column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
-        MaskMissingColumnsTo(*m_gradient, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
+        if (m_gradient->GetMatrixType() != SPARSE) // Sparse matrices can only be masked with 0s
+            MaskMissingColumnsTo(*m_gradient, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
     }
 
     static TensorView<ElemType> Unpack(const TensorShape& sampleShape,
@@ -1443,6 +1459,7 @@ public:
 
     static void BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
                                   const MBLayoutPtr& inputLayout,
+                                  ElemType beta,
                                   Matrix<ElemType>& broadcastTo,
                                   const FrameRange& targetFrameRange,
                                   const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage);
@@ -1465,6 +1482,9 @@ public:
     MatrixBasePtr GradientPtr() const { return m_gradient; }
     std::shared_ptr<Matrix<ElemType>>& GradientPtrRef() { return m_gradient; }
     // TODO: This is only used for testing whether a gradient has been allocated. Maybe reduce to bool HasGradient()?
+
+    MatrixType GetPreferredGradientMatrixType() { return m_preferredGradientMatrixType; }
+    void SetPreferredGradientMatrixType(MatrixType requestType) { m_preferredGradientMatrixType = requestType; }
 
 private:
 
@@ -1585,24 +1605,41 @@ public:
     {
     }
 
-private:
+protected:
 
     // determine the size that we should set our Matrix storage to
     void DetermineDataSize(size_t& rows, size_t& cols) const
     {
-        if (HasMBLayout())
-        {
-            rows = GetSampleMatrixNumRows();
-            cols = GetSampleMatrixNumCols();
-        }
-        else
+        if (m_isValueSparse && HasMBLayout())
         {
             const auto& shape = GetSampleLayout();
             size_t rank = shape.GetRank();
-            rows = rank > 0 ? shape[0] : 0;
-            cols = rank > 0 ?        1 : 0;
+            rows = rank > 0 ? shape[0] : 1;
+
+            // TODO: TensorShape should have a method to 
+            // easily compute size of subshapes
+            cols = 1;
             for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
                 cols *= shape[k];
+
+            cols *= GetMBLayout()->GetNumCols();
+        }
+        else
+        {
+            if (HasMBLayout())
+            {
+                rows = GetSampleMatrixNumRows();
+                cols = GetSampleMatrixNumCols();
+            }
+            else
+            {
+                const auto& shape = GetSampleLayout();
+                size_t rank = shape.GetRank();
+                rows = rank > 0 ? shape[0] : 0;
+                cols = rank > 0 ? 1 : 0;
+                for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
+                    cols *= shape[k];
+            }
         }
     }
 
@@ -1646,91 +1683,13 @@ public:
     // This is where we
     //  - update the node dimension based on actual MB size
     //  - (re-)allocate the m_value matrix, which may be shared across nodes and thus have changed dimensions
-    virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
-    {
-        Base::BeginForwardProp();
+    virtual void /*IComputationNode::*/ BeginForwardProp() override; // called before first iteration step of ForwardProp()
 
-        // update the actual m_value allocation
-        if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
-            UpdateFunctionValuesSize();
+    virtual void /*IComputationNode::*/ EndForwardProp() override;
 
-        // give nodes a chance to update their internal state that may also have to match MB size
-        UpdateFunctionMBSize();
+    virtual void /*IComputationNode::*/BeginBackprop() override;
 
-        // and make sure dimensions are what we expect
-        VerifyDataSize(Value());
-    }
-
-    // NaN checks
-    virtual void /*IComputationNode::*/ EndForwardProp() override
-    {
-        Base::EndForwardProp();
-#ifdef _DEBUG
-#ifdef TRACK_GAP_NANS
-        MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-        if (Value().HasNan("EndForwardProp"))
-            LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
-#endif
-#if 0   // use this to track values of all nodes
-        MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-        Value().Print(msra::strfun::utf8(NodeName()), 0, min(Value().GetNumRows()-1, 4), 0, min(Value().GetNumCols()-1, 4));
-#endif
-        InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
-#endif
-        // tracing
-        Trace();
-    }
-
-    virtual void /*IComputationNode::*/BeginBackprop() override
-    {
-        Base::BeginBackprop();
-
-        if (NeedsGradient())
-        {
-            // Verify that the shapes of the output/input Value matrices that the gradient backprop for this node needs
-            // are intact and have not been erroneously reshaped due to incorrect memory sharing
-            auto VerifyValueShape = [](const ComputationNode<ElemType>& node) {
-                size_t rows, cols;
-                node.DetermineDataSize(rows, cols);
-
-                auto& valueMatrix = node.Value();
-                if ((valueMatrix.GetNumRows() != rows) || (valueMatrix.GetNumCols() != cols))
-                {
-                    LogicError("%ls %ls operation found to have incorrect Value() matrix shape %lu x %lu during backprop; expected shape is %lu x %lu. "
-                               "This may be due to incorrect memory sharing.",
-                               node.NodeName().c_str(), node.OperationName().c_str(), valueMatrix.GetNumRows(), valueMatrix.GetNumCols(), rows, cols);
-                }
-            };
-
-            if (IsOutputNeededDuringBackprop())
-                VerifyValueShape(*this);
-
-            for (size_t i = 0; i < m_inputs.size(); i++)
-            {
-                if (InputUsedInComputingInputNodesGradients(i))
-                    VerifyValueShape(InputRef(i));
-            }
-        }
-    }
-
-#ifdef _DEBUG
-    virtual void /*IComputationNode::*/ EndBackprop() override
-    {
-        Base::EndBackprop();
-#ifdef TRACK_GAP_NANS
-        for (size_t i = 0; i < m_inputs.size(); i++)
-        {
-            ComputationNodePtr child = Input(i);
-            if (child->m_needsGradient)
-            {
-                child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-                if (child->Gradient().HasNan("EndBackprop"))
-                    LogicError("%ls %ls operation unexpectedly produced NaN gradients.", child->NodeName().c_str(), child->OperationName().c_str());
-            }
-        }
-#endif
-    }
-#endif
+    virtual void /*IComputationNode::*/ EndBackprop() override;
 
     // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
     // TODO: move to -Base (or -Network?)
@@ -1795,7 +1754,7 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         size_t matrixSize = m_sampleLayout.GetNumElements();
-        if (IsValueSharable())
+        if (IsValueSharable() && !m_isValueSparse)
             RequestMatrixFromPool(m_value, matrixPool, matrixSize, HasMBLayout());
         else
             CreateMatrixIfNull(m_value);
@@ -1805,7 +1764,7 @@ public:
     // don't release matrices that need to be used in the gradient computation
     virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
     {
-        if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE) && IsValueSharable())
+        if (!IsOutputNeededDuringBackprop() && !m_isValueSparse && IsValueSharable())
             ReleaseMatrixToPool(m_value, matrixPool);
     }
 
@@ -1835,7 +1794,7 @@ public:
 
             // Release the Value matrix only if the output value is needed during backprop
             // since in the case it isn't used, we release it during forward prop itself
-            if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE && IsValueSharable())
+            if (IsOutputNeededDuringBackprop() && !m_isValueSparse && IsValueSharable())
                 ReleaseMatrixToPool(m_value, matrixPool);
         }
     }
@@ -1869,11 +1828,13 @@ protected:
 
     // matrixSize is per sample size, if unknown or hard to estimate, set matrixSize = 0
     // if the matrix's size will scale with minibatch size, set mbScale = true 
-    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false)
+    // if workspace flag is true, the memory request will be treated specially. We assume workspace memory will share their own pointers 
+    // this is currently a workaround for workspace memory for convolutions
+    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false)
     {
         if (matrixPtr == nullptr)
         {
-            matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale);
+            matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale, isWorkSpace);
         }
     }
 
@@ -2067,6 +2028,8 @@ protected:
     shared_ptr<Matrix<ElemType>> m_value, m_gradient;
 
     static std::map<size_t, std::map<size_t, shared_ptr<Matrix<ElemType>>>> s_constOnes;
+
+    MatrixType m_preferredGradientMatrixType = UNDETERMINED;
 };
 
 // convenience wrapper for ComputationNode::New()

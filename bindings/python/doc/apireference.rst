@@ -3,13 +3,16 @@ Python API Reference
 
 .. toctree::
    :maxdepth: 2
-
-   Graph components <graph>
+	      
+   CNTK <cntk>
+   Debugging <cntk.debugging.rst>
    IO <cntk.io>
-   Learner <cntk.learner>
-   Trainer <cntk.trainer>
-   Training session <cntk.training_session>
-   Operators <cntk.ops>
-   Utils <cntk.utils>
+   Layers <cntk.layers.rst>
+   Losses <cntk.losses.rst>
+   Learners <cntk.learners.rst>
+   Logging <cntk.logging.rst>
+   Metrics <cntk.metrics.rst>
+   Ops <cntk.ops.rst>
+   Train <cntk.train>
+   Eval <cntk.eval>
    Module reference <modules>
-

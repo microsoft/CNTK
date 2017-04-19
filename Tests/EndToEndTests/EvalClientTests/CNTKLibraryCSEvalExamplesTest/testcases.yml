@@ -1,0 +1,13 @@
+isPythonTest: True
+
+dataDir: .
+
+tags: 
+  # Only for Windows Release
+  - bvt-l ((build_sku == '1bitsgd') or (build_sku == 'cpu')) and (os == 'windows') and (flavor == 'release')
+  - nightly-l ((build_sku == '1bitsgd') or (build_sku == 'cpu')) and (os == 'windows') and (flavor == 'release')
+
+testCases:
+  Test run must be completed:
+    patterns:
+      - Evaluation completes
