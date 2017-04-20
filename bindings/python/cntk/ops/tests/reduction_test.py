@@ -206,7 +206,7 @@ def test_op_reduce_all(input_data, axis, device_id, precision):
         expected_backward = bwd(value,expected_forward)
         binding = {a: value}
         actual_backward = input_op.grad(binding)
-        actual_forward  = np.copy(input_op.eval(binding))
+        actual_forward  = input_op.eval(binding)
         assert np.allclose(actual_forward, expected_forward)
         for ab,eb in zip (actual_backward, expected_backward):
             assert np.allclose(ab, eb)
@@ -275,7 +275,7 @@ def test_op_reduce_over_batch_axis(input_data, device_id, precision):
         expected_backward = bwd(data, expected_forward)
         binding = {a: data}
         actual_backward = input_op.grad(binding)
-        actual_forward  = np.copy(input_op.eval(binding))
+        actual_forward  = input_op.eval(binding)
         assert np.allclose(actual_forward, expected_forward)
         for ab,eb in zip (actual_backward, expected_backward):
             assert np.allclose(ab, eb)

@@ -3913,7 +3913,12 @@ namespace CNTK
     CNTK_API FunctionPtr StopGradient(const Variable& operand, const std::wstring& name = L"");
 
     ///
-    /// Update the content of ref to the content of the operand, and return ref also. 
+    /// Assign the value in operand to ref and return the new value, ref need to be the same layout as operand.
+    /// During forward pass, ref will get the new value after the forward or backward pass finish, so that any part of
+    /// the graph that depend on ref will get the old value. To get the new value, use the one returned by
+    /// the assign node.The reason for that is to make ``assign`` have a deterministic behavior.
+    /// During inference the value of ref wull be updated after the forward pass and during training the value
+    /// of ref will be updated after backprop. 
     ///
     CNTK_API FunctionPtr Assign(Variable& ref, const Variable& operand, const std::wstring& name = L"");
 

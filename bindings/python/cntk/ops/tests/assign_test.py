@@ -82,6 +82,8 @@ def test_assign_gradient(input_data, device_id, precision):
     result = list(fwd.values())[0]
     grad = assign_op.backward(bwd, {assign_op.output:np.ones_like(result)}, set([dest]))
 
-    # dest should have the new value by now..
+    # dest should have the new value by now.
     assert np.array_equal(dest.asarray(), data)
+
+    # check the gradient.
     assert np.array_equal(grad[dest], np.zeros_like(result))
