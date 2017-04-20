@@ -135,7 +135,7 @@ public:
     // main entry point for forward prop
     void ForwardProp(const ComputationNodeBasePtr rootNode);
 
-    // main entry point for post forward prop
+    // main entry point for post forward or backward prop
     void PostForwardOrBackProp(const ComputationNodeBasePtr rootNode);
 
     // main entry point for backprop
