@@ -13,7 +13,7 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Examples","Image","Detection","FastRCNN", "CNTK_FastRCNN_Eval.ipynb")
 
 # For now the test only supported on linux with python 3.4
-@pytest.mark.skipif(sys.version_info != (3,4),
+@pytest.mark.skipif(not (sys.version_info.major == 3 and sys.version_info.minor == 4),
                     reason="requires python 3.4")
 @pytest.mark.skipif(sys.platform == 'win32',
                     reason="does not currently run on windows")
@@ -24,7 +24,7 @@ def test_cntk_fastrcnn_eval_noErrors(nb):
     assert errors == []
 
 # For now the test only supported on linux with python 3.4
-@pytest.mark.skipif(sys.version_info != (3,4),
+@pytest.mark.skipif(not (sys.version_info.major == 3 and sys.version_info.minor == 4),
                     reason="requires python 3.4")
 @pytest.mark.skipif(sys.platform == 'win32',
                     reason="does not currently run on windows")
