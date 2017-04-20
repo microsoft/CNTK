@@ -58,3 +58,5 @@ class IgnoreLabel(UserFunction):
             # since we set target = pred in forward the gradients for ignored entries should already be zero
             variables[self.inputs[0]] = root_gradients[self.outputs[0]]
 
+    def clone(self, cloned_inputs):
+        return IgnoreLabel(cloned_inputs[0], cloned_inputs[1], ignore_label=self._ignore_label)

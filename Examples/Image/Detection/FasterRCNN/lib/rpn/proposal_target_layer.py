@@ -56,13 +56,13 @@ class ProposalTargetLayer(UserFunction):
         bbox_inside_weights_shape = (self._rois_per_image, self._num_classes * 4)
 
         return [output_variable(rois_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
-                                name="ptl_rois", needs_gradient=False), # , name="rpn_target_rois"
+                                name="ptl_rois", needs_gradient=False),
                 output_variable(labels_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
-                                name="label_targets", needs_gradient=False),
+                                name="ptl_lables", needs_gradient=False),
                 output_variable(bbox_targets_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
-                                name="bbox_targets", needs_gradient=False),
+                                name="ptl_bbox", needs_gradient=False),
                 output_variable(bbox_inside_weights_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
-                                name="bbox_inside_w", needs_gradient=False)]
+                                name="ptl_bbox_w", needs_gradient=False)]
 
     def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
         if debug_fwd: print("--> Entering forward in {}".format(self.name))
@@ -192,6 +192,8 @@ class ProposalTargetLayer(UserFunction):
         """This layer does not propagate gradients."""
         pass
 
+    def clone(self, cloned_inputs):
+        return ProposalTargetLayer(cloned_inputs[0], cloned_inputs[1], num_classes=self._num_classes)
 
 def _get_bbox_regression_labels(bbox_target_data, num_classes):
     """Bounding-box regression targets (bbox_target_data) are stored in a

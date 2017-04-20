@@ -75,3 +75,6 @@ class SmoothL1Loss(UserFunction):
             gradients[ge_plus_one] = item_gradients [ge_plus_one]
             gradients.shape = (1,) + gradients.shape
             variables[self.inputs[0]] = gradients
+
+    def clone(self, cloned_inputs):
+        return SmoothL1Loss(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2], sigma=self._sigma)

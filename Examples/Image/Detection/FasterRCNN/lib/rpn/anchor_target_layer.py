@@ -265,6 +265,8 @@ class AnchorTargetLayer(UserFunction):
         """This layer does not propagate gradients."""
         pass
 
+    def clone(self, cloned_inputs):
+        return AnchorTargetLayer(cloned_inputs[0], cloned_inputs[1], im_info=self._im_info)
 
 def _unmap(data, count, inds, fill=0):
     """ Unmap a subset of item (data) back to the original set of items (of
