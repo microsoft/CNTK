@@ -13,6 +13,7 @@ from pixelcnn import models as m
 from pixelcnn import nn as nn
 from pixelcnn import losses as l
 from pixelcnn import sample as sp
+from pixelcnn import plotting as plotting
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -46,22 +47,24 @@ def create_reader(map_file, is_training):
 def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs = 100):
 
     # Input variables denoting the features and label data
-    input_var  = ct.input_variable((num_channels, image_height, image_width))
-    target_var = ct.input_variable(shape=(256, num_channels*image_height*image_width)) if (loss == 'category') else ct.input_variable(shape=(num_channels, image_height, image_width))
-    label_var  = ct.input_variable((num_classes))
+    x      = ct.input(shape=(num_channels, image_height, image_width))
+    target = ct.input(shape=(num_channels, image_height, image_width))
+    label  = ct.input((num_classes))
 
     # apply model to input
-    input_norm = (input_var - 127.5) / 127.5 # [-1, 1]
-    z = m.build_model(input_norm, model, loss)
+    x_norm = (x - 127.5) / 127.5 # [-1, 1]
+
+    z_init = m.build_model(x_norm, model, loss, first_run=True)
+    z = m.build_model(x_norm, model, loss)
 
     # loss and metric
-    ce = l.loss_function(input_norm, target_var, z, loss)
+    ce = l.loss_function(x_norm, target, z, loss)
     pe = ct.relu(1.0) # dummy value to make reporting progress happy.
 
     # training config
-    epoch_size     = 50000    
-    minibatch_size = 12 if (model == 'pixelcnnpp') else 64
-
+    epoch_size          = 50000
+    init_minibatch_size = 100
+    minibatch_size      = 12 if (model == 'pixelcnnpp') else 64
 
     # Set learning parameters
     lr_init          = 0.00001
@@ -78,17 +81,17 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     learner = ct.learners.adam(z.parameters, 
                                lr=lr_schedule, 
                                momentum=mm_schedule,
-                               unit_gain=False,
+                               unit_gain=False
                                # l1_regularization_weight = 0.001
-                               # l2_regularization_weight = 0.001,
-                               gradient_clipping_threshold_per_sample=100
+                               # l2_regularization_weight = 0.001
+                               #gradient_clipping_threshold_per_sample=10
                                )
     trainer = ct.Trainer(z, (ce, pe), [learner], progress_writers)
 
     # define mapping from reader streams to network inputs
     input_map = {
-        input_var: reader_train.streams.features,
-        label_var: reader_train.streams.labels
+        x: reader_train.streams.features,
+        label: reader_train.streams.labels
     }
 
     ct.logging.log_number_of_parameters(z); print()
@@ -97,20 +100,28 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         training_loss = 0
+
+        # first_run
+        if epoch == 0:
+            reader_state = reader_train.get_checkpoint_state()
+            data = reader_train.next_minibatch(min(init_minibatch_size, epoch_size), input_map=input_map)
+            z_init.eval({x:data[x].value})
+            reader_train.restore_from_checkpoint(reader_state)
+
         while sample_count < epoch_size:  # loop over minibatches in the epoch
             t0 = time.perf_counter()
-            data = reader_train.next_minibatch(min(minibatch_size, epoch_size-sample_count), input_map=input_map) # fetch minibatch.
+            data = reader_train.next_minibatch(min(minibatch_size, epoch_size-sample_count), input_map=input_map)
             t1 = time.perf_counter()
 
             if loss == 'category':
                 # One hot: 256, 3*32*32
-                image  = np.asarray(data[input_var].value, dtype=int).flatten()
+                image  = np.asarray(data[x].value, dtype=int).flatten()
                 target = np.zeros((256,) + image.shape)
                 target[image, np.arange(image.size)] = 1
                 target = np.ascontiguousarray(np.reshape(target, (-1, 1, 256, num_channels*image_height*image_width)))
-                trainer.train_minibatch({input_var:data[input_var].value, target_var:target})
+                trainer.train_minibatch({input_var:data[x].value, target_var:target})
             else:
-                trainer.train_minibatch({input_var:data[input_var].value})
+                trainer.train_minibatch({x:data[x].value})
                 # lr_per_sample *= lr_decay
                 # learner.reset_learning_rate(ct.learning_rate_schedule(lr_per_sample, unit=ct.UnitType.sample))
 
@@ -119,22 +130,32 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
             sample_count  += trainer.previous_minibatch_sample_count
             training_loss += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count
 
+        lr_per_sample *= 0.6
+        learner.reset_learning_rate(ct.learning_rate_schedule(lr_per_sample, unit=ct.UnitType.sample))
+
         # sample from the model
         t3 = time.perf_counter()
         if loss == 'mixture':
-            x_gen = np.zeros(image_shape, dtype=np.float32)
+            x_gen = np.zeros((12,) + image_shape, dtype=np.float32)
             for y in range(image_height):
                 for x in range(image_width):
-                    new_x_gen    = z.eval({input_var:[x_gen]})
+                    new_x_gen    = z.eval({x:[x_gen]})
+                    print(new_x_gen)
                     new_x_gen_np = np.asarray(sp.np_sample_from_discretized_mix_logistic(new_x_gen[0], nr_logistic_mix))
-                    x_gen[0,y,x] = new_x_gen_np[0,y,x]
-                    x_gen[1,y,x] = new_x_gen_np[1,y,x]
-                    x_gen[2,y,x] = new_x_gen_np[2,y,x]
+                    x_gen[:,:,y,x] = new_x_gen_np[:,:,y,x]
+                    #x_gen[:,1,y,x] = new_x_gen_np[:,1,y,x]
+                    #x_gen[:,2,y,x] = new_x_gen_np[:,2,y,x]
 
-            norm_image  = sp.scale_to_unit_interval(np.ascontiguousarray(np.transpose(x_gen, (1, 2, 0)), dtype=np.float32)) # [0,1]
-            norm_image *= 255.0
-            image = Image.fromarray(np.asarray(norm_image, dtype=np.uint8))
-            image.save("image_{}.png".format(epoch))
+            sample_x = np.concatenate(np.ascontiguousarray(np.transpose(x_gen, (0,2,3,1))), axis=0)
+            img_tile = plotting.img_tile(sample_x, aspect_ratio=1.0, border_color=1.0, stretch=True)
+            img = plotting.plot_img(img_tile, title="Samples from epoch {}.".format(epoch))
+            plotting.plt.savefig("image_{}.png".format(epoch))
+            plotting.plt.close('all')
+
+            #norm_image  = sp.scale_to_unit_interval(np.ascontiguousarray(np.transpose(x_gen, (0,2,3,1)), dtype=np.float32)) # [0,1]
+            #norm_image *= 255.0
+            #image = Image.fromarray(np.asarray(norm_image, dtype=np.uint8))
+            #image.save("image_{}.png".format(epoch))
         t4 = time.perf_counter()
 
         trainer.summarize_training_progress()

@@ -5,11 +5,11 @@ import numpy as np
 import cntk as ct
 from . import nn as nn
 
-def loss_function(input_norm, target, z, loss):
+def loss_function(x, target, z, loss):
     if loss == 'category':
         return softmax_256_loss(target, z)        
     elif loss == 'mixture':
-        return discretized_mix_logistic_loss(input_norm,z)
+        return discretized_mix_logistic_loss(x,z)
 
     return None
 
@@ -64,12 +64,10 @@ def discretized_mix_logistic_loss(x,l):
                                                                       ct.log(nn.maximum(cdf_delta, 1e-12)), 
                                                                       log_pdf_mid - np.log(127.5))))
 
-    log_probs = ct.reshape(ct.reduce_sum(log_probs, axis=2), shape=logit_probs.shape)
-    log_probs = log_probs + nn.log_prob_from_logits(logit_probs)
-
+    log_probs = ct.reduce_sum(log_probs, axis=2) + nn.log_prob_from_logits(logit_probs)
     losses = nn.log_sum_exp(log_probs)
-    #loss = -ct.reduce_sum(losses)
-    loss = ct.reshape(-ct.reduce_sum(ct.reduce_sum(losses,axis=0),axis=1), shape=(1,))
+    loss = -ct.reduce_sum(losses)
+    #loss = ct.reshape(-ct.reduce_sum(ct.reduce_sum(losses,axis=0),axis=1), shape=(1,))
     return loss
 
 def softmax_256_loss(image_target, prediction):
