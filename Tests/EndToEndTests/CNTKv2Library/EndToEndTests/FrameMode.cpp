@@ -74,7 +74,7 @@ namespace
         session->Train(device);
     }
 
-    FeedForwardClassifier BuildFeedForwardClassifier(const DeviceDescriptor& device)
+    FeedForwardClassifier BuildFeedForwardClassifier(const DeviceDescriptor& device, bool noEval = false)
     {
         const size_t inputDim = 2;
         const size_t numOutputClasses = 2;
@@ -101,7 +101,7 @@ namespace
 
         auto labels = InputVariable({ numOutputClasses }, DataType::Float, g_labelsStreamName);
         auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
-        auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
+        auto prediction = noEval ? nullptr : CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
 
         return FeedForwardClassifier{ inputDim, numOutputClasses, input, labels, classifierOutput, trainingLoss, prediction };
     }
@@ -137,9 +137,10 @@ void TestFrameMode()
         for (auto device : devices)
         {
             for (auto loop : loops)
+            for (bool noEval : {false, true})
             {
                 sync->Barrier();
-                loop(l.first, device, l.second, BuildFeedForwardClassifier(device));
+                loop(l.first, device, l.second, BuildFeedForwardClassifier(device, noEval));
             }
         }
     }
