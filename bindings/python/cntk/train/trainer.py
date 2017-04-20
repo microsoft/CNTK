@@ -35,7 +35,7 @@ class Trainer(cntk_py.Trainer):
         training progress.
 
     Todo:
-        Would be great to allow to skip some parameters that should not be updated.
+       Would be great to allow to skip some parameters that should not be updated.
     '''
 
     @staticmethod
