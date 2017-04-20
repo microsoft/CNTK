@@ -34,7 +34,8 @@ class Trainer(cntk_py.Trainer):
        progress_writers (list): optionally, list of progress writers from :mod:`cntk.utils` to automatically track
          training progress.
 
-        TODO: Would be great to allow to skip some parameters that should not be updated.
+    Todo:
+       Would be great to allow to skip some parameters that should not be updated.
     '''
 
     @staticmethod
