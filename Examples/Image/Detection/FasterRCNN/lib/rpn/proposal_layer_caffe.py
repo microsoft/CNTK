@@ -5,7 +5,7 @@
 # Written by Ross Girshick and Sean Bell
 # --------------------------------------------------------
 
-import caffe
+#import caffe
 import numpy as np
 import yaml
 from fast_rcnn.config import cfg
@@ -15,11 +15,14 @@ from fast_rcnn.nms_wrapper import nms
 
 DEBUG = False
 
-class ProposalLayer(caffe.Layer):
+class ProposalLayer: #(caffe.Layer):
     """
     Outputs object detection proposals by applying estimated bounding-box
     transformations to a set of regular boxes (called "anchors").
     """
+
+    def set_param_str(self, param_str):
+        self.param_str_ = param_str
 
     def setup(self, bottom, top):
         # parse the layer parameter string, which must be valid YAML
@@ -29,20 +32,21 @@ class ProposalLayer(caffe.Layer):
         anchor_scales = layer_params.get('scales', (8, 16, 32))
         self._anchors = generate_anchors(scales=np.array(anchor_scales))
         self._num_anchors = self._anchors.shape[0]
+        self.phase = "TRAIN"
 
-        if DEBUG:
-            print 'feat_stride: {}'.format(self._feat_stride)
-            print 'anchors:'
-            print self._anchors
+        #if DEBUG:
+            #print 'feat_stride: {}'.format(self._feat_stride)
+            #print 'anchors:'
+            #print self._anchors
 
         # rois blob: holds R regions of interest, each is a 5-tuple
         # (n, x1, y1, x2, y2) specifying an image batch index n and a
         # rectangle (x1, y1, x2, y2)
-        top[0].reshape(1, 5)
+        #top[0].reshape(1, 5)
 
         # scores blob: holds scores for R regions of interest
-        if len(top) > 1:
-            top[1].reshape(1, 1, 1, 1)
+        #if len(top) > 1:
+        #    top[1].reshape(1, 1, 1, 1)
 
     def forward(self, bottom, top):
         # Algorithm:
@@ -58,7 +62,7 @@ class ProposalLayer(caffe.Layer):
         # take after_nms_topN proposals after NMS
         # return the top proposals (-> RoIs top, scores top)
 
-        assert bottom[0].data.shape[0] == 1, \
+        assert bottom[0].shape[0] == 1, \
             'Only single item batches are supported'
 
         cfg_key = str(self.phase) # either 'TRAIN' or 'TEST'
@@ -69,19 +73,19 @@ class ProposalLayer(caffe.Layer):
 
         # the first set of _num_anchors channels are bg probs
         # the second set are the fg probs, which we want
-        scores = bottom[0].data[:, self._num_anchors:, :, :]
-        bbox_deltas = bottom[1].data
-        im_info = bottom[2].data[0, :]
+        scores = bottom[0][:, self._num_anchors:, :, :]
+        bbox_deltas = bottom[1]
+        im_info = bottom[2][0, :]
 
-        if DEBUG:
-            print 'im_size: ({}, {})'.format(im_info[0], im_info[1])
-            print 'scale: {}'.format(im_info[2])
+        #if DEBUG:
+        #    print 'im_size: ({}, {})'.format(im_info[0], im_info[1])
+        #    print 'scale: {}'.format(im_info[2])
 
         # 1. Generate proposals from bbox deltas and shifted anchors
         height, width = scores.shape[-2:]
 
-        if DEBUG:
-            print 'score map size: {}'.format(scores.shape)
+        #if DEBUG:
+        #    print 'score map size: {}'.format(scores.shape)
 
         # Enumerate all shifts
         shift_x = np.arange(0, width) * self._feat_stride
@@ -152,13 +156,15 @@ class ProposalLayer(caffe.Layer):
         # batch inds are 0
         batch_inds = np.zeros((proposals.shape[0], 1), dtype=np.float32)
         blob = np.hstack((batch_inds, proposals.astype(np.float32, copy=False)))
-        top[0].reshape(*(blob.shape))
-        top[0].data[...] = blob
+
+        return blob
+        #top[0].reshape(*(blob.shape))
+        #top[0].data[...] = blob
 
         # [Optional] output scores blob
-        if len(top) > 1:
-            top[1].reshape(*(scores.shape))
-            top[1].data[...] = scores
+        #if len(top) > 1:
+        #    top[1].reshape(*(scores.shape))
+        #    top[1].data[...] = scores
 
     def backward(self, top, propagate_down, bottom):
         """This layer does not propagate gradients."""
