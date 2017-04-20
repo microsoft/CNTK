@@ -623,8 +623,7 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixAdam, RandomSeedFixture)
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
 }
 
-<<<<<<< HEAD
-    BOOST_FIXTURE_TEST_CASE(GPUMatrixOneHot, RandomSeedFixture)
+BOOST_FIXTURE_TEST_CASE(GPUMatrixOneHot, RandomSeedFixture)
 {
     GPUMatrix<double> result(c_deviceIdZero);
     const size_t num_class = 6;

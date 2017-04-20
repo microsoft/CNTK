@@ -3303,7 +3303,6 @@ ElemType Matrix<ElemType>::SumOfElements() const
 }
 
 template <class ElemType>
-<<<<<<< HEAD
 Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, vector<size_t>& shape, size_t axis, bool is_sparse)
 {
     if (a.IsEmpty())
@@ -3333,10 +3332,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, vect
 }
 
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::GatherFromTarget(const Matrix<ElemType>& indices, const Matrix<ElemType>& target, const SmallVector<size_t>& targetShape)
-=======
 Matrix<ElemType>& Matrix<ElemType>::GatherFromTarget(const Matrix<ElemType>& indices, const Matrix<ElemType>& target, size_t row_elements)
->>>>>>> fe81c76... gather gpu impl and ut
 {
     if (indices.IsEmpty() || target.IsEmpty())
         LogicError("GatherFromTarget: Input matrix is empty.");
