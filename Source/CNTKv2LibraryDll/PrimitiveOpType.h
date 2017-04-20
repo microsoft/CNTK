@@ -80,6 +80,8 @@ namespace CNTK
         OneHot = 68,
         Pow = 69,
         ToSequence = 70,
+        ToSequenceLike = 71,
+        UnpackSequence = 72,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

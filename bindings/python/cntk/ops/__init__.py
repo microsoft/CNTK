@@ -2446,6 +2446,33 @@ def to_sequence(x, sequence_lengths=None, sequence_axis_name_prefix='toSequence_
         return to_sequence(x, sequence_lengths, sequence_axis_name_prefix, name)
 
 
+@typemap
+def to_sequence_like(x, dynamic_axes_like, name=''):
+    '''
+    This function converts 'x' to a sequence using the most significant
+    static axis [0] as the sequence axis. The length of the sequences are
+    obtained from the 'dynamic_axes_like' operand.
+
+    Example:
+        TBA.
+
+    Args:
+        x: the tensor (or its name) which is converted to a sequence
+        dynamic_axes_like: Tensor operand used to obtain the lengths of
+            the generated sequences. The dynamic axes of the generated sequence
+            tensor match the dynamic axes of the 'dynamic_axes_like' operand.
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+
+    from cntk.cntk_py import to_sequence_like
+
+    x = sanitize_input(x)
+    dynamic_axes_like = sanitize_input(dynamic_axes_like)
+    return to_sequence_like(x, dynamic_axes_like, name)
+
 #######################################################################
 # training ops
 #######################################################################

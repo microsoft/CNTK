@@ -78,6 +78,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameEndIndex = L"endIndex";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameEndIndexVec = L"endIndexVec";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameReductionOpName = L"reductionOpName";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameReductionKeepDimensions = L"reductionKeepDimensions";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBidirectional = L"bidirectional";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumLayers = L"numLayers";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameHiddenSize = L"hiddenSize";
@@ -96,6 +97,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotOutputSparse = L"oneHotOutputSparse";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotAxis = L"onehotAxis";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceAxisNamePrefix = L"sequenceAxis";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackPaddingValue = L"sequenceUnpackPaddingValue";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput = L"sequenceUnpackSuppressMaskOutput";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -180,6 +183,10 @@ namespace CNTK
         {
             reduceAxis(Axis::OperandSequenceAxis(), inputs[0], outputDynamicAxes);
         }
+        else if (op == PrimitiveOpType::UnpackSequence)
+        {
+            reduceAxis(Axis::OperandSequenceAxis(), inputs[0], outputDynamicAxes);
+        }
         else if ((op == PrimitiveOpType::Where) || (op == PrimitiveOpType::ToSequence))
         {
             if (functionConfig.Contains(PrimitiveFunction::AttributeNameNewDynamicAxes))
@@ -221,7 +228,7 @@ namespace CNTK
             outputDynamicAxes = inputs[2].DynamicAxes();
         else if ((op == PrimitiveOpType::PackedIndex) || (op == PrimitiveOpType::GatherPacked))
             outputDynamicAxes = inputs[1].DynamicAxes();
-        else if (op == PrimitiveOpType::ReconcileDynamicAxis)
+        else if ((op == PrimitiveOpType::ReconcileDynamicAxis) || (op == PrimitiveOpType::ToSequenceLike))
             outputDynamicAxes = inputs[1].DynamicAxes();
         else if (op == PrimitiveOpType::PastValue || op == PrimitiveOpType::FutureValue)
             outputDynamicAxes = inputs[0].DynamicAxes(); // second arg (initial state) may have different dynamic axis
@@ -260,6 +267,7 @@ namespace CNTK
             outputs.push_back(OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), Name()));
         else
         {
+            std::vector<Variable> secondaryOutputs;
             DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);
             std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, this, m_attributes);
             bool needsGradient = std::any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.NeedsGradient(); });
@@ -341,26 +349,51 @@ namespace CNTK
                             assert(m_inputs.size() == 1);
                             outputShape = NDShape{}; // scalar
                             break;
+                        case PrimitiveOpType::UnpackSequence:
+                        {
+                            assert(m_inputs.size() == 1);
+                            if ((m_inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()) && (m_inputs[0].DynamicAxes().size() < 2))
+                                InvalidArgument("UnpackSequence: Operand '%S' must have at least 2 dynamic axes.", m_inputs[0].AsString().c_str());
+
+                            outputShape = m_inputs[0].Shape().AppendShape({ NDShape::FreeDimension });
+
+                            auto suppressMaskOutput = m_attributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
+                            if (!suppressMaskOutput)
+                            {
+                                auto maskOutput = OutputVariable({ NDShape::FreeDimension }, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, Name().empty() ? L"" : Name() + L"_UnpackSequenceMask");
+                                secondaryOutputs.push_back(maskOutput);
+                            }
+                            break;
+                        }
                         case PrimitiveOpType::ToSequence:
-                            assert((m_inputs.size() == 1) || (m_inputs.size() == 2));
+                        case PrimitiveOpType::ToSequenceLike:
+                            assert(((m_op == PrimitiveOpType::ToSequence) && (m_inputs.size() == 1)) || (m_inputs.size() == 2));
                             if (m_inputs[0].DynamicAxes().empty())
-                                InvalidArgument("ToSequence: Operands '%S' must have dynamic axes.", NamedListString(m_inputs).c_str());
+                                InvalidArgument("Function '%S': Operand '%S' must have dynamic axes.", AsString().c_str(), m_inputs[0].AsString().c_str());
 
                             if ((m_inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()) && (m_inputs[0].DynamicAxes().size() != 1))
-                                InvalidArgument("ToSequence Function '%S': Input operand '%S' with #dynamic axes != 1 (batch axis) is not supported.", AsString().c_str(), m_inputs[0].AsString().c_str());
-
-                            if ((m_inputs.size() == 2) &&
-                                (m_inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()) &&
-                                (m_inputs[1].DynamicAxes() != Axis::UnknownDynamicAxes()) &&
-                                (m_inputs[0].DynamicAxes() != m_inputs[1].DynamicAxes()))
-                                InvalidArgument("ToSequence Function '%S': First input operand '%S' dynamic axes '%S' do not match second input operand '%S' dynamic axes '%S' .",
-                                                AsString().c_str(), m_inputs[0].AsString().c_str(), NamedListString(m_inputs[0].DynamicAxes()).c_str(), m_inputs[1].AsString().c_str(), NamedListString(m_inputs[1].DynamicAxes()).c_str());
+                                InvalidArgument("Function '%S': Input operand '%S' with #dynamic axes != 1 (batch axis) is not supported.", AsString().c_str(), m_inputs[0].AsString().c_str());
 
                             if (m_inputs[0].Shape().Rank() < 1)
-                                InvalidArgument("ToSequence Function '%S': First input operand '%S' must be of rank >= 1.", AsString().c_str(), m_inputs[0].AsString().c_str());
+                                InvalidArgument("Function '%S': First input operand '%S' must be of rank >= 1.", AsString().c_str(), m_inputs[0].AsString().c_str());
 
-                            if ((m_inputs.size() == 2) && (m_inputs[1].Shape().TotalSize() != 1))
-                                InvalidArgument("ToSequence Function '%S': Second input operand '%S' must be a scalar.", AsString().c_str(), m_inputs[1].AsString().c_str());
+                            if (m_op == PrimitiveOpType::ToSequence)
+                            {
+                                if ((m_inputs.size() == 2) &&
+                                    (m_inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()) &&
+                                    (m_inputs[1].DynamicAxes() != Axis::UnknownDynamicAxes()) &&
+                                    (m_inputs[0].DynamicAxes() != m_inputs[1].DynamicAxes()))
+                                    InvalidArgument("Function '%S': First input operand '%S' dynamic axes '%S' do not match second input operand '%S' dynamic axes '%S' .",
+                                                    AsString().c_str(), m_inputs[0].AsString().c_str(), NamedListString(m_inputs[0].DynamicAxes()).c_str(), m_inputs[1].AsString().c_str(), NamedListString(m_inputs[1].DynamicAxes()).c_str());
+
+                                if ((m_inputs.size() == 2) && (m_inputs[1].Shape().TotalSize() != 1))
+                                    InvalidArgument("Function '%S': Second input operand '%S' must be a scalar.", AsString().c_str(), m_inputs[1].AsString().c_str());
+                            }
+                            else
+                            {
+                                if ((m_inputs[1].DynamicAxes() != Axis::UnknownDynamicAxes()) && (m_inputs[1].DynamicAxes().size() < 2))
+                                    InvalidArgument("Function '%S': Operand(1) '%S' must be a sequence (have at least 2 dynamic axes).", AsString().c_str(), m_inputs[1].AsString().c_str());
+                            }
 
                             outputShape = m_inputs[0].Shape().SubShape(0, m_inputs[0].Shape().Rank() - 1);
                             break;
@@ -714,15 +747,19 @@ namespace CNTK
                         case PrimitiveOpType::ReduceElements:
                         {
                             assert(m_inputs.size() == 1);
+                            bool keepDimensions = true;
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameReductionKeepDimensions))
+                                keepDimensions = m_attributes[PrimitiveFunction::AttributeNameReductionKeepDimensions].Value<bool>();
+
                             auto reductionAxis = NormalizeAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0]);
                             if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
-                                outputShape = {};
+                                outputShape = keepDimensions ? NDShape(m_inputs[0].Shape().Rank(), 1) : NDShape({});
                             else if (reductionAxis.IsDynamicAxis())
                                 outputShape = m_inputs[0].Shape();
                             else
                             {
                                 std::vector<int> reductionAxes = { reductionAxis.StaticAxisIndex() };
-                                outputShape = ReductionOpOutputShape(m_op, m_inputs[0].Shape(), reductionAxes, /*preserveReductionAxes =*/ true);
+                                outputShape = ReductionOpOutputShape(m_op, m_inputs[0].Shape(), reductionAxes, /*preserveReductionAxes =*/ keepDimensions);
                             }
                             break;
                         }
@@ -857,7 +894,9 @@ namespace CNTK
                 }
             }
 
-            outputs.push_back({ OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, Name().empty() ? L"" : Name()) });
+            auto primaryOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, Name().empty() ? L"" : Name());
+            outputs.push_back(primaryOutput);
+            outputs.insert(outputs.end(), secondaryOutputs.begin(), secondaryOutputs.end());
         }
     }
 

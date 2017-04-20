@@ -3981,6 +3981,13 @@ namespace CNTK
     CNTK_API FunctionPtr ToSequence(const Variable& operand, const Variable& sequenceLengths, const std::wstring& sequenceAxisNamePrefix, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
+    /// This overload allows specifying an additional 'dynamicAxesLike' operand which is used to obtain the lengths of the
+    /// generated sequences; the dynamic axes of the generated sequence are required to match the dynamic axes of the 'dynamicAxesLike' operand.
+    ///
+    CNTK_API FunctionPtr ToSequenceLike(const Variable& operand, const Variable& dynamicAxesLike, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in operator for reconciling the dynamic axes of the specified tensor operands.
     /// The output of the returned Function has the sample layout of the left operand and the dynamic axes of the axesAsOperand.
     /// It also performs a runtime check to ensure that the  dynamic axes layouts of the 2 operands indeed match.
@@ -4014,6 +4021,14 @@ namespace CNTK
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
 
         CNTK_API FunctionPtr BroadcastAs(const Variable& operand, const Variable& broadcastAs, const std::wstring& name = L"");
+
+        ///
+        /// Create an instance of the CNTK built-in operator for unpacking the specified sequence operand along 
+        /// the most significant static axis [-1] and padding any gaps with the specified padding value.
+        /// If supressMaskOutput is false, the returned Function has 2 outputs; viz. the unpacked non-sequence data and a mask
+        /// denoting the gaps in the unpacked output due to differences across lengths of the sequences in the operand.
+        ///
+        CNTK_API FunctionPtr Unpack(const Variable& operand, double paddingValue, bool supressMaskOutput, const std::wstring& name = L"");
     }
 
     ///

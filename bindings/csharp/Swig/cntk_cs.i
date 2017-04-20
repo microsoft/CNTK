@@ -209,6 +209,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Argmax;
 %ignore_function CNTK::Argmin;
 %ignore_function CNTK::ToSequence;
+%ignore_function CNTK::ToSequenceLike;
 %ignore_function CNTK::AsBlock;
 %ignore_function CNTK::ReaderCrop;
 %ignore_function CNTK::ReaderMean;

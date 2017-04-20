@@ -556,7 +556,7 @@ namespace CNTK
                             (int)axis.StaticAxisIndex(), (int)operandShape.Rank(), operandShape.AsString().c_str());
     }
 
-    bool IsFirstOutputOfMultiOutputUDF(const Variable& var);
+    bool IsFirstOutputOfMultiOutputFunction(const Variable& var);
     inline  bool IsConstantScalar(const Variable& var)
     {
         return var.IsConstant() && (var.Shape().TotalSize() == 1);
@@ -620,6 +620,9 @@ namespace CNTK
     }
 
     NDMaskPtr CreateMask(const std::vector<size_t>& sequenceLengths, const std::vector<bool>& sequenceStartFlags = {}, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice());
+
+    double ReductionIdentityValue(const std::wstring& reductionOpName);
+
     // Helper class to manage a collection of learners.
     class Learners
     {

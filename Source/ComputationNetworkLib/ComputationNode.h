@@ -53,7 +53,8 @@
 #define CNTK_MODEL_VERSION_21 21 // pooling: add a ceilOutDim to decide whether ceil or floor while computing the output size
 #define CNTK_MODEL_VERSION_22 22 // Slice and pad accepts multiple axes 
 #define CNTK_MODEL_VERSION_23 23 // pooling: add include pad func for average pooling
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_23
+#define CNTK_MODEL_VERSION_24 24 // ReduceElements: add keepDimensions
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_24
 
 
 // helper mode for debugging
@@ -715,7 +716,7 @@ protected:
 
     // helper functions for common cases
     void ValidateUnaryMap(bool isFinalValidationPass);
-    void ValidateUnaryReduce(bool isFinalValidationPass);
+    void ValidateUnaryReduce(bool isFinalValidationPass, bool keepDimensions = false);
     void ValidateInferBinaryInputDims();
     void ValidateInferNaryInputDims(size_t numInputs);    
     void ValidateBinaryZip(bool isFinalValidationPass, bool allowBroadcast);
@@ -1476,17 +1477,18 @@ public:
                                        const MBLayoutPtr& layout,
                                        const std::shared_ptr<Matrix<ElemType>>& unpackedDataStorage,
                                        const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage,
+                                       const std::shared_ptr<Matrix<char>>& tempMaskStorage,
                                        bool batchMajor,
-                                       bool maskGaps);
+                                       const ElemType* gapPadValue);
 
     static TensorView<ElemType> Unpack(const TensorShape& sampleShape,
                                        const Matrix<ElemType>& packedData,
                                        const MBLayoutPtr& layout,
                                        bool batchMajor,
-                                       bool maskGaps)
+                                       const ElemType* gapPadValue)
     {
         auto nullSharedPtr = std::shared_ptr<Matrix<ElemType>>(nullptr);
-        return Unpack(sampleShape, packedData, layout, nullSharedPtr, nullSharedPtr, batchMajor, maskGaps);
+        return Unpack(sampleShape, packedData, layout, nullSharedPtr, nullSharedPtr, std::shared_ptr<Matrix<char>>(nullptr), batchMajor, gapPadValue);
     }
 
     static void BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,

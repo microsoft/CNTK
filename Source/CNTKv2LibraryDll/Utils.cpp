@@ -448,15 +448,12 @@ namespace CNTK
 #endif
     }
 
-    bool IsFirstOutputOfMultiOutputUDF(const Variable& var)
+    bool IsFirstOutputOfMultiOutputFunction(const Variable& var)
     {
         if (!var.IsOutput())
             return false;
 
         auto owner = var.Owner();
-        if (dynamic_cast<PrimitiveFunction*>(owner.get()))
-            return false;
-
         return (var == owner->Outputs()[0]) && (owner->Outputs().size() > 1);
     }
 
@@ -845,7 +842,7 @@ namespace CNTK
             mask = CreateMask(layout, AsDeviceDescriptor(matrix.GetDeviceId()));
 
         // Reshuffle to data to unpack and uninterleave the CNTK form packed data
-        auto unpackedTensorView = ComputationNode<ElementType>::Unpack(AsTensorShape(sampleShape), matrix, layout, /*batchMajor=*/ false, /*maskGaps=*/ false);
+        auto unpackedTensorView = ComputationNode<ElementType>::Unpack(AsTensorShape(sampleShape), matrix, layout, /*batchMajor=*/ false, /*gapPadValue=*/ nullptr);
         auto dataShape = PackedValue::GetUnpackedShape(sampleShape, sampleDynamicAxes, layout);
         auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), dataShape, readOnly, new TensorView<ElementType>(unpackedTensorView, AsTensorViewShape(dataShape)));
         return MakeSharedObject<Value>(data, mask);
@@ -906,6 +903,12 @@ namespace CNTK
         }
 
         return deviceValueMask;
+    }
+
+    double ReductionIdentityValue(const std::wstring& reductionOpName)
+    {
+        auto reductionOpEnumValue = ReduceElementsNode<double>::ReductionOpEnumValue(reductionOpName);
+        return ReduceElementsNode<double>::NeutralValue(reductionOpEnumValue);
     }
 
     template void DictionaryValue::AllocateDataPtr<NDShape>(const NDShape& value);

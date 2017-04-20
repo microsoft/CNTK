@@ -96,6 +96,8 @@ namespace CNTK
         {PrimitiveOpType::OneHot, L"OneHotOp" },
         {PrimitiveOpType::Pow, L"Pow"},
         {PrimitiveOpType::ToSequence, L"ToSequenceOp"},
+        {PrimitiveOpType::ToSequenceLike, L"ToSequenceLikeOp"},
+        {PrimitiveOpType::UnpackSequence, L"UnpackSequenceOp"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -235,6 +237,7 @@ namespace CNTK
         static const std::wstring AttributeNameEndIndex;
         static const std::wstring AttributeNameEndIndexVec;
         static const std::wstring AttributeNameReductionOpName;
+        static const std::wstring AttributeNameReductionKeepDimensions;
         static const std::wstring AttributeNameRngSeed;
         static const std::wstring AttributeNameRngOffset;
         static const std::wstring AttributeNameBidirectional;
@@ -253,6 +256,8 @@ namespace CNTK
         static const std::wstring AttributeNameOneHotOutputSparse;
         static const std::wstring AttributeNameOneHotAxis;
         static const std::wstring AttributeNameSequenceAxisNamePrefix;
+        static const std::wstring AttributeNameSequenceUnpackPaddingValue;
+        static const std::wstring AttributeNameSequenceUnpackSuppressMaskOutput;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
@@ -736,6 +741,7 @@ namespace CNTK
         // Version 8: Add ELU node.
         // Version 9: Add OneHot node.
         // Version 10: Add Pow operator.
-        static const size_t s_serializationVersion = 10;
+        // Version 11: Add ToSequence, ToSequenceLike and UnpackSequence operators.
+        static const size_t s_serializationVersion = 11;
     };
 }

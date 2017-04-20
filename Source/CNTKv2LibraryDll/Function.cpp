@@ -1631,6 +1631,12 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::ToSequence, operand, sequenceLengths, std::move(additionalAttributes), name);
     }
 
+    const static std::wstring DefaultToSequenceSequenceAxisNamePrefix = L"ToSequence_";
+    FunctionPtr ToSequenceLike(const Variable& operand, const Variable& dynamicAxesLike, const std::wstring& name)
+    {
+        return BinaryOp(PrimitiveOpType::ToSequenceLike, operand, dynamicAxesLike, Dictionary(), name);
+    }
+
     namespace Sequence
     {
         void VerifyIsSequence(const Variable& operand)
@@ -1736,26 +1742,11 @@ namespace CNTK
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::wstring& name)
         {
-            if (reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
-                return Internal::ReduceElements(operand, reductionOpName, Axis::OperandSequenceAxis(), name);
-            
-            using namespace std::placeholders;
-
-            std::function<FunctionPtr(const Variable& leftOperand, const Variable& rightOperand)> reductionFunctor;
-            if (reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
-                reductionFunctor = std::bind(Plus, _1, _2, L"");
-            else
-                LogicError("ReduceElements: operand '%S'; %S reduction op is currently unsupported along dynamic axis.", operand.AsString().c_str(), reductionOpName.c_str());
-
             auto operandPlaceholder = PlaceholderVariable(L"operand");
+            auto unpackedSequence = Unpack(operandPlaceholder, ReductionIdentityValue(PrimitiveFunction::InternalSumReductionOpName), /*suppressMaskOutput =*/ true, name);
+            auto reductionResult = Internal::ReduceElements(unpackedSequence, reductionOpName, Axis(-1), /*keepReducedDimensions =*/ false);
 
-            // We are reducing over a dynamic axis which is currently implemented using recurrence
-            auto cumulativeSumFunctionPlaceholder = PlaceholderVariable(operand.Shape());
-            auto prevAccumulatedValuesFunction = PastValue(cumulativeSumFunctionPlaceholder);
-            auto cumulativeSumFunction = reductionFunctor(prevAccumulatedValuesFunction, operandPlaceholder);
-            cumulativeSumFunction->ReplacePlaceholders({ { cumulativeSumFunctionPlaceholder, cumulativeSumFunction } });
-
-            return AsBlock(Sequence::Slice(cumulativeSumFunction, -1, 0), { { operandPlaceholder, operand} }, L"Sequence::ReduceElements", name);
+            return AsBlock(std::move(reductionResult), { { operandPlaceholder, operand } }, L"Sequence::ReduceElements", name);
         }
 
         FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)
@@ -1765,27 +1756,23 @@ namespace CNTK
 
         FunctionPtr ReduceMax(const Variable& operand, const std::wstring& name)
         {
-            auto operandPlaceholder = PlaceholderVariable(L"operand");
-
-            auto p = PlaceholderLike(operand);
-            auto minusInf = Constant::Scalar(-std::numeric_limits<float>::infinity());
-            auto prevP = PastValue(p, minusInf);
-            auto gt = Greater(operandPlaceholder, prevP);
-            auto runningMax = ElementSelect(gt, operandPlaceholder, prevP);
-            runningMax->ReplacePlaceholders({ {p, runningMax} });
-            return AsBlock(Sequence::Last(runningMax), { {operandPlaceholder, operand } }, L"Sequence::ReduceMax", name);
+            return ReduceElements(operand, PrimitiveFunction::InternalMaxReductionOpName, name);
         }
 
         FunctionPtr Softmax(const Variable& operand, const std::wstring& name)
         {
             auto operandPlaceholder = PlaceholderVariable(L"operand");
-
-            auto p = PlaceholderLike(operand);
-            auto minusInf = Constant::Scalar(-std::numeric_limits<float>::infinity());
-            auto runningLogSumExp = LogAddExp(operandPlaceholder, PastValue(p, minusInf));
-            runningLogSumExp->ReplacePlaceholders({ { p, runningLogSumExp } });
-            auto logZ = BroadcastAs(Sequence::Last(runningLogSumExp), operandPlaceholder);
+            auto reducedLogSumExp = ReduceElements(operandPlaceholder, PrimitiveFunction::InternalLogSumReductionOpName, name);
+            auto logZ = BroadcastAs(reducedLogSumExp, operandPlaceholder);
             return AsBlock(Exp(operandPlaceholder - logZ), { { operandPlaceholder, operand } }, L"Sequence::Softmax", name);
+        }
+
+        FunctionPtr Unpack(const Variable& operand, double paddingValue, bool supressMaskOutput, const std::wstring& name)
+        {
+            Dictionary additionalAttributes;
+            additionalAttributes[PrimitiveFunction::AttributeNameSequenceUnpackPaddingValue] = paddingValue;
+            additionalAttributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput] = supressMaskOutput;
+            return UnaryOp(PrimitiveOpType::UnpackSequence, operand, std::move(additionalAttributes), name);
         }
     }
 
@@ -1873,7 +1860,7 @@ namespace CNTK
             return UnaryOp(PrimitiveOpType::Slice, operand, std::move(additionalProperties), name);
         }
 
-        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name)
+        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, bool keepReducedDimensions, const std::wstring& name)
         {
             if (axis == Axis::DefaultBatchAxis())
                 LogicError("ReduceElements: operand %S; Reduction along the batch axis alone is currently unsupported.", operand.AsString().c_str());
@@ -1886,11 +1873,21 @@ namespace CNTK
                 auto additionalProperties = Dictionary();
                 additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
                 additionalProperties[PrimitiveFunction::AttributeNameReductionOpName] = reductionOpName;
+                additionalProperties[PrimitiveFunction::AttributeNameReductionKeepDimensions] = keepReducedDimensions;
                 return UnaryOp(PrimitiveOpType::ReduceElements, operand, std::move(additionalProperties), name);
             }
 
             LogicError("ReduceElements: operand %S; Invalid axis argument provided. To reduce an operand along its ordered dynamic axis use Sequence::ReduceElements.",
                        operand.AsString().c_str());
+        }
+
+        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name)
+        {
+            bool keepReducedDimensions = true;
+            if (axis == Axis::AllStaticAxes() || axis == Axis::AllAxes())
+                keepReducedDimensions = false;
+
+            return ReduceElements(operand, reductionOpName, axis, keepReducedDimensions, name);
         }
 
         FunctionPtr Convolution(const Variable& convolutionMap,

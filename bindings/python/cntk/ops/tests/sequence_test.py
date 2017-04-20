@@ -26,14 +26,12 @@ def test_lstm_over_lstm_thought_vectors(device_id):
     hidden_dim = 2
     num_labels = 2
     x_seq_input = C.sequence.input((C.FreeDimension, input_vocab_size), is_sparse=True, name='features')
-    x_secondary_seq_lens = C.input((), name='sequence_lengths')
     label_seq_input = C.sequence.input(num_labels, is_sparse=True, sequence_axis=Axis('label_sequence'), name='labels')
     with C.default_options(initial_state=0.1):
         model = C.layers.Embedding(emb_dim, name='embed')(x_seq_input)
         model = C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=False)(model)
         model = C.sequence.last(model)
-        model = C.to_sequence(model, x_secondary_seq_lens)
-        model = C.reconcile_dynamic_axes(model, label_seq_input)
+        model = C.to_sequence_like(model, label_seq_input)
         model = C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=False)(model)
         model = C.layers.Dense(num_labels, name='classify')(model)
 
@@ -47,17 +45,23 @@ def test_lstm_over_lstm_thought_vectors(device_id):
     csr_seq2 = _to_csr(seq2_data)
     ndarrayview2 = C.NDArrayView.from_csr(csr_seq2, shape=(2, 3, 3), device=C.cpu())
     x_seq_data = C.Value.create(C.sequence.input((3, 3), is_sparse=True), [ndarrayview1, ndarrayview2], device=C.cpu()).data
-    x_seq_lens_data = np.asarray([3, 2], dtype=np.float32)
 
     seq1_label_data = [[0, 1], [0, 1], [1, 0]]
     seq2_label_data = [[1, 0], [0, 1]]
     label_seq_data = [_to_csr(seq1_label_data), _to_csr(seq2_label_data)]
-    param_grads, loss_result = ce.grad({x_seq_input : x_seq_data, x_secondary_seq_lens : x_seq_lens_data, label_seq_input : label_seq_data},
+    param_grads, loss_result = ce.grad({x_seq_input : x_seq_data, label_seq_input : label_seq_data},
                                        wrt=ce.parameters, outputs=[ce], as_numpy=False)
     
     loss_result = loss_result.as_sequences()
-    assert np.allclose(loss_result[0], [[0.703254], [0.701883], [0.683452]], atol=0.03)
-    assert np.allclose(loss_result[1], [[0.682687], [0.696831]], atol=0.03)
+
+    # TODO: The tolerance here is inordinately high due to the non-determinism in initialization 
+    # of parameters as the individual tests are not run in separate processes resulting in the
+    # addition or removal of tests to affect the random initialization of parameters in all other
+    # tests that do not explicitly specify the random seed. The tolerance should be lowered to 
+    # 0.01 after this issue in the test infrastructure has been fixed.
+    absolute_tolerance = 0.1
+    assert np.allclose(loss_result[0], [[0.703254], [0.701883], [0.683452]], atol=absolute_tolerance)
+    assert np.allclose(loss_result[1], [[0.682687], [0.696831]], atol=absolute_tolerance)
 
 
 def test_sequence_max():
@@ -174,3 +178,26 @@ def test_to_sequence_backprop(device_id):
             grad_value = param_grads_2[param].asarray()
             assert np.array_equal(reference_grad_value, grad_value)
 
+
+def test_sequence_unpack_basic(device_id):
+    dev = cntk_device(device_id)
+
+    x = C.input((C.FreeDimension, 2, 3), is_sparse=False)
+    x_seq_lens = C.input(())
+    x_seq = C.to_sequence(x, x_seq_lens)
+    x_seq_unpacked = C.sequence.unpack(x_seq, padding_value=-1000.0)
+    x_seq_unpacked_value_output = x_seq_unpacked.outputs[0]
+    x_seq_unpacked_mask_output = x_seq_unpacked.outputs[1]
+    assert len(x_seq_unpacked_value_output.dynamic_axes) == 1
+    assert x_seq_unpacked_value_output.shape == (C.FreeDimension, 2, 3)
+
+    seq1_data = [[[0, 1, 1], [0, 1, 0]], [[1, 0, 0], [1, 0, 1]]]
+    seq2_data = [[0, 1, 1], [1, 1, 0]]
+    x_data = [np.asarray(seq1_data, dtype=np.float32), np.asarray([seq2_data, [[-100.0, -100.0, -100.0], [-100.0, -100.0, -100.0]]], dtype=np.float32)]
+    x_seq_lens_data = np.asarray([2, 1], dtype=np.float32)
+    result = x_seq_unpacked.eval({x : x_data, x_seq_lens : x_seq_lens_data}, device=dev)
+    value = result[x_seq_unpacked_value_output]
+    mask = result[x_seq_unpacked_mask_output]
+    assert np.array_equal(value[0], seq1_data)
+    assert np.array_equal(value[1], [seq2_data, [[-1000.0, -1000.0, -1000.0], [-1000.0, -1000.0, -1000.0]]])
+    assert np.array_equal(mask, [[1, 1], [1, 0]])
