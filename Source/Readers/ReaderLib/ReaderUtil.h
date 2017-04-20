@@ -7,6 +7,7 @@
 
 #include "Reader.h"
 #include "SequenceEnumerator.h"
+#include <boost/algorithm/string.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -145,5 +146,33 @@ private:
     // Max number of allowed invalid sequences.
     size_t m_maxNumberOfInvalidSequences;
 };
+
+// Boost split is too slow, this one gives almost 200% better results for initial parsig of big text files.
+template<typename T>
+inline void Split(T* begin, T* end, const std::vector<bool> delim_hash, std::vector<boost::iterator_range<T*>>& result)
+{
+    char* start = begin;
+    while (begin != end)
+    {
+        if (delim_hash[*begin])
+        {
+            result.push_back(boost::make_iterator_range(start, begin));
+            start = begin + 1;
+        }
+        ++begin;
+    }
+
+    // Adding last.
+    result.push_back(boost::make_iterator_range(start, end));
+}
+
+// Function that is used to build delimiter hashes.
+inline std::vector<bool> DelimHash(const std::vector<char>& values)
+{
+    std::vector<bool> delim_equal(256, false);
+    for (const auto& c : values)
+        delim_equal[c] = true;
+    return delim_equal;
+}
 
 }}}

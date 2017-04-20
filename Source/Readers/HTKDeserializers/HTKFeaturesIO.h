@@ -266,12 +266,6 @@ public:
             parsedpath result;
             string archivepath;
 
-            // parse out logical path
-            //vector<boost::iterator_range<const char*>> tokens;
-
-            //auto container = boost::make_iterator_range(pathParam.data(), pathParam.data() + pathParam.size());
-            //optimized_split(pathParam.data(), pathParam.data() + pathParam.size(), delim_equal, tokens);
-            //boost::split(tokens, container, boost::is_any_of("="));
             auto start = pathParam.data();
             auto end = start + pathParam.size();
             boost::iterator_range<const char*> token;
@@ -294,7 +288,6 @@ public:
             }
             else // a=b[s,e] syntax detected
             {
-                //vector<boost::iterator_range<const char*>> otherTokens;
                 start = consume(start, end, delim_left_bracket, token);
                 archivepath.assign(token.begin(), token.end());
                 if (start == end) // actually it's only a=b

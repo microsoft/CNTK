@@ -77,13 +77,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cv::Mat image,
         size_t classId,
         size_t copyId,
-        const KeyType& sequenceKey,
+        size_t sequenceKey,
         std::vector<SequenceDataPtr>& result)
     {
         auto imageData = make_shared<ImageSequenceData>();
         if (!image.data)
         {
-            fprintf(stderr, "WARNING: Could not decompress sequence with id '%s'\n", m_corpus->IdToKey(sequenceKey.m_sequence).c_str());
+            fprintf(stderr, "WARNING: Could not decompress sequence with id '%s'\n", m_corpus->IdToKey(sequenceKey).c_str());
             imageData->m_isValid = false;
         }
         else
@@ -101,7 +101,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             imageData->m_numberOfSamples = 1;
             imageData->m_elementType = dataType;
             imageData->m_isValid = true;
-            imageData->m_key = sequenceKey;
+            imageData->m_key = { sequenceKey, 0 };
         }
         result.push_back(imageData);
 

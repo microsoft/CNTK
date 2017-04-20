@@ -102,7 +102,7 @@ protected:
 
     string KeyOf(const SequenceDescriptor& s)
     {
-        return m_deserializer.m_corpus->IdToKey(s.m_key.m_sequence);
+        return m_deserializer.m_corpus->IdToKey(s.m_key);
     }
 
     void CleanBuffer()
@@ -387,7 +387,7 @@ void MLFDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus, co
             for (uint32_t i = 0; i < chunk.m_sequences.size(); ++i)
             {
                 const auto& sequence = chunk.m_sequences[i];
-                m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key.m_sequence, static_cast<ChunkIdType>(m_chunks.size()), i));
+                m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key, static_cast<ChunkIdType>(m_chunks.size()), i));
             }
 
             totalNumSequences += chunk.m_numberOfSequences;

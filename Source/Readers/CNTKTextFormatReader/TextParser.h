@@ -181,7 +181,7 @@ private:
     void LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor);
 
     // Fills some metadata members to be conformant to the exposed SequenceData interface.
-    void FillSequenceMetadata(SequenceBuffer& sequenceBuffer, const KeyType& sequenceKey);
+    void FillSequenceMetadata(SequenceBuffer& sequenceBuffer, size_t sequenceKey);
 
     void SetTraceLevel(unsigned int traceLevel);
 
