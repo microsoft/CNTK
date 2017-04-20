@@ -34,6 +34,9 @@ class PolyMath:
         self.two_step = model_config['two_step']
         self.use_cudnn = model_config['use_cudnn']
 
+        print('dropout', self.dropout)
+        print('use_cudnn', self.use_cudnn)
+
     def charcnn(self, x):
         conv_out = C.layers.Sequential([
             C.layers.Embedding(self.char_emb_dim),

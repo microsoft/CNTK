@@ -61,7 +61,7 @@ def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, answers=[[]
 
                 ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids = tsv2ctf.tsv_iter(line, polymath.vocab, polymath.chars, is_test, answers)
                 if is_test:
-				    context_tokens[0] += [ctokens]
+                    context_tokens[0] += [ctokens]
 
                 batch['cwids'].append(cwids)
                 batch['qwids'].append(qwids)
