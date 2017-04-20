@@ -65,3 +65,23 @@ def test_assign_dependency(input_data, device_id, precision):
     assert np.array_equal(result[y.output], data)
     assert np.array_equal(dest.asarray(), data)
     assert np.array_equal(y.eval(), data + data)
+
+@pytest.mark.parametrize("input_data", ASSIGN_TEST_OPERANDS)
+def test_assign_gradient(input_data, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    data = AA(input_data, dtype=dt)
+
+    value = C.parameter(init=data)
+    dest = C.parameter(shape=data.shape, dtype=dt)
+    assign_op = C.assign(dest, value)
+
+    bwd, fwd = assign_op.forward({}, [assign_op.output], set([assign_op.output]))
+    # dest will be updated after backprop, so verify that it isn't updated yet.
+    assert not np.array_equal(dest.asarray(), data)
+
+    result = list(fwd.values())[0]
+    grad = assign_op.backward(bwd, {assign_op.output:np.ones_like(result)}, set([dest]))
+
+    # dest should have the new value by now..
+    assert np.array_equal(dest.asarray(), data)
+    assert np.array_equal(grad[dest], np.zeros_like(result))

@@ -339,11 +339,16 @@ namespace CNTK
         // Map to keep track of any references to network output/gradient storage handed out so far
         std::vector<PackedValueWeakPtr> m_existingNetworkStorageReferences;
 
-        // The backpropRoots sepecified in the most recent 'Forward' call on 'this' Function.
+        // The backpropRoots specified in the most recent 'Forward' call on 'this' Function.
         // This indicates for which of its roots has 'this' Function retained required intermediate 
         // states from the previos Forward call to be able to backpropagate gradients backwards from in
         // the next 'Backward' call.
         std::unordered_set<Variable> m_currentBackpropRoots;
+
+        // Outputs to evaluate are the list of outputs that the forward pass need to evaluate. m_currentOutputsToEvaluate
+        // will store this list, from the last forward pass call, only in training mode. The reason for that
+        // is to run PostForwardOrBackProp after backprop phase finish.
+        std::vector<Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_currentOutputsToEvaluate;
 
         std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
 

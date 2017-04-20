@@ -1038,7 +1038,7 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        SetRunPostForwardProp(true);
+        SetRunPostForwardOrBackProp(true);
 
         auto& result = Value();
         auto& inputValue = InputRef(1).Value();
@@ -1047,9 +1047,9 @@ public:
         result.AssignValuesOf(inputValue);
     }
 
-    virtual void /*ComputationNodeNonLooping::*/ PostForwardProp() override
+    virtual void /*ComputationNodeNonLooping::*/ PostForwardOrBackProp() override
     {
-        SetRunPostForwardProp(false);
+        SetRunPostForwardOrBackProp(false);
 
         auto& refValue = InputRef(0).Value();
         refValue.AssignValuesOf(*m_result);

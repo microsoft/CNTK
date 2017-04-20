@@ -136,7 +136,7 @@ public:
     void ForwardProp(const ComputationNodeBasePtr rootNode);
 
     // main entry point for post forward prop
-    void PostForwardProp(const ComputationNodeBasePtr rootNode);
+    void PostForwardOrBackProp(const ComputationNodeBasePtr rootNode);
 
     // main entry point for backprop
     void Backprop(const ComputationNodeBasePtr rootNode);
@@ -180,10 +180,10 @@ public:
     }
 
     template <class NODESET> // version that takes multiple nodes
-    void PostForwardProp(const NODESET& nodes)
+    void PostForwardOrBackProp(const NODESET& nodes)
     {
         TravserseInSortedGlobalEvalOrder(nodes, [](const ComputationNodeBasePtr& node) {
-            PARTraversalFlowControlNode::PostForwardProp(node);
+            PARTraversalFlowControlNode::PostForwardOrBackProp(node);
         });
     }
 
@@ -1167,13 +1167,13 @@ protected:
         }
 
         static void ForwardProp(const ComputationNodeBasePtr& node, const FrameRange& fr);
-        static void PostForwardProp(const ComputationNodeBasePtr& node);
+        static void PostForwardOrBackProp(const ComputationNodeBasePtr& node);
 
         virtual void BeginForwardProp() override {}
         virtual void ForwardProp(const FrameRange&) override;
         virtual void EndForwardProp() override {}
 
-        virtual void PostForwardProp() override;
+        virtual void PostForwardOrBackProp() override;
 
         virtual void BeginBackprop() override {}
         virtual void BackpropTo(const size_t inputIndex, const FrameRange&) override

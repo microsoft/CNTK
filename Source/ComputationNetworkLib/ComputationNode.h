@@ -95,8 +95,8 @@ struct /*interface*/ IComputationNode
     virtual void ForwardProp(const FrameRange&) = 0; // forward prop for one minibatch
     virtual void EndForwardProp() = 0;               // called after last iteration step of ForwardProp()
 
-    virtual void PostForwardProp() {} // Optional: Post forward prop for one minibatch, this will be called in a second 
-                                      //           looping on the graph, after the first Forward pass finish.
+    virtual void PostForwardOrBackProp() {} // Optional: Post forward prop for one minibatch, this will be called in a second 
+                                            //           looping on the graph, after the first Forward pass finish.
 
     virtual void BeginBackprop() = 0;                                        // called before first iteration step of ComputeGradient()
     virtual void BackpropTo(const size_t inputIndex, const FrameRange&) = 0; // backprop gradient into one of the inputs
@@ -312,7 +312,7 @@ public:
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
         m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0),
         m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name), m_isValueSparse(false),
-        m_runPostForwardProp(false)
+        m_runPostForwardOrBackProp(false)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
         // we store a unique numeric number for every node that is constructed, as a debugging aid
@@ -769,11 +769,11 @@ public:
         return false;
     }
 
-    // Return whether we should call PostForwardProp method in the second iteration or not.
-    void SetRunPostForwardProp(bool f) { m_runPostForwardProp = f; }
-    bool RunPostForwardProp() const
+    // Return whether we should call PostForwardOrBackProp method in the second iteration or not.
+    void SetRunPostForwardOrBackProp(bool f) { m_runPostForwardOrBackProp = f; }
+    bool RunPostForwardOrBackProp() const
     {
-        return m_runPostForwardProp;
+        return m_runPostForwardOrBackProp;
     }
 
     // reset gradients of a node's inputs
@@ -947,7 +947,7 @@ protected:
     float m_learningRateMultiplier;    // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
     bool m_gradientInitialized;        // indicates whether the gradient matrix has been resized and initialized to 0
     bool m_outputNeededDuringBackprop; // indicates whether the output value of the node is needed during backprop
-    bool m_runPostForwardProp;         // indicates whether we should call PostForward in the second pass.
+    bool m_runPostForwardOrBackProp;   // indicates whether we should call PostForward in the second pass.
 };
 typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 

@@ -1616,7 +1616,16 @@ namespace CNTK
         ScopedNetworkOperationMode modeGuard(m_computationNetwork, outputsToRetainBackwardStateFor.empty() ? NetworkOperationMode::inferring : NetworkOperationMode::training);
 
         m_computationNetwork->ForwardProp(outputsToEvaluate);
-        m_computationNetwork->PostForwardProp(outputsToEvaluate);
+
+        // Call PostForwardOrBackProp after ForwardProp only in evaluation mode.
+        if (outputsToRetainBackwardStateFor.empty())
+            m_computationNetwork->PostForwardOrBackProp(outputsToEvaluate);
+        else
+        {
+            m_currentOutputsToEvaluate.clear();
+            for (auto outputToEvaluate : outputsToEvaluate)
+                m_currentOutputsToEvaluate.push_back(outputToEvaluate);
+        }
 
         GetNetworkOutputs(outputs);
 
@@ -1669,6 +1678,12 @@ namespace CNTK
         m_computationNetwork->GetNestedNetwork(rootComputationNodePtr)->Backprop(FrameRange(nullptr), true, true);
 
         GetNetworkGradients(backPropagatedGradientValuesForInputs);
+
+        if (m_currentOutputsToEvaluate.size() > 0)
+        {
+            m_computationNetwork->PostForwardOrBackProp(m_currentOutputsToEvaluate);
+            m_currentOutputsToEvaluate.clear();
+        }
 
         // TODO: How to deal with the specified 'computeDevice'
     }
