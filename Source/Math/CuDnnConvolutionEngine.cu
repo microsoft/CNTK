@@ -664,7 +664,7 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
                    (poolKind == PoolKind::None ||
                    inputRank <= 3 && (kernelRank < 3 || kernel[2] == 1)));
 
-    // cuDNN as of version 6.0 does not handle asymmetric padding for convolution correctly. We need to detect asymmetric
+    // cuDNN as of version 6.0 does not handle asymmetric padding for even size kernel convolution correctly. We need to detect asymmetric
     // padding due to auto-padding and choose the reference convolution implementation instead
     if (poolKind == PoolKind::None)     // only for convolution, pooling seems fine
     {

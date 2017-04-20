@@ -286,6 +286,7 @@ protected:                                  \
     using Base::m_tempMatrixForward;        \
     using Base::m_tempMatrixBackward;       \
     using Base::m_convEng;                  \
+    using Base::InferConvolution2DReductionDims; \
     using Base::InferReductionDims;         \
 public:
 
