@@ -2144,14 +2144,14 @@ def gather(indices, reference):
         >>> d = np.asarray([[0,1],[2,3],[4,5],[6,7],[8,9],[10,11]]).astype(np.float32)
         >>> y = C.parameter(shape=d.shape, init=d)
         >>> C.ops.gather(x, y).eval({x:c})
-        array([[[[[  0.,   1.]],
+        [array([[[[  0.,   1.]],
         <BLANKLINE>
-                 [[  2.,   3.]]],
+                [[  2.,   3.]]],
         <BLANKLINE>
         <BLANKLINE>
-                [[[  8.,   9.]],
+               [[[  8.,   9.]],
         <BLANKLINE>
-                 [[ 10.,  11.]]]]], dtype=float32)
+                [[ 10.,  11.]]]], dtype=float32)]
         
     Args:
         reference: A tensor
