@@ -56,13 +56,14 @@ def populate_dicts(files):
     # return as defaultdict(int) so that new keys will return 0 which is the value for <unknown>
     return known, defaultdict(int, vocab), defaultdict(int, chars)
     
-def tsv_iter(line, vocab, chars, is_test=False):
+def tsv_iter(line, vocab, chars, is_test=False, answers=[[]]):
     unk_w = vocab[unk]
     unk_c = chars[unk]
 
     if is_test:
         uid, title, context, query, answer, other = line.split('\t')
         begin_answer, end_answer = '0', '1'
+        answers[0] += [answer.split(';')]
     else:
         uid, title, context, query, begin_answer, end_answer, answer = line.split('\t')
 

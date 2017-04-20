@@ -1,10 +1,12 @@
 import cntk as C
 import numpy as np
 from polymath import PolyMath
+from squad_utils import metric_max_over_ground_truths, f1_score, exact_match_score
 import tsv2ctf
 import os
 import argparse
 import importlib
+import time
 
 model_name = "pm.model"
 
@@ -45,7 +47,7 @@ def create_mb_and_map(func, data_file, polymath, randomize=True, repeat=True):
     }
     return mb_source, input_map
 
-def create_tsv_reader(func, tsv_file, polymath, seqs):
+def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, answers=[[]], context_tokens=[[]]):
     with open(tsv_file, 'r', encoding='utf-8') as f:
         eof = False
         while not eof:
@@ -56,8 +58,10 @@ def create_tsv_reader(func, tsv_file, polymath, seqs):
                 if not line:
                     eof = True
                     break
-                    
-                ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids = tsv2ctf.tsv_iter(line, polymath.vocab, polymath.chars, False)
+
+                ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids = tsv2ctf.tsv_iter(line, polymath.vocab, polymath.chars, is_test, answers)
+                if is_test:
+				    context_tokens[0] += [ctokens]
 
                 batch['cwids'].append(cwids)
                 batch['qwids'].append(qwids)
@@ -120,22 +124,24 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     model_file = os.path.join(model_path, model_name)
     model = C.combine(list(z.outputs) + [loss.output])
     label_ab = argument_by_name(loss, 'ab')
-    
-    if restore and os.path.isfile(model_file):
-        trainer.restore_from_checkpoint(model_file)
 
     epoch_stat = {
         'best_val_err' : 100,
         'best_since'   : 0,
         'val_since'    : 0}
     
+    if restore and os.path.isfile(model_file):
+        trainer.restore_from_checkpoint(model_file)
+        #after restore always re-evaluate
+        epoch_stat['best_val_err'] = validate_model(os.path.join(data_path, training_config['val_data']), model, polymath)
+
     def post_epoch_work(epoch_stat):
         trainer.summarize_training_progress()
         epoch_stat['val_since'] += 1
 
         if epoch_stat['val_since'] == training_config['val_interval']:
             epoch_stat['val_since'] = 0
-            val_err = test_model(os.path.join(data_path, training_config['val_data']), model, polymath)
+            val_err = validate_model(os.path.join(data_path, training_config['val_data']), model, polymath)
             if epoch_stat['best_val_err'] > val_err:
                 epoch_stat['best_val_err'] = val_err
                 epoch_stat['best_since'] = 0
@@ -190,8 +196,8 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 def symbolic_best_span(begin, end):
     running_max_begin = C.layers.Recurrence(C.element_max, initial_state=-float("inf"))(begin)
     return C.layers.Fold(C.element_max, initial_state=C.constant(-1e+30))(running_max_begin + end)
-        
-def test_model(test_data, model, polymath):
+    
+def validate_model(test_data, model, polymath):
     begin_logits = model.outputs[0]
     end_logits   = model.outputs[1]
     loss         = model.outputs[2]
@@ -248,7 +254,7 @@ def test_model(test_data, model, polymath):
     stat_avg = stat_sum / num_sequences
     loss_avg = loss_sum / num_sequences
 
-    print("Tested {} sequences, loss {:.4f}, F1 {:.4f}, EM {:.4f}, precision {:4f}, recall {:4f} hasOverlap {:4f}, start_match {:4f}, end_match {:4f}".format(
+    print("Validated {} sequences, loss {:.4f}, F1 {:.4f}, EM {:.4f}, precision {:4f}, recall {:4f} hasOverlap {:4f}, start_match {:4f}, end_match {:4f}".format(
             num_sequences,
             loss_avg,
             stat_avg[0],
@@ -264,8 +270,42 @@ def test_model(test_data, model, polymath):
 def test(test_data, model_path, config_file):
     polymath = PolyMath(config_file)
     model = C.load_model(os.path.join(model_path, model_name))
-    test_model(test_data, model, polymath)
+    begin_logits = model.outputs[0]
+    end_logits   = model.outputs[1]
+    loss         = C.as_composite(model.outputs[2].owner)
+    begin_prediction = C.sequence.input(1, sequence_axis=begin_logits.dynamic_axes[1], needs_gradient=True)
+    end_prediction = C.sequence.input(1, sequence_axis=end_logits.dynamic_axes[1], needs_gradient=True)    
+    best_span_score = symbolic_best_span(begin_prediction, end_prediction)
+    predicted_span = C.layers.Recurrence(C.plus)(begin_prediction - C.sequence.past_value(end_prediction))
 
+    f1_sum = 0
+    em_sum = 0
+    num_seq = 0
+    answers = [[]]
+    context_tokens = [[]]
+    batch_size = 128 # in sequences
+    num_batch = 0
+    tsv_reader = create_tsv_reader(loss, test_data, polymath, batch_size, is_test=True, answers=answers, context_tokens=context_tokens)
+    for data in tsv_reader:
+        start_time = time.time()
+        out = model.eval(data, outputs=[begin_logits,end_logits,loss], as_numpy=False)
+        g = best_span_score.grad({begin_prediction:out[begin_logits], end_prediction:out[end_logits]}, wrt=[begin_prediction,end_prediction], as_numpy=False)
+        other_input_map = {begin_prediction: g[begin_prediction], end_prediction: g[end_prediction]}
+        span = predicted_span.eval((other_input_map))
+        for seq, (ctokens, answer) in enumerate(zip(context_tokens[0], answers[0])):
+            predict_answer = ''.join([ctokens[i]+' ' if c == 1 else '' for i,c in enumerate(span[seq])])
+            f1 = metric_max_over_ground_truths(f1_score, predict_answer, answer)
+            em = metric_max_over_ground_truths(exact_match_score, predict_answer, answer)
+            f1_sum += f1
+            em_sum += 1 if em else 0
+            #print(f1, em, predict_answer.encode('utf-8'), [ans.encode('utf-8') for ans in answer])
+        num_seq += len(answers[0])
+        answers[0]=[]
+        context_tokens[0]=[]
+        num_batch += 1
+        end_time = time.time()
+        print("Tested {} batches ({:.1f} seq / second), F1 {:.4f}, EM {:.4f}".format(num_batch, batch_size / (end_time - start_time), f1_sum / num_seq, em_sum / num_seq))
+                
 if __name__=='__main__':
     # default Paths relative to current python file.
     abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -291,7 +331,9 @@ if __name__=='__main__':
 
     test_data = args['test']
     
-    if test_data == None:
+    if test_data:
+        test(test_data, model_path, args['config'])
+    else:
         try:
             train(data_path, model_path, args['logdir'], args['config'],
                 restore = not args['restart'],
@@ -299,5 +341,3 @@ if __name__=='__main__':
                 gen_heartbeat = args['genheartbeat'])
         finally:
             C.Communicator.finalize()
-    else:
-        test(test_data, model_path, args['config'])
