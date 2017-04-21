@@ -141,12 +141,14 @@ void DoCrossValidate(const ConfigParameters& config)
         evalNodeNamesVector.push_back(evalNodeNames[i]);
     }
 
-    std::vector<std::vector<EpochCriterion>> cvErrorResults;
     std::vector<std::wstring> cvModels;
 
     DataReader cvDataReader(readerConfig);
 
     bool enableDistributedMBReading = config(L"distributedMBReading", GetDistributedMBReadingDefaultValue(config, cvDataReader));
+
+    vector<double> minErrors;
+    vector<int>    minErrIds;
 
     bool finalModelEvaluated = false;
     for (size_t i = cvInterval[0]; i <= cvInterval[2]; i += cvInterval[1])
@@ -155,7 +157,7 @@ void DoCrossValidate(const ConfigParameters& config)
 
         if (!fexists(cvModelPath))
         {
-            fprintf(stderr, "Model %ls does not exist.\n", cvModelPath.c_str());
+            LOGPRINTF(stderr, "Model %ls does not exist.\n", cvModelPath.c_str());
             if (finalModelEvaluated || !fexists(modelPath))
                 continue; // file missing
             else
@@ -172,43 +174,75 @@ void DoCrossValidate(const ConfigParameters& config)
         SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult,
             firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
 
-        fprintf(stderr, "Model %ls --> \n", cvModelPath.c_str());
+        // Get requsted eval node names actually present in current network.
+        // If no nodes are requested, this will return all eval and criterion nodes in current network.
+        const vector<ComputationNodeBasePtr> evalNodes = net->GetEvalNodesWithName(evalNodeNamesVector);
+        vector<wstring> evalNodeNamesForCurrentNet(evalNodes.size());
+        transform(evalNodes.begin(), evalNodes.end(), evalNodeNamesForCurrentNet.begin(),
+            [](const ComputationNodeBasePtr& node) { return node->GetName(); });
+
+        if (evalNodeNamesVector.empty())
+        {
+            // If no nodes are requested currently, it means that this is the first network that we are
+            // evaluating. We set requested nodes to all eval and criterion nodes from current network.
+            // These will be requested for this and all subsequent models.
+            evalNodeNamesVector = evalNodeNamesForCurrentNet;
+        }
+        else
+        {
+            // Verify that current model has all requested nodes.
+            if (evalNodeNamesVector != evalNodeNamesForCurrentNet)
+            {
+                LogicError("Model %ls does not have all requested evaluation nodes.", cvModelPath.c_str());
+            }
+        }
+
+        LOGPRINTF(stderr, "Model %ls --> \n", cvModelPath.c_str());
         auto evalErrors = eval.Evaluate(&cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
-        cvErrorResults.push_back(evalErrors);
+
+        // Update best model.
+        for (int j = 0; j < evalErrors.size(); ++j)
+        {
+            if (cvModels.size() == 1 || evalErrors[j].Average() < minErrors[j])
+            {
+                minErrors[j] = evalErrors[j].Average();
+                minErrIds[j] = cvModels.size() - 1;
+            }
+            LOGPRINTF(stderr, "Based on %ls: Best model so far = %ls with min err %.8g\n",
+                evalNodeNamesVector[i].c_str(), cvModels[minErrIds[i]].c_str(), minErrors[i]);
+        }
 
         ::Sleep(1000 * sleepSecondsBetweenRuns);
     }
 
-    // find best model
-    if (cvErrorResults.size() == 0)
+    if (cvModels.size() == 0)
         LogicError("No model is evaluated.");
 
-    vector<double> minErrors;
-    vector<int>    minErrIds;
-    vector<EpochCriterion> evalErrors = cvErrorResults[0];
-    for (int i = 0; i < evalErrors.size(); ++i)
-    {
-        minErrors.push_back(evalErrors[i].Average());
-        minErrIds.push_back(0);
-    }
+    // Flag which indicates if we need to save best models for each evaluation metric
+    // under a new name. For example, these can be used by other tasks that follow
+    // this one.
+    const bool saveBestModelPerCriterion = config(L"saveBestEpochPerCriterion", false);
 
-    for (int i = 0; i < cvErrorResults.size(); i++)
+    LOGPRINTF(stderr, "Best models:\n");
+    LOGPRINTF(stderr, "------------\n");
+    for (int i = 0; i < minErrors.size(); ++i)
     {
-        evalErrors = cvErrorResults[i];
-        for (int j = 0; j < evalErrors.size(); j++)
+        LOGPRINTF(stderr, "Based on %ls: Best model = %ls with min err %.8g\n",
+            evalNodeNamesVector[i].c_str(), cvModels[minErrIds[i]].c_str(), minErrors[i]);
+
+        // Save best model for each criterion if we are required to do so, and if we
+        // are the main worker (in case of distributed execution).
+        if (saveBestModelPerCriterion && 
+            (MPIWrapper::GetInstance() == nullptr || MPIWrapper::GetInstance()->IsMainNode()))
         {
-            if (evalErrors[j].Average() < minErrors[j])
-            {
-                minErrors[j] = evalErrors[j].Average();
-                minErrIds[j] = i;
-            }
+            const wstring modelNameOriginal = cvModels[minErrIds[i]];
+            const wstring modelNameCopied = modelPath + L"_" + evalNodeNamesVector[i];
+            copyOrDie(modelNameOriginal, modelNameCopied);
+            LOGPRINTF(stderr, "Copying best model for %ls: %ls -> %ls\n",
+                evalNodeNamesVector[i].c_str(), modelNameOriginal.c_str(), modelNameCopied.c_str());
         }
     }
 
-    fprintf(stderr, "Best models:\n");
-    fprintf(stderr, "------------\n");
-    for (int i = 0; i < minErrors.size(); ++i)
-        fprintf(stderr, "Based on Err[%d]: Best model = %ls with min err %.8g\n", i, cvModels[minErrIds[i]].c_str(), minErrors[i]);
 }
 
 template void DoCrossValidate<float>(const ConfigParameters& config);
