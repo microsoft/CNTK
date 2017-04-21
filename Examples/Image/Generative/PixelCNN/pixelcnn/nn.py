@@ -117,6 +117,7 @@ def dense(x, num_units, nonlinearity=None, init=global_init, init_scale=1., coun
         # use weight normalization (Salimans & Kingma, 2016)
         V_norm = V / ct.sqrt(maximum(ct.reduce_sum(V*V, axis=1), 1e-12))        
         x_init = ct.times(V_norm, x)
+
         m_init, v_init = moments(x_init, axes=(1, ct.Axis.default_batch_axis()))
         scale_init = init_scale / ct.sqrt(v_init + 1e-10)
         ct.assign(g, scale_init)

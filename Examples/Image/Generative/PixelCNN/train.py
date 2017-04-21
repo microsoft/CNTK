@@ -47,18 +47,20 @@ def create_reader(map_file, is_training):
 def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs = 100):
 
     # Input variables denoting the features and label data
-    x      = ct.input(shape=(num_channels, image_height, image_width))
-    target = ct.input(shape=(num_channels, image_height, image_width))
-    label  = ct.input((num_classes))
+    inputs_init = ct.input(shape=(num_channels, image_height, image_width))    
+    inputs = ct.input(shape=(num_channels, image_height, image_width))
+    targets = ct.input(shape=(num_channels, image_height, image_width))
+    labels  = ct.input((num_classes))
 
     # apply model to input
-    x_norm = (x - 127.5) / 127.5 # [-1, 1]
+    inputs_init_norm = (inputs_init - 127.5) / 127.5 # [-1, 1]    
+    inputs_norm = (inputs - 127.5) / 127.5 # [-1, 1]
 
-    z_init = m.build_model(x_norm, model, loss, first_run=True)
-    z = m.build_model(x_norm, model, loss)
+    z_init = m.build_model(inputs_init_norm, model, loss, first_run=True)
+    z = m.build_model(inputs_norm, model, loss)
 
     # loss and metric
-    ce = l.loss_function(x_norm, target, z, loss)
+    ce = l.loss_function(inputs_norm, targets, z, loss)
     pe = ct.relu(1.0) # dummy value to make reporting progress happy.
 
     # training config
@@ -84,14 +86,14 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
                                unit_gain=False
                                # l1_regularization_weight = 0.001
                                # l2_regularization_weight = 0.001
-                               #gradient_clipping_threshold_per_sample=10
+                               # gradient_clipping_threshold_per_sample=10
                                )
     trainer = ct.Trainer(z, (ce, pe), [learner], progress_writers)
 
     # define mapping from reader streams to network inputs
     input_map = {
-        x: reader_train.streams.features,
-        label: reader_train.streams.labels
+        inputs: reader_train.streams.features,
+        labels: reader_train.streams.labels
     }
 
     ct.logging.log_number_of_parameters(z); print()
@@ -105,7 +107,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
         if epoch == 0:
             reader_state = reader_train.get_checkpoint_state()
             data = reader_train.next_minibatch(min(init_minibatch_size, epoch_size), input_map=input_map)
-            z_init.eval({x:data[x].value})
+            z_init.eval({inputs_init:data[inputs].asarray()})
             reader_train.restore_from_checkpoint(reader_state)
 
         while sample_count < epoch_size:  # loop over minibatches in the epoch
@@ -121,7 +123,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
                 target = np.ascontiguousarray(np.reshape(target, (-1, 1, 256, num_channels*image_height*image_width)))
                 trainer.train_minibatch({input_var:data[x].value, target_var:target})
             else:
-                trainer.train_minibatch({x:data[x].value})
+                trainer.train_minibatch({inputs:data[inputs].asarray()})
                 # lr_per_sample *= lr_decay
                 # learner.reset_learning_rate(ct.learning_rate_schedule(lr_per_sample, unit=ct.UnitType.sample))
 
@@ -139,8 +141,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
             x_gen = np.zeros((12,) + image_shape, dtype=np.float32)
             for y in range(image_height):
                 for x in range(image_width):
-                    new_x_gen    = z.eval({x:[x_gen]})
-                    print(new_x_gen)
+                    new_x_gen    = z.eval({inputs:[x_gen]})
                     new_x_gen_np = np.asarray(sp.np_sample_from_discretized_mix_logistic(new_x_gen[0], nr_logistic_mix))
                     x_gen[:,:,y,x] = new_x_gen_np[:,:,y,x]
                     #x_gen[:,1,y,x] = new_x_gen_np[:,1,y,x]
