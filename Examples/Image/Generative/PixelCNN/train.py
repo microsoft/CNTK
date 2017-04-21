@@ -132,8 +132,8 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
             sample_count  += trainer.previous_minibatch_sample_count
             training_loss += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count
 
-        #lr_per_sample *= 0.6
-        #learner.reset_learning_rate(ct.learning_rate_schedule(lr_per_sample, unit=ct.UnitType.sample))
+        lr_per_sample *= 0.6
+        learner.reset_learning_rate(ct.learning_rate_schedule(lr_per_sample, unit=ct.UnitType.sample))
 
         # sample from the model
         t3 = time.perf_counter()

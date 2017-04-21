@@ -22,16 +22,15 @@ def concat_elu(x):
     """ like concatenated ReLU (http://arxiv.org/abs/1603.05201), but then with ELU """
     return ct.elu(ct.splice(x, -x, axis=0))
 
-def log_sum_exp(x):
+def log_sum_exp(x, axis=None):
     """ numerically stable log_sum_exp implementation that prevents overflow """
-    axis = len(x.shape) - 1
-    m = ct.reshape(ct.reduce_max(x, axis), shape=x.shape[0:axis])
+    rank = len(x.shape)
+    m = ct.reshape(ct.reduce_max(x, axis), shape=x.shape[0:axis]+x.shape[axis+1:rank])
     m2 = ct.reduce_max(x, axis)
     return m + ct.reshape(ct.log(ct.reduce_sum(ct.exp(x-m2), axis)), shape=m.shape)
 
-def log_prob_from_logits(x):
+def log_prob_from_logits(x, axis=None):
     """ numerically stable log_softmax implementation that prevents overflow """
-    axis = len(x.shape) - 1
     m = ct.reduce_max(x, axis)
     return x - m - ct.log(ct.reduce_sum(ct.exp(x-m), axis=axis))
 
