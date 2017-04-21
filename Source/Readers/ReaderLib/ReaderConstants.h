@@ -17,4 +17,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     static size_t const g_4GB = 0x100000000L;
 
+    const static char g_Row_Delimiter = '\n';
+
 }}}

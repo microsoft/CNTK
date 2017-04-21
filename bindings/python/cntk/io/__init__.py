@@ -504,11 +504,13 @@ def HTKFeatureDeserializer(streams):
         dimension = stream.dim
         scp_file = stream['scp']
         broadcast = stream['broadcast'] if 'broadcast' in stream else False
+        defines_mb_size = stream['defines_mb_size'] if 'defines_mb_size' in stream else False
         left_context, right_context = stream.context if 'context' in stream\
                                                      else (0, 0)
         htk_config = cntk_py.HTKFeatureConfiguration(stream_name, scp_file,
                                                      dimension, left_context,
-                                                     right_context, broadcast)
+                                                     right_context, broadcast,
+                                                     defines_mb_size)
         feat.append(htk_config)
 
     if len(feat) == 0:
@@ -626,6 +628,9 @@ def CTFDeserializer(filename, streams):
 
     Args:
         filename (str): file name containing the text input
+        streams: any dictionary-like object that contains a mapping from stream
+          names to :class:`StreamDef` objects. Each StreamDef object configures
+          an input stream.
 
     See also:
         :cntkwiki:`CNTKTextReader format <BrainScript-CNTKTextFormat-Reader>`
@@ -635,7 +640,7 @@ def CTFDeserializer(filename, streams):
             raise ValueError("CTFDeserializer: stream name for key %s must be "
                              "specified" % k)
     sc = [cntk_py.StreamConfiguration(
-        k, s.dim, s.is_sparse, s.stream_alias) for k, s in streams.items()]
+        k, s.dim, s.is_sparse, s.stream_alias, s['defines_mb_size']) for k, s in streams.items()]
     return cntk_py.ctf_deserializer(filename, sc)
 
 # TODO: this should be a private class; use StreamDef instead
@@ -654,16 +659,18 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
         is_sparse (bool, defaults to `False`): whether the provided data is
           sparse (`False` by default)
         stream_alias (str, defaults to ''): name of the stream in the file
+        defines_mb_size (`bool`, defaults to False): whether this stream defines
+          the minibatch size.
     '''
 
-    def __init__(self, name, dim, is_sparse=False, stream_alias=''):
+    def __init__(self, name, dim, is_sparse=False, stream_alias='', defines_mb_size = False):
         return super(StreamConfiguration, self).__init__(name, dim, is_sparse,
-                                                         stream_alias)
+                                                         stream_alias, defines_mb_size)
 
 # stream definition for use in StreamDefs
 # returns a record { stream_alias, is_sparse, optional shape, optional transforms, optional context, optional scp, optional mlf }
 def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
-              context=None, scp=None, mlf=None, broadcast=None):
+              context=None, scp=None, mlf=None, broadcast=None, defines_mb_size=False):
     '''
        Configuration of a stream for use with the builtin Deserializers.
        The meanings of some configuration keys have a mild dependency on the
@@ -695,6 +702,8 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
         broadcast (`bool`, defaults to `None`): whether the features in this
           stream should be broadcast to the whole sequence (useful in e.g.
           ivectors with HTK)
+        defines_mb_size (`bool`, defaults to False): whether this stream defines
+          the minibatch size.
     '''
     config = dict(stream_alias=field, is_sparse=is_sparse)
     if shape is not None:
@@ -710,6 +719,8 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
         config['is_sparse'] = True
     if broadcast is not None:
         config['broadcast'] = broadcast
+    config['defines_mb_size'] = True if defines_mb_size else False
+      
     return Record(**config)
     # TODO: we should always use 'shape' unless it is always rank-1 or a single rank's dimension
     # TODO: dim should be inferred from the file, at least for dense
