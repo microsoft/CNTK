@@ -141,8 +141,8 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
             x_gen = np.zeros((12,) + image_shape, dtype=np.float32)
             for y in range(image_height):
                 for x in range(image_width):
-                    new_x_gen    = z.eval({inputs:[x_gen]})
-                    new_x_gen_np = np.asarray(sp.np_sample_from_discretized_mix_logistic(new_x_gen[0], nr_logistic_mix))
+                    new_x_gen    = z.eval({inputs:x_gen})
+                    new_x_gen_np = np.asarray(sp.np_sample_from_discretized_mix_logistic(new_x_gen, nr_logistic_mix))
                     x_gen[:,:,y,x] = new_x_gen_np[:,:,y,x]
                     #x_gen[:,1,y,x] = new_x_gen_np[:,1,y,x]
                     #x_gen[:,2,y,x] = new_x_gen_np[:,2,y,x]
