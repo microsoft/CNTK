@@ -33,22 +33,26 @@ namespace DebugUtil
         {
             string output;
             string previousLine;
-            int count = 0;
-            CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [&output, &previousLine, &count](string stack)
+            int count = 1;
+            CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [&output, &previousLine, &count](const string& currentStackLine)
             {
-                if (stack.compare(previousLine))
+                if (currentStackLine.compare(previousLine))
                 {
-                    if (count)
+                    if (count > 1)
                     {
                         output.pop_back(); // remove new line and add it below
-                        output += " (x" + std::to_string(count+1) + ")\n";
+                        output += " (x" + std::to_string(count) + ")\n"; // print callstack line plus number of times it appears
                     }
-                    output += stack;
-                    previousLine = stack;
-                    count = 0;
+                    output += currentStackLine;
+                    previousLine = currentStackLine;
+                    count = 1;
                     return;
                 }
-                ++count;
+                // make sure we're not counting empty lines
+                if (!currentStackLine.empty())
+                {
+                    ++count;
+                }
             });
             return output;
         }
