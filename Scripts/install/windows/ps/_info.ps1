@@ -38,7 +38,7 @@ Repeated operation of this script will reuse already downloaded components.
 function Display64BitWarningMessage {
     "
 A 64bit version of Powershell is required to run this script.
-Please make sure you started this installation from a 64bit process.
+Please make sure you started this installation from a 64bit command process.
 "
 }
 
