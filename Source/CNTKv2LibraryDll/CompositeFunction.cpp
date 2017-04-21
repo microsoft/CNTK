@@ -629,11 +629,19 @@ namespace CNTK
                 break;
             case PrimitiveOpType::TransposeAxes:
             {
-                auto axis1 = functionConfig[PrimitiveFunction::AttributeNameAxis1].Value<Axis>();
-                auto axis2 = functionConfig[PrimitiveFunction::AttributeNameAxis2].Value<Axis>();
+                if (functionConfig.Contains(PrimitiveFunction::AttributeNamePermVec)) 
+                {
+                    auto perm = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNamePermVec].Value<std::vector<DictionaryValue>>());
+                    computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), internalNodeName, perm);
+                }
+                else
+                {
+                    auto axis1 = functionConfig[PrimitiveFunction::AttributeNameAxis1].Value<Axis>();
+                    auto axis2 = functionConfig[PrimitiveFunction::AttributeNameAxis2].Value<Axis>();
 
-                // The axis ids passed to the internal CNTK TransposeDimensionsNode are 1 based instead of 0 based
-                computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(axis1), AsCNTKInternalAxisIdx(axis2));
+                    // The axis ids passed to the internal CNTK TransposeDimensionsNode are 1 based instead of 0 based
+                    computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(axis1), AsCNTKInternalAxisIdx(axis2));
+                }
                 break;
             }
             case PrimitiveOpType::Where:

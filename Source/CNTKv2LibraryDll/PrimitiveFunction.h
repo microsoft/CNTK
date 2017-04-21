@@ -198,6 +198,7 @@ namespace CNTK
         static const std::wstring AttributeNameAxisVec;
         static const std::wstring AttributeNameAxis1;
         static const std::wstring AttributeNameAxis2;
+        static const std::wstring PrimitiveFunction::AttributeNamePermVec;
         static const std::wstring AttributeNameAllowDuplicates;
         static const std::wstring AttributeNameNumSamples;
         static const std::wstring AttributeNameDropoutRate;

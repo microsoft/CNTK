@@ -11,7 +11,7 @@ from numbers import Number
 from . import sequence
 from .functions import CloneMethod, Function, load_model, register_native_user_function, native_user_function
 from ..variables import Variable, Parameter, Constant
-from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args
+from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_perm
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
@@ -1906,29 +1906,48 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
 
 
 @typemap
-def transpose(x, axis1=0, axis2=1, name=''):
+def transpose(x, axis1=0, axis2=1, perm=None, name=''):
     '''
-    Swaps two axes of the tensor. The output tensor has the same data but with
-    ``axis1`` and ``axis2`` swapped.
+    Permutes the axes of the tensor. If ``perm`` is None, the output tensor has the same data but with
+    ``axis1`` and ``axis2`` swapped. If ``perm`` is a permutation of (0, 1, ..., len(x.shape)-1)
+    the output has the same data but the axes are permuted according to perm.
 
     Example:
         >>> C.transpose([[[0,1],[2,3],[4,5]]], 1, 2).eval()
         array([[[ 0.,  2.,  4.],
                 [ 1.,  3.,  5.]]], dtype=float32)
+        >>> a = np.arange(24).reshape(2,3,4).astype('f')
+        >>> C.transpose(a, perm=(2, 0, 1)).eval() - np.transpose(a, (2, 0, 1))
+        array([[[ 0.,  0.,  0.],
+                [ 0.,  0.,  0.]],
+        <BLANKLINE>
+               [[ 0.,  0.,  0.],
+                [ 0.,  0.,  0.]],
+        <BLANKLINE>
+               [[ 0.,  0.,  0.],
+                [ 0.,  0.,  0.]],
+        <BLANKLINE>
+               [[ 0.,  0.,  0.],
+                [ 0.,  0.,  0.]]], dtype=float32)
 
     Args:
         x: tensor to be transposed
         axis1 (int or :class:`~cntk.axis.Axis`): the axis to swap with ``axis2``
         axis2 (int or :class:`~cntk.axis.Axis`): the axis to swap with ``axis1``
+        perm  (list): the permutation to apply to the axes.
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    from cntk.cntk_py import transpose_axes
+    from cntk.cntk_py import transpose_axes, transpose
     x = sanitize_input(x)
-    axis1 = sanitize_axis(axis1)
-    axis2 = sanitize_axis(axis2)
-    return transpose_axes(x, axis1, axis2, name)
+    if perm is None:
+        axis1 = sanitize_axis(axis1)
+        axis2 = sanitize_axis(axis2)
+        return transpose_axes(x, axis1, axis2, name)
+    else:
+        perm = sanitize_perm(perm)
+        return transpose(x, perm, name)
 
 
 @typemap

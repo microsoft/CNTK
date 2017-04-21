@@ -1035,6 +1035,13 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::TransposeAxes, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr Transpose(const Variable& operand, const std::vector<size_t>& permutation, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNamePermVec] = AsDictionaryValueVector(permutation);
+        return UnaryOp(PrimitiveOpType::TransposeAxes, operand, std::move(additionalProperties), name);
+    }
+
     FunctionPtr Transpose(const Variable& operand, const std::wstring& name)
     {
         if (operand.Shape().Rank() <= 2)

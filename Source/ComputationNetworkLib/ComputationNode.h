@@ -53,6 +53,7 @@
 #define CNTK_MODEL_VERSION_21 21 // pooling: add a ceilOutDim to decide whether ceil or floor while computing the output size
 #define CNTK_MODEL_VERSION_22 22 // Slice and pad accepts multiple axes 
 #define CNTK_MODEL_VERSION_23 23 // pooling: add include pad func for average pooling
+#define CNTK_MODEL_VERSION_24 24 // transpose: allow specifying a permutation
 #define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_23
 
 

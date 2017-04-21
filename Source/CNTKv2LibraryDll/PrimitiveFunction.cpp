@@ -43,6 +43,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxisVec = L"axisVec";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxis1 = L"axis1";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxis2 = L"axis2";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNamePermVec = L"permutation";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAllowDuplicates = L"allowDuplicates";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumSamples = L"numSamples";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDropoutRate = L"dropoutRate";
@@ -361,17 +362,28 @@ namespace CNTK
                         {
                             assert(m_inputs.size() == 1);
 
-                            auto axis1 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis1].Value<Axis>(), m_inputs[0].Shape());
-                            auto axis2 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis2].Value<Axis>(), m_inputs[0].Shape());
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNamePermVec))
+                            {
+                                auto perm = AsVector<size_t>(m_attributes[PrimitiveFunction::AttributeNamePermVec].Value<std::vector<DictionaryValue>>());
+                                auto shape = m_inputs[0].Shape();
+                                outputShape = shape;
+                                for (size_t i = 0; i < perm.size(); ++i)
+                                    outputShape[i] = shape[perm[i]];
+                            }
+                            else
+                            {
+                                auto axis1 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis1].Value<Axis>(), m_inputs[0].Shape());
+                                auto axis2 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis2].Value<Axis>(), m_inputs[0].Shape());
 
-                            if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
-                                LogicError("Function '%S': TransposeAxes operation currently does not support transposing dynamic axes.", AsString().c_str());
+                                if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
+                                    LogicError("Function '%S': TransposeAxes operation currently does not support transposing dynamic axes.", AsString().c_str());
 
-                            // We allow to transpose with an axes that exceeds the rank of the input.
-                            // The output rank is the max of the input rank, and either of the axes being transposed.
-                            auto outputRank = std::max(m_inputs[0].Shape().Rank(), (size_t)(std::max(axis1.StaticAxisIndex(), axis2.StaticAxisIndex()) + 1));
-                            outputShape = m_inputs[0].Shape().AppendShape(NDShape(outputRank - m_inputs[0].Shape().Rank(), 1));
-                            std::swap(outputShape[axis1.StaticAxisIndex()], outputShape[axis2.StaticAxisIndex()]);
+                                // We allow to transpose with an axes that exceeds the rank of the input.
+                                // The output rank is the max of the input rank, and either of the axes being transposed.
+                                auto outputRank = std::max(m_inputs[0].Shape().Rank(), (size_t)(std::max(axis1.StaticAxisIndex(), axis2.StaticAxisIndex()) + 1));
+                                outputShape = m_inputs[0].Shape().AppendShape(NDShape(outputRank - m_inputs[0].Shape().Rank(), 1));
+                                std::swap(outputShape[axis1.StaticAxisIndex()], outputShape[axis2.StaticAxisIndex()]);
+                            }
                             break;
                         }
                         case PrimitiveOpType::Slice:

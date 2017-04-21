@@ -496,6 +496,27 @@ def sanitize_Function_attributes(attributes):
         attributes['autoPadding'] = list(reversed(attributes['autoPadding']))
 
     return attributes
+    
+def sanitize_perm(perm):
+    # Find the permutation such that when it is applied to the reverse 
+    # of an input gives the reverse of perm applied to the input
+    # Example: 
+    # input is [a, b, c, d], perm is [3, 0, 2, 1], perm of input is [d, a, c, b]
+    # we are looking for [2, 1, 3, 0] because when we apply it to [d, c, b, a]
+    # the result is [b, c, a, d] which is the revese of [d, a, c, b]
+    n = len(perm)
+    return list([n-i-1 for i in reversed(perm)])
+
+
+def test_sanitize_perm():
+    from itertools import permutations
+    def perm_apply(x, perm):
+        return list([x[i] for i in perm])
+    for i in range(7):
+        test = list([42+j for j in range(i)])
+        for p in permutations(range(i)):
+            q = sanitize_perm(p)
+            assert(all(x==y for x,y in zip(list(reversed(perm_apply(test,p))),perm_apply(list(reversed(test)),q))))
 
 def memoize(func):
     class memodict(dict):

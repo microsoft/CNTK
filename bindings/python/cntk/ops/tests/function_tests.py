@@ -366,7 +366,7 @@ def test_output_subset_evaluation(device_id):
         parameter_device = cpu()
     p = parameter(shape=(1), init=glorot_uniform(), device=parameter_device)
     op2 = (x2 - constant(value=10, shape=(1), device=device)) - p
-    
+
     op = combine([op1, op2]);
 
     _, result = op.forward({x1 : np.asarray([1, 2, 3])}, [op1], device=device)
@@ -385,7 +385,7 @@ def test_block_with_unused_outputs():
     input_var1 = input(shape=())
     input_var2 = input(shape=())
     block = as_block(combine([func1, func3]), [(p3, input_var1), (p5, input_var2)], 'multi_output_block')
-    
+
     eval_root = combine([block.outputs[0]])
     result = eval_root.eval({input_var1 : np.asarray([3], dtype=np.float32), input_var2 : np.asarray([-3], dtype=np.float32)})
     assert np.array_equal(result, [[ 4.]])
@@ -422,6 +422,18 @@ def test_transpose_0d_1d_operands():
     with pytest.raises(ValueError):
         transpose_1d = C.transpose(x2)
 
+def test_transpose_perm():
+    a = np.arange(120, dtype=np.float32).reshape(2, 3, 4, 5)
+    from itertools import permutations
+    for p in permutations(range(4)):
+        assert np.array_equal(C.transpose(a, perm=p).eval(), np.transpose(a, p))
+    # test permutations over odd number of axes just in case
+    b = a.reshape(6, 4, 5)
+    for p in permutations(range(3)):
+        assert np.array_equal(C.transpose(b, perm=p).eval(), np.transpose(b, p))
+
+
+
 
 def test_eval_again_with_prev_outputs_live(device_id):
     x = C.input(2)
@@ -456,7 +468,7 @@ def test_eval_again_with_prev_outputs_live(device_id):
     # is now erased, due to the subsequent eval call
     with pytest.raises(RuntimeError):
         assert np.array_equal(result1[out1.output].asarray(), [[3, 6]])
-    
+
     grad_op = out1 + out2
     grad1 = grad_op.grad({x : np.asarray([2, 5], dtype=np.float32)}, wrt=[w1, w2], device=dev)
     assert np.array_equal(grad1[w1], [2])
