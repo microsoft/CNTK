@@ -24,6 +24,9 @@ namespace CNTKLibraryCSEvalExamples
             // Evaluate a batch of images
             CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.CPUDevice);
 
+            // Evaluate multiple sample requests in parallel
+            CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(DeviceDescriptor.CPUDevice);
+
             // Evaluate a single sequence with one-hot vector
             CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);
 
@@ -34,6 +37,7 @@ namespace CNTKLibraryCSEvalExamples
             Console.WriteLine(" ====== Run evaluation on GPU =====");
             CNTKLibraryManagedExamples.EvaluationSingleImage(DeviceDescriptor.GPUDevice(0));
             CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.GPUDevice(0));
+            CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(DeviceDescriptor.GPUDevice(0));
             CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.GPUDevice(0));
             CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.GPUDevice(0));
 

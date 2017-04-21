@@ -11,6 +11,7 @@
 #include "DataReader.h"
 #include "StringUtil.h"
 #include "ReaderConstants.h"
+#include "ReaderUtil.h"
 
 using std::string;
 using std::wstring;
@@ -117,35 +118,6 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     }
 
     m_filepath = msra::strfun::utf16(config(L"file"));
-
-    wstring randomizeString = config(L"randomize", wstring());
-    if (!_wcsicmp(randomizeString.c_str(), L"none")) // TODO: don't support case-insensitive option strings in the new reader
-    {
-        // "none" is only accepted to be backwards-compatible (DoWriteOutput() in EvalActions.cpp
-        // inserts this magic constant into the reader config to prevent it from shuffling the input).
-        // In user-defined configurations, 'randomize' should be a boolean.
-        m_randomizationWindow = randomizeNone;
-    }
-    else
-    {
-        bool randomize = config(L"randomize", true);
-
-        if (!randomize)
-        {
-            m_randomizationWindow = randomizeNone;
-        }
-        else if (config.Exists(L"randomizationWindow"))
-        {
-            m_randomizationWindow = config(L"randomizationWindow");
-        }
-        else
-        {
-            m_randomizationWindow = randomizeAuto;
-        }
-    }
-
-    m_sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", false);
-
     m_skipSequenceIds = config(L"skipSequenceIds", false);
     m_maxErrors = config(L"maxErrors", 0);
     m_traceLevel = config(L"traceLevel", 1);
@@ -153,6 +125,8 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     m_keepDataInMemory = config(L"keepDataInMemory", false);
     m_frameMode = config(L"frameMode", false);
 
+    m_randomizationWindow = GetRandomizationWindowFromConfig(config);
+    m_sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", false);
     if (!m_sampleBasedRandomizationWindow && m_randomizationWindow == randomizeAuto) 
     {
         m_randomizationWindow = g_4GB / m_chunkSizeBytes; // ~ 4 GB (on disk) worth of chunks

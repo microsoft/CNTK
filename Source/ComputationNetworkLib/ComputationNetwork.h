@@ -139,11 +139,64 @@ public:
     void Backprop(const ComputationNodeBasePtr rootNode);
 
     template <class NODESET> // version that takes multiple nodes
+    void TravserseInSortedGlobalEvalOrder(const NODESET& nodes, const std::function<void(const ComputationNodeBasePtr&)>& action)
+    {
+        // Create a composite evaluation order for all the nodes
+        std::vector<ComputationNodeBasePtr> combinedEvalOrder;
+        for (auto node : nodes)
+        {
+            auto currentNodeEvalOrder = GetEvalOrder(node);
+            combinedEvalOrder.insert(combinedEvalOrder.end(), currentNodeEvalOrder.begin(), currentNodeEvalOrder.end());
+        }
+
+        combinedEvalOrder = SortByGlobalEvalOrder(combinedEvalOrder);
+        set<ComputationNodeBasePtr> completedSEQNodes;
+        for (auto& node : combinedEvalOrder)
+        {
+            if (node->IsPartOfLoop())
+            {
+                shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, node);
+                assert(recInfo != nullptr);
+                if (completedSEQNodes.insert(recInfo).second)
+                    node = recInfo;
+                else
+                    node = nullptr;
+            }
+
+            if (node)
+                action(node);
+        }
+    }
+
+    template <class NODESET> // version that takes multiple nodes
     void ForwardProp(const NODESET& nodes)
     {
-        auto nodesSortedByGlobalEvalOrder = SortByGlobalEvalOrder(nodes);
-        for (auto& node : nodesSortedByGlobalEvalOrder)
-            ForwardProp(node);
+        TravserseInSortedGlobalEvalOrder(nodes, [](const ComputationNodeBasePtr& node) {
+            PARTraversalFlowControlNode::ForwardProp(node, FrameRange(nullptr));
+        });
+    }
+
+    template <class NODESET_FROM, class NODESET_TO> // version that takes both initial and final set of nodes
+    void ForwardPropFromTo(const NODESET_FROM& nodesFrom, const NODESET_TO& nodesTo)
+    {
+        // Compute the set of nodes to do forward on.
+        std::set<ComputationNodeBasePtr> nodesToForward;
+        TravserseInSortedGlobalEvalOrder(nodesTo, [&](const ComputationNodeBasePtr& node) {
+            for (const ComputationNodeBasePtr& input : node->GetInputs())
+            {
+                if (std::find(nodesFrom.begin(), nodesFrom.end(), input) != nodesFrom.end()
+                    || nodesToForward.find(input) != nodesToForward.end())
+                {
+                    nodesToForward.insert(node);
+                }
+            }
+        });
+
+        // Perform forward on resulting nodes in global evaluation order.
+        for (const auto& node : SortByGlobalEvalOrder(nodesToForward))
+        {
+            ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(node, FrameRange(nullptr));
+        }
     }
 
     static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr>& nodes);
@@ -175,9 +228,9 @@ public:
     // -----------------------------------------------------------------------
 
     void CompileNetwork(); // call this after creation, Load(), and any modification
+    void ValidateNetwork();
 
 private:
-    void ValidateNetwork();
     size_t ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFirstPass, bool isFinalValidationPass);
     bool ValidateNode(ComputationNodeBasePtr node, bool isFinalValidationPass) const;
     void MarkValueNonSharableNodes();
@@ -882,6 +935,12 @@ public:
     // diagnostics
     // -----------------------------------------------------------------------
 
+    void SetTrackGapNans(bool enable)
+    {
+        m_environment->trackGapNans = enable;
+    }
+    bool GetTrackGapNaNs() const { return m_environment->trackGapNans; }
+
     void SetTraceLevel(int traceLevel)
     {
         m_environment->traceLevel = traceLevel;
@@ -1095,9 +1154,10 @@ protected:
         {
             return L"PARTraversalFlowControlNode";
         }
-        virtual void BeginForwardProp() override
-        {
-        }
+
+        static void ForwardProp(const ComputationNodeBasePtr& node, const FrameRange& fr);
+
+        virtual void BeginForwardProp() override {}
         virtual void ForwardProp(const FrameRange&) override;
         virtual void EndForwardProp() override
         {

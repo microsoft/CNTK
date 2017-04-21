@@ -235,6 +235,7 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, pu
     void Init(const TensorShape& sampleLayout, bool isSparse, const std::wstring axisName, float learningRateMultiplier = 0)
     {
         m_isSparse = isSparse;
+        Base::m_isValueSparse = isSparse;
         MarkValueNonSharable();
         if (isSparse)
             ConvertToSparseMatrix();

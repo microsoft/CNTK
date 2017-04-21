@@ -14,11 +14,11 @@ inline FunctionPtr ConvBNLayer(Variable input, size_t outFeatureMapCount, size_t
     auto convParams = Parameter({ kernelWidth, kernelHeight, numInputChannels, outFeatureMapCount }, DataType::Float, GlorotUniformInitializer(wScale, -1, 2), device);
     auto convFunction = Convolution(convParams, input, { hStride, vStride, numInputChannels });
 
-    auto biasParams = Parameter({ NDShape::InferredDimension }, (float)bValue, device);
+    auto biasParams  = Parameter({ NDShape::InferredDimension }, (float)bValue, device);
     auto scaleParams = Parameter({ NDShape::InferredDimension }, (float)scValue, device);
-    auto runningMean = Constant({ NDShape::InferredDimension }, 0.0f, device);
+    auto runningMean   = Constant({ NDShape::InferredDimension }, 0.0f, device);
     auto runningInvStd = Constant({ NDShape::InferredDimension }, 0.0f, device);
-    auto runningCount = Constant::Scalar(0.0f, device);
+    auto runningCount  = Constant::Scalar(0.0f, device);
     return BatchNormalization(convFunction, scaleParams, biasParams, runningMean, runningInvStd, runningCount, spatial, (double)bnTimeConst, 0.0, 1e-5 /* epsilon */);
 }
 
@@ -36,12 +36,12 @@ inline FunctionPtr ProjLayer(Variable wProj, Variable input, size_t hStride, siz
     auto m = Constant({ outFeatureMapCount }, 0.0f, device);
     auto v = Constant({ outFeatureMapCount }, 0.0f, device);
 
-    auto runningCount = Constant::Scalar(0.0f, device);
+    auto n = Constant::Scalar(0.0f, device);
 
     size_t numInputChannels = input.Shape()[input.Shape().Rank() - 1];
 
     auto c = Convolution(wProj, input, { hStride, vStride, numInputChannels }, { true }, { false });
-    return BatchNormalization(c, sc, b, m, v, runningCount, true /*spatial*/, (double)bnTimeConst, 0, 1e-5, false); // TODO: cudnn engine does not work in Linux debug build here
+    return BatchNormalization(c, sc, b, m, v, n, true /*spatial*/, (double)bnTimeConst, 0, 1e-5, false); // TODO: cudnn engine does not work in Linux debug build here
 }
 
 inline FunctionPtr ResNetNode2(Variable input, size_t outFeatureMapCount, size_t kernelWidth, size_t kernelHeight, double wScale, double bValue, double scValue, size_t bnTimeConst, bool spatial, const DeviceDescriptor& device)

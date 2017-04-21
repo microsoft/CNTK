@@ -26,11 +26,12 @@ struct MemRequestInfo
     shared_ptr<Matrix<ElemType>>*pMatrixPtr;    // memory pointer 
     size_t matrixSize;                          // memory size 
     bool mbScale;                               // whether the memory shall be scaled by minibatch size 
+    bool isWorkSpace;                           // workspace memory or not, by workspace we indicate whether a memory space will be released very shortly after allocation 
     int allocStep;                              // at what step counter memory allocation is requested 
     int releaseStep;                            // at what step counter memory release is requested  
     int memoryId;                               // integer indexing the memory buffer ID 
-    MemRequestInfo(DEVICEID_TYPE deviceId, shared_ptr<Matrix<ElemType>>*pMatrixPtr, size_t matrixSize, bool mbScale, int allocStep)
-        :deviceId(deviceId), pMatrixPtr(pMatrixPtr), matrixSize(matrixSize), mbScale(mbScale), allocStep(allocStep), releaseStep(INT_MAX), memoryId(-1)
+    MemRequestInfo(DEVICEID_TYPE deviceId, shared_ptr<Matrix<ElemType>>*pMatrixPtr, size_t matrixSize, bool mbScale, bool isWorkSpace, int allocStep)
+        :deviceId(deviceId), pMatrixPtr(pMatrixPtr), matrixSize(matrixSize), mbScale(mbScale), isWorkSpace(isWorkSpace), allocStep(allocStep), releaseStep(INT_MAX), memoryId(-1)
     {
     }
     void SetReleaseStep(int step) { releaseStep = step; }
@@ -89,11 +90,17 @@ public:
         m_stepCounter++; 
     }
 
+    // isWorkSpace is a flag indicating a memory is temporary and will be released very shortly. In the current implementation, all workspace
+    // memories will have their own pool. This is a design proven to be useful for the workspace memory in convolution. 
+    // matrixSize is an estimate of the required memory to be allocated. Note we don't allocate any memory at the time of request. Instead, a 
+    // global memory allocation optimziation is run to improve memory efficiency 
+    // mbScale is another flag indicating if the size of the memory will scale w.r.t. the minibatch size. Unfortunately, at the time of memory
+    // request and pointer assignment, we don't known the minibatch size. Thus our memory sharing algorithm is sub-optimal. 
     template <class ElemType>
-    void RequestAllocate(DEVICEID_TYPE deviceId, shared_ptr<Matrix<ElemType>>*pMatrixPtr, size_t matrixSize, bool mbScale)
+    void RequestAllocate(DEVICEID_TYPE deviceId, shared_ptr<Matrix<ElemType>>*pMatrixPtr, size_t matrixSize, bool mbScale, bool isWorkSpace)
     {
         vector<MemRequestInfo<ElemType>>& memInfoVec = GetMemRequestInfoVec<ElemType>(); 
-        MemRequestInfo<ElemType> memInfo(deviceId, pMatrixPtr, matrixSize, mbScale, m_stepCounter); 
+        MemRequestInfo<ElemType> memInfo(deviceId, pMatrixPtr, matrixSize, mbScale, isWorkSpace, m_stepCounter);
         memInfoVec.push_back(memInfo); 
         m_deviceIDSet.insert(deviceId); 
         m_stepCounter++; 
@@ -149,105 +156,109 @@ private:
         // sort the memory request from largest size to smallest 
         std::sort(memInfoVec.begin(), memInfoVec.end(), greater_than_mem_req_size<ElemType>());
 
+        std::vector<bool> workspaceFlagVec = {true, false};
         for (auto& devId : m_deviceIDSet)
         {
-            // memAllocInfoVec is a sorted list of memory allocations from smallest to largest in memory size 
-            vector<MemAllocInfo> memAllocInfoVec;
-            int memoryCounter = 0; 
-            // we start with memory request that is scalable with minibatch size(usually those require larger memory size)
-            for (auto& memInfo : memInfoVec)
+            for (auto wsFlag : workspaceFlagVec)   // we allocate the workspace memory pointers first, and they are not shared with the non-workspace memory requests
             {
-                // check if it's the proper device
-                if (memInfo.deviceId != devId || !memInfo.mbScale)
-                    continue;
-
-                if (!memAllocInfoVec.empty())
+                // memAllocInfoVec is a sorted list of memory allocations from smallest to largest in memory size 
+                vector<MemAllocInfo> memAllocInfoVec;
+                int memoryCounter = 0;
+                // we start with memory request that is scalable with minibatch size(usually those require larger memory size)
+                for (auto& memInfo : memInfoVec)
                 {
-                    // since we assign from highest memory to lowest, every memory that has been allocated can accommodate the 
-                    // current memory request, unless there is a conflict (overlap) 
-                    auto iter = memAllocInfoVec.begin(); 
-                    while (iter != memAllocInfoVec.end() && CheckOverlap(make_pair(memInfo.allocStep, memInfo.releaseStep), iter->occupancy))
-                        iter++; 
-                    if (iter == memAllocInfoVec.end())
-                    {   
-                        // no current memory can be assigned, need to create a new one 
-                        vector<pair<int, int>> occ; 
-                        occ.push_back(make_pair(memInfo.allocStep, memInfo.releaseStep)); 
-                        MemAllocInfo ma(memoryCounter, memInfo.matrixSize, occ);
-                        // insert in the front of the vector to maintain sorted order 
-                        memAllocInfoVec.insert(memAllocInfoVec.begin(), ma); 
-                        memInfo.SetMemoryId(memoryCounter);
-                        memoryCounter++;
+                    // check if it's the proper device
+                    if (memInfo.deviceId != devId || memInfo.isWorkSpace != wsFlag || !memInfo.mbScale)
+                        continue;
+
+                    if (!memAllocInfoVec.empty())
+                    {
+                        // since we assign from highest memory to lowest, every memory that has been allocated can accommodate the 
+                        // current memory request, unless there is a conflict (overlap) 
+                        auto iter = memAllocInfoVec.begin();
+                        while (iter != memAllocInfoVec.end() && CheckOverlap(make_pair(memInfo.allocStep, memInfo.releaseStep), iter->occupancy))
+                            iter++;
+                        if (iter == memAllocInfoVec.end())
+                        {
+                            // no current memory can be assigned, need to create a new one 
+                            vector<pair<int, int>> occ;
+                            occ.push_back(make_pair(memInfo.allocStep, memInfo.releaseStep));
+                            MemAllocInfo ma(memoryCounter, memInfo.matrixSize, occ);
+                            // insert in the front of the vector to maintain sorted order 
+                            memAllocInfoVec.insert(memAllocInfoVec.begin(), ma);
+                            memInfo.SetMemoryId(memoryCounter);
+                            memoryCounter++;
+                        }
+                        else
+                        {
+                            iter->occupancy.push_back(make_pair(memInfo.allocStep, memInfo.releaseStep));
+                            memInfo.SetMemoryId(iter->memoryId);
+                        }
                     }
                     else
-                    {
-                        iter->occupancy.push_back(make_pair(memInfo.allocStep, memInfo.releaseStep)); 
-                        memInfo.SetMemoryId(iter->memoryId); 
-                    }
-                }
-                else
-                {
-                    vector<pair<int, int>> occ;
-                    occ.push_back(make_pair(memInfo.allocStep, memInfo.releaseStep));
-                    MemAllocInfo ma(memoryCounter, memInfo.matrixSize, occ);
-                    memAllocInfoVec.push_back(ma);
-                    memInfo.SetMemoryId(memoryCounter);
-                    memoryCounter++;
-                }
-            }
-
-            // rescan the request list and this time allocate for those that doesn't depend on minibatch size 
-            for (auto& memInfo : memInfoVec)
-            {
-                // check if it's the proper device
-                if (memInfo.deviceId != devId || memInfo.mbScale)
-                    continue;
-
-                if (!memAllocInfoVec.empty())
-                {
-                    // the memory allocation vector is sorted by size. We find the largest available buffer that doesn't have time overlap
-                    auto workingAlloc = memAllocInfoVec.end(); 
-                    for (auto iter = memAllocInfoVec.begin(); iter != memAllocInfoVec.end(); iter++)
-                    {
-                        if (!CheckOverlap(make_pair(memInfo.allocStep, memInfo.releaseStep), iter->occupancy))
-                            workingAlloc = iter; 
-                    }
-                    if (workingAlloc == memAllocInfoVec.end())  // nothing works 
                     {
                         vector<pair<int, int>> occ;
                         occ.push_back(make_pair(memInfo.allocStep, memInfo.releaseStep));
                         MemAllocInfo ma(memoryCounter, memInfo.matrixSize, occ);
-                        memAllocInfoVec.push_back(ma);  // add as the last one 
+                        memAllocInfoVec.push_back(ma);
                         memInfo.SetMemoryId(memoryCounter);
                         memoryCounter++;
                     }
-                    else
-                    {
-                        workingAlloc->occupancy.push_back(make_pair(memInfo.allocStep, memInfo.releaseStep));
-                        memInfo.SetMemoryId(workingAlloc->memoryId);
-                    }
                 }
-                else
-                {
-                    vector<pair<int, int>> occ;
-                    occ.push_back(make_pair(memInfo.allocStep, memInfo.releaseStep));
-                    MemAllocInfo ma(memoryCounter, memInfo.matrixSize, occ);
-                    memAllocInfoVec.push_back(ma);
-                    memInfo.SetMemoryId(memoryCounter);
-                    memoryCounter++;
-                }
-            }
-            
-            // now assign the actual pointers 
-            for (int i = 0; i < memoryCounter; i++)
-            {
-                auto matrixPtr = make_shared<Matrix<ElemType>>(devId);
-                if (!matrixPtr) // this can't really happen, because we haven't started allocating memory yet
-                    LogicError("MatrixPool: failed to get a valid matrix.");
+
+                // rescan the request list and this time allocate for those that doesn't depend on minibatch size 
                 for (auto& memInfo : memInfoVec)
                 {
-                    if (memInfo.deviceId == devId && memInfo.memoryId == i) 
-                        *memInfo.pMatrixPtr = matrixPtr;
+                    // check if it's the proper device
+                    if (memInfo.deviceId != devId || memInfo.isWorkSpace != wsFlag || memInfo.mbScale)
+                        continue;
+
+                    if (!memAllocInfoVec.empty())
+                    {
+                        // the memory allocation vector is sorted by size. We find the largest available buffer that doesn't have time overlap
+                        auto workingAlloc = memAllocInfoVec.end();
+                        for (auto iter = memAllocInfoVec.begin(); iter != memAllocInfoVec.end(); iter++)
+                        {
+                            if (!CheckOverlap(make_pair(memInfo.allocStep, memInfo.releaseStep), iter->occupancy))
+                                workingAlloc = iter;
+                        }
+                        if (workingAlloc == memAllocInfoVec.end())  // nothing works 
+                        {
+                            vector<pair<int, int>> occ;
+                            occ.push_back(make_pair(memInfo.allocStep, memInfo.releaseStep));
+                            MemAllocInfo ma(memoryCounter, memInfo.matrixSize, occ);
+                            memAllocInfoVec.push_back(ma);  // add as the last one 
+                            memInfo.SetMemoryId(memoryCounter);
+                            memoryCounter++;
+                        }
+                        else
+                        {
+                            workingAlloc->occupancy.push_back(make_pair(memInfo.allocStep, memInfo.releaseStep));
+                            memInfo.SetMemoryId(workingAlloc->memoryId);
+                        }
+                    }
+                    else
+                    {
+                        vector<pair<int, int>> occ;
+                        occ.push_back(make_pair(memInfo.allocStep, memInfo.releaseStep));
+                        MemAllocInfo ma(memoryCounter, memInfo.matrixSize, occ);
+                        memAllocInfoVec.push_back(ma);
+                        memInfo.SetMemoryId(memoryCounter);
+                        memoryCounter++;
+                    }
+                }
+
+                // now assign the actual pointers 
+                for (int i = 0; i < memoryCounter; i++)
+                {
+                    auto matrixPtr = make_shared<Matrix<ElemType>>(devId);
+                    if (!matrixPtr) // this can't really happen, because we haven't started allocating memory yet
+                        LogicError("MatrixPool: failed to get a valid matrix.");
+                    for (auto& memInfo : memInfoVec)
+                    {
+                        if (memInfo.deviceId == devId && memInfo.isWorkSpace == wsFlag && memInfo.memoryId == i)
+                            *memInfo.pMatrixPtr = matrixPtr;
+                    }
                 }
             }
         }

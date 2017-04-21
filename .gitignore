@@ -155,8 +155,6 @@ ModelManifest.xml
 # Python
 *.pyc
 __pycache__/
-Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc
-Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.h
 
 # =========================
 # Windows detritus
@@ -188,8 +186,11 @@ core
 # prebuild file 
 Source/CNTK/buildinfo.h
 Source/CNTK/buildinfo.h$$
+Source/CNTKv2LibraryDll/buildinfo.h
+Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.h
+Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc
 
-# Unit test output
+# test output
 Tests/UnitTests/ReaderTests/Control/**/*_Output.txt
 Tests/UnitTests/NetworkTests/Output/
 Tests/EndToEndTests/UnitTests/MathTests/M.txt
@@ -207,6 +208,8 @@ Dependencies/CNTKCustomMKL/Publish
 Dependencies/CNTKCustomMKL/CNTKCustomMKL-Linux-*.tgz
 Dependencies/CNTKCustomMKL/CNTKCustomMKL-Windows-*.zip
 
+Tests/EndToEndTests/CNTKv2Python/Examples/models
+
 # Python bindings
 bindings/python/_cntk_py*.pyd
 bindings/python/cntk.egg-info/
@@ -215,6 +218,10 @@ bindings/python/cntk/libs/
 bindings/python/cntk/cntk_py_wrap.cpp
 bindings/python/cntk/cntk_py_wrap.h
 bindings/python/dist/
+bindings/python/doc/cntk.*.rst
+bindings/python/doc/cntk.rst
+bindings/python/doc/modules.rst
+bindings/python/doc/_build
 
 # Auto-generated sources from CNTK.proto
 Source/CNTKv2LibraryDll/proto/CNTK.pb.cc
@@ -245,22 +252,18 @@ Examples/Image/DataSets/CIFAR-10/train_map.txt
 Examples/Image/DataSets/CIFAR-10/train_regrLabels.txt
 Examples/Image/DataSets/MNIST/Test-28x28_cntk_text.txt
 Examples/Image/DataSets/MNIST/Train-28x28_cntk_text.txt
-Examples/Image/DataSets/Animals/Train/
-Examples/Image/DataSets/Animals/Test/
-Examples/Image/DataSets/Grocery/negative/
-Examples/Image/DataSets/Grocery/positive/
-Examples/Image/DataSets/Grocery/testImages/
-Examples/Image/DataSets/Grocery/*.txt
-Examples/Image/DataSets/Flowers/jpg/
-Examples/Image/DataSets/Flowers/*.txt
+Examples/Image/DataSets/grocery/negative/
+Examples/Image/DataSets/grocery/positive/
+Examples/Image/DataSets/grocery/testImages/
+Examples/Image/DataSets/grocery/*.txt
 Examples/Image/PretrainedModels/*.model
 Examples/Image/FeatureExtraction/*.txt
 Examples/Image/GettingStarted/Output/
-Examples/Image/TransferLearning/Output/
 Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
 Tutorials/HelloWorld-LogisticRegression/LR.txt.p
 Tutorials/HelloWorld-LogisticRegression/Models/
 Tutorials/.ipynb_checkpoints/
+tutorials/.ipynb_checkpoints/
 Tutorials/atis.test.ctf
 Tutorials/atis.train.ctf
 Tutorials/data/
@@ -268,7 +271,13 @@ Tutorials/dqn.mod
 Tutorials/pg.mod
 Tutorials/query.wl
 Tutorials/slots.wl
+bindings/python/tutorials/.ipynb_checkpoints
+Examples/Text/ATIS/Data
+Examples/Tutorials/ImageHandsOn/cifar-10-batches-py
+Tutorials/zip
+
+# other
 /packages
 /CNTK.VC.db
 /CNTK.VC.VC.opendb
-.cache
+/Local

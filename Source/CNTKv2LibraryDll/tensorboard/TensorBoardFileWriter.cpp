@@ -23,6 +23,7 @@
 #include "tensorboard/tensorboard.pb.h"
 #pragma warning(pop)
 
+#include "BackCompat.h"
 #include "fileutil.h"
 #include "hostname.h"
 #include "tensorboard/TensorBoardUtils.h"
@@ -78,6 +79,12 @@ namespace CNTK
             m_dir(dir),
             m_file(NULL),
             m_fileName()
+        {
+        }
+
+        TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir,
+                                                     const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize)
+            : TensorBoardFileWriter(dir, ConvertFromLegacyModel(modelToVisualize))
         {
         }
 

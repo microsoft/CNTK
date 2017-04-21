@@ -217,6 +217,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
     return net.AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(net.GetDeviceId(), paramName, rows, cols));
 }
 
+// this is used in V2
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape)
 {
@@ -266,21 +267,21 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateConvolutionNode(const std::wstring& nodeName, const TensorShape& kernelShape, const TensorShape& mapCount,
                                                                                                  const TensorShape& strideShape, const std::vector<bool>& sharing,
                                                                                                  const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                                                                                 bool transpose, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+                                                                                                 bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
 {
     return net.AddNodeToNetWithElemType(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                        kernelShape, mapCount, strideShape,
                                                                        sharing, autoPadding, lowerPad, upperPad,
-                                                                       transpose, imageLayout, maxTempMemSizeInSamples));
+                                                                       transpose, outputShape, imageLayout, maxTempMemSizeInSamples));
 }
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreatePoolingNode(const std::wstring& nodeName, PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
-                                                                                             const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                                                                             ImageLayoutKind imageLayout)
+                                                                                             const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad, bool ceilOutDim,
+                                                                                             const bool includePad, ImageLayoutKind imageLayout)
 {
     return net.AddNodeToNetWithElemType(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-                                                                   poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout));
+                                                                   poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, ceilOutDim, includePad, imageLayout));
 }
 
 template <class ElemType>
@@ -343,13 +344,13 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convo
                                                                                        const TensorShape& kernelShape, const TensorShape& mapCount, 
                                                                                        const TensorShape& strideShape, const std::vector<bool>& sharing,
                                                                                        const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                                                                       bool transpose, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
+                                                                                       bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
                                                                                        const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                           kernelShape, mapCount, strideShape,
                                                                           sharing, autoPadding, lowerPad, upperPad,
-                                                                          transpose, imageLayout, maxTempMemSizeInSamples),
+                                                                          transpose, outputShape, imageLayout, maxTempMemSizeInSamples),
                                                                           { weight, inputValues });
 }
 
@@ -357,11 +358,11 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pooling(const ComputationNodePtr inputValues,
                                                                                    PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
                                                                                    const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                                                                   ImageLayoutKind imageLayout,
+                                                                                   bool ceilOutDim, const bool includePad, ImageLayoutKind imageLayout,
                                                                                    const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-                                                                      poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),
+                                                                      poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, ceilOutDim, includePad, imageLayout),
                                                                       { inputValues });
 }
 
@@ -501,9 +502,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Seque
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ForwardBackward(const ComputationNodePtr label, const ComputationNodePtr prediction, int blankTokenId, int delayConstraint, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ForwardBackward(const ComputationNodePtr graph, const ComputationNodePtr features, int blankTokenId, int delayConstraint, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<ForwardBackwardNode<ElemType>>(net.GetDeviceId(), nodeName, blankTokenId, delayConstraint), { label, prediction });
+    return net.AddNodeToNetAndAttachInputs(New<ForwardBackwardNode<ElemType>>(net.GetDeviceId(), nodeName, blankTokenId, delayConstraint), { graph, features });
 }
 
 template <class ElemType>
@@ -850,7 +851,10 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Futur
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<SliceNode<ElemType>>(net.GetDeviceId(), nodeName, (int)start_index, (int)(start_index + num_rows)), { a });
+    std::vector<int> startIndex, endIndex; 
+    startIndex.push_back((int)start_index); 
+    endIndex.push_back((int)(start_index + num_rows)); 
+    return net.AddNodeToNetAndAttachInputs(New<SliceNode<ElemType>>(net.GetDeviceId(), nodeName, startIndex, endIndex), { a });
 }
 
 template <class ElemType>
@@ -895,12 +899,12 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Looku
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::BatchNormalization(const ComputationNodePtr input,
                                                                                               const ComputationNodePtr scale, const ComputationNodePtr bias,
-                                                                                              const ComputationNodePtr runMean, const ComputationNodePtr runVariance, const ComputationNodePtr runSampleCount,
+                                                                                              const ComputationNodePtr runMean, const ComputationNodePtr runVariance, const ComputationNodePtr runCount,
                                                                                               bool spatial, double normalizationTimeConstant, double blendTimeConstant, double epsilon, bool useCntkEngine,
                                                                                               ImageLayoutKind imageLayoutKind,
                                                                                               const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, useCntkEngine, imageLayoutKind), { input, scale, bias, runMean, runVariance, runSampleCount });
+    return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, useCntkEngine, imageLayoutKind), { input, scale, bias, runMean, runVariance, runCount });
 }
 
 template class ComputationNetworkBuilder<float>;

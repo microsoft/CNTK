@@ -25,22 +25,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-//----------------------------------------------------------------------------
-// For reductions we need the neutral elements of the corresponding binary ops
-//----------------------------------------------------------------------------
-template <typename ElemType> ElemType NeutralValue(ElementWiseOperator op)
-{
-    switch (op)
-    {
-    case ElementWiseOperator::opSum:                return  0;
-    case ElementWiseOperator::opLogSum:             return -std::numeric_limits<ElemType>::infinity();
-    case ElementWiseOperator::opMin:                return  std::numeric_limits<ElemType>::max();
-    case ElementWiseOperator::opMax:                return  std::numeric_limits<ElemType>::lowest();
-    case ElementWiseOperator::opElementwiseProduct: return 1;
-    default:                                        return 0; // error
-    }
-};
-
 // -----------------------------------------------------------------------
 // ReduceElements (op, axis=, input)
 // -----------------------------------------------------------------------
@@ -56,6 +40,7 @@ template <class ElemType>
         node->m_operation   = m_operation;
         node->m_reductionOp = m_reductionOp;
         node->m_scale       = m_scale;
+        node->m_keepDimensions = m_keepDimensions;
     }
 }
 
@@ -64,6 +49,11 @@ template <class ElemType>
 {
     Base::Load(fstream, modelVersion);
     fstream >> m_axis >> m_operation;
+    if (modelVersion >= CNTK_MODEL_VERSION_24)
+        fstream >> m_keepDimensions;
+    else
+        m_keepDimensions = DefaultKeepDimensionsSetting(m_axis);
+
     ValidateOp();
 }
 
@@ -72,6 +62,7 @@ template <class ElemType>
 {
     Base::Save(fstream);
     fstream << m_axis << m_operation; // note: we serialize the string and not the opcode, since opcodes may change
+    fstream << m_keepDimensions;
 }
 
 template <class ElemType>
@@ -87,7 +78,7 @@ template <class ElemType>
     // when reducing all, we must mask gaps
     if (ReduceAllAxes())
     {
-        InputRef(0).MaskMissingValueColumnsTo(frInput, NeutralValue<ElemType>(m_reductionOp));
+        InputRef(0).MaskMissingValueColumnsTo(frInput, NeutralValue(m_reductionOp));
         if (IsMean())
         {
             //for mean reduction and all axes we need to carefully compute the scaling factor
@@ -99,14 +90,21 @@ template <class ElemType>
     // Create a new layout if we are reducing the sequence axis
     if (ReduceSequenceAxis())
     {
-        GetMBLayout()->InitAsFrameMode(Input(0)->GetMBLayout()->GetNumSequences());
+        auto inputMBLayout = InputRef(0).GetMBLayout();
+        if (inputMBLayout->HasSequenceBeyondBegin() || inputMBLayout->HasSequenceBeyondEnd())
+            LogicError("%ls: %s node cannot perform sequence axis reduction for truncated sequence.", Base::NodeDescription().c_str(), typeid(*this).name());
+
+        GetMBLayout()->InitAsFrameMode(inputMBLayout->GetNumSequences());
         UpdateFunctionValuesSize();
     }
     // get the args
     size_t rank = DetermineElementwiseTensorRank();
     TensorView<ElemType> input;
     if (ReduceSequenceAxis())
-        input = ComputationNode<ElemType>::Unpack(GetSampleLayout(), InputRef(0).Value(), InputRef(0).GetMBLayout(), m_tempUnpackedData, m_tempScatterIndices, /*batchMajor=*/ true, /*maskGaps=*/ true);
+    {
+        ElemType gapPadValue = NeutralValue(m_reductionOp);
+        input = ComputationNode<ElemType>::Unpack(GetSampleLayout(), InputRef(0).Value(), InputRef(0).GetMBLayout(), m_tempUnpackedData, m_tempScatterIndices, m_tempMask, /*batchMajor=*/ true, &gapPadValue);
+    }
     else
         input = InputRef(0).ValueTensorFor(rank, frInput);
 
@@ -160,7 +158,7 @@ template <class ElemType>
             // Let: f(x, y, z) = log(exp x + exp y + exp z)
             // For the derivative we get:
             // df / dx = exp(x)/exp(f)
-            //         = exp(x – f)
+            //         = exp(x - f)
             sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
         }
         break;
@@ -189,8 +187,8 @@ template <class ElemType>
         break;
         case ElementWiseOperator::opElementwiseProduct:
         {
-            auto input = InputRef(inputIndex).ValueTensorFor(rank, frInput);
-            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input  = InputRef(inputIndex).ValueTensorFor(rank, frInput);
+            auto output =                      ValueTensorFor(rank, fr.AllowBroadcast());
             sliceInputGrad.AddElementwiseProductWithQuotientOf(sliceOutputGrad, output, input);
             break;
         }
@@ -239,21 +237,7 @@ template <class ElemType>
 template <class ElemType>
 void ReduceElementsNode<ElemType>::ValidateOp()
 {
-#if 1 // legacy with initial experiments, delete this soon
-    if (m_operation == L"Plus") m_reductionOp = ElementWiseOperator::opSum;
-    else
-#endif
-    if      (m_operation == L"Sum")    m_reductionOp = ElementWiseOperator::opSum;
-    else if (m_operation == L"Mean")   m_reductionOp = ElementWiseOperator::opSum;
-    else if (m_operation == L"LogSum") m_reductionOp = ElementWiseOperator::opLogSum;
-    else if (m_operation == L"Min")    m_reductionOp = ElementWiseOperator::opMin;
-    else if (m_operation == L"Max")    m_reductionOp = ElementWiseOperator::opMax;
-    else if (m_operation == L"Prod")   m_reductionOp = ElementWiseOperator::opElementwiseProduct;
-    else if (m_operation == L"Argmin") m_reductionOp = ElementWiseOperator::opArgmin;
-    else if (m_operation == L"Argmax") m_reductionOp = ElementWiseOperator::opArgmax;
-
-    // more here
-    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min', 'Prod', 'Argmax', 'Argmin'.", NodeDescription().c_str(), m_operation.c_str());
+    m_reductionOp = ReductionOpEnumValue(m_operation);
 }
 
 template <class ElemType>
@@ -263,7 +247,7 @@ template <class ElemType>
     ValidateOp();
     m_scale = (ElemType)1;
     if (ReduceAllAxes())
-        Base::ValidateUnaryReduce(isFinalValidationPass);
+        Base::ValidateUnaryReduce(isFinalValidationPass, m_keepDimensions);
     else if (ReduceSequenceAxis())
     {
         Base::Validate(isFinalValidationPass);
@@ -288,19 +272,33 @@ template <class ElemType>
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-
         let shape = Input(0)->GetSampleLayout();
         auto dims = shape.GetDims();
         size_t reducedDim = 0; // (init to keep compiler happy)
         if (ReduceAllStaticAxes() || ReduceAllAxes())
         {
             reducedDim = shape.GetNumElements();
-            dims = { 1 };                       // entire sample is reduced to a scalar
+            dims = m_keepDimensions ? SmallVector<size_t>(shape.GetRank(), 1) : SmallVector<size_t>({ 1 }); // entire sample is reduced to a scalar
         }
         else if (m_axis - 1 >= 0 && m_axis - 1 < dims.size())
         {
             reducedDim = dims[m_axis - 1];
-            dims[m_axis - 1] = 1;               // one axis is reduced to a scalar
+            // one axis is reduced to a scalar
+            if (m_keepDimensions)
+                dims[m_axis - 1] = 1;
+            else
+            {
+                SmallVector<size_t> reducedDims(dims.size() - 1);
+                for (size_t i = 0, j = 0; i < dims.size(); ++i)
+                {
+                    if (i == (m_axis - 1))
+                        continue;
+
+                    reducedDims[j] = dims[i];
+                    j++;
+                }
+                dims = reducedDims;
+            }
         }
         else if (isFinalValidationPass)
             InvalidArgument("The shape of %ls [%s] has no axis %d", NodeDescription().c_str(), string(shape).c_str(), m_axis);
@@ -311,7 +309,6 @@ template <class ElemType>
 
         SetDims(TensorShape(dims), Input(0)->HasMBLayout());
     }
-
 }
 
 template class ReduceElementsNode<float>;
@@ -444,7 +441,7 @@ template <class ElemType>
     let& sourceMBLayout = InputRef(SOURCEDATA).GetMBLayout(); // only used for index conversion
     let& indexMBLayout  = InputRef(INDEXDATA).GetMBLayout();
     let&  index  = InputRef(INDEXDATA).Value(); // per-seq index values that are to be mapped
-    auto& result =                   Value(); // packed index values as mapped to sourceData's layout
+    auto& result =                     Value(); // packed index values as mapped to sourceData's layout
     // loop over sourceSequences
     // Input matrix contains time indices for each sequence that refer to frames inside that sequence.
     // We replace every per-sequence index by the resolved column index w.r.t. the same MBLayout.
@@ -455,7 +452,7 @@ template <class ElemType>
         if (sourceSeq.seqId == GAP_SEQUENCE_ID)
             continue;
         let& indexSeq = indexMBLayout->FindMatchingSequence(sourceSequences, i); // find corresponding entry in indexMBLayout
-        for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++) // map all index values in index sequence
+        for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++)   // map all index values in index sequence
         {
             let jIndex  = indexMBLayout->GetColumnIndex(indexSeq, tIndex);    // map time index to actual location in the matrix storage object
             let tSource = (size_t)index(0, jIndex);                           // the new time location (relative to source sequence)

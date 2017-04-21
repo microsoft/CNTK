@@ -767,10 +767,10 @@ template class DummyCriterionNode<double>;
 // ForwardBackwardNode (graph, prediction, delayConstraint)
 // CTC training criterion, primarily based on the paper "Connectionist Temporal Classification: Labelling Unsegmented
 // Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
-//
+// blankTokenId (input): id of the blank token. If specified as SIZE_MAX, will be replaced with (numberOfLabels - 1)
 // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. 
 //      This using the original time information to enforce that CTC tokens only get aligned within a time margin.
-//      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
+//      Setting this parameter smaller will result in shorter delay between label output during decoding, yet may hurt accuracy.
 //      delayConstraint=-1 means no constraint
 // -----------------------------------------------------------------------
 
@@ -784,10 +784,15 @@ class ForwardBackwardNode : public  ComputationNodeNonLooping<ElemType>, public 
         return L"ForwardBackward";
     }
 public:
-    DeclareConstructorFromConfigWithNumInputs(ForwardBackwardNode);
-    ForwardBackwardNode(DEVICEID_TYPE deviceId, const wstring & name, int blankTokenId=INT_MIN, int delayConstraint=-1) :
+    ForwardBackwardNode(DEVICEID_TYPE deviceId, const wstring & name, size_t blankTokenId=SIZE_MAX, int delayConstraint=-1) :
         Base(deviceId, name), m_blankTokenId(blankTokenId), m_delayConstraint(delayConstraint)
     {
+    }
+
+    ForwardBackwardNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : ForwardBackwardNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"blankTokenId"), configp->Get(L"delayConstraint"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     // Compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
@@ -936,6 +941,23 @@ public:
         m_maxValues->Resize(1, cols);
     }
 
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_delayConstraint;
+        fstream << m_blankTokenId;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_delayConstraint;
+        fstream >> m_blankTokenId;
+    }
+
+    int DelayConstraint() { return m_delayConstraint; }
+    size_t BlankTokenId() { return m_blankTokenId; }
+
 protected:
     virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
@@ -945,7 +967,7 @@ protected:
     shared_ptr<Matrix<ElemType>> m_maxValues;
 
     msra::lattices::GammaCalculation<ElemType> m_GammaCal;
-    int m_blankTokenId;
+    size_t m_blankTokenId;
     int m_delayConstraint;
 };
 
@@ -955,6 +977,7 @@ template class ForwardBackwardNode<double>;
 // -----------------------------------------------------------------------
 // StopGradientNode (Input)
 // Outputs its input as it and prevents any gradient contribution from its output to its input.
+// TODO: This could be more easily implemented as a unary operation, like PassNode.
 // -----------------------------------------------------------------------
 template <class ElemType>
 class StopGradientNode : public UnaryElementWiseNode<ElemType>
@@ -989,4 +1012,64 @@ public:
 
 template class StopGradientNode<float>;
 template class StopGradientNode<double>;
+
+// -----------------------------------------------------------------------
+// OutputMultiplexerNode(userDefinedV2FunctionNode, outputIndex)
+// ComputationNode for selecting one of the multiple outputs of UserDefinedV2FunctionNode
+// This is needed since the CNTK computation engin natively does not support
+// nodes with multiple outputs and hence, we need a separate node to multiplex 
+// the additional outputs.
+// -----------------------------------------------------------------------
+
+// TODO: We currently only support external nodes that cannot be part of CNTK recurrent loops
+template <class ElemType>
+class OutputMultiplexerNode final : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"OutputMultiplexer"; }
+
+public:
+    OutputMultiplexerNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputIndex = 0)
+        : Base(deviceId, name), m_outputIndex(outputIndex)
+    {
+        if (outputIndex == 0)
+            LogicError("OutputMultiplexerNode ctor must not be instantiated with outputIndex == 0");
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        // TODO: We should avoid this copy but that requires carefully managing the 
+        // lifetimes of the Value objects since to be able to directly use the 
+        // input Value as its output, we have to make sure that the input's Value
+        // is not reused until all dependents of this node are finished.
+        auto inputNode = Input(0)->template As<MultiOutputNode<ElemType>>();
+        Value().AssignValuesOf(*inputNode->m_outputsValue[m_outputIndex]);
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        // TODO: We should avoid this copy but that requires carefully managing the 
+        // lifetimes of the Gradient objects since to be able to directly use the 
+        // Gradient as input's gradient, we have to make sure that the Gradient
+        // is not reused until all the inputs are finished backpropagating to their inputs.
+        auto inputNode = Input(0)->template As<MultiOutputNode<ElemType>>();
+        inputNode->m_outputsGradient[m_outputIndex]->SetValue(Gradient());
+    }
+
+    virtual void Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        auto inputNode = Input(0)->template As<MultiOutputNode<ElemType>>();
+        m_pMBLayout = inputNode->m_outputsMBLayout[m_outputIndex];
+        SetDims(inputNode->m_outputsShape[m_outputIndex], HasMBLayout());
+    }
+
+private:
+    size_t m_outputIndex;
+};
+
+template class OutputMultiplexerNode<float>;
+template class OutputMultiplexerNode<double>;
+
 } } }

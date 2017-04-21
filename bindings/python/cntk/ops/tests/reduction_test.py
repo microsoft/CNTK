@@ -11,8 +11,9 @@ Unit tests for reduction operations, tested for the forward and the backward pas
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, _test_unary_op, AA, I, precision, PRECISION_TO_TYPE, constant
-from ...utils import sanitize_dtype_cntk
+import cntk as C
+from .ops_test_utils import unittest_helper, _test_unary_op, AA, precision, PRECISION_TO_TYPE, constant
+from cntk.internal import sanitize_dtype_cntk
 
 REDUCE_TEST_OPERANDS = [
     #(input_data,  axis)
@@ -30,12 +31,12 @@ def test_op_reduce_sum(input_data, axis, device_id, precision):
 
     data = AA(input_data, dtype=dt)
 
-    expected_forward = [[np.sum(data, axis=(axis), keepdims=True)]]
+    expected_forward = [np.sum(data, axis=(axis), keepdims=True)]
 
     backward = np.ones_like(data)
 
     expected_backward = {
-        'arg': [[backward]]
+        'arg': [backward]
     }
 
     from .. import reduce_sum
@@ -48,7 +49,7 @@ def test_op_reduce_max(input_data, axis, device_id, precision):
 
     data = AA(input_data, dtype=dt)
 
-    expected_forward = [[np.amax(data, axis=(axis), keepdims=True)]]
+    expected_forward = [np.amax(data, axis=(axis), keepdims=True)]
 
     forward_array = np.asarray(expected_forward, dtype=dt)
     max_elements = forward_array.reshape(forward_array.size).tolist()
@@ -59,7 +60,7 @@ def test_op_reduce_max(input_data, axis, device_id, precision):
         backward += np.asarray(data == element)
 
     expected_backward = {
-        'arg': [[backward]]
+        'arg': [backward]
     }
 
     from .. import reduce_max
@@ -72,7 +73,7 @@ def test_op_reduce_min(input_data, axis, device_id, precision):
 
     data = AA(input_data, dtype=dt)
 
-    expected_forward = [[np.amin(data, axis=(axis), keepdims=True)]]
+    expected_forward = [np.amin(data, axis=(axis), keepdims=True)]
 
     forward_array = np.asarray(expected_forward, dtype=dt)
     max_elements = forward_array.reshape(forward_array.size).tolist()
@@ -83,7 +84,7 @@ def test_op_reduce_min(input_data, axis, device_id, precision):
         backward += np.asarray(data == element)
 
     expected_backward = {
-        'arg': [[backward]]
+        'arg': [backward]
     }
 
     from .. import reduce_min
@@ -96,12 +97,12 @@ def test_op_reduce_mean(input_data, axis, device_id, precision):
 
     data = AA(input_data, dtype=dt)
 
-    expected_forward = [[np.mean(data, axis=(axis), keepdims=True)]]
+    expected_forward = [np.mean(data, axis=(axis), keepdims=True)]
 
     backward = np.ones_like(data) / data.shape[axis]
 
     expected_backward = {
-        'arg': [[backward]]
+        'arg': [backward]
     }
 
     from .. import reduce_mean
@@ -114,12 +115,12 @@ def test_op_reduce_mean(input_data, axis, device_id, precision):
 
     data = AA(input_data, dtype=dt)
 
-    expected_forward = [[np.mean(data, axis=(axis), keepdims=True)]]
+    expected_forward = [np.mean(data, axis=(axis), keepdims=True)]
 
     backward = np.ones_like(data) / data.shape[axis]
 
     expected_backward = {
-        'arg': [[backward]]
+        'arg': [backward]
     }
 
     from .. import reduce_mean
@@ -135,12 +136,12 @@ def test_op_reduce_log_sum(input_data, axis, device_id, precision):
 
     data_exp = np.exp(data)
     sum_exp = np.sum(data_exp, axis=(axis), keepdims=True)
-    expected_forward = [[np.log(sum_exp)]]
+    expected_forward = [np.log(sum_exp)]
 
     backward = data_exp / sum_exp
 
     expected_backward = {
-        'arg': [[backward]]
+        'arg': [backward]
     }
 
     from .. import reduce_log_sum_exp
@@ -154,12 +155,12 @@ def test_op_reduce_prod(input_data, axis, device_id, precision):
     data = AA(input_data, dtype=dt)
 
     p = np.prod(data, axis=(axis), keepdims=True)
-    expected_forward = [[p]]
+    expected_forward = [p]
 
     backward = p / data
 
     expected_backward = {
-        'arg': [[backward]]
+        'arg': [backward]
     }
 
     from .. import reduce_prod
@@ -175,10 +176,10 @@ def test_op_reduce_all(input_data, axis, device_id, precision):
     # actual_forward  = np.copy(input_op.eval(binding))
     dt = np.float32
     data = AA(input_data, dtype=dt)
-    a = I(shape=data.shape,
-          dtype=sanitize_dtype_cntk(dt),
-          needs_gradient=True,
-          name='a')
+    a = C.sequence.input(shape=data.shape,
+                         dtype=sanitize_dtype_cntk(dt),
+                         needs_gradient=True,
+                         name='a')
     # create batch
     value = [AA([data,data-0.5], dtype=dt),AA([data+0.25], dtype=dt)]
     from .. import reduce_sum, reduce_max, reduce_min, reduce_mean, reduce_log_sum_exp, reduce_prod
@@ -236,7 +237,7 @@ def test_op_reduce_argmax(input_data, axis, device_id, precision):
 
     # numpy argmax doesn't support keepdims
     arg_shape = np.amax(data, axis=(axis), keepdims=True).shape
-    expected_forward = [[np.argmax(data, axis=(axis)).reshape(arg_shape)]]
+    expected_forward = [np.argmax(data, axis=(axis)).reshape(arg_shape)]
 
     from .. import argmax
     _test_unary_op(precision, device_id, argmax, input_data,
@@ -250,7 +251,7 @@ def test_op_reduce_argmin(input_data, axis, device_id, precision):
 
     # numpy argmin doesn't support keepdims
     arg_shape = np.amin(data, axis=(axis), keepdims=True).shape
-    expected_forward = [[np.argmin(data, axis=(axis)).reshape(arg_shape)]]
+    expected_forward = [np.argmin(data, axis=(axis)).reshape(arg_shape)]
 
     from .. import argmin
     _test_unary_op(precision, device_id, argmin, input_data,

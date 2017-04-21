@@ -61,6 +61,8 @@ protected:
     // Assumes the sequences inside MBLayout have the same order as Sequences.
     void EstablishIdToKey(Minibatch& minibatch, const Sequences& sequences);
 
+    static void CheckNameUniqueness(const std::vector<StreamDescriptionPtr>& streams);
+
     SequenceEnumeratorPtr m_sequenceEnumerator;
 
     // Input stream descriptions provided by the transformer.

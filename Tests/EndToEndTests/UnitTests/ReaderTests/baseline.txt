@@ -1,8 +1,20 @@
 CPU info:
     CPU Model Name: Intel(R) Xeon(R) CPU E5-2620 v3 @ 2.40GHz
-    Hardware threads: 1
+    Hardware threads: 24
     Total Memory: 33476764 kB
 -------------------------------------------------------------------
+Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: C:/repo/cntk_github4/CNTK/x64/release
+Test path: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
+Current working directory is now: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
+Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: C:/repo/cntk_github4/CNTK/x64/release
+Test path: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/
+Current working directory is now: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader
+Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github4/CNTK/x64/release
 Test path: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests
@@ -278,6 +290,18 @@ Executable path: C:/repo/cntk_github4/CNTK/x64/release
 Test path: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests
 Set current path to: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
 Current working directory is now: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+INFO: Skipping unknown input ('B') at offset 7 in the input file (extra_input.txt). Input name 'B' was not specified in the reader config section.
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 13 in the input file (extra_input.txt). Possibly, a trailing newline is missing.
+INFO: Finished loading sequence (id = 0) at offset 13 in the input file (extra_input.txt), successfully read 1 out of expected 1 rows.
+INFO: Skipping unknown input at offset 7 in the input file (extra_input.txt). Input name (with the 1-character prefix 't') exceeds the maximum expected length (1).
+WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 53 in the input file (extra_input.txt). Possibly, a trailing newline is missing.
+INFO: Finished loading sequence (id = 0) at offset 53 in the input file (extra_input.txt), successfully read 1 out of expected 1 rows.
+Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: C:/repo/cntk_github4/CNTK/x64/release
+Test path: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
 Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github4/CNTK/x64/release
@@ -328,7 +352,7 @@ Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
-biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT3E4D.tmp'
+biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNTB9EE.tmp'
 minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
 minibatchframesourcemulti: read label set 0: 129 classes
 
@@ -337,7 +361,7 @@ biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 recoverblock: recovering feature block 0 [0..65535)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT3E4D.tmp'
+biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNTB9EE.tmp'
 Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github4/CNTK/x64/release
@@ -486,7 +510,7 @@ Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
-biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT7BD4.tmp'
+biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNTF794.tmp'
 minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
 minibatchframesourcemulti: read label set 0: 129 classes
 
@@ -495,7 +519,7 @@ biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 recoverblock: recovering feature block 0 [0..65535)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT7BD4.tmp'
+biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNTF794.tmp'
 Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github4/CNTK/x64/release
@@ -948,7 +972,7 @@ total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
 Bundler::CreateChunkDescriptions(): started
-Bundler::CreateChunkDescriptions(): creating descriptions for 0 chunks
+Bundler::CreateChunkDescriptions(): creating descriptions for 3 chunks
 Bundler::CreateChunkDescriptions(): starting to clean chunks
 Bundler::CreateChunkDescriptions(): finished cleaning of 3 chunks
 BlockRandomizer::PrepareNewSweepIfNeeded: re-randomizing for sweep 0
@@ -992,7 +1016,7 @@ total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
 Bundler::CreateChunkDescriptions(): started
-Bundler::CreateChunkDescriptions(): creating descriptions for 0 chunks
+Bundler::CreateChunkDescriptions(): creating descriptions for 3 chunks
 Bundler::CreateChunkDescriptions(): starting to clean chunks
 Bundler::CreateChunkDescriptions(): finished cleaning of 3 chunks
 BlockRandomizer::PrepareNewSweepIfNeeded: re-randomizing for sweep 0
@@ -1121,6 +1145,8 @@ Executable path: C:/repo/cntk_github4/CNTK/x64/release
 Test path: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests
 Set current path to: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data
 Current working directory is now: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data
+WARNING: Could not decompress sequence with id '0'
+WARNING: Could not decompress sequence with id '0'
 Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github4/CNTK/x64/release
@@ -1159,6 +1185,38 @@ WARNING: Mean file does not match the size of the input image, will be ignored.
 Please remove mean transformation from the config.
 WARNING: Mean file does not match the size of the input image, will be ignored.
 Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
+WARNING: Mean file does not match the size of the input image, will be ignored.
+Please remove mean transformation from the config.
 Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github4/CNTK/x64/release
@@ -1181,6 +1239,12 @@ WARNING: Mean file does not match the size of the input image, will be ignored.
 Please remove mean transformation from the config.
 WARNING: Mean file does not match the size of the input image, will be ignored.
 Please remove mean transformation from the config.
+Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: C:/repo/cntk_github4/CNTK/x64/release
+Test path: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data
 Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github4/CNTK/x64/release
@@ -1312,6 +1376,12 @@ Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/Rea
 Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github4/CNTK/x64/release
 Test path: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data
+Current working directory is now: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/Data
+Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: C:/repo/cntk_github4/CNTK/x64/release
+Test path: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests
 Set current path to: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests/.
 Current working directory is now: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests
 Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
@@ -1370,6 +1440,22 @@ Test path: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/iVector
 Current working directory is now: d:/TestPreparation/iVector
+Reading script file ./features.rscp ... 4963 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 4963 utterances grouped into 19 chunks, average chunk size: 261.2 utterances, 87863.9 frames (for I/O: 261.2 utterances, 87863.9 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 40-dimensional 'FBANK_Z' with frame shift 10.0 ms
+Reading script file ./ivector.rscp ... 4963 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 4963 utterances grouped into 1 chunks, average chunk size: 4963.0 utterances, 4963.0 frames (for I/O: 4963.0 utterances, 4963.0 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 100-dimensional 'USER' with frame shift 10.0 ms
+total 9000 state names in state list ./labels.statelist
+htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
+MLFDataDeserializer::MLFDataDeserializer: 4974 utterances with 1671772 frames in 9000 classes
+Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: C:/repo/cntk_github4/CNTK/x64/release
+Test path: C:/repo/cntk_github4/CNTK/Tests/UnitTests/ReaderTests
+Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+Set current path to: d:\TestPreparation/iVector
+Current working directory is now: d:/TestPreparation/iVector
 reading script file ./features.rscp ... 4963 entries
 reading script file ./ivector.rscp ... 4963 entries
 total 9000 state names in state list ./labels.statelist
@@ -1405,7 +1491,7 @@ htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
 ....................................................................................................feature set 0: 1669414 frames in 4963 out of 4963 utterances
 label set 0: 9000 classes
 minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
-....................................................................................................Running 132 test cases...
+....................................................................................................Running 138 test cases...
 feature set 1: 1669414 frames in 4963 out of 4963 utterances
 minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
 minibatchiterator: epoch 0: frames [0..400] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
@@ -1420,27 +1506,32 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 100-dimensi
 total 9000 state names in state list ./labels.statelist
 htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
 MLFDataDeserializer::MLFDataDeserializer: 4974 utterances with 1671772 frames in 9000 classes
-Legacy configuration is used for truncated BPTT mode, please adapt the config to explicitly specify truncationLength.
 Set current path to: C:/repo/cntk_github4/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 
 Test module "ReaderTests" has passed with:
-  132 test cases out of 132 passed
-  22631632 assertions out of 22631632 passed
+  138 test cases out of 138 passed
+  22631639 assertions out of 22631639 passed
 
   Test suite "ReaderTestSuite" has passed with:
-    95 test cases out of 95 passed
-    16971350 assertions out of 16971350 passed
-
-    Test case "ReaderTestSuite/CNTKBinaryReader_sparse_seq" has passed with:
-      1 assertion out of 1 passed
-
-    Test case "ReaderTestSuite/CNTKBinaryReader_Simple_sparse" has passed with:
-      1 assertion out of 1 passed
+    100 test cases out of 100 passed
+    16971356 assertions out of 16971356 passed
 
     Test case "ReaderTestSuite/CNTKBinaryReader_Simple_dense" has passed with:
       1 assertion out of 1 passed
 
-    Test case "ReaderTestSuite/CNTKBinaryReader_Simple_dense2" has passed with:
+    Test case "ReaderTestSuite/CNTKBinaryReader_MNIST_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKBinaryReader_10x10_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKBinaryReader_50x20_jagged_sequences_dense" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKBinaryReader_10x10_sparse" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/CNTKBinaryReader_50x20_jagged_sequences_sparse" has passed with:
       1 assertion out of 1 passed
 
     Test case "ReaderTestSuite/CNTKTextFormatReader_Simple_dense" has passed with:
@@ -1532,6 +1623,8 @@ Test module "ReaderTests" has passed with:
 
     Test case "ReaderTestSuite/CNTKTextFormatReader_no_trailing_newline_invalid_input" has passed with:
       9 assertions out of 9 passed
+
+    Test case "ReaderTestSuite/CNTKTextFormatReader_extra_input_should_be_ignored" has passed
 
     Test case "ReaderTestSuite/CNTKTextFormatReader_100x100x3" has passed with:
       1 assertion out of 1 passed
@@ -1666,12 +1759,15 @@ Test module "ReaderTests" has passed with:
       1 assertion out of 1 passed
 
     Test case "ReaderTestSuite/Base64WithWriteIds" has passed with:
-      2 assertions out of 2 passed
+      4 assertions out of 4 passed
 
     Test case "ReaderTestSuite/ImageAndImageReaderSimple" has passed with:
       1 assertion out of 1 passed
 
     Test case "ReaderTestSuite/ImageReaderBadMap" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageAndImageTwoStreamsSameName" has passed with:
       1 assertion out of 1 passed
 
     Test case "ReaderTestSuite/ImageReaderBadLabel" has passed with:
@@ -1713,18 +1809,24 @@ Test module "ReaderTests" has passed with:
     Test case "ReaderTestSuite/ImageReaderMissingScaleTransforms" has passed with:
       1 assertion out of 1 passed
 
+    Test case "ReaderTestSuite/ImageReaderNoMatchingIds" has passed with:
+      1 assertion out of 1 passed
+
     Test case "ReaderTestSuite/ImageReader3DotsSyntaxInMapFile" has passed with:
       1 assertion out of 1 passed
 
   Test suite "ReaderIVectorTestSuite" has passed with:
-    4 test cases out of 4 passed
-    8 assertions out of 8 passed
+    5 test cases out of 5 passed
+    9 assertions out of 9 passed
 
     Test case "ReaderIVectorTestSuite/HTKNoIVector" has passed with:
       2 assertions out of 2 passed
 
     Test case "ReaderIVectorTestSuite/HTKIVectorFrame" has passed with:
       2 assertions out of 2 passed
+
+    Test case "ReaderIVectorTestSuite/HTKNoPropagationOfUtteranceIVectorFrame" has passed with:
+      1 assertion out of 1 passed
 
     Test case "ReaderIVectorTestSuite/HTKIVectorSequence" has passed with:
       2 assertions out of 2 passed

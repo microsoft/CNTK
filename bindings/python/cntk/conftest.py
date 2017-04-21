@@ -61,9 +61,11 @@ import numpy
 # Because of difference in precision across platforms, we restrict the output
 # precision and don't write in scientific notation
 numpy.set_printoptions(precision=6, suppress=True)
+
+import cntk.debugging
+cntk.debugging.set_computation_network_track_gap_nans(True)
+
 import cntk
-
-
 @pytest.fixture(autouse=True)
 def add_namespace(doctest_namespace):
     doctest_namespace['np'] = numpy

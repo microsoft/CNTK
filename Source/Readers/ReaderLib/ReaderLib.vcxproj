@@ -38,6 +38,9 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <TargetName>Cntk.Reader-$(CntkComponentVersion)</TargetName>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
@@ -87,6 +90,7 @@
     <ClCompile Include="FramePacker.cpp" />
     <ClCompile Include="ReaderBase.cpp" />
     <ClCompile Include="ReaderShim.cpp" />
+    <ClCompile Include="ReaderUtil.cpp" />
     <ClCompile Include="SequencePacker.cpp" />
     <ClCompile Include="SequenceRandomizer.cpp" />
     <ClCompile Include="TruncatedBpttPacker.cpp" />

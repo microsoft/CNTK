@@ -42,29 +42,8 @@ DataWriter::DataWriter(const ConfigRecordType& config)
 {
     typedef void (*GetWriterProc)(IDataWriter** pwriter);
 
-    // get the name for the writer we want to use, default to BinaryWriter (which is in BinaryReader.dll)
-    // TODO: This seems like a find-replace operation?
-    wstring writerType = config(L"writerType", L"BinaryReader");
-    if (writerType == L"HTKMLFWriter" || writerType == L"HTKMLFReader")
-    {
-        writerType = L"HTKMLFReader";
-    }
-    else if (writerType == L"BinaryWriter" || writerType == L"BinaryReader")
-    {
-        writerType = L"BinaryReader";
-    }
-    else if (writerType == L"LUSequenceWriter" || writerType == L"LUSequenceReader")
-    {
-        writerType = L"LUSequenceReader";
-    }
-    else if (writerType == L"LMSequenceWriter" || writerType == L"LMSequenceReader")
-    {
-        writerType = L"LMSequenceReader";
-    }
-    else if (writerType == L"KaldiReader" || writerType == L"KaldiWriter")
-    {
-        writerType = L"KaldiReader";
-    }
+    // get the name for the writer we want to use, default to BinaryWriter
+    wstring writerType = config(L"writerType", L"Cntk.Reader.Binary.Deprecated");
 
     string precision = config(L"precision", "float");
 

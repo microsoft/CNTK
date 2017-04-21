@@ -46,6 +46,9 @@
   <PropertyGroup>
     <LinkIncremental>$(DebugBuild)</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup>
+    <TargetName>Cntk.Composite-$(CntkComponentVersion)</TargetName>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>

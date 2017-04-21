@@ -58,6 +58,7 @@ struct /*interface*/ MATH_API MatrixBase
     virtual int GetDeviceId() const = 0;
     virtual MatrixType GetMatrixType() const = 0;
     virtual MatrixFormat GetFormat() const = 0;
+    virtual void CastAssignValuesOf(const MatrixBase& other) = 0; // allows for mixed assignment with conversion
     // TODO: Move more generic functions such as getting dims, resizing, and getting/setting as scalars in here.
     virtual ~MatrixBase();
 };
@@ -106,7 +107,7 @@ public:
 #if 0
     Matrix(shared_ptr<BaseMatrix<ElemType>> baseMatrix, ElemType* pArray, DEVICEID_TYPE deviceId);                                     // constructor for setting Matrix from a base matrix (externally managed butter pArray)
 #endif
-    Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense);
+    Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType = DENSE, const MatrixFormat matrixFormat = matrixFormatDense, const size_t nnz = 0);
     // TODO: Rewrite this constructor to eliminate the external buffers flag. Make a separate construction mechanism for Matrix objects that don't own their storage.
     Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags = matrixFlagNormal, const size_t nnz = 0);
     Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId);
@@ -216,6 +217,8 @@ public:
 
     ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
+    void AdaDeltaUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionvalues, ElemType learningRatePerSample, ElemType rho, ElemType epsilon);
+
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true); // by default we only reallocate if need to grow
     void Resize(const Matrix<ElemType>& other) // TODO: Should this carry over numNZElemToReserve for sparse matrices?
     {
@@ -271,6 +274,7 @@ public:
         assert(vals.size() == numRows * numCols);
         SetValue(numRows, numCols, GetDeviceId(), vals.data(), matrixFormatRowMajor);
     }
+    void CastAssignValuesOf(const MatrixBase& other) override; // allows for mixed assignment with conversion
     static ElemType MakeNan(size_t payload);
     void Invalidate()
     {
@@ -279,7 +283,7 @@ public:
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer = nullptr);
 
-    void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val);
+    void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry);
 
     void SetColumn(const ElemType* colPointer, size_t colInd);
     void SetColumn(const ElemType val, size_t colInd);
@@ -296,6 +300,8 @@ public:
     Matrix<ElemType>& AssignNCEDerivative(const Matrix<ElemType>& tmp, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, size_t inputIndex);
     Matrix<ElemType>& AssignSoftmaxSum(const Matrix<ElemType>& a, const Matrix<ElemType>& softmax);
     Matrix<ElemType>& AssignNceUnnormalizedEval(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias);
+
+    Matrix<ElemType>& AssignOneHot(const Matrix<ElemType>& a, vector<size_t>& shape, size_t axis, bool is_sparse);
 
     Matrix<ElemType> Transpose(); // This method doesn't change state of Matrix. It should be a const function
     Matrix<ElemType>& AssignTransposeOf(const Matrix<ElemType>& a);
@@ -378,7 +384,7 @@ public:
 
     Matrix<ElemType>& AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, ElemType &totalScore,
         const vector<size_t> & extraUttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep,
-        const size_t mbSize, const int delayConstraint, const bool isColWise);
+        const size_t mbSize, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
 
     Matrix<ElemType>& InplaceSqrt();
     Matrix<ElemType>& AssignSqrtOf(const Matrix<ElemType>& a);
@@ -530,8 +536,8 @@ public:
 
     void MaxUnpooling(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, const Matrix<ElemType>& poolInput, Matrix<ElemType>& input) const;
 
-    void AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output) const;
-    void AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad) const;
+    void AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output, const bool poolIncludePad) const;
+    void AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad, const bool poolIncludePad) const;
 
     void BatchNormalizationForward(const Matrix<ElemType>& scale, const Matrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
                                    Matrix<ElemType>& runMean, Matrix<ElemType>& runVariance, Matrix<ElemType>& out, double epsilon,
@@ -561,6 +567,8 @@ public:
     static void Multiply(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
     static void Multiply1x1AndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c);
     static void ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, ElemType beta, Matrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
+
+    static void ColumnwiseScaleAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& v, ElemType beta, Matrix<ElemType>& c);
 
     static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
     static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, ElemType beta, Matrix<ElemType>& c);

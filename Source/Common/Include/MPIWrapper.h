@@ -96,6 +96,9 @@ public:
     virtual size_t MainNodeRank() const = 0;
     virtual bool IsMultiHost() const = 0;
 
+    // Use GPUDirect RDMA support
+    virtual bool UseGpuGdr() = 0;
+
     // -----------------------------------------------------------------------
     // data-exchange functions (wrappers around MPI functions)
     // -----------------------------------------------------------------------
@@ -110,7 +113,6 @@ public:
     virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request) = 0;
     virtual int Abort(int errorcode) = 0;
     virtual int Error_string(int errorcode, char* string, int* resultlen) = 0;
-
 
     // helpers to determine the MPI_Datatype of a pointer
     static MPI_Datatype GetDataType(char *);

@@ -45,7 +45,7 @@ public:
     // TODO: separate into nodes that have inputs and those that duplicate functions with input adding except just not adding inputs. Clear?
 
     ComputationNodePtr CreateLearnableParameter(const std::wstring& paramName, const size_t rows, const size_t cols);
-    ComputationNodePtr CreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape);
+    ComputationNodePtr CreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape); // V2
     // sparse matrix size is optionally specified
     // ComputationNodePtr CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size = 0);
     ComputationNodePtr CreateInputNode(const std::wstring& inputName, const size_t rows, const wstring& dynamicAxisName = L"");
@@ -54,13 +54,13 @@ public:
     ComputationNodePtr CreateSparseInputNode(const std::wstring& inputName, const TensorShape& sampleLayout, const wstring& dynamicAxisName = L"");
     ComputationNodePtr CreateConvolutionNode(const std::wstring& nodeName, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                                              const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                             bool transpose, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples);
+                                             bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples);
     ComputationNodePtr CreateConvolutionNode(const std::wstring& nodeName, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, 
                                              const size_t horizontalSubsample, const size_t verticalSubsample, 
                                              ImageLayoutKind imageLayoutKind, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0);
     ComputationNodePtr CreatePoolingNode(const std::wstring& nodeName, PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
-                                         const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                         ImageLayoutKind imageLayout);
+                                         const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad, bool ceilOutDim,
+                                         const bool includePad, ImageLayoutKind imageLayout);
     ComputationNodePtr CreateMaxPoolingNode(const std::wstring& nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
     ComputationNodePtr CreateAveragePoolingNode(const std::wstring& nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
     ComputationNodePtr CreateROIPoolingNode(const std::wstring& nodeName, const TensorShape& roiOutputShape);
@@ -84,11 +84,11 @@ public:
                                    const ComputationNodePtr inputValues,
                                    const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                                    const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                   bool transpose, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
+                                   bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
                                    const std::wstring nodeName = L"");
     ComputationNodePtr Pooling(const ComputationNodePtr inputValues, 
                                PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
-                               const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                               const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad, bool ceilOutDim, const bool includePad,
                                ImageLayoutKind imageLayout,
                                const std::wstring nodeName = L"");
     ComputationNodePtr MaxUnpooling(const ComputationNodePtr unpoolInputValues,
@@ -126,7 +126,7 @@ public:
     ComputationNodePtr CosDistance(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr CrossEntropy(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
     ComputationNodePtr CrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
-    ComputationNodePtr ForwardBackward(const ComputationNodePtr label, const ComputationNodePtr prediction, int blankTokenId, int delayConstraint, const std::wstring nodeName = L"");
+    ComputationNodePtr ForwardBackward(const ComputationNodePtr graph, const ComputationNodePtr features, int blankTokenId, int delayConstraint, const std::wstring nodeName = L"");
     ComputationNodePtr DiagTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Diagonal(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Dropout(const ComputationNodePtr a, const std::wstring nodeName = L"");
@@ -195,4 +195,4 @@ public:
 
 // create a new from config
 shared_ptr<ComputationNodeBase> NewComputationNodeFromConfig(const Microsoft::MSR::ScriptableObjects::IConfigRecordPtr configp);
-} } }
+}}}

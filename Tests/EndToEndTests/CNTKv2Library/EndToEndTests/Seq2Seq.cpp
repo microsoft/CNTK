@@ -209,6 +209,15 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
             break;
 
         trainer->TrainMinibatch({ { rawInput, minibatchData[rawInputStreamInfo] }, { rawLabels, minibatchData[rawLabelsStreamInfo] } }, device);
+
+        // Some basic sanity tests on the training loss and evaluation error values
+        auto IsNegativeOrNan = [](double value) {
+            return (value < 0) || std::isnan(value);
+        };
+
+        if (IsNegativeOrNan(trainer->PreviousMinibatchLossAverage()) || IsNegativeOrNan(trainer->PreviousMinibatchEvaluationAverage()))
+            ReportFailure("SequenceToSequence: Invalid (-ve or nan) loss or evaluation metric encountered in training of the SequenceToSequence model.");
+
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
 
         if ((i + 1) == numMinibatchesToCheckpointAfter)
@@ -232,9 +241,15 @@ void TrainSequenceToSequenceTranslator()
 {
     fprintf(stderr, "\nTrainSequenceToSequenceTranslator..\n");
 
-    // TODO: Also test with sparse input variables in the graph
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, false, true, true);
+    if (ShouldRunOnCpu())
+    {
+        TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, false, true, true);
+        TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), true, false, false, false, true, true);
+    }
 
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
+    {
         TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, true, false, false);
+        TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), true, true, true, true, false, false);
+    }
 }

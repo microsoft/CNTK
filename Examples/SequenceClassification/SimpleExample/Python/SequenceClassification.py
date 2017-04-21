@@ -7,33 +7,33 @@
 import sys
 import os
 from cntk import Trainer, Axis #, text_format_minibatch_source, StreamConfiguration
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.device import cpu, set_default_device
-from cntk.learner import sgd, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
+from cntk.device import cpu, try_set_default_device
+from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk.ops import input, sequence
+from cntk.logging import ProgressPrinter
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "common"))
-from nn import LSTMP_component_with_self_stabilization, embedding, linear_layer, print_training_progress
+from cntk.layers import Sequential, Embedding, Recurrence, LSTM, Dense
 
 # Creates the reader
 def create_reader(path, is_training, input_dim, label_dim):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
         features = StreamDef(field='x', shape=input_dim,   is_sparse=True),
         labels   = StreamDef(field='y', shape=label_dim,   is_sparse=False)
-    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+    )), randomize=is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
 
 # Defines the LSTM model for classifying sequences
-def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_dim, cell_dim):
-    embedding_function = embedding(input, embedding_dim)
-    LSTM_function = LSTMP_component_with_self_stabilization(
-        embedding_function.output, LSTM_dim, cell_dim)[0]
-    thought_vector = sequence.last(LSTM_function)
-
-    return linear_layer(thought_vector, num_output_classes)
+def LSTM_sequence_classifier_net(feature, num_output_classes, embedding_dim, LSTM_dim, cell_dim):
+    lstm_classifier = Sequential([Embedding(embedding_dim),
+                                  Recurrence(LSTM(LSTM_dim, cell_dim))[0],
+                                  sequence.last,
+                                  Dense(num_output_classes)])
+    return lstm_classifier(feature)
 
 # Creates and trains a LSTM sequence classification model
-def train_sequence_classifier(debug_output=False):
+def train_sequence_classifier():
     input_dim = 2000
     cell_dim = 25
     hidden_dim = 25
@@ -41,12 +41,11 @@ def train_sequence_classifier(debug_output=False):
     num_output_classes = 5
 
     # Input variables denoting the features and label data
-    features = input_variable(shape=input_dim, is_sparse=True)
-    label = input_variable(num_output_classes, dynamic_axes=[
-                           Axis.default_batch_axis()])
+    features = sequence.input(shape=input_dim, is_sparse=True)
+    label = input(num_output_classes)
 
     # Instantiate the sequence classification model
-    classifier_output = LSTM_sequence_classifer_net(
+    classifier_output = LSTM_sequence_classifier_net(
         features, num_output_classes, embedding_dim, hidden_dim, cell_dim)
 
     ce = cross_entropy_with_softmax(classifier_output, label)
@@ -63,21 +62,19 @@ def train_sequence_classifier(debug_output=False):
     }
 
     lr_per_sample = learning_rate_schedule(0.0005, UnitType.sample)
+
     # Instantiate the trainer object to drive the model training
+    progress_printer = ProgressPrinter(10)
     trainer = Trainer(classifier_output, (ce, pe),
-                      sgd(classifier_output.parameters, lr=lr_per_sample))
+                      sgd(classifier_output.parameters, lr=lr_per_sample),
+                      progress_printer)
 
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 200
-    training_progress_output_freq = 10
-
-    if debug_output:
-        training_progress_output_freq = training_progress_output_freq/3
 
     for i in range(251):
         mb = reader.next_minibatch(minibatch_size, input_map=input_map)
         trainer.train_minibatch(mb)
-        print_training_progress(trainer, i, training_progress_output_freq)
 
     import copy
 
@@ -90,7 +87,7 @@ def train_sequence_classifier(debug_output=False):
 if __name__ == '__main__':
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    # set_default_device(cpu())
+    # try_set_default_device(cpu())
 
     error, _ = train_sequence_classifier()
     print("Error: %f" % error)

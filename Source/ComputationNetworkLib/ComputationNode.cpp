@@ -89,8 +89,9 @@ template<class ElemType>
                                                                   const MBLayoutPtr& layout,
                                                                   const std::shared_ptr<Matrix<ElemType>>& unpackedDataStorage,
                                                                   const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage,
+                                                                  const std::shared_ptr<Matrix<char>>& tempMaskStorage,
                                                                   bool batchMajor,
-                                                                  bool maskGaps)
+                                                                  const ElemType* gapPadValue)
 {
     size_t maxNumTimeSteps = 1;
     size_t numSequences = 1;
@@ -105,24 +106,30 @@ template<class ElemType>
     }
 
     std::shared_ptr<Matrix<ElemType>> unpackedData;
-    if ((maxNumTimeSteps == 1) || (numSequences == 1))
+    if ((maxNumTimeSteps == 1) || (numSequences == 1) || (batchMajor && (layout->GetNumParallelSequences() == layout->GetNumSequences())))
+    {
         unpackedData = std::make_shared<Matrix<ElemType>>(packedData.AsReference());
+        if (gapPadValue && layout && layout->HasGaps())
+            MaskMissingColumnsTo<ElemType>(*unpackedData, layout, FrameRange(layout), *gapPadValue);
+    }
     else
     {
         unpackedData = unpackedDataStorage;
         if (!unpackedData)
             unpackedData = std::make_shared<Matrix<ElemType>>(packedData.GetNumRows(), maxNumTimeSteps * numSequences, packedData.GetDeviceId(), packedData.GetMatrixType(), packedData.GetFormat());
         else
+        {
+            unpackedData->SwitchToMatrixType(packedData.GetMatrixType(), packedData.GetFormat(), /*keepValues=*/false);
             unpackedData->Resize(packedData.GetNumRows(), maxNumTimeSteps * numSequences);
-
-        if (maskGaps)
-            unpackedData->SetValue(0.0f);
+        }
 
         size_t i = 0;
         auto& layoutSequences = layout->GetAllSequences();
         int numLayoutSequences = (int)layoutSequences.size();
         std::vector<ElemType> scatterIndicesVector(layout->GetNumCols(), -1);
-
+        std::vector<char> columnsValidityMask;
+        if (gapPadValue)
+            columnsValidityMask.resize(numSequences * maxNumTimeSteps, 1);
         for (int layoutSequenceIdx = 0; layoutSequenceIdx < numLayoutSequences; ++layoutSequenceIdx)
         {
             auto sequenceInfo = layoutSequences[layoutSequenceIdx];
@@ -133,10 +140,16 @@ template<class ElemType>
                 auto currentSequenceEndIdx = std::min(maxNumTimeSteps, sequenceInfo.tEnd);
                 size_t currentSequenceLength = (currentSequenceEndIdx - currentSequenceBeginIdx);
 
-                for (size_t j = 0; j < currentSequenceLength; ++j)
+                for (size_t j = 0; j < maxNumTimeSteps; ++j)
                 {
-                    auto targetIdx = (ElemType)(batchMajor ? ((j * numSequences) + i) : ((i * maxNumTimeSteps) + j));
-                    scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx] = targetIdx;
+                    auto targetIdx = (batchMajor ? ((j * numSequences) + i) : ((i * maxNumTimeSteps) + j));
+                    if (j < currentSequenceLength)
+                        scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx] = (ElemType)targetIdx;
+                    else
+                    {
+                        if (gapPadValue)
+                            columnsValidityMask[targetIdx] = 0;
+                    }
                 }
 
                 i++;
@@ -149,7 +162,24 @@ template<class ElemType>
         else
             scatterIdxMatrix->SetValue(1, layout->GetNumCols(), packedData.GetDeviceId(), scatterIndicesVector.data());
 
+        // DoScatterColumnsOf for sparse matrices requires the output to be pre-fileed with 0s
+        if (gapPadValue && (*gapPadValue == 0) && (unpackedData->GetMatrixType() == MatrixType::SPARSE))
+            unpackedData->SetValue(*gapPadValue);
+
         unpackedData->DoScatterColumnsOf(0, *scatterIdxMatrix, packedData, 1);
+
+        // DoScatterColumnsOf fills the target with 0 before scattering if passed beta == 0. 
+        // This we need to mask only if the gapPadValue != 0
+        if (gapPadValue && (*gapPadValue != 0))
+        {
+            auto columnsValidityMaskMatrix = tempMaskStorage;
+            if (!columnsValidityMaskMatrix)
+                columnsValidityMaskMatrix = std::make_shared<Matrix<char>>(1, columnsValidityMask.size(), columnsValidityMask.data(), packedData.GetDeviceId());
+            else
+                columnsValidityMaskMatrix->SetValue(1, columnsValidityMask.size(), packedData.GetDeviceId(), columnsValidityMask.data());
+
+            unpackedData->MaskColumnsValue(*columnsValidityMaskMatrix, *gapPadValue, unpackedData->GetNumCols() / columnsValidityMaskMatrix->GetNumCols());
+        }
     }
 
     return TensorView<ElemType>(unpackedData, unpackedShape);
@@ -383,12 +413,12 @@ void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allow
 }
 
 // unary reduce-to-(1,1) operation, e.g. MatrixL1RegNode
-void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass)
+void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass, bool keepDimensions)
 {
     assert(m_inputs.size() == 1);
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
-    SetDims(TensorShape(1), false);
+    SetDims(keepDimensions ? m_inputs[0]->GetSampleLayout() : TensorShape(1), false);
 }
 
 // binary reduce-to-(1,1) operation, e.g. CrossEntropyWithSoftmaxNode
@@ -607,6 +637,98 @@ const std::string ComputationNodeBase::ShapeDescription() const
 }
 
 template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::BeginForwardProp()
+{
+    Base::BeginForwardProp();
+
+    if (NeedsDynamicValidation())
+        Validate(/*isFinalValidationPass =*/ true);
+
+    // update the actual m_value allocation
+    if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
+        UpdateFunctionValuesSize();
+
+    // give nodes a chance to update their internal state that may also have to match MB size
+    UpdateFunctionMBSize();
+
+    // and make sure dimensions are what we expect
+    VerifyDataSize(Value());
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::EndForwardProp()
+{
+    Base::EndForwardProp();
+
+    if (HasEnvironmentPtr() && Environment().trackGapNans)
+    {
+        MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+        if (Value().HasNan("EndForwardProp"))
+            LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
+
+        InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
+    }
+
+    // tracing
+    Trace();
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::BeginBackprop()
+{
+    Base::BeginBackprop();
+
+    if (NeedsGradient())
+    {
+        // Verify that the shapes of the output/input Value matrices that the gradient backprop for this node needs
+        // are intact and have not been erroneously reshaped due to incorrect memory sharing
+        auto VerifyValueShape = [](const ComputationNode<ElemType>& node) {
+            size_t rows, cols;
+            node.DetermineDataSize(rows, cols);
+
+            auto& valueMatrix = node.Value();
+            if ((valueMatrix.GetNumRows() != rows) || (valueMatrix.GetNumCols() != cols))
+            {
+                LogicError("%ls %ls operation found to have incorrect Value() matrix shape %lu x %lu during backprop; expected shape is %lu x %lu. "
+                    "This may be due to incorrect memory sharing.",
+                    node.NodeName().c_str(), node.OperationName().c_str(), valueMatrix.GetNumRows(), valueMatrix.GetNumCols(), rows, cols);
+            }
+        };
+
+        if (IsOutputNeededDuringBackprop())
+            VerifyValueShape(*this);
+
+        for (size_t i = 0; i < m_inputs.size(); i++)
+        {
+            if (InputUsedInComputingInputNodesGradients(i))
+                VerifyValueShape(InputRef(i));
+        }
+    }
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::EndBackprop()
+{
+    Base::EndBackprop();
+
+    if (HasEnvironmentPtr() && Environment().trackGapNans)
+    {
+        for (size_t i = 0; i < m_inputs.size(); i++)
+        {
+            ComputationNodePtr child = Input(i);
+            if (child->m_needsGradient)
+            {
+                child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+                if (child->Gradient().HasNan("EndBackprop"))
+                {
+                    LogicError("%ls %ls operation unexpectedly produced NaN gradients.", child->NodeName().c_str(), child->OperationName().c_str());
+                }
+            }
+        }
+    }
+}
+
+template <class ElemType>
 /*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, const bool printMetadata, File& fstream) const
 {
     if (printMetadata)
@@ -672,6 +794,8 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
     bool sampleSeparatorHasShape  = sampleSeparator.find("%x")  != sampleSeparator.npos;
     bool sequencePrologueHasSeqId = sequencePrologue.find("%d") != sequencePrologue.npos;
     bool sampleSeparatorHasSeqId  = sampleSeparator.find("%d")  != sampleSeparator.npos;
+    bool sequencePrologueHasSeqKey = sequencePrologue.find("%k") != sequencePrologue.npos;
+    bool sampleSeparatorHasSeqKey = sampleSeparator.find("%k") != sampleSeparator.npos;
 
     for (size_t s = 0; s < sequences.size(); s++)
     {
@@ -721,10 +845,17 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
                 sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%d", sh);
         }
 
+        if (getKeyById)
+        {
+            if (sequencePrologueHasSeqKey)
+                seqProl = msra::strfun::ReplaceAll<std::string>(seqProl, "%k", getKeyById(seqInfo.seqId));
+            if (sampleSeparatorHasSeqKey)
+                sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%k", getKeyById(seqInfo.seqId));
+        }
+
         if (s > 0)
             fprintfOrDie(f, "%s", sequenceSeparator.c_str());
-        if (getKeyById)
-            fprintfOrDie(f, "%s ", getKeyById(seqInfo.seqId).c_str());
+
         fprintfOrDie(f, "%s", seqProl.c_str());
 
         // output it according to our format specification

@@ -631,8 +631,7 @@ void make_intermediate_dirs(const std::wstring& filepath);
 
 std::vector<std::wstring> get_all_files_from_directory(const std::wstring& directory);
 
-};
-};
+}}
 
 // ----------------------------------------------------------------------------
 // fuptodate() -- test whether an output file is at least as new as an input file

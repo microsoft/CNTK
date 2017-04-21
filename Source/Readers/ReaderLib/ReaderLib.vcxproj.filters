@@ -135,6 +135,9 @@
     <ClCompile Include="Indexer.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
+    <ClCompile Include="ReaderUtil.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Interfaces">

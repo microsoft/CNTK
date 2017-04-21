@@ -6,8 +6,7 @@
 import numpy as np
 
 from cntk.ops import *
-from cntk.ops import *
-from cntk.debug import save_as_legacy_model
+from cntk.debugging import save_as_legacy_model
 from cntk.ops.functions import load_model
 
 # TODO: a test for restore_model?
@@ -34,7 +33,7 @@ def test_load_save_constant(tmpdir):
     assert np.allclose(loaded_result, expected)
 
 def test_load_save_input_legacy_names(tmpdir):
-    i1 = input_variable((1,2), name='i1')
+    i1 = input((1,2), name='i1')
     root_node = abs(i1)
     input1 = [[[-1,2]]]
 
@@ -58,8 +57,8 @@ def test_load_save_input_legacy_names(tmpdir):
     assert np.allclose(loaded_result, expected)
     
 def test_load_save_inputs(tmpdir):
-    i1 = input_variable((1,2), name='i1')
-    i2 = input_variable((2,1), name='i2')
+    i1 = input((1,2), name='i1')
+    i2 = input((2,1), name='i2')
     root_node = plus(i1, i2)
     input1 = [[[1,2]]]
     input2 = [[[[1],[2]]]]
@@ -84,7 +83,7 @@ def test_load_save_inputs(tmpdir):
     assert np.allclose(loaded_result, expected)
 
 def test_load_save_unique_input(tmpdir):
-    i1 = input_variable((1,2), name='i1')
+    i1 = input((1,2), name='i1')
     root_node = softmax(i1)
 
     input1 = [[[1,2]]]

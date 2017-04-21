@@ -83,6 +83,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto imageData = make_shared<ImageSequenceData>();
         if (!image.data)
         {
+            fprintf(stderr, "WARNING: Could not decompress sequence with id '%s'\n", m_corpus->IdToKey(sequenceKey.m_sequence).c_str());
             imageData->m_isValid = false;
         }
         else

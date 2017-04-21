@@ -1,10 +1,8 @@
 dataDir: .
 
 tags:
-  # CPU only, at this stage.
-  # TODO move from l to separate leg, requires infra changes
-  - bvt-l (build_sku == 'cpu') or (build_sku == '1bitsgd')
-  - nightly-l (build_sku == 'cpu') or (build_sku == '1bitsgd')
+  - bvt-p (build_sku == 'cpu') or (build_sku == '1bitsgd')
+  - nightly-p (build_sku == 'cpu') or (build_sku == '1bitsgd')
 
 testCases:
   Test cases pass:
