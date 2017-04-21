@@ -362,7 +362,8 @@ public:
           m_prevChosenMinibatchSize(0),
           m_lastFinishedEpochTrainLoss(0.0),
           m_distGradAgg(nullptr),
-          m_gradHeader(nullptr)
+          m_gradHeader(nullptr),
+          m_gradAlloc(nullptr), m_useMergedGrads(false)
     {
         msra::files::make_intermediate_dirs(m_modelPath);
     }
@@ -592,6 +593,8 @@ protected:
 
     std::shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
     std::shared_ptr<struct DistGradHeader> m_gradHeader;
+    std::shared_ptr<Matrix<ElemType>> m_gradAlloc;
+    bool m_useMergedGrads;
 
     shared_ptr<IMASGD<ElemType>> m_pMASGDHelper;
 

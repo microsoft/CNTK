@@ -529,6 +529,43 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, net->GetDeviceId(), m_traceLevel);
         }
 
+        // NCL: This is an ugly hack to merge the gradient buffers into a single contiguous allocation.
+        // NCL: Making a single call (rather than one call per NN layer) to NCCL is much more efficient.
+        m_useMergedGrads = GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD
+                              && currentNumGradientBits == (8 * sizeof(ElemType)); // simple aggregator only
+        if (m_useMergedGrads && m_gradAlloc == nullptr)
+        {
+            size_t contigSize = 0UL;
+            size_t contigAlign = 256 / sizeof(ElemType);
+            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+            {
+                ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+                if (node->IsParameterUpdateRequired())
+                {
+                    Matrix<ElemType>* currParamsValues = &(node->Value());
+                    size_t rows = currParamsValues->GetNumRows();
+                    size_t cols = currParamsValues->GetNumCols();
+                    size_t aligns = (rows * cols + contigAlign-1) / contigAlign;
+                    contigSize += aligns * contigAlign;
+                }
+            }
+            m_gradAlloc = std::make_shared<Matrix<ElemType>>(1, contigSize, net->GetDeviceId());
+            size_t offset = 0UL;
+            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+            {
+                ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+                if (node->IsParameterUpdateRequired())
+                {
+                    Matrix<ElemType>* currParamsValues = &(node->Value());
+                    size_t rows = currParamsValues->GetNumRows();
+                    size_t cols = currParamsValues->GetNumCols();
+                    node->GradientPtrRef() = std::make_shared<Matrix<ElemType>>(m_gradAlloc->ColumnSlice(offset, rows*cols).Reshaped(rows, cols));
+                    size_t aligns = (rows * cols + contigAlign-1) / contigAlign;
+                    offset += aligns * contigAlign;
+                }
+            }
+        }
+
         Timer timer;
         timer.Start();
 
@@ -1301,24 +1338,30 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // distributed gradient aggregation
             if (learnParamsGradients.size() == 0)
             {
-                // lazily form the list of smoothedGradients to exchange
-                learnParamsGradients.reserve(learnableNodes.size());
-                for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                if (m_useMergedGrads)
                 {
-                    ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                    if (node->IsParameterUpdateRequired())
+                    learnParamsGradients.push_back(m_gradAlloc.get());
+                }
+                else
+                {
+                    // lazily form the list of smoothedGradients to exchange
+                    learnParamsGradients.reserve(learnableNodes.size());
+                    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                     {
-                        Matrix<ElemType>* currParamsGradient = &(node->Gradient()); // TODO: we can use shared_ptrs now
-
-                        // Sometimes, in parallel training, the current node may not get any samples to process
-                        // In this case, the gradient matrix may not have been sized yet. If so, lets size it.
-                        if (currParamsGradient->GetNumCols() == 0)
+                        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+                        if (node->IsParameterUpdateRequired())
                         {
-                            Matrix<ElemType>* currParamsValues = &(node->Value());
-                            currParamsGradient->Resize(currParamsValues->GetNumRows(), currParamsValues->GetNumCols());
-                        }
+                            Matrix<ElemType>* currParamsGradient = &(node->Gradient()); // TODO: we can use shared_ptrs now
+                            // Sometimes, in parallel training, the current node may not get any samples to process
+                            // In this case, the gradient matrix may not have been sized yet. If so, lets size it.
+                            if (currParamsGradient->GetNumCols() == 0)
+                            {
+                                Matrix<ElemType>* currParamsValues = &(node->Value());
+                                currParamsGradient->Resize(currParamsValues->GetNumRows(), currParamsValues->GetNumCols());
+                            }
 
-                        learnParamsGradients.push_back(currParamsGradient);
+                            learnParamsGradients.push_back(currParamsGradient);
+                        }
                     }
                 }
             }
