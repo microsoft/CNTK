@@ -32,9 +32,23 @@ namespace DebugUtil
         try
         {
             string output;
-            CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [&output](string stack)
+            string previousLine;
+            int count = 0;
+            CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [&output, &previousLine, &count](string stack)
             {
-                output += stack;
+                if (stack.compare(previousLine))
+                {
+                    if (count)
+                    {
+                        output.pop_back(); // remove new line and add it below
+                        output += " (x" + std::to_string(count+1) + ")\n";
+                    }
+                    output += stack;
+                    previousLine = stack;
+                    count = 0;
+                    return;
+                }
+                ++count;
             });
             return output;
         }
@@ -162,23 +176,24 @@ static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, 
     size_t firstFrame = skipLevels + 1; // skip CollectCallStack()
     for (size_t i = firstFrame; i < frames; i++)
     {
+        string callStackLine;
         if (i == firstFrame)
-            write("    > ");
+            callStackLine = "    > ";
         else
-            write("    - ");
+            callStackLine = "    - ";
 
         if (SymFromAddr(process, (DWORD64)(callStack[i]), 0, symbolInfo))
         {
-            write(makeFunctionNamesStandOut ? MakeFunctionNameStandOut(symbolInfo->Name) : symbolInfo->Name);
-            write("\n");
+            callStackLine += makeFunctionNamesStandOut ? MakeFunctionNameStandOut(symbolInfo->Name) : symbolInfo->Name;
+            write(callStackLine + "\n");
         }
         else
         {
             DWORD error = GetLastError();
             char buf[17];
             sprintf_s(buf, "%p", callStack[i]);
-            write(buf);
-            write(" (SymFromAddr() error: " + msra::strfun::utf8(FormatWin32Error(error)) + ")\n");
+            callStackLine += buf;
+            write(callStackLine + " (SymFromAddr() error: " + msra::strfun::utf8(FormatWin32Error(error)) + ")\n");
         }
     }
 
