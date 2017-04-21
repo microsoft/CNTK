@@ -132,13 +132,13 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
             sample_count  += trainer.previous_minibatch_sample_count
             training_loss += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count
 
-        lr_per_sample *= 0.6
-        learner.reset_learning_rate(ct.learning_rate_schedule(lr_per_sample, unit=ct.UnitType.sample))
+        #lr_per_sample *= 0.6
+        #learner.reset_learning_rate(ct.learning_rate_schedule(lr_per_sample, unit=ct.UnitType.sample))
 
         # sample from the model
         t3 = time.perf_counter()
         if loss == 'mixture':
-            x_gen = np.zeros((12,) + image_shape, dtype=np.float32)
+            x_gen = np.zeros((16,) + image_shape, dtype=np.float32)
             for y in range(image_height):
                 for x in range(image_width):
                     new_x_gen    = z.eval({inputs:x_gen})
@@ -147,7 +147,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
                     #x_gen[:,1,y,x] = new_x_gen_np[:,1,y,x]
                     #x_gen[:,2,y,x] = new_x_gen_np[:,2,y,x]
 
-            sample_x = np.concatenate(np.ascontiguousarray(np.transpose(x_gen, (0,2,3,1))), axis=0)
+            sample_x = np.ascontiguousarray(np.transpose(x_gen, (0,2,3,1)))
             img_tile = plotting.img_tile(sample_x, aspect_ratio=1.0, border_color=1.0, stretch=True)
             img = plotting.plot_img(img_tile, title="Samples from epoch {}.".format(epoch))
             plotting.plt.savefig("image_{}.png".format(epoch))
