@@ -503,7 +503,7 @@ def test_layers_convolution_value():
     # Extract the W weight matrix
     expected_res = np.sum(model.foo.W.value)
 
-    np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=7, \
+    np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=5, \
         err_msg="Error in convolution computation with stride = 1 and zeropad = False")
 
     ##########################################################
