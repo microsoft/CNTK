@@ -240,6 +240,7 @@ class Function(cntk_py.Function):
         params_dict = { arg.name: arg for arg in params }
         return map_function_arguments(params, params_dict, *args, **kwargs)
 
+    @staticmethod
     def _replace_args_type_check(arg_map): # type: (Dict[param: Variable, arg: Variable]), param meant to be substituted by arg
         '''
         Performs a type-compatibility check for arguments to replace_placeholders() and clone(),
