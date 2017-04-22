@@ -7,6 +7,7 @@
 #include "Common.h"
 
 using namespace CNTK;
+using namespace std;
 
 using namespace std::placeholders;
 
@@ -40,7 +41,12 @@ void TrainLSTMSequenceClassifier(const DeviceDescriptor& device, bool useSparseL
         prediction = predictionVar;
     }
 
-    auto minibatchSource = TextFormatMinibatchSource(L"Train.ctf", { { featuresName, inputDim, true, L"x" }, { labelsName, numOutputClasses, false, L"y" } }, MinibatchSource::FullDataSweep);
+    wstring path = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/";
+    auto minibatchSource = TextFormatMinibatchSource(path + L"Train.ctf",
+        {
+            { featuresName, inputDim, true, L"x" },
+            { labelsName, numOutputClasses, false, L"y" }
+        }, MinibatchSource::FullDataSweep);
     const size_t minibatchSize = 200;
 
     auto featureStreamInfo = minibatchSource->StreamInfo(featuresName);
