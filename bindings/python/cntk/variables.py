@@ -181,24 +181,33 @@ class VariableMixin(object):
             '''
             raise TypeError("Can't instantiate abstract class " + str(self) + ". Please use 'input(" + str(self) + ")'.")
 
+        _unknown_shape = (-2,)
+
         def __str__(self):
             '''
             Stringifies the Type record back to Python 3 syntax per layers.typing.
             '''
             # base type
-            unknown_shape = (-2,)
-            shape     = getattr(self, 'shape', unknown_shape)
+            shape     = getattr(self, 'shape', Variable._Type._unknown_shape)
             is_sparse = getattr(self, 'is_sparse', False)
             axes      = getattr(self, 'dynamic_axes', ())
+            dtype     = getattr(self, 'dtype', None)
             has_axes = len(axes) > 0 # it's a tuple of Axis
             if is_sparse and not has_axes:
                 raise TypeError('Type: cannot be sparse and not have an axis')
-            if shape == unknown_shape:  #.is_unknown():  # TODO: how to do this right?
+            if shape == Variable._Type._unknown_shape:
                 s = 'tensor'
             elif shape == ():
-                s = 'float'
+                s = 'np.float64' if dtype == np.float64 else 'np.float32' if dtype == np.float32 else 'float'
             else:
-                s = 'Tensor[' + ','.join(str(dim) for dim in shape) + ']'
+                s = 'Tensor['
+                if dtype == np.float64:
+                    s += 'np.float64,'
+                if shape == ():
+                    s += '()'
+                else:
+                    s += ','.join(str(dim) for dim in shape)
+                s += ']'
                 if is_sparse:
                     s = "Sparse" + s
                 elif not has_axes:
@@ -215,6 +224,23 @@ class VariableMixin(object):
                     s = t + '[' + s + ']'
             # We do not return dtype or needs_gradient. dtype is mostly redundant, and needs_gradient is not really part of the type.
             return s
+
+        @property
+        def shape_is_known(self):
+            shape = getattr(self, 'shape', None)
+            return not shape or shape != Variable._Type._unknown_shape
+
+        @staticmethod
+        def _sanitize(type):
+            '''
+            Converts type into Variable._Type if given a float, float32, or float64.
+            '''
+            if type == float:
+                return Variable._Type(shape=(), is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
+            elif type == np.float32 or  type == np.float64:
+                return Variable._Type(shape=(), dtype=type, is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
+            else:
+                return type
 
     @property
     def _type(self):
