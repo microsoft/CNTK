@@ -87,8 +87,8 @@ def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
         namespace.Embedding(embedding_dim, name='embed'),
         namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu, name='rnn')),
         #namespace.identity,
-        namespace.LogValues(),
-        #namespace.Barrier(),
+        #namespace.LogValues(),
+        namespace.Barrier(),
         namespace.Dense(num_output_classes, name='dense')
     ])
 
@@ -154,7 +154,7 @@ def train(debug_output=False):
             print(gp.to_ndarray())
 
     # testing a tree model
-    if False:
+    if True:
         e1 = dynamite.Embedding(3)
         r1 = dynamite.RNNUnit(3, dynamite.relu)
         e1(1)
@@ -181,9 +181,12 @@ def train(debug_output=False):
         # Observation: barrier does not change forward (we got lucky), and does not work for backprop.
         # We should inject a barrier for backprop into shared matrices.
         d1 = dynamite.Dense(1)
-        z = dynamite.reduce_sum(dynamite.Variable.splice(*dynamite.map_batch(lambda inp: d1(b1(tree_node(inp))), [batch])))
+        def model(batch):
+            return dynamite.reduce_sum(dynamite.Variable.splice(*dynamite.map_batch(lambda inp: d1(b1(tree_node(inp))), [batch])))
+        z = model(batch)
         #dynamite.dump_graph(z)
         dynamite.print_graph_stats([z], '\n############## LOSS, unbatched\n')
+        print(z.to_ndarray())
         z.get_value()
         dynamite.print_graph_stats([z], '\n############## LOSS, batched\n')
         #dynamite.dump_graph(z)
@@ -196,7 +199,7 @@ def train(debug_output=False):
         #dynamite.dump_graph(grad_vars)
         dynamite.print_graph_stats(grad_vars + (z,), '\n############## plus GRADIENTS, unbatched\n')
         for g in grad_vars:
-            g.get_value()
+            print(g.to_ndarray())
         #dynamite.dump_graph(grad_vars)
         dynamite.print_graph_stats(grad_vars + (z,), '\n############## LOSS and GRADIENTS, batched\n')
         pass
