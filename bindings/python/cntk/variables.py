@@ -177,9 +177,9 @@ class VariableMixin(object):
             ...     inp = Tensor[32]()
             ... except TypeError as e:
             ...     print('ERROR: ' + str(e))
-            ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(Tensor[32])'.
+            ERROR: abstract type Tensor[32] cannot be instantiated; use 'input(Tensor[32])' instead
             '''
-            raise TypeError("Can't instantiate abstract class " + str(self) + ". Please use 'input(" + str(self) + ")'.")
+            raise TypeError("abstract type " + str(self) + " cannot be instantiated; use 'input(" + str(self) + ")' instead")
 
         _unknown_shape = (-2,)
 
@@ -236,6 +236,11 @@ class VariableMixin(object):
             Converts type into Variable._Type if given a float, float32, or float64.
             '''
             # TODO: it would be great if in a future version we could recognize and support Python 3 typing.Sequence
+            import sys
+            if sys.version_info.major >= 3:
+                from typing import GenericMeta
+                if isinstance(type, GenericMeta):
+                    raise TypeError("Python's typing.Sequence is not a valid CNTK type; use cntk.layers.typing.Sequence instead")
             if type == float:
                 return Variable._Type(shape=(), is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
             elif type == np.float32 or  type == np.float64:
