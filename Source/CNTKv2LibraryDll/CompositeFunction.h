@@ -262,6 +262,8 @@ namespace CNTK
         static Variable GetMappingForNoOpOutput(const Variable& variable, bool recursive = false);
         static Variable GetMappingVariable(const Variable& variable, bool recursive = false);
 
+        std::unordered_map<Variable, NDShape> InferFreeDimensionsOfArguments(const std::unordered_map<Variable, ValuePtr>& arguments);
+
         template <typename ElementType>
         Microsoft::MSR::CNTK::ComputationNetworkPtr GetComputationNetwork(const DeviceDescriptor& device,
                                                                           const std::unordered_set<Variable>& backpropRoots,
@@ -280,6 +282,7 @@ namespace CNTK
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetOutputVariableNode(const Variable& variable,
                                                                                   Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
                                                                                   Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder,
+                                                                                  const std::unordered_map<Variable, Variable>& fullyDefinedArgumentsMap,
                                                                                   std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap,
                                                                                   std::unordered_map<Variable, bool>& isVariableRootMap,
                                                                                   const std::unordered_set<Variable>& inputsToExcludeGradientsFor);
@@ -287,6 +290,7 @@ namespace CNTK
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
                                                                     Microsoft::MSR::CNTK::ComputationNetworkBuilder<ElementType>& builder,
+                                                                    const std::unordered_map<Variable, Variable>& fullyDefinedArgumentsMap,
                                                                     std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap,
                                                                     std::unordered_map<Variable, bool>& isVariableRootMap,
                                                                     const std::unordered_set<Variable>& inputsToExcludeGradientsFor);
@@ -331,8 +335,8 @@ namespace CNTK
         // A map from Variable objects to ComputationNode objects in the ComputationNetwork instance that implements 'this' Composite Function
         std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_variableToNodeMap;
 
-        // A map that tells whether a Variable in the graph underlying 'this' Function is a root of the graph
-        std::unordered_map<Variable, bool> m_isVariableRootMap;
+        FunctionPtr m_latestFullyDefinedComposite;
+        std::unordered_map<Variable, Variable> m_fullyDefinedArgumentsMap;
 
         Microsoft::MSR::CNTK::ComputationNetworkPtr m_computationNetwork;
 

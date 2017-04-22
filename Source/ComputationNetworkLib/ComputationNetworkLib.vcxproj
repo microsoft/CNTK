@@ -106,6 +106,7 @@
     <ClInclude Include="DeprecatedNodes.h" />
     <ClInclude Include="PreComputeNodes.h" />
     <ClInclude Include="RNNNodes.h" />
+    <ClInclude Include="SequenceReshapeNodes.h" />
     <ClInclude Include="SpecialPurposeNodes.h" />
     <ClInclude Include="EvaluationNodes.h" />
     <ClInclude Include="InputAndParamNodes.h" />

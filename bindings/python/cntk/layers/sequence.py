@@ -9,7 +9,7 @@ First / higher-order functions over sequences, like :func:`Recurrence`.
 '''
 
 from ..variables import Record
-from ..ops import combine, splice, sequence
+from ..ops import combine, splice, sequence, reconcile_dynamic_axes
 from .blocks import *
 from .blocks import _get_initial_state_or_default, _inject_name
 
@@ -57,12 +57,11 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
     @BlockFunction('Delay', name)
     def delay(x):
         # TODO: reenable this
-        ## if specific dynamic_axes requested then delay without and inject a reconcile_dynamic_axis() on top
+        ## if specific dynamic_axes requested then delay without and inject a reconcile_dynamic_axes() on top
         #if dynamic_axes_like:
         #    r = delay(x, initial_state=initial_state, time_step=time_step, name='')
         #    from .utils import sanitize_input, typemap
-        #    from _cntk_py import reconcile_dynamic_axis
-        #    r = typemap(reconcile_dynamic_axis)(sanitize_input(r), sanitize_input(dynamic_axes_like), name=name)
+        #    r = typemap(reconcile_dynamic_axes)(sanitize_input(r), sanitize_input(dynamic_axes_like), name=name)
         #    return r;
         ## regular case
         return sequence.delay(x, initial_state=initial_state, time_step=T)
@@ -562,8 +561,7 @@ def UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name
         new_state = z.outputs[1] if len(z.outputs) > 1 else output # we allow generator to return a single value if it is identical to the new state
         # implant the dynamic axis (from dynamic_axes_like)
         from cntk.internal import sanitize_input, typemap
-        from ..cntk_py import reconcile_dynamic_axis
-        new_state = typemap(reconcile_dynamic_axis)(sanitize_input(new_state), sanitize_input(out_axis))
+        new_state = typemap(reconcile_dynamic_axes)(sanitize_input(new_state), sanitize_input(out_axis))
         new_state = combine([new_state], name='unfold_new_state')
         state_fwd.resolve_to(new_state)
 

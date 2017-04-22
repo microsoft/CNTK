@@ -529,6 +529,7 @@ namespace CNTK
     Parameter::Parameter(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)
         : Variable(shape, VariableKind::Parameter, dataType, nullptr, true, {}, name, Internal::GenerateUid(VariableKind::Parameter))
     {
+
         m_dataFields->SetValueInitialization(initializer, device);
     }
 
