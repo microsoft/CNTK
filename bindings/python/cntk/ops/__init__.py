@@ -2865,6 +2865,6 @@ def assign(ref, input, name=''):
     '''
     from cntk.cntk_py import assign
     dtype = get_data_type(input)
-    op = sanitize_input(input, dtype)
-    ref_op = sanitize_input(ref, dtype)
-    return assign(ref_op, op, name)
+    operand = sanitize_input(input, dtype)
+    ref_operand = sanitize_input(ref, dtype)
+    return assign(ref_operand, operand, name)

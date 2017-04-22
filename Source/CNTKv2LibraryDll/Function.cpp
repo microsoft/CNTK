@@ -1123,12 +1123,6 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
     }
 
-    FunctionPtr BinaryOp(PrimitiveOpType op, Variable& refOperand, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
-    {
-        std::vector<Variable> operands = { refOperand, operand };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
-    }
-
     FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::Plus, leftOperand, rightOperand, Dictionary(), name);

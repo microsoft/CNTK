@@ -347,7 +347,7 @@ namespace CNTK
 
         // Outputs to evaluate are the list of outputs that the forward pass need to evaluate. m_currentOutputsToEvaluate
         // will store this list, from the last forward pass call, only in training mode. The reason for that
-        // is to run PostForwardOrBackProp after backprop phase finish.
+        // is to run PostForwardAndBackProp after backprop phase finish.
         std::vector<Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_currentOutputsToEvaluate;
 
         std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;

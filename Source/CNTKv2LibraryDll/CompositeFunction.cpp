@@ -1620,9 +1620,9 @@ namespace CNTK
 
         m_computationNetwork->ForwardProp(outputsToEvaluate);
 
-        // Call PostForwardOrBackProp after ForwardProp only in evaluation mode.
+        // Call PostForwardAndBackProp after ForwardProp only in evaluation mode.
         if (outputsToRetainBackwardStateFor.empty())
-            m_computationNetwork->PostForwardOrBackProp(outputsToEvaluate);
+            m_computationNetwork->PostForwardAndBackProp(outputsToEvaluate);
         else
         {
             m_currentOutputsToEvaluate.clear();
@@ -1684,7 +1684,7 @@ namespace CNTK
 
         if (m_currentOutputsToEvaluate.size() > 0)
         {
-            m_computationNetwork->PostForwardOrBackProp(m_currentOutputsToEvaluate);
+            m_computationNetwork->PostForwardAndBackProp(m_currentOutputsToEvaluate);
             m_currentOutputsToEvaluate.clear();
         }
 

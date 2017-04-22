@@ -44,12 +44,12 @@ void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode)
     GetNestedNetwork(rootNode)->ForwardProp(FrameRange(nullptr));
 }
 
-void ComputationNetwork::PostForwardOrBackProp(const ComputationNodeBasePtr rootNode)
+void ComputationNetwork::PostForwardAndBackProp(const ComputationNodeBasePtr rootNode)
 {
-    VerifyIsCompiled("PostForwardOrBackProp");
+    VerifyIsCompiled("PostForwardAndBackProp");
 
     // traverse all nodes in the pre-determined evaluation order
-    GetNestedNetwork(rootNode)->PostForwardOrBackProp();
+    GetNestedNetwork(rootNode)->PostForwardAndBackProp();
 }
 
 // set the gradient matrix of a (root) node 1.0
@@ -163,18 +163,15 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         ForwardProp(node, fr);
 }
 
-/*static*/ void ComputationNetwork::PARTraversalFlowControlNode::PostForwardOrBackProp(const ComputationNodeBasePtr& node)
+/*static*/ void ComputationNetwork::PARTraversalFlowControlNode::PostForwardAndBackProp(const ComputationNodeBasePtr& node)
 {
-    if (node->RunPostForwardOrBackProp())
-    {
-        node->PostForwardOrBackProp();
-    }
+    node->PostForwardAndBackProp();
 }
 
-/*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::PostForwardOrBackProp() /*override*/
+/*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::PostForwardAndBackProp() /*override*/
 {
     for (auto& node : m_nestedNodes)
-        PostForwardOrBackProp(node);
+        PostForwardAndBackProp(node);
 }
 
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/

@@ -1038,8 +1038,6 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        SetRunPostForwardOrBackProp(true);
-
         auto& result = Value();
         auto& inputValue = InputRef(1).Value();
 
@@ -1047,10 +1045,8 @@ public:
         result.AssignValuesOf(inputValue);
     }
 
-    virtual void /*ComputationNodeNonLooping::*/ PostForwardOrBackProp() override
+    virtual void /*ComputationNodeNonLooping::*/ PostForwardAndBackProp() override
     {
-        SetRunPostForwardOrBackProp(false);
-
         auto& refValue = InputRef(0).Value();
         refValue.AssignValuesOf(*m_result);
     }
@@ -1064,13 +1060,10 @@ public:
     {
         ValidateBinaryZip(isFinalValidationPass, false);
 
-        if (m_inputs.size() != 2)
-            InvalidArgument("AssignNode: Assign operation requires two inputs instead of %d.", (int)m_inputs.size());
-
         if (Input(0)->HasMBLayout() || Input(1)->HasMBLayout())
             InvalidArgument("AssignNode: None of the inputs can have dynamic axes.");
 
-        if (!Input(1)->GetSampleLayout().IsElementwiseCompatibleWith(Input(0)->GetSampleLayout()))
+        if (Input(0)->GetSampleLayout() != Input(1)->GetSampleLayout())
             InvalidArgument("AssignNode: All inputs should have same sample layout.");
     }
 
