@@ -235,9 +235,9 @@ class VariableMixin(object):
             '''
             Converts type into Variable._Type if given a float, float32, or float64.
             '''
-            # TODO: it would be great if in a future version we could recognize and support Python 3 typing.Sequence
+            # TODO: it would be great if in a future version we could recognize and support Python 3.5 typing.Sequence
             import sys
-            if sys.version_info.major >= 3:
+            if sys.version_info >= (3,5):
                 from typing import GenericMeta
                 if isinstance(type, GenericMeta):
                     raise TypeError("Python's typing.Sequence is not a valid CNTK type; use cntk.layers.typing.Sequence instead")
