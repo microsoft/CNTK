@@ -66,7 +66,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
      >>> f.W.shape  # "row" dimension of "matrix" consists of 3 axes that match the input
      (64, 16, 16, 5)
 
-    This behavior can be modified by telling CNTK either the rank of the output (``map_rank``)
+    This behavior can be modified by telling CNTK either the number of axes that should not be projected (``map_rank``)
     or the rank of the input (``input_rank``). If neither is specified, all input dimensions are
     projected, as in the example above.
 
@@ -80,7 +80,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
      (3, 3, 5)
 
      >>> f = Dense(5, activation=C.softmax, map_rank=2)
-     >>> x = input((4, 6, 3, 3, 3)) # e.g. 24 parallel 3x3x3 objects arranged in a 4x5 grid. The grid is to be retained
+     >>> x = input((4, 6, 3, 3, 3)) # e.g. 24 parallel 3x3x3 objects arranged in a 4x6 grid. The grid is to be retained
      >>> y = f(x)
      >>> y.shape  # the 4x6 elements are classified separately, the grid structure is retained
      (4, 6, 5)
