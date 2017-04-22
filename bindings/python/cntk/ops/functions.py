@@ -253,7 +253,7 @@ class Function(cntk_py.Function):
             arg_type   = arg._type if isinstance(arg, cntk_py.Variable) else arg.output._type if isinstance(arg, Function) else None
             def param_name(): # helper to get a descriptive name for param
                 if param.name:
-                    return "argument '%s'" % param.name
+                    return "argument %s" % param.name
                 else:
                     return 'positional argument %d' % i
             if not arg_type:
@@ -263,10 +263,11 @@ class Function(cntk_py.Function):
                 continue
             if not arg_type.shape_is_known:
                 raise TypeError(param_name() + ' has a known shape, and cannot be passed a Variable of unknown shape')
-            if len(arg_type.shape) < len(param_type.shape) or arg_type.shape[-len(param_type.shape):] != param_type.shape or \
-                   arg_type.dtype        != param_type.dtype        or \
-                   arg_type.dynamic_axes != param_type.dynamic_axes or \
-                   arg_type.is_sparse    != param_type.is_sparse:
+            if len(arg_type.shape) < len(param_type.shape) or \
+                   arg_type.shape[-len(param_type.shape):] != param_type.shape or \
+                   (arg_type.dynamic_axes and arg_type.dynamic_axes != param_type.dynamic_axes) or \
+                   arg_type.dtype != param_type.dtype or \
+                   arg_type.is_sparse != param_type.is_sparse:
                 raise TypeError(param_name() + "'s type " + str(param_type) + " is incompatible with the type " + str(arg_type) + " of the passed Variable")
 
     def update_signature(self, *arg_types, **kwarg_types):

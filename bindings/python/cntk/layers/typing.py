@@ -117,11 +117,22 @@ Example:
 
     >>> # nested sequences are currently not supported
     >>> try:
-    ...     inp = Sequence[Sequence[Tensor[32]]]
-    ...     y = sigmoid(inp)
+    ...     t = Sequence[Sequence[Tensor[32]]]
     ... except TypeError as e:
     ...     print('ERROR: ' + str(e))
     ERROR: sequences over sequences are currently not supported
+
+    >>> # a function with specified type gets passed a differently-shaped input
+    >>> @Function
+    ... @Signature(x=Tensor[13])
+    ... def f(x):
+    ...    return sigmoid(x)
+    >>> try:
+    ...     x = input((42,))
+    ...     y = f(x)
+    ... except TypeError as e:
+    ...     print('ERROR: ' + str(e))
+    ERROR: argument x's type Tensor[13] is incompatible with the type Tensor[42] of the passed Variable
 
 Using Python type syntax, besides being more concise and easier to memorize, has the added benefit of beign able to more easily talk about types of CNTK objects,
 very similar to how one would talk about the types of Python objects (e.g. `List[Tuple[int,float]]`).
