@@ -29,7 +29,10 @@ def populate_dicts(files):
     for f in files:
         with open('%s.tsv' % f, 'r', encoding='utf-8') as input_file:
             for line in input_file:
-                uid, title, context, query, begin_answer, end_answer, answer = line.split('\t')
+                if 'dev' in f:
+                    uid, title, context, query, answer, other = line.split('\t')
+                else:
+                    uid, title, context, query, begin_answer, end_answer, answer = line.split('\t')
                 tokens = context.split(' ')+query.split(' ')
                 for t in tokens:
                     wdcnt[t.lower()] += 1
@@ -144,7 +147,7 @@ if __name__=='__main__':
     try:
         known, vocab, chars = pickle.load(open('vocabs.pkl', 'rb'))
     except:
-        known, vocab, chars = populate_dicts((tsvs[0],))
+        known, vocab, chars = populate_dicts(tsvs)
         f = open('vocabs.pkl', 'wb')
         pickle.dump((known, vocab, chars), f)
         f.close()

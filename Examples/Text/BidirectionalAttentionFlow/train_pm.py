@@ -70,7 +70,7 @@ def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, answers=[[]
                 batch['ccids'].append(ccids)
                 batch['qcids'].append(qcids)
             
-            if len(batch) > 0:
+            if len(batch['cwids']) > 0:
                 context_g_words  = C.Value.one_hot([[C.Value.ONE_HOT_SKIP if i >= polymath.wg_dim else i for i in cwids] for cwids in batch['cwids']], polymath.wg_dim)
                 context_ng_words = C.Value.one_hot([[C.Value.ONE_HOT_SKIP if i < polymath.wg_dim else i - polymath.wg_dim for i in cwids] for cwids in batch['cwids']], polymath.wn_dim)
                 query_g_words    = C.Value.one_hot([[C.Value.ONE_HOT_SKIP if i >= polymath.wg_dim else i for i in qwids] for qwids in batch['qwids']], polymath.wg_dim)
@@ -111,7 +111,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     learner = C.adadelta(z.parameters, lr)
 
     if C.Communicator.num_workers() > 1:
-        learner = C.block_momentum_distributed_learner(learner, block_size=training_config['block_size'], distributed_after=training_config['distributed_after'])
+        learner = C.data_parallel_distributed_learner(learner)
 
     trainer = C.Trainer(z, (loss, None), learner, progress_writers)
 
@@ -145,7 +145,6 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
             if epoch_stat['best_val_err'] > val_err:
                 epoch_stat['best_val_err'] = val_err
                 epoch_stat['best_since'] = 0
-                trainer.save_checkpoint(model_file+'.best')
                 trainer.save_checkpoint(model_file)
             else:
                 epoch_stat['best_since'] += 1
@@ -185,8 +184,11 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 
         for epoch in range(max_epochs):       # loop over epochs
             tsv_reader = create_tsv_reader(loss, train_data_file, polymath, minibatch_seqs)
+            minibatch_count = 0
             for data in tsv_reader:
-                trainer.train_minibatch(data)                                   # update model with it
+                if (minibatch_count % C.Communicator.num_workers()) == C.Communicator.rank():
+                    trainer.train_minibatch(data) # update model with it
+                minibatch_count += 1
             if not post_epoch_work(epoch_stat):
                 break
 

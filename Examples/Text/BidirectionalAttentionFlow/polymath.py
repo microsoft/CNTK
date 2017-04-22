@@ -33,9 +33,11 @@ class PolyMath:
         self.highway_layers = model_config['highway_layers']
         self.two_step = model_config['two_step']
         self.use_cudnn = model_config['use_cudnn']
+        self.use_sparse = C.Communicator.num_workers() == 1 # always use sparse when running single GPU, dense for data_parallel_distributed_learner
 
         print('dropout', self.dropout)
         print('use_cudnn', self.use_cudnn)
+        print('use_sparse', self.use_sparse)
 
     def charcnn(self, x):
         conv_out = C.layers.Sequential([
@@ -59,7 +61,7 @@ class PolyMath:
         def func(wg, wn):
             return C.times(wg, glove) + C.times(wn, nonglove)
         return func
-        
+
     def input_layer(self,cgw,cnw,cc,qgw,qnw,qc):
         cgw_ph = C.placeholder_variable()
         cnw_ph = C.placeholder_variable()
@@ -81,8 +83,8 @@ class PolyMath:
         highway_drop = C.layers.Dropout(self.dropout)(highway)
         processed = OptimizedRnnStack(self.hidden_dim, bidirectional=True, use_cudnn=self.use_cudnn)(highway_drop)
         
-        qce = C.one_hot(qc_ph, num_classes=self.c_dim, sparse_output=True)
-        cce = C.one_hot(cc_ph, num_classes=self.c_dim, sparse_output=True)
+        qce = C.one_hot(qc_ph, num_classes=self.c_dim, sparse_output=self.use_sparse)
+        cce = C.one_hot(cc_ph, num_classes=self.c_dim, sparse_output=self.use_sparse)
                 
         q_processed = processed.clone(C.CloneMethod.share, {input_chars:qce, input_glove_words:qgw_ph, input_nonglove_words:qnw_ph})
         c_processed = processed.clone(C.CloneMethod.share, {input_chars:cce, input_glove_words:cgw_ph, input_nonglove_words:cnw_ph})
@@ -127,7 +129,7 @@ class PolyMath:
         c2q = C.reshape(C.reduce_sum(C.sequence.broadcast_as(qvw, q_attn) * q_attn, axis=0),(-1))
         
         max_col = C.reduce_max(S)
-        c_attn = seq_softmax(max_col)
+        c_attn = C.sequence.softmax(max_col)
         htilde = C.sequence.reduce_sum(c_processed * c_attn)
 
         q2c = C.sequence.broadcast_as(htilde, c_processed)
@@ -181,10 +183,10 @@ class PolyMath:
         c = C.Axis.new_unique_dynamic_axis('c')
         q = C.Axis.new_unique_dynamic_axis('q')
         b = C.Axis.default_batch_axis()
-        cgw = C.input_variable(self.wg_dim, dynamic_axes=[b,c], is_sparse=True, name='cgw')
-        cnw = C.input_variable(self.wn_dim, dynamic_axes=[b,c], is_sparse=True, name='cnw')
-        qgw = C.input_variable(self.wg_dim, dynamic_axes=[b,q], is_sparse=True, name='qgw')
-        qnw = C.input_variable(self.wn_dim, dynamic_axes=[b,q], is_sparse=True, name='qnw')
+        cgw = C.input_variable(self.wg_dim, dynamic_axes=[b,c], is_sparse=self.use_sparse, name='cgw')
+        cnw = C.input_variable(self.wn_dim, dynamic_axes=[b,c], is_sparse=self.use_sparse, name='cnw')
+        qgw = C.input_variable(self.wg_dim, dynamic_axes=[b,q], is_sparse=self.use_sparse, name='qgw')
+        qnw = C.input_variable(self.wn_dim, dynamic_axes=[b,q], is_sparse=self.use_sparse, name='qnw')
         cc = C.input_variable((1,self.word_size), dynamic_axes=[b,c], name='cc')
         qc = C.input_variable((1,self.word_size), dynamic_axes=[b,q], name='qc')
         ab = C.input_variable(self.a_dim, dynamic_axes=[b,c], name='ab')
@@ -242,7 +244,7 @@ class PolyMath:
         start_logits = C.placeholder_variable(shape=())
         end_logits = C.placeholder_variable(shape=())
 
-        start_end_prob = seq_softmax(C.splice(start_logits, end_logits))
+        start_end_prob = C.sequence.softmax(C.splice(start_logits, end_logits))
         combined = C.splice(start_end_prob,ab,ae)
         vw, _ = C.layers.PastValueWindow(self.max_context_len, C.Axis.new_leading_axis(), go_backwards=True)(combined).outputs
         start_prob = C.slice(vw,1,0,1)

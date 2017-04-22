@@ -18,7 +18,7 @@ model_config = {
 }
 
 training_config = {
-    'minibatch_size'	: 4096,    # in samples when using ctf reader
+    'minibatch_size'	: 4096,   # in samples when using ctf reader, per worker
     'epoch_size'     	: 85540,   # in sequences, when using ctf reader
     'log_freq'       	: 500,     # in minibatchs
     'max_epochs'     	: 300,
@@ -28,9 +28,6 @@ training_config = {
     'val_data'       	: 'val.ctf',
     'val_interval'   	: 1,       # interval in epochs to run validation
     'stop_after'     	: 10,      # num epochs to stop if no CV improvement
-    'minibatch_seqs' 	: 16,      # num sequences of minibatch, when using tsv reader
-
-    # block momentum settings
-    'block_size'     	: 10000,    # block size in sequences, for block momentum
-    'distributed_after' : 250000, # num sequences after which to start distributed training
+    'minibatch_seqs' 	: 16,      # num sequences of minibatch, when using tsv reader, per worker
+    'distributed_after' : 0, # num sequences after which to start distributed training
 }

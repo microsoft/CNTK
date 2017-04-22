@@ -38,17 +38,14 @@ def HighwayNetwork(dim, highway_layers, name=''):
     return C.layers.For(range(highway_layers), lambda i : HighwayBlock(dim, name=name+str(i)))
     
 def seq_loss(logits, y):
-    return C.layers.Fold(C.log_add_exp, initial_state=C.constant(-1e+30, logits.shape))(logits) - C.sequence.last(C.sequence.gather(logits, y))
+    prob = C.sequence.softmax(logits)
+    return -C.log(C.sequence.last(C.sequence.gather(prob, y)))
 
 def seq_hardmax(logits):
     seq_max = C.layers.Fold(C.element_max, initial_state=C.constant(-1e+30, logits.shape))(logits)
     s = C.equal(logits, C.sequence.broadcast_as(seq_max, logits))
     s_acc = C.layers.Recurrence(C.plus)(s)
     return s * C.equal(s_acc, 1) # only pick the first one
-
-def seq_softmax(logits):
-    log_sum = C.layers.Fold(C.log_add_exp, initial_state=C.constant(-1e+30, logits.shape))(logits)
-    return C.exp(logits - C.sequence.broadcast_as(log_sum, logits))
 
 class LambdaFunc(C.ops.functions.UserFunction):
     def __init__(self,
