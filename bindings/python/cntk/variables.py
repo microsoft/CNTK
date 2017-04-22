@@ -235,6 +235,7 @@ class VariableMixin(object):
             '''
             Converts type into Variable._Type if given a float, float32, or float64.
             '''
+            # TODO: it would be great if in a future version we could recognize and support Python 3 typing.Sequence
             if type == float:
                 return Variable._Type(shape=(), is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
             elif type == np.float32 or  type == np.float64:

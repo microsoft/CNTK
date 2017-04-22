@@ -250,7 +250,7 @@ class Function(cntk_py.Function):
             arg   = arg_map_item[1]  # argument  = what it gets substituted with
             #print('checking param', param.name, 'against arg', arg.name)
             param_type = param._type
-            arg_type   = getattr(arg, '_type', None)
+            arg_type   = arg._type if isinstance(arg, cntk_py.Variable) else arg.output._type if isinstance(arg, Function) else None
             def param_name(): # helper to get a descriptive name for param
                 if param.name:
                     return "argument '%s'" % param.name
@@ -453,11 +453,11 @@ class Function(cntk_py.Function):
         return getattr(outputs[0], name)
 
     @property
-    def _type(self):
+    def type(self):
         '''
         Get type of a Function's output.
         '''
-        return self.output._type
+        return self.output.type
 
     @property
     @typemap
