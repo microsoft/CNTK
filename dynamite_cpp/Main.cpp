@@ -8,118 +8,87 @@
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
+#include "Layers.h"
 
 #include <iostream>
 #include <cstdio>
 
 using namespace CNTK;
+
+using namespace std;
+
 using namespace std::placeholders;
 
-void TrainCifarResnet();
-void TrainLSTMSequenceClassifier();
-void MNISTClassifierTests();
-void TrainSequenceToSequenceTranslator();
-void TrainTruncatedLSTMAcousticModelClassifier();
-void TestFrameMode();
-void TestDistributedCheckpointing();
+inline FunctionPtr LSTMSequenceClassifierNet(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t LSTMDim, size_t cellDim, const DeviceDescriptor& device, const std::wstring& outputName)
+{
+    auto embeddingFunction = Embedding(input, embeddingDim, device);
+    auto pastValueRecurrenceHook = [](const Variable& x) { return PastValue(x); };
+    auto LSTMFunction = LSTMPComponentWithSelfStabilization<float>(embeddingFunction, { LSTMDim }, { cellDim }, pastValueRecurrenceHook, pastValueRecurrenceHook, device).first;
+    auto thoughtVectorFunction = Sequence::Last(LSTMFunction);
+
+    return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
+}
+
+void TrainLSTMSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabels, bool testSaveAndReLoad)
+{
+    const size_t inputDim = 2000;
+    const size_t cellDim = 25;
+    const size_t hiddenDim = 25;
+    const size_t embeddingDim = 50;
+    const size_t numOutputClasses = 5;
+
+    auto featuresName = L"features";
+    auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName);
+    auto classifierOutput = LSTMSequenceClassifierNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
+
+    auto labelsName = L"labels";
+    auto labels = InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
+    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
+    auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
+
+    if (testSaveAndReLoad)
+    {
+        Variable classifierOutputVar = classifierOutput;
+        Variable trainingLossVar = trainingLoss;
+        Variable predictionVar = prediction;
+        auto oneHiddenLayerClassifier = CNTK::Combine({ trainingLoss, prediction, classifierOutput }, L"classifierModel");
+        SaveAndReloadModel<float>(oneHiddenLayerClassifier, { &features, &labels, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
+
+        classifierOutput = classifierOutputVar;
+        trainingLoss = trainingLossVar;
+        prediction = predictionVar;
+    }
+
+    wstring path = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/";
+    auto minibatchSource = TextFormatMinibatchSource(path + L"Train.ctf",
+    {
+        { featuresName, inputDim, true, L"x" },
+        { labelsName, numOutputClasses, false, L"y" }
+    }, MinibatchSource::FullDataSweep);
+    const size_t minibatchSize = 200;
+
+    auto featureStreamInfo = minibatchSource->StreamInfo(featuresName);
+    auto labelStreamInfo = minibatchSource->StreamInfo(labelsName);
+
+    LearningRatePerSampleSchedule learningRatePerSample = 0.0005;
+    MomentumAsTimeConstantSchedule momentumTimeConstant = 256;
+    auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction,
+    { MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample,
+        momentumTimeConstant, /*unitGainMomentum = */true) });
+
+    size_t outputFrequencyInMinibatches = 1;
+    for (size_t i = 0; true; i++)
+    {
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        if (minibatchData.empty())
+            break;
+
+        trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+        PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
+    }
+}
 
 int main(int argc, char *argv[])
 {
-#if defined(_MSC_VER)
-    // in case of asserts in debug mode, print the message into stderr and throw exception
-    if (_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, HandleDebugAssert) == -1) {
-        fprintf(stderr, "_CrtSetReportHook2 failed.\n");
-        return -1;
-    }
-#endif
-
-    // Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking
-    // which will have a silent performance degradation otherwise
-    Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
-
-#ifndef CPUONLY
-    fprintf(stderr, "Run tests using GPU build.\n");
-#else
-    fprintf(stderr, "Run tests using CPU-only build.\n");
-#endif
-
-    if (argc > 2)
-    {
-        if (argc == 3 && !std::string(argv[1]).compare("Distribution")) {
-            {
-                auto communicator = MPICommunicator();
-                std::string logFilename = argv[2] + std::to_string(communicator->CurrentWorker().m_globalRank);
-                auto result = freopen(logFilename.c_str(), "w", stdout);
-                if (result == nullptr)
-                {
-                    fprintf(stderr, "Could not redirect stdout.\n");
-                    return -1;
-                }
-            }
-
-            TestFrameMode();
-
-            TestDistributedCheckpointing();
-
-            std::string testsPassedMsg = "\nCNTKv2Library-Distribution tests: Passed\n";
-
-            printf("%s", testsPassedMsg.c_str());
-
-            fflush(stdout);
-            DistributedCommunicator::Finalize();
-            fclose(stdout);
-            return 0;
-        }
-        else
-        {
-            fprintf(stderr, "Wrong number of arguments.\n");
-            return -1;
-        }
-    }
-
-    std::string testName = "LSTMSequenceClassifier";//(argv[1]);
-
-    if (!testName.compare("CifarResNet"))
-    {
-        if (ShouldRunOnGpu())
-        {
-            fprintf(stderr, "Run test on a GPU device.\n");
-            TrainCifarResnet();
-        }
-        
-        if (ShouldRunOnCpu())
-        {
-            fprintf(stderr, "Cannot run TrainCifarResnet test on a CPU device.\n");
-        }
-    }
-    else if (!testName.compare("LSTMSequenceClassifier"))
-    {
-        TrainLSTMSequenceClassifier();
-    }
-    else if (!testName.compare("MNISTClassifier"))
-    {
-        MNISTClassifierTests();
-    }
-    else if (!testName.compare("SequenceToSequence"))
-    {
-        TrainSequenceToSequenceTranslator();
-    }
-    else if (!testName.compare("TruncatedLSTMAcousticModel"))
-    {
-        TrainTruncatedLSTMAcousticModelClassifier();
-    }
-    else
-    {
-        fprintf(stderr, "End to end test not found.\n");
-        return -1;
-    }
-
-    std::string testsPassedMsg = "\nCNTKv2Library-" + testName + " tests: Passed\n";
-
-    fprintf(stderr, "%s", testsPassedMsg.c_str());
-    fflush(stderr);
-
-#if defined(_MSC_VER)
-    _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, HandleDebugAssert);
-#endif
+    TrainLSTMSequenceClassifier(DeviceDescriptor::GPUDevice(0), true, false);
 }

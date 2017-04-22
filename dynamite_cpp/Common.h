@@ -10,6 +10,7 @@
 #include <functional>
 #include <fstream>
 #include <random>
+#include "Layers.h"
 
 // enable assert in Release mode.
 #ifdef NDEBUG
@@ -158,136 +159,6 @@ inline void SaveAndReloadModel(FunctionPtr& functionPtr, const std::vector<Varia
 
         *(outputVarInfo.second) = newOutputVar;
     }
-}
-
-inline FunctionPtr FullyConnectedLinearLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::wstring& outputName = L"")
-{
-    assert(input.Shape().Rank() == 1);
-    size_t inputDim = input.Shape()[0];
-
-    auto timesParam = Parameter({ outputDim, inputDim }, DataType::Float, GlorotUniformInitializer(DefaultParamInitScale, SentinelValueForInferParamInitRank, SentinelValueForInferParamInitRank, 1), device, L"timesParam");
-    auto timesFunction = Times(timesParam, input, L"times");
-
-    auto plusParam = Parameter({ outputDim }, 0.0f, device, L"plusParam");
-    return Plus(plusParam, timesFunction, outputName);
-}
-
-inline FunctionPtr FullyConnectedDNNLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity, const std::wstring& outputName = L"")
-{
-    return nonLinearity(FullyConnectedLinearLayer(input, outputDim, device, outputName));
-}
-
-inline FunctionPtr FullyConnectedFeedForwardClassifierNet(Variable input,
-    size_t numOutputClasses,
-    size_t hiddenLayerDim,
-    size_t numHiddenLayers,
-    const DeviceDescriptor& device,
-    const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity,
-    const std::wstring& outputName)
-{
-    assert(numHiddenLayers >= 1);
-    auto classifierRoot = FullyConnectedDNNLayer(input, hiddenLayerDim, device, nonLinearity);
-    for (size_t i = 1; i < numHiddenLayers; ++i)
-        classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
-
-    auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, 1, device));
-    return Times(outputTimesParam, classifierRoot, 1, outputName);
-}
-
-template <typename ElementType>
-inline FunctionPtr Stabilize(const Variable& x, const DeviceDescriptor& device)
-{
-    ElementType scalarConstant = 4.0f;
-    auto f = Constant::Scalar(scalarConstant);
-    auto fInv = Constant::Scalar(f.GetDataType(), 1.0 / scalarConstant);
-
-    auto beta = ElementTimes(fInv, Log(Constant::Scalar(f.GetDataType(), 1.0) + Exp(ElementTimes(f, Parameter({}, f.GetDataType(), 0.99537863 /* 1/f*ln (e^f-1) */, device)))));
-    return ElementTimes(beta, x);
-}
-
-template <typename ElementType>
-std::pair<FunctionPtr, FunctionPtr> LSTMPCellWithSelfStabilization(Variable input, Variable prevOutput, Variable prevCellState, const DeviceDescriptor& device)
-{
-    size_t outputDim = prevOutput.Shape()[0];
-    size_t cellDim = prevCellState.Shape()[0];
-
-    auto createBiasParam = [device](size_t dim) {
-        return Parameter({ dim }, (ElementType)0.0, device);
-    };
-
-    unsigned long seed2 = 1;
-    auto createProjectionParam = [device, &seed2](size_t outputDim) {
-        return Parameter({ outputDim, NDShape::InferredDimension }, AsDataType<ElementType>(), GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
-    };
-
-    auto createDiagWeightParam = [device, &seed2](size_t dim) {
-        return Parameter({ dim }, AsDataType<ElementType>(), GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
-    };
-
-    auto stabilizedPrevOutput = Stabilize<ElementType>(prevOutput, device);
-    auto stabilizedPrevCellState = Stabilize<ElementType>(prevCellState, device);
-
-    auto projectInput = [input, cellDim, createBiasParam, createProjectionParam]() {
-        return createBiasParam(cellDim) + Times(createProjectionParam(cellDim), input);
-    };
-
-    // Input gate
-    auto it = Sigmoid(projectInput() + Times(createProjectionParam(cellDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
-    auto bit = ElementTimes(it, Tanh(projectInput() + Times(createProjectionParam(cellDim), stabilizedPrevOutput)));
-
-    // Forget-me-not gate
-    auto ft = Sigmoid(projectInput() + Times(createProjectionParam(cellDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
-    auto bft = ElementTimes(ft, prevCellState);
-
-    auto ct = bft + bit;
-
-    // Output gate
-    auto ot = Sigmoid(projectInput() + Times(createProjectionParam(cellDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), Stabilize<ElementType>(ct, device)));
-    auto ht = ElementTimes(ot, Tanh(ct));
-
-    auto c = ct;
-    auto h = (outputDim != cellDim) ? Times(createProjectionParam(outputDim), Stabilize<ElementType>(ht, device)) : ht;
-
-    return{ h, c };
-}
-
-template <typename ElementType>
-std::pair<FunctionPtr, FunctionPtr> LSTMPComponentWithSelfStabilization(Variable input,
-    const NDShape& outputShape,
-    const NDShape& cellShape,
-    const std::function<FunctionPtr(const Variable&)>& recurrenceHookH,
-    const std::function<FunctionPtr(const Variable&)>& recurrenceHookC,
-    const DeviceDescriptor& device)
-{
-    auto dh = PlaceholderVariable(outputShape, input.DynamicAxes());
-    auto dc = PlaceholderVariable(cellShape, input.DynamicAxes());
-
-    auto LSTMCell = LSTMPCellWithSelfStabilization<ElementType>(input, dh, dc, device);
-
-    auto actualDh = recurrenceHookH(LSTMCell.first);
-    auto actualDc = recurrenceHookC(LSTMCell.second);
-
-    // Form the recurrence loop by replacing the dh and dc placeholders with the actualDh and actualDc
-    LSTMCell.first->ReplacePlaceholders({ { dh, actualDh }, { dc, actualDc } });
-
-    return{ LSTMCell.first, LSTMCell.second };
-}
-
-// This is currently unused
-inline FunctionPtr SimpleRecurrentLayer(const  Variable& input, const  NDShape& outputDim, const std::function<FunctionPtr(const Variable&)>& recurrenceHook, const DeviceDescriptor& device)
-{
-    auto dh = PlaceholderVariable(outputDim, input.DynamicAxes());
-
-    unsigned long seed = 1;
-    auto createProjectionParam = [device, &seed](size_t outputDim, size_t inputDim) {
-        return Parameter(NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.5, 0.5, seed++, device));
-    };
-
-    auto hProjWeights = createProjectionParam(outputDim[0], outputDim[0]);
-    auto inputProjWeights = createProjectionParam(outputDim[0], input.Shape()[0]);
-
-    auto output = Times(hProjWeights, recurrenceHook(dh)) + Times(inputProjWeights, input);
-    return output->ReplacePlaceholders({ { dh, output } });
 }
 
 inline std::vector<size_t> GenerateSequenceLengths(size_t numSequences, size_t maxAllowedSequenceLength)
@@ -463,24 +334,6 @@ inline size_t FlattenedIndex(const NDShape& shape, const std::vector<size_t>& st
 
     return flattenedIdx;
 };
-
-inline FunctionPtr Embedding(const Variable& input, size_t embeddingDim, const DeviceDescriptor& device)
-{
-    assert(input.Shape().Rank() == 1);
-    size_t inputDim = input.Shape()[0];
-    auto embeddingParameters = Parameter({ embeddingDim, inputDim }, DataType::Float, GlorotUniformInitializer(), device);
-    return Times(embeddingParameters, input);
-}
-
-inline FunctionPtr LSTMSequenceClassifierNet(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t LSTMDim, size_t cellDim, const DeviceDescriptor& device, const std::wstring& outputName)
-{
-    auto embeddingFunction = Embedding(input, embeddingDim, device);
-    auto pastValueRecurrenceHook = [](const Variable& x) { return PastValue(x); };
-    auto LSTMFunction = LSTMPComponentWithSelfStabilization<float>(embeddingFunction, { LSTMDim }, { cellDim }, pastValueRecurrenceHook, pastValueRecurrenceHook, device).first;
-    auto thoughtVectorFunction = Sequence::Last(LSTMFunction);
-
-    return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
-}
 
 inline bool AreEqual(const NDArrayViewPtr& view1, const NDArrayViewPtr& view2)
 {
