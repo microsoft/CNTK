@@ -58,7 +58,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     The weight matrix will be a tensor that reflects the "flattened" dimensions in its axes.
 
     Example:
-     >>> f = Dense(5, activation=C.relu)
+     >>> f = Dense(5, activation=C.softmax) # a 5-class classifier
      >>> x = input((64,16,16)) # e.g. an image reduced by a convolution stack
      >>> y = f(x)
      >>> y.shape
@@ -71,18 +71,18 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     projected, as in the example above.
 
     Example:
-     >>> f = Dense(5, activation=C.relu, input_rank=2)
+     >>> f = Dense(5, activation=C.softmax, input_rank=2) # a 5-class classifier
      >>> x = input((10, 3, 3)) # e.g. 10 parallel 3x3 objects. Input has input_rank=2 axes
      >>> y = f(x)
-     >>> y.shape  # the "10" dimension is retained
+     >>> y.shape  # the 10 parallel objects are classified separately, the "10" dimension is retained
      (10, 5)
      >>> f.W.shape  # "row" dimension of "matrix" consists of (3,3) matching the input axes to project
      (3, 3, 5)
 
-     >>> f = Dense(5, activation=C.relu, map_rank=2)
-     >>> x = input((4, 6, 3, 3, 3)) # e.g. 20 parallel 3x3x3 objects arranged in a 4x5 grid. The grid is to be retained
+     >>> f = Dense(5, activation=C.softmax, map_rank=2)
+     >>> x = input((4, 6, 3, 3, 3)) # e.g. 24 parallel 3x3x3 objects arranged in a 4x5 grid. The grid is to be retained
      >>> y = f(x)
-     >>> y.shape  # the 4x6 grid is retained
+     >>> y.shape  # the 4x6 elements are classified separately, the grid structure is retained
      (4, 6, 5)
      >>> f.W.shape  # "row" dimension of "matrix" consists of (3,3) matching the input axes to project
      (3, 3, 3, 5)
