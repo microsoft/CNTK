@@ -52,11 +52,18 @@ inline FunctionPtr CreateModel(size_t numOutputClasses, size_t embeddingDim, siz
 
     //auto dh = PlaceholderVariable(); // exception: Times: The right operand 'Output('PastValue26_Output_0', [], [*, #])' rank (0) must be >= #axes (1) being reduced over.
     auto dh = PlaceholderVariable({ hiddenDim }, ((Variable)r).DynamicAxes());
-    r = RNNStep<float>(PastValue(dh), r, device);
-    r->ReplacePlaceholders({ { dh, r } });
+    auto x1 = PlaceholderVariable();
+    auto r1 = r;
+    r = RNNStep<float>(PastValue(dh), x1, device);
+    r->ReplacePlaceholders({ { dh, r }, { x1, r1 } });
 
-    r = Sequence::Last(r);
-    r = Linear(r, numOutputClasses, device);
+    auto r2 = r;
+    r = Sequence::Last(PlaceholderVariable());
+    r->ReplacePlaceholder(r2);
+
+    auto r3 = r;
+    r = Linear(PlaceholderVariable(), numOutputClasses, device);
+    r->ReplacePlaceholder(r3);
     return r;
 }
 
@@ -90,7 +97,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto labelStreamInfo   = minibatchSource->StreamInfo(labelsName);
 
     auto learner = SGDLearner(classifierOutput->Parameters(), LearningRatePerSampleSchedule(0.05));
-    auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { learner });
+    auto trainer = CreateTrainer(nullptr, trainingLoss, prediction, { learner });
 
     const size_t minibatchSize = 200;
     for (size_t i = 0; true; i++)
