@@ -47,7 +47,7 @@ def create_mb_and_map(func, data_file, polymath, randomize=True, repeat=True):
     }
     return mb_source, input_map
 
-def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, answers=[[]], context_tokens=[[]]):
+def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, misc={}):
     with open(tsv_file, 'r', encoding='utf-8') as f:
         eof = False
         while not eof:
@@ -59,9 +59,7 @@ def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, answers=[[]
                     eof = True
                     break
 
-                ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids = tsv2ctf.tsv_iter(line, polymath.vocab, polymath.chars, is_test, answers)
-                if is_test:
-                    context_tokens[0] += [ctokens]
+                ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids = tsv2ctf.tsv_iter(line, polymath.vocab, polymath.chars, is_test, misc)
 
                 batch['cwids'].append(cwids)
                 batch['qwids'].append(qwids)
@@ -148,7 +146,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
                 trainer.save_checkpoint(model_file)
             else:
                 epoch_stat['best_since'] += 1
-                if best_since > stop_after:
+                if epoch_stat['best_since'] > training_config['stop_after']:
                     return False
 
         if profiling:
@@ -269,6 +267,24 @@ def validate_model(test_data, model, polymath):
             
     return loss_avg
 
+# map from token to char offset
+def w2c_map(s, words):
+    w2c=[]
+    rem=s
+    offset=0
+    for i,w in enumerate(words):
+        cidx=rem.find(w)
+        assert(cidx>=0)
+        w2c.append(cidx+offset)
+        offset+=cidx + len(w)
+        rem=rem[cidx + len(w):]
+    return w2c
+
+# get phrase from string based on tokens and their offsets
+def get_answer(raw_text, tokens, start, end):
+    w2c=w2c_map(raw_text, tokens)
+    return raw_text[w2c[start]:w2c[end]+len(tokens[end])]
+
 def test(test_data, model_path, config_file):
     polymath = PolyMath(config_file)
     model = C.load_model(os.path.join(model_path, model_name))
@@ -283,27 +299,31 @@ def test(test_data, model_path, config_file):
     f1_sum = 0
     em_sum = 0
     num_seq = 0
-    answers = [[]]
-    context_tokens = [[]]
-    batch_size = 128 # in sequences
+    batch_size = 16 # in sequences
     num_batch = 0
-    tsv_reader = create_tsv_reader(loss, test_data, polymath, batch_size, is_test=True, answers=answers, context_tokens=context_tokens)
+    misc = {'rawctx':[], 'ctoken':[], 'answer':[]}
+    tsv_reader = create_tsv_reader(loss, test_data, polymath, batch_size, is_test=True, misc=misc)
     for data in tsv_reader:
         start_time = time.time()
         out = model.eval(data, outputs=[begin_logits,end_logits,loss], as_numpy=False)
         g = best_span_score.grad({begin_prediction:out[begin_logits], end_prediction:out[end_logits]}, wrt=[begin_prediction,end_prediction], as_numpy=False)
         other_input_map = {begin_prediction: g[begin_prediction], end_prediction: g[end_prediction]}
         span = predicted_span.eval((other_input_map))
-        for seq, (ctokens, answer) in enumerate(zip(context_tokens[0], answers[0])):
-            predict_answer = ''.join([ctokens[i]+' ' if c == 1 else '' for i,c in enumerate(span[seq])])
-            f1 = metric_max_over_ground_truths(f1_score, predict_answer, answer)
-            em = metric_max_over_ground_truths(exact_match_score, predict_answer, answer)
+        for seq, (raw_text, ctokens, answer) in enumerate(zip(misc['rawctx'], misc['ctoken'], misc['answer'])):
+            seq_where = np.argwhere(span[seq])[:,0]
+            span_begin = np.min(seq_where)
+            span_end = np.max(seq_where)
+            predict_answer = get_answer(raw_text, ctokens, span_begin, span_end)
+            f1 = metric_max_over_ground_truths(f1_score, predict_answer, misc['answer'][seq])
+            em = metric_max_over_ground_truths(exact_match_score, predict_answer, misc['answer'][seq])
             f1_sum += f1
             em_sum += 1 if em else 0
             #print(f1, em, predict_answer.encode('utf-8'), [ans.encode('utf-8') for ans in answer])
-        num_seq += len(answers[0])
-        answers[0]=[]
-        context_tokens[0]=[]
+        
+        num_seq += len(misc['rawctx'])
+        misc['rawctx'] = []
+        misc['ctoken'] = []
+        misc['answer'] = []
         num_batch += 1
         end_time = time.time()
         print("Tested {} batches ({:.1f} seq / second), F1 {:.4f}, EM {:.4f}".format(num_batch, batch_size / (end_time - start_time), f1_sum / num_seq, em_sum / num_seq))

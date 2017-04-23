@@ -24,6 +24,7 @@ def populate_dicts(files):
     chars = defaultdict(count().__next__)
     wdcnt = defaultdict(int)
     chcnt = defaultdict(int)
+    test_wdcnt = defaultdict(int) # all glove words in test/dev should be added to known, but non-glove words in test/dev should be kept unknown
 
     # count the words and characters to find the ones with cardinality above the thresholds
     for f in files:
@@ -34,15 +35,19 @@ def populate_dicts(files):
                 else:
                     uid, title, context, query, begin_answer, end_answer, answer = line.split('\t')
                 tokens = context.split(' ')+query.split(' ')
-                for t in tokens:
-                    wdcnt[t.lower()] += 1
-                    for c in t: chcnt[c] += 1
+                if 'train' in f:
+                    for t in tokens:
+                        wdcnt[t.lower()] += 1
+                        for c in t: chcnt[c] += 1
+                else:
+                    for t in tokens:
+                        test_wdcnt[t.lower()] += 1
 
     # add all words that are both in glove and the vocabulary first
     with open('glove.6B.100d.txt', encoding='utf-8') as f:
         for line in f:
             word = line.split()[0].lower()
-            if wdcnt[word] >= 1: # polymath adds word to dict regardless of word_count_threshold when it's in GloVe
+            if wdcnt[word] >= 1 or test_wdcnt[word] >= 1: # polymath adds word to dict regardless of word_count_threshold when it's in GloVe
                 _ = vocab[word]
     known =len(vocab)
 
@@ -59,14 +64,13 @@ def populate_dicts(files):
     # return as defaultdict(int) so that new keys will return 0 which is the value for <unknown>
     return known, defaultdict(int, vocab), defaultdict(int, chars)
     
-def tsv_iter(line, vocab, chars, is_test=False, answers=[[]]):
+def tsv_iter(line, vocab, chars, is_test=False, misc={}):
     unk_w = vocab[unk]
     unk_c = chars[unk]
 
     if is_test:
-        uid, title, context, query, answer, other = line.split('\t')
+        uid, title, context, query, answer, raw = line.split('\t')
         begin_answer, end_answer = '0', '1'
-        answers[0] += [answer.split(';')]
     else:
         uid, title, context, query, begin_answer, end_answer, answer = line.split('\t')
 
@@ -97,6 +101,11 @@ def tsv_iter(line, vocab, chars, is_test=False, answers=[[]]):
     eaidx = [0 if i != ea else 1 for i,t in enumerate(ctokens)]
     if sum(eaidx) == 0:
         raise ValueError('problem with input line:\n%s' % line)
+
+    if is_test:
+        misc['answer'] += [answer.split(';')]
+        misc['rawctx'] += [raw]
+        misc['ctoken'] += [ctokens]
 
     return ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids
 
