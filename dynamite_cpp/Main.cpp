@@ -17,11 +17,11 @@ using namespace CNTK;
 
 using namespace std;
 
-FunctionPtr Embedding(const Variable& input, size_t embeddingDim, const DeviceDescriptor& device)
+FunctionPtr Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
     auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
 
-    return Times(E, input);
+    return Times(E, PlaceholderVariable());
 }
 
 template <typename ElementType>
@@ -36,39 +36,38 @@ FunctionPtr RNNStep(Variable prevOutput, Variable input, const DeviceDescriptor&
     return ReLU(Times(W, input) + Times(R, prevOutput) + b);
 }
 
-FunctionPtr Linear(Variable input, size_t outputDim, const DeviceDescriptor& device)
+FunctionPtr Linear(size_t outputDim, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
     auto b = Parameter({ outputDim }, 0.0f, device);
 
-    return Times(W, input) + b;
+    return Times(W, PlaceholderVariable()) + b;
+}
+
+FunctionPtr Sequential(const vector<FunctionPtr>& fns)
+{
+    for (size_t i = 1; i < fns.size(); i++)
+        fns[i]->ReplacePlaceholder(fns[i - 1]->Output());
+    return fns.back();
+}
+
+FunctionPtr Recurrence(const function<FunctionPtr(Variable,Variable)>& stepFunction)
+{
+    auto dh = PlaceholderVariable({ 25 }, Axis::UnknownDynamicAxes());
+    auto rec = stepFunction(PastValue(dh), PlaceholderVariable());
+    rec->ReplacePlaceholders({ { dh, rec } });
+    return rec;
 }
 
 // Embedding(50) >> Recurrence(RNNStep(25)) >> Last >> Linear(5)
-inline FunctionPtr CreateModel(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
+FunctionPtr CreateModel(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
-    auto embed = Embedding(PlaceholderVariable(), embeddingDim, device);
-
-    //auto dh = PlaceholderVariable(); // exception: Times: The right operand 'Output('PastValue26_Output_0', [], [*, #])' rank (0) must be >= #axes (1) being reduced over.
-    auto dh = PlaceholderVariable({ hiddenDim }, ((Variable)embed).DynamicAxes());
-    //auto x1 = PlaceholderVariable();
-    //auto r1 = r;
-    auto rec = RNNStep<float>(PastValue(dh), PlaceholderVariable(), device);
-    rec->ReplacePlaceholders({ { dh, rec } });
-
-    //auto r2 = r;
-    auto last = Sequence::Last(PlaceholderVariable());
-    //r->ReplacePlaceholder(r2);
-
-    //auto r3 = r;
-    auto dense = Linear(PlaceholderVariable(), numOutputClasses, device);
-    //r->ReplacePlaceholder(r3);
-
-    auto fns = vector<FunctionPtr>{ embed, rec, last, dense };
-    for (size_t i = 1; i < fns.size(); i++)
-        fns[i]->ReplacePlaceholder(fns[i - 1]->Output());
-
-    return fns.back();
+    return Sequential({
+        Embedding(embeddingDim, device),
+        Recurrence([device](Variable dh, Variable x) -> FunctionPtr { return RNNStep<float>(dh, x, device); }),
+        Sequence::Last(PlaceholderVariable()),
+        Linear(numOutputClasses, device)
+    });
 }
 
 void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabels)
@@ -119,7 +118,8 @@ int main(int argc, char *argv[])
 {
     try
     {
-        TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
+        //TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
+        TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
     }
     catch (exception& e)
     {
