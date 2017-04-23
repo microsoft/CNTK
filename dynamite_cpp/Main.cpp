@@ -17,40 +17,37 @@ using namespace CNTK;
 
 using namespace std;
 
-typedef function<FunctionPtr(Variable)> UnaryFunction;
-typedef function<FunctionPtr(Variable, Variable)> BinaryFunction;
+typedef function<FunctionPtr(Variable)> UnaryModel;
+typedef function<FunctionPtr(Variable, Variable)> BinaryModel;
 
-UnaryFunction Embedding(size_t embeddingDim, const DeviceDescriptor& device)
+UnaryModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
     auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
-
     return [=](Variable x)
     {
         return Times(E, x);
     };
 }
 
-BinaryFunction RNNStep(size_t outputDim, const DeviceDescriptor& device)
+BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
     auto R = Parameter({ outputDim, outputDim                  }, DataType::Float, GlorotUniformInitializer(), device);
     auto b = Parameter({ outputDim }, 0.0f, device);
-
     return [=](Variable prevOutput, Variable input)
     {
         return ReLU(Times(W, input) + Times(R, prevOutput) + b);
     };
 }
 
-UnaryFunction Linear(size_t outputDim, const DeviceDescriptor& device)
+UnaryModel Linear(size_t outputDim, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
     auto b = Parameter({ outputDim }, 0.0f, device);
-
     return [=](Variable x) { return Times(W, x) + b; };
 }
 
-UnaryFunction Sequential(const vector<UnaryFunction>& fns)
+UnaryModel Sequential(const vector<UnaryModel>& fns)
 {
     return [=](Variable x)
     {
@@ -61,7 +58,7 @@ UnaryFunction Sequential(const vector<UnaryFunction>& fns)
     };
 }
 
-UnaryFunction Recurrence(const function<FunctionPtr(Variable,Variable)>& stepFunction)
+UnaryModel Recurrence(const function<FunctionPtr(Variable,Variable)>& stepFunction)
 {
     return [=](Variable x)
     {
@@ -72,7 +69,7 @@ UnaryFunction Recurrence(const function<FunctionPtr(Variable,Variable)>& stepFun
     };
 }
 
-UnaryFunction Fold(const function<FunctionPtr(Variable, Variable)>& stepFunction)
+UnaryModel Fold(const function<FunctionPtr(Variable, Variable)>& stepFunction)
 {
     auto recurrence = Recurrence(stepFunction);
     return [=](Variable x)
@@ -81,7 +78,7 @@ UnaryFunction Fold(const function<FunctionPtr(Variable, Variable)>& stepFunction
     };
 }
 
-UnaryFunction CreateModel(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
+UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
     return Sequential({
         Embedding(embeddingDim, device),
@@ -90,7 +87,7 @@ UnaryFunction CreateModel(size_t numOutputClasses, size_t embeddingDim, size_t h
     });
 }
 
-function<pair<Variable,Variable>(Variable, Variable)> CreateCriterion(UnaryFunction model)
+function<pair<Variable,Variable>(Variable, Variable)> CreateCriterionFunction(UnaryModel model)
 {
     return [=](Variable features, Variable labels)
     {
@@ -113,8 +110,8 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     const wstring trainingCTFPath = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf";
 
     // model and criterion function
-    auto model_fn = CreateModel(numOutputClasses, embeddingDim, hiddenDim, device);
-    auto criterion_fn = CreateCriterion(model_fn);
+    auto model_fn = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
+    auto criterion_fn = CreateCriterionFunction(model_fn);
 
     // data
     const wstring featuresName = L"features";
