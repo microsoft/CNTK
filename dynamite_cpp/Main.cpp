@@ -18,6 +18,7 @@ using namespace CNTK;
 using namespace std;
 
 typedef function<FunctionPtr(Variable)> UnaryFunction;
+typedef function <FunctionPtr(Variable, Variable)> BinaryFunction;
 
 UnaryFunction Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
@@ -26,16 +27,16 @@ UnaryFunction Embedding(size_t embeddingDim, const DeviceDescriptor& device)
     return [=](Variable x) { return Times(E, x); };
 }
 
-template <typename ElementType>
-FunctionPtr RNNStep(Variable prevOutput, Variable input, const DeviceDescriptor& device)
+BinaryFunction RNNStep(size_t outputDim, const DeviceDescriptor& device)
 {
-    size_t outputDim = prevOutput.Shape()[0];
+    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
+    auto R = Parameter({ outputDim, outputDim                  }, DataType::Float, GlorotUniformInitializer(), device);
+    auto b = Parameter({ outputDim }, 0.0f, device);
 
-    auto W = Parameter({ outputDim, NDShape::InferredDimension }, AsDataType<ElementType>(), GlorotUniformInitializer(), device);
-    auto R = Parameter({ outputDim, outputDim                  }, AsDataType<ElementType>(), GlorotUniformInitializer(), device);
-    auto b = Parameter({ outputDim }, (ElementType)0.0, device);
-
-    return ReLU(Times(W, input) + Times(R, prevOutput) + b);
+    return [=](Variable prevOutput, Variable input)
+    {
+        return ReLU(Times(W, input) + Times(R, prevOutput) + b);
+    };
 }
 
 UnaryFunction Linear(size_t outputDim, const DeviceDescriptor& device)
@@ -79,12 +80,11 @@ UnaryFunction Fold(const function<FunctionPtr(Variable, Variable)>& stepFunction
     };
 }
 
-// Embedding(50) >> Recurrence(RNNStep(25)) >> Last >> Linear(5)
 UnaryFunction CreateModel(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
     return Sequential({
         Embedding(embeddingDim, device),
-        Fold([device](Variable dh, Variable x) -> FunctionPtr { return RNNStep<float>(dh, x, device); }),
+        Fold(RNNStep(hiddenDim, device)),
         Linear(numOutputClasses, device)
     });
 }
