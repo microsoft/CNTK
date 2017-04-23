@@ -17,11 +17,13 @@ using namespace CNTK;
 
 using namespace std;
 
-FunctionPtr Embedding(size_t embeddingDim, const DeviceDescriptor& device)
+typedef function<FunctionPtr(Variable)> UnaryFunction;
+
+UnaryFunction Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
     auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
 
-    return Times(E, PlaceholderVariable());
+    return [=](Variable x) { return Times(E, x); };
 }
 
 template <typename ElementType>
@@ -36,12 +38,12 @@ FunctionPtr RNNStep(Variable prevOutput, Variable input, const DeviceDescriptor&
     return ReLU(Times(W, input) + Times(R, prevOutput) + b);
 }
 
-FunctionPtr Linear(size_t outputDim, const DeviceDescriptor& device)
+UnaryFunction Linear(size_t outputDim, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
     auto b = Parameter({ outputDim }, 0.0f, device);
 
-    return Times(W, PlaceholderVariable()) + b;
+    return [=](Variable x) { return Times(W, x) + b; };
 }
 
 FunctionPtr Sequential(const vector<FunctionPtr>& fns)
@@ -51,22 +53,25 @@ FunctionPtr Sequential(const vector<FunctionPtr>& fns)
     return fns.back();
 }
 
-FunctionPtr Recurrence(const function<FunctionPtr(Variable,Variable)>& stepFunction)
+UnaryFunction Recurrence(const function<FunctionPtr(Variable,Variable)>& stepFunction)
 {
-    auto dh = PlaceholderVariable({ 25 }, Axis::UnknownDynamicAxes());
-    auto rec = stepFunction(PastValue(dh), PlaceholderVariable());
-    rec->ReplacePlaceholders({ { dh, rec } });
-    return rec;
+    return [=](Variable x)
+    {
+        auto dh = PlaceholderVariable({ 25 }, Axis::UnknownDynamicAxes());
+        auto rec = stepFunction(PastValue(dh), x);
+        rec->ReplacePlaceholders({ { dh, rec } });
+        return rec;
+    };
 }
 
 // Embedding(50) >> Recurrence(RNNStep(25)) >> Last >> Linear(5)
 FunctionPtr CreateModel(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
     return Sequential({
-        Embedding(embeddingDim, device),
-        Recurrence([device](Variable dh, Variable x) -> FunctionPtr { return RNNStep<float>(dh, x, device); }),
+        Embedding(embeddingDim, device)(PlaceholderVariable()),
+        Recurrence([device](Variable dh, Variable x) -> FunctionPtr { return RNNStep<float>(dh, x, device); })(PlaceholderVariable()),
         Sequence::Last(PlaceholderVariable()),
-        Linear(numOutputClasses, device)
+        Linear(numOutputClasses, device)(PlaceholderVariable())
     });
 }
 
