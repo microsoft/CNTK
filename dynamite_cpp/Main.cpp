@@ -17,8 +17,53 @@ using namespace CNTK;
 
 using namespace std;
 
+FunctionPtr Embedding(const Variable& input, size_t embeddingDim, const DeviceDescriptor& device)
+{
+    assert(input.Shape().Rank() == 1);
+    size_t inputDim = input.Shape()[0];
+    auto embeddingParameters = Parameter({ embeddingDim, inputDim }, DataType::Float, GlorotUniformInitializer(), device);
+    return Times(embeddingParameters, input);
+}
+
+template <typename ElementType>
+FunctionPtr RNNStep(Variable input, Variable prevOutput, const DeviceDescriptor& device)
+{
+    size_t outputDim = prevOutput.Shape()[0];
+
+    auto createBiasParam = [device](size_t dim) {
+        return Parameter({ dim }, (ElementType)0.0, device);
+    };
+
+    unsigned long seed2 = 1;
+    auto createProjectionParam = [device, &seed2](size_t outputDim, size_t inputDim) {
+        return Parameter({ outputDim, inputDim },
+            AsDataType<ElementType>(),
+            GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
+    };
+
+    auto W = createProjectionParam(outputDim, NDShape::InferredDimension);
+    auto R = createProjectionParam(outputDim, outputDim);
+    auto b = createBiasParam(outputDim);
+
+    auto h = ReLU(b + Times(W, input) + Times(R, prevOutput));
+
+    return h;
+}
+
+FunctionPtr Dense(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::wstring& outputName = L"")
+{
+    assert(input.Shape().Rank() == 1);
+    size_t inputDim = input.Shape()[0];
+
+    auto timesParam = Parameter({ outputDim, inputDim }, DataType::Float, GlorotUniformInitializer(DefaultParamInitScale, SentinelValueForInferParamInitRank, SentinelValueForInferParamInitRank, 1), device, L"timesParam");
+    auto timesFunction = Times(timesParam, input, L"times");
+
+    auto plusParam = Parameter({ outputDim }, 0.0f, device, L"plusParam");
+    return Plus(plusParam, timesFunction, outputName);
+}
+
 // Embedding(50) >> Recurrence(RNNStep(25)) >> Last >> Dense(5)
-inline FunctionPtr CreateModel(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device, const std::wstring& outputName)
+inline FunctionPtr CreateModel(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
     auto r = Embedding(input, embeddingDim, device);
 
@@ -27,7 +72,7 @@ inline FunctionPtr CreateModel(const Variable& input, size_t numOutputClasses, s
     r->ReplacePlaceholders({ { dh, PastValue(r) } });
 
     r = Sequence::Last(r);
-    r = FullyConnectedLinearLayer(r, numOutputClasses, device, outputName);
+    r = Dense(r, numOutputClasses, device);
     return r;
 }
 
@@ -38,18 +83,19 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     const size_t hiddenDim        = 25;
     const size_t numOutputClasses = 5;
 
+    const wstring trainingCTFPath = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf";
+
     const wstring featuresName = L"features";
     const wstring labelsName   = L"labels";
 
     auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName);
-    auto classifierOutput = CreateModel(features, numOutputClasses, embeddingDim, hiddenDim, device, L"classifierOutput");
+    auto classifierOutput = CreateModel(features, numOutputClasses, embeddingDim, hiddenDim, device);
 
     auto labels = InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
-    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
-    auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
+    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels);
+    auto prediction   = CNTK::ClassificationError    (classifierOutput, labels);
 
-    const wstring path = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/";
-    auto minibatchSource = TextFormatMinibatchSource(path + L"Train.ctf",
+    auto minibatchSource = TextFormatMinibatchSource(trainingCTFPath,
     {
         { featuresName, inputDim,         true,  L"x" },
         { labelsName,   numOutputClasses, false, L"y" }

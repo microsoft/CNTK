@@ -16,22 +16,10 @@ using namespace CNTK;
 #pragma warning(push)
 #pragma warning(disable: 4996)
 
-FunctionPtr FullyConnectedLinearLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::wstring& outputName = L"")
-{
-    assert(input.Shape().Rank() == 1);
-    size_t inputDim = input.Shape()[0];
-
-    auto timesParam = Parameter({ outputDim, inputDim }, DataType::Float, GlorotUniformInitializer(DefaultParamInitScale, SentinelValueForInferParamInitRank, SentinelValueForInferParamInitRank, 1), device, L"timesParam");
-    auto timesFunction = Times(timesParam, input, L"times");
-
-    auto plusParam = Parameter({ outputDim }, 0.0f, device, L"plusParam");
-    return Plus(plusParam, timesFunction, outputName);
-}
-
-FunctionPtr FullyConnectedDNNLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity, const std::wstring& outputName = L"")
-{
-    return nonLinearity(FullyConnectedLinearLayer(input, outputDim, device, outputName));
-}
+//FunctionPtr FullyConnectedDNNLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity, const std::wstring& outputName = L"")
+//{
+//    return nonLinearity(FullyConnectedLinearLayer(input, outputDim, device, outputName));
+//}
 
 template <typename ElementType>
 FunctionPtr Stabilize(const Variable& x, const DeviceDescriptor& device)
@@ -112,31 +100,6 @@ std::pair<FunctionPtr, FunctionPtr> LSTMPComponentWithSelfStabilization(Variable
     return{ LSTMCell.first, LSTMCell.second };
 }
 
-template <typename ElementType>
-FunctionPtr RNNStep(Variable input, Variable prevOutput, const DeviceDescriptor& device)
-{
-    size_t outputDim = prevOutput.Shape()[0];
-
-    auto createBiasParam = [device](size_t dim) {
-        return Parameter({ dim }, (ElementType)0.0, device);
-    };
-
-    unsigned long seed2 = 1;
-    auto createProjectionParam = [device, &seed2](size_t outputDim, size_t inputDim) {
-        return Parameter({ outputDim, inputDim },
-                         AsDataType<ElementType>(),
-                         GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
-    };
-
-    auto W = createProjectionParam(outputDim, NDShape::InferredDimension);
-    auto R = createProjectionParam(outputDim, outputDim);
-    auto b = createBiasParam(outputDim);
-
-    auto h = ReLU(b + Times(W, input) + Times(R, prevOutput));
-
-    return h;
-}
-
 // This is currently unused
 inline FunctionPtr SimpleRecurrentLayer(const  Variable& input, const  NDShape& outputDim, const std::function<FunctionPtr(const Variable&)>& recurrenceHook, const DeviceDescriptor& device)
 {
@@ -152,12 +115,4 @@ inline FunctionPtr SimpleRecurrentLayer(const  Variable& input, const  NDShape& 
 
     auto output = Times(hProjWeights, recurrenceHook(dh)) + Times(inputProjWeights, input);
     return output->ReplacePlaceholders({ { dh, output } });
-}
-
-inline FunctionPtr Embedding(const Variable& input, size_t embeddingDim, const DeviceDescriptor& device)
-{
-    assert(input.Shape().Rank() == 1);
-    size_t inputDim = input.Shape()[0];
-    auto embeddingParameters = Parameter({ embeddingDim, inputDim }, DataType::Float, GlorotUniformInitializer(), device);
-    return Times(embeddingParameters, input);
 }
