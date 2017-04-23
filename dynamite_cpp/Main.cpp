@@ -19,10 +19,9 @@ using namespace std;
 
 FunctionPtr Embedding(const Variable& input, size_t embeddingDim, const DeviceDescriptor& device)
 {
-    assert(input.Shape().Rank() == 1);
-    size_t inputDim = input.Shape()[0];
-    auto embeddingParameters = Parameter({ embeddingDim, inputDim }, DataType::Float, GlorotUniformInitializer(), device);
-    return Times(embeddingParameters, input);
+    auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
+
+    return Times(E, input);
 }
 
 template <typename ElementType>
@@ -30,49 +29,33 @@ FunctionPtr RNNStep(Variable input, Variable prevOutput, const DeviceDescriptor&
 {
     size_t outputDim = prevOutput.Shape()[0];
 
-    auto createBiasParam = [device](size_t dim) {
-        return Parameter({ dim }, (ElementType)0.0, device);
-    };
+    auto W = Parameter({ outputDim, NDShape::InferredDimension }, AsDataType<ElementType>(), GlorotUniformInitializer(), device);
+    auto R = Parameter({ outputDim, outputDim                  }, AsDataType<ElementType>(), GlorotUniformInitializer(), device);
+    auto b = Parameter({ outputDim }, (ElementType)0.0, device);
 
-    unsigned long seed2 = 1;
-    auto createProjectionParam = [device, &seed2](size_t outputDim, size_t inputDim) {
-        return Parameter({ outputDim, inputDim },
-            AsDataType<ElementType>(),
-            GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
-    };
-
-    auto W = createProjectionParam(outputDim, NDShape::InferredDimension);
-    auto R = createProjectionParam(outputDim, outputDim);
-    auto b = createBiasParam(outputDim);
-
-    auto h = ReLU(b + Times(W, input) + Times(R, prevOutput));
-
-    return h;
+    return ReLU(Times(W, input) + Times(R, prevOutput) + b);
 }
 
-FunctionPtr Dense(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::wstring& outputName = L"")
+FunctionPtr Linear(Variable input, size_t outputDim, const DeviceDescriptor& device)
 {
-    assert(input.Shape().Rank() == 1);
-    size_t inputDim = input.Shape()[0];
+    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
+    auto b = Parameter({ outputDim }, 0.0f, device);
 
-    auto timesParam = Parameter({ outputDim, inputDim }, DataType::Float, GlorotUniformInitializer(DefaultParamInitScale, SentinelValueForInferParamInitRank, SentinelValueForInferParamInitRank, 1), device, L"timesParam");
-    auto timesFunction = Times(timesParam, input, L"times");
-
-    auto plusParam = Parameter({ outputDim }, 0.0f, device, L"plusParam");
-    return Plus(plusParam, timesFunction, outputName);
+    return Times(W, input) + b;
 }
 
-// Embedding(50) >> Recurrence(RNNStep(25)) >> Last >> Dense(5)
+// Embedding(50) >> Recurrence(RNNStep(25)) >> Last >> Linear(5)
 inline FunctionPtr CreateModel(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
     auto r = Embedding(input, embeddingDim, device);
 
+    //auto dh = PlaceholderVariable();
     auto dh = PlaceholderVariable({ hiddenDim }, ((Variable)r).DynamicAxes());
     r = RNNStep<float>(r, dh, device);
     r->ReplacePlaceholders({ { dh, PastValue(r) } });
 
     r = Sequence::Last(r);
-    r = Dense(r, numOutputClasses, device);
+    r = Linear(r, numOutputClasses, device);
     return r;
 }
 
@@ -89,7 +72,8 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     const wstring labelsName   = L"labels";
 
     auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName);
-    auto classifierOutput = CreateModel(features, numOutputClasses, embeddingDim, hiddenDim, device);
+    auto classifierOutput = CreateModel(PlaceholderVariable(), numOutputClasses, embeddingDim, hiddenDim, device);
+    classifierOutput->ReplacePlaceholder(features);
 
     auto labels = InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels);
@@ -121,5 +105,12 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
 int main(int argc, char *argv[])
 {
-    TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
+    try
+    {
+        TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
+    }
+    catch (exception& e)
+    {
+        fprintf(stderr, "EXCEPTION caught: %s\n", e.what());
+    }
 }
