@@ -17,8 +17,8 @@ using namespace CNTK;
 
 using namespace std;
 
-typedef function<FunctionPtr(Variable)> UnaryModel;
-typedef function<FunctionPtr(Variable, Variable)> BinaryModel;
+typedef function<Variable(Variable)> UnaryModel;
+typedef function<Variable(Variable, Variable)> BinaryModel;
 
 UnaryModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
@@ -58,18 +58,18 @@ UnaryModel Sequential(const vector<UnaryModel>& fns)
     };
 }
 
-UnaryModel Recurrence(const function<FunctionPtr(Variable,Variable)>& stepFunction)
+UnaryModel Recurrence(const function<Variable(Variable,Variable)>& stepFunction)
 {
     return [=](Variable x)
     {
         auto dh = PlaceholderVariable();
         auto rec = stepFunction(PastValue(dh), x);
-        rec->ReplacePlaceholders({ { dh, rec } });
+        FunctionPtr(rec)->ReplacePlaceholders({ { dh, rec } });
         return rec;
     };
 }
 
-UnaryModel Fold(const function<FunctionPtr(Variable, Variable)>& stepFunction)
+UnaryModel Fold(const function<Variable(Variable, Variable)>& stepFunction)
 {
     auto recurrence = Recurrence(stepFunction);
     return [=](Variable x)
