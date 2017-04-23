@@ -17,16 +17,23 @@ using namespace CNTK;
 
 using namespace std;
 
-typedef function<Variable(Variable)> UnaryModel;
-typedef function<Variable(Variable, Variable)> BinaryModel;
+template<class Base>
+class NnaryModel : public Base
+{
+public:
+    NnaryModel(const Base& f) : Base(f){}
+    // need to think a bit how to store nested NnaryModels
+};
+typedef NnaryModel<function<Variable(Variable)>> UnaryModel;
+typedef NnaryModel<function<Variable(Variable,Variable)>> BinaryModel;
 
 UnaryModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
     auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
-    return [=](Variable x)
+    return UnaryModel([=](Variable x)
     {
         return Times(E, x);
-    };
+    });
 }
 
 BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
