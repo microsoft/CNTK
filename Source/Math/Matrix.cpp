@@ -1767,6 +1767,39 @@ void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>&
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 
+///
+// Implement the original nadam algorithm according to the paper
+// Ref: Incorporating Nesterov Momentum into Adam, http://cs229.stanford.edu/proj2015/054_report.pdf
+///
+template <class ElemType>
+void Matrix<ElemType>::NAdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
+	const double learnRatePerSample, const double meanMomentum, const double meanMomentumNextMB, const double accumulatedMomentum,
+	const double varMomentum, bool unitGainMomentum)
+{
+	smoothedCount++;
+	// Bias correction
+	let biasCorrection = (ElemType)(sqrt(1 - pow(varMomentum, smoothedCount)));
+	//accumulatedMomentum *= meanMomentum;
+
+	DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
+	{
+		m_CPUMatrix->NAdam(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix,
+		(ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)meanMomentumNextMB,
+		(ElemType)varMomentum, biasCorrection, (ElemType)accumulatedMomentum ,unitGainMomentum);
+	SetDataLocation(CPU);
+	},
+	{
+		m_GPUMatrix->NAdam(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix,
+		(ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)meanMomentumNextMB,
+		(ElemType)varMomentum, biasCorrection, (ElemType)accumulatedMomentum ,unitGainMomentum);
+	SetDataLocation(GPU);
+	},
+	{ NOT_IMPLEMENTED; },
+	{ NOT_IMPLEMENTED; });
+
+	// Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
+}
+
 template <class ElemType>
 ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
                                    ElemType RMS_GAMMA,

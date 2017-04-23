@@ -131,67 +131,6 @@ public:
 template class LogPlusNode<float>;
 template class LogPlusNode<double>;
 
-
-// -----------------------------------------------------------------------
-// PowNode (base, exponent)
-// Computes base ** exponent.
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class PowNode : public BinaryElementWiseNode<ElemType>
-{
-    typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName() { return L"Pow"; }
-
-public:
-    DeclareConstructorFromConfigWithNumInputs(PowNode);
-    PowNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-    {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
-        auto base   = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
-        auto expo   = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
-        result.AssignPowOf(base, expo);
-    }
-
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
-    {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto gradient = GradientTensorFor(rank, fr);
-        auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
-        auto base = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
-
-        // if reduction then mask the respective input(s) (zero out the gaps)
-        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
-            MaskMissingGradientColumnsToZero(fr);
-        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
-            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
-
-
-        if (inputIndex == 0)
-        {
-            auto exponent = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
-            // d/dx x**y = y * x**(y-1)
-            inputGradient.AddElementwiseProductWithPowBaseDerivativeOf(gradient, base, exponent);
-        }
-        else
-        {
-            auto result = ValueTensorFor(rank, fr);
-            // d/dy x**y = ln(x) * x**y
-            inputGradient.AddElementwiseProductWithPowExponentDerivativeOf(gradient, result, base);
-        }
-    }
-};
-
-template class PowNode<float>;
-template class PowNode<double>;
-
-
 // -----------------------------------------------------------------------
 // MinusNode (minuend, subtrahend)
 // -----------------------------------------------------------------------
@@ -465,16 +404,14 @@ private:
         TensorView<ElemType> unpackedInput[NumInputs];
         for (int i = 0; i < NumInputs; i++)
         {
-            ElemType gapPadValue = 0;
             unpackedInput[i] = ComputationNode<ElemType>::Unpack(
                 InputRef(i).GetSampleLayout(),
                 InputRef(i).Value(),
                 inputMBLayout,
                 m_tempUnpackedValue[i],
                 m_tempScatterIndices[i],
-                std::shared_ptr<Matrix<char>>(nullptr),
                 /*batchMajor=*/ false,
-                &gapPadValue);
+                /*maskGaps=*/ true);
         }
 
         // note the unpacked input is not the normal MBLayout (batchMajor) so do ColumnSlice directly
@@ -506,16 +443,14 @@ private:
         bool unpacked[NumInputs];
         for (int i = 0; i < NumInputs; i++)
         {
-            ElemType gapPadValue = 0;
             unpackedInput[i] = ComputationNode<ElemType>::Unpack(
                 InputRef(i).GetSampleLayout(),
                 InputRef(i).Value(),
                 input0MBLayout, // the same for both operands
                 m_tempUnpackedValue[i],
                 m_tempScatterIndices[i],
-                std::shared_ptr<Matrix<char>>(nullptr),
                 /*batchMajor=*/ false,
-                &gapPadValue);
+                /*maskGaps=*/ true);
 
             unpacked[i] = ((input0MBLayout->GetNumTimeSteps() > 1) && (input0MBLayout->GetNumSequences() > 1));
         }

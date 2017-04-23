@@ -5,8 +5,8 @@
 # ==============================================================================
 
 '''
-Basic building blocks that are semantically not layers (not used in a layered fashion),
-e.g. the LSTM block.
+blocks -- basic building blocks that are semantically not layers (not used in a layered fashion)
+          e.g. the LSTM
 '''
 
 from __future__ import division
@@ -77,8 +77,6 @@ def _inject_name(f, name):
     Call this at the end of any layer or block that takes an optional name argument.
     '''
     if name:
-        if not isinstance(f, Function):
-            f = Function(f)
         if len(f.outputs) == 1:
             f = alias(f, name=name)
         else:

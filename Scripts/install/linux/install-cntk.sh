@@ -30,11 +30,11 @@ while true; do
   case "$1" in
     --py-version)
       case "$2" in
-        27 | 34 | 35 | 36)
+        27 | 34 | 35)
           PY_VERSION="$2"
           ;;
         *)
-          die "Invalid value for --py-version option, please specify 27, 34, 35, or 36."
+          die "Invalid value for --py-version option, please specify 27, 34, or 35."
           ;;
       esac
       shift 2

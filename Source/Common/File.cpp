@@ -973,20 +973,18 @@ extern std::unordered_map<std::wstring, std::wstring> g_deprecatedReaderWriterNa
 
 #ifdef _WIN32
 
-FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc, bool isCNTKPlugin)
+FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc)
 {
     m_dllName = plugin;
 
-    if (isCNTKPlugin)
+    // map legacy names to new naming scheme
+    auto entry = g_deprecatedReaderWriterNameMap.find(m_dllName);
+    if (entry != g_deprecatedReaderWriterNameMap.end())
     {
-        // map legacy names to new naming scheme
-        auto entry = g_deprecatedReaderWriterNameMap.find(m_dllName);
-        if (entry != g_deprecatedReaderWriterNameMap.end())
-            m_dllName = entry->second;
-
-        m_dllName += L"-" + msra::strfun::utf16(std::string(CNTK_COMPONENT_VERSION));
+        m_dllName = entry->second;
     }
 
+    m_dllName += L"-" + msra::strfun::utf16(std::string(CNTK_COMPONENT_VERSION));
     m_dllName += L".dll";
     m_hModule = LoadLibrary(m_dllName.c_str());
     if (m_hModule == NULL)
@@ -1003,21 +1001,19 @@ FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
-void* Plugin::LoadInternal(const std::string& plugin, const std::string& proc, bool isCNTKPlugin)
+void* Plugin::LoadInternal(const std::string& plugin, const std::string& proc)
 {
     string soName = plugin;
     wstring soNameW = msra::strfun::utf16(plugin);
 
-    if (isCNTKPlugin)
+    // map legacy names to new naming scheme
+    auto entry = g_deprecatedReaderWriterNameMap.find(soNameW);
+    if (entry != g_deprecatedReaderWriterNameMap.end())
     {
-        // map legacy names to new naming scheme
-        auto entry = g_deprecatedReaderWriterNameMap.find(soNameW);
-        if (entry != g_deprecatedReaderWriterNameMap.end())
-            soName = msra::strfun::utf8(entry->second);
-
-        soName += "-" + std::string(TOSTRING(CNTK_COMPONENT_VERSION));
+        soName = msra::strfun::utf8(entry->second);
     }
 
+    soName += "-" + std::string(TOSTRING(CNTK_COMPONENT_VERSION));
     soName += ".so";
     void* handle = dlopen(soName.c_str(), RTLD_LAZY);
     if (handle == NULL)

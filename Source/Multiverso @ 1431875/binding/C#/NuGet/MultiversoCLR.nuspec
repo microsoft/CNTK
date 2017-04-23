@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>MultiversoCLR</id>
+    <version>1.0.1</version>
+    <authors>feiga</authors>
+    <owners>feiga</owners>
+    <licenseUrl>http://github.com/Microsoft/multiverso/blob/master/LICENSE</licenseUrl>
+    <projectUrl>http://github.com/Microsoft/multiverso</projectUrl>
+    <iconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>MultiversoCLR</description>
+    <copyright>Copyright 2016</copyright>
+    <tags>Multiverso</tags>
+  </metadata>
+  <files>
+    <file src="MultiversoCLR.dll" target="lib\"/>
+    <file src="libzmq-v120-mt-4_0_4.dll" target="build\x64"/>
+  </files>
+</package>

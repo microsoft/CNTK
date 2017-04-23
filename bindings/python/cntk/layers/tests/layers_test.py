@@ -481,7 +481,7 @@ def test_layers_convolution_shape():
 
 def test_layers_convolution_value():
     # Common parameters
-    inC, inH, inW = 3, 10, 10
+    inC, inH, inW = 1, 3, 3
     in_filter_shape = (3, 3)
     out_num_filters = 1
     dat = np.ones([1, inC, inH, inW], dtype = np.float32)
@@ -501,7 +501,7 @@ def test_layers_convolution_value():
     res = model(y).eval({y: dat})
 
     # Extract the W weight matrix
-    expected_res = np.sum(model.foo.W.value)
+    expected_res = np.sum(getattr(model, 'foo').parameters[0].value)
 
     np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=7, \
         err_msg="Error in convolution computation with stride = 1 and zeropad = False")
@@ -520,9 +520,9 @@ def test_layers_convolution_value():
     res = model(y).eval({y: dat})
 
     # Extract the W weight matrix
-    expected_res = np.sum(model.foo.W.value)
+    expected_res = np.sum(getattr(model, 'foo').parameters[0].value)
 
-    np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=5, \
+    np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=7, \
         err_msg="Error in convolution computation with stride = 2 and zeropad = False")
 
     ##########################################################
@@ -539,27 +539,14 @@ def test_layers_convolution_value():
     res = model(y).eval({y: dat})
 
     # Extract the W weight matrix
-    expected_res = np.sum(model.foo.W.value)
+    expected_res = np.sum(getattr(model, 'foo').parameters[0].value)
 
     # Compare the center of the res with the sum of the weights
     np.testing.assert_array_almost_equal(res[0][0][1][1], expected_res, decimal=7, \
         err_msg="Error in convolution computation with stride = 1 and zeropad = True")
 
     ##########################################################
-    # Test convolutional layer for second invocation/parameter sharing
-    ##########################################################
-    y1 = input((inC, inH, inW))
-    res = model(y1).eval({y1: dat}) # this re-clones 'model'
-
-    # Extract the W weight matrix
-    expected_res = np.sum(model.foo.W.value)
-
-    # Compare the center of the res with the sum of the weights
-    np.testing.assert_array_almost_equal(res[0][0][1][1], expected_res, decimal=7, \
-        err_msg="Error in convolution computation with stride = 1 and zeropad = True, second invocation")
-
-    ##########################################################
-    # Test convolutional layer for correctness (p=True s = 2)
+    # Test convolutional layer for correctness (p=True s = 1)
     ##########################################################
     zeropad = True
     in_strides = 2
@@ -572,11 +559,12 @@ def test_layers_convolution_value():
     res = model(y).eval({y: dat})
 
     # Extract the W weight matrix
-    expected_res = np.sum(model.foo.W.value[0,:,1:,1:])
+    W = getattr(model, 'foo').parameters[0].value
+    expected_res = np.sum(W[0][0][1:,1:])
 
-    # Compare at the top-left corner, to see the effect of zero-padding.
+    # Compare the center of the res with the sum of the weights
     np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=5,
-        err_msg="Error in convolution computation with stride = 2 and zeropad = True")
+        err_msg="Error in convolution computation with stride = 1 and zeropad = True")
 
 ##########################################################
 # Test convolutional 3D layer for correctness (p=False s = 1)
@@ -599,7 +587,7 @@ def test_layers_convolution_3d():
 
     res = model(y).eval({y: dat})
 
-    expected_res = np.sum(model.foo.W.value)
+    expected_res = np.sum(getattr(model, 'foo').parameters[0].value)
 
     np.testing.assert_array_almost_equal(res[0][0][0][0][0], expected_res, decimal=5, \
         err_msg="Error in convolution3D computation with stride = 1 and zeropad = True")
@@ -625,7 +613,7 @@ def test_layers_convolution_2d():
 
     res = model(y).eval({y: dat})
 
-    expected_res = np.sum(model.foo.W.value)
+    expected_res = np.sum(getattr(model, 'foo').parameters[0].value)
 
     np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=5, \
         err_msg="Error in convolution2D computation with stride = 1 and zeropad = True")

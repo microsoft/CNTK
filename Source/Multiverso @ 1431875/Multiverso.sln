@@ -1,0 +1,78 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.40629.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test", "Test\Test.vcxproj", "{546681D6-495C-4AEE-BBC2-3CAEC86B5137}"
+	ProjectSection(ProjectDependencies) = postProject
+		{16F14058-B116-49D9-8BA0-209F3AFFE849} = {16F14058-B116-49D9-8BA0-209F3AFFE849}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Multiverso", "src\Multiverso.vcxproj", "{16F14058-B116-49D9-8BA0-209F3AFFE849}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Applications", "Applications", "{E89A2FAD-9A40-49CD-89C1-519721658DF0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{24641475-000A-42C2-ACE9-72334689D8A2}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LogisticRegression", "Applications\LogisticRegression\LogisticRegression.vcxproj", "{AC12B871-D57D-493A-86A6-7778929D5A46}"
+	ProjectSection(ProjectDependencies) = postProject
+		{16F14058-B116-49D9-8BA0-209F3AFFE849} = {16F14058-B116-49D9-8BA0-209F3AFFE849}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WordEmbedding", "Applications\WordEmbedding\WordEmbedding.vcxproj", "{73A81AC2-ECC6-4932-B0CF-0776BEAABCB9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{16F14058-B116-49D9-8BA0-209F3AFFE849} = {16F14058-B116-49D9-8BA0-209F3AFFE849}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UnitTests", "UnitTests", "{8C589AB2-05F5-48E7-A21D-400395760939}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MultiversoCLR", "binding\C#\MultiversoCLR\MultiversoCLR.vcxproj", "{8A33C1F0-77BB-4ADC-83B2-12146A199DFD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{16F14058-B116-49D9-8BA0-209F3AFFE849} = {16F14058-B116-49D9-8BA0-209F3AFFE849}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MultiversoTests", "Test\UnitTests\MultiversoTests.vcxproj", "{EC7157E9-A51F-4702-A5FD-8DAF88C7029F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{16F14058-B116-49D9-8BA0-209F3AFFE849} = {16F14058-B116-49D9-8BA0-209F3AFFE849}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{546681D6-495C-4AEE-BBC2-3CAEC86B5137}.Debug|x64.ActiveCfg = Debug|x64
+		{546681D6-495C-4AEE-BBC2-3CAEC86B5137}.Debug|x64.Build.0 = Debug|x64
+		{546681D6-495C-4AEE-BBC2-3CAEC86B5137}.Release|x64.ActiveCfg = Release|x64
+		{546681D6-495C-4AEE-BBC2-3CAEC86B5137}.Release|x64.Build.0 = Release|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug|x64.ActiveCfg = Debug|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug|x64.Build.0 = Debug|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release|x64.ActiveCfg = Release|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release|x64.Build.0 = Release|x64
+		{AC12B871-D57D-493A-86A6-7778929D5A46}.Debug|x64.ActiveCfg = Debug|x64
+		{AC12B871-D57D-493A-86A6-7778929D5A46}.Debug|x64.Build.0 = Debug|x64
+		{AC12B871-D57D-493A-86A6-7778929D5A46}.Release|x64.ActiveCfg = Release|x64
+		{AC12B871-D57D-493A-86A6-7778929D5A46}.Release|x64.Build.0 = Release|x64
+		{73A81AC2-ECC6-4932-B0CF-0776BEAABCB9}.Debug|x64.ActiveCfg = Debug|x64
+		{73A81AC2-ECC6-4932-B0CF-0776BEAABCB9}.Debug|x64.Build.0 = Debug|x64
+		{73A81AC2-ECC6-4932-B0CF-0776BEAABCB9}.Release|x64.ActiveCfg = Release|x64
+		{73A81AC2-ECC6-4932-B0CF-0776BEAABCB9}.Release|x64.Build.0 = Release|x64
+		{8A33C1F0-77BB-4ADC-83B2-12146A199DFD}.Debug|x64.ActiveCfg = Debug|x64
+		{8A33C1F0-77BB-4ADC-83B2-12146A199DFD}.Release|x64.ActiveCfg = Release|x64
+		{EC7157E9-A51F-4702-A5FD-8DAF88C7029F}.Debug|x64.ActiveCfg = Debug|x64
+		{EC7157E9-A51F-4702-A5FD-8DAF88C7029F}.Debug|x64.Build.0 = Debug|x64
+		{EC7157E9-A51F-4702-A5FD-8DAF88C7029F}.Release|x64.ActiveCfg = Release|x64
+		{EC7157E9-A51F-4702-A5FD-8DAF88C7029F}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{546681D6-495C-4AEE-BBC2-3CAEC86B5137} = {24641475-000A-42C2-ACE9-72334689D8A2}
+		{AC12B871-D57D-493A-86A6-7778929D5A46} = {E89A2FAD-9A40-49CD-89C1-519721658DF0}
+		{73A81AC2-ECC6-4932-B0CF-0776BEAABCB9} = {E89A2FAD-9A40-49CD-89C1-519721658DF0}
+		{8C589AB2-05F5-48E7-A21D-400395760939} = {24641475-000A-42C2-ACE9-72334689D8A2}
+		{EC7157E9-A51F-4702-A5FD-8DAF88C7029F} = {8C589AB2-05F5-48E7-A21D-400395760939}
+	EndGlobalSection
+EndGlobal

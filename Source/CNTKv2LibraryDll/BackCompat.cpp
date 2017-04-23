@@ -23,7 +23,6 @@
 #include "PreComputeNodes.h"
 #include "DeprecatedNodes.h"
 #include "SpecialPurposeNodes.h"
-#include "SequenceReshapeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 

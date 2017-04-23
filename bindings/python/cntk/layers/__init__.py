@@ -4,9 +4,7 @@
 # for full license information.
 # ==============================================================================
 
-'''
-CNTK Layers library
-'''
+# CNTK Layers library
 
 from .blocks import *
 from .higher_order_layers import *

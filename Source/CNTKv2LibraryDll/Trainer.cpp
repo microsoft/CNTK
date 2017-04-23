@@ -73,9 +73,6 @@ namespace CNTK
             m_aggregatedTrainingEvalCriterionValue = std::make_shared<Accumulator>();
         }
 
-        // create a default eval value in case there's no criterion
-        m_prevMinibatchAggregateEvalCriterionValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(0, m_aggregatedLossFunction->Output().GetDataType(), NDShape{ 1 }, DeviceDescriptor::CPUDevice()));
-
         m_combinedTrainingFunction = Combine(combinedFunctionArgs);
         SetCombinedEvalFunction(m_combinedTrainingFunction);
 
