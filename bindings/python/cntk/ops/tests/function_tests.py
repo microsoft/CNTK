@@ -433,22 +433,52 @@ def test_eval_again_with_prev_outputs_live(device_id):
     op = C.combine([out1, out2])
 
     result1 = op.eval({x : np.asarray([2, 5], dtype=np.float32)}, device=dev)
+    assert np.array_equal(result1[out1.output], [[3, 6]])
+    assert np.array_equal(result1[out2.output], [[1, 4]])
+
     result2 = op.eval({x : np.asarray([[-1, 4], [-4, 7]], dtype=np.float32)}, device=dev)
     assert np.array_equal(result2[out1.output], [[0, 5], [-3, 8]])
     assert np.array_equal(result2[out2.output], [[-2, 3], [-5, 6]])
 
+    # result1 should still be valid
+    assert np.array_equal(result1[out1.output], [[3, 6]])
+    assert np.array_equal(result1[out2.output], [[1, 4]])
+
     result1 = op.eval({x : np.asarray([2, 5], dtype=np.float32)}, device=dev, as_numpy=False)
+    assert np.array_equal(result1[out1.output].asarray(), [[3, 6]])
+    assert np.array_equal(result1[out2.output].asarray(), [[1, 4]])
+
     result2 = op.eval({x : np.asarray([[-1, 4], [-4, 7]], dtype=np.float32)}, device=dev, as_numpy=False)
     assert np.array_equal(result2[out1.output].asarray(), [[0, 5], [-3, 8]])
     assert np.array_equal(result2[out2.output].asarray(), [[-2, 3], [-5, 6]])
 
+    # Accessing result1 now will cause an error since it was a temporary that
+    # is now erased, due to the subsequent eval call
+    with pytest.raises(RuntimeError):
+        assert np.array_equal(result1[out1.output].asarray(), [[3, 6]])
+    
     grad_op = out1 + out2
     grad1 = grad_op.grad({x : np.asarray([2, 5], dtype=np.float32)}, wrt=[w1, w2], device=dev)
+    assert np.array_equal(grad1[w1], [2])
+    assert np.array_equal(grad1[w2], [2])
+
     grad2 = grad_op.grad({x : np.asarray([[-1, 4], [-4, 7]], dtype=np.float32)}, wrt=[w1, w2], device=dev)
     assert np.array_equal(grad2[w1], [4])
     assert np.array_equal(grad2[w2], [4])
 
+    # grad1 should still be valid
+    assert np.array_equal(grad1[w1], [2])
+    assert np.array_equal(grad1[w2], [2])
+
     grad1 = grad_op.grad({x : np.asarray([2, 5], dtype=np.float32)}, wrt=[w1, w2], device=dev, as_numpy=False)
+    assert np.array_equal(grad1[w1].asarray(), [2])
+    assert np.array_equal(grad1[w2].asarray(), [2])
+
     grad2 = grad_op.grad({x : np.asarray([[-1, 4], [-4, 7]], dtype=np.float32)}, wrt=[w1, w2], device=dev, as_numpy=False)
     assert np.array_equal(grad2[w1].asarray(), [4])
     assert np.array_equal(grad2[w2].asarray(), [4])
+
+    # Accessing grad1 now will cause an error since it was a temporary that
+    # is now erased, due to the subsequent grad call
+    with pytest.raises(RuntimeError):
+        assert np.array_equal(grad1[w1].asarray(), [2])

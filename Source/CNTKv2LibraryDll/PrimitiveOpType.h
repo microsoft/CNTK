@@ -78,6 +78,10 @@ namespace CNTK
         ForwardBackward = 66,
         CosDistanceWithNegativeSamples = 67,
         OneHot = 68,
+        Pow = 69,
+        ToSequence = 70,
+        ToSequenceLike = 71,
+        UnpackSequence = 72,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

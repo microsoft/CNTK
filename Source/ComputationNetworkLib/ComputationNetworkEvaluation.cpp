@@ -460,9 +460,9 @@ void ComputationNetwork::CompileNetwork()
 
     if (TraceLevel() > 0)
     {
-    fprintf(stderr, "\n%d roots:\n", (int)m_allRoots.size());
-    for (const auto& root : m_allRoots)
-        fprintf(stderr, "\t%ls = %ls()\n", root->NodeName().c_str(), root->OperationName().c_str());
+        fprintf(stderr, "\n%d roots:\n", (int)m_allRoots.size());
+        for (const auto& root : m_allRoots)
+            fprintf(stderr, "\t%ls = %ls()\n", root->NodeName().c_str(), root->OperationName().c_str());
     }
 
     // Note: Steps below are loops over root nodes. We will gradually push those loops through to the functions,
@@ -508,7 +508,8 @@ void ComputationNetwork::CompileNetwork()
     ResetEvalTimeStamps(); // invalidate all m_value fields. Really belongs into StartEvaluateMinibatchLoop()
 
     if (TraceLevel() > 0)
-    fprintf(stderr, "\nPost-processing network complete.\n\n");
+        fprintf(stderr, "\nPost-processing network complete.\n\n");
+
     m_isCompiled = true;
 }
 
@@ -715,12 +716,20 @@ bool ComputationNetwork::ValidateNode(ComputationNodeBasePtr node, bool isFinalV
     for (auto& child : children)
         childDims.push_back(GetDims(child));
     auto sampleLayout = node->GetSampleLayout();
-    // We do call validate(final) as many times as needed, since stuff may have changed underneath.
-    node->Validate(isFinalValidationPass /*final*/); // all nodes have been visited: do verification instead of just inference
-    // also take the opportunity to propagate m_needsGradient
+
+    // also take the opportunity to propagate m_needsGradient and m_nodeNeedsDynamicValidation
+    bool nodeNeedsDynamicValidation = node->NeedsDynamicValidation();
+    node->m_needsDynamicValidation |= nodeNeedsDynamicValidation;
     auto needsGradient = node->m_needsGradient;
     for (auto& child : children) // TODO: do we need a check that this is stable if isFinalValidationPass?
+    {
         node->m_needsGradient |= child->m_needsGradient;
+        node->m_needsDynamicValidation |= child->m_needsDynamicValidation;
+    }
+
+    // We do call validate(final) as many times as needed, since stuff may have changed underneath.
+    node->Validate(isFinalValidationPass && !node->m_needsDynamicValidation /*final*/); // all nodes have been visited: do verification instead of just inference
+
     // check state --node will be valid if all nodes have been visited and node has not been updated
     bool unchanged = true;
     unchanged &= (oldMBLayoutPtr == node->GetMBLayout());
@@ -731,6 +740,7 @@ bool ComputationNetwork::ValidateNode(ComputationNodeBasePtr node, bool isFinalV
     unchanged &= (childDims == newChildDims);
     unchanged &= (sampleLayout == node->GetSampleLayout());
     unchanged &= (needsGradient == node->m_needsGradient);
+    unchanged &= (nodeNeedsDynamicValidation == node->m_needsDynamicValidation);
     return !unchanged;
 }
 
