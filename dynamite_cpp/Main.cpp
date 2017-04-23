@@ -58,7 +58,7 @@ UnaryModel Sequential(const vector<UnaryModel>& fns)
     };
 }
 
-UnaryModel Recurrence(const function<Variable(Variable,Variable)>& stepFunction)
+UnaryModel Recurrence(const BinaryModel& stepFunction)
 {
     return [=](Variable x)
     {
@@ -69,7 +69,7 @@ UnaryModel Recurrence(const function<Variable(Variable,Variable)>& stepFunction)
     };
 }
 
-UnaryModel Fold(const function<Variable(Variable, Variable)>& stepFunction)
+UnaryModel Fold(const BinaryModel& stepFunction)
 {
     auto recurrence = Recurrence(stepFunction);
     return [=](Variable x)
