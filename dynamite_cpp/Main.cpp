@@ -17,15 +17,17 @@ using namespace CNTK;
 
 using namespace std;
 
+namespace Dynamite {
+
 template<class Base>
-class NnaryModel : public Base
+class ModelT : public Base
 {
 public:
-    NnaryModel(const Base& f) : Base(f){}
+    ModelT(const Base& f) : Base(f){}
     // need to think a bit how to store nested NnaryModels
 };
-typedef NnaryModel<function<Variable(Variable)>> UnaryModel;
-typedef NnaryModel<function<Variable(Variable,Variable)>> BinaryModel;
+typedef ModelT<function<Variable(Variable)>> UnaryModel;
+typedef ModelT<function<Variable(Variable,Variable)>> BinaryModel;
 
 UnaryModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
@@ -84,6 +86,20 @@ UnaryModel Fold(const BinaryModel& stepFunction)
         return Sequence::Last(recurrence(x));
     };
 }
+
+struct Batch
+{
+};
+
+struct Sequence
+{
+    const static function<Variable(Variable)> Last;
+};
+const /*static*/ function<Variable(Variable)> Sequence::Last = [](Variable x) -> Variable { return CNTK::Sequence::Last(x); };
+
+}; // namespace
+
+using namespace Dynamite;
 
 UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
