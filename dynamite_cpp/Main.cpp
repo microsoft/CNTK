@@ -47,24 +47,28 @@ FunctionPtr Linear(Variable input, size_t outputDim, const DeviceDescriptor& dev
 // Embedding(50) >> Recurrence(RNNStep(25)) >> Last >> Linear(5)
 inline FunctionPtr CreateModel(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
-    auto x = PlaceholderVariable();
-    auto r = Embedding(x, embeddingDim, device);
+    auto embed = Embedding(PlaceholderVariable(), embeddingDim, device);
 
     //auto dh = PlaceholderVariable(); // exception: Times: The right operand 'Output('PastValue26_Output_0', [], [*, #])' rank (0) must be >= #axes (1) being reduced over.
-    auto dh = PlaceholderVariable({ hiddenDim }, ((Variable)r).DynamicAxes());
-    auto x1 = PlaceholderVariable();
-    auto r1 = r;
-    r = RNNStep<float>(PastValue(dh), x1, device);
-    r->ReplacePlaceholders({ { dh, r }, { x1, r1 } });
+    auto dh = PlaceholderVariable({ hiddenDim }, ((Variable)embed).DynamicAxes());
+    //auto x1 = PlaceholderVariable();
+    //auto r1 = r;
+    auto rec = RNNStep<float>(PastValue(dh), PlaceholderVariable(), device);
+    rec->ReplacePlaceholders({ { dh, rec } });
 
-    auto r2 = r;
-    r = Sequence::Last(PlaceholderVariable());
-    r->ReplacePlaceholder(r2);
+    //auto r2 = r;
+    auto last = Sequence::Last(PlaceholderVariable());
+    //r->ReplacePlaceholder(r2);
 
-    auto r3 = r;
-    r = Linear(PlaceholderVariable(), numOutputClasses, device);
-    r->ReplacePlaceholder(r3);
-    return r;
+    //auto r3 = r;
+    auto dense = Linear(PlaceholderVariable(), numOutputClasses, device);
+    //r->ReplacePlaceholder(r3);
+
+    auto fns = vector<FunctionPtr>{ embed, rec, last, dense };
+    for (size_t i = 1; i < fns.size(); i++)
+        fns[i]->ReplacePlaceholder(fns[i - 1]->Output());
+
+    return fns.back();
 }
 
 void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabels)
