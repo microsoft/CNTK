@@ -52,8 +52,8 @@ inline FunctionPtr CreateModel(size_t numOutputClasses, size_t embeddingDim, siz
 
     //auto dh = PlaceholderVariable(); // exception: Times: The right operand 'Output('PastValue26_Output_0', [], [*, #])' rank (0) must be >= #axes (1) being reduced over.
     auto dh = PlaceholderVariable({ hiddenDim }, ((Variable)r).DynamicAxes());
-    r = RNNStep<float>(dh, r, device);
-    r->ReplacePlaceholders({ { dh, PastValue(r) } });
+    r = RNNStep<float>(PastValue(dh), r, device);
+    r->ReplacePlaceholders({ { dh, r } });
 
     r = Sequence::Last(r);
     r = Linear(r, numOutputClasses, device);
