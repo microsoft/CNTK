@@ -64,7 +64,7 @@ def populate_dicts(files):
     # return as defaultdict(int) so that new keys will return 0 which is the value for <unknown>
     return known, defaultdict(int, vocab), defaultdict(int, chars)
     
-def tsv_iter(line, vocab, chars, is_test=False, misc={}):
+def tsv_iter(line, vocab, chars, is_test=False, misc={'rawctx':[], 'ctoken':[], 'answer':[]}):
     unk_w = vocab[unk]
     unk_c = chars[unk]
 
