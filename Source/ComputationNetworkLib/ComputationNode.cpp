@@ -89,9 +89,8 @@ template<class ElemType>
                                                                   const MBLayoutPtr& layout,
                                                                   const std::shared_ptr<Matrix<ElemType>>& unpackedDataStorage,
                                                                   const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage,
-                                                                  const std::shared_ptr<Matrix<char>>& tempMaskStorage,
                                                                   bool batchMajor,
-                                                                  const ElemType* gapPadValue)
+                                                                  bool maskGaps)
 {
     size_t maxNumTimeSteps = 1;
     size_t numSequences = 1;
@@ -109,8 +108,11 @@ template<class ElemType>
     if ((maxNumTimeSteps == 1) || (numSequences == 1) || (batchMajor && (layout->GetNumParallelSequences() == layout->GetNumSequences())))
     {
         unpackedData = std::make_shared<Matrix<ElemType>>(packedData.AsReference());
-        if (gapPadValue && layout && layout->HasGaps())
-            MaskMissingColumnsTo<ElemType>(*unpackedData, layout, FrameRange(layout), *gapPadValue);
+
+        if (maskGaps && layout && layout->HasGaps())
+        {
+            MaskMissingColumnsTo<ElemType>(*unpackedData, layout, FrameRange(layout), 0);
+        }
     }
     else
     {
@@ -118,18 +120,16 @@ template<class ElemType>
         if (!unpackedData)
             unpackedData = std::make_shared<Matrix<ElemType>>(packedData.GetNumRows(), maxNumTimeSteps * numSequences, packedData.GetDeviceId(), packedData.GetMatrixType(), packedData.GetFormat());
         else
-        {
-            unpackedData->SwitchToMatrixType(packedData.GetMatrixType(), packedData.GetFormat(), /*keepValues=*/false);
             unpackedData->Resize(packedData.GetNumRows(), maxNumTimeSteps * numSequences);
-        }
+
+        if (maskGaps)
+            unpackedData->SetValue(0.0f);
 
         size_t i = 0;
         auto& layoutSequences = layout->GetAllSequences();
         int numLayoutSequences = (int)layoutSequences.size();
         std::vector<ElemType> scatterIndicesVector(layout->GetNumCols(), -1);
-        std::vector<char> columnsValidityMask;
-        if (gapPadValue)
-            columnsValidityMask.resize(numSequences * maxNumTimeSteps, 1);
+
         for (int layoutSequenceIdx = 0; layoutSequenceIdx < numLayoutSequences; ++layoutSequenceIdx)
         {
             auto sequenceInfo = layoutSequences[layoutSequenceIdx];
@@ -140,16 +140,10 @@ template<class ElemType>
                 auto currentSequenceEndIdx = std::min(maxNumTimeSteps, sequenceInfo.tEnd);
                 size_t currentSequenceLength = (currentSequenceEndIdx - currentSequenceBeginIdx);
 
-                for (size_t j = 0; j < maxNumTimeSteps; ++j)
+                for (size_t j = 0; j < currentSequenceLength; ++j)
                 {
-                    auto targetIdx = (batchMajor ? ((j * numSequences) + i) : ((i * maxNumTimeSteps) + j));
-                    if (j < currentSequenceLength)
-                        scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx] = (ElemType)targetIdx;
-                    else
-                    {
-                        if (gapPadValue)
-                            columnsValidityMask[targetIdx] = 0;
-                    }
+                    auto targetIdx = (ElemType)(batchMajor ? ((j * numSequences) + i) : ((i * maxNumTimeSteps) + j));
+                    scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx] = targetIdx;
                 }
 
                 i++;
@@ -162,24 +156,7 @@ template<class ElemType>
         else
             scatterIdxMatrix->SetValue(1, layout->GetNumCols(), packedData.GetDeviceId(), scatterIndicesVector.data());
 
-        // DoScatterColumnsOf for sparse matrices requires the output to be pre-fileed with 0s
-        if (gapPadValue && (*gapPadValue == 0) && (unpackedData->GetMatrixType() == MatrixType::SPARSE))
-            unpackedData->SetValue(*gapPadValue);
-
         unpackedData->DoScatterColumnsOf(0, *scatterIdxMatrix, packedData, 1);
-
-        // DoScatterColumnsOf fills the target with 0 before scattering if passed beta == 0. 
-        // This we need to mask only if the gapPadValue != 0
-        if (gapPadValue && (*gapPadValue != 0))
-        {
-            auto columnsValidityMaskMatrix = tempMaskStorage;
-            if (!columnsValidityMaskMatrix)
-                columnsValidityMaskMatrix = std::make_shared<Matrix<char>>(1, columnsValidityMask.size(), columnsValidityMask.data(), packedData.GetDeviceId());
-            else
-                columnsValidityMaskMatrix->SetValue(1, columnsValidityMask.size(), packedData.GetDeviceId(), columnsValidityMask.data());
-
-            unpackedData->MaskColumnsValue(*columnsValidityMaskMatrix, *gapPadValue, unpackedData->GetNumCols() / columnsValidityMaskMatrix->GetNumCols());
-        }
     }
 
     return TensorView<ElemType>(unpackedData, unpackedShape);
@@ -413,12 +390,12 @@ void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allow
 }
 
 // unary reduce-to-(1,1) operation, e.g. MatrixL1RegNode
-void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass, bool keepDimensions)
+void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass)
 {
     assert(m_inputs.size() == 1);
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
-    SetDims(keepDimensions ? m_inputs[0]->GetSampleLayout() : TensorShape(1), false);
+    SetDims(TensorShape(1), false);
 }
 
 // binary reduce-to-(1,1) operation, e.g. CrossEntropyWithSoftmaxNode
@@ -641,9 +618,6 @@ template <class ElemType>
 {
     Base::BeginForwardProp();
 
-    if (NeedsDynamicValidation())
-        Validate(/*isFinalValidationPass =*/ true);
-
     // update the actual m_value allocation
     if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
         UpdateFunctionValuesSize();
@@ -664,8 +638,9 @@ template <class ElemType>
     {
         MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
         if (Value().HasNan("EndForwardProp"))
+        {
             LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
-
+        }
         InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
     }
 

@@ -211,7 +211,7 @@ class ArrayMixin(object):
         if is_sparse:
             from cntk.internal.sanitize import _sparse_to_dense_network_cache
 
-            device = ndav.device
+            device = self.device
             if callable(device):
                 device = device()
 

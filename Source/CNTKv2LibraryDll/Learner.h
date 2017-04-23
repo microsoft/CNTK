@@ -152,6 +152,15 @@ namespace CNTK
         {
             return MomentumValueForMB(m_momentumSchedule, minibatchSize);
         }
+		virtual double MomentumValueForNextMB(size_t minibatchSize) const
+		{
+			double nextMomentum = GetNextTrainingParameterValue(m_momentumSchedule);
+			if (m_momentumSchedule.Unit() == MomentumSchedule::UnitType::Minibatch)
+			{
+				return nextMomentum;
+			}
+			return std::pow(nextMomentum, minibatchSize);
+		}
 
     protected:
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
@@ -161,6 +170,8 @@ namespace CNTK
 
         // returns current per-minibatch momentum value from the provided schedule.
         double MomentumValueForMB(const MomentumSchedule& schedule, size_t minibatchSize) const;
+
+		//double MomentumValueForNextMB(const MomentumSchedule& schedule, size_t minibatchSize) const;
 
         // Return true if the update should use classic momentum and 
         // false if the unit-gain momentum should be used instead.
@@ -290,6 +301,36 @@ namespace CNTK
         mutable std::unordered_map<Parameter, double> m_smoothedCounts;
         MomentumSchedule m_varianceMomentumSchedule;
     };
+
+	class LearnerNAdam : public LearnerMomentumSGD
+	{
+	public:
+
+		LearnerNAdam(const std::vector<Parameter>& parameters,
+			const LearningRateSchedule& learningRateSchedule,
+			const MomentumSchedule& momentumSchedule,
+			bool unitGain,
+			const MomentumSchedule& varianceMomentumSchedule,
+			AdditionalLearningOptions additionalOptions);
+
+	protected:
+		virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+
+		template <typename ElementType>
+		void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+	private:
+
+		// returns current per-minibatch variance momentum value.
+		double VarianceMomentumValueForMB(size_t minibatchSize) const
+		{
+			return MomentumValueForMB(m_varianceMomentumSchedule, minibatchSize);
+		}
+
+		mutable std::unordered_map<Parameter, double> m_smoothedCounts;
+		mutable double accumulatedMomentum;
+		mutable double lastSmoothCounts;
+		MomentumSchedule m_varianceMomentumSchedule;
+	};
 
     class LearnerRMSProp : public LearnerBase
     {

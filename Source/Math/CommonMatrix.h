@@ -89,7 +89,7 @@ enum ElementWiseOperator
     // unary ops for use by Matrix class only (there is no TensorView implementation)
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative,
     // binary
-    opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum, opPow,
+    opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum,
     opMax, opMin, opArgmax, opArgmin,
     opLess, opEqual, opGreater, opGreaterEqual, opNotEqual, opLessEqual, // Note: must obey this order: (sgn(a-b) == -1, 0, +1), (sgn(a-b) != -1, 0, +1)
     opAnd, opOr, opXor, opMaskNegative,
@@ -108,8 +108,6 @@ enum ElementWiseOperator
     opCopyIfEqual,
     opElementwiseProductWithExpOfDiff, /* a * exp(b - c) */
     opElementwiseProductWithQuotient, /* a * (b / c) */
-    opElementwiseProductWithPowExponentDerivative, /* a * b * log(c) */
-    opElementwiseProductWithPowBaseDerivative,  /* a * c * pow(b, c-1) */
     // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
 };
 
@@ -143,7 +141,6 @@ enum ElementWiseOperator
     Macro(ElementwiseProduct);                                               \
     Macro(ElementwiseQuotient);                                              \
     Macro(LogSum);                                                           \
-    Macro(Pow);                                                              \
     Macro(Max);                                                              \
     Macro(Min);                                                              \
     Macro(Equal);                                                            \
@@ -175,9 +172,7 @@ enum ElementWiseOperator
     Macro(Clip);                                        \
     Macro(ElementwiseProductWithLogSumDerivative);      \
     Macro(ElementwiseProductWithExpOfDiff);             \
-    Macro(ElementwiseProductWithQuotient);              \
-    Macro(ElementwiseProductWithPowExponentDerivative); \
-    Macro(ElementwiseProductWithPowBaseDerivative);
+    Macro(ElementwiseProductWithQuotient);
 
 // -----------------------------------------------------------------------
 // various enums to describe

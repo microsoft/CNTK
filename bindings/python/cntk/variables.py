@@ -29,7 +29,6 @@ class Record(dict):
 
     def __setattr__(self, key, value):
         raise AttributeError('record is immutable')
-
     def updated_with(self, **kwargs):
         '''
         Create a new Record from an existing one with members modified or added.
@@ -146,7 +145,7 @@ class VariableMixin(object):
         '''
         return super(VariableMixin, self).uid()
 
-    class _Type(Record):
+    class Type(Record):
         '''
         Describes a Variable's type; that is, all arguments to instantiate a Placeholder or Input.
         These are meant to be passed to update_signature.
@@ -164,22 +163,7 @@ class VariableMixin(object):
                 r['is_sparse'] = is_sparse
             if dynamic_axes is not None:
                 r['dynamic_axes'] = dynamic_axes
-            super(Variable._Type, self).__init__(**r)
-
-        def __call__(self):
-            '''
-            Dummy call operator, in case a user attempts to instantiates the type directly.
-            That is not possible because these are abstract types that cannot be instantiated directly.
-
-            Example:
-            >>> from cntk.layers.typing import Tensor
-            >>> try:
-            ...     inp = Tensor[32]()
-            ... except TypeError as e:
-            ...     print('ERROR: ' + str(e))
-            ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(Tensor[32])'.
-            '''
-            raise TypeError("Can't instantiate abstract class " + str(self) + ". Please use 'input(" + str(self) + ")'.")
+            super(Variable.Type, self).__init__(**r)
 
         def __str__(self):
             '''
@@ -217,18 +201,11 @@ class VariableMixin(object):
             return s
 
     @property
-    def _type(self):
+    def type(self):
         '''
-        The complete type of the data represented by this Variable as a single object that has data members of the same name.
-
-        Example:
-        >>> x = C.input(13, name='my_input')
-        >>> x
-        Input('my_input', [#], [13])
-        >>> x._type.shape, x._type.dynamic_axes, x._type.is_sparse, x._type.needs_gradient
-        ((13,), (Axis('defaultBatchAxis'),), False, False)
+        The complete type of the data represented by this Variable as a single Variable.Type instance.
         '''
-        return Variable._Type(shape=self.shape, dtype=self.dtype, needs_gradient=self.needs_gradient, is_sparse=self.is_sparse, dynamic_axes=self.dynamic_axes)
+        return Variable.Type(shape=self.shape, dtype=self.dtype, needs_gradient=self.needs_gradient, is_sparse=self.is_sparse, dynamic_axes=self.dynamic_axes)
 
 
 
@@ -354,11 +331,7 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
     @property
     def value(self):
         '''
-        Value of the Parameter
-
-        Args:
-          getter: gets the Parameter's value as a NumPy array
-          setter: sets the Parameter's value to the provided NumPy array
+        NumPy array of the value
         '''
         return super(Parameter, self).value().to_ndarray()
 
