@@ -46,11 +46,15 @@ UnaryFunction Linear(size_t outputDim, const DeviceDescriptor& device)
     return [=](Variable x) { return Times(W, x) + b; };
 }
 
-FunctionPtr Sequential(const vector<FunctionPtr>& fns)
+UnaryFunction Sequential(const vector<UnaryFunction>& fns)
 {
-    for (size_t i = 1; i < fns.size(); i++)
-        fns[i]->ReplacePlaceholder(fns[i - 1]->Output());
-    return fns.back();
+    return [=](Variable x)
+    {
+        auto arg = Combine({ x });
+        for (const auto& f : fns)
+            arg = f(arg);
+        return arg;
+    };
 }
 
 UnaryFunction Recurrence(const function<FunctionPtr(Variable,Variable)>& stepFunction)
@@ -64,14 +68,24 @@ UnaryFunction Recurrence(const function<FunctionPtr(Variable,Variable)>& stepFun
     };
 }
 
+UnaryFunction Fold(const function<FunctionPtr(Variable, Variable)>& stepFunction)
+{
+    return [=](Variable x)
+    {
+        auto dh = PlaceholderVariable({ 25 }, Axis::UnknownDynamicAxes());
+        auto rec = stepFunction(PastValue(dh), x);
+        rec->ReplacePlaceholders({ { dh, rec } });
+        return Sequence::Last(rec);
+    };
+}
+
 // Embedding(50) >> Recurrence(RNNStep(25)) >> Last >> Linear(5)
-FunctionPtr CreateModel(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
+UnaryFunction CreateModel(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
     return Sequential({
-        Embedding(embeddingDim, device)(PlaceholderVariable()),
-        Recurrence([device](Variable dh, Variable x) -> FunctionPtr { return RNNStep<float>(dh, x, device); })(PlaceholderVariable()),
-        Sequence::Last(PlaceholderVariable()),
-        Linear(numOutputClasses, device)(PlaceholderVariable())
+        Embedding(embeddingDim, device),
+        Fold([device](Variable dh, Variable x) -> FunctionPtr { return RNNStep<float>(dh, x, device); }),
+        Linear(numOutputClasses, device)
     });
 }
 
@@ -88,7 +102,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     const wstring labelsName   = L"labels";
 
     auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName);
-    auto classifierOutput = CreateModel(numOutputClasses, embeddingDim, hiddenDim, device);
+    auto classifierOutput = CreateModel(numOutputClasses, embeddingDim, hiddenDim, device)(PlaceholderVariable());
     classifierOutput->ReplacePlaceholder(features);
 
     auto labels = InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
