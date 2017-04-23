@@ -25,7 +25,7 @@ FunctionPtr Embedding(const Variable& input, size_t embeddingDim, const DeviceDe
 }
 
 template <typename ElementType>
-FunctionPtr RNNStep(Variable input, Variable prevOutput, const DeviceDescriptor& device)
+FunctionPtr RNNStep(Variable prevOutput, Variable input, const DeviceDescriptor& device)
 {
     size_t outputDim = prevOutput.Shape()[0];
 
@@ -45,13 +45,14 @@ FunctionPtr Linear(Variable input, size_t outputDim, const DeviceDescriptor& dev
 }
 
 // Embedding(50) >> Recurrence(RNNStep(25)) >> Last >> Linear(5)
-inline FunctionPtr CreateModel(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
+inline FunctionPtr CreateModel(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
-    auto r = Embedding(input, embeddingDim, device);
+    auto x = PlaceholderVariable();
+    auto r = Embedding(x, embeddingDim, device);
 
-    //auto dh = PlaceholderVariable();
+    //auto dh = PlaceholderVariable(); // exception: Times: The right operand 'Output('PastValue26_Output_0', [], [*, #])' rank (0) must be >= #axes (1) being reduced over.
     auto dh = PlaceholderVariable({ hiddenDim }, ((Variable)r).DynamicAxes());
-    r = RNNStep<float>(r, dh, device);
+    r = RNNStep<float>(dh, r, device);
     r->ReplacePlaceholders({ { dh, PastValue(r) } });
 
     r = Sequence::Last(r);
@@ -72,7 +73,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     const wstring labelsName   = L"labels";
 
     auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName);
-    auto classifierOutput = CreateModel(PlaceholderVariable(), numOutputClasses, embeddingDim, hiddenDim, device);
+    auto classifierOutput = CreateModel(numOutputClasses, embeddingDim, hiddenDim, device);
     classifierOutput->ReplacePlaceholder(features);
 
     auto labels = InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
