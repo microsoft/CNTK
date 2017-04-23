@@ -67,33 +67,54 @@ UnaryModel Sequential(const vector<UnaryModel>& fns)
     };
 }
 
-UnaryModel Recurrence(const BinaryModel& stepFunction)
-{
-    return [=](Variable x)
-    {
-        auto dh = PlaceholderVariable();
-        auto rec = stepFunction(PastValue(dh), x);
-        FunctionPtr(rec)->ReplacePlaceholders({ { dh, rec } });
-        return rec;
-    };
-}
-
-UnaryModel Fold(const BinaryModel& stepFunction)
-{
-    auto recurrence = Recurrence(stepFunction);
-    return [=](Variable x)
-    {
-        return Sequence::Last(recurrence(x));
-    };
-}
-
 struct Batch
 {
+    static function<vector<Variable>(vector<Variable>)> Map(UnaryModel f)
+    {
+        return [=](vector<Variable> batch)
+        {
+            vector<Variable> res;
+            res.reserve(batch.size());
+            for (const auto& x : batch)
+                res.push_back(f(x));
+            return res;
+        };
+    }
 };
 
 struct Sequence
 {
     const static function<Variable(Variable)> Last;
+
+    static UnaryModel Recurrence(const BinaryModel& stepFunction)
+    {
+        return [=](Variable x)
+        {
+            auto dh = PlaceholderVariable();
+            auto rec = stepFunction(PastValue(dh), x);
+            FunctionPtr(rec)->ReplacePlaceholders({ { dh, rec } });
+            return rec;
+        };
+    }
+
+    static UnaryModel Fold(const BinaryModel& stepFunction)
+    {
+        auto recurrence = Recurrence(stepFunction);
+        return [=](Variable x)
+        {
+            return Sequence::Last(recurrence(x));
+        };
+    }
+
+    static function<vector<Variable>(vector<Variable>)> Map(UnaryModel f)
+    {
+        return Batch::Map(f);
+    }
+
+    static function<vector<Variable>(vector<Variable>)> Embedding(size_t embeddingDim, const DeviceDescriptor& device)
+    {
+        return Map(Dynamite::Embedding(embeddingDim, device));
+    }
 };
 const /*static*/ function<Variable(Variable)> Sequence::Last = [](Variable x) -> Variable { return CNTK::Sequence::Last(x); };
 
@@ -105,7 +126,7 @@ UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, siz
 {
     return Sequential({
         Embedding(embeddingDim, device),
-        Fold(RNNStep(hiddenDim, device)),
+        Dynamite::Sequence::Fold(RNNStep(hiddenDim, device)),
         Linear(numOutputClasses, device)
     });
 }
