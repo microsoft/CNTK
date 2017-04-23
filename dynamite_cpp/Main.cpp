@@ -24,7 +24,10 @@ UnaryFunction Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
     auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
 
-    return [=](Variable x) { return Times(E, x); };
+    return [=](Variable x)
+    {
+        return Times(E, x);
+    };
 }
 
 BinaryFunction RNNStep(size_t outputDim, const DeviceDescriptor& device)
@@ -71,12 +74,10 @@ UnaryFunction Recurrence(const function<FunctionPtr(Variable,Variable)>& stepFun
 
 UnaryFunction Fold(const function<FunctionPtr(Variable, Variable)>& stepFunction)
 {
+    auto recurrence = Recurrence(stepFunction);
     return [=](Variable x)
     {
-        auto dh = PlaceholderVariable({ 25 }, Axis::UnknownDynamicAxes());
-        auto rec = stepFunction(PastValue(dh), x);
-        rec->ReplacePlaceholders({ { dh, rec } });
-        return Sequence::Last(rec);
+        return Sequence::Last(recurrence(x));
     };
 }
 
