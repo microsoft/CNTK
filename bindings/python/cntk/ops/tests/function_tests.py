@@ -421,3 +421,34 @@ def test_transpose_0d_1d_operands():
     x2 = C.input(2)
     with pytest.raises(ValueError):
         transpose_1d = C.transpose(x2)
+
+
+def test_eval_again_with_prev_outputs_live(device_id):
+    x = C.input(2)
+    dev = cntk_device(device_id)
+    w1 = C.parameter(init=np.asarray([1], dtype=np.float32), device=dev)
+    w2 = C.parameter(init=np.asarray([-1], dtype=np.float32), device=dev)
+    out1 = x + w1
+    out2 = x + w2
+    op = C.combine([out1, out2])
+
+    result1 = op.eval({x : np.asarray([2, 5], dtype=np.float32)}, device=dev)
+    result2 = op.eval({x : np.asarray([[-1, 4], [-4, 7]], dtype=np.float32)}, device=dev)
+    assert np.array_equal(result2[out1.output], [[0, 5], [-3, 8]])
+    assert np.array_equal(result2[out2.output], [[-2, 3], [-5, 6]])
+
+    result1 = op.eval({x : np.asarray([2, 5], dtype=np.float32)}, device=dev, as_numpy=False)
+    result2 = op.eval({x : np.asarray([[-1, 4], [-4, 7]], dtype=np.float32)}, device=dev, as_numpy=False)
+    assert np.array_equal(result2[out1.output].asarray(), [[0, 5], [-3, 8]])
+    assert np.array_equal(result2[out2.output].asarray(), [[-2, 3], [-5, 6]])
+
+    grad_op = out1 + out2
+    grad1 = grad_op.grad({x : np.asarray([2, 5], dtype=np.float32)}, wrt=[w1, w2], device=dev)
+    grad2 = grad_op.grad({x : np.asarray([[-1, 4], [-4, 7]], dtype=np.float32)}, wrt=[w1, w2], device=dev)
+    assert np.array_equal(grad2[w1], [4])
+    assert np.array_equal(grad2[w2], [4])
+
+    grad1 = grad_op.grad({x : np.asarray([2, 5], dtype=np.float32)}, wrt=[w1, w2], device=dev, as_numpy=False)
+    grad2 = grad_op.grad({x : np.asarray([[-1, 4], [-4, 7]], dtype=np.float32)}, wrt=[w1, w2], device=dev, as_numpy=False)
+    assert np.array_equal(grad2[w1].asarray(), [4])
+    assert np.array_equal(grad2[w2].asarray(), [4])
