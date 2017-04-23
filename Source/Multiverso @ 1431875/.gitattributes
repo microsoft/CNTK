@@ -1,0 +1,57 @@
+.gitattributes text
+.gitignore text
+.gitmodules text
+
+
+*.md text
+*.txt text
+*.TXT text
+*.yml text
+*.yml.bak text
+*.config text
+
+Makefile text
+CMakeLists.txt
+*.cmake.in text
+*.sln text
+*.pyproj text
+*.vcxproj text
+*.vcxproj.filters text
+*.vssettings text
+*.csproj text
+*.props text
+*.asax text
+*.nuspec text
+*.rockspec text
+
+*.h text
+*.cpp text
+*.cc text
+*.cu text
+*.cuh text
+*.proto text
+*.sh text
+*.bat text
+*.cmd text
+*.py text
+*.ipynb text
+*.pl text
+*.ps1 text
+*.ps text
+*.i text
+*.lua text
+
+Dockerfile* text
+
+# Binary extensions:
+*.ark binary
+*.chunk binary
+*.cmf binary
+*.docx binary
+*.jpg binary
+*.pdf binary
+*.png binary
+*.pptx binary
+*.snk binary
+*.vsdm binary
+*.zip binary

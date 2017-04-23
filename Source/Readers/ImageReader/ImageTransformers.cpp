@@ -442,9 +442,6 @@ void MeanTransformer::Apply(uint8_t, cv::Mat &mat)
            (m_meanImg.size() == mat.size() &&
            m_meanImg.channels() == mat.channels()));
 
-    if (m_meanImg.size() == cv::Size(0, 0))
-        return;     // nothing to do 
-
     if (m_meanImg.size() == mat.size())
     {
         // If matrix has not been converted to the right type, do it now as maen requires floating point type.

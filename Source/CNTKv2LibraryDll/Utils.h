@@ -151,7 +151,7 @@ namespace CNTK
     inline std::pair<size_t, size_t> GetMatrixDimensions(const NDShape& viewShape)
     {
         // Ensure none of the shape dimensions are unknown
-        if (viewShape.HasInferredDimension() || viewShape.HasFreeDimension())
+        if (viewShape.HasInferredDimension())
             InvalidArgument("Cannot create an NDArrayView using a view shape '%S' that has unknown dimensions for any of its axes.", viewShape.AsString().c_str());
 
         size_t matrixRowSize = (viewShape.Rank() > 0) ? viewShape[0] : 1;
@@ -360,19 +360,11 @@ namespace CNTK
         NDShape kernelShape = convolutionMapShape.SubShape(0, operandShape.Rank());
         auto outputMapCount = convolutionMapShape.SubShape(kernelShape.Rank());
         auto shapeRank = operandShape.Rank(); 
-        NDShape paddedOutputMapCount;
-        if (shapeRank > outputMapCount.Rank())
-            paddedOutputMapCount = NDShape(shapeRank - outputMapCount.Rank(), 1);
-
-        paddedOutputMapCount = paddedOutputMapCount.AppendShape(outputMapCount);
-
-        if (transpose && (shapeRank > 0) && (paddedOutputMapCount[shapeRank - 1] == NDShape::InferredDimension))  // convolution transpose, the mapCount in depth is derived from operandShape 
-        {
-            if (operandShape[shapeRank - 1] == NDShape::FreeDimension)
-                InvalidArgument("Deconvolution: Output map count cannot be inferred from operand shape '%S' free dimension.", operandShape.AsString().c_str());
-
+        NDShape paddedOutputMapCount(shapeRank, 1);
+        for (size_t i = 0; i < outputMapCount.Rank(); ++i)
+            paddedOutputMapCount[shapeRank - 1 - i] = outputMapCount[outputMapCount.Rank() - 1 - i];
+        if (transpose && paddedOutputMapCount[shapeRank - 1] == NDShape::InferredDimension)  // conovlution transpose, the mapCount in depth is derived from operandShape 
             paddedOutputMapCount[shapeRank - 1] = operandShape[shapeRank - 1];
-        }
 
         return{ paddedOutputMapCount, kernelShape };
     }
@@ -514,13 +506,7 @@ namespace CNTK
             if (axis == Axis::EndStaticAxis())
                 axis = Axis((int)operandShape.Rank());
             else if (axis.StaticAxisIndex() < 0)
-            {
-                auto normalizedAxis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
-                if (normalizedAxis.StaticAxisIndex() < 0)
-                    InvalidArgument("Axis '%S' is out of bounds of the operand shape '%S' it applies to.", axis.AsString().c_str(), operandShape.AsString().c_str());
-                else
-                    axis = normalizedAxis;
-            }
+                axis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
         }
 
         return axis;
@@ -556,7 +542,7 @@ namespace CNTK
                             (int)axis.StaticAxisIndex(), (int)operandShape.Rank(), operandShape.AsString().c_str());
     }
 
-    bool IsFirstOutputOfMultiOutputFunction(const Variable& var);
+    bool IsFirstOutputOfMultiOutputUDF(const Variable& var);
     inline  bool IsConstantScalar(const Variable& var)
     {
         return var.IsConstant() && (var.Shape().TotalSize() == 1);
@@ -593,35 +579,6 @@ namespace CNTK
     {
         return ShapeRowColSplitPoint(var.Shape(), var.IsSparse());
     }
-
-    bool IsPackedValue(const ValuePtr& value);
-
-    inline NDShape GetVariableShape(const NDShape& varShape, const Microsoft::MSR::CNTK::TensorShape& computationNodeShape)
-    {
-        auto fullyDefinedVarShape = varShape;
-        if (computationNodeShape.GetRank() < fullyDefinedVarShape.Rank())
-            LogicError("Computation node tensor shape '%s' must not be of lower rank than variable shape '%S'.", ((std::string)computationNodeShape).c_str(), fullyDefinedVarShape.AsString().c_str());
-
-        for (size_t i = 0; i < fullyDefinedVarShape.Rank(); ++i)
-        {
-            if (fullyDefinedVarShape[i] == NDShape::FreeDimension)
-                fullyDefinedVarShape[i] = computationNodeShape.GetDim(i);
-            else if (fullyDefinedVarShape[i] != computationNodeShape.GetDim(i))
-                LogicError("Computation node tensor shape '%s' does not match variable shape '%S'.", ((std::string)computationNodeShape).c_str(), fullyDefinedVarShape.AsString().c_str());
-        }
-
-        for (size_t i = fullyDefinedVarShape.Rank(); i < computationNodeShape.GetRank(); ++i)
-        {
-            if (computationNodeShape.GetDim(i) != 1)
-                LogicError("Computation node tensor shape '%s' does not match variable shape '%S'.", ((std::string)computationNodeShape).c_str(), fullyDefinedVarShape.AsString().c_str());
-        }
-
-        return fullyDefinedVarShape;
-    }
-
-    NDMaskPtr CreateMask(const std::vector<size_t>& sequenceLengths, const std::vector<bool>& sequenceStartFlags = {}, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice());
-
-    double ReductionIdentityValue(const std::wstring& reductionOpName);
 
     // Helper class to manage a collection of learners.
     class Learners
@@ -668,40 +625,16 @@ namespace CNTK
     class Utils
     {
     public:
-        static Axis NewDynamicAxisDerivedFromOperand(const std::wstring& axisNamePrefix, const Variable& operand)
-        {
-            std::function<Variable(const Variable&)> GetActualSourceVariable;
-            GetActualSourceVariable = [&GetActualSourceVariable](const Variable& var) -> Variable {
-                if (var.BlockFunctionVariableMapping() == Variable())
-                    return var;
-                else
-                    return GetActualSourceVariable(var.BlockFunctionVariableMapping());
-            };
-
-            auto whereNodeConditionSourceVar = GetActualSourceVariable(operand);
-            return Axis(axisNamePrefix + whereNodeConditionSourceVar.Uid());
-        }
-        static void VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape = nullptr);
+        static void VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value);
 
         template <typename ElementType>
-        static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr>
-        GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape,
-                                                    const std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>& outputMatrixStorage,
-                                                    const std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>& tempIndicesStorage);
-
-        template <typename ElementType>
-        static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr>
-        GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape = nullptr)
-        {
-            auto nullSharedPtr = std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>>(nullptr);
-            return GetCNTKImplMatrixAndMBLayoutFromValueObject(var, value, inferredVarShape, nullSharedPtr, nullSharedPtr);
-        }
+        static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr> GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value);
 
         template <typename ElementType>
         static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const std::vector<Axis>& sampleDynamicAxes, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
 
         template <typename ElementType>
-        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const Variable& var, const Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
+        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const Variable& var, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
     };
 
     template <typename Container>
@@ -724,7 +657,7 @@ namespace CNTK
     class Accumulator : public Value
     {
     public:
-        Accumulator() : Value(nullptr), m_numUpdates(0), m_isUninitialized(true) {}
+        Accumulator() : Value(nullptr), m_numUpdates(0) {}
 
         void Update(const ValuePtr& delta, const DeviceDescriptor& device);
         void Reset();
@@ -732,7 +665,6 @@ namespace CNTK
     private:
         void ResetToZero();
 
-        bool m_isUninitialized;
         size_t   m_numUpdates;
     };
 

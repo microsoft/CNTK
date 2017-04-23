@@ -4,8 +4,7 @@
 # for full license information.
 # ==============================================================================
 
-'''
-Layers and building blocks that are not generic but represent more specific model types go here.
-'''
+# CNTK models collection
+# Layers and building blocks that are not generic but represent more specific model types go here.
 
 from .attention import *

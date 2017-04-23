@@ -22,3 +22,4 @@ def _value_as_sequence_or_array(val, var):
     else:
         map_if_possible(val)
         return val.asarray()
+

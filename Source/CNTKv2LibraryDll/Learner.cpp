@@ -9,6 +9,8 @@
 #include "Utils.h"
 #include "Serialization.h"
 
+#include <google/protobuf/stubs/logging.h>
+
 #define DISPATCH_TO_TYPED_UPDATE_FUNCTION                                                                     \
     switch (smoothedGradientValue->GetDataType())                                                             \
     {                                                                                                         \
@@ -116,9 +118,6 @@ namespace CNTK
     {
         if (m_additionalOptions.gradientClippingThresholdPerSample != numeric_limits<double>::infinity())
         {
-            // when using meanGradient, no need to scale up the maxGradientPerMB
-            actualMBSize = (m_additionalOptions.useMeanGradient ? 1 : actualMBSize);
-
             double maxGradientPerMB = m_additionalOptions.gradientClippingThresholdPerSample * actualMBSize;
             if (m_additionalOptions.gradientClippingWithTruncation)
                 gradient.InplaceTruncate(ElementType(maxGradientPerMB));
@@ -142,12 +141,6 @@ namespace CNTK
     {
         const auto& gradientMatrix = gradientValue->GetWritableMatrix<ElementType>();
 
-        // get mean gradient if needed
-        if (m_additionalOptions.useMeanGradient)
-        {
-            Matrix<ElementType>::Scale((ElementType)1.0 / actualMBSize, *gradientMatrix);
-        }
-
         // clipping gradients to prevent outliers
         ClipGradient<ElementType>(*gradientMatrix, actualMBSize);
 
@@ -155,7 +148,7 @@ namespace CNTK
         if (m_additionalOptions.l2RegularizationWeight > 0)
         {
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
-            const auto weight = m_additionalOptions.l2RegularizationWeight * (m_additionalOptions.useMeanGradient ? 1 : actualMBSize);
+            const auto weight = m_additionalOptions.l2RegularizationWeight * actualMBSize;
             const auto& parameterMatrix = parameterValue->GetWritableMatrix<ElementType>();
             Matrix<ElementType>::ScaleAndAdd(ElementType(weight), *parameterMatrix, *gradientMatrix);
         }
@@ -191,8 +184,7 @@ namespace CNTK
         {
             const auto learningRate = LearningRate(actualMBSize);
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
-            // don't need to scale to actualMBSize if we are already taking averaged gradient
-            const auto weight = learningRate * m_additionalOptions.l1RegularizationWeight * (m_additionalOptions.useMeanGradient ? 1 : actualMBSize);
+            const auto weight = learningRate * m_additionalOptions.l1RegularizationWeight * actualMBSize;
             parameterValue->GetWritableMatrix<ElementType>()->InplaceSoftThreshold(ElementType(weight));
         }
     }
@@ -210,9 +202,6 @@ namespace CNTK
                              : Learner(parameters, learningRateSchedule),
                              m_additionalOptions(additionalOptions)
     {
-        if (parameters.empty())
-            InvalidArgument("The parameters list specified to a Learner must not be empty.");
-
         std::unordered_set<Parameter> uniqueParameters(parameters.begin(), parameters.end());
 
         if (uniqueParameters.size() != parameters.size())
@@ -225,11 +214,6 @@ namespace CNTK
                 NDArrayViewPtr view = AllocateNDArrayView(parameter, parameter.Shape());
                 m_smoothedGradientValues.emplace(parameter, view);
             }
-        }
-
-        if (m_additionalOptions.useMeanGradient && learningRateSchedule.Unit() == LearningRateSchedule::UnitType::Minibatch)
-        {
-            LogicError("useMeanGradient should not be used with per-minibatch learning rate setting");
         }
     }
 
@@ -489,10 +473,6 @@ namespace CNTK
         {
             return currentMomentum;
         }
-
-        if (m_additionalOptions.useMeanGradient)
-            LogicError("useMeanGradient should not be used with per-sample momentum setting");
-
         return std::pow(currentMomentum, minibatchSize);
     }
 
@@ -696,6 +676,58 @@ namespace CNTK
             momentum, varMomentum, UseUnitGainMomentum());
     }
 
+	LearnerNAdam::LearnerNAdam(const vector<Parameter>& parameters,
+		const LearningRateSchedule& learningRateSchedule,
+		const MomentumSchedule& momentumSchedule,
+		bool unitGain,
+		const MomentumSchedule& varianceMomentumSchedule,
+		AdditionalLearningOptions additionalOptions)
+		: LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule,
+			unitGain, additionalOptions, /*allocateSmoothGradients*/ false),
+		m_varianceMomentumSchedule(varianceMomentumSchedule)
+	{
+		for (const auto& parameter : parameters)
+		{
+			const auto shape = GetMatrixShape(parameter);
+			NDArrayViewPtr view = AllocateNDArrayView(parameter, { shape[0], 2 * shape[1] });
+			m_smoothedGradientValues.emplace(parameter, view);
+			m_smoothedCounts.emplace(parameter, 0.0);
+			accumulatedMomentum = 1.0;
+			lastSmoothCounts = -1;
+		}
+	}
+
+	/*virtual*/ void LearnerNAdam::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+		const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+	{
+		DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+	}
+
+	template <typename ElementType>
+	void LearnerNAdam::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+		const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+	{
+		GET_WRITABLE_MATRICES;
+
+		const auto learningRate = LearningRate(trainingSampleCount);
+		const auto momentum = MomentumValueForMB(trainingSampleCount);
+
+		const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
+		const auto momentumNextMB = MomentumValueForNextMB(trainingSampleCount);
+
+		double& smoothedCount = m_smoothedCounts.at(parameter);
+		if (lastSmoothCounts + 0.5 < smoothedCount)  //a new epoch
+		{
+			accumulatedMomentum *= momentum;
+			lastSmoothCounts = smoothedCount;
+		}
+
+		//GOOGLE_LOG(INFO) << "momentum at " << smoothedCount << " is " << momentum <<" Next Mom is" << momentumNextMB
+			//<< " accumulatedMomentum = " << accumulatedMomentum << "\n";
+		smoothedGradientMatrix->NAdamUpdate(*gradientMatrix, *parameterMatrix, smoothedCount, learningRate,
+			momentum, momentumNextMB, accumulatedMomentum, varMomentum, UseUnitGainMomentum());
+	}
+
     LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters,
                                    const LearningRateSchedule& learningRateSchedule,
                                    double gamma, double inc, double dec, double max, double min,
@@ -792,6 +824,16 @@ namespace CNTK
     {
         return MakeSharedObject<LearnerAdam>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
     }
+
+	LearnerPtr NAdamLearner(const vector<Parameter>& parameters,
+		const LearningRateSchedule& learningRateSchedule,
+		const MomentumSchedule& momentumSchedule,
+		bool unitGain, /*=true*/
+		const MomentumSchedule& varianceMomentumSchedule, /*= MomentumAsTimeConstantSchedulePerSample(2 * 3600 * 100)*/
+		AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
+	{
+		return MakeSharedObject<LearnerNAdam>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
+	}
 
     LearnerPtr AdaGradLearner(const vector<Parameter>& parameters,
                               const LearningRateSchedule& learningRateSchedule,

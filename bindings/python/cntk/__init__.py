@@ -33,4 +33,3 @@ from .sample_installer import install_samples
 
 DATATYPE = np.float32
 InferredDimension = cntk_py.InferredDimension
-FreeDimension = cntk_py.FreeDimension

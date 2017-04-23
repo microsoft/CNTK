@@ -1,4 +1,4 @@
-%module(directors="1") CNTKLib
+%module(directors="1") Utils
 //%feature("autodoc", "1");
 
 %include <stl.i>
@@ -121,8 +121,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Function::Function;
 %ignore_function CNTK::Function::RestoreFromCheckpoint;
 %ignore_function CNTK::Function::Gradients;
-%ignore_function CNTK::Function::RegisterNativeUserFunction;
-%ignore_function CNTK::Function::NativeUserFunction;
 
 %ignore_class CNTK::Parameter;
 %ignore_class CNTK::Constant;
@@ -159,7 +157,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Minus;
 %ignore_function CNTK::operator-;
 %ignore_function CNTK::LogAddExp;
-%ignore_function CNTK::Pow;
 %ignore_function CNTK::ElementTimes;
 %ignore_function CNTK::ElementDivide;
 %ignore_function CNTK::Equal;
@@ -208,8 +205,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Softplus;
 %ignore_function CNTK::Argmax;
 %ignore_function CNTK::Argmin;
-%ignore_function CNTK::ToSequence;
-%ignore_function CNTK::ToSequenceLike;
 %ignore_function CNTK::AsBlock;
 %ignore_function CNTK::ReaderCrop;
 %ignore_function CNTK::ReaderMean;
@@ -304,6 +299,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Internal::PackedIndex;
 %ignore_function CNTK::Internal::GatherPacked;
 %ignore_function CNTK::Internal::ScatterPacked;
+%ignore_function CNTK::Internal::ReconcileDynamicAxis;
 %ignore_function CNTK::Internal::ReconcileDynamicAxes;
 %ignore_function CNTK::Internal::ZeroesWithDynamicAxesLike;
 %ignore_function CNTK::Internal::Where;
@@ -422,7 +418,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+        return Utils.AreEqualDeviceDescriptor(this, p);
     }
 
     public bool Equals(DeviceDescriptor p)
@@ -434,7 +430,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+        return Utils.AreEqualDeviceDescriptor(this, p);
     }
 
     public static bool operator ==(DeviceDescriptor first, DeviceDescriptor second)
@@ -452,7 +448,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualDeviceDescriptor(first, second);
+        return Utils.AreEqualDeviceDescriptor(first, second);
     }
 
     public static bool operator !=(DeviceDescriptor first, DeviceDescriptor second)
@@ -537,7 +533,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualAxis(this, p);
+        return Utils.AreEqualAxis(this, p);
     }
 
     public bool Equals(Axis p)
@@ -549,7 +545,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualAxis(this, p);
+        return Utils.AreEqualAxis(this, p);
     }
 
     public static bool operator ==(Axis first, Axis second)
@@ -567,7 +563,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualAxis(first, second);
+        return Utils.AreEqualAxis(first, second);
     }
 
     public static bool operator !=(Axis first, Axis second)
@@ -707,17 +703,17 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         {
             varVect.Add(v);
         }
-        return CNTKLib.Combine(varVect);
+        return Utils.Combine(varVect);
     }
 
     public static Function AsComposite(Function rootFunction, string name = "")
     {
-        return CNTKLib.AsComposite(rootFunction, name);
+        return Utils.AsComposite(rootFunction, name);
     }
 
     public static Function Alias(Variable operand, string name = "")
     {
-        return CNTKLib.Alias(operand, name);
+        return Utils.Alias(operand, name);
     }
 
     // For C# Eval, default ParameterCloningMethod is share.
@@ -726,19 +722,14 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return _Clone(ParameterCloningMethod.Share);
     }
 
-    public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> inputs, System.Collections.Generic.IDictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
-    {
-        Evaluate(inputs, outputs, false, computeDevice);
-    }
-
-    public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> inputs, System.Collections.Generic.IDictionary<Variable, Value> outputs, bool createPersistentOutputValues, DeviceDescriptor computeDevice)
+    public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> arguments, System.Collections.Generic.IDictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
     {
         // Evaluate the rootFunction.
-        var inMap = new UnorderedMapVariableValuePtr();
+        var argMap = new UnorderedMapVariableValuePtr();
         var outMap = new UnorderedMapVariableValuePtr();
-        foreach (var p in inputs)
+        foreach (var p in arguments)
         {
-            inMap.Add(p.Key, p.Value);
+            argMap.Add(p.Key, p.Value);
         }
 
         foreach (var p in outputs)
@@ -746,19 +737,12 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
             outMap.Add(p.Key, p.Value);
         }
 
-        Evaluate(inMap, outMap, computeDevice);
+        Evaluate(argMap, outMap, computeDevice);
 
         foreach (var p in outMap)
         {
-            if (createPersistentOutputValues && (outputs[p.Key] == null))
-            {
-                outputs[p.Key] = p.Value.DeepClone();
-            }
-            else
-            { 
-                // for shared_ptr<Value>, the p.Value returns a copy, so it is safe to use it directly in outputs.
-                outputs[p.Key] = p.Value;
-            }
+            // for shared_ptr<Value>, the p.Value returns a copy, so it is safe to use it directly in outputs.
+            outputs[p.Key] = p.Value;
         }
     }
 
@@ -875,7 +859,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualVariable(this, p);
+        return Utils.AreEqualVariable(this, p);
     }
 
     public bool Equals(Variable p)
@@ -887,7 +871,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualVariable(this, p);
+        return Utils.AreEqualVariable(this, p);
     }
 
     public static bool operator ==(Variable first, Variable second)
@@ -905,7 +889,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualVariable(first, second);
+        return Utils.AreEqualVariable(first, second);
     }
 
     public static bool operator !=(Variable first, Variable second)
@@ -926,11 +910,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (AreEqualShape) CNTK::operator==(const NDShape& first, const NDShape& second);
 %rename (_IsUnknown) CNTK::NDShape::IsUnknown;
 %rename (_HasInferredDimension) CNTK::NDShape::HasInferredDimension;
-%rename (_HasFreeDimension) CNTK::NDShape::HasFreeDimension;
 
 %ignore CNTK::NDShape::NDShape(const std::initializer_list<size_t>& dimensions);
 %ignore CNTK::NDShape::InferredDimension;
-%ignore CNTK::NDShape::FreeDimension;
 
 //
 // NDShape
@@ -987,11 +969,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     public bool HasInferredDimension
     {
         get { return _HasInferredDimension(); }
-    }
-
-    public bool HasFreeDimension
-    {
-        get { return _HasFreeDimension(); }
     }
 
     public int TotalSize
@@ -1052,7 +1029,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualShape(this, p);
+        return Utils.AreEqualShape(this, p);
     }
 
     public bool Equals(NDShape p)
@@ -1064,7 +1041,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualShape(this, p);
+        return Utils.AreEqualShape(this, p);
     }
 
     public static bool operator ==(NDShape first, NDShape second)
@@ -1082,7 +1059,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualShape(first, second);
+        return Utils.AreEqualShape(first, second);
     }
 
     public static bool operator !=(NDShape first, NDShape second)
@@ -1097,7 +1074,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static readonly int InferredDimension = -1;
-    public static readonly int FreeDimension = -3;
 %}
 
 // Todo: add correct typemap as they might be useful for C# in future.
@@ -1144,7 +1120,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         {
             if (element < 0)
             {
-                throw new System.ArgumentException("The argument cannot contain a negative value");
+                throw new System.ArgumentException("The paraemter diemnsions cannot contain a negative value");
             }
             inputVector.Add((uint)element);
         }
@@ -1773,32 +1749,17 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
 %ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, const void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device);
 %ignore CNTK::NDArrayView::NDArrayView(double value, DataType dataType = DataType::Float, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), bool readOnly = false);
+%igore_function CNTK::NDArrayView::SliceView;
 
 %extend CNTK::NDArrayView {
     NDArrayView(const NDShape& viewShape, float *dataBuffer, size_t numBufferElements, const DeviceDescriptor& device, bool readOnly = false)
     {
-        if (device.Type() == CNTK::DeviceKind::GPU)
-        {
-            auto cpuView = new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
-            auto gpuView = new CNTK::NDArrayView(cpuView->GetDataType(), cpuView->GetStorageFormat(), viewShape, device);
-            gpuView->CopyFrom(*cpuView);
-            return gpuView;
-        }
-        else
-            return new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, device, readOnly);
+        return new CNTK::NDArrayView(CNTK::DataType::Float, viewShape, dataBuffer, numBufferElements * sizeof(float), device, readOnly);
     }
 
     NDArrayView(const NDShape& viewShape, double *dataBuffer, size_t numBufferElements, const DeviceDescriptor& device, bool readOnly = false)
     {
-        if (device.Type() == CNTK::DeviceKind::GPU)
-        {
-            auto cpuView = new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, CNTK::DeviceDescriptor::CPUDevice(), readOnly);
-            auto gpuView = new CNTK::NDArrayView(cpuView->GetDataType(), cpuView->GetStorageFormat(), viewShape, device);
-            gpuView->CopyFrom(*cpuView);
-            return gpuView;
-        }
-        else
-            return new CNTK::NDArrayView(viewShape, dataBuffer, numBufferElements, device, readOnly);
+        return new CNTK::NDArrayView(CNTK::DataType::Double, viewShape, dataBuffer, numBufferElements * sizeof(double), device, readOnly);
     }
 
     NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false)
@@ -1810,14 +1771,12 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     {
         return new CNTK::NDArrayView(viewShape, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device, readOnly);
     }
-
 }
 
 %rename (GetDevice) CNTK::NDArrayView::Device;
 %rename (GetShape) CNTK::NDArrayView::Shape;
 %rename (_IsSparse) CNTK::NDArrayView::IsSparse;
 %rename (_IsReadOnly) CNTK::NDArrayView::IsReadOnly;
-%rename (_SliceView) CNTK::NDArrayView::SliceView;
 
 %typemap(cscode) CNTK::NDArrayView %{
     public NDArrayView(NDShape viewShape, float[] dataBuffer, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, (uint)dataBuffer.Length, device, readOnly)
@@ -1898,29 +1857,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         {
             return _IsReadOnly();
         }
-    }
-
-    public NDArrayView SliceView(System.Collections.Generic.IEnumerable<int> startOffset, System.Collections.Generic.IEnumerable<int> extent, bool readOnly = false)
-    {
-        var startOffsetVector = AsSizeTVector(startOffset);
-
-        var extentVector = AsSizeTVector(extent);
-
-        return _SliceView(startOffsetVector, extentVector, readOnly);
-    }
-
-    private static SizeTVector AsSizeTVector(System.Collections.Generic.IEnumerable<int> input)
-    {
-        var inputVector = new SizeTVector();
-        foreach (var element in input)
-        {
-            if (element < 0)
-            {
-                throw new System.ArgumentException("The argument cannot contain a negative value");
-            }
-            inputVector.Add((uint)element);
-        }
-        return inputVector;
     }
 %}
 

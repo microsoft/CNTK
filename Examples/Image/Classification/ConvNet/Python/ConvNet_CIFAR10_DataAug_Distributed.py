@@ -225,7 +225,7 @@ if __name__=='__main__':
                                 restore=not args['restart'],
                                 log_to_file=args['logdir'],
                                 num_mbs_per_log=100,
-                                gen_heartbeat=True,
+                                gen_heartbeat=False,
                                 profiling=args['profile'],
                                 tensorboard_logdir=args['tensorboard_logdir'])
     finally:

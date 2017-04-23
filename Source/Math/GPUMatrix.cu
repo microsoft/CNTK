@@ -220,19 +220,13 @@ void TracingGPUMemoryAllocator::Free(int deviceId, AllocatedElemType* bufferPtr,
     }
 }
 
-// Computes the smallest multiple of k greater or equal to n
-static inline size_t asMultipleOf(size_t n, size_t k) { return n + n % k;  }
-
 template <typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::AllocateNoTrace(int deviceId, size_t numElements)
 {
     AllocatedElemType* deviceBufferPtr;
 
     PrepareDevice(deviceId);
-    // In case numElements is odd we allocate a buffer with one more element. The reason is 
-    // we might call curandGenerateNormal (e.g. for Gaussian noise injection) which would fail
-    // if the number of elements it needs to generate is odd.
-    CUDA_CALL(cudaMalloc((void**) &deviceBufferPtr, sizeof(AllocatedElemType) * asMultipleOf(numElements, 2)));
+    CUDA_CALL(cudaMalloc((void**) &deviceBufferPtr, sizeof(AllocatedElemType) * numElements));
 
     return deviceBufferPtr;
 }
@@ -636,8 +630,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetColumnSlice(const GPUMatrix<ElemTyp
         LogicError("The number of rows in source and destination matrices do not match");
 
     if (m_numRows * numCols > 0) // TODO: remove if unnecessary
-        CUDA_CALL(cudaMemcpy(Data() + LocateColumn(startColumn), fromMatrix.Data(), sizeof(ElemType) * m_numRows * numCols, cudaMemcpyDeviceToDevice));
-
+        CUDA_CALL(cudaMemcpy(Data() + m_sliceViewOffset + LocateColumn(startColumn), fromMatrix.Data(), sizeof(ElemType) * m_numRows * numCols, cudaMemcpyDeviceToDevice));
     return *this;
 }
 
@@ -1333,14 +1326,10 @@ void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
     CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
 
     // TODO: Why not use SyncGuard?
-
-    // curandGenerateNormal can return the error CURAND_STATUS_LENGTH_NOT_MULTIPLE if GetNumElements() is odd.
-    // To avoid this we always allocate a buffer of even size and potentially generate one more random element.
-    auto n = asMultipleOf(GetNumElements(), 2);
     if (sizeof(ElemType) == sizeof(float))
-        CURAND_CALL(curandGenerateNormal(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(Data()), n, (float) mean, (float) sigma));
+        CURAND_CALL(curandGenerateNormal(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(Data()), GetNumElements(), (float) mean, (float) sigma));
     else
-        CURAND_CALL(curandGenerateNormalDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(Data()), n, (double) mean, (double) sigma));
+        CURAND_CALL(curandGenerateNormalDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(Data()), GetNumElements(), (double) mean, (double) sigma));
     // CURAND_CALL(curandDestroyGenerator(gen));
 }
 
@@ -1460,6 +1449,33 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _adam<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, functionValues.Data(),
         learnRatePerSample, momentum, adaWeight, adaMul, unitGainMomentum);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::NAdam(GPUMatrix<ElemType>& gradients,
+	GPUMatrix<ElemType>& functionValues,
+	ElemType learnRatePerSample,
+	ElemType momentum,
+	ElemType momNext,
+	ElemType adaWeight,
+	ElemType adaMul,
+	ElemType momMul,
+	bool unitGainMomentum)
+{
+	size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+	if (IsEmpty() || (GetNumCols() < numColsNeeded))
+	{
+		RequireSize(gradients.GetNumRows(), numColsNeeded);
+		SetValue(0.0);
+	}
+
+	assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+
+	size_t n = gradients.GetNumElements();
+	int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+	_nadam<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, functionValues.Data(),
+		learnRatePerSample, momentum, momNext, adaWeight, adaMul, momMul, unitGainMomentum);
 }
 
 template <class ElemType>
