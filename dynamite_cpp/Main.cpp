@@ -18,7 +18,7 @@ using namespace CNTK;
 using namespace std;
 
 typedef function<FunctionPtr(Variable)> UnaryFunction;
-typedef function <FunctionPtr(Variable, Variable)> BinaryFunction;
+typedef function<FunctionPtr(Variable, Variable)> BinaryFunction;
 
 UnaryFunction Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
@@ -65,7 +65,7 @@ UnaryFunction Recurrence(const function<FunctionPtr(Variable,Variable)>& stepFun
 {
     return [=](Variable x)
     {
-        auto dh = PlaceholderVariable({ 25 }, Axis::UnknownDynamicAxes());
+        auto dh = PlaceholderVariable();
         auto rec = stepFunction(PastValue(dh), x);
         rec->ReplacePlaceholders({ { dh, rec } });
         return rec;
@@ -118,10 +118,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
     // data
     const wstring featuresName = L"features";
-    const wstring labelsName = L"labels";
-
-    auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName);
-    auto labels = InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
+    const wstring labelsName   = L"labels";
 
     auto minibatchSource = TextFormatMinibatchSource(trainingCTFPath,
     {
@@ -133,6 +130,9 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto labelStreamInfo   = minibatchSource->StreamInfo(labelsName);
 
     // build the graph
+    auto features = InputVariable({ inputDim },         true /*isSparse*/, DataType::Float, featuresName);
+    auto labels   = InputVariable({ numOutputClasses }, useSparseLabels,   DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
+
     auto criterion = criterion_fn(features, labels);
     auto loss   = criterion.first;
     auto metric = criterion.second;
