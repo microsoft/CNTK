@@ -335,8 +335,8 @@ namespace CNTK
         // A map from Variable objects to ComputationNode objects in the ComputationNetwork instance that implements 'this' Composite Function
         std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_variableToNodeMap;
 
-        FunctionPtr m_latestFullyDefinedComposite;
         std::unordered_map<Variable, Variable> m_fullyDefinedArgumentsMap;
+        FunctionPtr m_latestFullyDefinedCompositeForCheckedModeValidation;
 
         Microsoft::MSR::CNTK::ComputationNetworkPtr m_computationNetwork;
 

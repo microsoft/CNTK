@@ -236,3 +236,9 @@ def test_sequence_unpack_backprop(device_id):
             reference_grad_value = param_grads_1[param].asarray()
             grad_value = param_grads_2[param].asarray()
             assert np.array_equal(reference_grad_value, grad_value)
+
+
+def test_to_sequence_error_for_operand_with_sequence_axis():
+    x = C.sequence.input(C.FreeDimension, 2)
+    with pytest.raises(ValueError):
+        op = C.to_sequence(x)

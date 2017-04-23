@@ -292,6 +292,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 %ignore_class CNTK::ProgressWriter;
 
+%ignore_function CNTK::SetCheckedMode;
+%ignore_function CNTK::GetCheckedMode;
+
 %ignore_struct std::hash<::CNTK::DistributedWorkerDescriptor>;
 
 // Ignore things in CNTKLibraryInternals.h that are not exposed for C# Eval.
@@ -327,8 +330,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 %ignore_function CNTK::Internal::SetComputationNetworkTraceLevel;
 %ignore_function CNTK::Internal::GetComputationNetworkTraceLevel;
-%ignore_function CNTK::Internal::SetComputationNetworkTrackGapNans;
-%ignore_function CNTK::Internal::GetComputationNetworkTrackGapNans;
 %ignore_function CNTK::Internal::SetGPUMemoryAllocationTraceLevel;
 %ignore_function CNTK::Internal::ForceSynchronousCUDAKernelExecutions;
 %ignore_function CNTK::Internal::ForceDeterministicAlgorithms;

@@ -264,9 +264,6 @@ namespace CNTK
         CNTK_API void SetComputationNetworkTraceLevel(int traceLevel);
         int GetComputationNetworkTraceLevel();
 
-        CNTK_API void SetComputationNetworkTrackGapNans(bool enable);
-        bool GetComputationNetworkTrackGapNans();
-
         CNTK_API void SetGPUMemoryAllocationTraceLevel(int traceLevel);
 
         CNTK_API void SetMathLibTraceLevel(int traceLevel);

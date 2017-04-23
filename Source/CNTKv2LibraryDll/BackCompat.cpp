@@ -532,7 +532,7 @@ namespace CNTK
         {
             ComputationNetworkPtr net = make_shared<ComputationNetwork>(AsCNTKImplDeviceId(computeDevice));
             net->SetTraceLevel(Internal::GetComputationNetworkTraceLevel());
-            net->SetTrackGapNans(Internal::GetComputationNetworkTrackGapNans());
+            net->SetTrackGapNans(GetCheckedMode());
 
             auto dataType = DetectLegacyModelDataType(modelFile);
             switch (dataType)
