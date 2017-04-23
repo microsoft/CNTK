@@ -17,66 +17,51 @@ using namespace CNTK;
 
 using namespace std;
 
-using namespace std::placeholders;
-
-inline FunctionPtr LSTMSequenceClassifierNet(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t LSTMDim, size_t cellDim, const DeviceDescriptor& device, const std::wstring& outputName)
+// Embedding(50) >> Recurrence(RNNStep(25)) >> Last >> Dense(5)
+inline FunctionPtr CreateModel(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device, const std::wstring& outputName)
 {
-    auto embeddingFunction = Embedding(input, embeddingDim, device);
-    auto pastValueRecurrenceHook = [](const Variable& x) { return PastValue(x); };
-    auto LSTMFunction = LSTMPComponentWithSelfStabilization<float>(embeddingFunction, { LSTMDim }, { cellDim }, pastValueRecurrenceHook, pastValueRecurrenceHook, device).first;
-    auto thoughtVectorFunction = Sequence::Last(LSTMFunction);
+    auto r = Embedding(input, embeddingDim, device);
 
-    return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
+    auto dh = PlaceholderVariable({ hiddenDim }, ((Variable)r).DynamicAxes());
+    r = RNNStep<float>(r, dh, device);
+    r->ReplacePlaceholders({ { dh, PastValue(r) } });
+
+    r = Sequence::Last(r);
+    r = FullyConnectedLinearLayer(r, numOutputClasses, device, outputName);
+    return r;
 }
 
-void TrainLSTMSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabels, bool testSaveAndReLoad)
+void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabels)
 {
-    const size_t inputDim = 2000;
-    const size_t cellDim = 25;
-    const size_t hiddenDim = 25;
-    const size_t embeddingDim = 50;
+    const size_t inputDim         = 2000;
+    const size_t embeddingDim     = 50;
+    const size_t hiddenDim        = 25;
     const size_t numOutputClasses = 5;
 
-    auto featuresName = L"features";
-    auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName);
-    auto classifierOutput = LSTMSequenceClassifierNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
+    const wstring featuresName = L"features";
+    const wstring labelsName   = L"labels";
 
-    auto labelsName = L"labels";
+    auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName);
+    auto classifierOutput = CreateModel(features, numOutputClasses, embeddingDim, hiddenDim, device, L"classifierOutput");
+
     auto labels = InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
     auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
 
-    if (testSaveAndReLoad)
-    {
-        Variable classifierOutputVar = classifierOutput;
-        Variable trainingLossVar = trainingLoss;
-        Variable predictionVar = prediction;
-        auto oneHiddenLayerClassifier = CNTK::Combine({ trainingLoss, prediction, classifierOutput }, L"classifierModel");
-        SaveAndReloadModel<float>(oneHiddenLayerClassifier, { &features, &labels, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
-
-        classifierOutput = classifierOutputVar;
-        trainingLoss = trainingLossVar;
-        prediction = predictionVar;
-    }
-
-    wstring path = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/";
+    const wstring path = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/";
     auto minibatchSource = TextFormatMinibatchSource(path + L"Train.ctf",
     {
-        { featuresName, inputDim, true, L"x" },
-        { labelsName, numOutputClasses, false, L"y" }
+        { featuresName, inputDim,         true,  L"x" },
+        { labelsName,   numOutputClasses, false, L"y" }
     }, MinibatchSource::FullDataSweep);
-    const size_t minibatchSize = 200;
 
     auto featureStreamInfo = minibatchSource->StreamInfo(featuresName);
-    auto labelStreamInfo = minibatchSource->StreamInfo(labelsName);
+    auto labelStreamInfo   = minibatchSource->StreamInfo(labelsName);
 
-    LearningRatePerSampleSchedule learningRatePerSample = 0.0005;
-    MomentumAsTimeConstantSchedule momentumTimeConstant = 256;
-    auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction,
-    { MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample,
-        momentumTimeConstant, /*unitGainMomentum = */true) });
+    auto learner = SGDLearner(classifierOutput->Parameters(), LearningRatePerSampleSchedule(0.05));
+    auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { learner });
 
-    size_t outputFrequencyInMinibatches = 1;
+    const size_t minibatchSize = 200;
     for (size_t i = 0; true; i++)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
@@ -84,11 +69,11 @@ void TrainLSTMSequenceClassifier(const DeviceDescriptor& device, bool useSparseL
             break;
 
         trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-        PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
+        PrintTrainingProgress(trainer, i, /*outputFrequencyInMinibatches=*/ 1);
     }
 }
 
 int main(int argc, char *argv[])
 {
-    TrainLSTMSequenceClassifier(DeviceDescriptor::GPUDevice(0), true, false);
+    TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
 }

@@ -112,6 +112,31 @@ std::pair<FunctionPtr, FunctionPtr> LSTMPComponentWithSelfStabilization(Variable
     return{ LSTMCell.first, LSTMCell.second };
 }
 
+template <typename ElementType>
+FunctionPtr RNNStep(Variable input, Variable prevOutput, const DeviceDescriptor& device)
+{
+    size_t outputDim = prevOutput.Shape()[0];
+
+    auto createBiasParam = [device](size_t dim) {
+        return Parameter({ dim }, (ElementType)0.0, device);
+    };
+
+    unsigned long seed2 = 1;
+    auto createProjectionParam = [device, &seed2](size_t outputDim, size_t inputDim) {
+        return Parameter({ outputDim, inputDim },
+                         AsDataType<ElementType>(),
+                         GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
+    };
+
+    auto W = createProjectionParam(outputDim, NDShape::InferredDimension);
+    auto R = createProjectionParam(outputDim, outputDim);
+    auto b = createBiasParam(outputDim);
+
+    auto h = ReLU(b + Times(W, input) + Times(R, prevOutput));
+
+    return h;
+}
+
 // This is currently unused
 inline FunctionPtr SimpleRecurrentLayer(const  Variable& input, const  NDShape& outputDim, const std::function<FunctionPtr(const Variable&)>& recurrenceHook, const DeviceDescriptor& device)
 {
