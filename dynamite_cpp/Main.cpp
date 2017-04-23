@@ -90,6 +90,19 @@ UnaryFunction CreateModel(size_t numOutputClasses, size_t embeddingDim, size_t h
     });
 }
 
+function<pair<Variable,Variable>(Variable, Variable)> CreateCriterion(UnaryFunction model)
+{
+    return [=](Variable features, Variable labels)
+    {
+        auto z = model(features);
+
+        auto loss   = CNTK::CrossEntropyWithSoftmax(z, labels);
+        auto metric = CNTK::ClassificationError    (z, labels);
+
+        return make_pair(loss, metric);
+    };
+}
+
 void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabels)
 {
     const size_t inputDim         = 2000;
@@ -99,16 +112,16 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
     const wstring trainingCTFPath = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf";
 
+    // model and criterion function
+    auto model_fn = CreateModel(numOutputClasses, embeddingDim, hiddenDim, device);
+    auto criterion_fn = CreateCriterion(model_fn);
+
+    // data
     const wstring featuresName = L"features";
-    const wstring labelsName   = L"labels";
+    const wstring labelsName = L"labels";
 
     auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName);
-    auto classifierOutput = CreateModel(numOutputClasses, embeddingDim, hiddenDim, device)(PlaceholderVariable());
-    classifierOutput->ReplacePlaceholder(features);
-
     auto labels = InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
-    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels);
-    auto prediction   = CNTK::ClassificationError    (classifierOutput, labels);
 
     auto minibatchSource = TextFormatMinibatchSource(trainingCTFPath,
     {
@@ -119,8 +132,14 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto featureStreamInfo = minibatchSource->StreamInfo(featuresName);
     auto labelStreamInfo   = minibatchSource->StreamInfo(labelsName);
 
-    auto learner = SGDLearner(classifierOutput->Parameters(), LearningRatePerSampleSchedule(0.05));
-    auto trainer = CreateTrainer(nullptr, trainingLoss, prediction, { learner });
+    // build the graph
+    auto criterion = criterion_fn(features, labels);
+    auto loss   = criterion.first;
+    auto metric = criterion.second;
+
+    // train
+    auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
+    auto trainer = CreateTrainer(nullptr, loss, metric, { learner });
 
     const size_t minibatchSize = 200;
     for (size_t i = 0; true; i++)
