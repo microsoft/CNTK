@@ -74,7 +74,7 @@ def as_block(composite, block_arguments_map, block_op_name, block_instance_name=
     Args:
         composite: The composite Function that the block encapsulates
         block_arguments_map: A list of tuples, mapping from block's underlying composite's arguments to
-        actual variables they are connected to
+         actual variables they are connected to
         block_op_name: Name of the op that the block represents
         block_instance_name (str, optional): the name of the block Function in the network
 
