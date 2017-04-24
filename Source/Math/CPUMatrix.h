@@ -99,6 +99,9 @@ public:
     void Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
               ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
 
+	void Adamax(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+		ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+
     ElemType RmsProp(CPUMatrix<ElemType>& gradients,
                      ElemType RMS_GAMMA,
                      ElemType RMS_WGT_INC,

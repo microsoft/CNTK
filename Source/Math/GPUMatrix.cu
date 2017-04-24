@@ -1463,6 +1463,35 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::Adamax(GPUMatrix<ElemType>& gradients,
+	GPUMatrix<ElemType>& functionValues,
+	ElemType learnRatePerSample,
+	ElemType momentum,
+	ElemType adaWeight,
+	ElemType adaMul,
+	bool unitGainMomentum)
+{
+	size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+	if (IsEmpty() || (GetNumCols() < numColsNeeded))
+	{
+		RequireSize(gradients.GetNumRows(), numColsNeeded);
+		SetValue(0.0);
+	}
+
+	assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+
+	size_t n = gradients.GetNumElements();
+	GPUMatrix<ElemType> c(GetComputeDeviceId());
+	gradients.VectorNormInf(c, 0);
+	ElemType* max_gradients = c.Data();
+
+	int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+	_adamax<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, functionValues.Data(),
+		learnRatePerSample, momentum, adaWeight, adaMul, max_gradients, unitGainMomentum);
+}
+
+template <class ElemType>
 ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
                                       ElemType RMS_GAMMA,
                                       ElemType RMS_WGT_INC,
