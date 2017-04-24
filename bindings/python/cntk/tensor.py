@@ -211,14 +211,14 @@ class ArrayMixin(object):
         if is_sparse:
             from cntk.internal.sanitize import _sparse_to_dense_network_cache
 
-            device = self.device
+            device = ndav.device
             if callable(device):
                 device = device()
 
             network = _sparse_to_dense_network_cache(ndav.shape[1:], False,
-                    device)
+                                                     device)
             warnings.warn('converting Value object to CSR format might be slow')
- 
+
             dense_data = network.eval(self, device=device)
 
             def to_csr(dense_data):

@@ -16,7 +16,7 @@ from .ops_test_utils import _test_binary_op, AA, precision, PRECISION_TO_TYPE,\
         unittest_helper
 
 from cntk import input, dropout, combine
-
+import cntk as C
 
 def test_sequence_grad_as_numpy_false(device_id, precision):
     from .. import sequence
@@ -55,3 +55,13 @@ def test_eval_not_all_outputs():
 
     result = func.eval({y : y_data}, [minus_func])
     assert np.array_equal(result, np.asarray([[1.]]))
+
+def test_grad_custimized_root():
+    x = C.input(shape=(1,), needs_gradient=True)
+    y = C.sqrt(x)
+    y2 = C.log(x)
+    combine = C.combine([y.output, y2.output])
+    a = np.asarray([1,4,16], dtype=np.float32).reshape(3,1)
+    grads = combine.grad({x:a}, grad_root = y.output)
+    expect_grad = np.asarray([[0.5],[0.25],[0.125]], dtype=np.float32)
+    assert np.array_equal(grads, expect_grad)

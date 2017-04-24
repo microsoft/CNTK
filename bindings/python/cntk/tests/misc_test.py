@@ -36,11 +36,6 @@ def test_callstack2():
         cntk.io.MinibatchSource(cntk.io.CTFDeserializer("", streams={}))
     assert '[CALL STACK]' in str(excinfo.value)
 
-def test_Value_raises():
-    from cntk import NDArrayView, Value
-    with pytest.raises(ValueError):
-        nd = NDArrayView.from_dense(np.asarray([[[4,5]]], dtype=np.float32))
-        val = Value(nd)
 
 def test_cpu_and_gpu_devices():
     device = cpu()
@@ -97,41 +92,41 @@ def test_set_cpu_as_default_device():
     assert device == use_default_device()
 
 def test_set_gpu_as_default_device():
-  if len(all_devices()) == 1: 
-      return;
-  # this will release any previous held device locks
-  try_set_default_device(cpu(), False)
-  for i in range(len(all_devices()) - 1):
-    device = gpu(i)
-    assert try_set_default_device(device, False)
-    assert not is_locked(device)
-    assert device == use_default_device()
-    if not device.is_locked():
+    if len(all_devices()) == 1: 
+        return;
+    # this will release any previous held device locks
+    try_set_default_device(cpu(), False)
+    for i in range(len(all_devices()) - 1):
+        device = gpu(i)
+        assert try_set_default_device(device, False)
         assert not is_locked(device)
-        assert try_set_default_device(device, True)
         assert device == use_default_device()
-        assert is_locked(device)
+        if not device.is_locked():
+            assert not is_locked(device)
+            assert try_set_default_device(device, True)
+            assert device == use_default_device()
+            assert is_locked(device)
 
 def test_set_excluded_devices():
-  if len(all_devices()) == 1: 
-      return;
-  assert try_set_default_device(cpu(), False)
-  assert try_set_default_device(gpu(0), False)
-  set_excluded_devices([cpu()])
-  assert not try_set_default_device(cpu(), False)
-  set_excluded_devices([])
-  assert try_set_default_device(cpu(), False)
+    if len(all_devices()) == 1: 
+        return;
+    assert try_set_default_device(cpu(), False)
+    assert try_set_default_device(gpu(0), False)
+    set_excluded_devices([cpu()])
+    assert not try_set_default_device(cpu(), False)
+    set_excluded_devices([])
+    assert try_set_default_device(cpu(), False)
 
 def test_setting_trace_level():
-  from cntk.logging import TraceLevel, set_trace_level, get_trace_level
-
-  value = get_trace_level();
-  assert value == TraceLevel.Warning
+    from cntk.logging import TraceLevel, set_trace_level, get_trace_level
   
-  for level in [TraceLevel.Info, TraceLevel.Error, TraceLevel.Warning]:
-    set_trace_level(level)
-    value = get_trace_level();
-    assert value == level
-    set_trace_level(level.value)
-    value = get_trace_level();
-    assert value == level
+    value = get_trace_level()
+    assert value == TraceLevel.Warning
+    
+    for level in [TraceLevel.Info, TraceLevel.Error, TraceLevel.Warning]:
+        set_trace_level(level)
+        value = get_trace_level()
+        assert value == level
+        set_trace_level(level.value)
+        value = get_trace_level()
+        assert value == level

@@ -15,6 +15,7 @@ import cntk as C
 from .ops_test_utils import cntk_device
 from cntk.axis import Axis
 from .. import constant
+from cntk.tests.test_utils import _to_dense
 
 def test_times_2d_sparse_operand(device_id):
     from .. import times
@@ -202,7 +203,6 @@ def test_non_sequence_sparse_one_hot():
     result_indices = result.dot(np.array([0, 1, 2]))
     assert np.array_equal(result_indices, indices)
 
-
 def test_gather_2D_using_one_hot_and_times():
     i = C.sequence.input((1,))
     indices = [[2, 0], [1]]
@@ -223,13 +223,20 @@ def test_2d_non_sequence_sparse_one_hot():
     indices = np.asarray([[2, 1], [0, 2], [1, 0]])
     result = sparse_one_hot.eval({x : indices}, as_numpy=False)
 
-    def _to_dense(val):
-        x = C.input(val.shape[1:], is_sparse=True)
-        dense = C.times(x, C.constant(value=np.eye(val.shape[-1], dtype=np.float32)))
-        return dense.eval({x : val})
-
     result_dense = _to_dense(result)
     assert np.array_equal(result_dense, np.eye(num_classes, dtype=np.float32)[indices])
+
+
+def test_2d_sequence_sparse_one_hot():
+    x = C.sequence.input((2,))
+    num_classes = 3
+    sparse_one_hot = C.one_hot(x, num_classes, sparse_output=True)
+    indices = [np.asarray([[2, 1], [0, 2]]), np.asarray([[1, 0]])]
+    result = sparse_one_hot.eval({x : indices}, as_numpy=False)
+
+    result_dense = _to_dense(result, True)
+    assert np.array_equal(result_dense[0], np.eye(num_classes, dtype=np.float32)[indices[0]])
+    assert np.array_equal(result_dense[1], np.eye(num_classes, dtype=np.float32)[indices[1]])
 
 
 def test_gather_implementation_using_one_hot_and_times():
@@ -245,3 +252,33 @@ def test_gather_implementation_using_one_hot_and_times():
     result = t.eval({x : indices})
     expected_result = np.asarray([[[ 0., 1.], [ 6., 7.]], [[ 4., 5.], [ 2., 3.]]])
     assert np.array_equal(result, expected_result)
+
+
+def test_2d_sparse_csr_batch_input(device_id):
+    dev = cntk_device(device_id)
+    features = C.input((2, 3), is_sparse=True)
+    w = C.parameter(init=np.asarray([[0.5, 1], [-.5, 2], [1., 1.5]], dtype=np.float32), device=dev)
+    t = C.times(features, w)
+    features_data = [sp.sparse.csr_matrix(np.asarray([[1.,0.,0.], [0.,1.,0.]], dtype=np.float32)),
+                     sp.sparse.csr_matrix(np.asarray([[0.,0.,1.], [1.,0.,0.]], dtype=np.float32))]
+    result = t.eval({features : features_data}, device=dev)
+    assert np.array_equal(result, [[[.5, 1], [-.5, 2]], [[1, 1.5], [.5, 1]]])
+
+
+def test_sparse_block_row_input(device_id):
+    dev = cntk_device(device_id)
+    num_classes = 3
+
+    w_init = np.asarray([[0,1],[2,3],[4,5]]).astype(np.float32)
+    w = C.parameter(init=w_init, device=dev)
+
+    x = C.input(())
+    sparse_one_hot = C.one_hot(x, num_classes, sparse_output=True)
+    t = C.times(sparse_one_hot, w)
+    indices = np.asarray([0,2], dtype=np.float32)
+    w_grad_value = t.grad({x : indices}, wrt=[w], device=dev, as_numpy=False)
+
+    grad_i = C.input(w.shape)
+    new_param_value = (0.01*grad_i + w).eval({grad_i : w_grad_value}, device=dev)
+    assert np.array_equal(new_param_value, np.asarray([[[ 0.01, 1.01], [2., 3.], [4.01, 5.01]]], dtype=np.float32))
+ 

@@ -235,7 +235,7 @@ public:
     void RmsProp(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
                      ElemType momentum, ElemType RMS_GAMMA, const bool needAveMultiplier);
 
-    void AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon);
+    void AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
 
     void Reshape(const size_t numRows, const size_t numCols);
 

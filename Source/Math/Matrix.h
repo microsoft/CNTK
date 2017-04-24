@@ -217,7 +217,7 @@ public:
 
     void RmsPropUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double learnRatePerSample, const double momentum, ElemType RMS_GAMMA, const bool needAveMultiplier);
 
-    void AdaDeltaUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionvalues, ElemType rho, ElemType epsilon);
+    void AdaDeltaUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionvalues, ElemType learningRatePerSample, ElemType rho, ElemType epsilon);
 
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true); // by default we only reallocate if need to grow
     void Resize(const Matrix<ElemType>& other) // TODO: Should this carry over numNZElemToReserve for sparse matrices?

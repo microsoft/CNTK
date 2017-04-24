@@ -94,6 +94,8 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         else:
             self.metric_multiplier = 1.0
 
+        self.__disown__()
+
         # print out data about CNTK build
         cntk_py.print_built_info()
 
@@ -207,6 +209,10 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         self.metric_since_last = 0
         self.samples_since_last = 0
         return ret
+
+    def write(self, key, value):
+        # Override for ProgressWriter.write method.
+        self.___logprint("{}: {}".format(key, value))
 
     def ___logprint(self, logline):
         if self.log_to_file == None:
@@ -444,6 +450,7 @@ class TensorBoardProgressWriter(cntk_py.ProgressWriter):
         # Only log either when rank is not specified or when rank is 0.
         self.writer = cntk_py.TensorBoardFileWriter(log_dir, model) if not rank else None
         self.closed = False
+        self.__disown__()
 
     def write_value(self, name, value, step):
         '''

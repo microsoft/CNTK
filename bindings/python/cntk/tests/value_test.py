@@ -7,14 +7,16 @@ import pytest
 import numpy as np
 import scipy.sparse as sparse
 import cntk as C
+
 csr = sparse.csr_matrix
 
 from ..core import *
 from cntk.tests.test_utils import *
-from cntk.ops.tests.ops_test_utils import compare_lists_of_np_arrays
+from cntk.ops.tests.ops_test_utils import compare_lists_of_np_arrays, cntk_device
 from cntk import *
 from cntk.internal import _value_as_sequence_or_array
 from cntk import asarray, asvalue
+from cntk.tests.test_utils import _to_dense, _to_csr
 
 test_numbers = [4., 5, 6., 7., 8.]
 test_array = AA(test_numbers, dtype=np.float32)
@@ -206,3 +208,44 @@ def test_ndarray_properties():
     assert ndav.is_sparse == False
 
     assert ndav.dtype == np.float32
+
+
+
+def test_ndarrayview_from_csr(device_id):
+    dev = cntk_device(device_id)
+    data = [[[0, 1, 1], [0, 1, 0]], [[1, 0, 0], [1, 0, 1]]]
+    csr_data = _to_csr(data)
+    ndarrayview = NDArrayView.from_csr(csr_data, shape=(2, 2, 3))
+    assert np.array_equal(_to_dense(ndarrayview), data)
+    
+    with pytest.raises(ValueError):
+        ndarrayview = NDArrayView.from_csr(csr_data, shape=(3, 2, 3))
+
+    with pytest.raises(ValueError):
+        ndarrayview = NDArrayView.from_csr(csr_data, shape=(2, 2, 4))
+ 
+
+def test_2d_sparse_sequences_value(device_id):
+    dev = cntk_device(device_id)
+    seq1_data = [[[0, 1, 1], [0, 1, 0]], [[1, 0, 0], [1, 0, 1]]]
+    csr_seq1 = _to_csr(seq1_data)
+    ndarrayview1 = NDArrayView.from_csr(csr_seq1, shape=(2, 2, 3), device=cpu())
+    seq2_data = [[0, 1, 1], [1, 1, 0]]
+    csr_seq2 = _to_csr(seq2_data)
+    ndarrayview2 = NDArrayView.from_csr(csr_seq2, shape=(1, 2, 3), device=cpu())
+
+    x = sequence.input((2, 3))
+    sequence_value = Value.create(x, [ndarrayview1, ndarrayview2], device=dev)
+    assert np.array_equal(_to_dense(sequence_value.data), [seq1_data, [seq2_data, [[0, 0, 0], [0, 0, 0]]]])
+
+def test_as_shape_to_1d(device_id):
+    dev = cntk_device(device_id)
+    x = C.input(1)
+    w_1d = C.parameter((1), device=dev)
+    assert np.array_equal(w_1d.value, [0])
+
+    op = x * 0.1
+    value = op.eval({x:np.asarray([[1]], dtype=np.float32)}, as_numpy=False, device=dev)
+    value = value.data.as_shape(value.data.shape[1:])
+    w_1d.value = value
+    assert np.array_equal(w_1d.value, np.asarray([0.1], dtype=np.float32))

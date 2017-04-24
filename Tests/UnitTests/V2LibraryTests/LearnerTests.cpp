@@ -251,13 +251,16 @@ void TestSweepBasedSchedule()
     DeviceDescriptor device = DeviceDescriptor::CPUDevice();
     auto schedule = LearningRatePerSampleSchedule({ 1, 2, 3, 4, 5 }, LearningRateSchedule::FullDataSweep);
 
-    auto learner1 = SGDLearner({}, schedule);
+    auto weights = Parameter({ 2 }, DataType::Float, 0, device);
+    auto learner1 = SGDLearner({ weights }, schedule);
     assert(1 == learner1->LearningRate());
 
     
     for (auto i : {2, 3, 4, 5 })
     {
-        std::unordered_map<Parameter, NDArrayViewPtr> gradients {};
+        std::vector<float> gradientValueVector(weights.Shape().TotalSize(), 0);
+        auto gradientValue = MakeSharedObject<NDArrayView>(weights.Shape(), gradientValueVector);
+        std::unordered_map<Parameter, NDArrayViewPtr> gradients{ { weights, gradientValue } };
         learner1->Update(gradients, 1, true);
         assert(i == learner1->LearningRate());
     }

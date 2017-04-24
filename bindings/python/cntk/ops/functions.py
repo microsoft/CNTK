@@ -114,7 +114,7 @@ class Function(cntk_py.Function):
         from .. import placeholder, input
         def make_arg_variable(name, annotations):
             from ..variables import Variable
-            if isinstance(annotations.get(name, None), Variable.Type):
+            if isinstance(annotations.get(name, None), Variable._Type):
                 var_type = annotations[name]
                 return input(name=name, **var_type)
             else:
@@ -252,7 +252,7 @@ class Function(cntk_py.Function):
             from ..variables import Variable
             if isinstance(arg_type, (int, tuple)): # just passed a shape
                 return input(shape=_as_tuple(arg_type), name=name)
-            elif isinstance(arg_type, Variable.Type): # full type given as Tensor(...)
+            elif isinstance(arg_type, Variable._Type): # full type given as Tensor(...)
                 return input(name=name, **arg_type)
             else:
                 raise TypeError("update_signature() expects arguments of type int, tuple of int, or Type.Variable")
@@ -525,7 +525,9 @@ class Function(cntk_py.Function):
              to be performed.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
+             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
+             You must explicitly clone the temporay Value objects if they need to be accessed later.
 
         Note:
              See :meth:`~cntk.ops.functions.Function.forward` for examples on
@@ -650,7 +652,9 @@ class Function(cntk_py.Function):
              computation is. If `None`, the default device is used.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
+             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
+             You must explicitly clone the temporay Value objects if they need to be accessed later.
 
         Returns:
              A tuple (BackPropState, map of outputs to NumPy arrays). The
@@ -705,7 +709,9 @@ class Function(cntk_py.Function):
              the gradients have to be computed.
             as_numpy (bool): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
+             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
+             You must explicitly clone the temporay Value objects if they need to be accessed later.
 
         Note:
              See :meth:`~cntk.ops.functions.Function.forward` for more examples
@@ -729,7 +735,7 @@ class Function(cntk_py.Function):
         return var_gradients
 
     @typemap
-    def grad(self, at, wrt=None, outputs=None, device=None, as_numpy=True):
+    def grad(self, at, wrt=None, outputs=None, device=None, as_numpy=True, grad_root=None):
         '''
         Computes the gradient of this Function at location ``at`` with respect to ``wrt``.
         The Function must have a single output.
@@ -757,16 +763,20 @@ class Function(cntk_py.Function):
              computation is performed. If `None`, the default device is used.
             as_numpy (bool, default `True`): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
+             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
+             You must explicitly clone the temporay Value objects if they need to be accessed later.
+            grad_root (:class:`~cntk.variables.Variable`, optional): specify the root of gradients calculation. 
+             If not specified, the output of this function will be used as gradient root.
 
         Returns:
             dict or NumPy Array or a tuple of these: Dict with keys of ``wrt`` variables and gradient values of
-             ``wrt`` variables. A single NumPy array if there is only one gradient value.
-             If ``outputs`` were specified (to fetch values for), this method returns a tuple where the 2nd element
-             of the tuple is the ``outputs`` values; a dict with keys of specified ``outputs`` variables and
-             values of computed ``outputs``, or a single NumPy array if there is only one output value.
-             Each element has the same shape as the ``wrt`` or ``outputs`` variables including dynamic axes
-             (such as the batch axis).
+            ``wrt`` variables. A single NumPy array if there is only one gradient value.
+            If ``outputs`` were specified (to fetch values for), this method returns a tuple where the 2nd element
+            of the tuple is the ``outputs`` values; a dict with keys of specified ``outputs`` variables and
+            values of computed ``outputs``, or a single NumPy array if there is only one output value.
+            Each element has the same shape as the ``wrt`` or ``outputs`` variables including dynamic axes
+            (such as the batch axis).
         '''
         if device is None:
             device = DeviceDescriptor.use_default_device()
@@ -784,7 +794,10 @@ class Function(cntk_py.Function):
         output_map = {v: None for v in outputs}
         wrt_map = {v: None for v in wrt}
 
-        super(Function, self).gradients(in_var_map, wrt_map, output_map, device)
+        if grad_root is None:
+            super(Function, self).gradients(in_var_map, wrt_map, output_map, device)
+        else:
+            super(Function, self).gradients(in_var_map, grad_root, wrt_map, output_map, device)
 
         if as_numpy:
             for k in output_map:
@@ -811,19 +824,18 @@ class Function(cntk_py.Function):
     def name(self):
         '''
         Name of this function
+
+        Args:
+          getter (str): returns the name of the function.
+          setter (str): sets the name of the function. Setting the name of a
+           Function is only allowed if the Function does not already have a
+           name. Calling this method, when this Function already has a name,
+           results in an exception.
         '''
         return super(Function, self).name()
 
     @name.setter
     def name(self, function_name):
-        '''
-        Sets the name of this Function.
-        Setting the name of a Function is only allowed if the Function does not already have a name.
-        Calling this method, when this Function already has a name, results in an exception.
-
-        Args:
-            function_name (`str`): name for this Function.
-        '''
         super(Function, self).set_name(function_name)
 
     @property
@@ -1088,6 +1100,45 @@ class Function(cntk_py.Function):
         if not device:
             device = DeviceDescriptor.use_default_device()
         return cntk_py.Function.load_model(filename, device)
+
+@typemap
+def register_native_user_function(op_name, module_name, factory_method_name):
+    '''
+    Registers a native user-defined Function that can be subsequently instantiated
+    using the 'native_user_function' method.
+
+    Args:
+        op_name (str): Name of the native user-defined Function to register.
+         This name must be unique and an error will be reported if it matches
+         the 'op_name' specified for a previously registered native user-defined Function.
+        module_name (str): Name of the module containing the factory method for creating 
+         instances of the native user-defined Function being registered. This is typically
+         the name of a DLL/so which exports a factory method for creating instances of the
+         native user-defined Function.
+        factory_method_name (str): Name of the factory method for creating instances of the native
+         user-defined Function being registered. This method must be an exported method of the
+         specified module.
+    '''
+    return cntk_py.Function_register_native_user_function(op_name, module_name, factory_method_name)
+
+@typemap
+def native_user_function(op_name, operands, user_function_instance_name=''):
+    '''
+    Creates an instance of a user-defined Function previously registered using the
+    'register_native_user_function' method.
+
+    Args:
+        op_name (str): Name of the native user-defined Function to instantiate.
+         This name must be the name that was used when registering the native user-function 
+         with the 'register_native_user_function' method.
+        operands (list): input operands of the new instance of the native user-defined Function.
+        user_function_instance_name (str): Name of the instance of the created native 
+         user-defined Function.
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    return cntk_py.Function_native_user_function(op_name, operands, user_function_instance_name)
 
 @typemap
 def load_model(filename, device=None):

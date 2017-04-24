@@ -126,14 +126,14 @@ ConvolutionTransposeLayer {numOutputChannels,
 }.apply
 
 # BilinearUpsamplingLayer -- upsample input activations using transposed convolution with bilinear weights.
-BilinearUpsamplingLayer {numInputChannels, numOutputChannels, kernelSize, stride} =
+BilinearUpsamplingLayer {numChannels, kernelSize, stride} =
 {
-    kernelShape = kernelSize:kernelSize:numOutputChannels
-    paramShape = _ConcatArrays (kernelShape, _AsArray (numInputChannels))
+    kernelShape = kernelSize:kernelSize:numChannels
+    paramShape = _ConcatArrays (kernelShape, _AsArray (numChannels))
     W = ParameterTensor{paramShape, init = 'bilinear', initValueScale = 1, initOnCPUOnly = true, learningRateMultiplier = 0}
     sharing = true    # TODO: support this
     apply (x) = {
-        c = ConvolutionTranspose (W, x, kernelShape, mapDims = numInputChannels, stride = stride, sharing = sharing, autoPadding = false, lowerPad = 0, upperPad = 0, outputShape = None, maxTempMemSizeInSamples = 0)
+        c = ConvolutionTranspose (W, x, kernelShape, mapDims = numChannels, stride = stride, sharing = sharing, autoPadding = false, lowerPad = 0, upperPad = 0, outputShape = None, maxTempMemSizeInSamples = 0)
     }.c
 }.apply
 

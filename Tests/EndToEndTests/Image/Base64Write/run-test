@@ -14,4 +14,23 @@ EvalModelDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/PreTrainedModels/EvalModel
 echo $EvalModelDir
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun EvalNetOnImages.cntk EvalModelDir=$EvalModelDir || exit $?
+cntkrun EvalNetOnImages.cntk EvalModelDir=$EvalModelDir
+ExitCode=$?
+
+if [ $ExitCode == 0 ]; then
+  echo Write succeeded.
+
+  OUTPUT_DIFF=$TEST_RUN_DIR/Diff.OutputNodes
+  OUTPUT_CURRENT=$TEST_RUN_DIR/Actual.OutputNodes.z
+  OUTPUT_BASELINE=$TEST_DIR/ExpectedOutputNodes.txt
+
+  awk -f $TEST_DIR/Comparator.awk $OUTPUT_BASELINE $OUTPUT_CURRENT > $OUTPUT_DIFF || exit $?
+
+  if [ -s $OUTPUT_DIFF ]; then
+    echo "Error: Output of write command does not match baseline output within specified tolerance:"
+    cat $OUTPUT_DIFF 
+    exit 1
+  fi
+fi
+
+exit $ExitCode

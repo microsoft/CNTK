@@ -2,10 +2,11 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// CPUMatrix.cpp : full implementation of all matrix functions on the CPU side
+// CPUMatrix.h : template implementation of all matrix functions on the CPU side
 //
 
-#include "stdafx.h"
+#pragma once
+
 #include "Basics.h"
 #include "File.h"
 
@@ -65,18 +66,6 @@
     }
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-int MATH_API TracingGPUMemoryAllocator::m_traceLevel = 0;
-
-void TracingGPUMemoryAllocator::SetTraceLevel(int traceLevel)
-{
-    m_traceLevel = traceLevel;
-}
-
-bool TracingGPUMemoryAllocator::IsTraceEnabled()
-{
-    return (m_traceLevel > 0);
-}
 
 #pragma region Helpful Enum Definitions
 enum class MatrixOrder
@@ -1336,7 +1325,7 @@ void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon)
+void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
@@ -1364,7 +1353,7 @@ void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<Ele
         ElemType x2 = smoothX2[i];
         ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
         smoothX2[i] = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
-        val[i] += deltaX;
+        val[i] += learningRate * deltaX;
     }
 }
 
@@ -5869,7 +5858,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOfWithShift(const 
 #pragma endregion Static BLAS Functions
 
 // 'double' version of LogAdd
-double LogAddD(double x, double y)
+inline double LogAddD(double x, double y)
 {
     return LogAdd(x, y);
 }
@@ -7129,12 +7118,6 @@ void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseO
         }
     }
 }
-
-// =======================================================================
-// explicit instantiations
-// =======================================================================
-template class MATH_API CPUMatrix<float>;
-template class MATH_API CPUMatrix<double>;
 
 // We use Matrix<char> as the backing store for QuantizedMatrix
 // Let's explicitly instantiate the methods we need for that purpose

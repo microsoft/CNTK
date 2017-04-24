@@ -9,15 +9,12 @@ import sys
 import os
 from cntk.device import cpu, try_set_default_device
 from cntk import Trainer
+from cntk.layers import Dense, Sequential, For
 from cntk.learners import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input, sigmoid
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
 from cntk.logging import ProgressPrinter
-
-abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "Examples", "common"))
-from nn import fully_connected_classifier_net
 
 # make sure we get always the same "randomness"
 np.random.seed(0)
@@ -47,9 +44,8 @@ def ffnet():
     feature = input((input_dim), np.float32)
     label = input((num_output_classes), np.float32)
 
-    # Instantiate the feedforward classification model
-    netout = fully_connected_classifier_net(
-        feature, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
+    netout = Sequential([For(range(num_hidden_layers), lambda i: Dense(hidden_layers_dim, activation=sigmoid)),
+                         Dense(num_output_classes)])(feature)
 
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)

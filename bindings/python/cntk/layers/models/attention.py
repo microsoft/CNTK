@@ -5,7 +5,7 @@
 # ==============================================================================
 
 '''
-attention -- standard attention model
+Standard attention model.
 '''
 
 from __future__ import division
@@ -33,6 +33,8 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
     # until CNTK can handle multiple nested dynamic loops, we require fixed windows and fake it
     if attention_span is None or attention_axis is None:
         raise NotImplementedError('AttentionModel currently requires a fixed attention_span and a static attention_axis to be specified')
+    if attention_span <= 0:
+        raise ValueError('attention_span must be a positive value')
 
     # model parameters
     with default_options(bias=False): # all the projections have no bias
