@@ -260,7 +260,12 @@ class Function(cntk_py.Function):
             if not arg_type:
                 raise TypeError(param_name() + " was passed an object that is not a Variable or Function")
             # parameter shape is not yet known, any input is acceptable
-            if not param_type.shape_is_known:
+            if not param_type.shape_is_known or param.is_placeholder:
+                # Note: if a Function with nown inputs gets cloned while replacing the inputs
+                # with placeholders, those placeholders retain their shapes for some reason.
+                # But in this case, it should be allowed to replace them with mismatching dimensions,
+                # hence we do not test placeholders, only inputs.
+                # TODO: Should clone-replacing inputs with placeholders reset the shapes to unknown?
                 continue
             if not arg_type.shape_is_known:
                 raise TypeError(param_name() + ' has a known shape, and cannot be passed a Variable of unknown shape')
