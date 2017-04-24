@@ -35,7 +35,7 @@ def create_reader(path, is_training, input_dim, label_dim):
 cached_eyes = dict()
 
 # convert CNTK reader's minibatch to our internal representation
-def from_cntk_mb(inputs: tuple, variables: tuple):
+def from_cntk_mb(inputs: tuple, variables: Tuple[cntk.Variable, ...]) -> Tuple[dynamite.Variable]:
     def convert(self, var): # var is for reference to know the axis
         data = self.data
         # unpack MBLayout
@@ -294,7 +294,7 @@ def train(debug_output=False):
                 #    dp.dump_graph(dp)
                 #    exit()
             # total stats
-            dynamite.print_graph_stats(dgradients[parameter_map[p]] for p in model.parameters)
+            dynamite.print_graph_stats((dgradients[parameter_map[p]] for p in model.parameters))
 
             # model update from dynamic
             param_map = { p: dgradients[parameter_map[p]].get_value() for p in model.parameters }
