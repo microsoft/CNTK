@@ -7,7 +7,6 @@ import numpy as np
 word_count_threshold = data_config['word_count_threshold']
 char_count_threshold = data_config['char_count_threshold']
 word_size = data_config['word_size']
-max_context_len = data_config['max_context_len']
 max_query_len = data_config['max_query_len']
 
 sanitize = str.maketrans({"|": None, "\n": None})
@@ -75,9 +74,6 @@ def tsv_iter(line, vocab, chars, is_test=False, misc={'rawctx':[], 'ctoken':[], 
         uid, title, context, query, begin_answer, end_answer, answer = line.split('\t')
 
     ctokens = context.split(' ')
-    #ctokens.append(eos) # polymath-1 does not generates this
-    if len(ctokens) > max_context_len:
-        raise ValueError('input context exceeds max_context_len: %d' % len(ctokens))
 
     qtokens = query.split(' ')
     if len(qtokens) > max_query_len:

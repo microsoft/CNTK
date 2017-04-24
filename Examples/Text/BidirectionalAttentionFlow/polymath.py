@@ -14,7 +14,6 @@ class PolyMath:
         self.char_count_threshold = data_config['char_count_threshold']
         self.word_size = data_config['word_size']
         self.max_query_len = data_config['max_query_len']
-        self.max_context_len = data_config['max_context_len']
         self.abs_path = os.path.dirname(os.path.abspath(__file__))
         pickle_file = os.path.join(self.abs_path, data_config['pickle_file'])
 
@@ -130,10 +129,16 @@ class PolyMath:
         
         max_col = C.reduce_max(S)
         c_attn = C.sequence.softmax(max_col)
-        htilde = C.sequence.reduce_sum(c_processed * c_attn)
 
-        q2c = C.sequence.broadcast_as(htilde, c_processed)
-        att_context = C.splice(c_processed, c2q, c_processed * c2q, c_processed * q2c)
+        if model_config['reduced_q2c']:
+            q_c_out = c_processed * c_attn
+        else:
+            # original Bidaf
+            htilde = C.sequence.reduce_sum(c_processed * c_attn)
+            q2c = C.sequence.broadcast_as(htilde, c_processed)
+            q2c_out = c_processed * q2c
+
+        att_context = C.splice(c_processed, c2q, c_processed * c2q, q2c_out)
         
         return C.as_block(
             att_context,
@@ -208,68 +213,3 @@ class PolyMath:
         start_loss = seq_loss(start_logits, ab)
         end_loss = seq_loss(end_logits, ae)
         return C.combine([start_logits, end_logits]), start_loss + end_loss
-
-    def f1_score_naive(self, ab_var, ae_var, start_logits_var, end_logits_var):
-        ab = C.placeholder_variable(shape=())
-        ae = C.placeholder_variable(shape=())
-        start_logits = C.placeholder_variable(shape=())
-        end_logits = C.placeholder_variable(shape=())
-
-        oab = seq_hardmax(start_logits)
-        oae = seq_hardmax(end_logits)
-        answers = C.splice(ab, C.sequence.delay(ae), oab, C.sequence.delay(oae)) # make end non-inclusive
-        answers_prop = C.layers.Recurrence(C.element_max, go_backwards=False)(answers)
-        ans_gt = C.element_min(C.slice(answers_prop, 0, 0, 1), (1 - C.slice(answers_prop, 0, 1, 2)))
-        ans_out = C.element_min(C.slice(answers_prop, 0, 2, 3), (1 - C.slice(answers_prop, 0, 3, 4)))
-        start_match = C.sequence.reduce_sum(ab * oab)
-        end_match = C.sequence.reduce_sum(ae * oae)
-        common = ans_gt * ans_out
-        metric = C.layers.Fold(C.plus)(C.splice(ans_gt, ans_out, common))
-        gt_len = C.slice(metric, 0, 0, 1)
-        test_len = C.slice(metric, 0, 1, 2)
-        common_len = C.slice(metric, 0, 2, 3)
-        precision = common_len / test_len
-        recall = common_len / gt_len
-        f1 = precision * recall * 2 / (precision + recall)
-        
-        return C.as_block(
-            C.combine([f1, precision, recall, C.greater(common_len, 0), start_match, end_match]),
-            [(ab, ab_var), (ae, ae_var), (start_logits, start_logits_var), (end_logits, end_logits_var)],
-            'f1_score_layer',
-            'f1_score_layer')
-
-    def f1_score(self, ab_var, ae_var, start_logits_var, end_logits_var):
-        ab = C.placeholder_variable(shape=())
-        ae = C.placeholder_variable(shape=())
-        start_logits = C.placeholder_variable(shape=())
-        end_logits = C.placeholder_variable(shape=())
-
-        start_end_prob = C.sequence.softmax(C.splice(start_logits, end_logits))
-        combined = C.splice(start_end_prob,ab,ae)
-        vw, _ = C.layers.PastValueWindow(self.max_context_len, C.Axis.new_leading_axis(), go_backwards=True)(combined).outputs
-        start_prob = C.slice(vw,1,0,1)
-        end_prob = C.slice(vw,1,1,2)
-        joint_prob_mask = C.constant(np.asarray(np.triu(np.ones(self.max_context_len)),dtype=np.float32), shape=(self.max_context_len, self.max_context_len)) # start <= end
-        joint_prob = C.times_transpose(start_prob, end_prob) * joint_prob_mask
-        joint_prob_loc = C.equal(joint_prob, C.reduce_max(joint_prob, axis=C.Axis.all_static_axes()))
-        start_pos = C.argmax(C.reduce_max(joint_prob_loc,1),0)
-        end_pos = C.argmax(C.reduce_max(joint_prob_loc,0),1)
-        
-        gt_start = C.argmax(C.slice(vw,1,2,3),0)
-        gt_end = C.argmax(C.slice(vw,1,3,4),0)
-        
-        test_len = end_pos - start_pos + 1
-        gt_len = gt_end - gt_start + 1
-        
-        common_start = C.element_max(gt_start, start_pos)
-        common_end = C.element_max(C.element_min(gt_end, end_pos), common_start - 1)
-
-        common_len = common_end - common_start + 1
-        precision = common_len / test_len
-        recall = common_len / gt_len
-        f1 = precision * recall * 2 / (precision + recall)
-        return C.as_block(
-            C.combine([f1, precision, recall, C.greater(common_len, 0), C.equal(start_pos, gt_start), C.equal(end_pos, gt_end)]),
-            [(ab, ab_var), (ae, ae_var), (start_logits, start_logits_var), (end_logits, end_logits_var)],
-            'f1_score_layer',
-            'f1_score_layer')

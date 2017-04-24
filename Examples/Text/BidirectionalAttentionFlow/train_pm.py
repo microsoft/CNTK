@@ -299,7 +299,7 @@ def test(test_data, model_path, config_file):
     f1_sum = 0
     em_sum = 0
     num_seq = 0
-    batch_size = 16 # in sequences
+    batch_size = 64 # in sequences
     num_batch = 0
     misc = {'rawctx':[], 'ctoken':[], 'answer':[]}
     tsv_reader = create_tsv_reader(loss, test_data, polymath, batch_size, is_test=True, misc=misc)
