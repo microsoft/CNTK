@@ -1154,7 +1154,6 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     Batch normalization applies this formula to every input element (element-wise):
     ``y = (x - batch_mean) / (batch_stddev + epsilon) * scale + bias``
     where ``batch_mean`` and ``batch_stddev`` are estimated on the minibatch and ``scale`` and ``bias`` are learned parameters.
-    TODO: add paper reference
 
     During operation, this layer also estimates an aggregate running mean and standard deviation for use in inference.
 
@@ -1180,6 +1179,9 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     Returns:
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
+
+    Todo:
+       Add paper reference.
     '''
 
     map_rank                    = get_default_override(BatchNormalization, map_rank=map_rank)
@@ -1215,7 +1217,6 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
     Layer normalization applies this formula to every input element (element-wise):
     ``y = (x - mean(x)) / (stddev(x) + epsilon) * scale + bias``
     where ``scale`` and ``bias`` are learned scalar parameters.
-    TODO: add paper reference
 
     Example:
      >>> f = LayerNormalization(initial_scale=2, initial_bias=1)
@@ -1232,6 +1233,9 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
     Returns:
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
+
+    Todo:
+       Add paper reference.
     '''
     epsilon = get_default_override(LayerNormalization, epsilon=epsilon)
 
