@@ -333,6 +333,13 @@ namespace CNTK
         static const size_t InferredDimension = (size_t)-1;
 
         ///
+        /// A placeholder value to use for an axis whose dimension is unbound and is only determined
+        /// when actual data is bound to the variable. Note that since the actual dimension is bound
+        /// from actual minibatch data, the dimension can vary across different evaluations.
+        ///
+        static const size_t FreeDimension = (size_t)-3;
+
+        ///
         /// A placeholder shape to use to denote an unknown shape
         ///
         CNTK_API static const NDShape Unknown;
@@ -417,12 +424,20 @@ namespace CNTK
         }
 
         ///
+        /// Returns a boolean value indicating if the dimension size for any of the axes of 'this' shape is free (aka == NDShape::FreeDimension).
+        ///
+        bool HasFreeDimension() const
+        {
+            return (std::find(m_shapeDims.begin(), m_shapeDims.end(), (size_t)FreeDimension) != m_shapeDims.end());
+        }
+
+        ///
         /// Returns the total size of the rectangular shape that 'this' shape denotes.
         ///
         size_t TotalSize() const
         {
-            if (HasInferredDimension())
-                RuntimeError("NDShape::TotalSize: TotalSize cannot be determined for a NDShape '%S' with one or more dimensions being InferredDimension.", AsString().c_str());
+            if (HasInferredDimension() || HasFreeDimension())
+                RuntimeError("NDShape::TotalSize: TotalSize cannot be determined for a NDShape '%S' with one or more dimensions being InferredDimension or FreeDimension.", AsString().c_str());
 
             size_t totalSize = 1;
             for (auto dim : m_shapeDims)
@@ -469,10 +484,12 @@ namespace CNTK
                     if (i != 0)
                         wStrStream << L" x ";
 
-                    if (displayShape[i] != InferredDimension)
-                        wStrStream << displayShape[i];
-                    else
+                    if (displayShape[i] == InferredDimension)
                         wStrStream << "?";
+                    else if (displayShape[i] == FreeDimension)
+                        wStrStream << "*";
+                    else
+                        wStrStream << displayShape[i];
                 }
                 wStrStream << L"]";
                 return wStrStream.str();
@@ -1648,6 +1665,7 @@ namespace CNTK
         friend class BlockFunction;
         friend class Trainer;
         friend class PrimitiveFunction;
+        friend class Utils;
 
         template <typename T>
         friend struct std::hash;
@@ -2712,8 +2730,8 @@ namespace CNTK
         void ResizeOutputBuffer(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
             auto shape = outputVariable.Shape();
-            if (shape == NDShape::Unknown || shape.HasInferredDimension())
-                RuntimeError("The outputVariable '%S' shape '%S' is unknown shape or has inferred dimension for at least one axis.",
+            if (shape == NDShape::Unknown || shape.HasInferredDimension() || shape.HasFreeDimension())
+                RuntimeError("The outputVariable '%S' shape '%S' is unknown shape, has inferred dimension or free dimension for at least one axis.",
                               outputVariable.AsString().c_str(), shape.AsString().c_str());
 
             size_t numOfSequences;
@@ -3309,6 +3327,7 @@ namespace CNTK
         CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl(bool pythonOperandOrder = false) const;
         CNTK_API std::shared_ptr<std::vector<Variable>> OutputsImpl() const;
 
+        void ValidateOrUpdateOutputs();
         void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified, std::vector<Variable>& buffer);
 
         static void ReplacePlaceholderInPlace(Variable& var,
@@ -3960,6 +3979,31 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
 
+    ///
+    /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
+    ///
+    CNTK_API FunctionPtr ToSequence(const Variable& operand, const std::wstring& sequenceAxisNamePrefix, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
+    /// This overload allows specifying an additional operand containing the lengths of individual sequences
+    ///
+    CNTK_API FunctionPtr ToSequence(const Variable& operand, const Variable& sequenceLengths, const std::wstring& sequenceAxisNamePrefix, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
+    /// This overload allows specifying an additional 'dynamicAxesLike' operand which is used to obtain the lengths of the
+    /// generated sequences; the dynamic axes of the generated sequence are required to match the dynamic axes of the 'dynamicAxesLike' operand.
+    ///
+    CNTK_API FunctionPtr ToSequenceLike(const Variable& operand, const Variable& dynamicAxesLike, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operator for reconciling the dynamic axes of the specified tensor operands.
+    /// The output of the returned Function has the sample layout of the left operand and the dynamic axes of the axesAsOperand.
+    /// It also performs a runtime check to ensure that the  dynamic axes layouts of the 2 operands indeed match.
+    ///
+    CNTK_API FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name = L"");
+
     namespace Sequence
     {
         CNTK_API FunctionPtr IsFirst(const Variable& operand, const std::wstring& name = L"");
@@ -3987,6 +4031,14 @@ namespace CNTK
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
 
         CNTK_API FunctionPtr BroadcastAs(const Variable& operand, const Variable& broadcastAs, const std::wstring& name = L"");
+
+        ///
+        /// Create an instance of the CNTK built-in operator for unpacking the specified sequence operand along 
+        /// the most significant static axis [-1] and padding any gaps with the specified padding value.
+        /// If supressMaskOutput is false, the returned Function has 2 outputs; viz. the unpacked non-sequence data and a mask
+        /// denoting the gaps in the unpacked output due to differences across lengths of the sequences in the operand.
+        ///
+        CNTK_API FunctionPtr Unpack(const Variable& operand, double paddingValue, bool supressMaskOutput, const std::wstring& name = L"");
     }
 
     ///
