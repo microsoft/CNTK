@@ -9,7 +9,7 @@ class PolyMath:
     def __init__(self, config_file):
         data_config = importlib.import_module(config_file).data_config
         model_config = importlib.import_module(config_file).model_config
-
+        self.model_config = model_config
         self.word_count_threshold = data_config['word_count_threshold']
         self.char_count_threshold = data_config['char_count_threshold']
         self.word_size = data_config['word_size']
@@ -130,7 +130,7 @@ class PolyMath:
         max_col = C.reduce_max(S)
         c_attn = C.sequence.softmax(max_col)
 
-        if model_config['reduced_q2c']:
+        if self.model_config['reduced_q2c']:
             q_c_out = c_processed * c_attn
         else:
             # original Bidaf

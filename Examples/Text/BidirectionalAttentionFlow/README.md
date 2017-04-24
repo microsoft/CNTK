@@ -27,4 +27,4 @@ It does a fair amount of preprocessing therefore converting data to cntk text fo
 ## Run `tsv2ctf.py`
 It creates a `vocabs.pkl` and `train.ctf`, `val.ctf`, and `dev.ctf`
 
-The data is ready now. Run bidaf.py to create the cntk model.
+The data is ready now. Run train_pm.py to create the cntk model.
