@@ -50,7 +50,7 @@ class NDArrayView(cntk_py.NDArrayView):
     @typemap
     def from_dense(np_array, device=None, read_only=False, borrow=False):
         '''
-        Create a :class:`NDArrayView` instance from a NumPy array.
+        Create an :class:`NDArrayView` instance from a NumPy array.
 
         Args:
             np_array (numpy.ndarray): NumPy array
@@ -83,7 +83,7 @@ class NDArrayView(cntk_py.NDArrayView):
     @typemap
     def from_csr(csr_array, device=None, read_only=False, borrow=False, shape=None):
         '''
-        Create a :class:`NDArrayView` instance from a SciPy sparse array in CSR
+        Create an :class:`NDArrayView` instance from a SciPy sparse array in CSR
         format.
 
         Args:
@@ -134,7 +134,7 @@ class NDArrayView(cntk_py.NDArrayView):
     @typemap
     def from_data(data, device=None, read_only=False, borrow=False):
         '''
-        Create a :class:`NDArrayView` instance from a NumPy or SciPy sparse
+        Create an :class:`NDArrayView` instance from a NumPy or SciPy sparse
         array in CSR format.
 
         Args:
