@@ -5628,7 +5628,7 @@ __global__ void _gatherFromTarget(ElemType *indices,
 }
 
 template<class ElemType>
-__global__ void _scatterAccordingIndices(ElemType *indices,
+__global__ void _scatterToIndices(ElemType *indices,
                                          ElemType *value,
                                          ElemType *buffer,
                                          size_t num_row_elements,
@@ -5640,7 +5640,7 @@ __global__ void _scatterAccordingIndices(ElemType *indices,
     {
         size_t indices_index = index / num_row_elements;
         size_t offset = index % num_row_elements;
-        buffer[(size_t)indices[indices_index] * num_row_elements + offset] += value[index];
+        atomicAdd(&buffer[(size_t)indices[indices_index] * num_row_elements + offset], value[index]);
     }
 }
 

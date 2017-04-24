@@ -2997,7 +2997,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::GatherFromTarget(const CPUMatrix<ElemT
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterAccordingIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements)
 {
     if (indices.IsEmpty() || values.IsEmpty())
         LogicError("ScatterAccordingIndices: input matrix is empty.");
@@ -3010,8 +3010,9 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterAccordingIndices(const CPUMatri
     for (int i = 0; i < indices.GetNumElements(); i++)
     {
         auto index = (size_t)indicesBufPtr[i] * row_elements;
+        auto offset = i * row_elements;
         for (int j = 0; j < row_elements; j++)
-            buffer[index + j] += valueBufPtr[i * row_elements + j];
+            buffer[index + j] += valueBufPtr[offset + j];
     }
 
     return *this;

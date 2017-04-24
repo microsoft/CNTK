@@ -2134,16 +2134,16 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
     return one_hot_op(x, num_classes, sparse_output, axis, name)
 
 @typemap
-def gather(indices, reference):
+def gather(reference, indices):
     '''
-	Retrieves the elements of indices indices in the tensor reference. 
+    Retrieves the elements of indices in the tensor reference. 
 
     Example:
-        >>> c = np.asarray([[[0],[1]],[[4],[5]]]).astype(np.float32)
+        >>> c = np.asarray([[[0],[1]],[[4],[5]]]).astype('f')
         >>> x = C.input_variable((2,1))
-        >>> d = np.asarray([[0,1],[2,3],[4,5],[6,7],[8,9],[10,11]]).astype(np.float32)
-        >>> y = C.parameter(shape=d.shape, init=d)
-        >>> C.ops.gather(x, y).eval({x:c})
+        >>> d = np.arange(12).reshape(6,2).astype('f')
+        >>> y = C.constant(d)
+        >>> C.gather(y, x).eval({x:c})
         [array([[[[  0.,   1.]],
         <BLANKLINE>
                 [[  2.,   3.]]],
@@ -2155,7 +2155,7 @@ def gather(indices, reference):
         
     Args:
         reference: A tensor
-        nindices: An integer tensor of indices
+        indices: An integer tensor of indices
 
     Returns:
         :class:`~cntk.ops.functions.Function`

@@ -565,7 +565,6 @@ def test_op_sequence_reduce_sum(device_id, precision):
     assert np.array_equal(res[1], np.asarray([5.]))
     assert np.array_equal(res[2], np.asarray([9.]))
 
-
 def test_swapaxes_0d_1d_operands():
     x1 = C.input(())
     with pytest.raises(ValueError):
@@ -624,3 +623,21 @@ def test_op_reshape_free_dimension(device_id):
     data = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]
     result = x_reshaped_2.eval({x : np.asarray(data, dtype=np.float32)})
     assert np.array_equal(result[0], np.reshape(data, (2, 4)))
+
+def test_gather_op(device_id, precision):
+    a_data = [AA([[0],[1]], dtype=PRECISION_TO_TYPE[precision]),
+	          AA([[3],[4]], dtype=PRECISION_TO_TYPE[precision])]
+    a = C.input((2,1))
+    r_data = np.arange(12).reshape(6,2).astype('f')
+    r = C.constant(r_data)
+    res = C.gather(r, a).eval({a:a_data})
+    expectd = np.asarray([[[[0., 1.]],[[2., 3.]]],[[[6., 7.]],[[8.,9.]]]])
+    assert np.array_equal(res, expectd)
+    
+    b_data = [AA([[0,2],[1,3]], dtype=PRECISION_TO_TYPE[precision]),
+              AA([[2,4],[3,5]], dtype=PRECISION_TO_TYPE[precision])]
+    b = C.input((2,2))
+    res2 = C.gather(r, b).eval({b:b_data})
+
+    expectd2 = np.asarray([[[[0., 1.],[4.,5.]],[[2., 3.],[6., 7.]]],[[[4., 5.],[8.,9.]],[[6., 7.], [10., 11.]]]])
+    assert np.array_equal(res2, expectd2)
