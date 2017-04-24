@@ -1053,7 +1053,8 @@ public:
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        // TODO: define the backprop behavior for the assign node.
+        if (inputIndex == 1)
+            Input(1)->Gradient() += Gradient();
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -1072,13 +1073,6 @@ public:
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_result, matrixPool);
-    }
-
-    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
-    {
-        Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_result, matrixPool);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
