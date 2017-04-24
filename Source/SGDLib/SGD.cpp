@@ -2319,6 +2319,7 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {
+        Matrix<ElemType>::Scale((1 / actualMBSize), gradientValues);
         smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learnRatePerSample, 
                                          momentum, (ElemType) m_rpi.gamma, needAveMultiplier);
     }
