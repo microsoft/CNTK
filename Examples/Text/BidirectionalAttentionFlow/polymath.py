@@ -9,7 +9,7 @@ class PolyMath:
     def __init__(self, config_file):
         data_config = importlib.import_module(config_file).data_config
         model_config = importlib.import_module(config_file).model_config
-        self.model_config = model_config
+
         self.word_count_threshold = data_config['word_count_threshold']
         self.char_count_threshold = data_config['char_count_threshold']
         self.word_size = data_config['word_size']
@@ -33,10 +33,12 @@ class PolyMath:
         self.two_step = model_config['two_step']
         self.use_cudnn = model_config['use_cudnn']
         self.use_sparse = C.Communicator.num_workers() == 1 # always use sparse when running single GPU, dense for data_parallel_distributed_learner
+        self.reduced_q2c = model_config['reduced_q2c']
 
         print('dropout', self.dropout)
         print('use_cudnn', self.use_cudnn)
         print('use_sparse', self.use_sparse)
+        print('reduced_q2c', self.reduced_q2c)
 
     def charcnn(self, x):
         conv_out = C.layers.Sequential([
@@ -130,7 +132,7 @@ class PolyMath:
         max_col = C.reduce_max(S)
         c_attn = C.sequence.softmax(max_col)
 
-        if self.model_config['reduced_q2c']:
+        if self.reduced_q2c:
             q_c_out = c_processed * c_attn
         else:
             # original Bidaf
