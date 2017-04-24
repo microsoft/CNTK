@@ -87,8 +87,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
      >>> f.W.shape  # "row" dimension of "matrix" consists of (3,3) matching the input axes to project
      (3, 3, 3, 5)
      >>> z = y([np.zeros(x.shape)])
-     >>> z.shape
-     (1, 4, 6, 5)
+     >>> assert z.shape == (1, 4, 6, 5)
 
     Args:
      shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
