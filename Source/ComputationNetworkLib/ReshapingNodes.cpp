@@ -292,6 +292,9 @@ template <class ElemType>
     else if (ReduceBatchAxis())
     {
         Base::Validate(isFinalValidationPass);
+        if (isFinalValidationPass && !Input(0)->HasMBLayout())
+            InvalidArgument("%ls %ls operation can perform batch axis reduction only on minibatch data (which have a layout).", NodeName().c_str(), OperationName().c_str());
+
         SetDims(Input(0)->GetSampleLayout(), false);
     }
     else

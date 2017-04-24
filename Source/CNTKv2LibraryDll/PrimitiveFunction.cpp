@@ -352,6 +352,11 @@ namespace CNTK
                             assert(m_inputs.size() == 2);
                             if (!m_inputs[0].DynamicAxes().empty() || !m_inputs[1].DynamicAxes().empty())
                                 InvalidArgument("AssignNode: None of the operands '%S' can have dynamic axes.", NamedListString(m_inputs).c_str());
+                            if (!(m_inputs[0].IsConstant() || m_inputs[0].IsParameter()))
+                                InvalidArgument("AssignNode: Ref operand must be constant or parameter only.");
+                            if (m_inputs[0].Shape() != m_inputs[1].Shape())
+                                InvalidArgument("AssignNode: All inputs should have same sample layout.");
+
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[1].Shape());
                             break;
                         case PrimitiveOpType::ScatterPacked:
@@ -705,11 +710,14 @@ namespace CNTK
                             else if (reductionAxis == Axis::DefaultBatchAxis())
                             {
                                 auto dynamicAxes = m_inputs[0].DynamicAxes();
-                                if (std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis()) == dynamicAxes.end())
-                                    LogicError("ReduceElements: operand %S; No batch axis found during reduction along the batch axis.", m_inputs[0].AsString().c_str());
+                                if (dynamicAxes != Axis::UnknownDynamicAxes())
+                                {
+                                    if (std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis()) == dynamicAxes.end())
+                                        LogicError("ReduceElements: operand %S; No batch axis found during reduction along the batch axis.", m_inputs[0].AsString().c_str());
 
-                                if (dynamicAxes.size() > 1)
-                                    LogicError("ReduceElements: operand %S; Reduction along the batch axis on input sequence is currently unsupported.", m_inputs[0].AsString().c_str());
+                                    if (dynamicAxes.size() > 1)
+                                        LogicError("ReduceElements: operand %S; Reduction along the batch axis on input sequence is currently unsupported.", m_inputs[0].AsString().c_str());
+                                }
 
                                 outputShape = m_inputs[0].Shape();
                             }
