@@ -158,7 +158,7 @@ namespace CNTK
                 }
                 else if (m_maxNumSamplesToRead == MinibatchSource::InfinitelyRepeat)
                 {
-                    // Setting big value, but not the max in order to aviod bit overflow.
+                    // Setting big value, but not the max in order to avoid bit overflow.
                     epochConfig.m_totalEpochSizeInSamples = std::numeric_limits<size_t>::max() / 2;
                 }
                 else 

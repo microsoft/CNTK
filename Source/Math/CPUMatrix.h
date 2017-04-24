@@ -102,6 +102,7 @@ public:
 	void CPUMatrix<ElemType>::NAdam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
 		ElemType momentum, ElemType momentumNext, ElemType adaWeight, ElemType adaMul, ElemType momMul, bool unitGainMomentum);
 
+
     ElemType RmsProp(CPUMatrix<ElemType>& gradients,
                      ElemType RMS_GAMMA,
                      ElemType RMS_WGT_INC,

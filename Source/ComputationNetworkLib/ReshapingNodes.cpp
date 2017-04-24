@@ -25,22 +25,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-//----------------------------------------------------------------------------
-// For reductions we need the neutral elements of the corresponding binary ops
-//----------------------------------------------------------------------------
-template <typename ElemType> ElemType NeutralValue(ElementWiseOperator op)
-{
-    switch (op)
-    {
-    case ElementWiseOperator::opSum:                return  0;
-    case ElementWiseOperator::opLogSum:             return -std::numeric_limits<ElemType>::infinity();
-    case ElementWiseOperator::opMin:                return  std::numeric_limits<ElemType>::max();
-    case ElementWiseOperator::opMax:                return  std::numeric_limits<ElemType>::lowest();
-    case ElementWiseOperator::opElementwiseProduct: return 1;
-    default:                                        return 0; // error
-    }
-};
-
 // -----------------------------------------------------------------------
 // ReduceElements (op, axis=, input)
 // -----------------------------------------------------------------------
@@ -56,6 +40,7 @@ template <class ElemType>
         node->m_operation   = m_operation;
         node->m_reductionOp = m_reductionOp;
         node->m_scale       = m_scale;
+        node->m_keepDimensions = m_keepDimensions;
     }
 }
 
@@ -64,6 +49,11 @@ template <class ElemType>
 {
     Base::Load(fstream, modelVersion);
     fstream >> m_axis >> m_operation;
+    if (modelVersion >= CNTK_MODEL_VERSION_24)
+        fstream >> m_keepDimensions;
+    else
+        m_keepDimensions = DefaultKeepDimensionsSetting(m_axis);
+
     ValidateOp();
 }
 
@@ -72,6 +62,7 @@ template <class ElemType>
 {
     Base::Save(fstream);
     fstream << m_axis << m_operation; // note: we serialize the string and not the opcode, since opcodes may change
+    fstream << m_keepDimensions;
 }
 
 template <class ElemType>
@@ -87,7 +78,7 @@ template <class ElemType>
     // when reducing all, we must mask gaps
     if (ReduceAllAxes())
     {
-        InputRef(0).MaskMissingValueColumnsTo(frInput, NeutralValue<ElemType>(m_reductionOp));
+        InputRef(0).MaskMissingValueColumnsTo(frInput, NeutralValue(m_reductionOp));
         if (IsMean())
         {
             //for mean reduction and all axes we need to carefully compute the scaling factor
@@ -110,7 +101,10 @@ template <class ElemType>
     size_t rank = DetermineElementwiseTensorRank();
     TensorView<ElemType> input;
     if (ReduceSequenceAxis())
-        input = ComputationNode<ElemType>::Unpack(GetSampleLayout(), InputRef(0).Value(), InputRef(0).GetMBLayout(), m_tempUnpackedData, m_tempScatterIndices, /*batchMajor=*/ true, /*maskGaps=*/ true);
+    {
+        ElemType gapPadValue = NeutralValue(m_reductionOp);
+        input = ComputationNode<ElemType>::Unpack(GetSampleLayout(), InputRef(0).Value(), InputRef(0).GetMBLayout(), m_tempUnpackedData, m_tempScatterIndices, m_tempMask, /*batchMajor=*/ true, &gapPadValue);
+    }
     else
         input = InputRef(0).ValueTensorFor(rank, frInput);
 
@@ -243,21 +237,7 @@ template <class ElemType>
 template <class ElemType>
 void ReduceElementsNode<ElemType>::ValidateOp()
 {
-#if 1 // legacy with initial experiments, delete this soon
-    if (m_operation == L"Plus") m_reductionOp = ElementWiseOperator::opSum;
-    else
-#endif
-    if      (m_operation == L"Sum")    m_reductionOp = ElementWiseOperator::opSum;
-    else if (m_operation == L"Mean")   m_reductionOp = ElementWiseOperator::opSum;
-    else if (m_operation == L"LogSum") m_reductionOp = ElementWiseOperator::opLogSum;
-    else if (m_operation == L"Min")    m_reductionOp = ElementWiseOperator::opMin;
-    else if (m_operation == L"Max")    m_reductionOp = ElementWiseOperator::opMax;
-    else if (m_operation == L"Prod")   m_reductionOp = ElementWiseOperator::opElementwiseProduct;
-    else if (m_operation == L"Argmin") m_reductionOp = ElementWiseOperator::opArgmin;
-    else if (m_operation == L"Argmax") m_reductionOp = ElementWiseOperator::opArgmax;
-
-    // more here
-    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min', 'Prod', 'Argmax', 'Argmin'.", NodeDescription().c_str(), m_operation.c_str());
+    m_reductionOp = ReductionOpEnumValue(m_operation);
 }
 
 template <class ElemType>
@@ -267,7 +247,7 @@ template <class ElemType>
     ValidateOp();
     m_scale = (ElemType)1;
     if (ReduceAllAxes())
-        Base::ValidateUnaryReduce(isFinalValidationPass);
+        Base::ValidateUnaryReduce(isFinalValidationPass, m_keepDimensions);
     else if (ReduceSequenceAxis())
     {
         Base::Validate(isFinalValidationPass);
@@ -292,19 +272,33 @@ template <class ElemType>
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-
         let shape = Input(0)->GetSampleLayout();
         auto dims = shape.GetDims();
         size_t reducedDim = 0; // (init to keep compiler happy)
         if (ReduceAllStaticAxes() || ReduceAllAxes())
         {
             reducedDim = shape.GetNumElements();
-            dims = { 1 };                       // entire sample is reduced to a scalar
+            dims = m_keepDimensions ? SmallVector<size_t>(shape.GetRank(), 1) : SmallVector<size_t>({ 1 }); // entire sample is reduced to a scalar
         }
         else if (m_axis - 1 >= 0 && m_axis - 1 < dims.size())
         {
             reducedDim = dims[m_axis - 1];
-            dims[m_axis - 1] = 1;               // one axis is reduced to a scalar
+            // one axis is reduced to a scalar
+            if (m_keepDimensions)
+                dims[m_axis - 1] = 1;
+            else
+            {
+                SmallVector<size_t> reducedDims(dims.size() - 1);
+                for (size_t i = 0, j = 0; i < dims.size(); ++i)
+                {
+                    if (i == (m_axis - 1))
+                        continue;
+
+                    reducedDims[j] = dims[i];
+                    j++;
+                }
+                dims = reducedDims;
+            }
         }
         else if (isFinalValidationPass)
             InvalidArgument("The shape of %ls [%s] has no axis %d", NodeDescription().c_str(), string(shape).c_str(), m_axis);
@@ -315,7 +309,6 @@ template <class ElemType>
 
         SetDims(TensorShape(dims), Input(0)->HasMBLayout());
     }
-
 }
 
 template class ReduceElementsNode<float>;

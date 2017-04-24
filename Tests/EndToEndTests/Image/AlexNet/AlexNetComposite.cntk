@@ -34,16 +34,12 @@ Train = [
                                 jitterType = "UniRatio"
                             ]:[
                                 type = "Scale"
-                                width = 224
-                                height = 224
+                                width = 227
+                                height = 227
                                 channels = 3
                                 # Interpolation to use when scaling image to width x height size.
                                 # Possible values: nearest, linear, cubic, lanczos. Default: linear.
                                 interpolations = "linear"
-                            ]:[
-                                type = "Mean"
-                                # Stores mean values for each pixel in OpenCV matrix XML format.
-                                meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
                             ]:[
                                 type = "Transpose"
                             ]
@@ -79,12 +75,9 @@ Test = [
                                 cropType = "center"
                             ]:[
                                 type = "Scale"
-                                width = 224
-                                height = 224
+                                width = 227
+                                height = 227
                                 channels = 3
-                            ]:[
-                                type = "Mean"
-                                meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
                             ]:[
                                 type = "Transpose"
                             ]

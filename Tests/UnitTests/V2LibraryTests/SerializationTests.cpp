@@ -330,7 +330,11 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::ELU) == 65 &&
                   static_cast<size_t>(PrimitiveOpType::ForwardBackward) == 66 &&
                   static_cast<size_t>(PrimitiveOpType::CosDistanceWithNegativeSamples) == 67 &&
-                  static_cast<size_t>(PrimitiveOpType::OneHot) == 68,
+                  static_cast<size_t>(PrimitiveOpType::OneHot) == 68 &&
+                  static_cast<size_t>(PrimitiveOpType::Pow) == 69 &&
+                  static_cast<size_t>(PrimitiveOpType::ToSequence) == 70 &&
+                  static_cast<size_t>(PrimitiveOpType::ToSequenceLike) == 71 &&
+                  static_cast<size_t>(PrimitiveOpType::UnpackSequence) == 72,
                   "PrimitiveOpType enum value was modified.");
 }
 

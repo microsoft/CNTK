@@ -4,8 +4,10 @@
 # for full license information.
 # ==============================================================================
 
-# layers -- blocks in the network that are used layer-like, i.e. layered on top of each other
-#           e.g. a fully connected layer with non-linearity
+'''
+Blocks in the network that are used layer-like, i.e. layered on top of each other
+e.g. a fully connected layer with non-linearity.
+'''
 
 from __future__ import division
 import numpy as np
@@ -230,7 +232,6 @@ def _pad_to_shape(filter_shape, param, what):
         raise ValueError("{} parameter ({}) must be a scalar or have same number of elements as the filter_shape parameter ({})".format(what, param, filter_shape))
     return param
 
-# BUGBUG: Can one pass a numpy array as initial values? TODO: add a test case
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (spatial shape)   )
 #    in     : ( (sample shape) +                 +  (reduction shape) + (spatial shape)   )
@@ -245,6 +246,7 @@ def _pad_to_shape(filter_shape, param, what):
 #  - filter_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
 # TODO: stride not supported for sequential
+# TODO: add a test case for passing a numpy array as initial values
 def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
                 num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                 sequential=False, # time convolution if True (filter_shape[0] corresponds to dynamic axis)
@@ -374,7 +376,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
     emulating_1D = len(filter_shape) < 2
 
     actual_output_channels_shape = num_filters                if not emulating_output_depth else (1,)
-    actual_reduction_shape       = _INFERRED * reduction_rank if not emulating_input_depth  else _INFERRED  # BUGBUG: (1,) crashes
+    actual_reduction_shape       = _INFERRED * reduction_rank if not emulating_input_depth  else _INFERRED  # TODO: C++ suport for 1D
     actual_filter_shape          = (1,) * emulating_1D + filter_shape
 
     # add the dimension to the options as well
@@ -390,14 +392,13 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
     if isinstance(init, np.ndarray):
         if reduction_rank != 0:
             raise ValueError("a constant initializer can currently only used without reduction dimension")
-        # BUGBUG: ^^ no need. Instead, take whatever reduction dimension is given here as that of the input.
+        # TODO: Test whether this is needed. We should instead just take whatever reduction dimension is given here as that of the input.
         nominal_W_shape = num_filters + filter_shape
         if init.shape != nominal_W_shape:
             raise ValueError("a constant initializer was passed that is of wrong shape")
         init_kernel = init.reshape(actual_output_channels_shape + kernel_shape) # make it fit
     else:
         init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-len(actual_output_channels_shape)))
-        # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag?
 
     # parameters bound to this Function
     W = Parameter(actual_output_channels_shape + kernel_shape,                    init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
@@ -427,8 +428,9 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
         # actual convolution
         sequential_emulated_axis = len(pad) - filter_rank if sequential else None # static-axis convolution must not pad the simulated sequential dimension (it must reduce to 1)
         r = convolution (W, x,
-                         strides=strides, sharing=sharing, auto_padding=tuple(p if i != sequential_emulated_axis else False for i, p in enumerate(pad)),
-                         # TODO: can we rename auto_padding to pad?
+                         strides=strides, sharing=sharing,
+                         auto_padding=(False,) * reduction_rank  # convolution() currently has no reduction_rank parameter, so we must pass an explicit False for the reduction axis
+                                      + tuple(p if i != sequential_emulated_axis else False for i, p in enumerate(pad)),
                          max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         # if sequential and not padding, then strip the extraneous boundary values
         if sequential and not pad[-filter_rank]:
@@ -437,7 +439,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
             r = r + b
         # if no output dimension is desired, then strip it
         # also need to strip the fake singleton axes, since they are not reduced away
-        # BUGBUG: We still have those axes in the kernel. That can only be solved inside the C++ implementation.
+        # TODO: We still have those axes in the kernel. Solve this once the C++ implementation supports 1D directly.
         num_axes_to_remove = sequential + emulating_1D + emulating_output_depth
         if num_axes_to_remove > 0:
             # (out_depth, emulated axes, spatial_shape)
@@ -718,9 +720,9 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
     @BlockFunction('ConvolutionTranspose', name)
     def convolve_transposed(x):
         r = convolution_transpose(W, x,
-                                  strides=_as_tuple(strides),
-                                  sharing=_as_tuple(sharing),
-                                  auto_padding=_as_tuple(pad),
+                                  strides=strides,
+                                  sharing=sharing,
+                                  auto_padding=(False,) * reduction_rank + pad, # convolution_transpose() currently has no reduction_rank parameter, so we must pass an explicit False for the reduction axis
                                   output_shape=output_full_shape, 
                                   max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         if bias:
@@ -1114,7 +1116,6 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     Batch normalization applies this formula to every input element (element-wise):
     ``y = (x - batch_mean) / (batch_stddev + epsilon) * scale + bias``
     where ``batch_mean`` and ``batch_stddev`` are estimated on the minibatch and ``scale`` and ``bias`` are learned parameters.
-    TODO: add paper reference
 
     During operation, this layer also estimates an aggregate running mean and standard deviation for use in inference.
 
@@ -1140,6 +1141,9 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     Returns:
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
+
+    Todo:
+       Add paper reference.
     '''
 
     map_rank                    = get_default_override(BatchNormalization, map_rank=map_rank)
@@ -1175,7 +1179,6 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
     Layer normalization applies this formula to every input element (element-wise):
     ``y = (x - mean(x)) / (stddev(x) + epsilon) * scale + bias``
     where ``scale`` and ``bias`` are learned scalar parameters.
-    TODO: add paper reference
 
     Example:
      >>> f = LayerNormalization(initial_scale=2, initial_bias=1)
@@ -1192,6 +1195,9 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
     Returns:
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
+
+    Todo:
+       Add paper reference.
     '''
     epsilon = get_default_override(LayerNormalization, epsilon=epsilon)
 

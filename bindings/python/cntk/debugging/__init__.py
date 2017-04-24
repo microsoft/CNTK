@@ -4,15 +4,15 @@
 # for full license information.
 # ==============================================================================
 
+'''
+Helper functions for debugging graphs.
+'''
+
 from __future__ import division
 from __future__ import print_function
 
 from .debug import *
 from .profiler import *
-
-'''
-Helper functions for debugging graphs.
-'''
 
 def dump_signature(root, tag=None):
     '''
@@ -22,7 +22,7 @@ def dump_signature(root, tag=None):
     args = root.signature
     def format_arg_spec(v):
         s = v.name + ': ' if v.name else ''
-        return s + str(v.type)
+        return s + str(v._type)
     outputs = root.outputs
     if len(outputs) > 1:
         output_signature = 'Tuple[' + ', '.join(format_arg_spec(output) for output in outputs) + ']'

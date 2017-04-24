@@ -171,8 +171,6 @@ namespace CNTK
         // returns current per-minibatch momentum value from the provided schedule.
         double MomentumValueForMB(const MomentumSchedule& schedule, size_t minibatchSize) const;
 
-		//double MomentumValueForNextMB(const MomentumSchedule& schedule, size_t minibatchSize) const;
-
         // Return true if the update should use classic momentum and 
         // false if the unit-gain momentum should be used instead.
         bool UseUnitGainMomentum() const

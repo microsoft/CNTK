@@ -1766,8 +1766,7 @@ void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>&
 
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
-
-///
+//
 // Implement the original nadam algorithm according to the paper
 // Ref: Incorporating Nesterov Momentum into Adam, http://cs229.stanford.edu/proj2015/054_report.pdf
 ///

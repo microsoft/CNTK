@@ -52,6 +52,30 @@ OverloadUnaryMathFns(log1p);
 
 #pragma pop_macro("OverloadUnaryMathFns")
 
+#pragma push_macro("OverloadBinaryMathFns")
+#define OverloadBinaryMathFns(x)         \
+    DECL float x##_(float f, float y)    \
+    {                                    \
+        return x##f(f, y);               \
+    }                                    \
+    DECL double x##_(double f, double y) \
+    {                                    \
+        return x(f, y);                  \
+    }
+
+// Because we compile with fast math the following produces nan for negative numbers raised to integer power.
+// Is there an nvcc pragma to disable fast math temporarily? Something like 
+// #pragma fast-math push
+// #pragma fast-math off
+// OverloadBinaryMathFns(pow);
+// #pragma fast-math pop
+OverloadBinaryMathFns(pow);
+
+
+#pragma pop_macro("OverloadBinaryMathFns")
+
+
+
 // -----------------------------------------------------------------------
 // additional functions that are standard in our context
 // -----------------------------------------------------------------------
@@ -224,6 +248,7 @@ DefBinaryOp(Difference, a - b);
 DefBinaryOp(ElementwiseProduct, a* b);
 DefBinaryOp(ElementwiseQuotient, ClippedQuotient(a, b));
 DefBinaryOp(LogSum, LogAdd(a, b));
+DefBinaryOp(Pow, pow_(a, b));
 DefBinaryOp(Max, a > b ? a : b);
 DefBinaryOp(Min, a < b ? a : b);
 DefBinaryOp(Equal, a == b);
@@ -265,8 +290,11 @@ DefTernaryOp(Clip, c < a ? a : (c > b ? b : c)); // Clip(min,max)(data) => a=min
 DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
 DefTernaryOp(ElementwiseProductWithExpOfDiff, a * exp_(b - c));
 DefTernaryOp(ElementwiseProductWithQuotient, a * b * OpReciprocal(c));
+DefTernaryOp(ElementwiseProductWithPowExponentDerivative, a * b * OpLog(c));
+DefTernaryOp(ElementwiseProductWithPowBaseDerivative, a * c * OpPow(b, c - 1)); // Using the output of pow would be faster but it requires a quaternary op and users will likely only use pow in forward mode
 
 #pragma pop_macro("DefTernaryOp")
+
 }}}
 #pragma pop_macro("DECL")
 #pragma pop_macro("TENSOR_OPS_DECL")

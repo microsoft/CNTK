@@ -2,11 +2,11 @@
 #define _BUILDINFO_H 
 #define _GIT_EXIST 
 #define _BUILDBRANCH_  "master"      
-#define _BUILDSHA1_    "49d4398062b0698778a21f850e000c268d59799f (modified)"
+#define _BUILDSHA1_    "86f22b70b3a1bf90f1764d60e46d42999ad2eb68 (modified)"
 #define _MATHLIB_ "mkl"
 #define _BUILDER_ "jkg"     
 #define _BUILDMACHINE_ "jkg0"    
-#define _BUILDPATH_    "C:\\repos\\cntk\\Source\\CNTKv2LibraryDll\\"     
+#define _BUILDPATH_    "C:\\repos2\\CNTK\\Source\\CNTKv2LibraryDll\\"     
 #define _BUILDTYPE_ "Release"
 #define _BUILDTARGET_ "GPU"
 #define _WITH_1BITSGD_ "no"

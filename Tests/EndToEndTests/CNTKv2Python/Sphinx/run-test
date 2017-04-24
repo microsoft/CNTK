@@ -23,7 +23,8 @@ else
   FIND=find
 fi
 
-sphinx-apidoc "$MODULE_DIR" -o . -f "$MODULE_DIR/cntk_py.py" $($FIND "$MODULE_DIR" -type d -name tests | $NORM_PATH)
+sphinx-apidoc "$MODULE_DIR" --module-first --separate --no-toc --output-dir=. --force \
+  $( ( printf "$MODULE_DIR/%s\n" cntk_py.py conftest.py internal; $FIND "$MODULE_DIR" -type d -name tests ) | $NORM_PATH)
 
 sphinx-build -b html -d _build/doctrees -W -j $(nproc) . _build/html
 

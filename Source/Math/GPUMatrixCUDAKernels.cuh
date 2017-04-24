@@ -5251,6 +5251,7 @@ __global__ void _nadam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, Elem
 }
 
 
+
 template <class ElemType>
 __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
