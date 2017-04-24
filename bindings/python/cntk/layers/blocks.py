@@ -282,7 +282,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         # TODO: should both activations be replaced?
         bit = it * activation (bit_proj)              # applied to tanh of input network
 
-        ft = sigmoid (peep (ft_proj, dcs, Cf) + 1)    # forget-me-not gate(t)
+        ft = sigmoid (peep (ft_proj, dcs, Cf))        # forget-me-not gate(t)
         bft = ft * dc                                 # applied to cell(t-1)
 
         ct = bft + bit                                # c(t) is sum of both

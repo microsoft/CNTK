@@ -1430,10 +1430,9 @@ void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemT
             ElemType g = grad[p];
             ElemType adaSqr = rho * smoothAda[denseIndex] + (1 - rho) * g * g;
             smoothAda[denseIndex] = adaSqr;
-            ElemType& x2 = smoothX2[denseIndex];
+            ElemType x2 = smoothX2[denseIndex];
             ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
-            x2 = rho * x2 + (1 - rho) * deltaX * deltaX;
-            deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
+            smoothX2[denseIndex] = rho * smoothX2[denseIndex] + (1 - rho) * deltaX * deltaX;
             val[denseIndex] += learningRate * deltaX;
         }
     }
