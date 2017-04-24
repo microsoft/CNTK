@@ -839,7 +839,7 @@ public:
         inputGradientValues.Print("ForwardBackwardNode Partial-Right-in");
 #endif  
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
-        Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, CTCposterior, inputGradientValues); 
+        Matrix<ElemType>::AddScaledDifference(gradientValues.Get00Element(), softmaxOfRight, CTCposterior, inputGradientValues); 
 
 #if DUMPOUTPUT
         inputGradientValues.Print("ForwardBackwardNode Partial-Right");
@@ -876,8 +876,7 @@ public:
     virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        m_pMBLayout = nullptr; // no layout
-
+        m_pMBLayout = InputRef(0).GetMBLayout();//std::make_shared<MBLayout>();
         if (isFinalValidationPass) 
         {
             if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && // match vector dimension
