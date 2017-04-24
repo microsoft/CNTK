@@ -8,6 +8,7 @@
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
+#include "TimerUtility.h"
 #include "Layers.h"
 
 #include <iostream>
@@ -71,14 +72,26 @@ UnaryModel Sequential(const vector<UnaryModel>& fns)
 
 struct Batch
 {
-    static function<vector<Variable>(vector<Variable>)> Map(UnaryModel f)
+    static function<const vector<Variable>&(const vector<Variable>&)> Map(UnaryModel f)
     {
-        return [=](vector<Variable> batch)
+        return [=](const vector<Variable>& batch)
         {
             vector<Variable> res;
             res.reserve(batch.size());
             for (const auto& x : batch)
                 res.push_back(f(x));
+            return res;
+        };
+    }
+    static function<vector<Variable>(const vector<Variable>&,const vector<Variable>&)> Map(BinaryModel f)
+    {
+        return [=](const vector<Variable>& xBatch, const vector<Variable>& yBatch)
+        {
+            vector<Variable> res;
+            res.reserve(xBatch.size());
+            assert(yBatch.size() == xBatch.size());
+            for (size_t i = 0; i < xBatch.size(); i++)
+                res.push_back(f(xBatch[i], yBatch[i]));
             return res;
         };
     }
@@ -108,23 +121,52 @@ struct Sequence
         };
     }
 
-    static function<vector<Variable>(vector<Variable>)> Map(UnaryModel f)
+    static function<vector<Variable>(const vector<Variable>&)> Map(UnaryModel f)
     {
         return Batch::Map(f);
     }
 
-    static function<vector<Variable>(vector<Variable>)> Embedding(size_t embeddingDim, const DeviceDescriptor& device)
+    static function<vector<Variable>(const vector<Variable>&)> Embedding(size_t embeddingDim, const DeviceDescriptor& device)
     {
         return Map(Dynamite::Embedding(embeddingDim, device));
     }
 };
 const /*static*/ function<Variable(Variable)> Sequence::Last = [](Variable x) -> Variable { return CNTK::Sequence::Last(x); };
 
-vector<vector<Variable>> FromCNTKMB(vector<ValuePtr> inputs, vector<Variable> variables, const DeviceDescriptor& device) // variables needed for axis info only
+// slice the last dimension (index with index i; then drop the axis)
+Variable Index(Variable x, size_t i)
+{
+    auto dims = x.Shape().Dimensions();
+    x = Slice(x, { Axis((int)x.Shape().Rank() - 1) }, { (int)i }, { (int)i + 1 });
+    dims = x.Shape().Dimensions();
+    return x;
+}
+
+// slice the last dimension (index with index i; then drop the axis)
+NDArrayViewPtr Index(NDArrayViewPtr data, size_t i)
+{
+    auto dims = data->Shape().Dimensions();
+    auto startOffset = vector<size_t>(dims.size(), 0);
+    auto extent = dims;
+    if (startOffset.back() != i || extent.back() != 1)
+    {
+        startOffset.back() = i;
+        extent.back()      = 1;
+        data = data->SliceView(startOffset, extent, true); // slice it
+        dims = data->Shape().Dimensions();
+    }
+    let newShape = NDShape(vector<size_t>(dims.begin(), dims.end() - 1));
+    data = data->AsShape(newShape); // and drop the final dimension
+    return data;
+}
+
+vector<vector<Variable>> FromCNTKMB(const vector<ValuePtr>& inputs, const vector<Variable>& variables, const DeviceDescriptor& device) // variables needed for axis info only
 // returns vector[numArgs] OF vector[numBatchItems] OF Constant[seqLen,sampleShape]
 {
+    let numArgs = inputs.size();
+    vector<vector<Variable>> res(numArgs);
     size_t numSeq = 0;
-    for (size_t i = 0; i < inputs.size(); i++)
+    for (size_t i = 0; i < numArgs; i++)
     {
         // prepare argument i
         let& input    = inputs[i];
@@ -137,24 +179,23 @@ vector<vector<Variable>> FromCNTKMB(vector<ValuePtr> inputs, vector<Variable> va
             CNTK::LogicError("inconsistent MB size");
         auto hasAxis = variable.DynamicAxes().size() > 1;
 
-        vector<Variable> arg(numSeq);   // resulting argument
+        auto& arg = res[i];
+        arg.resize(numSeq);   // resulting argument
         for (size_t s = 0; s < numSeq; s++)
         {
             auto data = sequences[s]; // NDArrayView
             // convert sparse if needed
-            // ... CONTINUE
+            // ... needs NDArrayView, and not needed for just building the graph
             // return in correct shape
             if (!hasAxis)
             {
-                // slice off sample axis (the last in C++)
-                auto dims = data->Shape().Dimensions();
-                assert(dims.back() == 1);
-                auto newShape = NDShape(vector<size_t>(dims.begin(), dims.end()-1));
-                data = data->AsShape(newShape);
+                assert(data->Shape().Dimensions().back() == 1);
+                data = Index(data, 0); // slice off sample axis (the last in C++)
             }
             arg[s] = Constant(data);
         }
     }
+    return res;
 }
 
 /*
@@ -211,16 +252,57 @@ UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, siz
     });
 }
 
+UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
+{
+    auto embed  = Embedding(embeddingDim, device);
+    auto step   = RNNStep(hiddenDim, device);
+    auto linear = Linear(numOutputClasses, device);
+    auto zero   = Constant({ hiddenDim }, 0.0f, device);
+    return [=](Variable x) -> Variable
+    {
+        // 'x' is an entire sequence; last dimension is length
+        let len = x.Shape().Dimensions().back();
+        Variable state = zero;
+        for (size_t t = 0; t < len; t++)
+        {
+            auto xt = Index(x, t);
+            xt = embed(xt);
+            state = step(state, xt);
+        }
+        return linear(state);
+    };
+}
+
 function<pair<Variable,Variable>(Variable, Variable)> CreateCriterionFunction(UnaryModel model)
 {
     return [=](Variable features, Variable labels)
     {
-        auto z = model(features);
+        let z = model(features);
 
-        auto loss   = CNTK::CrossEntropyWithSoftmax(z, labels);
-        auto metric = CNTK::ClassificationError    (z, labels);
+        let loss   = CNTK::CrossEntropyWithSoftmax(z, labels);
+        let metric = CNTK::ClassificationError    (z, labels);
 
         return make_pair(loss, metric);
+    };
+}
+
+function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCriterionFunctionUnrolled(UnaryModel model)
+{
+    BinaryModel criterion = [=](Variable feature, Variable label) -> Variable
+    {
+        let z = model(feature);
+        let loss = CNTK::CrossEntropyWithSoftmax(z, label);
+        return loss;
+    };
+    // create a batch mapper (which will allow suspension)
+    let batchModel = Batch::Map(criterion);
+    // for final summation, we create a new lambda (featBatch, labelBatch) -> mbLoss
+    return [=](const vector<Variable>& features, const vector<Variable>& labels)
+    {
+        let losses = batchModel(features, labels);
+        let collatedLosses = Splice(losses, Axis(0)); // collate all seq losses
+        let mbLoss = ReduceSum(collatedLosses);       // aggregate over entire minibatch
+        return mbLoss;
     };
 }
 
@@ -233,9 +315,13 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
     const wstring trainingCTFPath = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf";
 
-    // model and criterion function
-    auto model_fn = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
+    // static model and criterion function
+    auto model_fn     = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
     auto criterion_fn = CreateCriterionFunction(model_fn);
+
+    // dybamic model and criterion function
+    auto d_model_fn     = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim, device);
+    auto d_criterion_fn = CreateCriterionFunctionUnrolled(d_model_fn);
 
     // data
     const wstring featuresName = L"features";
@@ -269,12 +355,25 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         if (minibatchData.empty())
             break;
 
+#if 1
         // Dynamite
-        auto args = FromCNTKMB({ minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, FunctionPtr(loss)->Arguments(), device);
+        vector<vector<Variable>> args;
+        Variable mbLoss;
+        {
+            Microsoft::MSR::CNTK::ScopeTimer timer(3, "FromCNTKMB:     %.6f sec\n");
+            args = FromCNTKMB({ minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, FunctionPtr(loss)->Arguments(), device);
+        }
+        {
+            Microsoft::MSR::CNTK::ScopeTimer timer(3, "d_criterion_fn: %.6f sec\n");
+            mbLoss = d_criterion_fn(args[0], args[1]);
+        }
+#endif
 
+#if 0
         // static CNTK
         trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
         PrintTrainingProgress(trainer, i, /*outputFrequencyInMinibatches=*/ 1);
+#endif
     }
 }
 

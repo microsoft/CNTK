@@ -114,6 +114,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\cntk\Source\Common\TimerUtility.cpp" />
     <ClCompile Include="Common.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
