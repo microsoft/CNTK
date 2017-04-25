@@ -1,0 +1,54 @@
+language: cpp
+sudo: required
+dist: trusty
+
+# solving MPI conflict https://docs.travis-ci.com/user/languages/cpp#OpenMP-projects
+before_install:
+- test -n $CC  && unset CC
+- test -n $CXX && unset CXX
+
+install:
+- sudo apt-get install -y libopenmpi-dev openmpi-bin build-essential
+
+# for boost unit test
+- sudo apt-get install -y libboost-test-dev
+
+# for testing python binding
+- sudo apt-get install -y cmake python-nose python-scipy python-numpy
+
+# for testing lua binding
+- curl -sk https://raw.githubusercontent.com/torch/ezinstall/master/install-deps | bash -e
+- git clone https://github.com/torch/distro.git ~/torch --recursive
+- cd ~/torch; ./install.sh -b
+- source ~/.bashrc
+
+before_script:
+- cd $TRAVIS_BUILD_DIR
+- mkdir build && cd build && cmake ..
+
+script:
+- make && sudo make install
+# run cpp tests
+# - mpirun -np 4 ./Test/multiverso.test kv
+# - mpirun -np 4 ./Test/multiverso.test array
+# - mpirun -np 4 ./Test/multiverso.test allreduce
+
+# - ./Test/unittests/multiverso.ut --log_level=test_suite
+
+# lua tests
+- cd ../binding/lua/
+- make install
+# - make test
+
+# python tests
+- cd ../python/
+- sudo python setup.py install
+# - sudo nosetests  # sudo is needed when testing python on travis
+
+notifications:
+  email: false
+
+matrix:
+  include:
+    - compiler: gcc
+    - compiler: clang

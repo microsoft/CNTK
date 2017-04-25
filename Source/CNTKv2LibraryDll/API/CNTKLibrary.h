@@ -4370,6 +4370,15 @@ namespace CNTK
             return schedule[count];
         }
 
+		template <typename ElementType>
+		ElementType GetNextTrainingParameterValue(const TrainingParameterSchedule<ElementType>& schedule) const
+		{
+			auto count = schedule.IsSweepBased() ? m_sweepCount : m_sampleCount;
+			//if(count < schedule.m_epochSize)
+			count++;
+			return schedule[count];
+		}
+
         Learner(const std::vector<Parameter>& parameters, const LearningRateSchedule& learningRateSchedule)
             : m_parameters(parameters),
             m_learningRateSchedule(learningRateSchedule),
@@ -4432,6 +4441,15 @@ namespace CNTK
                                     bool unitGain = DefaultUnitGainValue(),
                                     const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
                                     AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
+	///
+	/// Create an instance of NAdam learner as the original paper.
+	///
+	CNTK_API LearnerPtr NAdamLearner(const std::vector<Parameter>& parameters,
+		const LearningRateSchedule& learningRateSchedule,
+		const MomentumSchedule& momentumSchedule,
+		bool unitGain = DefaultUnitGainValue(),
+		const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
+		AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
     /// Create an instance of the CNTK built-in AdaGrad learner.

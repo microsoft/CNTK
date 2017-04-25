@@ -1,0 +1,237 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="..\include\multiverso\table\array_table.h">
+      <Filter>table</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\table\kv_table.h">
+      <Filter>table</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\actor.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\blob.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\communicator.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\controller.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\message.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\net.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\node.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\server.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\worker.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\zoo.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\util\net_util.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\util\mt_queue.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\util\waiter.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\util\log.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\net\zmq_net.h">
+      <Filter>net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\net\mpi_net.h">
+      <Filter>net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\util\quantization_util.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\table\matrix_table.h">
+      <Filter>table</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\util\configure.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\util\timer.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\dashboard.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\net\allreduce_engine.h">
+      <Filter>net</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\util\async_buffer.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\util\configure.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\updater\updater.h">
+      <Filter>updater</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\updater\adagrad_updater.h">
+      <Filter>updater</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\table\sparse_matrix_table.h">
+      <Filter>table</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\updater\sgd_updater.h">
+      <Filter>updater</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\updater\momentum_updater.h">
+      <Filter>updater</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\io\hdfs_stream.h">
+      <Filter>io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\io\io.h">
+      <Filter>io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\io\local_stream.h">
+      <Filter>io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\multiverso.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\table_interface.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\c_api.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\util\allocator.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\table_factory.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\multiverso\table\matrix.h">
+      <Filter>table</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="system">
+      <UniqueIdentifier>{f1d6488a-2e66-4610-8676-304c070d7b49}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util">
+      <UniqueIdentifier>{4e63d643-6e66-4f5c-832b-232b5a5ad239}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="net">
+      <UniqueIdentifier>{c720657f-d601-4776-956c-b2f892a1402c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="io">
+      <UniqueIdentifier>{42ca0285-0d86-4f90-9e14-9c668890c025}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="table">
+      <UniqueIdentifier>{eb628a56-01c9-4c87-a995-9504264c0e54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="updater">
+      <UniqueIdentifier>{5f38ba48-a652-4ec4-9540-8d44de3352bb}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="actor.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="communicator.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="controller.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="multiverso.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="server.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="table.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="worker.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="zoo.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="util\log.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="node.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="util\net_util.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="net.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="timer.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="dashboard.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="util\configure.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="updater\updater.cpp">
+      <Filter>updater</Filter>
+    </ClCompile>
+    <ClCompile Include="table\array_table.cpp">
+      <Filter>table</Filter>
+    </ClCompile>
+    <ClCompile Include="table\matrix_table.cpp">
+      <Filter>table</Filter>
+    </ClCompile>
+    <ClCompile Include="table\sparse_matrix_table.cpp">
+      <Filter>table</Filter>
+    </ClCompile>
+    <ClCompile Include="net\allreduce_engine.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="net\allreduce_topo.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="io\hdfs_stream.cpp">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="io\io.cpp">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="io\local_stream.cpp">
+      <Filter>io</Filter>
+    </ClCompile>
+    <ClCompile Include="net\mpi_net.cpp">
+      <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="c_api.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="util\allocator.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="table_factory.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="blob.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="table\matrix.cpp">
+      <Filter>table</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

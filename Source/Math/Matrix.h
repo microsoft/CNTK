@@ -215,6 +215,10 @@ public:
     void AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
         const double learnRatePerSample, const double meanMomentum, const double varMomentum, bool unitGainMomentum = true);
 
+	void NAdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
+		const double learnRatePerSample, const double meanMomentum, const double meanMomentumNextMB, const double accumulatedMomentum,
+		const double varMomentum, bool unitGainMomentum);
+
     ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
     void AdaDeltaUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionvalues, ElemType learningRatePerSample, ElemType rho, ElemType epsilon);

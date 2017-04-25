@@ -1,0 +1,1 @@
+MSBuild.exe Multiverso.vcxproj /p:Configuration=Release /p:Platform=x64 /p:ConfigurationType=DynamicLibrary

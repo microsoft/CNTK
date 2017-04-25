@@ -697,6 +697,58 @@ namespace CNTK
             momentum, varMomentum, UseUnitGainMomentum());
     }
 
+	LearnerNAdam::LearnerNAdam(const vector<Parameter>& parameters,
+		const LearningRateSchedule& learningRateSchedule,
+		const MomentumSchedule& momentumSchedule,
+		bool unitGain,
+		const MomentumSchedule& varianceMomentumSchedule,
+		AdditionalLearningOptions additionalOptions)
+		: LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule,
+			unitGain, additionalOptions, /*allocateSmoothGradients*/ false),
+		m_varianceMomentumSchedule(varianceMomentumSchedule)
+	{
+		for (const auto& parameter : parameters)
+		{
+			const auto shape = GetMatrixShape(parameter);
+			NDArrayViewPtr view = AllocateNDArrayView(parameter, { shape[0], 2 * shape[1] });
+			m_smoothedGradientValues.emplace(parameter, view);
+			m_smoothedCounts.emplace(parameter, 0.0);
+			accumulatedMomentum = 1.0;
+			lastSmoothCounts = -1;
+		}
+	}
+
+	/*virtual*/ void LearnerNAdam::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+		const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+	{
+		DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+	}
+
+	template <typename ElementType>
+	void LearnerNAdam::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+		const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+	{
+		GET_WRITABLE_MATRICES;
+
+		const auto learningRate = LearningRate(trainingSampleCount);
+		const auto momentum = MomentumValueForMB(trainingSampleCount);
+
+		const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
+		const auto momentumNextMB = MomentumValueForNextMB(trainingSampleCount);
+
+		double& smoothedCount = m_smoothedCounts.at(parameter);
+		if (lastSmoothCounts + 0.5 < smoothedCount)  //a new epoch
+		{
+			accumulatedMomentum *= momentum;
+			lastSmoothCounts = smoothedCount;
+		}
+
+		//GOOGLE_LOG(INFO) << "momentum at " << smoothedCount << " is " << momentum <<" Next Mom is" << momentumNextMB
+		//<< " accumulatedMomentum = " << accumulatedMomentum << "\n";
+		smoothedGradientMatrix->NAdamUpdate(*gradientMatrix, *parameterMatrix, smoothedCount, learningRate,
+			momentum, momentumNextMB, accumulatedMomentum, varMomentum, UseUnitGainMomentum());
+	}
+
     LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters,
                                    const LearningRateSchedule& learningRateSchedule,
                                    double gamma, double inc, double dec, double max, double min,
@@ -793,6 +845,16 @@ namespace CNTK
     {
         return MakeSharedObject<LearnerAdam>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
     }
+
+	LearnerPtr NAdamLearner(const vector<Parameter>& parameters,
+		const LearningRateSchedule& learningRateSchedule,
+		const MomentumSchedule& momentumSchedule,
+		bool unitGain, /*=true*/
+		const MomentumSchedule& varianceMomentumSchedule, /*= MomentumAsTimeConstantSchedulePerSample(2 * 3600 * 100)*/
+		AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
+	{
+		return MakeSharedObject<LearnerNAdam>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
+	}
 
     LearnerPtr AdaGradLearner(const vector<Parameter>& parameters,
                               const LearningRateSchedule& learningRateSchedule,

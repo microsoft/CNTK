@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="model">
+      <UniqueIdentifier>{e2c7d88c-0c64-4d8e-9d9f-7f6f26176563}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="updater">
+      <UniqueIdentifier>{59ea58cb-49fe-4959-8d79-f43ac61c1b04}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="regular">
+      <UniqueIdentifier>{2324addc-e430-4df9-82e9-f71c36eb2fac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="objective">
+      <UniqueIdentifier>{d61fadf5-a59a-4312-bf75-27cc61412a4b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util">
+      <UniqueIdentifier>{8a4298f3-ba08-43a2-abf7-c8b0a56c5425}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="system">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\model\model.h">
+      <Filter>model</Filter>
+    </ClInclude>
+    <ClInclude Include="src\model\ps_model.h">
+      <Filter>model</Filter>
+    </ClInclude>
+    <ClInclude Include="src\objective\objective.h">
+      <Filter>objective</Filter>
+    </ClInclude>
+    <ClInclude Include="src\objective\ftrl_objective.h">
+      <Filter>objective</Filter>
+    </ClInclude>
+    <ClInclude Include="src\objective\sigmoid_objective.h">
+      <Filter>objective</Filter>
+    </ClInclude>
+    <ClInclude Include="src\objective\softmax_objective.h">
+      <Filter>objective</Filter>
+    </ClInclude>
+    <ClInclude Include="src\regular\l1_regular.h">
+      <Filter>regular</Filter>
+    </ClInclude>
+    <ClInclude Include="src\regular\l2_regular.h">
+      <Filter>regular</Filter>
+    </ClInclude>
+    <ClInclude Include="src\regular\regular.h">
+      <Filter>regular</Filter>
+    </ClInclude>
+    <ClInclude Include="src\configure.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="src\logreg.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="src\reader.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="src\updater\sgd_updater.h">
+      <Filter>updater</Filter>
+    </ClInclude>
+    <ClInclude Include="src\updater\updater.h">
+      <Filter>updater</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\common.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\log.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\timer.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\hopscotch_hash.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\sparse_table.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\data_type.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="src\updater\ftrl_updater.h">
+      <Filter>updater</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\ftrl_sparse_table.h">
+      <Filter>util</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\logreg.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="src\model\model.cpp">
+      <Filter>model</Filter>
+    </ClCompile>
+    <ClCompile Include="src\objective\objective.cpp">
+      <Filter>objective</Filter>
+    </ClCompile>
+    <ClCompile Include="src\regular\regular.cpp">
+      <Filter>regular</Filter>
+    </ClCompile>
+    <ClCompile Include="src\reader.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\log.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\model\ps_model.cpp">
+      <Filter>model</Filter>
+    </ClCompile>
+    <ClCompile Include="src\updater\updater.cpp">
+      <Filter>updater</Filter>
+    </ClCompile>
+    <ClCompile Include="src\configure.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

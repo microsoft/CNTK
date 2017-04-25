@@ -1,0 +1,22 @@
+ Usage:
+-size: word embedding size, e.g. 300
+-train_file: the training corpus file, e.g.enwik2014
+-read_vocab: the file to read all the vocab counts info
+-binary: 0 or 1,indicates whether to write all the embeddings vectors into binary format
+-cbow: 0 or 1, default 1, whether to use cbow, otherwise skip-gram
+-alpha: initial learning rate, usually set to 0.025
+-output: the output file to store all the embedding vectors
+-window: the window size
+-sample: the sub - sample size, usually set to 0
+-hs: 0 or 1, default 1, whether to use hierarchical softmax, otherwise negative-sampling
+-negative: the negative word count in negative sampling, please set it to 0 when - hs = 1
+-threads: the thread number to run in one machine
+-min_count: words with lower frequency than min_count is removed from dictionary
+-epoch: the epoch number
+-stopwords: 0 or 1, whether to avoid training stop words
+-sw_file: the stop words file storing all the stop words, valid when -stopwords = 1
+-use_adagrad: 0 or 1, whether to use adagrad to adjust learning rate
+-data_block_size: default 1MB, the maximum bytes which a data block will store
+-max_preload_data_size: default 8GB, the maximum data size(bytes) which multiverse_WordEmbedding will preload
+-is_pipeline: 0 or 1, whether to use pipeline
+-server_endpoint_file: default "", server ZMQ socket endpoint file in MPI - free version

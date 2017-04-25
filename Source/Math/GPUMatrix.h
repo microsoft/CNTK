@@ -232,6 +232,10 @@ public:
     void Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
                   ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
 
+	void NAdam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+		ElemType momentum, ElemType momNext, ElemType adaWeight, ElemType adaMul,
+		ElemType momMul, bool unitGainMomentum);
+
     ElemType RmsProp(GPUMatrix<ElemType>& gradients, 
                      ElemType RMS_GAMMA, 
                      ElemType RMS_WGT_INC, 
