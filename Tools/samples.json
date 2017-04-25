@@ -109,9 +109,9 @@
     },
     {
         "category": ["Image"],
-        "name":  "MNIST Feed Multi-Layer Perceptron OCR",
+        "name":  "MNIST Multi-Layer Perceptron (MLP) OCR",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103C_MNIST_MultiLayerPerceptron.ipynb",
-        "description":  "Recognize hand written digits (OCR) with MNIST data.",
+        "description":  "Recognize hand written digits (OCR) with MNIST data using MLP.",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"],
 	"dateadded": "4/24/2017"
