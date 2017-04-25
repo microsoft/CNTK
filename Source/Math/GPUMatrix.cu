@@ -1465,13 +1465,13 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
 template <class ElemType>
 void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
                                   GPUMatrix<ElemType>& functionValues, 
-                                  ElemType learnRatePerSample,
+                                  ElemType learningRate,
                                   ElemType momentum,
                                   ElemType RMS_GAMMA,
                                   const bool needAveMultiplier)
 {
     const ElemType floor = 1.0;
-    ElemType* curr_grad = gradients.Data();
+    ElemType* mean_grad = gradients.Data();
     ElemType* val = functionValues.Data();
 
     size_t n = gradients.GetNumElements();
@@ -1493,8 +1493,8 @@ void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
     ElemType* avars = Data();         // accumulated variances for RMS scaling
     ElemType* moms = Data() + n;
 
-    _rmsprop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, moms, val, curr_grad, n,
-                                                                       learnRatePerSample, momentum, RMS_GAMMA,
+    _rmsprop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, moms, val, mean_grad, n,
+                                                                       learningRate, momentum, RMS_GAMMA,
                                                                        floor);
 }
 

@@ -1623,7 +1623,7 @@ void GPUSparseMatrix<ElemType>::Adam(
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c, 
     GPUMatrix<ElemType>& functionValues, 
-    ElemType learnRatePerSample, 
+    ElemType learningRate,
     ElemType momentum,
     ElemType RMS_GAMMA,
     const bool needAveMultiplier)
@@ -1659,7 +1659,7 @@ void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
     _rmsprop4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
         avars, moms, val,
         Data(), ColOrRow2BlockId(), GetNumRows(),
-        n, learnRatePerSample, momentum, RMS_GAMMA, floor);
+        n, learningRate, momentum, RMS_GAMMA, floor);
 }
 
 template <class ElemType>

@@ -1103,7 +1103,7 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemTyp
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType RMS_GAMMA, const bool needAveMultiplier)
+void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType momentum, ElemType RMS_GAMMA, const bool needAveMultiplier)
 {
 
 }

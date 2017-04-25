@@ -734,7 +734,7 @@ namespace CNTK
     {
         GET_WRITABLE_MATRICES;
 
-        const auto learningRate = LearningRate(trainingSampleCount);
+        const auto learningRate = LearningRate(trainingSampleCount) * trainingSampleCount; // Learning rate per batch
         const auto momentum = MomentumValueForMB(trainingSampleCount);
 
         smoothedGradientMatrix->RmsPropUpdate(*gradientMatrix,

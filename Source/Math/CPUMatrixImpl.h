@@ -1284,7 +1284,7 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
 template <class ElemType>
 void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients, 
                                   CPUMatrix<ElemType>& functionValues,
-                                  ElemType learnRatePerSample,
+                                  ElemType learningRate,
                                   ElemType momentum,
                                   ElemType RMS_GAMMA,
                                   const bool needAveMultiplier)
@@ -1292,7 +1292,7 @@ void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
     const ElemType floor = 1.0;
 
     size_t n = gradients.GetNumElements();
-    ElemType* curr_grad = gradients.Data();
+    ElemType* mean_grad = gradients.Data();
     ElemType* val = functionValues.Data();
 
     if (IsEmpty() || GetNumCols() < gradients.GetNumCols() * 2)
@@ -1318,8 +1318,8 @@ void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
 #pragma omp parallel for
     for (long i = 0; i < n; i++)
     {
-        avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (curr_grad[i] * curr_grad[i]);
-        moms[i] = moms[i] * momentum + (curr_grad[i] * learnRatePerSample) / (sqrt(avars[i] + floor));
+        avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (mean_grad[i] * mean_grad[i]);
+        moms[i] = moms[i] * momentum + (mean_grad[i] * learningRate) / (sqrt(avars[i] + floor));
         val[i] -= moms[i];
     }
 }

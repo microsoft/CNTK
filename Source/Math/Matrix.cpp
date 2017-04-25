@@ -1770,7 +1770,7 @@ void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>&
 template <class ElemType>
 void Matrix<ElemType>::RmsPropUpdate(Matrix<ElemType>& gradients, 
                                    Matrix<ElemType>& functionValues, 
-                                   const double learnRatePerSample,
+                                   const double learningRate,
                                    const double momentum,
                                    ElemType RMS_GAMMA,
                                    const bool needAveMultiplier)
@@ -1778,10 +1778,10 @@ void Matrix<ElemType>::RmsPropUpdate(Matrix<ElemType>& gradients,
     DecideAndMoveToRightDevice(*this, gradients, functionValues);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
-        { m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, (ElemType)learnRatePerSample, (ElemType)momentum, RMS_GAMMA, needAveMultiplier); SetDataLocation(CPU); },
-        { m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learnRatePerSample, (ElemType)momentum, RMS_GAMMA, needAveMultiplier); SetDataLocation(GPU); },
+        { m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, (ElemType)learningRate, (ElemType)momentum, RMS_GAMMA, needAveMultiplier); SetDataLocation(CPU); },
+        { m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learningRate, (ElemType)momentum, RMS_GAMMA, needAveMultiplier); SetDataLocation(GPU); },
         { NOT_IMPLEMENTED; },
-        { gradients.m_GPUSparseMatrix->RmsProp(*m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learnRatePerSample, (ElemType)momentum, RMS_GAMMA, needAveMultiplier); SetDataLocation(GPU); });
+        { gradients.m_GPUSparseMatrix->RmsProp(*m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learningRate, (ElemType)momentum, RMS_GAMMA, needAveMultiplier); SetDataLocation(GPU); });
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 

@@ -99,7 +99,7 @@ public:
     void Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
               ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
 
-    void RmsProp(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+    void RmsProp(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate,
                      ElemType momentum, ElemType RMS_GAMMA, const bool needAveMultiplier);
 
     void AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
