@@ -129,7 +129,7 @@ namespace CNTK
             LogicError("The number (%d) of requested axes exceeds the currently supported limit (%d)", (int)viewShape.Rank(), (int)maxNumAxesSupportedByTensorView);
 
         // TensorShape is required to be at least 1D
-        size_t minRankSize = 1;
+        size_t minRankSize = 0;
         Microsoft::MSR::CNTK::SmallVector<size_t> tensorViewShape(std::max<size_t>(minRankSize, viewShape.Rank()));
         for (size_t i = 0; i < tensorViewShape.size(); ++i)
             tensorViewShape[i] = (i < viewShape.Rank()) ? viewShape[i] : 1;
@@ -307,6 +307,7 @@ namespace CNTK
     static int const CNTKInternalIdxValueForAllStaticAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllStaticAxes;
     static int const CNTKInternalIdxValueForAllAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllAxes;
     static int const CNTKInternalIdxValueForSequenceAxis = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForSequenceAxis;
+    static int const CNTKInternalIdxValueForBatchAxis = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForBatchAxis;
 
     inline Axis AsAxis(int CNTKInternalAxisIdx)
     {
@@ -318,6 +319,9 @@ namespace CNTK
 
         if (CNTKInternalAxisIdx == CNTKInternalIdxValueForSequenceAxis)
             return Axis::OperandSequenceAxis();
+
+        if (CNTKInternalAxisIdx == CNTKInternalIdxValueForBatchAxis)
+            return Axis::DefaultBatchAxis();
 
         return Axis(CNTKInternalAxisIdx - 1);
     }
@@ -340,6 +344,9 @@ namespace CNTK
 
         if (axis.IsDynamicAxis() && axis.IsOrdered())
             return CNTKInternalIdxValueForSequenceAxis;
+
+        if (axis == Axis::DefaultBatchAxis())
+            return CNTKInternalIdxValueForBatchAxis;
 
         if (!axis.IsStaticAxis())
             LogicError("Only Static Axes can be converted to a CNTK internal axis index");

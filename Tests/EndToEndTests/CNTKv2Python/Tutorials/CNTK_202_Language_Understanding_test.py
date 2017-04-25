@@ -8,6 +8,9 @@ import os
 import re
 import numpy
 
+import cntk as C
+C.cntk_py.reset_random_seed(0)
+
 abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_202_Language_Understanding.ipynb")
 # Runs on GPU only, batch normalization training on CPU is not yet implemented.
@@ -31,6 +34,6 @@ def test_cntk_202_language_understanding_trainerror(nb):
            pass
         except KeyError:
            pass
-    expectedMetrics = [2.8, 1.9, 2.2, 2.0]
+    expectedMetrics = [2.8, 2.1, 2.4, 2.1]
     # TODO tighten tolerances
     assert numpy.allclose(expectedMetrics, metrics, atol=0.2)

@@ -34,6 +34,7 @@ namespace CNTK
     const std::wstring scheduleKey = L"schedule";
     const std::wstring learningRateScheduleKey = L"learnig_rate_schedule";
     const std::wstring smoothedGradientsKey = L"smoothed_gradients";
+    const std::wstring noiseInjectionSeedKey = L"noise_injection_seed";
     const std::wstring stateKey = L"state";
     const std::wstring rngSeedKey = L"rng_seed";
     const std::wstring rngOffsetKey = L"rng_offset";
@@ -43,6 +44,7 @@ namespace CNTK
     const std::wstring blockFunctionCompositeArgumentsMapValuesKey = L"block_function_composite_arguments_map_values";
     const std::wstring internalWorkerStateKey = L"internal_worker_state";
     const std::wstring externalWorkerStateKey = L"external_worker_state";
+    const std::wstring userDefinedStateKey = L"user_defined_state";
 
     template <typename T> 
     inline std::string GetVersionsString(size_t currentVersion, size_t dictVersion)

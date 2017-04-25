@@ -480,6 +480,9 @@ def test_layers_convolution_shape():
         "Error in convolution with stride > 1 and padding")
 
 def test_layers_convolution_value():
+    from cntk.cntk_py import reset_random_seed
+    reset_random_seed(0)
+
     # Common parameters
     inC, inH, inW = 3, 10, 10
     in_filter_shape = (3, 3)

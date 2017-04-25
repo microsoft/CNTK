@@ -201,3 +201,54 @@ def test_sequence_unpack_basic(device_id):
     assert np.array_equal(value[0], seq1_data)
     assert np.array_equal(value[1], [seq2_data, [[-1000.0, -1000.0, -1000.0], [-1000.0, -1000.0, -1000.0]]])
     assert np.array_equal(mask, [[1, 1], [1, 0]])
+
+
+def test_sequence_unpack_backprop(device_id):
+    dev = cntk_device(device_id)
+    input_vocab_size=3
+    emb_dim = 2
+    hidden_dim = 2
+    num_labels = 2
+    x_seq_input = C.sequence.input(input_vocab_size, is_sparse=True, name='features')
+    label_input = C.input(num_labels, is_sparse=True, name='labels')
+    with C.default_options(initial_state=0.1):
+        model = C.layers.Embedding(emb_dim, name='embed')(x_seq_input)
+        model = C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=False)(model)
+        model = C.layers.Dense(num_labels, name='classify')(model)
+
+    z = C.sequence.last(C.layers.Recurrence(C.plus)(model))
+    ce = C.cross_entropy_with_softmax(z, label_input)
+    seq1_data = [[0, 1, 1], [0, 1, 0], [1, 0, 0]]
+    seq2_data = [[0, 0, 1], [0, 1, 1]]
+    label_data = _to_csr([[0, 1], [1, 0]])
+    param_grads_1, loss_result_1 = ce.grad({x_seq_input : [_to_csr(seq1_data), _to_csr(seq2_data)], label_input : label_data},
+                                           wrt=ce.parameters, outputs=[ce], as_numpy=False)
+    
+    z = C.sequence.reduce_sum(model)
+    ce = C.cross_entropy_with_softmax(z, label_input)
+    param_grads_2, loss_result_2 = ce.grad({x_seq_input : [_to_csr(seq1_data), _to_csr(seq2_data)], label_input : label_data},
+                                           wrt=ce.parameters, outputs=[ce], as_numpy=False)
+
+    assert np.array_equal(loss_result_1.asarray(), loss_result_2.asarray())
+    
+    for param in param_grads_1:
+        if not param_grads_1[param].is_sparse:
+            reference_grad_value = param_grads_1[param].asarray()
+            grad_value = param_grads_2[param].asarray()
+            assert np.array_equal(reference_grad_value, grad_value)
+
+
+def test_to_sequence_error_for_operand_with_sequence_axis():
+    x = C.sequence.input(C.FreeDimension, 2)
+    with pytest.raises(ValueError):
+        op = C.to_sequence(x)
+
+
+def test_sequence_reduce_sum_over_scalar():
+    x = C.sequence.input(shape=(), needs_gradient=True)
+    op = C.sequence.reduce_sum(x)
+
+    grad, result = op.grad({x : [np.asarray([-1, 3, 5], dtype=np.float32), np.asarray([2, -5], dtype=np.float32), np.asarray([-2], dtype=np.float32)]}, outputs=[op])
+    np.array_equal(result, [7, -3, -2])
+    np.array_equal(grad, [[1, 1, 1], [1, 1], [1]])
+

@@ -96,6 +96,10 @@ struct /*interface*/ IComputationNode
     virtual void ForwardProp(const FrameRange&) = 0; // forward prop for one minibatch
     virtual void EndForwardProp() = 0;               // called after last iteration step of ForwardProp()
 
+    virtual void PostForwardAndBackProp() {} // Optional: Post forward and backprop prop for one minibatch, this will be called in a second 
+                                             //           looping on the graph, after the backward pass finish. Or after forward pass in inference
+                                             //           mode.
+
     virtual void BeginBackprop() = 0;                                        // called before first iteration step of ComputeGradient()
     virtual void BackpropTo(const size_t inputIndex, const FrameRange&) = 0; // backprop gradient into one of the inputs
     virtual void EndBackprop() = 0;                                          // called after last iteration step of ComputeGradient()
@@ -1669,8 +1673,8 @@ protected:
             {
                 const auto& shape = GetSampleLayout();
                 size_t rank = shape.GetRank();
-                rows = rank > 0 ? shape[0] : 0;
-                cols = rank > 0 ? 1 : 0;
+                rows = rank > 0 ? shape[0] : 1;
+                cols = 1;
                 for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
                     cols *= shape[k];
             }

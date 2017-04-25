@@ -231,7 +231,7 @@ void TestSimpleRecurrence(size_t inputDim,
             inputValue = MakeSharedObject<Value>(inputValueData, inputMask);
         }
 
-        NDShape reducedOutputShape = {};
+        NDShape reducedOutputShape = {1};
         std::vector<ElementType> reducedOutputData(reducedOutputShape.TotalSize());
         ValuePtr reducedOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(reducedOutputShape, reducedOutputData.data(), reducedOutputData.size(), DeviceDescriptor::CPUDevice(), false));
 

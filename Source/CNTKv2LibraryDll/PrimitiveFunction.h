@@ -98,6 +98,7 @@ namespace CNTK
         {PrimitiveOpType::ToSequence, L"ToSequenceOp"},
         {PrimitiveOpType::ToSequenceLike, L"ToSequenceLikeOp"},
         {PrimitiveOpType::UnpackSequence, L"UnpackSequenceOp"},
+        {PrimitiveOpType::Assign, L"Assign" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -742,6 +743,25 @@ namespace CNTK
         // Version 9: Add OneHot node.
         // Version 10: Add Pow operator.
         // Version 11: Add ToSequence, ToSequenceLike and UnpackSequence operators.
-        static const size_t s_serializationVersion = 11;
+        // Version 12: Add Assign node.
+        static const size_t s_serializationVersion = 12;
+    };
+
+    class UDFUtils
+    {
+    public:
+
+        static bool IsUDF(const FunctionPtr& f);
+
+        static bool IsUDF(const Dictionary& dict);
+
+        static Dictionary Serialize(const FunctionPtr& dictionary);
+
+        static FunctionPtr Deserialize(const Dictionary& dictionary,
+            const std::unordered_map<std::wstring, Variable>& uidToVariableMap,
+            const CNTK::DeviceDescriptor& device,
+            const Internal::UDFDeserializerPtr& deserializer);
+
+        static const size_t s_serializationVersion = 0;
     };
 }

@@ -2721,7 +2721,7 @@ public:
             {
                 // This must always be a [1] tensor. No inference allowed.
                 size_t i = RUN_COUNT;
-                if (Input(i)->HasMBLayout() || Input(i)->GetSampleLayout() != TensorShape(1))
+                if (Input(i)->HasMBLayout() || (Input(i)->GetSampleLayout().GetRank() > 1) || (Input(i)->GetSampleLayout().GetNumElements() != 1))
                     InvalidArgument("%ls: Input[%d] must be a vector of 1 element without dynamic axis.", NodeDescription().c_str(), (int)i);
                 RunCount(); // cache the shared value into the local cache, for 0 checks
             }
