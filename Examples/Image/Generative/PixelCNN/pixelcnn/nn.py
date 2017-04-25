@@ -111,7 +111,7 @@ def dense(x, num_units, nonlinearity=None, init=global_init, init_scale=1., coun
     if first_run:
         V = ct.parameter((num_units, x_shape[0]), init=init, name='V'); set_parameter(scope, 'V', V)
         g = ct.parameter((num_units, 1.), init=init, name='g'); set_parameter(scope, 'g', g)
-        b = ct.parameter((num_units), name='b'); set_parameter(scope, 'b', b)
+        b = ct.parameter((num_units, 1.), name='b'); set_parameter(scope, 'b', b)
 
         # use weight normalization (Salimans & Kingma, 2016)
         V_norm = V / ct.sqrt(maximum(ct.reduce_sum(V*V, axis=1), 1e-12))        
@@ -145,7 +145,7 @@ def conv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinea
 
     if first_run:
         V = ct.parameter(output_channels_shape + x_channels_shape + filter_shape, init=init, name='V'); set_parameter(scope, 'V', V)
-        g = ct.parameter(output_channels_shape + (1,) * (1+len(filter_shape)), init=init, name='g'); set_parameter(scope, 'g', g)
+        g = ct.parameter(output_channels_shape + (1,) * len(filter_shape), init=init, name='g'); set_parameter(scope, 'g', g)
         b = ct.parameter(output_channels_shape + (1,) * len(filter_shape), name='b'); set_parameter(scope, 'b', b)
 
         # use weight normalization (Salimans & Kingma, 2016)
@@ -163,7 +163,7 @@ def conv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinea
 
         # use weight normalization (Salimans & Kingma, 2016)
         V_norm = V / ct.sqrt(maximum(ct.reduce_sum(ct.reduce_sum(ct.reduce_sum(V*V, axis=0), axis=2), axis=3), 1e-12))
-        W = g * V_norm
+        W = ct.reshape(g,(num_filters,1,1,1)) * V_norm
 
         linear = ct.convolution(W, x, strides=x_channels_shape + strides, auto_padding=_as_tuple(pad)) + b
 
@@ -190,7 +190,7 @@ def deconv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlin
 
     if first_run:
         V = ct.parameter(x_channels_shape + output_channels_shape + filter_shape, init=init, name='V'); set_parameter(scope, 'V', V)
-        g = ct.parameter((1,) + output_channels_shape + (1,) * len(filter_shape), init=init, name='g'); set_parameter(scope, 'g', g)
+        g = ct.parameter(output_channels_shape + (1,) * len(filter_shape), init=init, name='g'); set_parameter(scope, 'g', g)
         b = ct.parameter(output_channels_shape + (1,) * len(filter_shape), name='b'); set_parameter(scope, 'b', b)
 
         # use weight normalization (Salimans & Kingma, 2016)
@@ -208,7 +208,7 @@ def deconv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlin
 
         # use weight normalization (Salimans & Kingma, 2016)
         V_norm = V / ct.sqrt(maximum(ct.reduce_sum(ct.reduce_sum(ct.reduce_sum(V*V, axis=0), axis=2), axis=3), 1e-12))
-        W = g * V_norm
+        W = ct.reshape(g,(1,num_filters,1,1)) * V_norm
 
         linear = ct.convolution_transpose(W, x, strides=x_channels_shape + strides, output_shape=output_shape, auto_padding=_as_tuple(pad)) + b
 
