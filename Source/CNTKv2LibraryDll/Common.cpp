@@ -640,6 +640,18 @@ namespace CNTK
         return s_allDevices;
     }
 
+    std::wstring DeviceDescriptor::AsString() const
+    {
+        std::wstring str = DeviceKindName(Type());
+        if (Type() == DeviceKind::GPU)
+        {
+            auto props = GetGPUProperties(*this);
+            std::wstring wname(props.name.begin(), props.name.end());
+            str = str + L"[" + std::to_wstring(Id()) + L"] " + wname;
+        }
+        return str;
+    }
+
     /*static*/ DeviceDescriptor DeviceDescriptor::GPUDevice(unsigned int deviceId) 
     {       
         const auto& allDevices = AllDevices();

@@ -47,6 +47,14 @@ namespace CNTK
                 Value::Erase();
         }
 
+        /* virtual */ bool IsValid() const
+        {
+            if (IsPacked())
+                return !!m_packedData;
+            else
+                return Value::IsValid();
+        }
+
         const NDShape& Shape() const override { return m_unpackedShape; }
         DeviceDescriptor Device() const override { return m_isPacked ? m_packedData->Device() : Value::Device(); }
         DataType GetDataType() const override { return m_isPacked ? m_packedData->GetDataType() : Value::GetDataType(); }
