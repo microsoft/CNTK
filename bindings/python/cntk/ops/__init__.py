@@ -151,10 +151,11 @@ def labels_to_graph(labels, name=''):
     '''
     Conversion node from labels to graph. Typically used as an input to ForwardBackward node. 
     This node's objective is to transform input labels into a graph representing exact forward-backward criterion.
+
     Example:
-        num_classes = 2
-        labels = cntk.input((num_classes))
-        graph = cntk.labels_to_graph(labels)
+        >>> num_classes = 2
+        >>> labels = cntk.input((num_classes))
+        >>> graph = cntk.labels_to_graph(labels)
 
     Args:
         labels: input training labels
