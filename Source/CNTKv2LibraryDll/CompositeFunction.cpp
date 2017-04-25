@@ -730,7 +730,22 @@ namespace CNTK
                 }
                 case PrimitiveOpType::Reshape:
                 {
-                    computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(primitiveFunction->RawOutputs()[0].Shape()));
+                    auto beginAxis = Axis(0);
+                    auto endAxis = Axis((int)functionInputs[0].Shape().Rank());
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameBeginAxis))
+                        beginAxis = functionConfig[PrimitiveFunction::AttributeNameBeginAxis].Value<Axis>();
+
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameEndAxis))
+                        endAxis = functionConfig[PrimitiveFunction::AttributeNameEndAxis].Value<Axis>();
+
+                    auto replacementShape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
+                    for (size_t i = 0; i < replacementShape.Rank(); ++i)
+                    {
+                        if (replacementShape[i] == NDShape::InferredDimension)
+                            replacementShape[i] = 0;
+                    }
+
+                    computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(replacementShape), AsCNTKInternalAxisIdx(beginAxis), AsCNTKInternalAxisIdx(endAxis));
                     break;
                 }
                 case PrimitiveOpType::ROIPooling:
@@ -1124,7 +1139,7 @@ namespace CNTK
         while ((adjustedNodeShape.GetRank() > varShape.Rank()) && (adjustedNodeShape.GetDim(adjustedNodeShape.GetRank() - 1) == 1))
             adjustedNodeShape.TrimRankInPlace(adjustedNodeShape.GetRank() - 1);
 
-        if (!varShape.HasFreeDimension())
+        if (!varShape.HasFreeDimension() && !varShape.HasInferredDimension())
             return (AsNDShape(adjustedNodeShape) == varShape);
 
         if (varShape.Rank() != adjustedNodeShape.GetRank())
@@ -1132,7 +1147,7 @@ namespace CNTK
 
         for (size_t i = 0; i < varShape.Rank(); ++i)
         {
-            if ((varShape[i] != NDShape::FreeDimension) && (varShape[i] != adjustedNodeShape.GetDim(i)))
+            if ((varShape[i] != NDShape::FreeDimension) && (varShape[i] != NDShape::InferredDimension) && (varShape[i] != adjustedNodeShape.GetDim(i)))
                 return false;
         }
 

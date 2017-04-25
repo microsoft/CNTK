@@ -502,7 +502,7 @@ namespace CNTK
                         }
                         case PrimitiveOpType::Reshape:
                         {
-                            auto& replacementShape = m_attributes[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
+                            auto replacementShape = m_attributes[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
 
                             auto beginAxis = Axis(0);
                             auto endAxis = Axis((int)m_inputs[0].Shape().Rank());
@@ -512,7 +512,7 @@ namespace CNTK
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameEndAxis))
                                 endAxis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameEndAxis].Value<Axis>(), m_inputs[0].Shape());
 
-                            outputShape = ReshapeOutputShape(m_inputs[0].Shape(), replacementShape, beginAxis, endAxis, true);
+                            outputShape = ReshapeOutputShape(m_inputs[0].Shape(), replacementShape, beginAxis, endAxis, /*inferDimensions =*/ false);
                             break;
                         }
                         case PrimitiveOpType::ROIPooling:
