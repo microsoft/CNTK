@@ -99,8 +99,8 @@ namespace CNTK
         return std::shared_ptr<std::vector<Variable>>(new std::vector<Variable>(std::move(outputs)), [](std::vector<Variable>* ptr) { delete ptr; });
     }
 
-    Function::Function(const std::vector<Variable>& inputs, const std::wstring& name, const std::wstring& uid)
-        : Function(inputs, Dictionary(), name, uid)
+    Function::Function(const std::vector<Variable>& inputs, const std::wstring& name)
+        : Function(inputs, Dictionary(), name)
     {}
 
     Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid)
@@ -430,64 +430,64 @@ namespace CNTK
         Forward(arguments, outputs, computeDevice, {});
     }
 
-    void Function::SaveModel(const std::wstring& modelFilePath)
+    void Function::Save(const std::wstring& filepath)
     {
         Dictionary model = Serialize();
-        auto stream = GetFstream(modelFilePath, false);
+        auto stream = GetFstream(filepath, false);
         *stream << model;
         stream->flush();
     }
 
-    /*static*/ FunctionPtr Function::LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice)
+    /*static*/ FunctionPtr Function::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice, const Internal::UDFDeserializerPtr& deserializer)
     {
-        auto stream = GetFstream(modelFile, true);
+        auto stream = GetFstream(filepath, true);
         if (!Internal::IsLegacyModel(*stream))
         {
             Dictionary model;
             *stream >> model;
-            return Function::Deserialize(model, computeDevice);
+            return Function::Deserialize(model, computeDevice, deserializer);
         }
         else
         {
-            return Internal::LoadLegacyModel(modelFile, computeDevice);
+            return Internal::LoadLegacyModel(filepath, computeDevice); // throw an exception if deserializer != nullptr?
         }
     }
 
-    /*static*/ FunctionPtr Function::LoadModel(char *modelBuffer, size_t modelBufferLength, const DeviceDescriptor& computeDevice)
+    /*static*/ FunctionPtr Function::Load(const char *buffer, size_t length, const DeviceDescriptor& computeDevice, const Internal::UDFDeserializerPtr& deserializer)
     {
-        // Considering that std::streambuf::setg() requires char *, and we want to avoid
-        // data copy, modelbuffer is defined as "char *" , instead of "const char *".
-        if ((modelBuffer == nullptr) || (modelBufferLength <= 0))
+        if ((buffer == nullptr) || (length <= 0))
             InvalidArgument("The model buffer should not be null and its length should be greater than 0");
 
         struct modelStreamBuffer : std::streambuf
         {
-            modelStreamBuffer(char* start, size_t size) {
-                this->setg(start, start, start + size);
+            modelStreamBuffer(const char* start, size_t size) {
+                // std::streambuf::setg() requires char *
+                char* first = const_cast<char*>(start);
+                this->setg(first, first, first + size);
             }
         };
 
-        if (Internal::IsLegacyModel(modelBuffer, modelBufferLength))
+        if (Internal::IsLegacyModel(buffer, length))
             InvalidArgument("Loading a legacy model from byte array is not supported.");
         else
         {
-            modelStreamBuffer buf(modelBuffer, modelBufferLength);
+            modelStreamBuffer buf(buffer, length);
             std::istream modelStream(&buf);
 
-            return LoadModel(modelStream, computeDevice);
+            return Load(modelStream, computeDevice, deserializer);
         }
     }
 
-    /*static*/ FunctionPtr Function::LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice)
+    /*static*/ FunctionPtr Function::Load(std::istream& inputStream, const DeviceDescriptor& computeDevice, const Internal::UDFDeserializerPtr& deserializer)
     {
         Dictionary model;
         inputStream >> model;
-        return Function::Deserialize(model, computeDevice);
+        return Function::Deserialize(model, computeDevice, deserializer);
     }
 
-    void Function::RestoreModel(const std::wstring& modelFilePath)
+    void Function::Restore(const std::wstring& filepath)
     {
-        auto stream = GetFstream(modelFilePath, true);
+        auto stream = GetFstream(filepath, true);
         if (!Internal::IsLegacyModel(*stream))
         {
             Dictionary model;
@@ -496,7 +496,7 @@ namespace CNTK
             return;
         }
 
-        auto loadedModelFunction = Internal::LoadLegacyModel(modelFilePath, DeviceDescriptor::CPUDevice());
+        auto loadedModelFunction = Internal::LoadLegacyModel(filepath, DeviceDescriptor::CPUDevice());
             // TODO: Make sure that the loaded model is the same as the trainer's model through UID matching in the V2 format
             // TODO: For V1 format models make sure that the loaded model is isomorphic to the trainer's model
         auto loadedModelLeafVariables = loadedModelFunction->Inputs();
@@ -904,9 +904,9 @@ namespace CNTK
         compositeFunction->CopyState(*restoredCompositeFunction);
     }
 
-    /*static*/ FunctionPtr Function::Deserialize(const Dictionary& modelDictionary, const CNTK::DeviceDescriptor& device)
+    /*static*/ FunctionPtr Function::Deserialize(const Dictionary& modelDictionary, const CNTK::DeviceDescriptor& device, const Internal::UDFDeserializerPtr& deserializer)
     {
-        return CompositeFunction::Deserialize(modelDictionary, device);
+        return CompositeFunction::Deserialize(modelDictionary, device, deserializer);
     }
 
     void Function::PrintGraph() const

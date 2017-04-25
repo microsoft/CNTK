@@ -670,19 +670,19 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     auto MB2Loss = trainer->PreviousMinibatchLossAverage();
     trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
 
-    classifierOutput->RestoreModel(modelFile);
+    classifierOutput->Restore(modelFile);
 
     trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
     auto postRestoreMB2Loss = trainer->PreviousMinibatchLossAverage();
     FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
 
-    classifierOutput->RestoreModel(modelFile);
+    classifierOutput->Restore(modelFile);
     Internal::SaveAsLegacyModel(classifierOutput, modelFile);
 
     trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
     trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
 
-    classifierOutput->RestoreModel(modelFile);
+    classifierOutput->Restore(modelFile);
 
     trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
     postRestoreMB2Loss = trainer->PreviousMinibatchLossAverage();
@@ -694,7 +694,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     auto learner2 = AdamLearner(classifierOutput->Parameters(), learningRateSchedule, momentumSchedule, /*unitGainMomentum = */true);
     auto trainer2 = CreateTrainer(classifierOutput, trainingLoss, prediction, { learner });
 
-    classifierOutput->RestoreModel(modelFile);
+    classifierOutput->Restore(modelFile);
 
     vector<double> expectedLoss;
     for (int i = 0; i < 10; i++)
@@ -708,7 +708,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     for (int i = 0; i < 10; i++)
     {
         trainer->RestoreFromCheckpoint(L"trainer.checkpoint" + std::to_wstring(i));
-        classifierOutput->RestoreModel(modelFile + std::to_wstring(i));
+        classifierOutput->Restore(modelFile + std::to_wstring(i));
         trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
         double loss = trainer->PreviousMinibatchLossAverage();
         FloatingPointCompare(loss, expectedLoss[i], "Post checkpoint restoration training loss does not match expectation");
@@ -718,7 +718,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
 void TestThatExceptionsAreRaisedForNonExistentPaths()
 {
     VerifyException([]() {
-        Function::LoadModel(L"This.File.Does.Not.Exist");
+        Function::Load(L"This.File.Does.Not.Exist");
     }, "Was able to open file 'This.File.Does.Not.Exist' for reading.");
 
     VerifyException([]() {
@@ -726,7 +726,7 @@ void TestThatExceptionsAreRaisedForNonExistentPaths()
     }, "Was able to open file 'This.File.Does.Not.Exist' for reading.");
 
     VerifyException([]() {
-        Function::LoadModel(L"This_Path_Does_Not_Exist/Models/model.file");
+        Function::Load(L"This_Path_Does_Not_Exist/Models/model.file");
     }, "Was able to open file 'This_Path_Does_Not_Exist/Models/model.file' for reading.");
 
 
@@ -738,7 +738,7 @@ void TestThatExceptionsAreRaisedForNonExistentPaths()
 
 void TestLoadingAModelWithALoadBatchNormFunction() {
     {
-        auto model = Function::LoadModel(L"batch.norm.no.sample.count.v2.bin");
+        auto model = Function::Load(L"batch.norm.no.sample.count.v2.bin");
         if (model == nullptr) {
             ReportFailure("Failed to load a V2 model with a BatchNorm node that has only 5 inputs.");
         }
@@ -746,7 +746,7 @@ void TestLoadingAModelWithALoadBatchNormFunction() {
     
     {
         // make sure, we can load legacy V1 model.
-        auto model = Function::LoadModel(L"batch.norm.no.sample.count.v1.bin");
+        auto model = Function::Load(L"batch.norm.no.sample.count.v1.bin");
         if (model == nullptr) {
             ReportFailure("Failed to load a legacy V1 model with a BatchNorm node.");
         }
@@ -897,7 +897,7 @@ void TestLoadingModelFromMemoryBuffer()
     char* modelBuffer = new char[length];
     modelFileStream.read(modelBuffer, length);
 
-    auto model = Function::LoadModel(modelBuffer, length);
+    auto model = Function::Load(modelBuffer, length);
     if (model == nullptr) {
         ReportFailure("Failed to load a V2 model from memory buffer.");
     }
@@ -914,15 +914,15 @@ void TestLoadingModelFromMemoryBufferWithException()
     modelFileStream.read(modelBuffer, length);
 
     VerifyException([&length]() {
-        Function::LoadModel(nullptr, length);
+        Function::Load(nullptr, length);
     }, "Was able to load model from nullptr memory buffer.");
 
     VerifyException([&modelBuffer]() {
-        Function::LoadModel(modelBuffer, 0);
+        Function::Load(modelBuffer, 0);
     }, "Was able to load model from nullptr memory buffer.");
 
     VerifyException([&modelBuffer, &length]() {
-        Function::LoadModel(modelBuffer, length);
+        Function::Load(modelBuffer, length);
     }, "Was able to load legacy model from memory buffer."); 
     delete[] modelBuffer;
 }

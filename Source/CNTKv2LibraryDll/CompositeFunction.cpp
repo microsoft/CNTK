@@ -176,7 +176,8 @@ namespace CNTK
                 outputUids.insert(primitiveFunction->Uid());
             }
 
-            functionDictionaries.push_back(primitiveFunction->Serialize());
+            auto functionDict = UDFUtils::IsUDF(primitiveFunction)  ? UDFUtils::Serialize(primitiveFunction) : primitiveFunction->Serialize();
+            functionDictionaries.push_back(functionDict);
         }
 
         dict[functionsKey] = std::move(functionDictionaries);
@@ -223,7 +224,7 @@ namespace CNTK
         return composite;
     }
 
-    /*static*/ FunctionPtr CompositeFunction::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device)
+    /*static*/ FunctionPtr CompositeFunction::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device, const Internal::UDFDeserializerPtr& deserializer)
     {
         static const vector<std::wstring> s_requiredDictionaryKeys = { inputsKey, functionsKey };
        
@@ -251,16 +252,20 @@ namespace CNTK
         std::unordered_set<FunctionPtr> allPrimitiveFunctions; // this keeps all primitive functions alive until a composite function is created.
         for (const auto& dictionaryValue : functions)
         {
-            FunctionPtr root = PrimitiveFunction::Deserialize(dictionaryValue.Value<Dictionary>(), uidToInputMap, allPrimitiveFunctions, allPlaceholderReplacements, device);
+            auto functionDict = dictionaryValue.Value<Dictionary>();
+            FunctionPtr root = UDFUtils::IsUDF(functionDict) ?
+                UDFUtils::Deserialize(functionDict, uidToInputMap, device, deserializer) :
+                PrimitiveFunction::Deserialize(functionDict, uidToInputMap, allPrimitiveFunctions, allPlaceholderReplacements, device);
             allPrimitiveFunctions.insert(root);
 
             auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(root.get());
 
-            // Since Combine simply forwards other functions' outputs, all of its outputs
-            // should already be in the uidToInputMap.
-            auto opType = primitiveFunction->OpType();
-            if (opType == PrimitiveOpType::Combine)
+            if (primitiveFunction != nullptr && primitiveFunction->OpType() == PrimitiveOpType::Combine) 
+            {
+                // Since Combine simply forwards other functions' outputs, all of its outputs
+                // should already be in the uidToInputMap.
                 continue;
+            }
 
             for (const auto& output : root->RawOutputs())
             {
@@ -280,7 +285,6 @@ namespace CNTK
                 }
             }
         }
-
 
         // starting with the serialization version = 3, the state is preserved inside the attribute dictionaries of the
         // corresponding primitive functions. Earlier versions have a dedicated key-value pair in the composite function dict.

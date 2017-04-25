@@ -392,32 +392,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
         self.restore_from_checkpoint(position)
 
 
-def _py_dict_to_cntk_dict(py_dict):
-    '''
-    Converts a Python dictionary into a CNTK Dictionary whose values are CNTK
-    DictionaryValue instances.
-
-    Args:
-        py_dict (dict): a dictionary to be converted.
-
-    Returns:
-        cntk_py.Dictionary:
-        A :class:`~cntk.cntk_py.Dictionary` that has been converted from the input `dict`
-    '''
-    res = cntk_py.Dictionary()
-    for k, v in py_dict.items():
-        if isinstance(v, dict):
-            res[k] = cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(v))
-        # TODO: add support to list of lists ?
-        elif isinstance(v, list):
-            dval = [cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(e)
-                    if isinstance(e, dict) else e) for e in v]
-            res[k] = cntk_py.DictionaryValue(dval)
-        else:
-            res[k] = cntk_py.DictionaryValue(v)
-    return res
-
-
 class StreamInformation(cntk_py.StreamInformation):
     '''
     Stream information container that is used to describe streams when
