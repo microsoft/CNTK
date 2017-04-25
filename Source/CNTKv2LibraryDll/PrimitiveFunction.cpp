@@ -606,7 +606,7 @@ namespace CNTK
                         }
                         case PrimitiveOpType::SumAll:
                             assert(m_inputs.size() == 1);
-                            outputShape = { 1 };
+                            outputShape = {};
                             break;
                         case PrimitiveOpType::OneHot:
                         {

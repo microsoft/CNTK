@@ -74,7 +74,7 @@ namespace CNTK
         }
 
         // create a default eval value in case there's no criterion
-        m_prevMinibatchAggregateEvalCriterionValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(0, m_aggregatedLossFunction->Output().GetDataType(), NDShape{ 1 }, DeviceDescriptor::CPUDevice()));
+        m_prevMinibatchAggregateEvalCriterionValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(0, m_aggregatedLossFunction->Output().GetDataType(), NDShape{}, DeviceDescriptor::CPUDevice()));
 
         m_combinedTrainingFunction = Combine(combinedFunctionArgs);
         SetCombinedEvalFunction(m_combinedTrainingFunction);

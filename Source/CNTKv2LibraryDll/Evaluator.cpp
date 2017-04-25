@@ -127,7 +127,7 @@ namespace CNTK
 
             double localSampleCount = static_cast<double>(result.second);
 
-            auto values = std::vector<NDArrayViewPtr>{ result.first->Data(), MakeSharedObject<NDArrayView>(NDShape{ 1 }, &localSampleCount, 1, DeviceDescriptor::CPUDevice()) };
+            auto values = std::vector<NDArrayViewPtr>{ result.first->Data(), MakeSharedObject<NDArrayView>(NDShape{}, &localSampleCount, 1, DeviceDescriptor::CPUDevice()) };
             DistributedCommunicatorPtr communicator = MPICommunicator();
             communicator->AggregateInPlace(values, communicator->Workers());
             result.second = static_cast<size_t>(localSampleCount);
