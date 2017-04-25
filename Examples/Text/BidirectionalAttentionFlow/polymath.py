@@ -133,7 +133,7 @@ class PolyMath:
         c_attn = C.sequence.softmax(max_col)
 
         if self.reduced_q2c:
-            q_c_out = c_processed * c_attn
+            q2c_out = c_processed * c_attn
         else:
             # original Bidaf
             htilde = C.sequence.reduce_sum(c_processed * c_attn)
