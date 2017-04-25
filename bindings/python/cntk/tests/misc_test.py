@@ -36,11 +36,6 @@ def test_callstack2():
         cntk.io.MinibatchSource(cntk.io.CTFDeserializer("", streams={}))
     assert '[CALL STACK]' in str(excinfo.value)
 
-def test_Value_raises():
-    from cntk import NDArrayView, Value
-    with pytest.raises(ValueError):
-        nd = NDArrayView.from_dense(np.asarray([[[4,5]]], dtype=np.float32))
-        val = Value(nd)
 
 def test_cpu_and_gpu_devices():
     device = cpu()
@@ -97,27 +92,145 @@ def test_set_cpu_as_default_device():
     assert device == use_default_device()
 
 def test_set_gpu_as_default_device():
-  if len(all_devices()) == 1: 
-      return;
-  # this will release any previous held device locks
-  try_set_default_device(cpu(), False)
-  for i in range(len(all_devices()) - 1):
-    device = gpu(i)
-    assert try_set_default_device(device, False)
-    assert not is_locked(device)
-    assert device == use_default_device()
-    if not device.is_locked():
+    if len(all_devices()) == 1: 
+        return;
+    # this will release any previous held device locks
+    try_set_default_device(cpu(), False)
+    for i in range(len(all_devices()) - 1):
+        device = gpu(i)
+        assert try_set_default_device(device, False)
         assert not is_locked(device)
-        assert try_set_default_device(device, True)
         assert device == use_default_device()
-        assert is_locked(device)
+        if not device.is_locked():
+            assert not is_locked(device)
+            assert try_set_default_device(device, True)
+            assert device == use_default_device()
+            assert is_locked(device)
 
 def test_set_excluded_devices():
-  if len(all_devices()) == 1: 
-      return;
-  assert try_set_default_device(cpu(), False)
-  assert try_set_default_device(gpu(0), False)
-  set_excluded_devices([cpu()])
-  assert not try_set_default_device(cpu(), False)
-  set_excluded_devices([])
-  assert try_set_default_device(cpu(), False)
+    if len(all_devices()) == 1: 
+        return;
+    assert try_set_default_device(cpu(), False)
+    assert try_set_default_device(gpu(0), False)
+    set_excluded_devices([cpu()])
+    assert not try_set_default_device(cpu(), False)
+    set_excluded_devices([])
+    assert try_set_default_device(cpu(), False)
+
+def test_setting_trace_level():
+    from cntk.logging import TraceLevel, set_trace_level, get_trace_level
+  
+    value = get_trace_level()
+    assert value == TraceLevel.Warning
+    
+    for level in [TraceLevel.Info, TraceLevel.Error, TraceLevel.Warning]:
+        set_trace_level(level)
+        value = get_trace_level()
+        assert value == level
+        set_trace_level(level.value)
+        value = get_trace_level()
+        assert value == level
+
+def get_random_parameter_value(initializer, seed=None):
+    init = initializer(scale = cntk.initializer.DefaultParamInitScale, seed=seed)
+    return cntk.ops.parameter(shape=(10,), init=init).value
+
+def get_dropout_rng_seed(seed=None):
+    if (seed):
+        f = cntk.ops.dropout(0.5, seed=seed)
+    else:
+        f = cntk.ops.dropout(0.5)
+    return f.root_function.attributes['rngSeed']
+
+def test_rng_seeding_in_parameter_initialization():
+    initializers = [
+                        cntk.initializer.glorot_normal, 
+                        cntk.initializer.glorot_uniform,
+                        cntk.initializer.he_normal,
+                        cntk.initializer.he_uniform,
+                        cntk.initializer.normal,
+                        cntk.initializer.uniform,
+                        cntk.initializer.xavier
+                    ]
+
+    for x in initializers:
+    
+        cntk.cntk_py.reset_random_seed(1)
+
+        p1 = get_random_parameter_value(x)
+        p2 = get_random_parameter_value(x)
+        assert not np.allclose(p1, p2)
+
+        cntk.cntk_py.reset_random_seed(2)
+        p1 = get_random_parameter_value(x)
+        cntk.cntk_py.reset_random_seed(2)
+        p2 = get_random_parameter_value(x)
+        assert np.allclose(p1, p2)
+
+        cntk.cntk_py.reset_random_seed(3)
+        p1 = get_random_parameter_value(x, seed=123)
+        p2 = get_random_parameter_value(x, seed=123)
+        assert np.allclose(p1, p2)
+
+        cntk.cntk_py.reset_random_seed(4)
+        p1 = get_random_parameter_value(x, seed=123)
+        p2 = get_random_parameter_value(x, seed=456)
+        assert not np.allclose(p1, p2)
+
+        cntk.cntk_py.reset_random_seed(5)
+        cntk.cntk_py.set_fixed_random_seed(789)
+        p1 = get_random_parameter_value(x)
+        p2 = get_random_parameter_value(x)
+        assert np.allclose(p1, p2)
+
+        cntk.cntk_py.reset_random_seed(6)
+        cntk.cntk_py.set_fixed_random_seed(789)
+        p1 = get_random_parameter_value(x, seed=123)
+        p2 = get_random_parameter_value(x, seed=123)
+        assert np.allclose(p1, p2)
+
+        cntk.cntk_py.reset_random_seed(7)
+        cntk.cntk_py.set_fixed_random_seed(789)
+        p1 = get_random_parameter_value(x, seed=123)
+        p2 = get_random_parameter_value(x, seed=456)
+        assert not np.allclose(p1, p2)
+
+        cntk.cntk_py.reset_random_seed(8)
+        cntk.cntk_py.set_fixed_random_seed(789)
+        p1 = get_random_parameter_value(x)
+        cntk.cntk_py.set_fixed_random_seed(987)
+        p2 = get_random_parameter_value(x)
+        assert not np.allclose(p1, p2)
+
+        cntk.cntk_py.reset_random_seed(9)
+        cntk.cntk_py.set_fixed_random_seed(789)
+        p1 = get_random_parameter_value(x)
+        cntk.cntk_py.set_fixed_random_seed(987)
+        cntk.cntk_py.set_fixed_random_seed(789)
+        p2 = get_random_parameter_value(x)
+        assert np.allclose(p1, p2)
+
+    cntk.cntk_py.reset_random_seed(0)
+
+def test_rng_seeding_in_dropout():
+    seed1 = get_dropout_rng_seed()
+    seed2 = get_dropout_rng_seed()
+    assert seed1 != seed2
+
+    seed1 = get_dropout_rng_seed(seed=123)
+    seed2 = get_dropout_rng_seed(seed=123)
+    assert seed1 == seed2 and seed1 == 123
+
+    cntk.cntk_py.set_fixed_random_seed(456)
+    seed1 = get_dropout_rng_seed()
+    seed2 = get_dropout_rng_seed()
+    assert seed1 == seed2 and seed1 == 456
+
+
+    cntk.cntk_py.reset_random_seed(789)
+    seed1 = get_dropout_rng_seed()
+    cntk.cntk_py.reset_random_seed(789)
+    seed2 = get_dropout_rng_seed()
+    assert seed1 == seed2 and seed1 == 789
+
+    cntk.cntk_py.reset_random_seed(0)

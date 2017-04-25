@@ -10,7 +10,7 @@ import argparse
 import math
 from cntk.layers import *  # Layers library
 from cntk.layers.typing import *
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
 from cntk import Trainer, Value
 from cntk.learners import fsadagrad, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk import splice, relu
@@ -42,7 +42,7 @@ def create_reader(path, is_training):
         query         = StreamDef(field='S0', shape=vocab_size,  is_sparse=True),
         intent_labels = StreamDef(field='S1', shape=num_intents, is_sparse=True),  # (used for intent classification variant)
         slot_labels   = StreamDef(field='S2', shape=num_labels,  is_sparse=True)
-    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+    )), randomize=is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
 
 ########################
 # define the model     #

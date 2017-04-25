@@ -1036,9 +1036,10 @@ void CreateSequenceTestSprse(const DeviceDescriptor device, bool readOnly)
     denseValue = Value::CreateSequence({ dimSize * dimSize }, referenceDenseData, device, readOnly);
     CheckSparseValueEqualToDenseValue(sparseValue, denseValue, device);
 
-    VerifyException([&colsStarts, &rowIndices, &nonZeroValues, &numNonZeroValues, &dimSize, &seqLen, &device, &readOnly]() {
-        Value::CreateSequence<ElementType>( {dimSize, dimSize }, seqLen, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, device, readOnly);
-    }, "The expected exception has not been caught: Value::Create: the sample shape leading axis dimensionality must equal the total size of the sample.");
+    std::tie(referenceDenseData, colsStarts, rowIndices, nonZeroValues, numNonZeroValues) = GenerateSequenceInCSC<ElementType>(dimSize, seqLen * dimSize);
+    sparseValue = Value::CreateSequence<ElementType>({ dimSize, dimSize }, seqLen, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, device, readOnly);
+    denseValue = Value::CreateSequence({ dimSize, dimSize }, referenceDenseData, device, readOnly);
+    CheckSparseValueEqualToDenseValue(sparseValue, denseValue, device);
 }
 
 struct ValueFixture

@@ -26,12 +26,82 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    std::atomic<bool> s_checkedMode(false);
+    void SetCheckedMode(bool enable)
+    {
+        s_checkedMode.store(enable);
+    }
+
+    bool GetCheckedMode()
+    {
+        return s_checkedMode.load();
+    }
+
     namespace Internal
     {
-        static std::atomic<unsigned long long> s_nextUniqueId(0);
+        static std::atomic_ullong s_nextUniqueId = ATOMIC_VAR_INIT(0);
         size_t NewUniqueId()
         {
             return s_nextUniqueId++;
+        }
+        static std::mutex s_fixedSeedMutex;
+        static bool s_fixedRandomSeed = false;
+        static std::atomic_ullong s_currentRandomSeed = ATOMIC_VAR_INIT(0);
+
+        unsigned long GetRandomSeed()
+        {
+            return static_cast<unsigned long>(s_currentRandomSeed.load());
+        }
+
+        void SetFixedRandomSeed(unsigned long value)
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            s_currentRandomSeed.store(value);
+            s_fixedRandomSeed = true;
+        }
+
+        bool IsRandomSeedFixed()
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            return s_fixedRandomSeed;
+        }
+
+        void ResetRandomSeed(unsigned long value)
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            s_currentRandomSeed.store(value);
+            s_fixedRandomSeed = false;
+        }
+
+        // This is used to generate a default seed value for random parameter initializer and also 
+        // for stateful nodes (dropout, and both flavors of random sample). The 'perWorkerLocalValue' flag
+        // indicates if the generated value should be identical accross individual workers in distributed 
+        // setting or if each worker should get a different seed value.        
+        size_t GenerateRandomSeed(bool perWorkerLocalValue /*= false*/)
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            
+            if (s_fixedRandomSeed)
+                return s_currentRandomSeed;
+            
+
+            if (!perWorkerLocalValue)
+                return s_currentRandomSeed++;
+
+            static size_t numWorkers = 1, rank = 0;
+            static bool initialized = false;
+            if (MPIWrapper::GetTotalNumberOfMPINodes() != 0 && !initialized) 
+            {
+                DistributedCommunicatorPtr communicator = MPICommunicator();
+                numWorkers = communicator->Workers().size();
+                rank = communicator->CurrentWorker().m_globalRank;
+
+                if (numWorkers < 1)
+                    numWorkers = 1;   
+            }
+
+            initialized = true;
+            return (numWorkers * s_currentRandomSeed++) + rank;
         }
 
         std::atomic<bool> s_reverseTensorShapesInErrorMessages(false);
@@ -386,20 +456,14 @@ namespace CNTK
             return s_computationNetworkTraceLevel.load();
         }
 
-        std::atomic<bool> s_computationNetworkTrackGapNans(false);
-        void SetComputationNetworkTrackGapNans(bool enable)
-        {
-            s_computationNetworkTrackGapNans.store(enable);
-        }
-
-        bool GetComputationNetworkTrackGapNans()
-        {
-            return s_computationNetworkTrackGapNans.load();
-        }
-
         void SetGPUMemoryAllocationTraceLevel(int traceLevel)
         {
             Microsoft::MSR::CNTK::TracingGPUMemoryAllocator::SetTraceLevel(traceLevel);
+        }
+
+        void SetMathLibTraceLevel(int traceLevel)
+        {
+            Microsoft::MSR::CNTK::SetMathLibTraceLevel(traceLevel);
         }
 
         void ForceDeterministicAlgorithms()
@@ -432,6 +496,36 @@ namespace CNTK
         {
             return DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES;
         }
+    }
+
+    std::atomic<TraceLevel> s_traceLevel(TraceLevel::Warning);
+    void SetTraceLevel(TraceLevel value)
+    {
+        using namespace Internal;
+
+        auto previousValue = s_traceLevel.exchange(value);
+
+        if (previousValue == value)
+            return;
+
+        if (value == TraceLevel::Info)
+        {
+            // V1 does not have an intermediate trace level,
+            // the logging is either disabled (trace level = 0)
+            // or enabled (trace level != 0);
+            SetComputationNetworkTraceLevel(int(value));
+            SetMathLibTraceLevel(int(value));
+        }
+        else if (previousValue == TraceLevel::Info)
+        {
+            SetComputationNetworkTraceLevel(0);
+            SetMathLibTraceLevel(0);
+        }
+    }
+
+    TraceLevel GetTraceLevel()
+    {
+        return s_traceLevel.load();
     }
 
     /*static*/ const NDShape NDShape::Unknown(1, SentinelDimValueForUnknownShape);
@@ -576,14 +670,14 @@ namespace CNTK
         return *result;
     }
 
-    /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxis_";
+    /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxisIdx=";
 
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForDynamicAxes = std::numeric_limits<int>::max();
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllStaticAxes = std::numeric_limits<int>::max() - 1;
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForUnknownAxes = std::numeric_limits<int>::max() - 2;
     /*static*/ const int Axis::SentinelEndStaticAxisIndexValue = std::numeric_limits<int>::max() - 3;
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllAxes = std::numeric_limits<int>::max() - 4;
-    
+
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
 
     bool Axis::UniqueDynamicAxesNames::RegisterAxisName(const std::wstring& axisName)
@@ -668,6 +762,16 @@ namespace CNTK
         s_uniqueDynamicAxisNames.RegisterAxisName(axisName);
     }
 
+    std::wstring Axis::AsString() const
+    {
+        std::wstringstream wss;
+        wss << "Axis('";
+        wss << m_name;
+        wss << "')";
+
+        return wss.str();
+    }
+
     void SetMaxNumCPUThreads(size_t numCPUThreads)
     {
         Internal::s_threadsAreSet = true;
@@ -689,6 +793,18 @@ namespace CNTK
     void SetDefaultUnitGainValue(bool value) 
     {
         s_defaultUnitGainValue.store(value);
+    }
+
+    static std::atomic<bool> s_defaultUseMeanGradient(false);
+
+    bool DefaultUseMeanGradientValue()
+    {
+        return s_defaultUseMeanGradient;
+    }
+
+    void SetDefaultUseMeanGradientValue(bool value)
+    {
+        s_defaultUseMeanGradient.store(value);
     }
 
     template <class E>

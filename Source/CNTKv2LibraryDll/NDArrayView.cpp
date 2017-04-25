@@ -157,7 +157,7 @@ namespace CNTK
         auto tensorShape = tensorView->GetShape();
 
         // we should always reshape for rank-0, so that batch and sequence axis goes to columns
-        if (tensorShape.GetRank() <= 2 && rowColSplitPoint != 0)
+        if (tensorShape.GetRank() <= 1 && rowColSplitPoint != 0)
             return tensorView->AsMatrix();
 
         size_t splitPoint = rowColSplitPoint;
@@ -343,10 +343,12 @@ namespace CNTK
         {
             auto currentMatrix = GetMatrix<float>();
             std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
+            std::shared_ptr<Matrix<float>> slicedMatrixView;
             if (sliceViewMatrixDims.first != currentMatrixDims.first)
-                LogicError("NDArrayView::SliceView: Currently only slices that can be realized as a column slice of the underlying Matrix object, are allowed.");
+                slicedMatrixView = make_shared<Matrix<float>>(currentMatrix->Reshaped(1, currentMatrix->GetNumElements()).ColumnSlice(flatBufferOffset, sliceViewShape.TotalSize()));
+            else
+                slicedMatrixView = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
 
-            auto slicedMatrixView = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
             tensorView = new TensorView<float>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
             break;
         }
@@ -354,10 +356,12 @@ namespace CNTK
         {
             auto currentMatrix = GetMatrix<double>();
             std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
+            std::shared_ptr<Matrix<double>> slicedMatrixView;
             if (sliceViewMatrixDims.first != currentMatrixDims.first)
-                LogicError("NDArrayView::SliceView: Currently only slices that can be realized as a column slice of the underlying Matrix object, are allowed");
+                slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->Reshaped(1, currentMatrix->GetNumElements()).ColumnSlice(flatBufferOffset, sliceViewShape.TotalSize()));
+            else
+                slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
 
-            auto slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
             tensorView = new TensorView<double>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
             break;
         }
@@ -378,7 +382,7 @@ namespace CNTK
                             (int)newShape.TotalSize(), newShape.AsString().c_str());
         }
 
-        auto newTensorShape = AsTensorShape(newShape);
+        auto newTensorShape = AsTensorViewShape(newShape);
         void* tensorView = nullptr;
         switch (m_dataType)
         {

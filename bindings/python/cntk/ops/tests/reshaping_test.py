@@ -513,7 +513,7 @@ def test_op_broadcast_as(device_id, precision):
 
 
 def test_op_broadcast_as_in_loop(device_id):
-    from .. import sequence, placeholder, past_value, input
+    from .. import sequence, placeholder, input
 
     a_data = [AA([1]), AA([2]), AA([3])]
     b_data = [AA([[2]]), AA([[2], [3]]), AA([[2], [3], [4]])]
@@ -522,7 +522,7 @@ def test_op_broadcast_as_in_loop(device_id):
     b = sequence.input(shape=(1,), name='b')
 
     out_placeholder = placeholder()
-    out_delayed = past_value(out_placeholder, time_step=5)
+    out_delayed = sequence.past_value(out_placeholder, time_step=5)
     out_delayed_plus_b = out_delayed + b
     out = sequence.broadcast_as(a, out_delayed_plus_b)
     out.replace_placeholder(out)

@@ -206,7 +206,7 @@ def test_op_reduce_all(input_data, axis, device_id, precision):
         expected_backward = bwd(value,expected_forward)
         binding = {a: value}
         actual_backward = input_op.grad(binding)
-        actual_forward  = np.copy(input_op.eval(binding))
+        actual_forward  = input_op.eval(binding)
         assert np.allclose(actual_forward, expected_forward)
         for ab,eb in zip (actual_backward, expected_backward):
             assert np.allclose(ab, eb)
@@ -228,6 +228,57 @@ def test_op_reduce_mean_all_constant(input_data, axis, device_id, precision):
     expected_forward = AA(np.mean(value))
     actual_forward  = input_op.eval()
     assert np.allclose(actual_forward, expected_forward)
+
+REDUCE_BATCH_TEST_OPERANDS = [
+    #(input_data)
+    ([[1]]),
+    ([[1,2],[4,5]]),
+    ([[[1,2],[3,4]],[[5,6],[7,8]]]),
+]
+
+@pytest.mark.parametrize("input_data", REDUCE_BATCH_TEST_OPERANDS)
+def test_op_reduce_over_batch_axis(input_data, device_id, precision):
+    from .. import reduce_sum, reduce_max, reduce_min, reduce_mean, reduce_log_sum_exp, reduce_prod
+    from cntk import Axis
+
+    dt = PRECISION_TO_TYPE[precision]
+
+    data = AA(input_data, dtype=dt)
+    a = C.input(shape=data.shape[1:],
+                dtype=sanitize_dtype_cntk(dt),
+                needs_gradient=True,
+                name='a')
+
+    def min_max_bwd(x, f):
+        forward_array = np.asarray(f, dtype=dt)
+        min_max_elements = forward_array.reshape(forward_array.size).tolist()
+
+        # place 1.0s where minimum or maximum elements are
+        backward = np.zeros_like(x)
+        for element in min_max_elements:
+            backward += np.asarray(x == element)
+
+        return backward
+
+    ops = [ 
+            (reduce_sum,         lambda x:np.sum(x, axis=0, keepdims=False),                    lambda x,f:np.ones_like(x)),
+            (reduce_max,         lambda x:np.amax(x, axis=0, keepdims=False),                   lambda x,f:min_max_bwd(x,f)),
+            (reduce_min,         lambda x:np.amin(x, axis=0, keepdims=False),                   lambda x,f:min_max_bwd(x,f)),
+            (reduce_mean,        lambda x:np.mean(x, axis=0, keepdims=False),                   lambda x,f:np.ones_like(x)/x.shape[0]),
+            (reduce_log_sum_exp, lambda x:np.log(np.sum(np.exp(x), axis=0, keepdims=False)),    lambda x,f:np.exp(x-f)),
+            (reduce_prod,        lambda x:np.prod(x, axis=0, keepdims=False),                   lambda x,f:f / x)
+          ] 
+
+    for op,fwd,bwd in ops:
+        input_op = op(a, axis=Axis.default_batch_axis())
+        expected_forward = fwd(data)
+        expected_backward = bwd(data, expected_forward)
+        binding = {a: data}
+        actual_backward = input_op.grad(binding)
+        actual_forward  = input_op.eval(binding)
+        assert np.allclose(actual_forward, expected_forward)
+        for ab,eb in zip (actual_backward, expected_backward):
+            assert np.allclose(ab, eb)
 
 @pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
 def test_op_reduce_argmax(input_data, axis, device_id, precision):

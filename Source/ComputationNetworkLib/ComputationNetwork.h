@@ -135,6 +135,9 @@ public:
     // main entry point for forward prop
     void ForwardProp(const ComputationNodeBasePtr rootNode);
 
+    // main entry point for post forward and backward prop
+    void PostForwardAndBackProp(const ComputationNodeBasePtr rootNode);
+
     // main entry point for backprop
     void Backprop(const ComputationNodeBasePtr rootNode);
 
@@ -176,6 +179,37 @@ public:
         });
     }
 
+    template <class NODESET> // version that takes multiple nodes
+    void PostForwardAndBackProp(const NODESET& nodes)
+    {
+        TravserseInSortedGlobalEvalOrder(nodes, [](const ComputationNodeBasePtr& node) {
+            PARTraversalFlowControlNode::PostForwardAndBackProp(node);
+        });
+    }
+
+    template <class NODESET_FROM, class NODESET_TO> // version that takes both initial and final set of nodes
+    void ForwardPropFromTo(const NODESET_FROM& nodesFrom, const NODESET_TO& nodesTo)
+    {
+        // Compute the set of nodes to do forward on.
+        std::set<ComputationNodeBasePtr> nodesToForward;
+        TravserseInSortedGlobalEvalOrder(nodesTo, [&](const ComputationNodeBasePtr& node) {
+            for (const ComputationNodeBasePtr& input : node->GetInputs())
+            {
+                if (std::find(nodesFrom.begin(), nodesFrom.end(), input) != nodesFrom.end()
+                    || nodesToForward.find(input) != nodesToForward.end())
+                {
+                    nodesToForward.insert(node);
+                }
+            }
+        });
+
+        // Perform forward on resulting nodes in global evaluation order.
+        for (const auto& node : SortByGlobalEvalOrder(nodesToForward))
+        {
+            ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(node, FrameRange(nullptr));
+        }
+    }
+
     static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr>& nodes);
     void ResetEvalTimeStamps();
 
@@ -205,9 +239,9 @@ public:
     // -----------------------------------------------------------------------
 
     void CompileNetwork(); // call this after creation, Load(), and any modification
+    void ValidateNetwork();
 
 private:
-    void ValidateNetwork();
     size_t ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFirstPass, bool isFinalValidationPass);
     bool ValidateNode(ComputationNodeBasePtr node, bool isFinalValidationPass) const;
     void MarkValueNonSharableNodes();
@@ -1133,22 +1167,21 @@ protected:
         }
 
         static void ForwardProp(const ComputationNodeBasePtr& node, const FrameRange& fr);
+        static void PostForwardAndBackProp(const ComputationNodeBasePtr& node);
 
         virtual void BeginForwardProp() override {}
         virtual void ForwardProp(const FrameRange&) override;
-        virtual void EndForwardProp() override
-        {
-        }
-        virtual void BeginBackprop() override
-        {
-        }
+        virtual void EndForwardProp() override {}
+
+        virtual void PostForwardAndBackProp() override;
+
+        virtual void BeginBackprop() override {}
         virtual void BackpropTo(const size_t inputIndex, const FrameRange&) override
         {
             NOT_IMPLEMENTED;
         } // ugh, call Backprop() instead
-        virtual void EndBackprop() override
-        {
-        }
+        virtual void EndBackprop() override {}
+
         virtual void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);

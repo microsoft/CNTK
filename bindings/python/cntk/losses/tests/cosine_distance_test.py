@@ -47,10 +47,10 @@ def test_cosine_distance_with_negative_samples():
   result = model.eval({qry:[a], doc:[b]})
 
   # We expect 1 row per minibatch
-  np.allclose(result.shape[1], a.shape[0])
+  np.allclose(len(result), a.shape[0])
 
   # We expect the number of columns to be number of negative samples + 1
-  np.allclose(result.shape[2], num_neg_samples+1)
+  np.allclose(result[0].shape[1], num_neg_samples+1)
 
   # The first value is exact match, second ony 1 element match and last one is 0 match
   np.allclose(result[0], np.tile([1, 0.5, 0.], (a.shape[0],1)))

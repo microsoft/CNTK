@@ -18,7 +18,7 @@ from cntk import *
 from cntk.train.distributed import *
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
 import cntk.io.transforms as xforms
-from cntk.layers import Placeholder, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential
+from cntk.layers import Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential
 from cntk.initializer import normal
 
 # default Paths relative to current python file.
@@ -59,7 +59,7 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
             features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
             labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
         randomize = is_training,
-        epoch_size=total_number_of_samples,
+        max_samples=total_number_of_samples,
         multithreaded_deserializer = True)
 
 # Local Response Normalization layer. See Section 3.3 of the paper:
@@ -69,7 +69,7 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
 # where a_{x,y}^i is the activity of a neuron comoputed by applying kernel i at position (x,y)
 # N is the total number of kernals, n is half normalization width.
 def LocalResponseNormalization(k, n, alpha, beta, name=''):
-    x = Placeholder(name='lrn_arg')
+    x = cntk.placeholder(name='lrn_arg')
     x2 = cntk.square(x)
     # reshape to insert a fake singleton reduction dimension after the 3th axis (channel axis). Note Python axis order and BrainScript are reversed.
     x2s = cntk.reshape(x2, (1, cntk.InferredDimension), 0, 1)
@@ -174,7 +174,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
     # Train all minibatches 
     training_session(
         trainer=trainer, mb_source = train_source,
-        var_to_stream = input_map,
+        model_inputs_to_streams = input_map,
         mb_size = minibatch_size,
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(filename=os.path.join(model_path, model_name), restore=restore),

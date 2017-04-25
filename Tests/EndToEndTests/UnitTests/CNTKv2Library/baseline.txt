@@ -375,9 +375,14 @@ Test module "V2LibraryTests" has passed with:
     Test case "LoadLegacyModelSuite/LoadLegacyModelWithPrecomputeInGPU" has passed
 
   Test suite "MinibatchSourceSuite" has passed with:
-    5 test cases out of 5 passed
+    6 test cases out of 6 passed
+    48 assertions out of 48 passed
 
-    Test case "MinibatchSourceSuite/EndOfSweepFlagIsSetCorrectly" has passed
+    Test case "MinibatchSourceSuite/TestThatEndOfSweepFlagIsSetCorrectly" has passed with:
+      12 assertions out of 12 passed
+
+    Test case "MinibatchSourceSuite/TestSettingMaximumNumberOfSweepsToRead" has passed with:
+      36 assertions out of 36 passed
 
     Test case "MinibatchSourceSuite/NoRandomizedMinibatchSourceWarmStart" has passed
 
@@ -432,6 +437,10 @@ Test module "V2LibraryTests" has passed with:
     Test case "SerializationSuite/LegacyModelSavingInGPU" has passed
 
     Test case "SerializationSuite/CheckpointingWithStatefulNodesInGPU" has passed
+
+    Test case "SerializationSuite/CheckpointingWithStatefulNodesAndExplicitSeedsOnCPU" has passed
+
+    Test case "SerializationSuite/CheckpointingWithStatefulNodesAndExplicitSeedsOnGPU" has passed
 
   Test suite "FeedForwardSuite" has passed with:
     6 test cases out of 6 passed

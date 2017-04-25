@@ -18,7 +18,7 @@ void TestLoadLegacyModelWithPrecompute(const DeviceDescriptor& device)
     const size_t baseFeaturesDim = 363;
     const size_t numOutputClasses = 132;
 
-    auto modelFuncPtr = Function::LoadModel(L"cntkSpeechFF.dnn", device);
+    auto modelFuncPtr = Function::Load(L"cntkSpeechFF.dnn", device);
 
     auto FindVariableByName = [](const std::vector<Variable>& variables, const std::wstring& name) {
         for (size_t i = 0; i < variables.size(); ++i)
@@ -38,9 +38,9 @@ void TestLoadLegacyModelWithPrecompute(const DeviceDescriptor& device)
     FunctionPtr loss = FindVariableByName(outputs, L"CrossEntropyWithSoftmax");
     FunctionPtr eval = FindVariableByName(outputs, L"EvalClassificationError");
 
-    Dictionary frameModeConfig;
-    frameModeConfig[L"frameMode"] = true;
-    auto minibatchSource = CreateHTKMinibatchSource(baseFeaturesDim, numOutputClasses, frameModeConfig, MinibatchSource::InfinitelyRepeat, true);
+    auto config = GetHTKMinibatchSourceConfig(baseFeaturesDim, numOutputClasses);
+    config.isFrameModeEnabled = true;
+    auto minibatchSource = CreateCompositeMinibatchSource(config);
 
     const size_t minbatchSize = 256;
     size_t numMinibatches = 10;

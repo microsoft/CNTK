@@ -58,8 +58,7 @@ def test_op_future_value(input_size, time_step, initial_state, device_id, precis
     }
     init = parameter(init=AA(initial_state, dtype=dt), device=cntk_device(device_id))
 
-    from .. import future_value
-    input_op_input = future_value(a, init, time_step)
+    input_op_input = sequence.future_value(a, init, time_step)
 
     unittest_helper(input_op_input,
                 x, expected_forward, expected_backward,
@@ -95,8 +94,7 @@ def test_op_past_value(input_size, time_step, initial_state, device_id, precisio
 
     init = parameter(init=AA(initial_state, dtype=dt), device=cntk_device(device_id))
 
-    from .. import past_value
-    input_op_input = past_value(a, init, time_step)
+    input_op_input = sequence.past_value(a, init, time_step)
 
     unittest_helper(input_op_input,
                 x, expected_forward, expected_backward,

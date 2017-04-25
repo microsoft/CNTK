@@ -116,6 +116,9 @@ namespace CNTK
     {
         if (m_additionalOptions.gradientClippingThresholdPerSample != numeric_limits<double>::infinity())
         {
+            // when using meanGradient, no need to scale up the maxGradientPerMB
+            actualMBSize = (m_additionalOptions.useMeanGradient ? 1 : actualMBSize);
+
             double maxGradientPerMB = m_additionalOptions.gradientClippingThresholdPerSample * actualMBSize;
             if (m_additionalOptions.gradientClippingWithTruncation)
                 gradient.InplaceTruncate(ElementType(maxGradientPerMB));
@@ -139,6 +142,12 @@ namespace CNTK
     {
         const auto& gradientMatrix = gradientValue->GetWritableMatrix<ElementType>();
 
+        // get mean gradient if needed
+        if (m_additionalOptions.useMeanGradient)
+        {
+            Matrix<ElementType>::Scale((ElementType)1.0 / actualMBSize, *gradientMatrix);
+        }
+
         // clipping gradients to prevent outliers
         ClipGradient<ElementType>(*gradientMatrix, actualMBSize);
 
@@ -146,7 +155,7 @@ namespace CNTK
         if (m_additionalOptions.l2RegularizationWeight > 0)
         {
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
-            const auto weight = m_additionalOptions.l2RegularizationWeight * actualMBSize;
+            const auto weight = m_additionalOptions.l2RegularizationWeight * (m_additionalOptions.useMeanGradient ? 1 : actualMBSize);
             const auto& parameterMatrix = parameterValue->GetWritableMatrix<ElementType>();
             Matrix<ElementType>::ScaleAndAdd(ElementType(weight), *parameterMatrix, *gradientMatrix);
         }
@@ -162,17 +171,10 @@ namespace CNTK
         const auto gaussianNoiseInjectionStdDev = GetCurrentTrainingParameterValue(m_additionalOptions.gaussianNoiseInjectionStdDev);
         if (gaussianNoiseInjectionStdDev > 0)
         {
-            const auto& gradientMatrix = gradientValue->GetWritableMatrix<ElementType>();
+            const auto& sgdUpdateNoise = Matrix<ElementType>::RandomGaussian(parameterMatrix->GetNumRows(), parameterMatrix->GetNumCols(),
+                CPUDEVICE, ElementType(0.0), ElementType(gaussianNoiseInjectionStdDev), m_noiseInjectionSeed++);
 
-            Matrix<ElementType> sgdUpdateNoise((DEVICEID_TYPE)parameterMatrix->GetDeviceId());
-
-            // get the gradient structure since gradient is sparse
-            sgdUpdateNoise.SetValue(*gradientMatrix);
-
-            const auto noiseStdDev = gaussianNoiseInjectionStdDev;
-
-            // reset its value to random
-            sgdUpdateNoise.SetGaussianRandomValue(ElementType(0.0), ElementType(noiseStdDev));
+            sgdUpdateNoise.TransferToDeviceIfNotThere(parameterMatrix->GetDeviceId(), true);
 
             Matrix<ElementType>::ScaleAndAdd(ElementType(1.0), sgdUpdateNoise, *parameterMatrix);
         }
@@ -182,7 +184,8 @@ namespace CNTK
         {
             const auto learningRate = LearningRate(actualMBSize);
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
-            const auto weight = learningRate * m_additionalOptions.l1RegularizationWeight * actualMBSize;
+            // don't need to scale to actualMBSize if we are already taking averaged gradient
+            const auto weight = learningRate * m_additionalOptions.l1RegularizationWeight * (m_additionalOptions.useMeanGradient ? 1 : actualMBSize);
             parameterValue->GetWritableMatrix<ElementType>()->InplaceSoftThreshold(ElementType(weight));
         }
     }
@@ -198,8 +201,12 @@ namespace CNTK
                              AdditionalLearningOptions additionalOptions,
                              bool allocateSmoothGradients /* = true */)
                              : Learner(parameters, learningRateSchedule),
-                             m_additionalOptions(additionalOptions)
+                             m_additionalOptions(additionalOptions), 
+                             m_noiseInjectionSeed(Internal::GenerateRandomSeed())
     {
+        if (parameters.empty())
+            InvalidArgument("The parameters list specified to a Learner must not be empty.");
+
         std::unordered_set<Parameter> uniqueParameters(parameters.begin(), parameters.end());
 
         if (uniqueParameters.size() != parameters.size())
@@ -212,6 +219,11 @@ namespace CNTK
                 NDArrayViewPtr view = AllocateNDArrayView(parameter, parameter.Shape());
                 m_smoothedGradientValues.emplace(parameter, view);
             }
+        }
+
+        if (m_additionalOptions.useMeanGradient && learningRateSchedule.Unit() == LearningRateSchedule::UnitType::Minibatch)
+        {
+            LogicError("useMeanGradient should not be used with per-minibatch learning rate setting");
         }
     }
 
@@ -243,6 +255,8 @@ namespace CNTK
 
     /*virtual*/ bool LearnerBase::Update(unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd) /*override*/
     {
+        ReportTrainingParameterValue(m_learningRateSchedule, L"Learning rate");
+
         if (LearningRate(trainingSampleCount) == 0.0)
         {
             return false;
@@ -327,6 +341,7 @@ namespace CNTK
         checkpoint[sampleCountKey] = m_sampleCount;
         checkpoint[minibatchCountKey] = m_minibatchCount;
         checkpoint[learningRateScheduleKey] = m_learningRateSchedule.Serialize();
+        checkpoint[noiseInjectionSeedKey] = m_noiseInjectionSeed;
 
         // TODO: should we also save momentum schedule into the checkpoint?
         // If that is the case, need to be able to override this method in subclasses.
@@ -356,6 +371,12 @@ namespace CNTK
 
         m_sampleCount = checkpoint[sampleCountKey].Value<size_t>();
         m_minibatchCount = checkpoint[minibatchCountKey].Value<size_t>();
+
+        if (checkpoint.Contains(noiseInjectionSeedKey)) 
+        {
+            m_noiseInjectionSeed = checkpoint[noiseInjectionSeedKey].Value<size_t>();
+        }
+
         // TODO: which learning rate schedule should take precedence here? 
         // The one given at construction time or the one loaded from a checkpoint?
         m_learningRateSchedule = TrainingParameterSchedule<double>::Deserialize(checkpoint[learningRateScheduleKey].Value<Dictionary>());
@@ -405,6 +426,28 @@ namespace CNTK
         }
     }
 
+    void LearnerBase::ReportTrainingParameterValue(const TrainingParameterSchedule<double>& schedule, const wstring& name) const
+    {
+        double value = GetCurrentTrainingParameterValue(schedule);
+
+        auto iter = m_trainingParametersMap.find(name);
+        if (iter == m_trainingParametersMap.end() || iter->second != value)
+        {
+            m_trainingParametersMap[name] = value;
+
+            wstringstream stream;
+            stream << name;
+            if (schedule.Unit() == TrainingParameterSchedule<double>::UnitType::Minibatch)
+                stream << L" per minibatch";
+            else
+                stream << L" per sample";
+            wstring prefix = stream.str();
+
+            for (auto& writer : m_progressWriters)
+                writer->Write(prefix, value);
+        }
+    }
+
     LearnerSGD::LearnerSGD(const std::vector<Parameter>& parameters, 
                            const LearningRateSchedule& learningRateSchedule, 
                            AdditionalLearningOptions additionalOptions,
@@ -447,12 +490,18 @@ namespace CNTK
         {
             return currentMomentum;
         }
+
+        if (m_additionalOptions.useMeanGradient)
+            LogicError("useMeanGradient should not be used with per-sample momentum setting");
+
         return std::pow(currentMomentum, minibatchSize);
     }
 
     /*virtual*/ void LearnerMomentumSGD::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
                                                 const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
     {
+        ReportTrainingParameterValue(m_momentumSchedule, L"Momentum");
+
         DISPATCH_TO_TYPED_UPDATE_FUNCTION;
     }
 
@@ -531,9 +580,10 @@ namespace CNTK
 
     LearnerAdaDelta::LearnerAdaDelta(
         const std::vector<Parameter>& parameters,
+        const LearningRateSchedule& learningRateSchedule,
         double rho, double epsilon,
         AdditionalLearningOptions additionalOptions)
-        : LearnerBase(parameters, LearningRateSchedule(1, LearningRateSchedule::UnitType::Sample), additionalOptions, /*allocateSmoothGradients*/ false),
+        : LearnerBase(parameters, learningRateSchedule, additionalOptions, /*allocateSmoothGradients*/ false),
         m_rho(rho), m_epsilon(epsilon)
     {
         for (const auto& parameter : parameters)
@@ -556,7 +606,9 @@ namespace CNTK
     {
         GET_WRITABLE_MATRICES
 
-        smoothedGradientMatrix->AdaDeltaUpdate(*gradientMatrix, *parameterMatrix, (ElementType)m_rho, (ElementType)m_epsilon);
+        const auto learningRate = LearningRate(trainingSampleCount);
+
+        smoothedGradientMatrix->AdaDeltaUpdate(*gradientMatrix, *parameterMatrix, (ElementType)learningRate, (ElementType)m_rho, (ElementType)m_epsilon);
     }
 
     /*static*/ const double LearnerFSAdaGrad::s_targetAdagradAvDenom = 1.0;
@@ -760,9 +812,10 @@ namespace CNTK
     }
 
     LearnerPtr AdaDeltaLearner(const vector<Parameter>& parameters,
+                               const LearningRateSchedule& learningRateSchedule,
                                double rho, double epsilon,
                                AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        return MakeSharedObject<LearnerAdaDelta>(parameters, rho, epsilon, additionalOptions);
+        return MakeSharedObject<LearnerAdaDelta>(parameters, learningRateSchedule, rho, epsilon, additionalOptions);
     }
 }

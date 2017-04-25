@@ -329,7 +329,13 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::StopGradient) == 64 &&
                   static_cast<size_t>(PrimitiveOpType::ELU) == 65 &&
                   static_cast<size_t>(PrimitiveOpType::ForwardBackward) == 66 &&
-                  static_cast<size_t>(PrimitiveOpType::CosDistanceWithNegativeSamples) == 67,
+                  static_cast<size_t>(PrimitiveOpType::CosDistanceWithNegativeSamples) == 67 &&
+                  static_cast<size_t>(PrimitiveOpType::OneHot) == 68 &&
+                  static_cast<size_t>(PrimitiveOpType::Pow) == 69 &&
+                  static_cast<size_t>(PrimitiveOpType::ToSequence) == 70 &&
+                  static_cast<size_t>(PrimitiveOpType::ToSequenceLike) == 71 &&
+                  static_cast<size_t>(PrimitiveOpType::UnpackSequence) == 72 &&
+                  static_cast<size_t>(PrimitiveOpType::Assign) == 73,
                   "PrimitiveOpType enum value was modified.");
 }
 
@@ -343,22 +349,36 @@ std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool read
 #endif
 }
 
+void ForceInitParameters(FunctionPtr f) 
+{
+    for (const auto& p : f->Parameters()) 
+        UNUSED(p.Value()); 
+}
+
 FunctionPtr BuildFFClassifierNet(const Variable& inputVar, size_t numOutputClasses, const DeviceDescriptor& device, unsigned long seed = 1)
 {
-    Internal::SetFixedRandomSeed(seed);
+    Internal::ResetRandomSeed(seed);
     const size_t numHiddenLayers = 2;
     const size_t hiddenLayersDim = 32;
     auto nonLinearity = std::bind(Sigmoid, std::placeholders::_1, L"");
-    return FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, nonLinearity, L"classifierOutput");
+    auto f = FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, nonLinearity,
+        L"classifierOutput", SentinelValueForAutoSelectRandomSeed);
+    // initialize the function parameters right away, using the current seed value.
+    ForceInitParameters(f);
+    return f;
 }
 
 FunctionPtr BuildLSTMClassifierNet(const Variable& inputVar, const size_t numOutputClasses, const DeviceDescriptor& device, unsigned long seed = 1)
 {
-    Internal::SetFixedRandomSeed(seed);
+    Internal::ResetRandomSeed(seed);
     const size_t cellDim = 25;
     const size_t hiddenDim = 25;
     const size_t embeddingDim = 50;
-    return LSTMSequenceClassifierNet(inputVar, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
+    auto f = LSTMSequenceClassifierNet(inputVar, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, 
+        L"classifierOutput", SentinelValueForAutoSelectRandomSeed);
+    // initialize the function parameters right away, using the current seed value.
+    ForceInitParameters(f);
+    return f;
 }
 
 void TestFunctionSaveAndLoad(const FunctionPtr& function, const DeviceDescriptor& device)
@@ -389,13 +409,11 @@ void TestFunctionSaveAndLoad(const FunctionPtr& function, const DeviceDescriptor
 
 void TestFunctionsForEquality(const DeviceDescriptor& device)
 {
-    // TODO: add GPU version (need to reset cuda random generator each time a new function is created).
-    assert(device.Type() == DeviceKind::CPU);
-
     auto inputVar = InputVariable({ 2 }, false, DataType::Float, L"features");
 
     auto f1 = BuildFFClassifierNet(inputVar, 3, device, /*seed*/ 1);
     auto f2 = BuildFFClassifierNet(inputVar, 3, device, /*seed*/ 1);
+    
     if (!AreEqual(f1, f2))
     {
         BOOST_ERROR("TestFunctionsForEquality: two functions built with the same seed values are not identical.");
@@ -403,6 +421,7 @@ void TestFunctionsForEquality(const DeviceDescriptor& device)
 
     auto f3 = BuildFFClassifierNet(inputVar, 3, device, /*seed*/ 2);
     auto f4 = BuildFFClassifierNet(inputVar, 3, device, /*seed*/ 3);
+
     if (AreEqual(f3, f4))
     {
         BOOST_ERROR("TestFunctionsForEquality: two functions built with different seed values are identical.");
@@ -664,19 +683,19 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     auto MB2Loss = trainer->PreviousMinibatchLossAverage();
     trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
 
-    classifierOutput->RestoreModel(modelFile);
+    classifierOutput->Restore(modelFile);
 
     trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
     auto postRestoreMB2Loss = trainer->PreviousMinibatchLossAverage();
     FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
 
-    classifierOutput->RestoreModel(modelFile);
+    classifierOutput->Restore(modelFile);
     Internal::SaveAsLegacyModel(classifierOutput, modelFile);
 
     trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
     trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
 
-    classifierOutput->RestoreModel(modelFile);
+    classifierOutput->Restore(modelFile);
 
     trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
     postRestoreMB2Loss = trainer->PreviousMinibatchLossAverage();
@@ -688,7 +707,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     auto learner2 = AdamLearner(classifierOutput->Parameters(), learningRateSchedule, momentumSchedule, /*unitGainMomentum = */true);
     auto trainer2 = CreateTrainer(classifierOutput, trainingLoss, prediction, { learner });
 
-    classifierOutput->RestoreModel(modelFile);
+    classifierOutput->Restore(modelFile);
 
     vector<double> expectedLoss;
     for (int i = 0; i < 10; i++)
@@ -702,7 +721,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     for (int i = 0; i < 10; i++)
     {
         trainer->RestoreFromCheckpoint(L"trainer.checkpoint" + std::to_wstring(i));
-        classifierOutput->RestoreModel(modelFile + std::to_wstring(i));
+        classifierOutput->Restore(modelFile + std::to_wstring(i));
         trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
         double loss = trainer->PreviousMinibatchLossAverage();
         FloatingPointCompare(loss, expectedLoss[i], "Post checkpoint restoration training loss does not match expectation");
@@ -712,7 +731,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
 void TestThatExceptionsAreRaisedForNonExistentPaths()
 {
     VerifyException([]() {
-        Function::LoadModel(L"This.File.Does.Not.Exist");
+        Function::Load(L"This.File.Does.Not.Exist");
     }, "Was able to open file 'This.File.Does.Not.Exist' for reading.");
 
     VerifyException([]() {
@@ -720,7 +739,7 @@ void TestThatExceptionsAreRaisedForNonExistentPaths()
     }, "Was able to open file 'This.File.Does.Not.Exist' for reading.");
 
     VerifyException([]() {
-        Function::LoadModel(L"This_Path_Does_Not_Exist/Models/model.file");
+        Function::Load(L"This_Path_Does_Not_Exist/Models/model.file");
     }, "Was able to open file 'This_Path_Does_Not_Exist/Models/model.file' for reading.");
 
 
@@ -732,7 +751,7 @@ void TestThatExceptionsAreRaisedForNonExistentPaths()
 
 void TestLoadingAModelWithALoadBatchNormFunction() {
     {
-        auto model = Function::LoadModel(L"batch.norm.no.sample.count.v2.bin");
+        auto model = Function::Load(L"batch.norm.no.sample.count.v2.bin");
         if (model == nullptr) {
             ReportFailure("Failed to load a V2 model with a BatchNorm node that has only 5 inputs.");
         }
@@ -740,7 +759,7 @@ void TestLoadingAModelWithALoadBatchNormFunction() {
     
     {
         // make sure, we can load legacy V1 model.
-        auto model = Function::LoadModel(L"batch.norm.no.sample.count.v1.bin");
+        auto model = Function::Load(L"batch.norm.no.sample.count.v1.bin");
         if (model == nullptr) {
             ReportFailure("Failed to load a legacy V1 model with a BatchNorm node.");
         }
@@ -814,6 +833,74 @@ void TestCheckpointingWithStatefulNodes(const DeviceDescriptor& device)
     }
 }
 
+
+void TestCheckpointingWithStatefulNodesAndExplicitSeeds(const DeviceDescriptor& device)
+{
+    auto featureStreamName = L"features";
+    auto labelsStreamName = L"labels";
+
+    size_t inputDim = 784;
+    size_t numOutputClasses = 10;
+    auto features = InputVariable({ inputDim }, false /*isSparse*/, DataType::Float, featureStreamName);
+    auto labels = InputVariable({ numOutputClasses }, DataType::Float, labelsStreamName);
+
+    auto net1 = BuildFFClassifierNet(features, numOutputClasses, device, 1);
+    auto net2 = net1->Clone(ParameterCloningMethod::Clone, { { features , features } });
+    auto net3 = net1->Clone(ParameterCloningMethod::Clone, { { features , features } });
+    
+    auto trainer1 = BuildTrainer(Dropout(net1, 0.5, 123), labels);
+    auto trainer2 = BuildTrainer(Dropout(net2, 0.5, 123), labels);
+    auto trainer3 = BuildTrainer(Dropout(net3, 0.5, 321), labels);
+
+    const size_t minibatchSize = 50;
+    const size_t maxSamples = 150;
+    auto minibatchSource = TextFormatMinibatchSource(L"Train-28x28_cntk_text.txt", { { featureStreamName, inputDim },{ labelsStreamName, numOutputClasses } }, 2 * maxSamples, false);
+    
+    auto featureStreamInfo = minibatchSource->StreamInfo(features);
+    auto labelStreamInfo = minibatchSource->StreamInfo(labels);
+
+    for (int i = 0; i < maxSamples; i+=minibatchSize)
+    {
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        unordered_map<Variable, MinibatchData> minibatch = { { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } };
+
+        trainer1->TrainMinibatch(minibatch, device);
+        trainer2->TrainMinibatch(minibatch, device);
+        trainer3->TrainMinibatch(minibatch, device);
+        auto loss1 = trainer1->PreviousMinibatchLossAverage();
+        auto loss2 = trainer2->PreviousMinibatchLossAverage();
+        auto loss3 = trainer3->PreviousMinibatchLossAverage();
+        FloatingPointCompare(loss1, loss2, "Training loss does not match expectation");
+        BOOST_TEST((abs(loss1 - loss2) <= abs(loss2 - loss3)));
+    }
+
+    trainer1->SaveCheckpoint(L"seeded_stateful_nodes.model");
+    auto state = minibatchSource->GetCheckpointState();
+
+    vector<double> expectedLoss;
+    for (int i = 0; i < maxSamples; i += minibatchSize)
+    {
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        unordered_map<Variable, MinibatchData> minibatch = { { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } };
+
+        trainer1->TrainMinibatch(minibatch, device);
+        expectedLoss.push_back(trainer1->PreviousMinibatchLossAverage());
+    }
+
+    trainer1->RestoreFromCheckpoint(L"seeded_stateful_nodes.model");
+    minibatchSource->RestoreFromCheckpoint(state);
+
+    for (int i = 0; i*minibatchSize < maxSamples; i++)
+    {
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        unordered_map<Variable, MinibatchData> minibatch = { { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } };
+
+        trainer1->TrainMinibatch(minibatch, device);
+        double loss = trainer1->PreviousMinibatchLossAverage();
+        FloatingPointCompare(loss, expectedLoss[i], "Post checkpoint restoration training loss does not match expectation");
+    }
+}
+
 void TestLoadingModelFromMemoryBuffer()
 {
     ifstream modelFileStream("batch.norm.no.sample.count.v2.bin", ifstream::binary);
@@ -823,7 +910,7 @@ void TestLoadingModelFromMemoryBuffer()
     char* modelBuffer = new char[length];
     modelFileStream.read(modelBuffer, length);
 
-    auto model = Function::LoadModel(modelBuffer, length);
+    auto model = Function::Load(modelBuffer, length);
     if (model == nullptr) {
         ReportFailure("Failed to load a V2 model from memory buffer.");
     }
@@ -840,15 +927,15 @@ void TestLoadingModelFromMemoryBufferWithException()
     modelFileStream.read(modelBuffer, length);
 
     VerifyException([&length]() {
-        Function::LoadModel(nullptr, length);
+        Function::Load(nullptr, length);
     }, "Was able to load model from nullptr memory buffer.");
 
     VerifyException([&modelBuffer]() {
-        Function::LoadModel(modelBuffer, 0);
+        Function::Load(modelBuffer, 0);
     }, "Was able to load model from nullptr memory buffer.");
 
     VerifyException([&modelBuffer, &length]() {
-        Function::LoadModel(modelBuffer, length);
+        Function::Load(modelBuffer, length);
     }, "Was able to load legacy model from memory buffer."); 
     delete[] modelBuffer;
 }
@@ -904,6 +991,10 @@ BOOST_AUTO_TEST_CASE(LargeLernerSerializationInCpu)
 BOOST_AUTO_TEST_CASE(FunctionsForEquality)
 {
     TestFunctionsForEquality(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnGpu())
+    {
+        TestFunctionsForEquality(DeviceDescriptor::GPUDevice(0));
+    }
 }
 
 BOOST_AUTO_TEST_CASE(FunctionSerializationInCPU)
@@ -989,6 +1080,18 @@ BOOST_AUTO_TEST_CASE(CheckpointingWithStatefulNodesInGPU)
 {
     if (ShouldRunOnGpu())
         TestCheckpointingWithStatefulNodes(DeviceDescriptor::GPUDevice(0));
+}
+
+
+BOOST_AUTO_TEST_CASE(CheckpointingWithStatefulNodesAndExplicitSeedsOnCPU)
+{
+     TestCheckpointingWithStatefulNodesAndExplicitSeeds(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(CheckpointingWithStatefulNodesAndExplicitSeedsOnGPU)
+{
+    if (ShouldRunOnGpu())
+        TestCheckpointingWithStatefulNodesAndExplicitSeeds(DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

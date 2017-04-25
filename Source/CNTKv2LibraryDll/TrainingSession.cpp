@@ -12,15 +12,6 @@
 
 namespace CNTK
 {
-    namespace Internal
-    {
-        // TODO: Workaround for back compat. Should not be used and will be removed in the next version.
-        CNTK_API void AddProgressWriters(const TrainerPtr& t, const std::vector<ProgressWriterPtr>& w)
-        {
-            t->AddProgressWriters(w);
-        }
-    }
-
     using namespace std;
 
     const static std::wstring s_trainingMinibatchSource = L"TrainingMinibatchSource";
@@ -71,42 +62,6 @@ namespace CNTK
     {
     }
 
-    TrainingSessionPtr CreateBasicTrainingSession(
-        const MinibatchSourcePtr& trainingSource,
-        const TrainerPtr& trainer,
-        const std::unordered_map<Variable, StreamInformation>& modelInputToMinibatchSourceStream,
-        const MinibatchSizeSchedule& minibatchSizeSchedule,
-        size_t checkpointFrequencyinSamples,
-        const std::wstring& checkPointFileName,
-        const MinibatchSourcePtr& crossValidationSource,
-        const MinibatchSizeSchedule& crossValidationSchedule,
-        size_t crossValidationFrequencyInSamples,
-        bool restoreFromCheckpointIfExists,
-        bool saveAllCheckpoints,
-        size_t maxNumberOfSamples,
-        size_t progressFrequency,
-        const std::vector<ProgressWriterPtr>& progressWriters)
-    {
-        fprintf(stderr, "WARNING:CreateBasicTrainingSession is deprecated and will be removed in the next beta (13)."
-            "Instructions for updating:"
-            "Please switch to CreateTrainingSession function and then call SetCheckpointing/SetCrossValidation/SetPrintingProgress as needed.");
-
-        return MakeSharedObject<TrainingSession>(trainingSource,
-            trainer,
-            modelInputToMinibatchSourceStream,
-            minibatchSizeSchedule,
-            checkpointFrequencyinSamples,
-            checkPointFileName,
-            crossValidationSource,
-            crossValidationSchedule,
-            crossValidationFrequencyInSamples,
-            restoreFromCheckpointIfExists,
-            saveAllCheckpoints,
-            maxNumberOfSamples,
-            progressFrequency,
-            progressWriters);
-    }
-
     TrainingSessionPtr CreateTrainingSession(
         const TrainerPtr& trainer,
         const MinibatchSourcePtr& trainingSource,
@@ -125,33 +80,6 @@ namespace CNTK
             maxNumTrainingSamples,
             progressFrequency,
             checkpointing, crossValidation, test);
-    }
-
-    TrainingSession::TrainingSession(
-        const MinibatchSourcePtr& trainingSource,
-        const TrainerPtr& trainer,
-        const std::unordered_map<Variable, StreamInformation>& modelInputToMinibatchSourceStream,
-        const MinibatchSizeSchedule& schedule,
-        size_t checkpointFrequencyInSamples,
-        const std::wstring& checkPointFileName,
-        const MinibatchSourcePtr& crossValidationSource,
-        const MinibatchSizeSchedule& crossValidationSchedule,
-        size_t crossValidationFrequencyInSamples,
-        bool restoreFromCheckpointIfExists,
-        bool saveAllCheckpoints,
-        size_t maxNumberOfSamples,
-        size_t progressFrequencyInSamples,
-        const std::vector<ProgressWriterPtr>& progressWriters)
-        : TrainingSession(
-            trainer, trainingSource, schedule, modelInputToMinibatchSourceStream, maxNumberOfSamples, progressFrequencyInSamples,
-            CheckpointConfig(checkPointFileName, checkpointFrequencyInSamples, restoreFromCheckpointIfExists, saveAllCheckpoints),
-            CrossValidationConfig(crossValidationSource, crossValidationSchedule, crossValidationFrequencyInSamples),
-            TestConfig(nullptr))
-    {
-        if (progressFrequencyInSamples)
-        {
-            trainer->AddProgressWriters(progressWriters);
-        }
     }
 
     TrainingSession::TrainingSession(
@@ -307,20 +235,25 @@ namespace CNTK
         {
             std::unordered_map<Variable, ValuePtr> minibatch;
             double accumulatedError = 0;
-            double error = 0;
             size_t totalNumberOfSamples = 0;
             size_t numberOfMinibatches = 0;
 
+            std::pair<ValuePtr, size_t> errorAndCount;
             auto checkpoint = m_cv.m_source->GetCheckpointState();
-            size_t sampleCount = 0;
-            while (GetCrossValidationMinibatch(minibatch, m_cv.m_mbSize[totalNumberOfSamples], computeDevice), !minibatch.empty())
+            bool shouldCV = true;
+            while (shouldCV)
             {
+                GetCrossValidationMinibatch(minibatch, m_cv.m_mbSize[totalNumberOfSamples], computeDevice);
+
                 // TODO: it may be slow to rely on TestMinibatch to return error each time, since it may require transfer
-                // of error from the GPU each time.
-                error = m_trainer->TestMinibatch(minibatch, computeDevice, sampleCount);
-                accumulatedError += error * sampleCount;
-                totalNumberOfSamples += sampleCount;
-                numberOfMinibatches++;
+                // of error from the GPU each time, accumulatedError can be allocated on GPU
+                shouldCV = m_trainer->TestMinibatch(minibatch, errorAndCount, computeDevice, m_numberOfWorkers != 1);
+                if (shouldCV)
+                {
+                    accumulatedError += errorAndCount.first->AsScalar<double>();
+                    totalNumberOfSamples += errorAndCount.second;
+                    numberOfMinibatches++;
+                }
             }
 
             m_cv.m_source->RestoreFromCheckpoint(checkpoint);
@@ -339,12 +272,14 @@ namespace CNTK
             return;
 
         std::unordered_map<Variable, ValuePtr> minibatch;
-        size_t sampleCount = 0;
         size_t totalNumberOfSamples = 0;
-        while (GetNextMinibatch(m_test.m_source, minibatch, m_test.m_mbSize[totalNumberOfSamples], 0, 1, computeDevice), !minibatch.empty())
+        bool shouldTest = true;
+        std::pair<ValuePtr, size_t> errorAndCount;
+        while (shouldTest)
         {
-            m_trainer->TestMinibatch(minibatch, computeDevice, sampleCount);
-            totalNumberOfSamples += sampleCount;
+            GetNextMinibatch(m_test.m_source, minibatch, m_test.m_mbSize[totalNumberOfSamples], m_workerRank, m_numberOfWorkers, computeDevice);
+            shouldTest = m_trainer->TestMinibatch(minibatch, errorAndCount, computeDevice, m_numberOfWorkers != 1);
+            totalNumberOfSamples += errorAndCount.second;
         }
 
         m_trainer->SummarizeTestProgress();
@@ -373,8 +308,7 @@ namespace CNTK
 
     void TrainingSession::GetCrossValidationMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice)
     {
-        // TODO: Support distributed cross-validation, when TestMinibatch supports it.
-        GetNextMinibatch(m_cv.m_source, minibatch, maxMbSize, 0, 1, computeDevice);
+        GetNextMinibatch(m_cv.m_source, minibatch, maxMbSize, m_workerRank, m_numberOfWorkers, computeDevice);
     }
 
     void TrainingSession::GetNextMinibatch(const MinibatchSourcePtr& source, std::unordered_map<Variable, ValuePtr>& minibatch, size_t mbSize, size_t workerRank, size_t numberOfWorkers, const DeviceDescriptor& computeDevice)
@@ -437,13 +371,13 @@ namespace CNTK
         wstring fileName;
         if (pos == wstring::npos)
         {
-            parent = L"..";
+            parent = L".";
             fileName = checkpoint;
         }
         else
         {
             parent = checkpoint.substr(0, pos);
-            fileName = checkpoint.substr(pos);
+            fileName = checkpoint.substr(pos + 1);
         }
 
         std::wstring restoreFile;

@@ -186,6 +186,48 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
     assert(abs(resulted_non_zeros - expected_non_zeros) <
            max_off)
 
+def test_op_dropout_with_explicit_seed(device_id, precision):
+    from cntk import combine, dropout, input
+
+    value = np.ones(shape=(100,100), dtype=PRECISION_TO_TYPE[precision])
+
+    a = input(shape=value.shape,
+              dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+              needs_gradient=True,
+              name='a')
+
+    seed = 123;
+
+    dropout_nodes= [
+        dropout(a, dropout_rate=0.5, seed=seed),
+        dropout(a, dropout_rate=0.5, seed=seed),
+        dropout(a, dropout_rate=0.5, seed=seed+1),
+        dropout(a, dropout_rate=0.5)
+    ]
+
+    cloned_nodes = [x.clone('clone') for x in dropout_nodes]
+
+    value.shape = (1, 1) + value.shape
+    
+    results = []
+    for node in dropout_nodes + cloned_nodes:
+        forward_input = {node.inputs[0]: value}
+        forward, backward = cntk_eval(node,
+                                      forward_input,
+                                      precision,
+                                      cntk_device(device_id),
+                                      backward_pass=True)
+
+        results.append(forward[node.output])
+    
+    assert np.allclose(results[0], results[1])
+    assert not np.allclose(results[0], results[2])
+    assert not np.allclose(results[0], results[3])
+
+    clones = results[len(dropout_nodes):]
+    for i in range(len(clones)):
+        assert np.allclose(results[i], clones[i])
+
 
 @pytest.mark.parametrize("dropout_rate", [-0.1, 1.0, 100])
 def test_op_dropout_bad_input(dropout_rate):
@@ -441,11 +483,11 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
 
     expected_forward = AA(forward)
 
-    scale        = Parameter(init=AA([init_scale], dtype=dtype), device=dev)
-    bias         = Parameter(init=AA([init_bias], dtype=dtype), device=dev)
-    run_mean     = constant(mean, shape=(1), device=dev)
-    run_variance = constant(var,  shape=(1), device=dev)
-    run_count    = constant(0,               device=dev)
+    scale        = Parameter(init=AA([init_scale], dtype=dtype), dtype=dtype, device=dev)
+    bias         = Parameter(init=AA([init_bias], dtype=dtype), dtype=dtype, device=dev)
+    run_mean     = constant(mean, shape=(1), dtype=dtype, device=dev)
+    run_variance = constant(var,  shape=(1), dtype=dtype, device=dev)
+    run_count    = constant(0,               dtype=dtype, device=dev)
 
     from cntk import batch_normalization, input
 
@@ -462,3 +504,28 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
     forward_input = {a: t}
 
     unittest_helper(op_node, forward_input, expected_forward, expected_backward=None, device_id=device_id, precision=precision)
+
+TENSOR_PAIRS = [
+    ([0.3], [0.1]),
+    ([[0.1]], [[0.3]]),
+    ([[1.5, 2.1]], [[-2., -3.]]),
+    ([[1., 2.], [3., 4.], [1., 2.]],
+     [[2., 2.], [3., 1.], [-1., -2.]])
+]
+
+@pytest.mark.parametrize("base, exponent", TENSOR_PAIRS)
+def test_op_pow(base, exponent, device_id, precision):
+    dt =  PRECISION_TO_TYPE[precision]
+    base = AA(base,dtype=dt)
+    exponent = AA(exponent,dtype=dt)
+    expected_forward = base ** exponent
+
+    expected_backward = {
+            'left_arg':  [exponent * base**(exponent-1)],
+            'right_arg': [expected_forward * np.log(base)]
+        }
+
+    from .. import pow
+    _test_binary_op(precision, device_id, pow,
+                    base, exponent,
+                    AA([expected_forward]), expected_backward)

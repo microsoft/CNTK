@@ -240,7 +240,7 @@ public:
                      ElemType RMS_WGT_MIN, 
                      const bool needAveMultiplier);
 
-    void AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon);
+    void AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
 
     void Reshape(const size_t numRows, const size_t numCols);
 
@@ -276,6 +276,8 @@ public:
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
     void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
     void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle);
+
+    GPUMatrix<ElemType>& AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
 
     GPUMatrix<ElemType> Transpose() const;
     GPUMatrix<ElemType>& AssignTransposeOf(const GPUMatrix<ElemType>& a);
@@ -518,6 +520,8 @@ public:
     static void Multiply(const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, GPUMatrix<ElemType>& c);
     static void Multiply(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
     static void Multiply1x1AndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, ElemType beta, GPUMatrix<ElemType>& c);
+
+    static void ColumnwiseScaleAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& v, ElemType beta, GPUMatrix<ElemType>& c);
 
     static void ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c);
     static void ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);

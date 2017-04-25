@@ -5,16 +5,16 @@
 # ==============================================================================
 
 '''
-blocks -- basic building blocks that are semantically not layers (not used in a layered fashion)
-          e.g. the LSTM
+Basic building blocks that are semantically not layers (not used in a layered fashion),
+e.g. the LSTM block.
 '''
 
 from __future__ import division
 import numpy as np
-from cntk import parameter, constant, input, placeholder, combine, alias, sequence
-from cntk.variables import Record
+from cntk import input, placeholder, combine, alias, sequence, parameter, constant
+from cntk.variables import Record, Constant, Parameter
 from cntk.axis import Axis
-from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus, past_value, future_value
+from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus
 from .typing import Signature
 from cntk.internal import _as_tuple
 from cntk.initializer import glorot_uniform
@@ -68,7 +68,7 @@ def _get_initial_state_or_default(initial_state):
 
 def BlockFunction(op_name, name):
     '''
-    Decorator for defining a @Function as a BlockFunction. Same as @Function, but wrap the content into an as_block().
+    Decorator for defining a @Function as a BlockFunction. Same as @Function, but wrap the content into an :func:`~cntk.ops.as_block`.
     '''
     return lambda f: Function(f, make_block=True, op_name=op_name, name=name)
 
@@ -77,185 +77,28 @@ def _inject_name(f, name):
     Call this at the end of any layer or block that takes an optional name argument.
     '''
     if name:
+        if not isinstance(f, Function):
+            f = Function(f)
         if len(f.outputs) == 1:
             f = alias(f, name=name)
         else:
             f = combine(list(f.outputs), name=name) # BUGBUG: Does this actually name things?
     return f
 
-# TODO: Move this into the lower layer where these are defined.
-# some mappings--these currently exist only so that I can name the nodes for debugging
-def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
-    '''
-    Parameter(shape, init, dtype=np.float32, name='')
-
-    Constructs a Parameter variable.
-    Some operations, such as :func:`~cntk.ops.times`,
-    can update a parameter's shape depending on its data input. For those dimensions, pass :const:`~cntk.InferredDimension`.
-
-    This is a wrapper around :func:`~cntk.ops.parameter` that allows to specify
-    the ``dtype`` (float/double) per :class:`~cntk.default_options`.
-
-    Example:
-     >>> p = Parameter((13,42,7), init=glorot_uniform())
-     >>> p.shape
-         (13, 42, 7)
-
-     >>> # example with inferred dimensions
-     >>> W = Parameter((InferredDimension, 42), init=glorot_uniform())
-     >>> W.shape   # -1 indicates dimension yet to be inferred
-         (-1, 42)
-     >>> x = Input(13)
-     >>> y = times(x, W)  # times operation now knows that the input dimension of W must be 13
-     >>> W.shape          # hence, the shape has been updated
-         (13, 42)
-
-    Args:
-        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        init (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `W`
-        dtype (np.dtype, defaults to np.float32): data type
-        name (str, defaults to ''): the name of the Function instance in the network
-    Returns:
-        a learnable parameter Variable
-    '''
-    
-    pure = get_default_override(None, pure=default_override_or(False))
-    if pure:
-        raise TypeError('parameters cannot be created inside a @Function def')
-    dtype = get_default_override(Parameter, dtype=dtype)
-    init = _initializer_for(init)
-    return parameter(shape, init=init, dtype=dtype, name=name)
-
-def Constant(value, shape=None, dtype=default_override_or(np.float32), name=''):
-    '''
-    Constant(value, shape=None, dtype=np.float32, name='')
-
-    Constructs a Variable object that is constant.
-    This is a wrapper around :func:`~cntk.ops.constant`.
-
-    Example:
-     >>> c = Constant(1, (2,3))
-     >>> c.value
-         array([[ 1.,  1.,  1.],
-                [ 1.,  1.,  1.]], dtype=float32)
-
-    Args:
-        value (object): the object you want to make constant
-        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        dtype (np.dtype, defaults to np.float32): data type
-        name (str, defaults to ''): the name of the Function instance in the network
-    Returns:
-        a constant Variable
-    '''
-
-    dtype = get_default_override(Constant, dtype=dtype)
-    return constant(value, shape=shape, dtype=dtype, name=name)
-
-# TODO: this function should not be necessary anymore
-def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_sparse=False,
-          dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
-    '''
-    Input(shape, dtype=np.float32, needs_gradient=True, is_sparse=False, dynamic_axes=Axis.default_input_variable_dynamic_axes(), name='')
-
-    Constructs an Input variable.
-    Input variables are used when explicitly constructing a graph.
-    In the context of the Layers library, however, the preferred method is to use the @\ :func:`~cntk.utils.Signature` pattern.
-    This is a wrapper around :func:`~cntk.ops.input_variable`.
-
-    Example:
-     >>> # an input receptacle for explicit graph building
-     >>> x = Input((2,3), is_sparse=True)
-     >>> x.is_sparse
-         True
-     >>> x.shape
-         (2, 3)
-     >>> y = sigmoid(x)
-     >>> y.shape
-         (2, 3)
-
-     >>> # but the preferred pattern is to use the @Function/@Signature pattern instead:
-     >>> from cntk.ops.functions import Function
-     >>> from cntk.layers.typing import *
-     >>> @Function
-     ... @Signature(x = Tensor[2,3])
-     ... def y(x):
-     ...     return sigmoid(x)
-     >>> y.shape
-         (2, 3)
-
-     >>> # type specifications can also be directly passed to Input:
-     >>> x = Input(**SparseTensor[2,3])
-     >>> x.is_sparse
-         True
-     >>> x.shape
-         (2, 3)
-     >>> y = sigmoid(x)
-     >>> y.shape
-         (2, 3)
-
-    Args:
-        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        dtype (np.dtype, defaults to np.float32): data type
-        needs_gradient (bool, defaults to `True`):
-        is_sparse (bool, defaults to `False`):
-        dynamic_axes (object, `Axis.default_input_variable_dynamic_axes`):
-        name (str, defaults to ''): the name of the Function instance in the network
-        
-    Returns:
-        an input Variable
-    '''
-
-    dtype = get_default_override(Input, dtype=dtype)
-    return input(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
-                          dynamic_axes=dynamic_axes, name=name)
-
-def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholder'):
-    '''
-    Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholder')
-
-    Constructs a Placeholder variable.
-    This is only used for explicit graph building.
-    This is a wrapper around :func:`~cntk.ops.placeholder_variable`.
-
-    Example:
-     >>> # an function-input placeholder for explicit graph building
-     >>> x = Placeholder()
-     >>> x.shape   # "-2" indicates unknown shape
-         (-2,)
-
-    Args:
-        shape (`int` or `tuple` of `ints`, defaults to `None`): vector or tensor dimension of the output of this layer
-        dynamic_axes (object, defaults to `None`):
-        is_sparse (bool, defaults to `False`):
-        name (str, defaults to 'placeholder'): the name of the Function instance in the network
-        
-    Returns:
-        a placeholder Variable
-    '''
-
-    if shape is not None or dynamic_axes is not None or is_sparse is not None:
-        import warnings
-        warnings.warn('Placeholder() no longer requires shapes, axes, or sparse to be specified. Please just remove the arguments.', DeprecationWarning)
-    return placeholder(name=name)
-    # TODO: delete these vv once confirmed that this is indeed not used anymore
-    #p = placeholder(shape=shape, dynamic_axes=dynamic_axes, is_sparse=is_sparse, name=name) # TODO: use (*args, **kwargs)?
-    # BUGBUG: placeholder does not know is_sparse
-    #return placeholder(shape=shape, dynamic_axes=dynamic_axes, name=name) # TODO: use (*args, **kwargs)?
-
 def ForwardDeclaration(name='forward_declaration'):
     '''
     Helper for recurrent network declarations.
-    Returns a Placeholder variable with an added method resolve_to() to be called
+    Returns a placeholder variable with an added method ``resolve_to()`` to be called
     at the end to close the loop.
     This is used for explicit graph building with recurrent connections.
 
     Example:
      >>> # create a graph with a recurrent loop to compute the length of an input sequence
      >>> from cntk.layers.typing import *
-     >>> x = Input(**Sequence[Tensor[2]])
+     >>> x = C.input(**Sequence[Tensor[2]])
      >>> ones_like_input = sequence.broadcast_as(1, x)  # sequence of scalar ones of same length as input
      >>> out_fwd = ForwardDeclaration()  # placeholder for the state variables
-     >>> out = past_value(out_fwd, initial_state=0) + ones_like_input
+     >>> out = sequence.past_value(out_fwd, initial_state=0) + ones_like_input
      >>> out_fwd.resolve_to(out)
      >>> length = sequence.last(out)
      >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
@@ -269,7 +112,7 @@ def ForwardDeclaration(name='forward_declaration'):
     Returns:
         a placeholder variable with a method ``resolve_to()`` that resolves it to another variable
     '''
-    var_fwd = Placeholder(name=name)
+    var_fwd = placeholder(name=name)
     def resolve_to(var):
         from cntk import cntk_py
         #if isinstance(var, cntk_py.Function):
@@ -279,6 +122,7 @@ def ForwardDeclaration(name='forward_declaration'):
         var.owner.replace_placeholders({var_fwd: var})   # resolves var_fwd := var
     var_fwd.resolve_to = resolve_to
     return var_fwd
+
 
 @Function
 def identity(keep):
@@ -451,7 +295,8 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
             ht
 
         # returns the new state as a tuple with names but order matters
-        return (Function.NamedOutput(h=h), Function.NamedOutput(c=c))
+        #return (Function.NamedOutput(h=h), Function.NamedOutput(c=c))
+        return (h, c)
 
     # GRU model function
     # in this case:
@@ -489,14 +334,16 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
             ht
 
         # returns the new state as a tuple with names but order matters
-        return Function.NamedOutput(h=h)
+        #return Function.NamedOutput(h=h)
+        return h
 
     def rnn(dh, x):
         dhs = Sdh(dh)  # previous value, stabilized
         ht = activation (times(x, W) + times(dhs, H) + b)
         h = times(Sht(ht), Wmr) if has_projection else \
             ht
-        return Function.NamedOutput(h=h)
+        #return Function.NamedOutput(h=h)
+        return h
 
     function = {
         'RNNUnit': rnn,

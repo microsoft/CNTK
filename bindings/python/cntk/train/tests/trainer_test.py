@@ -6,6 +6,7 @@
 
 import os
 import math
+import warnings
 import numpy as np
 from cntk import Value
 from cntk import Function
@@ -71,6 +72,26 @@ def test_output_to_retain():
     updated, var_map = trainer.train_minibatch(arguments, outputs=[z_output])
     assert np.allclose(var_map[z_output], np.asarray(in1_value)+20)
 
+def test_epochsize_wrn_for_momentum_time_constant():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        momentum_as_time_constant_schedule(1100, epoch_size=1000)
+
+        assert len(w) == 1
+        assert issubclass(w[-1].category, RuntimeWarning)
+        assert "epoch_size" in str(w[-1].message)
+
+def test_epochsize_wrn_for_parameter_schedule():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        training_parameter_schedule(0.01, UnitType.sample, epoch_size=1000)
+
+        assert len(w) == 1
+        assert issubclass(w[-1].category, RuntimeWarning)
+        assert "epoch_size" in str(w[-1].message)
+
 def test_eval_sparse_dense(tmpdir, device_id):
     from cntk import Axis
     from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
@@ -96,7 +117,7 @@ def test_eval_sparse_dense(tmpdir, device_id):
     mbs = MinibatchSource(CTFDeserializer(ctf_file, StreamDefs(
         features  = StreamDef(field='S0', shape=input_vocab_dim,  is_sparse=True),
         labels    = StreamDef(field='S1', shape=label_vocab_dim,  is_sparse=True)
-    )), randomize=False, epoch_size = 2)
+    )), randomize=False, max_samples = 2)
 
     raw_input = sequence.input(shape=input_vocab_dim, sequence_axis=Axis('inputAxis'), name='raw_input', is_sparse=True)
 
@@ -273,32 +294,6 @@ def test_trainer_with_some_params_not_learned():
 
     trainer.test_minibatch(arguments)
 
-def test_not_replaced_placeholders():
-    
-    def wrap_in_block(fun_args, name):
-        block_args = [placeholder(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
-        combined_block_args = combine(block_args)                               # the content of the BlockFunction
-        arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
-        combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=name)
-        return combined_args
-
-
-    input_dim = 2
-    x = sequence.input(shape=(input_dim,))
-    p1 = placeholder()
-    p2 = placeholder()
-
-    a = abs(x)
-    b = wrap_in_block(list(a.outputs) + [p1], "my_first_block")
-    b = wrap_in_block(list(b.outputs) + [p2], "my_second_block")
-    b = past_value(b.outputs[0])
-
-    model = b.replace_placeholders({p1:b.outputs[0], p2:b.outputs[0]})
-
-    x0 = [[1, 1],[2, 2]]
-    with pytest.raises(RuntimeError):
-        model.forward({x : x0}, model.outputs)
-
 def test_disallow_seq_starts_with_Value_objects():
     one_hot_batch = [[2,5], [0,1,6]]
     dim = 10
@@ -315,7 +310,7 @@ def test_disallow_seq_starts_with_Value_objects():
 
 def test_scalar_input():
     scalar = input((1,), dtype=np.float32, name='tscalar')
-    op = scalar + 1
+    op = scalar + parameter(init=np.asarray([1]), dtype=np.float32)
 
     lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
     trainer = Trainer(op, (op, None), sgd(op.parameters, lr_per_sample))
@@ -324,7 +319,7 @@ def test_scalar_input():
     
 def test_empty_minibatch():
     scalar = input((1,), dtype=np.float32, name='tscalar')
-    op = scalar + 1
+    op = scalar + parameter(init=np.asarray([1]), dtype=np.float32)
 
     lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
     trainer = Trainer(op, (op, None), sgd(op.parameters, lr_per_sample))

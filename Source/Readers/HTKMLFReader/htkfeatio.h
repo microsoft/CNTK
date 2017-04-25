@@ -466,6 +466,7 @@ public:
         void ClearLogicalPath()
         {
             logicalpath.clear();
+            logicalpath.shrink_to_fit();
         }
 
         // casting to wstring yields the logical path

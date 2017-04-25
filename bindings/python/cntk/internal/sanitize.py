@@ -3,13 +3,9 @@
 # for full license information.
 # ==============================================================================
 
-import sys
 import numbers
 import collections
-import copy
 import numpy as np
-from numbers import Number
-from scipy import sparse
 
 from .. import cntk_py
 from ..axis import Axis
@@ -89,6 +85,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     from cntk.variables import Constant, Variable, Parameter
     from cntk.ops.functions import Function
     from cntk.ops import constant
+    from ..core import asarray
 
     # is it a Variable or a Function?
     if isinstance(arg,
@@ -98,12 +95,17 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
                    Function, cntk_py.Function)):
         return arg
 
+    if isinstance(arg, Variable._Type):
+        raise ValueError("Input is a type object (" + str(arg) + "). Did you mean to pass 'input(" + str(arg) + ")'?")
+
     # maybe a Python list that we can interpret as a NumPy array?
     if isinstance(arg, list) and not arg:
         raise ValueError('input is empty')
 
     if not isinstance(arg, np.ndarray) or arg.dtype != fallback_dtype:
-        arg = np.asarray(arg, dtype=fallback_dtype)
+        # TODO: check whether Values can be ingested directly
+        arg = asarray(arg, fallback_dtype)
+
         if arg.shape == ():
             arg.shape = (1,)
 
@@ -157,8 +159,8 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
 
 def sanitize_value(shape, value, dtype, device):
     '''
-    Converts a given ``value`` to an :class:`~cntk.core.NDArrayView` object that can be passed to
-    the CNTK core.
+    Converts a given ``value`` to an :class:`~cntk.core.NDArrayView` object
+    that can be passed to the CNTK core.
 
     Args:
         shape (tuple): shape of the value
@@ -172,6 +174,7 @@ def sanitize_value(shape, value, dtype, device):
         :class:`~cntk.core.NDArrayView` object representing ``value``
     '''
     from .. import NDArrayView
+    from ..core import asarray
     if value is None:
         if shape is None:
             raise ValueError('you need to specify at least shape or value')
@@ -179,11 +182,14 @@ def sanitize_value(shape, value, dtype, device):
         ndav = NDArrayView(shape, cntk_dtype, device)
     else:
         np_dtype = sanitize_dtype_numpy(dtype)
-        if not isinstance(value, np.ndarray) or value.dtype != np_dtype:
+        is_numpy = isinstance(value, np.ndarray)
+        if is_numpy and value.dtype != np_dtype:
+            value = value.astype(np_dtype)
+        elif not is_numpy:
             if np.isscalar(value) and shape:
                 value = np.full(shape, value, dtype=np_dtype)
             else:
-                value = np.asarray(value, dtype=np_dtype)
+                value = asarray(value, np_dtype)
 
         ndav = NDArrayView.from_dense(value, device)
 
@@ -356,6 +362,17 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     return var_map
 
 
+def data_type_to_dtype(data_type):
+    if data_type == cntk_py.DataType_Float:
+        return np.float32
+    elif data_type == cntk_py.DataType_Double:
+        return np.float64
+    elif data_type == cntk_py.DataType_Unknown:
+        return object
+    else:
+        raise ValueError('data_type %s is not supported'%data_type)
+
+
 def sanitize_dtype_numpy(dtype):
     is_type = isinstance(dtype, type) or isinstance(dtype, np.dtype)
     is_str = is_string(dtype)
@@ -446,30 +463,28 @@ def sanitize_variable_value_dict(var_value_dict):
     else:
         return list(var_value_dict.values())[0]
 
-def _sanitize_common_conv_args(strides, auto_padding, lower_pad, upper_pad):
+def _sanitize_common_conv_args(strides, auto_padding):
     strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
 
     # Reverse the 'auto_padding' argument to account for the col-major tensor
     # layout in core C++ implementation
     auto_padding = list(reversed(auto_padding))
 
-    return strides, auto_padding, lower_pad, upper_pad
+    return strides, auto_padding
     
-def sanitize_pooling_args(pooling_window_shape, strides, auto_padding, lower_pad, upper_pad):
+def sanitize_pooling_args(pooling_window_shape, strides, auto_padding):
     pooling_window_shape = sanitize_shape(pooling_window_shape)
-    strides, auto_padding, lower_pad, upper_pad = _sanitize_common_conv_args(strides, auto_padding, lower_pad, upper_pad)
-    return pooling_window_shape, strides, auto_padding, lower_pad, upper_pad
+    strides, auto_padding = _sanitize_common_conv_args(strides, auto_padding)
+    return pooling_window_shape, strides, auto_padding
     
-def sanitize_convolution_args(strides, sharing, auto_padding, lower_pad, upper_pad):
-    strides, auto_padding, lower_pad, upper_pad = _sanitize_common_conv_args(strides, auto_padding, lower_pad, upper_pad)
+def sanitize_convolution_args(strides, sharing, auto_padding):
+    strides, auto_padding = _sanitize_common_conv_args(strides, auto_padding)
 
     # Reverse the 'sharing' argument to account for the col-major tensor layout
     # in core C++ implementation
     sharing = list(reversed(sharing))
 
-    return strides, sharing, auto_padding, lower_pad, upper_pad
+    return strides, sharing, auto_padding
 
 def sanitize_Function_attributes(attributes):
     # Reverse the 'sharing' and 'auto_padding' attributes to account for the
@@ -484,16 +499,23 @@ def sanitize_Function_attributes(attributes):
 
 def memoize(func):
     class memodict(dict):
-        __slots__ = ()
+        def __init__(self, f):
+            self.f = f
+        def __call__(self, *args):
+            return self[args]
         def __missing__(self, key):
-            self[key] = ret = func(key)
+            self[key] = ret = func(*key)
             return ret
-    return memodict().__getitem__
+    return memodict(func)
 
 @memoize
-def _sparse_to_dense_network_cache(input_shape):
-    from cntk.ops import times, input_variable
+def _sparse_to_dense_network_cache(input_shape, is_sequence, device):
+    from cntk.ops import times, input, sequence
 
-    temp_input = input_variable(input_shape)
+    if is_sequence:
+        temp_input = sequence.input(input_shape, is_sparse=True)
+    else:
+        temp_input = input(input_shape, is_sparse=True)
+
     eye_shape = input_shape[-1]
     return times(temp_input, np.eye(eye_shape))

@@ -77,10 +77,16 @@ namespace CNTK
         ELU = 65,
         ForwardBackward = 66,
         CosDistanceWithNegativeSamples = 67,
+        OneHot = 68,
+        Pow = 69,
+        ToSequence = 70,
+        ToSequenceLike = 71,
+        UnpackSequence = 72,
+        Assign = 73,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.
         // If you append here, also add checks in SerializationTests (CheckEnumValuesNotModified)
-        // and bump up PrimitiveFunction::s_serializationVersion and update PrimitiveFunction::Deserialize
+        // and bump up PrimitiveFunction::s_serializationVersion
     };
 }

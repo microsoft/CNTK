@@ -928,6 +928,63 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixAdam, RandomSeedFixture)
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
 }
 
+BOOST_FIXTURE_TEST_CASE(CPUMatrixOneHot, RandomSeedFixture)
+{
+    const size_t num_class = 6;
+    
+    DMatrix m0(2, 2);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(1, 0) = 3;
+    m0(1, 1) = 4;
+
+    DMatrix expect(12, 2);
+    expect(1, 0) = 1;
+    expect(9, 0) = 1;
+    expect(2, 1) = 1;
+    expect(10, 1) = 1;
+
+    vector<size_t> shape(3);
+    shape[0] = num_class; shape[1] = 2; shape[2] = 2;
+    DMatrix m1;
+    m1.AssignOneHot(m0, shape, 0);
+    BOOST_CHECK(m1.GetNumRows() == 12);
+    BOOST_CHECK(m1.GetNumCols() == 2);
+    BOOST_CHECK(m1.IsEqualTo(expect, 1e-6));
+
+    DMatrix expect2(12, 2);
+    expect2(2, 0) = 1;
+    expect2(7, 0) = 1;
+    expect2(4, 1) = 1;
+    expect2(9, 1) = 1;
+
+    vector<size_t> shape2(3);
+    shape2[0] = 2; shape2[1] = num_class; shape2[2] = 2;
+    DMatrix m2;
+    m2.AssignOneHot(m0, shape2, 1);
+    BOOST_CHECK(m2.GetNumRows() == 12);
+    BOOST_CHECK(m2.GetNumCols() == 2);
+    BOOST_CHECK(m2.IsEqualTo(expect2, 1e-6));
+
+    DMatrix dirtyMatrix(2, 2);
+    dirtyMatrix(0, 0) = 1;
+    dirtyMatrix(0, 1) = -1;
+    dirtyMatrix(1, 0) = 7;
+    dirtyMatrix(1, 1) = 4;
+
+    DMatrix dirtyExpect(12, 2);
+    dirtyExpect(1, 0) = 1;
+    dirtyExpect(9, 0) = 0;
+    dirtyExpect(2, 1) = 0;
+    dirtyExpect(10, 1) = 1;
+
+    DMatrix dirty_m;
+    dirty_m.AssignOneHot(dirtyMatrix, shape, 0);
+    BOOST_CHECK(dirty_m.GetNumRows() == 12);
+    BOOST_CHECK(dirty_m.GetNumCols() == 2);
+    BOOST_CHECK(dirty_m.IsEqualTo(dirtyExpect, 1e-6));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 }
 } } }

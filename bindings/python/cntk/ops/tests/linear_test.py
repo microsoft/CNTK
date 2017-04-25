@@ -12,6 +12,7 @@ the forward and the backward pass
 from __future__ import division
 import numpy as np
 import pytest
+import cntk as C
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, precision, PRECISION_TO_TYPE, cntk_device
 from cntk.internal import sanitize_dtype_cntk
 from cntk.internal.utils import _ones_like, eval
@@ -352,3 +353,12 @@ def test_op_times_reduce_sequence_axis(device_id, precision):
                            [[0,0,0,0,1,1,1,1,1,1]]])
     
     assert np.allclose(actual_forward, expected_forward)
+
+def test_per_dim_mean_var_norm():
+    mean = np.asarray([2.], dtype=np.float32)
+    inv_stddev = np.asarray([0.5], dtype=np.float32)
+    x = C.input((1,))
+    func = C.per_dim_mean_variance_normalize(x, mean, inv_stddev)
+    result = func.eval({x : np.asarray([[3.], [1.]], dtype=np.float32)})
+    assert np.array_equal(result, [[.5], [-.5]])
+

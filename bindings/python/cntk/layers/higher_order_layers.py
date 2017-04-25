@@ -5,9 +5,12 @@
 # ==============================================================================
 
 '''
-higher_order_layers -- higher-order functions, like Sequential() and ResNetBlock().
-Note that sequential higher-order functions like Recurrence() are in sequence.py.
+Higher-order functions, like :func:`Sequential` and :func:`ResNetBlock`. Note that
+sequential higher-order functions like :func:`~cntk.layers.sequence.Recurrence` are in :mod:`cntk.layers.sequence`.
 '''
+
+from types import FunctionType
+from inspect import getargspec
 
 from ..variables import Record
 from .blocks import *
@@ -141,18 +144,23 @@ def For(what_range, constructor, name=''):
      constructor (Python function/lambda with 1 or 0 arguments): lambda that constructs a layer
 
     Returns:
-        cntk.ops.functions.Function: 
+        cntk.ops.functions.Function:
         A function that accepts one argument and applies the layers as constructed by ``constructor`` one after another.
     '''
     # Python 2.7 support requires us to use getargspec() instead of inspect
-    from inspect import getargspec
     takes_arg = len(getargspec(constructor).args) > 0
+
+    # For Python 3, check if it is a python function/lambda
+    if type(constructor) != FunctionType or not callable(constructor):
+        raise ValueError("constructor must be a Python function/lambda")
+
     # helper to call the layer constructor
     def call(i):
         if takes_arg:
             return constructor(i)  # takes an arg: pass it
         else:
             return constructor()   # takes no arg: call without, that's fine too
+
     layers = [call(i) for i in what_range]
     sequential = Sequential(layers)
 
@@ -171,9 +179,24 @@ def SequentialClique(functions, name=''):
     '''
     SequentialClique(functions, name='')
 
-    Layer factory function to create a composite that applies a sequence of or any functions onto an input,
+    Layer factory function to create a composite that applies a sequence of functions onto an input,
     with skip connections between all function. I.e. each function receives a sum of the input and all
     prior functions' outputs.
+
+    Example:
+     >>> from cntk.layers import *
+     >>> from cntk.ops import abs, sqrt, square
+     >>> x = input(2)
+     >>> seq_clique = SequentialClique([abs, sqrt, square])
+     >>> seq_clique(x).eval(np.array([2, 8], np.float32)) # 400 = square((8 + abs(8)) + sqrt(8 + abs(8)))
+         array([[  36.,  400.]], dtype=float32)
+
+    Args:
+     functions (single or list of :class:`~cntk.ops.functions.Function`): functions to be applied.
+
+    Returns:
+        cntk.ops.functions.Function:
+        A function that accepts one argument and applies the sequence of functions.
     '''
     def clique(x):
         for f in functions:
@@ -207,7 +230,7 @@ def ResNetBlock(f, name=''):
        the function to add the skip connection to.
 
     Returns:
-        cntk.ops.functions.Function: 
+        cntk.ops.functions.Function:
         A function that accepts one argument, applies ``f`` to it, and adds the original argument.
     '''
     def skip(x):

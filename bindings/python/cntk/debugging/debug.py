@@ -39,7 +39,7 @@ __doc__ = '''
 In order to debug a graph one simply needs to wrap the root node as follows::
 
     # ... setting up the model in z
-    from cntk.debug import debug_model
+    from cntk.debugging import debug_model
     z = debug_model(z)
 
 Then, when ``z`` is evaluated or trained (i.e. when either
@@ -106,15 +106,18 @@ class _DebugState(object):
             self.name_to_node[n.name].append(n)
 
 
-def set_computation_network_track_gap_nans(enable):
+def set_checked_mode(enable):
     '''
-    Fill in NaNs in gaps of sequences to track unmasked uninitialized data.
-    For debugging purposes only.
-
+     Checked mode enables additional runtime verification such as:
+        - Tracking NaN occurences in sequence gaps.
+        - Function graph verification after binding of free static axes to actual values at runtime
+     
+     Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
+    
     Args:
-        enable (bool): whether to enable gap nans tracking (with performance impact)
+        enable (bool): whether to enable checked mode (with performance impact)
     '''
-    cntk_py.set_computation_network_track_gap_nans(enable)
+    cntk_py.set_checked_mode(enable)
 
 
 def set_computation_network_trace_level(level):
@@ -164,11 +167,16 @@ class _DebugNode(UserFunction):
     def __init__(self, arg, debug_state,
                  in_stream=sys.stdin, out_stream=sys.stdout,
                  exit_func=sys.exit,
-                 name='Debug'):
+                 name='D'):
         if hasattr(arg, 'is_composite') and arg.is_composite:
             arg = arg.root_function
 
-        name += '_%s' % arg.uid
+        # Shorten the name a bit
+        arg_uid_parts = arg.uid.split('_')
+        if len(arg_uid_parts)>2 and arg_uid_parts[-2] == 'Output':
+            del arg_uid_parts[-2]
+        name += '_%s' % '_'.join(arg_uid_parts)
+
         super(_DebugNode, self).__init__([arg], as_numpy=True, name=name)
         self.after = arg
         self.debug_state = debug_state

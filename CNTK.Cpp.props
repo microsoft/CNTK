@@ -14,6 +14,9 @@
     <NvmlLibPath Condition="'$(CudaVersion)' == '7.5'">"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
     <NvmlLibPath Condition="'$(CudaVersion)' == '8.0'" />
 
+    <NvmlDll>%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml.dll</NvmlDll>
+    <NvmlDll Condition="Exists('c:\local\bindrop\NVSMI\nvml.dll')">c:\local\bindrop\NVSMI\nvml.dll</NvmlDll>
+
     <HasOpenCv>false</HasOpenCv>
     <HasOpenCv Condition="Exists('$(OPENCV_PATH)') Or Exists('$(OPENCV_PATH_V31)')">true</HasOpenCv>
     
@@ -31,7 +34,6 @@
 
     <!-- If an executable links Cntk.Reader-$(CntkComponentVersion).lib, it has dependency on Cntk.Common.dll, Cntk.Math.dll and Cntk.PerformanceProfiler.dll -->
     <ReaderLibs>Cntk.Reader-$(CntkComponentVersion).lib;Cntk.Common-$(CntkComponentVersion).lib;Cntk.Math-$(CntkComponentVersion).lib;Cntk.PerformanceProfiler-$(CntkComponentVersion).lib</ReaderLibs>
-
   </PropertyGroup>
 
   <PropertyGroup>

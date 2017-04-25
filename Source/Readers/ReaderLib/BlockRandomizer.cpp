@@ -62,7 +62,12 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
     m_currentWindowRange = ClosedOpenChunkInterval{};
 
     m_config = config;
-    if (config.m_totalEpochSizeInSamples == requestDataSize)
+    
+    if (config.m_totalEpochSizeInSweeps != g_infinity)
+    {
+        m_epochSize = m_sweepSizeInSamples * config.m_totalEpochSizeInSweeps;
+    }
+    else if (config.m_totalEpochSizeInSamples == requestDataSize)
     {
         m_epochSize = m_sweepSizeInSamples;
     }

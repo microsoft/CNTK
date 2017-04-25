@@ -138,7 +138,7 @@
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /I /D /Y "$(ProjectDir)BrainScript\CNTKCoreLib\CNTK.core.bs" "$(TargetDir)" &amp;&amp; if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" "$(TargetDir)"</Command>
+      <Command>xcopy /I /D /Y "$(ProjectDir)BrainScript\CNTKCoreLib\CNTK.core.bs" "$(TargetDir)" &amp;&amp; if exist "$(NvmlDll)" xcopy /I /D /Y "$(NvmlDll)" "$(TargetDir)"</Command>
       <Message>Copying dependencies</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>

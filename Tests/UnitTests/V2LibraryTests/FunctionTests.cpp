@@ -953,6 +953,18 @@ void TestFindName(const DeviceDescriptor& device)
         minusFunc3->FindByName(blockFuncName, true);
     }, "The expected exception has not been caugth: multiple functions with the same name.");
 
+    // Test FindByName with multiple block functions, nestedSearchInsideBlockFunction is true
+    auto placeholder1 = PlaceholderVariable(L"inputPlaceholder1");
+    auto firstBlockPlusFuncName = L"FirstBlockPlus";
+    auto blockRoot1 = Plus(placeholder1, Constant::Scalar(1.0f), firstBlockPlusFuncName);
+    auto placeholder2 = PlaceholderVariable(L"inputPlaceholder2");
+    auto secondBlockPlusFuncName = L"SecondBlockPlus";
+    auto blockRoot2 = Plus(placeholder2, Constant::Scalar(1.0f), secondBlockPlusFuncName);
+    auto block2 = AsBlock(std::move(blockRoot2), { { placeholder2, InputVariable({}, DataType::Float)} }, L"Plus");
+    auto block1 = AsBlock(std::move(blockRoot1), { { placeholder1, block2->Output() } }, L"Plus");
+    CheckFindByNameResult(block1->FindByName(firstBlockPlusFuncName, true), blockRoot1);
+    CheckFindByNameResult(block1->FindByName(secondBlockPlusFuncName, true), blockRoot2);
+
     // Test FindAllWithName with block functions, nestedSearchInsideBlockFunction is false.
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherPlusFuncName), anotherPlusFuncName, 1);
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherMinusFuncName), anotherMinusFuncName, 0);

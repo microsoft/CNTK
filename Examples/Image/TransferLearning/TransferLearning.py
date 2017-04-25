@@ -9,9 +9,8 @@ import numpy as np
 import os
 from PIL import Image
 from cntk.device import try_set_default_device, gpu
-from cntk import load_model
+from cntk import load_model, placeholder, Constant
 from cntk import Trainer, UnitType
-from cntk.layers import Placeholder, Constant
 from cntk.logging.graph import find_by_name, get_node_outputs
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDefs, StreamDef
 import cntk.io.transforms as xforms
@@ -79,7 +78,7 @@ def create_model(base_model_file, feature_node_name, last_hidden_node_name, num_
     # Clone the desired layers with fixed weights
     cloned_layers = combine([last_node.owner]).clone(
         CloneMethod.freeze if freeze else CloneMethod.clone,
-        {feature_node: Placeholder(name='features')})
+        {feature_node: placeholder(name='features')})
 
     # Add new dense layer for class prediction
     feat_norm  = input_features - Constant(114)
@@ -160,7 +159,7 @@ def eval_single_image(loaded_model, image_path, image_width, image_height):
     output = loaded_model.eval(arguments)
 
     # return softmax probabilities
-    sm = softmax(output[0, 0])
+    sm = softmax(output[0])
     return sm.eval()
 
 
@@ -189,11 +188,11 @@ def eval_test_images(loaded_model, output_file, test_map_file, image_width, imag
 
                 np.savetxt(results_file, probs[np.newaxis], fmt="%.3f")
                 if pred_count % 100 == 0:
-                    print("Processed {0} samples ({1} correct)".format(pred_count, (correct_count / pred_count)))
+                    print("Processed {0} samples ({1} correct)".format(pred_count, (float(correct_count) / pred_count)))
                 if pred_count >= num_images:
                     break
 
-    print ("{0} of {1} prediction were correct {2}.".format(correct_count, pred_count, (correct_count / pred_count)))
+    print ("{0} of {1} prediction were correct {2}.".format(correct_count, pred_count, (float(correct_count) / pred_count)))
 
 
 if __name__ == '__main__':

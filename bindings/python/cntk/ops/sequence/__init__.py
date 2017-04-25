@@ -8,15 +8,16 @@ from cntk.internal import typemap, sanitize_input
 from cntk.internal.utils import get_data_type
 
 from ...axis import Axis
-
+from ...default_options import get_default_override, default_override_or
 ##########################################################################
 # variable ops
 ##########################################################################
 
 @typemap
-def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
+def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
           sequence_axis=Axis.default_dynamic_axis(), name=''):
-    '''
+    '''input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, sequence_axis=Axis.default_dynamic_axis(), name='')
+
     It creates an input in the network: a place where data,
     such as features and labels, should be provided.
 
@@ -29,18 +30,203 @@ def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
         name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Variable`
+        :class:`~cntk.variables.Variable`
     '''
     from ... import input
-    return input(shape, dtype, needs_gradient, is_sparse, [Axis.default_batch_axis(), sequence_axis], name)
+    return input(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse, dynamic_axes=[Axis.default_batch_axis(), sequence_axis], name=name)
 
 ##########################################################################
 # sequence ops
 ##########################################################################
 
+@typemap
+def unpack(x, padding_value, no_mask_output=False, name=''):
+    '''
+    This function unpacks the specified sequence operand 'x' along the most
+    significant static axis [-1] and pads any gaps with the specified 'padding_value'.
+    If the 'no_mask_output' argument is False, the returned Function has 2 outputs;
+    viz. the unpacked non-sequence data and a mask denoting the gaps in the unpacked output
+    due to differences across lengths of the sequences in the operand.
+
+    Example:
+        TBA.
+
+    Args:
+        x: the sequence tensor (or its name) which is unpacked
+        padding_value (np.float32 or np.float64): The value to pad gaps in the unpacked tensor with.
+        no_mask_output (bool, optional): whether the Function has a mask tensor output denoting the
+            gaps in the unpacked output due to differences across lengths of the sequences in the operand.
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+
+    from cntk.cntk_py import unpack
+
+    x = sanitize_input(x)
+    return unpack(x, padding_value, no_mask_output, name)
+
+
+@typemap
+def future_value(x, initial_state=None, time_step=1, name=''):
+    '''
+    This function returns the future value w.r.t. ``x``. It is most often used when
+    creating RNNs. The resulting tensor has the same shape as the input but is
+    the next logical sample. The ``time_step`` parameter is the number of steps
+    to look into the future and is 1 by default. If there is no future value (i.e.
+    the current sample is the last one in the tensor) then the ``initial_state``
+    value is returned.
+
+    The initial state can be a constant (scalar or tensor), a learnable tensor
+    or input data (which has a batch dimension, as needed for sequence-to-sequence models).
+
+    Example:
+        >>> x = C.sequence.input(shape=(3,2))
+        >>> # Create one sequence with 4 tensors of shape (3, 2)
+        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
+        >>> y = C.sequence.future_value(x) # using initial state of 0 by default
+        >>> y.eval({x:x0})
+        [array([[[  6.,   7.],
+                 [  8.,   9.],
+                 [ 10.,  11.]],
+        <BLANKLINE>
+                [[ 12.,  13.],
+                 [ 14.,  15.],
+                 [ 16.,  17.]],
+        <BLANKLINE>
+                [[ 18.,  19.],
+                 [ 20.,  21.],
+                 [ 22.,  23.]],
+        <BLANKLINE>
+                [[  0.,   0.],
+                 [  0.,   0.],
+                 [  0.,   0.]]], dtype=float32)]
+
+    Args:
+        x: the tensor (or its name) from which the future value is obtained.
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
+        time_step (int): the number of time steps to look into the future (default 1)
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+
+    from cntk.internal import sanitize_dtype_cntk
+    from ...cntk_py import Constant
+    from cntk.cntk_py import future_value
+
+    if initial_state is None:
+        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+
+    x = sanitize_input(x)
+    return future_value(x, initial_state, time_step, name)
+
+
+@typemap
+def past_value(x, initial_state=None, time_step=1, name=''):
+    '''
+    This function returns the past value w.r.t. ``x``. It is most often used when
+    creating RNNs. The resulting tensor has the same shape as the input but is
+    the previous logical sample. The ``time_step`` parameter is the number of steps
+    to look into the past and is 1 by default. If there is no past value (i.e.
+    the current sample is the first one in the tensor)  then the ``initial_state``
+    value is returned.
+
+    The initial state can be a constant (scalar or tensor), a learnable tensor
+    or input data (which has a batch dimension, as needed for sequence-to-sequence models).
+
+    Example:
+        >>> # create example input: one sequence with 4 tensors of shape (3, 2)
+        >>> from cntk.layers.typing import Tensor, Sequence
+        >>> x = C.sequence.input((3,2))
+        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
+        >>> x0
+        array([[[[  0.,   1.],
+                 [  2.,   3.],
+                 [  4.,   5.]],
+        <BLANKLINE>
+                [[  6.,   7.],
+                 [  8.,   9.],
+                 [ 10.,  11.]],
+        <BLANKLINE>
+                [[ 12.,  13.],
+                 [ 14.,  15.],
+                 [ 16.,  17.]],
+        <BLANKLINE>
+                [[ 18.,  19.],
+                 [ 20.,  21.],
+                 [ 22.,  23.]]]], dtype=float32)
+
+        >>> # this demonstrates how past_value shifts the sequence by one, padding with initial_state
+        >>> y = C.sequence.past_value(x) # initial_state is 0 by default
+        >>> y.eval({x:x0})
+        [array([[[  0.,   0.],
+                 [  0.,   0.],
+                 [  0.,   0.]],
+        <BLANKLINE>
+                [[  0.,   1.],
+                 [  2.,   3.],
+                 [  4.,   5.]],
+        <BLANKLINE>
+                [[  6.,   7.],
+                 [  8.,   9.],
+                 [ 10.,  11.]],
+        <BLANKLINE>
+                [[ 12.,  13.],
+                 [ 14.,  15.],
+                 [ 16.,  17.]]], dtype=float32)]
+
+        >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
+        >>> s = C.input((3,2))  # not a sequence, e.g. a final encoder hidden state
+        >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,3,2))
+        >>> s0
+        array([[[ 0. ,  0.5],
+                [ 1. ,  1.5],
+                [ 2. ,  2.5]]], dtype=float32)
+        >>> y = C.sequence.past_value(x, initial_state=s)
+        >>> y.eval({x:x0, s:s0}) # same as the previous example except for the first time step
+        [array([[[  0. ,   0.5],
+                 [  1. ,   1.5],
+                 [  2. ,   2.5]],
+        <BLANKLINE>
+                [[  0. ,   1. ],
+                 [  2. ,   3. ],
+                 [  4. ,   5. ]],
+        <BLANKLINE>
+                [[  6. ,   7. ],
+                 [  8. ,   9. ],
+                 [ 10. ,  11. ]],
+        <BLANKLINE>
+                [[ 12. ,  13. ],
+                 [ 14. ,  15. ],
+                 [ 16. ,  17. ]]], dtype=float32)]
+
+    Args:
+        x: the tensor (or its name) from which the past value is obtained
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
+        time_step (int): the number of time steps to look into the past (default 1)
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+
+    from cntk.internal import sanitize_dtype_cntk
+    from cntk.cntk_py import Constant, past_value
+
+    if initial_state is None:
+        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+    else:
+        initial_state = sanitize_input(initial_state)
+
+    x = sanitize_input(x)
+    return past_value(x, initial_state, time_step, name)
+
+
 def delay(x, initial_state=None, time_step=1, name=''):
     '''
-    This function combines :func:`~cntk.ops.past_value` and :func:`~cntk.ops.future_value` into a single function.
+    This function combines :func:`~cntk.ops.sequence.past_value` and :func:`~cntk.ops.sequence.future_value` into a single function.
     This is useful when the time_step is computed and can be positive, negative, or 0.
 
     Args:
@@ -49,7 +235,7 @@ def delay(x, initial_state=None, time_step=1, name=''):
         time_step (int): the number of time steps to look into the past, where negative values mean to look into the future, and 0 means a no-op (default 1).
         name (str, optional): the name of the Function instance in the network
     '''
-    from ...ops import alias, past_value, future_value
+    from ...ops import alias, element_select, element_divide, placeholder, exp 
     if time_step > 0:
         return past_value  (x, time_step= time_step, initial_state=initial_state, name=name)
     elif time_step < 0:
@@ -73,7 +259,7 @@ def is_first(seq, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[ 1.,  0.,  0.,  0.]], dtype=float32)
+        [array([ 1.,  0.,  0.,  0.], dtype=float32)]
 
     Args:
         seq: the symbolic tensor denoting a sequence
@@ -99,7 +285,7 @@ def is_last(seq, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[ 0.,  0.,  0.,  1.]], dtype=float32)
+        [array([ 0.,  0.,  0.,  1.], dtype=float32)]
 
     Args:
         seq: the symbolic tensor denoting a sequence
@@ -206,22 +392,23 @@ def where(condition, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0, dtype=np.float32), (1,4,3,2))
         >>> z.eval({x:x0})
-        array([[[ 0.],
+        [array([[ 0.],
                 [ 0.],
                 [ 1.],
-                [ 1.]]], dtype=float32)
+                [ 1.]], dtype=float32)]
         >>> y = C.sequence.where(z)
         >>> y.eval({x:x0})
-        array([[ 2.,  3.]], dtype=float32)
+        [array([ 2.,  3.], dtype=float32)]
 
         >>> # repeat frame[1] twice, frame[3] three times, and frame[4] twice
         >>> C.sequence.where(C.sequence.input(1)).eval([[[1], [2], [1], [3], [2]]])
-        array([[ 0.,  1.,  1.,  2.,  3.,  3.,  3.,  4.,  4.]], dtype=float32)
+        [array([ 0.,  1.,  1.,  2.,  3.,  3.,  3.,  4.,  4.], dtype=float32)]
         >>> # note that the above are the indices that are passed to 
 
         >>> # repeat frames with a fractional factor
         >>> C.sequence.where(C.sequence.input(1)).eval([[[1.2]]*10])
-        array([[ 0.,  0.,  1.,  2.,  3.,  4.,  5.,  5.,  6.,  7.,  8.,  9.]], dtype=float32)
+        [array([ 0.,  0.,  1.,  2.,  3.,  4.,  5.,  5.,  6.,  7.,  8.,  9.],
+            dtype=float32)]
         >>> # as a result, a 1.2 times stretch is realized by duplicating frame[0] and frame[5]
 
     Args:
@@ -252,13 +439,13 @@ def gather(seq, condition, new_sequence_axis_typeinfo=None, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[[[ 12.,  13.],
+        [array([[[ 12.,  13.],
                  [ 14.,  15.],
                  [ 16.,  17.]],
         <BLANKLINE>
                 [[ 18.,  19.],
                  [ 20.,  21.],
-                 [ 22.,  23.]]]], dtype=float32)
+                 [ 22.,  23.]]], dtype=float32)]
 
     Args:
         seq: the symbolic sequence from which elements will be selected
@@ -300,7 +487,7 @@ def scatter(seq, condition, new_sequence_axis_typeinfo=None, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[[[ 18.,  19.],
+        [array([[[ 18.,  19.],
                  [ 20.,  21.],
                  [ 22.,  23.]],
         <BLANKLINE>
@@ -314,7 +501,7 @@ def scatter(seq, condition, new_sequence_axis_typeinfo=None, name=''):
         <BLANKLINE>
                 [[  0.,   0.],
                  [  0.,   0.],
-                 [  0.,   0.]]]], dtype=float32)
+                 [  0.,   0.]]], dtype=float32)]
 
     Args:
         seq: the symbolic sequence from which elements will be copied in the
@@ -354,7 +541,7 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[[[ 18.,  19.],
+        [array([[[ 18.,  19.],
                  [ 20.,  21.],
                  [ 22.,  23.]],
         <BLANKLINE>
@@ -368,7 +555,7 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
         <BLANKLINE>
                 [[ 18.,  19.],
                  [ 20.,  21.],
-                 [ 22.,  23.]]]], dtype=float32)
+                 [ 22.,  23.]]], dtype=float32)]
 
     Args:
         operand: the symbolic tensor whose value will be broadcast
@@ -411,3 +598,35 @@ def reduce_sum(seq, name=''):
     from cntk.cntk_py import sequence_reduce_sum
     seq = sanitize_input(seq, get_data_type(seq))
     return sequence_reduce_sum(seq, name)
+
+@typemap
+def reduce_max(seq, name=''):
+    '''
+    Computes the max of the input sequence's elements across the sequence axis.
+
+    Args:
+        seq: sequence input tensor
+        name (`str`, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sequence_reduce_max
+    seq = sanitize_input(seq, get_data_type(seq))
+    return sequence_reduce_max(seq, name)
+
+@typemap
+def softmax(seq, name = ''):
+    '''
+    Computes the softmax of the input across the sequence axis.
+
+    Args:
+        seq: sequence input tensor
+        name (`str`, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sequence_softmax
+    seq = sanitize_input(seq, get_data_type(seq))
+    return sequence_softmax(seq, name)
