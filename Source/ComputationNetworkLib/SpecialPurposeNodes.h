@@ -892,7 +892,7 @@ public:
                 LogicError("ForwardBackwardNode: Please pass LabelsToGraph(labels) for second argument");
         }
 
-        SetDims(TensorShape(1), false);
+        SetDims(Environment().IsV2Library() ? TensorShape() : TensorShape(1), false);
     }
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const

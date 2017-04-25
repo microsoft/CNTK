@@ -37,7 +37,7 @@ namespace CNTK
 
         if (!m_evaluationFunction->Output().DynamicAxes().empty())
         {
-            m_aggregatedEvaluationFunction = ReduceSum(m_evaluationFunction, L"aggregateEvalMetric");
+            m_aggregatedEvaluationFunction = ReduceSum(m_evaluationFunction, Axis::AllAxes(), L"aggregateEvalMetric");
             m_testSampleCountVar = m_evaluationFunction;
         }
         else

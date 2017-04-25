@@ -1313,6 +1313,7 @@ namespace CNTK
 
             m_computationNetwork->SetTraceLevel(Internal::GetComputationNetworkTraceLevel());
             m_computationNetwork->SetTrackGapNans(GetCheckedMode());
+            m_computationNetwork->SetIsV2Library(true);
             m_computationNetwork->CompileNetwork();
 
             // Verify that the shapes of the output Variables that we computed match the corresponding nodes in the ComputationNetwork
@@ -1326,7 +1327,7 @@ namespace CNTK
                     auto computationNodeSampleLayout = computationNodePtr->GetSampleLayout();
                     if (!VariableShapeMatchesNodeShape(outputShape, computationNodeSampleLayout))
                     {
-                        LogicError("Function '%S': The output Variable '%S' shape '%S' does not match the SampleLayout shape '%s' of the corresponding ComputationNode in the network.",
+                        LogicError("Function '%S': The output Variable '%S' shape '%S' does not match the SampleLayout shape '[%s]' of the corresponding ComputationNode in the network.",
                                     AsString().c_str(), outputVar.AsString().c_str(), outputShape.AsString().c_str(), ((std::string)computationNodeSampleLayout).c_str());
                     }
                 }

@@ -249,6 +249,17 @@ def test_sequence_reduce_sum_over_scalar():
     op = C.sequence.reduce_sum(x)
 
     grad, result = op.grad({x : [np.asarray([-1, 3, 5], dtype=np.float32), np.asarray([2, -5], dtype=np.float32), np.asarray([-2], dtype=np.float32)]}, outputs=[op])
-    np.array_equal(result, [7, -3, -2])
-    np.array_equal(grad, [[1, 1, 1], [1, 1], [1]])
+    assert np.array_equal(result, [7, -3, -2])
+    assert np.array_equal(grad[0], [1, 1, 1])
+    assert np.array_equal(grad[1], [1, 1])
+    assert np.array_equal(grad[2], [1])
+
+
+def test_sequence_reduce_over_reduced_scalar():
+    x = C.sequence.input(shape=(1), needs_gradient=True)
+    op = C.sequence.reduce_sum(C.reduce_sum(x))
+
+    grad, result = op.grad({x : np.asarray([[-1], [3], [5]], dtype=np.float32)}, outputs=[op])
+    assert np.array_equal(result, [7])
+    assert np.array_equal(grad[0], [[1], [1], [1]])
 
