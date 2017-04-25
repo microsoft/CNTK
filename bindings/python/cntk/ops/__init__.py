@@ -154,8 +154,8 @@ def labels_to_graph(labels, name=''):
 
     Example:
         >>> num_classes = 2
-        >>> labels = cntk.input((num_classes))
-        >>> graph = cntk.labels_to_graph(labels)
+        >>> labels = C.input((num_classes))
+        >>> graph = C.labels_to_graph(labels)
 
     Args:
         labels: input training labels
