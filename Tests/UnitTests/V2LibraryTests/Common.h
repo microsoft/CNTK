@@ -45,7 +45,7 @@ struct V2LibraryTestFixture
         Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
 
         // Turn on gap nan tracking
-        Internal::SetComputationNetworkTrackGapNans(true);
+        SetCheckedMode(true);
     }
 };
 

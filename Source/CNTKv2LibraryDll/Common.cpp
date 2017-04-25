@@ -26,6 +26,17 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    std::atomic<bool> s_checkedMode(false);
+    void SetCheckedMode(bool enable)
+    {
+        s_checkedMode.store(enable);
+    }
+
+    bool GetCheckedMode()
+    {
+        return s_checkedMode.load();
+    }
+
     namespace Internal
     {
         static std::atomic_ullong s_nextUniqueId = ATOMIC_VAR_INIT(0);
@@ -408,17 +419,6 @@ namespace CNTK
         int GetComputationNetworkTraceLevel()
         {
             return s_computationNetworkTraceLevel.load();
-        }
-
-        std::atomic<bool> s_computationNetworkTrackGapNans(false);
-        void SetComputationNetworkTrackGapNans(bool enable)
-        {
-            s_computationNetworkTrackGapNans.store(enable);
-        }
-
-        bool GetComputationNetworkTrackGapNans()
-        {
-            return s_computationNetworkTrackGapNans.load();
         }
 
         void SetGPUMemoryAllocationTraceLevel(int traceLevel)

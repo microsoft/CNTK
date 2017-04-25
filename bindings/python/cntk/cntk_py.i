@@ -92,6 +92,7 @@
 %ignore CNTK::TrainingParameterSchedule::operator=;
 %ignore CNTK::TrainingParameterSchedule::operator[];
 
+%ignore CNTK::GetCheckedMode;
 
 // renaming overloads for TrainMinibatch and TestMinibatch that take a map 
 // of Variables and MinibatchData as their first parameter. If this is not done, 
@@ -163,7 +164,6 @@
 %ignore CNTK::Internal::IsRenamingFunctionsAllowed;
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 %ignore CNTK::Internal::GetComputationNetworkTraceLevel;
-%ignore CNTK::Internal::GetComputationNetworkTrackGapNans;
 %ignore CNTK::Internal::TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
 %ignore CNTK::Internal::Convolution; 
 
