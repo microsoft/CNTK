@@ -3000,19 +3000,44 @@ template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements)
 {
     if (indices.IsEmpty() || values.IsEmpty())
-        LogicError("ScatterAccordingIndices: input matrix is empty.");
+        LogicError("ScatterToIndices: input matrix is empty.");
 
     ElemType* indicesBufPtr = indices.Data();
     ElemType* valueBufPtr = values.Data();
     ElemType* buffer = Data();
     
-#pragma omp parallel for
-    for (int i = 0; i < indices.GetNumElements(); i++)
+    std::unordered_map<ElemType, vector<size_t> > indicesHash;
+    for (size_t i = 0; i < indices.GetNumElements(); i++)
     {
-        auto index = (size_t)indicesBufPtr[i] * row_elements;
-        auto offset = i * row_elements;
-        for (int j = 0; j < row_elements; j++)
-            buffer[index + j] += valueBufPtr[offset + j];
+        auto it = indicesHash.find(indicesBufPtr[i]);
+        if (it == indicesHash.end())
+        {
+            indicesHash.insert({indicesBufPtr[i], vector<size_t>({i})});
+        }
+        else
+        {
+            indicesHash[indicesBufPtr[i]].push_back(i);
+        }
+    }
+
+#pragma omp parallel
+    {
+        size_t count = 0;
+        int ithread = omp_get_thread_num();
+        int nthread = omp_get_num_threads();
+        for (auto it = indicesHash.begin(); it != indicesHash.end(); ++it, count++)
+        {
+            if (count % nthread != ithread)
+                continue;
+            auto index = (size_t)(it->first) * row_elements;
+            // loop all the values with same index in the same thread
+            for (auto lIt = it->second.begin(); lIt != it->second.end(); ++lIt)
+            {
+                auto offset = *lIt * row_elements;
+                for (int j = 0; j < row_elements; j++)
+                    buffer[index + j] += valueBufPtr[offset + j];
+            }
+        }
     }
 
     return *this;

@@ -2140,18 +2140,18 @@ def gather(reference, indices):
 
     Example:
         >>> c = np.asarray([[[0],[1]],[[4],[5]]]).astype('f')
-        >>> x = C.input_variable((2,1))
+        >>> x = C.input((2,1))
         >>> d = np.arange(12).reshape(6,2).astype('f')
         >>> y = C.constant(d)
         >>> C.gather(y, x).eval({x:c})
-        [array([[[[  0.,   1.]],
+        array([[[[  0.,   1.]],
         <BLANKLINE>
                 [[  2.,   3.]]],
         <BLANKLINE>
         <BLANKLINE>
                [[[  8.,   9.]],
         <BLANKLINE>
-                [[ 10.,  11.]]]], dtype=float32)]
+                [[ 10.,  11.]]]], dtype=float32)
         
     Args:
         reference: A tensor

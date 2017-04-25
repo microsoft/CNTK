@@ -4333,7 +4333,7 @@ template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::ScatterToIndices(const GPUMatrix<ElemType>& values, const GPUMatrix<ElemType>& indices, size_t row_elements)
 {
     if (indices.IsEmpty() || values.IsEmpty())
-        LogicError("ScatterAccordingIndices: input matrix is empty.");
+        LogicError("ScatterToIndices: input matrix is empty.");
 
     ElemType* indicesBufPtr = indices.Data();
     ElemType* valueBufPtr = values.Data();
