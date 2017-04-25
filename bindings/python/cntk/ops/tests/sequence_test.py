@@ -242,3 +242,13 @@ def test_to_sequence_error_for_operand_with_sequence_axis():
     x = C.sequence.input(C.FreeDimension, 2)
     with pytest.raises(ValueError):
         op = C.to_sequence(x)
+
+
+def test_sequence_reduce_sum_over_scalar():
+    x = C.sequence.input(shape=(), needs_gradient=True)
+    op = C.sequence.reduce_sum(x)
+
+    grad, result = op.grad({x : [np.asarray([-1, 3, 5], dtype=np.float32), np.asarray([2, -5], dtype=np.float32), np.asarray([-2], dtype=np.float32)]}, outputs=[op])
+    np.array_equal(result, [7, -3, -2])
+    np.array_equal(grad, [[1, 1, 1], [1, 1], [1]])
+

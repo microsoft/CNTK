@@ -1112,16 +1112,20 @@ namespace CNTK
         if (varShape.Rank() == 0)
             return (nodeShape.GetNumElements() == 1);
 
-        auto varShapeAsTensorShape = AsTensorShape(varShape);
-        if (!varShape.HasFreeDimension())
-            return (nodeShape == AsTensorViewShape(varShape)) || (nodeShape == varShapeAsTensorShape);
+        // Sometimes the nodeShape may have an additional trailing axis with dim==1 due to the lack of support for 0-d tensors in V1 engine.
+        auto adjustedNodeShape = nodeShape;
+        while ((adjustedNodeShape.GetRank() > varShape.Rank()) && (adjustedNodeShape.GetDim(adjustedNodeShape.GetRank() - 1) == 1))
+            adjustedNodeShape.TrimRankInPlace(adjustedNodeShape.GetRank() - 1);
 
-        if (varShapeAsTensorShape.GetRank() != nodeShape.GetRank())
+        if (!varShape.HasFreeDimension())
+            return (AsNDShape(adjustedNodeShape) == varShape);
+
+        if (varShape.Rank() != adjustedNodeShape.GetRank())
             return false;
 
-        for (size_t i = 0; i < varShapeAsTensorShape.GetRank(); ++i)
+        for (size_t i = 0; i < varShape.Rank(); ++i)
         {
-            if ((varShapeAsTensorShape.GetDim(i) != NDShape::FreeDimension) && (varShapeAsTensorShape.GetDim(i) != nodeShape.GetDim(i)))
+            if ((varShape[i] != NDShape::FreeDimension) && (varShape[i] != adjustedNodeShape.GetDim(i)))
                 return false;
         }
 

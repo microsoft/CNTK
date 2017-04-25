@@ -1669,8 +1669,8 @@ protected:
             {
                 const auto& shape = GetSampleLayout();
                 size_t rank = shape.GetRank();
-                rows = rank > 0 ? shape[0] : 0;
-                cols = rank > 0 ? 1 : 0;
+                rows = rank > 0 ? shape[0] : 1;
+                cols = 1;
                 for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
                     cols *= shape[k];
             }
