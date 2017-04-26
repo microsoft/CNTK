@@ -115,15 +115,15 @@ void Bundler::CreateChunkDescriptions()
             for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
             {
                 isValid = m_deserializers[deserializerIndex]->GetSequenceDescription(sequenceDescriptions[sequenceIndex], s);
-                
-				//Check the lenght of sequence from differnt streams, skip those inconsistent ones.
-				if (isValid && s.m_numberOfSamples != sequenceDescriptions[sequenceIndex].m_numberOfSamples)
-				{
-					fprintf(stderr, "skipping file due to inconsistency in sequence length in different streams (%d vs %d)", s.m_numberOfSamples, sequenceDescriptions[sequenceIndex].m_numberOfSamples);
-					isValid = false;
-				}
-				
-				if (!isValid)
+
+                //Check the lenght of sequence from differnt streams, skip those inconsistent ones.
+                if (isValid && s.m_numberOfSamples != sequenceDescriptions[sequenceIndex].m_numberOfSamples)
+                {
+                    fprintf(stderr, "skipping file due to inconsistency in sequence length in different streams (%d vs %d)", s.m_numberOfSamples, sequenceDescriptions[sequenceIndex].m_numberOfSamples);
+                    isValid = false;
+                }
+
+                if (!isValid)
                 {
                     invalid.insert(sequenceIndex);
                     break;
