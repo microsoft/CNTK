@@ -268,6 +268,10 @@ template<class ElemType>
 void GPUSparseMatrix<ElemType>::Adam(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
 {
 }
+template<class ElemType>
+void GPUSparseMatrix<ElemType>::Adamax(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+{
+}
 
 template<class ElemType>
 ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType, ElemType, const bool)
@@ -1099,6 +1103,12 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<El
 template <class ElemType>
 void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
     ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+{
+
+}
+template <class ElemType>
+void GPUMatrix<ElemType>::Adamax(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+	ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
 {
 
 }

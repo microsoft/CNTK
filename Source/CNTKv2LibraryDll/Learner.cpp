@@ -693,6 +693,48 @@ namespace CNTK
             momentum, varMomentum, UseUnitGainMomentum());
     }
 
+	LearnerAdamax::LearnerAdamax(const vector<Parameter>& parameters,
+		const LearningRateSchedule& learningRateSchedule,
+		const MomentumSchedule& momentumSchedule,
+		bool unitGain,
+		const MomentumSchedule& varianceMomentumSchedule,
+		AdditionalLearningOptions additionalOptions)
+		: LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule,
+			unitGain, additionalOptions, /*allocateSmoothGradients*/ false),
+		m_varianceMomentumSchedule(varianceMomentumSchedule)
+	{
+		for (const auto& parameter : parameters)
+		{
+			const auto shape = GetMatrixShape(parameter);
+			NDArrayViewPtr view = AllocateNDArrayView(parameter, { shape[0], 2 * shape[1] });
+			m_smoothedGradientValues.emplace(parameter, view);
+			m_smoothedCounts.emplace(parameter, 0.0);
+		}
+	}
+
+	/*virtual*/ void LearnerAdamax::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+		const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+	{
+		DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+	}
+
+	template <typename ElementType>
+	void LearnerAdamax::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+		const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+	{
+		GET_WRITABLE_MATRICES;
+
+		const auto learningRate = LearningRate(trainingSampleCount);
+		const auto momentum = MomentumValueForMB(trainingSampleCount);
+
+		const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
+
+		double& smoothedCount = m_smoothedCounts.at(parameter);
+
+		smoothedGradientMatrix->AdamaxUpdate(*gradientMatrix, *parameterMatrix, smoothedCount, learningRate,
+			momentum, varMomentum, UseUnitGainMomentum());
+	}
+
     LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters,
                                    const LearningRateSchedule& learningRateSchedule,
                                    double gamma, double inc, double dec, double max, double min,
@@ -789,6 +831,16 @@ namespace CNTK
     {
         return MakeSharedObject<LearnerAdam>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
     }
+
+	LearnerPtr AdamaxLearner(const vector<Parameter>& parameters,
+		const LearningRateSchedule& learningRateSchedule,
+		const MomentumSchedule& momentumSchedule,
+		bool unitGain, /*=true*/
+		const MomentumSchedule& varianceMomentumSchedule, /*= MomentumAsTimeConstantSchedulePerSample(2 * 3600 * 100)*/
+		AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
+	{
+		return MakeSharedObject<LearnerAdamax>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
+	}
 
     LearnerPtr AdaGradLearner(const vector<Parameter>& parameters,
                               const LearningRateSchedule& learningRateSchedule,

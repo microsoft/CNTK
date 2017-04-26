@@ -243,6 +243,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 %ignore_function CNTK::FSAdaGradLearner;
 %ignore_function CNTK::AdamLearner;
+%ignore_function CNTK::AdamaxLearner;
 %ignore_function CNTK::AdaGradLearner;
 %ignore_function CNTK::RMSPropLearner;
 %ignore_function CNTK::AdaDeltaLearner;

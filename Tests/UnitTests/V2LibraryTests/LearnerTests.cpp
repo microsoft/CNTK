@@ -107,6 +107,15 @@ void TestAdamLearner(size_t numParameters, size_t numMinibatches, bool unitGainM
 }
 
 template <typename ElementType>
+void TestAdamaxLearner(size_t numParameters, size_t numMinibatches, bool unitGainMomentum, const DeviceDescriptor& device)
+{
+	NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
+	auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
+	auto learner = AdamaxLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum, MomentumPerSampleSchedule(0.99));
+	TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+}
+
+template <typename ElementType>
 void TestRMSPropLearner(size_t numParameters, size_t numMinibatches, const DeviceDescriptor& device)
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);

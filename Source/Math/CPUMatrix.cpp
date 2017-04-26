@@ -1293,6 +1293,54 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
 }
 
 template <class ElemType>
+void CPUMatrix<ElemType>::Adamax(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+	ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+{
+	size_t numColsNeeded = 2 * gradients.GetNumCols();
+	auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
+
+	if (IsEmpty() || (GetNumCols() < numColsNeeded))
+	{
+		RequireSize(gradients.GetNumRows(), numColsNeeded);
+		SetValue(0.0);
+	}
+
+	if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
+		LogicError("The matrix gradients does not have expected dimensions.");
+
+	size_t n = gradients.GetNumElements();
+	ElemType* grad = gradients.Data();
+	ElemType* smoothAda = Data();
+	ElemType* smoothMom = Data() + n;
+	ElemType* val = functionValues.Data();
+//	ElemType max_grad = grad[0];
+	//find the max gradient 
+
+#pragma omp parallel for
+	// TODO: Unroll 4-times for better performance leveraging vectorization
+	for (long i = 0; i < n; i++)
+	{
+		ElemType g = grad[i];
+		//		ElemType adaSqr = adaWeight * smoothAda[i] + (1.0f - adaWeight) * g * g;
+		//adammax
+		ElemType ada = adaWeight * smoothAda[i];
+		if (ada <abs(g))
+		{
+			ada = abs(g);
+		}
+		
+
+		smoothAda[i] = ada;
+		//		ElemType ada = sqrt(adaSqr);
+		ElemType w = adaMul * (ElemType)(1.0 / (ada + 1e-8));
+		g = momentum * smoothMom[i] + unitGainFactor * g;
+		smoothMom[i] = g;
+		val[i] -= g * w * learnRatePerSample;
+
+	}
+}
+
+template <class ElemType>
 ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
                                       ElemType RMS_GAMMA,
                                       ElemType RMS_WGT_INC,

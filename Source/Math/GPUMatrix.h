@@ -231,6 +231,8 @@ public:
 
     void Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
                   ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+	void Adamax(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+		ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
 
     ElemType RmsProp(GPUMatrix<ElemType>& gradients, 
                      ElemType RMS_GAMMA, 

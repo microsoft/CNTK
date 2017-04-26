@@ -290,6 +290,35 @@ namespace CNTK
         mutable std::unordered_map<Parameter, double> m_smoothedCounts;
         MomentumSchedule m_varianceMomentumSchedule;
     };
+	class LearnerAdamax : public LearnerMomentumSGD
+	{
+	public:
+
+		LearnerAdamax(const std::vector<Parameter>& parameters,
+			const LearningRateSchedule& learningRateSchedule,
+			const MomentumSchedule& momentumSchedule,
+			bool unitGain,
+			const MomentumSchedule& varianceMomentumSchedule,
+			AdditionalLearningOptions additionalOptions);
+
+	protected:
+
+		virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+
+		template <typename ElementType>
+		void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+
+	private:
+
+		// returns current per-minibatch variance momentum value.
+		double VarianceMomentumValueForMB(size_t minibatchSize) const
+		{
+			return MomentumValueForMB(m_varianceMomentumSchedule, minibatchSize);
+		}
+
+		mutable std::unordered_map<Parameter, double> m_smoothedCounts;
+		MomentumSchedule m_varianceMomentumSchedule;
+	};
 
     class LearnerRMSProp : public LearnerBase
     {

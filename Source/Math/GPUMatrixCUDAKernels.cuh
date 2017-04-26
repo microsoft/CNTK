@@ -5216,6 +5216,39 @@ __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemT
         val[idx] -= g;
     }
 }
+template <class ElemType>
+__global__ void _adamax(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
+	ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+{
+	const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
+	CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+	CUDA_LONG stride = blockDim.x * gridDim.x;
+	
+	//idx = blockIdx.x * blockDim.x + threadIdx.x;
+	for (; idx < size; idx += stride)
+	{
+		ElemType g = grad[idx];
+		ElemType adaSqr = adaWeight * smoothAda[idx];
+		if (adaSqr < abs(g))
+			adaSqr = abs(g);
+		
+		smoothAda[idx] = adaSqr;
+		ElemType w;
+		if (sizeof(ElemType) == sizeof(double))
+		{
+			w = adaMul * rsqrt(adaSqr + 1e-8);
+		}
+		else
+		{
+			w = adaMul * rsqrtf(adaSqr + 1e-8);
+		}
+
+		g = mom * smoothMom[idx] + unitGainFactor * g;
+		smoothMom[idx] = g;
+		g = lr*g*w;
+		val[idx] -= g;
+	}
+}
 
 template <class ElemType>
 __global__ void _adam4BlockSparseCol(CUDA_LONG size,
@@ -5246,6 +5279,41 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
         g = lr*g*w;
         val[idx] -= g;
     }
+}
+
+template <class ElemType>
+__global__ void _adamax4BlockSparseCol(CUDA_LONG size,
+	ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+	ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
+	ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+{
+	const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
+	CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+	CUDA_LONG stride = blockDim.x * gridDim.x;
+
+
+	for (; idx < size; idx += stride)
+	{
+		ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
+		ElemType adaSqr = adaWeight * smoothAda[idx];
+		if (adaSqr < abs(g))
+			adaSqr = abs(g);
+		smoothAda[idx] = adaSqr;
+		ElemType w;
+		if (sizeof(ElemType) == sizeof(double))
+		{
+			w = adaMul * rsqrt(adaSqr + 1e-8);
+		}
+		else
+		{
+			w = adaMul * rsqrtf(adaSqr + 1e-8);
+		}
+
+		g = mom * smoothMom[idx] + unitGainFactor * g;
+		smoothMom[idx] = g;
+		g = lr*g*w;
+		val[idx] -= g;
+	}
 }
 
 template <class ElemType>

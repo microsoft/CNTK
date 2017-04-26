@@ -48,6 +48,8 @@ the following learning algorithms:
 +------------------------+
 | Adam                   |
 +------------------------+
+| Adamax                 |
++------------------------+
 | MomentumSGD            |
 +------------------------+
 | Nesterov               |
@@ -797,6 +799,61 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     return cntk_py.adam_learner(parameters, lr, momentum, unit_gain,
                                 variance_momentum, additional_options)
 
+def adamax(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
+         variance_momentum=momentum_as_time_constant_schedule(720000),
+         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
+         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
+         gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
+    '''adamax(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+    Creates an Adamax learner instance to learn the parameters. See [1] for more
+    information.
+
+    Args:
+        parameters (list of parameters): list of network parameters to tune.
+         These can be obtained by the root operator's ``parameters``.
+        lr (output of :func:`learning_rate_schedule`): learning rate schedule.
+        momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
+         For additional information, please refer to the :cntkwiki:`this CNTK Wiki article <BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`.
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults
+         to the value returned by :func:`default_unit_gain_value`.
+        variance_momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults
+         to ``momentum_as_time_constant_schedule(720000)``.
+        l1_regularization_weight (float, optional): the L1 regularization weight per sample,
+         defaults to 0.0
+        l2_regularization_weight (float, optional): the L2 regularization weight per sample,
+         defaults to 0.0
+        gaussian_noise_injection_std_dev (float, optional): the standard deviation
+         of the Gaussian noise added to parameters post update, defaults to 0.0
+        gradient_clipping_threshold_per_sample (float, optional): clipping threshold
+         per sample, defaults to infinity
+        gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
+         with truncation
+        use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
+         Defaults to the value returned by :func:`default_average_gradient_value()`.
+
+    Returns:
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
+
+    See also:
+        
+    '''
+    _verify_learning_rate_type(lr)
+    _verify_momentum_type(momentum)
+    _verify_momentum_type(variance_momentum)
+    gaussian_noise_injection_std_dev = \
+        training_parameter_schedule(
+            gaussian_noise_injection_std_dev, UnitType.minibatch)
+
+    additional_options = cntk_py.AdditionalLearningOptions()
+    additional_options.l1_regularization_weight = l1_regularization_weight
+    additional_options.l2_regularization_weight = l2_regularization_weight
+    additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
+    additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
+    additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.use_mean_gradient = use_mean_gradient
+    
+    return cntk_py.adamax_learner(parameters, lr, momentum, unit_gain,
+                                variance_momentum, additional_options)
 
 @typemap
 def rmsprop(parameters, lr,

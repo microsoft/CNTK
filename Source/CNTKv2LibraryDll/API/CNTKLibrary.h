@@ -4309,6 +4309,13 @@ namespace CNTK
                                     const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
                                     AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
+	CNTK_API LearnerPtr AdamaxLearner(const std::vector<Parameter>& parameters,
+		const LearningRateSchedule& learningRateSchedule,
+		const MomentumSchedule& momentumSchedule,
+		bool unitGain = DefaultUnitGainValue(),
+		const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
+		AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
+
     ///
     /// Create an instance of the CNTK built-in AdaGrad learner.
     ///
