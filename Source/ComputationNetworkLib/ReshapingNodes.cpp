@@ -110,7 +110,7 @@ template <class ElemType>
     else
         input = InputRef(0).ValueTensorFor(rank, frInput);
 
-    auto result = ReduceAllAxes() ? TensorView<ElemType>(ValuePtr(), TensorShape(1)) : ValueTensorFor(rank, fr);
+    auto result = ReduceAllAxes() ? TensorView<ElemType>(ValuePtr(), GetSampleLayout()) : ValueTensorFor(rank, fr);
 
     switch (m_reductionOp)
     {
@@ -141,7 +141,7 @@ template <class ElemType>
         const auto frInput = (ReduceAllAxes() || ReduceBatchAxis()) ? FrameRange(InputRef(0).GetMBLayout()) : fr; // can't use 'fr' for ReduceAllAxes() as it refers to the result (same as for training criteria)
                                                                                         // get the args
         size_t rank = DetermineElementwiseTensorRank();
-        auto sliceOutputGrad = ReduceAllAxes() ? TensorView<ElemType>(GradientPtr(), TensorShape(1)) : GradientTensorFor(rank, fr); // propagate from this one...
+        auto sliceOutputGrad = ReduceAllAxes() ? TensorView<ElemType>(GradientPtr(), GetSampleLayout()) : GradientTensorFor(rank, fr); // propagate from this one...
         auto sliceInputGrad = InputRef(0).GradientTensorFor(rank, frInput); // ...to this one
 
         // gradients are not as simple as passing an op-code, unfortunately
@@ -288,7 +288,7 @@ template <class ElemType>
         if (ReduceAllStaticAxes())
         {
             reducedDim = shape.GetNumElements();
-            dims = m_keepDimensions ? SmallVector<size_t>(shape.GetRank(), 1) : SmallVector<size_t>({ 1 }); // entire sample is reduced to a scalar
+            dims = m_keepDimensions ? SmallVector<size_t>(shape.GetRank(), 1) : (Environment().IsV2Library() ? SmallVector<size_t>({}) : SmallVector<size_t>({ 1 })); // entire sample is reduced to a scalar
         }
         else if (m_axis - 1 >= 0 && m_axis - 1 < dims.size())
         {
@@ -435,7 +435,7 @@ template <class ElemType>
     // we map scalars to scalars
     if (isFinalValidationPass && Input(0)->GetSampleLayout().GetNumElements() != 1)
         InvalidArgument("%ls %ls operation can only operate on scalar input.", NodeName().c_str(), OperationName().c_str());
-    SetDims(TensorShape(1), true);
+    SetDims(Environment().IsV2Library() ? TensorShape() : TensorShape(1), true);
 }
 
 template class WhereNode<float>;

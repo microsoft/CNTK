@@ -418,7 +418,7 @@ void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass, bool k
     assert(m_inputs.size() == 1);
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
-    SetDims(keepDimensions ? m_inputs[0]->GetSampleLayout() : TensorShape(1), false);
+    SetDims(keepDimensions ? m_inputs[0]->GetSampleLayout() : (Environment().IsV2Library() ? TensorShape() : TensorShape(1)), false);
 }
 
 // binary reduce-to-(1,1) operation, e.g. CrossEntropyWithSoftmaxNode
@@ -446,7 +446,7 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
             LogicError("%ls: Expected MBLayout in Input 1.", NodeDescription().c_str());
         // Shape of the MBLayouts is checked at runtime.
     }
-    SetDims(TensorShape(1), false);
+    SetDims(Environment().IsV2Library() ? TensorShape() : TensorShape(1), false);
 }
 
 // helper function for validation

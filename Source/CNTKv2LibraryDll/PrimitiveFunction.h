@@ -322,6 +322,9 @@ namespace CNTK
 
         static NDShape ReshapeOutputShape(const NDShape& operandShape, NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, bool inferDimensions)
         {
+            if (replacementShape.HasFreeDimension())
+                InvalidArgument("Reshape: Replacement shape '%S' must not have a free dimension.", replacementShape.AsString().c_str());
+
             int beginAxisIdx = beginAxis.StaticAxisIndex();
             int endAxisIdx = endAxis.StaticAxisIndex();
 
@@ -335,31 +338,34 @@ namespace CNTK
                 InvalidArgument("Reshape: end axis index (%d) is invalid for operand shape '%S'.", endAxisIdx, operandShape.AsString().c_str());
 
             auto operandSubshapeToReshape = operandShape.SubShape(beginAxisIdx, endAxisIdx);
-            if (operandSubshapeToReshape.HasFreeDimension() || operandSubshapeToReshape.HasInferredDimension())
-                InvalidArgument("Reshape: Operand subshape '%S' being reshaped must not have an inferred or free dimension.", operandSubshapeToReshape.AsString().c_str());
+            if (operandSubshapeToReshape.HasInferredDimension())
+                InvalidArgument("Reshape: Operand subshape '%S' being reshaped must not have an inferred dimension.", operandSubshapeToReshape.AsString().c_str());
 
-            size_t inputElementsCount = operandSubshapeToReshape.TotalSize();
             auto inferredReplacementShape = replacementShape;
-            size_t targetElementsCount = 1;
             size_t inferredAxisIndex = SIZE_MAX;
-            for (size_t k = 0; k < inferredReplacementShape.Rank(); k++)
+            if (!operandSubshapeToReshape.HasFreeDimension())
             {
-                if (inferredReplacementShape[k] != NDShape::InferredDimension)
-                    targetElementsCount *= inferredReplacementShape[k];
-                else if (inferredAxisIndex == SIZE_MAX)
-                    inferredAxisIndex = k;
-                else
-                    InvalidArgument("Reshape: More than one axis's dimension was unspecified in the replacement shape '%S'", replacementShape.AsString().c_str());
-            }
+                size_t inputElementsCount = operandSubshapeToReshape.TotalSize();
+                size_t targetElementsCount = 1;
+                for (size_t k = 0; k < inferredReplacementShape.Rank(); k++)
+                {
+                    if (inferredReplacementShape[k] != NDShape::InferredDimension)
+                        targetElementsCount *= inferredReplacementShape[k];
+                    else if (inferredAxisIndex == SIZE_MAX)
+                        inferredAxisIndex = k;
+                    else
+                        InvalidArgument("Reshape: More than one axis's dimension was unspecified in the replacement shape '%S'", replacementShape.AsString().c_str());
+                }
 
-            if (inferredAxisIndex != SIZE_MAX)
-                inferredReplacementShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
+                if (inferredAxisIndex != SIZE_MAX)
+                    inferredReplacementShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
+            }
 
             auto outputShape = operandShape.SubShape(0, beginAxisIdx);
             outputShape = outputShape.AppendShape(inferredReplacementShape);
             outputShape = outputShape.AppendShape(operandShape.SubShape(endAxisIdx));
 
-            if (outputShape.TotalSize() != operandShape.TotalSize())
+            if (!operandSubshapeToReshape.HasFreeDimension() && (operandSubshapeToReshape.TotalSize() != inferredReplacementShape.TotalSize()))
             {
                 auto replacedSubShape = operandShape.SubShape(beginAxisIdx, endAxisIdx);
                 InvalidArgument("Reshape: Operand (sub-)dimensions '%S' incompatible with desired replacement (sub-)dimensions '%S'. Number of elements %s.",

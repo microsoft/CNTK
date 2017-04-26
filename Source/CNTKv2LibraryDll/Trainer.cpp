@@ -53,7 +53,7 @@ namespace CNTK
         combinedFunctionArgs.push_back(m_lossFunction);
         if (!m_lossFunction->Output().DynamicAxes().empty())
         {
-            m_aggregatedLossFunction = ReduceSum(lossFunction, L"aggregateLoss");
+            m_aggregatedLossFunction = ReduceSum(lossFunction, Axis::AllAxes(), L"aggregateLoss");
             combinedFunctionArgs.push_back(m_aggregatedLossFunction);
             m_trainingSampleCountVar = m_lossFunction;
         }
@@ -74,7 +74,7 @@ namespace CNTK
         }
 
         // create a default eval value in case there's no criterion
-        m_prevMinibatchAggregateEvalCriterionValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(0, m_aggregatedLossFunction->Output().GetDataType(), NDShape{ 1 }, DeviceDescriptor::CPUDevice()));
+        m_prevMinibatchAggregateEvalCriterionValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(0, m_aggregatedLossFunction->Output().GetDataType(), NDShape{}, DeviceDescriptor::CPUDevice()));
 
         m_combinedTrainingFunction = Combine(combinedFunctionArgs);
         SetCombinedEvalFunction(m_combinedTrainingFunction);
