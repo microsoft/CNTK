@@ -125,7 +125,7 @@ def alias(x, name=''):
 @typemap
 def labels_to_graph(labels, name=''):
     '''
-    Conversion node from labels to graph. Typically used as an input to ForwardBackward node. 
+    Conversion node from labels to graph. Typically used as an input to ForwardBackward node.
     This node's objective is to transform input labels into a graph representing exact forward-backward criterion.
     Example:
         num_classes = 2
@@ -146,7 +146,7 @@ def labels_to_graph(labels, name=''):
 def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name=''):
     '''
     Criterion node for training methods that rely on forward-backward Viterbi-like passes, e.g. Connectionist Temporal Classification (CTC) training
-    The node takes as the input the graph of labels, produced by the labels_to_graph operation that determines the exact forward/backward procedure. 
+    The node takes as the input the graph of labels, produced by the labels_to_graph operation that determines the exact forward/backward procedure.
     Example:
         graph = cntk.labels_to_graph(labels)
         networkOut = model(features)
@@ -201,7 +201,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                   [ 16.,  18.,  20.,  22.],
                   [ 26.,  28.,  30.,  32.],
                   [ 36.,  38.,  40.,  42.]]]], dtype=float32)
-        
+
     Args:
         convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
          where :math:`[m_1 \\times m_2 \\times \\ldots \\times m_n]` must be the kernel dimensions (spatial extent of the filter).
@@ -235,7 +235,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     '''
     Computes the transposed convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
-    This is also known as ``fractionally strided convolutional layers``, or, ``deconvolution``. 
+    This is also known as ``fractionally strided convolutional layers``, or, ``deconvolution``.
     This operation is used in image and language processing applications. It supports arbitrary
     dimensions, strides, sharing, and padding.
 
@@ -275,7 +275,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
          pixels outside the area are assumed zero ("padded with zeroes"). Without padding, the kernels are only shifted over
          positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
          the input dimension. The last value that lines up with the number of input channels must be false.
-        output_shape: user expected output shape after convolution transpose. 
+        output_shape: user expected output shape after convolution transpose.
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -287,7 +287,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     from cntk.cntk_py import convolution_transpose
     operand = sanitize_input(operand)
     strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
-    if output_shape is None: 
+    if output_shape is None:
         output_shape = (0,)
     output_shape = sanitize_shape(output_shape)
     return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding,
@@ -423,12 +423,12 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
          training as well. You must pass a constant tensor with initial value 0 and the same dimensions
          as ``scale`` and ``bias``
         running_inv_std: running variance. Represented as ``running_mean``
-        running_count: Denotes the total number of samples that have been used so far to compute 
+        running_count: Denotes the total number of samples that have been used so far to compute
          the ``running_mean`` and ``running_inv_std`` parameters. You must pass a scalar (either rank-0 ``constant(val)``).
         spatial(bool): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
         normalization_time_constant(float, default 5000): time constant for computing running average of
-         mean and variance as a low-pass filtered version of the batch statistics. 
+         mean and variance as a low-pass filtered version of the batch statistics.
         blend_time_constant(float, default 0): constant for smoothing batch estimates with the running
          statistics
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
@@ -885,7 +885,7 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=TIMES_NO_INFERRED_
     The output of this operation is the matrix product of the two input matrices.
     It supports broadcasting. Sparse is supported in the left operand, if it is a matrix.
     The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
-    
+
     For better performance on times operation on sequence which is followed by sequence.reduce_sum, use
     infer_input_rank_to_map=TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK, i.e. replace following::
 
@@ -1908,7 +1908,7 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
 @typemap
 def transpose(x, perm, name=''):
     '''
-    Permutes the axes of the tensor. The output has the same data but the axes 
+    Permutes the axes of the tensor. The output has the same data but the axes
     are permuted according to ``perm``.
 
     Example:
@@ -1925,6 +1925,8 @@ def transpose(x, perm, name=''):
     '''
     from cntk.cntk_py import transpose
     x = sanitize_input(x)
+    if type(perm) in [int, Axis]:
+        raise TypeError('transpose expects a permutation; to swap two axes use swapaxes')
     perm = [Axis(p) for p in sanitize_permutation(perm)]
     return transpose(x, perm, name)
 
@@ -2115,14 +2117,14 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
 def reduce_sum(x, axis=None, name=''):
     '''
     Computes the sum of the input tensor's elements across one axis. If the axis parameter
-    is not specified then the sum will be computed over all static axes, which is 
-    equivalent with specifying ``axis=Axis.all_static_axes()``. If 
-    ``axis=Axis.all_axes()``, the output is a scalar which is the sum of all the 
+    is not specified then the sum will be computed over all static axes, which is
+    equivalent with specifying ``axis=Axis.all_static_axes()``. If
+    ``axis=Axis.all_axes()``, the output is a scalar which is the sum of all the
     elements in the minibatch.
 
     Example:
         >>> x = C.sequence.input((2,2))
-        >>> # create a batch of 2 sequences each containing 2 2x2 matrices 
+        >>> # create a batch of 2 sequences each containing 2 2x2 matrices
         >>> x0 = np.arange(16,dtype=np.float32).reshape(2,2,2,2)
         >>> # reduce over all static axes
         >>> C.reduce_mean(x).eval({x:x0})
@@ -2347,7 +2349,7 @@ def reduce_prod(x, axis=None, name=''):
 @typemap
 def argmax(x, axis=None, name=''):
     '''
-    Computes the argmax of the input tensor's elements across the specified axis. 
+    Computes the argmax of the input tensor's elements across the specified axis.
     If no axis is specified, it will return the flatten index of the largest element
     in tensor x.
 
@@ -2380,7 +2382,7 @@ def argmax(x, axis=None, name=''):
 @typemap
 def argmin(x, axis=None, name=''):
     '''
-    Computes the argmin of the input tensor's elements across the specified axis. 
+    Computes the argmin of the input tensor's elements across the specified axis.
     If no axis is specified, it will return the flatten index of the smallest element
     in tensor x.
 
@@ -2416,10 +2418,10 @@ def argmin(x, axis=None, name=''):
 
 @typemap
 def random_sample(
-    weights, 
-    num_samples, 
-    allow_duplicates, 
-    seed = SentinelValueForAutoSelectRandomSeed, 
+    weights,
+    num_samples,
+    allow_duplicates,
+    seed = SentinelValueForAutoSelectRandomSeed,
     name=''):
     '''
     Estimates inclusion frequencies for random sampling with or without
@@ -2456,8 +2458,8 @@ def random_sample(
 
 @typemap
 def random_sample_inclusion_frequency(
-    weights, 
-    num_samples, 
+    weights,
+    num_samples,
     allow_duplicates,
     seed = SentinelValueForAutoSelectRandomSeed,
     name=''):
@@ -2467,14 +2469,14 @@ def random_sample_inclusion_frequency(
     in the the sampled set. In case of sampling without replacement
     the result is only an estimate which might be quite rough in the
     case of small sample sizes.
-    Intended uses are e.g. sampled softmax, noise contrastive 
+    Intended uses are e.g. sampled softmax, noise contrastive
     estimation etc.
-    This operation will be typically used together 
+    This operation will be typically used together
     with :func:`random_sample`.
 
     Args:
-        weights: input vector of sampling weights which should be 
-         non-negative numbers. 
+        weights: input vector of sampling weights which should be
+         non-negative numbers.
         num_samples (int): number of expected samples
         allow_duplicates (bool): If sampling is done
          with replacement (`True`) or without (`False`).
@@ -2484,7 +2486,7 @@ def random_sample_inclusion_frequency(
     Example:
         >>> import numpy as np
         >>> from cntk import *
-        >>> # weight vector with 100 '1000'-values followed 
+        >>> # weight vector with 100 '1000'-values followed
         >>> # by 100 '1' values
         >>> w1 = np.full((100),1000, dtype = np.float)
         >>> w2 = np.full((100),1, dtype = np.float)
@@ -2509,9 +2511,9 @@ def random_sample_inclusion_frequency(
     weights = sanitize_input(weights)
 
     return random_sample_inclusion_frequency(
-        weights, 
-        num_samples, 
-        allow_duplicates, 
+        weights,
+        num_samples,
+        allow_duplicates,
         seed,
         name)
 
@@ -2595,7 +2597,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
     '''
     from cntk.cntk_py import input_variable
     from cntk.internal import sanitize_shape, sanitize_dtype_cntk
-    
+
     shape = sanitize_shape(shape)
     dtype = get_default_override(_input_spec, dtype=dtype)
     if dtype is None:
@@ -2804,7 +2806,7 @@ def per_dim_mean_variance_normalize(operand, mean, inv_stddev, name=''):
 @typemap
 def stop_gradient(input, name=''):
     '''
-    Outputs its input as it and prevents any gradient contribution from its output to its input. 
+    Outputs its input as it and prevents any gradient contribution from its output to its input.
 
     Args:
         input: class:`~cntk.ops.functions.Function` that outputs a tensor
