@@ -189,3 +189,9 @@ def block_momentum_distributed_learner(learner, block_size, block_momentum_as_ti
             reset_sgd_momentum_after_aggregation,
             block_learning_rate)
 
+@typemap
+def mpi_communicator():
+    '''
+    Creates a non quantized MPI communicator.
+    '''
+    return cntk_py.mpicommunicator()

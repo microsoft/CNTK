@@ -196,18 +196,17 @@ if __name__=='__main__':
     # Create distributed trainer factory
     print("Start training: quantize_bit = {}, epochs = {}, distributed_after = {}".format(num_quantization_bits, epochs, warm_up))
 
-    try:
-        resnet_cifar10(train_data, test_data, mean_data,
-                       network_name, 
-                       epoch_size,
-                       num_quantization_bits,
-                       block_size=args['block_samples'],
-                       warm_up=args['distributed_after'],
-                       max_epochs=epochs,
-                       restore=not args['restart'],
-                       scale_up=scale_up,
-                       log_to_file=args['logdir'],
-                       profiling=args['profile'])
-    finally:
-        # Must call MPI finalize when process exit
-        Communicator.finalize()
+    resnet_cifar10(train_data, test_data, mean_data,
+                   network_name, 
+                   epoch_size,
+                   num_quantization_bits,
+                   block_size=args['block_samples'],
+                   warm_up=args['distributed_after'],
+                   max_epochs=epochs,
+                   restore=not args['restart'],
+                   scale_up=scale_up,
+                   log_to_file=args['logdir'],
+                   profiling=args['profile'])
+
+    # Must call MPI finalize when process exit without exceptions
+    Communicator.finalize()

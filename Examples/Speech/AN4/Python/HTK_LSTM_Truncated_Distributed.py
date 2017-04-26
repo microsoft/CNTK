@@ -180,4 +180,5 @@ if __name__=='__main__':
                                 tensorboard_logdir=args['tensorboard_logdir'])
     finally:
         os.chdir(abs_path)
-        Communicator.finalize()
+    # Must call MPI finalize when process exit without exceptions
+    Communicator.finalize()
