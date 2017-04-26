@@ -99,6 +99,8 @@ private:
 
     // Truncation length for BPTT mode.
     size_t m_truncationLength;
+
+    bool m_keepDataInMemory;
 };
 
 }}}

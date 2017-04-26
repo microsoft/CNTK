@@ -22,6 +22,7 @@
 #include "ConfigUtil.h"
 #include "StringUtil.h"
 #include "ReaderConstants.h"
+#include "ChunkCache.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -41,6 +42,8 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
 
     useNumericSequenceKeys = config(L"useNumericSequenceKeys", useNumericSequenceKeys);
     m_corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
+
+    m_keepDataInMemory = config(L"keepDataInMemory", false);
 
     // Identifying packing mode.
     bool frameMode = config(L"frameMode", false);
@@ -234,6 +237,8 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
 
         IDataDeserializerPtr d = CreateDeserializer(p, primary);
         primary = false;
+        if(m_keepDataInMemory)
+            d = make_shared<ChunkCache>(d);
         m_deserializers.push_back(d);
     }
 }
