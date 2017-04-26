@@ -119,7 +119,7 @@ void Bundler::CreateChunkDescriptions()
                 //Check the lenght of sequence from differnt streams, skip those inconsistent ones.
                 if (isValid && s.m_numberOfSamples != sequenceDescriptions[sequenceIndex].m_numberOfSamples)
                 {
-                    fprintf(stderr, "skipping file due to inconsistency in sequence length in different streams (%d vs %d)", s.m_numberOfSamples, sequenceDescriptions[sequenceIndex].m_numberOfSamples);
+                    fprintf(stderr, "skipping file due to inconsistency in sequence length in different streams (%d vs %d)\n", s.m_numberOfSamples, sequenceDescriptions[sequenceIndex].m_numberOfSamples);
                     isValid = false;
                 }
 
