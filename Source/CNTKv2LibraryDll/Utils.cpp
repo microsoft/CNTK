@@ -134,7 +134,7 @@ namespace CNTK
     }
 
     Dictionary::Dictionary()
-        : m_dictionaryData(new unordered_map <wstring, DictionaryValue>)
+        //: m_dictionaryData(new unordered_map <wstring, DictionaryValue>)
     {
     }
 
@@ -150,7 +150,7 @@ namespace CNTK
     Dictionary& Dictionary::operator=(const Dictionary& other)
     {
         assert(this != &other);
-        m_dictionaryData.reset(new unordered_map<wstring, DictionaryValue>(*(other.m_dictionaryData)));
+        m_dictionaryData.reset(other.m_dictionaryData ? new unordered_map<wstring, DictionaryValue>(*(other.m_dictionaryData)) : nullptr);
         return *this;
     }
 
@@ -172,28 +172,29 @@ namespace CNTK
 
     DictionaryValue& Dictionary::operator[](const wchar_t* key)
     {
-        return (*m_dictionaryData)[key];
+        return GetDictionaryData()[key]; // this will lazily create the dict if not yet existing
     }
 
     const DictionaryValue& Dictionary::operator[](const wchar_t* key) const
     {
-        return m_dictionaryData->at(key);
+        return GetDictionaryData().at(key);
     }
 
     bool Dictionary::Contains(const wchar_t* key) const
     {
-        return (m_dictionaryData->find(key) != m_dictionaryData->end());
+        return m_dictionaryData && (m_dictionaryData->find(key) != m_dictionaryData->end());
     }
 
     void Dictionary::Add(const Dictionary& other)
     {
-        for (auto& kv : *(other.m_dictionaryData))
-        {
-            if (Contains(kv.first))
-                InvalidArgument("Dictionary::Add: Already contains an entry with key %S being added from the 'other' dictionary", kv.first.c_str());
+        if (other.m_dictionaryData)
+            for (auto& kv : *(other.m_dictionaryData))
+            {
+                if (Contains(kv.first))
+                    InvalidArgument("Dictionary::Add: Already contains an entry with key %S being added from the 'other' dictionary", kv.first.c_str());
 
-            (*this)[kv.first] = kv.second;
-        }
+                (*this)[kv.first] = kv.second;
+            }
     }
 
     bool Dictionary::operator==(const Dictionary& other) const
@@ -203,19 +204,20 @@ namespace CNTK
             return true;
         }
 
-        if (m_dictionaryData->size() != other.m_dictionaryData->size())
+        if (Size() != other.Size())
         {
             return false;
         }
-        
-        for (const auto& kv : *m_dictionaryData)
-        {
-            auto result = other.m_dictionaryData->find(kv.first);
-            if (result == other.m_dictionaryData->end() || kv.second != result->second)
+
+        if (Size() != 0)
+            for (const auto& kv : *m_dictionaryData)
             {
-                return false;
+                auto result = other.m_dictionaryData->find(kv.first);
+                if (result == other.m_dictionaryData->end() || kv.second != result->second)
+                {
+                    return false;
+                }
             }
-        }
 
         return true;
     }

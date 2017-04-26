@@ -1582,18 +1582,21 @@ namespace CNTK
         typedef std::unordered_map<std::wstring, DictionaryValue>::iterator DictionaryIterator;
         typedef std::unordered_map<std::wstring, DictionaryValue>::const_iterator ConstDictionaryIterator;
 
-        DictionaryIterator begin() const { return m_dictionaryData->begin(); }
-        ConstDictionaryIterator cbegin() const { return m_dictionaryData->cbegin(); }
-        DictionaryIterator end() const { return m_dictionaryData->end(); }
-        ConstDictionaryIterator cend() const { return m_dictionaryData->cend(); }
+        DictionaryIterator begin() { return GetDictionaryData().begin(); }
+        DictionaryIterator end()   { return GetDictionaryData().end(); }
+        ConstDictionaryIterator begin() const { return GetDictionaryData().begin(); }
+        ConstDictionaryIterator end()   const { return GetDictionaryData().end(); }
+        ConstDictionaryIterator cbegin() const { return GetDictionaryData().cbegin(); }
+        ConstDictionaryIterator cend()   const { return GetDictionaryData().cend(); }
 
-        size_t Size() const { return m_dictionaryData->size();  }
+        size_t Size() const { return m_dictionaryData ? m_dictionaryData->size() : 0;  }
 
         std::unordered_set<std::wstring> Keys() 
         { 
             std::unordered_set<std::wstring> keys;
-            for (const auto& kv : *m_dictionaryData)
-                keys.insert(kv.first);
+            if (m_dictionaryData)
+                for (const auto& kv : *m_dictionaryData)
+                    keys.insert(kv.first);
             return keys;
         }
 
@@ -1605,6 +1608,20 @@ namespace CNTK
 
     private:
         std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
+        const std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData() const
+        {
+            if (m_dictionaryData)
+                return *m_dictionaryData;
+            static std::unordered_map<std::wstring, DictionaryValue> s_emptyDict;
+            assert(s_emptyDict.empty());
+            return s_emptyDict;
+        }
+        std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData()
+        {
+            if (!m_dictionaryData)
+                m_dictionaryData.reset(new std::unordered_map <std::wstring, DictionaryValue>());
+            return *m_dictionaryData;
+        }
         static const size_t s_version = 1;
     };
 

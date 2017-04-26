@@ -247,8 +247,10 @@ namespace CNTK
         proto::Dictionary* dst = (arena != nullptr) ? 
             Arena::CreateMessage<proto::Dictionary>(arena) : new proto::Dictionary();
         dst->set_version(src.s_version);
-        for (const auto& kv : src)
+        for (auto iter = src.cbegin(); iter != src.cend(); ++iter)
+        //for (const auto& kv : src)
         {
+            const auto& kv = *iter;
             Copy(kv.second, dst->mutable_data()->operator[](ToString(kv.first)), arena);
         }
         return dst;
@@ -445,7 +447,7 @@ namespace CNTK
         UsingUTF8 locale;
         proto::Dictionary proto;
         stream >> proto;
-        dictionary.m_dictionaryData->reserve(proto.data_size());
+        dictionary.GetDictionaryData().reserve(proto.data_size());
         for (const auto& kv : proto.data())
         {
             Serializer::Copy(kv.second, dictionary[ToWString(kv.first)]);
@@ -493,7 +495,7 @@ namespace CNTK
         ReadFromFile(filename, *proto);
 
         Dictionary dictionary;
-        dictionary.m_dictionaryData->reserve(proto->data_size());
+        dictionary.GetDictionaryData().reserve(proto->data_size());
         for (const auto& kv : proto->data())
         {
             Serializer::Copy(kv.second, dictionary[ToWString(kv.first)]);

@@ -107,7 +107,7 @@ namespace CNTK
 
         ConfigParameters config;
         std::wstringstream s;
-        for (const auto& keyValuePair : *(augmentedConfiguration.m_dictionaryData))
+        for (const auto& keyValuePair : augmentedConfiguration.GetDictionaryData())
             AddConfigString(s, keyValuePair.first, keyValuePair.second, 0);
 
         config.Parse(msra::strfun::utf8(s.str()));

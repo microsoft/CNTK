@@ -365,7 +365,7 @@ namespace CNTK
             uidMap[theirUIDs[i]] = ourUIDs[i];
         
         Dictionary remappedState;
-        for (auto& kv : state)
+        for (const auto& kv : state)
             remappedState[uidMap[kv.first]] = kv.second;
 
         SetInternalState(remappedState);
