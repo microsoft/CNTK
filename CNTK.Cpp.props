@@ -68,17 +68,20 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="Exists('$(OPENCV_PATH)')">
-    <OpenCvPath>$(OPENCV_PATH)</OpenCvPath>
+    <!--OpenCvPath>$(OPENCV_PATH)</OpenCvPath-->
+    <OpenCvPath>"C:\local\opencv-3.2.0-vc14"</OpenCvPath>
     <OpenCvVersion>300</OpenCvVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="Exists('$(OPENCV_PATH_V31)')">
-    <OpenCvPath>$(OPENCV_PATH_V31)</OpenCvPath>
+    <!--OpenCvPath>$(OPENCV_PATH_V31)</OpenCvPath-->
+    <OpenCvPath>"C:\local\opencv-3.2.0-vc14"</OpenCvPath>
     <OpenCvVersion>310</OpenCvVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="Exists('$(OPENCV_PATH_V32)')">
-    <OpenCvPath>$(OPENCV_PATH_V32)</OpenCvPath>
+    <!--OpenCvPath>$(OPENCV_PATH_V32)</OpenCvPath-->
+    <OpenCvPath>"C:\local\opencv-3.2.0-vc14"</OpenCvPath>
     <OpenCvVersion>320</OpenCvVersion>
   </PropertyGroup>
 
