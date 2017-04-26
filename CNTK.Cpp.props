@@ -70,13 +70,15 @@
   <PropertyGroup Condition="Exists('$(OPENCV_PATH)')">
     <!--OpenCvPath>$(OPENCV_PATH)</OpenCvPath-->
     <OpenCvPath>C:\local\opencv-3.2.0-vc14\build</OpenCvPath>
-    <OpenCvVersion>300</OpenCvVersion>
+    <!--OpenCvVersion>300</OpenCvVersion-->
+    <OpenCvVersion>320</OpenCvVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="Exists('$(OPENCV_PATH_V31)')">
     <!--OpenCvPath>$(OPENCV_PATH_V31)</OpenCvPath-->
     <OpenCvPath>C:\local\opencv-3.2.0-vc14\build</OpenCvPath>
-    <OpenCvVersion>310</OpenCvVersion>
+    <!--OpenCvVersion>310</OpenCvVersion-->
+    <OpenCvVersion>320</OpenCvVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="Exists('$(OPENCV_PATH_V32)')">
