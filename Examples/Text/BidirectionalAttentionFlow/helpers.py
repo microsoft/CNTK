@@ -18,8 +18,8 @@ def OptimizedRnnStack(hidden_dim, num_layers=1, recurrent_op='lstm', init=C.glor
             x = C.placeholder_variable()
             return C.as_block(
                     C.splice(
-                        C.layers.Recurrence(C.layers.LSTM(hidden_dim, init_W=init_fw_W, init_H=init_fw_H, init_bias=init_fw_b, name=name+'_fw'))(x),
-                        C.layers.Recurrence(C.layers.LSTM(hidden_dim, init_W=init_bw_W, init_H=init_bw_H, init_bias=init_bw_b, name=name+'_bw'), go_backwards=True)(x)),
+                        C.layers.Recurrence(C.layers.LSTM(hidden_dim, name=name+'_fw'))(x),
+                        C.layers.Recurrence(C.layers.LSTM(hidden_dim, name=name+'_bw'), go_backwards=True)(x)),
                     [(x, x_var)],
                     'BiLSTM',
                     'BiLSTM'+name)
