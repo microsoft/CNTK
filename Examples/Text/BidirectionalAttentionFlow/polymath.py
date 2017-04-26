@@ -168,7 +168,7 @@ class PolyMath:
         att_context = C.placeholder_variable(shape=(8*self.hidden_dim,))
         mod_context = C.placeholder_variable(shape=(2*self.hidden_dim,))
         #output layer
-        start_logits = C.layers.Dense(1)(C.dropout(C.splice(mod_context, att_context), self.dropout))
+        start_logits = C.layers.Dense(1, name='out_start')(C.dropout(C.splice(mod_context, att_context), self.dropout))
         if self.two_step:
             start_hardmax = seq_hardmax(start_logits)
             att_mod_ctx = C.sequence.last(C.sequence.gather(mod_context, start_hardmax))
@@ -178,7 +178,7 @@ class PolyMath:
         att_mod_ctx_expanded = C.sequence.broadcast_as(att_mod_ctx, att_context)
         end_input = C.splice(att_context, mod_context, att_mod_ctx_expanded, mod_context * att_mod_ctx_expanded)
         m2 = OptimizedRnnStack(self.hidden_dim, bidirectional=True, use_cudnn=self.use_cudnn)(end_input)
-        end_logits = C.layers.Dense(1)(C.dropout(C.splice(m2, att_context), self.dropout))
+        end_logits = C.layers.Dense(1, name='out_end')(C.dropout(C.splice(m2, att_context), self.dropout))
 
         return C.as_block(
             C.combine([start_logits, end_logits]),

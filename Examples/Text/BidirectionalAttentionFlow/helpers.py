@@ -4,13 +4,25 @@ from cntk.layers.blocks import _INFERRED
 
 def OptimizedRnnStack(hidden_dim, num_layers=1, recurrent_op='lstm', init=C.glorot_uniform(), bidirectional=False, use_cudnn=True, name=''):
     if use_cudnn:
-        W = C.Parameter(_INFERRED + (hidden_dim,), init=init)
-        def func(x):
-            return C.optimized_rnnstack(x, W, hidden_dim, num_layers, bidirectional, recurrent_op=recurrent_op, name=name)
+        W = C.parameter(inferred_dim + (hidden_dim,), init=init)
+        def func(x_var):
+            x = C.placeholder_variable()
+            return C.as_block(
+                C.optimized_rnnstack(x, W, hidden_dim, num_layers, bidirectional, recurrent_op=recurrent_op, name=name),
+                [(x, x_var)],
+                'cudnn_BiLSTM',
+                'cudnn_BiLSTM'+name)
         return func
     else:
-        def func(x):
-            return C.splice(C.layers.Recurrence(C.layers.LSTM(hidden_dim))(x), C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=True)(x))
+        def func(x_var):
+            x = C.placeholder_variable()
+            return C.as_block(
+                    C.splice(
+                        C.layers.Recurrence(C.layers.LSTM(hidden_dim, init_W=init_fw_W, init_H=init_fw_H, init_bias=init_fw_b, name=name+'_fw'))(x),
+                        C.layers.Recurrence(C.layers.LSTM(hidden_dim, init_W=init_bw_W, init_H=init_bw_H, init_bias=init_bw_b, name=name+'_bw'), go_backwards=True)(x)),
+                    [(x, x_var)],
+                    'BiLSTM',
+                    'BiLSTM'+name)
         return func
 
 def HighwayBlock(dim, # ideally this should be inferred, but times does not allow inferred x inferred parameter for now

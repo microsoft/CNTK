@@ -14,7 +14,6 @@ tsvs = 'train', 'dev', 'val'
 unk = '<UNK>'
 pad = '<PAD>'
 EMPTY_TOKEN = '<NULL>'
-pad = ' '  # used for padding has to be single char and match with format specifier below
 # pad (or trim) to word_size characters
 pad_spec = '{0:<%d.%d}' % (word_size, word_size)
 
@@ -57,13 +56,13 @@ def populate_dicts(files):
     _ = chars[unk]
 
     #finally add all words that are not in yet
-    _  = [vocab[word] for word in wdcnt if word not in vocab and wdcnt[word] >= word_count_threshold]
-    _  = [chars[c]    for c    in chcnt if c    not in chars and chcnt[c]    >= char_count_threshold]
+    _  = [vocab[word] for word in wdcnt if word not in vocab and wdcnt[word] > word_count_threshold]
+    _  = [chars[c]    for c    in chcnt if c    not in chars and chcnt[c]    > char_count_threshold]
 
     # return as defaultdict(int) so that new keys will return 0 which is the value for <unknown>
     return known, defaultdict(int, vocab), defaultdict(int, chars)
     
-def tsv_iter(line, vocab, chars, is_test=False, misc={'rawctx':[], 'ctoken':[], 'answer':[]}):
+def tsv_iter(line, vocab, chars, is_test=False, misc={}):
     unk_w = vocab[unk]
     unk_c = chars[unk]
 
@@ -98,7 +97,7 @@ def tsv_iter(line, vocab, chars, is_test=False, misc={'rawctx':[], 'ctoken':[], 
     if sum(eaidx) == 0:
         raise ValueError('problem with input line:\n%s' % line)
 
-    if is_test:
+    if is_test and misc.keys():
         misc['answer'] += [answer.split(';')]
         misc['rawctx'] += [raw]
         misc['ctoken'] += [ctokens]
