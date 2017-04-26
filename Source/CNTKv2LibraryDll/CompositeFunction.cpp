@@ -224,7 +224,7 @@ namespace CNTK
         return composite;
     }
 
-    /*static*/ FunctionPtr CompositeFunction::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device, const Internal::UDFDeserializerPtr& deserializer)
+    /*static*/ FunctionPtr CompositeFunction::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device, const UDFDeserializeCallback& callback)
     {
         static const vector<std::wstring> s_requiredDictionaryKeys = { inputsKey, functionsKey };
        
@@ -254,7 +254,7 @@ namespace CNTK
         {
             auto functionDict = dictionaryValue.Value<Dictionary>();
             FunctionPtr root = UDFUtils::IsUDF(functionDict) ?
-                UDFUtils::Deserialize(functionDict, uidToInputMap, device, deserializer) :
+                UDFUtils::Deserialize(functionDict, uidToInputMap, device, callback) :
                 PrimitiveFunction::Deserialize(functionDict, uidToInputMap, allPrimitiveFunctions, allPlaceholderReplacements, device);
             allPrimitiveFunctions.insert(root);
 

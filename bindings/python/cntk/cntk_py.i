@@ -23,7 +23,6 @@
 %rename(_infer_outputs) CNTK::Function::InferOutputs;
 %rename(_serialize) CNTK::Function::Serialize;
 %rename(_deserialize) CNTK::Function::Deserialize;
-%rename(_deserialize) CNTK::Internal::UDFDeserializer::Deserialize;
 %rename(_update) CNTK::Learner::Update;
 %rename(sgd_learner) CNTK::SGDLearner;
 %rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
@@ -77,7 +76,7 @@
 %warnfilter(401) CNTK::NDArrayView;
 %warnfilter(401) CNTK::NDMask;
 %warnfilter(401) CNTK::Function;
-%warnfilter(401) CNTK::Internal::UDFDeserializer;
+%warnfilter(401) CNTK::Internal::UDFDeserializeCallbackWrapper;
 %warnfilter(401) CNTK::Trainer;
 %warnfilter(401) CNTK::Evaluator;
 %warnfilter(401) CNTK::Value;
@@ -85,6 +84,8 @@
 %warnfilter(401) CNTK::MinibatchSource;
 
 %warnfilter(401, 509) CNTK::MomentumAsTimeConstantSchedule;
+
+%warnfilter(340) CNTK::NoOp;
 
 // The following operators are not supported in Python.
 %ignore operator<<;
@@ -618,17 +619,15 @@ public:
 
 // Callback support
 %feature("director") CNTK::Function;
-%feature("director") CNTK::Internal::UDFDeserializer;
+%feature("director") CNTK::Internal::UDFDeserializeCallbackWrapper;
 %feature("nodirector") CNTK::Function::OnPlaceholdersReplaced;
 %feature("nodirector") CNTK::Function::OpName;
 
-// Since there're three overloads of Function::Load, both "rename" and "compactdefaultargs" are needed
-// to make pybuffer_binary work correctly with default arguments.
-%rename(load_from_buffer) CNTK::Function::Load(const char*, size_t, const DeviceDescriptor&, const Internal::UDFDeserializerPtr&);
-%feature("compactdefaultargs") CNTK::Function::Load(const char*, size_t, const DeviceDescriptor&, const Internal::UDFDeserializerPtr&);
-
 // This overload is not used in python at the moment.
-%ignore CNTK::Function::Load(std::istream&, const DeviceDescriptor&, const Internal::UDFDeserializerPtr&);
+%ignore CNTK::Function::Load(const std::wstring&, const DeviceDescriptor&, const UDFDeserializeCallback&);
+%ignore CNTK::Function::Load(const char*, size_t, const DeviceDescriptor&, const UDFDeserializeCallback&);
+%ignore CNTK::Function::Load(std::istream&, const DeviceDescriptor&, const UDFDeserializeCallback&);
+%rename(load_from_buffer) CNTK::Function::Load(const char*, size_t, const CNTK::DeviceDescriptor&, const CNTK::Internal::UDFDeserializeCallbackWrapper&);
 
 %feature("director") CNTK::Learner;
 %feature("nodirector") CNTK::Learner::Parameters;
@@ -813,7 +812,7 @@ public:
     }
 %enddef
 
-// Implementing typemapping for a virtual function UDFDeserializer::Deserialize (it has a dictionary
+// Implementing typemapping for UDFDeserializeCallback (it has a dictionary
 // as one of its input parameters), which needs to be implemented in Python.
 
 %typemap(directorin, fragment="DictionaryValueToPy") const CNTK::Dictionary&
@@ -1393,7 +1392,6 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::Trainer)
 %shared_ptr(CNTK::TrainingSession)
 %shared_ptr(CNTK::Function)
-%shared_ptr(CNTK::Internal::UDFDeserializer)
 %shared_ptr(CNTK::NDArrayView)
 %shared_ptr(CNTK::Value)
 %shared_ptr(CNTK::NDMask)

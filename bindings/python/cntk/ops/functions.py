@@ -13,7 +13,7 @@ from cntk.internal import map_if_possible, typemap, sanitize_var_map,\
                           _value_as_sequence_or_array
 from cntk.internal.utils import get_python_function_arguments, \
                                 map_function_arguments, _py_dict_to_cntk_dict
-from cntk.internal import UserFunctionDeserializer
+from cntk.internal import _UDFDeserializeCallbackWrapper
 from ..variables import Record, Variable
 
 
@@ -1161,7 +1161,7 @@ class Function(cntk_py.Function):
         if not device:
             device = DeviceDescriptor.use_default_device()
 
-        deserializer = UserFunctionDeserializer(udf_factory_callback_map)
+        deserializer = _UDFDeserializeCallbackWrapper(udf_factory_callback_map)
 
         is_buffer = isinstance(model, type(b'')) and not isinstance(b'', str)
         is_buffer = is_buffer or isinstance(model, bytearray)

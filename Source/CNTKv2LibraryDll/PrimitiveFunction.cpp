@@ -1269,7 +1269,7 @@ namespace CNTK
     /*static*/ FunctionPtr UDFUtils::Deserialize(const Dictionary& dict,
                                                  const unordered_map<std::wstring, Variable>& uidToVariableMap,
                                                  const DeviceDescriptor& device,
-                                                 const Internal::UDFDeserializerPtr& deserializer)
+                                                 const UDFDeserializeCallback& callback)
     {
         static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, uidKey, inputsKey, userDefinedStateKey };
         ValidateDictionary<PrimitiveFunction>(dict, s_requiredDictionaryKeys, s_userDefinedFunctionTypeValue, s_serializationVersion);
@@ -1283,12 +1283,12 @@ namespace CNTK
 
         auto state = dict[userDefinedStateKey].Value<Dictionary>();
 
-        if (deserializer == nullptr) 
-        {
-            RuntimeError("No deserializer was provided to reconstruct UserDefinedFunctions.");
-        }
+        auto udf = callback(inputs, name, state);
 
-        auto udf = deserializer->Deserialize(inputs, name, state);
+        if (udf == nullptr)
+        {
+            RuntimeError("Unable to reconstruct a user-defined function. Please make sure to specify a valid UDF deserializer.");
+        }
 
         // Restore the original uid, which other functions in the graph depend on
         // (their inputs refer to the uids of this UDF outputs, which are generated base on the uid of this UDF).

@@ -376,22 +376,17 @@ namespace CNTK
             std::wstring m_fileName;
         };
 
-        ///
-        /// Defines an interface of a deserializer for user defined functions,
-        /// that needs to be provided to Function::Load to inflate user defined functions in the model.
-        /// Subclasses need to implement the single deserialize method.
-        ///
-        class UDFDeserializer : public std::enable_shared_from_this<UDFDeserializer>
+
+#ifdef SWIG
+        // SWIG callback wrapper for the UDF deserialization.
+        class UDFDeserializeCallbackWrapper
         {
         public:
-            ///
-            /// Reconstructs a user defined function given its inputs, name and a dictionary containing its state.
-            ///
-            virtual FunctionPtr Deserialize(const std::vector<Variable>& inputs, const std::wstring& name, const Dictionary& dictionary) const = 0;
-            virtual ~UDFDeserializer() = default;
+            virtual FunctionPtr operator()(const std::vector<Variable>&, const std::wstring&, const Dictionary&) const = 0;
+            virtual ~UDFDeserializeCallbackWrapper() = default;
         };
+#endif
 
-        typedef std::shared_ptr<UDFDeserializer> UDFDeserializerPtr;
     }
 
     // Forward-declare test fixtures, so that they can be used as friends.

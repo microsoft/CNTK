@@ -772,7 +772,7 @@ namespace CNTK
         static FunctionPtr Deserialize(const Dictionary& dictionary,
             const std::unordered_map<std::wstring, Variable>& uidToVariableMap,
             const CNTK::DeviceDescriptor& device,
-            const Internal::UDFDeserializerPtr& deserializer);
+            const UDFDeserializeCallback& callback);
 
         static const size_t s_serializationVersion = 0;
     };

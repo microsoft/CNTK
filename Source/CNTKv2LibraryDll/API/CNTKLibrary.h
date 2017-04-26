@@ -2876,6 +2876,21 @@ namespace CNTK
     };
 
     ///
+    /// Defines a signature of the deserialize callback for user defined functions,
+    /// that needs to be provided to Function::Load to inflate user defined functions in the model.
+    /// This callback reconstructs a user defined function given its inputs, name and a dictionary 
+    /// containing its state.
+    ///
+    typedef std::function<FunctionPtr(const std::vector<Variable>& /*inputs*/,
+        const std::wstring& /*name*/,
+        const Dictionary& /*dictionary*/)> UDFDeserializeCallback;
+
+    static auto NoOp = [] (const std::vector<Variable>&, const std::wstring&, const Dictionary&) 
+    {
+        return nullptr;
+    };
+
+    ///
     /// Represents a function (optionally differentiable w.r.t. its inputs)
     /// A Function denotes a symbolic computation with zero or more input arguments and one or more outputs. 
     /// A Function may be primitive or composite (comprised of other Function instances whose inputs and outputs are wired together).
@@ -3038,7 +3053,7 @@ namespace CNTK
         ///
         CNTK_API static FunctionPtr Deserialize(const Dictionary& dictionary, 
                                                 const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), 
-                                                const Internal::UDFDeserializerPtr& deserializer = nullptr);
+                                                const UDFDeserializeCallback& deserializer = NoOp);
 
     public:
         ///
@@ -3236,21 +3251,43 @@ namespace CNTK
         ///
         CNTK_API static FunctionPtr Load(const std::wstring& filepath, 
                                          const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), 
-                                         const Internal::UDFDeserializerPtr& deserializer = nullptr);
+                                         const UDFDeserializeCallback& deserializer = NoOp);
 
         ///
         /// Load a Function from a memory buffer
         ///
         CNTK_API static FunctionPtr Load(const char* buffer, size_t length,
                                          const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
-                                         const Internal::UDFDeserializerPtr& deserializer = nullptr);
+                                         const UDFDeserializeCallback& deserializer = NoOp);
 
         ///
         /// Load a Function from an istream. The legacy V1 model is not supported.
         ///
         CNTK_API static FunctionPtr Load(std::istream& inputStream, 
                                          const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
-                                         const Internal::UDFDeserializerPtr& deserializer = nullptr);
+                                         const UDFDeserializeCallback& deserializer = NoOp);
+
+#ifdef SWIG // for Python interop (adds callback wrapper)
+        static CNTK::FunctionPtr Load(const std::wstring& filepath,
+            const CNTK::DeviceDescriptor& computeDevice,
+            const CNTK::Internal::UDFDeserializeCallbackWrapper& wrapper)
+        {
+            using namespace std::placeholders;
+            UDFDeserializeCallback callback = std::bind(&CNTK::Internal::UDFDeserializeCallbackWrapper::operator(), 
+                                                        &wrapper, _1, _2, _3);
+            return CNTK::Function::Load(filepath, computeDevice, callback);
+        }
+
+        static CNTK::FunctionPtr Load(const char* buffer, size_t length,
+            const CNTK::DeviceDescriptor& computeDevice,
+            const CNTK::Internal::UDFDeserializeCallbackWrapper& wrapper)
+        {
+            using namespace std::placeholders;
+            UDFDeserializeCallback callback = std::bind(&CNTK::Internal::UDFDeserializeCallbackWrapper::operator(), 
+                                                        &wrapper, _1, _2, _3);
+            return CNTK::Function::Load(buffer, length, computeDevice, callback);
+        }
+#endif
 
         ///
         /// Prints the entire graph underlying this Function to stderr

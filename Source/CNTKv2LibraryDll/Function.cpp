@@ -438,14 +438,14 @@ namespace CNTK
         stream->flush();
     }
 
-    /*static*/ FunctionPtr Function::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice, const Internal::UDFDeserializerPtr& deserializer)
+    /*static*/ FunctionPtr Function::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice, const UDFDeserializeCallback& callback)
     {
         auto stream = GetFstream(filepath, true);
         if (!Internal::IsLegacyModel(*stream))
         {
             Dictionary model;
             *stream >> model;
-            return Function::Deserialize(model, computeDevice, deserializer);
+            return Function::Deserialize(model, computeDevice, callback);
         }
         else
         {
@@ -453,7 +453,7 @@ namespace CNTK
         }
     }
 
-    /*static*/ FunctionPtr Function::Load(const char *buffer, size_t length, const DeviceDescriptor& computeDevice, const Internal::UDFDeserializerPtr& deserializer)
+    /*static*/ FunctionPtr Function::Load(const char *buffer, size_t length, const DeviceDescriptor& computeDevice, const UDFDeserializeCallback& callback)
     {
         if ((buffer == nullptr) || (length <= 0))
             InvalidArgument("The model buffer should not be null and its length should be greater than 0");
@@ -474,15 +474,15 @@ namespace CNTK
             modelStreamBuffer buf(buffer, length);
             std::istream modelStream(&buf);
 
-            return Load(modelStream, computeDevice, deserializer);
+            return Load(modelStream, computeDevice, callback);
         }
     }
 
-    /*static*/ FunctionPtr Function::Load(std::istream& inputStream, const DeviceDescriptor& computeDevice, const Internal::UDFDeserializerPtr& deserializer)
+    /*static*/ FunctionPtr Function::Load(std::istream& inputStream, const DeviceDescriptor& computeDevice, const UDFDeserializeCallback& callback)
     {
         Dictionary model;
         inputStream >> model;
-        return Function::Deserialize(model, computeDevice, deserializer);
+        return Function::Deserialize(model, computeDevice, callback);
     }
 
     void Function::Restore(const std::wstring& filepath)
@@ -904,9 +904,9 @@ namespace CNTK
         compositeFunction->CopyState(*restoredCompositeFunction);
     }
 
-    /*static*/ FunctionPtr Function::Deserialize(const Dictionary& modelDictionary, const CNTK::DeviceDescriptor& device, const Internal::UDFDeserializerPtr& deserializer)
+    /*static*/ FunctionPtr Function::Deserialize(const Dictionary& modelDictionary, const CNTK::DeviceDescriptor& device, const UDFDeserializeCallback& callback)
     {
-        return CompositeFunction::Deserialize(modelDictionary, device, deserializer);
+        return CompositeFunction::Deserialize(modelDictionary, device, callback);
     }
 
     void Function::PrintGraph() const

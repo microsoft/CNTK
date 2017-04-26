@@ -119,7 +119,7 @@ namespace CNTK
                                                      const std::unordered_map<Variable, Variable>& allPlaceholderReplacements,
                                                      const CNTK::DeviceDescriptor& device);
 
-        static FunctionPtr Deserialize(const Dictionary& dictionary, const CNTK::DeviceDescriptor& device, const Internal::UDFDeserializerPtr& deserializer);
+        static FunctionPtr Deserialize(const Dictionary& dictionary, const CNTK::DeviceDescriptor& device, const UDFDeserializeCallback& callback);
 
         virtual const std::wstring& OpName() const override
         {

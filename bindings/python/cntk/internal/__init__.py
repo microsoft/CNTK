@@ -23,17 +23,18 @@ def _value_as_sequence_or_array(val, var):
         map_if_possible(val)
         return val.asarray()
 
-class UserFunctionDeserializer(cntk_py.UDFDeserializer):
+class _UDFDeserializeCallbackWrapper(cntk_py.UDFDeserializeCallbackWrapper):
     '''
     Provides an implementation of the UDFDeserializer interface used
     to inflate user defined functions in a model dictionary.
     '''
     def __init__(self, factory_callback_map=None):
-        super(UserFunctionDeserializer, self).__init__()
+        super(_UDFDeserializeCallbackWrapper, self).__init__()
         self.factory_callback_map = factory_callback_map
         self.__disown__()
 
-    def _deserialize(self, inputs, name, dictionary):
+    def __call__(self, inputs, name, dictionary):
+        import pdb; pdb.set_trace()
         cls = dictionary['class']
         module = dictionary['module']
         state = dictionary['state']

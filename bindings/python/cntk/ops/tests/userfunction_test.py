@@ -16,7 +16,7 @@ import cntk as C
 from cntk import *
 from cntk.train.trainer import *
 from cntk.learners import *
-from cntk.ops.functions import Function, UserFunction, UserFunctionDeserializer
+from cntk.ops.functions import Function, UserFunction
 from .ops_test_utils import AA
 
 class MyPlus(UserFunction):
