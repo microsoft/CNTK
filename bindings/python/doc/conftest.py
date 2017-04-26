@@ -55,3 +55,7 @@ import cntk
 def add_namespace(doctest_namespace):
     doctest_namespace['np'] = numpy
     doctest_namespace['C'] = cntk
+
+@pytest.fixture(autouse=True)
+def reset_random_seed():
+    cntk.cntk_py.reset_random_seed(0)
