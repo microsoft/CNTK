@@ -75,7 +75,7 @@ class Function(cntk_py.Function):
       def f(x:Tensor[13]):
           return x * x
 
-    If you are working with Python 2.7, use CNTK's `@:class:~cntk.layers.typing.Signature` decorator instead::
+    If you are working with Python 2.7, use CNTK's :class:`@Signature <cntk.layers.typing.Signature>` decorator instead::
 
       >>> from cntk.layers.typing import *
       >>> @Function
@@ -85,9 +85,9 @@ class Function(cntk_py.Function):
       >>> debugging.dump_signature(f)
       Function(x: Tensor[13]) -> Tensor[13]
 
-    ``make_block=True`` is an internal parameter used to implement `@:func:~cntk.layers.blocks.BlockFunction()`.
-    If `BlockFunction()` passes `True``, then the result will be wrapped
-    in :func:``~cntk.ops.as_block()``, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
+    ``make_block=True`` is an internal parameter used to implement :func:`@BlockFunction <cntk.layers.blocks.BlockFunction>`.
+    If `BlockFunction()` passes `True`, then the result will be wrapped
+    in :func:`~cntk.ops.as_block()`, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
     '''
 
     # We override the constructors to implement an overload that constructs
