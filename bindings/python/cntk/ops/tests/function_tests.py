@@ -413,28 +413,6 @@ def test_update_signature():
     assert f.x.shape == (input_dim,)
 
 
-def test_transpose_0d_1d_operands():
-    x1 = C.input(())
-    with pytest.raises(ValueError):
-        transpose_0d = C.transpose(x1)
-
-    x2 = C.input(2)
-    with pytest.raises(ValueError):
-        transpose_1d = C.transpose(x2)
-
-def test_transpose_perm():
-    a = np.arange(120, dtype=np.float32).reshape(2, 3, 4, 5)
-    from itertools import permutations
-    for p in permutations(range(4)):
-        assert np.array_equal(C.transpose(a, perm=p).eval(), np.transpose(a, p))
-    # test permutations over odd number of axes just in case
-    b = a.reshape(6, 4, 5)
-    for p in permutations(range(3)):
-        assert np.array_equal(C.transpose(b, perm=p).eval(), np.transpose(b, p))
-
-
-
-
 def test_eval_again_with_prev_outputs_live(device_id):
     x = C.input(2)
     dev = cntk_device(device_id)

@@ -629,10 +629,10 @@ namespace CNTK
                 break;
             case PrimitiveOpType::TransposeAxes:
             {
-                if (functionConfig.Contains(PrimitiveFunction::AttributeNamePermVec)) 
+                if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
                 {
-                    auto perm = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNamePermVec].Value<std::vector<DictionaryValue>>());
-                    computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), internalNodeName, perm);
+                    auto perm = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+                    computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(perm));
                 }
                 else
                 {

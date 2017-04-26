@@ -3455,7 +3455,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in transpose operation on the specified input operand using the specified permutation
     ///
-    CNTK_API FunctionPtr Transpose(const Variable& operand, const std::vector<size_t>& permutation,  const std::wstring& name = L"");
+    CNTK_API FunctionPtr Transpose(const Variable& operand, const std::vector<Axis>& permutation,  const std::wstring& name = L"");
 
     ///
     /// Create an instance of the slice operation on specified tensor input operand

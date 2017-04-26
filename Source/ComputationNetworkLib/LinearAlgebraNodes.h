@@ -1186,9 +1186,11 @@ public:
     {
     }
 
-    TransposeDimensionsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::vector<size_t> perm)
-        : Base(deviceId, name), m_axis1(0), m_axis2(0), m_perm(perm)
+    TransposeDimensionsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::vector<int> perm)
+        : Base(deviceId, name), m_axis1(0), m_axis2(0), m_perm({})
     {
+        // undo the annoying +1
+        std::transform(perm.begin(), perm.end(), std::back_inserter(m_perm), [](const int& p) { return (size_t)(p - 1); });
     }
 
     TransposeDimensionsNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -1256,11 +1258,11 @@ private:
         return shape;
     }
 
-    bool isPermutation(const std::vector<size_t>& perm)
+    static bool IsPermutation(const std::vector<size_t>& perm)
     {
-        auto sorted_perm = m_perm;
+        auto sorted_perm = perm;
         std::sort(sorted_perm.begin(), sorted_perm.end());
-        for (auto i = 0; i < m_perm.size(); ++i)
+        for (auto i = 0; i < perm.size(); ++i)
         {
             if (i != sorted_perm[i])
                 return false;
@@ -1317,15 +1319,15 @@ public:
         else
         {
             //we are transposing a tensor using a permutation
-            if (m_axis1 > 0 || m_axis2 > 0)
-                InvalidArgument("%ls %ls operation: Cannot transpose via permutation and axes indices > 0", NodeName().c_str(), OperationName().c_str());
+            if (m_axis1 != 0 || m_axis2 != 0)
+                InvalidArgument("%ls %ls operation: Cannot transpose via permutation and axes indices != 0", NodeName().c_str(), OperationName().c_str());
 
             //verify shapes are matching
             if (m_perm.size() != shape.GetRank())
                 InvalidArgument("%ls %ls operation: Specified permutation doesn't match operand", NodeName().c_str(), OperationName().c_str());
 
             //verify it is a permutation
-            if (!isPermutation(m_perm))
+            if (!TransposeDimensionsNode::IsPermutation(m_perm))
                 InvalidArgument("%ls %ls operation: Specified permutation is not a permutation of (0, 1, ..., rank - 1)", NodeName().c_str(), OperationName().c_str());
         }
         // apply the permutation

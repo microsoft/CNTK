@@ -497,26 +497,24 @@ def sanitize_Function_attributes(attributes):
 
     return attributes
     
-def sanitize_perm(perm):
+def sanitize_permutation(perm):
     # Find the permutation such that when it is applied to the reverse 
     # of an input gives the reverse of perm applied to the input
     # Example: 
     # input is [a, b, c, d], perm is [3, 0, 2, 1], perm of input is [d, a, c, b]
     # we are looking for [2, 1, 3, 0] because when we apply it to [d, c, b, a]
     # the result is [b, c, a, d] which is the revese of [d, a, c, b]
+
     n = len(perm)
-    return list([n-i-1 for i in reversed(perm)])
-
-
-def test_sanitize_perm():
-    from itertools import permutations
-    def perm_apply(x, perm):
-        return list([x[i] for i in perm])
-    for i in range(7):
-        test = list([42+j for j in range(i)])
-        for p in permutations(range(i)):
-            q = sanitize_perm(p)
-            assert(all(x==y for x,y in zip(list(reversed(perm_apply(test,p))),perm_apply(list(reversed(test)),q))))
+    # first make sure the range of each element is valid
+    if not all(-n <= i < n for i in perm):
+        raise ValueError('invalid permutation element: elements must be from {-len(perm), ..., len(perm)-1}')
+    # next take care of negative indices
+    positive_perm = [perm[i] if perm[i]>=0 else n+perm[i] for i in range(n)]
+    # check for duplicates
+    if n != len(set(positive_perm)):
+        raise ValueError('duplicate item in permutation')
+    return [n-i-1 for i in reversed(positive_perm)]
 
 def memoize(func):
     class memodict(dict):

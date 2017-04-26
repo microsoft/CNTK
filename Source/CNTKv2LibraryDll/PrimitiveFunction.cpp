@@ -43,7 +43,6 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxisVec = L"axisVec";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxis1 = L"axis1";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxis2 = L"axis2";
-    /*static*/ const std::wstring PrimitiveFunction::AttributeNamePermVec = L"permutation";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAllowDuplicates = L"allowDuplicates";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumSamples = L"numSamples";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDropoutRate = L"dropoutRate";
@@ -362,13 +361,13 @@ namespace CNTK
                         {
                             assert(m_inputs.size() == 1);
 
-                            if (m_attributes.Contains(PrimitiveFunction::AttributeNamePermVec))
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec))
                             {
-                                auto perm = AsVector<size_t>(m_attributes[PrimitiveFunction::AttributeNamePermVec].Value<std::vector<DictionaryValue>>());
+                                auto perm = AsVector<Axis>(m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
                                 auto shape = m_inputs[0].Shape();
                                 outputShape = shape;
                                 for (size_t i = 0; i < perm.size(); ++i)
-                                    outputShape[i] = shape[perm[i]];
+                                    outputShape[i] = shape[perm[i].StaticAxisIndex()];
                             }
                             else
                             {

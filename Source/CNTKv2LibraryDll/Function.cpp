@@ -1035,10 +1035,18 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::TransposeAxes, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr Transpose(const Variable& operand, const std::vector<size_t>& permutation, const std::wstring& name)
+    FunctionPtr Transpose(const Variable& operand, const std::vector<Axis>& permutation, const std::wstring& name)
     {
+        //Check all the axes
+        if (!std::all_of(permutation.begin(), permutation.end(), [](const Axis& a) { return a.IsStaticAxis(); }))
+            LogicError("Transpose: Permutation vector must only contain static axes.");
+
+        std::vector<Axis> actualPermutation = permutation;
+        for (auto& p : actualPermutation)
+            p = NormalizeAxis(p, operand);
+
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNamePermVec] = AsDictionaryValueVector(permutation);
+        additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(actualPermutation);
         return UnaryOp(PrimitiveOpType::TransposeAxes, operand, std::move(additionalProperties), name);
     }
 

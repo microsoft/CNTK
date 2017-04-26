@@ -564,3 +564,42 @@ def test_op_sequence_reduce_sum(device_id, precision):
     assert np.array_equal(res[0], np.asarray([2.]))
     assert np.array_equal(res[1], np.asarray([5.]))
     assert np.array_equal(res[2], np.asarray([9.]))
+
+
+def test_swapaxes_0d_1d_operands():
+    x1 = C.input(())
+    with pytest.raises(ValueError):
+        swapaxes_0d = C.swapaxes(x1)
+
+    x2 = C.input(2)
+    with pytest.raises(ValueError):
+        swapaxes_1d = C.swapaxes(x2)
+
+
+def test_transpose():
+    a = np.arange(120, dtype=np.float32).reshape(2, 3, 4, 5)
+    from itertools import permutations
+    for p in permutations(range(4)):
+        assert np.array_equal(C.transpose(a, p).eval(), np.transpose(a, p))
+    # test permutations over odd number of axes just in case
+    b = a.reshape(6, 4, 5)
+    for p in permutations(range(3)):
+        assert np.array_equal(C.transpose(b, p).eval(), np.transpose(b, p))
+    # test negative numbers
+    for p in permutations(range(3)):
+        q = [i - 3 for i in p]
+        assert np.array_equal(C.transpose(b, q).eval(), np.transpose(b, q))
+
+
+def test_transpose_backward():
+    shape = (2, 3, 4)
+    p = (2, 0, 1)
+    x0 = np.arange(np.prod(shape), dtype=np.float32).reshape(*shape)
+    shapet = tuple(shape[i] for i in p)
+    x = C.input(shape, needs_gradient=True)
+    y = C.reduce_sum(C.cos(C.transpose(x, p)))
+    xt = C.input(shapet, needs_gradient=True)
+    yt = C.reduce_sum(C.cos(xt))
+    g = np.squeeze(y.grad({x:x0}))
+    gt = np.squeeze(yt.grad({xt:np.transpose(x0, p)}))
+    assert np.allclose(np.transpose(g, p), gt)
