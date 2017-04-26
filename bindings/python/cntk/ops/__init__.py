@@ -1913,7 +1913,8 @@ def transpose(x, perm, name=''):
 
     Example:
         >>> a = np.arange(24).reshape(2,3,4).astype('f')
-        >>> np.array_equal(C.transpose(a, perm=(2, 0, 1)).eval(), np.transpose(a, (2, 0, 1))
+        >>> np.array_equal(C.transpose(a, perm=(2, 0, 1)).eval(), np.transpose(a, (2, 0, 1)))
+        True
 
     Args:
         x: tensor to be transposed
