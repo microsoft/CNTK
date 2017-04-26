@@ -2,7 +2,7 @@ import numpy as np
 import cntk as C
 from cntk.layers.blocks import _INFERRED
 
-def OptimizedRnnStack(hidden_dim, num_layers=1, recurrent_op='lstm', init=C.glorot_uniform(), bidirectional=False, use_cudnn=True, name=''):
+def OptimizedRnnStack(hidden_dim, num_layers=1, inferred_dim=_INFERRED, recurrent_op='lstm', init=C.glorot_uniform(), bidirectional=False, use_cudnn=True, name=''):
     if use_cudnn:
         W = C.parameter(inferred_dim + (hidden_dim,), init=init)
         def func(x_var):
