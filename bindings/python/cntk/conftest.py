@@ -63,7 +63,7 @@ import numpy
 numpy.set_printoptions(precision=6, suppress=True)
 
 import cntk.debugging
-cntk.debugging.set_computation_network_track_gap_nans(True)
+cntk.debugging.set_checked_mode(True)
 
 import cntk
 @pytest.fixture(autouse=True)

@@ -48,8 +48,8 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveA
     auto classifierOutput = LSTMNet<ElementType>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, device, L"classifierOutput");
 
     auto labelsVar = InputVariable({ numOutputClasses }, AsDataType<ElementType>(), L"labels");
-    auto trainingLoss = ReduceSum(CrossEntropyWithSoftmax(classifierOutput, labelsVar), L"lossFunction");
-    auto prediction = ReduceSum(ClassificationError(classifierOutput, labelsVar), L"classificationError");
+    auto trainingLoss = ReduceSum(CrossEntropyWithSoftmax(classifierOutput, labelsVar), Axis::AllAxes(), L"lossFunction");
+    auto prediction = ReduceSum(ClassificationError(classifierOutput, labelsVar), Axis::AllAxes(), L"classificationError");
 
     auto LSTMClassifier = Combine({ trainingLoss, prediction, classifierOutput }, L"LSTMClassifier");
 
@@ -144,7 +144,7 @@ void TestSimpleRecurrence(size_t inputDim,
 
     plusOutput = plusOutput->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
 
-    auto reducedOutput = ReduceSum(plusOutput, L"sum");
+    auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
 
     if (testSaveAndReLoad)
     {

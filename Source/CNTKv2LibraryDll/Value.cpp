@@ -323,7 +323,7 @@ namespace CNTK
         std::vector<NDArrayViewPtr> sequencesView(numOfSequences);
         for (size_t i = 0; i < numOfSequences; i++)
         {
-            // Sequence lenght is 1.
+            // Sequence length is 1.
             auto sequenceDataShape = sampleShape.AppendShape({ 1 });
             sequencesView[i] = MakeSharedObject<NDArrayView>(sequenceDataShape, batchData.data() + i * shapeSize, shapeSize, DeviceDescriptor::CPUDevice());
         }

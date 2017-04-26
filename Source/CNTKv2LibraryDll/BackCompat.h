@@ -17,25 +17,9 @@ namespace CNTK
 
         FunctionPtr ConvertFromLegacyModel(const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& net);
 
-        static const char legacyMarker[] = { 0x42, 0x00, 0x43, 0x00, 0x4e, 0x00, 0x00, 0x00 }; // L"BCN"
+        bool IsLegacyModel(std::fstream& stream);
 
-        inline bool IsLegacyModel(std::fstream& stream)
-        {
-            static const auto size = sizeof(legacyMarker);
-            char buffer[size];
-            const auto position = stream.tellg();
-            stream.read(buffer, size);
-            stream.seekg(position);
-            return (strncmp(legacyMarker, buffer, size) == 0);
-        }
-
-        inline bool IsLegacyModel(const char *modelBuffer, size_t bufferLength)
-        {
-            static const auto size = sizeof(legacyMarker);
-            if (bufferLength < size)
-                return false;
-            return (strncmp(legacyMarker, modelBuffer, size) == 0);
-        }
+        bool IsLegacyModel(const char *buffer, size_t bufferSize);
 
         enum class LegacyModelDataType : unsigned int
         {

@@ -302,12 +302,14 @@ public:
     static const int  CNTKInternalIdxValueForAllStaticAxes = 0;
     static const int  CNTKInternalIdxValueForAllAxes = -1;
     static const int  CNTKInternalIdxValueForSequenceAxis = -2;
+    static const int  CNTKInternalIdxValueForBatchAxis = -3;
 
 private:
     bool IsMean() const { return (m_operation == L"Mean"); }
     bool ReduceAllStaticAxes() const { return m_axis == CNTKInternalIdxValueForAllStaticAxes; }
     bool ReduceAllAxes() const { return m_axis == CNTKInternalIdxValueForAllAxes; }
     bool ReduceSequenceAxis() const { return m_axis == CNTKInternalIdxValueForSequenceAxis; }
+    bool ReduceBatchAxis() const { return m_axis == CNTKInternalIdxValueForBatchAxis; }
 
 private:
     // operation attributes

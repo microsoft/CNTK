@@ -26,6 +26,17 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    std::atomic<bool> s_checkedMode(false);
+    void SetCheckedMode(bool enable)
+    {
+        s_checkedMode.store(enable);
+    }
+
+    bool GetCheckedMode()
+    {
+        return s_checkedMode.load();
+    }
+
     namespace Internal
     {
         static std::atomic_ullong s_nextUniqueId = ATOMIC_VAR_INIT(0);
@@ -33,15 +44,50 @@ namespace CNTK
         {
             return s_nextUniqueId++;
         }
-
+        static std::mutex s_fixedSeedMutex;
+        static bool s_fixedRandomSeed = false;
         static std::atomic_ullong s_currentRandomSeed = ATOMIC_VAR_INIT(0);
 
-        // This is used to generate a default seed for stateful nodes (dropout, and both
-        // flavors of random sample). As a result, in distributed environment, each worker 
-        // ends up having a different seed.
-        
-        size_t GenerateRandomSeed()
+        unsigned long GetRandomSeed()
         {
+            return static_cast<unsigned long>(s_currentRandomSeed.load());
+        }
+
+        void SetFixedRandomSeed(unsigned long value)
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            s_currentRandomSeed.store(value);
+            s_fixedRandomSeed = true;
+        }
+
+        bool IsRandomSeedFixed()
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            return s_fixedRandomSeed;
+        }
+
+        void ResetRandomSeed(unsigned long value)
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            s_currentRandomSeed.store(value);
+            s_fixedRandomSeed = false;
+        }
+
+        // This is used to generate a default seed value for random parameter initializer and also 
+        // for stateful nodes (dropout, and both flavors of random sample). The 'perWorkerLocalValue' flag
+        // indicates if the generated value should be identical accross individual workers in distributed 
+        // setting or if each worker should get a different seed value.        
+        size_t GenerateRandomSeed(bool perWorkerLocalValue /*= false*/)
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            
+            if (s_fixedRandomSeed)
+                return s_currentRandomSeed;
+            
+
+            if (!perWorkerLocalValue)
+                return s_currentRandomSeed++;
+
             static size_t numWorkers = 1, rank = 0;
             static bool initialized = false;
             if (MPIWrapper::GetTotalNumberOfMPINodes() != 0 && !initialized) 
@@ -410,17 +456,6 @@ namespace CNTK
             return s_computationNetworkTraceLevel.load();
         }
 
-        std::atomic<bool> s_computationNetworkTrackGapNans(false);
-        void SetComputationNetworkTrackGapNans(bool enable)
-        {
-            s_computationNetworkTrackGapNans.store(enable);
-        }
-
-        bool GetComputationNetworkTrackGapNans()
-        {
-            return s_computationNetworkTrackGapNans.load();
-        }
-
         void SetGPUMemoryAllocationTraceLevel(int traceLevel)
         {
             Microsoft::MSR::CNTK::TracingGPUMemoryAllocator::SetTraceLevel(traceLevel);
@@ -642,7 +677,7 @@ namespace CNTK
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForUnknownAxes = std::numeric_limits<int>::max() - 2;
     /*static*/ const int Axis::SentinelEndStaticAxisIndexValue = std::numeric_limits<int>::max() - 3;
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllAxes = std::numeric_limits<int>::max() - 4;
-    
+
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
 
     bool Axis::UniqueDynamicAxesNames::RegisterAxisName(const std::wstring& axisName)

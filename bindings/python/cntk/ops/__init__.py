@@ -74,7 +74,7 @@ def as_block(composite, block_arguments_map, block_op_name, block_instance_name=
     Args:
         composite: The composite Function that the block encapsulates
         block_arguments_map: A list of tuples, mapping from block's underlying composite's arguments to
-        actual variables they are connected to
+         actual variables they are connected to
         block_op_name: Name of the op that the block represents
         block_instance_name (str, optional): the name of the block Function in the network
 
@@ -151,10 +151,11 @@ def labels_to_graph(labels, name=''):
     '''
     Conversion node from labels to graph. Typically used as an input to ForwardBackward node. 
     This node's objective is to transform input labels into a graph representing exact forward-backward criterion.
+
     Example:
-        num_classes = 2
-        labels = cntk.input((num_classes))
-        graph = cntk.labels_to_graph(labels)
+        >>> num_classes = 2
+        >>> labels = C.input((num_classes))
+        >>> graph = C.labels_to_graph(labels)
 
     Args:
         labels: input training labels
@@ -2118,8 +2119,9 @@ def reduce_sum(x, axis=None, name=''):
     Computes the sum of the input tensor's elements across one axis. If the axis parameter
     is not specified then the sum will be computed over all static axes, which is 
     equivalent with specifying ``axis=Axis.all_static_axes()``. If 
-    ``axis=Axis.all_axes()``, the output is a scalar which is the sum of all the 
-    elements in the minibatch.
+    ``axis=Axis.all_axes()`` is specified, then the output is a scalar which is the sum of all the 
+    elements in the minibatch. And if ``axis=Axis.default_batch_axis()`` is specified, then the reduction
+    will happen across the batch axis (In this case the input must not be a sequence).
 
     Example:
         >>> x = C.sequence.input((2,2))
@@ -2162,6 +2164,12 @@ def reduce_sum(x, axis=None, name=''):
         4.5
         >>> (np.sum(x1)+np.sum(x2))/(x1.size+x2.size)
         4.5
+        >>> # reduce over batch axis
+        >>> xv = C.input((2,2))
+        >>> xd = np.arange(8,dtype=np.float32).reshape(2,2,2)
+        >>> C.reduce_sum(xv,axis=C.Axis.default_batch_axis()).eval({xv:xd})
+        array([[  4.,   6.],
+               [  8.,  10.]], dtype=float32)
 
     Args:
         x: input tensor
@@ -2879,3 +2887,71 @@ def stop_gradient(input, name=''):
     dtype = get_data_type(input)
     op = sanitize_input(input, dtype)
     return stop_gradient(op, name)
+
+@typemap
+def assign(ref, input, name=''):
+    '''
+    Assign the value in input to ref and return the new value, ref need to be the same layout as input.
+    Both ref and input can't have dynamic axis and broadcast isn't supported for the assign operator.
+    During forward pass, ref will get the new value after the forward or backward pass finish, so that 
+    any part of the graph that depend on ref will get the old value. To get the new value, use the one 
+    returned by the assign node. The reason for that is to make ``assign`` have a deterministic behavior.
+
+    If not computing gradients, the ref will be assigned the new value after the forward pass over the 
+    entire Function graph is complete; i.e. all uses of ref in the forward pass will use the original 
+    (pre-assignment) value of ref.
+
+    If computing gradients (training mode), the assignment to ref will happen after completing both 
+    the forward and backward passes over the entire Function graph.
+
+    The ref must be a Parameter or Constant. If the same ref is used in multiple assign operations, 
+    then the order in which the assignment happens is non-deterministic and the final value can be 
+    either of the assignments unless an order is established using a data dependence between the 
+    assignments.
+
+    Example:
+        >>> dest = C.constant(shape=(3,4))
+        >>> data = C.parameter(shape=(3,4), init=2)
+        >>> C.assign(dest,data).eval()
+        array([[ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.]], dtype=float32)
+        >>> dest.asarray()
+        array([[ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.]], dtype=float32)
+
+        >>> dest = C.parameter(shape=(3,4), init=0)
+        >>> a = C.assign(dest, data)
+        >>> y = dest + data
+        >>> result = C.combine([y, a]).eval()
+        >>> result[y.output]
+        array([[ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.]], dtype=float32)
+        >>> dest.asarray()
+        array([[ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.]], dtype=float32)
+        >>> result = C.combine([y, a]).eval()
+        >>> result[y.output]
+        array([[ 4.,  4.,  4.,  4.],
+               [ 4.,  4.,  4.,  4.],
+               [ 4.,  4.,  4.,  4.]], dtype=float32)
+        >>> dest.asarray()
+        array([[ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.],
+               [ 2.,  2.,  2.,  2.]], dtype=float32)
+
+    Args:
+        ref: class: `~cntk.variables.Constant` or `~cntk.variables.Parameter`.
+        input: class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import assign
+    dtype = get_data_type(input)
+    operand = sanitize_input(input, dtype)
+    ref_operand = sanitize_input(ref, dtype)
+    return assign(ref_operand, operand, name)

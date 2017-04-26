@@ -294,7 +294,7 @@ template<class ElemType, int direction>
 /*private*/ TensorView<ElemType> DelayedValueNodeBase<ElemType, direction>::GetMaskTensor(size_t rank, const FrameRange& fr) const
 {
     // tensorShape of m_inputInvalidMatrix is [1 x S x T]
-    auto tensorShape = TensorShape(1);
+    auto tensorShape = TensorShape();
     tensorShape.AppendInPlace(rank++, GetMBLayout()->GetNumParallelSequences());
     tensorShape.AppendInPlace(rank++, GetMBLayout()->GetNumTimeSteps());
 

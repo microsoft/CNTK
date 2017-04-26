@@ -987,7 +987,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorials", "Tutorials", "{
 		Tutorials\CNTK_101_LogisticRegression.ipynb = Tutorials\CNTK_101_LogisticRegression.ipynb
 		Tutorials\CNTK_102_FeedForward.ipynb = Tutorials\CNTK_102_FeedForward.ipynb
 		Tutorials\CNTK_103A_MNIST_DataLoader.ipynb = Tutorials\CNTK_103A_MNIST_DataLoader.ipynb
-		Tutorials\CNTK_103B_MNIST_FeedForwardNetwork.ipynb = Tutorials\CNTK_103B_MNIST_FeedForwardNetwork.ipynb
+		Tutorials\CNTK_103C_MNIST_MultiLayerPerceptron.ipynb = Tutorials\CNTK_103C_MNIST_MultiLayerPerceptron.ipynb
 		Tutorials\CNTK_201A_CIFAR-10_DataLoader.ipynb = Tutorials\CNTK_201A_CIFAR-10_DataLoader.ipynb
 		Tutorials\CNTK_201B_CIFAR-10_ImageHandsOn.ipynb = Tutorials\CNTK_201B_CIFAR-10_ImageHandsOn.ipynb
 		Tutorials\CNTK_202_Language_Understanding.ipynb = Tutorials\CNTK_202_Language_Understanding.ipynb
@@ -1509,9 +1509,31 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPExtensibilityExamples", 
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "PythonExamples", "Examples\PythonExamples.pyproj", "{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FCN", "FCN", "{58E3A257-91BE-4DC7-8991-70BFABE0A671}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Image\FCN\baseline.txt = Tests\EndToEndTests\Image\FCN\baseline.txt
+		Tests\EndToEndTests\Image\FCN\fcn.cntk = Tests\EndToEndTests\Image\FCN\fcn.cntk
+		Tests\EndToEndTests\Image\FCN\fcn8_to_fcn4.mel = Tests\EndToEndTests\Image\FCN\fcn8_to_fcn4.mel
+		Tests\EndToEndTests\Image\FCN\prepare_for_test.mel = Tests\EndToEndTests\Image\FCN\prepare_for_test.mel
+		Tests\EndToEndTests\Image\FCN\run-test = Tests\EndToEndTests\Image\FCN\run-test
+		Tests\EndToEndTests\Image\FCN\shared.bs = Tests\EndToEndTests\Image\FCN\shared.bs
+		Tests\EndToEndTests\Image\FCN\testcases.yml = Tests\EndToEndTests\Image\FCN\testcases.yml
+	EndProjectSection
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPExtensibilityExamplesLibrary", "Examples\Extensibility\CPPLib\CPPExtensibilityExamplesLibrary.vcxproj", "{4CF94A50-0D17-432A-8B5A-8458E91C44A6}"
 	ProjectSection(ProjectDependencies) = postProject
 		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SaveBestModelPerCriterion", "SaveBestModelPerCriterion", "{C1189678-4FFA-4258-971F-3262B44FCA99}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.cpu.txt = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.cpu.txt
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.gpu.txt = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\cntkcv.cntk = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\cntkcv.cntk
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\run-test = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\run-test
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\testcases.yml = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\testcases.yml
 	EndProjectSection
 EndProject
 Global
@@ -2214,6 +2236,8 @@ Global
 		{7A27E076-296E-41A8-BA76-164071251372} = {3BF56127-6F0F-41CF-BFCE-31165A0A5E73}
 		{40A8CC31-8C08-4156-AE08-E8C0FADC3509} = {7A27E076-296E-41A8-BA76-164071251372}
 		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01} = {47755F2E-D674-4175-9E38-8EA053455072}
+		{58E3A257-91BE-4DC7-8991-70BFABE0A671} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
 		{4CF94A50-0D17-432A-8B5A-8458E91C44A6} = {7A27E076-296E-41A8-BA76-164071251372}
+		{C1189678-4FFA-4258-971F-3262B44FCA99} = {6994C86D-A672-4254-824A-51F4DFEB807F}
 	EndGlobalSection
 EndGlobal

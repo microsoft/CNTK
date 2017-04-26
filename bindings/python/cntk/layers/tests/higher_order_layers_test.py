@@ -15,8 +15,9 @@ import pytest
 def test_for_constructor_layer(layers_count, dense_units):
     x = input(4)
 
-    network = For(range(layers_count), lambda i: Dense(dense_units))
+    network = For(range(layers_count), lambda i: Dense(dense_units), name="my_for")
 
+    assert network.name == "my_for"
     expected_num_of_parameters = 2 * layers_count
     assert len(network.parameters) == expected_num_of_parameters
 
@@ -44,8 +45,9 @@ INPUT_DATA = [[2, 8],[4, 7, 9], [5, 6, 10]]
 def test_sequential_clique_with_functions(input_data):
     x = input(len(input_data))
 
-    seq_clique = SequentialClique([abs, sqrt, square])(x)
+    seq_clique = SequentialClique([abs, sqrt, square], name="my_clique")(x)
 
+    assert seq_clique.name == "my_clique"
     assert seq_clique.shape == x.shape
 
     np_data = np.asarray(input_data, np.float32)

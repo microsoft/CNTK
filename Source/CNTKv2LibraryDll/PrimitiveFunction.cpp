@@ -371,7 +371,7 @@ namespace CNTK
                             if (m_inputs[0].DynamicAxes().empty())
                                 InvalidArgument("Function '%S': Operand '%S' must have dynamic axes.", AsString().c_str(), m_inputs[0].AsString().c_str());
 
-                            if ((m_inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()) && (m_inputs[0].DynamicAxes().size() != 1))
+                            if ((m_inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()) && ((m_inputs[0].DynamicAxes().size() != 1) || (m_inputs[0].DynamicAxes()[0] != Axis::DefaultBatchAxis())))
                                 InvalidArgument("Function '%S': Input operand '%S' with #dynamic axes != 1 (batch axis) is not supported.", AsString().c_str(), m_inputs[0].AsString().c_str());
 
                             if (m_inputs[0].Shape().Rank() < 1)
@@ -399,6 +399,17 @@ namespace CNTK
                             break;
                         case PrimitiveOpType::PackedIndex:
                             assert(m_inputs.size() == 2);
+                            outputShape = UnaryElementwiseOpOutputShape(m_inputs[1].Shape());
+                            break;
+                        case PrimitiveOpType::Assign:
+                            assert(m_inputs.size() == 2);
+                            if (!m_inputs[0].DynamicAxes().empty() || !m_inputs[1].DynamicAxes().empty())
+                                InvalidArgument("AssignNode: None of the operands '%S' can have dynamic axes.", NamedListString(m_inputs).c_str());
+                            if (!(m_inputs[0].IsConstant() || m_inputs[0].IsParameter()))
+                                InvalidArgument("AssignNode: Ref operand must be constant or parameter only.");
+                            if (m_inputs[0].Shape() != m_inputs[1].Shape())
+                                InvalidArgument("AssignNode: All inputs should have same sample layout.");
+
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[1].Shape());
                             break;
                         case PrimitiveOpType::ScatterPacked:
@@ -491,7 +502,7 @@ namespace CNTK
                         }
                         case PrimitiveOpType::Reshape:
                         {
-                            auto& replacementShape = m_attributes[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
+                            auto replacementShape = m_attributes[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
 
                             auto beginAxis = Axis(0);
                             auto endAxis = Axis((int)m_inputs[0].Shape().Rank());
@@ -501,7 +512,7 @@ namespace CNTK
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameEndAxis))
                                 endAxis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameEndAxis].Value<Axis>(), m_inputs[0].Shape());
 
-                            outputShape = ReshapeOutputShape(m_inputs[0].Shape(), replacementShape, beginAxis, endAxis, true);
+                            outputShape = ReshapeOutputShape(m_inputs[0].Shape(), replacementShape, beginAxis, endAxis, /*inferDimensions =*/ false);
                             break;
                         }
                         case PrimitiveOpType::ROIPooling:
@@ -595,7 +606,7 @@ namespace CNTK
                         }
                         case PrimitiveOpType::SumAll:
                             assert(m_inputs.size() == 1);
-                            outputShape = { 1 };
+                            outputShape = {};
                             break;
                         case PrimitiveOpType::OneHot:
                         {
@@ -754,6 +765,20 @@ namespace CNTK
                             auto reductionAxis = NormalizeAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0]);
                             if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
                                 outputShape = keepDimensions ? NDShape(m_inputs[0].Shape().Rank(), 1) : NDShape({});
+                            else if (reductionAxis == Axis::DefaultBatchAxis())
+                            {
+                                auto dynamicAxes = m_inputs[0].DynamicAxes();
+                                if (dynamicAxes != Axis::UnknownDynamicAxes())
+                                {
+                                    if (std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis()) == dynamicAxes.end())
+                                        LogicError("ReduceElements: operand %S; No batch axis found during reduction along the batch axis.", m_inputs[0].AsString().c_str());
+
+                                    if (dynamicAxes.size() > 1)
+                                        LogicError("ReduceElements: operand %S; Reduction along the batch axis on input sequence is currently unsupported.", m_inputs[0].AsString().c_str());
+                                }
+
+                                outputShape = m_inputs[0].Shape();
+                            }
                             else if (reductionAxis.IsDynamicAxis())
                                 outputShape = m_inputs[0].Shape();
                             else
@@ -900,29 +925,37 @@ namespace CNTK
         }
     }
 
-    static const std::wstring s_primitiveFunctionTypeValue = L"PrimitiveFunction";
-
-    /*virtual*/ Dictionary PrimitiveFunction::Serialize() const 
+    static vector<DictionaryValue> GetInputUids(const Function& f)
     {
-        Dictionary dict;
-
-        dict[versionKey] = CurrentVersion();
-        dict[typeKey] = s_primitiveFunctionTypeValue;
-        dict[opKey] = static_cast<size_t>(m_op);
-        dict[attributesKey] = Attributes();
-        dict[uidKey] = Uid();
-        if (!Name().empty())
-            dict[nameKey] = Name();
-        
-        auto inputs = Inputs();
+        auto inputs = f.Inputs();
         vector<DictionaryValue> inputUids;
         inputUids.reserve(inputs.size());
         for (auto& input : inputs)
         {
             inputUids.push_back(input.Uid());
         }
+        return inputUids;
+    }
 
-        dict[inputsKey] = std::move(inputUids);
+    static Dictionary SerializeCommonAttributes(const Function& f, size_t version, const wstring& functionType)
+    {
+        Dictionary dict;
+        dict[versionKey] = version;
+        dict[typeKey] = functionType;
+        dict[uidKey] = f.Uid();
+        if (!f.Name().empty())
+            dict[nameKey] = f.Name();
+        dict[inputsKey] = std::move(GetInputUids(f));
+        return dict;
+    }
+
+    static const std::wstring s_primitiveFunctionTypeValue = L"PrimitiveFunction";
+
+    /*virtual*/ Dictionary PrimitiveFunction::Serialize() const 
+    {
+        Dictionary dict = SerializeCommonAttributes(*this, CurrentVersion(), s_primitiveFunctionTypeValue);
+        dict[opKey] = static_cast<size_t>(m_op);
+        dict[attributesKey] = Attributes();
 
         if (m_op == PrimitiveOpType::Block)
         {
@@ -945,6 +978,28 @@ namespace CNTK
         }
 
         return dict;
+    }
+
+    static std::vector<Variable> GetInputVariables(const Dictionary& dict, const unordered_map<wstring, Variable>& uidToVariableMap, size_t currentSerializationVersion)
+    {
+        const auto& inputUids = dict[inputsKey].Value<vector<DictionaryValue>>();
+
+        vector<Variable> inputs;
+        inputs.reserve(inputUids.size());
+
+        for (const auto& dictionaryValue : inputUids)
+        {
+            const auto& inputUid = dictionaryValue.Value<std::wstring>();
+            if (uidToVariableMap.find(inputUid) == uidToVariableMap.end())
+            {
+                auto version = dict[versionKey].Value<size_t>();
+                CNTK::LogicError("There are no inputs corresponding to input uid = '%ls' (%s).",
+                    inputUid.c_str(), GetVersionsString<PrimitiveFunction>(currentSerializationVersion, version).c_str());
+            }
+            inputs.push_back(uidToVariableMap.at(inputUid));
+        }
+
+        return inputs;
     }
 
     /*static*/ FunctionPtr PrimitiveFunction::Deserialize(const Dictionary& dict, 
@@ -974,21 +1029,7 @@ namespace CNTK
         if (dict.Contains(nameKey))
             name = dict[nameKey].Value<std::wstring>();
         auto attributes = dict[attributesKey].Value<Dictionary>();
-        const auto& inputUids = dict[inputsKey].Value<vector<DictionaryValue>>();
 
-        std::vector<Variable> inputs;
-        inputs.reserve(inputUids.size());
-
-        for (const auto& dictionaryValue : inputUids)
-        {
-            const auto& inputUid = dictionaryValue.Value<std::wstring>();
-            if (uidToVariableMap.find(inputUid) == uidToVariableMap.end())
-            {
-                CNTK::LogicError("There are no inputs corresponding to input uid = '%ls' (%s).",
-                                 inputUid.c_str(), GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());
-            }
-            inputs.push_back(uidToVariableMap.at(inputUid));
-        }
 
         if (op == PrimitiveOpType::Block)
         {
@@ -1020,6 +1061,7 @@ namespace CNTK
                                                   [](BlockFunction* ptr) { delete ptr; });
         }
 
+        auto inputs = GetInputVariables(dict, uidToVariableMap, s_serializationVersion);
 
         if (version < 4 && op == PrimitiveOpType::BatchNormalization)
         {
@@ -1165,5 +1207,55 @@ namespace CNTK
             dummyOutputVariable.m_dataFields->m_shape = BinaryElementwiseOpOutputShape(op, dummyOutputVariable, operand, broadcastAllowed, inferInputDimensions);
 
         return dummyOutputVariable.Shape();
+    }
+
+    static const std::wstring s_userDefinedFunctionTypeValue = L"UserDefinedFunction";
+
+    /*static*/ bool UDFUtils::IsUDF(const FunctionPtr& f)
+    {
+        return (dynamic_cast<const PrimitiveFunction*>(f.get()) == nullptr);
+    }
+
+    /*static*/ bool UDFUtils::IsUDF(const Dictionary& dict)
+    {
+        return (dict.Contains(typeKey) && dict[typeKey].Value<std::wstring>() == s_userDefinedFunctionTypeValue);
+    }
+
+    /*static*/ Dictionary UDFUtils::Serialize(const FunctionPtr& udf)
+    {
+        Dictionary dict = SerializeCommonAttributes(*udf, s_serializationVersion, s_userDefinedFunctionTypeValue);
+        dict[userDefinedStateKey] = udf->Serialize();
+        return dict;
+    }
+
+    /*static*/ FunctionPtr UDFUtils::Deserialize(const Dictionary& dict,
+                                                 const unordered_map<std::wstring, Variable>& uidToVariableMap,
+                                                 const DeviceDescriptor& device,
+                                                 const Internal::UDFDeserializerPtr& deserializer)
+    {
+        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, uidKey, inputsKey, userDefinedStateKey };
+        ValidateDictionary<PrimitiveFunction>(dict, s_requiredDictionaryKeys, s_userDefinedFunctionTypeValue, s_serializationVersion);
+
+        const auto& uid = dict[uidKey].Value<std::wstring>();
+        std::wstring name = L"";
+        if (dict.Contains(nameKey))
+            name = dict[nameKey].Value<std::wstring>();
+
+        auto inputs = GetInputVariables(dict, uidToVariableMap, s_serializationVersion);
+
+        auto state = dict[userDefinedStateKey].Value<Dictionary>();
+
+        if (deserializer == nullptr) 
+        {
+            RuntimeError("No deserializer was provided to reconstruct UserDefinedFunctions.");
+        }
+
+        auto udf = deserializer->Deserialize(inputs, name, state);
+
+        // Restore the original uid, which other functions in the graph depend on
+        // (their inputs refer to the uids of this UDF outputs, which are generated base on the uid of this UDF).
+        udf->m_uid = uid;
+        
+        return udf;
     }
 }
