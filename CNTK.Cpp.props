@@ -18,7 +18,7 @@
     <NvmlDll Condition="Exists('c:\local\bindrop\NVSMI\nvml.dll')">c:\local\bindrop\NVSMI\nvml.dll</NvmlDll>
 
     <HasOpenCv>false</HasOpenCv>
-    <HasOpenCv Condition="Exists('$(OPENCV_PATH)') Or Exists('$(OPENCV_PATH_V31)')">true</HasOpenCv>
+    <HasOpenCv Condition="Exists('$(OPENCV_PATH)') Or Exists('$(OPENCV_PATH_V31)') Or Exists('$(OPENCV_PATH_V32)')">true</HasOpenCv>
     
     <HasProtobuf>false</HasProtobuf>
     <HasProtobuf Condition="Exists('$(PROTOBUF_PATH)')">true</HasProtobuf>
@@ -75,6 +75,11 @@
   <PropertyGroup Condition="Exists('$(OPENCV_PATH_V31)')">
     <OpenCvPath>$(OPENCV_PATH_V31)</OpenCvPath>
     <OpenCvVersion>310</OpenCvVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="Exists('$(OPENCV_PATH_V32)')">
+    <OpenCvPath>$(OPENCV_PATH_V32)</OpenCvPath>
+    <OpenCvVersion>320</OpenCvVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(HasOpenCv)">

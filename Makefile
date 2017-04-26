@@ -29,8 +29,8 @@
 #     CuDNN version needs to be 5.0 or higher.
 #   KALDI_PATH= Path to Kaldi
 #     If not specified, Kaldi plugins will not be built
-#   OPENCV_PATH= path to OpenCV 3.1.0 installation, so $(OPENCV_PATH) exists
-#     defaults to /usr/local/opencv-3.1.0
+#   OPENCV_PATH= path to OpenCV 3.2.0 installation, so $(OPENCV_PATH) exists
+#     defaults to /usr/local/opencv-3.2.0
 #   PROTOBUF_PATH= path to Protocol Buffers 3.1.0 installation, so $(PROTOBUF_PATH) exists
 #     defaults to /usr/local/protobuf-3.1.0
 #   LIBZIP_PATH= path to libzip installation, so $(LIBZIP_PATH) exists
