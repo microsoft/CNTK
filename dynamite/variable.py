@@ -6,7 +6,7 @@ import collections
 # some global settings we can control from outside, e.g. for debugging
 class VariableGlobalConfig:
     use_batching = True
-    use_coroutines = True
+    use_coroutines = False
     enable_tracing = False
     use_arena_allocator = False
 
@@ -22,11 +22,11 @@ class VariableGlobalConfig:
 #     - apply to data -> model'' = model'(X1, X2) = a single value; not a function at all!
 #     - loss = model''.value     # triggers lazy evaluation; but really, it is already fully determined
 #  - backward:
-#     - chain rule: take gradient from top and multiply with gradient of node -> grad_times(set_of_params, error_signal=1)
+#     - chain rule: take gradient from top and multiply with gradient of node -> backward(set_of_params, error_signal=1)
 #     - (dp1, dp2, dp3, ...) = model''.grad_times_{p1,p2,p3}(e)    # where e=1.0 in normal backprop
-#     - hence, to compute the gradient, pick the node; choose e (typ. 1.0); and call node.grad_times({ p1, p2, p3 }, e)
+#     - hence, to compute the gradient, pick the node; choose e (typ. 1.0); and call node.backward({ p1, p2, p3 }, e)
 #     - ...how do we tell it where to place the gradients? It must connect to the V2 gradient NDArrayViews. Ah! Parameter Variables carry it from the start.
-#     - grad_times() will trigger batch transformation; then read off the gradient functions from the *batched* graph (; then reoptimize? try it out)
+#     - backward() will trigger batch transformation; then read off the gradient functions from the *batched* graph (; then reoptimize? try it out)
 
 # TODO:
 #  - move the entire stuff into Variable?? Then create outside overloads, e.g. times = Variable.__matmul__ instead of the other way round
@@ -242,7 +242,7 @@ class Variable:
             print('backprop_to() missing for', self.signature_as_string())
             raise NotImplementedError('backprop_to missing')
         return self.backprop_to_functions[i]
-    def grad_times(self, set_of_params, error_signal=1):
+    def backward(self, set_of_params, error_signal=1):
         error_signal = sanitize_input(error_signal)
         return create_gradient_graph(self, set_of_params, error_signal)
 
@@ -983,7 +983,7 @@ def create_gradient_graph(root, parameters, error_signal):
             active_set.add(id(node))
     if id(root) not in active_set:
         # root not depending on any parameter (gradient is 0; we could just return 0 for those cases, but it's likely an error)
-        raise ValueError('grad_times: variable does not depend on any of the given parameters')
+        raise ValueError('backward: variable does not depend on any of the given parameters')
     # function to create the actual aggregation operation for each gradient
     def create_aggregate(args): # list[Variable] -> Variable:
         # BUGBUG: we must collate dyadic matrix aggregations into a single matmul (or can we rely on batching in forward?)
@@ -1122,7 +1122,7 @@ def map_batch(f, batch_args):
 #
 ##############################################################################
 
-def train_minibatch(criterion, *batch_args):
+def forward(criterion, *batch_args):
     # perform the parallel map
     crits = map_batch(criterion, batch_args)
     crits = tuple(crit[0] for crit in crits) # pick out first item as criterion --TODO: generalize this

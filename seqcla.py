@@ -35,7 +35,7 @@ def create_reader(path, is_training, input_dim, label_dim):
 cached_eyes = dict()
 
 # convert CNTK reader's minibatch to our internal representation
-def from_cntk_mb(inputs: tuple, variables: Tuple[cntk.Variable, ...]) -> Tuple[dynamite.Variable]:
+def from_cntk_mb(inputs: tuple, variables: tuple) -> tuple:
     def convert(self, var): # var is for reference to know the axis
         data = self.data
         # unpack MBLayout
@@ -86,9 +86,9 @@ def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
     return namespace.Sequential([
         namespace.Embedding(embedding_dim, name='embed'),
         namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu, name='rnn')),
-        #namespace.identity,
+        namespace.identity,
+        #namespace.Barrier(),
         #namespace.LogValues(),
-        namespace.Barrier(),
         namespace.Dense(num_output_classes, name='dense')
     ])
 
@@ -109,7 +109,7 @@ def train(debug_output=False):
     #label = input(num_output_classes)
 
     # Instantiate the sequence classification model
-    model = create_model(cntk, num_output_classes, embedding_dim, hidden_dim)
+    model  = create_model(cntk,     num_output_classes, embedding_dim, hidden_dim)
     dmodel = create_model(dynamite, num_output_classes, embedding_dim, hidden_dim)
 
     criterion = Function(create_criterion(cntk, model))
@@ -147,14 +147,14 @@ def train(debug_output=False):
         s = dynamite.cross_entropy_with_softmax(m1(x), l)
         r = s.to_ndarray()
         #dynamite.dump_graph(s)
-        g = s.grad_times(dp1)
+        g = s.backward(dp1)
         for p in dp1:
             gp = g[p]
             #dynamite.dump_graph(gp)
             print(gp.to_ndarray())
 
     # testing a tree model
-    if True:
+    if False:
         e1 = dynamite.Embedding(3)
         r1 = dynamite.RNNUnit(3, dynamite.relu)
         e1(1)
@@ -181,9 +181,9 @@ def train(debug_output=False):
         # Observation: barrier does not change forward (we got lucky), and does not work for backprop.
         # We should inject a barrier for backprop into shared matrices.
         d1 = dynamite.Dense(1)
-        def model(batch):
+        def m1(batch):
             return dynamite.reduce_sum(dynamite.Variable.splice(*dynamite.map_batch(lambda inp: d1(b1(tree_node(inp))), [batch])))
-        z = model(batch)
+        z = m1(batch)
         #dynamite.dump_graph(z)
         dynamite.print_graph_stats([z], '\n############## LOSS, unbatched\n')
         print(z.to_ndarray())
@@ -193,7 +193,7 @@ def train(debug_output=False):
         #print(z.to_ndarray())
         # gradients
         dp1 = e1.get_parameters() + r1.get_parameters() + d1.get_parameters()
-        grads = z.grad_times(dp1)
+        grads = z.backward(dp1)
         grad_vars = tuple(grads.values())
         #print('### GRADIENT')
         #dynamite.dump_graph(grad_vars)
@@ -235,18 +235,22 @@ def train(debug_output=False):
             samples_per_second = 1 / dur_per_sample
             print('{:.2f} ms, {:.1f} samples/s'.format(dur * 1000, samples_per_second))
 
-        # CNTK dynamite  --do this first before CNTK updates anything
+        # CNTK dynamite
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
         this_batch_size = len(args[0])
         this_num_tokens = sum(len(arg0) for arg0 in args[0])
         this_max_len = max(len(arg0) for arg0 in args[0])
         print('\n-------------------- batch of', this_batch_size, 'with', this_num_tokens, 'tokens, max len', this_max_len, ', av len', this_num_tokens / this_batch_size, '--------------------\n')
         gstart = time.time()
-        crit = dynamite.train_minibatch(dcriterion, *args)
+
+        crit = dynamite.forward(dcriterion, *args) # builds the graph
+
         gend = time.time()
         log_time(gend-gstart)
         dstart = time.time()
-        crit_nd = crit.to_ndarray()
+
+        crit_nd = crit.to_ndarray() # lazy evaluation
+
         dend = time.time()
         #crit.dump_graph()
         print(crit.get_value().device)
@@ -260,17 +264,10 @@ def train(debug_output=False):
         else:
             return
 
-        #crit.dump_graph()
-        #exit()
         # compute gradients
-        dgradients = crit.grad_times(dparameters)
-        #dynamite.batch_eval([dgradients[p] for p in dparameters]) # compute all in a single shot, to see if it makes a difference --does not
-        #for p in dparameters:
-        #    print('gradient for', dparam_names[p])
-        #    g = dgradients[p].get_value()
-            #print(g.to_ndarray())
+        dgradients = crit.backward(dparameters)
 
-        if True:
+        if False: # set to True to use Dynamite gradients for model update; and False to use regular CNTK V2 static graph
             # CNTK static, manual fw/bw/update
             grads = combine([criterion.outputs[0]]).grad(at=criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]), wrt=model.parameters, as_numpy=False)
             for p in model.parameters:
@@ -280,27 +277,18 @@ def train(debug_output=False):
                 if dpname == '_[0].E':
                     continue  # cannot convert sparse gradient to numpy
                 dp = dgradients[dp] # find the gradient for the parameter
-                #print('### gradient for', dpname, '(CNTK static vs. dynamite)')
                 p_data = grads[p].data.to_ndarray()
-                #dynamite.VariableGlobalConfig.enable_tracing = True
                 dp_data = dp.to_ndarray() # this will trigger computation
-                #print(p_data)
-                #print(dp_data)
-                #exit()
-                # Dense.W fails when not using batching; but is OK without batching, so some gradient is just wrong
                 assert np.allclose(p_data, dp_data, atol=1e-5)
                 print('## OK', i, dpname)
-                #if dpname == "_[1].step_function.W":
-                #    dp.dump_graph(dp)
-                #    exit()
             # total stats
             dynamite.print_graph_stats((dgradients[parameter_map[p]] for p in model.parameters))
 
             # model update from dynamic
             param_map = { p: dgradients[parameter_map[p]].get_value() for p in model.parameters }
-            #for p, g in param_map.items():
-            #    print(p.shape, g.shape, p.name)
-            learner.update(param_map, len(args[0]))
+
+            learner.update(param_map, len(args[0])) # update through CNTK V2 API
+
         else:
             # CNTK static, original example
             start = time.time()

@@ -185,6 +185,16 @@ vector<vector<Variable>> FromCNTKMB(const vector<ValuePtr>& inputs, const vector
         {
             auto data = sequences[s]; // NDArrayView
             // convert sparse if needed
+/*
+                global cached_eyes
+                dim = shape[1] # (BUGBUG: won't work for >1D sparse objects)
+                if dim not in cached_eyes:
+                    eye_np = np.array(np.eye(dim), np.float32)
+                    cached_eyes[dim] = cntk.NDArrayView.from_dense(eye_np)
+                eye = cached_eyes[dim]
+                data = data @ eye
+                assert shape == data.shape
+*/
             // ... needs NDArrayView, and not needed for just building the graph
             // return in correct shape
             if (!hasAxis)
@@ -197,47 +207,6 @@ vector<vector<Variable>> FromCNTKMB(const vector<ValuePtr>& inputs, const vector
     }
     return res;
 }
-
-/*
-# convert CNTK reader's minibatch to our internal representation
-def from_cntk_mb(inputs: tuple, variables: tuple):
-    def convert(self, var): # var is for reference to know the axis
-        data = self.data
-        # unpack MBLayout
-        sequences, _ = data.unpack_variable_value(var, True, data.device)
-        # turn into correct NDArrayView types
-        has_axis = len(var.dynamic_axes) > 1
-        def fix_up(data):
-            data.__class__ = cntk.core.NDArrayView # data came in as base type
-            shape = data.shape
-            # map to dense if sparse for now, since we cannot batch sparse due to lack of CUDA kernel
-            if data.is_sparse:
-                global cached_eyes
-                dim = shape[1] # (BUGBUG: won't work for >1D sparse objects)
-                if dim not in cached_eyes:
-                    eye_np = np.array(np.eye(dim), np.float32)
-                    cached_eyes[dim] = cntk.NDArrayView.from_dense(eye_np)
-                eye = cached_eyes[dim]
-                data = data @ eye
-                assert shape == data.shape
-            else: # if dense then we clone it so that we won't hold someone else's reference
-                data = data.deep_clone()
-                data.__class__ = cntk.core.NDArrayView
-            item_shape = shape[1:]  # drop a superfluous length dimension
-            if has_axis:
-                seq = dynamite.Constant(data) # turn into a tensor object
-                #return seq
-                # BUGBUG: ^^ this fails in a batched __matmul__ of (13,4,2000)
-                #         It batched all 4-word sequences for embeddding. Which is bad, it should batch all words for that.
-                #         I.e. to allow this, we must repeatedly batch--newly batched ops go into the list again or something. 
-                res = [seq[t] for t in range(shape[0])] # slice it
-                return res
-            else:
-                assert shape[0] == 1
-                return dynamite.Constant(data[0])
-        return [fix_up(seq) for seq in sequences]
-    return tuple(convert(inp, var) for inp, var in zip(inputs, variables))
-*/
 
 }; // namespace
 
@@ -265,6 +234,8 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
         Variable state = zero;
         for (size_t t = 0; t < len; t++)
         {
+            //if (t == 9)
+            //    fprintf(stderr, "");
             auto xt = Index(x, t);
             xt = embed(xt);
             state = step(state, xt);
@@ -316,8 +287,8 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     const wstring trainingCTFPath = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf";
 
     // static model and criterion function
-    auto model_fn     = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
-    auto criterion_fn = CreateCriterionFunction(model_fn);
+    //auto model_fn     = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
+    //auto criterion_fn = CreateCriterionFunction(model_fn);
 
     // dybamic model and criterion function
     auto d_model_fn     = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim, device);
@@ -340,13 +311,13 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto features = InputVariable({ inputDim },         true /*isSparse*/, DataType::Float, featuresName);
     auto labels   = InputVariable({ numOutputClasses }, useSparseLabels,   DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
 
-    auto criterion = criterion_fn(features, labels);
-    auto loss   = criterion.first;
-    auto metric = criterion.second;
-
-    // train
-    auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
-    auto trainer = CreateTrainer(nullptr, loss, metric, { learner });
+    //auto criterion = criterion_fn(features, labels);
+    //auto loss   = criterion.first;
+    //auto metric = criterion.second;
+    //
+    //// train
+    //auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
+    //auto trainer = CreateTrainer(nullptr, loss, metric, { learner });
 
     const size_t minibatchSize = 200;
     for (size_t i = 0; true; i++)
@@ -357,12 +328,15 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
 #if 1
         // Dynamite
+        fprintf(stderr, "#seq: %d, #words: %d\n", (int)minibatchData[featureStreamInfo].numberOfSequences, (int)minibatchData[featureStreamInfo].numberOfSamples);
         vector<vector<Variable>> args;
         Variable mbLoss;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "FromCNTKMB:     %.6f sec\n");
-            args = FromCNTKMB({ minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, FunctionPtr(loss)->Arguments(), device);
+            //args = FromCNTKMB({ minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, FunctionPtr(loss)->Arguments(), device);
+            args = FromCNTKMB({ minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, { InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName), InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName,{ Axis::DefaultBatchAxis() }) }, device);
         }
+        for (size_t xxx = 0; xxx < 10; xxx++)
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "d_criterion_fn: %.6f sec\n");
             mbLoss = d_criterion_fn(args[0], args[1]);
@@ -379,6 +353,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
 int main(int argc, char *argv[])
 {
+    argc; argv;
     try
     {
         //TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
