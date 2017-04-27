@@ -157,7 +157,7 @@ def train(reader, model, max_epochs):
 
     # process minibatches and perform model training
     log_number_of_parameters(model) ; print()
-    progress_printer = ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging
+    progress_printer = ProgressPrinter(freq=100, first=10, tag='Training', num_epochs=max_epochs) # more detailed logging
     #progress_printer = ProgressPrinter(tag='Training')
 
     t = 0

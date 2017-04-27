@@ -3,7 +3,7 @@ import numpy as np
 from datetime import datetime
 import math
 from cntk import Trainer, Axis, device, combine
-from cntk.layers.blocks import Stabilizer, _initializer_for,  _INFERRED, Parameter, Placeholder
+from cntk.layers.blocks import Stabilizer, _initializer_for,  _INFERRED, Parameter
 from cntk.layers import Recurrence, Convolution, Dense
 from cntk.ops import input, sequence, reduce_sum, \
     parameter, times, element_times, plus, placeholder, reshape, constant, sigmoid, convolution, tanh, times_transpose, greater, element_divide, element_select, exp
@@ -70,7 +70,7 @@ def load_embedding(embedding_path, vocab_path, dim, init=None):
   vocab_dim = len(entity_vocab) + len(word_vocab) + 1
   entity_size = len(entity_vocab)
   item_embedding = [None]*vocab_dim
-  with open(embedding_path, 'r') as embedding:
+  with open(embedding_path, 'r', encoding='utf-8') as embedding:
     for line in embedding.readlines():
       line = line.strip('\n')
       item = line.split(' ')

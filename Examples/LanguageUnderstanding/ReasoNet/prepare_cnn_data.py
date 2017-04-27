@@ -16,7 +16,7 @@ def merge_files(folder, target):
   for f in all_files:
     txt=os.path.join(folder, f)
     if os.path.isfile(txt):
-      with open(txt) as sample:
+      with open(txt, encoding='utf-8') as sample:
         content = sample.readlines()
         context = content[2].strip()
         query = content[4].strip()
@@ -24,7 +24,7 @@ def merge_files(folder, target):
         entities = []
         for k in range(8, len(content)):
           entities += [ content[k].strip() ]
-        with open(target, 'a') as output:
+        with open(target, 'a', encoding='utf-8') as output:
           output.write("{0}\t{1}\t{2}\t{3}\n".format(query, answer, context, "\t".join(entities)))
     count+=1
     if count%1000==0:
