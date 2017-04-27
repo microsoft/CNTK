@@ -31,8 +31,80 @@ public:
 };
 typedef ModelT<function<Variable(Variable)>> UnaryModel;
 typedef ModelT<function<Variable(Variable,Variable)>> BinaryModel;
+typedef ModelT<function<vector<Variable>(const vector<Variable>&)>> UnarySequenceModel;
+typedef ModelT<function<vector<Variable>(const vector<Variable>&, const vector<Variable>&)>> BinarySequenceModel;
 
-UnaryModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
+struct Batch
+{
+    // UNTESTED
+    // This function would trigger the complex behavior.
+    static vector<Variable> map(const UnaryModel& f, const vector<Variable>& batch)
+    {
+        vector<Variable> res;
+        res.reserve(batch.size());
+        for (const auto& x : batch)
+            res.push_back(f(x));
+        return res;
+    }
+
+    // UNTESTED
+    static function<const vector<Variable>&(const vector<Variable>&)> Map(UnaryModel f)
+    {
+        return [=](const vector<Variable>& batch)
+        {
+#if 0
+            return map(f, batch);
+#else
+            vector<Variable> res;
+            res.reserve(batch.size());
+            for (const auto& x : batch)
+                res.push_back(f(x));
+            return res;
+#endif
+        };
+    }
+    static function<vector<Variable>(const vector<Variable>&, const vector<Variable>&)> Map(BinaryModel f)
+    {
+        return [=](const vector<Variable>& xBatch, const vector<Variable>& yBatch)
+        {
+            vector<Variable> res;
+            res.reserve(xBatch.size());
+            assert(yBatch.size() == xBatch.size());
+            for (size_t i = 0; i < xBatch.size(); i++)
+                res.emplace_back(f(xBatch[i], yBatch[i]));
+            return res;
+        };
+    }
+    static function<vector<vector<Variable>>(const vector<vector<Variable>>&, const vector<vector<Variable>>&)> Map(BinarySequenceModel f)
+    {
+        return [=](const vector<vector<Variable>>& xBatch, const vector<vector<Variable>>& yBatch)
+        {
+            vector<vector<Variable>> res;
+            res.reserve(xBatch.size());
+            assert(yBatch.size() == xBatch.size());
+            for (size_t i = 0; i < xBatch.size(); i++)
+                res.emplace_back(f(xBatch[i], yBatch[i]));
+            return res;
+        };
+    }
+};
+
+// UNTESTED
+struct UnaryBroadcastingModel : public UnaryModel
+{
+    typedef UnaryModel Base;
+    UnaryBroadcastingModel(const UnaryModel& f) : UnaryModel(f) { }
+    Variable operator() (Variable x) const
+    {
+        return Base::operator()(x);
+    }
+    vector<Variable> operator() (const vector<Variable>& x) const
+    {
+        return Batch::map(*this, x);
+    }
+};
+
+UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
     auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
     return UnaryModel([=](Variable x)
@@ -69,33 +141,6 @@ UnaryModel Sequential(const vector<UnaryModel>& fns)
         return arg;
     };
 }
-
-struct Batch
-{
-    static function<const vector<Variable>&(const vector<Variable>&)> Map(UnaryModel f)
-    {
-        return [=](const vector<Variable>& batch)
-        {
-            vector<Variable> res;
-            res.reserve(batch.size());
-            for (const auto& x : batch)
-                res.push_back(f(x));
-            return res;
-        };
-    }
-    static function<vector<Variable>(const vector<Variable>&,const vector<Variable>&)> Map(BinaryModel f)
-    {
-        return [=](const vector<Variable>& xBatch, const vector<Variable>& yBatch)
-        {
-            vector<Variable> res;
-            res.reserve(xBatch.size());
-            assert(yBatch.size() == xBatch.size());
-            for (size_t i = 0; i < xBatch.size(); i++)
-                res.push_back(f(xBatch[i], yBatch[i]));
-            return res;
-        };
-    }
-};
 
 struct Sequence
 {
@@ -146,7 +191,7 @@ Variable Index(Variable x, size_t i)
 NDArrayViewPtr Index(NDArrayViewPtr data, size_t i)
 {
     auto dims = data->Shape().Dimensions();
-    auto startOffset = vector<size_t>(dims.size(), 0);
+    auto startOffset = vector<size_t>(dims.size(), 0); // TODO: get a simpler interface without dynamic vector allocation
     auto extent = dims;
     if (startOffset.back() != i || extent.back() != 1)
     {
@@ -221,6 +266,7 @@ UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, siz
     });
 }
 
+// SequenceClassification.py
 UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
     auto embed  = Embedding(embeddingDim, device);
@@ -241,6 +287,116 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
             state = step(state, xt);
         }
         return linear(state);
+    };
+}
+
+// helper to convert a tensor to a vector of slices
+vector<Variable> ToVector(const Variable& x)
+{
+    vector<Variable> res;
+    let len = x.Shape().Dimensions().back();
+    res.reserve(len);
+    for (size_t t = 0; t < len; t++)
+        res.emplace_back(Index(x, t));
+    return res;
+}
+
+UnarySequenceModel Recurrence(const BinaryModel& step, const Variable& initialState, bool goBackwards = false)
+{
+    return [=](const vector<Variable>& seq)
+    {
+        let len = seq.size();
+        vector<Variable> res(len);
+        for (size_t t = 0; t < len; t++)
+        {
+            if (!goBackwards)
+            {
+                let& prev = t == 0 ? initialState : res[t - 1];
+                res[t] = step(prev, seq[t]);
+            }
+            else
+            {
+                let& prev = t == 0 ? initialState : res[len - 1 - (t - 1)];
+                res[len - 1 - t] = step(prev, seq[len - 1 - t]);
+            }
+        }
+        return res;
+    };
+}
+
+UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const BinaryModel& stepBwd, const Variable& initialState)
+{
+    let fwd = Recurrence(stepFwd, initialState);
+    let bwd = Recurrence(stepBwd, initialState, true);
+    let splice = Batch::Map(BinaryModel([](Variable a, Variable b) { return Splice({ a, b }, Axis(0)); }));
+    return [=](const vector<Variable>& seq)
+    {
+        let rFwd = fwd(seq);
+        let rBwd = bwd(seq);
+        return splice(rFwd, rBwd);
+    };
+}
+
+function<Variable(const vector<Variable>&, Variable)> AttentionModel(size_t attentionDim, const DeviceDescriptor& device)
+{
+    auto Wenc = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
+    auto Wdec = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
+    auto v    = Parameter({ attentionDim }, DataType::Float, GlorotUniformInitializer(), device);
+    return [=](const vector<Variable>& hEncs, Variable hDec)
+    {
+        // BUGBUG: suboptimal, redoing attention projection for inputs over again; need CSE
+        Variable hEncsTensor = Splice(hEncs, Axis(1)); // [hiddenDim, inputLen]
+        let hEncsProj = Times(Wenc, hEncsTensor, /*outputRank=*/1);
+        let hDecProj  = Times(Wdec, hDec);
+        let u = Tanh(hEncsProj + hDecProj); // // [hiddenDim, inputLen]
+        let u1 = Times(v, u, /*outputRank=*/0); // [inputLen]
+        let w = Softmax(u1);  // [inputLen] these are the weights
+        let hEncsAv = Times(hEncsTensor, w);
+        return hEncsAv;
+    };
+}
+
+// create a s2s translator
+BinarySequenceModel CreateModelFunctionS2SAtt(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, size_t attentionDim, const DeviceDescriptor& device)
+{
+    numOutputClasses; hiddenDim;
+    let embed = Embedding(embeddingDim, device);
+    let fwdEnc = RNNStep(hiddenDim, device);
+    let bwdEnc = RNNStep(hiddenDim, device);
+    let zero = Constant({ hiddenDim }, 0.0f, device);
+    let encoder = BiRecurrence(fwdEnc, bwdEnc, zero);
+    let outEmbed = Embedding(embeddingDim, device);
+    let bos = Constant({ numOutputClasses }, 0.0f, device); // one-hot representation of BOS symbol --TODO currently using zero for simplicity
+    let fwdDec = RNNStep(hiddenDim, device);
+    let attentionModel = AttentionModel(attentionDim, device);
+    let outProj = Linear(numOutputClasses, device);
+    let decode = [=](const vector<Variable>& encoded, const Variable& recurrenceState, const Variable& prevWord)
+    {
+        // compute the attention state
+        let attentionAugmentedState = attentionModel(encoded, recurrenceState);
+        // combine attention abnd previous state
+        let prevWordEmbedded = outEmbed(prevWord);
+        let input = Splice({ prevWordEmbedded, attentionAugmentedState }, Axis(0));
+        return fwdDec(recurrenceState, input);
+    };
+    return [=](const vector<Variable>& input, const vector<Variable>& label) -> vector<Variable>
+    {
+        // embed the input sequence
+        let seq = embed(input);
+        // bidirectional recurrence
+        let encoded = encoder(seq); // vector<Variable>
+        // decode, this version emits unnormalized log probs and uses labels as history
+        let outLen = label.size();
+        auto out = vector<Variable>(outLen);
+        //auto state = encoded.back(); // RNN initial state --note: bidir makes little sense here
+        Variable state = zero; // RNN initial state
+        for (size_t t = 0; t < outLen; t++)
+        {
+            let& prevOut = t == 0 ? bos : label[t - 1];
+            state = decode(encoded, state, prevOut);
+            out[t] = outProj(state);
+        }
+        return encoded;
     };
 }
 
@@ -271,8 +427,8 @@ function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCrite
     return [=](const vector<Variable>& features, const vector<Variable>& labels)
     {
         let losses = batchModel(features, labels);
-        let collatedLosses = Splice(losses, Axis(0)); // collate all seq losses
-        let mbLoss = ReduceSum(collatedLosses);       // aggregate over entire minibatch
+        let collatedLosses = Splice(losses, Axis(0));     // collate all seq losses
+        let mbLoss = ReduceSum(collatedLosses, Axis(0));  // aggregate over entire minibatch
         return mbLoss;
     };
 }
@@ -282,6 +438,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     const size_t inputDim         = 2000;
     const size_t embeddingDim     = 50;
     const size_t hiddenDim        = 25;
+    const size_t attentionDim     = 20;
     const size_t numOutputClasses = 5;
 
     const wstring trainingCTFPath = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf";
@@ -292,6 +449,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
     // dybamic model and criterion function
     auto d_model_fn     = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim, device);
+    auto d_model_fn1    = CreateModelFunctionS2SAtt(inputDim, embeddingDim, hiddenDim, attentionDim, device);
     auto d_criterion_fn = CreateCriterionFunctionUnrolled(d_model_fn);
 
     // data
@@ -320,7 +478,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     //auto trainer = CreateTrainer(nullptr, loss, metric, { learner });
 
     const size_t minibatchSize = 200;
-    for (size_t i = 0; true; i++)
+    for (size_t repeats = 0; true; repeats++)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         if (minibatchData.empty())
@@ -336,9 +494,23 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             //args = FromCNTKMB({ minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, FunctionPtr(loss)->Arguments(), device);
             args = FromCNTKMB({ minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, { InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName), InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName,{ Axis::DefaultBatchAxis() }) }, device);
         }
+        vector<vector<vector<Variable>>> vargs(args.size());
+        for (size_t i = 0; i < args.size(); i++)
+        {
+            let& batch = args[i]; // vector of variable-len tensors
+            auto& vbatch = vargs[i];
+            vbatch.resize(batch.size());
+            for (size_t j = i; j < batch.size(); j++)
+                vbatch[j] = std::move(ToVector(batch[j]));
+        }
+        let s2sOut = Batch::Map(d_model_fn1)(vargs[0], vargs[0]); // for now auto-encoder
         for (size_t xxx = 0; xxx < 10; xxx++)
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "d_criterion_fn: %.6f sec\n");
+            mbLoss = d_criterion_fn(args[0], args[1]);
+            mbLoss = d_criterion_fn(args[0], args[1]);
+            mbLoss = d_criterion_fn(args[0], args[1]);
+            mbLoss = d_criterion_fn(args[0], args[1]);
             mbLoss = d_criterion_fn(args[0], args[1]);
         }
 #endif
