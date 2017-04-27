@@ -23,3 +23,33 @@ def _value_as_sequence_or_array(val, var):
         map_if_possible(val)
         return val.asarray()
 
+class UserFunctionDeserializer(cntk_py.UDFDeserializer):
+    '''
+    Provides an implementation of the UDFDeserializer interface used
+    to inflate user defined functions in a model dictionary.
+    '''
+    def __init__(self, factory_callback_map=None):
+        super(UserFunctionDeserializer, self).__init__()
+        self.factory_callback_map = factory_callback_map
+        self.__disown__()
+
+    def _deserialize(self, inputs, name, dictionary):
+        cls = dictionary['class']
+        module = dictionary['module']
+        state = dictionary['state']
+        op_name = dictionary['op_name']
+
+        if (self.factory_callback_map and op_name in self.factory_callback_map):
+            factory = self.factory_callback_map[op_name]
+        else:
+            exec("from {} import {}".format(module, cls))
+            eval_str = "{0}.deserialize if hasattr({0}, 'deserialize') else None"
+            factory = eval(eval_str.format(cls))
+
+        if (factory):
+            return factory(list(inputs), name, state)
+
+        raise ValueError("Cannot deserialize user function '{}.{}'. "
+            "It neither has a static 'deserialize' method, "
+            "nor a factory callback was provided for the '{}' op name."
+            .format(module, cls, op_name))

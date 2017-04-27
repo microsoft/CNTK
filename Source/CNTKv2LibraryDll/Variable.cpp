@@ -258,31 +258,20 @@ namespace CNTK
         m_valueInitializationDevice.reset(new DeviceDescriptor(device));
     }
 
-    namespace Internal
-    {
-        static std::atomic<unsigned long> s_fixedRandomSeed(0);
-        void SetFixedRandomSeed(unsigned long fixedRandomSeed)
-        {
-            s_fixedRandomSeed.store(fixedRandomSeed);
-        }
-    }
-
-    static std::atomic<unsigned long> s_currentRandomSeed(1);
-
-    static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, double scale, int outputRank, int filterRank, unsigned long seed)
+    static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, double scale, unsigned long seed) 
     {
         Dictionary initConfig;
         initConfig[InitializerTypeAttributeName] = initializerTypeName;
+        initConfig[ScaleAttributeName] = scale;
+        initConfig[RandomSeedAttributeName] = (size_t)seed;        
+        return initConfig;
+    }
+    
+    static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, double scale, int outputRank, int filterRank, unsigned long seed)
+    {
+        auto initConfig = CreateInitializer(initializerTypeName, scale, seed);
         initConfig[OutputRankAttributeName] = outputRank;
         initConfig[FilterRankAttributeName] = filterRank;
-        initConfig[ScaleAttributeName] = scale;
-
-        auto currentFixedRandomSeed = Internal::s_fixedRandomSeed.load();
-        if (currentFixedRandomSeed != 0)
-            seed = currentFixedRandomSeed;
-
-        initConfig[RandomSeedAttributeName] = (size_t)seed;
-
         return initConfig;
     }
 
@@ -291,18 +280,12 @@ namespace CNTK
         Dictionary initConfig;
         initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::ConstantInitializerTypeName;
         initConfig[ValueAttributeName] = value;
-
         return initConfig;
     }
 
     ParameterInitializer UniformInitializer(double scale, unsigned long seed)
     {
-        Dictionary initConfig;
-        initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::UniformInitializerTypeName;
-        initConfig[ScaleAttributeName] = scale;
-        initConfig[RandomSeedAttributeName] = (size_t)seed;
-
-        return initConfig;
+        return CreateInitializer(Microsoft::MSR::CNTK::UniformInitializerTypeName, scale, seed);
     }
 
     ParameterInitializer NormalInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
@@ -398,7 +381,7 @@ namespace CNTK
         {
             auto randomSeed = (unsigned long)initConfig[RandomSeedAttributeName].Value<size_t>();
             if (randomSeed == SentinelValueForAutoSelectRandomSeed)
-                randomSeed = s_currentRandomSeed++;
+                randomSeed = Internal::GenerateRandomSeed();
 
             auto scale = initConfig[ScaleAttributeName].Value<double>();
             int outputRank = DefaultParamInitOutputRank, filterRank = DefaultParamInitFilterRank;
@@ -529,6 +512,7 @@ namespace CNTK
     Parameter::Parameter(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)
         : Variable(shape, VariableKind::Parameter, dataType, nullptr, true, {}, name, Internal::GenerateUid(VariableKind::Parameter))
     {
+
         m_dataFields->SetValueInitialization(initializer, device);
     }
 

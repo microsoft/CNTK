@@ -189,7 +189,7 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
 def test_op_dropout_with_explicit_seed(device_id, precision):
     from cntk import combine, dropout, input
 
-    value = np.ones(shape=(10,10), dtype=PRECISION_TO_TYPE[precision])
+    value = np.ones(shape=(100,100), dtype=PRECISION_TO_TYPE[precision])
 
     a = input(shape=value.shape,
               dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
@@ -205,10 +205,13 @@ def test_op_dropout_with_explicit_seed(device_id, precision):
         dropout(a, dropout_rate=0.5)
     ]
 
+    cloned_nodes = [x.clone('clone') for x in dropout_nodes]
+
     value.shape = (1, 1) + value.shape
-    forward_input = {a: value}
+    
     results = []
-    for node in dropout_nodes:
+    for node in dropout_nodes + cloned_nodes:
+        forward_input = {node.inputs[0]: value}
         forward, backward = cntk_eval(node,
                                       forward_input,
                                       precision,
@@ -220,6 +223,10 @@ def test_op_dropout_with_explicit_seed(device_id, precision):
     assert np.allclose(results[0], results[1])
     assert not np.allclose(results[0], results[2])
     assert not np.allclose(results[0], results[3])
+
+    clones = results[len(dropout_nodes):]
+    for i in range(len(clones)):
+        assert np.allclose(results[i], clones[i])
 
 
 @pytest.mark.parametrize("dropout_rate", [-0.1, 1.0, 100])

@@ -396,10 +396,11 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
-        BUGBUG: Document initializers
        dtype (`np.float32` or `np.float64`): data type to store the values as.
        device (:class:`~cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
+    Todo:
+       Document initializers for `value` parameter.
     '''
     def __init__(self, value=None, shape=None, dtype=default_override_or(np.float32), device=None, name=''):
 

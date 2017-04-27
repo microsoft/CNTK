@@ -157,7 +157,7 @@ namespace CNTK
         auto tensorShape = tensorView->GetShape();
 
         // we should always reshape for rank-0, so that batch and sequence axis goes to columns
-        if (tensorShape.GetRank() <= 2 && rowColSplitPoint != 0)
+        if (tensorShape.GetRank() <= 1 && rowColSplitPoint != 0)
             return tensorView->AsMatrix();
 
         size_t splitPoint = rowColSplitPoint;
@@ -561,15 +561,14 @@ namespace CNTK
                 slicedMatrixView = make_shared<Matrix<double>>(std::move(sliced));
             }
 #else // keeping old version for easier comparison in case something goes wrong--to be deleted soon
+            // TODO: This was changed on master; below is latest. Maybe it does the same as my change above. Test this.
             auto currentMatrix = GetMatrix<double>();
             std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
-            auto sliceViewMatrixDims = GetMatrixDimensions(sliceViewShape);              // slice if interpreted as Matrix
-            assert((flatBufferOffset % sliceViewMatrixDims.first) == 0);
-            auto sliceMatrixColumnOffset = flatBufferOffset / sliceViewMatrixDims.first; // Matrix column in which view begins
+            std::shared_ptr<Matrix<double>> slicedMatrixView;
             if (sliceViewMatrixDims.first != currentMatrixDims.first)
-                LogicError("NDArrayView::SliceView: Currently only slices that can be realized as a column slice of the underlying Matrix object, are allowed");
-
-            auto slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
+                slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->Reshaped(1, currentMatrix->GetNumElements()).ColumnSlice(flatBufferOffset, sliceViewShape.TotalSize()));
+            else
+                slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
 #endif
             tensorView = new TensorView<double>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
             break;

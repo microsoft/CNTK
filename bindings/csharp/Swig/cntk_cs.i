@@ -202,12 +202,15 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::ElementSelect;
 %ignore_function CNTK::Splice;
 %ignore_function CNTK::StopGradient;
+%ignore_function CNTK::Assign;
 %ignore_function CNTK::ELU;
 %ignore_function CNTK::LeakyReLU;
 %ignore_function CNTK::PReLU;
 %ignore_function CNTK::Softplus;
 %ignore_function CNTK::Argmax;
 %ignore_function CNTK::Argmin;
+%ignore_function CNTK::ToSequence;
+%ignore_function CNTK::ToSequenceLike;
 %ignore_function CNTK::AsBlock;
 %ignore_function CNTK::ReaderCrop;
 %ignore_function CNTK::ReaderMean;
@@ -290,6 +293,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 %ignore_class CNTK::ProgressWriter;
 
+%ignore_function CNTK::SetCheckedMode;
+%ignore_function CNTK::GetCheckedMode;
+
 %ignore_struct std::hash<::CNTK::DistributedWorkerDescriptor>;
 
 // Ignore things in CNTKLibraryInternals.h that are not exposed for C# Eval.
@@ -302,7 +308,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Internal::PackedIndex;
 %ignore_function CNTK::Internal::GatherPacked;
 %ignore_function CNTK::Internal::ScatterPacked;
-%ignore_function CNTK::Internal::ReconcileDynamicAxis;
 %ignore_function CNTK::Internal::ReconcileDynamicAxes;
 %ignore_function CNTK::Internal::ZeroesWithDynamicAxesLike;
 %ignore_function CNTK::Internal::Where;
@@ -326,8 +331,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 %ignore_function CNTK::Internal::SetComputationNetworkTraceLevel;
 %ignore_function CNTK::Internal::GetComputationNetworkTraceLevel;
-%ignore_function CNTK::Internal::SetComputationNetworkTrackGapNans;
-%ignore_function CNTK::Internal::GetComputationNetworkTrackGapNans;
 %ignore_function CNTK::Internal::SetGPUMemoryAllocationTraceLevel;
 %ignore_function CNTK::Internal::ForceSynchronousCUDAKernelExecutions;
 %ignore_function CNTK::Internal::ForceDeterministicAlgorithms;
@@ -587,8 +590,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 %}
 
-// Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
-%ignore CNTK::Function::LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice= DeviceDescriptor::UseDefaultDevice());
 %ignore CNTK::Function::BlockArgumentsMapping;
 %rename (GetName) CNTK::Function::Name;
 %rename (GetUid) CNTK::Function::Uid;
@@ -604,7 +605,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (_IsPrimitive) CNTK::Function::IsPrimitive;
 %rename (_IsBlock) CNTK::Function::IsBlock;
 
-// Customize type mapping for modelBuffer, used by LoadModel
+// Customize type mapping for modelBuffer, used by Load
 %apply char* INPUT { char* modelBuffer }
 %typemap(ctype) (char* modelBuffer) "char*"
 %typemap(imtype) (char* modelBuffer) "byte[]"
@@ -612,9 +613,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 %typemap(cscode) CNTK::Function %{
 
-    public static Function LoadModel(byte[] modelBuffer, DeviceDescriptor computeDevice)
+    public static Function Load(byte[] modelBuffer, DeviceDescriptor computeDevice)
     {
-        return LoadModel(modelBuffer, (uint)modelBuffer.Length, computeDevice);
+        return Load(modelBuffer, (uint)modelBuffer.Length, computeDevice);
     }
 
     public string Name
@@ -925,9 +926,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (AreEqualShape) CNTK::operator==(const NDShape& first, const NDShape& second);
 %rename (_IsUnknown) CNTK::NDShape::IsUnknown;
 %rename (_HasInferredDimension) CNTK::NDShape::HasInferredDimension;
+%rename (_HasFreeDimension) CNTK::NDShape::HasFreeDimension;
 
 %ignore CNTK::NDShape::NDShape(const std::initializer_list<size_t>& dimensions);
 %ignore CNTK::NDShape::InferredDimension;
+%ignore CNTK::NDShape::FreeDimension;
 
 //
 // NDShape
@@ -984,6 +987,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     public bool HasInferredDimension
     {
         get { return _HasInferredDimension(); }
+    }
+
+    public bool HasFreeDimension
+    {
+        get { return _HasFreeDimension(); }
     }
 
     public int TotalSize
@@ -1089,6 +1097,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static readonly int InferredDimension = -1;
+    public static readonly int FreeDimension = -3;
 %}
 
 // Todo: add correct typemap as they might be useful for C# in future.
@@ -1914,6 +1923,27 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return inputVector;
     }
 %}
+
+
+
+%ignore CNTK::Function::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), const Internal::UDFDeserializerPtr& deserializer);
+%ignore CNTK::Function::Load(const char* buffer, size_t length, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), const Internal::UDFDeserializerPtr& deserializer = nullptr);
+// Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
+%ignore CNTK::Function::Load(std::istream& inputStream, const DeviceDescriptor& computeDevice= DeviceDescriptor::UseDefaultDevice(), const Internal::UDFDeserializerPtr& deserializer = nullptr);
+
+%extend CNTK::Function {
+    static FunctionPtr Load(const std::wstring& filepath, 
+                            const CNTK::DeviceDescriptor& computeDevice = CNTK::DeviceDescriptor::UseDefaultDevice()) 
+    {
+        return CNTK::Function::Load(filepath, computeDevice, nullptr);
+    }
+
+    static FunctionPtr Load(const char* modelBuffer, size_t length,
+                            const CNTK::DeviceDescriptor& computeDevice = CNTK::DeviceDescriptor::UseDefaultDevice()) 
+    {
+        return CNTK::Function::Load(modelBuffer, length, computeDevice, nullptr);
+    }
+}
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
