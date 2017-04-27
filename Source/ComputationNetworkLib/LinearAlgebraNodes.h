@@ -1186,9 +1186,12 @@ public:
     {
     }
 
-    TransposeDimensionsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::vector<int> perm)
+    TransposeDimensionsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::vector<int>& perm)
         : Base(deviceId, name), m_axis1(0), m_axis2(0), m_perm({})
     {
+        if (!std::all_of(perm.begin(), perm.end(), [](int p) {return p >= 1; }))
+            InvalidArgument("%ls %ls operation: _internal_ indices for axes must be >= 1.", NodeName().c_str(), OperationName().c_str());
+
         // undo the annoying +1
         std::transform(perm.begin(), perm.end(), std::back_inserter(m_perm), [](const int& p) { return (size_t)(p - 1); });
     }
@@ -1258,15 +1261,14 @@ private:
         return shape;
     }
 
-    static bool IsPermutation(const std::vector<size_t>& perm)
+    // verify that the argument is a valid permutation 
+    // We pass by value because the function mutates perm
+    static bool IsPermutation(std::vector<size_t> perm)
     {
-        auto sorted_perm = perm;
-        std::sort(sorted_perm.begin(), sorted_perm.end());
+        std::sort(perm.begin(), perm.end());
         for (auto i = 0; i < perm.size(); ++i)
-        {
-            if (i != sorted_perm[i])
+            if (i != perm[i])
                 return false;
-        }
         return true;
     }
 

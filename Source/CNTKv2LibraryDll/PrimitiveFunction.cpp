@@ -365,6 +365,8 @@ namespace CNTK
                             {
                                 auto perm = AsVector<Axis>(m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
                                 auto shape = m_inputs[0].Shape();
+                                for (auto& p : perm)
+                                    p = NormalizeStaticAxis(p, shape);
                                 outputShape = shape;
                                 for (size_t i = 0; i < perm.size(); ++i)
                                     outputShape[i] = shape[perm[i].StaticAxisIndex()];

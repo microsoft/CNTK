@@ -632,6 +632,8 @@ namespace CNTK
                 if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
                 {
                     auto perm = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+                    for (auto& p : perm)
+                        p = NormalizeStaticAxis(p, perm.size());
                     computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(perm));
                 }
                 else

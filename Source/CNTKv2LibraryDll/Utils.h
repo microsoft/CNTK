@@ -499,25 +499,29 @@ namespace CNTK
         return{ Axis(derivedDynamicAxisName, sourceAxis.IsOrdered()) };
     }
 
+    inline Axis& NormalizeStaticAxis(Axis& axis, size_t rank)
+    {
+        if (axis == Axis::EndStaticAxis())
+            axis = Axis((int)rank);
+        else if (axis.StaticAxisIndex() < 0)
+        {
+            auto normalizedAxis = Axis((int)rank + axis.StaticAxisIndex());
+            if (normalizedAxis.StaticAxisIndex() < 0)
+                InvalidArgument("Axis '%S' is out of bounds for the rank '%zd' it applies to.", axis.AsString().c_str(), rank);
+            else
+                axis = normalizedAxis;
+        }
+        return axis;
+    }
+
     inline Axis& NormalizeStaticAxis(Axis& axis, const NDShape& operandShape)
     {
         if (axis != Axis::AllStaticAxes() && axis != Axis::AllAxes())
         {
             assert(axis.IsStaticAxis());
             assert(operandShape != NDShape::Unknown);
-
-            if (axis == Axis::EndStaticAxis())
-                axis = Axis((int)operandShape.Rank());
-            else if (axis.StaticAxisIndex() < 0)
-            {
-                auto normalizedAxis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
-                if (normalizedAxis.StaticAxisIndex() < 0)
-                    InvalidArgument("Axis '%S' is out of bounds of the operand shape '%S' it applies to.", axis.AsString().c_str(), operandShape.AsString().c_str());
-                else
-                    axis = normalizedAxis;
-            }
+            axis = NormalizeStaticAxis(axis, operandShape.Rank());
         }
-
         return axis;
     }
 
