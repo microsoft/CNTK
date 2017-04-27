@@ -597,6 +597,13 @@ class Value(cntk_py.Value):
         Whether the data is read-only
         '''
         return super(Value, self).is_read_only()
+    
+    @property
+    def is_valid(self):
+        '''
+        Whether the value is valid or has been invalidated by another forward and/or backward pass
+        '''
+        return super(Value, self).is_valid()
 
     @property
     def dtype(self):

@@ -592,6 +592,21 @@ namespace CNTK
         return Data()->AsScalar<ElementType>();
     }
 
+    /* virtual */ bool Value::IsValid() const
+    {
+        return !!m_data;
+    }
+
+    std::wstring Value::AsString() const
+    {
+        wstringstream wss;
+        if (IsValid())
+            wss << L"Value(" << Shape().AsString() << ", " << DeviceKindName(Device().Type()) << L")";
+        else
+            wss << L"Value(###)";
+        return wss.str();
+    }
+
     void PackedValue::Unpack() const
     {
         if (m_packedDataLayout && (m_packedDataLayout->GetNumTimeSteps() != 1) && (m_packedDataLayout->GetNumSequences() != 1) && Internal::IsAutomaticUnpackingOfPackedValuesDisabled())

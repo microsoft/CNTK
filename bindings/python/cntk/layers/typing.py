@@ -90,7 +90,7 @@ Example:
     ...     inp = Tensor[32]()   # attempt to create an instance of type Tensor[32]
     ... except TypeError as e:
     ...     print('ERROR: ' + str(e))
-    ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(Tensor[32])'.
+    ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(**Tensor[32])'.
 
     >>> # types are not inputs
     >>> try:
@@ -119,7 +119,7 @@ def _make_tensor_meta(cls_name, **kwargs):
     class TensorMeta(type):
         def __getitem__(self, shape):
             shape = sanitize_shape(shape)
-            return Variable._Type(shape, **kwargs) # inject it for @Function 
+            return Variable._Type(shape, **kwargs) # inject it for @Function
     return TensorMeta(cls_name, (), {})
 
 # Tensor and SparseTensor contain only a batch axis.
