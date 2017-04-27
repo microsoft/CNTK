@@ -124,7 +124,8 @@ namespace CNTK
 
     NDArrayViewPtr Variable::Value() const
     {
-        if (!IsConstant() && !IsParameter())
+        if (IsInput() || IsPlaceholder())
+        //if (!IsConstant() && !IsParameter())
             LogicError("Variable '%S' Value(): Only Variables of kind Parameter and Constant have a Value.", AsString().c_str());
 
         if (m_dataFields->m_initValueFlag)
@@ -154,6 +155,15 @@ namespace CNTK
                 m_dataFields->m_valueInitializer = nullptr;
                 m_dataFields->m_valueInitializationDevice = nullptr;
             });
+        }
+
+        // compute a knowable value if possible
+        if (!m_dataFields->m_value)
+        {
+            const auto& owner = Owner();
+            if (!owner)
+                LogicError("Variable '%S' Value(): Only Variables with owners can compute their Value.", AsString().c_str());
+            owner->MemoizeKnowableValue();
         }
 
         assert(m_dataFields->m_value != nullptr);

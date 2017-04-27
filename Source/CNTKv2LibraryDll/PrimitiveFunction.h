@@ -319,6 +319,8 @@ namespace CNTK
 
         void SetState(const Dictionary& state);
 
+        virtual void MemoizeKnowableValue() const override;
+
     private:
 
         // The following helper functions are used to determine the output shape for different 
@@ -554,8 +556,8 @@ namespace CNTK
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
 
-            if (outputRank == 0)
-                InvalidArgument("Times: Output rank (%d) must be > 0.", (int)outputRank);
+            //if (outputRank == 0)
+            //    InvalidArgument("Times: Output rank (%d) must be > 0.", (int)outputRank);
 
             if (outputRank > leftOperandShape.Rank())
                 InvalidArgument("Times: Output rank (%d) must be <= rank (%d) of the %s operand '%S'.",

@@ -68,6 +68,8 @@ namespace CNTK
             return outputsMap;
         }
 
+        virtual void MemoizeKnowableValue() const override { NOT_IMPLEMENTED; }
+
     protected:
         virtual void OnPlaceholdersReplaced(const std::unordered_map<Variable, Variable>& placeholderReplacements,
                                             std::unordered_set<Variable>& replacedPlaceholders) override

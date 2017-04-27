@@ -511,7 +511,7 @@ namespace CNTK
         return{ Axis(derivedDynamicAxisName, sourceAxis.IsOrdered()) };
     }
 
-    inline Axis& NormalizeStaticAxis(Axis& axis, const NDShape& operandShape)
+    inline Axis& NormalizeStaticAxis(Axis& axis, const NDShape& operandShape) // note: operates in-place
     {
         if (axis != Axis::AllStaticAxes() && axis != Axis::AllAxes())
         {

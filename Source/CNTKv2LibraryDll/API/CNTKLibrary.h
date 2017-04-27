@@ -1832,6 +1832,13 @@ namespace CNTK
         ///
         CNTK_API std::wstring AsString() const;
 
+        ///
+        /// If the value of this node is knowable, then compute it and return it.
+        /// This is the case for Constants, Parameters, and any Function that only
+        /// depends on Constants and Parameters but not on Inputs and Placeholders
+        /// (which is the case for dynamic networks).
+        ///
+        CNTK_API NDArrayViewPtr Value() const;
     protected:
 #ifdef SWIG
     public:
@@ -1841,7 +1848,7 @@ namespace CNTK
         {}
 
     protected:
-        CNTK_API NDArrayViewPtr Value() const;
+        //CNTK_API NDArrayViewPtr Value() const;
         CNTK_API void SetValue(const NDArrayViewPtr& value);
 
     private:
@@ -3311,6 +3318,13 @@ namespace CNTK
         {
             return NativeUserFunction(opName, operands, Dictionary(), userFunctionInstanceName);
         }
+
+    public:
+
+        ///
+        /// Partially compute values that do not depend in Input or Placeholder.
+        ///
+        CNTK_API virtual void MemoizeKnowableValue() const = 0;
 
     protected:
         static bool IsArgument(const Variable& var)

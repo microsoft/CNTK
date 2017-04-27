@@ -645,7 +645,8 @@ namespace CNTK
                             assert(m_inputs.size() == 2);
 
                             auto transposeShapeFunc = [](const NDShape& shape) {
-                                NDShape transposedShape(std::max<size_t>(2, shape.Rank()), 1);
+                                //NDShape transposedShape(std::max<size_t>(2, shape.Rank()), 1);
+                                NDShape transposedShape(shape.Rank());
                                 for (size_t i = 0; i < shape.Rank(); ++i)
                                     transposedShape[transposedShape.Rank() - i - 1] = shape[i];
 
@@ -1258,5 +1259,104 @@ namespace CNTK
         udf->m_uid = uid;
         
         return udf;
+    }
+
+    /*virtual*/ void PrimitiveFunction::MemoizeKnowableValue() const /*override*/
+    {
+        if (m_outputs.size() != 1)
+            LogicError("Variable '%S' Value(): Only Variables with one output can compute their Value for now.", AsString().c_str());
+        const auto& output = m_outputs[0];
+        if (output.m_dataFields->m_value) // already done
+            return;
+        // get the input values (recursively compute them if needed)
+        if (m_inputs.empty())
+            LogicError("Variable '%S' Value(): Only Variables with input arguments can compute their Value.", AsString().c_str());
+        vector<NDArrayViewPtr> args(m_inputs.size());
+        for (size_t i = 0; i < args.size(); i++)
+            args[i] = m_inputs[i].Value();
+        // allocate memory for the result
+        NDArrayViewPtr out;
+        if (m_op != PrimitiveOpType::Slice && m_op != PrimitiveOpType::Reshape) // not all ops need a new output
+            out = make_shared<NDArrayView>(m_inputs.front().GetDataType(), output.Shape(), args.front()->Device());
+        // perform the operation
+        auto op = Microsoft::MSR::CNTK::ElementWiseOperator::opNone;
+        auto reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
+        switch (m_op)
+        {
+            // elementwise ops are done outside, we just set the opcode
+        case PrimitiveOpType::Plus:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;                break;
+        case PrimitiveOpType::Minus:          op = Microsoft::MSR::CNTK::ElementWiseOperator::opDifference;         break;
+        case PrimitiveOpType::ElementTimes:   op = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct; break;
+        case PrimitiveOpType::ReLU:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opLinearRectifier;    break;
+            // reduction ops are also done outside, but set the reductionOp
+        case PrimitiveOpType::ReduceElements:
+            {
+                op = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
+                const auto& reductionOpName = m_attributes[PrimitiveFunction::AttributeNameReductionOpName].Value<wstring>();
+                if (reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
+                    reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
+                else if (reductionOpName == PrimitiveFunction::InternalLogSumReductionOpName)
+                    reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opLogSum;
+                else
+                    //  PrimitiveFunction::InternalMeanReductionOpName
+                    //  PrimitiveFunction::InternalMaxReductionOpName
+                    //  PrimitiveFunction::InternalMinReductionOpName
+                    //  PrimitiveFunction::InternalProdReductionOpName
+                    LogicError("Variable '%S' Value(): Reduction op %S not yet implemented.", AsString().c_str(), reductionOpName.c_str());
+            }
+            break;
+            // non-elementwise ops are done here
+        case PrimitiveOpType::Times:
+            // (dup--delete this once tested)
+            out->MatrixProduct(false, args[0], m_op == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, m_attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
+            break;
+        case PrimitiveOpType::TransposeTimes:
+            out->MatrixProduct(false, args[0], m_op == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, m_attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
+            break;
+        case PrimitiveOpType::Reshape:
+             out = args[0];
+             if (out->Shape() != output.Shape())
+                 out = out->AsShape(output.Shape());
+            break;
+        case PrimitiveOpType::Slice:
+            {
+                auto axis       = m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                auto beginIndex = m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+                auto endIndex   = m_attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
+                NormalizeStaticAxis(axis, m_inputs[0].Shape());
+                out = args[0];
+                auto extent = out->Shape().Dimensions();
+                auto startOffset = vector<size_t>(extent.size(), 0);
+                auto axisIndex = axis.StaticAxisIndex();
+                if (startOffset[axisIndex] != beginIndex || extent[axisIndex] != endIndex - beginIndex)
+                {
+                    startOffset[axisIndex] = beginIndex;
+                    extent[axisIndex] = endIndex - beginIndex;
+                    out = out->SliceView(startOffset, extent, true); // slice it
+                }
+            }
+            break;
+        case PrimitiveOpType::Splice:
+            {
+                auto axis = m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                auto maxInputRank = MaxInputRank(m_inputs);
+                NormalizeStaticAxis(axis, NDShape(maxInputRank));
+                if (args.size() > 1)
+                    NDArrayView::GatherBatch(args, axis.StaticAxisIndex(), out);
+                else // only one: do nothing or at best reshape if a new axis is added
+                {
+                    out = args[0];
+                    if (out->Shape() != output.Shape())
+                        out = out->AsShape(output.Shape());
+                }
+            }
+            break;
+        default:
+            LogicError("Variable '%S' Value(): Memoziation of operation %S not implemented yet.", AsString().c_str(), OpName().c_str());
+        }
+        // most common case: elementwise ops are done here instead
+        if (op != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
+            out->NumericOperation(args, 1.0, op, out, 0.0, reductionOp);
+        output.m_dataFields->m_value = out;
     }
 }
