@@ -20,8 +20,6 @@ from cntk.tests.test_utils import _to_dense, _to_csr
 
 
 def test_lstm_over_lstm_thought_vectors(device_id):
-    previous_random_seed = C.cntk_py.get_random_seed()
-    C.cntk_py.reset_random_seed(0)
     dev = cntk_device(device_id)
     input_vocab_size=3
     emb_dim = 2
@@ -64,8 +62,6 @@ def test_lstm_over_lstm_thought_vectors(device_id):
     absolute_tolerance = 0.02
     assert np.allclose(loss_result[0], [[0.63504], [0.673343], [0.698446]], atol=absolute_tolerance)
     assert np.allclose(loss_result[1], [[0.772344], [0.64295]], atol=absolute_tolerance)
-
-    C.cntk_py.reset_random_seed(previous_random_seed)
 
 
 def test_sequence_max():
