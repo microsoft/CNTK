@@ -624,4 +624,3 @@ def test_op_reshape_free_dimension(device_id):
     data = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]
     result = x_reshaped_2.eval({x : np.asarray(data, dtype=np.float32)})
     assert np.array_equal(result[0], np.reshape(data, (2, 4)))
->>>>>>> origin/master
