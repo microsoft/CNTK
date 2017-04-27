@@ -75,6 +75,11 @@ namespace CNTK
         return m_dataFields->Owner();
     }
 
+    bool Variable::OwnerIs(const Function* f) const
+    {
+        return m_dataFields->OwnerIs(f);
+    }
+
     Variable Variable::CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const
     {
         // We have to preserve the whole subgraph.
@@ -86,9 +91,15 @@ namespace CNTK
 
     Variable Variable::NonCompositePreservingCopy() const
     {
+#if 1
+        Variable result;
+        result.m_dataFields = m_dataFields;
+        return result;
+#else
         Variable copy = *this;
         copy.m_outputComposite = nullptr;
         return copy;
+#endif
     }
 
     void Variable::SetOwner(const std::weak_ptr<Function>& ownerFunction)
@@ -217,9 +228,15 @@ namespace CNTK
 
         auto ownerFunctionPtr = m_ownerFunction.lock();
         if (ownerFunctionPtr != nullptr)
-            return ownerFunctionPtr->shared_from_this();
+            return ownerFunctionPtr->shared_from_this(); // TODO: it's already a shared_ptr... so why shared_from_this()?
         else
             return nullptr;
+    }
+
+    bool VariableFields::OwnerIs(const Function* f) const
+    {
+        auto ownerFunctionPtr = m_ownerFunction.lock();
+        return ownerFunctionPtr.get() == f;
     }
 
     std::shared_ptr<VariableFields> VariableFields::Clone() const

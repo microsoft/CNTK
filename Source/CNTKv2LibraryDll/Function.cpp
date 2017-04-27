@@ -29,29 +29,37 @@ namespace CNTK
 
     std::vector<Variable>& Function::InitOutputs()
     {
-        std::call_once(m_outputsInitFlag, [this]() {
+        // HACK: temporarily changed so that we can see it in the profiler
+        //std::call_once(m_outputsInitFlag, [this]() {
+        if (m_outputsInitFlag++ == 0)
+        {
             std::vector<Variable> outputs;
             outputs.reserve(Function::MaxNumOutputs);
             InferOutputs(outputs);
+            m_outputs.reserve(outputs.size());
             for (auto outputVar : outputs)
             {
-                if (outputVar.IsOutput() && !outputVar.Owner())
+                if (outputVar.IsOutput() && outputVar.OwnerIs(nullptr))
                     outputVar.SetOwner(shared_from_this());
 
-                if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.Owner().get() == this)
+                if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.OwnerIs(this))
                 {
                     // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.
                     outputVar.m_dataFields->m_uid = m_uid + L"_" + VariableKindName(outputVar.Kind()) + L"_" + std::to_wstring(m_outputs.size());
                 }
 
+#if 1
+                m_outputs.emplace_back(std::move(outputVar.NonCompositePreservingCopy()));
+#else
                 m_outputs.push_back(outputVar);
                 if (m_outputs.back().m_outputComposite != nullptr)
                 {
                     // Nuke the composite ptr to allow release of cyclic graphs.
                     m_outputs.back().m_outputComposite = nullptr;
                 }
+#endif
             }
-        });
+        }//);
 
         return m_outputs;
     }
@@ -106,14 +114,19 @@ namespace CNTK
     Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid)
         : m_rootFunction(rootFunction), m_name(name), m_uid(uid), m_attributes(std::move(functionConfig))
     {
+        m_inputs.reserve(inputs.size());
         for (auto inputVar : inputs)
         {
+#if 1
+            m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy()));
+#else
             m_inputs.push_back(inputVar);
             if (m_inputs.back().m_outputComposite != nullptr)
             {
                 // Nuke the composite ptr to allow release of cyclic graphs.
                 m_inputs.back().m_outputComposite = nullptr;
             }
+#endif
 
             if (!inputVar.IsInput() &&
                 !inputVar.IsOutput() &&
@@ -941,8 +954,8 @@ namespace CNTK
 
     FunctionPtr UnaryOp(PrimitiveOpType op, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
     {
-        std::vector<Variable> operands = { operand };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
+        //std::vector<Variable> operands = { operand };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operand, std::move(opConfig), name), name);
     }
 
     FunctionPtr Negate(const Variable& operand, const std::wstring& name)
@@ -1122,8 +1135,7 @@ namespace CNTK
 
     FunctionPtr BinaryOp(PrimitiveOpType op, const Variable& leftOperand, const Variable& rightOperand, Dictionary&& opConfig, const std::wstring& name)
     {
-        std::vector<Variable> operands = { leftOperand, rightOperand };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, leftOperand, rightOperand, std::move(opConfig), name), name);
     }
 
     FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
@@ -1541,6 +1553,10 @@ namespace CNTK
 
     FunctionPtr AsComposite(const FunctionPtr& rootFunction, const std::wstring& name)
     {
+#ifdef NO_ALL_PRIMITIVE_FUNCTIONS_HACK
+        if (!rootFunction->IsComposite())
+            new shared_ptr<Function>(rootFunction); // this creates a memory leak but eliminates O(N^2) complexity
+#endif
         return rootFunction->IsComposite() ? rootFunction : CompositeFunction::Create(rootFunction, name);
     }
 

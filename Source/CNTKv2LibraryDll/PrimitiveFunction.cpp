@@ -154,7 +154,7 @@ namespace CNTK
         auto reduceAxis = [](Axis reductionAxis, Variable input, std::vector<Axis>& outputDynamicAxes)
         {
             reductionAxis = NormalizeAxis(reductionAxis, input);
-            for (auto inputDynamicAxis : input.DynamicAxes())
+            for (const auto& inputDynamicAxis : input.DynamicAxes())
             {
                 if (inputDynamicAxis != reductionAxis)
                     outputDynamicAxes.push_back(inputDynamicAxis);
@@ -173,7 +173,7 @@ namespace CNTK
             (op == PrimitiveOpType::LambdaRank) ||
             (op == PrimitiveOpType::NDCG))
         {
-            outputDynamicAxes = std::vector<Axis>({});
+            //outputDynamicAxes = std::vector<Axis>({});
         }
         else if ((op == PrimitiveOpType::ReduceElements) && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>().IsDynamicAxis() && (inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()))
         {
@@ -240,10 +240,11 @@ namespace CNTK
                 outputDynamicAxes = Axis::UnknownDynamicAxes();
                 for (auto inputVar : inputs)
                 {
-                    auto currentInputDynamicAxes = inputVar.DynamicAxes();
+                    const auto& currentInputDynamicAxes = inputVar.DynamicAxes();
                     if (!currentInputDynamicAxes.empty() && (currentInputDynamicAxes != Axis::UnknownDynamicAxes()))
                     {
-                        if (outputDynamicAxes == Axis::UnknownDynamicAxes())
+                        //if (outputDynamicAxes == Axis::UnknownDynamicAxes())
+                        if (Axis::IsUnknownDynamicAxes(outputDynamicAxes))
                             outputDynamicAxes = currentInputDynamicAxes;
                         else
                         {
@@ -273,8 +274,8 @@ namespace CNTK
             bool needsGradient = std::any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.NeedsGradient(); });
 
             NDShape outputShape = NDShape::Unknown;
-            bool allInputShapesUnknown = (std::find_if(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return !input.Shape().IsUnknown(); }) == m_inputs.end());
-            bool anyInputShapesUnknown = (std::find_if(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.Shape().IsUnknown(); }) != m_inputs.end());
+            bool anyInputShapesUnknown =                          (std::find_if(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return  input.Shape().IsUnknown(); }) != m_inputs.end());
+            bool allInputShapesUnknown = anyInputShapesUnknown && (std::find_if(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return !input.Shape().IsUnknown(); }) == m_inputs.end());
             if (!anyInputShapesUnknown || (!allInputShapesUnknown && (outputDynamicAxes != Axis::UnknownDynamicAxes())))
             {
                 switch (m_op)
@@ -297,8 +298,8 @@ namespace CNTK
                     assert(m_inputs.size() == 2);
                     if ((m_op == PrimitiveOpType::PastValue) || (m_op == PrimitiveOpType::FutureValue))
                     {
-                        Variable inputOperandVar = m_inputs[0];
-                        Variable initialStateVar = m_inputs[1];
+                        const Variable& inputOperandVar = m_inputs[0];
+                        //const Variable& initialStateVar = m_inputs[1];
 
                         // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
                         if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (inputOperandVar.DynamicAxes().size() != 2))

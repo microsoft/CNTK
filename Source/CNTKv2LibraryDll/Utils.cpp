@@ -138,6 +138,22 @@ namespace CNTK
     {
     }
 
+    const std::unordered_map<std::wstring, DictionaryValue>& Dictionary::GetDictionaryData() const
+    {
+        if (m_dictionaryData)
+            return *m_dictionaryData;
+        static std::unordered_map<std::wstring, DictionaryValue> s_emptyDict;
+        assert(s_emptyDict.empty());
+        return s_emptyDict;
+    }
+
+    std::unordered_map<std::wstring, DictionaryValue>& Dictionary::GetDictionaryData()
+    {
+        if (!m_dictionaryData)
+            m_dictionaryData.reset(new std::unordered_map <std::wstring, DictionaryValue>());
+        return *m_dictionaryData;
+    }
+
     Dictionary::~Dictionary()
     {
     }
@@ -155,7 +171,7 @@ namespace CNTK
     }
 
     Dictionary::Dictionary(Dictionary&& other)
-        : m_dictionaryData(nullptr)
+        //: m_dictionaryData(nullptr) // TODO: needed?
     {
         *this = move(other);
     }
@@ -164,8 +180,9 @@ namespace CNTK
     {
         assert(this != &other);
 
-        m_dictionaryData = other.m_dictionaryData;
-        other.m_dictionaryData = nullptr;
+        m_dictionaryData = std::move(other.m_dictionaryData);
+        // TODO: check with assembly code that this actually moves
+        //other.m_dictionaryData = nullptr;
 
         return *this;
     }

@@ -38,12 +38,15 @@ namespace CNTK
                 InvalidArgument("The DataType of the Parameter/Constant Variable '%S' does not match the DataType of the associated Value", AsString().c_str());
 
             // Validate that each of the dynamic axes are unique
-            std::unordered_set<Axis> uniqueDynamicAxis;
-            for (auto& currentDynamicAxis : dynamicAxes)
+            if (!dynamicAxes.empty())
             {
-                auto retVal = uniqueDynamicAxis.insert(currentDynamicAxis);
-                if (!retVal.second)
-                    InvalidArgument("Dynamic axis named %S is specified more than once for Variable '%S'", currentDynamicAxis.Name().c_str(), AsString().c_str());
+                std::unordered_set<Axis> uniqueDynamicAxis;
+                for (auto& currentDynamicAxis : dynamicAxes)
+                {
+                    auto retVal = uniqueDynamicAxis.insert(currentDynamicAxis);
+                    if (!retVal.second)
+                        InvalidArgument("Dynamic axis named %S is specified more than once for Variable '%S'", currentDynamicAxis.Name().c_str(), AsString().c_str());
+                }
             }
 
             if (m_varKind == VariableKind::Input)
@@ -65,6 +68,7 @@ namespace CNTK
         std::wstring AsString() const;
         std::shared_ptr<VariableFields> Clone() const;
         FunctionPtr Owner() const;
+        bool OwnerIs(const Function* f) const;
 
         CNTK_API void SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device);
 

@@ -1014,6 +1014,14 @@ namespace CNTK
         ///
         CNTK_API static const std::vector<Axis>& UnknownDynamicAxes();
 
+        ///
+        /// Check whether Axis vector represents the unknown dynamic axes
+        ///
+        CNTK_API static bool IsUnknownDynamicAxes(const std::vector<Axis>& axes)
+        {
+            return axes.size() == 1 && axes[0].m_staticAxisIdx == SentinelStaticAxisIndexValueForUnknownAxes;
+        }
+
     public:
         ///
         /// Construct an Axis object denoting a static axis with the specified index.
@@ -1635,20 +1643,8 @@ namespace CNTK
 
     private:
         std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
-        const std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData() const
-        {
-            if (m_dictionaryData)
-                return *m_dictionaryData;
-            static std::unordered_map<std::wstring, DictionaryValue> s_emptyDict;
-            assert(s_emptyDict.empty());
-            return s_emptyDict;
-        }
-        std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData()
-        {
-            if (!m_dictionaryData)
-                m_dictionaryData.reset(new std::unordered_map <std::wstring, DictionaryValue>());
-            return *m_dictionaryData;
-        }
+        const std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData() const;
+        std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData();
         static const size_t s_version = 1;
     };
 
@@ -1815,6 +1811,11 @@ namespace CNTK
         /// Returns null when called for a Variable that is not of 'Output' VariableKind.
         ///
         CNTK_API FunctionPtr Owner() const;
+
+        ///
+        /// Checks whether the owner is the passed object (which may be nullptr).
+        ///
+        CNTK_API bool OwnerIs(const Function* f) const;
 
         ///
         /// Returns the DataType of the data that 'this' Variable symbolically represents
@@ -3424,7 +3425,7 @@ namespace CNTK
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
 
         std::vector<Variable> m_inputs;
-        std::once_flag m_outputsInitFlag;
+        size_t/*std::once_flag*/ m_outputsInitFlag = 0;
         std::vector<Variable> m_outputs;
 
         FunctionPtr m_rootFunction; // nullptr for primitive Function instances

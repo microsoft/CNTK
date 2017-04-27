@@ -74,7 +74,10 @@ namespace CNTK
             std::unordered_set<FunctionPtr> visitedFunctions;
 
             // Call Collect to get the set of all functions in the graph
+#define NO_ALL_PRIMITIVE_FUNCTIONS_HACK // hack to skip building m_allPrimitiveFunctions for timing tests, as this has O(N^2) complexity
+#ifndef NO_ALL_PRIMITIVE_FUNCTIONS_HACK
             Collect(rootFunction, visitedFunctions);
+#endif
 
             auto composite = MakeSharedObject<CompositeFunction>(rootFunction, std::move(visitedFunctions), name, uid);
 

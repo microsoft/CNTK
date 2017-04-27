@@ -270,6 +270,14 @@ namespace CNTK
             : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, GenerateUid(op))
         {}
 
+        PrimitiveFunction(PrimitiveOpType op, const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const std::wstring& functionName = L"")
+            : PrimitiveFunction(op, { input0, input1 }, std::move(functionConfig), functionName, GenerateUid(op))
+        {}
+
+        PrimitiveFunction(PrimitiveOpType op, const Variable& input0, Dictionary&& functionConfig, const std::wstring& functionName = L"")
+            : PrimitiveFunction(op, { input0 }, std::move(functionConfig), functionName, GenerateUid(op))
+        {}
+
         // Primitive functions are currently implemented using the core CNTK engine ComputationNode types
         virtual BackPropStatePtr Forward(const std::vector<ValuePtr>& /*inputValues*/,
                                          std::unordered_map<Variable, ValuePtr>& /*outputs*/,
@@ -449,8 +457,13 @@ namespace CNTK
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
         static NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool broadcastAllowed, bool inferInputDimensions)
         {
-            auto leftOperandShape = leftOperand.Shape();
-            auto rightOperandShape = rightOperand.Shape();
+            const auto& leftOperandShapeC  = leftOperand.Shape();
+            const auto& rightOperandShapeC = rightOperand.Shape();
+            if (leftOperandShapeC == rightOperandShapeC) // fast path--note this won't catch if both inputs have inferred dimensions, which is an error condition
+                return leftOperandShapeC;
+
+            auto leftOperandShape  = leftOperandShapeC;
+            auto rightOperandShape = rightOperandShapeC;
 
             if (leftOperandShape == NDShape::Unknown)
                 leftOperandShape = rightOperandShape;
