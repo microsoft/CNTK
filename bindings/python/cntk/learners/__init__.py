@@ -743,8 +743,8 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          variance_momentum=momentum_as_time_constant_schedule(720000),
          l1_regularization_weight=0.0, l2_regularization_weight=0.0,
          gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-         gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value(), epsilon=1e-8):
-    '''adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, epsilon=1e-8)
+         gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value(), epsilon=1e-8, adamax=False):
+    '''adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, epsilon=1e-8, adamax=False)
     Creates an Adam learner instance to learn the parameters. See [1] for more
     information.
 
@@ -772,6 +772,8 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
         epsilon (float, optional): numerical stability constant,
          defaults to 1e-8
+        adamax: when ``True``, use infinity-norm variance momentum update instead of L2. Defaults
+         to False
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
@@ -797,7 +799,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.use_mean_gradient = use_mean_gradient
     
     return cntk_py.adam_learner(parameters, lr, momentum, unit_gain,
-                                variance_momentum, epsilon, additional_options)
+                                variance_momentum, epsilon, adamax, additional_options)
 
 
 @typemap

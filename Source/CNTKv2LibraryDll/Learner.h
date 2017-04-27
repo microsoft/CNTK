@@ -273,6 +273,7 @@ namespace CNTK
             bool unitGain,
             const MomentumSchedule& varianceMomentumSchedule,
             double epsilon,
+            bool adamax,
             AdditionalLearningOptions additionalOptions);
 
     protected:
@@ -293,6 +294,7 @@ namespace CNTK
         mutable std::unordered_map<Parameter, double> m_smoothedCounts;
         MomentumSchedule m_varianceMomentumSchedule;
         double m_epsilon;
+        bool m_adamax;
     };
 
     class LearnerRMSProp : public LearnerBase

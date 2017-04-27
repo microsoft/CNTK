@@ -661,10 +661,12 @@ namespace CNTK
         bool unitGain,
         const MomentumSchedule& varianceMomentumSchedule,
         double epsilon,
+        bool adamax,
         AdditionalLearningOptions additionalOptions)
         : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule,
             unitGain, additionalOptions, /*allocateSmoothGradients*/ false),
-        m_varianceMomentumSchedule(varianceMomentumSchedule), m_epsilon(epsilon)
+          m_varianceMomentumSchedule(varianceMomentumSchedule), m_epsilon(epsilon),
+          m_adamax(adamax)
     {
 
         if (m_epsilon < 0.0)
@@ -675,7 +677,7 @@ namespace CNTK
         for (const auto& parameter : parameters)
         {
             const auto shape = GetMatrixShape(parameter);
-            NDArrayViewPtr view = AllocateNDArrayView(parameter, { shape[0], 2 * shape[1] });
+            NDArrayViewPtr view = AllocateNDArrayView(parameter, {shape[0], 2 * shape[1]});
             m_smoothedGradientValues.emplace(parameter, view);
             m_smoothedCounts.emplace(parameter, 0.0);
         }
@@ -701,7 +703,7 @@ namespace CNTK
         double& smoothedCount = m_smoothedCounts.at(parameter);
 
         smoothedGradientMatrix->AdamUpdate(*gradientMatrix, *parameterMatrix, smoothedCount, learningRate,
-            momentum, varMomentum, (ElementType)m_epsilon, UseUnitGainMomentum());
+                                           momentum, varMomentum, (ElementType)m_epsilon, UseUnitGainMomentum(), m_adamax);
     }
 
     LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters,
@@ -797,9 +799,10 @@ namespace CNTK
                            bool unitGain, /*=true*/
                            const MomentumSchedule& varianceMomentumSchedule, /*= MomentumAsTimeConstantSchedulePerSample(2 * 3600 * 100)*/
                            double epsilon,
+                           bool adamax, /*=false*/
                            AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        return MakeSharedObject<LearnerAdam>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, epsilon, additionalOptions);
+        return MakeSharedObject<LearnerAdam>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, epsilon, adamax, additionalOptions);
     }
 
     LearnerPtr AdaGradLearner(const vector<Parameter>& parameters,
