@@ -46,7 +46,7 @@ from lib.fast_rcnn.bbox_transform import bbox_transform_inv
 
 ###############################################################
 ###############################################################
-train_e2e = True
+train_e2e = False
 make_mode = False
 graph_type = "png" # "png" or "pdf"
 
@@ -646,7 +646,8 @@ if __name__ == '__main__':
     #plot(dummy, r"C:\Temp\Yuxiao_20170426_converted_models\VGG16_Faster-RCNN_VOC.pdf")
     #import pdb; pdb.set_trace()
 
-    model_path = os.path.join(abs_path, "Output", "faster_rcnn_py.model")
+    model_path = os.path.join(abs_path, "Output", "faster_rcnn_py_{}_{}.model"
+                              .format(base_model_to_use, "e2e" if train_e2e else "4stage"))
 
     # Train only if no model exists yet
     if os.path.exists(model_path) and make_mode:

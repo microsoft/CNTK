@@ -190,6 +190,16 @@ class ProposalLayer(UserFunction):
     def clone(self, cloned_inputs):
         return ProposalLayer(cloned_inputs[0], cloned_inputs[1], im_info=self._im_info)
 
+    def serialize(self):
+        internal_state = {}
+        internal_state['im_info'] = self._im_info
+        return internal_state
+
+    @staticmethod
+    def deserialize(inputs, name, state):
+        im_info = state['im_info']
+        return ProposalLayer(inputs[0], inputs[1], name=name, im_info=im_info)
+
 
 def _filter_boxes(boxes, min_size):
     """Remove all boxes with any side smaller than min_size."""

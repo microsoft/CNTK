@@ -78,3 +78,14 @@ class SmoothL1Loss(UserFunction):
 
     def clone(self, cloned_inputs):
         return SmoothL1Loss(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2], sigma=self._sigma)
+
+    def serialize(self):
+        internal_state = {}
+        if self._sigma is not None:
+            internal_state['sigma'] = self._sigma
+        return internal_state
+
+    @staticmethod
+    def deserialize(inputs, name, state):
+        sigma = None if 'sigma' not in state else state['sigma']
+        return SmoothL1Loss(inputs[0], inputs[1], inputs[2], name=name, sigma=sigma)

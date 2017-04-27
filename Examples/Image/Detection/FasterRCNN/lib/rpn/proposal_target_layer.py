@@ -195,6 +195,17 @@ class ProposalTargetLayer(UserFunction):
     def clone(self, cloned_inputs):
         return ProposalTargetLayer(cloned_inputs[0], cloned_inputs[1], num_classes=self._num_classes)
 
+    def serialize(self):
+        internal_state = {}
+        internal_state['num_classes'] = self._num_classes
+        return internal_state
+
+    @staticmethod
+    def deserialize(inputs, name, state):
+        num_classes = state['num_classes']
+        return ProposalTargetLayer(inputs[0], inputs[1], name=name, num_classes=num_classes)
+
+
 def _get_bbox_regression_labels(bbox_target_data, num_classes):
     """Bounding-box regression targets (bbox_target_data) are stored in a
     compact form N x (class, tx, ty, tw, th)

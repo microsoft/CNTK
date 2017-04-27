@@ -268,6 +268,17 @@ class AnchorTargetLayer(UserFunction):
     def clone(self, cloned_inputs):
         return AnchorTargetLayer(cloned_inputs[0], cloned_inputs[1], im_info=self._im_info)
 
+    def serialize(self):
+        internal_state = {}
+        internal_state['im_info'] = self._im_info
+        return internal_state
+
+    @staticmethod
+    def deserialize(inputs, name, state):
+        im_info = state['im_info']
+        return AnchorTargetLayer(inputs[0], inputs[1], name=name, im_info=im_info)
+
+
 def _unmap(data, count, inds, fill=0):
     """ Unmap a subset of item (data) back to the original set of items (of
     size count) """

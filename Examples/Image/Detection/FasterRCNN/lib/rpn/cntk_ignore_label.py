@@ -60,3 +60,13 @@ class IgnoreLabel(UserFunction):
 
     def clone(self, cloned_inputs):
         return IgnoreLabel(cloned_inputs[0], cloned_inputs[1], ignore_label=self._ignore_label)
+
+    def serialize(self):
+        internal_state = {}
+        internal_state['ignore_label'] = self._ignore_label
+        return internal_state
+
+    @staticmethod
+    def deserialize(inputs, name, state):
+        ignore_label = state['ignore_label']
+        return IgnoreLabel(inputs[0], inputs[1], name=name, ignore_label=ignore_label)
