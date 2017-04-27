@@ -639,7 +639,7 @@ __global__ void _stochasticbinaryBackward_PassThrough(const ElemType* a, const E
 	//ElemType sigma = 1. / (1. + exp(-a[id]));
 	//ingrad[id] = outgrad[id] * sigma * (1 - sigma);
 	//ingrad[id] = output[id] > (ElemType)0 ? outgrad[id] : 0;
-    ingrad[id] = outgrad[id];
+    ingrad[id] = fabs_(a[id]) <= 1 ? outgrad[id] : 0;
 }
 
 template <class ElemType>
