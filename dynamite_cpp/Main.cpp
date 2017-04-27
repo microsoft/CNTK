@@ -184,14 +184,17 @@ Variable Index(Variable x, size_t i)
     auto dims = x.Shape().Dimensions();
     x = Slice(x, { Axis((int)x.Shape().Rank() - 1) }, { (int)i }, { (int)i + 1 });
     dims = x.Shape().Dimensions();
+    dims.pop_back(); // drop last axis
+    x = Reshape(x, dims);
     return x;
 }
 
-// slice the last dimension (index with index i; then drop the axis)
+// slice the last dimension if an NDArrayView (index with index i; then drop the axis)
+// This is used for MB conversion.
 NDArrayViewPtr Index(NDArrayViewPtr data, size_t i)
 {
     auto dims = data->Shape().Dimensions();
-    auto startOffset = vector<size_t>(dims.size(), 0); // TODO: get a simpler interface without dynamic vector allocation
+    auto startOffset = vector<size_t>(dims.size(), 0);
     auto extent = dims;
     if (startOffset.back() != i || extent.back() != 1)
     {
@@ -349,7 +352,7 @@ function<Variable(const vector<Variable>&, Variable)> AttentionModel(size_t atte
         let hEncsProj = Times(Wenc, hEncsTensor, /*outputRank=*/1);
         let hDecProj  = Times(Wdec, hDec);
         let u = Tanh(hEncsProj + hDecProj); // // [hiddenDim, inputLen]
-        let u1 = Times(v, u, /*outputRank=*/0); // [inputLen]
+        let u1 = Times(v, u, /*outputRank=*/0); // [inputLen]   --BUGBUG: fails, but no need
         let w = Softmax(u1);  // [inputLen] these are the weights
         let hEncsAv = Times(hEncsTensor, w);
         return hEncsAv;
@@ -418,7 +421,10 @@ function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCrite
     BinaryModel criterion = [=](Variable feature, Variable label) -> Variable
     {
         let z = model(feature);
-        let loss = CNTK::CrossEntropyWithSoftmax(z, label);
+        //let loss = CNTK::CrossEntropyWithSoftmax(z, label);
+        auto s1 = label.Shape();
+        auto z1 = z.Shape();
+        let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(label, z, /*outputRank=*/0));
         return loss;
     };
     // create a batch mapper (which will allow suspension)
@@ -503,15 +509,15 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             for (size_t j = i; j < batch.size(); j++)
                 vbatch[j] = std::move(ToVector(batch[j]));
         }
-        let s2sOut = Batch::Map(d_model_fn1)(vargs[0], vargs[0]); // for now auto-encoder
+        //let s2sOut = Batch::Map(d_model_fn1)(vargs[0], vargs[0]); // for now auto-encoder
         for (size_t xxx = 0; xxx < 10; xxx++)
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "d_criterion_fn: %.6f sec\n");
-            mbLoss = d_criterion_fn(args[0], args[1]);
-            mbLoss = d_criterion_fn(args[0], args[1]);
-            mbLoss = d_criterion_fn(args[0], args[1]);
-            mbLoss = d_criterion_fn(args[0], args[1]);
-            mbLoss = d_criterion_fn(args[0], args[1]);
+            mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value();
+            mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value();
+            mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value();
+            mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value();
+            mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value();
         }
 #endif
 
