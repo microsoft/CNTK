@@ -186,6 +186,11 @@ def test_to_sequence_backprop(device_id):
 def test_sequence_unpack_basic(device_id):
     dev = cntk_device(device_id)
 
+    # Unpack a placeholder
+    p = C.placeholder()
+    p_unpacked_outputs = C.sequence.unpack(p, padding_value=0).outputs
+    assert len(p_unpacked_outputs) == 2
+
     x = C.input((C.FreeDimension, 2, 3), is_sparse=False)
     x_seq_lens = C.input(())
     x_seq = C.to_sequence(x, x_seq_lens)

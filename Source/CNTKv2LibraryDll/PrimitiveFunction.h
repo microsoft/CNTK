@@ -343,22 +343,26 @@ namespace CNTK
 
             auto inferredReplacementShape = replacementShape;
             size_t inferredAxisIndex = SIZE_MAX;
-            if (!operandSubshapeToReshape.HasFreeDimension())
+            size_t targetElementsCount = 1;
+            for (size_t k = 0; k < inferredReplacementShape.Rank(); k++)
             {
-                size_t inputElementsCount = operandSubshapeToReshape.TotalSize();
-                size_t targetElementsCount = 1;
-                for (size_t k = 0; k < inferredReplacementShape.Rank(); k++)
-                {
-                    if (inferredReplacementShape[k] != NDShape::InferredDimension)
-                        targetElementsCount *= inferredReplacementShape[k];
-                    else if (inferredAxisIndex == SIZE_MAX)
-                        inferredAxisIndex = k;
-                    else
-                        InvalidArgument("Reshape: More than one axis's dimension was unspecified in the replacement shape '%S'", replacementShape.AsString().c_str());
-                }
+                if (inferredReplacementShape[k] != NDShape::InferredDimension)
+                    targetElementsCount *= inferredReplacementShape[k];
+                else if (inferredAxisIndex == SIZE_MAX)
+                    inferredAxisIndex = k;
+                else
+                    InvalidArgument("Reshape: More than one axis's dimension was unspecified in the replacement shape '%S'", replacementShape.AsString().c_str());
+            }
 
-                if (inferredAxisIndex != SIZE_MAX)
+            if (inferredAxisIndex != SIZE_MAX)
+            {
+                if (!operandSubshapeToReshape.HasFreeDimension())
+                {
+                    size_t inputElementsCount = operandSubshapeToReshape.TotalSize();
                     inferredReplacementShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
+                }
+                else
+                    inferredReplacementShape[inferredAxisIndex] = NDShape::FreeDimension;
             }
 
             auto outputShape = operandShape.SubShape(0, beginAxisIdx);

@@ -267,7 +267,6 @@ namespace CNTK
             outputs.push_back(OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), Name()));
         else
         {
-            std::vector<Variable> secondaryOutputs;
             DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);
             std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, this, m_attributes);
             bool needsGradient = std::any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.NeedsGradient(); });
@@ -356,13 +355,6 @@ namespace CNTK
                                 InvalidArgument("UnpackSequence: Operand '%S' must have at least 2 dynamic axes.", m_inputs[0].AsString().c_str());
 
                             outputShape = m_inputs[0].Shape().AppendShape({ NDShape::FreeDimension });
-
-                            auto suppressMaskOutput = m_attributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
-                            if (!suppressMaskOutput)
-                            {
-                                auto maskOutput = OutputVariable({ NDShape::FreeDimension }, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, Name().empty() ? L"" : Name() + L"_UnpackSequenceMask");
-                                secondaryOutputs.push_back(maskOutput);
-                            }
                             break;
                         }
                         case PrimitiveOpType::ToSequence:
@@ -921,7 +913,15 @@ namespace CNTK
 
             auto primaryOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, Name().empty() ? L"" : Name());
             outputs.push_back(primaryOutput);
-            outputs.insert(outputs.end(), secondaryOutputs.begin(), secondaryOutputs.end());
+            if (m_op == PrimitiveOpType::UnpackSequence)
+            {
+                auto suppressMaskOutput = m_attributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
+                if (!suppressMaskOutput)
+                {
+                    auto maskOutput = OutputVariable({ NDShape::FreeDimension }, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, Name().empty() ? L"" : Name() + L"_UnpackSequenceMask");
+                    outputs.push_back(maskOutput);
+                }
+            }
         }
     }
 
