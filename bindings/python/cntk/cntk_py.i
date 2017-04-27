@@ -771,9 +771,11 @@ public:
                 int key_flags = 0;
                 if (SWIG_KEY_TYPE == $descriptor(CNTK::Variable *))
                     key_flags |= SWIG_POINTER_IMPLICIT_CONV;
-                int res1 = SWIG_ConvertPtr(key, &raw_var, SWIG_KEY_TYPE,  key_flags );
+                int res1 = SWIG_ConvertPtr(key, &raw_var, SWIG_KEY_TYPE,  key_flags);
                 if (!SWIG_IsOK(res1)) {
-                    SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary"); 
+                    std::string s("cannot convert key of dictionary to ");
+                    s += typeid(KEY_TYPE).name();
+                    SWIG_exception_fail(SWIG_ArgError(res1), s.c_str());
                 }
                 if (!raw_var) {
                     SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary");
@@ -787,7 +789,9 @@ public:
                 void *raw_value = 0;
                 int res2 = SWIG_ConvertPtr(value, &raw_value, SWIG_VALUE_TYPE,  val_flags );
                 if (!SWIG_IsOK(res2)) {
-                    SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary"); 
+                    std::string s("cannot convert value of dictionary to ");
+                    s += typeid(VALUE_TYPE).name();
+                    SWIG_exception_fail(SWIG_ArgError(res2), s.c_str());
                 }
 
                 VALUE_TYPE* value;
@@ -936,7 +940,7 @@ public:
             void *cpp_key = 0;
             int key_res = SWIG_ConvertPtr(py_key, &cpp_key, $descriptor(CNTK::Variable *), 0 | SWIG_POINTER_IMPLICIT_CONV);
             if (!SWIG_IsOK(key_res)) {
-                RuntimeError("cannot convert key of dictionary"); 
+                RuntimeError("cannot convert key of dictionary to CNTK::Variable"); 
             }
 
             CNTK::Variable* cntk_var = reinterpret_cast<CNTK::Variable*>(cpp_key);
@@ -947,7 +951,7 @@ public:
                 void *cpp_val = 0;
                 int val_res = SWIG_ConvertPtr(py_value, &cpp_val, $descriptor(CNTK::ValuePtr *), 0);
                 if (!SWIG_IsOK(val_res)) {
-                    RuntimeError("cannot convert value of dictionary"); 
+                    RuntimeError("cannot convert value of dictionary CNTK::ValuePtr"); 
                 }
 
                 CNTK::ValuePtr* cpp_value = reinterpret_cast<CNTK::ValuePtr*>(cpp_val);

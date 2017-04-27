@@ -14,15 +14,18 @@ import cntk as C
 from ..functions import *
 from ...train.trainer import *
 from ...initializer import glorot_uniform
-from .. import constant, parameter, input, placeholder, times, plus, sequence, as_composite, combine, convolution, splice, as_block
+from .. import constant, parameter, input, placeholder, times, plus, sequence,\
+        as_composite, combine, convolution, splice, as_block, alias
 from ... import InferredDimension, gpu, cpu
 from .ops_test_utils import compare_lists_of_np_arrays, AA, cntk_device
 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDefs, StreamDef
 
+
 def test_variable_forwarding():
     op = constant(value=2, shape=(3,4)) + 1
     assert op.shape == (3,4)
+
 
 def test_eval_by_node_name():
     i = input(shape=(1,), needs_gradient=True, name='i')
@@ -482,3 +485,26 @@ def test_eval_again_with_prev_outputs_live(device_id):
     # is now erased, due to the subsequent grad call
     with pytest.raises(RuntimeError):
         assert np.array_equal(grad1[w1].asarray(), [2])
+
+
+def test_outputs_passing():
+    in1 = input(shape=(1,))
+    a = alias(in1 + 1, name='a')
+    b = a + 2
+
+    expected = [[2], [3]]
+
+    result = b.eval({in1: [[1], [2]]}, outputs=a.outputs)
+    assert np.array_equal(result, expected)
+    
+    result = b.eval({in1: [[1], [2]]}, outputs=list(a.outputs))
+    assert np.array_equal(result, expected)
+    
+    result = b.eval({in1: [[1], [2]]}, outputs=a.output)
+    assert np.array_equal(result, expected)
+    
+    result = b.eval({in1: [[1], [2]]}, outputs=a)
+    assert np.array_equal(result, expected)
+    
+    with pytest.raises(TypeError):
+        b.eval({in1: [[1], [2]]}, outputs=[a.outputs])
