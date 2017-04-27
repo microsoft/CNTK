@@ -41,7 +41,7 @@ def test_cntk_fastrcnn_eval_evalCorrect(nb):
                      re.search('Number of detections: (\d+)',  get_output_stream_from_cell(cell))]
     assert len(detectionCells) == 1
     
-    number_of_detections = int(re.search('Number of detections: (\d+)', detectionCells[0].outputs[0]['text']).group(1))
+    number_of_detections = int(re.search('Number of detections: (\d+)', get_output_stream_from_cell(detectionCells[0])).group(1))
     assert(number_of_detections > 0)
 
 
