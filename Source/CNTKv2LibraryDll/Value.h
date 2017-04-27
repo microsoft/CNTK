@@ -50,7 +50,7 @@ namespace CNTK
         /* virtual */ bool IsValid() const
         {
             if (IsPacked())
-                return !!m_packedData;
+                return m_packedData != nullptr;
             else
                 return Value::IsValid();
         }

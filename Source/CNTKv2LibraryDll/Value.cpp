@@ -603,7 +603,7 @@ namespace CNTK
         if (IsValid())
             wss << L"Value(" << Shape().AsString() << ", " << DeviceKindName(Device().Type()) << L")";
         else
-            wss << L"Value(???)";
+            wss << L"Value(###)";
         return wss.str();
     }
 
