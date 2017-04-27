@@ -62,7 +62,7 @@ def deconv_mnist(max_epochs=3):
 
     # Instantiate the trainer object to drive the model training
     learner = cntk.learners.momentum_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=True)
-    progress_printer = cntk.logging.ProgressPrinter(tag='Training')
+    progress_printer = cntk.logging.ProgressPrinter(tag='Training', num_epochs=max_epochs)
     trainer = cntk.Trainer(z, (rmse_loss, rmse_eval), learner, progress_printer)
 
     # define mapping from reader streams to network inputs
