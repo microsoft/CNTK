@@ -409,6 +409,32 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                   m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR);
     }
 
+    int *send_buffer = new int[m_mpi->NumNodesInUse()];
+    int *recv_buffer = new int[m_mpi->NumNodesInUse()];
+    memset(send_buffer, 0, sizeof(int) * m_mpi->NumNodesInUse());
+    memset(recv_buffer, 0, sizeof(int) * m_mpi->NumNodesInUse());
+    send_buffer[m_mpi->CurrentNodeRank()] = net->GetDeviceId();
+    m_mpi->AllReduce<int>(send_buffer, recv_buffer, m_mpi->NumNodesInUse());
+
+    int *treeps = new int[m_mpi->NumNodesInUse()];
+    memset(treeps, 0, sizeof(int) * m_mpi->NumNodesInUse());
+    for (int i = 0; i < m_mpi->NumNodesInUse(); ++i)
+        treeps[i] = m_mixtreeps[2 * i] - 48;
+
+    int *idx = new int[m_mpi->NumNodesInUse()];
+    memset(idx, 0, sizeof(int) * m_mpi->NumNodesInUse());
+    for (int i = 0; i < m_mpi->NumNodesInUse(); ++i)
+    {
+        int temp = 0;
+        for (int j = 0; j < m_mpi->NumNodesInUse(); ++j)
+            if (recv_buffer[i] > recv_buffer[j])
+                temp++;
+        idx[i] = temp;
+    }
+    for (int i = 0; i < m_mpi->NumNodesInUse(); ++i)
+        m_mixtreeps[2 * i] = char(treeps[idx[i]] + 48);
+
+
     // Multiverso Warpper for ASGD logic init
     if (m_parallelizationMethod == ParallelizationMethod::dataParallelASGD)
     {
