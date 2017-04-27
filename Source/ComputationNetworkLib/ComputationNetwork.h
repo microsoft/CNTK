@@ -952,6 +952,12 @@ public:
     }
     bool GetTrackGapNaNs() const { return m_environment->trackGapNans; }
 
+    void SetIsV2Library(bool enable)
+    {
+        m_environment->isV2Library = enable;
+    }
+    bool GetIsV2Library() const { return m_environment->isV2Library; }
+
     void SetTraceLevel(int traceLevel)
     {
         m_environment->traceLevel = traceLevel;

@@ -611,7 +611,7 @@ namespace CNTK
 
         for (size_t i = 0; i < fullyDefinedVarShape.Rank(); ++i)
         {
-            if (fullyDefinedVarShape[i] == NDShape::FreeDimension)
+            if ((fullyDefinedVarShape[i] == NDShape::FreeDimension) || (fullyDefinedVarShape[i] == NDShape::InferredDimension))
                 fullyDefinedVarShape[i] = computationNodeShape.GetDim(i);
             else if (fullyDefinedVarShape[i] != computationNodeShape.GetDim(i))
                 LogicError("Computation node tensor shape '%s' does not match variable shape '%S'.", ((std::string)computationNodeShape).c_str(), fullyDefinedVarShape.AsString().c_str());

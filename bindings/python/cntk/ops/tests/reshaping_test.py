@@ -564,3 +564,24 @@ def test_op_sequence_reduce_sum(device_id, precision):
     assert np.array_equal(res[0], np.asarray([2.]))
     assert np.array_equal(res[1], np.asarray([5.]))
     assert np.array_equal(res[2], np.asarray([9.]))
+
+
+def test_op_reshape_free_dimension(device_id):
+    dev = cntk_device(device_id)
+    x = C.input((C.FreeDimension, 2, 2))
+
+    x_reshaped_1 = C.reshape(x, (-1,), 0, 2)
+    data = [[[1, 2], [3, 4]]]
+    result = x_reshaped_1.eval({x : np.asarray(data, dtype=np.float32)})
+    assert np.array_equal(result[0], data[0])
+    data = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]
+    result = x_reshaped_1.eval({x : np.asarray(data, dtype=np.float32)})
+    assert np.array_equal(result[0], np.reshape(data, (4, 2)))
+
+    x_reshaped_2 = C.reshape(x, (-1,), 1, 3)
+    data = [[[1, 2], [3, 4]]]
+    result = x_reshaped_2.eval({x : np.asarray(data, dtype=np.float32)})
+    assert np.array_equal(result[0], np.reshape(data, (1, 4)))
+    data = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]
+    result = x_reshaped_2.eval({x : np.asarray(data, dtype=np.float32)})
+    assert np.array_equal(result[0], np.reshape(data, (2, 4)))
