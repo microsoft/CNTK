@@ -13,7 +13,7 @@ from .. import parameter
 
 def _check(init, name):
     p = parameter(shape=(10,20,5), init=init)
-    val = np.asarray(p)
+    val = p.asarray()
     assert np.allclose(np.average(val), 0, atol=0.1), name
     assert np.var(val) > 0.01, name
 
@@ -21,8 +21,11 @@ def test_initializer_init(device_id):
     from cntk.ops.tests.ops_test_utils import cntk_device
     from cntk import cntk_py
     cntk_py.always_allow_setting_default_device()
-    from cntk.device import set_default_device
-    set_default_device(cntk_device(device_id))
+    from cntk.device import try_set_default_device
+    try_set_default_device(cntk_device(device_id))
+
+    previous_random_seed = cntk_py.get_random_seed()
+    cntk_py.reset_random_seed(0)
 
     _check(uniform(scale=1), 'uniform')
     _check(normal(scale=1, output_rank=1, filter_rank=2), 'normal')
@@ -31,3 +34,5 @@ def test_initializer_init(device_id):
     _check(glorot_normal(scale=10, output_rank=1, filter_rank=2), 'glorot_normal')
     _check(he_uniform(scale=10, output_rank=1, filter_rank=2), 'he_uniform')
     _check(he_normal(scale=10, output_rank=1, filter_rank=2), 'he_normal')
+
+    cntk_py.reset_random_seed(previous_random_seed)

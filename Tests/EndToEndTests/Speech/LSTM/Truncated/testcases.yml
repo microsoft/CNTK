@@ -1,7 +1,8 @@
 dataDir: ../../Data
 tags:
-     - bvt-l  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
-     - nightly-l (build_sku == 'gpu')
+     - bvt-l (build_sku == 'gpu') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
+     # Note: Windows-Debug-CPU runs for too long (~ 2 hours depending on machine)
+     - nightly-l (build_sku == 'gpu') and ((flavor == 'release') or (os == 'linux') or (device == 'gpu'))
 
 testCases:
   CNTK Run must be completed:

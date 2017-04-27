@@ -173,6 +173,13 @@ void renameOrDie(const std::string& from, const std::string& to);
 void renameOrDie(const std::wstring& from, const std::wstring& to);
 
 // ----------------------------------------------------------------------------
+// copyOrDie(): copy file with error handling.
+// ----------------------------------------------------------------------------
+
+void copyOrDie(const std::string& from, const std::string& to);
+void copyOrDie(const std::wstring& from, const std::wstring& to);
+
+// ----------------------------------------------------------------------------
 // fexists(): test if a file exists
 // ----------------------------------------------------------------------------
 
@@ -628,8 +635,10 @@ void expand_wildcards(const std::wstring& path, std::vector<std::wstring>& paths
 namespace msra { namespace files {
 
 void make_intermediate_dirs(const std::wstring& filepath);
-};
-};
+
+std::vector<std::wstring> get_all_files_from_directory(const std::wstring& directory);
+
+}}
 
 // ----------------------------------------------------------------------------
 // fuptodate() -- test whether an output file is at least as new as an input file

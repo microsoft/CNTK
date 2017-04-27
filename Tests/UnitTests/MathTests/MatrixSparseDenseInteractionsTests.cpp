@@ -136,8 +136,6 @@ BOOST_FIXTURE_TEST_CASE(MatrixDenseTimesSparse, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(CPUMatrixDenseTimesSparse, RandomSeedFixture)
 {
-    // TODO: test fails with large dimensions
-    size_t dim1 = 4, dim2 = 2;
     Matrix<float> mAdense(CPUDEVICE);
     mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
 

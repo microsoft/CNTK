@@ -75,11 +75,9 @@ public:
         ReleaseMatrixToPool(m_transposedOutput, matrixPool);
         ReleaseMatrixToPool(m_transposedDInput, matrixPool);
         ReleaseMatrixToPool(m_transposedDOutput, matrixPool);
-#if 0
         ReleaseMatrixToPool(m_reserve, matrixPool);
         ReleaseMatrixToPool(m_workspace, matrixPool);
         ReleaseMatrixToPool(m_packingIndex, matrixPool);
-#endif
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const { return false; }

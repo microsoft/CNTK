@@ -394,13 +394,15 @@ class Test:
       ccMajorByCard = {
         'GeForce GTX 780 Ti': 3,
         'GeForce GTX 960': 5,
+        'GeForce GTX 1050 Ti': 6,
+        'Quadro K2000' : 3,
         'Quadro M2000M': 5,
         'Quadro M4000': 5,
       }
-      cc = sys.maxint
+      cc = sys.maxsize
       try:
         gpuList = subprocess.check_output([nvidiaSmiPath, '-L'])
-        for line in gpuList.split('\n'):
+        for line in gpuList.decode('utf-8').split('\n'):
           m = re.match(r"GPU (?P<id>\d+): (?P<type>[^(]*) \(UUID: (?P<guid>GPU-.*)\)\r?$", line)
           if m:
             try:
@@ -411,7 +413,7 @@ class Test:
               pass
       except OSError:
         pass
-      if cc != sys.maxint:
+      if cc != sys.maxsize:
         self.gpuBaselinePatternList.insert(0, ".gpu.cc" + str(cc))
 
     return self.gpuBaselinePatternList
@@ -683,6 +685,8 @@ def runCommand(args):
     pyPaths['py34'] = convertPythonPath(args.py34_paths)
   if args.py35_paths:
     pyPaths['py35'] = convertPythonPath(args.py35_paths)
+  if args.py36_paths:
+    pyPaths['py36'] = convertPythonPath(args.py36_paths)
   # If no Python was explicitly specifed, go against current.
   if not pyPaths:
     pyPaths['py'] = ''
@@ -789,6 +793,7 @@ if __name__ == "__main__":
   runSubparser.add_argument("--py27-paths", help="comma-separated paths to prepend when running a test against Python 2.7")
   runSubparser.add_argument("--py34-paths", help="comma-separated paths to prepend when running a test against Python 3.4")
   runSubparser.add_argument("--py35-paths", help="comma-separated paths to prepend when running a test against Python 3.5")
+  runSubparser.add_argument("--py36-paths", help="comma-separated paths to prepend when running a test against Python 3.6")
   tmpDir = os.getenv("TEMP") if windows else "/tmp"
   defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
   runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")

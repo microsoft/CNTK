@@ -12,7 +12,7 @@ echo.
 echo Requirements:
 echo  - Intel MKL SDK installed on the machine
 echo  - MKLROOT environment variable is set to the MKL directory inside the Intel MKL SDK
-echo  - Visual Studio 2013 installed and included in the path
+echo  - Visual Studio 2015 installed and included in the path
 echo.
 
 setlocal enableextensions enabledelayedexpansion

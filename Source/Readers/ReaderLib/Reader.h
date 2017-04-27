@@ -7,8 +7,10 @@
 
 #include <vector>
 #include <memory>
+#include <functional>
 #include "Sequences.h"
 #include "TensorShape.h"
+#include "ReaderConstants.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -32,12 +34,18 @@ struct ReaderConfiguration
     size_t m_workerRank;                    // Rank of the Open MPI worker, worker rank has to be less than the number of workers
     size_t m_minibatchSizeInSamples;        // Maximum minibatch size for the epoch in samples
     size_t m_truncationSize;                // Truncation size in samples for truncated BPTT mode.
+
+    // This flag indicates whether the minibatches are allowed to overlap the boundary
+    // between sweeps (in which case, they can contain data from different sweeps) or
+    // if they need to be trimmed at the sweep end.
+    bool m_allowMinibatchesToCrossSweepBoundaries{ false };
 };
 
 // TODO: Should be deprecated.
 struct EpochConfiguration : public ReaderConfiguration
 {
     size_t m_totalEpochSizeInSamples;       // Total size of the epoch in samples
+    size_t m_totalEpochSizeInSweeps {g_infinity}; // Total size of the epoch in sweeps (default = no limit).
     size_t m_epochIndex;                    // Current epoch index [0 .. max number of epochs)
 };
 
@@ -87,6 +95,10 @@ typedef std::shared_ptr<StreamMinibatch> StreamMinibatchPtr;
 // Represents a single minibatch, that contains information about all streams.
 struct Minibatch
 {
+    // Indicates that this minibatch is either adjacent to the data sweep boundary 
+    // (-----<minibatch>|---) or crosses the boundary (-----<mini|batch>---).
+    bool m_endOfSweep;
+
     // Indicates that the end of epoch has been reached.
     // It is set to true for the last minibatch, there still
     // can be data in m_data field even if this flag is set.
@@ -95,11 +107,12 @@ struct Minibatch
     // Minibatch data
     std::vector<StreamMinibatchPtr> m_data;
 
-    Minibatch() : m_endOfEpoch(false)
-    {
-    }
+    // A function that maps a sequence id from minibatch layout
+    // to the string representation of the sequence key.
+    std::function<std::string(const size_t)> m_getKeyById;
 
-    Minibatch(bool endOfEpoch) : m_endOfEpoch(endOfEpoch)
+    Minibatch(bool endOfSweep = false, bool endOfEpoch = false)
+        : m_endOfSweep(endOfSweep), m_endOfEpoch(endOfEpoch)
     {
     }
 };

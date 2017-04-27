@@ -3,8 +3,8 @@ isPythonTest: True
 dataDir: .
 
 tags:
-    - bvt-e (build_sku == 'gpu') and (device=='cpu') and (flavor=='release')
-    - nightly-e (build_sku == 'gpu') and (device=='cpu') and (flavor=='release')
+    - bvt-e (build_sku == 'gpu') and (device == 'cpu') and (flavor == 'release')
+    - nightly-e (build_sku == 'gpu') and (device == 'cpu') and (flavor == 'release')
 
 testCases:
   PyTest run must finish with error code 0 (outputs __COMPLETED__ in that case):

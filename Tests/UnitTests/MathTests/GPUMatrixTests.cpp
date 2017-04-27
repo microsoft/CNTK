@@ -6,12 +6,70 @@
 //
 #include "stdafx.h"
 #include "../../../Source/Math/GPUMatrix.h"
+#include "../../../Source/Math/Matrix.h"
+#include "BestGpu.h"
 
 using namespace Microsoft::MSR::CNTK;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
+
+BOOST_FIXTURE_TEST_CASE(MatrixCopyAssignAccrossDevices, RandomSeedFixture)
+{
+    bool hasTwoGpus = false;
+#ifndef CPUONLY
+    auto gpus = GetAllGpusData();
+    hasTwoGpus = (gpus.size() > 1);
+#endif
+    std::array<float, 6> array = { 1, 2, 3, 4, 5, 6 };
+
+    {
+        Matrix<float> m_gpu(2, 3, array.data(), c_deviceIdZero, matrixFlagNormal);
+        Matrix<float> m_copy_gpu_0(m_gpu, c_deviceIdZero);
+        if (hasTwoGpus)
+            Matrix<float> m_copy_gpu_1(m_gpu, c_deviceIdZero + 1);
+        Matrix<float> m_copy_cpu(m_gpu, -1);
+    }
+
+    {
+        Matrix<float> m_cpu(2, 3, array.data(), -1, matrixFlagNormal);
+        Matrix<float> m_copy_gpu_0(m_cpu, c_deviceIdZero);
+        if (hasTwoGpus)
+            Matrix<float> m_copy_gpu_1(m_cpu, c_deviceIdZero + 1);
+        Matrix<float> m_copy_cpu(m_cpu, -1);
+    }
+
+    {
+        Matrix<float> m_gpu(2, 3, array.data(), c_deviceIdZero, matrixFlagNormal);
+        Matrix<float> m_copy_gpu_0(c_deviceIdZero);
+        m_copy_gpu_0.AssignValuesOf(m_gpu);
+        if (hasTwoGpus)
+        {
+            Matrix<float> m_copy_gpu_1(c_deviceIdZero + 1);
+            m_copy_gpu_1.AssignValuesOf(m_gpu);
+        }
+        Matrix<float> m_copy_cpu(-1);
+        m_copy_cpu.AssignValuesOf(m_gpu);
+    }
+
+    if (hasTwoGpus)
+    {
+
+        Matrix<float> m_gpu_0(2, 3, array.data(), c_deviceIdZero, matrixFlagNormal);
+        Matrix<float> m_gpu_1(2, 3, c_deviceIdZero + 1, m_gpu_0.GetMatrixType(), m_gpu_0.GetFormat());
+        try
+        {
+            // TODO: fix this!
+            m_gpu_1.AssignValuesOf(m_gpu_0);
+            BOOST_TEST(false, "Expected AssignValuesOf to fail.");
+        }
+        catch (...)
+        {
+        }
+    }
+}
+
 
 BOOST_FIXTURE_TEST_CASE(GPUMatrixConstructorNoFlag, RandomSeedFixture)
 {
@@ -535,6 +593,91 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixCurandSeedingDouble, RandomSeedFixture)
     auto m2 = GPUMatrix<double>::RandomUniform(16, 16, c_deviceIdZero, low, high, seedIgnored);
 
     BOOST_CHECK(m1.IsEqualTo(m2));
+}
+
+BOOST_FIXTURE_TEST_CASE(GPUMatrixAdam, RandomSeedFixture)
+{
+    GPUMatrix<double> adamMatrix(c_deviceIdZero);
+    GPUMatrix<double> gradients(2, 1, c_deviceIdZero);
+    GPUMatrix<double> parameters(2, 1, c_deviceIdZero);
+    GPUMatrix<double> expectedParameters(2, 1, c_deviceIdZero);
+    GPUMatrix<double> expectedStates(2, 2, c_deviceIdZero);
+    double gradientValues[] = { 0.1, -0.1 };
+    double paramValues[] = { 0.1, 0.1 };
+    double expectedValues[] = { -0.05803489, 0.25803488 };
+    double expectedStateValues[] = { 1e-5, 0.01, 1e-5, -0.01 };
+    gradients.SetValue(2, 1, c_deviceIdZero, gradientValues, matrixFormatRowMajor);
+    parameters.SetValue(2, 1, c_deviceIdZero, paramValues, matrixFormatRowMajor);
+    expectedParameters.SetValue(2, 1, c_deviceIdZero, expectedValues, matrixFormatRowMajor);
+    expectedStates.SetValue(2, 2, c_deviceIdZero, expectedStateValues, matrixFormatRowMajor);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, true);
+    BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
+    BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
+
+    double expectedValues2[] = { -0.27046135, 0.47046134 };
+    double expectedStateValues2[] = { 2e-05, 0.019, 2e-05, -0.019 };
+    expectedParameters.SetValue(2, 1, c_deviceIdZero, expectedValues2, matrixFormatRowMajor);
+    expectedStates.SetValue(2, 2, c_deviceIdZero, expectedStateValues2, matrixFormatRowMajor);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, true);
+    BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
+    BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
+}
+
+BOOST_FIXTURE_TEST_CASE(GPUMatrixOneHot, RandomSeedFixture)
+{
+    GPUMatrix<double> result(c_deviceIdZero);
+    const size_t num_class = 6;
+
+    double data[4] = { 1,2,3,4 };
+    GPUMatrix<double> m0(2, 2, c_deviceIdZero);
+    m0.SetValue(2, 2, c_deviceIdZero, data, matrixFormatRowMajor);
+
+    double exp_data[24];
+    memset(&exp_data[0], 0, sizeof(double) * 24);
+    exp_data[1] = exp_data[9] = exp_data[14] = exp_data[22] = 1;
+    GPUMatrix<double> exp(12, 2, c_deviceIdZero);
+    exp.SetValue(12, 2, c_deviceIdZero, exp_data, matrixFormatColMajor);
+    
+    vector<size_t> shape(3);
+    shape[0] = num_class; shape[1] = 2; shape[2] = 2;
+
+    result.AssignOneHot(m0, shape, 0);
+    
+    BOOST_CHECK(result.GetNumCols() == 2);
+    BOOST_CHECK(result.GetNumRows() == 12);
+    BOOST_CHECK(result.IsEqualTo(exp, 1e-6));
+
+    double exp_data2[24];
+    memset(&exp_data2[0], 0, sizeof(double) * 24);
+    exp_data2[2] = exp_data2[7] = exp_data2[16] = exp_data2[21] = 1;
+    GPUMatrix<double> exp2(12, 2, c_deviceIdZero);
+    exp2.SetValue(12, 2, c_deviceIdZero, exp_data2, matrixFormatColMajor);
+
+    vector<size_t> shape2(3);
+    shape2[0] = 2; shape2[1] = num_class; shape2[2] = 2;
+    GPUMatrix<double> result2(c_deviceIdZero);
+    result2.AssignOneHot(m0, shape2, 1);
+
+    BOOST_CHECK(result2.GetNumCols() == 2);
+    BOOST_CHECK(result2.GetNumRows() == 12);
+    BOOST_CHECK(result2.IsEqualTo(exp2, 1e-6));
+
+    double dirty_data[4] = {1,-1,7,4};
+    GPUMatrix<double> dirty_m(2, 2, c_deviceIdZero);
+    m0.SetValue(2, 2, c_deviceIdZero, dirty_data, matrixFormatRowMajor);
+
+    double dirty_exp_data[24];
+    memset(&dirty_exp_data[0], 0, sizeof(double) * 24);
+    dirty_exp_data[1] = dirty_exp_data[22] = 1;
+    GPUMatrix<double> dirty_exp(12, 2, c_deviceIdZero);
+    dirty_exp.SetValue(12, 2, c_deviceIdZero, dirty_exp_data, matrixFormatColMajor);
+
+    GPUMatrix<double> dirty_result(c_deviceIdZero);
+    dirty_result.AssignOneHot(m0, shape, 0);
+
+    BOOST_CHECK(dirty_result.GetNumCols() == 2);
+    BOOST_CHECK(dirty_result.GetNumRows() == 12);
+    BOOST_CHECK(dirty_result.IsEqualTo(dirty_exp, 1e-6));
 }
 
 #if 0 // Temporarily disabling

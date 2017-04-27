@@ -1,12 +1,7 @@
 dataDir: ../../../../Text/SLU
 tags:
-    # the complete suite (2 flavours x 2 devices) takes around
-    # 20 minutes with the longest test (debug cpu)
-    # running for ca. 10 minutes
-    # In BVT, run Release GPU
-    - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
-    # running every Nightly job in 'E' (Examples) leg
-    - nightly-e (build_sku=='gpu')
+    - bvt-e (build_sku == 'gpu') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
+    - nightly-e (build_sku == 'gpu')
 
 testCases:
   CNTK Run must be completed:

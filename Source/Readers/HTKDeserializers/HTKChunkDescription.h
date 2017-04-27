@@ -8,7 +8,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include "DataDeserializer.h"
-#include "../HTKMLFReader/htkfeatio.h"
+#include "HTKFeaturesIO.h"
 #include "UtteranceDescription.h"
 #include "ssematrix.h"
 

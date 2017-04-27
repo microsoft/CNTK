@@ -22,7 +22,7 @@ nccl_path=
 nccl_check=include/nccl.h
 
 # CNTK Custom MKL Version
-cntk_custom_mkl_version=2
+cntk_custom_mkl_version=3
 
 have_mkl=no
 mkl_path=
@@ -40,6 +40,15 @@ boost_check=include/boost/test/unit_test.hpp
 # Protocol buffers library
 protobuf_path=
 protobuf_check=lib/libprotobuf.a
+
+# MPI library
+mpi_path=
+mpi_check=include/mpi.h
+
+# Cuda-aware MPI
+# OPENMPI can auto-detect but not MVAPICH2
+cuda_gdr=no
+default_cuda_gdr=$cuda_gdr
 
 have_kaldi=no
 kaldi_path=
@@ -84,6 +93,9 @@ declare -A py_paths
 
 mathlib=
 
+have_mpi=yes
+default_use_mpi=$have_mpi
+
 default_use_1bitsgd=no
 enable_1bitsgd=$default_use_1bitsgd
 
@@ -113,6 +125,7 @@ default_opencvs="opencv-3.1.0 opencv-3.0.0"
 default_protobuf="protobuf-3.1.0"
 default_libzips="libzip-1.1.2"
 default_swig="swig-3.0.10"
+default_mpi="mpi"
 
 function default_paths ()
 {
@@ -215,6 +228,11 @@ function find_libzip ()
     find_dir "$default_libzips" "$libzip_check"
 }
 
+function find_mpi ()
+{
+    find_dir "$default_mpi" "$mpi_check"
+}
+
 function is_hardlinked ()
 {
     r=no
@@ -297,7 +315,7 @@ function find_python ()
 function default_use_python ()
 {
 # Keeping it default "no" for a little while:
-#    if test x$(find_swig) = x || test x$(find_python 27)$(find_python 34)$(find_python 35) = x
+#    if test x$(find_swig) = x || test x$(find_python 27)$(find_python 34)$(find_python 35)$(find_python 36) = x
 #    then
         echo no
 #    else
@@ -327,6 +345,8 @@ function show_help ()
     echo "  --asgd[=(yes|no)] use ASGD powered by Multiverso $(show_default $(default_use_asgd))"
     echo "  --cuda[=(yes|no)] use cuda GPU $(show_default $(default_use_cuda))"
     echo "  --python[=(yes|no)] with Python bindings $(show_default $(default_use_python))"
+    echo "  --mpi[=(yes|no)] use MPI communication $(show_default ${default_use_mpi})"
+    echo "  --gdr[=(yes|no)] use GPUDirect RDMA $(show_default ${default_cuda_gdr})"
     echo "  --with-cuda[=directory] $(show_default $(find_cuda))"
     echo "  --with-cub[=directory] $(show_default $(find_cub))"
     echo "  --with-gdk-include[=directory] $(show_default $(find_gdk_include))"
@@ -343,11 +363,13 @@ function show_help ()
     echo "  --with-code-coverage[=(yes|no)] $(show_default ${default_use_code_coverage})"
     echo "  --with-boost[=directory] $(show_default $(find_boost))"
     echo "  --with-protobuf[=directory] $(show_default $(find_protobuf))"
-    echo "  --with-py-versions=(space-separated list of 27, 34, 35)"
+    echo "  --with-py-versions=(space-separated list of 27, 34, 35, 36)"
     echo "  --with-py27-path[=directory] $(show_default $(find_python 27))"
     echo "  --with-py34-path[=directory] $(show_default $(find_python 34))"
     echo "  --with-py35-path[=directory] $(show_default $(find_python 35))"
+    echo "  --with-py36-path[=directory] $(show_default $(find_python 36))"
     echo "  --with-swig[=directory] $(show_default $(find_swig))"
+    echo "  --with-mpi[=directory] $(show_default $(find_mpi))"
 
     echo "Libraries search path:"
     for head in $(default_paths)
@@ -450,7 +472,7 @@ do
                 for ver in $optarg
                 do
                     case $ver in
-                        27 | 34 | 35)
+                        27 | 34 | 35 | 36)
                             ;;
                         *)
                             echo "Invalid value for --with-py-versions $optarg: invalid version $ver"
@@ -463,7 +485,7 @@ do
             fi
             ;;
 
-        --with-py27-path*|--with-py34-path*|--with-py35-path*)
+        --with-py27-path*|--with-py34-path*|--with-py35-path*|--with-py36-path*)
             enable_python=yes
             py_version=${key:9:2}
             if test x$optarg = x
@@ -474,7 +496,7 @@ do
                     echo "Cannot find Python $py_version directory."
                     echo "Please specify a value for $key"
                     exit 1
-                fi
+            fi
             else
                 if check_python $py_version "$optarg"
                 then
@@ -505,6 +527,28 @@ do
                     echo "Invalid SWIG directory $optarg"
                     exit 1
                 fi
+            fi
+            ;;
+
+        --mpi*)
+            if test x$optarg = xyes || test x$optarg = xno
+            then
+                have_mpi=$optarg
+            else
+                echo "Invalid value for --mpi $optarg"
+                show_help
+                exit
+            fi
+            ;;
+
+        --gdr*)
+            if test x$optarg = xyes || test x$optarg = xno
+            then
+                cuda_gdr=$optarg
+            else
+                echo "Invalid value for --gdr $optarg"
+                show_help
+                exit
             fi
             ;;
 
@@ -802,6 +846,25 @@ do
                 fi
             fi
             ;;
+        --with-mpi*)
+            if test x$optarg = x
+            then
+                mpi_path=$(find_mpi)
+                if test x$mpi_path = x
+                then
+                    echo "Cannot find mpi directory."
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $mpi_check) = yes
+                then
+                    mpi_path=$optarg
+                else
+                    echo "Invalid mpi directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
         *)
             echo Invalid option $key
             show_help
@@ -904,17 +967,19 @@ fi
 
 if test $enable_python = yes
 then
+    # TODO disabled for now. Default Python versions may miss dependencies we do not
+    # check for here yet, only support explicitly specified paths.
     # Fill unfilled default paths
-    [ -z "${py_paths[27]}" ] && find_python 27 && py_paths[27]=$(find_python 27)
-    [ -z "${py_paths[34]}" ] && find_python 34 && py_paths[34]=$(find_python 34)
-    [ -z "${py_paths[35]}" ] && find_python 35 && py_paths[35]=$(find_python 35)
+    #[ -z "${py_paths[27]}" ] && find_python 27 && py_paths[27]=$(find_python 27)
+    #[ -z "${py_paths[34]}" ] && find_python 34 && py_paths[34]=$(find_python 34)
+    #[ -z "${py_paths[35]}" ] && find_python 35 && py_paths[35]=$(find_python 35)
 
     # Unless there's a specified order or restriction, take all configured Python versions (old to new)
     [ -z "$py_versions" ] && py_versions=${!py_paths[@]}
     py_versions="$py_versions "
 
     # Make sure each requested version is configured, remove other parts
-    for ver in 27 34 35
+    for ver in 27 34 35 36
     do
         case $py_versions in
             *$ver\ *)
@@ -1002,6 +1067,20 @@ then
     fi
 fi
 
+if test x$mpi_path = x
+then
+    mpi_path=$(find_mpi)
+    if test x${mpi_path} = x
+    then
+        echo Cannot locate MPI library. See
+        echo   https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi
+        echo for installation instructions.
+        exit 1
+    else
+        echo Found MPI at $mpi_path
+    fi
+fi
+
 config=$build_top/Config.make
 echo Generating $config
 echo "#Configuration file for cntk" > $config
@@ -1017,6 +1096,16 @@ case $mathlib in
         echo OPENBLAS_PATH=$openblas_path >> $config
         ;;
 esac
+if test $have_mpi = yes ; then
+    echo HAS_MPI=1 >> $config
+else
+    echo HAS_MPI=0 >> $config
+fi
+if test $cuda_gdr = yes ; then
+    echo CUDA_GDR=1 >> $config
+else
+    echo CUDA_GDR=0 >> $config
+fi
 if test $enable_cuda = yes ; then
     echo CUDA_PATH=$cuda_path >> $config
     echo GDK_INCLUDE_PATH=$gdk_include_path >> $config
@@ -1056,6 +1145,9 @@ if test x$boost_path != x; then
 fi
 if test x$protobuf_path != x; then
     echo PROTOBUF_PATH=$protobuf_path >> $config
+fi
+if test x$mpi_path != x; then
+    echo MPI_PATH=$mpi_path >> $config
 fi
 
 if test $enable_asgd = yes ; then

@@ -396,8 +396,16 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         MELProperty prop = melPropNull;
 #if 1   // legacy
         // legacy names for some properties
-        if      (EqualInsensitive(propName, "finalCriterion", "Criteria")) propName = "criterion";
-        else if (EqualInsensitive(propName, "eval"))                       propName = "evaluation";
+        if (EqualInsensitive(propName, "finalCriterion", "Criteria"))
+        {
+            propName = "criterion";
+            prop = melPropFinalCriterion;
+        }
+        else if (EqualInsensitive(propName, "eval"))
+        {
+            propName = "evaluation";
+            prop = melPropEvaluation;
+        }
         // legacy property that now works differently
         else if (EqualInsensitive(propName, "needGradient", "needsGradient") || EqualInsensitive(propName, "computeGradient"))
             prop = melPropParameterUpdateRequired;  // for backward compatibility

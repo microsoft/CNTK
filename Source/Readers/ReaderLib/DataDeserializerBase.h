@@ -14,7 +14,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class DataDeserializerBase : public IDataDeserializer
 {
 public:
-    DataDeserializerBase()
+    DataDeserializerBase(bool primary) : m_primary(primary)
     {}
 
     virtual bool GetSequenceDescription(const SequenceDescription& primary, SequenceDescription& result) override
@@ -35,6 +35,9 @@ protected:
 
     // Streams this data deserializer can produce.
     std::vector<StreamDescriptionPtr> m_streams;
+
+    // Flag, indicating if the deserializer is primary.
+    const bool m_primary;
 
 private:
     DISABLE_COPY_AND_MOVE(DataDeserializerBase);

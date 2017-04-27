@@ -5,14 +5,8 @@ tags:
      # old CPUs, it produces results different enough to cause the tests to fail
      # In the longer term the old machines will be retired but for now this test
      # is being disabled on the CPU until the retirement of those machines
-
-     # running on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
-     # - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
-     # running unconditionally on every Nightly job in 'S' leg
-     # - nightly-s (build_sku == 'gpu')
-
-     # - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') and (device=='gpu'))
-     - nightly-s (build_sku == 'gpu') and (device=='gpu')
+     #- bvt-s (build_sku == 'gpu') and (device == 'gpu') and ((flavor == 'debug') ^ (os == 'windows'))
+     - nightly-s (build_sku == 'gpu') and (device == 'gpu')
 
 testCases:
   CNTK Run must be completed:

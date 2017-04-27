@@ -2,10 +2,13 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
+#include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Common.h"
 
 using namespace CNTK;
+
+namespace CNTK { namespace Test {
 
 void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
 {
@@ -32,7 +35,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
 
             bool reduceAll = (reductionAxis < 0);
             if (reduceAll)
-                reduceSumFunc = ReduceSum(inputVar);
+                reduceSumFunc = ReduceSum(inputVar, Axis::AllAxes());
             else
                 reduceSumFunc = ReduceSum(inputVar, Axis(useNegativeAxisIndex ? (reductionAxis - (int)sampleRank) : reductionAxis));
 
@@ -106,7 +109,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
             auto inputVar = InputVariable({ inputShape }, DataType::Float, L"input");
             FunctionPtr reduceSumFunc = Sequence::ReduceSum(inputVar);
 
-            NDShape maskShape = { 1, numSequences };
+            NDShape maskShape = { numSequences };
             NDShape outputShape = reduceSumFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape(maskShape);
 
@@ -160,7 +163,12 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
             auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
-            auto sliceFunc = Slice(inputVar, Axis(useNegativeAxisIndex ? (sliceAxis - (int)sampleRank) : sliceAxis), beginOffset, endOffset);
+            std::vector<Axis> axis; 
+            std::vector<int> beginOffsetVec, endOffsetVec; 
+            axis.push_back(Axis(useNegativeAxisIndex ? (sliceAxis - (int)sampleRank) : sliceAxis)); 
+            beginOffsetVec.push_back(beginOffset); 
+            endOffsetVec.push_back(endOffset); 
+            auto sliceFunc = Slice(inputVar, axis, beginOffsetVec, endOffsetVec);
 
             NDShape outputShape = sliceFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape({ maxActualSequenceLength, numSequences });
@@ -224,7 +232,10 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
 
             size_t outputSequenceAxisLength = maxSliceLength;
             size_t outputBatchAxisLength = numSequences;
-            NDShape outputShape = sliceFunc->Output().Shape().AppendShape({ outputSequenceAxisLength, outputBatchAxisLength });
+            NDShape outputShape = sliceFunc->Output().Shape();
+            if (endAndBeginOffsetDiff != 1)
+                outputShape = outputShape.AppendShape({ outputSequenceAxisLength });
+            outputShape = outputShape.AppendShape({ outputBatchAxisLength });
             std::vector<float> outputData(outputShape.TotalSize(), 0);
             NDMaskPtr mask;
             if (endAndBeginOffsetDiff < 0)
@@ -286,7 +297,7 @@ void TestRecurrentFunctionCloning()
     auto placeholderReplacement = PastValue(plusOutput);
     plusOutput = plusOutput->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
 
-    auto reducedOutput = ReduceSum(plusOutput, L"sum");
+    auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
     auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
 
     std::unordered_set<FunctionPtr> visitedFunctions;
@@ -299,7 +310,7 @@ void TestRecurrentFunctionCloning()
     CompareFunctions(clonedFunctionWithParametersCloned, clonedFunctionWithParametersShared, ParameterCloningMethod::Share, {}, visitedFunctions);
 
     visitedFunctions.clear();
-    auto replacementInputVar = InputVariable({ inputDim }, true, DataType::Float, false, L"input2");
+    auto replacementInputVar = InputVariable({ inputDim }, true, DataType::Float, true, L"input2");
     std::unordered_map<Variable, Variable> cloningReplacements = { { *(clonedFunctionWithParametersShared->Arguments().begin()), replacementInputVar } };
     auto clonedFunctionWithParametersFrozen = clonedFunctionWithParametersShared->Clone(ParameterCloningMethod::Freeze, cloningReplacements);
     CompareFunctions(clonedFunctionWithParametersShared, clonedFunctionWithParametersFrozen, ParameterCloningMethod::Freeze, cloningReplacements, visitedFunctions);
@@ -397,7 +408,7 @@ void TestSplice(size_t numInputs, size_t maxNumInputAxes, size_t spliceAxis, con
         transposeInputFuncs[i] = TransposeAxes(inputVars[i], Axis(0), Axis((int)spliceAxis));
         transposedInputs[i] = transposeInputFuncs[i];
     }
-    
+
     auto spliceTransposedFunc = Splice(transposedInputs, Axis(0));
     spliceUsingTransposeFunc = TransposeAxes(spliceTransposedFunc, Axis(0), Axis((int)spliceAxis));
     std::unordered_map<Variable, ValuePtr> spliceUsingTransposeOutputs = { { spliceUsingTransposeFunc->Output(), nullptr } };
@@ -408,7 +419,7 @@ void TestSplice(size_t numInputs, size_t maxNumInputAxes, size_t spliceAxis, con
     auto automaticUnpackingOfPackedValuesDisabled = Internal::IsAutomaticUnpackingOfPackedValuesDisabled();
     Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ false);
 
-    if (!CNTK::Internal::AreEqual(*spliceOutputs.begin()->second, *spliceUsingTransposeOutputs.begin()->second, relativeTolerance, absoluteTolerance))
+    if (!Internal::AreEqual(*spliceOutputs.begin()->second, *spliceUsingTransposeOutputs.begin()->second, relativeTolerance, absoluteTolerance))
         ReportFailure("Splice actual output does not match expectation");
 
     // Test backprop
@@ -429,7 +440,7 @@ void TestSplice(size_t numInputs, size_t maxNumInputAxes, size_t spliceAxis, con
     {
         auto actualInputGradientValue = sliceInputGradients[inputVars[i]];
         auto expectedInputGradientValue = sliceUsingTransposeInputGradients[inputVars[i]];
-        if (!CNTK::Internal::AreEqual(*actualInputGradientValue, *expectedInputGradientValue, relativeTolerance, absoluteTolerance))
+        if (!Internal::AreEqual(*actualInputGradientValue, *expectedInputGradientValue, relativeTolerance, absoluteTolerance))
             ReportFailure("Splice actual gradient does not match expectation");
     }
 
@@ -440,11 +451,14 @@ void TestSplice()
 {
     srand(1);
 
-    TestSplice(4, 2, 0, DeviceDescriptor::CPUDevice());
-    TestSplice(3, 3, 2, DeviceDescriptor::CPUDevice());
-    TestSplice(2, 3, 3, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+    {
+        TestSplice(4, 2, 0, DeviceDescriptor::CPUDevice());
+        TestSplice(3, 3, 2, DeviceDescriptor::CPUDevice());
+        TestSplice(2, 3, 3, DeviceDescriptor::CPUDevice());
+    }
 
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestSplice(4, 3, 1, DeviceDescriptor::GPUDevice(0));
         TestSplice(3, 4, 2, DeviceDescriptor::GPUDevice(0));
@@ -455,7 +469,7 @@ void TestSplice()
 void TestTimesNodeShapeInference()
 {
     auto timesNodeShapeInferenceTest = [](size_t inputRank, size_t outputRank, int inputRankToMap) {
-        
+
         auto device = DeviceDescriptor::CPUDevice();
 
         size_t maxDimSize = 15;
@@ -513,6 +527,42 @@ void TestTimesNodeShapeInference()
     timesNodeShapeInferenceTest(3, 2, 2);
 }
 
+void TestTimesIndirectSparseInputGradientSparse(const DeviceDescriptor& device)
+{
+    size_t dim = 5;
+    size_t numSequences = 1;
+
+    auto timesParam = Parameter(NDShape({ 1, dim }), DataType::Float, 0.0, device);
+
+    auto input = InputVariable(NDShape({ dim }), /* isSparse*/ true, DataType::Float);
+    auto timesFunction = Times(timesParam, Sequence::First(input));
+
+    auto inputValue = Value::CreateSequence<float>(dim, { 2 }, device, true);
+    std::unordered_map<Variable, ValuePtr> inputMap;
+    inputMap.insert(std::make_pair(input, inputValue));
+
+    std::vector<float> outputData(numSequences);
+    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ 1, numSequences }), outputData, false));
+    std::unordered_map<Variable, ValuePtr> outputMap;
+    outputMap.insert(std::make_pair(timesFunction->Output(), outputValue));
+
+    auto backState = timesFunction->Forward(inputMap, outputMap, device, { timesFunction->Output() });
+
+    std::unordered_map<Variable, ValuePtr> rootGradients;
+    std::vector<float> rootGradient(numSequences, 1.0f);
+    rootGradients.insert(std::make_pair(timesFunction->Output(), MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ numSequences }), rootGradient, false))));
+
+    std::unordered_map<Variable, ValuePtr> inputGradients;
+    inputGradients.insert(std::make_pair(timesParam, nullptr));
+
+    timesFunction->Backward(backState, rootGradients, inputGradients);
+
+    ValuePtr paramGradient = inputGradients[timesParam];
+
+    if (!paramGradient->IsSparse())
+        ReportFailure("Gradient is expected to be sparse.");
+}
+
 template <typename ElementType>
 void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
 {
@@ -525,20 +575,20 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
 
     auto param = Parameter(shape, AsDataType<ElementType>(), GlorotUniformInitializer(), device);
     auto plus = Plus(param, param);
-    
+
 
     std::vector<ElementType> outputData(numElements);
     ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(shape, outputData, false));
 
     std::unordered_map<Variable, ValuePtr> outputs = { { plus->Output(), outputValue } };
-    plus->Forward({}, outputs, device);
+    plus->Forward(std::unordered_map<Variable, ValuePtr>({}), outputs, device);
 
     NDArrayViewPtr cpuView;
     auto getParameterData = [&cpuView](const Parameter& p) -> const ElementType*
     {
-          cpuView = (p.Value()->Device() != DeviceDescriptor::CPUDevice()) ?
-                     p.Value()->DeepClone(DeviceDescriptor::CPUDevice()) : p.Value();
-          return cpuView->DataBuffer<ElementType>();
+        cpuView = (p.Value()->Device() != DeviceDescriptor::CPUDevice()) ?
+        p.Value()->DeepClone(DeviceDescriptor::CPUDevice()) : p.Value();
+        return cpuView->DataBuffer<ElementType>();
     };
 
     auto parameterData = getParameterData(param);
@@ -563,7 +613,7 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
         }
 
         param.RecordValueUpdate();
-        plus->Forward({}, outputs, device);
+        plus->Forward(std::unordered_map<Variable, ValuePtr>({}), outputs, device);
         parameterData = getParameterData(param);
         for (int i = 0; i < numElements; i++)
         {
@@ -582,14 +632,14 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
     auto newValuesNDarray = MakeSharedObject<NDArrayView>(shape, newValues, false);
 
     param.SetValue(newValuesNDarray);
-    plus->Forward({}, outputs, device);
+    plus->Forward(std::unordered_map<Variable, ValuePtr>({}), outputs, device);
     parameterData = getParameterData(param);
     for (int i = 0; i < numElements; i++)
     {
         auto denom = (i + ElementType(1.0));
-        FloatingPointCompare<ElementType>(parameterData[i], ElementType(1.0) / denom, 
+        FloatingPointCompare<ElementType>(parameterData[i], ElementType(1.0) / denom,
                                           "Parameter valued does not match the expected value.");
-        FloatingPointCompare<ElementType>(outputData[i], ElementType(2.0) / denom, 
+        FloatingPointCompare<ElementType>(outputData[i], ElementType(2.0) / denom,
                                           "Function output does not match the expected value.");
     }
 }
@@ -621,7 +671,7 @@ void TestRecurrenceShapeInference()
         auto placeholderReplacement = PastValue(plusOutput);
         plusOutput = plusOutput->ReplacePlaceholders({ { recurrenceForwardReference, placeholderReplacement } });
 
-        auto reducedOutput = ReduceSum(plusOutput, L"sum");
+        auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
         auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
 
         auto inputVar = InputVariable(inputShape, false, DataType::Float, true, L"input", { Axis::NewUniqueDynamicAxis(L"inputSequence"), Axis::DefaultBatchAxis() });
@@ -643,33 +693,421 @@ void TestRecurrenceShapeInference()
     testShapeInferenceInRecurrence(2, 2);
 }
 
-void FunctionTests()
+void TestFunctionOutputs(const DeviceDescriptor& device)
 {
-    fprintf(stderr, "\nFunctionTests..\n");
+    // Simple
+    {
+        Variable o1, o2;
+        {
+            size_t inputDim = 1;
+            size_t outputDim = 2;
 
-    TestSplice();
+            auto inputVar = InputVariable({ inputDim }, false, DataType::Float, true, L"features", { Axis::NewUniqueDynamicAxis(L"inputSequence"), Axis::DefaultBatchAxis() });
+            auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ inputDim }, -0.05, 0.05, 1, device));
+            auto plusFunc = CNTK::Plus(plusParam, inputVar);
 
-    TestChangingParameterValues<float>(2, DeviceDescriptor::CPUDevice());
-    if (IsGPUAvailable())
-        TestChangingParameterValues<double>(3, DeviceDescriptor::GPUDevice(0));
+            auto timesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.05, 0.05, 1, device));
+            auto timesFunc = CNTK::Times(timesParam, plusFunc);
+
+            o1 = plusFunc->Output();
+            o2 = timesFunc->Output();
+
+            // Here all function smart pointers going out of scope.
+        }
+
+        FunctionPtr combine = CNTK::Combine({ o1, o2 });
+        auto args = combine->Arguments();
+    }
+
+    // Recurrent
+    {
+        Variable o;
+        {
+            auto stateFwd = PlaceholderVariable(L"p1");
+
+            auto placeHolder = PlaceholderVariable(L"p2");
+            auto abs = Abs(placeHolder, L"abs");
+
+            auto z = abs->Clone(ParameterCloningMethod::Share, { { placeHolder, PastValue(stateFwd, 1, L"pastValue") } });
+            auto newState = z->ReplacePlaceholders({ {stateFwd, z->Output() } });
+            o = newState->Output();
+        }
+
+        auto args = o.Owner()->Arguments();
+        for (auto a : args)
+        {
+            if (a.Name() == L"" || a.Owner()->Name() == L"")
+                RuntimeError("Unexpected name");
+        }
+    }
+}
+
+void TestOutputVariableName(const DeviceDescriptor& device)
+{
+    size_t inputDim = 10;
+    size_t outputDim = 20;
+    const std::wstring timesFuncName = L"TimesFunc";
+    const std::wstring plusFuncName = L"PlusFunc";
+    const std::wstring combineFuncName = L"CombineFunc";
+    const std::wstring outputName = L"ModelOutput";
+
+    auto inputVar = InputVariable({ inputDim }, DataType::Float, L"features");
+
+    auto plusParam = Parameter(NDArrayView::RandomUniform<float>({ inputDim }, -0.05, 0.05, 1, device));
+    auto plusFunc = Plus(plusParam, inputVar, plusFuncName);
+
+    auto timesParam = Parameter(NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.05, 0.05, 1, device));
+    auto timesFunc = Times(timesParam, plusFunc, timesFuncName);
+
+    auto combineFunc = Combine({ timesFunc, plusFunc }, combineFuncName);
+
+    FunctionPtr output = Alias(combineFunc->Outputs()[0], outputName);
+
+    // Check function name and output variable name
+    if (timesFunc->Name() != timesFuncName)
+        ReportFailure("The function name does not match. expected = %S, actual = %S\n", timesFuncName.c_str(), timesFunc->Name().c_str());
+
+    if (timesFunc->Output().Name() != timesFuncName)
+        ReportFailure("The output variable name does not match. expected = %S, actual = %S\n", timesFuncName.c_str(), timesFunc->Output().Name().c_str());
+
+    if (plusFunc->Name() != plusFuncName)
+        ReportFailure("The function name does not match. expected = %S, actual = %S\n", plusFuncName.c_str(), plusFunc->Name().c_str());
+
+    if (plusFunc->Output().Name() != plusFuncName)
+        ReportFailure("The output variable name does not match. expected = %S, actual = %S\n", plusFuncName.c_str(), plusFunc->Output().Name().c_str());
+
+    // Check combined function with multiple outputs
+    if (combineFunc->Name() != combineFuncName)
+        ReportFailure("The function name does not match. expected = %S, actual = %S\n", combineFuncName.c_str(), combineFunc->Name().c_str());
+
+    if (combineFunc->Outputs()[0].Name() != timesFuncName)
+        ReportFailure("The output variable name of combine function does not match. expected = %S, actual = %S\n", timesFuncName.c_str(), combineFunc->Outputs()[0].Name().c_str());
+
+    if (combineFunc->Outputs()[1].Name() != plusFuncName)
+        ReportFailure("The output variable name of combine function does not match. expected = %S, actual = %S\n", plusFuncName.c_str(), combineFunc->Outputs()[0].Name().c_str());
+
+    // Check output variable using alias.
+    if (output->Output().Name() != outputName)
+        ReportFailure("THe output variable created by alias does not match. expected = %S, actual = %S\n", outputName.c_str(), output->Output().Name().c_str());
+
+    // Check the output variable has correct shape size.
+    if (output->Output().Shape().TotalSize() != outputDim)
+        ReportFailure("The output variable does not have expected shape size. exptected = %ld, actual = %ld\n",
+                      static_cast<unsigned long>(outputDim),
+                      static_cast<unsigned long>(output->Output().Shape().TotalSize()));
+
+    // Change the output order of combine function.
+    // Todo: it is allowed to have duplicated function name?
+    combineFunc = Combine({ plusFunc, timesFunc }, combineFuncName);
+
+    // Make sure that the alias maps to the correct output variable when the output order changes
+    output = Alias(combineFunc->Outputs()[1], outputName);
+
+    // Check combined function with multiple outputs
+    if (combineFunc->Name() != combineFuncName)
+        ReportFailure("The function name does not match. expected = %S, actual = %S\n", combineFuncName.c_str(), combineFunc->Name().c_str());
+
+    if (combineFunc->Outputs()[0].Name() != plusFuncName)
+        ReportFailure("The output variable name of combine function does not match. expected = %S, actual = %S\n", plusFuncName.c_str(), combineFunc->Outputs()[0].Name().c_str());
+
+    if (combineFunc->Outputs()[1].Name() != timesFuncName)
+        ReportFailure("The output variable name of combine function does not match. expected = %S, actual = %S\n", timesFuncName.c_str(), combineFunc->Outputs()[0].Name().c_str());
+
+    // Check that the output variable using alias is not affected
+    if (output->Output().Name() != outputName)
+        ReportFailure("THe output variable created by alias does not match. expected = %S, actual = %S\n", outputName.c_str(), output->Output().Name().c_str());
+
+    // Check the output variable has correct shape size.
+    if (output->Output().Shape().TotalSize() != outputDim)
+        ReportFailure("The output variable does not have expected shape size. exptected = %ld, actual = %ld\n",
+            static_cast<unsigned long>(outputDim),
+            static_cast<unsigned long>(output->Output().Shape().TotalSize()));
+}
+
+void CheckFindByNameResult(FunctionPtr actual, FunctionPtr expected)
+{
+    if (actual == nullptr)
+    {
+        if (expected != nullptr)
+            ReportFailure("The expected function '%S' has not been found.", expected->Name().c_str());
+    }
+    else 
+    {
+        if (expected == nullptr)
+            ReportFailure("Found a function '%S', but null is expected.", actual->Name().c_str());
+        else if (expected->Name().compare(actual->Name()) != 0)
+            ReportFailure("The found function '%S' does have the same name as the exepected one '%S'", actual->Name().c_str(), expected->Name().c_str());
+    }
+}
+
+void CheckFindAllWithNameResult(std::vector<FunctionPtr> actual, std::wstring expectedName, size_t expectedSize)
+{
+    if (actual.size() != expectedSize)
+        ReportFailure("The number of found functions does not match the expected number.");
     else
+    {
+        for (size_t i = 0; i < actual.size(); i++)
+        {
+            if (actual[i]->Name().compare(expectedName) != 0)
+                ReportFailure("The found function '%S' does have the same name as the exepected one '%S'", actual[i]->Name().c_str(), expectedName.c_str());
+        }
+    }
+}
+
+void TestFindName(const DeviceDescriptor& device)
+{
+    size_t inputDim = 10;
+    size_t outputDim = 20;
+    const std::wstring timesFuncName = L"TimesFunc";
+    const std::wstring plusFuncName = L"PlusFunc";
+    const std::wstring anotherPlusFuncName = L"AnotherPlusFunc";
+    const std::wstring minusFuncName = L"MinusFunc";
+    const std::wstring anotherMinusFuncName = L"AnotherMinusFunc";
+    const std::wstring blockFuncName = L"BlockFunc";
+    const std::wstring nonExistingFuncName = L"NonExistingFunc";
+    const std::wstring nestedBlockFuncName = L"NestedBlockFunc";
+    const std::wstring emptyFuncName = L"";
+    const std::wstring placeholderName = L"inputPlaceholder";
+    const std::wstring variableName = L"features";
+    const std::wstring aliasFuncName = L"aliasFunc";
+
+    auto inputVar1 = InputVariable({ inputDim }, DataType::Float, L"features");
+
+    auto inputPlaceholder1 = PlaceholderVariable(L"inputPlaceholder");
+    auto timesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.05, 0.05, 1, device));
+    auto timesFunc1 = CNTK::Times(timesParam, inputPlaceholder1, timesFuncName);
+    auto plusFunc1 = CNTK::Plus(Constant::Scalar(2.0f), timesFunc1, plusFuncName);
+    auto plusFunc2 = CNTK::Plus(Constant::Scalar(2.0f), plusFunc1, plusFuncName);
+    auto emptyNameFunc1 = CNTK::Plus(plusFunc1, plusFunc2);
+    auto minusFunc1 = CNTK::Minus(plusFunc2, emptyNameFunc1, minusFuncName);
+
+    // Test FindByName for the case without any block function
+    CheckFindByNameResult(minusFunc1->FindByName(timesFuncName), timesFunc1);
+    CheckFindByNameResult(minusFunc1->FindByName(minusFuncName), minusFunc1);
+    CheckFindByNameResult(minusFunc1->FindByName(emptyFuncName), emptyNameFunc1);
+    CheckFindByNameResult(minusFunc1->FindByName(nonExistingFuncName), nullptr);
+    CheckFindByNameResult(minusFunc1->FindByName(placeholderName), nullptr);
+    VerifyException([&minusFunc1, &plusFuncName]() {
+        minusFunc1->FindByName(plusFuncName);
+    }, "The expected exception has not been caugth: multiple functions with the same name.");
+
+    // Test FindAllWithName for the case without any block function
+    CheckFindAllWithNameResult(minusFunc1->FindAllWithName(timesFuncName), timesFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc1->FindAllWithName(minusFuncName), minusFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc1->FindAllWithName(emptyFuncName), emptyFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc1->FindAllWithName(nonExistingFuncName), nonExistingFuncName, 0);
+    CheckFindAllWithNameResult(minusFunc1->FindAllWithName(placeholderName), placeholderName, 0);
+    CheckFindAllWithNameResult(minusFunc1->FindAllWithName(plusFuncName), plusFuncName, 2);
+
+    // Build a block function
+    auto blockFunc = CNTK::AsBlock(std::move(minusFunc1), { { inputPlaceholder1, inputVar1 } }, L"TimesPlusMinus", blockFuncName);
+
+    // Build a nested block function
+    auto inputPlaceholder2 = PlaceholderVariable(L"inputPlaceholder");
+    auto inputPlaceholder3 = PlaceholderVariable(L"inputPlaceholder");
+    auto inputVar2 = InputVariable({ outputDim }, DataType::Float, L"features");
+    auto anotherMinusFunc1 = CNTK::Minus(inputPlaceholder2, Constant::Scalar(3.0f), anotherMinusFuncName);
+    auto plusFunc3 = CNTK::Plus(Constant::Scalar(3.0f), anotherMinusFunc1, plusFuncName);
+    auto cloneBlockFunc = blockFunc->Clone(ParameterCloningMethod::Clone, { { inputVar1, inputPlaceholder3 } });
+    auto minusFunc2 = CNTK::Minus(cloneBlockFunc, plusFunc3, minusFuncName);
+    auto plusFunc4 = CNTK::Plus(minusFunc2, Constant::Scalar(3.0f), plusFuncName);
+    auto nestedBlockFunc = CNTK::AsBlock(std::move(plusFunc4), { { inputPlaceholder2, inputVar2 },{ inputPlaceholder3, inputVar1 } }, L"NestedBlock", nestedBlockFuncName);
+
+    // Build a function having both block and nested block functions
+    auto inputVar3 = InputVariable({ outputDim }, DataType::Float, variableName);
+    auto plusFunc5 = CNTK::Plus(inputVar3, blockFunc, plusFuncName);
+    auto anotherPlusFunc1 = CNTK::Plus(plusFunc5, nestedBlockFunc, anotherPlusFuncName);
+    auto minusFunc3 = CNTK::Minus(anotherPlusFunc1, Constant::Scalar(3.0f), minusFuncName);
+
+    // Test FindByName with block functions, nestedSearchInsideBlockFunction is false.
+    CheckFindByNameResult(minusFunc3->FindByName(anotherPlusFuncName), anotherPlusFunc1);
+    CheckFindByNameResult(minusFunc3->FindByName(anotherMinusFuncName), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(nonExistingFuncName), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(variableName), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(nestedBlockFuncName), nestedBlockFunc);
+    CheckFindByNameResult(minusFunc3->FindByName(plusFuncName), plusFunc5);
+    CheckFindByNameResult(minusFunc3->FindByName(timesFuncName), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(emptyFuncName), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(minusFuncName), minusFunc3);
+    CheckFindByNameResult(minusFunc3->FindByName(blockFuncName), blockFunc);
+
+    // Test FindByName with block funcitons, nestedSearchInsideBlockFunction is true
+    CheckFindByNameResult(minusFunc3->FindByName(anotherPlusFuncName, true), anotherPlusFunc1);
+    CheckFindByNameResult(minusFunc3->FindByName(anotherMinusFuncName, true), anotherMinusFunc1);
+    CheckFindByNameResult(minusFunc3->FindByName(nonExistingFuncName, true), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(variableName, true), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(nestedBlockFuncName, true), nestedBlockFunc);
+    VerifyException([&minusFunc3, &plusFuncName]() {
+        minusFunc3->FindByName(plusFuncName, true);
+    }, "The expected exception has not been caugth: multiple functions with the same name.");
+    VerifyException([&minusFunc3, &timesFuncName]() {
+        minusFunc3->FindByName(timesFuncName, true);
+    }, "The expected exception has not been caugth: multiple functions with the same name.");
+    VerifyException([&minusFunc3, &emptyFuncName]() {
+        minusFunc3->FindByName(emptyFuncName, true);
+    }, "The expected exception has not been caugth: multiple functions with the same name.");
+    VerifyException([&minusFunc3, &minusFuncName]() {
+        minusFunc3->FindByName(minusFuncName, true);
+    }, "The expected exception has not been caugth: multiple functions with the same name.");
+    VerifyException([&minusFunc3, &blockFuncName]() {
+        minusFunc3->FindByName(blockFuncName, true);
+    }, "The expected exception has not been caugth: multiple functions with the same name.");
+
+    // Test FindByName with multiple block functions, nestedSearchInsideBlockFunction is true
+    auto placeholder1 = PlaceholderVariable(L"inputPlaceholder1");
+    auto firstBlockPlusFuncName = L"FirstBlockPlus";
+    auto blockRoot1 = Plus(placeholder1, Constant::Scalar(1.0f), firstBlockPlusFuncName);
+    auto placeholder2 = PlaceholderVariable(L"inputPlaceholder2");
+    auto secondBlockPlusFuncName = L"SecondBlockPlus";
+    auto blockRoot2 = Plus(placeholder2, Constant::Scalar(1.0f), secondBlockPlusFuncName);
+    auto block2 = AsBlock(std::move(blockRoot2), { { placeholder2, InputVariable({}, DataType::Float)} }, L"Plus");
+    auto block1 = AsBlock(std::move(blockRoot1), { { placeholder1, block2->Output() } }, L"Plus");
+    CheckFindByNameResult(block1->FindByName(firstBlockPlusFuncName, true), blockRoot1);
+    CheckFindByNameResult(block1->FindByName(secondBlockPlusFuncName, true), blockRoot2);
+
+    // Test FindAllWithName with block functions, nestedSearchInsideBlockFunction is false.
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherPlusFuncName), anotherPlusFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherMinusFuncName), anotherMinusFuncName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(nonExistingFuncName), nonExistingFuncName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(variableName), variableName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(nestedBlockFuncName), nestedBlockFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(plusFuncName), plusFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(timesFuncName), timesFuncName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(emptyFuncName), emptyFuncName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(minusFuncName), minusFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(blockFuncName), blockFuncName, 1);
+
+    // Test FindAllWithName with block funcitons, nestedSearchInsideBlockFunction is true
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherPlusFuncName, true), anotherPlusFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherMinusFuncName, true), anotherMinusFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(nonExistingFuncName, true), nonExistingFuncName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(variableName, true), variableName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(nestedBlockFuncName, true), nestedBlockFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(plusFuncName, true), plusFuncName, 7);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(timesFuncName, true), timesFuncName, 2);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(emptyFuncName,true), emptyFuncName, 2);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(minusFuncName, true), minusFuncName, 4); 
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(blockFuncName, true), blockFuncName, 2);
+
+    // Test alias
+    auto aliasFunc1 = Alias(anotherPlusFunc1, aliasFuncName);
+    // The Alias does not really create an alias for the function, but indeed create a new function having alias as name.
+    // The new function is not a part of existing graph, except it is explicitly referenced in the graph.
+    // TODO: change the tests when Alias is a real alias of a function.
+    CheckFindByNameResult(minusFunc3->FindByName(aliasFuncName), nullptr);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(aliasFuncName, true), aliasFuncName, 0);
+    auto minusFunc4 = CNTK::Minus(aliasFunc1, minusFunc3, minusFuncName);
+    CheckFindByNameResult(minusFunc4->FindByName(aliasFuncName), aliasFunc1);
+    CheckFindAllWithNameResult(minusFunc4->FindAllWithName(aliasFuncName, true), aliasFuncName, 1);
+}
+
+BOOST_AUTO_TEST_SUITE(FunctionSuite)
+
+BOOST_AUTO_TEST_CASE(FindNameInCPU)
+{
+    if (ShouldRunOnCpu())
+        TestFindName(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(FindNameInGPU)
+{
+    if (ShouldRunOnGpu())
+        TestFindName(DeviceDescriptor::GPUDevice(0));
+}
+
+BOOST_AUTO_TEST_CASE(Splice)
+{
+    // Handles device internally.
+    TestSplice();
+}
+
+BOOST_AUTO_TEST_CASE(ChangingParameterValuesInCPU)
+{
+    if (ShouldRunOnCpu())
+    {
+        TestChangingParameterValues<float>(2, DeviceDescriptor::CPUDevice());
         TestChangingParameterValues<double>(3, DeviceDescriptor::CPUDevice());
+    }
+}
 
-    TestTimesNodeShapeInference();
-    TestRecurrenceShapeInference();
+BOOST_AUTO_TEST_CASE(ChangingParameterValuesInGPU)
+{
+    if (ShouldRunOnGpu())
+        TestChangingParameterValues<double>(3, DeviceDescriptor::GPUDevice(0));
+}
 
-    TestSlice(2, DeviceDescriptor::CPUDevice());
-    if (IsGPUAvailable())
+BOOST_AUTO_TEST_CASE(TimesNodeShapeInference)
+{
+    if (ShouldRunOnCpu())
+        TestTimesNodeShapeInference();
+}
+
+BOOST_AUTO_TEST_CASE(RecurrenceShapeInference)
+{
+    if (ShouldRunOnCpu())
+        TestRecurrenceShapeInference();
+}
+
+BOOST_AUTO_TEST_CASE(SliceInCPU)
+{
+    if (ShouldRunOnCpu())
+        TestSlice(2, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(SliceInGPU)
+{
+    if (ShouldRunOnGpu())
         TestSlice(1, DeviceDescriptor::GPUDevice(0));
+}
 
-    TestReduceSum(1, DeviceDescriptor::CPUDevice());
-    if (IsGPUAvailable())
+BOOST_AUTO_TEST_CASE(ReduceSumInCPU)
+{
+    if (ShouldRunOnCpu())
+        TestReduceSum(1, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(ReduceSumInGPU)
+{
+    if (ShouldRunOnGpu())
         TestReduceSum(2, DeviceDescriptor::GPUDevice(0));
+}
 
-    TestRecurrentFunctionCloning();
+BOOST_AUTO_TEST_CASE(RecurrentFunctionCloning)
+{
+    if (ShouldRunOnCpu())
+        TestRecurrentFunctionCloning();
+}
 
-    TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
-    if (IsGPUAvailable())
+BOOST_AUTO_TEST_CASE(TransposeInCPU)
+{
+    if (ShouldRunOnCpu())
+        TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(TransposeInGPU)
+{
+    if (ShouldRunOnGpu())
         TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
 }
 
+BOOST_AUTO_TEST_CASE(OutputVariableNameInCPU)
+{
+    if (ShouldRunOnCpu())
+        TestOutputVariableName(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(FunctionOutputs)
+{
+    if (ShouldRunOnCpu())
+        TestFunctionOutputs(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(TimesIndirectSparseGradType)
+{
+    if (ShouldRunOnCpu())
+        TestTimesIndirectSparseInputGradientSparse(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+}}

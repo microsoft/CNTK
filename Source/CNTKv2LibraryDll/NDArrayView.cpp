@@ -22,10 +22,11 @@ namespace CNTK
                                                        size_t bufferSizeInBytes)
     {
         if (dataBuffer == nullptr)
-            InvalidArgument("Cannot create a NDArrayView over a null data buffer");
+            InvalidArgument("Cannot create a NDArrayView over a null data buffer.");
 
         if (bufferSizeInBytes < (viewShape.TotalSize() * sizeof(ElementType)))
-            InvalidArgument("Size of the specified buffer for creating the NDArrayView is smaller than the specified view shape");
+            InvalidArgument("Size (%d) of the specified buffer for creating the NDArrayView is smaller than the specified view shape '%S'.",
+                            (int)bufferSizeInBytes, viewShape.AsString().c_str());
 
         auto matrixDims = GetMatrixDimensions(viewShape);
         std::shared_ptr<Matrix<ElementType>> matrix = std::make_shared<Matrix<ElementType>>(matrixDims.first, matrixDims.second, (ElementType*)dataBuffer, AsCNTKImplDeviceId(device), matrixFlagDontOwnBuffer);
@@ -53,28 +54,31 @@ namespace CNTK
     template <typename ElementType>
     static TensorView<ElementType>* AllocateTensorView(const NDShape& viewShape,
                                                        CNTK::StorageFormat storageType,
-                                                       const DeviceDescriptor& device)
+                                                       const DeviceDescriptor& device,
+                                                       size_t numNonZeroValues = 0)
     {
         auto matrixDims = GetMatrixDimensions(viewShape);
         std::shared_ptr<Matrix<ElementType>> matrix = std::make_shared<Matrix<ElementType>>(matrixDims.first,
                                                                                             matrixDims.second,
                                                                                             AsCNTKImplDeviceId(device),
                                                                                             IsSparseStorageFormat(storageType) ? MatrixType::SPARSE : MatrixType::DENSE,
-                                                                                            AsCNTKImplMatrixFormat(storageType));
+                                                                                            AsCNTKImplMatrixFormat(storageType),
+                                                                                            numNonZeroValues);
         return new TensorView<ElementType>(matrix, AsTensorViewShape(viewShape));
     }
 
     static void* AllocateTensorView(CNTK::DataType dataType,
                                     CNTK::StorageFormat storageType,
                                     const NDShape& viewShape,
-                                    const DeviceDescriptor& device)
+                                    const DeviceDescriptor& device,
+                                    size_t numNonZeroValues = 0)
     {
         switch (dataType)
         {
         case DataType::Float:
-            return AllocateTensorView<float>(viewShape, storageType, device);
+            return AllocateTensorView<float>(viewShape, storageType, device, numNonZeroValues);
         case DataType::Double:
-            return AllocateTensorView<double>(viewShape, storageType, device);
+            return AllocateTensorView<double>(viewShape, storageType, device, numNonZeroValues);
         default:
             LogicError("Unsupported DataType %s", DataTypeName(dataType));
             break;
@@ -88,10 +92,12 @@ namespace CNTK
 
     template <typename ElementType>
     NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/)
-        : NDArrayView(AsDataType<ElementType>(), device, StorageFormat::SparseCSC, viewShape, false, AllocateTensorView<ElementType>(viewShape, StorageFormat::SparseCSC, device))
+        : NDArrayView(AsDataType<ElementType>(), device, StorageFormat::SparseCSC, viewShape, false, AllocateTensorView<ElementType>(viewShape, StorageFormat::SparseCSC, device, numNonZeroValues))
     {
         if ((colStarts == nullptr) || (rowIndices == nullptr) || (nonZeroValues == nullptr) || (numNonZeroValues == 0) || (numNonZeroValues > viewShape.TotalSize()))
-            InvalidArgument("Invalid sparse CSC format initial data specified for NDArrayView construction");
+            InvalidArgument("Invalid sparse CSC format data specified for construction of NDArrayView with shape '%S'; "
+                            "either one of the specified buffers is null or the count (%d) of non-zero values is invalid.",
+                            viewShape.AsString().c_str(), (int)numNonZeroValues);
 
         auto sparseMatrix = GetWritableMatrix<ElementType>(1);
         sparseMatrix->SetMatrixFromCSCFormat(colStarts, rowIndices, nonZeroValues, numNonZeroValues, sparseMatrix->GetNumRows(), sparseMatrix->GetNumCols());
@@ -119,25 +125,28 @@ namespace CNTK
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device)
         : NDArrayView(dataType, device, storageType, viewShape, false, AllocateTensorView(dataType, storageType, viewShape, device))
-    {
-    }
+    {}
 
     NDArrayView::~NDArrayView()
-    {
-    }
+    {}
 
     void NDArrayView::SetValue(float value)
     {
-        if (IsSparse())
-            LogicError("Filling a NDArrayView with a scalar is only allowed for NDArrayView objects with dense storage format");
+        if (GetDataType() == DataType::Double)
+            SetValue((double)value);
+        else
+        {
+            if (IsSparse())
+                LogicError("NDArrayView::SetValue: Setting a NDArrayView contents to a scalar is only allowed for objects with dense storage format.");
 
-        GetWritableMatrix<float>()->SetValue(value);
+            GetWritableMatrix<float>()->SetValue(value);
+        }
     }
 
     void NDArrayView::SetValue(double value)
     {
         if (IsSparse())
-            LogicError("Filling a NDArrayView with a scalar is only allowed for NDArrayView objects with dense storage format");
+            LogicError("NDArrayView::SetValue: Setting a NDArrayView contents to a scalar is only allowed for objects with dense storage format.");
 
         GetWritableMatrix<double>()->SetValue(value);
     }
@@ -146,7 +155,9 @@ namespace CNTK
     /*static*/ std::shared_ptr<Matrix<ElementType>> NDArrayView::GetMatrixImpl(const TensorView<ElementType>* tensorView, size_t rowColSplitPoint)
     {
         auto tensorShape = tensorView->GetShape();
-        if (tensorShape.GetRank() <= 2)
+
+        // we should always reshape for rank-0, so that batch and sequence axis goes to columns
+        if (tensorShape.GetRank() <= 1 && rowColSplitPoint != 0)
             return tensorView->AsMatrix();
 
         size_t splitPoint = rowColSplitPoint;
@@ -165,7 +176,7 @@ namespace CNTK
             });
 
             if (numDimsThatCannotBeDropped > 2)
-                LogicError("The TensorView underlying this NDArrayView cannot be flattened to a Matrix");
+                LogicError("The TensorView (shape = %s) underlying this NDArrayView cannot be flattened to a Matrix.", ((std::string)tensorShape).c_str());
 
             // If we can fold the entire tensor down to a vector so any of the axes can be a valid split point,
             // let's pick the split point to be 1
@@ -207,7 +218,7 @@ namespace CNTK
     TensorView<ElementType>* NDArrayView::GetWritableTensorView()
     {
         if (IsReadOnly())
-            InvalidArgument("NDArrayView::GetWritableTensorView: Cannot get writable TensorView from a read-only NDArrayView");
+            InvalidArgument("NDArrayView::GetWritableTensorView: Cannot get a writable TensorView from a read-only NDArrayView.");
 
         return const_cast<TensorView<ElementType>*>(GetTensorView<ElementType>());
     }
@@ -232,7 +243,7 @@ namespace CNTK
             break;
         }
         default:
-            LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
+            LogicError("NDArrayView::DeepClone: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
         }
 
@@ -243,10 +254,11 @@ namespace CNTK
     void NDArrayView::CopyFrom(const NDArrayView& source)
     {
         if ((source.Shape() != Shape()) && (AsTensorShape(source.Shape()) != AsTensorShape(Shape())))
-            InvalidArgument("NDArrayView::CopyFrom: The 'source' view's shape must be same as the shape of this NDArrayView");
+            InvalidArgument("NDArrayView::CopyFrom: The source view shape '%S' is not same as the shape '%S' of this NDArrayView.", 
+                            source.Shape().AsString().c_str(), Shape().AsString().c_str());
 
         if (IsReadOnly())
-            RuntimeError("NDArrayView::CopyFrom: Cannot modify contents of a readonly NDArrayView");
+            RuntimeError("NDArrayView::CopyFrom: Cannot modify contents of a readonly NDArrayView.");
 
         switch (m_dataType)
         {
@@ -265,7 +277,7 @@ namespace CNTK
             break;
         }
         default:
-            LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
+            LogicError("NDArrayView::CopyFrom: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
         }
     }
@@ -282,11 +294,110 @@ namespace CNTK
             tensorView = new TensorView<double>(*(GetTensorView<double>()));
             break;
         default:
-            LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
+            LogicError("NDArrayView::Alias: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
         }
 
         return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);
+    }
+
+    NDArrayViewPtr NDArrayView::SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly) const
+    {
+        auto rank = Shape().Rank();
+        if (startOffset.size() != rank)
+            InvalidArgument("NDArrayView::SliceView: Rank (%d) of the NDArrayView does not match the dimensionality (%d) of the specified slice offset.", (int)rank, (int)startOffset.size());
+
+        if (extent.size() > rank)
+            InvalidArgument("NDArrayView::SliceView: Dimensionality (%d) of the specified slice extent exceeds the rank (%d) of this NDArrayView.", (int)extent.size(), (int)rank);
+
+        if (std::find(extent.begin(), extent.end(), 0) != extent.end())
+            InvalidArgument("NDArrayView::SliceView: Specified slice extent is zero along at least one of the axes.");
+
+        bool anyPrevAxisSliced = false;
+        NDShape sliceViewShape(extent);
+        std::vector<size_t> endOffset(rank);
+        for (size_t i = 0; i < rank; ++i)
+        {
+            if ((i < sliceViewShape.Rank()) && (sliceViewShape[i] == NDShape::InferredDimension))
+                sliceViewShape[i] = Shape()[i] - startOffset[i];
+
+            endOffset[i] = startOffset[i] + ((i < sliceViewShape.Rank()) ? sliceViewShape[i] : 1);
+
+            if (anyPrevAxisSliced && ((endOffset[i] - startOffset[i]) != 1))
+                InvalidArgument("NDArrayView::SliceView: Cannot create a slice which is not contiguous in memory. "
+                                "This NDArrayView shape = %S, slice offset = %S, slice extent = %S.",
+                                 Shape().AsString().c_str(), NDShape(startOffset).AsString().c_str(), NDShape(extent).AsString().c_str());
+
+            bool isCurrentAxisSliced = (startOffset[i] != 0) || (endOffset[i] != Shape()[i]);
+            anyPrevAxisSliced = anyPrevAxisSliced || isCurrentAxisSliced;
+        }
+
+        auto flatBufferOffset = AsTensorShape(Shape()).Locate(startOffset);
+        auto sliceViewMatrixDims = GetMatrixDimensions(sliceViewShape);
+        assert((flatBufferOffset % sliceViewMatrixDims.first) == 0);
+        auto sliceMatrixColumnOffset = flatBufferOffset / sliceViewMatrixDims.first;
+        void* tensorView = nullptr;
+        switch (m_dataType)
+        {
+        case DataType::Float:
+        {
+            auto currentMatrix = GetMatrix<float>();
+            std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
+            std::shared_ptr<Matrix<float>> slicedMatrixView;
+            if (sliceViewMatrixDims.first != currentMatrixDims.first)
+                slicedMatrixView = make_shared<Matrix<float>>(currentMatrix->Reshaped(1, currentMatrix->GetNumElements()).ColumnSlice(flatBufferOffset, sliceViewShape.TotalSize()));
+            else
+                slicedMatrixView = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
+
+            tensorView = new TensorView<float>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
+            break;
+        }
+        case DataType::Double:
+        {
+            auto currentMatrix = GetMatrix<double>();
+            std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
+            std::shared_ptr<Matrix<double>> slicedMatrixView;
+            if (sliceViewMatrixDims.first != currentMatrixDims.first)
+                slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->Reshaped(1, currentMatrix->GetNumElements()).ColumnSlice(flatBufferOffset, sliceViewShape.TotalSize()));
+            else
+                slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
+
+            tensorView = new TensorView<double>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
+            break;
+        }
+        default:
+            LogicError("NDArrayView::SliceView: Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+
+        return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), sliceViewShape, IsReadOnly() || readOnly, tensorView);
+    }
+
+    NDArrayViewPtr NDArrayView::AsShape(const NDShape& newShape) const
+    {
+        if (newShape.TotalSize() != Shape().TotalSize())
+        {
+            InvalidArgument("NDArrayView::AsShape: The total size (%d) of this view's shape '%S' must be same as the size (%d) of the newShape '%S'.",
+                            (int)Shape().TotalSize(), Shape().AsString().c_str(),
+                            (int)newShape.TotalSize(), newShape.AsString().c_str());
+        }
+
+        auto newTensorShape = AsTensorViewShape(newShape);
+        void* tensorView = nullptr;
+        switch (m_dataType)
+        {
+        case DataType::Float:
+            tensorView = new TensorView<float>(*(GetTensorView<float>()), newTensorShape);
+            break;
+        case DataType::Double:
+            tensorView = new TensorView<double>(*(GetTensorView<double>()), newTensorShape);
+            break;
+        default:
+            LogicError("NDArrayView::AsShape: Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+
+        return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), newShape, IsReadOnly(), tensorView);
     }
 
     // TODO: This could actually be strided?
@@ -294,7 +405,7 @@ namespace CNTK
     ElementType* NDArrayView::WritableDataBuffer()
     {
         if (IsReadOnly())
-            InvalidArgument("NDArrayView::WritableDataBuffer: Cannot get writable data buffer from a read-only NDArrayView");
+            InvalidArgument("NDArrayView::WritableDataBuffer: Cannot get writable data buffer from a read-only NDArrayView.");
 
         return const_cast<ElementType*>(DataBuffer<ElementType>());
     }
@@ -304,10 +415,10 @@ namespace CNTK
     const ElementType* NDArrayView::DataBuffer() const
     {
         if (AsDataType<ElementType>() != m_dataType)
-            InvalidArgument("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
+            InvalidArgument("NDArrayView::DataBuffer: The specified ElementType '%s' does not match this NDArrayView's DataType '%s'.", typeid(ElementType).name(), DataTypeName(m_dataType));
 
         if (IsSparse())
-            InvalidArgument("DataBuffer/WritableDataBuffer methods can only be called for NDArrayiew objects with dense storage format");
+            InvalidArgument("DataBuffer/WritableDataBuffer methods not supported for sparse NDArrayiew objects.");
 
         // First make sure that the underlying matrix is on the right device
         auto matrix = GetMatrix<ElementType>();
@@ -337,7 +448,7 @@ namespace CNTK
             break;
         }
         default:
-            LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
+            LogicError("NDArrayView::ChangeDevice: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
         }
 
@@ -364,6 +475,42 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
     }
 
+    template <typename ElementType>
+    ElementType NDArrayView::AsScalar() const
+    {
+        auto scalarData = this->shared_from_this();
+        if (scalarData->Shape().TotalSize() != 1)
+            LogicError("NDArrayView::AsScalar: The NDArrayView shaped '%S' is not a scalar.", scalarData->Shape().AsString().c_str());
+
+        ElementType scalar = std::numeric_limits<ElementType>::quiet_NaN();
+        std::shared_ptr<const NDArrayView> cpuData;
+        if (scalarData->Device() == DeviceDescriptor::CPUDevice())
+            cpuData = scalarData;
+        else
+        {
+            auto tmpCPUData = std::make_shared<NDArrayView>(scalarData->GetDataType(), scalarData->Shape(), CNTK::DeviceDescriptor::CPUDevice());
+            tmpCPUData->CopyFrom(*scalarData);
+            cpuData = tmpCPUData;
+        }
+
+        if (scalarData->GetDataType() == DataType::Float)
+            scalar = *(cpuData->DataBuffer<float>());
+        else if (scalarData->GetDataType() == DataType::Double)
+            scalar = static_cast<ElementType>(*(cpuData->DataBuffer<double>()));
+        else
+            LogicError("NDArrayView::AsScalar: Unsupported DataType");
+
+        return scalar;
+    }
+
+    std::wstring NDArrayView::AsString() const
+    {
+        wstringstream wss;
+        std::wstring device = DeviceKindName(m_device.Type());
+        wss << L"NDArrayView(" << m_viewShape.AsString() << L", " << device << L")";
+        return wss.str();
+    }
+
     // Explicit template instantiations
     template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<float>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
     template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<double>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
@@ -387,4 +534,6 @@ namespace CNTK
 
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
+    template float NDArrayView::AsScalar<float>() const;
+    template double NDArrayView::AsScalar<double>() const;
 }

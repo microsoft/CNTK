@@ -25,6 +25,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <glob.h>
+#include <dirent.h>
+#include <sys/sendfile.h>
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -677,6 +679,34 @@ void renameOrDie(const std::wstring& from, const std::wstring& to)
 #else
     renameOrDie(wtocharpath(from.c_str()).c_str(), wtocharpath(to.c_str()).c_str());
 #endif
+}
+
+// ----------------------------------------------------------------------------
+// copyOrDie(): copy file with error handling.
+// ----------------------------------------------------------------------------
+
+void copyOrDie(const string& from, const string& to)
+{
+    // Call wide string implementation.
+    copyOrDie(s2ws(from), s2ws(to));
+}
+
+void copyOrDie(const wstring& from, const wstring& to)
+{
+    const wstring tempTo = to + L".tmp";
+#ifdef _WIN32
+    const BOOL succeeded = CopyFile(from.c_str(), tempTo.c_str(), FALSE);
+    if (!succeeded)
+        RuntimeError("error copying file '%ls' to '%ls': %d", from.c_str(), tempTo.c_str(), GetLastError());
+#else
+    FILE* fromFile = fopenOrDie(from, L"rb");
+    FILE* tempToFile = fopenOrDie(tempTo, L"wb");
+    const size_t fromFileSize = filesize(fromFile);
+    sendfile(fileno(tempToFile), fileno(fromFile), 0, fromFileSize);
+    fcloseOrDie(fromFile);
+    fcloseOrDie(tempToFile);
+#endif
+    renameOrDie(tempTo, to);
 }
 
 // ----------------------------------------------------------------------------
@@ -1952,6 +1982,54 @@ void msra::files::make_intermediate_dirs(const wstring& filepath)
             subpath += L"/";
         subpath += p;
     }
+}
+
+std::vector<std::wstring> msra::files::get_all_files_from_directory(const std::wstring& directory)
+{
+    std::vector<std::wstring> result;
+#ifdef _WIN32
+    WIN32_FIND_DATA ffd = {};
+    HANDLE hFind = FindFirstFile((directory + L"/*").c_str(), &ffd);
+    if (INVALID_HANDLE_VALUE == hFind)
+        RuntimeError("Cannot get information about directory '%ls'.", directory.c_str());
+
+    do
+    {
+        if (!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+        {
+            result.push_back(ffd.cFileName);
+        }
+    } while (FindNextFile(hFind, &ffd) != 0);
+
+    auto dwError = GetLastError();
+    FindClose(hFind);
+
+    if (dwError != ERROR_NO_MORE_FILES)
+        RuntimeError("Error iterating directory '%ls'", directory.c_str());
+#else
+    std::string d = msra::strfun::utf8(directory);
+    auto dirp = opendir(d.c_str());
+    dirent *dp = nullptr;
+    struct stat st = {};
+    while ((dp = readdir(dirp)) != NULL)
+    {
+        const std::string fileName = dp->d_name;
+        const std::string fullFileName = d + "/" + fileName;
+
+        if (fileName == "." || fileName == "..")
+            continue;
+
+        if (stat(fullFileName.c_str(), &st) == -1)
+            continue;
+
+        if ((st.st_mode & S_IFDIR) != 0)
+            continue;
+
+        result.push_back(msra::strfun::utf16(fileName));
+    }
+    closedir(dirp);
+#endif
+    return result;
 }
 
 // ----------------------------------------------------------------------------

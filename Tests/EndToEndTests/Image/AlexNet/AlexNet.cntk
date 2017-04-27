@@ -10,24 +10,22 @@ Train=[
         randomize=Auto
         features=[
             # Below are the required parameters.
-            width=224
-            height=224
+            width=227
+            height=227
             channels=3
             # Below are the optional parameters.
             # Possible values: Center, Random. Default: Center
-            cropType=Random
+            cropType=RandomSide
             # Horizontal random flip, will be enabled by default if cropType=Random
             #hflip=0
-            # Crop scale ratio. Examples: cropRatio=0.9, cropRatio=0.7:0.9. Default: 1.
-            cropRatio=0.875
+            # Crop scale side ratio. Examples: sideRatio=0.9, sideRatio=0.7:0.9.
+            sideRatio=0.875
             # Crop scale ratio jitter type.
-            # Possible values: None, UniRatio, UniLength, UniArea. Default: UniRatio
+            # Possible values: None, UniRatio. Default: None
             jitterType=UniRatio
             # Interpolation to use when scaling image to width x height size.
             # Possible values: nearest, linear, cubic, lanczos. Default: linear.
             interpolations=linear
-            # Stores mean values for each pixel in OpenCV matrix XML format.
-            meanFile=$ConfigDir$/ImageNet1K_mean.xml
         ]
         labels=[
             labelDim=1000
@@ -41,11 +39,10 @@ Test=[
         file=$ConfigDir$/val_map.txt
         randomize=None
         features=[
-            width=224
-            height=224
+            width=227
+            height=227
             channels=3
             cropType=Center
-            meanFile=$ConfigDir$/ImageNet1K_mean.xml
         ]
         labels=[
             labelDim=1000

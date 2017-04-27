@@ -25,8 +25,6 @@ namespace CNTK
         static void PrepaireZeroGradients(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& info);
         static void ConvertToOrdered(const std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, std::vector<std::pair<Parameter, NDArrayViewPtr>>& result);
 
-        const size_t m_distributeAfterSamples;
-
         std::vector<std::pair<Parameter, NDArrayViewPtr>> m_gradientBuffer;
         std::vector<Parameter> m_parameters;
 

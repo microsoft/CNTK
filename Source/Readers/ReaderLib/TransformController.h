@@ -73,10 +73,10 @@ public:
 
     // Gets next sequences up to a maximum count of samples,
     // applying transformers to particular streams.
-    virtual Sequences GetNextSequences(size_t sampleCount) override
+    virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) override
     {
         assert(m_sequenceProvider != nullptr);
-        Sequences sequences = m_sequenceProvider->GetNextSequences(sampleCount);
+        Sequences sequences = m_sequenceProvider->GetNextSequences(globalSampleCount, localSampleCount);
         if (sequences.m_data.empty())
         {
             return sequences;

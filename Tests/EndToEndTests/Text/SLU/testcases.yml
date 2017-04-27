@@ -1,9 +1,6 @@
 dataDir: ./
 tags:
-     # the complete suite (2 flavours x 2 devices) should take
-     # no longer than 60 seconds with the longest test (debug cpu)
-     # finishing in below 30 seconds.
-     - bvt-s  (build_sku == 'gpu')
+     - bvt-s (build_sku == 'gpu') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
      - nightly-s (build_sku == 'gpu')
 
 testCases:

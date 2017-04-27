@@ -763,7 +763,7 @@ INFO: rn4_1.c_proj.y.y: loading pre-CuDNNv5 model: approximated mini-batch count
 INFO: rn4_2.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
       Statistics in further training may be biased; consider re-training instead.
 INFO: rn4_2.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
-      Statistics in further EvaluateImageInputUsingFeatureVector: Outcome = 118
+      Statistics in further EvaluateImageInputUsingFeatureVector: Outcome = 340
 
 ====== EvaluateImageInputUsingImageApi ========
 training may be biased; consider re-training instead.
@@ -847,7 +847,7 @@ WARNING: rn2_1.c2.y.y: loading pre-CuDNNv5 model: approximately converting varia
 WARNING: rn2_1.c_proj.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
 WARNING: rn2_2.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
 WARNING: rn2_2.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-WARNING: rn3_1.c1.c.y.y: loading pre-CuDNNv5 model:EvaluateImageInputUsingImageApi: Outcome = 118
+WARNING: rn3_1.c1.c.y.y: loading pre-CuDNNv5 model:EvaluateImageInputUsingImageApi: Outcome = 340
 
 ====== CompareImageApiResults ========
 Both image API calls returned the same output vector.

@@ -21,7 +21,7 @@ class CNTKTextFormatReaderTestRunner;
 template <class ElemType>
 class TextParser : public DataDeserializerBase {
 public:
-    TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper, bool isPrimary);
+    TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper, bool pimary);
     ~TextParser();
 
     // Retrieves a chunk of data.
@@ -36,7 +36,7 @@ public:
     bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
 
 private:
-    TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams, bool isPrimary);
+    TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams, bool primary = true);
 
     // Builds an index of the input data.
     void Initialize();
@@ -104,8 +104,8 @@ private:
 
     std::unique_ptr<Indexer> m_indexer;
 
-    int64_t m_fileOffsetStart;
-    int64_t m_fileOffsetEnd;
+    size_t m_fileOffsetStart;
+    size_t m_fileOffsetEnd;
 
     // TODO: not DRY (same in the Indexer), needs refactoring
     unique_ptr<char[]> m_buffer;
@@ -121,10 +121,7 @@ private:
     unsigned int m_numAllowedErrors;
     bool m_skipSequenceIds;
     unsigned int m_numRetries; // specifies the number of times an unsuccessful
-    // file operation should be repeated (default value is 5).
-
-    // Indicates if the deserializer is primary.
-    bool m_isPrimary;
+                               // file operation should be repeated (default value is 5).
 
     // Corpus descriptor.
     CorpusDescriptorPtr m_corpus;
@@ -176,14 +173,15 @@ private:
     // Returns true if the trace level is greater or equal to 'Warning'
     bool inline ShouldWarn() { m_hadWarnings = true; return m_traceLevel >= Warning; }
 
-    // Given a descriptor, retrieves the data for the corresponding sequence from the file.
-    SequenceBuffer LoadSequence(const SequenceDescriptor& descriptor);
+    // Given a descriptor and the file offset of the containing chunk,
+    // retrieves the data for the corresponding sequence from the file.
+    SequenceBuffer LoadSequence(const SequenceDescriptor& descriptor, size_t chunkOffset);
 
     // Given a descriptor, retrieves the data for the corresponding chunk from the file.
     void LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor);
 
     // Fills some metadata members to be conformant to the exposed SequenceData interface.
-    void FillSequenceMetadata(SequenceBuffer& sequenceBuffer, size_t sequenceId);
+    void FillSequenceMetadata(SequenceBuffer& sequenceBuffer, const KeyType& sequenceKey);
 
     void SetTraceLevel(unsigned int traceLevel);
 

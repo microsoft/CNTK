@@ -131,8 +131,8 @@ if [[ $OS == "Windows_NT" && $OSTYPE == "cygwin" ]]; then
     BIN_NAME=CNTK.exe
     BUILD_OS="windows"
 
-    if [[ $VS120COMNTOOLS == "" ]]; then
-        echo "============ Visual Studio 12.0 environment not properly setup or VS not installed ============"
+    if [[ $VS140COMNTOOLS == "" ]]; then
+        echo "============ Visual Studio 14.0 environment not properly setup or VS not installed ============"
         echo "============ Please find and run the appropriate vcvarsall.bat script ============"
         exit 1
     fi

@@ -10,14 +10,13 @@
 namespace CNTK
 {
     DistributedLearnerBase::DistributedLearnerBase(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
-        : DistributedLearner(communicator, learner),
-          m_distributeAfterSamples(distributeAfterSamples)
+        : DistributedLearner(communicator, learner, distributeAfterSamples)
     {
         if (!m_learner)
-            InvalidArgument("Learner is not allowed to be null.");
+            InvalidArgument("Learner cannot be null.");
 
         if (!m_communicator)
-            InvalidArgument("Communicator is not allowed to be null.");
+            InvalidArgument("Communicator of a DistributedLearner cannot be null.");
     }
 
     // Get checkpoint state associated with distributed trainer
@@ -46,8 +45,8 @@ namespace CNTK
         }
 
         auto dataType = gradientValues.begin()->first.GetDataType();
-        info.evalCriterionValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{ 1 }, DeviceDescriptor::CPUDevice());
-        info.trainingLossValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{ 1 }, DeviceDescriptor::CPUDevice());
+        info.evalCriterionValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{}, DeviceDescriptor::CPUDevice());
+        info.trainingLossValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{}, DeviceDescriptor::CPUDevice());
     }
 
     void DistributedLearnerBase::ConvertToOrdered(const std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, std::vector<std::pair<Parameter, NDArrayViewPtr>>& result)

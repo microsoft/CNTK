@@ -226,12 +226,15 @@ Set current path to: /home/mahilleb/CNTK/Tests/EndToEndTests/UnitTests/EvalTests
 Running 5 test cases...
 
 Test module "EvalTests" has passed with:
-  5 test cases out of 5 passed
-  15 assertions out of 15 passed
+  7 test cases out of 7 passed
+  21 assertions out of 21 passed
 
   Test suite "EvalTestSuite" has passed with:
-    5 test cases out of 5 passed
-    15 assertions out of 15 passed
+    7 test cases out of 7 passed
+    21 assertions out of 21 passed
+
+    Test case "EvalTestSuite/CheckModelVersion" has passed with:
+      1 assertion out of 1 passed
 
     Test case "EvalTestSuite/EvalConstantPlusTest" has passed with:
       1 assertion out of 1 passed

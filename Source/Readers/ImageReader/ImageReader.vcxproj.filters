@@ -9,6 +9,8 @@
     <ClCompile Include="ImageReader.cpp" />
     <ClCompile Include="ImageConfigHelper.cpp" />
     <ClCompile Include="ZipByteReader.cpp" />
+    <ClCompile Include="Base64ImageDeserializer.cpp" />
+    <ClCompile Include="ImageDeserializerBase.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -28,6 +30,8 @@
     <ClInclude Include="ImageConfigHelper.h" />
     <ClInclude Include="ByteReader.h" />
     <ClInclude Include="ImageUtil.h" />
+    <ClInclude Include="Base64ImageDeserializer.h" />
+    <ClInclude Include="ImageDeserializerBase.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

@@ -23,10 +23,11 @@
 // REVIEW alexeyk: disable warnings properly for GCC/clang
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 4100)
-#pragma warning(disable : 4127)
-#pragma warning(disable : 4201)
-#pragma warning(disable : 4515)
+#pragma warning(disable : 4100) // 'identifier': unreferenced formal parameter
+#pragma warning(disable : 4127) // conditional expression is constant
+#pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
+#pragma warning(disable : 4458) // declaration of 'identifier' hides class member
+#pragma warning(disable : 4515) // 'namespace': namespace uses itself
 #endif
 #include <cub/cub.cuh>
 #ifdef _MSC_VER
@@ -39,6 +40,10 @@
 #ifndef CUDA_LONG
 #define CUDA_LONG int32_t
 #endif
+
+// special markers in BlockId2ColOrRow()/ColOrRow2BlockId()
+static const GPUSPARSE_INDEX_TYPE Id_NotAssigned = -1;
+static const GPUSPARSE_INDEX_TYPE Id_Pending = INT_MAX;
 
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
 
@@ -1416,8 +1421,9 @@ __global__ void _adagrad4BlockSparse(
 
 template <class ElemType>
 __global__ void _fsadagrad(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-                           ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul)
+                           ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
 {
+    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
@@ -1444,7 +1450,70 @@ __global__ void _fsadagrad(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, 
 
         if (mom > 0.0f)
         {
-            g = mom * smoothMom[idx] + (1.0f - mom) * g;
+            g = mom * smoothMom[idx] + unitGainFactor * g;
+            smoothMom[idx] = g;
+        }
+
+        g *= lr;
+        val[idx] -= g;
+    }
+}
+
+template<class ElemType>
+inline __device__ ElemType _getvalue4BlockSparseCol(ElemType* v, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len, CUDA_LONG idx)
+{
+    CUDA_LONG col = idx / len;
+    CUDA_LONG row = idx - col * len;
+    CUDA_LONG blockid = colOrRow2blockId[col];
+    return (blockid == Id_NotAssigned) ? 0 : v[blockid * len + row];
+}
+
+template<class ElemType>
+inline __device__ void _scalevalue4BlockSparseCol(ElemType* v, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len, CUDA_LONG idx, ElemType s)
+{
+    CUDA_LONG col = idx / len;
+    CUDA_LONG row = idx - col * len;
+    CUDA_LONG blockid = colOrRow2blockId[col];
+    if (blockid != Id_NotAssigned)
+    {
+        v[blockid * len + row] *= s;
+    }
+}
+
+template <class ElemType>
+__global__ void _fsadagrad4BlockSparseCol(CUDA_LONG size, 
+    ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+    ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+{
+    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
+    CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+    CUDA_LONG stride = blockDim.x * gridDim.x;
+    for (; idx < size; idx += stride)
+    {
+        ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
+        ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+        smoothAda[idx] = adaSqr;
+        if (adaSqr != 0.0f)
+        {
+            ElemType w;
+            if (sizeof(ElemType) == sizeof(double))
+            {
+                w = adaMul * rsqrt(adaSqr);
+            }
+            else
+            {
+                w = adaMul * rsqrtf(adaSqr);
+            }
+
+            if (w > 10.0f)
+                w = 10.0f;
+            g *= w;
+        }
+
+        if (mom > 0.0f)
+        {
+            g = mom * smoothMom[idx] + unitGainFactor * g;
             smoothMom[idx] = g;
         }
 
@@ -1464,6 +1533,23 @@ __global__ void _rmsprop_init(
         return;
 
     ElemType tmp = curr_grad[i];
+    avars[i] = tmp * tmp;
+    signs[i] = ElemType(0.0);
+    steps[i] = ElemType(0.02);
+}
+
+template <class ElemType>
+__global__ void _rmsprop_init4BlockSparseCol(
+    ElemType* avars, ElemType* signs, ElemType* steps,
+    ElemType* curr_grad, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+    const CUDA_LONG N)
+{
+    CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i >= N)
+        return;
+
+    ElemType tmp = _getvalue4BlockSparseCol(curr_grad, colOrRow2blockId, len, i);
+
     avars[i] = tmp * tmp;
     signs[i] = ElemType(0.0);
     steps[i] = ElemType(0.02);
@@ -1516,6 +1602,61 @@ __global__ void _rmsprop(
 
     ElemType temp = steps[i] / sqrt(avars[i] + floor);
     curr_grad[i] *= temp;
+    signs[i] = grad_sign;
+
+    if (multipliers != nullptr)
+        multipliers[i] = temp;
+}
+
+template <class ElemType>
+__global__ void _rmsprop4BlockSparseCol(
+    ElemType* avars, ElemType* signs, ElemType* steps,
+    ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+    const CUDA_LONG N,
+    ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN,
+    ElemType floor,
+    ElemType* upd_gpu,
+    ElemType* multipliers)
+{
+    CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i >= N)
+        return;
+
+    ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, i);
+
+    avars[i] = RMS_GAMMA * avars[i] + (ElemType(1.0) - RMS_GAMMA) * (g * g);
+
+    // // grad sign base 3: 0->neg, 1->zero, 2->pos
+    // const int grad_sign = 1 + (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
+
+    // // signs[i] contains three consecutive grad_sign
+    // signs[i]  = 3*(int(signs[i]) % 9) + grad_sign;
+
+    // // update according to the following table:
+    // // (!pos,!pos,!pos) or (!neg,!neg,!neg): RMS_WGT_INC
+    // // (!neg,!neg,neg) or (!pos,!pos,pos): RMS_WGT_DEC
+    // // otherwise: no action
+
+    // switch(int(upd_gpu[int(signs[i])]))
+    // {
+    // case 0:
+    //    steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
+    //    break;
+    // case 2:
+    //    steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
+    //    break;
+    // }
+    // curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+
+    const int grad_sign = (ElemType(0) < g) - (g < ElemType(0));
+
+    if (signs[i] * grad_sign > 0)
+        steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
+    else
+        steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
+
+    ElemType temp = steps[i] / sqrt(avars[i] + floor);
+    _scalevalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, i, temp);
     signs[i] = grad_sign;
 
     if (multipliers != nullptr)
@@ -2170,6 +2311,51 @@ __global__ void _innerProduct(
         {
             index = IDX2C(id, j, N);
             sum += a[index] * b[index];
+        }
+    }
+
+    c[id] = sum;
+}
+
+template <class ElemType>
+__global__ void _innerProduct4SparseCSC(
+    ElemType* c,
+    const ElemType* a,
+    const GPUSPARSE_INDEX_TYPE* aRowIndex,
+    const GPUSPARSE_INDEX_TYPE* aColCSCIndex,
+    const ElemType* b,
+    const CUDA_LONG M, // a.GetNumRows();
+    const CUDA_LONG N, // a.GetNumCols();
+    const bool isColWise)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if ((isColWise && id >= N) || (!isColWise && id >= M))
+        return;
+
+    ElemType sum = 0;
+    CUDA_LONG index;
+
+    if (isColWise)
+    {
+        for (CUDA_LONG i = aColCSCIndex[id]; i < aColCSCIndex[id+1]; i++)
+        {
+            index = IDX2C(aRowIndex[i], id, M);
+            sum += a[i] * b[index];
+        }
+    }
+    else
+    {
+        for (CUDA_LONG j = 0; j < N; ++j)
+        {
+            for (CUDA_LONG i = aColCSCIndex[j]; i < aColCSCIndex[j+1]; i++)
+            {
+                if (aRowIndex[i] == id)
+                {
+                    index = IDX2C(id, j, M);
+                    sum += a[i] * b[index];
+                    break;
+                }
+            }
         }
     }
 
@@ -2951,6 +3137,55 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
 }
 
 template <class ElemType>
+__global__ void _columnwiseScaleAndWeightedAdd(
+    ElemType alpha,
+    const ElemType* aData,
+    const ElemType* vData,
+    ElemType beta,
+    ElemType* cData,
+    int m, int n)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= m * n)
+        return;
+
+    CUDA_LONG col = id / m;
+
+    if (beta == 0) // don't even read the memory if beta is 0
+        cData[id] = alpha * vData[col] * aData[id];
+    else
+        cData[id] = alpha * vData[col] * aData[id] + beta * cData[id];
+}
+
+template <class ElemType>
+__global__ void _columnwiseScaleAndWeightedAdd4CSC(
+    ElemType alpha,
+    const ElemType* aData, const GPUSPARSE_INDEX_TYPE* aSecondaryIndices, const GPUSPARSE_INDEX_TYPE* aMajorIndices,
+    const ElemType* vData,
+    ElemType beta,
+    ElemType* cData,
+    int m, int n)
+{
+    CUDA_LONG col = blockDim.x * blockIdx.x + threadIdx.x;
+    if (col >= n)
+        return;
+
+    GPUSPARSE_INDEX_TYPE start = aSecondaryIndices[col];
+    GPUSPARSE_INDEX_TYPE end = aSecondaryIndices[col + 1];
+
+    for (GPUSPARSE_INDEX_TYPE p = start; p < end; p++)
+    {
+        GPUSPARSE_INDEX_TYPE row = aMajorIndices[p];
+        ElemType val = aData[p];
+
+        if (beta == 0) // don't even read the memory if beta is 0
+            cData[IDX2C(row, col, m)] = alpha * vData[col] * val;
+        else
+            cData[IDX2C(row, col, m)] = alpha * vData[col] * val + beta * cData[IDX2C(row, col, m)];
+    }
+}
+
+template <class ElemType>
 __global__ void _reshape(
     const int oldNumRows,                       // old row count
     const int oldNumCols,                       // old col count
@@ -3007,10 +3242,6 @@ __global__ void _reshape(
     if (currentCol == (newNumCols - 1))
         newColumnIndex[newNumCols] = oldColumnIndex[oldNumCols]; // set end pointer
 }
-
-// special markers in BlockId2ColOrRow()/ColOrRow2BlockId()
-static const GPUSPARSE_INDEX_TYPE Id_NotAssigned = -1;
-static const GPUSPARSE_INDEX_TYPE Id_Pending = INT_MAX;
 
 //called before _determineBlockIds and _denseMulSparseCSCTransposeToSparseBlockCol to determine which columns have values and
 //what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
@@ -3845,8 +4076,10 @@ __global__ void _normalGradForSparseBlock(
     const size_t numBlocks,
     ElemType* lhsValues, // lhs is blockCol or blockRow
     const GPUSPARSE_INDEX_TYPE* blockIds,
-    ElemType* rhs)
+    ElemType* rhs,
+    bool unitGainMomentum)
 {
+    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - momentum) : 1.0;
     const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG row, col;
     if (blockCol)
@@ -3865,7 +4098,7 @@ __global__ void _normalGradForSparseBlock(
         col = index - numCols * blockId;
         row = blockIds[blockId];
     }
-    rhs[IDX2C(row, col, numRows)] = (1 - momentum) * lhsValues[index] + momentum * rhs[IDX2C(row, col, numRows)];
+    rhs[IDX2C(row, col, numRows)] = unitGainFactor * lhsValues[index] + momentum * rhs[IDX2C(row, col, numRows)];
     lhsValues[index] = rhs[IDX2C(row, col, numRows)];
 }
 
@@ -4933,23 +5166,487 @@ __global__ void _assignNumOfDiffCol(const ElemType* a, const ElemType* b, ElemTy
 }
 
 template <class ElemType>
-__global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LONG numCols, CUDA_LONG numRows, ElemType val)
+__global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LONG numCols, CUDA_LONG numRows, ElemType val, CUDA_LONG numColsPerMaskEntry)
 {
-    CUDA_LONG colIdx = blockIdx.x;
-    if (colIdx > numCols)
-        return;
+    CUDA_LONG maskColIdx = blockIdx.x;
+    CUDA_LONG matrixStartColIdx = maskColIdx * numColsPerMaskEntry;
 
-    if (columnsMask[IDX2C(0, colIdx, 1)] == 1)
-        return;
-
-    CUDA_LONG rowIdx = threadIdx.x;
-    for (; rowIdx < numRows; rowIdx += blockDim.x)
+    for (CUDA_LONG k = 0; k < numColsPerMaskEntry; ++k)
     {
-        a[IDX2C(rowIdx, colIdx, numRows)] = val;
+        CUDA_LONG colIdx = matrixStartColIdx + k;
+        if (colIdx > numCols)
+            return;
+
+        if (columnsMask[IDX2C(0, maskColIdx, 1)] == 1)
+            return;
+
+        CUDA_LONG rowIdx = threadIdx.x;
+        for (; rowIdx < numRows; rowIdx += blockDim.x)
+        {
+            a[IDX2C(rowIdx, colIdx, numRows)] = val;
+        }
     }
 }
+
+template <class ElemType>
+__global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+{
+    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
+    CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+    CUDA_LONG stride = blockDim.x * gridDim.x;
+    for (; idx < size; idx += stride)
+    {
+        ElemType g = grad[idx];
+        ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+        smoothAda[idx] = adaSqr;
+        ElemType w;
+        if (sizeof(ElemType) == sizeof(double))
+        {
+            w = adaMul * rsqrt(adaSqr + 1e-8);
+        }
+        else
+        {
+            w = adaMul * rsqrtf(adaSqr + 1e-8);
+        }
+
+        g = mom * smoothMom[idx] + unitGainFactor * g;
+        smoothMom[idx] = g;
+        g = lr*g*w;
+        val[idx] -= g;
+    }
 }
+
+template <class ElemType>
+__global__ void _adam4BlockSparseCol(CUDA_LONG size,
+    ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+    ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+{
+    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
+    CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+    CUDA_LONG stride = blockDim.x * gridDim.x;
+    for (; idx < size; idx += stride)
+    {
+        ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
+        ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+        smoothAda[idx] = adaSqr;
+        ElemType w;
+        if (sizeof(ElemType) == sizeof(double))
+        {
+            w = adaMul * rsqrt(adaSqr + 1e-8);
+        }
+        else
+        {
+            w = adaMul * rsqrtf(adaSqr + 1e-8);
+        }
+
+        g = mom * smoothMom[idx] + unitGainFactor * g;
+        smoothMom[idx] = g;
+        g = lr*g*w;
+        val[idx] -= g;
+    }
 }
+
+template <class ElemType>
+__global__ void _adadelta(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
+    ElemType learningRate, ElemType rho, ElemType epsilon)
+{
+    CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+    CUDA_LONG stride = blockDim.x * gridDim.x;
+    for (; idx < size; idx += stride)
+    {
+        ElemType g = grad[idx];
+        ElemType adaSqr = rho * smoothAda[idx] + (1.0f - rho) * g * g;
+        smoothAda[idx] = adaSqr;
+        ElemType x2 = smoothX2[idx];
+        ElemType deltaX;
+        if (sizeof(ElemType) == sizeof(double))
+        {
+            deltaX = -sqrt(x2 + epsilon) * rsqrt(adaSqr + epsilon) * g;
+        }
+        else
+        {
+            deltaX = -sqrtf(x2 + epsilon) * rsqrtf(adaSqr + epsilon) * g;
+        }
+
+        smoothX2[idx] = rho * smoothX2[idx] + (1.0f - rho) * deltaX * deltaX;
+        val[idx] += learningRate * deltaX;
+    }
 }
+
+template <class ElemType>
+__global__ void _adadelta4BlockSparseCol(CUDA_LONG size,
+    ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+    ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
+    ElemType learningRate, ElemType rho, ElemType epsilon)
+{
+    CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+    CUDA_LONG stride = blockDim.x * gridDim.x;
+    for (; idx < size; idx += stride)
+    {
+        ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
+        ElemType adaSqr = rho * smoothAda[idx] + (1.0f - rho) * g * g;
+        smoothAda[idx] = adaSqr;
+        ElemType x2 = smoothX2[idx];
+        ElemType deltaX;
+        if (sizeof(ElemType) == sizeof(double))
+        {
+            deltaX = -sqrt(x2 + epsilon) * rsqrt(adaSqr + epsilon) * g;
+        }
+        else
+        {
+            deltaX = -sqrtf(x2 + epsilon) * rsqrtf(adaSqr + epsilon) * g;
+        }
+
+        smoothX2[idx] = rho * smoothX2[idx] + (1.0f - rho) * deltaX * deltaX;
+        val[idx] += learningRate * deltaX;
+    }
+}
+
+// Calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
+// prob (input): the posterior output from the network
+// alpha (output): alpha for forward-backward calculation. 
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+// uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// numChannels (input): channel number in this minibatch
+// uttNum (input): number of utterances
+// t (input): time stamp to process
+// maxPhoneNum (input): the max number of phones between utterances
+// totalPhoneNum (input): the total number of phones of all utterances
+// blankTokenId (input): id of the CTC blank token
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
+//      Alpha and Beta scores outside of the delay boundary are set to zero.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding.
+//      delayConstraint=-1 means no constraint
+template<class ElemType>
+__global__ void _assignAlphaScore(
+    const ElemType *prob,
+    ElemType *alphaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
+    const size_t *uttToChanInd,
+    const size_t *uttFrameNum,
+    const size_t *uttBeginFrame,
+    const size_t *uttPhoneNum,
+    size_t numChannels,
+    const size_t uttNum,
+    const size_t  t,
+    const size_t maxPhoneNum, // Maximum length of utterance in this MB
+    const size_t totalPhoneNum, // Total number of phones
+    const size_t blankTokenId,
+    const int delayConstraint)
+{
+    LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
+    // Index of the label in the sequence
+    LONG64 phoneSeqId = blockDim.y * blockIdx.y + threadIdx.y;
+
+    // Number of phones and frames in this utterance
+    LONG64 phoneNum = uttPhoneNum[uttId]; 
+    LONG64 frameNum = uttFrameNum[uttId];
+
+    if (uttId >= uttNum || phoneSeqId >= phoneNum - 1 || t >= frameNum || phoneSeqId == 0) return;
+
+    // Current and previous phone indices in phoneSeq matrix
+    LONG64 labelid = uttId*maxPhoneNum + phoneSeqId;
+    LONG64 labelid_2 = labelid - 2;
+
+    // Actual current phone label
+    LONG64 phoneId = (LONG64)(phoneSeq[labelid]);
+
+    // Index of the current frame in minibatch
+    LONG64 timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+
+    // Index of probability of observing phoneId at frame timeId
+    LONG64 probId = timeId*totalPhoneNum + phoneId;
+
+    LONG64 alphaId = maxPhoneNum* timeId + phoneSeqId; // alpha_t(s)
+    // Previous time frame
+    LONG64 timeId_1 = timeId - numChannels; // Index corresponding to (t-1)
+    LONG64 alphaId_0 = maxPhoneNum* timeId_1 + phoneSeqId; // alpha_{t-1}(s)
+    LONG64 alphaId_1 = alphaId_0 - 1; // alpha_{t-1}(s-1)
+    LONG64 alphaId_2 = alphaId_0 - 2; // alpha_{t-1}(s-2)
+
+    if (t == 0)
+    {
+        // Initialize recursion
+        if (phoneSeqId == 1 || phoneSeqId == 2)
+        {
+            alphaScore[alphaId] = prob[probId];
+        }
+    }
+    else
+    {
+        if (phoneSeqId >= 1)
+        {
+            ElemType x = LZERO;
+
+            ElemType ascore;
+            if (phoneSeqId > 2)
+            {
+                // if current label is not blank and not equal prev non-blank label
+                if ((LONG64)(phoneSeq[labelid]) != blankTokenId && phoneId != (LONG64)(phoneSeq[labelid_2]))
+                {
+                    x = logaddk(x, alphaScore[alphaId_2]);
+                }
+            }
+
+            if (phoneSeqId > 1)
+            {
+                x = logaddk(x, alphaScore[alphaId_1]);
+            }
+
+            x = logaddk(x, alphaScore[alphaId_0]);
+
+            if (phoneId != SIZE_MAX)
+                ascore = prob[probId]; // Probability of observing given label at given time
+            else
+                ascore = 0;
+            alphaScore[alphaId] = (ElemType)x + ascore;
+            if (delayConstraint != -1)
+            {
+                LONG64 labelid_r = labelid + 2;
+                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_r]);
+                if (phoneId == blankTokenId)
+                {
+                    // only constraint right side
+                    if (t > phoneBoundId_r + delayConstraint - 1)
+                        alphaScore[alphaId] = LZERO;
+                }
+                else if (phoneId != blankTokenId)
+                {
+                    if (t > phoneBoundId_r + delayConstraint)
+                        alphaScore[alphaId] = LZERO;
+                }
+            }
+        }
+    }
+}
+
+// Calculate beta in forward-backward calculation, equation (10), (11) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// See _assignAlphaScore for the explanation of parameters
+template<class ElemType>
+__global__ void _assignBetaScore(
+    const ElemType *prob,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
+    const size_t *uttToChanInd,
+    const size_t *uttFrameNum,
+    const size_t *uttBeginFrame,
+    const size_t *uttPhoneNum,
+    const size_t numChannels,
+    const size_t uttNum,
+    const size_t  t,
+    const size_t maxPhoneNum,
+    const size_t totalPhoneNum,
+    const size_t blankTokenId,
+    const int delayConstraint)
+{
+    LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
+    // Index of the label in the sequence
+    LONG64 phoneSeqId = blockDim.y * blockIdx.y + threadIdx.y;
+    LONG64 phoneNum = uttPhoneNum[uttId];
+    LONG64 frameNum = uttFrameNum[uttId];
+
+    if (uttId >= uttNum || phoneSeqId >= phoneNum - 1 || t >= frameNum || phoneSeqId == 0) return;
+
+    LONG64 labelid = uttId*maxPhoneNum + phoneSeqId;
+    LONG64 labelid_2 = labelid + 2;
+    LONG64 phoneId = (LONG64)(phoneSeq[labelid]);
+    LONG64 timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+    LONG64 probId = timeId*totalPhoneNum + phoneId;
+    LONG64 betaid = maxPhoneNum* timeId + phoneSeqId;
+    LONG64 timeId_1 = timeId + numChannels;
+    LONG64 betaid_0 = maxPhoneNum* timeId_1 + phoneSeqId;
+    LONG64 betaid_1 = betaid_0 + 1;
+    LONG64 betaid_2 = betaid_0 + 2;
+
+    if (t == frameNum - 1)
+    {
+        if (phoneSeqId == phoneNum - 3 || phoneSeqId == phoneNum - 2)
+        {
+            betaScore[betaid] = prob[probId];
+        }
+    }
+    else
+    {
+        if (phoneSeqId >= 1)
+        {
+            ElemType x = LZERO;
+            ElemType ascore;
+            if (phoneSeqId < phoneNum - 3)
+            {
+                if (phoneSeq[labelid] != blankTokenId && phoneId != phoneSeq[labelid_2])
+                {
+                    x = logaddk(x, betaScore[betaid_2]);
+                }
+            }
+
+            if (phoneSeqId < phoneNum - 2)
+            {
+                x = logaddk(x, betaScore[betaid_1]);
+            }
+
+            x = logaddk(x, betaScore[betaid_0]);
+
+            if (phoneId != SIZE_MAX)
+                ascore = prob[probId];
+            else
+                ascore = 0;
+            betaScore[betaid] = (ElemType)x + ascore;
+            if (delayConstraint != -1)
+            {
+                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_2]);
+                if (phoneId == blankTokenId)
+                {
+                    if (t > phoneBoundId_r + delayConstraint - 1)
+                        betaScore[betaid] = LZERO;
+                }
+                else if (phoneId != blankTokenId)
+                {
+                    if (t > phoneBoundId_r + delayConstraint)
+                        betaScore[betaid] = LZERO;
+                }
+            }
+        }
+    }
+}
+
+// Calculate derivative, equation (15) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// See _assignAlphaScore for the explanation of parameters
+template<class ElemType>
+__global__ void _assignCTCScore(
+    ElemType *CTCscore,
+    ElemType *prob,
+    ElemType *alphaScore,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    const size_t uttNum,
+    const size_t *uttToChanInd,
+    const size_t *uttBeginFrame,
+    const size_t *uttPhoneNum,
+    const size_t *uttFrameNum,
+    const long numChannels,
+    const long maxPhoneNum,
+    const long totalPhoneNum)
+{
+    LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
+    LONG64 t = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (uttId < uttNum && t < uttFrameNum[uttId])
+    {
+        LONG64 phoneNum = uttPhoneNum[uttId];
+        LONG64 alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
+        LONG64 timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+        ElemType P_lx = betaScore[alphaId_0];
+
+        for (int s = 1; s < phoneNum - 1; s++)
+        {
+            long phoneId = phoneSeq[uttId*maxPhoneNum + s];
+            LONG64 alphaId = maxPhoneNum* timeId + s;
+            LONG64 probId = timeId*totalPhoneNum + phoneId;
+
+            if (phoneId != SIZE_MAX)
+            {
+                ElemType logoccu = alphaScore[alphaId] + betaScore[alphaId] - prob[probId] - (ElemType)P_lx;
+                CTCscore[probId] = logaddk(CTCscore[probId], logoccu);
+            }
+        }
+
+        for (int s = 0; s < totalPhoneNum; s++)
+        {
+            LONG64 probId = timeId*totalPhoneNum + s;
+            ElemType logoccu = CTCscore[probId];
+            if (logoccu < LZERO)
+                CTCscore[probId] = 0.0f;
+            else
+                CTCscore[probId] = exp(logoccu);
+        }
+    }
+}
+
+// Calculate CTC score. equation (8) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+template<class ElemType>
+__global__ void _assignTotalScore(ElemType *betaScore,
+    ElemType *totalScore,
+    const size_t uttNum,
+    const size_t *uttToChanInd,
+    const size_t *uttBeginFrame,
+    const size_t numChannels,
+    const size_t maxPhoneNum)
+{
+    LONG64 uttId = blockIdx.x;
+    if (uttId < uttNum)
+    {
+        LONG64 alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
+
+        betaScore[alphaId_0] = logaddk(betaScore[alphaId_0 + 1], betaScore[alphaId_0 + 2]);
+        totalScore[uttId] = betaScore[alphaId_0];
+    }
+}
+
+template<class ElemType>
+__global__ void _assignOneHot(ElemType *indices,
+                                  ElemType *targetBuffer,
+                                  size_t num_class,
+                                  size_t num_item,
+                                  size_t num_element)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < num_element)
+    {
+        if (indices[index] >= 0 && indices[index] < num_class)
+        {
+            size_t block_id = index / num_item;
+            size_t item_id = index % num_item;
+            targetBuffer[block_id * num_class * num_item + item_id + num_item * (size_t)indices[index]] = 1;
+        }
+    }
+}
+
+template<class ElemType>
+__global__ void _assignOneHotAsSparse(ElemType *indices,
+                                      GPUSPARSE_INDEX_TYPE *secondaryIndices,
+                                      GPUSPARSE_INDEX_TYPE *majorIndices,
+                                      ElemType *targetBuffer,
+                                      size_t num_class,
+                                      int num_item,
+                                      size_t num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < num_elements)
+    {
+        int block_id = index / num_item;
+        int item_id = index % num_item;
+        // for invalid indices, theorically they should not belong to nz elements.
+        // but if we scan the indices to count the valid indices number,
+        // it will be difficult for parallel calculation, especially on GPU.
+        // here we chose to keep those elements in nz element list, but with value 0 at row 0
+        if (indices[index] >= 0 && indices[index] < num_class)
+        {
+            targetBuffer[index] = 1;
+            majorIndices[index] = ((int)indices[index] * num_item) + item_id;
+        }
+        else
+        {
+            targetBuffer[index] = 0;
+            majorIndices[index] = item_id;
+        }
+
+        if (item_id == 0)
+            secondaryIndices[block_id + 1] = num_item * (block_id + 1);
+
+        if (index == 0)
+            secondaryIndices[0] = 0;
+    }
+}
+
+}}}
 
 #endif // !CPUONLY

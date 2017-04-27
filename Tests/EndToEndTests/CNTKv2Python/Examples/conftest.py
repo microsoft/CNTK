@@ -9,8 +9,10 @@ import pytest
 
 _DEFAULT_DEVICE_ID=-1
 
-import cntk.cntk_py
+import cntk
+import cntk.debugging
 cntk.cntk_py.always_allow_setting_default_device()
+cntk.debugging.set_checked_mode(True)
 
 def pytest_addoption(parser):
     parser.addoption("--deviceid", action="append", default=[_DEFAULT_DEVICE_ID],
@@ -54,19 +56,3 @@ def pytest_generate_tests(metafunc):
                 raise RuntimeError("invalid is1bitsgd value {}, only 0 or 1 allowed".format(elem))
 
         metafunc.parametrize("is_1bit_sgd", is1bitsgd, scope='session')
-
-@pytest.fixture(scope='module')
-def nb(tmpdir_factory, request, device_id):
-    # TODO we need a way to inject device_id into the notebook
-    import nbformat
-    import os
-    import subprocess
-    inPath = getattr(request.module, "notebook")
-    outPath = str(tmpdir_factory.mktemp('notebook').join('out.ipynb'))
-    assert os.path.isfile(inPath)
-    kernel_name_opt = "--ExecutePreprocessor.kernel_name=python%d" % (sys.version_info[0])
-    args = ["jupyter", "nbconvert", "--to", "notebook", "--execute",
-            "--ExecutePreprocessor.timeout=300", kernel_name_opt, "--output", outPath, inPath]
-    subprocess.check_call(args)
-    nb = nbformat.read(outPath, nbformat.current_nbformat)
-    return nb

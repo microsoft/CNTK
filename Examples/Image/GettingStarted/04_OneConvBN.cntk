@@ -33,7 +33,7 @@ trainNetwork = {
 
         DenseBnReluLayer {outDim} = Sequential (
             LinearLayer             {outDim} :   
-            BatchNormalizationLayer {spatialRank = 1} : ReLU
+            BatchNormalizationLayer {spatialRank = 0} : ReLU
         )
 		
         model = Sequential (
@@ -73,7 +73,7 @@ trainNetwork = {
 
     reader = {
         readerType = "CNTKTextFormatReader"
-        # See ../REAMDE.md for details on getting the data (Train-28x28_cntk_text.txt).
+        # See ../README.md for details on getting the data (Train-28x28_cntk_text.txt).
         file = "$DataDir$/Train-28x28_cntk_text.txt"
         input = {
             features = { dim = 784 ; format = "dense" }

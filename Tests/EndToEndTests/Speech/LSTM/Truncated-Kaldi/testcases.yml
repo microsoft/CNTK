@@ -1,7 +1,7 @@
 dataDir: ../../Data
 tags:
      # TODO run on more SKUs and/or BVT
-     - nightly-l (build_sku == 'gpu') and (os=='linux')
+     - nightly-l (build_sku == 'gpu') and (os == 'linux')
 
 testCases:
   CNTK Run must be completed:

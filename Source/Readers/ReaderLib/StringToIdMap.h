@@ -47,7 +47,7 @@ public:
     }
 
     // Get integer id for the string value, adding if not exists.
-    size_t operator[](const TString& value)
+    size_t AddIfNotExists(const TString& value)
     {
         const auto& it = m_values.find(value);
         if (it == m_values.end())
@@ -69,7 +69,7 @@ public:
     // Get string value by its integer id.
     const TString& operator[](size_t id) const
     {
-        if (id < m_indexedValues.size())
+        if (id >= m_indexedValues.size())
             RuntimeError("Unknown id requested");
         return *m_indexedValues[id];
     }
@@ -85,7 +85,7 @@ private:
     DISABLE_COPY_AND_MOVE(TStringToIdMap);
 
     std::map<TString, size_t> m_values;
-    std::vector<const TString*> m_indexedValues;
+    std::deque<const TString*> m_indexedValues;
 };
 
 typedef TStringToIdMap<std::wstring> WStringToIdMap;

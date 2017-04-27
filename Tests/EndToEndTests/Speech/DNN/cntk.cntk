@@ -78,7 +78,7 @@ speechTrain = [
         ]
     ]
     reader = [
-        readerType = "HTKMLFReader"
+        readerType = "HTKDeserializers"
         readMethod = "blockRandomize"
         miniBatchMode = "partial"
         randomize = "auto"

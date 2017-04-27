@@ -32,6 +32,11 @@ public:
         }
     }
 
+    bool IsNumericSequenceKeys() const
+    {
+        return m_numericSequenceKeys;
+    }
+
     // By default include all sequences.
     CorpusDescriptor(bool numericSequenceKeys) : m_includeAll(true), m_numericSequenceKeys(numericSequenceKeys)
     {
@@ -58,11 +63,7 @@ public:
                 // The function has to provide a size_t unique "hash" for the input key
                 // If we see the key for the first time, we add it to the registry.
                 // Otherwise we retrieve the hash value for the key from the registry.
-                size_t id;
-                if (m_keyToIdMap.TryGet(key, id))
-                    return id;
-                m_keyToIdMap.AddValue(key);
-                return m_keyToIdMap[key];
+                return m_keyToIdMap.AddIfNotExists(key);
             };
 
             IdToKey = [this](size_t id)

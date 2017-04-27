@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+// Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
@@ -26,10 +26,8 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
         return;
 
     size_t numRanks = mpi->NumNodesInUse();
-    MPI_Comm mpiComm = mpi->Communicator();
     std::vector<int> allDevs(numRanks);
-    MPI_Allgather(&deviceId, 1, MPI_INT, allDevs.data(), 1, MPI_INT, mpiComm)
-        || MpiFail("NcclComm: MPI_Allgather");
+    mpi->Allgather(&deviceId, 1, MPI_INT, allDevs.data(), 1, MPI_INT);
 
     for (size_t r = 0; r<numRanks; r++)
     {
@@ -53,15 +51,14 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     if (res != ncclSuccess)
         RuntimeError("NcclComm failed to obtain ncclUniqueId: %s", ncclGetErrorString(res));
 
-    MPI_Bcast(&ncclId, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, 0, mpiComm)
-        || MpiFail("NcclComm: MPI_Bcase");
+    mpi->Bcast(&ncclId, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, 0);
 
     PrepareDevice(deviceId);
     res = ncclCommInitRank(&m_ncclComm, numRanks, ncclId, mpi->CurrentNodeRank());
     if (res != ncclSuccess)
       RuntimeError("NcclComm failed to initialize ncclComm_t: %s", ncclGetErrorString(res));
 
-    cudaStreamCreateWithFlags(&m_stream, cudaStreamNonBlocking)
+    cudaStreamCreateWithFlags(&m_stream, cudaStreamDefault)
         || "cudaStreamCreateWithFlags failed";
     fprintf(stderr, "NcclComm: initialized\n");
 }
@@ -79,21 +76,38 @@ bool NcclComm::IsSupported()
     return m_ncclComm != nullptr;
 }
 
-void NcclComm::AllReduceImpl(void* buffer, size_t count, DataType dtype)
+void NcclComm::AllReduceImpl(void* inputbuffer, void *outputbuffer, size_t count, DataType dtype)
 {
     ncclResult_t res;
     if (dtype == DataType::FLOAT)
     {
-        res = ncclAllReduce(buffer, buffer, count, ncclFloat, ncclSum, m_ncclComm, m_stream);
+        res = ncclAllReduce(inputbuffer, outputbuffer, count, ncclFloat, ncclSum, m_ncclComm, m_stream);
     }
     else
     {
         assert(dtype == DataType::DOUBLE);
-        res = ncclAllReduce(buffer, buffer, count, ncclDouble, ncclSum, m_ncclComm, m_stream);
+        res = ncclAllReduce(inputbuffer, outputbuffer, count, ncclDouble, ncclSum, m_ncclComm, m_stream);
     }
 
     if (res != ncclSuccess)
         RuntimeError("NcclComm ncclAllReduce failed: %s", ncclGetErrorString(res));
+}
+
+void NcclComm::BroadcastImpl(void* buffer, size_t count, MPI_Datatype dtype, int root)
+{
+    ncclResult_t res;
+    if (dtype == MPI_CHAR)
+    {
+        res = ncclBcast(buffer, count, ncclChar, root, m_ncclComm, m_stream);
+    }
+    else
+    {
+        RuntimeError("NcclComm Broadcast supports Char type only");
+    }
+    if (res != ncclSuccess)
+    {
+        RuntimeError("NcclComm ncclBcast failed: %s", ncclGetErrorString(res));
+    }
 }
 
 void NcclComm::Sync()

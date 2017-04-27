@@ -4,7 +4,7 @@ dataDir: ../../../../Speech/Data
 tags:
     # TODO disabled; sometimes doesn't pass baseline. Need to investigate (WI # 430)
     # due to time, only in 1BitSGD, GPU and release
-    #- nightly-e (build_sku == '1bitsgd') and (flavor=='release') and (device=='gpu') and (os=='linux')
+    #- nightly-e (build_sku == '1bitsgd') and (flavor == 'release') and (device == 'gpu') and (os == 'linux')
 
 testCases:
   CNTK Run must be completed:

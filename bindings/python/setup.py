@@ -9,6 +9,8 @@ import numpy
 
 IS_WINDOWS = platform.system() == 'Windows'
 
+IS_PY2 = sys.version_info.major == 2
+
 # TODO should handle swig path specified via build_ext --swig-path
 if os.system('swig -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
     print("Please install swig (>= 3.0.10) and include it in your path.\n")
@@ -16,9 +18,10 @@ if os.system('swig -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
 
 if IS_WINDOWS:
     if os.system('cl 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
-        print("Compiler was not found in path. Please run this from a Visual Studio 2013 x64 Native Tools Command Prompt,\n"
-              "e.g., by running the following command:\n"
-              "  \"C:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\VC\\vcvarsall\" amd64\n")
+        print("Compiler was not found in path.\n"
+              "Make sure you installed the C++ tools during Visual Studio 2015 install and \n"
+              "run vcvarsall.bat from a DOS command prompt:\n"
+              "  \"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall\" amd64\n")
         sys.exit(1)
 
     try:
@@ -65,15 +68,19 @@ def strip_ext(fn):
 
 if IS_WINDOWS:
     libname_rt_ext = '.dll'
-
-    link_libs = ["CNTKLibrary-2.0"]
+    cntkLibraryName = "Cntk.Core-" + os.environ['CNTK_COMPONENT_VERSION']
+    link_libs = [cntkLibraryName]
 else:
-    link_libs = ["cntklibrary-2.0"]
+    cntkLibraryName = "Cntk.Core-" + os.environ['CNTK_COMPONENT_VERSION']
+    link_libs = [cntkLibraryName]
     libname_rt_ext = '.so'
 
 
-rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
-                                                      '*' + libname_rt_ext))]
+if 'CNTK_LIBRARIES' in os.environ:
+  rt_libs = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split()]
+else:
+  rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
+                                                        '*' + libname_rt_ext))]
 
 # copy over the libraries to the cntk base directory so that the rpath is
 # correctly set
@@ -105,6 +112,7 @@ if IS_WINDOWS:
         "/EHsc",
         "/DEBUG",
         "/Zi",
+        "/WX"
     ]
     extra_link_args = ['/DEBUG']
     runtime_library_dirs = []
@@ -126,7 +134,7 @@ cntk_module = Extension(
     name="_cntk_py",
 
     sources = [os.path.join("cntk", "cntk_py.i")],
-    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon],
+    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon, "-Werror" ],
     libraries = link_libs,
     library_dirs = [CNTK_LIB_PATH],
 
@@ -154,17 +162,22 @@ if IS_WINDOWS:
     kwargs = dict(data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])],
                   package_data = package_data)
 else:
-    # On Linux copy all runtime libs into the cntk/lib folder. 
+    # On Linux copy all runtime libs into the cntk/lib folder.
     package_data['cntk'] += rt_libs
     kwargs = dict(package_data = package_data)
 
+cntk_install_requires = [
+    'numpy>=1.11',
+    'scipy>=0.17'
+]
+
+if IS_PY2:
+    cntk_install_requires.append('enum34>=1.1.6')
+
 setup(name="cntk",
-      version="2.0.beta6.0",
+      version="2.0rc2",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,
-      # install_requires=[
-      #  'numpy>=1.11',
-      #  'scipy>=0.17'
-      #],
+      install_requires=cntk_install_requires,
       **kwargs)

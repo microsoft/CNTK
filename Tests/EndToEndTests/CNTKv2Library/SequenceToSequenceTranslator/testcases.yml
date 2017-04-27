@@ -1,0 +1,11 @@
+dataDir: .
+
+tags:
+    - bvt-e ((build_sku == '1bitsgd') or (build_sku == 'cpu')) and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
+    - nightly-e ((build_sku == '1bitsgd') or (build_sku == 'cpu')) and ((device=='gpu') or (flavor== 'release'))
+
+testCases:
+  Test run must be completed:
+    patterns:
+      - "CNTKv2Library-SequenceToSequence tests: Passed"
+

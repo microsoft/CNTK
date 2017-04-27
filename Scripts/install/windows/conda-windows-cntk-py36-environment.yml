@@ -1,0 +1,24 @@
+name: cntk-py36
+dependencies:
+- h5py=2.6.0=np111py36_2
+- jupyter=1.0.0=py36_3
+- matplotlib=2.0.0=np111py36_0
+- numpy=1.11.2=py36_0
+- pandas=0.19.1=np111py36_0
+- pandas-datareader=0.2.1=py36_0
+- pillow=3.4.2=py36_0
+- pip=9.0.1=py36_1
+- python=3.6.0=0
+- pyyaml=3.12=py36_0
+- scipy=0.18.1=np111py36_0
+- seaborn=0.7.1=py36_0
+- setuptools=27.2.0=py36_1
+- six=1.10.0=py36_0
+- wheel=0.29.0=py36_0
+- pip:
+  - pytest==3.0.3
+  - sphinx==1.5.4
+  - sphinx-rtd-theme==0.2.4
+  - twine==1.8.1
+  - gym==0.5.2
+  - pydot-ng==1.0.0

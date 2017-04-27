@@ -27,6 +27,8 @@ public:
 
     size_t GetRandomizationWindow() const { return m_randomizationWindow; }
 
+    bool UseSampleBasedRandomizationWindow() const { return m_sampleBasedRandomizationWindow; }
+
     bool ShouldSkipSequenceIds() const { return m_skipSequenceIds; }
 
     unsigned int GetMaxAllowedErrors() const { return m_maxErrors; }
@@ -47,6 +49,9 @@ private:
     std::wstring m_filepath;
     std::vector<StreamDescriptor> m_streams;
     size_t m_randomizationWindow;
+    // Specifies how to interpret randomization window, if true randomization window == number of samples, else 
+    // randomization window = number of chunks (default).
+    bool m_sampleBasedRandomizationWindow; 
     ElementType m_elementType;
     bool m_skipSequenceIds;
     unsigned int m_maxErrors;

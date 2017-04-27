@@ -55,7 +55,7 @@ trainNetwork = {
         minibatchSize = 64
         maxEpochs = 40
         learningRatesPerSample = 0.001*10:0.0005*10:0.0001
-		dropoutRate = 0.5
+        dropoutRate = 0.5
         momentumAsTimeConstant = 0*5:1024
         
         numMBsToShowResult = 500
@@ -63,7 +63,7 @@ trainNetwork = {
 
     reader = {
         readerType = "CNTKTextFormatReader"
-        # See ../REAMDE.md for details on getting the data (Train-28x28_cntk_text.txt).
+        # See ../README.md for details on getting the data (Train-28x28_cntk_text.txt).
         file = "$DataDir$/Train-28x28_cntk_text.txt"
         randomize = true
         keepDataInMemory = true

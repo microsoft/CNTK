@@ -63,48 +63,82 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         RandomizeNextChunkIfNeeded();
     }
 
-    // Gets next randomized sequence descriptions not exceeding the sample count.
-    std::vector<RandomizedSequenceDescription> SequenceRandomizer::GetNextSequenceDescriptions(size_t sampleCount, ClosedOpenChunkInterval& requiredChunks)
+    // Gets the next randomized sequence descriptions not exceeding the global and local sample count,
+    // when atLeastOneSequenceNeeded is false. Otherwise (when atLeastOneSequenceNeeded is true), 
+    // returns at least one sequence description even when its length is greater than the required sample counts.
+    // Whether a sequence is considered local is defined by the isLocalSequence predicate.
+    // Returns a pair whose first element indicates the number of global samples read,
+    // and second -- the number of local samples read (== sum of number of sample over all elements in the 
+    // 'sequences' vector).
+    std::pair<size_t, size_t> SequenceRandomizer::GetNextSequenceDescriptions(
+        size_t globalSampleCount,
+        size_t localSampleCount,
+        const std::function<bool(const RandomizedSequenceDescription*)>& isLocalSequence,
+        ClosedOpenChunkInterval& requiredChunks,
+        std::vector<RandomizedSequenceDescription>& sequences,
+        bool atLeastOneSequenceNeeded)
     {
-        int samples = (int)sampleCount;
+        assert(globalSampleCount != 0);
+        assert(localSampleCount != 0);
+
+        if (globalSampleCount > std::numeric_limits<int>::max() &&
+            localSampleCount > std::numeric_limits<int>::max())
+            RuntimeError("Global and local size of the minibatch cannot exceed max int.");
 
         // Initialize the range to the current chunk.
         requiredChunks.m_begin = (ChunkIdType)std::min(m_currentChunkCursor, m_randomizedChunks.size() - 1);
         requiredChunks.m_end = requiredChunks.m_begin + 1;
 
-        std::vector<RandomizedSequenceDescription> result;
-        result.reserve(sampleCount);
+        sequences.reserve(localSampleCount);
+        sequences.clear();
 
-        bool firstSequence = true;
-        while (samples > 0 && m_currentChunkCursor < m_randomizedChunks.size())
+        size_t globalSamplesRead = 0, localSamplesRead = 0;
+        while (m_currentChunkCursor < m_randomizedChunks.size() &&
+               localSamplesRead < localSampleCount &&
+               globalSamplesRead < globalSampleCount)
         {
             size_t sequenceOffsetInsideChunk = m_currentSequenceCursor - m_randomizedChunks[m_currentChunkCursor].m_sequencePositionStart;
             const RandomizedSequenceDescription* sequence = &m_sequenceWindow[m_currentChunkCursor - m_chunkWindowBegin][sequenceOffsetInsideChunk];
             int sequenceLength = (int)sequence->m_numberOfSamples;
+            bool isLocal = isLocalSequence(sequence);
+            bool enoughData = !sequences.empty() || !atLeastOneSequenceNeeded;
 
-            if (firstSequence || samples >= sequenceLength)
+            // Let's check whether we need to break because we exceeded global counter.
+            if (enoughData && globalSamplesRead + sequenceLength > globalSampleCount)
+                break;
+
+            // Let's check whether we need to break because we exceeded local counter.
+            if (enoughData && isLocal && localSamplesRead + sequenceLength > localSampleCount)
+                break;
+
+            if (isLocal) // Ok good to add it to the result.
             {
-                requiredChunks.m_begin = std::min(m_randomizedChunks[m_currentChunkCursor].m_randomizationWindow.m_begin, requiredChunks.m_begin);
-                requiredChunks.m_end = std::max(m_randomizedChunks[m_currentChunkCursor].m_randomizationWindow.m_end, requiredChunks.m_end);
-
-                firstSequence = false;
-                result.push_back(*sequence);
-                m_currentSequenceCursor++;
-                m_currentSampleCursor += sequenceLength;
-
-                if (sequenceOffsetInsideChunk + 1 >= m_randomizedChunks[m_currentChunkCursor].m_original->m_numberOfSequences)
-                {
-                    // Moving to the next chunk,
-                    // Be careful, this invalidates the sequence from above.
-                    MoveChunkCursor();
-                }
+                sequences.push_back(*sequence);
+                localSamplesRead += sequenceLength;
             }
 
-            // Always decrease the available number of samples.
-            samples -= sequenceLength;
+            // even when the next sequence is not local, somebody else would return it, so
+            // we need to ivalidate the 'atLeastOneSequenceNeeded' flag.
+            atLeastOneSequenceNeeded = false; 
+
+            globalSamplesRead += sequenceLength;
+
+            // Update the required chunk window.
+            requiredChunks.m_begin = std::min(m_randomizedChunks[m_currentChunkCursor].m_randomizationWindow.m_begin, requiredChunks.m_begin);
+            requiredChunks.m_end = std::max(m_randomizedChunks[m_currentChunkCursor].m_randomizationWindow.m_end, requiredChunks.m_end);
+
+            // Update current cursor to the next sequence.
+            m_currentSequenceCursor++;
+            m_currentSampleCursor += sequenceLength;
+            if (sequenceOffsetInsideChunk + 1 >= m_randomizedChunks[m_currentChunkCursor].m_original->m_numberOfSequences)
+            {
+                // Moving to the next chunk,
+                // Be careful, this invalidates the sequence from above.
+                MoveChunkCursor();
+            }
         }
 
-        return result;
+        return { globalSamplesRead, localSamplesRead };
     }
 
     // Move the chunk cursor to the next chunk, randomizing more sequences if necessary.
@@ -329,9 +363,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // TODO perhaps optimize this
         ClosedOpenChunkInterval window;
+        vector<RandomizedSequenceDescription> tmp;
         while (m_currentSampleCursor < sweepSampleOffset)
         {
-            GetNextSequenceDescriptions(1, window);
+            tmp.clear();
+            GetNextSequenceDescriptions(1, 1, [](const RandomizedSequenceDescription*) { return true; }, window, tmp);
         }
 
         return m_currentSampleCursor;
@@ -369,7 +405,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t k = 0; k < m_bufferOriginalSequences.size(); k++)
         {
             RandomizedSequenceDescription s;
-            s.m_id = m_bufferOriginalSequences[k].m_id;
+            s.m_indexInOriginalChunk = m_bufferOriginalSequences[k].m_indexInChunk;
             s.m_numberOfSamples = m_bufferOriginalSequences[k].m_numberOfSamples;
             s.m_chunk = &chunk;
             chunkSequences.push_back(s);

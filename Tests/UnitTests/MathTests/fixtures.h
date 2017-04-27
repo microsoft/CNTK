@@ -12,3 +12,9 @@ public:
     RandomSeedFixture();
     unsigned long IncrementCounter();
 };
+
+class DeterministicCPUAlgorithmsFixture {
+
+public:
+    DeterministicCPUAlgorithmsFixture();
+};

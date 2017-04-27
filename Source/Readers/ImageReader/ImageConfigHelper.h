@@ -14,9 +14,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 enum class CropType
 {
-    Center = 0,
-    Random = 1,
-    MultiView10 = 2
+    Center = 0,         // center crop with a given size 
+    RandomSide = 1,     // random scale resized with shorter side sampled from min and max (ResNet-style)
+    RandomArea = 2,     // random scale resized with area size ratio between min and max (Inception-style)
+    MultiView10 = 3     // 10 view crop
 };
 
 // A helper class for image specific parameters.

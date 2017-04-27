@@ -28,7 +28,7 @@ Simple_Test = [
             height=8
             channels=3
             cropType=Center
-            cropRatio=1.0
+            sideRatio=1.0
             jitterType=UniRatio
             interpolations=linear
             #meanFile=$RootDir$/ImageReaderSimple_mean.xml
@@ -38,3 +38,33 @@ Simple_Test = [
         ]
     ]
 ]
+
+DeserializerType = "ImageDeserializer"
+MapFile="$RootDir$/ImageReaderSimple_map.txt"
+
+Composite_Test= {
+    reader = {
+        verbosity = 0 ;  randomize = false
+
+        deserializers = ({
+            type = $DeserializerType$
+            module = "ImageReader"
+            file = "$MapFile$"
+
+            input = {
+                features = {
+                    transforms = (
+                        { type = "Crop" ;  cropType = "Center" ;  sideRatio = 1.0 ;  jitterType = "UniRatio" }:
+                        { type = "Scale" ;  width = 4 ; height = 8 ; channels = 3 ; interpolations = "linear" }:
+                        { type = "Mean" ; }:
+                        { type = "Transpose" }
+                    )
+                }
+
+                labels = {
+                    labelDim = 4
+                }
+            }
+        })
+    }
+}

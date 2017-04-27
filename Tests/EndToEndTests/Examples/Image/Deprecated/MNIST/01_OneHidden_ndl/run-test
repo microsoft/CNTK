@@ -3,9 +3,3 @@
 . $TEST_DIR/../run-test-common
 
 cntkrun  01_OneHidden_ndl_deprecated.cntk "train=[SGD=[maxEpochs=3]] imageLayout=\"$imageLayout\" stderr=-"
-ExitCode=$?
-
-# Delete the test data if copied
-[[ "$Copied" -eq "1" ]] && rm -rf "$DataDir"
-
-exit $ExitCode

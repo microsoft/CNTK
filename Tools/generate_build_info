@@ -20,6 +20,8 @@
 #   BUILDER         (user under which the build was done)
 #   BUILDMACHINE    (build machine)
 #   BUILDPATH       (build path)
+#   MPI_NAME        (mpi distribution)
+#   MPI_VERSION     (mpi version)
 
 usage ()
 {
@@ -59,7 +61,8 @@ makebuildinfo()
     local BUILDER=$10
     local BUILDMACHINE=${11}
     local BUILDPATH=${12}
-
+    local MPI_NAME=${13}
+    local MPI_VERSION=${14}
     (
         printf "#ifndef _BUILDINFO_H\n"
         printf "#define _BUILDINFO_H\n"
@@ -93,6 +96,8 @@ makebuildinfo()
         printf "#define _BUILDER_ \"%s\"\n"  "$BUILDER"
         printf "#define _BUILDMACHINE_ \"%s\"\n"  "$BUILDMACHINE"
         printf "#define _BUILDPATH_ \"%s\"\n"  "$BUILDPATH"
+        printf "#define _MPI_NAME_ \"%s\"\n"  "$MPI_NAME"
+        printf "#define _MPI_VERSION_ \"%s\"\n"  "$MPI_VERSION"
         printf "#endif\n"
     ) > "$target"
 }
@@ -138,6 +143,19 @@ if [ "$MATHLIB" = "mkl" -a "$MKL_THREADING" = "sequential" ]; then
     MATHLIB=mkl-sequential
 fi
 
+# MPI info
+MPI_NAME=Unknown
+MPI_VERSION=Unknown
+if hash ${MPI_PATH}/bin/mpirun 2>/dev/null; then
+    if [ -e ${MPI_PATH}/bin/ompi_info ]; then
+        MPI_NAME="Open MPI"
+        MPI_VERSION=`${MPI_PATH}/bin/ompi_info --parsable | grep ident | cut -f 2 -d ":"`
+    elif [ -e ${MPI_PATH}/bin/mpirun_rsh ]; then
+        MPI_NAME=`${MPI_PATH}/bin/mpiname`
+        MPI_VERSION=`${MPI_PATH}/bin/mpiname -v`
+    fi
+fi
+
 # Build machine info
 BUILDER=$USER
 BUILDMACHINE=`hostname`
@@ -161,6 +179,8 @@ makebuildinfo \
     "$CNTK_ENABLE_ASGD" \
     "$BUILDER" \
     "$BUILDMACHINE" \
-    "$BUILDPATH"
+    "$BUILDPATH" \
+    "$MPI_NAME" \
+    "$MPI_VERSION"
 
 cmp -s "$target\$\$" "$target" || mv "$target\$\$" "$target"

@@ -1,8 +1,8 @@
 dataDir: ./
 tags:
-     - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
-     # Don't run Windows Debug-CPU (which runs ~ 204 sec)
-     - nightly-s (build_sku == 'gpu') and ((os=='linux') or (device=='gpu') or (flavor=='release'))
+     - bvt-s (build_sku == 'gpu') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
+     # Don't run Windows Debug-CPU (which runs ~ 204 sec) (TODO check again)
+     - nightly-s (build_sku == 'gpu') and ((os == 'linux') or (device == 'gpu') or (flavor == 'release'))
 
 testCases:
   CNTK Run must be completed:

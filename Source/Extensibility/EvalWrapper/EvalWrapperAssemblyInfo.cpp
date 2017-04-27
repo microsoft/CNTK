@@ -4,7 +4,7 @@
 //
 // EvalWrapperAssemblyInfo.cpp -- Provides Strong Name for EvalWrapper assembly.
 // 
-// Note that the key pair (inlcuding secret key) is stored in the same folder as this source file.
+// Note that the key pair (including secret key) is stored in the same folder as this source file.
 // The Strong Name serves for identity puposes and for the applications that require it.
 // The Strong Name does NOT enable trust scenario. Use the compiled and Authenticode signed dll version of this assembly
 // provided with the CNTK NuGet package if you need trust. See CNTK Releases web page for NuGet package name and location:

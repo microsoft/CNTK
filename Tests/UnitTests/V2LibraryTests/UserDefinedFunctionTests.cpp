@@ -2,48 +2,103 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
+#include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
+#include "UserMatrixMultiplicationOp.h"
 
 using namespace CNTK;
-
 // TODO: Need to further cleanup/simplify definition of user defined functions
-class UserDefinedTimesFunction final : public Function
+class UserDefinedTimesOrPlusFunction final : public Function
 {
     template <typename T, typename ...CtorArgTypes>
     friend inline std::shared_ptr<T> CNTK::MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
 public:
-    static FunctionPtr Create(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"")
+    static FunctionPtr Create(const Variable& leftOperand, const Variable& rightOperand, bool isTimes, const std::wstring& name = L"")
     {
-        auto userDefinedTimesFunc = MakeSharedObject<UserDefinedTimesFunction>(leftOperand, rightOperand, name);
+        auto userDefinedTimesFunc = MakeSharedObject<UserDefinedTimesOrPlusFunction>(leftOperand, rightOperand, isTimes, name);
         return Combine({ userDefinedTimesFunc->Output() });
     }
 
 public:
 
-    BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
+    BackPropStatePtr Forward(const std::vector<ValuePtr>& inputValues,
                              std::unordered_map<Variable, ValuePtr>& outputs,
                              const DeviceDescriptor& computeDevice,
                              const std::unordered_set<Variable>& outputsToRetainBackwardStateFor) override
     {
-        std::unordered_map<Variable, ValuePtr> outputValues = { { m_timesFunc->Output(), nullptr } };
+        std::unordered_map<Variable, ValuePtr> outputValues = { { m_timesOrPlusFunc->Output(), nullptr } };
         std::unordered_set<Variable> retainBackwardStateFor;
         if (!outputsToRetainBackwardStateFor.empty())
-            retainBackwardStateFor = { m_timesFunc->Output() };
-        auto retVal = m_timesFunc->Forward(arguments, outputValues, computeDevice, retainBackwardStateFor);
-        outputs[Output()] = outputValues[m_timesFunc->Output()];
+            retainBackwardStateFor = { m_timesOrPlusFunc->Output() };
+
+        auto inputs = Inputs();
+        auto GetInputIndex = [&inputs](const Variable& input) -> size_t {
+            for (size_t i = 0; i < inputs.size(); ++i)
+            {
+                if (inputs[i] == input)
+                    return i;
+            }
+
+            BOOST_ERROR("GetInputIndex: Specified variable is not an input of this Function");
+            return 0;
+        };
+
+        std::unordered_map<Variable, ValuePtr> argumentValues;
+        for (auto argumentMapping : m_timesOrPlusFuncArgumentMap)
+        {
+            ValuePtr argValue = inputValues[GetInputIndex(argumentMapping.second)];
+
+            if (argumentMapping.first.IsParameter())
+                Parameter(argumentMapping.first).SetValue(argValue->Data());
+            else
+                argumentValues.insert({ argumentMapping.first, argValue });
+        }
+
+        auto retVal = m_timesOrPlusFunc->Forward(argumentValues, outputValues, computeDevice, retainBackwardStateFor);
+        outputs[Output()] = outputValues[m_timesOrPlusFunc->Output()];
 
         return retVal;
     }
 
     void Backward(const BackPropStatePtr& state,
-                  const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
-                  std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override
+        const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
+        std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override
     {
-        std::unordered_map<Variable, ValuePtr> gradientValues = { { m_timesFunc->Output(), rootGradientValues.begin()->second } };
-        return m_timesFunc->Backward(state, gradientValues, backPropagatedGradientValuesForInputs);
+        std::unordered_map<Variable, ValuePtr> gradientValues = { { m_timesOrPlusFunc->Output(), rootGradientValues.begin()->second } };
+        std::unordered_map<Variable, ValuePtr> timesFuncBackPropagatedGradientValuesForInputs;
+        for (auto argumentMapping : m_timesOrPlusFuncArgumentMap)
+        {
+            if (backPropagatedGradientValuesForInputs.find(argumentMapping.second) != backPropagatedGradientValuesForInputs.end())
+                timesFuncBackPropagatedGradientValuesForInputs.insert({ argumentMapping.first, backPropagatedGradientValuesForInputs.at(argumentMapping.second) });
+        }
+
+        m_timesOrPlusFunc->Backward(state, gradientValues, timesFuncBackPropagatedGradientValuesForInputs);
+
+        auto origBackPropagatedGradientValuesForInputs = backPropagatedGradientValuesForInputs;
+        for (auto argumentMapping : m_timesOrPlusFuncArgumentMap)
+        {
+            if (timesFuncBackPropagatedGradientValuesForInputs.find(argumentMapping.first) != timesFuncBackPropagatedGradientValuesForInputs.end())
+            {
+                if (backPropagatedGradientValuesForInputs[argumentMapping.second] == nullptr)
+                    backPropagatedGradientValuesForInputs[argumentMapping.second] = timesFuncBackPropagatedGradientValuesForInputs.at(argumentMapping.first);
+                else
+                {
+                    if (origBackPropagatedGradientValuesForInputs[argumentMapping.second] == nullptr)
+                    {
+                        // We need to aggregate
+                        auto inVar1 = InputVariable(argumentMapping.second.Shape(), argumentMapping.second.GetDataType(), argumentMapping.second.DynamicAxes());
+                        auto inVar2 = InputVariable(argumentMapping.second.Shape(), argumentMapping.second.GetDataType(), argumentMapping.second.DynamicAxes());
+                        auto aggregationFunc = Plus(inVar1, inVar2);
+                        std::unordered_map<Variable, ValuePtr> outputValues = { { aggregationFunc->Output(), nullptr } };
+                        aggregationFunc->Forward({ { inVar1, backPropagatedGradientValuesForInputs[argumentMapping.second] }, { inVar2, timesFuncBackPropagatedGradientValuesForInputs.at(argumentMapping.first) } }, outputValues, state->Device());
+                        backPropagatedGradientValuesForInputs[argumentMapping.second] = outputValues[aggregationFunc->Output()];
+                    }
+                }
+            }
+        }
     }
 
     const std::wstring& OpName() const override
@@ -56,27 +111,49 @@ public:
     size_t CurrentVersion() const override { NOT_IMPLEMENTED; }
 
 private:
-    std::vector<Variable> GetOutputVariables(const Variable& leftOperand, const Variable& rightOperand)
+    void InferOutputs(std::vector<Variable>& outputs) override
     {
-        auto tempFunc = Times(leftOperand, rightOperand);
+        auto leftOperand = Inputs()[0];
+        auto rightOperand = Inputs()[1];
+        auto tempFunc = m_isTimes ? Times(leftOperand, rightOperand) : Plus(leftOperand, rightOperand);
         auto tempFuncOutputs = tempFunc->Outputs();
 
-        std::vector<Variable> outputs;
         for (auto tempFuncOutput : tempFuncOutputs)
-            outputs.push_back(OutputVariable(tempFuncOutput.Shape(), tempFuncOutput.GetDataType(), this, tempFuncOutput.DynamicAxes()));
-
-        return outputs;
+            outputs.push_back(OutputVariable(tempFuncOutput.Shape(), tempFuncOutput.GetDataType(), tempFuncOutput.DynamicAxes()));
     }
 
-    UserDefinedTimesFunction(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
-        : Function({ leftOperand, rightOperand }, GetOutputVariables(leftOperand, rightOperand), Dictionary(), name)
+    UserDefinedTimesOrPlusFunction(const Variable& leftOperand, const Variable& rightOperand, bool isTimes, const std::wstring& name)
+        : Function({ leftOperand, rightOperand }, Dictionary(), name), m_isTimes(isTimes)
     {
-        m_timesFunc = Times(leftOperand, rightOperand);
+        auto createTimesOperandVar = [this](const Variable& operand, const std::wstring& operandName) {
+            Variable var;
+
+            if (operand.DynamicAxes().empty())
+            {
+                if (Combine({ operand })->Parameters().empty())
+                    BOOST_ERROR("Cannot determine device to place Parameter on!");
+
+                var = Parameter(operand.Shape(), operand.GetDataType(), 0, Combine({ operand })->Parameters()[0].Value()->Device());
+            }
+            else
+                var = InputVariable(operand.Shape(), operand.IsSparse(), operand.GetDataType(), operand.NeedsGradient(), operandName, operand.DynamicAxes());
+
+            m_timesOrPlusFuncArgumentMap.insert({ var, operand });
+            return var;
+        };
+
+        auto timesLeftOperandInputVar = createTimesOperandVar(leftOperand, L"leftOperand");
+        auto timesRightOperandInputVar = createTimesOperandVar(rightOperand, L"rightOperand");
+        m_timesOrPlusFunc = isTimes ? Times(timesLeftOperandInputVar, timesRightOperandInputVar) : Plus(timesLeftOperandInputVar, timesRightOperandInputVar);
     }
 
 private:
-    FunctionPtr m_timesFunc;
+    bool m_isTimes;
+    FunctionPtr m_timesOrPlusFunc;
+    std::unordered_map<Variable, Variable> m_timesOrPlusFuncArgumentMap;
 };
+
+namespace CNTK { namespace Test {
 
 template <typename ElementType>
 void TestTimesAndPlus(size_t inputDim,
@@ -84,8 +161,9 @@ void TestTimesAndPlus(size_t inputDim,
                       size_t numSamples,
                       const DeviceDescriptor& device,
                       size_t numIterations,
-                      bool usePreAllocatedOutputs,
-                      bool outputOnSpecifiedDevice)
+                      bool usePreAllocatedOutputs,                      
+                      bool outputOnSpecifiedDevice,
+                      bool useUserDefinedPlus)
 {
     auto timesParamName = L"timesParameters";
     auto plusParamName = L"plusParameters";
@@ -94,7 +172,14 @@ void TestTimesAndPlus(size_t inputDim,
 
     auto inputVarName = L"input";
     auto inputVar = InputVariable({ inputDim }, AsDataType<ElementType>(), inputVarName);
-    auto timesAndPlusFunc = Plus(plusParam, UserDefinedTimesFunction::Create(timesParam, inputVar));
+    FunctionPtr timesAndPlusFunc;
+    if (useUserDefinedPlus)
+    {
+        auto timesFunc = UserDefinedTimesOrPlusFunction::Create(timesParam, inputVar, /* isTimes = */ true);
+        timesAndPlusFunc = AsComposite(UserDefinedTimesOrPlusFunction::Create(plusParam, timesFunc, /* isTimes = */ false));
+    }
+    else
+        timesAndPlusFunc = Plus(plusParam, UserDefinedTimesOrPlusFunction::Create(timesParam, inputVar, /* isTimes = */ true));
 
     srand(1);
     for (size_t iterIdx = 0; iterIdx < numIterations; ++iterIdx)
@@ -200,7 +285,7 @@ void TestTimesAndPlus(size_t inputDim,
 
         for (size_t i = 0; i < outputDim; ++i)
             if (plusParameterGradientData[i] != numSamples)
-                throw std::runtime_error("TestTimesAndPlus: Backprop prop results do not match expected results for Plus params gradients");
+                BOOST_ERROR("Backprop prop results do not match expected results for Plus params gradients");
 
         std::vector<ElementType> expectedTimesParamsGradientValues(timesParam.Shape().TotalSize());
         for (size_t i = 0; i < inputDim; ++i)
@@ -217,14 +302,110 @@ void TestTimesAndPlus(size_t inputDim,
     }
 }
 
-void UserDefinedFunctionTests()
+void TestDuplicateVariablesInInputs(size_t dim, const DeviceDescriptor& device)
 {
-    fprintf(stderr, "\nUserDefinedFunctionTests..\n");
+    auto inputVar = InputVariable({ dim }, DataType::Float, /* needsGradient = */ true, L"input");
+    auto plusFunc = UserDefinedTimesOrPlusFunction::Create(inputVar, inputVar, /* isTimes = */ false);
 
-    TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true);
-    if (IsGPUAvailable())
+    srand(1);
+    size_t numSamples = 7;
+    std::vector<float> inputData(dim * numSamples);
+    for (size_t i = 0; i < inputData.size(); ++i)
+        inputData[i] = ((float)rand()) / RAND_MAX;
+
+    NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
+    ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
+
+    NDShape outputShape = plusFunc->Output().Shape().AppendShape({ 1, numSamples });
+    std::unordered_map<Variable, ValuePtr> outputs = { { plusFunc->Output(), nullptr } };
+    auto backpropState = plusFunc->Forward({ { inputVar, inputValue } }, outputs, device, { plusFunc->Output() });
+
+    // Perform backprop
+    std::vector<float> rootGradientsData(outputShape.TotalSize(), 1);
+    ValuePtr rootGradientValue;
+    if (device.Type() == DeviceKind::CPU)
+        rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), device, true));
+    else
     {
-        TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false);
-        TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false);
+        NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true);
+        NDArrayViewPtr gpuArrayView = MakeSharedObject<NDArrayView>(DataType::Float, outputShape, device);
+        gpuArrayView->CopyFrom(*cpuArrayView);
+        rootGradientValue = MakeSharedObject<Value>(gpuArrayView);
+    }
+
+    std::vector<float> inputGradientData(inputShape.TotalSize());
+    ValuePtr inputGradientValue;
+    if (device.Type() == DeviceKind::CPU)
+        inputGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputGradientData.data(), inputGradientData.size(), device, false));
+    else
+        inputGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(DataType::Float, inputShape, device));
+
+    std::unordered_map<Variable, ValuePtr> inputGradients = { { inputVar, inputGradientValue } };
+    plusFunc->Backward(backpropState, { { plusFunc->Output(), rootGradientValue } }, inputGradients);
+
+    // Verify forward prop results
+    std::vector<float> outputData(outputShape.TotalSize());
+    auto outputValue = outputs[plusFunc->Output()];
+    NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(outputShape, outputData.data(), outputData.size(), DeviceDescriptor::CPUDevice(), false);
+    cpuArrayView->CopyFrom(*outputValue->Data());
+
+    std::vector<float> expectedOutputValues(outputShape.TotalSize());
+    for (size_t i = 0; i < numSamples; ++i)
+    {
+        for (size_t j = 0; j < dim; ++j)
+            expectedOutputValues[(i * dim) + j] = inputData[(i * dim) + j] * 2;
+    }
+
+    FloatingPointVectorCompare(outputData, expectedOutputValues, "TestTimesAndPlus: Forward prop results do not match expected results");
+
+    // Verify backward prop results
+    if (device.Type() != DeviceKind::CPU)
+    {
+        NDArrayViewPtr cpuArrayViewBack = MakeSharedObject<NDArrayView>(DataType::Float, inputShape, DeviceDescriptor::CPUDevice());
+        cpuArrayViewBack->CopyFrom(*inputGradientValue->Data());
+        const float* cpuArrayViewBuffer = cpuArrayViewBack->DataBuffer<float>();
+        memcpy(inputGradientData.data(), cpuArrayViewBuffer, inputShape.TotalSize() * sizeof(float));
+    }
+
+    for (size_t i = 0; i < dim; ++i)
+        if (inputGradientData[i] != 2)
+            BOOST_ERROR("TestTimesAndPlus: Backprop prop results do not match expected results for Plus params gradients");
+}
+
+BOOST_AUTO_TEST_SUITE(UserDefinedFunctionSuite)
+
+BOOST_AUTO_TEST_CASE(DuplicateVariablesInCPU)
+{
+    if (ShouldRunOnCpu())
+        TestDuplicateVariablesInInputs(11, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(DuplicateVariablesInGPU)
+{
+    if (ShouldRunOnGpu())
+        TestDuplicateVariablesInInputs(117, DeviceDescriptor::GPUDevice(0));
+}
+
+BOOST_AUTO_TEST_CASE(TimesAndPlusInCPU)
+{
+    if (ShouldRunOnCpu())
+        TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true, true);
+}
+
+BOOST_AUTO_TEST_CASE(TimesAndPlusInGPU)
+{
+    if (ShouldRunOnGpu())
+    {
+        TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false, false);
+        TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false, true);
     }
 }
+
+BOOST_AUTO_TEST_CASE(UserTimesFunctionExample)
+{
+    UserTimesFunctionExample();
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+}}

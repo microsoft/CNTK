@@ -3,9 +3,9 @@ dataDir: ../../../../../../../Examples/Image/DataSets/CIFAR-10
 tags:
     # Debug version asserts on Windows.
     # In BVT, run Release GPU
-    - bvt-e (build_sku=='gpu') & (device=='gpu') & (flavor=='release') 
+    - bvt-e (build_sku == 'gpu') & (device == 'gpu') & (flavor == 'release') 
     # In Nightly on Linux, additionally run Debug GPU and Release CPU
-    - nightly-e (build_sku=='gpu') & (((device=='gpu') & (flavor=='release')) | ((os=='linux') & ((flavor=='debug') ^ (device=='cpu'))))
+    - nightly-e (build_sku == 'gpu') & (((device == 'gpu') & (flavor == 'release')) | ((os == 'linux') & ((flavor == 'debug') ^ (device == 'cpu'))))
 
 testCases:
   CNTK Run must be completed:

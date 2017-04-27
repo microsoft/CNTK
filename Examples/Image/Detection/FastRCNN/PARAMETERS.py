@@ -6,7 +6,7 @@ from fastRCNN.pascal_voc import pascal_voc # as nmsPython
 print (datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
 # dataset name
-datasetName = "grocery"
+datasetName = "Grocery"
 # datasetName = "pascalVoc"
 # datasetName = "pascalVoc_aeroplanesOnly"
 
@@ -15,20 +15,20 @@ datasetName = "grocery"
 # default parameters
 ############################
 # cntk params
-cntk_nrRois = 2000  # 2000 # how many ROIs to zero-pad
+cntk_nrRois = 100      # how many ROIs to zero-pad. Use 100 to get quick result. Use 2000 to get good results.
 cntk_padWidth = 1000
 cntk_padHeight = 1000
 
 # directories
 rootDir = os.path.dirname(os.path.realpath(sys.argv[0])) + "/"
-imgDir = rootDir + "../../DataSets/" + datasetName+ "/"
-pascalDataDir = rootDir + "../../DataSets/Pascal/"
+imgDir = os.path.join(rootDir, "../../DataSets/" + datasetName+ "/")
+pascalDataDir = os.path.join(rootDir, "../../DataSets/Pascal/")
 
 # derived directories
-procDir = rootDir + "proc/" + datasetName + "_{}/".format(cntk_nrRois)
-resultsDir = rootDir + "results/" + datasetName + "_{}/".format(cntk_nrRois)
-roiDir = procDir + "rois/"
-cntkFilesDir = procDir + "cntkFiles/"
+procDir = os.path.join(rootDir, "proc/" + datasetName + "_{}/".format(cntk_nrRois))
+resultsDir = os.path.join(rootDir, "results/" + datasetName + "_{}/".format(cntk_nrRois))
+roiDir = os.path.join(procDir, "rois/")
+cntkFilesDir = os.path.join(procDir, "cntkFiles/")
 cntkTemplateDir = rootDir
 
 # ROI generation
@@ -49,11 +49,16 @@ train_posOverlapThres = 0.5 # threshold for marking ROIs as positive.
 nmsThreshold = 0.3          # Non-Maxima suppression threshold (in range [0,1]).
                             # The lower the more ROIs will be combined. Used in 5_evaluateResults and 5_visualizeResults.
 
+cntk_num_train_images = -1          # set per data set below
+cntk_num_test_images = -1           # set per data set below
+cntk_mb_size = -1                   # set per data set below
+cntk_max_epochs = -1                # set per data set below
+cntk_momentum_time_constant = -1    # set per data set below
 
 ############################
 # project-specific parameters
 ############################
-if datasetName.startswith("grocery"):
+if datasetName.startswith("Grocery"):
     classes = ('__background__',  # always index 0
                'avocado', 'orange', 'butter', 'champagne', 'eggBox', 'gerkin', 'joghurt', 'ketchup',
                'orangeJuice', 'onion', 'pepper', 'tomato', 'water', 'milk', 'tabasco', 'mustard')
@@ -66,6 +71,11 @@ if datasetName.startswith("grocery"):
 
     # model training / scoring
     classifier = 'nn'
+    cntk_num_train_images = 25
+    cntk_num_test_images = 5
+    cntk_mb_size = 5
+    cntk_max_epochs = 20
+    cntk_momentum_time_constant = 10
 
     # postprocessing
     nmsThreshold = 0.01
@@ -90,6 +100,11 @@ elif datasetName.startswith("pascalVoc"):
     # use cntk_nrRois = 4000. more than 99% of the test images have less than 4000 rois, but 50% more than 2000
     # model training / scoring
     classifier = 'nn'
+    cntk_num_train_images = 5011
+    cntk_num_test_images = 4952
+    cntk_mb_size = 2
+    cntk_max_epochs = 17
+    cntk_momentum_time_constant = 20
 
     # database
     imdbs = dict()

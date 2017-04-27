@@ -1,3 +1,9 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+
 #pragma once
 
 #include <future>
@@ -8,6 +14,7 @@
 #include "TimerUtility.h"
 #include "MatrixQuantizerImpl.h"
 #include "Utils.h"
+#include "NcclComm.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -16,11 +23,12 @@ class V2SimpleDistGradAggregator : public IDistGradAggregator<ElemType>
 {
     UsingIDistGradAggregatorMembers;
     ::CNTK::DistributedCommunicatorPtr m_communicator;
+    NcclComm m_nccl;
 
 public:
-    V2SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int syncStatsTrace, ::CNTK::DistributedCommunicatorPtr communicator)
+    V2SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace, ::CNTK::DistributedCommunicatorPtr communicator)
         : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace), m_iterationCount(0),
-        m_communicator(communicator)
+        m_communicator(communicator), m_nccl(deviceId, mpi)
     {}
 
     ~V2SimpleDistGradAggregator()
@@ -183,14 +191,21 @@ private:
 
         // Prepare gradients.
         std::vector<::CNTK::NDArrayViewPtr> valuesToAggregate;
-        for (size_t i = 0; i < gradients.size(); ++i)
+        if (m_nccl.IsSupported()) // nccl is only enabled if all ranks have net on GPUs.
+        {                         // we assume in this case all grad layers are on the GPU too.
+            m_nccl.AllReduce(gradients);
+        }
+        else
         {
-            if (gradients[i]->Data() == nullptr) // Hack in case of eval.
-                continue;
+            for (size_t i = 0; i < gradients.size(); ++i)
+            {
+                if (gradients[i]->Data() == nullptr) // Hack in case of eval.
+                    continue;
 
-            ::CNTK::NDShape shape{ gradients[i]->GetNumElements() };
-            auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(), shape, gradients[i]->Data(), gradients[i]->GetNumElements() * sizeof(ElemType), ::CNTK::AsDeviceDescriptor(gradients[i]->GetDeviceId()));
-            valuesToAggregate.push_back(data);
+                ::CNTK::NDShape shape{ gradients[i]->GetNumElements() };
+                auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(), shape, gradients[i]->Data(), gradients[i]->GetNumElements() * sizeof(ElemType), ::CNTK::AsDeviceDescriptor(gradients[i]->GetDeviceId()));
+                valuesToAggregate.push_back(data);
+            }
         }
 
         // Prepare header.
@@ -209,6 +224,9 @@ private:
         valuesToAggregate.push_back(headerData);
 
         m_communicator->AggregateInPlace(valuesToAggregate, m_communicator->Workers());
+
+        if (m_nccl.IsSupported())
+            m_nccl.Sync();
 
         // Copy data back to the header
         headerCPU->criterion = headerBuffer[0];

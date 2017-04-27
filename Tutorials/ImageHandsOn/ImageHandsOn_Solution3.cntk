@@ -73,7 +73,7 @@ TrainConvNet = {
             file = "$dataDir$/cifar-10-batches-py/train_map.txt"
             input = {
                 features = { transforms = (
-                    { type = "Crop" ; cropType = "random" ; cropRatio = 0.8 ; jitterType = "uniRatio" } :
+                    { type = "Crop" ; cropType = "RandomSide" ; sideRatio = 0.8 ; jitterType = "UniRatio" } :
                     { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
                     { type = "Transpose" }
                 )}
