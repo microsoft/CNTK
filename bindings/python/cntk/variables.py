@@ -34,10 +34,10 @@ class Record(dict):
         '''
         Create a new Record from an existing one with members modified or added.
         e.g. r = Record(x = 13) ; print(r.x) ; r2 = r.updated_with(x = 42) ; print(r2.x)
-    
+
         Args:
             kwargs: keyword arguments to turn into the record members
-    
+
         Returns:
             A singleton class instance that has all passed kw args as immutable class members.
         '''
@@ -177,9 +177,9 @@ class VariableMixin(object):
             ...     inp = Tensor[32]()
             ... except TypeError as e:
             ...     print('ERROR: ' + str(e))
-            ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(Tensor[32])'.
+            ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(**Tensor[32])'.
             '''
-            raise TypeError("Can't instantiate abstract class " + str(self) + ". Please use 'input(" + str(self) + ")'.")
+            raise TypeError("Can't instantiate abstract class " + str(self) + ". Please use 'input(**" + str(self) + ")'.")
 
         def __str__(self):
             '''
