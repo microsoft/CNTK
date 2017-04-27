@@ -7,7 +7,6 @@ import numpy as np
 
 from cntk.ops import *
 from cntk.debugging import save_as_legacy_model
-from cntk.ops.functions import load_model
 
 # TODO: a test for restore_model?
 
@@ -42,9 +41,9 @@ def test_load_save_input_legacy_names(tmpdir):
     assert np.allclose(result, expected)
 
     filename = str(tmpdir / 'i_plus_c_0.mod')
-    root_node.save_model(filename)
+    root_node.save(filename)
 
-    loaded_node = load_model(filename)
+    loaded_node = Function.load(filename)
 
     # Test specifying the input node names by order
     loaded_result = loaded_node.eval([input1])
@@ -52,7 +51,7 @@ def test_load_save_input_legacy_names(tmpdir):
 
     filename = filename + '.legacy'
     save_as_legacy_model(root_node, filename)
-    loaded_node = load_model(filename)
+    loaded_node = Function.load(filename)
     loaded_result = loaded_node.eval([input1])
     assert np.allclose(loaded_result, expected)
     

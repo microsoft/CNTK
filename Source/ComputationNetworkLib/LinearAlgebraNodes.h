@@ -465,14 +465,16 @@ private:
         TensorView<ElemType> unpackedInput[NumInputs];
         for (int i = 0; i < NumInputs; i++)
         {
+            ElemType gapPadValue = 0;
             unpackedInput[i] = ComputationNode<ElemType>::Unpack(
                 InputRef(i).GetSampleLayout(),
                 InputRef(i).Value(),
                 inputMBLayout,
                 m_tempUnpackedValue[i],
                 m_tempScatterIndices[i],
+                std::shared_ptr<Matrix<char>>(nullptr),
                 /*batchMajor=*/ false,
-                /*maskGaps=*/ true);
+                &gapPadValue);
         }
 
         // note the unpacked input is not the normal MBLayout (batchMajor) so do ColumnSlice directly
@@ -504,14 +506,16 @@ private:
         bool unpacked[NumInputs];
         for (int i = 0; i < NumInputs; i++)
         {
+            ElemType gapPadValue = 0;
             unpackedInput[i] = ComputationNode<ElemType>::Unpack(
                 InputRef(i).GetSampleLayout(),
                 InputRef(i).Value(),
                 input0MBLayout, // the same for both operands
                 m_tempUnpackedValue[i],
                 m_tempScatterIndices[i],
+                std::shared_ptr<Matrix<char>>(nullptr),
                 /*batchMajor=*/ false,
-                /*maskGaps=*/ true);
+                &gapPadValue);
 
             unpacked[i] = ((input0MBLayout->GetNumTimeSteps() > 1) && (input0MBLayout->GetNumSequences() > 1));
         }
@@ -1220,7 +1224,7 @@ public:
         if (modelVersion >= CNTK_MODEL_VERSION_3) 
         {
             fstream >> m_axis1 >> m_axis2;
-            if (modelVersion >= CNTK_MODEL_VERSION_24 && m_axis1 == 0 && m_axis2 == 0)
+            if (modelVersion >= CNTK_MODEL_VERSION_25 && m_axis1 == 0 && m_axis2 == 0)
             {
                 size_t size = 0;
                 fstream >> size;
@@ -1416,7 +1420,7 @@ public:
 
         // TODO: We could do something more interesting with tensors.
         //       E.g. apply a cos distance of a whole set of data with a single reference.
-        SetDims(TensorShape(1), Input(1)->HasMBLayout());
+        SetDims(Environment().IsV2Library() ? TensorShape() : TensorShape(1), Input(1)->HasMBLayout());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

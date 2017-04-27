@@ -27,7 +27,7 @@ This new type system is subject to change, please give us feedback on github or 
    Tutorials <tutorials>
    Examples <examples>
    Layers Library Reference  <layerref>
-   Python API Reference <apireference>
+   Python API Reference <cntk>
    Readers, Multi-GPU, Profiling...<readersprofetc>
    Extending CNTK <extend>
    Known Issues <knownissues>

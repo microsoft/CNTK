@@ -169,7 +169,7 @@ def test_op_reshape_parameter():
     state, result = param_reshaped.forward({}, [param_reshaped.output],
                                            [param_reshaped.output])
     assert np.allclose(result[param_reshaped.output], expected_forward)
-    
+
     grad = param_reshaped.backward(state, np.ones(param_new_shape), [param])
     assert np.allclose(grad[param], np.ones(param_shape))
 
@@ -312,8 +312,8 @@ def test_op_slice_sequence(input_data, slice_params, expected_result,
                          sequence_axis=t,
                          name='a')
 
-    result = C.sequence.slice(a, 
-            begin_index=slice_params[0], 
+    result = C.sequence.slice(a,
+            begin_index=slice_params[0],
             end_index=slice_params[1])
 
     def grad_slice(x, beg_index, end_index):
@@ -322,7 +322,7 @@ def test_op_slice_sequence(input_data, slice_params, expected_result,
         return res
 
 
-    expected_forward = AA([expected_result], 
+    expected_forward = AA([expected_result],
             dtype=PRECISION_TO_TYPE[precision])
     expected_backward = {
         a: [grad_slice(np.asarray(input_data), *slice_params)]
@@ -494,18 +494,18 @@ def test_op_scatter_sparse(device_id):
 def test_op_broadcast_as(device_id, precision):
     from .. import sequence
 
-    a_data = [AA([1], dtype=PRECISION_TO_TYPE[precision]), 
-              AA([2], dtype=PRECISION_TO_TYPE[precision]), 
+    a_data = [AA([1], dtype=PRECISION_TO_TYPE[precision]),
+              AA([2], dtype=PRECISION_TO_TYPE[precision]),
               AA([3], dtype=PRECISION_TO_TYPE[precision])]
-    b_data = [AA([[2]], dtype=PRECISION_TO_TYPE[precision]), 
-              AA([[2], [3]], dtype=PRECISION_TO_TYPE[precision]), 
+    b_data = [AA([[2]], dtype=PRECISION_TO_TYPE[precision]),
+              AA([[2], [3]], dtype=PRECISION_TO_TYPE[precision]),
               AA([[2], [3], [4]], dtype=PRECISION_TO_TYPE[precision])]
 
     a = C.input(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), name='a')
     b = sequence.input(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), name='b')
 
     broadcast_a_as_b = sequence.broadcast_as(a, b)
-    
+
     res = broadcast_a_as_b.eval({a: a_data, b: b_data})
     assert np.array_equal(res[0], np.asarray([[1.]]))
     assert np.array_equal(res[1], np.asarray([[2.], [2.]]))
@@ -526,7 +526,7 @@ def test_op_broadcast_as_in_loop(device_id):
     out_delayed_plus_b = out_delayed + b
     out = sequence.broadcast_as(a, out_delayed_plus_b)
     out.replace_placeholder(out)
-    
+
     res = out.eval({a: a_data, b: b_data})
     assert np.array_equal(res[0], np.asarray([[1.]]))
     assert np.array_equal(res[1], np.asarray([[2.], [2.]]))
@@ -548,7 +548,7 @@ def test_op_sequence_reduce_sum(device_id, precision):
     assert np.array_equal(actual_grad[0], np.asarray([[2.]]))
     assert np.array_equal(actual_grad[1], np.asarray([[2.], [2.]]))
     assert np.array_equal(actual_grad[2], np.asarray([[2.], [2.], [2.]]))
-    
+
     res = sequence_sum_a_plus_sequence_sum_a.eval({a: a_data})
     assert np.array_equal(res[0], np.asarray([4.]))
     assert np.array_equal(res[1], np.asarray([10.]))
@@ -559,7 +559,7 @@ def test_op_sequence_reduce_sum(device_id, precision):
     p = C.placeholder(shape=(1,))
     r = sequence.reduce_sum(p)
     r.replace_placeholder(a)
-    
+
     res = r.eval({a: a_data})
     assert np.array_equal(res[0], np.asarray([2.]))
     assert np.array_equal(res[1], np.asarray([5.]))
@@ -603,3 +603,25 @@ def test_transpose_backward():
     g = np.squeeze(y.grad({x:x0}))
     gt = np.squeeze(yt.grad({xt:np.transpose(x0, p)}))
     assert np.allclose(np.transpose(g, p), gt)
+
+
+def test_op_reshape_free_dimension(device_id):
+    dev = cntk_device(device_id)
+    x = C.input((C.FreeDimension, 2, 2))
+
+    x_reshaped_1 = C.reshape(x, (-1,), 0, 2)
+    data = [[[1, 2], [3, 4]]]
+    result = x_reshaped_1.eval({x : np.asarray(data, dtype=np.float32)})
+    assert np.array_equal(result[0], data[0])
+    data = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]
+    result = x_reshaped_1.eval({x : np.asarray(data, dtype=np.float32)})
+    assert np.array_equal(result[0], np.reshape(data, (4, 2)))
+
+    x_reshaped_2 = C.reshape(x, (-1,), 1, 3)
+    data = [[[1, 2], [3, 4]]]
+    result = x_reshaped_2.eval({x : np.asarray(data, dtype=np.float32)})
+    assert np.array_equal(result[0], np.reshape(data, (1, 4)))
+    data = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]
+    result = x_reshaped_2.eval({x : np.asarray(data, dtype=np.float32)})
+    assert np.array_equal(result[0], np.reshape(data, (2, 4)))
+>>>>>>> origin/master
