@@ -401,9 +401,9 @@ namespace CNTK
         else
             LogicError("HTKMLFDeserializer: No mlf files were specified");
         if (phoneBoundaries)
-            labels[L"phoneBoundaries"] = L"false";
-        else
             labels[L"phoneBoundaries"] = L"true";
+        else
+            labels[L"phoneBoundaries"] = L"false";
         stream[streamName] = labels;
         htk.Add(L"type", L"HTKMLFDeserializer", L"input", stream);
         return htk;
