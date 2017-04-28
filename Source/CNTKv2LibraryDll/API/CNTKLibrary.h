@@ -1683,17 +1683,30 @@ namespace CNTK
     {
         inline std::wstring GenerateUid(std::wstring&& prefix)
         {
-            return prefix + std::to_wstring(Internal::NewUniqueId());
+            prefix += std::to_wstring(Internal::NewUniqueId());
+            return prefix;
+        }
+
+        inline std::wstring GenerateUid(const wchar_t * prefix)
+        {
+            // We chop the prefix to first 2 chars, in order to allow triggering small-string optimization.
+            // This is safe (w.r.t. being unique) since a unique count is always appended.
+            size_t len = prefix[0] == 0 ? 0 : (prefix[1] == 0 ? 1 : 2);
+            return GenerateUid(std::wstring(prefix, len));
         }
 
         inline std::wstring GenerateUid(VariableKind varKind)
         {
-            return GenerateUid(std::wstring(VariableKindName(varKind)));
+            return GenerateUid(VariableKindName(varKind));
         }
 
         inline std::wstring GenerateUid(const std::wstring& prefix)
         {
+#if 1
+            return GenerateUid(prefix.c_str()); // will chop prefix to 2 chars
+#else
             return GenerateUid(std::wstring(prefix));
+#endif
         }
     }
 
@@ -2989,7 +3002,7 @@ namespace CNTK
         /// The passed "outputs" vector should also reserve 128 elements in order to not cause memory allocation during
         /// crossing of dll boundary.
         ///
-        CNTK_API virtual void InferOutputs(std::vector<Variable>& outputs) = 0;
+        CNTK_API virtual void InferOutputs(std::vector<Variable>& /*out*/outputs) = 0;
 
     public:
 
@@ -3095,7 +3108,13 @@ namespace CNTK
         ///
         FunctionPtr RootFunction() const
         {
-            return (m_rootFunction == nullptr) ? const_cast<Function*>(this)->shared_from_this() : m_rootFunction;
+            auto res = (m_rootFunction == nullptr) ? const_cast<Function*>(this)->shared_from_this() : m_rootFunction;
+            assert(res->IsPrimitive()); // TODO: remove this test again once I understand this fully
+#if 1
+            if (!res->IsPrimitive())
+                LogicError("RootFunction must be PrimitiveFunction");
+#endif
+            return res;
         }
 
         ///
