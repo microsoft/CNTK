@@ -818,4 +818,56 @@ namespace CNTK
     {
         return MakeSharedObject<LearnerAdaDelta>(parameters, learningRateSchedule, rho, epsilon, additionalOptions);
     }
+
+    LearnerCNTK::LearnerCNTK(NetworkFactory f, const std::vector<Parameter>& parameters, 
+        const Dictionary& hyperparameters,
+        const LearningRateSchedule& learningRateSchedule,
+        AdditionalLearningOptions additionalOptions)
+        : LearnerBase(parameters, learningRateSchedule, additionalOptions, /*allocateSmoothGradients*/ false)
+    {
+        m_hyperparameters = hyperparameters;
+
+        //std::vector<Variable> outputs;
+        for (const auto& p : parameters)
+        {
+            //we do not support sparse gradients for now 
+            auto g = InputVariable(p.Shape(), /*isSparse=*/ false, p.GetDataType(), /*needsGradient=*/ false, L"gradient", /*dynamicAxes=*/ {});
+            FunctionPtr fpg = f(p, g, hyperparameters);
+            //ensure the network only contains a single input variable.
+            if (fpg->Arguments().size() != 1)
+                LogicError("CNTKLearner only accepts networks that have exactly one InputVariable. All other Variables in the network must be Parameters or Constants");
+            //std::copy(fpg->Outputs().begin(), fpg->Outputs().end(), std::back_inserter(outputs));
+            m_updates.insert({p, fpg});
+        }
+        //m_updates = Combine(outputs, L"updates");
+    }
+
+    /*virtual*/ void LearnerCNTK::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+    {
+        DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+    }
+
+    template <typename ElementType>
+    void LearnerCNTK::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+    {
+        FunctionPtr update = m_updates.at(parameter);
+        Variable g = update->Arguments()[0];
+        ValuePtr gv = std::make_shared<Value>(gradientValue);
+        std::unordered_map<Variable, ValuePtr> in = { {g, gv} };
+        std::unordered_map<Variable, ValuePtr> out; 
+        std::transform(update->Outputs().begin(), update->Outputs().end(), std::inserter(out, out.end()), [](const Variable& v) -> std::pair<Variable,ValuePtr> { return { v, nullptr }; });
+        update->Forward(in, out);
+//        const auto learningRate = LearningRate(trainingSampleCount);
+    }
+
+    LearnerPtr CNTKLearner(NetworkFactory f, const std::vector<Parameter>& parameters,
+        const Dictionary& hyperparameters,
+        const LearningRateSchedule& learningRateSchedule,
+        AdditionalLearningOptions additionalOptions)
+    {
+        return MakeSharedObject<LearnerCNTK>(f, parameters, hyperparameters, learningRateSchedule, additionalOptions);
+    }
+
 }

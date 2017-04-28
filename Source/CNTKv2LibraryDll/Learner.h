@@ -8,9 +8,16 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <numeric>
+#include <functional>
 
 namespace CNTK 
 {
+
+    // A learner which allows the new values of the parameters to be computed with the same 
+    // mechanism as the rest of the network
+
+    typedef std::function<FunctionPtr(Parameter, Variable, Dictionary)> NetworkFactory;
+
     // An abstract base class at the root of the standard learners hierarchy
     // It implements most of the learner functionality, except for the actual update function,
     // and adds a few pre-/postprocessing methods (which are invoked before and after the update).
@@ -311,6 +318,31 @@ namespace CNTK
         double m_max;
         double m_min;
         bool m_needAveMultiplier;
+
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+
+        template <typename ElementType>
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+    };
+
+
+    class LearnerCNTK : public LearnerBase
+    {
+        std::unordered_map<Parameter, FunctionPtr> m_updates;
+        Dictionary m_hyperparameters;
+
+    public:
+        LearnerCNTK(NetworkFactory f, const std::vector<Parameter>& parameters,
+            const Dictionary& hyperparameters,
+            const LearningRateSchedule& learningRateSchedule,
+            AdditionalLearningOptions additionalOptions);
+
+        //virtual FunctionPtr RegisterUpdate(const Parameter& parameter, const Variable& gradient)
+        //{
+        //   NOT_IMPLEMENTED;
+        //}
+
+    protected:
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
 
