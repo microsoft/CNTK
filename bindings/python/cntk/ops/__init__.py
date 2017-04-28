@@ -11,7 +11,7 @@ from numbers import Number
 from . import sequence
 from .functions import CloneMethod, Function, load_model, register_native_user_function, native_user_function
 from ..variables import Variable, Parameter, Constant
-from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args
+from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
@@ -134,7 +134,7 @@ def reconcile_dynamic_axes(x, dynamic_axes_as, name=''):
 
     Args:
         x: The Function/Variable, whose dynamic axes are to be reconciled
-        dynamic_axes_as: The Function/Variable, to whose dynamic axes the 
+        dynamic_axes_as: The Function/Variable, to whose dynamic axes the
             operand 'x''s dynamic axes are reconciled to.
         name (str, optional): the name of the reconcile_dynamic_axes Function in the network
 
@@ -149,7 +149,7 @@ def reconcile_dynamic_axes(x, dynamic_axes_as, name=''):
 @typemap
 def labels_to_graph(labels, name=''):
     '''
-    Conversion node from labels to graph. Typically used as an input to ForwardBackward node. 
+    Conversion node from labels to graph. Typically used as an input to ForwardBackward node.
     This node's objective is to transform input labels into a graph representing exact forward-backward criterion.
 
     Example:
@@ -171,7 +171,7 @@ def labels_to_graph(labels, name=''):
 def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name=''):
     '''
     Criterion node for training methods that rely on forward-backward Viterbi-like passes, e.g. Connectionist Temporal Classification (CTC) training
-    The node takes as the input the graph of labels, produced by the labels_to_graph operation that determines the exact forward/backward procedure. 
+    The node takes as the input the graph of labels, produced by the labels_to_graph operation that determines the exact forward/backward procedure.
     Example:
         graph = cntk.labels_to_graph(labels)
         networkOut = model(features)
@@ -226,7 +226,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                   [ 16.,  18.,  20.,  22.],
                   [ 26.,  28.,  30.,  32.],
                   [ 36.,  38.,  40.,  42.]]]], dtype=float32)
-        
+
     Args:
         convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
          where :math:`[m_1 \\times m_2 \\times \\ldots \\times m_n]` must be the kernel dimensions (spatial extent of the filter).
@@ -260,7 +260,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     '''
     Computes the transposed convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
-    This is also known as ``fractionally strided convolutional layers``, or, ``deconvolution``. 
+    This is also known as ``fractionally strided convolutional layers``, or, ``deconvolution``.
     This operation is used in image and language processing applications. It supports arbitrary
     dimensions, strides, sharing, and padding.
 
@@ -300,7 +300,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
          pixels outside the area are assumed zero ("padded with zeroes"). Without padding, the kernels are only shifted over
          positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
          the input dimension. The last value that lines up with the number of input channels must be false.
-        output_shape: user expected output shape after convolution transpose. 
+        output_shape: user expected output shape after convolution transpose.
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -312,7 +312,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     from cntk.cntk_py import convolution_transpose
     operand = sanitize_input(operand)
     strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
-    if output_shape is None: 
+    if output_shape is None:
         output_shape = (0,)
     output_shape = sanitize_shape(output_shape)
     return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding,
@@ -448,12 +448,12 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
          training as well. You must pass a constant tensor with initial value 0 and the same dimensions
          as ``scale`` and ``bias``
         running_inv_std: running variance. Represented as ``running_mean``
-        running_count: Denotes the total number of samples that have been used so far to compute 
+        running_count: Denotes the total number of samples that have been used so far to compute
          the ``running_mean`` and ``running_inv_std`` parameters. You must pass a scalar (either rank-0 ``constant(val)``).
         spatial(bool): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
         normalization_time_constant(float, default 5000): time constant for computing running average of
-         mean and variance as a low-pass filtered version of the batch statistics. 
+         mean and variance as a low-pass filtered version of the batch statistics.
         blend_time_constant(float, default 0): constant for smoothing batch estimates with the running
          statistics
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
@@ -910,7 +910,7 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=TIMES_NO_INFERRED_
     The output of this operation is the matrix product of the two input matrices.
     It supports broadcasting. Sparse is supported in the left operand, if it is a matrix.
     The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
-    
+
     For better performance on times operation on sequence which is followed by sequence.reduce_sum, use
     infer_input_rank_to_map=TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK, i.e. replace following::
 
@@ -1931,13 +1931,39 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
 
 
 @typemap
-def transpose(x, axis1=0, axis2=1, name=''):
+def transpose(x, perm, name=''):
+    '''
+    Permutes the axes of the tensor. The output has the same data but the axes
+    are permuted according to ``perm``.
+
+    Example:
+        >>> a = np.arange(24).reshape(2,3,4).astype('f')
+        >>> np.array_equal(C.transpose(a, perm=(2, 0, 1)).eval(), np.transpose(a, (2, 0, 1)))
+        True
+
+    Args:
+        x: tensor to be transposed
+        perm  (list): the permutation to apply to the axes.
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import transpose
+    x = sanitize_input(x)
+    if type(perm) in [int, Axis]:
+        raise TypeError('transpose expects a permutation; to swap two axes use swapaxes')
+    perm = [Axis(p) for p in sanitize_permutation(perm)]
+    return transpose(x, perm, name)
+
+
+@typemap
+def swapaxes(x, axis1=0, axis2=1, name=''):
     '''
     Swaps two axes of the tensor. The output tensor has the same data but with
     ``axis1`` and ``axis2`` swapped.
 
     Example:
-        >>> C.transpose([[[0,1],[2,3],[4,5]]], 1, 2).eval()
+        >>> C.swapaxes([[[0,1],[2,3],[4,5]]], 1, 2).eval()
         array([[[ 0.,  2.,  4.],
                 [ 1.,  3.,  5.]]], dtype=float32)
 
@@ -1954,7 +1980,6 @@ def transpose(x, axis1=0, axis2=1, name=''):
     axis1 = sanitize_axis(axis1)
     axis2 = sanitize_axis(axis2)
     return transpose_axes(x, axis1, axis2, name)
-
 
 @typemap
 def slice(x, axis, begin_index, end_index, name=''):
@@ -2117,15 +2142,15 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
 def reduce_sum(x, axis=None, name=''):
     '''
     Computes the sum of the input tensor's elements across one axis. If the axis parameter
-    is not specified then the sum will be computed over all static axes, which is 
-    equivalent with specifying ``axis=Axis.all_static_axes()``. If 
-    ``axis=Axis.all_axes()`` is specified, then the output is a scalar which is the sum of all the 
+    is not specified then the sum will be computed over all static axes, which is
+    equivalent with specifying ``axis=Axis.all_static_axes()``. If
+    ``axis=Axis.all_axes()`` is specified, then the output is a scalar which is the sum of all the
     elements in the minibatch. And if ``axis=Axis.default_batch_axis()`` is specified, then the reduction
     will happen across the batch axis (In this case the input must not be a sequence).
 
     Example:
         >>> x = C.sequence.input((2,2))
-        >>> # create a batch of 2 sequences each containing 2 2x2 matrices 
+        >>> # create a batch of 2 sequences each containing 2 2x2 matrices
         >>> x0 = np.arange(16,dtype=np.float32).reshape(2,2,2,2)
         >>> # reduce over all static axes
         >>> C.reduce_mean(x).eval({x:x0})
@@ -2356,7 +2381,7 @@ def reduce_prod(x, axis=None, name=''):
 @typemap
 def argmax(x, axis=None, name=''):
     '''
-    Computes the argmax of the input tensor's elements across the specified axis. 
+    Computes the argmax of the input tensor's elements across the specified axis.
     If no axis is specified, it will return the flatten index of the largest element
     in tensor x.
 
@@ -2389,7 +2414,7 @@ def argmax(x, axis=None, name=''):
 @typemap
 def argmin(x, axis=None, name=''):
     '''
-    Computes the argmin of the input tensor's elements across the specified axis. 
+    Computes the argmin of the input tensor's elements across the specified axis.
     If no axis is specified, it will return the flatten index of the smallest element
     in tensor x.
 
@@ -2435,7 +2460,7 @@ def to_sequence(x, sequence_lengths=None, sequence_axis_name_prefix='toSequence_
     Args:
         x: the tensor (or its name) which is converted to a sequence
         sequence_lengths: Optional tensor operand representing the sequence lengths.
-            if unspecified, all sequences are assumed to be of the same length; 
+            if unspecified, all sequences are assumed to be of the same length;
             i.e. dimensionality of the most significant static axis.
         sequence_axis_name_prefix (str, optional): prefix of the new sequence axis name.
         name (str, optional): the name of the Function instance in the network
@@ -2487,10 +2512,10 @@ def to_sequence_like(x, dynamic_axes_like, name=''):
 
 @typemap
 def random_sample(
-    weights, 
-    num_samples, 
-    allow_duplicates, 
-    seed = SentinelValueForAutoSelectRandomSeed, 
+    weights,
+    num_samples,
+    allow_duplicates,
+    seed = SentinelValueForAutoSelectRandomSeed,
     name=''):
     '''
     Estimates inclusion frequencies for random sampling with or without
@@ -2527,8 +2552,8 @@ def random_sample(
 
 @typemap
 def random_sample_inclusion_frequency(
-    weights, 
-    num_samples, 
+    weights,
+    num_samples,
     allow_duplicates,
     seed = SentinelValueForAutoSelectRandomSeed,
     name=''):
@@ -2538,14 +2563,14 @@ def random_sample_inclusion_frequency(
     in the the sampled set. In case of sampling without replacement
     the result is only an estimate which might be quite rough in the
     case of small sample sizes.
-    Intended uses are e.g. sampled softmax, noise contrastive 
+    Intended uses are e.g. sampled softmax, noise contrastive
     estimation etc.
-    This operation will be typically used together 
+    This operation will be typically used together
     with :func:`random_sample`.
 
     Args:
-        weights: input vector of sampling weights which should be 
-         non-negative numbers. 
+        weights: input vector of sampling weights which should be
+         non-negative numbers.
         num_samples (int): number of expected samples
         allow_duplicates (bool): If sampling is done
          with replacement (`True`) or without (`False`).
@@ -2555,7 +2580,7 @@ def random_sample_inclusion_frequency(
     Example:
         >>> import numpy as np
         >>> from cntk import *
-        >>> # weight vector with 100 '1000'-values followed 
+        >>> # weight vector with 100 '1000'-values followed
         >>> # by 100 '1' values
         >>> w1 = np.full((100),1000, dtype = np.float)
         >>> w2 = np.full((100),1, dtype = np.float)
@@ -2580,9 +2605,9 @@ def random_sample_inclusion_frequency(
     weights = sanitize_input(weights)
 
     return random_sample_inclusion_frequency(
-        weights, 
-        num_samples, 
-        allow_duplicates, 
+        weights,
+        num_samples,
+        allow_duplicates,
         seed,
         name)
 
@@ -2666,7 +2691,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
     '''
     from cntk.cntk_py import input_variable
     from cntk.internal import sanitize_shape, sanitize_dtype_cntk
-    
+
     shape = sanitize_shape(shape)
     dtype = get_default_override(_input_spec, dtype=dtype)
     if dtype is None:
@@ -2875,7 +2900,7 @@ def per_dim_mean_variance_normalize(operand, mean, inv_stddev, name=''):
 @typemap
 def stop_gradient(input, name=''):
     '''
-    Outputs its input as it and prevents any gradient contribution from its output to its input. 
+    Outputs its input as it and prevents any gradient contribution from its output to its input.
 
     Args:
         input: class:`~cntk.ops.functions.Function` that outputs a tensor
@@ -2893,20 +2918,20 @@ def assign(ref, input, name=''):
     '''
     Assign the value in input to ref and return the new value, ref need to be the same layout as input.
     Both ref and input can't have dynamic axis and broadcast isn't supported for the assign operator.
-    During forward pass, ref will get the new value after the forward or backward pass finish, so that 
-    any part of the graph that depend on ref will get the old value. To get the new value, use the one 
+    During forward pass, ref will get the new value after the forward or backward pass finish, so that
+    any part of the graph that depend on ref will get the old value. To get the new value, use the one
     returned by the assign node. The reason for that is to make ``assign`` have a deterministic behavior.
 
-    If not computing gradients, the ref will be assigned the new value after the forward pass over the 
-    entire Function graph is complete; i.e. all uses of ref in the forward pass will use the original 
+    If not computing gradients, the ref will be assigned the new value after the forward pass over the
+    entire Function graph is complete; i.e. all uses of ref in the forward pass will use the original
     (pre-assignment) value of ref.
 
-    If computing gradients (training mode), the assignment to ref will happen after completing both 
+    If computing gradients (training mode), the assignment to ref will happen after completing both
     the forward and backward passes over the entire Function graph.
 
-    The ref must be a Parameter or Constant. If the same ref is used in multiple assign operations, 
-    then the order in which the assignment happens is non-deterministic and the final value can be 
-    either of the assignments unless an order is established using a data dependence between the 
+    The ref must be a Parameter or Constant. If the same ref is used in multiple assign operations,
+    then the order in which the assignment happens is non-deterministic and the final value can be
+    either of the assignments unless an order is established using a data dependence between the
     assignments.
 
     Example:

@@ -47,3 +47,33 @@ def test_free_static_axis_in_recurrence():
     w_grad, out_val = out.grad({x : x_data}, wrt=[wh, wx], outputs=[out])
     assert np.allclose(out_val, [[[[0.9, 3.], [1.7, 3.2]]]])
     assert np.allclose(w_grad[wx], [[-0.2, -0.2], [1.4, 1.4]])
+
+
+def test_reshape_free_static_axis():
+    x = C.input((C.FreeDimension, 2, 3))
+    x_reshaped = C.reshape(x, (-1), 0, 2)
+    assert x_reshaped.shape == (C.FreeDimension, 3)
+    x_data = np.arange(12).reshape(2, 2, 3)
+    result = x_reshaped.eval({x : x_data})
+    assert np.array_equal(result[0], x_data.reshape(4, 3))
+
+    x_data = np.arange(18).reshape(3, 2, 3)
+    result = x_reshaped.eval({x : x_data})
+    assert np.array_equal(result[0], x_data.reshape(6, 3))
+
+    x_reshaped = C.reshape(x, (-1), 1, 3)
+    assert x_reshaped.shape == (C.FreeDimension, 6)
+    x_data = np.arange(12).reshape(2, 2, 3)
+    result = x_reshaped.eval({x : x_data})
+    assert np.array_equal(result[0], x_data.reshape(2, 6))
+
+    x_reshaped = C.reshape(x, (4), 0, 2)
+    assert x_reshaped.shape == (4, 3)
+    x_data = np.arange(12).reshape(2, 2, 3)
+    result = x_reshaped.eval({x : x_data})
+    assert np.array_equal(result[0], x_data.reshape(4, 3))
+
+    x_data = np.arange(6).reshape(1, 2, 3)
+    with pytest.raises(ValueError):
+        result = x_reshaped.eval({x : x_data})
+   

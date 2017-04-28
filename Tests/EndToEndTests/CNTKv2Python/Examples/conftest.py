@@ -56,3 +56,7 @@ def pytest_generate_tests(metafunc):
                 raise RuntimeError("invalid is1bitsgd value {}, only 0 or 1 allowed".format(elem))
 
         metafunc.parametrize("is_1bit_sgd", is1bitsgd, scope='session')
+
+@pytest.fixture(autouse=True)
+def reset_random_seed():
+    cntk.cntk_py.reset_random_seed(0)

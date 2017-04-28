@@ -109,6 +109,15 @@
     },
     {
         "category": ["Image"],
+        "name":  "MNIST Logistic Regression (LR) OCR",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103B_MNIST_LogisticRegression.ipynb",
+        "description":  "Recognize hand written digits (OCR) with MNIST data using multi-class LR.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/26/2017"
+    },
+    {
+        "category": ["Image"],
         "name":  "MNIST Multi-Layer Perceptron (MLP) OCR",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103C_MNIST_MultiLayerPerceptron.ipynb",
         "description":  "Recognize hand written digits (OCR) with MNIST data using MLP.",

@@ -648,11 +648,21 @@ namespace CNTK
                     break;
                 case PrimitiveOpType::TransposeAxes:
                 {
-                    auto axis1 = functionConfig[PrimitiveFunction::AttributeNameAxis1].Value<Axis>();
-                    auto axis2 = functionConfig[PrimitiveFunction::AttributeNameAxis2].Value<Axis>();
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
+                    {
+                        auto perm = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+                        for (auto& p : perm)
+                            p = NormalizeStaticAxis(p, perm.size());
+                        computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(perm));
+                    }
+                    else
+                    {
+                        auto axis1 = functionConfig[PrimitiveFunction::AttributeNameAxis1].Value<Axis>();
+                        auto axis2 = functionConfig[PrimitiveFunction::AttributeNameAxis2].Value<Axis>();
 
-                    // The axis ids passed to the internal CNTK TransposeDimensionsNode are 1 based instead of 0 based
-                    computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(axis1), AsCNTKInternalAxisIdx(axis2));
+                        // The axis ids passed to the internal CNTK TransposeDimensionsNode are 1 based instead of 0 based
+                        computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(axis1), AsCNTKInternalAxisIdx(axis2));
+                    }
                     break;
                 }
                 case PrimitiveOpType::Where:

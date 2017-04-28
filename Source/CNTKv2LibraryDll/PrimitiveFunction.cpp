@@ -267,7 +267,6 @@ namespace CNTK
             outputs.push_back(OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), Name()));
         else
         {
-            std::vector<Variable> secondaryOutputs;
             DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);
             std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, this, m_attributes);
             bool needsGradient = std::any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.NeedsGradient(); });
@@ -356,13 +355,6 @@ namespace CNTK
                                 InvalidArgument("UnpackSequence: Operand '%S' must have at least 2 dynamic axes.", m_inputs[0].AsString().c_str());
 
                             outputShape = m_inputs[0].Shape().AppendShape({ NDShape::FreeDimension });
-
-                            auto suppressMaskOutput = m_attributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
-                            if (!suppressMaskOutput)
-                            {
-                                auto maskOutput = OutputVariable({ NDShape::FreeDimension }, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, Name().empty() ? L"" : Name() + L"_UnpackSequenceMask");
-                                secondaryOutputs.push_back(maskOutput);
-                            }
                             break;
                         }
                         case PrimitiveOpType::ToSequence:
@@ -425,17 +417,30 @@ namespace CNTK
                         {
                             assert(m_inputs.size() == 1);
 
-                            auto axis1 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis1].Value<Axis>(), m_inputs[0].Shape());
-                            auto axis2 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis2].Value<Axis>(), m_inputs[0].Shape());
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec))
+                            {
+                                auto perm = AsVector<Axis>(m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+                                auto shape = m_inputs[0].Shape();
+                                for (auto& p : perm)
+                                    p = NormalizeStaticAxis(p, shape);
+                                outputShape = shape;
+                                for (size_t i = 0; i < perm.size(); ++i)
+                                    outputShape[i] = shape[perm[i].StaticAxisIndex()];
+                            }
+                            else
+                            {
+                                auto axis1 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis1].Value<Axis>(), m_inputs[0].Shape());
+                                auto axis2 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis2].Value<Axis>(), m_inputs[0].Shape());
 
-                            if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
-                                LogicError("Function '%S': TransposeAxes operation currently does not support transposing dynamic axes.", AsString().c_str());
+                                if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
+                                    LogicError("Function '%S': TransposeAxes operation currently does not support transposing dynamic axes.", AsString().c_str());
 
-                            // We allow to transpose with an axes that exceeds the rank of the input.
-                            // The output rank is the max of the input rank, and either of the axes being transposed.
-                            auto outputRank = std::max(m_inputs[0].Shape().Rank(), (size_t)(std::max(axis1.StaticAxisIndex(), axis2.StaticAxisIndex()) + 1));
-                            outputShape = m_inputs[0].Shape().AppendShape(NDShape(outputRank - m_inputs[0].Shape().Rank(), 1));
-                            std::swap(outputShape[axis1.StaticAxisIndex()], outputShape[axis2.StaticAxisIndex()]);
+                                // We allow to transpose with an axes that exceeds the rank of the input.
+                                // The output rank is the max of the input rank, and either of the axes being transposed.
+                                auto outputRank = std::max(m_inputs[0].Shape().Rank(), (size_t)(std::max(axis1.StaticAxisIndex(), axis2.StaticAxisIndex()) + 1));
+                                outputShape = m_inputs[0].Shape().AppendShape(NDShape(outputRank - m_inputs[0].Shape().Rank(), 1));
+                                std::swap(outputShape[axis1.StaticAxisIndex()], outputShape[axis2.StaticAxisIndex()]);
+                            }
                             break;
                         }
                         case PrimitiveOpType::Slice:
@@ -921,7 +926,15 @@ namespace CNTK
 
             auto primaryOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, Name().empty() ? L"" : Name());
             outputs.push_back(primaryOutput);
-            outputs.insert(outputs.end(), secondaryOutputs.begin(), secondaryOutputs.end());
+            if (m_op == PrimitiveOpType::UnpackSequence)
+            {
+                auto suppressMaskOutput = m_attributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
+                if (!suppressMaskOutput)
+                {
+                    auto maskOutput = OutputVariable({ NDShape::FreeDimension }, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, Name().empty() ? L"" : Name() + L"_UnpackSequenceMask");
+                    outputs.push_back(maskOutput);
+                }
+            }
         }
     }
 

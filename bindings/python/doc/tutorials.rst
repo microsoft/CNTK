@@ -9,6 +9,7 @@ Tutorials
 
 #.  *Recognize hand written digits (OCR) with MNIST data*
      CNTK 103 Part A: :cntktut:`MNIST data preparation <CNTK_103A_MNIST_DataLoader>`,
+     Part B: :cntktut:`Multi-class logistic regression classifier <CNTK_103B_MNIST_LogisticRegression>`
      Part C: :cntktut:`Multi-layer perceptron classifier <CNTK_103C_MNIST_MultiLayerPerceptron>`
 
 #.  *Learn how to predict the stock market*
