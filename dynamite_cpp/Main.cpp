@@ -403,16 +403,18 @@ BinarySequenceModel CreateModelFunctionS2SAtt(size_t numOutputClasses, size_t em
     };
 }
 
-function<pair<Variable,Variable>(Variable, Variable)> CreateCriterionFunction(UnaryModel model)
+//function<pair<Variable,Variable>(Variable, Variable)> CreateCriterionFunction(UnaryModel model)
+BinaryModel CreateCriterionFunction(UnaryModel model)
 {
     return [=](Variable features, Variable labels)
     {
         let z = model(features);
 
-        let loss   = CNTK::CrossEntropyWithSoftmax(z, labels);
-        let metric = CNTK::ClassificationError    (z, labels);
-
-        return make_pair(loss, metric);
+        //let loss   = CNTK::CrossEntropyWithSoftmax(z, labels);
+        let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(labels, z));
+        //let metric = CNTK::ClassificationError    (z, labels);
+        return loss;
+        //return make_pair(loss, metric);
     };
 }
 
@@ -424,7 +426,8 @@ function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCrite
         //let loss = CNTK::CrossEntropyWithSoftmax(z, label);
         auto s1 = label.Shape();
         auto z1 = z.Shape();
-        let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(label, z, /*outputRank=*/0));
+        //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(label, z, /*outputRank=*/0));
+        let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label, z, /*outputRank=*/0));
         return loss;
     };
     // create a batch mapper (which will allow suspension)
@@ -450,8 +453,8 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     const wstring trainingCTFPath = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf";
 
     // static model and criterion function
-    //auto model_fn     = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
-    //auto criterion_fn = CreateCriterionFunction(model_fn);
+    auto model_fn     = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
+    auto criterion_fn = CreateCriterionFunction(model_fn);
 
     // dybamic model and criterion function
     auto d_model_fn     = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim, device);
@@ -472,16 +475,17 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto labelStreamInfo   = minibatchSource->StreamInfo(labelsName);
 
     // build the graph
-    auto features = InputVariable({ inputDim },         true /*isSparse*/, DataType::Float, featuresName);
-    auto labels   = InputVariable({ numOutputClasses }, useSparseLabels,   DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
+    useSparseLabels;
+    auto features = InputVariable({ inputDim },         false/*true*/ /*isSparse*/, DataType::Float, featuresName);
+    auto labels   = InputVariable({ numOutputClasses }, false/*useSparseLabels*/,   DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
 
-    //auto criterion = criterion_fn(features, labels);
-    //auto loss   = criterion.first;
+    auto criterion = criterion_fn(features, labels);
+    auto loss   = criterion;
     //auto metric = criterion.second;
-    //
-    //// train
-    //auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
-    //auto trainer = CreateTrainer(nullptr, loss, metric, { learner });
+    
+    // train
+    auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
+    auto trainer = CreateTrainer(nullptr, loss, loss/*metric*/, { learner });
 
     const size_t minibatchSize = 200;
     for (size_t repeats = 0; true; repeats++)
@@ -510,23 +514,61 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
                 vbatch[j] = std::move(ToVector(batch[j]));
         }
         //let s2sOut = Batch::Map(d_model_fn1)(vargs[0], vargs[0]); // for now auto-encoder
-        for (size_t xxx = 0; xxx < 10; xxx++)
+        mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value()->AsScalar<float>();
+        for (size_t xxx = 0; xxx < 20; xxx++)
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "d_criterion_fn: %.6f sec\n");
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value()->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value()->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value()->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value()->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value()->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
+            //mbLoss.Value()->AsScalar<float>();
             // looks like it is computing something in a meaningful range
             //fprintf(stderr, "%.6f\n", mbLoss.Value()->AsScalar<float>() / minibatchData[featureStreamInfo].numberOfSequences);
         }
 #endif
-
-#if 0
+#if 1
         // static CNTK
         trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-        PrintTrainingProgress(trainer, i, /*outputFrequencyInMinibatches=*/ 1);
+        double crit = trainer->PreviousMinibatchLossAverage();
+        {
+            Microsoft::MSR::CNTK::ScopeTimer timer(3, "CNTK static:    %.6f sec\n");
+            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            crit = trainer->PreviousMinibatchLossAverage();
+        }
+        PrintTrainingProgress(trainer, repeats, /*outputFrequencyInMinibatches=*/ 1);
 #endif
     }
 }
