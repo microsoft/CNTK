@@ -1299,6 +1299,7 @@ namespace CNTK
         case PrimitiveOpType::Exp:            op = Microsoft::MSR::CNTK::ElementWiseOperator::opExp;                break;
         case PrimitiveOpType::Cos:            op = Microsoft::MSR::CNTK::ElementWiseOperator::opCosine;             break;
         case PrimitiveOpType::Sin:            op = Microsoft::MSR::CNTK::ElementWiseOperator::opSin;                break;
+        case PrimitiveOpType::Negate:         op = Microsoft::MSR::CNTK::ElementWiseOperator::opNegate;             break;
             // reduction ops are also done outside, but set the reductionOp
         case PrimitiveOpType::ReduceElements:
             {
