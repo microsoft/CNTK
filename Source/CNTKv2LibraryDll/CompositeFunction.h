@@ -106,7 +106,7 @@ namespace CNTK
         void InferOutputs(std::vector<Variable>& outputs) override
         {
             auto& inferred = m_rootFunction->InitOutputs();
-            outputs.assign(inferred.begin(), inferred.end());
+            outputs.assign(inferred.begin(), inferred.end()); // note: not just assigning as to keep existing memory allocation, as needed in case of user-defined functions
         }
 
         virtual void Backward(const BackPropStatePtr& state,

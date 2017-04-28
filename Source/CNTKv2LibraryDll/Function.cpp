@@ -34,31 +34,43 @@ namespace CNTK
         if (m_outputsInitFlag++ == 0)
         {
             std::vector<Variable> outputs;
-            outputs.reserve(Function::MaxNumOutputs);
-            InferOutputs(outputs);
-            m_outputs.reserve(outputs.size());
-            for (auto outputVar : outputs)
+            if (!IsPrimitive()) // if not primitive then items may be pushed by external code that lives with a different CRT heap
+                outputs.reserve(Function::MaxNumOutputs);
+            InferOutputs(outputs); // gives us a full copy of all those Variable objects
+            if (!IsPrimitive())
+                assert(outputs.capacity() = Function::MaxNumOutputs); // must not have touched this
+            //m_outputs.reserve(outputs.size());
+            //for (auto& outputVar : outputs)
+            for (size_t i = 0; i < outputs.size(); i++)
             {
+                auto& outputVar = outputs[i];
+
                 if (outputVar.IsOutput() && outputVar.OwnerIs(nullptr))
                     outputVar.SetOwner(shared_from_this());
 
                 if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.OwnerIs(this))
                 {
                     // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.
-                    outputVar.m_dataFields->m_uid = m_uid + L"_" + VariableKindName(outputVar.Kind()) + L"_" + std::to_wstring(m_outputs.size());
+                    //outputVar.m_dataFields->m_uid = m_uid + L"_" + VariableKindName(outputVar.Kind()) + L"_" + std::to_wstring(i/*m_outputs.size()*/);
+                    outputVar.m_dataFields->m_uid = m_uid + L"_" + VariableKindName(outputVar.Kind()) + std::to_wstring(i/*m_outputs.size()*/);
                 }
 
-#if 1
-                m_outputs.emplace_back(std::move(outputVar.NonCompositePreservingCopy()));
-#else
-                m_outputs.push_back(outputVar);
-                if (m_outputs.back().m_outputComposite != nullptr)
-                {
-                    // Nuke the composite ptr to allow release of cyclic graphs.
-                    m_outputs.back().m_outputComposite = nullptr;
-                }
-#endif
+                outputVar.m_outputComposite.reset();
+//#if 1
+//                m_outputs.emplace_back(std::move(outputVar.NonCompositePreservingCopy()));
+//#else
+//                m_outputs.push_back(outputVar);
+//                if (m_outputs.back().m_outputComposite != nullptr)
+//                {
+//                    // Nuke the composite ptr to allow release of cyclic graphs.
+//                    m_outputs.back().m_outputComposite = nullptr;
+//                }
+//#endif
             }
+            if (outputs.size() < outputs.capacity())
+                m_outputs = outputs; // free some memory
+            else
+                m_outputs = std::move(outputs);
         }//);
 
         return m_outputs;

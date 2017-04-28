@@ -645,8 +645,8 @@ namespace CNTK
                             assert(m_inputs.size() == 2);
 
                             auto transposeShapeFunc = [](const NDShape& shape) {
-                                //NDShape transposedShape(std::max<size_t>(2, shape.Rank()), 1);
-                                NDShape transposedShape(shape.Rank());
+                                NDShape transposedShape(std::max<size_t>(2, shape.Rank()), 1);
+                                //NDShape transposedShape(shape.Rank());
                                 for (size_t i = 0; i < shape.Rank(); ++i)
                                     transposedShape[transposedShape.Rank() - i - 1] = shape[i];
 
@@ -922,8 +922,13 @@ namespace CNTK
             }
 
             auto primaryOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, Name().empty() ? L"" : Name());
+            if (outputs.capacity() == 0) // if pre-reserved then don't touch it
+                outputs.reserve(1 + secondaryOutputs.size());
+            else // if pre-reserved then we must not reallocate as caller may live in a different CRT heap
+                assert(outputs.capacity() >= 1 + secondaryOutputs.size());
             outputs.push_back(primaryOutput);
-            outputs.insert(outputs.end(), secondaryOutputs.begin(), secondaryOutputs.end());
+            if (!secondaryOutputs.empty())
+                outputs.insert(outputs.end(), secondaryOutputs.begin(), secondaryOutputs.end());
         }
     }
 
