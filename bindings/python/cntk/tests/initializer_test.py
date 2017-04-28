@@ -12,7 +12,7 @@ from .. import parameter
 
 
 def _check(init, name):
-    p = parameter(shape=(10,20,5), init=init)
+    p = parameter(shape=(50,20,5), init=init)
     val = p.asarray()
     assert np.allclose(np.average(val), 0, atol=0.1), name
     assert np.var(val) > 0.01, name
