@@ -376,8 +376,6 @@ namespace CNTK
             std::wstring m_fileName;
         };
 
-
-#ifdef SWIG
         // SWIG callback wrapper for the UDF deserialization.
         class UDFDeserializeCallbackWrapper
         {
@@ -385,8 +383,13 @@ namespace CNTK
             virtual FunctionPtr operator()(const std::vector<Variable>&, const std::wstring&, const Dictionary&) const = 0;
             virtual ~UDFDeserializeCallbackWrapper() = default;
         };
-#endif
 
+        typedef std::shared_ptr<UDFDeserializeCallbackWrapper> UDFDeserializeCallbackWrapperPtr;
+        
+        CNTK_API void RegisterUDFDeserializeCallbackWrapper(UDFDeserializeCallbackWrapperPtr callbackPtr);
+
+
+        CNTK_API bool IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName);
     }
 
     // Forward-declare test fixtures, so that they can be used as friends.

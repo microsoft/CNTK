@@ -49,10 +49,8 @@ class MyPlus(UserFunction):
             input_gradients[input] = root_gradients
 
     def serialize(self):
-        internal_state = {}
-        internal_state['forward_calls'] = self.forward_calls
-        internal_state['backward_calls'] = self.backward_calls
-        return internal_state
+        return {'forward_calls' : self.forward_calls, 
+                'backward_calls' : self.backward_calls}
 
     @staticmethod
     def deserialize(inputs, name, state):
@@ -60,6 +58,24 @@ class MyPlus(UserFunction):
         f.forward_calls = state['forward_calls']
         f.backward_calls = state['backward_calls']
         return f
+
+
+class MyPlusPlus(MyPlus):
+    def __init__(self, inputs, name, state={}):
+        super(MyPlusPlus, self).__init__(inputs[0], inputs[1], name=name+name)
+
+    def forward(self, *args, **kwargs):
+        r1 =  super(MyPlusPlus, self).forward(*args, **kwargs)
+        r2 =  super(MyPlusPlus, self).forward(*args, **kwargs)
+        return None, r1[1] + r2[1]
+
+    def serialize(self):
+        return None
+
+    @staticmethod
+    def deserialize(*args):
+        return MyPlusPlus(*args)
+
 
 def test_ext_eval_1():
     dim = 4
@@ -315,12 +331,14 @@ def test_ext_lambdafunc(tmpdir):
 
     filepath = str(tmpdir / 'test_ext_lambdafunc.dat')
     z0.save(filepath)
-    z = Function.load(filepath, udf_factory_callback_map =
-        {
-            'conditional_exec_lambda' :     
-            lambda x, *unused: 
-                LambdaFunc(x, when=lambda arg: np.sum(arg)>1, execute=cb.inc)
-        })
+
+    Function.register_udf_deserialize_callback(
+        'conditional_exec_lambda',
+        lambda x, *unused: 
+                LambdaFunc(x, when=lambda arg: np.sum(arg)>1, execute=cb.inc))
+
+    z = Function.load(filepath)
+
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
     trainer = Trainer(z, (z+0, z+0), \
@@ -484,18 +502,136 @@ def test_udf_output_needs_no_gradient():
     assert np.allclose(result, [[[6., 8.], [10., 12.]]])
 
 
-def test_native_user_function():
-    ops.register_native_user_function('NativeUserTimesFunction', 'Cntk.ExtensibilityExamples-' + C.__version__.rstrip('+'), 'CreateUserTimesFunction')
+def test_native_user_function(tmpdir):
+
+    if not cntk_py.is_native_user_function_registered('NativeUserTimesOp'):
+        ops.register_native_user_function('NativeUserTimesOp', 'Cntk.ExtensibilityExamples-' + C.__version__.rstrip('+'), 'CreateUserTimesFunction')
+
     dev = cpu()
     x = input((2))
     w = parameter((2, 2), init=np.asarray([[0.5, 2], [-0.5, 1.5]], dtype=np.float32), device=dev)
-    attributes = {'param_rank' : 2, 'padding' : True}
-    op = ops.native_user_function('NativeUserTimesFunction', [w, x], attributes, 'native_user_times_function')
+    attributes = {
+            'param_rank' : 2, 
+            'padding' : True, 
+            'none': None, 
+            'nested lists' : [[1,2,3], [4,5,6]],
+            'string' : 'string',
+            'some data' :  np.arange(1, 10, dtype=np.float32).reshape((3,3))
+        }
 
+    def verify_attributes(udf):
+         for k,v in attributes.items():
+            if not isinstance(v, np.ndarray):
+                assert udf.attributes[k] == v
+            else:
+                assert (udf.attributes[k] == v).all()
+
+    op = ops.native_user_function('NativeUserTimesOp', [w, x], attributes, 'native_user_times_function')
+
+    verify_attributes(op.owner)
+
+    filepath = str(tmpdir / 'test_native_user_function.dat')
+    op.save(filepath)
+    
+    op_reloaded = Function.load(filepath, device=dev)
     x_data = NDArrayView.from_dense(np.asarray([[0.1, 0.2], [-0.1, 0.3]], dtype=np.float32), device=dev)
-    result = op.eval({x : x_data}, device=dev)
+    result = op_reloaded.eval({op_reloaded.arguments[0] : x_data}, device=dev)
+    
     assert np.allclose(result, [[-0.05, 0.5], [-0.2, 0.25]])
 
-    native_times_primitive = op.find_by_name('native_user_times_function')
-    assert native_times_primitive.attributes == attributes
- 
+    native_times_primitive = op_reloaded.find_by_name('native_user_times_function')
+
+    verify_attributes(native_times_primitive)
+
+
+def build_test_function():
+    dev = cpu()
+    w_value = np.asarray([[0.5, 2], [-0.5, 1.5]]).astype(np.float32)
+    c1_value = 2.718
+    c2_value = -3.141
+    
+    if not cntk_py.is_native_user_function_registered('NativeUserTimesOp'):
+        ops.register_native_user_function('NativeUserTimesOp', 'Cntk.ExtensibilityExamples-' + C.__version__.rstrip('+'), 'CreateUserTimesFunction')
+
+    x = input((2))
+
+    w = parameter((2, 2), init=w_value, device=dev)
+    
+    mp = MyPlus(x, constant(c1_value))
+    op = user_function(MyPlus(x, constant(c1_value)))
+    op = ops.native_user_function('NativeUserTimesOp', [w, op], user_function_instance_name='my_times')
+    
+    return dev, w_value, c1_value, c2_value, user_function(MyPlus(op, constant(c2_value)))
+
+def test_both_flavors_of_user_functions(tmpdir):
+    dev, w_value, c1_value, c2_value, op  = build_test_function()
+
+    filepath = str(tmpdir / 'test_native_user_function.dat')
+    op.save(filepath)
+    op_reloaded = Function.load(filepath, device=dev)
+    
+    np.random.seed(1)
+
+    for i in range(5):
+        x_value = np.random.random((2,2)).astype(np.float32)
+        x_data = NDArrayView.from_dense(x_value, device=dev)
+        result = op_reloaded.eval({op_reloaded.arguments[0] : x_data}, device=dev)
+        expected = np.matmul((x_value + c1_value), w_value) + c2_value
+        assert np.allclose(result, expected)
+
+def test_udf_checkpointing(tmpdir):
+    dev, w_value, c1_value, c2_value, op  = build_test_function()
+
+    label = constant(np.asarray([[1, 2], [3,4]]).astype(np.float32))
+    
+    loss = cross_entropy_with_softmax(op, label)
+    eval_error = classification_error(op, label)
+
+    lr_schedule = learning_rate_schedule(0.5, UnitType.minibatch)
+    learner = sgd(op.parameters, lr_schedule)
+    trainer = Trainer(op, (loss, eval_error), [learner])
+
+    trainer.train_minibatch({op.arguments[0] : np.random.random((2,2)).astype(np.float32)}, device=dev)
+
+    filepath = str(tmpdir /'test_checkpointing.out')
+
+    trainer.save_checkpoint(filepath, external_state={'test':'test'})
+
+    d = cntk_py.Dictionary.load(filepath)
+    assert len(d.keys()) != 0
+
+def test_override_deserialize(tmpdir):
+    dev, w_value, c1_value, c2_value, op  = build_test_function()
+
+    filepath = str(tmpdir / 'test_override_deserialize.dat')
+    op.save(filepath)
+
+    Function.register_udf_deserialize_callback(
+         MyPlus._op_name(), lambda *x : MyPlusPlus(*x))
+
+    op_reloaded = Function.load(filepath, device=dev)
+    
+    np.random.seed(1)
+
+    for i in range(5):
+        x_value = np.random.random((2,2)).astype(np.float32)
+        x_data = NDArrayView.from_dense(x_value, device=dev)
+        result = op_reloaded.eval({op_reloaded.arguments[0] : x_data}, device=dev)
+        expected = 2 *(np.matmul(2 * (x_value + c1_value), w_value) + c2_value)
+        assert np.allclose(result, expected)
+
+def test_override_serialize(tmpdir):
+    dev=cpu()
+    a,b = 1.2322341, -0.29084;
+    op = MyPlusPlus([constant(a), constant(b)], '++');
+    op = MyPlusPlus([op, op], '+++')
+    op = MyPlusPlus([op, op], '++++')
+    op = user_function(op)
+    result1 = op.eval({}, device=dev)
+
+    filepath = str(tmpdir / 'test_udf_with_renamed_deserialize.dat')
+    op.save(filepath)
+
+    op_reloaded = Function.load(filepath, device=dev)
+    
+    assert result1 == op_reloaded.eval({},  device=dev)

@@ -137,6 +137,7 @@
     <ClInclude Include="PrimitiveOpType.h" />
     <ClInclude Include="Serialization.h" />
     <ClInclude Include="tensorboard\TensorBoardUtils.h" />
+    <ClInclude Include="UserDefinedFunction.h" />
     <ClInclude Include="UserFunctionFactory.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="stdafx.h" />
@@ -175,6 +176,7 @@
     <ClCompile Include="tensorboard\TensorBoardUtils.cpp" />
     <ClCompile Include="Trainer.cpp" />
     <ClCompile Include="TrainingSession.cpp" />
+    <ClCompile Include="UserDefinedFunction.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="Value.cpp" />
     <ClCompile Include="Variable.cpp" />

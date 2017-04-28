@@ -21,7 +21,7 @@
 %rename(_add_progress_writers) CNTK::Internal::AddProgressWriters;
 %rename(_backward) CNTK::Function::Backward;
 %rename(_infer_outputs) CNTK::Function::InferOutputs;
-%rename(_serialize) CNTK::Function::Serialize;
+%rename(_serialize_impl) CNTK::Function::Serialize;
 %rename(_deserialize) CNTK::Function::Deserialize;
 %rename(_update) CNTK::Learner::Update;
 %rename(sgd_learner) CNTK::SGDLearner;
@@ -39,9 +39,9 @@
 %rename(ctf_deserializer) CNTK::CTFDeserializer;
 %rename(htk_feature_deserializer) CNTK::HTKFeatureDeserializer;
 %rename(htk_mlf_deserializer) CNTK::HTKMLFDeserializer;
-%rename(_infer_outputs) CNTK::Function::InferOutputs;
 %rename(_stream_infos) CNTK::SwigMinibatchSource::StreamInfos(PyObject*);
 %rename(_next_minibatch) CNTK::SwigMinibatchSource::_GetNextMinibatch;
+%rename(_register_udf_deserialize_callback) CNTK::Internal::RegisterUDFDeserializeCallbackWrapper;
 
 %rename(_none) CNTK::DictionaryValue::Type::None;
 
@@ -174,7 +174,8 @@
 %ignore CNTK::Internal::TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
 %ignore CNTK::Internal::Convolution; 
 
-%ignore CNTK::Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
+%ignore CNTK::Function::RegisterUDFDeserializeCallback;
+%ignore CNTK::Function::GetUDFDeserializeCallback;
 
 %{
 #define SWIG_FILE_WITH_INIT
@@ -617,17 +618,32 @@ public:
     }
 }
 
-// Callback support
+
 %feature("director") CNTK::Function;
-%feature("director") CNTK::Internal::UDFDeserializeCallbackWrapper;
 %feature("nodirector") CNTK::Function::OnPlaceholdersReplaced;
 %feature("nodirector") CNTK::Function::OpName;
+// Callback support
+%feature("director") CNTK::Internal::UDFDeserializeCallbackWrapper;
+
+%typemap(directorout) std::shared_ptr<CNTK::Function> (void * swig_argp, int swig_res = 0) {
+  if ($input == Py_None) {
+    $result = $ltype();
+  } else {
+    swig_res = SWIG_ConvertPtr($input, &swig_argp, $descriptor(std::shared_ptr<CNTK::Function> *), %convertptr_flags);
+    if (!SWIG_IsOK(swig_res)) {
+      %dirout_fail(swig_res,"$type");
+    }
+    $result = *(%reinterpret_cast(swig_argp, $&ltype));
+  }
+}
+
+// Since there're three overloads of Function::Load, both "rename" and "compactdefaultargs" are needed
+// to make pybuffer_binary work correctly with default arguments.
+%rename(load_from_buffer) CNTK::Function::Load(const char*, size_t, const DeviceDescriptor&);
+%feature("compactdefaultargs") CNTK::Function::Load(const char*, size_t, const DeviceDescriptor&);
 
 // This overload is not used in python at the moment.
-%ignore CNTK::Function::Load(const std::wstring&, const DeviceDescriptor&, const UDFDeserializeCallback&);
-%ignore CNTK::Function::Load(const char*, size_t, const DeviceDescriptor&, const UDFDeserializeCallback&);
-%ignore CNTK::Function::Load(std::istream&, const DeviceDescriptor&, const UDFDeserializeCallback&);
-%rename(load_from_buffer) CNTK::Function::Load(const char*, size_t, const CNTK::DeviceDescriptor&, const CNTK::Internal::UDFDeserializeCallbackWrapper&);
+%ignore CNTK::Function::Load(std::istream&, const DeviceDescriptor&);
 
 %feature("director") CNTK::Learner;
 %feature("nodirector") CNTK::Learner::Parameters;
@@ -812,7 +828,7 @@ public:
     }
 %enddef
 
-// Implementing typemapping for UDFDeserializeCallback (it has a dictionary
+// Implementing typemapping for UDFDeserializeCallbackWrapper (it has a dictionary
 // as one of its input parameters), which needs to be implemented in Python.
 
 %typemap(directorin, fragment="DictionaryValueToPy") const CNTK::Dictionary&
@@ -1403,6 +1419,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::DistributedLearner)
 %shared_ptr(CNTK::Internal::TensorBoardFileWriter)
 %shared_ptr(CNTK::ProgressWriter)
+%shared_ptr(CNTK::Internal::UDFDeserializeCallbackWrapper)
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
@@ -1784,6 +1801,7 @@ namespace CNTK
 %template(random_uniform_float) CNTK::NDArrayView::RandomUniform<float>;
 %template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
+%template(DictionaryValueFromNDArrayView) CNTK::DictionaryValue::DictionaryValue<CNTK::NDArrayView>;
 
 %template(training_parameter_per_sample_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
 %template(training_parameter_per_minibatch_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Minibatch>;

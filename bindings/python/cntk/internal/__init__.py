@@ -23,31 +23,38 @@ def _value_as_sequence_or_array(val, var):
         map_if_possible(val)
         return val.asarray()
 
+_serialization_version = 1
+
+def _serialize(udf):
+    dictionary = {}
+    dictionary['class'] = udf.__class__.__name__
+    dictionary['module'] = udf.__class__.__module__
+    dictionary['op_name'] = udf.op_name
+    dictionary['state'] = udf.serialize()
+    dictionary['version'] = _serialization_version
+    return dictionary
+
+
 class _UDFDeserializeCallbackWrapper(cntk_py.UDFDeserializeCallbackWrapper):
-    '''
-    Provides an implementation of the UDFDeserializer interface used
-    to inflate user defined functions in a model dictionary.
-    '''
     def __init__(self, factory_callback_map=None):
         super(_UDFDeserializeCallbackWrapper, self).__init__()
         self.factory_callback_map = factory_callback_map
-        self.__disown__()
 
     def __call__(self, inputs, name, dictionary):
-        import pdb; pdb.set_trace()
         cls = dictionary['class']
         module = dictionary['module']
         state = dictionary['state']
         op_name = dictionary['op_name']
+        deserialize_method = 'deserialize'
 
         if (self.factory_callback_map and op_name in self.factory_callback_map):
             factory = self.factory_callback_map[op_name]
         else:
             exec("from {} import {}".format(module, cls))
-            eval_str = "{0}.deserialize if hasattr({0}, 'deserialize') else None"
-            factory = eval(eval_str.format(cls))
+            eval_str = "{0}.{1} if hasattr({0}, '{1}') else None"
+            factory = eval(eval_str.format(cls, deserialize_method))
 
-        if (factory):
+        if factory:
             return factory(list(inputs), name, state)
 
         raise ValueError("Cannot deserialize user function '{}.{}'. "

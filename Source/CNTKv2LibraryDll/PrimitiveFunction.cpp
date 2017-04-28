@@ -21,6 +21,7 @@
 #include "ConvolveGeometry.h"
 #include "ConvolutionalNodes.h"
 #include "Variable.h"
+#include "UserFunctionFactory.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -963,7 +964,7 @@ namespace CNTK
         }
     }
 
-    static vector<DictionaryValue> GetInputUids(const Function& f)
+    vector<DictionaryValue> GetInputUids(const Function& f)
     {
         auto inputs = f.Inputs();
         vector<DictionaryValue> inputUids;
@@ -975,7 +976,7 @@ namespace CNTK
         return inputUids;
     }
 
-    static Dictionary SerializeCommonAttributes(const Function& f, size_t version, const wstring& functionType)
+    Dictionary SerializeCommonFunctionAttributes(const Function& f, size_t version, const wstring& functionType)
     {
         Dictionary dict;
         dict[versionKey] = version;
@@ -991,7 +992,7 @@ namespace CNTK
 
     /*virtual*/ Dictionary PrimitiveFunction::Serialize() const 
     {
-        Dictionary dict = SerializeCommonAttributes(*this, CurrentVersion(), s_primitiveFunctionTypeValue);
+        Dictionary dict = SerializeCommonFunctionAttributes(*this, CurrentVersion(), s_primitiveFunctionTypeValue);
         dict[opKey] = static_cast<size_t>(m_op);
         dict[attributesKey] = Attributes();
 
@@ -1018,7 +1019,7 @@ namespace CNTK
         return dict;
     }
 
-    static std::vector<Variable> GetInputVariables(const Dictionary& dict, const unordered_map<wstring, Variable>& uidToVariableMap, size_t currentSerializationVersion)
+    std::vector<Variable> GetInputVariables(const Dictionary& dict, const std::unordered_map<std::wstring, Variable>& uidToVariableMap, size_t currentSerializationVersion)
     {
         const auto& inputUids = dict[inputsKey].Value<vector<DictionaryValue>>();
 
@@ -1245,55 +1246,5 @@ namespace CNTK
             dummyOutputVariable.m_dataFields->m_shape = BinaryElementwiseOpOutputShape(op, dummyOutputVariable, operand, broadcastAllowed, inferInputDimensions);
 
         return dummyOutputVariable.Shape();
-    }
-
-    static const std::wstring s_userDefinedFunctionTypeValue = L"UserDefinedFunction";
-
-    /*static*/ bool UDFUtils::IsUDF(const FunctionPtr& f)
-    {
-        return (dynamic_cast<const PrimitiveFunction*>(f.get()) == nullptr);
-    }
-
-    /*static*/ bool UDFUtils::IsUDF(const Dictionary& dict)
-    {
-        return (dict.Contains(typeKey) && dict[typeKey].Value<std::wstring>() == s_userDefinedFunctionTypeValue);
-    }
-
-    /*static*/ Dictionary UDFUtils::Serialize(const FunctionPtr& udf)
-    {
-        Dictionary dict = SerializeCommonAttributes(*udf, s_serializationVersion, s_userDefinedFunctionTypeValue);
-        dict[userDefinedStateKey] = udf->Serialize();
-        return dict;
-    }
-
-    /*static*/ FunctionPtr UDFUtils::Deserialize(const Dictionary& dict,
-                                                 const unordered_map<std::wstring, Variable>& uidToVariableMap,
-                                                 const DeviceDescriptor& device,
-                                                 const UDFDeserializeCallback& callback)
-    {
-        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, uidKey, inputsKey, userDefinedStateKey };
-        ValidateDictionary<PrimitiveFunction>(dict, s_requiredDictionaryKeys, s_userDefinedFunctionTypeValue, s_serializationVersion);
-
-        const auto& uid = dict[uidKey].Value<std::wstring>();
-        std::wstring name = L"";
-        if (dict.Contains(nameKey))
-            name = dict[nameKey].Value<std::wstring>();
-
-        auto inputs = GetInputVariables(dict, uidToVariableMap, s_serializationVersion);
-
-        auto state = dict[userDefinedStateKey].Value<Dictionary>();
-
-        auto udf = callback(inputs, name, state);
-
-        if (udf == nullptr)
-        {
-            RuntimeError("Unable to reconstruct a user-defined function. Please make sure to specify a valid UDF deserializer.");
-        }
-
-        // Restore the original uid, which other functions in the graph depend on
-        // (their inputs refer to the uids of this UDF outputs, which are generated base on the uid of this UDF).
-        udf->m_uid = uid;
-        
-        return udf;
     }
 }

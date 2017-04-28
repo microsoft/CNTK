@@ -23,6 +23,7 @@
 #include "BlockFunction.h"
 #include "SpecialPurposeNodes.h"
 #include "SequenceReshapeNodes.h"
+#include "UserDefinedFunction.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -58,7 +59,7 @@ namespace CNTK
         for (auto& function : m_allPrimitiveFunctions)
         {
             auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
-            if (!primitiveFunction->IsStateful())
+            if (!primitiveFunction || !primitiveFunction->IsStateful())
                 continue;
 
             // TODO: same for BatchNorm
@@ -85,7 +86,7 @@ namespace CNTK
         for (auto& function : m_allPrimitiveFunctions)
         {
             auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(function.get());
-            if (!primitiveFunction->IsStateful())
+            if (!primitiveFunction || !primitiveFunction->IsStateful())
                 continue;
 
             // TODO: same for BatchNorm
@@ -224,7 +225,7 @@ namespace CNTK
         return composite;
     }
 
-    /*static*/ FunctionPtr CompositeFunction::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device, const UDFDeserializeCallback& callback)
+    /*static*/ FunctionPtr CompositeFunction::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device)
     {
         static const vector<std::wstring> s_requiredDictionaryKeys = { inputsKey, functionsKey };
        
@@ -254,7 +255,7 @@ namespace CNTK
         {
             auto functionDict = dictionaryValue.Value<Dictionary>();
             FunctionPtr root = UDFUtils::IsUDF(functionDict) ?
-                UDFUtils::Deserialize(functionDict, uidToInputMap, device, callback) :
+                UDFUtils::Deserialize(functionDict, uidToInputMap, device) :
                 PrimitiveFunction::Deserialize(functionDict, uidToInputMap, allPrimitiveFunctions, allPlaceholderReplacements, device);
             allPrimitiveFunctions.insert(root);
 
@@ -303,7 +304,7 @@ namespace CNTK
         for (auto& function : functions)
         {
             auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
-            if (!primitiveFunction->IsStateful())
+            if (!primitiveFunction || !primitiveFunction->IsStateful())
                 continue;
 
             if (stateDictionary.Contains(primitiveFunction->Uid()))
@@ -340,7 +341,7 @@ namespace CNTK
             vector<wstring> uids;
             PreorderTraverseFunctions(function.RootFunction(), [&uids](const FunctionPtr& funcPtr) {
                 auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
-                if (primitiveFunction->IsStateful()) 
+                if (primitiveFunction && primitiveFunction->IsStateful())
                 {
                     uids.push_back(funcPtr->Uid());
                 }
@@ -384,7 +385,7 @@ namespace CNTK
         for (const auto& function : m_allPrimitiveFunctions)
         {
             auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
-            if (!primitiveFunction->IsStateful())
+            if (!primitiveFunction || !primitiveFunction->IsStateful())
                 continue;
 
             auto functionState = state[primitiveFunction->Uid()].Value<Dictionary>();

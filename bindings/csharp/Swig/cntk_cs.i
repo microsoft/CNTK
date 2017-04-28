@@ -1927,24 +1927,33 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 
 
-%ignore CNTK::Function::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), const Internal::UDFDeserializerPtr& deserializer);
-%ignore CNTK::Function::Load(const char* buffer, size_t length, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), const Internal::UDFDeserializerPtr& deserializer = nullptr);
+%ignore CNTK::Function::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+%ignore CNTK::Function::Load(const char* buffer, size_t length, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 // Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
-%ignore CNTK::Function::Load(std::istream& inputStream, const DeviceDescriptor& computeDevice= DeviceDescriptor::UseDefaultDevice(), const Internal::UDFDeserializerPtr& deserializer = nullptr);
+%ignore CNTK::Function::Load(std::istream& inputStream, const DeviceDescriptor& computeDevice= DeviceDescriptor::UseDefaultDevice());
 
 %extend CNTK::Function {
     static FunctionPtr Load(const std::wstring& filepath, 
                             const CNTK::DeviceDescriptor& computeDevice = CNTK::DeviceDescriptor::UseDefaultDevice()) 
     {
-        return CNTK::Function::Load(filepath, computeDevice, nullptr);
+        return CNTK::Function::Load(filepath, computeDevice);
     }
 
     static FunctionPtr Load(const char* modelBuffer, size_t length,
                             const CNTK::DeviceDescriptor& computeDevice = CNTK::DeviceDescriptor::UseDefaultDevice()) 
     {
-        return CNTK::Function::Load(modelBuffer, length, computeDevice, nullptr);
+        return CNTK::Function::Load(modelBuffer, length, computeDevice);
     }
 }
+
+
+%ignore CNTK::Function::RegisterUDFDeserializeCallback;
+%ignore CNTK::Function::GetUDFDeserializeCallback;
+%ignore_class CNTK::Internal::UDFDeserializeCallbackWrapper;
+%ignore_function CNTK::Internal::RegisterUDFDeserializeCallbackWrapper;
+%ignore_function CNTK::Internal::IsNativeUserFunctionRegistered;
+
+
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"

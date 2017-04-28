@@ -263,7 +263,7 @@ namespace CNTK
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
-            : Function(inputs, std::move(functionConfig), functionName, uid), m_op(op)
+            : Function(inputs, std::move(functionConfig), nullptr, functionName, uid), m_op(op)
         {}
 
     public:
@@ -759,21 +759,7 @@ namespace CNTK
         static const size_t s_serializationVersion = 13;
     };
 
-    class UDFUtils
-    {
-    public:
-
-        static bool IsUDF(const FunctionPtr& f);
-
-        static bool IsUDF(const Dictionary& dict);
-
-        static Dictionary Serialize(const FunctionPtr& dictionary);
-
-        static FunctionPtr Deserialize(const Dictionary& dictionary,
-            const std::unordered_map<std::wstring, Variable>& uidToVariableMap,
-            const CNTK::DeviceDescriptor& device,
-            const UDFDeserializeCallback& callback);
-
-        static const size_t s_serializationVersion = 0;
-    };
+    std::vector<DictionaryValue> GetInputUids(const Function& f);
+    Dictionary SerializeCommonFunctionAttributes(const Function& f, size_t version, const std::wstring& functionType);
+    std::vector<Variable> GetInputVariables(const Dictionary& dict, const std::unordered_map<std::wstring, Variable>& uidToVariableMap, size_t currentSerializationVersion);
 }
