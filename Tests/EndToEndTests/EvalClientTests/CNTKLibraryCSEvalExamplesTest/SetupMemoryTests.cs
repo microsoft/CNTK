@@ -61,7 +61,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Load the model.
                 string modelFilePath = "resnet20.dnn";
                 CNTKLibraryManagedExamples.ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
-                Function modelFunc = Function.LoadModel(modelFilePath, device);
+                Function modelFunc = Function.Load(modelFilePath, device);
 
                 Variable inputVar = modelFunc.Arguments.Single();
                 MemoryTests.ArgumentVar0 = inputVar;

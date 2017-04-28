@@ -54,7 +54,7 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-        SetDims(TensorShape(1), Input(0)->HasMBLayout()); // each column is reduced to a scalar
+        SetDims(Environment().IsV2Library() ? TensorShape() : TensorShape(1), Input(0)->HasMBLayout()); // each column is reduced to a scalar
     }
 };
 

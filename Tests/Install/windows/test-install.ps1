@@ -12,7 +12,7 @@ $ProgressPreference = 'SilentlyContinue'
 Set-Location c:\local
 Expand-Archive -Path BinaryDrop.zip
 
-$installCache = '.\BinaryDrop\cntk\Scripts\install\windows\InstallCache'
+$installCache = '.\BinaryDrop\cntk\Scripts\install\windows\ps\InstallCache'
 Move-Item -Path InstallCache -Destination $installCache
 
 Get-ChildItem .\BinaryDrop\cntk\Scripts\install\windows\ps\ -Recurse -File -Include *.ps1, *.psm1 |

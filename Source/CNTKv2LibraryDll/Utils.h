@@ -129,7 +129,7 @@ namespace CNTK
             LogicError("The number (%d) of requested axes exceeds the currently supported limit (%d)", (int)viewShape.Rank(), (int)maxNumAxesSupportedByTensorView);
 
         // TensorShape is required to be at least 1D
-        size_t minRankSize = 1;
+        size_t minRankSize = 0;
         Microsoft::MSR::CNTK::SmallVector<size_t> tensorViewShape(std::max<size_t>(minRankSize, viewShape.Rank()));
         for (size_t i = 0; i < tensorViewShape.size(); ++i)
             tensorViewShape[i] = (i < viewShape.Rank()) ? viewShape[i] : 1;
@@ -307,6 +307,7 @@ namespace CNTK
     static int const CNTKInternalIdxValueForAllStaticAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllStaticAxes;
     static int const CNTKInternalIdxValueForAllAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllAxes;
     static int const CNTKInternalIdxValueForSequenceAxis = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForSequenceAxis;
+    static int const CNTKInternalIdxValueForBatchAxis = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForBatchAxis;
 
     inline Axis AsAxis(int CNTKInternalAxisIdx)
     {
@@ -318,6 +319,9 @@ namespace CNTK
 
         if (CNTKInternalAxisIdx == CNTKInternalIdxValueForSequenceAxis)
             return Axis::OperandSequenceAxis();
+
+        if (CNTKInternalAxisIdx == CNTKInternalIdxValueForBatchAxis)
+            return Axis::DefaultBatchAxis();
 
         return Axis(CNTKInternalAxisIdx - 1);
     }
@@ -340,6 +344,9 @@ namespace CNTK
 
         if (axis.IsDynamicAxis() && axis.IsOrdered())
             return CNTKInternalIdxValueForSequenceAxis;
+
+        if (axis == Axis::DefaultBatchAxis())
+            return CNTKInternalIdxValueForBatchAxis;
 
         if (!axis.IsStaticAxis())
             LogicError("Only Static Axes can be converted to a CNTK internal axis index");
@@ -504,25 +511,29 @@ namespace CNTK
         return{ Axis(derivedDynamicAxisName, sourceAxis.IsOrdered()) };
     }
 
+    inline Axis& NormalizeStaticAxis(Axis& axis, size_t rank)
+    {
+        if (axis == Axis::EndStaticAxis())
+            axis = Axis((int)rank);
+        else if (axis.StaticAxisIndex() < 0)
+        {
+            auto normalizedAxis = Axis((int)rank + axis.StaticAxisIndex());
+            if (normalizedAxis.StaticAxisIndex() < 0)
+                InvalidArgument("Axis '%S' is out of bounds for the rank '%zd' it applies to.", axis.AsString().c_str(), rank);
+            else
+                axis = normalizedAxis;
+        }
+        return axis;
+    }
+
     inline Axis& NormalizeStaticAxis(Axis& axis, const NDShape& operandShape)
     {
         if (axis != Axis::AllStaticAxes() && axis != Axis::AllAxes())
         {
             assert(axis.IsStaticAxis());
             assert(operandShape != NDShape::Unknown);
-
-            if (axis == Axis::EndStaticAxis())
-                axis = Axis((int)operandShape.Rank());
-            else if (axis.StaticAxisIndex() < 0)
-            {
-                auto normalizedAxis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
-                if (normalizedAxis.StaticAxisIndex() < 0)
-                    InvalidArgument("Axis '%S' is out of bounds of the operand shape '%S' it applies to.", axis.AsString().c_str(), operandShape.AsString().c_str());
-                else
-                    axis = normalizedAxis;
-            }
+            axis = NormalizeStaticAxis(axis, operandShape.Rank());
         }
-
         return axis;
     }
 
@@ -604,7 +615,7 @@ namespace CNTK
 
         for (size_t i = 0; i < fullyDefinedVarShape.Rank(); ++i)
         {
-            if (fullyDefinedVarShape[i] == NDShape::FreeDimension)
+            if ((fullyDefinedVarShape[i] == NDShape::FreeDimension) || (fullyDefinedVarShape[i] == NDShape::InferredDimension))
                 fullyDefinedVarShape[i] = computationNodeShape.GetDim(i);
             else if (fullyDefinedVarShape[i] != computationNodeShape.GetDim(i))
                 LogicError("Computation node tensor shape '%s' does not match variable shape '%S'.", ((std::string)computationNodeShape).c_str(), fullyDefinedVarShape.AsString().c_str());

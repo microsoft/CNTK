@@ -1,0 +1,55 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+# Temporary directory for storing semantic segmentation data generated
+# from existing image classification data.
+FCN_DATA_DIR=$TEST_RUN_DIR/Data
+
+# For a given data file, convert single label used in image classification
+# to pixelwise labels and ignore mask used in semantic segmentation.
+# - All pixels with value 0 are labeled with class 0.
+# - All pixels with value 255 are labeled with class 1.
+# - Ignore mask has value 1 for all pixels (i.e. no pixels are ignored).
+function edit_data_file
+{
+  local SedCmd="\
+    s/.*|/|/g;\
+    h;\
+    s/0/1 0/g;\
+    s/255/0 1/g;\
+    s/features/labels/g;\
+    G;\
+    x;\
+    s/255/1/g;\
+    s/0/1/g;\
+    s/features/ignoreMask/g;\
+    G;\
+    s/^\(.*\)\n\(.*\)\n\(.*\)/\1\t\2\t\3/"
+  cat $1 | sed -e "$SedCmd" >$2
+}
+
+# Adapt existing training and test data for semantic segmentation.
+function prepare_data
+{
+  echo === Preparing training and test data
+  mkdir $FCN_DATA_DIR >/dev/null 2>&1 || cleanup
+  edit_data_file $TEST_DATA_DIR/Train_cntk_text.txt $FCN_DATA_DIR/Train_cntk_fcn_text.txt || cleanup
+  edit_data_file $TEST_DATA_DIR/Test_cntk_text.txt $FCN_DATA_DIR/Test_cntk_fcn_text.txt || cleanup
+}
+
+# Clean up temporary semantic segmentation data files.
+function cleanup
+{
+  local ExitCode=$?
+  echo === Deleting training and test data
+  rm -rf $FCN_DATA_DIR
+  exit $ExitCode
+}
+
+prepare_data || cleanup
+
+echo === Running training
+# Usage: cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun fcn.cntk
+cleanup

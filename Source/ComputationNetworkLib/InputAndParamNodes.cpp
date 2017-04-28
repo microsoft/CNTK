@@ -569,12 +569,12 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
     const auto& thisShape = GetSampleLayout();
 
     // see where we stand with our shape
-    bool hasMissingDims = thisShape.GetRank() == 0 || thisShape.GetNumElements() == 0;
+    bool hasMissingDims = thisShape.GetNumElements() == 0;
     if (!hasMissingDims) // all there--nothing to infer
         return;
     
     // infer at least one dimension
-    if (otherShape.GetRank() == 0 || otherShape.GetNumElements() == 0)
+    if (otherShape.GetNumElements() == 0)
         return; // LogicError("ValidateInferInputDimsFrom: Inferred dimensions must not be empty.");
 
     if (m_initString.empty())

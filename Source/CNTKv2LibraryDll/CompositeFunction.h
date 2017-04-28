@@ -119,7 +119,7 @@ namespace CNTK
                                                      const std::unordered_map<Variable, Variable>& allPlaceholderReplacements,
                                                      const CNTK::DeviceDescriptor& device);
 
-        static FunctionPtr Deserialize(const Dictionary& dictionary, const CNTK::DeviceDescriptor& device);
+        static FunctionPtr Deserialize(const Dictionary& dictionary, const CNTK::DeviceDescriptor& device, const Internal::UDFDeserializerPtr& deserializer);
 
         virtual const std::wstring& OpName() const override
         {
@@ -335,19 +335,24 @@ namespace CNTK
         // A map from Variable objects to ComputationNode objects in the ComputationNetwork instance that implements 'this' Composite Function
         std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_variableToNodeMap;
 
-        FunctionPtr m_latestFullyDefinedComposite;
         std::unordered_map<Variable, Variable> m_fullyDefinedArgumentsMap;
+        FunctionPtr m_latestFullyDefinedCompositeForCheckedModeValidation;
 
         Microsoft::MSR::CNTK::ComputationNetworkPtr m_computationNetwork;
 
         // Map to keep track of any references to network output/gradient storage handed out so far
         std::vector<PackedValueWeakPtr> m_existingNetworkStorageReferences;
 
-        // The backpropRoots sepecified in the most recent 'Forward' call on 'this' Function.
+        // The backpropRoots specified in the most recent 'Forward' call on 'this' Function.
         // This indicates for which of its roots has 'this' Function retained required intermediate 
         // states from the previos Forward call to be able to backpropagate gradients backwards from in
         // the next 'Backward' call.
         std::unordered_set<Variable> m_currentBackpropRoots;
+
+        // Outputs to evaluate are the list of outputs that the forward pass need to evaluate. m_currentOutputsToEvaluate
+        // will store this list, from the last forward pass call, only in training mode. The reason for that
+        // is to run PostForwardAndBackProp after backprop phase finish.
+        std::vector<Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_currentOutputsToEvaluate;
 
         std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
 

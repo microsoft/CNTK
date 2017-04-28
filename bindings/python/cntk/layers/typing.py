@@ -105,7 +105,7 @@ Example:
     ...     inp = Tensor[32]()   # attempt to create an instance of type Tensor[32]
     ... except TypeError as e:
     ...     print('ERROR: ' + str(e))
-    ERROR: abstract type Tensor[32] cannot be instantiated; use 'input(Tensor[32])' instead
+    ERROR: abstract type Tensor[32] cannot be instantiated; use 'input(**Tensor[32])' instead
 
     >>> # types are not inputs
     >>> try:

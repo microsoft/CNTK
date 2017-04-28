@@ -135,6 +135,9 @@ public:
     // main entry point for forward prop
     void ForwardProp(const ComputationNodeBasePtr rootNode);
 
+    // main entry point for post forward and backward prop
+    void PostForwardAndBackProp(const ComputationNodeBasePtr rootNode);
+
     // main entry point for backprop
     void Backprop(const ComputationNodeBasePtr rootNode);
 
@@ -173,6 +176,14 @@ public:
     {
         TravserseInSortedGlobalEvalOrder(nodes, [](const ComputationNodeBasePtr& node) {
             PARTraversalFlowControlNode::ForwardProp(node, FrameRange(nullptr));
+        });
+    }
+
+    template <class NODESET> // version that takes multiple nodes
+    void PostForwardAndBackProp(const NODESET& nodes)
+    {
+        TravserseInSortedGlobalEvalOrder(nodes, [](const ComputationNodeBasePtr& node) {
+            PARTraversalFlowControlNode::PostForwardAndBackProp(node);
         });
     }
 
@@ -941,6 +952,12 @@ public:
     }
     bool GetTrackGapNaNs() const { return m_environment->trackGapNans; }
 
+    void SetIsV2Library(bool enable)
+    {
+        m_environment->isV2Library = enable;
+    }
+    bool GetIsV2Library() const { return m_environment->isV2Library; }
+
     void SetTraceLevel(int traceLevel)
     {
         m_environment->traceLevel = traceLevel;
@@ -1156,22 +1173,21 @@ protected:
         }
 
         static void ForwardProp(const ComputationNodeBasePtr& node, const FrameRange& fr);
+        static void PostForwardAndBackProp(const ComputationNodeBasePtr& node);
 
         virtual void BeginForwardProp() override {}
         virtual void ForwardProp(const FrameRange&) override;
-        virtual void EndForwardProp() override
-        {
-        }
-        virtual void BeginBackprop() override
-        {
-        }
+        virtual void EndForwardProp() override {}
+
+        virtual void PostForwardAndBackProp() override;
+
+        virtual void BeginBackprop() override {}
         virtual void BackpropTo(const size_t inputIndex, const FrameRange&) override
         {
             NOT_IMPLEMENTED;
         } // ugh, call Backprop() instead
-        virtual void EndBackprop() override
-        {
-        }
+        virtual void EndBackprop() override {}
+
         virtual void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
         virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);
