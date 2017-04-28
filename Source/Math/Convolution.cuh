@@ -260,11 +260,14 @@ __global__ void kROIPoolingForward(const int totalIterations,
         roiData += n * 4;
 
         // roi data is relative to original image size
-        int roiStartW = (int)(    round_(roiData[0] * width));
-        int roiStartH = (int)(    round_(roiData[1] * height));
-        int roiWidth  = (int)(max(round_(roiData[2] * width),  (ElemType)1));
-        int roiHeight = (int)(max(round_(roiData[3] * height), (ElemType)1));
-        
+        int roiStartW = (int)(round_(roiData[0] * 0.0625));
+        int roiStartH = (int)(round_(roiData[1] * 0.0625));
+        int roiEndW   = (int)(round_(roiData[2] * 0.0625));
+        int roiEndH   = (int)(round_(roiData[3] * 0.0625));
+
+        int roiWidth  = max(roiEndW - roiStartW + 1, (int)1);
+        int roiHeight = max(roiEndH - roiStartH + 1, (int)1);
+
         ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
         ElemType winW = (ElemType)roiWidth / (ElemType)pooledWidth;
         

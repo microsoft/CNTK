@@ -614,13 +614,13 @@ class Value(cntk_py.Value):
         return data_type_to_dtype(self.get_data_type())
 
 
-def user_function(user_func):
+def user_function(user_func, name=''):
     '''
     Wraps the passed Function to create a composite representing the
     composite Function graph rooted at the passed root Function.
     '''
     from . import as_composite
-    return as_composite(user_func)
+    return as_composite(user_func, name=name)
 
 
 def asarray(value, dtype=None):
