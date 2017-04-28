@@ -452,6 +452,7 @@ class MyPlusWithNoGradientNeededForOutput(UserFunction):
     def backward(self, state, root_gradients, input_gradients):
         raise ValueError("MyPlusWithNoGradientNeededForOutput does not need gradient for output and backward must not be called")
 
+
 def test_udf_output_needs_no_gradient():
     dim = 2
     x = sequence.input(dim, needs_gradient=True, name='x')
@@ -468,13 +469,19 @@ def test_udf_output_needs_no_gradient():
 
     assert np.allclose(result, [[[6., 8.], [10., 12.]]])
 
+
 def test_native_user_function():
     ops.register_native_user_function('NativeUserTimesFunction', 'Cntk.ExtensibilityExamples-' + C.__version__.rstrip('+'), 'CreateUserTimesFunction')
     dev = cpu()
     x = input((2))
     w = parameter((2, 2), init=np.asarray([[0.5, 2], [-0.5, 1.5]], dtype=np.float32), device=dev)
-    op = ops.native_user_function('NativeUserTimesFunction', [w, x])
+    attributes = {'param_rank' : 2, 'padding' : True}
+    op = ops.native_user_function('NativeUserTimesFunction', [w, x], attributes, 'native_user_times_function')
 
     x_data = NDArrayView.from_dense(np.asarray([[0.1, 0.2], [-0.1, 0.3]], dtype=np.float32), device=dev)
     result = op.eval({x : x_data}, device=dev)
     assert np.allclose(result, [[-0.05, 0.5], [-0.2, 0.25]])
+
+    native_times_primitive = op.find_by_name('native_user_times_function')
+    assert native_times_primitive.attributes == attributes
+ 
