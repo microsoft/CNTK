@@ -542,7 +542,7 @@ def test_layers_convolution_value():
     expected_res = np.sum(model.foo.W.value)
 
     # Compare the center of the res with the sum of the weights
-    np.testing.assert_array_almost_equal(res[0][0][1][1], expected_res, decimal=7, \
+    np.testing.assert_array_almost_equal(res[0][0][1][1], expected_res, decimal=6, \
         err_msg="Error in convolution computation with stride = 1 and zeropad = True")
 
     ##########################################################
@@ -555,7 +555,7 @@ def test_layers_convolution_value():
     expected_res = np.sum(model.foo.W.value)
 
     # Compare the center of the res with the sum of the weights
-    np.testing.assert_array_almost_equal(res[0][0][1][1], expected_res, decimal=7, \
+    np.testing.assert_array_almost_equal(res[0][0][1][1], expected_res, decimal=6, \
         err_msg="Error in convolution computation with stride = 1 and zeropad = True, second invocation")
 
     ##########################################################
