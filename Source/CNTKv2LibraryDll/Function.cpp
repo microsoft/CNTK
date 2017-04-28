@@ -10,6 +10,8 @@
 #include "BlockFunction.h"
 #include "Utils.h"
 #include "UserFunctionFactory.h"
+#include <chrono>
+using namespace std::chrono;
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -174,16 +176,16 @@ namespace CNTK
         NOT_IMPLEMENTED;
     }
 
-    void Function::Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
+    std::vector<int> Function::Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
                              std::unordered_map<Variable, ValuePtr>& gradients,
                              std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
                              const DeviceDescriptor& computeDevice)
     {
         auto gradientRoot = Output();
-        Gradients(arguments, gradientRoot, gradients, outputsToEvaluate, computeDevice);
+        return Gradients(arguments, gradientRoot, gradients, outputsToEvaluate, computeDevice);
     }
 
-    void Function::Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
+    std::vector<int> Function::Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
                              Variable& gradientRoot,
                              std::unordered_map<Variable, ValuePtr>& gradients,
                              std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
@@ -196,8 +198,13 @@ namespace CNTK
         if (outputsToEvaluate.find(gradientRoot) == outputsToEvaluate.end())
             outputs.insert({gradientRoot , nullptr});
 
+        vector<int> result;
+
+        milliseconds start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
         // TODO: Exclude inputs not belonging to 'gradients' from the gradient computation
         auto backPropState = this->Forward(arguments, outputs, computeDevice, {gradientRoot});
+        auto end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        result.push_back((int)end.count() - (int)start.count());
 
         for (auto outputVarValuePair : outputsToEvaluate)
             outputsToEvaluate[outputVarValuePair.first] = outputs[outputVarValuePair.first];
@@ -206,7 +213,11 @@ namespace CNTK
         auto rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(gradientRoot.GetDataType(), gradientRootOutputValue->Shape(), computeDevice), gradientRootOutputValue->Mask());
         rootGradientValue->Data()->SetValue(1.0f);
 
+        start = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
         this->Backward(backPropState, {{gradientRoot, rootGradientValue}}, gradients);
+        end = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        result.push_back((int)end.count() - (int)start.count());
+        return result;
     }
 
     void Function::SetName(const std::wstring& name)

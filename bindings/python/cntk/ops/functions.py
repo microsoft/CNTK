@@ -797,10 +797,12 @@ class Function(cntk_py.Function):
         output_map = {v: None for v in outputs}
         wrt_map = {v: None for v in wrt}
 
+        times = None
+
         if grad_root is None:
-            super(Function, self).gradients(in_var_map, wrt_map, output_map, device)
+            times = super(Function, self).gradients(in_var_map, wrt_map, output_map, device)
         else:
-            super(Function, self).gradients(in_var_map, grad_root, wrt_map, output_map, device)
+            times = super(Function, self).gradients(in_var_map, grad_root, wrt_map, output_map, device)
 
         if as_numpy:
             for k in output_map:
@@ -811,7 +813,7 @@ class Function(cntk_py.Function):
         if len(output_map) == 0:
             return sanitize_variable_value_dict(wrt_map)
         else:
-            return sanitize_variable_value_dict(wrt_map), sanitize_variable_value_dict(output_map)
+            return sanitize_variable_value_dict(wrt_map), sanitize_variable_value_dict(output_map), times
 
     @property
     @typemap
