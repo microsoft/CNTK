@@ -8,9 +8,6 @@ import os
 import re
 import numpy
 
-import cntk as C
-C.cntk_py.reset_random_seed(0)
-
 abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_202_Language_Understanding.ipynb")
 # Runs on GPU only, batch normalization training on CPU is not yet implemented.
