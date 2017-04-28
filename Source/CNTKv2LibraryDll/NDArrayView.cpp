@@ -734,6 +734,7 @@ namespace CNTK
 
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
-    template float NDArrayView::AsScalar<float>() const;
-    template double NDArrayView::AsScalar<double>() const;
+
+    template CNTK_API float NDArrayView::AsScalar<float>() const;
+    template CNTK_API double NDArrayView::AsScalar<double>() const;
 }

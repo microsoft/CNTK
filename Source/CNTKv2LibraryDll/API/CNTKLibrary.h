@@ -811,7 +811,7 @@ namespace CNTK
         /// If the value stored is a scalar, returns it. Otherwise, throws an error.
         ///
         template<typename ElementType>
-        ElementType AsScalar() const;
+        CNTK_API ElementType AsScalar() const;
 
     private:
         // Disallow copy and move construction and assignment
