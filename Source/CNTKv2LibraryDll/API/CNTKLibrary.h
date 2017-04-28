@@ -1643,8 +1643,8 @@ namespace CNTK
 
     private:
         std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
-        const std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData() const;
-        std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData();
+        CNTK_API const std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData() const;
+        CNTK_API std::unordered_map<std::wstring, DictionaryValue>& GetDictionaryData();
         static const size_t s_version = 1;
     };
 
@@ -1715,7 +1715,7 @@ namespace CNTK
     // Forward declarations
     inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes());
     inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name = L"");
+    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name = std::wstring());
 
     ///
     /// Denotes a symbolic entity corresponding to the inputs and outputs of a Function.
@@ -1958,7 +1958,7 @@ private:
     /// Create a Placeholder variable to be used as a temporary/placeholder input to a Function.
     /// All placeholder inputs of a Function must be replaced with non-placeholder Variables before Forward evaluation of the Function.
     ///
-    inline Variable PlaceholderVariable(const std::wstring& name = L"")
+    inline Variable PlaceholderVariable(const std::wstring& name = std::wstring())
     {
         return PlaceholderVariable(NDShape::Unknown, name, Axis::UnknownDynamicAxes());
     }
@@ -1974,7 +1974,7 @@ private:
     ///
     /// Create an 'Input' Variable and specify if gradients are to be computed for this input
     ///
-    inline Variable InputVariable(const NDShape& shape, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name = L"", const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes())
+    inline Variable InputVariable(const NDShape& shape, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name = std::wstring(), const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes())
     {
         return InputVariable(shape, /*isSparse =*/ false, dataType, needsGradient, name, dynamicAxes);
     }
@@ -2030,7 +2030,7 @@ private:
     ///
     /// Create an 'Output' variable
     ///
-    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"")
+    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name = std::wstring())
     {
         return OutputVariable(shape, dataType, dynamicAxes, /*needsGradient =*/ true, name);
     }
@@ -2073,7 +2073,7 @@ private:
         ///
         /// Construct a parameter whose initial contents are a copy of the specified 'value'
         ///
-        explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name = L"")
+        explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name = std::wstring())
             : Parameter(value, name, Internal::GenerateUid(VariableKind::Parameter))
         {}
 
@@ -2083,21 +2083,21 @@ private:
         /// Construct a parameter of specified shape whose contents are initialized with the specified 'initValue'
         ///
         template<typename ElemType>
-        Parameter(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
+        Parameter(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = std::wstring())
             : Parameter(shape, AsDataType<ElemType>(), ConstantInitializer(initValue), device, name)
         {}
 
         ///
         /// Construct a constant of specified shape whose contents are initialized with the specified 'initValue'
         ///
-        Parameter(const NDShape& shape, DataType dataType, double initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
+        Parameter(const NDShape& shape, DataType dataType, double initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = std::wstring())
             : Parameter(shape, dataType, ConstantInitializer(initValue), device, name)
         {}
 
         ///
         /// Construct a constant of specified shape whose contents are initialized using the specified initializer
         ///
-        CNTK_API Parameter(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"");
+        CNTK_API Parameter(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = std::wstring());
 
         ///
         /// DownCast a Variable to a Parameter. Only allowed if the VariableKind is Parameter and throws an exception otherwise.
@@ -2160,7 +2160,7 @@ private:
         ///
         /// Construct a Constant whose initial contents are a copy of the specified value
         ///
-        Constant(const NDArrayViewPtr& value, const std::wstring& name = L"")
+        Constant(const NDArrayViewPtr& value, const std::wstring& name = std::wstring())
             : Constant(value, name, Internal::GenerateUid(VariableKind::Constant))
         {}
 
@@ -2170,14 +2170,14 @@ private:
         /// Construct a constant of specified shape whose contents are initialized with the specified 'initValue'
         ///
         template<typename ElemType>
-        Constant(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
+        Constant(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = std::wstring())
             : Constant(shape, AsDataType<ElemType>(), ConstantInitializer(initValue), device, name)
         {}
 
         ///
         /// Construct a constant of specified shape whose contents are initialized with the specified 'initValue'
         ///
-        Constant(const NDShape& shape, DataType dataType, double initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
+        Constant(const NDShape& shape, DataType dataType, double initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = std::wstring())
             : Constant(shape, dataType, ConstantInitializer(initValue), device, name)
         {}
 
@@ -2230,7 +2230,7 @@ private:
         ///
         /// Construct a constant of specified shape whose contents are initialized using the specified initializer
         ///
-        CNTK_API Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"");
+        CNTK_API Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = std::wstring());
     };
 
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 
@@ -3343,7 +3343,7 @@ namespace CNTK
         ///
         /// Partially compute values that do not depend in Input or Placeholder.
         ///
-        CNTK_API virtual void MemoizeKnowableValue() const = 0;
+        CNTK_API virtual void MemoizeKnowableValue() const { NOT_IMPLEMENTED; }
 
     protected:
         static bool IsArgument(const Variable& var)
@@ -3354,7 +3354,7 @@ namespace CNTK
         ///
         /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
         ///
-        CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
+        CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = std::wstring(), const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
         template <typename FunctionType>
         static void PreorderTraverseFunctions(const FunctionPtr& rootFunction, const FunctionType& functor, bool traverseInsideBlockFunction = false)
@@ -3449,7 +3449,7 @@ namespace CNTK
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
     public:
-        CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"");
+        CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = std::wstring());
 
     private:
         static UserFunctionFactoryPtr s_userFunctionFactory;
@@ -3470,7 +3470,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in elementwise negate operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Negate(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Negate(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Unary negation operator corresponding to the Negate operation
@@ -3483,123 +3483,123 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in elementwise sigmoid operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise tanh operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Tanh(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Tanh(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise sine operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Sin(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Sin(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise cosine operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Cos(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Cos(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise linear rectifier operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr ReLU(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReLU(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise exp operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Exp(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Exp(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise log operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Log(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Log(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise square operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Square(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Square(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise square-root operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Sqrt(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Sqrt(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise round operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Round(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Round(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise floor operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Floor(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Floor(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise ceil operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Ceil(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Ceil(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise abs operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Abs(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Abs(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise reciprocal operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr Reciprocal(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Reciprocal(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in softmax operation on specified tensor input operand
     /// TODO: this Softmax() needs to support specifying the axis
     ///
-    CNTK_API FunctionPtr Softmax(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Softmax(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in hardmax operation on specified tensor input operand
     ///
-    CNTK_API FunctionPtr Hardmax(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Hardmax(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in transpose dimensions operation on specified tensor input operand
     ///
-    CNTK_API FunctionPtr TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name = L"");
+    CNTK_API FunctionPtr TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in transpose operation on the specified 1D or 2D input operand
     ///
-    CNTK_API FunctionPtr Transpose(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Transpose(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the slice operation on specified tensor input operand
     ///
-    CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the random_sample operation on specified sampling weights input vector
     ///
-    CNTK_API FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+    CNTK_API FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the random_sample_inclusion_frequency operation on specified sampling weights input vector
     ///
-    CNTK_API FunctionPtr RandomSampleInclusionFrequency(const Variable& operand, size_t numSamples, bool allowDuplicates, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+    CNTK_API FunctionPtr RandomSampleInclusionFrequency(const Variable& operand, size_t numSamples, bool allowDuplicates, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the dropout operation on specified tensor input operand
     ///
-    CNTK_API FunctionPtr Dropout(const Variable& operand, double dropoutRate, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Dropout(const Variable& operand, double dropoutRate, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the reshape operation on specified tensor input operand
     ///
-    CNTK_API FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the reshape operation on specified tensor input operand
     ///
-    inline FunctionPtr Reshape(const Variable& operand, const NDShape& newShape, const std::wstring& name = L"")
+    inline FunctionPtr Reshape(const Variable& operand, const NDShape& newShape, const std::wstring& name = std::wstring())
     {
         return Reshape(operand, newShape, Axis(0), Axis::EndStaticAxis(), name);
     }
@@ -3607,7 +3607,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in elementwise tensor addition operation with the specified input operands.
     ///
-    CNTK_API FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     ///
     /// Binary addition operator corresponding to the Plus operation
@@ -3620,7 +3620,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in elementwise tensor subtraction operation with the specified input operands.
     ///
-    CNTK_API FunctionPtr Minus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Minus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     ///
     /// Binary minus operator corresponding to the Minus operation
@@ -3632,51 +3632,51 @@ namespace CNTK
 
     /// Create an instance of the CNTK built-in elementwise tensor operation that computes the log of the sum of the exponentials of the specified input operands.
     ///
-    CNTK_API FunctionPtr LogAddExp(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr LogAddExp(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     /// Create an instance of the CNTK built-in elementwise tensor operation that computes the leftOperand raised to the power of the right operand.
     ///
-    CNTK_API FunctionPtr Pow(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Pow(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise multiplication operation on specified tensor input operands.
     ///
-    CNTK_API FunctionPtr ElementTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ElementTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise division operation on specified tensor input operands.
     ///
-    CNTK_API FunctionPtr ElementDivide(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ElementDivide(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise equality comparison operation on specified tensor input operands.
     ///
-    CNTK_API FunctionPtr Equal(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Equal(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise not-equal comparison operation on specified tensor input operands.
     ///
-    CNTK_API FunctionPtr NotEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr NotEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise less than comparison operation on specified tensor input operands.
     ///
-    CNTK_API FunctionPtr Less(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Less(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise less than or equal to comparison operation on specified tensor input operands.
     ///
-    CNTK_API FunctionPtr LessEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr LessEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise greater than comparison operation on specified tensor input operands.
     ///
-    CNTK_API FunctionPtr Greater(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Greater(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise greater than or equal to comparison operation on specified tensor input operands.
     ///
-    CNTK_API FunctionPtr GreaterEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr GreaterEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in tensor multiplication operation with the specified input operands.
@@ -3691,14 +3691,14 @@ namespace CNTK
         TimesReduceSequenceAxisWithoutInferredInputRank = -2, // reduce sequence axis. Currently only support cases like (m x k) x (k) -> (m) for sequences
     };
 
-    CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, int inferInputRankToMap, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, int inferInputRankToMap, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in tensor multiplication operation with the specified input operands.
     /// TODO: Specify the constraints on the shapes of the operands.
     /// TODO: Document inferInputRankToMap
     ///
-    inline FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, const std::wstring& name = L"")
+    inline FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, const std::wstring& name = std::wstring())
     {
         return Times(leftOperand, rightOperand, outputRank, TimesNoInferredInputRank, name);
     }
@@ -3708,7 +3708,7 @@ namespace CNTK
     /// TODO: Specify the constraints on the shapes of the operands.
     /// TODO: Document inferInputRankToMap
     ///
-    inline FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"")
+    inline FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring())
     {
         return Times(leftOperand, rightOperand, /*outputRank =*/ 1, name);
     }
@@ -3718,14 +3718,14 @@ namespace CNTK
     /// and the specified right operand. Only accepts left operands of ranks 1 or 2.
     /// TODO: Specify the constraints on the shapes of the operands.
     ///
-    CNTK_API FunctionPtr TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, const std::wstring& name = L"");
+    CNTK_API FunctionPtr TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in matrix multiplication operation with the transpose of the left input operand
     /// and the specified right operand. Only accepts left operands of ranks 1 or 2.
     /// TODO: Specify the constraints on the shapes of the operands.
     ///
-    inline FunctionPtr TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"")
+    inline FunctionPtr TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring())
     {
         return TransposeTimes(leftOperand, rightOperand, /*outputRank =*/ 1, name);
     }
@@ -3734,37 +3734,37 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in operation to compute the cosine distance for the specified input operands.
     ///
-    CNTK_API FunctionPtr CosineDistance(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr CosineDistance(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation to compute the cosine distance with negative samplesfor the specified input operands.
     ///
-    CNTK_API FunctionPtr CosineDistanceWithNegativeSamples(const Variable& leftOperand, const Variable& rightOperand, size_t shiftWindow, size_t numberOfNegativeSamples, const std::wstring& name = L"");
+    CNTK_API FunctionPtr CosineDistanceWithNegativeSamples(const Variable& leftOperand, const Variable& rightOperand, size_t shiftWindow, size_t numberOfNegativeSamples, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation to compute binary cross-entropy for specified input operands.
     ///
-    CNTK_API FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
+    CNTK_API FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation to compute weighted binary cross-entropy for specified input operands.
     ///
-    CNTK_API FunctionPtr WeightedBinaryCrossEntropy(const Variable& prediction, const Variable& targets, const Variable& weights, const std::wstring& name = L"");
+    CNTK_API FunctionPtr WeightedBinaryCrossEntropy(const Variable& prediction, const Variable& targets, const Variable& weights, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation to compute squared-error for specified input operands.
     ///
-    CNTK_API FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
+    CNTK_API FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation to compute cross-entropy with softmax for specified input operands.
     ///
-    CNTK_API FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation to compute cross-entropy with softmax for specified input operands.
     ///
-    inline FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name = L"")
+    inline FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name = std::wstring())
     {
         return CrossEntropyWithSoftmax(prediction, labels, Axis(0), name);
     }
@@ -3772,28 +3772,28 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in operation for computing the edit distance error for specified operands.
     ///
-    CNTK_API FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float substitutionPenalty, float deletionPenalty, float insertionPenalty, bool squashInputs, const std::vector<size_t>& tokensToIgnore, const std::wstring& name = L"");
+    CNTK_API FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float substitutionPenalty, float deletionPenalty, float insertionPenalty, bool squashInputs, const std::vector<size_t>& tokensToIgnore, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation for computing the forwardbackward for specified operands.
     ///
-    CNTK_API FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation for computing the labels to graph for input operands.
     ///
-    CNTK_API FunctionPtr LabelsToGraph(const Variable& labels, const std::wstring& name = L"");
+    CNTK_API FunctionPtr LabelsToGraph(const Variable& labels, const std::wstring& name = std::wstring());
 
 
     ///
     /// Create an instance of the CNTK built-in operation for computing the classification prediction error for specified operands.
     ///
-    CNTK_API FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const Axis& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const Axis& axis, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation for computing the classification prediction error for specified operands.
     ///
-    inline FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const std::wstring& name = L"")
+    inline FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const std::wstring& name = std::wstring())
     {
         return ClassificationError(prediction, labels, topN, Axis(0), name);
     }
@@ -3801,7 +3801,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in operation for computing the classification prediction error for specified operands.
     ///
-    inline FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name = L"")
+    inline FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name = std::wstring())
     {
         return ClassificationError(prediction, labels, /*topN =*/ 1, axis, name);
     }
@@ -3809,7 +3809,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in operation for computing the classification prediction error for specified operands.
     ///
-    inline FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name = L"")
+    inline FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name = std::wstring())
     {
         return ClassificationError(prediction, labels, Axis(0), name);
     }
@@ -3817,25 +3817,25 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in LambdaRank loss an effective proxy for optimizing the NDCG metric
     ///
-    CNTK_API FunctionPtr LambdaRank(const Variable& prediction, const Variable& gains, const Variable& groupId, const std::wstring& name = L"");
+    CNTK_API FunctionPtr LambdaRank(const Variable& prediction, const Variable& gains, const Variable& groupId, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation for evaluating the NDCG at 1 metric
     ///
-    CNTK_API FunctionPtr NDCGAt1(const Variable& prediction, const Variable& gains, const Variable& groupId, const std::wstring& name = L"");
+    CNTK_API FunctionPtr NDCGAt1(const Variable& prediction, const Variable& gains, const Variable& groupId, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation for getting the past value along the lone dynamic axis of the specified operand.
     /// Throws an exception of the operand has more than one dynamic axis.
     ///
-    CNTK_API FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset = 1, const std::wstring& name = L"");
+    CNTK_API FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset = 1, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation for getting the past value along the lone dynamic axis of the specified operand.
     /// This overload uses an initial state value of 0.
     /// Throws an exception of the operand has more than one dynamic axis.
     ///
-    inline FunctionPtr PastValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"")
+    inline FunctionPtr PastValue(const Variable& operand, size_t offset = 1, const std::wstring& name = std::wstring())
     {
         static const auto defaultInitialState = Constant::Scalar(0.0f);
         return PastValue(operand, defaultInitialState, offset, name);
@@ -3845,60 +3845,60 @@ namespace CNTK
     /// Create an instance of the CNTK built-in operation for getting the future value along the lone dynamic axis of the specified operand.
     /// Throws an exception of the operand has more than one dynamic axis.
     ///
-    CNTK_API FunctionPtr FutureValue(const Variable& operand, const Variable& initialState, size_t offset = 1, const std::wstring& name = L"");
+    CNTK_API FunctionPtr FutureValue(const Variable& operand, const Variable& initialState, size_t offset = 1, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operation for getting the future value along the lone dynamic axis of the specified operand.
     /// This overload uses an initial state value of 0.
     /// Throws an exception of the operand has more than one dynamic axis.
     ///
-    inline FunctionPtr FutureValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"")
+    inline FunctionPtr FutureValue(const Variable& operand, size_t offset = 1, const std::wstring& name = std::wstring())
     {
         static const auto defaultInitialState = Constant::Scalar(0.0f);
         return FutureValue(operand, defaultInitialState, offset, name);
     }
 
-    CNTK_API FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in LogSum reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceLogSum(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceLogSum(const Variable& operand, const Axis& axis, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in Mean reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceMean(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceMean(const Variable& operand, const Axis& axis, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in Max reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceMax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceMax(const Variable& operand, const Axis& axis, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in Min reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceMin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceMin(const Variable& operand, const Axis& axis, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in Prod reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceProd(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceProd(const Variable& operand, const Axis& axis, const std::wstring& name = std::wstring());
 
     ///
     /// Per dimension mean-variance normalization of the specified input operand.
     ///
-    CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const Variable& mean, const Variable& invStdDev, const std::wstring& name = L"");
+    CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const Variable& mean, const Variable& invStdDev, const std::wstring& name = std::wstring());
 
     ///
     /// Per dimension mean-variance normalization of the specified input operand.
     ///
-    inline FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name = L"")
+    inline FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name = std::wstring())
     {
         Constant meanVar(mean);
         Constant invStdDevVar(invStdDev);
@@ -3915,7 +3915,7 @@ namespace CNTK
                                      const std::vector<bool>& sharing = { true },
                                      const std::vector<bool>& autoPadding = { true },
                                      size_t maxTempMemSizeInSamples = 0, 
-                                     const std::wstring& name = L"");
+                                     const std::wstring& name = std::wstring());
 
     ///
     /// Convolution transpose
@@ -3927,12 +3927,12 @@ namespace CNTK
         const std::vector<bool>& autoPadding = { true },
         const NDShape& outputShape = { 0 },
         size_t maxTempMemSizeInSamples = 0,
-        const std::wstring& name = L"");
+        const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in ROI pooling operation on specified tensor input operands with the specified output shape
     ///
-    CNTK_API FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name = std::wstring());
 
     ///
     /// TODO:
@@ -3953,7 +3953,7 @@ namespace CNTK
                                  const std::vector<bool>& autoPadding = {false},
                                  const bool ceilOutDim = false,
                                  const bool includePad = false,
-                                 const std::wstring& name = L"");
+                                 const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in Unpooling operation on specified tensor input operands with the specified type and shape
@@ -3964,7 +3964,7 @@ namespace CNTK
                                    const NDShape& UnpoolingWindowShape,
                                    const NDShape& strides = { 1 },
                                    const std::vector<bool>& autoPadding = { false },
-                                   const std::wstring& name = L"");
+                                   const std::wstring& name = std::wstring());
 
     ///
     /// TODO:
@@ -3981,26 +3981,26 @@ namespace CNTK
                                             double blendTimeConstant = 0,
                                             double epsilon = 0.00001,
                                             bool useCuDNNEngine = true,
-                                            const std::wstring& name = L"");
+                                            const std::wstring& name = std::wstring());
 
     /// Create an instance of the CNTK built-in OptimizedRNNStack operation on specified input operands
     ///
-    CNTK_API FunctionPtr OptimizedRNNStack(const Variable& operand, const Variable& weights, size_t hiddenSize, size_t numLayers, bool bidirectional = false, const std::wstring& recurrentOp = L"lstm", const std::wstring& name = L"");
+    CNTK_API FunctionPtr OptimizedRNNStack(const Variable& operand, const Variable& weights, size_t hiddenSize, size_t numLayers, bool bidirectional = false, const std::wstring& recurrentOp = L"lstm", const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise clip operation on the tensor operand
     ///
-    CNTK_API FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise choice operation using a condition tensor for specified tensor operands.
     ///
-    CNTK_API FunctionPtr ElementSelect(const Variable& condition, const Variable& thenOperand, const Variable& elseOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ElementSelect(const Variable& condition, const Variable& thenOperand, const Variable& elseOperand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in splice operation to splice together all the specified tensor operands into a single output tensor
     ///
-    CNTK_API FunctionPtr Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name = std::wstring());
 
     ///
     /// Create a new Function instance which just combines the outputs of the specified list of 'operands' Functions such that the 'Outputs' of the 
@@ -4008,12 +4008,12 @@ namespace CNTK
     /// E.g. When creating a classification model, typically the CrossEntropy loss Function and the ClassificationError Function comprise the two roots
     /// of the computation graph which can be "Combine"d to create a single Function with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
     ///
-    CNTK_API FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name = std::wstring());
 
     ///
     /// Creates a new Function instance which is just an alias of the specified operand.
     ///
-    CNTK_API FunctionPtr Alias(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Alias(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Creates a Block Function that encapsulates a composite to create an opaque Function object that
@@ -4024,7 +4024,7 @@ namespace CNTK
     ///
     /// Creates a new Function instance which output its input as it is and previent any gradient contribution from its output. 
     ///
-    CNTK_API FunctionPtr StopGradient(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr StopGradient(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Assign the value in operand to ref and return the new value, ref need to be the same layout as operand.
@@ -4034,98 +4034,98 @@ namespace CNTK
     /// During inference the value of ref wull be updated after the forward pass and during training the value
     /// of ref will be updated after backprop. 
     ///
-    CNTK_API FunctionPtr Assign(Variable& ref, const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Assign(Variable& ref, const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Creates a composite Function that has the specified rootFunction as its root.
     /// The composite denotes a higher-level Function encapsulating the entire graph
     /// of Functions underlying the specified rootFunction.
     ///
-    CNTK_API FunctionPtr AsComposite(const FunctionPtr& rootFunction, const std::wstring& name = L"");
+    CNTK_API FunctionPtr AsComposite(const FunctionPtr& rootFunction, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise exponential linear unit operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr ELU(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ELU(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise leaky linear rectifier operation with the specified input operand.
     ///
-    CNTK_API FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise parametric rectified linear Unit operation 
     /// with the specified input operand and learning parameter alpha.
     ///
-    CNTK_API FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise softplus operation 
     ///
-    CNTK_API FunctionPtr Softplus(const Variable& operand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Softplus(const Variable& operand, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in argmax operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in argmin on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
     ///
-    CNTK_API FunctionPtr ToSequence(const Variable& operand, const std::wstring& sequenceAxisNamePrefix, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ToSequence(const Variable& operand, const std::wstring& sequenceAxisNamePrefix, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
     /// This overload allows specifying an additional operand containing the lengths of individual sequences
     ///
-    CNTK_API FunctionPtr ToSequence(const Variable& operand, const Variable& sequenceLengths, const std::wstring& sequenceAxisNamePrefix, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ToSequence(const Variable& operand, const Variable& sequenceLengths, const std::wstring& sequenceAxisNamePrefix, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
     /// This overload allows specifying an additional 'dynamicAxesLike' operand which is used to obtain the lengths of the
     /// generated sequences; the dynamic axes of the generated sequence are required to match the dynamic axes of the 'dynamicAxesLike' operand.
     ///
-    CNTK_API FunctionPtr ToSequenceLike(const Variable& operand, const Variable& dynamicAxesLike, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ToSequenceLike(const Variable& operand, const Variable& dynamicAxesLike, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in operator for reconciling the dynamic axes of the specified tensor operands.
     /// The output of the returned Function has the sample layout of the left operand and the dynamic axes of the axesAsOperand.
     /// It also performs a runtime check to ensure that the  dynamic axes layouts of the 2 operands indeed match.
     ///
-    CNTK_API FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name = std::wstring());
 
     namespace Sequence
     {
-        CNTK_API FunctionPtr IsFirst(const Variable& operand, const std::wstring& name = L"");
-        CNTK_API FunctionPtr IsLast(const Variable& operand, const std::wstring& name = L"");
+        CNTK_API FunctionPtr IsFirst(const Variable& operand, const std::wstring& name = std::wstring());
+        CNTK_API FunctionPtr IsLast(const Variable& operand, const std::wstring& name = std::wstring());
 
-        CNTK_API FunctionPtr Slice(const Variable& operand, int beginIndex, int endIndex, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Slice(const Variable& operand, int beginIndex, int endIndex, const std::wstring& name = std::wstring());
 
         ///
         /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the operands lone dynamic sequence axis
         ///
-        CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name = L"");
+        CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name = std::wstring());
 
-        CNTK_API FunctionPtr ReduceMax(const Variable& operand, const std::wstring& name = L"");
+        CNTK_API FunctionPtr ReduceMax(const Variable& operand, const std::wstring& name = std::wstring());
 
-        CNTK_API FunctionPtr Softmax(const Variable& operand, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Softmax(const Variable& operand, const std::wstring& name = std::wstring());
 
-        CNTK_API FunctionPtr First(const Variable& operand, const std::wstring& name = L"");
-        CNTK_API FunctionPtr Last(const Variable& operand, const std::wstring& name = L"");
+        CNTK_API FunctionPtr First(const Variable& operand, const std::wstring& name = std::wstring());
+        CNTK_API FunctionPtr Last(const Variable& operand, const std::wstring& name = std::wstring());
 
-        CNTK_API FunctionPtr Where(const Variable& condition, const std::wstring& name = L"");
-        CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
-        CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Where(const Variable& condition, const std::wstring& name = std::wstring());
+        CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::wstring& name = std::wstring());
+        CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = std::wstring());
 
-        CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
-        CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::wstring& name = std::wstring());
+        CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = std::wstring());
 
-        CNTK_API FunctionPtr BroadcastAs(const Variable& operand, const Variable& broadcastAs, const std::wstring& name = L"");
+        CNTK_API FunctionPtr BroadcastAs(const Variable& operand, const Variable& broadcastAs, const std::wstring& name = std::wstring());
 
         ///
         /// Create an instance of the CNTK built-in operator for unpacking the specified sequence operand along 
@@ -4133,7 +4133,7 @@ namespace CNTK
         /// If supressMaskOutput is false, the returned Function has 2 outputs; viz. the unpacked non-sequence data and a mask
         /// denoting the gaps in the unpacked output due to differences across lengths of the sequences in the operand.
         ///
-        CNTK_API FunctionPtr Unpack(const Variable& operand, double paddingValue, bool supressMaskOutput, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Unpack(const Variable& operand, double paddingValue, bool supressMaskOutput, const std::wstring& name = std::wstring());
     }
 
     ///

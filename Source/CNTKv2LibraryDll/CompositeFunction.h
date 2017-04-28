@@ -69,7 +69,7 @@ namespace CNTK
         }
 
     public:
-        static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
+        static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = std::wstring(), const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
         {
             std::unordered_set<FunctionPtr> visitedFunctions;
 
