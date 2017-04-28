@@ -327,7 +327,7 @@ def test(test_data, model_path, config_file):
         num_batch += 1
         end_time = time.time()
         print("Tested {} batches ({:.1f} seq / second), F1 {:.4f}, EM {:.4f}".format(num_batch, batch_size / (end_time - start_time), f1_sum / num_seq, em_sum / num_seq))
-                
+
 if __name__=='__main__':
     # default Paths relative to current python file.
     abs_path   = os.path.dirname(os.path.abspath(__file__))

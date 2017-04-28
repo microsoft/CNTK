@@ -7,7 +7,6 @@ import numpy as np
 word_count_threshold = data_config['word_count_threshold']
 char_count_threshold = data_config['char_count_threshold']
 word_size = data_config['word_size']
-max_query_len = data_config['max_query_len']
 
 sanitize = str.maketrans({"|": None, "\n": None})
 tsvs = 'train', 'dev', 'val'
@@ -75,8 +74,6 @@ def tsv_iter(line, vocab, chars, is_test=False, misc={}):
     ctokens = context.split(' ')
 
     qtokens = query.split(' ')
-    if len(qtokens) > max_query_len:
-        raise ValueError('input query exceeds max_query_len: %d' % len(qtokens))
 
     #replace EMPTY_TOKEN with ''
     ctokens = [t if t != EMPTY_TOKEN else '' for t in ctokens]

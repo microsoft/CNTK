@@ -4,6 +4,9 @@ from helpers import *
 import pickle
 import importlib
 import os
+import crosstalk
+import crosstalk_cntk as crct
+_ci = crct.instance
 
 class PolyMath:
     def __init__(self, config_file):
@@ -13,7 +16,6 @@ class PolyMath:
         self.word_count_threshold = data_config['word_count_threshold']
         self.char_count_threshold = data_config['char_count_threshold']
         self.word_size = data_config['word_size']
-        self.max_query_len = data_config['max_query_len']
         self.abs_path = os.path.dirname(os.path.abspath(__file__))
         pickle_file = os.path.join(self.abs_path, data_config['pickle_file'])
 
@@ -44,7 +46,7 @@ class PolyMath:
         conv_out = C.layers.Sequential([
             C.layers.Embedding(self.char_emb_dim),
             C.layers.Dropout(self.dropout),
-            C.layers.Convolution2D((5,self.char_emb_dim), self.convs, activation=C.relu, init=C.glorot_uniform(), bias=True, init_bias=0)])(x)
+            C.layers.Convolution2D((5,self.char_emb_dim), self.convs, activation=C.relu, init=C.glorot_uniform(), bias=True, init_bias=0, name='charcnn_conv')])(x)
         return C.reduce_max(conv_out, axis=1) # workaround cudnn failure in GlobalMaxPooling
 
     def embed(self):
@@ -57,7 +59,7 @@ class PolyMath:
                 if word in self.vocab:
                     npglove[self.vocab[word],:] = np.asarray([float(p) for p in parts[1:]])
         glove = C.constant(npglove)
-        nonglove = C.parameter(shape=(len(self.vocab) - self.wg_dim, self.hidden_dim), init=C.glorot_uniform())
+        nonglove = C.parameter(shape=(len(self.vocab) - self.wg_dim, self.hidden_dim), init=C.glorot_uniform(), name='TrainableE')
         
         def func(wg, wn):
             return C.times(wg, glove) + C.times(wn, nonglove)
@@ -79,10 +81,10 @@ class PolyMath:
         # todo GlobalPooling/reduce_max should have a keepdims default to False
         embedded = C.splice(
             C.reshape(self.charcnn(input_chars), self.convs),
-            self.embed()(input_glove_words, input_nonglove_words))
+            self.embed()(input_glove_words, input_nonglove_words), name='splice_embed')
         highway = HighwayNetwork(dim=2*self.hidden_dim, highway_layers=self.highway_layers)(embedded)
         highway_drop = C.layers.Dropout(self.dropout)(highway)
-        processed = OptimizedRnnStack(self.hidden_dim, bidirectional=True, use_cudnn=self.use_cudnn)(highway_drop)
+        processed = OptimizedRnnStack(self.hidden_dim, bidirectional=True, use_cudnn=self.use_cudnn, name='input_rnn')(highway_drop)
         
         qce = C.one_hot(qc_ph, num_classes=self.c_dim, sparse_output=self.use_sparse)
         cce = C.one_hot(cc_ph, num_classes=self.c_dim, sparse_output=self.use_sparse)
@@ -101,11 +103,7 @@ class PolyMath:
         c_processed = C.placeholder_variable(shape=(2*self.hidden_dim,))
 
         #convert query's sequence axis to static
-        qvw, qvw_mask = C.layers.PastValueWindow(self.max_query_len, C.Axis.new_leading_axis(), go_backwards=True)(q_processed).outputs
-
-        #qvw_c = C.reduce_sum(qvw, 1)
-        #qvw_c = print_node(qvw_c)
-        #qvw = C.times(qvw_c, np.ones((1,200))) + qvw
+        qvw, qvw_mask = C.sequence.unpack(q_processed, padding_value=0).outputs
 
         # This part deserves some explanation
         # It is the attention layer
@@ -119,12 +117,12 @@ class PolyMath:
         att_bias = C.parameter(shape=(), init=0)
 
         wh = C.times (c_processed, ws1)
-        wu = C.reshape(C.times (qvw, ws2), (self.max_query_len,))
-        whu = C.times_transpose(c_processed, C.sequence.broadcast_as(C.element_times (qvw, ws3), c_processed))
+        wu = C.reshape(C.times (qvw, ws2), (-1,))
+        whu = C.reshape(C.reduce_sum(c_processed * C.sequence.broadcast_as(qvw * ws3, c_processed), axis=1), (-1,))
         S = wh + whu + C.sequence.broadcast_as(wu, c_processed) + att_bias
         # mask out values outside of Query, and fill in gaps with -1e+30 as neutral value for both reduce_log_sum_exp and reduce_max
-        qvw_mask_expanded = C.sequence.broadcast_as(C.reshape(qvw_mask, (self.max_query_len,)), c_processed)
-        S = C.element_select(qvw_mask_expanded, S, C.constant(-1e+30, S.shape))
+        qvw_mask_expanded = C.sequence.broadcast_as(qvw_mask, c_processed)
+        S = C.element_select(qvw_mask_expanded, S, C.constant(-1e+30))
         q_attn = C.reshape(C.softmax(S), (-1,1))
         #q_attn = print_node(q_attn)
         c2q = C.reshape(C.reduce_sum(C.sequence.broadcast_as(qvw, q_attn) * q_attn, axis=0),(-1))
@@ -151,7 +149,7 @@ class PolyMath:
     def modeling_layer(self, attention_context):
         att_context = C.placeholder_variable(shape=(8*self.hidden_dim,))
         #modeling layer
-		# todo: use dropout in optimized_rnn_stack from cudnn once API exposes it
+        # todo: use dropout in optimized_rnn_stack from cudnn once API exposes it
         mod_context = C.layers.Sequential([
             C.layers.Dropout(self.dropout),
             OptimizedRnnStack(self.hidden_dim, bidirectional=True, use_cudnn=self.use_cudnn),

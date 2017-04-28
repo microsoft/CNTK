@@ -2,7 +2,6 @@ data_config = {
     'word_size' : 16,
     'word_count_threshold' : 10,
     'char_count_threshold' : 50,
-    'max_query_len' : 65,
     'pickle_file' : 'vocabs.pkl',
 }
 
@@ -27,7 +26,7 @@ training_config = {
     #'train_data'          : 'train.tsv',
     'val_data'          : 'val.ctf',
     'val_interval'      : 1,       # interval in epochs to run validation
-    'stop_after'        : 3,      # num epochs to stop if no CV improvement
+    'stop_after'        : 3,       # num epochs to stop if no CV improvement
     'minibatch_seqs'    : 16,      # num sequences of minibatch, when using tsv reader, per worker
     'distributed_after' : 0,       # num sequences after which to start distributed training
 }
