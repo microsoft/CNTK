@@ -271,6 +271,21 @@ UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, siz
     });
 }
 
+//function<pair<Variable,Variable>(Variable, Variable)> CreateCriterionFunction(UnaryModel model)
+BinaryModel CreateCriterionFunction(UnaryModel model)
+{
+    return [=](Variable features, Variable labels)
+    {
+        let z = model(features);
+
+        //let loss   = CNTK::CrossEntropyWithSoftmax(z, labels);
+        let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(labels, z));
+        //let metric = CNTK::ClassificationError    (z, labels);
+        return loss;
+        //return make_pair(loss, metric);
+    };
+}
+
 // SequenceClassification.py
 UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
@@ -401,22 +416,7 @@ BinarySequenceModel CreateModelFunctionS2SAtt(size_t numOutputClasses, size_t em
             state = decode(encoded, state, prevOut);
             out[t] = outProj(state);
         }
-        return encoded;
-    };
-}
-
-//function<pair<Variable,Variable>(Variable, Variable)> CreateCriterionFunction(UnaryModel model)
-BinaryModel CreateCriterionFunction(UnaryModel model)
-{
-    return [=](Variable features, Variable labels)
-    {
-        let z = model(features);
-
-        //let loss   = CNTK::CrossEntropyWithSoftmax(z, labels);
-        let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(labels, z));
-        //let metric = CNTK::ClassificationError    (z, labels);
-        return loss;
-        //return make_pair(loss, metric);
+        return out;
     };
 }
 
@@ -455,8 +455,8 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     const wstring trainingCTFPath = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf";
 
     // static model and criterion function
-    auto model_fn     = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
-    auto criterion_fn = CreateCriterionFunction(model_fn);
+    //auto model_fn     = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
+    //auto criterion_fn = CreateCriterionFunction(model_fn);
 
     // dybamic model and criterion function
     auto d_model_fn     = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim, device);
@@ -481,13 +481,13 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto features = InputVariable({ inputDim },         false/*true*/ /*isSparse*/, DataType::Float, featuresName);
     auto labels   = InputVariable({ numOutputClasses }, false/*useSparseLabels*/,   DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
 
-    auto criterion = criterion_fn(features, labels);
-    auto loss   = criterion;
-    //auto metric = criterion.second;
-    
-    // train
-    auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
-    auto trainer = CreateTrainer(nullptr, loss, loss/*metric*/, { learner });
+    //auto criterion = criterion_fn(features, labels);
+    //auto loss   = criterion;
+    ////auto metric = criterion.second;
+    //
+    //// train
+    //auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
+    //auto trainer = CreateTrainer(nullptr, loss, loss/*metric*/, { learner });
 
     const size_t minibatchSize = 200;
     for (size_t repeats = 0; true; repeats++)
@@ -553,7 +553,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             //fprintf(stderr, "%.6f\n", mbLoss.Value()->AsScalar<float>() / minibatchData[featureStreamInfo].numberOfSequences);
         }
 #endif
-#if 1
+#if 0
         // static CNTK
         trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
         double crit = trainer->PreviousMinibatchLossAverage();
