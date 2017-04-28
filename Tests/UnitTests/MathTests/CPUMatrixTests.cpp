@@ -985,6 +985,47 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixOneHot, RandomSeedFixture)
     BOOST_CHECK(dirty_m.IsEqualTo(dirtyExpect, 1e-6));
 }
 
+BOOST_FIXTURE_TEST_CASE(CPUMatrixScatterToIndices, RandomSeedFixture)
+{
+    const size_t row_elements = 2;
+
+    DMatrix m0(2, 2);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(1, 0) = 2;
+    m0(1, 1) = 4;
+
+    DMatrix m1(row_elements, 6);
+    m1(0, 1) = m1(1, 1) = 4;
+    m1(0, 2) = m1(1, 2) = 3;
+    m1(0, 3) = m1(1, 3) = 2;
+    m1(0, 4) = m1(1, 4) = 1;
+
+    DMatrix m3(4, 2);
+    m3(0, 0) = 1;
+    m3(1, 0) = 2;
+    m3(2, 0) = 3;
+    m3(3, 0) = 4;
+    m3(0, 1) = 5;
+    m3(1, 1) = 6;
+    m3(2, 1) = 7;
+    m3(3, 1) = 8;
+
+    m1.ScatterToIndices(m3, m0, row_elements);
+
+    DMatrix expect(row_elements, 6);
+    expect(0, 1) = 5;
+    expect(1, 1) = 6;
+    expect(0, 2) = 11;
+    expect(1, 2) = 13;
+    expect(0, 3) = 2;
+    expect(1, 3) = 2;
+    expect(0, 4) = 8;
+    expect(1, 4) = 9;
+
+    BOOST_CHECK(m1.IsEqualTo(expect, 1e-6));
+}
+
 BOOST_FIXTURE_TEST_CASE(CPUMatrixGatherFromTarget, RandomSeedFixture)
 {
     const size_t row_elements = 2;

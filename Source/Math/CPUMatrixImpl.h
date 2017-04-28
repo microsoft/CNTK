@@ -675,19 +675,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     // Scatter may add more than one source column to the same target, so we must pre-scale with beta, and then just keep adding.
     Scale(beta, us); // if beta is 0, then this will be a memset()
 
-    // race-condition consideration: If idx[] references the same target column multiple times, this can have a race condition,
-    // and hence cannot use parallelism.
-//#pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
-    foreach_column(jIn, a)
-    {
-        auto jOutF = idx(0, jIn);           // this is the column we copy/add into
-        if (std::isnan(jOutF) || jOutF < 0) // negative index means gap
-            continue;
-        size_t jOut = (size_t)jOutF;
-        if (jOut >= GetNumCols())
-            InvalidArgument("DoGatherColumnsOf: Map out of bounds.");
-        ScaleAndAddColumn(/*beta=*/(ElemType)1, &us(0, jOut), &a(0, jIn), us.GetNumRows(), alpha);
-    }
+    ScatterValues(idx.Data(), a.Data(), us.Data(), (ElemType)1, alpha, idx.GetNumCols(), a.GetNumRows(), GetNumCols(), idx.GetNumRows());
 
     return *this;
 }
@@ -3006,39 +2994,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemT
     ElemType* valueBufPtr = values.Data();
     ElemType* buffer = Data();
     
-    std::unordered_map<ElemType, vector<size_t> > indicesHash;
-    for (size_t i = 0; i < indices.GetNumElements(); i++)
-    {
-        auto it = indicesHash.find(indicesBufPtr[i]);
-        if (it == indicesHash.end())
-        {
-            indicesHash.insert({indicesBufPtr[i], vector<size_t>({i})});
-        }
-        else
-        {
-            indicesHash[indicesBufPtr[i]].push_back(i);
-        }
-    }
-
-#pragma omp parallel
-    {
-        size_t count = 0;
-        int ithread = omp_get_thread_num();
-        int nthread = omp_get_num_threads();
-        for (auto it = indicesHash.begin(); it != indicesHash.end(); ++it, count++)
-        {
-            if (count % nthread != ithread)
-                continue;
-            auto index = (size_t)(it->first) * row_elements;
-            // loop all the values with same index in the same thread
-            for (auto lIt = it->second.begin(); lIt != it->second.end(); ++lIt)
-            {
-                auto offset = *lIt * row_elements;
-                for (int j = 0; j < row_elements; j++)
-                    buffer[index + j] += valueBufPtr[offset + j];
-            }
-        }
-    }
+    ScatterValues(indicesBufPtr, valueBufPtr, buffer, (ElemType)1, (ElemType)1, indices.GetNumElements(), row_elements, this->GetNumCols());
 
     return *this;
 }
@@ -7240,6 +7196,37 @@ void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseO
                 break;
             default:
                 LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)regularOpDims.size());
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType beta, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step)
+{
+    if (!indices || !value || !data)
+        LogicError("ScatterValues: input data is null.");
+
+#pragma omp parallel
+    {
+        int ithread = omp_get_thread_num();
+        int nthread = omp_get_num_threads();
+        for (auto i = 0; i < num_indices; i++)
+        {
+            auto col_r = indices[i * indices_step];
+            if (std::isnan(col_r) || col_r < 0)
+                continue;
+            auto col = (size_t)col_r;
+            //ignore the elements that is not partitioned into this thread
+            if (col % nthread != ithread)
+                continue;
+            
+            if (col >= cols)
+                InvalidArgument("ScatterValues: Indices map out of bounds. %ld >= %ld", (long int)col, (long int)cols);
+
+            auto index = col * rows;
+            auto offset = i * rows;
+            for (auto j = 0; j < rows; j++)
+                data[index + j] = beta * data[index + j] + alpha * value[offset + j];
         }
     }
 }

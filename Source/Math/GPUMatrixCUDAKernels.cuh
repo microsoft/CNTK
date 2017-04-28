@@ -5629,11 +5629,11 @@ __global__ void _gatherFromTarget(ElemType *indices,
 
 template<class ElemType>
 __global__ void _scatterToIndices(ElemType *indices,
-                                         ElemType *value,
-                                         ElemType *buffer,
-                                         size_t num_row_elements,
-                                         size_t num_indices,
-                                         CUDA_LONG num_elements)
+                                  ElemType *value,
+                                  ElemType *buffer,
+                                  size_t num_row_elements,
+                                  size_t num_indices,
+                                  CUDA_LONG num_elements)
 {
     const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < num_elements)

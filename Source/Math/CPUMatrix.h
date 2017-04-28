@@ -546,6 +546,8 @@ protected:
 
 private:
     void Clear();
+
+    void ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType beta, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step = 1);
 };
 
 typedef CPUMatrix<float> CPUSingleMatrix;

@@ -629,10 +629,14 @@ def test_gather_op(device_id, precision):
 	          AA([[3],[4]], dtype=PRECISION_TO_TYPE[precision])]
     a = C.input((2,1))
     r_data = np.arange(12).reshape(6,2).astype('f')
-    r = C.constant(r_data)
+    r = C.parameter(shape=r_data.data, init=r_data)
     res = C.gather(r, a).eval({a:a_data})
     expectd = np.asarray([[[[0., 1.]],[[2., 3.]]],[[[6., 7.]],[[8.,9.]]]])
     assert np.array_equal(res, expectd)
+
+    grads = C.gather(r, a).grad({a:a_data}, [r])
+    expectd_grad = np.asarray([[1,1],[1,1],[0,0],[1,1],[1,1],[0,0]], dtype=np.float32)
+    assert np.array_equal(grads, expectd_grad)
     
     b_data = [AA([[0,2],[1,3]], dtype=PRECISION_TO_TYPE[precision]),
               AA([[2,4],[3,5]], dtype=PRECISION_TO_TYPE[precision])]
@@ -641,3 +645,4 @@ def test_gather_op(device_id, precision):
 
     expectd2 = np.asarray([[[[0., 1.],[4.,5.]],[[2., 3.],[6., 7.]]],[[[4., 5.],[8.,9.]],[[6., 7.], [10., 11.]]]])
     assert np.array_equal(res2, expectd2)
+
