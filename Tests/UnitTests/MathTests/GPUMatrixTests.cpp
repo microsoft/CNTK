@@ -680,6 +680,55 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixOneHot, RandomSeedFixture)
     BOOST_CHECK(dirty_result.IsEqualTo(dirty_exp, 1e-6));
 }
 
+
+BOOST_FIXTURE_TEST_CASE(GPUMatrixScatterToIndices, RandomSeedFixture)
+{
+    const size_t row_elements = 2;
+
+    double data[4] = {1,2,2,4};
+    GPUMatrix<double> m0(2, 2, c_deviceIdZero);
+    m0.SetValue(2, 2, c_deviceIdZero, data, matrixFormatRowMajor);
+
+    double target[12];
+    memset(&target[0], 0, sizeof(double) * 12);
+    target[2] = target[3] = 4;
+    target[4] = target[5] = 3;
+    target[6] = target[7] = 2;
+    target[8] = target[9] = 1;
+    GPUMatrix<double> m1(row_elements, 6, c_deviceIdZero);
+    m1.SetValue(row_elements, 6, c_deviceIdZero, target, matrixFormatColMajor);
+
+    double m3_data[8];
+    memset(&m3_data[0], 0, sizeof(double) * 8);
+    m3_data[0] = 1;
+    m3_data[1] = 2;
+    m3_data[2] = 3;
+    m3_data[3] = 4;
+    m3_data[4] = 5;
+    m3_data[5] = 6;
+    m3_data[6] = 7;
+    m3_data[7] = 8;
+    GPUMatrix<double> m3(4, 2, c_deviceIdZero);
+    m3.SetValue(4, 2, c_deviceIdZero, m3_data, matrixFormatColMajor);
+
+    m1.ScatterToIndices(m3, m0, row_elements);
+
+    double expect[12];
+    memset(&expect[0], 0, sizeof(double) * 12);
+    expect[2] = 5;
+    expect[3] = 6;
+    expect[4] = 11;
+    expect[5] = 13;
+    expect[6] = 2;
+    expect[7] = 2;
+    expect[8] = 8;
+    expect[9] = 9;
+    GPUMatrix<double> m_expect(row_elements, 6, c_deviceIdZero);
+    m_expect.SetValue(row_elements, 6, c_deviceIdZero, expect, matrixFormatColMajor);
+
+    BOOST_CHECK(m1.IsEqualTo(m_expect, 1e-6));
+}
+
 BOOST_FIXTURE_TEST_CASE(GPUMatrixGatherFromTarget, RandomSeedFixture)
 {
     const size_t row_elements = 2;
