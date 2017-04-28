@@ -513,11 +513,13 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         for (size_t xxx = 0; xxx < 10; xxx++)
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "d_criterion_fn: %.6f sec\n");
-            mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value();
-            mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value();
-            mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value();
-            mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value();
-            mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value()->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value()->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value()->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value()->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value()->AsScalar<float>();
+            // looks like it is computing something in a meaningful range
+            //fprintf(stderr, "%.6f\n", mbLoss.Value()->AsScalar<float>() / minibatchData[featureStreamInfo].numberOfSequences);
         }
 #endif
 
