@@ -6286,7 +6286,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
         _assignCTCScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttToChanInd,
             uttBeginFrame, uttPhoneNum, uttFrameNum, numParallelSequences, maxPhoneNum, totalPhoneNum);
 
-		totalScore(0, 0) = 0.0;
+        totalScore(0, 0) = 0.0;
         for (size_t utt = 0; utt < uttNum; utt++)
         {
             totalScore(0,0) -= scores[utt];

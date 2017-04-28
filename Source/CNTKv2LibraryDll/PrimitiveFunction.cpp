@@ -169,6 +169,7 @@ namespace CNTK
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::EditDistanceError) ||
             (op == PrimitiveOpType::ClassificationError) ||
+            (op == PrimitiveOpType::ForwardBackward) ||
             (op == PrimitiveOpType::Logistic) ||
             (op == PrimitiveOpType::LambdaRank) ||
             (op == PrimitiveOpType::NDCG))
