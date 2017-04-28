@@ -1,17 +1,21 @@
+from os import path
+from enum import Enum, unique
+import warnings
+import collections
+
 from cntk import cntk_py, Value
 from cntk.device import DeviceDescriptor, cpu
 from cntk.internal import map_if_possible, typemap, sanitize_var_map,\
                           sanitize_batch, sanitize_dtype_cntk, _as_tuple,\
                           sanitize_variable_value_dict,\
                           sanitize_Function_attributes,\
+                          sanitize_variables_or_functions,\
                           _value_as_sequence_or_array
 from cntk.internal.utils import get_python_function_arguments, \
                                 map_function_arguments, _py_dict_to_cntk_dict
 from cntk.internal import UserFunctionDeserializer
 from ..variables import Record, Variable
-from enum import Enum, unique
-from os import path
-import warnings
+
 
 @unique
 class CloneMethod(Enum):
@@ -36,6 +40,7 @@ class CloneMethod(Enum):
     Parameters are cloned and made immutable; i.e. Constants in the new clone
     (e.g. for use as a fixed feature extractor)
     '''
+
 
 class Function(cntk_py.Function):
     '''
@@ -150,6 +155,7 @@ class Function(cntk_py.Function):
                 combined_block_args = combine(block_args)                               # the content of the BlockFunction
                 arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
                 return as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='Tuple').outputs
+
             def invoke(fun_args):
                 try:
                     # hide Placeholders of this function from .signature() of any function defined inside
@@ -162,6 +168,7 @@ class Function(cntk_py.Function):
                     # unhide Placeholders of this function again
                     for arg in args:
                         Function._placeholders_under_construction.remove(arg)
+
                 # resolve tuples and NamedOutputs  --TODO: check for duplicates
                 def resolve_named(output):
                     #if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
@@ -184,6 +191,7 @@ class Function(cntk_py.Function):
                 else:
                     out = resolve_named(out)
                 return out
+
             # if called from BlockFunction() then wrap into a block
             if make_block: # if we make a block then run off a separate set
                 block_args = [make_arg_variable(arg.name, annotations) for arg in args]  # placeholders inside the BlockFunction
@@ -284,6 +292,7 @@ class Function(cntk_py.Function):
             else:
                 from cntk import input
                 return input(arg)
+
         args = [to_input(arg) for arg in arg_types]
         self.replace_placeholders(dict(zip(placeholders, args)))
 
@@ -655,7 +664,7 @@ class Function(cntk_py.Function):
              computation is. If `None`, the default device is used.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
 
@@ -670,6 +679,8 @@ class Function(cntk_py.Function):
                                       None, device)
         if outputs is None:
             outputs = self.outputs
+        else:
+            outputs = sanitize_variables_or_functions(outputs)
 
         output_map = {v: None for v in outputs}
         keep_for_backward = set(keep_for_backward or {})
