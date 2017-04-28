@@ -87,6 +87,22 @@ struct Batch
             return res;
         };
     }
+
+    static Variable sum(const vector<Variable>& batch)
+    {
+        let& shape = batch.front().Shape();
+        let axis = (int)shape.Rank(); // add a new axis
+        return Reshape(ReduceSum(Splice(batch, Axis(axis)), Axis(axis)), shape);
+    }
+
+    static Variable sum(const vector<vector<Variable>>& batch)
+    {
+        vector<Variable> allSummands;
+        for (const auto& batchItem : batch)
+            for (const auto& seqItem : batchItem)
+                allSummands.push_back(seqItem);
+        return sum(allSummands);
+    }
 };
 
 // UNTESTED
@@ -351,10 +367,27 @@ UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const BinaryModel& s
     let splice = Batch::Map(BinaryModel([](Variable a, Variable b) { return Splice({ a, b }, Axis(0)); }));
     return [=](const vector<Variable>& seq)
     {
+        // does not work since Gather canm currently not concatenate
         let rFwd = fwd(seq);
         let rBwd = bwd(seq);
         return splice(rFwd, rBwd);
     };
+}
+
+Variable softmax(Variable z)
+{
+    let Z = ReduceLogSum(z, Axis::AllStaticAxes());
+    let P = Exp(z - Z);
+    return P;
+}
+
+void Flush(const Variable& x)
+{
+    x.Value();
+}
+void Flush(const FunctionPtr& f)
+{
+    f->Output().Value();
 }
 
 function<Variable(const vector<Variable>&, Variable)> AttentionModel(size_t attentionDim, const DeviceDescriptor& device)
@@ -370,7 +403,7 @@ function<Variable(const vector<Variable>&, Variable)> AttentionModel(size_t atte
         let hDecProj  = Times(Wdec, hDec);
         let u = Tanh(hEncsProj + hDecProj); // // [hiddenDim, inputLen]
         let u1 = Times(v, u, /*outputRank=*/0); // [inputLen]   --BUGBUG: fails, but no need
-        let w = Softmax(u1);  // [inputLen] these are the weights
+        let w = softmax(u1);  // [inputLen] these are the weights
         let hEncsAv = Times(hEncsTensor, w);
         return hEncsAv;
     };
@@ -384,7 +417,8 @@ BinarySequenceModel CreateModelFunctionS2SAtt(size_t numOutputClasses, size_t em
     let fwdEnc = RNNStep(hiddenDim, device);
     let bwdEnc = RNNStep(hiddenDim, device);
     let zero = Constant({ hiddenDim }, 0.0f, device);
-    let encoder = BiRecurrence(fwdEnc, bwdEnc, zero);
+    //let encoder = BiRecurrence(fwdEnc, bwdEnc, zero);
+    let encoder = Recurrence(fwdEnc, zero);
     let outEmbed = Embedding(embeddingDim, device);
     let bos = Constant({ numOutputClasses }, 0.0f, device); // one-hot representation of BOS symbol --TODO currently using zero for simplicity
     let fwdDec = RNNStep(hiddenDim, device);
@@ -396,7 +430,12 @@ BinarySequenceModel CreateModelFunctionS2SAtt(size_t numOutputClasses, size_t em
         let attentionAugmentedState = attentionModel(encoded, recurrenceState);
         // combine attention abnd previous state
         let prevWordEmbedded = outEmbed(prevWord);
-        let input = Splice({ prevWordEmbedded, attentionAugmentedState }, Axis(0));
+        //Flush(prevWordEmbedded);
+        //Flush(attentionAugmentedState);
+        let input1 = Splice({ prevWordEmbedded, attentionAugmentedState }, Axis(1));
+        let input = Reshape(input1, { prevWordEmbedded.Shape().Dimensions()[0] * 2});
+        // Splice is not implemented yet along existing axis, so splice into new and flatten
+        //Flush(input);
         return fwdDec(recurrenceState, input);
     };
     return [=](const vector<Variable>& input, const vector<Variable>& label) -> vector<Variable>
@@ -407,16 +446,20 @@ BinarySequenceModel CreateModelFunctionS2SAtt(size_t numOutputClasses, size_t em
         let encoded = encoder(seq); // vector<Variable>
         // decode, this version emits unnormalized log probs and uses labels as history
         let outLen = label.size();
-        auto out = vector<Variable>(outLen);
+        auto losses = vector<Variable>(outLen);
         //auto state = encoded.back(); // RNN initial state --note: bidir makes little sense here
         Variable state = zero; // RNN initial state
         for (size_t t = 0; t < outLen; t++)
         {
             let& prevOut = t == 0 ? bos : label[t - 1];
             state = decode(encoded, state, prevOut);
-            out[t] = outProj(state);
+            let z = outProj(state);
+            //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label[t], z, /*outputRank=*/0));
+            let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label[t], z, /*outputRank=*/0));
+            Flush(loss);
+            losses[t] = loss;
         }
-        return out;
+        return losses;
     };
 }
 
@@ -460,7 +503,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
     // dybamic model and criterion function
     auto d_model_fn     = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim, device);
-    auto d_model_fn1    = CreateModelFunctionS2SAtt(inputDim, embeddingDim, hiddenDim, attentionDim, device);
+    auto d_model_fn1    = CreateModelFunctionS2SAtt(inputDim, embeddingDim, 2*hiddenDim, attentionDim, device); // (Splice cannot concat, so hidden and embedding must be the same)
     auto d_criterion_fn = CreateCriterionFunctionUnrolled(d_model_fn);
 
     // data
@@ -515,7 +558,8 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             for (size_t j = i; j < batch.size(); j++)
                 vbatch[j] = std::move(ToVector(batch[j]));
         }
-        //let s2sOut = Batch::Map(d_model_fn1)(vargs[0], vargs[0]); // for now auto-encoder
+        let s2sLoss = Batch::sum(Batch::Map(d_model_fn1)(vargs[0], vargs[0])); // for now auto-encoder
+        s2sLoss.Value();
         mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value()->AsScalar<float>();
         for (size_t xxx = 0; xxx < 20; xxx++)
         {
