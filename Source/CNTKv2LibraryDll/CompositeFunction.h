@@ -185,6 +185,15 @@ namespace CNTK
             }
         }
 
+        template <typename ElementType>
+        static std::pair<Microsoft::MSR::CNTK::ComputationNetworkPtr, std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>>
+            CreateComputationNetwork(const FunctionPtr& rootFunction,
+                                     const DeviceDescriptor& device,
+                                     const std::unordered_set<Variable>& networkOutputs,
+                                     const std::unordered_map<Variable, Variable>& fullyDefinedArgumentsMap,
+                                     const std::unordered_set<Variable>& inputsExcludedFromGradientComputation,
+                                     bool useMangledNamesForComputationNodes);
+
     private:
         // Replace any PlaceHolder Variables in the graph of Functions underlying 'this' CompositeFunction. All PlaceHolder variables
         // should have been replaced before performing any Forward compute of 'this' Function.
@@ -281,7 +290,8 @@ namespace CNTK
                                                                                   Function* function,
                                                                                   const std::vector<std::shared_ptr<Microsoft::MSR::CNTK::ComputationNode<ElementType>>>& inputNodes,
                                                                                   Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
-                                                                                  std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap);
+                                                                                  std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap,
+                                                                                  bool useMangledNamesForComputationNodes);
 
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetOutputVariableNode(const Variable& variable,
@@ -290,7 +300,8 @@ namespace CNTK
                                                                                   const std::unordered_map<Variable, Variable>& fullyDefinedArgumentsMap,
                                                                                   std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap,
                                                                                   std::unordered_map<Variable, bool>& isVariableRootMap,
-                                                                                  const std::unordered_set<Variable>& inputsToExcludeGradientsFor);
+                                                                                  const std::unordered_set<Variable>& inputsToExcludeGradientsFor,
+                                                                                  bool useMangledNamesForComputationNodes);
 
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
@@ -298,7 +309,8 @@ namespace CNTK
                                                                     const std::unordered_map<Variable, Variable>& fullyDefinedArgumentsMap,
                                                                     std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap,
                                                                     std::unordered_map<Variable, bool>& isVariableRootMap,
-                                                                    const std::unordered_set<Variable>& inputsToExcludeGradientsFor);
+                                                                    const std::unordered_set<Variable>& inputsToExcludeGradientsFor,
+                                                                    bool useMangledNamesForComputationNodes);
 
         template <typename ElementType>
         static void PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode, std::unordered_map< Microsoft::MSR::CNTK::MBLayoutPtr, Variable>& layoutsPopulated);

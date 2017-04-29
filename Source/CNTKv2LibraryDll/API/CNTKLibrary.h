@@ -271,14 +271,10 @@ namespace CNTK
         ///
         CNTK_API static const std::vector<DeviceDescriptor>& AllDevices();
 
-        std::wstring AsString() const
-        {
-            std::wstring str = DeviceKindName(Type());
-            if (Type() == DeviceKind::GPU)
-                str = str + L"[" + std::to_wstring(Id()) + L"]";
-
-            return str;
-        }
+        ///
+        /// Return a string summary of this device
+        ///
+        CNTK_API std::wstring AsString() const;
 
     private:
         DeviceDescriptor(unsigned int deviceId, DeviceKind deviceType)
@@ -812,6 +808,11 @@ namespace CNTK
         ///
         template<typename ElementType>
         CNTK_API ElementType AsScalar() const;
+
+        ///
+        /// Return a string summary of the NDArrayView.
+        ///
+        CNTK_API std::wstring AsString() const;
 
     private:
         // Disallow copy and move construction and assignment
@@ -2768,6 +2769,17 @@ namespace CNTK
         template<typename ElementType>
         ElementType AsScalar() const;
 
+
+        ///
+        /// Returns whether this object has been invalidated (by another forward and/or backward pass)
+        ///
+        CNTK_API virtual bool IsValid() const;
+
+        ///
+        /// Returns a string summary of this Value object
+        ///
+        CNTK_API std::wstring AsString() const;
+
     private:
         template <typename ElementType>
         static void AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLengthInCols);
@@ -3330,14 +3342,6 @@ namespace CNTK
         ///
         CNTK_API static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName = L"");
 
-        ///
-        /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
-        ///
-        inline static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const std::wstring& userFunctionInstanceName = L"")
-        {
-            return NativeUserFunction(opName, operands, Dictionary(), userFunctionInstanceName);
-        }
-
     public:
 
         ///
@@ -3570,6 +3574,11 @@ namespace CNTK
     /// Create an instance of the CNTK built-in transpose operation on the specified 1D or 2D input operand
     ///
     CNTK_API FunctionPtr Transpose(const Variable& operand, const std::wstring& name = std::wstring());
+
+    ///
+    /// Create an instance of the CNTK built-in transpose operation on the specified input operand using the specified permutation
+    ///
+    CNTK_API FunctionPtr Transpose(const Variable& operand, const std::vector<Axis>& permutation,  const std::wstring& name = L"");
 
     ///
     /// Create an instance of the slice operation on specified tensor input operand
@@ -4507,6 +4516,7 @@ namespace CNTK
                                     const MomentumSchedule& momentumSchedule,
                                     bool unitGain = DefaultUnitGainValue(),
                                     const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
+                                    double epsilon = 1e-8,
                                     AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
@@ -4942,6 +4952,13 @@ namespace CNTK
             : data(value), numberOfSequences(numSequences), numberOfSamples(numSamples), sweepEnd(sweepEnd) 
         {}
 
+        std::wstring AsString() const
+        {
+            std::wstringstream wss;
+            wss << L"MinibatchData(data=" << data->AsString() << L", samples=" << numberOfSamples << L", seqs=" << numberOfSequences << L")";
+            return wss.str();
+        }
+
         ValuePtr data;
         size_t numberOfSequences;
         size_t numberOfSamples;
@@ -5182,7 +5199,7 @@ namespace CNTK
     /// 
     /// Create an HTKMLFDeserializer with the specified options
     /// 
-    CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles);
+    CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries = false);
 
     /// 
     /// Instantiate the CNTK built-in text format minibatch source

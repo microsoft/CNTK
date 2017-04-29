@@ -1465,6 +1465,7 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
     ElemType momentum,
     ElemType adaWeight,
     ElemType adaMul,
+    ElemType epsilon,
     bool unitGainMomentum)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
@@ -1480,7 +1481,7 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _adam<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, unitGainMomentum);
+        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainMomentum);
 }
 
 template <class ElemType>
@@ -4403,7 +4404,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
     GPUMatrix<ElemType>& beta,
     const GPUMatrix<ElemType> phoneSeq,
     const GPUMatrix<ElemType> phoneBoundary,
-    ElemType &totalScore,
+    GPUMatrix<ElemType> &totalScore,
     const std::vector<size_t>& uttToChanInd,
     const std::vector<size_t> & uttBeginFrame,
     const std::vector<size_t> & uttFrameNum,
@@ -4440,9 +4441,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
         CUDA_CALL(cudaMalloc((void **)&gpuUttToChanInd, uttNum * sizeof(size_t)));
         CUDA_CALL(cudaMemcpy(gpuUttToChanInd, uttToChanInd.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
 
-        ElemType *gpuScores;
-        CUDA_CALL(cudaMalloc((void **)&gpuScores, uttNum * sizeof(ElemType)));
-
         cudaEvent_t done = nullptr;
         CUDA_CALL(cudaEventCreate(&done));
         dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
@@ -4461,27 +4459,20 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
             _assignBetaScore << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
                 gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
         }
-
-        _assignTotalScore << <uttNum, 1, 0, t_stream >> > (beta.Data(), gpuScores, uttNum, gpuUttToChanInd, gpuBeginFrame, numParallelSequences, maxPhoneNum);
+        
+        ElemType zerVar = 0.0;
+        totalScore.SetColumn(&zerVar, 0);
+        _assignTotalScore << <uttNum, 1, 0, t_stream >> > (beta.Data(), totalScore.Data(), uttNum, gpuUttToChanInd, gpuBeginFrame, numParallelSequences, maxPhoneNum);
 
         dim3 block_tail_2((uttNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
         _assignCTCScore << < block_tail_2, thread_tail, 0, t_stream >> >(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, gpuUttToChanInd,
             gpuBeginFrame, gpuPhoneNum, gpuFrameNum, numParallelSequences, maxPhoneNum, totalPhoneNum);
 
-        vector<ElemType>scores(uttNum);
-        CUDA_CALL(cudaMemcpyAsync(scores.data(), gpuScores, sizeof(ElemType) * uttNum, cudaMemcpyDeviceToHost, t_stream));
-
-        for (size_t utt = 0; utt < uttFrameNum.size(); utt++)
-        {
-            totalScore += scores[utt];
-        }
-
         CUDA_CALL(cudaFree(gpuFrameNum));
         CUDA_CALL(cudaFree(gpuPhoneNum));
         CUDA_CALL(cudaFree(gpuBeginFrame));
         CUDA_CALL(cudaFree(gpuUttToChanInd));
-        CUDA_CALL(cudaFree(gpuScores));
 
         CUDA_CALL(cudaEventRecord(done));
         CUDA_CALL(cudaEventSynchronize(done));

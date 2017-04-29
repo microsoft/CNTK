@@ -439,9 +439,14 @@ namespace CNTK
     static const std::wstring UidPrefix = L"__v2libuid__";
     static const std::wstring NamePrefix = L"__v2libname__";
 
-    inline std::wstring CNTKInternalNodeNameFromUidAndName(const std::wstring& uid, const std::wstring& name)
+    // 'generateMangledNames' = true is used if we want to emit mangled names for the internal CNTK v1 nodes so that when
+    // saving the model in V1 format and loading it back, we can retrieve the original V2 Variable/Function UID and Name.
+    inline std::wstring CNTKInternalNodeNameFromUidAndName(const std::wstring& uid, const std::wstring& name, bool generateMangledNames = false)
     {
-        return UidPrefix + uid + NamePrefix + name;
+        if (generateMangledNames)
+            return UidPrefix + uid + NamePrefix + name;
+        else
+            return uid;
     }
 
     inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName)
@@ -511,25 +516,29 @@ namespace CNTK
         return{ Axis(derivedDynamicAxisName, sourceAxis.IsOrdered()) };
     }
 
-    inline Axis& NormalizeStaticAxis(Axis& axis, const NDShape& operandShape) // note: operates in-place
+    inline Axis& NormalizeStaticAxis(Axis& axis, size_t rank) // note: operates in-place
+    {
+        if (axis == Axis::EndStaticAxis())
+            axis = Axis((int)rank);
+        else if (axis.StaticAxisIndex() < 0)
+        {
+            auto normalizedAxis = Axis((int)rank + axis.StaticAxisIndex());
+            if (normalizedAxis.StaticAxisIndex() < 0)
+                InvalidArgument("Axis '%S' is out of bounds for the rank '%zd' it applies to.", axis.AsString().c_str(), rank);
+            else
+                axis = normalizedAxis;
+        }
+        return axis;
+    }
+
+    inline Axis& NormalizeStaticAxis(Axis& axis, const NDShape& operandShape) // in-place
     {
         if (axis != Axis::AllStaticAxes() && axis != Axis::AllAxes())
         {
             assert(axis.IsStaticAxis());
             assert(operandShape != NDShape::Unknown);
-
-            if (axis == Axis::EndStaticAxis())
-                axis = Axis((int)operandShape.Rank());
-            else if (axis.StaticAxisIndex() < 0)
-            {
-                auto normalizedAxis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
-                if (normalizedAxis.StaticAxisIndex() < 0)
-                    InvalidArgument("Axis '%S' is out of bounds of the operand shape '%S' it applies to.", axis.AsString().c_str(), operandShape.AsString().c_str());
-                else
-                    axis = normalizedAxis;
-            }
+            axis = NormalizeStaticAxis(axis, operandShape.Rank());
         }
-
         return axis;
     }
 

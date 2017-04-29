@@ -50,6 +50,45 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
      >>> with default_options(activation=C.relu):
      ...     f = Dense(500)
 
+    The ``Dense`` layer can be applied to inputs that are tensors, not just vectors.
+    This is useful, e.g., at the top of a image-processing cascade, where after many
+    convolutions with padding and strides it is difficult to know the precise dimensions.
+    For this case, CNTK has an extended definition of matrix product, in which
+    the input tensor will be treated as if it had been automatically flattened.
+    The weight matrix will be a tensor that reflects the "flattened" dimensions in its axes.
+
+    Example:
+     >>> f = Dense(5, activation=C.softmax) # a 5-class classifier
+     >>> x = input((64,16,16)) # e.g. an image reduced by a convolution stack
+     >>> y = f(x)
+     >>> y.shape
+     (5,)
+     >>> f.W.shape  # "row" dimension of "matrix" consists of 3 axes that match the input
+     (64, 16, 16, 5)
+
+    This behavior can be modified by telling CNTK either the number of axes that should not be projected (``map_rank``)
+    or the rank of the input (``input_rank``). If neither is specified, all input dimensions are
+    projected, as in the example above.
+
+    Example:
+     >>> f = Dense(5, activation=C.softmax, input_rank=2) # a 5-class classifier
+     >>> x = input((10, 3, 3)) # e.g. 10 parallel 3x3 objects. Input has input_rank=2 axes
+     >>> y = f(x)
+     >>> y.shape  # the 10 parallel objects are classified separately, the "10" dimension is retained
+     (10, 5)
+     >>> f.W.shape  # "row" dimension of "matrix" consists of (3,3) matching the input axes to project
+     (3, 3, 5)
+
+     >>> f = Dense(5, activation=C.softmax, map_rank=2)
+     >>> x = input((4, 6, 3, 3, 3)) # e.g. 24 parallel 3x3x3 objects arranged in a 4x6 grid. The grid is to be retained
+     >>> y = f(x)
+     >>> y.shape  # the 4x6 elements are classified separately, the grid structure is retained
+     (4, 6, 5)
+     >>> f.W.shape  # "row" dimension of "matrix" consists of (3,3) matching the input axes to project
+     (3, 3, 3, 5)
+     >>> z = y([np.zeros(x.shape)])
+     >>> assert z.shape == (1, 4, 6, 5)
+
     Args:
      shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
      activation (:class:`~cntk.ops.functions.Function`, defaults to identity): optional function to apply at the end, e.g. `relu`
@@ -94,7 +133,6 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     elif map_rank is None:
         infer_input_rank_to_map = 0  # neither given: default to 'infer W to use all input dims'
     else:
-        UntestedBranchError("Dense, map_rank option not implemented")
         infer_input_rank_to_map = map_rank  # infer W to use all input dims except the first static 'map_rank' ones
 
     # parameters bound to this Function

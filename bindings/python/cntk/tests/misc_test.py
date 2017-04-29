@@ -210,8 +210,6 @@ def test_rng_seeding_in_parameter_initialization():
         p2 = get_random_parameter_value(x)
         assert np.allclose(p1, p2)
 
-    cntk.cntk_py.reset_random_seed(0)
-
 def test_rng_seeding_in_dropout():
     seed1 = get_dropout_rng_seed()
     seed2 = get_dropout_rng_seed()
@@ -226,11 +224,8 @@ def test_rng_seeding_in_dropout():
     seed2 = get_dropout_rng_seed()
     assert seed1 == seed2 and seed1 == 456
 
-
     cntk.cntk_py.reset_random_seed(789)
     seed1 = get_dropout_rng_seed()
     cntk.cntk_py.reset_random_seed(789)
     seed2 = get_dropout_rng_seed()
     assert seed1 == seed2 and seed1 == 789
-
-    cntk.cntk_py.reset_random_seed(0)
