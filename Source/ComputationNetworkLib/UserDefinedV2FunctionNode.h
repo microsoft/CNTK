@@ -186,7 +186,7 @@ public:
             }
 
             auto outputNDShape = output.Shape();
-            if (outputNDShape.IsUnknown() || outputNDShape.HasInferredDimension() || outputNDShape.HasFreeDimension())
+            if (outputNDShape.IsUnknown() || outputNDShape.HasFreeOrInferredDimension())
                 LogicError("The output shape of an external user defined Function should be fully determined by the time CNTK engine validation executes");
 
             auto outputDynamicAxes = output.DynamicAxes();

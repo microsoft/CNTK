@@ -151,7 +151,7 @@ namespace CNTK
     inline std::pair<size_t, size_t> GetMatrixDimensions(const NDShape& viewShape)
     {
         // Ensure none of the shape dimensions are unknown
-        if (viewShape.HasInferredDimension() || viewShape.HasFreeDimension())
+        if (viewShape.HasFreeOrInferredDimension())
             InvalidArgument("Cannot create an NDArrayView using a view shape '%S' that has unknown dimensions for any of its axes.", viewShape.AsString().c_str());
 
         size_t matrixRowSize = (viewShape.Rank() > 0) ? viewShape[0] : 1;

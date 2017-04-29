@@ -338,9 +338,6 @@ namespace CNTK
                 InvalidArgument("Reshape: end axis index (%d) is invalid for operand shape '%S'.", endAxisIdx, operandShape.AsString().c_str());
 
             auto operandSubshapeToReshape = operandShape.SubShape(beginAxisIdx, endAxisIdx);
-            if (operandSubshapeToReshape.HasInferredDimension())
-                InvalidArgument("Reshape: Operand subshape '%S' being reshaped must not have an inferred dimension.", operandSubshapeToReshape.AsString().c_str());
-
             auto inferredReplacementShape = replacementShape;
             size_t inferredAxisIndex = SIZE_MAX;
             size_t targetElementsCount = 1;
@@ -356,20 +353,20 @@ namespace CNTK
 
             if (inferredAxisIndex != SIZE_MAX)
             {
-                if (!operandSubshapeToReshape.HasFreeDimension())
+                if (!operandSubshapeToReshape.HasFreeOrInferredDimension())
                 {
                     size_t inputElementsCount = operandSubshapeToReshape.TotalSize();
                     inferredReplacementShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
                 }
                 else
-                    inferredReplacementShape[inferredAxisIndex] = NDShape::FreeDimension;
+                    inferredReplacementShape[inferredAxisIndex] = operandSubshapeToReshape.HasInferredDimension() ? NDShape::InferredDimension : NDShape::FreeDimension;
             }
 
             auto outputShape = operandShape.SubShape(0, beginAxisIdx);
             outputShape = outputShape.AppendShape(inferredReplacementShape);
             outputShape = outputShape.AppendShape(operandShape.SubShape(endAxisIdx));
 
-            if (!operandSubshapeToReshape.HasFreeDimension() && (operandSubshapeToReshape.TotalSize() != inferredReplacementShape.TotalSize()))
+            if (!operandSubshapeToReshape.HasFreeOrInferredDimension() && (operandSubshapeToReshape.TotalSize() != inferredReplacementShape.TotalSize()))
             {
                 auto replacedSubShape = operandShape.SubShape(beginAxisIdx, endAxisIdx);
                 InvalidArgument("Reshape: Operand (sub-)dimensions '%S' incompatible with desired replacement (sub-)dimensions '%S'. Number of elements %s.",
@@ -703,7 +700,7 @@ namespace CNTK
               
                 if (i < operands.size() - 1)
                 {
-                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !(mainOperandShape.HasInferredDimension() || mainOperandShape.HasFreeDimension()))
+                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasFreeOrInferredDimension())
                     {
                         size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
                         paramShape[0] = total;

@@ -438,11 +438,20 @@ namespace CNTK
         }
 
         ///
+        /// Returns a boolean value indicating if the dimension size for any of the axes of 'this' shape is free or inferred
+        /// i.e. (== NDShape::FreeDimension or == NDShape::InferredDimension).
+        ///
+        bool HasFreeOrInferredDimension() const
+        {
+            return HasFreeDimension() || HasInferredDimension();
+        }
+
+        ///
         /// Returns the total size of the rectangular shape that 'this' shape denotes.
         ///
         size_t TotalSize() const
         {
-            if (HasInferredDimension() || HasFreeDimension())
+            if (HasFreeOrInferredDimension())
                 RuntimeError("NDShape::TotalSize: TotalSize cannot be determined for a NDShape '%S' with one or more dimensions being InferredDimension or FreeDimension.", AsString().c_str());
 
             size_t totalSize = 1;
@@ -2752,7 +2761,7 @@ namespace CNTK
         void ResizeOutputBuffer(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
             auto shape = outputVariable.Shape();
-            if (shape == NDShape::Unknown || shape.HasInferredDimension() || shape.HasFreeDimension())
+            if (shape == NDShape::Unknown || shape.HasFreeOrInferredDimension())
                 RuntimeError("The outputVariable '%S' shape '%S' is unknown shape, has inferred dimension or free dimension for at least one axis.",
                               outputVariable.AsString().c_str(), shape.AsString().c_str());
 
