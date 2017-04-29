@@ -5,7 +5,7 @@
 # ==============================================================================
 
 '''
-The CNTK typing module contains basic CNTK type meta-classes for :func:`~cntk.functions.Function.update_signature` and type signatures for the CNTK :class:`~cntk.functions.Function` decorator.
+The CNTK typing module contains basic CNTK type meta-classes for :func:`~cntk.functions.Function.update_signature` and type signatures for the CNTK :class:`~cntk.ops.functions.Function` decorator.
 
 The type of a CNTK :class:`~cntk.variables.Variable` is defined by five properties: `shape`, `dynamic_axes`, `is_sparse`, `dtype`, and `needs_gradient`.
 Some API functions accept these variables as independent arguments, e.g. :class:`~cntk.input`.
@@ -90,7 +90,7 @@ Example:
     ...     inp = Tensor[32]()   # attempt to create an instance of type Tensor[32]
     ... except TypeError as e:
     ...     print('ERROR: ' + str(e))
-    ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(Tensor[32])'.
+    ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(**Tensor[32])'.
 
     >>> # types are not inputs
     >>> try:
@@ -119,7 +119,7 @@ def _make_tensor_meta(cls_name, **kwargs):
     class TensorMeta(type):
         def __getitem__(self, shape):
             shape = sanitize_shape(shape)
-            return Variable._Type(shape, **kwargs) # inject it for @Function 
+            return Variable._Type(shape, **kwargs) # inject it for @Function
     return TensorMeta(cls_name, (), {})
 
 # Tensor and SparseTensor contain only a batch axis.

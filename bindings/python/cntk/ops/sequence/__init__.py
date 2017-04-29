@@ -40,6 +40,35 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
 ##########################################################################
 
 @typemap
+def unpack(x, padding_value, no_mask_output=False, name=''):
+    '''
+    This function unpacks the specified sequence operand 'x' along the most
+    significant static axis [-1] and pads any gaps with the specified 'padding_value'.
+    If the 'no_mask_output' argument is False, the returned Function has 2 outputs;
+    viz. the unpacked non-sequence data and a mask denoting the gaps in the unpacked output
+    due to differences across lengths of the sequences in the operand.
+
+    Example:
+        TBA.
+
+    Args:
+        x: the sequence tensor (or its name) which is unpacked
+        padding_value (np.float32 or np.float64): The value to pad gaps in the unpacked tensor with.
+        no_mask_output (bool, optional): whether the Function has a mask tensor output denoting the
+            gaps in the unpacked output due to differences across lengths of the sequences in the operand.
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+
+    from cntk.cntk_py import unpack
+
+    x = sanitize_input(x)
+    return unpack(x, padding_value, no_mask_output, name)
+
+
+@typemap
 def future_value(x, initial_state=None, time_step=1, name=''):
     '''
     This function returns the future value w.r.t. ``x``. It is most often used when

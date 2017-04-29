@@ -34,10 +34,10 @@ class Record(dict):
         '''
         Create a new Record from an existing one with members modified or added.
         e.g. r = Record(x = 13) ; print(r.x) ; r2 = r.updated_with(x = 42) ; print(r2.x)
-    
+
         Args:
             kwargs: keyword arguments to turn into the record members
-    
+
         Returns:
             A singleton class instance that has all passed kw args as immutable class members.
         '''
@@ -177,9 +177,9 @@ class VariableMixin(object):
             ...     inp = Tensor[32]()
             ... except TypeError as e:
             ...     print('ERROR: ' + str(e))
-            ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(Tensor[32])'.
+            ERROR: Can't instantiate abstract class Tensor[32]. Please use 'input(**Tensor[32])'.
             '''
-            raise TypeError("Can't instantiate abstract class " + str(self) + ". Please use 'input(" + str(self) + ")'.")
+            raise TypeError("Can't instantiate abstract class " + str(self) + ". Please use 'input(**" + str(self) + ")'.")
 
         def __str__(self):
             '''
@@ -217,7 +217,7 @@ class VariableMixin(object):
             return s
 
     @property
-    def type(self):
+    def _type(self):
         '''
         The complete type of the data represented by this Variable as a single object that has data members of the same name.
 
@@ -225,7 +225,7 @@ class VariableMixin(object):
         >>> x = C.input(13, name='my_input')
         >>> x
         Input('my_input', [#], [13])
-        >>> x.type.shape, x.type.dynamic_axes, x.type.is_sparse, x.type.needs_gradient
+        >>> x._type.shape, x._type.dynamic_axes, x._type.is_sparse, x._type.needs_gradient
         ((13,), (Axis('defaultBatchAxis'),), False, False)
         '''
         return Variable._Type(shape=self.shape, dtype=self.dtype, needs_gradient=self.needs_gradient, is_sparse=self.is_sparse, dynamic_axes=self.dynamic_axes)
@@ -389,10 +389,11 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
-        BUGBUG: Document initializers
        dtype (`np.float32` or `np.float64`): data type to store the values as.
        device (:class:`~cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
+    Todo:
+       Document initializers for `value` parameter.
     '''
     def __init__(self, value=None, shape=None, dtype=default_override_or(np.float32), device=None, name=''):
 

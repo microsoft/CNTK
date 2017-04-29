@@ -284,7 +284,6 @@ public:
         std::vector<size_t> phoneSeq;
         std::vector<size_t> phoneBound;
 
-        ElemType finalScore = 0;
         if (blankTokenId == SIZE_MAX)
             blankTokenId = numRows - 1;
 
@@ -373,7 +372,7 @@ public:
         // compute alpha, beta and CTC scores
         Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
-        CTCPosterior.AssignCTCScore(prob, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, finalScore, uttToChanInd, uttBeginFrame,
+        CTCPosterior.AssignCTCScore(prob, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, totalScore, uttToChanInd, uttBeginFrame,
             uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, /*isColWise=*/true );
         
         Microsoft::MSR::CNTK::Matrix<ElemType> rowSum(m_deviceid);
@@ -382,8 +381,6 @@ public:
         // Normalize the CTC scores
         CTCPosterior.VectorSum(CTCPosterior, rowSum, /*isColWise=*/true);
         CTCPosterior.RowElementDivideBy(rowSum);
-
-        totalScore(0, 0) = -finalScore;
     }
 
 private:

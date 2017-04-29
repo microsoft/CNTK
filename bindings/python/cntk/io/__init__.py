@@ -380,7 +380,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Gets current position in the minibatch source.
 
         Args:
-            getter: Minibatch position :class:`~cntk.cntk_py.Dictionary` on the
+            getter (:class:`~cntk.cntk_py.Dictionary`): minibatch position on the
              global timeline.
             setter (:class:`~cntk.cntk_py.Dictionary`): position returned by
              the getter
@@ -390,32 +390,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
     @current_position.setter
     def current_position(self, position):
         self.restore_from_checkpoint(position)
-
-
-def _py_dict_to_cntk_dict(py_dict):
-    '''
-    Converts a Python dictionary into a CNTK Dictionary whose values are CNTK
-    DictionaryValue instances.
-
-    Args:
-        py_dict (dict): a dictionary to be converted.
-
-    Returns:
-        cntk_py.Dictionary:
-        A :class:`~cntk.cntk_py.Dictionary` that has been converted from the input `dict`
-    '''
-    res = cntk_py.Dictionary()
-    for k, v in py_dict.items():
-        if isinstance(v, dict):
-            res[k] = cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(v))
-        # TODO: add support to list of lists ?
-        elif isinstance(v, list):
-            dval = [cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(e)
-                    if isinstance(e, dict) else e) for e in v]
-            res[k] = cntk_py.DictionaryValue(dval)
-        else:
-            res[k] = cntk_py.DictionaryValue(v)
-    return res
 
 
 class StreamInformation(cntk_py.StreamInformation):
@@ -538,7 +512,7 @@ def HTKFeatureDeserializer(streams):
     return cntk_py.htk_feature_deserializer(feat)
 
 
-def HTKMLFDeserializer(label_mapping_file, streams):
+def HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = False):
     '''
     Configures an HTK label reader that reads speech HTK format MLF (Master
     Label File)
@@ -548,6 +522,7 @@ def HTKMLFDeserializer(label_mapping_file, streams):
         streams: any dictionary-like object that contains a mapping from stream
           names to :class:`StreamDef` objects. Each StreamDef object configures
           a label stream.
+        phoneBoundaries (bool): if phone boundaries should be considered (should be set to True for CTC training, False otherwise)
     '''
     if len(streams) != 1:
         raise ValueError("HTKMLFDeserializer only accepts a single stream")
@@ -561,7 +536,7 @@ def HTKMLFDeserializer(label_mapping_file, streams):
         master_label_files = stream['mlf']
         if not isinstance(master_label_files, list):
             master_label_files = [master_label_files]
-        return cntk_py.htk_mlf_deserializer(stream_name, label_mapping_file, dimension, master_label_files)
+        return cntk_py.htk_mlf_deserializer(stream_name, label_mapping_file, dimension, master_label_files, phoneBoundaries)
 
 
 def ImageDeserializer(filename, streams):

@@ -26,7 +26,7 @@ FunctionPtr LinearLayerBlock(Variable input, size_t outputDim, const DeviceDescr
 FunctionPtr SimpleRecurrentBlock(const Variable& prevOutput, const Variable& input, const DeviceDescriptor& device, const std::wstring& outputName = L"")
 {
     assert(prevOutput.Shape().Rank() == 1);
-    assert((prevOutput.Shape() != NDShape::Unknown) && !prevOutput.Shape().HasInferredDimension());
+    assert((prevOutput.Shape() != NDShape::Unknown) && !prevOutput.Shape().HasInferredDimension() && !prevOutput.Shape().HasFreeDimension());
     auto outputDim = prevOutput.Shape()[0];
 
     auto prevOutputPlaceholder = PlaceholderVariable();

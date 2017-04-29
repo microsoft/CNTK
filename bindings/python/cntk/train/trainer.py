@@ -4,17 +4,20 @@
 # for full license information.
 # ==============================================================================
 
-from .. import cntk_py, Value
+from .. import cntk_py
 from ..device import use_default_device
 from cntk.internal import sanitize_var_map, sanitize_function, typemap, \
-                          map_if_possible, _value_as_sequence_or_array
-from ..io import _py_dict_to_cntk_dict, MinibatchData
+                          _value_as_sequence_or_array
+from cntk.internal.utils import _py_dict_to_cntk_dict
+from ..io import MinibatchData
 
-__doc__= '''\
+
+__doc__ = '''\
 A trainer encapsulates the overall training process and employs one or more
 :mod:`~cntk.learners` to tune the parameters of a specified model
 using gradients of parameters w.r.t. a training objective.
 '''
+
 
 class Trainer(cntk_py.Trainer):
     '''
@@ -26,15 +29,15 @@ class Trainer(cntk_py.Trainer):
 
     Args:
        model (:class:`~cntk.ops.functions.Function`): root node of the function to train
-       criterion (Python tuple of :class:`~cntk.ops.functions.Function`, or :class:`~cntk.ops.functions.Function` or ):
-        Function with one or two outputs,
-        representing loss and, if given, evaluation metric (in this order).
+       criterion (tuple of :class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`):
+        Function with one or two outputs, representing loss and, if given, evaluation metric (in this order).
         Alternatively, a tuple(loss Function, evaluation Function) is also accepted.
-       parameter_learners (list): list of learners from :mod:`cntk.learner`
+       parameter_learners (list): list of learners from :mod:`cntk.learners`
        progress_writers (list): optionally, list of progress writers from :mod:`cntk.utils` to automatically track
-         training progress.
+        training progress.
 
-        TODO: Would be great to allow to skip some parameters that should not be updated.
+    Todo:
+       Allow to skip some parameters that should not be updated.
     '''
 
     @staticmethod
@@ -44,11 +47,9 @@ class Trainer(cntk_py.Trainer):
         # map Variable to Function
         from cntk import combine
         criterion = tuple([combine([output], output.name) if isinstance(output, cntk_py.Variable) else output for output in criterion])
-        if not isinstance(criterion, tuple): # input can be a single value or a tuple (loss, metric)
-            criterion = (criterion, None)    # if single then pad with None for the metric
         if len(criterion) == 1:
             criterion = criterion + (None,) # tuple of 1 value: pad with None
-        if len(criterion) != 2:
+        elif len(criterion) != 2:
             raise ValueError("criterion parameter must be a singleton or a tuple of 2 elements")
         return criterion
 
@@ -156,7 +157,7 @@ class Trainer(cntk_py.Trainer):
                 updated = super(Trainer, self).train_minibatch(arguments,
                     output_map, device)
 
-            for k,v in output_map.items():
+            for k, v in output_map.items():
                 output_map[k] = _value_as_sequence_or_array(v, k)
 
             return updated, output_map
@@ -204,7 +205,7 @@ class Trainer(cntk_py.Trainer):
 
         Returns:
             `float`: the average evaluation criterion value per sample for the
-              tested minibatch.
+            tested minibatch.
         '''
         if not device:
             device = use_default_device()

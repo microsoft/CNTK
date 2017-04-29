@@ -2,10 +2,11 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// CPUMatrix.cpp : full implementation of all matrix functions on the CPU side
+// CPUMatrix.h : template implementation of all matrix functions on the CPU side
 //
 
-#include "stdafx.h"
+#pragma once
+
 #include "Basics.h"
 #include "File.h"
 
@@ -65,18 +66,6 @@
     }
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-int MATH_API TracingGPUMemoryAllocator::m_traceLevel = 0;
-
-void TracingGPUMemoryAllocator::SetTraceLevel(int traceLevel)
-{
-    m_traceLevel = traceLevel;
-}
-
-bool TracingGPUMemoryAllocator::IsTraceEnabled()
-{
-    return (m_traceLevel > 0);
-}
 
 #pragma region Helpful Enum Definitions
 enum class MatrixOrder
@@ -5923,7 +5912,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOfWithShift(const 
 #pragma endregion Static BLAS Functions
 
 // 'double' version of LogAdd
-double LogAddD(double x, double y)
+inline double LogAddD(double x, double y)
 {
     return LogAdd(x, y);
 }
@@ -5966,7 +5955,7 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
     }
 };
 
-// Calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// Calculate alpha in forward-backward calculation. equation (6), (7) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
 // prob (input): the posterior output from the network
 // alpha (output): alpha for forward-backward calculation. 
@@ -6094,7 +6083,7 @@ void _assignAlphaScore(
     }
 }
 
-// Calculate beta in forward-backward calculation, equation (10), (11) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// Calculate beta in forward-backward calculation, equation (10), (11) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // See _assignAlphaScore for the explanation of parameters
 template<class ElemType>
 void _assignBetaScore(
@@ -6189,7 +6178,7 @@ void _assignBetaScore(
     }
 }
 
-// Calculate CTC score. equation (8) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// Calculate CTC score. equation (8) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 template<class ElemType>
 void _assignTotalScore(ElemType *betaScore,
     std::vector<ElemType>& totalScore,
@@ -6211,7 +6200,7 @@ void _assignTotalScore(ElemType *betaScore,
     }
 }
 
-// Calculate derivative, equation (15) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// Calculate derivative, equation (15) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // See _assignAlphaScore for the explanation of parameters
 template<class ElemType>
 void _assignCTCScore(
@@ -6266,7 +6255,7 @@ void _assignCTCScore(
 template<class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
     const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
-    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const std::vector<size_t>& uttToChanInd, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
+    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, CPUMatrix<ElemType> & totalScore, const std::vector<size_t>& uttToChanInd, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
     const std::vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
 {
     // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
@@ -6297,9 +6286,10 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
         _assignCTCScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttToChanInd,
             uttBeginFrame, uttPhoneNum, uttFrameNum, numParallelSequences, maxPhoneNum, totalPhoneNum);
 
+        totalScore(0, 0) = 0.0;
         for (size_t utt = 0; utt < uttNum; utt++)
         {
-            totalScore += scores[utt];
+            totalScore(0,0) -= scores[utt];
         }
 
         return *this;
@@ -7183,12 +7173,6 @@ void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseO
         }
     }
 }
-
-// =======================================================================
-// explicit instantiations
-// =======================================================================
-template class MATH_API CPUMatrix<float>;
-template class MATH_API CPUMatrix<double>;
 
 // We use Matrix<char> as the backing store for QuantizedMatrix
 // Let's explicitly instantiate the methods we need for that purpose

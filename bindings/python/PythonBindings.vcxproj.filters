@@ -350,5 +350,14 @@
     <None Include="cntk\losses\tests\cosine_distance_test.py">
       <Filter>cntk\losses\tests</Filter>
     </None>
+    <None Include="cntk\ops\tests\assign_test.py">
+      <Filter>cntk\ops\tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\stop_gradient_test.py">
+      <Filter>cntk\ops\tests</Filter>
+    </None>
+    <None Include="cntk\io\transforms.py">
+      <Filter>cntk\io</Filter>
+    </None>
   </ItemGroup>
 </Project>

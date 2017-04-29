@@ -4,10 +4,12 @@
 # for full license information.
 # ==============================================================================
 
-# sequence -- first/higher-order functions over sequences, like Recurrence()
+'''
+First / higher-order functions over sequences, like :func:`Recurrence`.
+'''
 
 from ..variables import Record
-from ..ops import combine, splice, sequence
+from ..ops import combine, splice, sequence, reconcile_dynamic_axes
 from .blocks import *
 from .blocks import _get_initial_state_or_default, _inject_name
 
@@ -23,7 +25,7 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
         >>> from cntk.layers import Sequential
         >>> from cntk.layers.typing import Tensor, Sequence
-        >>> x = C.input(Sequence[Tensor[2]])
+        >>> x = C.input(**Sequence[Tensor[2]])
         >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
         >>> x0
         array([[[ 0.,  1.],
@@ -55,12 +57,11 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
     @BlockFunction('Delay', name)
     def delay(x):
         # TODO: reenable this
-        ## if specific dynamic_axes requested then delay without and inject a reconcile_dynamic_axis() on top
+        ## if specific dynamic_axes requested then delay without and inject a reconcile_dynamic_axes() on top
         #if dynamic_axes_like:
         #    r = delay(x, initial_state=initial_state, time_step=time_step, name='')
         #    from .utils import sanitize_input, typemap
-        #    from _cntk_py import reconcile_dynamic_axis
-        #    r = typemap(reconcile_dynamic_axis)(sanitize_input(r), sanitize_input(dynamic_axes_like), name=name)
+        #    r = typemap(reconcile_dynamic_axes)(sanitize_input(r), sanitize_input(dynamic_axes_like), name=name)
         #    return r;
         ## regular case
         return sequence.delay(x, initial_state=initial_state, time_step=T)
@@ -86,7 +87,7 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), 
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
         >>> from cntk.layers import Sequential
         >>> from cntk.layers.typing import Tensor, Sequence
-        >>> x = C.input(Sequence[Tensor[2]])
+        >>> x = C.input(**Sequence[Tensor[2]])
         >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
         >>> x0
         array([[[ 0.,  1.],
@@ -185,8 +186,8 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
      >>> from cntk.layers.typing import *
 
      >>> # a plain sequence-to-sequence model in training (where label length is known)
-     >>> en = C.input(SequenceOver[Axis('m')][SparseTensor[20000]])  # English input sentence
-     >>> fr = C.input(SequenceOver[Axis('n')][SparseTensor[30000]])  # French target sentence
+     >>> en = C.input(**SequenceOver[Axis('m')][SparseTensor[20000]])  # English input sentence
+     >>> fr = C.input(**SequenceOver[Axis('n')][SparseTensor[30000]])  # French target sentence
 
      >>> embed = Embedding(300)
      >>> encoder = Recurrence(LSTM(500), return_full_state=True)
@@ -327,7 +328,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
      ('defaultBatchAxis', 'defaultDynamicAxis')
 
      >>> # cumulative sum over inputs
-     >>> x = C.input(Sequence[Tensor[2]])
+     >>> x = C.input(**Sequence[Tensor[2]])
      >>> x0 = np.array([[   3,    2],
      ...                [  13,   42],
      ...                [-100, +100]])
@@ -425,7 +426,7 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
      ...                                    Dense(1, activation=sigmoid) ])
 
      >>> # element-wise max-pooling over an input sequence
-     >>> x = C.input(Sequence[Tensor[2]])
+     >>> x = C.input(**Sequence[Tensor[2]])
      >>> x0 = np.array([[ 1, 2 ],
      ...                [ 6, 3 ],
      ...                [ 4, 2 ],
@@ -528,10 +529,10 @@ def UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name
      name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.functions.Function(initial_state, dynamic_axis_like)`: 
-         A function that accepts two arguments (`initial state` and `dynamic_axis_like`), and performs the unfold operation on it.
-         The `initial state` argument is the initial state for the recurrence.
-         The `dynamic_axis_like` must be a sequence and provides a reference for the maximum length of the output sequence.
+        :class:`~cntk.ops.functions.Function`:
+        A function that accepts two arguments (`initial state` and `dynamic_axis_like`), and performs the unfold operation on it.
+        The `initial state` argument is the initial state for the recurrence.
+        The `dynamic_axis_like` must be a sequence and provides a reference for the maximum length of the output sequence.
     '''
 
     generator_function = _sanitize_function(generator_function)
@@ -560,8 +561,7 @@ def UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name
         new_state = z.outputs[1] if len(z.outputs) > 1 else output # we allow generator to return a single value if it is identical to the new state
         # implant the dynamic axis (from dynamic_axes_like)
         from cntk.internal import sanitize_input, typemap
-        from ..cntk_py import reconcile_dynamic_axis
-        new_state = typemap(reconcile_dynamic_axis)(sanitize_input(new_state), sanitize_input(out_axis))
+        new_state = typemap(reconcile_dynamic_axes)(sanitize_input(new_state), sanitize_input(out_axis))
         new_state = combine([new_state], name='unfold_new_state')
         state_fwd.resolve_to(new_state)
 

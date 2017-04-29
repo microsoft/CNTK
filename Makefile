@@ -274,7 +274,7 @@ ORIGINDIR:='$$ORIGIN'
 # Components VERSION info
 ########################################
 
-CNTK_COMPONENT_VERSION := 2.0rc1
+CNTK_COMPONENT_VERSION := 2.0rc2
 ifeq ("$(BUILDTYPE)","debug")
 CNTK_COMPONENT_VERSION := $(CNTK_COMPONENT_VERSION)d
 endif
@@ -360,7 +360,8 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
 	$(SOURCEDIR)/Math/BlockHandlerSSE.cpp \
 	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
-	$(SOURCEDIR)/Math/CPUMatrix.cpp \
+	$(SOURCEDIR)/Math/CPUMatrixFloat.cpp \
+	$(SOURCEDIR)/Math/CPUMatrixDouble.cpp \
 	$(SOURCEDIR)/Math/CPURNGHandle.cpp \
 	$(SOURCEDIR)/Math/CPUSparseMatrix.cpp \
 	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \

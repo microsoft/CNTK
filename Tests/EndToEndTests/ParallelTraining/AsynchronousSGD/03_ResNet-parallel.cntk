@@ -5,10 +5,10 @@
 makeMode = true
 RootDir = "."
 
-configName = "ssgd"
+configName = "asgd"
 minibatch = 128
 epochSize = 5
-parallelizationMethod = "DataParallelSGD"
+parallelizationMethod = "DataParallelASGD"
 asyncBuffer = "true"
 
 ConfigDir = "$RootDir$"
@@ -32,7 +32,7 @@ parallelTrain = "false"
 
 command = Train
 
-stderr = "$OutputDir$/03_ResNet"
+stderr = "$OutputDir$/Asgd_ResNet"
 traceLevel = 1
 
 Proj16to32Filename = "$ConfigDir$/16to32.txt"
@@ -40,7 +40,7 @@ Proj32to64Filename = "$ConfigDir$/32to64.txt"
 
 Train = [
     action = "train"
-    modelPath = "$ModelDir$/03_ResNet"
+    modelPath = "$ModelDir$/ASGD_Resnet.model"
 
      NDLNetworkBuilder = [
         networkDescription = "$ConfigDir$/03_ResNet.ndl"

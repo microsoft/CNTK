@@ -106,15 +106,18 @@ class _DebugState(object):
             self.name_to_node[n.name].append(n)
 
 
-def set_computation_network_track_gap_nans(enable):
+def set_checked_mode(enable):
     '''
-    Fill in NaNs in gaps of sequences to track unmasked uninitialized data.
-    For debugging purposes only.
-
+     Checked mode enables additional runtime verification such as:
+        - Tracking NaN occurences in sequence gaps.
+        - Function graph verification after binding of free static axes to actual values at runtime
+     
+     Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
+    
     Args:
-        enable (bool): whether to enable gap nans tracking (with performance impact)
+        enable (bool): whether to enable checked mode (with performance impact)
     '''
-    cntk_py.set_computation_network_track_gap_nans(enable)
+    cntk_py.set_checked_mode(enable)
 
 
 def set_computation_network_trace_level(level):

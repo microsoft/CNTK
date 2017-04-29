@@ -53,13 +53,6 @@ class DeviceDescriptor(cntk_py.DeviceDescriptor):
         '''
         return super(DeviceDescriptor, self).type()
 
-    def __str__(self):
-        if self.type() == DeviceKind.GPU:
-            details = 'GPU %i' % self.id()
-        else:
-            details = 'CPU'
-        return details
-
     def is_locked(self):
         '''
         Returns `True` if another CNTK process already holds an exclusive lock
@@ -154,7 +147,7 @@ def try_set_default_device(new_default_device, acquire_device_lock=False):
     Returns: `False` if
         * the specified device appears in the list of excluded devices;
         * `acquire_device_lock` is `True` and another process already holds a lock on the device;
-        * `acquire_device_lock` is `True` and `new_default_device` corresponds to a CPU device 
+        * `acquire_device_lock` is `True` and `new_default_device` corresponds to a CPU device
           (which cannot be locked).
     '''
     return cntk_py.DeviceDescriptor.try_set_default_device(new_default_device,

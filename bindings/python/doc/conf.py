@@ -27,10 +27,8 @@ master_doc = 'index'
 
 exclude_patterns = [
     '_build',
-    'cntk_py',
-    'tests',
-    '**/tests/*',
-    '*tests*'
+    'images',
+    'test',
 ]
 
 needs_sphinx = '1.5'
@@ -70,10 +68,10 @@ linkcheck_anchors_ignore = [
 
 source_prefix = 'https://github.com/Microsoft/CNTK/blob/'
 if module_is_unreleased():
-    # TODO temporary
-    source_prefix += 'v%s' % (cntk.__version__[:-1].replace("rc", ".rc"))
-else:
     source_prefix += 'master'
+else:
+    # TODO temporary
+    source_prefix += 'v%s' % (cntk.__version__.replace("rc", ".rc"))
 
 # sphinx.ext.extlinks options
 extlinks = {

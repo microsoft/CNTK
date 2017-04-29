@@ -1,13 +1,21 @@
+from os import path
+from enum import Enum, unique
+import warnings
+import collections
+
 from cntk import cntk_py, Value
 from cntk.device import DeviceDescriptor, cpu
 from cntk.internal import map_if_possible, typemap, sanitize_var_map,\
                           sanitize_batch, sanitize_dtype_cntk, _as_tuple,\
                           sanitize_variable_value_dict,\
                           sanitize_Function_attributes,\
+                          sanitize_variables_or_functions,\
                           _value_as_sequence_or_array
-from cntk.internal.utils import get_python_function_arguments, map_function_arguments
+from cntk.internal.utils import get_python_function_arguments, \
+                                map_function_arguments, _py_dict_to_cntk_dict
+from cntk.internal import UserFunctionDeserializer
 from ..variables import Record, Variable
-from enum import Enum, unique
+
 
 @unique
 class CloneMethod(Enum):
@@ -32,6 +40,7 @@ class CloneMethod(Enum):
     Parameters are cloned and made immutable; i.e. Constants in the new clone
     (e.g. for use as a fixed feature extractor)
     '''
+
 
 class Function(cntk_py.Function):
     '''
@@ -66,7 +75,7 @@ class Function(cntk_py.Function):
       def f(x:Tensor[13]):
           return x * x
 
-    If you are working with Python 2.7, use CNTK's `@:class:~cntk.layers.typing.Signature` decorator instead::
+    If you are working with Python 2.7, use CNTK's :class:`@Signature <cntk.layers.typing.Signature>` decorator instead::
 
       >>> from cntk.layers.typing import *
       >>> @Function
@@ -76,9 +85,9 @@ class Function(cntk_py.Function):
       >>> debugging.dump_signature(f)
       Function(x: Tensor[13]) -> Tensor[13]
 
-    ``make_block=True`` is an internal parameter used to implement `@:func:~cntk.layers.blocks.BlockFunction()`.
-    If `BlockFunction()` passes `True``, then the result will be wrapped
-    in :func:``~cntk.ops.as_block()``, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
+    ``make_block=True`` is an internal parameter used to implement :func:`@BlockFunction <cntk.layers.blocks.BlockFunction>`.
+    If `BlockFunction()` passes `True`, then the result will be wrapped
+    in :func:`~cntk.ops.as_block()`, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
     '''
 
     # We override the constructors to implement an overload that constructs
@@ -146,6 +155,7 @@ class Function(cntk_py.Function):
                 combined_block_args = combine(block_args)                               # the content of the BlockFunction
                 arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
                 return as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='Tuple').outputs
+
             def invoke(fun_args):
                 try:
                     # hide Placeholders of this function from .signature() of any function defined inside
@@ -158,6 +168,7 @@ class Function(cntk_py.Function):
                     # unhide Placeholders of this function again
                     for arg in args:
                         Function._placeholders_under_construction.remove(arg)
+
                 # resolve tuples and NamedOutputs  --TODO: check for duplicates
                 def resolve_named(output):
                     #if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
@@ -180,6 +191,7 @@ class Function(cntk_py.Function):
                 else:
                     out = resolve_named(out)
                 return out
+
             # if called from BlockFunction() then wrap into a block
             if make_block: # if we make a block then run off a separate set
                 block_args = [make_arg_variable(arg.name, annotations) for arg in args]  # placeholders inside the BlockFunction
@@ -269,7 +281,6 @@ class Function(cntk_py.Function):
         '''
         Back-compat wrapper for update_signature() (beta12 and before).
         '''
-        import warnings
         warnings.warn('This will be removed in future versions. Please use '
                 'update_signature(...) instead', DeprecationWarning)
         placeholders = self.placeholders  # the unbound parameters to fill in
@@ -281,6 +292,7 @@ class Function(cntk_py.Function):
             else:
                 from cntk import input
                 return input(arg)
+
         args = [to_input(arg) for arg in arg_types]
         self.replace_placeholders(dict(zip(placeholders, args)))
 
@@ -652,7 +664,7 @@ class Function(cntk_py.Function):
              computation is. If `None`, the default device is used.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
 
@@ -667,6 +679,8 @@ class Function(cntk_py.Function):
                                       None, device)
         if outputs is None:
             outputs = self.outputs
+        else:
+            outputs = sanitize_variables_or_functions(outputs)
 
         output_map = {v: None for v in outputs}
         keep_for_backward = set(keep_for_backward or {})
@@ -766,17 +780,17 @@ class Function(cntk_py.Function):
              costly conversion but returns a somewhat opaque object. Also, the Value objects 
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
-            grad_root (variable, optional): specify the root of gradients calculation. 
+            grad_root (:class:`~cntk.variables.Variable`, optional): specify the root of gradients calculation. 
              If not specified, the output of this function will be used as gradient root.
 
         Returns:
             dict or NumPy Array or a tuple of these: Dict with keys of ``wrt`` variables and gradient values of
-             ``wrt`` variables. A single NumPy array if there is only one gradient value.
-             If ``outputs`` were specified (to fetch values for), this method returns a tuple where the 2nd element
-             of the tuple is the ``outputs`` values; a dict with keys of specified ``outputs`` variables and
-             values of computed ``outputs``, or a single NumPy array if there is only one output value.
-             Each element has the same shape as the ``wrt`` or ``outputs`` variables including dynamic axes
-             (such as the batch axis).
+            ``wrt`` variables. A single NumPy array if there is only one gradient value.
+            If ``outputs`` were specified (to fetch values for), this method returns a tuple where the 2nd element
+            of the tuple is the ``outputs`` values; a dict with keys of specified ``outputs`` variables and
+            values of computed ``outputs``, or a single NumPy array if there is only one output value.
+            Each element has the same shape as the ``wrt`` or ``outputs`` variables including dynamic axes
+            (such as the batch axis).
         '''
         if device is None:
             device = DeviceDescriptor.use_default_device()
@@ -836,14 +850,6 @@ class Function(cntk_py.Function):
 
     @name.setter
     def name(self, function_name):
-        '''
-        Sets the name of this Function.
-        Setting the name of a Function is only allowed if the Function does not already have a name.
-        Calling this method, when this Function already has a name, results in an exception.
-
-        Args:
-            function_name (`str`): name for this Function.
-        '''
         super(Function, self).set_name(function_name)
 
     @property
@@ -1063,10 +1069,9 @@ class Function(cntk_py.Function):
         Args:
             filename (str): model path
         '''
-        return super(Function, self).save_model(filename)
+        return super(Function, self).save(filename)
 
     def save_model(self, filename): # legacy name
-        import warnings
         warnings.warn('This will be removed in future versions. Please use '
                 'save(...) instead', DeprecationWarning)
         return self.save(filename)
@@ -1082,32 +1087,58 @@ class Function(cntk_py.Function):
         Returns:
             `None`: this method only has the side-effect of loading the model parameters from the file
         '''
-        return super(Function, self).restore_model(filename)
+        return super(Function, self).restore(filename)
 
     def restore_model(self, filename): # legacy name
-        import warnings
         warnings.warn('This will be removed in future versions. Please use '
                 'restore(...) instead', DeprecationWarning)
         return self.restore(filename)
 
     @staticmethod
     @typemap
-    def load(filename, device=None):
+    def load(model, device=None, udf_factory_callback_map=None):
         '''
-        Load the model in ``filename``, that has been saved using
-        :func:`~cntk.ops.functions.Function.save`.
+        Load the ``model``, that has been saved using :func:`~cntk.ops.functions.Function.save`.
 
         Args:
-            filename (str): filename to load the model from
-            device (:class:`~cntk.device.DeviceDescriptor`, default is the default device):
-             instance of DeviceDescriptor
+            model (str or bytes): either a filepath of a model file or a byte buffer 
+             containing the binary representation of a model.
+            device (:class:`~cntk.device.DeviceDescriptor`, defaults to the current globally default device):
+             specifies the device to allocate the model on.
+            udf_factory_callback_map (dict, default is `None`): if the model contains any user-defined
+             functions, CNTK will try to automatically reconstruct them by invoking a static
+             ``deserialize`` method of the corresponding Function sub-class. This method takes three 
+             arguments (a list of inputs to the function, a string name, and a state dictionary
+             generated by the corresponding :func:`~cntk.ops.functions.UserFunction.serialize` method) and
+             returns an instance of the user-defined function. This optional argument allows to override
+             default UDF deserialization behavior by providing a map of user-function op names and 
+             corresponding lambdas that should be invoked instead of the ``deserialize`` method.
 
         Returns:
             root node
         '''
         if not device:
             device = DeviceDescriptor.use_default_device()
-        return cntk_py.Function.load_model(filename, device)
+
+        deserializer = UserFunctionDeserializer(udf_factory_callback_map)
+
+        is_buffer = isinstance(model, type(b'')) and not isinstance(b'', str)
+        is_buffer = is_buffer or isinstance(model, bytearray)
+
+        is_file = False
+        if not is_buffer:
+            try:
+                is_file = path.exists(model)
+            except:
+                pass
+
+        if is_buffer:
+            return cntk_py.Function.load_from_buffer(model, device, deserializer)
+        
+        if is_file:
+            return cntk_py.Function.load(model, device, deserializer)
+        
+        raise ValueError('Cannot load a model that is neither a file nor a byte buffer.')
 
 @typemap
 def register_native_user_function(op_name, module_name, factory_method_name):
@@ -1149,19 +1180,17 @@ def native_user_function(op_name, operands, user_function_instance_name=''):
     return cntk_py.Function_native_user_function(op_name, operands, user_function_instance_name)
 
 @typemap
-def load_model(filename, device=None):
+def load_model(model, device=None, udf_factory_callback_map=None):
     '''
     Alias for :func:`~cntk.ops.functions.Function.load`.
     '''
-    return Function.load(filename, device)
+    return Function.load(model, device, udf_factory_callback_map)
 
 @typemap
 def save_model(model, filename): # legacy name
-    import warnings
     warnings.warn('This will be removed in future versions. Please use '
             'model.save(...) instead', DeprecationWarning)
     return model.save(filename)
-
 
 class UserFunction(Function):
     '''
@@ -1327,3 +1356,20 @@ class UserFunction(Function):
             A cloned instance of this user-defined function.
         '''
         raise NotImplementedError('clone has to be overwritten')
+
+    def _serialize(self):
+        dictionary = {}
+        dictionary['class'] = self.__class__.__name__
+        dictionary['module'] = self.__class__.__module__
+        dictionary['op_name'] = self.op_name
+        dictionary['state'] = self.serialize()
+        return _py_dict_to_cntk_dict(dictionary)
+
+    def serialize(self):
+        '''
+        Generates a dictionary that captures the state of this user-defined function.
+
+        This method must be overridden, if a user function has any state that needs
+        to be preserved in the model dictionary.
+        '''
+        return {}

@@ -67,7 +67,7 @@ class Evaluator(cntk_py.Evaluator):
 
         Returns:
             `float`: the average evaluation criterion value per sample for the
-              tested minibatch.
+            tested minibatch.
         '''
         if not device:
             device = use_default_device()
