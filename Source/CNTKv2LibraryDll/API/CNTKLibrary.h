@@ -1797,6 +1797,8 @@ namespace CNTK
         ///
         CNTK_API std::wstring AsString() const;
 
+        size_t CurrentValueTimeStamp() const;
+
     protected:
 #ifdef SWIG
     public:
@@ -1806,6 +1808,7 @@ namespace CNTK
         {}
 
     protected:
+        //friend class LearnerCNTK;
         CNTK_API NDArrayViewPtr Value() const;
         CNTK_API void SetValue(const NDArrayViewPtr& value);
 
@@ -2072,8 +2075,6 @@ private:
             RecordValueUpdate();
         }
 
-        CNTK_API size_t CurrentValueTimeStamp() const;
-
         CNTK_API void RecordValueUpdate();
 
     private:
@@ -2165,6 +2166,18 @@ private:
         NDArrayViewPtr Value() const
         {
             return Variable::Value();
+        }
+
+        void RecordValueUpdate();
+
+        ///
+        /// Copies the contents of the 'value' NDArrayView into the view backing 'this' 
+        /// Constant's value. The shapes of both views must be identical.
+        ///
+        void SetValue(const NDArrayViewPtr& value)
+        {
+            Variable::SetValue(value);
+            RecordValueUpdate();
         }
 
     private:
@@ -4487,6 +4500,13 @@ namespace CNTK
                                         double rho = 0.95,
                                         double epsilon = 1e-8,
                                         AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
+
+    typedef std::function<FunctionPtr(Parameter, Constant, Dictionary)> NetworkFactory;
+
+    CNTK_API LearnerPtr CNTKLearner(NetworkFactory f, const std::vector<Parameter>& parameters,
+        const Dictionary& hyperparameters,
+        const LearningRateSchedule& learningRateSchedule,
+        AdditionalLearningOptions additionalOptions);
 
     ///
     /// Distributed Learner.

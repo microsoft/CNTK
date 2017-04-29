@@ -122,7 +122,19 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
     LearningRatePerSampleSchedule learningRatePerSample = 0.003125;
-    auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
+
+    LearnerPtr sgd = SGDLearner(classifierOutput->Parameters(), learningRatePerSample);
+    
+    NetworkFactory f = [](Parameter p, Constant g, Dictionary d) -> FunctionPtr
+    {
+        return Assign(p, Minus(p, ElementTimes(Constant::Scalar(0.003125f), g)));
+    };
+
+    LearnerPtr mysgd = CNTKLearner(f, classifierOutput->Parameters(), Dictionary(), learningRatePerSample, AdditionalLearningOptions());
+
+    auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { mysgd });
+
+    //auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
 
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
@@ -137,8 +149,8 @@ void MNISTClassifierTests()
 {
     fprintf(stderr, "\nMNISTClassifierTests..\n");
 
-    if (ShouldRunOnCpu())
-        TrainSimpleFeedForwardClassifier(DeviceDescriptor::CPUDevice());
+    //if (ShouldRunOnCpu())
+    //    TrainSimpleFeedForwardClassifier(DeviceDescriptor::CPUDevice());
     if (ShouldRunOnGpu())
         TrainMNISTClassifier(DeviceDescriptor::GPUDevice(0));
 }

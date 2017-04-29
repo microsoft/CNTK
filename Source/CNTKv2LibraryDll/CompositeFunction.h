@@ -372,7 +372,7 @@ namespace CNTK
 
         std::unordered_set<Variable> m_allNetworkRoots;
 
-        std::unordered_map<Parameter, size_t> m_lastRecordedParameterValueTimeStamps;
+        std::unordered_map<Variable, size_t> m_lastRecordedTimeStamps;
 
         std::unordered_set<Variable> m_inputsExcludedFromGradientComputation;
 
