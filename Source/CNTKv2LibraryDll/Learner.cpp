@@ -660,11 +660,18 @@ namespace CNTK
         const MomentumSchedule& momentumSchedule,
         bool unitGain,
         const MomentumSchedule& varianceMomentumSchedule,
+        double epsilon,
         AdditionalLearningOptions additionalOptions)
         : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule,
             unitGain, additionalOptions, /*allocateSmoothGradients*/ false),
-        m_varianceMomentumSchedule(varianceMomentumSchedule)
+        m_varianceMomentumSchedule(varianceMomentumSchedule), m_epsilon(epsilon)
     {
+
+        if (m_epsilon < 0.0)
+        {
+            InvalidArgument("Epsilon should be non-negative. You are trying to set it to %g.", m_epsilon);
+        }
+
         for (const auto& parameter : parameters)
         {
             const auto shape = GetMatrixShape(parameter);
@@ -694,7 +701,7 @@ namespace CNTK
         double& smoothedCount = m_smoothedCounts.at(parameter);
 
         smoothedGradientMatrix->AdamUpdate(*gradientMatrix, *parameterMatrix, smoothedCount, learningRate,
-            momentum, varMomentum, UseUnitGainMomentum());
+            momentum, varMomentum, (ElementType)m_epsilon, UseUnitGainMomentum());
     }
 
     LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters,
@@ -789,9 +796,10 @@ namespace CNTK
                            const MomentumSchedule& momentumSchedule,
                            bool unitGain, /*=true*/
                            const MomentumSchedule& varianceMomentumSchedule, /*= MomentumAsTimeConstantSchedulePerSample(2 * 3600 * 100)*/
+                           double epsilon,
                            AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        return MakeSharedObject<LearnerAdam>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
+        return MakeSharedObject<LearnerAdam>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, epsilon, additionalOptions);
     }
 
     LearnerPtr AdaGradLearner(const vector<Parameter>& parameters,

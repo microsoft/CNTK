@@ -3268,14 +3268,6 @@ namespace CNTK
         ///
         CNTK_API static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName = L"");
 
-        ///
-        /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
-        ///
-        inline static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const std::wstring& userFunctionInstanceName = L"")
-        {
-            return NativeUserFunction(opName, operands, Dictionary(), userFunctionInstanceName);
-        }
-
     protected:
         static bool IsArgument(const Variable& var)
         {
@@ -4443,6 +4435,7 @@ namespace CNTK
                                     const MomentumSchedule& momentumSchedule,
                                     bool unitGain = DefaultUnitGainValue(),
                                     const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
+                                    double epsilon = 1e-8,
                                     AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
@@ -5125,7 +5118,7 @@ namespace CNTK
     /// 
     /// Create an HTKMLFDeserializer with the specified options
     /// 
-    CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles);
+    CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries = false);
 
     /// 
     /// Instantiate the CNTK built-in text format minibatch source
