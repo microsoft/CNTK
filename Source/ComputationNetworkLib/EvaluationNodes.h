@@ -512,6 +512,7 @@ public:
         MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
         MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
         Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_subPen, m_delPen, m_insPen, m_squashInputs, m_tokensToIgnore);
+        Value().TransferToDeviceIfNotThere(Input(0)->GetDeviceId());
     }
 
     virtual void Validate(bool isFinalValidationPass) override
