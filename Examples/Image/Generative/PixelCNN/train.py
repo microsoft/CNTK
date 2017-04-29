@@ -69,20 +69,18 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     minibatch_size      = 12 if (model == 'pixelcnnpp') else 64
 
     # Set learning parameters
-    lr_init          = 0.001 / minibatch_size
-    lr_decay         = 0.999995
-    lr_per_sample    = lr_init
-    lr_schedule      = ct.learning_rate_schedule(lr_per_sample, unit=ct.UnitType.minibatch)
+    lr = 0.001 / minibatch_size
+    lr_decay = 0.6 #0.999995
 
     # Print progress
     progress_writers = [ct.logging.ProgressPrinter(tag='Training', freq=100, num_epochs=max_epochs)] # freq=100
 
     # trainer object
     learner = ct.learners.adam(z.parameters,
-                               lr=lr_schedule, 
+                               lr=ct.learning_rate_schedule(lr, unit=ct.UnitType.minibatch), 
                                momentum=ct.momentum_schedule(0.9), # Beta 1
                                unit_gain=False,
-                               variance_momentum=ct.momentum_schedule(0.999) # Beta 2
+                               variance_momentum=ct.momentum_schedule(0.999), # Beta 2
                                # l1_regularization_weight = 0.001
                                # l2_regularization_weight = 0.001
                                # gradient_clipping_threshold_per_sample=10
@@ -103,7 +101,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
         training_loss = 0
 
         # first_run
-        if epoch == 0:
+        if epoch == -1:
             reader_state = reader_train.get_checkpoint_state()
             data = reader_train.next_minibatch(min(init_minibatch_size, epoch_size), input_map=input_map)
             z_init.eval({inputs_init:data[inputs].asarray()})
@@ -112,7 +110,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
         sample_index = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
             t0 = time.perf_counter()
-            data = reader_train.next_minibatch(min(minibatch_size, epoch_size-sample_count), input_map=input_map)
+            data = reader_train.next_minibatch(min(minibatch_size, epoch_size-sample_count), input_map=input_map)            
             t1 = time.perf_counter()
 
             if loss == 'category':
@@ -124,18 +122,20 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
                 trainer.train_minibatch({input_var:data[x].value, target_var:target})
             else:
                 trainer.train_minibatch({inputs:data[inputs].asarray()})
+                #lr *= lr_decay
+                #learner.reset_learning_rate(ct.learning_rate_schedule(lr, unit=ct.UnitType.minibatch))
 
             t2 = time.perf_counter()
 
             sample_count  += trainer.previous_minibatch_sample_count
             training_loss += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count
 
-        lr_per_sample *= 0.6
-        learner.reset_learning_rate(ct.learning_rate_schedule(lr_per_sample, unit=ct.UnitType.minibatch))
+        lr *= lr_decay
+        learner.reset_learning_rate(ct.learning_rate_schedule(lr, unit=ct.UnitType.minibatch))
 
         # sample from the model
         t3 = time.perf_counter()
-        if (loss == 'mixture') and ((sample_index % 50) == 0):
+        if (loss == 'mixture'):
             x_gen = np.zeros((16,) + image_shape, dtype=np.float32)
             for y in range(image_height):
                 for x in range(image_width):

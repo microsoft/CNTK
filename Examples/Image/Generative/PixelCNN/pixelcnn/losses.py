@@ -62,8 +62,8 @@ def discretized_mix_logistic_loss(x,l):
 
     log_probs = ct.reshape(ct.reduce_sum(log_probs, axis=1), shape=(10,)+ls[1:]) + nn.log_prob_from_logits(logit_probs, axis=0)
     losses = nn.log_sum_exp(log_probs, axis=0)
-    # loss = -ct.reduce_sum(losses)
-    loss = ct.reshape(-ct.reduce_sum(ct.reduce_sum(losses,axis=0),axis=1), shape=(1,))
+    loss = -ct.reduce_sum(losses)
+    #loss = ct.reshape(-ct.reduce_sum(ct.reduce_sum(losses,axis=0),axis=1), shape=(1,))
     return loss
 
 def discretized_mix_logistic_loss_HWC(x,l):
