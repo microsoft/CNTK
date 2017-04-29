@@ -4443,6 +4443,7 @@ namespace CNTK
                                     const MomentumSchedule& momentumSchedule,
                                     bool unitGain = DefaultUnitGainValue(),
                                     const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
+                                    double epsilon = 1e-8,
                                     AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
