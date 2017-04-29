@@ -1832,6 +1832,20 @@ namespace CNTK
             m_currentOutputsToEvaluate.clear();
         }
 
+        if (m_log)
+        {
+            auto all_nodes = m_computationNetwork->GetAllNodes();
+            for (auto nodeIter : all_nodes)
+            {
+                fprintfOrDie(m_log, "FwStart,%ls,%ls,%d\n", nodeIter->NodeName().c_str(), nodeIter->OperationName().c_str(), nodeIter->m_fw_start);
+                fprintfOrDie(m_log, "FwEnd,%ls,%ls,%d\n", nodeIter->NodeName().c_str(), nodeIter->OperationName().c_str(), nodeIter->m_fw_end);
+                fprintfOrDie(m_log, "BwStart,%ls,%ls,%d\n", nodeIter->NodeName().c_str(), nodeIter->OperationName().c_str(), nodeIter->m_bw_start);
+                fprintfOrDie(m_log, "BwEnd,%ls,%ls,%d\n", nodeIter->NodeName().c_str(), nodeIter->OperationName().c_str(), nodeIter->m_bw_end);
+            }
+
+            fclose(m_log);
+            m_log = NULL;
+        }
         // TODO: How to deal with the specified 'computeDevice'
     }
 }

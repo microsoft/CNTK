@@ -656,7 +656,7 @@ template <class ElemType>
     // and make sure dimensions are what we expect
     VerifyDataSize(Value());
 
-    FILE* f = _wfopen(L"profile_log.txt", L"at");
+    /*FILE* f = _wfopen(L"profile_log.txt", L"at");
     if (f == NULL)
     {
         RuntimeError("Error: ProfilerGenerateDetailFile: Cannot create file <%ls>.\n", "profile_log.txt");
@@ -665,7 +665,9 @@ template <class ElemType>
     milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 
     fprintfOrDie(f, "FwStart,%ls,%ls,%d\n", NodeName().c_str(), OperationName().c_str(), ms.count());
-    fclose(f);
+    fclose(f);*/
+    milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    this->m_fw_start = ms.count();
 }
 
 template <class ElemType>
@@ -681,17 +683,9 @@ template <class ElemType>
 
         InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
     }
-
-    FILE* f = _wfopen(L"profile_log.txt", L"at");
-    if (f == NULL)
-    {
-        RuntimeError("Error: ProfilerGenerateDetailFile: Cannot create file <%ls>.\n", "profile_log.txt");
-    }
-
+    
     milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-
-    fprintfOrDie(f, "FwEnd,%ls,%ls,%d\n", NodeName().c_str(), OperationName().c_str(), ms.count());
-    fclose(f);
+    this->m_fw_end = ms.count();
 
     // tracing
     Trace();
@@ -729,16 +723,8 @@ template <class ElemType>
         }
     }
 
-    FILE* f = _wfopen(L"profile_log.txt", L"at");
-    if (f == NULL)
-    {
-        RuntimeError("Error: ProfilerGenerateDetailFile: Cannot create file <%ls>.\n", "profile_log.txt");
-    }
-
     milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-
-    fprintfOrDie(f, "BwStart,%ls,%ls,%d\n", NodeName().c_str(), OperationName().c_str(), ms.count());
-    fclose(f);
+    this->m_bw_start = ms.count();
 }
 
 template <class ElemType>
@@ -762,16 +748,8 @@ template <class ElemType>
         }
     }
 
-    FILE* f = _wfopen(L"profile_log.txt", L"at");
-    if (f == NULL)
-    {
-        RuntimeError("Error: ProfilerGenerateDetailFile: Cannot create file <%ls>.\n", "profile_log.txt");
-    }
-
     milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-
-    fprintfOrDie(f, "BwEnd,%ls,%ls,%d\n", NodeName().c_str(), OperationName().c_str(), ms.count());
-    fclose(f);
+    this->m_bw_end = ms.count();
 }
 
 template <class ElemType>

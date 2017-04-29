@@ -89,7 +89,7 @@ namespace CNTK
                                  const DeviceDescriptor& computeDevice,
                                  const std::unordered_set<Variable>& outputsToRetainBackwardStateFor,
                                  const std::unordered_set<Variable>& inputsToExcludeGradientsFor);
-
+        
         virtual BackPropStatePtr Forward(const std::vector<ValuePtr>& /*inputValues*/,
                                          std::unordered_map<Variable, ValuePtr>& /*outputs*/,
                                          const DeviceDescriptor& /*computeDevice*/,
@@ -206,7 +206,18 @@ namespace CNTK
         CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name, const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
             : Function({}, Dictionary(), rootFunction, name, uid),
             m_allPrimitiveFunctions(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
-        {}
+        {
+            m_log = _wfopen(L"profile_log.txt", L"at");
+        }
+
+        ~CompositeFunction()
+        {
+            if (m_log != NULL)
+            {
+                fclose(m_log);
+                m_log = NULL;
+            }
+        }
 
         std::vector<Variable> DetermineInputs(bool pythonOperandOrder = false) const
         {
@@ -238,7 +249,6 @@ namespace CNTK
 
             return inputs;
         }
-
 
         // Copy the internal state from the network into the function graph.
         void UpdateInternalState() const;
@@ -363,6 +373,8 @@ namespace CNTK
         std::unordered_map<Parameter, size_t> m_lastRecordedParameterValueTimeStamps;
 
         std::unordered_set<Variable> m_inputsExcludedFromGradientComputation;
+
+        FILE* m_log;
 
         // Version history:
         // 1 -- initial version.

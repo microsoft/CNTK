@@ -315,7 +315,7 @@ public:
 
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
         m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0),
-        m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name), m_isValueSparse(false)
+        m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name), m_isValueSparse(false), m_fw_start(0), m_fw_end(0), m_bw_start(0), m_bw_end(0)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
         // we store a unique numeric number for every node that is constructed, as a debugging aid
@@ -398,6 +398,11 @@ public:
 
         return name;
     }
+    
+    long long m_fw_start;
+    long long m_fw_end;
+    long long m_bw_start;
+    long long m_bw_end;
 
     // -----------------------------------------------------------------------
     // dimensions of the value held by this node
