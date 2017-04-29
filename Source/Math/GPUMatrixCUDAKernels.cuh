@@ -5190,7 +5190,7 @@ __global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LON
 
 template <class ElemType>
 __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum)
 {
     const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -5203,11 +5203,11 @@ __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemT
         ElemType w;
         if (sizeof(ElemType) == sizeof(double))
         {
-            w = adaMul * rsqrt(adaSqr + 1e-8);
+            w = adaMul * 1.0 / (sqrt(adaSqr) + epsilon);
         }
         else
         {
-            w = adaMul * rsqrtf(adaSqr + 1e-8);
+            w = adaMul * 1.0f / (sqrtf(adaSqr) + epsilon);
         }
 
         g = mom * smoothMom[idx] + unitGainFactor * g;
@@ -5221,7 +5221,7 @@ template <class ElemType>
 __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
     ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum)
 {
     const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -5234,11 +5234,11 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
         ElemType w;
         if (sizeof(ElemType) == sizeof(double))
         {
-            w = adaMul * rsqrt(adaSqr + 1e-8);
+            w = adaMul * 1.0 / (sqrt(adaSqr) + epsilon);
         }
         else
         {
-            w = adaMul * rsqrtf(adaSqr + 1e-8);
+            w = adaMul * 1.0f / (sqrtf(adaSqr) + epsilon);
         }
 
         g = mom * smoothMom[idx] + unitGainFactor * g;
@@ -5304,7 +5304,7 @@ __global__ void _adadelta4BlockSparseCol(CUDA_LONG size,
     }
 }
 
-// Calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// Calculate alpha in forward-backward calculation. equation (6), (7) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
 // prob (input): the posterior output from the network
 // alpha (output): alpha for forward-backward calculation. 
@@ -5428,7 +5428,7 @@ __global__ void _assignAlphaScore(
     }
 }
 
-// Calculate beta in forward-backward calculation, equation (10), (11) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// Calculate beta in forward-backward calculation, equation (10), (11) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // See _assignAlphaScore for the explanation of parameters
 template<class ElemType>
 __global__ void _assignBetaScore(
@@ -5518,7 +5518,7 @@ __global__ void _assignBetaScore(
     }
 }
 
-// Calculate derivative, equation (15) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// Calculate derivative, equation (15) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // See _assignAlphaScore for the explanation of parameters
 template<class ElemType>
 __global__ void _assignCTCScore(
@@ -5571,7 +5571,7 @@ __global__ void _assignCTCScore(
     }
 }
 
-// Calculate CTC score. equation (8) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// Calculate CTC score. equation (8) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 template<class ElemType>
 __global__ void _assignTotalScore(ElemType *betaScore,
     ElemType *totalScore,
@@ -5587,7 +5587,8 @@ __global__ void _assignTotalScore(ElemType *betaScore,
         LONG64 alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
 
         betaScore[alphaId_0] = logaddk(betaScore[alphaId_0 + 1], betaScore[alphaId_0 + 2]);
-        totalScore[uttId] = betaScore[alphaId_0];
+        // Negative sum
+        atomicAdd(&totalScore[0], -1 * betaScore[alphaId_0]);
     }
 }
 

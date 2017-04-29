@@ -439,9 +439,14 @@ namespace CNTK
     static const std::wstring UidPrefix = L"__v2libuid__";
     static const std::wstring NamePrefix = L"__v2libname__";
 
-    inline std::wstring CNTKInternalNodeNameFromUidAndName(const std::wstring& uid, const std::wstring& name)
+    // 'generateMangledNames' = true is used if we want to emit mangled names for the internal CNTK v1 nodes so that when
+    // saving the model in V1 format and loading it back, we can retrieve the original V2 Variable/Function UID and Name.
+    inline std::wstring CNTKInternalNodeNameFromUidAndName(const std::wstring& uid, const std::wstring& name, bool generateMangledNames = false)
     {
-        return UidPrefix + uid + NamePrefix + name;
+        if (generateMangledNames)
+            return UidPrefix + uid + NamePrefix + name;
+        else
+            return uid;
     }
 
     inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName)
