@@ -5218,6 +5218,44 @@ __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemT
 }
 
 template <class ElemType>
+__global__ void _adamax(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
+	ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType* max_gradients, bool unitGainMomentum)
+{
+	const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
+	CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+	CUDA_LONG stride = blockDim.x * gridDim.x;
+
+	ElemType max_g = max_gradients[0];
+	for (; idx < size; idx += stride)
+	{
+		ElemType g = grad[idx];
+		ElemType adaSqr = adaWeight * smoothAda[idx];
+        ElemType w;
+
+		if (abs(adaSqr) < max_g)
+			adaSqr = max_g;
+		else
+			adaSqr = abs(adaSqr);
+
+		smoothAda[idx] = adaSqr;
+		
+		if (sizeof(ElemType) == sizeof(double))
+		{
+			w = adaMul / (adaSqr + 1e-8);
+		}
+		else
+		{
+			w = adaMul / (adaSqr + 1e-8);
+		}
+
+		g = mom * smoothMom[idx] + unitGainFactor * g;
+		smoothMom[idx] = g;
+		g = lr*g*w;
+		val[idx] -= g;
+	}
+}
+
+template <class ElemType>
 __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
     ElemType* smoothAda, ElemType* smoothMom, ElemType* val,

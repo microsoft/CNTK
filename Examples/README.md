@@ -8,5 +8,5 @@ The examples are structured by topic into Image, Language Understanding,
 Speech, and so forth. To get started with CNTK we recommend the tutorials in
 the `Tutorials` folder.
 
-An overview on all examples and tutorials is also provided by the
+An overview on all examples and tutorials is also provided by 
 [Cognitive Toolkit Model Gallery](https://www.microsoft.com/en-us/research/product/cognitive-toolkit/model-gallery/) page.
