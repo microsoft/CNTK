@@ -1161,7 +1161,7 @@ def register_native_user_function(op_name, module_name, factory_method_name):
     return cntk_py.Function_register_native_user_function(op_name, module_name, factory_method_name)
 
 @typemap
-def native_user_function(op_name, operands, user_function_instance_name=''):
+def native_user_function(op_name, operands, attributes=None, user_function_instance_name=''):
     '''
     Creates an instance of a user-defined Function previously registered using the
     'register_native_user_function' method.
@@ -1177,7 +1177,11 @@ def native_user_function(op_name, operands, user_function_instance_name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    return cntk_py.Function_native_user_function(op_name, operands, user_function_instance_name)
+    if attributes is None:
+        attributes = {}
+
+    attributes = _py_dict_to_cntk_dict(attributes)
+    return cntk_py.Function_native_user_function(op_name, operands, attributes, user_function_instance_name)
 
 @typemap
 def load_model(model, device=None, udf_factory_callback_map=None):

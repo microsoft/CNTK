@@ -3268,14 +3268,6 @@ namespace CNTK
         ///
         CNTK_API static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName = L"");
 
-        ///
-        /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
-        ///
-        inline static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const std::wstring& userFunctionInstanceName = L"")
-        {
-            return NativeUserFunction(opName, operands, Dictionary(), userFunctionInstanceName);
-        }
-
     protected:
         static bool IsArgument(const Variable& var)
         {
