@@ -1333,11 +1333,14 @@ namespace CNTK
                 }
             }
 
-            // Record the timestamps of Parameter values
-            assert(m_lastRecordedParameterValueTimeStamps.empty());
+            // Record the timestamps of Parameters and Constants
+            assert(m_lastRecordedTimeStamps.empty());
             auto functionParameters = Parameters();
             for (auto parameter : functionParameters)
-                m_lastRecordedParameterValueTimeStamps.insert({ parameter, parameter.CurrentValueTimeStamp() });
+                m_lastRecordedTimeStamps.insert({ parameter, parameter.CurrentValueTimeStamp() });
+            auto functionConstants = Constants();
+            for (auto constant : functionConstants)
+                m_lastRecordedTimeStamps.insert({ constant, constant.CurrentValueTimeStamp() });
         }
 
         if (!m_networkMatricesAllocated && allocateNetworkMatrices)
@@ -1730,15 +1733,15 @@ namespace CNTK
             nodeIter->SetEvalTimeStampOutdatedWrtAll();
         
         // Bump the timestamp of the parameter nodes whose values have changed
-        for (auto& paramTimeStampRecord : m_lastRecordedParameterValueTimeStamps)
+        for (auto& timeStampRecord : m_lastRecordedTimeStamps)
         {
-            auto parameter = paramTimeStampRecord.first;
-            auto prevTimeStamp = paramTimeStampRecord.second;
-            auto newTimeStamp = parameter.CurrentValueTimeStamp();
+            auto variable = timeStampRecord.first;
+            auto prevTimeStamp = timeStampRecord.second;
+            auto newTimeStamp = variable.CurrentValueTimeStamp();
             if (newTimeStamp > prevTimeStamp)
             {
-                paramTimeStampRecord.second = newTimeStamp;
-                m_variableToNodeMap.at(parameter)->BumpEvalTimeStamp();
+                timeStampRecord.second = newTimeStamp;
+                m_variableToNodeMap.at(variable)->BumpEvalTimeStamp();
             }
         }
 

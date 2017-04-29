@@ -12,11 +12,16 @@
 
 namespace CNTK 
 {
+    // p = placeholder('parameter')
+    // g = placeholder('gradient')
+    // S = parameter(p.shape())
+    // Snew = C.assign(S, S + g * g)
+    // return C.assign(p, p - d['lr'] * g / C.sqrt(Snew)) 
 
     // A learner which allows the new values of the parameters to be computed with the same 
     // mechanism as the rest of the network
 
-    typedef std::function<FunctionPtr(Parameter, Variable, Dictionary)> NetworkFactory;
+    
 
     // An abstract base class at the root of the standard learners hierarchy
     // It implements most of the learner functionality, except for the actual update function,
@@ -328,8 +333,9 @@ namespace CNTK
 
     class LearnerCNTK : public LearnerBase
     {
-        std::unordered_map<Parameter, FunctionPtr> m_updates;
+        std::unordered_map<Parameter, std::pair<Constant, FunctionPtr>> m_updates;
         Dictionary m_hyperparameters;
+        static const std::unordered_map<Variable, ValuePtr> m_empty;
 
     public:
         LearnerCNTK(NetworkFactory f, const std::vector<Parameter>& parameters,
