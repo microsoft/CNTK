@@ -37,6 +37,12 @@ class ReplayMemory(object):
         self._rewards = np.zeros(size, dtype=np.float32)
         self._terminals = np.zeros(size, dtype=np.float32)
 
+    def __len__(self):
+        """ Returns the number of items currently present in the memory
+        Returns: Int >= 0 
+        """
+        return self._count
+
     def append(self, state, action, reward, done):
         """ Appends the specified transition to the memory.
         
