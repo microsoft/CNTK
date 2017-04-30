@@ -288,7 +288,7 @@ class DeepQAgent(object):
             return element_select(
                 terminals,
                 rewards,
-                gamma * reduce_max(self._target_net(post_states), axis=1) + rewards,
+                gamma * reduce_max(self._target_net(post_states), axis=0) + rewards,
             )
 
         # Define the loss, using Huber Loss (More robust to outliers)
