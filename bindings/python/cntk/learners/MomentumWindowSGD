@@ -17,7 +17,7 @@ class SGD_Memberwindow_My(UserLearner):
         sweep_end):
         alpha=0.8
         beta=4000
-        eta = alpha*np.exp(-count/beta)*self.learning_rate()
+        eta = alpha*np.exp(-self.count/beta)*self.learning_rate()
         if(self.count==0):
             for p, g in gradient_values.items():             
                 P=p.value
