@@ -11,29 +11,32 @@ import platform
 import pytest
 import gym
 
+# Skip test if not on Linx as Atari Learning Env is not available
+if platform.system() != 'Linux':
+    pytest.skip('test only run on Linux (Gym Atari dependency)')
+
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "ReinforcementLearning"))
 
-if platform.system() != 'Linux':
-    pytest.skip('test only run on Linux (Gym Atari dependency)')
+dqn = __import__("DeepQNeuralNetwork")
 
 # 1. Make environment:
 ENV_NAME = 'Pong-v3'
 env = gym.make(ENV_NAME)
 
 # 2. Make agent
-agent = DeepQAgent((4, 84, 84), env.action_space.n, train_after=100, monitor=False)
+agent = dqn.DeepQAgent((4, 84, 84), env.action_space.n, train_after=100, memory_size=1000, monitor=False)
 
 # Train
 current_step = 0
 max_steps = 1000
-current_state = as_ale_input(env.reset())
+current_state = dqn.as_ale_input(env.reset())
 
 while current_step < max_steps:
     action = agent.act(current_state)
     new_state, reward, done, _ = env.step(action)
-    new_state = as_ale_input(new_state)
+    new_state = dqn.as_ale_input(new_state)
 
     # Clipping reward for training stability
     reward = np.clip(reward, -1, 1)
@@ -44,7 +47,7 @@ while current_step < max_steps:
     current_state = new_state
 
     if done:
-        current_state = as_ale_input(env.reset())
+        current_state = dqn.as_ale_input(env.reset())
 
     current_step += 1
 
