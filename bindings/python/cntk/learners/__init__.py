@@ -54,7 +54,7 @@ the following learning algorithms:
 | MomentumSGD            |
 +------------------------+
 | Nesterov               |
-+------------------------+
++------------------------+ 
 | RMSProp                |
 +------------------------+
 | SGD                    |
