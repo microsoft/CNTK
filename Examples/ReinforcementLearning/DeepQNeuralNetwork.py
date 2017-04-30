@@ -8,16 +8,15 @@ from argparse import ArgumentParser
 
 import gym
 import numpy as np
-from cntk import Signature, TensorBoardProgressWriter
 from cntk.core import Value
 from cntk.initializer import he_uniform
-from cntk.layers import Convolution2D, Dense, default_options
-from cntk.layers.typing import Tensor
+from cntk.layers import Sequential, Convolution2D, Dense, default_options
+from cntk.layers.typing import Signature, Tensor
 from cntk.learners import adam, learning_rate_schedule, momentum_schedule, UnitType
-from cntk.models import Sequential
+from cntk.logging import TensorBoardProgressWriter
 from cntk.ops import abs, argmax, element_select, less, relu, reduce_max, reduce_sum, square
 from cntk.ops.functions import CloneMethod, Function
-from cntk.trainer import Trainer
+from cntk.train import Trainer
 
 
 class ReplayMemory(object):
