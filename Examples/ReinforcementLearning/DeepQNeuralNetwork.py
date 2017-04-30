@@ -245,7 +245,7 @@ class DeepQAgent(object):
     def __init__(self, input_shape, nb_actions,
                  gamma=0.99, explorer=LinearEpsilonAnnealingExplorer(1, 0.1, 1000000),
                  learning_rate=0.00025, momentum=0.95, minibatch_size=32,
-                 train_after=200000, train_interval=4, target_update_interval=10000,
+                 memory_size=500000, train_after=200000, train_interval=4, target_update_interval=10000,
                  monitor=True):
         self.input_shape = input_shape
         self.nb_actions = nb_actions
@@ -258,7 +258,7 @@ class DeepQAgent(object):
         self._explorer = explorer
         self._minibatch_size = minibatch_size
         self._history = History(input_shape)
-        self._memory = ReplayMemory(500000, input_shape[1:], 4)
+        self._memory = ReplayMemory(memory_size, input_shape[1:], 4)
         self._num_actions_taken = 0
 
         # Metrics accumulator
