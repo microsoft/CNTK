@@ -2133,10 +2133,38 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
     axis = sanitize_axis(axis)
     return one_hot_op(x, num_classes, sparse_output, axis, name)
 
+@typemap
+def gather(reference, indices):
+    '''
+    Retrieves the elements of indices in the tensor reference. 
+
+    Example:
+        >>> c = np.asarray([[[0],[1]],[[4],[5]]]).astype('f')
+        >>> x = C.input((2,1))
+        >>> d = np.arange(12).reshape(6,2).astype('f')
+        >>> y = C.constant(d)
+        >>> C.gather(y, x).eval({x:c})
+        array([[[[  0.,   1.]],
+        <BLANKLINE>
+                [[  2.,   3.]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[  8.,   9.]],
+        <BLANKLINE>
+                [[ 10.,  11.]]]], dtype=float32)
+        
+    Args:
+        reference: A tensor
+        indices: An integer tensor of indices
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+	'''
+    from cntk.cntk_py import gather_op
+    return gather_op(indices, reference)
 ##########################################################################
 # reduction ops
 ##########################################################################
-
 
 @typemap
 def reduce_sum(x, axis=None, name=''):

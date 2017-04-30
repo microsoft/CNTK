@@ -4277,7 +4277,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(con
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
 {
-    if(a.IsEmpty())
+    if (a.IsEmpty())
         LogicError("AssignOneHot: Matrix a is empty.");
 
     if (axis >= shape.size())
@@ -4293,15 +4293,58 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>
     auto nRows = num_class * a.GetNumRows();
     this->RequireSize(nRows, nCols);
     this->PrepareDevice();
-    
+
     CUDA_CALL(cudaMemset(Data(), 0, nCols * nRows * sizeof(ElemType)));
 
 
     CUDA_LONG N = (CUDA_LONG)a.GetNumElements();
     int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
-    _assignOneHot<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.Data(), Data(), num_class, item_size, N);
-    
+    _assignOneHot<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (a.Data(), Data(), num_class, item_size, N);
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::GatherFromTarget(const GPUMatrix<ElemType>& indices, const GPUMatrix<ElemType>& target, size_t row_elements)
+{
+    if (indices.IsEmpty() || target.IsEmpty())
+        LogicError("GatherFromTarget: input matrix is empty.");
+
+    if (row_elements == 0)
+        LogicError("GatherFromTarget: target matrix at least need 1 dim.");
+
+    auto nCols = indices.GetNumCols();
+    auto nRows = indices.GetNumRows() * row_elements;
+    this->RequireSize(nRows, nCols);
+    this->PrepareDevice();
+
+    ElemType* indicesBufPtr = indices.Data();
+    ElemType* targetBufPtr = target.Data();
+    ElemType* buffer = Data();
+
+    size_t num_indices = indices.GetNumElements();
+    CUDA_LONG N = (CUDA_LONG)num_indices * row_elements;
+    int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
+    _gatherFromTarget<ElemType> <<<blocksPerGrid, GridDim::maxThreadsPerBlock >>> (indicesBufPtr, targetBufPtr, buffer, row_elements, num_indices, N);
+
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::ScatterToIndices(const GPUMatrix<ElemType>& values, const GPUMatrix<ElemType>& indices, size_t row_elements)
+{
+    if (indices.IsEmpty() || values.IsEmpty())
+        LogicError("ScatterToIndices: input matrix is empty.");
+
+    ElemType* indicesBufPtr = indices.Data();
+    ElemType* valueBufPtr = values.Data();
+    ElemType* buffer = Data();
+
+    size_t num_indices = indices.GetNumElements();
+    CUDA_LONG N = (CUDA_LONG)num_indices * row_elements;
+    int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
+    _scatterToIndices<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (indicesBufPtr, valueBufPtr, buffer, row_elements, num_indices, N);
+
     return *this;
 }
 

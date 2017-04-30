@@ -809,6 +809,9 @@ namespace CNTK
                     computationNodePtr = New<OneHotNode<ElementType>>(network->GetDeviceId(), numClass, is_sparse, axis.StaticAxisIndex(), internalNodeName);
                     break;
                 }
+                case PrimitiveOpType::Gather:
+                    computationNodePtr = New<GatherNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::Plus:
                     computationNodePtr = New<PlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
