@@ -13,7 +13,7 @@ from cntk import input, cross_entropy_with_softmax, classification_error, reduce
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 import cntk.io.transforms as xforms
 from cntk import Trainer, cntk_py
-from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType, adam, adagrad, UserLearner
 from cntk.debugging import set_computation_network_trace_level
 from cntk.logging import *
 from cntk.debugging import *
@@ -28,6 +28,33 @@ image_height = 32
 image_width  = 32
 num_channels = 3  # RGB
 num_classes  = 10
+
+
+class Adamax(UserLearner):
+    def __init__(self, parameters, lr_schedule, beta1, beta2, epsilon):
+        super(Adamax, self).__init__(parameters, lr_schedule)
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+        self.t = 0
+        self.v = []
+        self.m = []
+        
+    def update(self, gradient_values, training_sample_count, sweep_end):
+        eta = self.learning_rate() / training_sample_count
+        self.t += 1
+        for i,p in enumerate(gradient_values):
+            g = gradient_values[p]
+            if (self.t == 1):
+                self.v.append(np.zeros(p.shape))
+                self.m.append(np.zeros(p.shape))
+            self.m[i] = (self.beta1 * self.m[i]) + (1-self.beta1)*g.to_ndarray()/(1-self.beta1**self.t)
+            self.v[i] = np.maximum(self.beta2 * self.v[i], np.abs(g.to_ndarray()))
+            p.value = p.value - eta / (self.v[i] + self.epsilon) * self.m[i]
+        return True
+
+def adamax(parameters, lr, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-8):
+    return Adamax(parameters, lr, beta1, beta2, epsilon)
 
 # Define the reader for both training and evaluation action.
 def create_reader(map_file, mean_file, train):
@@ -52,7 +79,7 @@ def create_reader(map_file, mean_file, train):
 
 
 # Train and evaluate the network.
-def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_epochs, profiler_dir=None,
+def train_and_evaluate(learnertype, reader_train, reader_test, network_name, epoch_size, max_epochs, profiler_dir=None,
                        model_dir=None, tensorboard_logdir=None):
 
     set_computation_network_trace_level(0)
@@ -93,8 +120,17 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
         progress_writers.append(tensorboard_writer)
 
     # trainer object
-    learner = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
-                           l2_regularization_weight = l2_reg_weight)
+    if (learnertype == 'momentum_sgd'):
+        learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
+                               l2_regularization_weight = l2_reg_weight)
+    elif (learnertype == 'adam'):
+        learner     = adam(z.parameters, lr_schedule, mm_schedule,l2_regularization_weight=l2_reg_weight)
+    elif (learnertype =='adagrad'):
+        learner     = adagrad(z.parameters, lr_schedule, l2_regularization_weight=l2_reg_weight)
+    elif (learnertype =='adamax'):
+        learner     = adamax(z.parameters, lr_schedule)
+    else:
+        raise Exception('learner not supported')
     trainer = Trainer(z, (ce, pe), learner, progress_writers)
 
     # define mapping from reader streams to network inputs
@@ -162,6 +198,7 @@ if __name__=='__main__':
     parser.add_argument('-p', '--profiler_dir', help='directory for saving profiler output', required=False, default=None)
     parser.add_argument('-m', '--model_dir', help='directory for saving model', required=False, default=None)
     parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir', help='Directory where TensorBoard logs should be created', required=False, default=None)
+    parser.add_argument('-l', '--learner', help='learner', required=False, default='momentum_sgd')
 
     args = vars(parser.parse_args())
     epochs = int(args['epochs'])
@@ -175,5 +212,5 @@ if __name__=='__main__':
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
 
     epoch_size = 50000
-    train_and_evaluate(reader_train, reader_test, network_name, epoch_size, epochs, args['profiler_dir'], model_dir,
+    train_and_evaluate(args['learner'], reader_train, reader_test, network_name, epoch_size, epochs, args['profiler_dir'], model_dir,
                        args['tensorboard_logdir'])
