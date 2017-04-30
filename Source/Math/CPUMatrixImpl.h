@@ -675,7 +675,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     // Scatter may add more than one source column to the same target, so we must pre-scale with beta, and then just keep adding.
     Scale(beta, us); // if beta is 0, then this will be a memset()
 
-    ScatterValues(idx.Data(), a.Data(), us.Data(), (ElemType)1, alpha, idx.GetNumCols(), a.GetNumRows(), GetNumCols(), idx.GetNumRows());
+    ScatterValues(idx.Data(), a.Data(), us.Data(), alpha, idx.GetNumCols(), a.GetNumRows(), GetNumCols(), idx.GetNumRows());
 
     return *this;
 }
@@ -2994,7 +2994,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemT
     ElemType* valueBufPtr = values.Data();
     ElemType* buffer = Data();
     
-    ScatterValues(indicesBufPtr, valueBufPtr, buffer, (ElemType)1, (ElemType)1, indices.GetNumElements(), row_elements, this->GetNumCols());
+    ScatterValues(indicesBufPtr, valueBufPtr, buffer, (ElemType)1, indices.GetNumElements(), row_elements, this->GetNumCols());
 
     return *this;
 }
@@ -7201,7 +7201,7 @@ void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseO
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType beta, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step)
+void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step)
 {
     if (!indices || !value || !data)
         LogicError("ScatterValues: input data is null.");
@@ -7226,7 +7226,7 @@ void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, Elem
             auto index = col * rows;
             auto offset = i * rows;
             for (auto j = 0; j < rows; j++)
-                data[index + j] = beta * data[index + j] + alpha * value[offset + j];
+                data[index + j] = data[index + j] + alpha * value[offset + j];
         }
     }
 }
