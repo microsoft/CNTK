@@ -116,6 +116,20 @@ def _verify_momentum_type(momentum):
                          'momentum_as_time_constant_schedule() function)'
                          % type(momentum))
 
+class newLearner(cntk_py.learner):
+    # Using the proximal gradient descent algorithm to optimize the mehod
+      
+    def __init__(self, parameters, lr_schedule, as_numpy=True):
+        super(newLearner, self).__init__(parameters, lr_schedule)
+        self.as_numpy = as_numpy
+        self.__disown__()
+    
+    def update(self,gradient_values, amount_of_sample, sweep_end):
+        theta = self.learningrate()/amount_of_sample
+        for p, g in gradient_values.items():
+             p.value = (np.sign(p.value) * np.maximum(np.abs(p.value - g.to_ndarray()*theta), 0.0) / (1.0 + l2*theta))
+        return True
+        
 
 class Learner(cntk_py.Learner):
 

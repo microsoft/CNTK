@@ -13,7 +13,7 @@ from cntk import input, cross_entropy_with_softmax, classification_error, reduce
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 import cntk.io.transforms as xforms
 from cntk import Trainer, cntk_py
-from cntk.learners import adm, neterov, sgd, momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.learners import adam, nesterov, sgd, momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.debugging import set_computation_network_trace_level
 from cntk.logging import *
 from cntk.debugging import *
@@ -86,15 +86,26 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
 
     # progress writers
-    progress_writers = [ProgressPrinter(tag='Training', num_epochs=max_epochs)]
+    # progress_writers = [ProgressPrinter(tag='Training', num_epochs=max_epochs, log_to_file = 'momentum_sgd.log')]
+    # progress_writers = [ProgressPrinter(tag='Training', num_epochs=max_epochs, log_to_file = 'sgd.log')]
+    progress_writers = [ProgressPrinter(tag='Training', num_epochs=max_epochs, log_to_file = 'nesterov.log')]
+    # progress_writers = [ProgressPrinter(tag='Training', num_epochs=max_epochs. log_to_file = 'adam.log')]
+    
     tensorboard_writer = None
     if tensorboard_logdir is not None:
         tensorboard_writer = TensorBoardProgressWriter(freq=10, log_dir=tensorboard_logdir, model=z)
         progress_writers.append(tensorboard_writer)
 
     # trainer object
-    learner = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
+    # learner = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
                            l2_regularization_weight = l2_reg_weight)
+    # learner = sgd(z.parameters, lr_schedule, mm_schedule,
+                           # l2_regularization_weight = l2_reg_weight)
+    learner = nesterov(z.parameters, lr_schedule, mm_schedule,
+                           l2_regularization_weight = l2_reg_weight)
+    # learner = adam(z.parameters, lr_schedule, mm_schedule,
+                           # l2_regularization_weight = l2_reg_weight)
+    
     trainer = Trainer(z, (ce, pe), learner, progress_writers)
 
     # define mapping from reader streams to network inputs
