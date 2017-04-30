@@ -614,8 +614,8 @@ namespace CNTK
             auto networkInputs = compositeFunction->Inputs();
             for (const auto& input : networkInputs)
             {
-                if (input.Shape().HasFreeDimension())
-                    InvalidArgument("Function '%S': Cannot save as legacy format, a model having inputs with free static axes.", compositeFunction->AsString().c_str());
+                if (input.Shape().HasFreeOrInferredDimension())
+                    InvalidArgument("Function '%S': Cannot save as legacy format, a model having inputs with free or inferred static axes.", compositeFunction->AsString().c_str());
             }
 
             compositeFunction->UpdateInternalState();

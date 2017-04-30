@@ -123,8 +123,9 @@ class Function(cntk_py.Function):
         from .. import placeholder, input
         def make_arg_variable(name, annotations):
             from ..variables import Variable
-            if isinstance(annotations.get(name, None), Variable._Type):
-                var_type = annotations[name]
+            var_type = annotations.get(name, None)
+            var_type = Variable._Type._sanitize(var_type)
+            if isinstance(var_type, Variable._Type):
                 return input(name=name, **var_type)
             else:
                 return placeholder(name=name)
@@ -238,10 +239,11 @@ class Function(cntk_py.Function):
 
     def argument_map(self, *args, **kwargs):
         '''
-        determine the {placeholder: variable} map for use with various call operations
+        Determines the {placeholder: variable} map for use with various call operations
         Returns a dictionary from this function's placeholders to whatever arguments are passed.
         Accepted are both positional and keyword arguments.
-        This mimics Python's argument interpretation, except that keyword arguments are not optional.
+        This mimics Python's argument interpretation, except that keyword arguments are not optional
+        (there is no concept of default value).
         This does not require the arguments to be Variables or Functions. It is also called by train_minibatch().
         '''
         params = self.signature    # function parameters
@@ -250,9 +252,45 @@ class Function(cntk_py.Function):
         params_dict = { arg.name: arg for arg in params }
         return map_function_arguments(params, params_dict, *args, **kwargs)
 
+    @staticmethod
+    def _replace_args_type_check(arg_map): # type: (Dict[param: Variable, arg: Variable]), param meant to be substituted by arg
+        '''
+        Performs a type-compatibility check for arguments to replace_placeholders() and clone(),
+        in order to output an actionable error message in case of an error.
+        '''
+        for i, arg_map_item in enumerate(arg_map.items()):
+            param = arg_map_item[0]  # parameter = what gets substituted
+            arg   = arg_map_item[1]  # argument  = what it gets substituted with
+            #print('checking param', param.name, 'against arg', arg.name)
+            param_type = param._type
+            arg_type   = arg._type if isinstance(arg, cntk_py.Variable) else arg.output._type if isinstance(arg, Function) else None
+            def param_name(): # helper to get a descriptive name for param
+                if param.name:
+                    return "argument %s" % param.name
+                else:
+                    return 'positional argument %d' % i
+            if not arg_type:
+                raise TypeError(param_name() + " was passed an object that is not a Variable or Function")
+            # parameter shape is not yet known, any input is acceptable
+            if not param_type.shape_is_known or param.is_placeholder:
+                # Note: if a Function with nown inputs gets cloned while replacing the inputs
+                # with placeholders, those placeholders retain their shapes for some reason.
+                # But in this case, it should be allowed to replace them with mismatching dimensions,
+                # hence we do not test placeholders, only inputs.
+                # TODO: Should clone-replacing inputs with placeholders reset the shapes to unknown?
+                continue
+            if not arg_type.shape_is_known:
+                raise TypeError(param_name() + ' has a known shape, and cannot be passed a Variable of unknown shape')
+            if len(arg_type.shape) < len(param_type.shape) or \
+                   arg_type.shape[-len(param_type.shape):] != param_type.shape or \
+                   (arg_type.dynamic_axes and arg_type.dynamic_axes != param_type.dynamic_axes) or \
+                   arg_type.dtype != param_type.dtype or \
+                   arg_type.is_sparse != param_type.is_sparse:
+                raise TypeError(param_name() + "'s type " + str(param_type) + " is incompatible with the type " + str(arg_type) + " of the passed Variable")
+
     def update_signature(self, *arg_types, **kwarg_types):
         '''
-        define input shapes, in-place
+        Defines input shapes, in-place
         e.g.
         model.update_signature(42)
         pass a list of objects that define the dimensions etc. of the placeholders
@@ -264,16 +302,16 @@ class Function(cntk_py.Function):
             from ..variables import Variable
             if isinstance(arg_type, (int, tuple)): # just passed a shape
                 return input(shape=_as_tuple(arg_type), name=name)
-            elif isinstance(arg_type, Variable._Type): # full type given as Tensor(...)
+            arg_type = Variable._Type._sanitize(arg_type)
+            if isinstance(arg_type, Variable._Type): # full type given as Tensor[...] etc.
                 return input(name=name, **arg_type)
-            else:
-                raise TypeError("update_signature() expects arguments of type int, tuple of int, or Type.Variable")
+            raise TypeError("update_signature() expects arguments of type int, tuple of int, or Type.Variable")
         # map the given types:
         #  - create an Input with the given Type or shape
         #  - keep the name property of the Function parameter
         #  - skip argument types passed as None
-        #  - TODO: should verify existing shape/axis information
         arg_map = { param: to_input(arg_type, name=param.name) for param, arg_type in arg_map.items() if arg_type is not None }
+        Function._replace_args_type_check(arg_map)
         self.replace_placeholders(arg_map)
 
 
@@ -294,7 +332,9 @@ class Function(cntk_py.Function):
                 return input(arg)
 
         args = [to_input(arg) for arg in arg_types]
-        self.replace_placeholders(dict(zip(placeholders, args)))
+        arg_map = dict(zip(placeholders, args))
+        Function._replace_args_type_check(arg_map)
+        self.replace_placeholders(arg_map)
 
 
     def __call__(self, *args, **kwargs):
@@ -332,6 +372,7 @@ class Function(cntk_py.Function):
         # symbolic: return a cloned Function
         # applying the function means to inline its piece of graph
         if is_symbolic:
+            Function._replace_args_type_check(arg_map)
             return self.clone(CloneMethod.share, arg_map)
 
         # numeric: evaluate
@@ -501,11 +542,11 @@ class Function(cntk_py.Function):
             arguments: maps variables to their input data. The interpretation depends on
              the input type:
 
-               * dict: keys are input variable or names, and values are the input data.
-                 See :meth:`~cntk.ops.functions.Function.forward` for details on passing
-                 input data.
-               * any other type: if node has an unique input, arguments is
-                 mapped to this input.
+              * dict: keys are input variable or names, and values are the input data.
+                See :meth:`~cntk.ops.functions.Function.forward` for details on passing
+                input data.
+              * any other type: if node has a unique input, arguments is
+                mapped to this input.
 
              For nodes with more than one input, only dict is allowed.
 
@@ -621,13 +662,13 @@ class Function(cntk_py.Function):
             arguments: maps variables to their input data. The interpretation depends on
              the input type:
 
-               * dict: keys are input variable or names, and values are the
-                 input data. To specify a minibatch, provide a list of arrays.
-                 The shape of each array must be compatible with the shape of
-                 the dictionary key. If the array denotes a sequence then the
-                 elements of the sequence are grouped along axis 0.
-               * any other type: if node has an unique input, arguments is
-                 mapped to this input.
+              * dict: keys are input variable or names, and values are the
+                input data. To specify a minibatch, provide a list of arrays.
+                The shape of each array must be compatible with the shape of
+                the dictionary key. If the array denotes a sequence then the
+                elements of the sequence are grouped along axis 0.
+              * any other type: if node has a unique input, arguments is
+                mapped to this input.
 
              For nodes with more than one input, only dict is allowed.
 
