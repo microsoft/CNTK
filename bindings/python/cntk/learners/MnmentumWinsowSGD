@@ -1,0 +1,39 @@
+import cntk
+import numpy as np
+from cntk.learners import UserLearner
+
+class SGD_Memberwindow_My(UserLearner):
+    def __init__(self, parameters, lr_schedule,
+        window_len=1,alpha=3):
+        super(SGD_Memberwindow_My, self).__init__(
+        parameters, lr_schedule)
+        self.window=np.array(range(window_len))
+        self.alpha=np.exp(alpha*(self.window-window_len))
+        self.B=[]
+        self.L=[]
+        self.count=0
+        self.window_len=window_len
+    def update(self,gradient_values,training_sample_count,
+        sweep_end):
+        alpha=0.8
+        beta=4000
+        eta = alpha*np.exp(-count/beta)*self.learning_rate()
+        if(self.count==0):
+            for p, g in gradient_values.items():             
+                P=p.value
+                self.B.append((np.zeros(P.shape)))
+            for i in range(self.window_len):
+                self.L.append(self.B)
+        layer_now=0
+        for p, g in gradient_values.items():
+            g_my=g.to_ndarray()
+            for i in range (self.window_len):
+                index_alpha=(-self.count-1+i)
+                g_my=g_my+self.alpha[index_alpha]*
+                self.L[i][layer_now]
+            p.value = p.value - eta*g_my
+            index_L=(self.count)
+            self.L[index_L][layer_now]=g.to_ndarray()
+            layer_now=layer_now+1
+        self.count=self.count+1
+        return True
