@@ -101,7 +101,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
         training_loss = 0
 
         # first_run
-        if epoch == -1:
+        if epoch == 0:
             reader_state = reader_train.get_checkpoint_state()
             data = reader_train.next_minibatch(min(init_minibatch_size, epoch_size), input_map=input_map)
             z_init.eval({inputs_init:data[inputs].asarray()})
