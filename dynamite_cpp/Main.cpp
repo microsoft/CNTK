@@ -13,6 +13,9 @@
 
 #include <iostream>
 #include <cstdio>
+#include <map>
+#include <set>
+#include <vector>
 
 #define let const auto
 
@@ -22,12 +25,53 @@ using namespace std;
 
 namespace Dynamite {
 
+struct ParameterBlock
+{
+    map<wstring, Parameter> m_parameters;
+    map<wstring, shared_ptr<ParameterBlock>> m_parentParameters;
+    ParameterBlock(const vector<Parameter>& parameters, const map<wstring, shared_ptr<ParameterBlock>>& parentParameters)
+        : m_parentParameters(parentParameters)
+    {
+        for (const auto& p : parameters)
+            if (p.Name().empty())
+                LogicError("parameters must be named");
+            else
+                m_parameters.insert(make_pair(p.Name(), p));
+    }
+    const Parameter& operator[](const wstring& name) const
+    {
+        auto iter = m_parameters.find(name);
+        if (iter == m_parameters.end())
+            LogicError("no such parameter: %ls", name.c_str());
+        return iter->second;
+    }
+    const ParameterBlock& Nested(const wstring& name) const
+    {
+        auto iter = m_parentParameters.find(name);
+        if (iter == m_parentParameters.end())
+            LogicError("no such captured model: %ls", name.c_str());
+        return *iter->second;
+    }
+};
+
 template<class Base>
 class ModelT : public Base
 {
+    shared_ptr<ParameterBlock> m_parameters;
 public:
     ModelT(const Base& f) : Base(f){}
     // need to think a bit how to store nested NnaryModels
+    ModelT(const vector<Parameter>& parameters, const Base& f)
+        : Base(f), m_parameters(make_shared<ParameterBlock>(parameters, map<wstring, shared_ptr<ParameterBlock>>()))
+    {
+    }
+    ModelT(const vector<Parameter>& parameters, const map<wstring, shared_ptr<ParameterBlock>>& nested, const Base& f)
+        : Base(f), m_parameters(make_shared<ParameterBlock>(parameters, nested))
+    {
+    }
+    const Parameter& operator[](const wstring& name) { return m_parameters[name]; }
+    const ParameterBlock& Nested(const wstring& name) { return m_parameters->Nested(name); }
+    const shared_ptr<ParameterBlock>& GetParameterBlock() const { return m_parameters; }
 };
 typedef ModelT<function<Variable(Variable)>> UnaryModel;
 typedef ModelT<function<Variable(Variable,Variable)>> BinaryModel;
@@ -122,8 +166,8 @@ struct UnaryBroadcastingModel : public UnaryModel
 
 UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
-    auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
-    return UnaryModel([=](Variable x)
+    auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"E");
+    return UnaryModel({ E }, [=](Variable x)
     {
         return Times(E, x);
     });
@@ -131,31 +175,37 @@ UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& de
 
 BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
 {
-    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
-    auto R = Parameter({ outputDim, outputDim                  }, DataType::Float, GlorotUniformInitializer(), device);
-    auto b = Parameter({ outputDim }, 0.0f, device);
-    return [=](Variable prevOutput, Variable input)
+    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
+    auto R = Parameter({ outputDim, outputDim                  }, DataType::Float, GlorotUniformInitializer(), device, L"R");
+    auto b = Parameter({ outputDim }, 0.0f, device, L"b");
+    return BinaryModel({ W, R, b }, [=](Variable prevOutput, Variable input)
     {
         return ReLU(Times(W, input) + Times(R, prevOutput) + b);
-    };
+    });
 }
 
-UnaryModel Linear(size_t outputDim, const DeviceDescriptor& device)
+UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& device)
 {
-    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
-    auto b = Parameter({ outputDim }, 0.0f, device);
-    return [=](Variable x) { return Times(W, x) + b; };
+    auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
+    auto b = Parameter({ outputDim }, 0.0f, device, L"b");
+    return UnaryModel({ W, b }, [=](Variable x) { return Times(W, x) + b; });
 }
 
 UnaryModel Sequential(const vector<UnaryModel>& fns)
 {
-    return [=](Variable x)
+    map<wstring, shared_ptr<ParameterBlock>> captured;
+    for (size_t i = 0l; i < fns.size(); i++)
+    {
+        auto name = L"[" + std::to_wstring(i) + L"]";
+        captured[name] = fns[i].GetParameterBlock();
+    }
+    return UnaryModel({}, captured, [=](Variable x)
     {
         auto arg = Combine({ x });
         for (const auto& f : fns)
             arg = f(arg);
         return arg;
-    };
+    });
 }
 
 struct Sequence
@@ -175,11 +225,13 @@ struct Sequence
 
     static UnaryModel Fold(const BinaryModel& stepFunction)
     {
+        map<wstring, shared_ptr<ParameterBlock>> captured;
+        captured[L"step"] = stepFunction.GetParameterBlock();
         auto recurrence = Recurrence(stepFunction);
-        return [=](Variable x)
+        return UnaryModel({}, captured, [=](Variable x)
         {
             return Sequence::Last(recurrence(x));
-        };
+        });
     }
 
     static function<vector<Variable>(const vector<Variable>&)> Map(UnaryModel f)
@@ -309,7 +361,13 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
     auto step   = RNNStep(hiddenDim, device);
     auto linear = Linear(numOutputClasses, device);
     auto zero   = Constant({ hiddenDim }, 0.0f, device);
-    return [=](Variable x) -> Variable
+    return UnaryModel({},
+    {
+        { L"embed",  embed.GetParameterBlock() },
+        { L"step",   step.GetParameterBlock() },
+        { L"linear", linear.GetParameterBlock() }
+    },
+    [=](Variable x) -> Variable
     {
         // 'x' is an entire sequence; last dimension is length
         let len = x.Shape().Dimensions().back();
@@ -323,7 +381,7 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
             state = step(state, xt);
         }
         return linear(state);
-    };
+    });
 }
 
 // helper to convert a tensor to a vector of slices
@@ -497,14 +555,14 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
     const wstring trainingCTFPath = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf";
 
-    // static model and criterion function
-    //auto model_fn     = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
-    //auto criterion_fn = CreateCriterionFunction(model_fn);
-
     // dybamic model and criterion function
     auto d_model_fn     = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim, device);
     auto d_model_fn1    = CreateModelFunctionS2SAtt(inputDim, embeddingDim, 2*hiddenDim, attentionDim, device); // (Splice cannot concat, so hidden and embedding must be the same)
     auto d_criterion_fn = CreateCriterionFunctionUnrolled(d_model_fn);
+
+    // static model and criterion function
+    auto model_fn = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
+    auto criterion_fn = CreateCriterionFunction(model_fn);
 
     // data
     const wstring featuresName = L"features";
@@ -524,13 +582,15 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto features = InputVariable({ inputDim },         false/*true*/ /*isSparse*/, DataType::Float, featuresName);
     auto labels   = InputVariable({ numOutputClasses }, false/*useSparseLabels*/,   DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
 
-    //auto criterion = criterion_fn(features, labels);
-    //auto loss   = criterion;
-    ////auto metric = criterion.second;
-    //
-    //// train
-    //auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
-    //auto trainer = CreateTrainer(nullptr, loss, loss/*metric*/, { learner });
+    //auto xxx = criterion_fn->Forward({ features, Input() }, { labels, Input() });
+
+    auto criterion = criterion_fn(features, labels);
+    auto loss   = criterion;
+    //auto metric = criterion.second;
+    
+    // train
+    auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
+    auto trainer = CreateTrainer(nullptr, loss, loss/*metric*/, { learner });
 
     const size_t minibatchSize = 200;
     for (size_t repeats = 0; true; repeats++)
@@ -558,10 +618,19 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             for (size_t j = i; j < batch.size(); j++)
                 vbatch[j] = std::move(ToVector(batch[j]));
         }
-        let s2sLoss = Batch::sum(Batch::Map(d_model_fn1)(vargs[0], vargs[0])); // for now auto-encoder
-        s2sLoss.Value();
         mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value()->AsScalar<float>();
-        for (size_t xxx = 0; xxx < 20; xxx++)
+        if (repeats > 0)
+        {
+            d_model_fn.Nested(L"embed" )[L"E"].Value()->CopyFrom(*model_fn.Nested(L"[0]")[L"E"].Value());
+            d_model_fn.Nested(L"step"  )[L"W"].Value()->CopyFrom(*model_fn.Nested(L"[1]").Nested(L"step"  )[L"W"].Value());
+            d_model_fn.Nested(L"step"  )[L"R"].Value()->CopyFrom(*model_fn.Nested(L"[1]").Nested(L"step"  )[L"R"].Value());
+            d_model_fn.Nested(L"step"  )[L"b"].Value()->CopyFrom(*model_fn.Nested(L"[1]").Nested(L"step"  )[L"b"].Value());
+            d_model_fn.Nested(L"linear")[L"W"].Value()->CopyFrom(*model_fn.Nested(L"[2]")[L"W"].Value());
+            d_model_fn.Nested(L"linear")[L"b"].Value()->CopyFrom(*model_fn.Nested(L"[2]")[L"b"].Value());
+        }
+        //let s2sLoss = Batch::sum(Batch::Map(d_model_fn1)(vargs[0], vargs[0])); // for now auto-encoder
+        //s2sLoss.Value();
+        if (repeats > 0) for (size_t xxx = 0; xxx < 5; xxx++)
         {
             // compute not directly comparable due to (1) no batching and (2) sparse, which may be expensive w.r.t. slicing, or not
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "d_criterion_fn: %.6f sec\n");
@@ -594,10 +663,10 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             //mbLoss.Value()->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
             // looks like it is computing something in a meaningful range
-            //fprintf(stderr, "%.6f\n", mbLoss.Value()->AsScalar<float>() / minibatchData[featureStreamInfo].numberOfSequences);
+            fprintf(stderr, "%.6f\n", mbLoss.Value()->AsScalar<float>() / minibatchData[featureStreamInfo].numberOfSequences);
         }
 #endif
-#if 0
+#if 1
         // static CNTK
         trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
         double crit = trainer->PreviousMinibatchLossAverage();
