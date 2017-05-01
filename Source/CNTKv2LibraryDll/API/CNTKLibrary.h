@@ -3795,8 +3795,15 @@ namespace CNTK
         return FutureValue(operand, defaultInitialState, offset, name);
     }
 
+    ///
+    /// Create an instance of the CNTK build-in operation to get the one_hot tensor on specified input along the specified axis
+    ///
     CNTK_API FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name = L"");
 
+    ///
+    /// Create an instance of the CNTK build-in operation to get a tensor that is gathered from reference tensor by indices.
+    ///
+    CNTK_API FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const std::wstring& name = L"");
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the specified axis
     ///

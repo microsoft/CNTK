@@ -99,6 +99,7 @@ namespace CNTK
         {PrimitiveOpType::ToSequenceLike, L"ToSequenceLikeOp"},
         {PrimitiveOpType::UnpackSequence, L"UnpackSequenceOp"},
         {PrimitiveOpType::Assign, L"Assign" },
+        {PrimitiveOpType::Gather, L"Gather"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -751,7 +752,8 @@ namespace CNTK
         // Version 10: Add Pow operator.
         // Version 11: Add ToSequence, ToSequenceLike and UnpackSequence operators.
         // Version 12: Add Assign node.
-        static const size_t s_serializationVersion = 12;
+        // Version 13: Add Gather op.
+        static const size_t s_serializationVersion = 13;
     };
 
     class UDFUtils
