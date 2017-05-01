@@ -928,10 +928,6 @@ namespace CNTK
             }
 
             auto primaryOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, Name().empty() ? L"" : Name());
-            if (outputs.capacity() == 0) // if pre-reserved then don't touch it
-                outputs.reserve(1 + secondaryOutputs.size());
-            else // if pre-reserved then we must not reallocate as caller may live in a different CRT heap
-                assert(outputs.capacity() >= 1 + secondaryOutputs.size());
             outputs.push_back(primaryOutput);
             if (m_op == PrimitiveOpType::UnpackSequence)
             {
