@@ -182,7 +182,7 @@ def test_asarray_method():
             assert (a==d).toarray().all()
 
 def test_value_properties():
-    ndav = NDArrayView((1, 2, 3), np.float32)
+    ndav = NDArrayView((1, 2, 3), np.float32, device=C.cpu())
     val = Value(batch=ndav)
 
     dev = val.device
@@ -197,7 +197,7 @@ def test_value_properties():
 
 
 def test_ndarray_properties():
-    ndav = NDArrayView((2, 3), np.float32)
+    ndav = NDArrayView((2, 3), np.float32, device=C.cpu())
 
     dev = ndav.device
     assert isinstance(dev, DeviceDescriptor)
@@ -217,13 +217,13 @@ def test_ndarrayview_from_csr(device_id):
     csr_data = _to_csr(data)
     ndarrayview = NDArrayView.from_csr(csr_data, shape=(2, 2, 3))
     assert np.array_equal(_to_dense(ndarrayview), data)
-    
+
     with pytest.raises(ValueError):
         ndarrayview = NDArrayView.from_csr(csr_data, shape=(3, 2, 3))
 
     with pytest.raises(ValueError):
         ndarrayview = NDArrayView.from_csr(csr_data, shape=(2, 2, 4))
- 
+
 
 def test_2d_sparse_sequences_value(device_id):
     dev = cntk_device(device_id)
@@ -249,3 +249,13 @@ def test_as_shape_to_1d(device_id):
     value = value.data.as_shape(value.data.shape[1:])
     w_1d.value = value
     assert np.array_equal(w_1d.value, np.asarray([0.1], dtype=np.float32))
+
+
+def test_is_valid(device_id):
+    a = C.input((2,), needs_gradient=True)
+    b = a*a
+    a0 = np.array([1,2],dtype=np.float32)
+    g = b.grad({a:a0}, as_numpy=False)
+    g2 = b.grad({a:a0}, as_numpy=False)
+    assert (g.is_valid == False)
+    assert (g2.is_valid == True)

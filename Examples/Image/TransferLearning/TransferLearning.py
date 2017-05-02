@@ -192,7 +192,7 @@ def eval_test_images(loaded_model, output_file, test_map_file, image_width, imag
                 if pred_count >= num_images:
                     break
 
-    print ("{0} of {1} prediction were correct {2}.".format(correct_count, pred_count, (float(correct_count) / pred_count)))
+    print ("{0} out of {1} predictions were correct {2}.".format(correct_count, pred_count, (float(correct_count) / pred_count)))
 
 
 if __name__ == '__main__':

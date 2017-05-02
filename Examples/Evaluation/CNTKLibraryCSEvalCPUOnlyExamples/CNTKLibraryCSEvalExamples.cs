@@ -38,7 +38,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
                 string modelFilePath = "resnet20.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
-                Function modelFunc = Function.LoadModel(modelFilePath, device);
+                Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Get input variable. The model has only one single input.
                 // The same way described above for output variable can be used here to get input variable by name.
@@ -120,7 +120,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Load the model.
                 // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
-                Function modelFunc = Function.LoadModel(modelFilePath, device);
+                Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Get input variable. The model has only one single input.
                 // The same way described above for output variable can be used here to get input variable by name.
@@ -205,7 +205,7 @@ namespace CNTKLibraryCSEvalExamples
             // Load and clone the model.
             // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
             // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
-            var rootFunc = Function.LoadModel(modelFilePath, device);
+            var rootFunc = Function.Load(modelFilePath, device);
             Models.Add(rootFunc);
 
             // It is not thread-safe to perform concurrent evaluation requests using the same model function.
@@ -292,7 +292,7 @@ namespace CNTKLibraryCSEvalExamples
                 var modelBuffer = File.ReadAllBytes(modelFilePath);
 
                 // Load model from memroy buffer
-                Function modelFunc = Function.LoadModel(modelBuffer, device);
+                Function modelFunc = Function.Load(modelBuffer, device);
 
                 // Get input variable. The model has only one single input.
                 // The same way described above for output variable can be used here to get input variable by name.
@@ -406,7 +406,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Please see README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS about how to train the model.
                 string modelFilePath = "atis.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS to create the model.", modelFilePath));
-                Function modelFunc = Function.LoadModel(modelFilePath, device);
+                Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Read word and slot index files.
                 string vocabFile = "query.wl";
@@ -514,7 +514,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Please see README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS about how to train the model.
                 string modelFilePath = "atis.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS to create the model.", modelFilePath));
-                Function modelFunc = Function.LoadModel(modelFilePath, device);
+                Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Read word and slot index files.
                 string vocabFile = "query.wl";
@@ -640,7 +640,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Please see README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS about how to train the model.
                 string modelFilePath = "atis.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS to create the model.", modelFilePath));
-                Function modelFunc = Function.LoadModel(modelFilePath, device);
+                Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Read word and slot index files.
                 string vocabFile = "query.wl";

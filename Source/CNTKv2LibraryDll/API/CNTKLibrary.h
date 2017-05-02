@@ -34,6 +34,16 @@
 namespace CNTK
 {
     ///
+    /// Checked mode enables additional runtime verification such as:
+    /// - Tracking NaN occurences in sequence gaps.
+    /// - Function graph verification after binding of free static axes to actual values at runtime
+    /// 
+    /// Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
+    ///
+    CNTK_API void SetCheckedMode(bool enable);
+    bool GetCheckedMode();
+
+    ///
     /// Enumeration type denoting data type of symbolic data entities or actual data.
     ///
     enum class DataType : unsigned int
@@ -261,14 +271,10 @@ namespace CNTK
         ///
         CNTK_API static const std::vector<DeviceDescriptor>& AllDevices();
 
-        std::wstring AsString() const
-        {
-            std::wstring str = DeviceKindName(Type());
-            if (Type() == DeviceKind::GPU)
-                str = str + L"[" + std::to_wstring(Id()) + L"]";
-
-            return str;
-        }
+        ///
+        /// Return a string summary of this device
+        ///
+        CNTK_API std::wstring AsString() const;
 
     private:
         DeviceDescriptor(unsigned int deviceId, DeviceKind deviceType)
@@ -432,11 +438,20 @@ namespace CNTK
         }
 
         ///
+        /// Returns a boolean value indicating if the dimension size for any of the axes of 'this' shape is free or inferred
+        /// i.e. (== NDShape::FreeDimension or == NDShape::InferredDimension).
+        ///
+        bool HasFreeOrInferredDimension() const
+        {
+            return HasFreeDimension() || HasInferredDimension();
+        }
+
+        ///
         /// Returns the total size of the rectangular shape that 'this' shape denotes.
         ///
         size_t TotalSize() const
         {
-            if (HasInferredDimension() || HasFreeDimension())
+            if (HasFreeOrInferredDimension())
                 RuntimeError("NDShape::TotalSize: TotalSize cannot be determined for a NDShape '%S' with one or more dimensions being InferredDimension or FreeDimension.", AsString().c_str());
 
             size_t totalSize = 1;
@@ -778,6 +793,11 @@ namespace CNTK
         ///
         template<typename ElementType>
         ElementType AsScalar() const;
+
+        ///
+        /// Return a string summary of the NDArrayView.
+        ///
+        CNTK_API std::wstring AsString() const;
 
     private:
         // Disallow copy and move construction and assignment
@@ -2690,6 +2710,17 @@ namespace CNTK
         template<typename ElementType>
         ElementType AsScalar() const;
 
+
+        ///
+        /// Returns whether this object has been invalidated (by another forward and/or backward pass)
+        ///
+        CNTK_API virtual bool IsValid() const;
+
+        ///
+        /// Returns a string summary of this Value object
+        ///
+        CNTK_API std::wstring AsString() const;
+
     private:
         template <typename ElementType>
         static void AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLengthInCols);
@@ -2730,7 +2761,7 @@ namespace CNTK
         void ResizeOutputBuffer(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
             auto shape = outputVariable.Shape();
-            if (shape == NDShape::Unknown || shape.HasInferredDimension() || shape.HasFreeDimension())
+            if (shape == NDShape::Unknown || shape.HasFreeOrInferredDimension())
                 RuntimeError("The outputVariable '%S' shape '%S' is unknown shape, has inferred dimension or free dimension for at least one axis.",
                               outputVariable.AsString().c_str(), shape.AsString().c_str());
 
@@ -2854,6 +2885,7 @@ namespace CNTK
         friend class CompositeFunction;
         friend class PrimitiveFunction;
         friend class BlockFunction;
+        friend class UDFUtils;
         friend class Trainer;
 
         friend Variable GetCorrespondingOutputVariableFromClone(const Variable&, const FunctionPtr&, const FunctionPtr&);
@@ -2997,11 +3029,13 @@ namespace CNTK
         CNTK_API FunctionPtr Clone(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod::Clone, const std::unordered_map<Variable, Variable>& replacements = {}) const;
 
         ///
-        /// Deserializes a Function from the dictionary.
-        /// TODO: add a second overload with a 'Function builder' parameter that would allow hooking
-        /// user-defined op-codes with custom functionality.
+        /// Deserializes a Function from the model dictionary, using the specified UDF deserializer to 
+        //  reconstruct user defined functions if the model contains any (in which case an exception will be raised 
+        /// if deserializer was omitted). If there are no user defined functions in the model, deserializer is ignored.
         ///
-        CNTK_API static FunctionPtr Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static FunctionPtr Deserialize(const Dictionary& dictionary, 
+                                                const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), 
+                                                const Internal::UDFDeserializerPtr& deserializer = nullptr);
 
     public:
         ///
@@ -3187,27 +3221,33 @@ namespace CNTK
         ///
         /// Save this Function graph into a model file.
         ///
-        CNTK_API void SaveModel(const std::wstring& modelFile);
+        CNTK_API void Save(const std::wstring& filepath);
 
         ///
         /// Restore the models parameters (in-place) from a model file
         ///
-        CNTK_API void RestoreModel(const std::wstring& modelFilePath);
+        CNTK_API void Restore(const std::wstring& filepath);
 
         ///
         /// Load a Function from a model file
         ///
-        CNTK_API static FunctionPtr LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static FunctionPtr Load(const std::wstring& filepath, 
+                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), 
+                                         const Internal::UDFDeserializerPtr& deserializer = nullptr);
 
         ///
         /// Load a Function from a memory buffer
         ///
-        CNTK_API static FunctionPtr LoadModel(char *modelBuffer, size_t modelBufferLength, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static FunctionPtr Load(const char* buffer, size_t length,
+                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
+                                         const Internal::UDFDeserializerPtr& deserializer = nullptr);
 
         ///
         /// Load a Function from an istream. The legacy V1 model is not supported.
         ///
-        CNTK_API static FunctionPtr LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static FunctionPtr Load(std::istream& inputStream, 
+                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
+                                         const Internal::UDFDeserializerPtr& deserializer = nullptr);
 
         ///
         /// Prints the entire graph underlying this Function to stderr
@@ -3236,14 +3276,6 @@ namespace CNTK
         /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
         ///
         CNTK_API static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName = L"");
-
-        ///
-        /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
-        ///
-        inline static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const std::wstring& userFunctionInstanceName = L"")
-        {
-            return NativeUserFunction(opName, operands, Dictionary(), userFunctionInstanceName);
-        }
 
     protected:
         static bool IsArgument(const Variable& var)
@@ -3349,7 +3381,7 @@ namespace CNTK
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
     public:
-        CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
+        CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"");
 
     private:
         static UserFunctionFactoryPtr s_userFunctionFactory;
@@ -3470,6 +3502,11 @@ namespace CNTK
     /// Create an instance of the CNTK built-in transpose operation on the specified 1D or 2D input operand
     ///
     CNTK_API FunctionPtr Transpose(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in transpose operation on the specified input operand using the specified permutation
+    ///
+    CNTK_API FunctionPtr Transpose(const Variable& operand, const std::vector<Axis>& permutation,  const std::wstring& name = L"");
 
     ///
     /// Create an instance of the slice operation on specified tensor input operand
@@ -3758,13 +3795,15 @@ namespace CNTK
         return FutureValue(operand, defaultInitialState, offset, name);
     }
 
+    ///
+    /// Create an instance of the CNTK build-in operation to get the one_hot tensor on specified input along the specified axis
+    ///
     CNTK_API FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name = L"");
 
     ///
-    /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along all the axes
+    /// Create an instance of the CNTK build-in operation to get a tensor that is gathered from reference tensor by indices.
     ///
-    CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name = L"");
-
+    CNTK_API FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const std::wstring& name = L"");
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the specified axis
     ///
@@ -3930,6 +3969,16 @@ namespace CNTK
     /// Creates a new Function instance which output its input as it is and previent any gradient contribution from its output. 
     ///
     CNTK_API FunctionPtr StopGradient(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Assign the value in operand to ref and return the new value, ref need to be the same layout as operand.
+    /// During forward pass, ref will get the new value after the forward or backward pass finish, so that any part of
+    /// the graph that depend on ref will get the old value. To get the new value, use the one returned by
+    /// the assign node.The reason for that is to make ``assign`` have a deterministic behavior.
+    /// During inference the value of ref wull be updated after the forward pass and during training the value
+    /// of ref will be updated after backprop. 
+    ///
+    CNTK_API FunctionPtr Assign(Variable& ref, const Variable& operand, const std::wstring& name = L"");
 
     ///
     /// Creates a composite Function that has the specified rootFunction as its root.
@@ -4402,6 +4451,7 @@ namespace CNTK
                                     const MomentumSchedule& momentumSchedule,
                                     bool unitGain = DefaultUnitGainValue(),
                                     const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
+                                    double epsilon = 1e-8,
                                     AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
@@ -4839,6 +4889,13 @@ namespace CNTK
             : data(value), numberOfSequences(numSequences), numberOfSamples(numSamples), sweepEnd(sweepEnd) 
         {}
 
+        std::wstring AsString() const
+        {
+            std::wstringstream wss;
+            wss << L"MinibatchData(data=" << data->AsString() << L", samples=" << numberOfSamples << L", seqs=" << numberOfSequences << L")";
+            return wss.str();
+        }
+
         ValuePtr data;
         size_t numberOfSequences;
         size_t numberOfSamples;
@@ -5079,7 +5136,7 @@ namespace CNTK
     /// 
     /// Create an HTKMLFDeserializer with the specified options
     /// 
-    CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles);
+    CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries = false);
 
     /// 
     /// Instantiate the CNTK built-in text format minibatch source

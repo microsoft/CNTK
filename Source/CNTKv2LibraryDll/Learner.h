@@ -64,6 +64,8 @@ namespace CNTK
 
         std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
 
+        mutable size_t m_noiseInjectionSeed;
+
         // The following four static protected methods expose private methods of NDArrayView class
         // (which declares LearnerBase as friend class), so that they are available to subclasses.
         template <typename ElementType>
@@ -270,6 +272,7 @@ namespace CNTK
             const MomentumSchedule& momentumSchedule,
             bool unitGain,
             const MomentumSchedule& varianceMomentumSchedule,
+            double epsilon,
             AdditionalLearningOptions additionalOptions);
 
     protected:
@@ -289,6 +292,7 @@ namespace CNTK
 
         mutable std::unordered_map<Parameter, double> m_smoothedCounts;
         MomentumSchedule m_varianceMomentumSchedule;
+        double m_epsilon;
     };
 
     class LearnerRMSProp : public LearnerMomentumSGD
