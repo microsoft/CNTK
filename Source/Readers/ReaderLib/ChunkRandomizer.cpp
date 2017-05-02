@@ -28,7 +28,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // Randomizes chunks and calculates randomization windows.
-    void ChunkRandomizer::Randomize(unsigned int seed)
+    void ChunkRandomizer::Randomize(size_t seed)
     {
         std::vector<ChunkIdType> randomizedChunkIndices;
         randomizedChunkIndices.reserve(m_originalChunks.size());
@@ -37,7 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             randomizedChunkIndices.push_back(i);
         }
 
-        m_rng.seed(seed);
+        m_rng.seed((unsigned long)seed);
         RandomShuffleMT(randomizedChunkIndices, m_rng);
 
         // Place randomized chunks on the timeline
