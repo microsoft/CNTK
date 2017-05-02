@@ -44,7 +44,8 @@ def test_numpy_conversion():
 def test_ndarrayview_operators(device_id, precision):
     from scipy.special import expit
     from cntk.ops.tests.ops_test_utils import cntk_device
-    from cntk.ops import input_variable
+    from cntk.ops import input_variable, sigmoid, tanh, relu, exp, reduce_sum, reduce_log_sum_exp, reshape
+    from ..cntk_py import Variable
 
     def test(what, args, rtol=0, atol=0):
         args = [arg.astype(precision, copy=True) for arg in args]
@@ -72,6 +73,13 @@ def test_ndarrayview_operators(device_id, precision):
     mat23 = np.array([[1., 2., 3.],[4., 5., 6.]]) # 3 x 2 matrix
     col21 = np.array([[13.],[42.]])                # column vector, same height as matrix
 
+    def is_not_numpy(a):
+        return isinstance(a, (NDArrayView, Variable))
+    def is_data(a):
+        return isinstance(a, NDArrayView)
+    def is_var(a):
+        return isinstance(a, Variable)
+
     # binary ops, elementwise
     test(lambda a, b: a + b, [mat23, col21])
     test(lambda a, b: a + b, [mat23, np.array(13)]) # scalar
@@ -81,27 +89,27 @@ def test_ndarrayview_operators(device_id, precision):
     # matrix product
     test(lambda a, b: a @ b, [col21.reshape(1,2), mat23])
     test(lambda a, b: a.dot(b), [col21.reshape(1,2), mat23])
-    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [col21.reshape(1,2), mat23.transpose()])
-    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [mat23, mat23]) # mat23 * mat23^T
-    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [mat23.transpose(), mat23.transpose()]) # mat23^T * mat23
-    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [mat23, np.array([13.,42.,1968.])]) # mat23 * row3^T
-    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [np.array([13.,42.,1968.]), mat23]) # row3 * mat23^T
-    test(lambda a, b: a.transpose_dot(b) if isinstance(a, NDArrayView) else a.transpose().dot(b), [mat23, mat23]) # mat23^T * mat23
-    test(lambda a, b: a.transpose_dot(b) if isinstance(a, NDArrayView) else a.transpose().dot(b), [col21.reshape(2), mat23])
-    test(lambda a, b: a.transpose_dot(b) if isinstance(a, NDArrayView) else a.transpose().dot(b), [col21, mat23])
+    test(lambda a, b: a.dot_transpose(b) if is_not_numpy(a) else a.dot(b.transpose()), [col21.reshape(1,2), mat23.transpose()])
+    test(lambda a, b: a.dot_transpose(b) if is_not_numpy(a) else a.dot(b.transpose()), [mat23, mat23]) # mat23 * mat23^T
+    test(lambda a, b: a.dot_transpose(b) if is_not_numpy(a) else a.dot(b.transpose()), [mat23.transpose(), mat23.transpose()]) # mat23^T * mat23
+    test(lambda a, b: a.dot_transpose(b) if is_not_numpy(a) else a.dot(b.transpose()), [mat23, np.array([13.,42.,1968.])]) # mat23 * row3^T
+    test(lambda a, b: a.dot_transpose(b) if is_not_numpy(a) else a.dot(b.transpose()), [np.array([13.,42.,1968.]), mat23]) # row3 * mat23^T
+    test(lambda a, b: a.transpose_dot(b) if is_not_numpy(a) else a.transpose().dot(b), [mat23, mat23]) # mat23^T * mat23
+    test(lambda a, b: a.transpose_dot(b) if is_not_numpy(a) else a.transpose().dot(b), [col21.reshape(2), mat23])
+    test(lambda a, b: a.transpose_dot(b) if is_not_numpy(a) else a.transpose().dot(b), [col21, mat23])
 
     # unary ops
-    test(lambda a: a.sigmoid() if isinstance(a, NDArrayView) else expit(a),        [mat23], rtol=1e-6)
-    test(lambda a: a.tanh()    if isinstance(a, NDArrayView) else np.tanh(a),      [mat23], rtol=1e-6)
-    test(lambda a: a.relu()    if isinstance(a, NDArrayView) else np.maximum(a,0), [mat23])
-    test(lambda a: a.exp()     if isinstance(a, NDArrayView) else np.exp(a),       [mat23], rtol=1e-6)
+    test(lambda a: a.sigmoid() if is_data(a) else sigmoid(a) if is_var(a) else expit(a),        [mat23], rtol=1e-6)
+    test(lambda a: a.tanh()    if is_data(a) else tanh(a)    if is_var(a) else np.tanh(a),      [mat23], rtol=1e-6)
+    test(lambda a: a.relu()    if is_data(a) else relu(a)    if is_var(a) else np.maximum(a,0), [mat23])
+    test(lambda a: a.exp()     if is_data(a) else exp(a)     if is_var(a) else np.exp(a),       [mat23], rtol=1e-6)
 
     # reduction ops
-    test(lambda a: a.reduce_sum()     if isinstance(a, NDArrayView) else np.sum(a),                 [mat23], rtol=1e-6)
-    test(lambda a: a.reduce_log_sum() if isinstance(a, NDArrayView) else np.log(np.sum(np.exp(a))), [mat23], rtol=1e-6)
+    test(lambda a: a.reduce_sum()     if is_data(a) else reduce_sum(a)         if is_var(a) else np.sum(a),                 [mat23], rtol=1e-6)
+    test(lambda a: a.reduce_log_sum() if is_data(a) else reduce_log_sum_exp(a) if is_var(a) else np.log(np.sum(np.exp(a))), [mat23], rtol=1e-6)
 
     # reshape
-    test(lambda a: a.reshape((1,6)), [mat23])
+    test(lambda a: a.reshape((1,6)) if not is_var(a) else reshape(a, (1,6)), [mat23])
 
     # slice
     test(lambda a: a[:], [mat23])
@@ -123,7 +131,7 @@ def test_ndarrayview_operators(device_id, precision):
     test(itest, [mat23]) # test loop over first index, IndexError
 
     # splice
-    test(lambda *args: NDArrayView.splice(*args) if isinstance(args[0], NDArrayView) else np.concatenate((args[0][np.newaxis,:], args[1][np.newaxis,:])), [mat23, 1.1*mat23])
+    test(lambda *args: NDArrayView.splice(*args) if is_not_numpy(args[0]) else np.concatenate((args[0][np.newaxis,:], args[1][np.newaxis,:])), [mat23, 1.1*mat23])
 
     # in-place ops
     test(lambda a, b: a.__iadd__(b), [mat23, col21]) 
