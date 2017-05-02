@@ -1471,6 +1471,8 @@ void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
                                   ElemType RMS_GAMMA,
                                   const bool needAveMultiplier)
 {
+    UNUSED(needAveMultiplier);
+
     const ElemType floor = 1.0;
     ElemType* mean_grad = gradients.Data();
     ElemType* val = functionValues.Data();

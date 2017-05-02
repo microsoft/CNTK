@@ -1629,6 +1629,8 @@ void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
     ElemType RMS_GAMMA,
     const bool needAveMultiplier)
 {
+    UNUSED(needAveMultiplier);
+
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
     {
         NOT_IMPLEMENTED;
