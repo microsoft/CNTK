@@ -5,8 +5,7 @@
 # ==============================================================================
 
 """
-Unit tests for evaluation operations, each operation is tested for
-the forward and the backward pass
+Unit tests for evaluation operations (grad and eval)
 """
 
 from __future__ import division
