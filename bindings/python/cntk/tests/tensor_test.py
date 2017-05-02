@@ -52,6 +52,14 @@ def test_ndarrayview_operators(device_id, precision):
         res_tv = what(*args_tv)
         assert isinstance(res_tv, NDArrayView) # make sure we don't get a cntk_py version back  --TODO: figure out why this does not work
         res_tv = res_tv.to_ndarray()
+        ## KVO
+        #args_kv = [Constant(arg) for arg in args]
+        #res_kv = what(*args_kv)
+        #res_kv = res_kv.value().to_ndarray()
+        ## static graph
+        #inputs_v2 = [input_variable(arg.shape) for arg in args]
+        #res_v2 = what(*inputs_v2)(*args)
+        #res_v2 = res_v2.to_ndarray()
         # numpy
         res_np = what(*args)
         print(res_tv)
