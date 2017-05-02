@@ -6,11 +6,9 @@
 
 The Inception-V3 model is implemented according to the model described in [Rethinking the Inception Architecture for Computer Vision](https://arxiv.org/abs/1512.00567) with changes from TensorFlow implementation.
 
-Should be noticed that for now, we're using a different data augmentation method, compared with the TensorFlow implementation.
+This implementation achieves `77.914%` Top-1 accuracy and `93.858%` Top-5 accuracy in validation set, which matches with TensorFlow implementation.
 
-This implementation achieves `77.460%` Top-1 accuracy and `93.562%` Top-5 accuracy in validation set, which is comparable to TensorFlow implementation.
-
-This example with a `256` batch-size should be trained with 8 GPUs. 
+This example with a `256` batch-size should be trained with 8 GPUs.
 
 You could run the example from the current folder using:
 
