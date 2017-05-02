@@ -1,6 +1,6 @@
 import cntk as C
 import numpy as np
-from polymath import PolyMath
+from polymath_crosstalk import PolyMath
 from squad_utils import metric_max_over_ground_truths, f1_score, exact_match_score
 import tsv2ctf
 import os
@@ -287,7 +287,9 @@ def get_answer(raw_text, tokens, start, end):
 
 def test(test_data, model_path, model_file, config_file):
     polymath = PolyMath(config_file)
-    model = C.load_model(os.path.join(model_path, model_file if model_file else model_name))
+    loaded_model = C.load_model(os.path.join(model_path, model_file if model_file else model_name))
+    z, loss = polymath.model()
+    model = C.combine(list(z.outputs) + [loss.output])
     begin_logits = model.outputs[0]
     end_logits   = model.outputs[1]
     loss         = C.as_composite(model.outputs[2].owner)
@@ -303,7 +305,23 @@ def test(test_data, model_path, model_file, config_file):
     num_batch = 0
     misc = {'rawctx':[], 'ctoken':[], 'answer':[]}
     tsv_reader = create_tsv_reader(loss, test_data, polymath, batch_size, is_test=True, misc=misc)
+
+    import crosstalk_cntk as crct
+    ci = crct.instance
+    ci.set_workdir('crosstalk')
+    
+    for i,p in enumerate(model.parameters):
+        # workaround model changes in shape
+        loaded = loaded_model.parameters[i].value
+        if p.value.shape != loaded.shape:
+            loaded = loaded.reshape(p.value.shape)
+        p.value = loaded
+    ci.save_all_params()
+    #ci.load_all_params()
+
     for data in tsv_reader:
+        #ci.set_data(data)
+
         start_time = time.time()
         out = model.eval(data, outputs=[begin_logits,end_logits,loss], as_numpy=False)
         g = best_span_score.grad({begin_prediction:out[begin_logits], end_prediction:out[end_logits]}, wrt=[begin_prediction,end_prediction], as_numpy=False)
@@ -343,7 +361,7 @@ if __name__=='__main__':
     parser.add_argument('-config', '--config', help='Config file', required=False, default='config')
     parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', action='store_true')
     parser.add_argument('-test', '--test', help='Test data file', required=False, default=None)
-    parser.add_argument('-model', '--model', help='Model file name', required=False, default=None)
+    parser.add_argument('-test_model', '--test_model', help='Test model file name', required=False, default=None)
 
     args = vars(parser.parse_args())
 

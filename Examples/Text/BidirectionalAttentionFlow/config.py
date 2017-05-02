@@ -13,7 +13,6 @@ model_config = {
     'highway_layers' 	: 2,
     'two_step'          : True,
     'use_cudnn'         : True,
-    'reduced_q2c'       : False,
 }
 
 training_config = {

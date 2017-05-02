@@ -4,6 +4,9 @@ from helpers import *
 import pickle
 import importlib
 import os
+import crosstalk
+import crosstalk_cntk as crct
+_ci = crct.instance
 
 class PolyMath:
     def __init__(self, config_file):
@@ -86,6 +89,24 @@ class PolyMath:
                 
         q_processed = processed.clone(C.CloneMethod.share, {input_chars:qce, input_glove_words:qgw_ph, input_nonglove_words:qnw_ph})
         c_processed = processed.clone(C.CloneMethod.share, {input_chars:cce, input_glove_words:cgw_ph, input_nonglove_words:cnw_ph})
+        
+        i2c = [None]*self.c_dim
+        for c in self.chars:
+            i2c[self.chars[c]] = c
+        _ci.watch(crct.find_func_param(embedded, shape=(self.c_dim, self.char_emb_dim,)), 'charcnn_emb', var_type=crosstalk.EmbedAttr,
+                  attr=crosstalk.EmbedAttr(dict=i2c, input_dim=self.c_dim))
+        i2w = [None]*self.wn_dim
+        for w in self.vocab:
+            if self.vocab[w] >= self.wg_dim:
+                i2w[self.vocab[w] - self.wg_dim] = w
+        _ci.watch(processed.find_by_name('charcnn_conv', -1), 'charcnn_conv', var_type=crosstalk.Conv2DAttr,
+                  attr=crosstalk.Conv2DAttr(filter_shape=(5,self.char_emb_dim,), num_filters=self.convs, has_bias=True))
+        _ci.watch(crct.find_func_param(embedded, name='TrainableE'), 'ng_emb', var_type=crosstalk.EmbedAttr,
+                  attr=crosstalk.EmbedAttr(dict=i2w, input_dim=self.wn_dim))
+        _ci.watch({n : crct.find_func_param(highway, name='0_'+n) for n in ['WT', 'bT', 'WU', 'bU']}, 'highway0', var_type=crct.DictParameterType)
+        _ci.watch({n : crct.find_func_param(highway, name='1_'+n) for n in ['WT', 'bT', 'WU', 'bU']}, 'highway1', var_type=crct.DictParameterType)
+        _ci.watch(processed.find_by_name('input_rnn', -1), 'input_rnn', var_type=crosstalk.RnnAttr,
+                  attr=crosstalk.RnnAttr(bidirectional=True, op_type='lstm', input_dim=2*self.hidden_dim, hidden_dim=self.hidden_dim, forget_bias=0))
 
         return C.as_block(
             C.combine([c_processed, q_processed]),
@@ -130,6 +151,22 @@ class PolyMath:
         q2c_out = c_processed * q2c
 
         att_context = C.splice(c_processed, c2q, c_processed * c2q, q2c_out)
+
+        def att_ws_setter(pl, raw, attr=None):
+            p1, p2, p3 = np.split(raw, 3)
+            crct.parameter_setter(pl[0], p1.reshape(-1,1))
+            crct.parameter_setter(pl[1], p2.reshape(-1,1))
+            crct.parameter_setter(pl[2], p3.reshape(-1))
+
+        def att_ws_getter(pl, attr=None):
+            p1 = crct.parameter_getter(pl[0])
+            p2 = crct.parameter_getter(pl[1])
+            p3 = crct.parameter_getter(pl[2]).reshape((-1,1))
+            return np.concatenate((p1,p2,p3))
+
+        _ci.register_funcs('attention_weights', setter=att_ws_setter, getter=att_ws_getter)
+        _ci.watch([ws1, ws2, ws3], 'attention_weights', var_type='attention_weights')
+        _ci.watch(att_bias, 'attention_bias')
         
         return C.as_block(
             att_context,
@@ -146,6 +183,11 @@ class PolyMath:
             OptimizedRnnStack(self.hidden_dim, bidirectional=True, use_cudnn=self.use_cudnn, name='model_rnn0'),
             C.layers.Dropout(self.dropout),
             OptimizedRnnStack(self.hidden_dim, bidirectional=True, use_cudnn=self.use_cudnn, name='model_rnn1')])(att_context)
+
+        _ci.watch(mod_context.find_by_name('model_rnn0', -1), 'model_rnn0', var_type=crosstalk.RnnAttr,
+              attr=crosstalk.RnnAttr(bidirectional=True, op_type='lstm', input_dim=8*self.hidden_dim, hidden_dim=self.hidden_dim, forget_bias=0))
+        _ci.watch(mod_context.find_by_name('model_rnn1', -1), 'model_rnn1', var_type=crosstalk.RnnAttr,
+              attr=crosstalk.RnnAttr(bidirectional=True, op_type='lstm', input_dim=2*self.hidden_dim, hidden_dim=self.hidden_dim, forget_bias=0))
 
         return C.as_block(
             mod_context,
@@ -169,6 +211,13 @@ class PolyMath:
         m2 = OptimizedRnnStack(self.hidden_dim, bidirectional=True, use_cudnn=self.use_cudnn, name='output_rnn')(end_input)
         end_logits = C.layers.Dense(1, name='out_end')(C.dropout(C.splice(m2, att_context), self.dropout))
 
+        _ci.watch(start_logits.W, 'start_pos_weights')
+        _ci.watch(start_logits.b, 'start_pos_bias')
+        _ci.watch(end_logits.find_by_name('output_rnn', -1), 'output_rnn', var_type=crosstalk.RnnAttr,
+              attr=crosstalk.RnnAttr(bidirectional=True, op_type='lstm', input_dim=14*self.hidden_dim, hidden_dim=self.hidden_dim, forget_bias=0))
+        _ci.watch(end_logits.find_by_name('out_end').W, 'end_pos_weights')
+        _ci.watch(end_logits.find_by_name('out_end').b, 'end_pos_bias')
+
         return C.as_block(
             C.combine([start_logits, end_logits]),
             [(att_context, attention_context), (mod_context, modeling_context)],
@@ -190,15 +239,21 @@ class PolyMath:
 
         #input layer
         c_processed, q_processed = self.input_layer(cgw,cnw,cc,qgw,qnw,qc).outputs
+        _ci.watch(c_processed, 'context')
+        _ci.watch(q_processed, 'query')
         
         # attention layer
         att_context = self.attention_layer(c_processed, q_processed)
-        
+        _ci.watch(att_context, 'att_context')
+
         # modeling layer
         mod_context = self.modeling_layer(att_context)
+        _ci.watch(mod_context, 'mod_context')
 
         # output layer
         start_logits, end_logits = self.output_layer(att_context, mod_context).outputs
+        _ci.watch(start_logits, 'start_logits')
+        _ci.watch(end_logits, 'end_logits')
 
         # loss
         start_loss = seq_loss(start_logits, ab)
