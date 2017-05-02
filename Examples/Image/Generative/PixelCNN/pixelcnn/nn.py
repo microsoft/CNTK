@@ -24,11 +24,24 @@ def squeeze(x, axes):
     new_shape = np.squeeze(np.zeros(x.shape), axis=reduce_axes).shape
     return ct.reshape(x, shape=new_shape)
 
-def maximum(l, r):
-    return ct.element_max(l, r)
+def _one_hot(indices, depth, dtype=np.float32):
+    values = np.asarray(indices)
+    return np.asarray((np.arange(depth) == values[..., None]), dtype=dtype)
 
-def minimum(l, r):
-    return ct.element_min(l, r)
+def one_hot(indices, depth, axis=-1, dtype=np.float32):
+    ''' Compute one hot from indices similar signature to tensorflow '''
+    values = np.asarray(indices)
+    rank = len(values.shape)
+    depth_range = np.arange(depth)
+    if axis < 0:
+        axis = rank + axis + 1
+    
+    ls = values.shape[0:axis]
+    rs = values.shape[axis:rank]
+    targets = np.reshape(depth_range, (1,)*len(ls)+depth_range.shape+(1,)*len(rs))
+    values = np.reshape(values, ls+(1,)+rs)
+    
+    return np.asarray(targets == values, dtype=dtype)
 
 def concat_elu(x):
     """ like concatenated ReLU (http://arxiv.org/abs/1603.05201), but then with ELU """

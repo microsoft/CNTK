@@ -15,7 +15,7 @@ def scale_to_unit_interval(ndar, eps=1e-8):
   ndar *= 1.0 / (ndar.max() + eps)
   return ndar
 
-def np_sample_from_discretized_mix_logistic(l,nr_mix=10):
+def np_sample_from_discretized_mix_logistic(l, nr_mix=10):
     ls = l.shape # NCHW
     xs = (ls[0], 3) + ls[2:]
 
@@ -24,10 +24,8 @@ def np_sample_from_discretized_mix_logistic(l,nr_mix=10):
     l = np.reshape(l[:,nr_mix:,:,:], (xs[0], nr_mix*3)+xs[1:])
 
     # sample mixture indicator from softmax
-    sel_value = np.argmax(logit_probs - np.log(-np.log(np.random.uniform(1e-5, 1. - 1e-5, logit_probs.shape).astype('f'))), axis=1)
-    sel_one = (np.arange(nr_mix) == sel_value[:,:,:,None]).astype(int)
-    sel_one = np.transpose(sel_one, (0,3,1,2))
-    sel = np.reshape(sel_one, (xs[0], nr_mix, 1) + xs[2:])
+    sel = nn.one_hot(np.argmax(logit_probs - np.log(-np.log(np.random.uniform(1e-5, 1. - 1e-5, logit_probs.shape).astype('f'))), axis=1), depth=nr_mix, axis=1 , dtype=np.float32)
+    sel = np.reshape(sel, (xs[0], nr_mix, 1) + xs[2:])
 
     # select logistic parameters
     means = np.sum(l[:,:nr_mix,:,:,:]*sel,1)
@@ -48,7 +46,7 @@ def np_sample_from_discretized_mix_logistic(l,nr_mix=10):
                            np.reshape(x1,(xs[0],1)+xs[2:]), 
                            np.reshape(x2,(xs[0],1)+xs[2:])), axis=1)
 
-def np_sample_from_discretized_mix_logistic_NHWC(l,nr_mix=10):
+def np_sample_from_discretized_mix_logistic_NHWC(l, nr_mix=10):
     l = np.ascontiguousarray(np.transpose(l, (0,2,3,1))) # From NCHW to NHWC    
     ls = l.shape
     xs = ls[:-1] + (3,)
@@ -58,9 +56,8 @@ def np_sample_from_discretized_mix_logistic_NHWC(l,nr_mix=10):
     l = np.reshape(l[:, :, :, nr_mix:], xs + (nr_mix*3,))
 
     # sample mixture indicator from softmax
-    sel_value = np.argmax(logit_probs - np.log(-np.log(np.random.uniform(1e-5, 1. - 1e-5, logit_probs.shape).astype('f'))), axis=3)
-    sel_one = (np.arange(nr_mix) == sel_value[:,:,:,None]).astype(int)
-    sel = np.reshape(sel_one, xs[:-1] + (1,nr_mix))    
+    sel = nn.one_hot(np.argmax(logit_probs - np.log(-np.log(np.random.uniform(1e-5, 1. - 1e-5, logit_probs.shape).astype('f'))), axis=3), depth=nr_mix, dtype=np.float32)
+    sel = np.reshape(sel, xs[:-1] + (1,nr_mix))    
 
     # select logistic parameters
     means = np.sum(l[:,:,:,:,:nr_mix]*sel,4)
@@ -69,7 +66,6 @@ def np_sample_from_discretized_mix_logistic_NHWC(l,nr_mix=10):
 
     # sample from logistic & clip to interval
     # we don't actually round to the nearest 8bit value when sampling
-    # u = tf.random_uniform(means.get_shape(), minval=1e-5, maxval=1. - 1e-5)
     u = np.random.uniform(1e-5, 1. - 1e-5, means.shape).astype('f')
 
     x = means + np.exp(log_scales)*(np.log(u) - np.log(1. - u))
@@ -78,9 +74,9 @@ def np_sample_from_discretized_mix_logistic_NHWC(l,nr_mix=10):
     x2 = np.minimum(np.maximum(x[:,:,:,2] + coeffs[:,:,:,1]*x0 + coeffs[:,:,:,2]*x1, -1.), 1.)
 
     # (NHWC)
-    image = np.concatenate((np.reshape(x0,xs[:-1]+(1,)), 
-                            np.reshape(x1,xs[:-1]+(1,)), 
-                            np.reshape(x2,xs[:-1]+(1,))), axis=3)
+    image = np.concatenate((np.reshape(x0, xs[:-1]+(1,)), 
+                            np.reshape(x1, xs[:-1]+(1,)), 
+                            np.reshape(x2, xs[:-1]+(1,))), axis=3)
     return np.ascontiguousarray(np.transpose(image, (0,3,1,2))) # From NHWC to NCHW
 
 def sample_from_discretized_mix_logistic(l,nr_mix=10):

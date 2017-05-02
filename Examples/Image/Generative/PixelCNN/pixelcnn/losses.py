@@ -28,7 +28,7 @@ def discretized_mix_logistic_loss(x, l, sum_all=True):
     log_scales = ct.element_max(l[nr_mix:2*nr_mix, :, :, :], -7.)
     coeffs = ct.tanh(l[2*nr_mix:3*nr_mix, :, :, :])
     # here and below: getting the means and adjusting them based on preceding sub-pixels
-    x = ct.reshape(x, (1,)+xs) + ct.constant(value=0., shape=(nr_mix,)+xs) 
+    x = ct.reshape(x, (1,)+xs) + ct.constant(value=0., shape=(nr_mix,)+xs)
     m2 = ct.reshape(means[:, 1, :, :] + coeffs[:, 0, :, :] * x[:, 0, :, :], (nr_mix,1,xs[1],xs[2]))
     m3 = ct.reshape(means[:, 2, :, :] + coeffs[:, 1, :, :] * x[:, 0, :, :] + coeffs[:, 2, :, :] * x[:, 1, :, :], (nr_mix,1,xs[1],xs[2]))
     means = ct.splice(ct.reshape(means[:,0,:,:], (nr_mix,1,xs[1],xs[2])), m2, m3, axis=1)
@@ -58,12 +58,11 @@ def discretized_mix_logistic_loss(x, l, sum_all=True):
                                   ct.element_select(ct.greater(x, 0.999), 
                                                     log_one_minus_cdf_min, 
                                                     ct.element_select(ct.greater(cdf_delta, 1e-5), 
-                                                                      ct.log(nn.maximum(cdf_delta, 1e-12)), 
+                                                                      ct.log(ct.element_max(cdf_delta, 1e-12)), 
                                                                       log_pdf_mid - np.log(127.5))))
 
     log_probs = nn.squeeze(ct.reduce_sum(log_probs, axis=1), axes=1) + nn.log_prob_from_logits(logit_probs, axis=0)
     losses = nn.log_sum_exp(log_probs, axis=0)
-
     if sum_all:
         return -ct.reduce_sum(losses)
     else:
@@ -76,8 +75,7 @@ def discretized_mix_logistic_loss_HWC(x, l, sum_all=True):
     log-likelihood for mixture of discretized logistics, assumes the data has been rescaled to [-1,1] interval
     """
     x = ct.transpose(x, (1, 2, 0)) # From CHW to HWC
-    l = ct.transpose(l, (1, 2, 0)) # From CHW to HWC
-
+    l = ct.transpose(l, (1, 2, 0)) # From CHW to HWC    
     xs = x.shape # true image (i.e. labels) to regress to.
     ls = l.shape # predicted distribution.
 
@@ -122,7 +120,6 @@ def discretized_mix_logistic_loss_HWC(x, l, sum_all=True):
                                                                       log_pdf_mid - np.log(127.5))))
 
     log_probs = nn.squeeze(ct.reduce_sum(log_probs, axis=2), axes=2) + nn.log_prob_from_logits(logit_probs, axis=len(logit_probs.shape)-1)
-
     losses = nn.log_sum_exp(log_probs, axis=len(log_probs.shape)-1)
     if sum_all:
         return -ct.reduce_sum(losses)

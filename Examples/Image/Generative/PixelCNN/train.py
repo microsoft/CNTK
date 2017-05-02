@@ -50,7 +50,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     inputs_init = ct.input(shape=(num_channels, image_height, image_width))    
     inputs = ct.input(shape=(num_channels, image_height, image_width))
     targets = ct.input(shape=(num_channels, image_height, image_width))
-    labels  = ct.input((num_classes))
+    labels = ct.input((num_classes))
 
     # apply model to input
     inputs_init_norm = (inputs_init - 127.5) / 127.5 # [-1, 1]    
@@ -70,7 +70,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
 
     # Set learning parameters
     lr = 0.001 / minibatch_size
-    lr_decay = 0.6 #0.999995
+    lr_decay = 0.9 #0.999995
 
     # Print progress
     progress_writers = [ct.logging.ProgressPrinter(tag='Training', freq=100, num_epochs=max_epochs)] # freq=100
