@@ -361,7 +361,7 @@ if __name__=='__main__':
     parser.add_argument('-config', '--config', help='Config file', required=False, default='config')
     parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', action='store_true')
     parser.add_argument('-test', '--test', help='Test data file', required=False, default=None)
-    parser.add_argument('-test_model', '--test_model', help='Test model file name', required=False, default=None)
+    parser.add_argument('-model', '--model', help='Model file name', required=False, default=None)
 
     args = vars(parser.parse_args())
 
