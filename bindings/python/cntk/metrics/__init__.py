@@ -7,7 +7,7 @@
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-from ..ops.functions import CloneMethod, Function, load_model
+from ..ops.functions import CloneMethod, Function
 from ..variables import Variable, Parameter, Constant
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, typemap
 from cntk.internal.utils import get_data_type
@@ -117,7 +117,7 @@ def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashIn
 
     Just like ClassificationError and other evaluation nodes, when used as an evaluation criterion, the SGD process will aggregate all values over an epoch and report the average, i.e. the error rate.
     Primary objective of this node is for error evaluation of CTC training, see formula (1) in "Connectionist Temporal Classification: Labelling Unsegmented
-    Sequence Data with Recurrent Neural Networks", http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+    Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 
     Example:
         i1 = cntk.input(shape=(2,))

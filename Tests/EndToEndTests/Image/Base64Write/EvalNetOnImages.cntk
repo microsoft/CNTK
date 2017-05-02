@@ -12,9 +12,14 @@ Output = {
     action = write
     writeSequenceKey = true
     outputNodeNames = OutputNodes.z
-    outputPath = $RunDir$/OutputNodes
+    outputPath = $RunDir$/Actual
     minibatchSize = 2
     modelPath = "$EvalModelDir$/test_base64.model"
+
+    format=[
+        sequencePrologue="prefix_%k\t"
+        elementSeparator="\t"
+    ]
 
     reader = {
         verbosity = 0 ;  randomize = false
@@ -24,7 +29,7 @@ Output = {
             input = {
                 features = {
                     transforms = (
-                        { type = "Crop" ; cropType = "Center" ; cropRatio = 1.0 ; jitterType = "UniRatio" }:
+                        { type = "Crop" ; cropType = "Center" ; sideRatio = 1.0 ; jitterType = "UniRatio" }:
                         { type = "Scale" ; width = 224 ; height = 224 ; channels = 3 ; interpolations = "Linear" }:
                         { type = "Transpose" }
                     )

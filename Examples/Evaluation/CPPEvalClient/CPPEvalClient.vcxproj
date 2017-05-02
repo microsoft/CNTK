@@ -108,12 +108,12 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0-rc1\build\native\Microsoft.Research.CNTK.CpuEval-mkl.targets" Condition="Exists('..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0-rc1\build\native\Microsoft.Research.CNTK.CpuEval-mkl.targets')" />
+    <Import Project="..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0.0-rc2\build\native\Microsoft.Research.CNTK.CpuEval-mkl.targets" Condition="Exists('..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0.0-rc2\build\native\Microsoft.Research.CNTK.CpuEval-mkl.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0-rc1\build\native\Microsoft.Research.CNTK.CpuEval-mkl.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0-rc1\build\native\Microsoft.Research.CNTK.CpuEval-mkl.targets'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0.0-rc2\build\native\Microsoft.Research.CNTK.CpuEval-mkl.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0.0-rc2\build\native\Microsoft.Research.CNTK.CpuEval-mkl.targets'))" />
   </Target>
 </Project>

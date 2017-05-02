@@ -10,18 +10,22 @@ Unit tests for the function class.
 
 import numpy as np
 import pytest
+import cntk as C
 from ..functions import *
 from ...train.trainer import *
 from ...initializer import glorot_uniform
-from .. import constant, parameter, input, placeholder, times, plus, sequence, as_composite, combine, convolution, splice, as_block
+from .. import constant, parameter, input, placeholder, times, plus, sequence,\
+        as_composite, combine, convolution, splice, as_block, alias
 from ... import InferredDimension, gpu, cpu
 from .ops_test_utils import compare_lists_of_np_arrays, AA, cntk_device
 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDefs, StreamDef
 
+
 def test_variable_forwarding():
     op = constant(value=2, shape=(3,4)) + 1
     assert op.shape == (3,4)
+
 
 def test_eval_by_node_name():
     i = input(shape=(1,), needs_gradient=True, name='i')
@@ -365,7 +369,7 @@ def test_output_subset_evaluation(device_id):
         parameter_device = cpu()
     p = parameter(shape=(1), init=glorot_uniform(), device=parameter_device)
     op2 = (x2 - constant(value=10, shape=(1), device=device)) - p
-    
+
     op = combine([op1, op2]);
 
     _, result = op.forward({x1 : np.asarray([1, 2, 3])}, [op1], device=device)
@@ -384,7 +388,7 @@ def test_block_with_unused_outputs():
     input_var1 = input(shape=())
     input_var2 = input(shape=())
     block = as_block(combine([func1, func3]), [(p3, input_var1), (p5, input_var2)], 'multi_output_block')
-    
+
     eval_root = combine([block.outputs[0]])
     result = eval_root.eval({input_var1 : np.asarray([3], dtype=np.float32), input_var2 : np.asarray([-3], dtype=np.float32)})
     assert np.array_equal(result, [[ 4.]])
@@ -410,3 +414,87 @@ def test_update_signature():
 
     assert f.outputs[0].shape == (input_dim,)
     assert f.x.shape == (input_dim,)
+
+
+def test_eval_again_with_prev_outputs_live(device_id):
+    x = C.input(2)
+    dev = cntk_device(device_id)
+    w1 = C.parameter(init=np.asarray([1], dtype=np.float32), device=dev)
+    w2 = C.parameter(init=np.asarray([-1], dtype=np.float32), device=dev)
+    out1 = x + w1
+    out2 = x + w2
+    op = C.combine([out1, out2])
+
+    result1 = op.eval({x : np.asarray([2, 5], dtype=np.float32)}, device=dev)
+    assert np.array_equal(result1[out1.output], [[3, 6]])
+    assert np.array_equal(result1[out2.output], [[1, 4]])
+
+    result2 = op.eval({x : np.asarray([[-1, 4], [-4, 7]], dtype=np.float32)}, device=dev)
+    assert np.array_equal(result2[out1.output], [[0, 5], [-3, 8]])
+    assert np.array_equal(result2[out2.output], [[-2, 3], [-5, 6]])
+
+    # result1 should still be valid
+    assert np.array_equal(result1[out1.output], [[3, 6]])
+    assert np.array_equal(result1[out2.output], [[1, 4]])
+
+    result1 = op.eval({x : np.asarray([2, 5], dtype=np.float32)}, device=dev, as_numpy=False)
+    assert np.array_equal(result1[out1.output].asarray(), [[3, 6]])
+    assert np.array_equal(result1[out2.output].asarray(), [[1, 4]])
+
+    result2 = op.eval({x : np.asarray([[-1, 4], [-4, 7]], dtype=np.float32)}, device=dev, as_numpy=False)
+    assert np.array_equal(result2[out1.output].asarray(), [[0, 5], [-3, 8]])
+    assert np.array_equal(result2[out2.output].asarray(), [[-2, 3], [-5, 6]])
+
+    # Accessing result1 now will cause an error since it was a temporary that
+    # is now erased, due to the subsequent eval call
+    with pytest.raises(RuntimeError):
+        assert np.array_equal(result1[out1.output].asarray(), [[3, 6]])
+
+    grad_op = out1 + out2
+    grad1 = grad_op.grad({x : np.asarray([2, 5], dtype=np.float32)}, wrt=[w1, w2], device=dev)
+    assert np.array_equal(grad1[w1], [2])
+    assert np.array_equal(grad1[w2], [2])
+
+    grad2 = grad_op.grad({x : np.asarray([[-1, 4], [-4, 7]], dtype=np.float32)}, wrt=[w1, w2], device=dev)
+    assert np.array_equal(grad2[w1], [4])
+    assert np.array_equal(grad2[w2], [4])
+
+    # grad1 should still be valid
+    assert np.array_equal(grad1[w1], [2])
+    assert np.array_equal(grad1[w2], [2])
+
+    grad1 = grad_op.grad({x : np.asarray([2, 5], dtype=np.float32)}, wrt=[w1, w2], device=dev, as_numpy=False)
+    assert np.array_equal(grad1[w1].asarray(), [2])
+    assert np.array_equal(grad1[w2].asarray(), [2])
+
+    grad2 = grad_op.grad({x : np.asarray([[-1, 4], [-4, 7]], dtype=np.float32)}, wrt=[w1, w2], device=dev, as_numpy=False)
+    assert np.array_equal(grad2[w1].asarray(), [4])
+    assert np.array_equal(grad2[w2].asarray(), [4])
+
+    # Accessing grad1 now will cause an error since it was a temporary that
+    # is now erased, due to the subsequent grad call
+    with pytest.raises(RuntimeError):
+        assert np.array_equal(grad1[w1].asarray(), [2])
+
+
+def test_outputs_passing():
+    in1 = input(shape=(1,))
+    a = alias(in1 + 1, name='a')
+    b = a + 2
+
+    expected = [[2], [3]]
+
+    result = b.eval({in1: [[1], [2]]}, outputs=a.outputs)
+    assert np.array_equal(result, expected)
+    
+    result = b.eval({in1: [[1], [2]]}, outputs=list(a.outputs))
+    assert np.array_equal(result, expected)
+    
+    result = b.eval({in1: [[1], [2]]}, outputs=a.output)
+    assert np.array_equal(result, expected)
+    
+    result = b.eval({in1: [[1], [2]]}, outputs=a)
+    assert np.array_equal(result, expected)
+    
+    with pytest.raises(TypeError):
+        b.eval({in1: [[1], [2]]}, outputs=[a.outputs])

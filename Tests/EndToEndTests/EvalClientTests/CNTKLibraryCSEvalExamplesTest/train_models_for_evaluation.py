@@ -58,7 +58,7 @@ from cntk import *
 from cntk.logging import *
 def create_criterion_function(model):
     @Function
-    @Signature(query = Sequence[Tensor[LanguageUnderstanding.vocab_size]], labels = Sequence[SparseTensor[LanguageUnderstanding.num_labels]])
+    @Signature(query = Sequence[SparseTensor[LanguageUnderstanding.vocab_size]], labels = Sequence[SparseTensor[LanguageUnderstanding.num_labels]])
     def criterion(query, labels):
         z = model(query)
         ce   = cross_entropy_with_softmax(z, labels)

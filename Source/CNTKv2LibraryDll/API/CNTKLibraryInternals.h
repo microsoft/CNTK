@@ -212,6 +212,13 @@ namespace CNTK
     class Accumulator;
     typedef std::shared_ptr<Accumulator> AccumulatorPtr;
 
+    class UserFunctionFactory;
+    typedef std::shared_ptr<UserFunctionFactory> UserFunctionFactoryPtr;
+
+    class PackedValue;
+    typedef std::shared_ptr<PackedValue> PackedValuePtr;
+    typedef std::weak_ptr<PackedValue> PackedValueWeakPtr;
+
     struct MinibatchSourceConfig;
 
     namespace Internal
@@ -220,7 +227,6 @@ namespace CNTK
         CNTK_API FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
         CNTK_API FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ScatterPacked(const Variable& operand, const Variable& packedIndex, const Variable& condition, const std::wstring& name = L"");
-        CNTK_API FunctionPtr ReconcileDynamicAxis(const Variable& operand, const Variable& layout, const std::wstring& name = L"");
         CNTK_API FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand);
         CNTK_API FunctionPtr Where(const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
         CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
@@ -229,7 +235,7 @@ namespace CNTK
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
         CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
-        CNTK_API FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name = L"");
+        CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, bool keepReducedDimensions, const std::wstring& name = L"");
         CNTK_API FunctionPtr CosineDistanceWithNegativeSamples(const Variable& leftOperand, const Variable& rightOperand, const Variable& shiftWindow, const Variable& numberOfNegativeSamples, const std::wstring& name = L"");
         CNTK_API FunctionPtr Convolution(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& autoPadding,
                                          bool transpose, const NDShape& outputShape, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
@@ -239,7 +245,7 @@ namespace CNTK
 
         CNTK_API size_t NewUniqueId();
 
-        CNTK_API size_t GenerateRandomSeed();
+        CNTK_API size_t GenerateRandomSeed(bool perWorkerLocalValue = false);
 
         // Internal hooks for testing and higher-level bindings
         // These should not be directly called by C++ API users
@@ -258,9 +264,6 @@ namespace CNTK
         CNTK_API void SetComputationNetworkTraceLevel(int traceLevel);
         int GetComputationNetworkTraceLevel();
 
-        CNTK_API void SetComputationNetworkTrackGapNans(bool enable);
-        bool GetComputationNetworkTrackGapNans();
-
         CNTK_API void SetGPUMemoryAllocationTraceLevel(int traceLevel);
 
         CNTK_API void SetMathLibTraceLevel(int traceLevel);
@@ -271,7 +274,11 @@ namespace CNTK
         CNTK_API void EnableSynchronousGPUKernelExecution();
         CNTK_API bool IsSynchronousGPUKernelExecutionEnabled();
 
-        CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
+        CNTK_API unsigned long GetRandomSeed();
+        CNTK_API void SetFixedRandomSeed(unsigned long value);
+        CNTK_API bool IsRandomSeedFixed();
+        // If SetFixedRandomSeed has been called before, this will clear the 'fixed' flag.
+        CNTK_API void ResetRandomSeed(unsigned long value = 0);
 
         CNTK_API void EnableForwardValuesSharing();
         CNTK_API void DisableForwardValuesSharing();
@@ -363,6 +370,23 @@ namespace CNTK
             FILE* m_file;
             std::wstring m_fileName;
         };
+
+        ///
+        /// Defines an interface of a deserializer for user defined functions,
+        /// that needs to be provided to Function::Load to inflate user defined functions in the model.
+        /// Subclasses need to implement the single deserialize method.
+        ///
+        class UDFDeserializer : public std::enable_shared_from_this<UDFDeserializer>
+        {
+        public:
+            ///
+            /// Reconstructs a user defined function given its inputs, name and a dictionary containing its state.
+            ///
+            virtual FunctionPtr Deserialize(const std::vector<Variable>& inputs, const std::wstring& name, const Dictionary& dictionary) const = 0;
+            virtual ~UDFDeserializer() = default;
+        };
+
+        typedef std::shared_ptr<UDFDeserializer> UDFDeserializerPtr;
     }
 
     // Forward-declare test fixtures, so that they can be used as friends.

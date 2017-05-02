@@ -1,0 +1,55 @@
+dataDir: ../../Data
+tags:
+     - bvt-p (build_sku == 'gpu') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
+     - nightly-p (build_sku == '1bitsgd') and (flavor == 'release')
+
+testCases:
+  Must train epochs in exactly same order and parameters for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Epochs must be finished with expected results for each MPI Rank for training:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - Training
+      - CrossEntropyWithSoftmax = {{float,tolerance=0%}}
+      - EvalClassificationError = {{float,tolerance=0.00000001}}
+      - learningRatePerSample = {{float,tolerance=0.001%}}
+
+  Epochs must be finished with expected results for each MPI Rank for CV:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - Validate
+      - CrossEntropyWithSoftmax = {{float,tolerance=0%}}
+      - EvalClassificationError = {{float,tolerance=0.00000001}}
+
+  Per-minibatch training results must match for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
+      - " * {{integer}}; "
+      - CrossEntropyWithSoftmax = {{float,tolerance=0%}}
+      - EvalClassificationError = {{float,tolerance=0.00000001}}
+
+  DataParallelSGD training parameters must match for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Starting minibatch loop
+      - DataParallelSGD training
+      - myRank = {{integer}}
+      - numNodes = 2
+      - numGradientBits = 64
+      - distributed reading is ENABLED
+
+  Best model per criterion must match for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Best epoch per criterion so far
+      - Validate
+      - CrossEntropyWithSoftmax = {{float,tolerance=0%}} (Epoch {{integer}})
+      - EvalClassificationError = {{float,tolerance=0.00000001}} (Epoch {{integer}})

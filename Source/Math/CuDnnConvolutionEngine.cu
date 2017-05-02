@@ -452,6 +452,7 @@ private:
         if (algo.autotuningState == AutotuningState::Running && batchSize > algo.maxMBSizeSeen)
         {
             algo.autotuningState = AutotuningState::Init;
+            cudaDeviceSynchronize(); // make sure no in-flight GPU kernels using workspace before release its memory
             workspace.Resize(0,0,0,false);
             algo.AlgoWorkspaceSize = 0;
             algo.MBSizeForCurrentWorkspace = 0;
@@ -664,22 +665,23 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
                    (poolKind == PoolKind::None ||
                    inputRank <= 3 && (kernelRank < 3 || kernel[2] == 1)));
 
-    return retVal;
-
-    // TODO: This currently either causes a CUDA timeout or slows the whole machine down to a crawl (GPU).
-    // cuDNN as of version 8.0 does not handle asymmetric padding for convolution correctly. We need to detect asymmetric
+    // cuDNN as of version 6.0 does not handle asymmetric padding for even size kernel convolution correctly. We need to detect asymmetric
     // padding due to auto-padding and choose the reference convolution implementation instead
-    //if (poolKind == PoolKind::None)     // only for convolution, pooling seems fine
-    //{
-    //    for (int i = 0; i < kernelRank; i++)
-    //    {
-    //        if (geometry->GetAutoPad(i))
-    //            retVal = retVal && (kernel[i] % 2 != 0);  // make sure kernel size is odd
-    //        else
-    //            retVal = retVal && (geometry->GetLowerPad(i) == geometry->GetUpperPad(i));   // lower pad is same as upper pad
-    //    }
-    //}
-    //return retVal;
+    if (poolKind == PoolKind::None)     // only for convolution, pooling seems fine
+    {
+        for (int i = 0; i < kernelRank; i++)
+        {
+            auto lowerPad = geometry->GetLowerPad(i); 
+            auto upperPad = geometry->GetUpperPad(i); 
+            if (kernel[i] % 2 == 0 && lowerPad < upperPad)
+            {
+                fprintf(stderr, "WARNING: Detected asymmetric padding issue with even kernel size and lowerPad (%d) < higherPad (%d) (i=%d), cuDNN will not be able to produce correct result. Switch to reference engine (VERY SLOW). \n", lowerPad, upperPad, i);
+                retVal = false; 
+                break; 
+            }
+        }
+    }
+    return retVal;
 }
 
 template class CuDnnConvolutionEngineFactory<float>;

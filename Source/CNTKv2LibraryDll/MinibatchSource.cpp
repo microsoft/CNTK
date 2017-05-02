@@ -158,7 +158,7 @@ namespace CNTK
                 }
                 else if (m_maxNumSamplesToRead == MinibatchSource::InfinitelyRepeat)
                 {
-                    // Setting big value, but not the max in order to aviod bit overflow.
+                    // Setting big value, but not the max in order to avoid bit overflow.
                     epochConfig.m_totalEpochSizeInSamples = std::numeric_limits<size_t>::max() / 2;
                 }
                 else 
@@ -386,7 +386,7 @@ namespace CNTK
         return htk;
     }
 
-    Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles)
+    Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries)
     {
         Deserializer htk;
         Dictionary stream;
@@ -400,6 +400,10 @@ namespace CNTK
             labels[L"mlfFile"] = actualFiles[0];
         else
             LogicError("HTKMLFDeserializer: No mlf files were specified");
+        if (phoneBoundaries)
+            labels[L"phoneBoundaries"] = L"true";
+        else
+            labels[L"phoneBoundaries"] = L"false";
         stream[streamName] = labels;
         htk.Add(L"type", L"HTKMLFDeserializer", L"input", stream);
         return htk;

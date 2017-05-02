@@ -135,7 +135,7 @@ void MultiThreadsEvaluationWithClone(const DeviceDescriptor& device, const int t
 void MultiThreadsEvaluationWithLoadModel(const DeviceDescriptor& device, const int threadCount)
 {
     // The model file will be trained and copied to the current runtime directory first.
-    auto modelFuncPtr = CNTK::Function::LoadModel(L"01_OneHidden", device);
+    auto modelFuncPtr = CNTK::Function::Load(L"01_OneHidden", device);
 
     OutputFunctionInfo(modelFuncPtr);
     fprintf(stderr, "MultiThreadsEvaluationWithLoadModel on device=%d\n", device.Id());

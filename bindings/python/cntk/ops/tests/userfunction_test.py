@@ -10,11 +10,13 @@ Unit tests for function extension
 from __future__ import division, print_function
 import numpy as np
 import pytest
+import os 
+import cntk as C
 
 from cntk import *
 from cntk.train.trainer import *
 from cntk.learners import *
-from cntk.ops.functions import UserFunction
+from cntk.ops.functions import Function, UserFunction, UserFunctionDeserializer
 from .ops_test_utils import AA
 
 class MyPlus(UserFunction):
@@ -45,6 +47,19 @@ class MyPlus(UserFunction):
 
         for input in input_gradients:
             input_gradients[input] = root_gradients
+
+    def serialize(self):
+        internal_state = {}
+        internal_state['forward_calls'] = self.forward_calls
+        internal_state['backward_calls'] = self.backward_calls
+        return internal_state
+
+    @staticmethod
+    def deserialize(inputs, name, state):
+        f = MyPlus(inputs[0], inputs[1], name)
+        f.forward_calls = state['forward_calls']
+        f.backward_calls = state['backward_calls']
+        return f
 
 def test_ext_eval_1():
     dim = 4
@@ -140,12 +155,12 @@ def test_ext_eval_7_placeholder():
     result = z.eval([input_data])
     assert np.allclose(result[0][0], input_data+3+10)
 
-def test_ext_train():
+def test_ext_train(tmpdir):
     dim = 4
 
     p = parameter(shape=(dim,), init=10)
     i = sequence.input(dim, needs_gradient=True, name='i_var')
-    m = MyPlus(i, constant(3))
+    m = MyPlus(i, constant(3), 'my_plus')
     # keeping m unwrapped since we need to access its member variables
     z = user_function(m)+p
 
@@ -161,7 +176,28 @@ def test_ext_train():
         input_data = np.random.rand(dim)
         trainer.train_minibatch([input_data])
 
+
     assert m.forward_calls == m.backward_calls == 100
+
+    filepath = str(tmpdir / 'test_ext_train.dat')
+
+    z.save(filepath)
+
+    buf = open(filepath, 'rb').read()
+
+    # this is only need for Python 2.7 
+    # (which does not distinguish between bytes and strings)
+    if isinstance(buf, str):
+        buf = bytearray(buf)
+
+    z1 = Function.load(buf)
+    
+    m1 = z1.find_by_name('my_plus')
+    #m1 is an instance of UserFunction, cannot directly downcast it to MyPlus, 
+    #using serialize as workaround:
+    state = m1.serialize()['state']
+
+    assert state['forward_calls'] == state['backward_calls'] == 100
 
 def test_udf_clone():
     dim = 4
@@ -223,7 +259,12 @@ class LambdaFunc(UserFunction):
             name=''):
         self.when = when
         self.execute = execute
-        super(LambdaFunc, self).__init__([arg], name=name)
+        arg = arg if isinstance(arg, list) else [arg]
+        super(LambdaFunc, self).__init__(arg, name=name)
+
+    @property
+    def op_name(self):
+        return 'conditional_exec_lambda'
 
     def infer_outputs(self):
         return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
@@ -238,7 +279,7 @@ class LambdaFunc(UserFunction):
         return root_gradients
 
 
-def test_ext_lambdafunc():
+def test_ext_lambdafunc(tmpdir):
     dim = 4
 
     class CallbackCounter(object):
@@ -256,8 +297,16 @@ def test_ext_lambdafunc():
             when=lambda arg: np.sum(arg)>1,
             execute=cb.inc)
     m = user_function(m)
-    z = m+0
+    z0 = m+0
 
+    filepath = str(tmpdir / 'test_ext_lambdafunc.dat')
+    z0.save(filepath)
+    z = Function.load(filepath, udf_factory_callback_map =
+        {
+            'conditional_exec_lambda' :     
+            lambda x, *unused: 
+                LambdaFunc(x, when=lambda arg: np.sum(arg)>1, execute=cb.inc)
+        })
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
     trainer = Trainer(z, (z+0, z+0), \
@@ -403,6 +452,7 @@ class MyPlusWithNoGradientNeededForOutput(UserFunction):
     def backward(self, state, root_gradients, input_gradients):
         raise ValueError("MyPlusWithNoGradientNeededForOutput does not need gradient for output and backward must not be called")
 
+
 def test_udf_output_needs_no_gradient():
     dim = 2
     x = sequence.input(dim, needs_gradient=True, name='x')
@@ -418,3 +468,20 @@ def test_udf_output_needs_no_gradient():
     assert np.allclose(gradients[op.arguments[1]], [[[0., 0.], [0., 0.]]])
 
     assert np.allclose(result, [[[6., 8.], [10., 12.]]])
+
+
+def test_native_user_function():
+    ops.register_native_user_function('NativeUserTimesFunction', 'Cntk.ExtensibilityExamples-' + C.__version__.rstrip('+'), 'CreateUserTimesFunction')
+    dev = cpu()
+    x = input((2))
+    w = parameter((2, 2), init=np.asarray([[0.5, 2], [-0.5, 1.5]], dtype=np.float32), device=dev)
+    attributes = {'param_rank' : 2, 'padding' : True}
+    op = ops.native_user_function('NativeUserTimesFunction', [w, x], attributes, 'native_user_times_function')
+
+    x_data = NDArrayView.from_dense(np.asarray([[0.1, 0.2], [-0.1, 0.3]], dtype=np.float32), device=dev)
+    result = op.eval({x : x_data}, device=dev)
+    assert np.allclose(result, [[-0.05, 0.5], [-0.2, 0.25]])
+
+    native_times_primitive = op.find_by_name('native_user_times_function')
+    assert native_times_primitive.attributes == attributes
+ 
