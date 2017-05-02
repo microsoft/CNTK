@@ -337,20 +337,13 @@ namespace CNTK
 
     class LearnerCNTK : public LearnerBase
     {
-        std::unordered_map<Parameter, std::pair<Constant, FunctionPtr>> m_updates;
-        Dictionary m_hyperparameters;
+        std::unordered_map<Parameter, std::pair<Variable, FunctionPtr>> m_updates;
         static const std::unordered_map<Variable, ValuePtr> m_empty;
 
     public:
-        LearnerCNTK(NetworkFactory f, const std::vector<Parameter>& parameters,
-            const Dictionary& hyperparameters,
-            const LearningRateSchedule& learningRateSchedule,
-            AdditionalLearningOptions additionalOptions);
+        LearnerCNTK(NetworkFactory f, const std::vector<Parameter>& parameters);
 
-        //virtual FunctionPtr RegisterUpdate(const Parameter& parameter, const Variable& gradient)
-        //{
-        //   NOT_IMPLEMENTED;
-        //}
+        LearnerCNTK(const std::unordered_map<Parameter, std::pair<Variable, FunctionPtr>>& updates);
 
     protected:
 

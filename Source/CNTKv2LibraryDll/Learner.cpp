@@ -833,22 +833,48 @@ namespace CNTK
 
     /* static */ const std::unordered_map<Variable, ValuePtr>  LearnerCNTK::m_empty = {};
 
-    LearnerCNTK::LearnerCNTK(NetworkFactory f, const std::vector<Parameter>& parameters, 
-        const Dictionary& hyperparameters,
-        const LearningRateSchedule& learningRateSchedule,
-        AdditionalLearningOptions additionalOptions)
-        : LearnerBase(parameters, learningRateSchedule, additionalOptions, /*allocateSmoothGradients*/ true)
-    {
-        m_hyperparameters = hyperparameters;
 
+    LearnerCNTK::LearnerCNTK(NetworkFactory f, const std::vector<Parameter>& parameters)
+        : LearnerBase(parameters, LearningRateSchedule(0.0, CNTK::LearningRateSchedule::UnitType::Sample), AdditionalLearningOptions(), /*allocateSmoothGradients*/ true)
+    {
         for (const auto& p : parameters)
         {
             //we do not support sparse gradients for now 
             auto g = Constant(p.Shape(), p.GetDataType(), 0.0, DeviceDescriptor::UseDefaultDevice(), L"gradient");
-            FunctionPtr fpg = f(p, g, hyperparameters);
+            FunctionPtr fpg = f(p, g);
             m_updates.insert({ p, {g, fpg} });
         }
     }
+
+    LearnerCNTK::LearnerCNTK(const std::unordered_map<Parameter, std::pair<Variable, FunctionPtr>>& updates)
+    {
+        m_updates = updates;
+    }
+    /*
+        auto placeholders = f->Placeholders();
+        for (const auto& p : parameters)
+        {
+            //we do not support sparse gradients for now
+            auto g = Constant(p.Shape(), p.GetDataType(), 0.0, DeviceDescriptor::UseDefaultDevice(), L"gradient");
+            std::unordered_map<Variable, Variable> subs;
+            for (auto& ph : placeholders)
+            {
+                auto name = ph.Name();
+                if (name == L"parameter")
+                    subs.insert({ ph, p });
+                else if (name == L"gradient")
+                    subs.insert({ ph, g });
+                else
+                {
+                    Constant c = Constant(p.Shape(), p.GetDataType(), 0.0, DeviceDescriptor::UseDefaultDevice(), name);
+                    subs.insert({ ph, c });
+                }
+            }
+            FunctionPtr fpg = f->Clone(CNTK::ParameterCloningMethod::Clone, subs);
+            m_updates.insert({ p, { g, fpg } });
+        }
+    }
+    */
 
     /*virtual*/ void LearnerCNTK::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
         const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
@@ -869,12 +895,16 @@ namespace CNTK
         update->Forward(m_empty, out);
     }
 
-    LearnerPtr CNTKLearner(NetworkFactory f, const std::vector<Parameter>& parameters,
-        const Dictionary& hyperparameters,
-        const LearningRateSchedule& learningRateSchedule,
-        AdditionalLearningOptions additionalOptions)
+
+    LearnerPtr CNTKLearner(NetworkFactory f, const std::vector<Parameter>& parameters)
     {
-        return MakeSharedObject<LearnerCNTK>(f, parameters, hyperparameters, learningRateSchedule, additionalOptions);
+        return MakeSharedObject<LearnerCNTK>(f, parameters);
+    }
+
+
+    LearnerPtr CNTKLearner(const std::unordered_map<Parameter, std::pair<Variable, FunctionPtr>>& updates)
+    {
+        return MakeSharedObject<LearnerCNTK>(updates);
     }
 
 }
