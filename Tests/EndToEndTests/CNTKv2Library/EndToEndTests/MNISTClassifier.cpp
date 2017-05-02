@@ -130,7 +130,13 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
         return Assign(p, Minus(p, ElementTimes(Constant::Scalar(0.003125f), g)));
     };
 
-    LearnerPtr mysgd = CNTKLearner(f, classifierOutput->Parameters(), Dictionary(), learningRatePerSample, AdditionalLearningOptions());
+    auto myp = PlaceholderVariable(L"parameter");
+    auto myg = PlaceholderVariable(L"gradient");
+    auto myf = Assign(myp, Minus(myp, ElementTimes(Constant::Scalar(0.003125f), myg)));
+
+    //LearnerPtr mysgd = CNTKLearner(f, classifierOutput->Parameters(), Dictionary(), learningRatePerSample, AdditionalLearningOptions());
+
+    LearnerPtr mysgd = CNTKLearner(myf, classifierOutput->Parameters(), Dictionary(), learningRatePerSample, AdditionalLearningOptions());
 
     auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { mysgd });
 
