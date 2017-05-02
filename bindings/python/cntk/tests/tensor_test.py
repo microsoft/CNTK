@@ -44,6 +44,7 @@ def test_numpy_conversion():
 def test_ndarrayview_operators(device_id, precision):
     from scipy.special import expit
     from cntk.ops.tests.ops_test_utils import cntk_device
+    from cntk.ops import input_variable
 
     def test(what, args, rtol=0, atol=0):
         args = [arg.astype(precision, copy=True) for arg in args]
@@ -52,14 +53,16 @@ def test_ndarrayview_operators(device_id, precision):
         res_tv = what(*args_tv)
         assert isinstance(res_tv, NDArrayView) # make sure we don't get a cntk_py version back  --TODO: figure out why this does not work
         res_tv = res_tv.to_ndarray()
-        ## KVO
-        #args_kv = [Constant(arg) for arg in args]
-        #res_kv = what(*args_kv)
-        #res_kv = res_kv.value().to_ndarray()
-        ## static graph
-        #inputs_v2 = [input_variable(arg.shape) for arg in args]
-        #res_v2 = what(*inputs_v2)(*args)
-        #res_v2 = res_v2.to_ndarray()
+        # known value
+        args_kv = [constant(arg) for arg in args]
+        res_kv = what(*args_kv)
+        res_kv = res_kv.value().to_ndarray()
+        assert np.allclose(res_tv, res_kv, rtol=rtol, atol=atol)
+        # static graph
+        inputs_v2 = [input_variable(arg.shape) for arg in args]
+        f_v2 = what(*inputs_v2)
+        res_v2 = f_v2(*args)[0]
+        assert np.allclose(res_tv, res_v2, rtol=rtol, atol=atol)
         # numpy
         res_np = what(*args)
         print(res_tv)
