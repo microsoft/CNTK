@@ -8,6 +8,7 @@
 #include "TensorView.h"
 #include "Utils.h"
 #include "Serialization.h"
+#include <iostream>
 
 #define DISPATCH_TO_TYPED_UPDATE_FUNCTION                                                                     \
     switch (smoothedGradientValue->GetDataType())                                                             \
@@ -826,4 +827,59 @@ namespace CNTK
     {
         return MakeSharedObject<LearnerAdaDelta>(parameters, learningRateSchedule, rho, epsilon, additionalOptions);
     }
+
+    /* static */ const std::unordered_map<Variable, ValuePtr>  LearnerUniversal::m_empty = {};
+
+
+    LearnerUniversal::LearnerUniversal(const std::vector<Parameter>& parameters, NetworkFactory f)
+        : LearnerBase(parameters, LearningRateSchedule(1.0, CNTK::LearningRateSchedule::UnitType::Sample), AdditionalLearningOptions(), /*allocateSmoothGradients*/ true)
+    {
+        for (const auto& p : parameters)
+        {
+            //we do not support sparse gradients for now 
+            auto g = Constant(p.Shape(), p.GetDataType(), 0.0, DeviceDescriptor::UseDefaultDevice(), L"gradient");
+            FunctionPtr fpg = f(p, g);
+            m_updates.insert({ p, {g, fpg} });
+        }
+    }
+
+    LearnerUniversal::LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr>>& updates)
+        : LearnerBase(parameters, LearningRateSchedule(1.0, CNTK::LearningRateSchedule::UnitType::Sample), AdditionalLearningOptions(), /*allocateSmoothGradients*/ true)
+    {
+        if (parameters.size() != updates.size())
+            LogicError("Number of parameters (%zd) does not match number of updates (%zd)", parameters.size(), updates.size());
+        for (size_t i = 0; i < parameters.size(); ++i)
+            m_updates.insert({ parameters[i], updates[i] });
+    }
+
+    /*virtual*/ void LearnerUniversal::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+    {
+        DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+    }
+
+    template <typename ElementType>
+    void LearnerUniversal::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+    {
+        auto pair = m_updates.at(parameter);
+        auto grad = Constant(pair.first);
+        grad.SetValue(gradientValue);
+        FunctionPtr update = pair.second;
+        std::unordered_map<Variable, ValuePtr> out; 
+        for (const auto& o : update->Outputs())
+            out.insert({ o, nullptr });
+        update->Forward(m_empty, out);
+    }
+
+    LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, NetworkFactory f)
+    {
+        return MakeSharedObject<LearnerUniversal>(parameters, f);
+    }
+
+    LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr>>& updates)
+    {
+        return MakeSharedObject<LearnerUniversal>(parameters, updates);
+    }
+
 }

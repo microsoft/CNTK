@@ -1794,6 +1794,8 @@ namespace CNTK
         ///
         CNTK_API std::wstring AsString() const;
 
+        CNTK_API size_t CurrentValueTimeStamp() const;
+
     protected:
 #ifdef SWIG
     public:
@@ -1803,6 +1805,7 @@ namespace CNTK
         {}
 
     protected:
+        //friend class LearnerCNTK;
         CNTK_API NDArrayViewPtr Value() const;
         CNTK_API void SetValue(const NDArrayViewPtr& value);
 
@@ -2069,8 +2072,6 @@ private:
             RecordValueUpdate();
         }
 
-        CNTK_API size_t CurrentValueTimeStamp() const;
-
         CNTK_API void RecordValueUpdate();
 
     private:
@@ -2162,6 +2163,18 @@ private:
         NDArrayViewPtr Value() const
         {
             return Variable::Value();
+        }
+
+        CNTK_API void RecordValueUpdate();
+
+        ///
+        /// Copies the contents of the 'value' NDArrayView into the view backing 'this' 
+        /// Constant's value. The shapes of both views must be identical.
+        ///
+        void SetValue(const NDArrayViewPtr& value)
+        {
+            Variable::SetValue(value);
+            RecordValueUpdate();
         }
 
     private:
@@ -4483,6 +4496,18 @@ namespace CNTK
                                         double rho = 0.95,
                                         double epsilon = 1e-8,
                                         AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
+
+    typedef std::function<FunctionPtr(Parameter, Variable)> NetworkFactory;
+
+    ///
+    /// Create an instance of a learner whose update is given by the specified factory which returns a CNTK FunctionPtr.
+    ///
+    CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, NetworkFactory f);
+
+    ///
+    /// Convenience constructor that should be used by foreign language bindings
+    ///
+    CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr> >& updates);
 
     ///
     /// Distributed Learner.

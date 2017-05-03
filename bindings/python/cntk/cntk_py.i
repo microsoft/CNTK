@@ -151,6 +151,7 @@
 %template() std::vector<std::pair<size_t, double>>;
 %template() std::vector<std::pair<size_t, size_t>>;
 %template() std::vector<std::pair<CNTK::Variable, CNTK::Variable>>;
+%template() std::vector<std::pair<CNTK::Variable, std::shared_ptr<CNTK::Function>>>;
 %template() std::vector<CNTK::Dictionary>;
 %template() std::vector<std::wstring>;
 %template() std::pair<std::vector<std::shared_ptr<CNTK::NDArrayView>>, std::vector<bool>>;

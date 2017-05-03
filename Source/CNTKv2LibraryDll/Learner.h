@@ -8,9 +8,21 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <numeric>
+#include <functional>
 
 namespace CNTK 
 {
+    // p = placeholder('parameter')
+    // g = placeholder('gradient')
+    // S = parameter(p.shape())
+    // Snew = C.assign(S, S + g * g)
+    // return C.assign(p, p - d['lr'] * g / C.sqrt(Snew)) 
+
+    // A learner which allows the new values of the parameters to be computed with the same 
+    // mechanism as the rest of the network
+
+    
+
     // An abstract base class at the root of the standard learners hierarchy
     // It implements most of the learner functionality, except for the actual update function,
     // and adds a few pre-/postprocessing methods (which are invoked before and after the update).
@@ -313,6 +325,25 @@ namespace CNTK
         double m_max;
         double m_min;
         bool m_needAveMultiplier;
+
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+
+        template <typename ElementType>
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+    };
+
+
+    class LearnerUniversal : public LearnerBase
+    {
+        std::unordered_map<Parameter, std::pair<Variable, FunctionPtr> > m_updates;
+        static const std::unordered_map<Variable, ValuePtr> m_empty;
+
+    public:
+        LearnerUniversal(const std::vector<Parameter>& parameters, NetworkFactory f);
+
+        LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr>>& updates);
+
+    protected:
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
 
