@@ -28,9 +28,13 @@ cp -R $TEST_DIR/../../../UnitTests/V2LibraryTests/data/* $TestDataDir || exit $?
 
 # Train model that is used by LoadLegacyModel tests.
 # Setup predefined variables $DataDir, $ConfigDir, and $OutputDir that are required by cntkrun
-ConfigDir=$TEST_ROOT_DIR/../../Examples/Speech/AN4/Config
-OutputDir=$ConfigDir/../Output
-DataDir=$ConfigDir/../Data
+#ConfigDir=$TEST_ROOT_DIR/../../Examples/Speech/AN4/Config
+#OutputDir=$ConfigDir/../Output
+#DataDir=$ConfigDir/../Data
+ConfigDir=$TEST_DIR/Config
+AN4DIR=$TEST_ROOT_DIR/../../Examples/Speech/AN4/Config
+OutputDir=$AN4DIR/../Output
+DataDir=$AN4DIR/../Data
 
 [ -d $OutputDir ] || mkdir $OutputDir || exit $?
 [ -d $OutputDir/Models ] && rm -rf $OutputDir/Models

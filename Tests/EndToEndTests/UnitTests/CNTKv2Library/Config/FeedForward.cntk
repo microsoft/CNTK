@@ -1,0 +1,85 @@
+# Parameters can be overwritten on the command line
+# for example: cntk configFile=myConfigFile RootDir=../.. 
+# For running from Visual Studio add
+# currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
+RootDir = ".."
+
+ConfigDir = "$RootDir$/Config"
+DataDir = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+
+# deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
+deviceId = -1
+
+command = speechTrain
+
+precision = "float"
+traceLevel = "1"
+modelPath = "$ModelDir$/cntkSpeechFF.dnn"
+parallelTrain = true
+
+#######################################
+#  TRAINING CONFIG                    #
+#######################################
+
+speechTrain = [
+    action = "train"
+    
+    SimpleNetworkBuilder = [
+        layerSizes = 363:512:512:132
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ClassificationError"
+        layerTypes = "Sigmoid"
+        applyMeanVarNorm = true
+        needPrior = true
+    ]
+
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 256:1024:2048
+        learningRatesPerMB = 1.0:0.5:0.1
+        numMBsToShowResult = 10
+        momentumPerMB = 0.9:0.656119
+        maxEpochs = 3
+        keepCheckPointFiles = true
+        
+        # Additional optional parameters are: parallelizationStartEpoch
+        parallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = true
+            
+            # Additional optional parameters are: useZeroThresholdFor1BitQuantization
+            dataParallelSGD = [
+                gradientBits = 1
+            ]
+        ]
+        
+        autoAdjust=[
+            autoAdjustMinibatch = true
+            minibatchSizeTuningFrequency = 1
+            minibatchSearchCriterionErrorMargin = 2
+        ]
+    ]
+    
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        
+        features = [ 
+            dim = 363
+            type = "real"
+            scpFile = "$DataDir$/glob_0000.scp"
+        ]
+        
+        labels = [
+            mlfFile = "$DataDir$/glob_0000.mlf"
+            labelMappingFile = "$DataDir$/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+]
