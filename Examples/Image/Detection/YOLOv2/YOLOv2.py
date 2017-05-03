@@ -131,7 +131,7 @@ def load_pretrained_darknet_feature_extractor():
     return combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: placeholder()})
 
 def load_pretrained_resnet101_feature_extractor():
-    loaded_model = load_model("D:\local\CNTK-2-0-rc1\cntk\Examples\Image\Detection\YOLOv2\Models\ResNet101_ImageNet_rc2.model")
+    loaded_model = load_model(os.path.join(par_abs_path, "..", "..", "PretrainedModels", "ResNet101_ImageNet.model"))
     feature_layer = find_by_name(loaded_model, "data")
     fe_output_layer = find_by_name(loaded_model, "res5c_relu")
 
