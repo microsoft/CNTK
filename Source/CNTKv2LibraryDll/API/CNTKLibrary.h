@@ -4503,8 +4503,14 @@ namespace CNTK
 
     typedef std::function<FunctionPtr(Parameter, Variable)> NetworkFactory;
 
+    ///
+    /// Create an instance of a learner whose update is given by the specified factory which returns a CNTK FunctionPtr.
+    ///
     CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, NetworkFactory f);
 
+    ///
+    /// Convenience constructor that should be used by foreign language bindings
+    ///
     CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr> >& updates);
 
     ///
