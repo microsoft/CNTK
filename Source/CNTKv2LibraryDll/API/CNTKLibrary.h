@@ -5029,6 +5029,11 @@ namespace CNTK
         size_t randomizationWindowInSamples { 0 };
 
         ///
+        /// Initial randomization seed value (incremented every sweep when the input data is re-randomized).
+        ///
+        size_t randomizationSeed { 0 };
+
+        ///
         /// Output verbosity level.
         ///
         TraceLevel traceLevel{ GetTraceLevel() };

@@ -122,7 +122,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
 
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
-    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=False, frame_mode=False, truncation_length=0, randomize=None, randomization_window=None, sample_based_randomization_window=None, epoch_size=None)
+    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, randomization_seed=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=False, frame_mode=False, truncation_length=0, randomize=None, randomization_window=None, sample_based_randomization_window=None, epoch_size=None)
 
     Args:
         deserializers (a single deserializer or a `list`): deserializers to be used in the composite reader
@@ -145,6 +145,8 @@ class MinibatchSource(cntk_py.MinibatchSource):
           non-zero value enables randomization.
           `randomization_window_in_chunks` and `randomization_window_in_samples` are mutually exclusive,
           an exception will be raised if both have non-zero values.
+        randomization_seed (`int`, defaults to 0): initial randomization seed value (incremented every sweep when 
+            the input data is re-randomized).
         trace_level (an instance of :class:`cntk.logging.TraceLevel`): the output verbosity level, defaults to
           the current logging verbosity level given by :func:`~cntk.logging.get_trace_level`.
         multithreaded_deserializer (`bool`, defaults to `False`): specifies if the deserialization should be
@@ -170,6 +172,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         max_sweeps = INFINITELY_REPEAT,
         randomization_window_in_chunks = DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS,
         randomization_window_in_samples = 0,
+        randomization_seed=0,
         trace_level = TraceLevel.Warning,
         multithreaded_deserializer=False,
         frame_mode=False,
@@ -189,6 +192,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         config.max_sweeps = max_sweeps
         config.randomization_window_in_chunks = randomization_window_in_chunks
         config.randomization_window_in_samples = randomization_window_in_samples
+        config.randomization_seed = randomization_seed;
         config.is_multithreaded = multithreaded_deserializer
         config.is_frame_mode_enabled = frame_mode
         config.truncation_length = truncation_length

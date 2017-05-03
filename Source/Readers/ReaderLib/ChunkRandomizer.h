@@ -77,7 +77,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const std::vector<RandomizedChunk>& GetRandomizedChunks() const;
 
         // Randomizes chunks based on the seed.
-        void Randomize(unsigned int seed);
+        void Randomize(size_t seed);
 
         // Randomize by spraying original sequences over a window of "m_randomizationRange" samples.
         void RandomizeUsingWindowInSamples();
