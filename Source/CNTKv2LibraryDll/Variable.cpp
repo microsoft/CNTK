@@ -569,4 +569,9 @@ namespace CNTK
         NDArrayViewPtr newConstantValue = CloneAsDataType(constantValueCPU, dataType, true);
         return Constant(newConstantValue->DeepClone(originalConstantValue->Device(), originalConstantValue->IsReadOnly()), Name());
     }
+
+    void Constant::ShareWith(const Constant& other)
+    {
+        m_dataFields = other.m_dataFields;
+    }
 }

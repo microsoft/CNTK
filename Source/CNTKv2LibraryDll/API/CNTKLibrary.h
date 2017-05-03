@@ -2223,6 +2223,11 @@ private:
             return Variable::Value();
         }
 
+        ///
+        /// Redirect an existing Constant to be a reference to another
+        ///
+        CNTK_API void ShareWith(const Constant& other);
+
     private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
             : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value, false, {}, name, uid)
