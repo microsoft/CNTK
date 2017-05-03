@@ -71,8 +71,7 @@ public:
     }
     const Parameter& operator[](const wstring& name) { return Parameters()[name]; }
     const ModelParameters& Nested(const wstring& name) { return Parameters().Nested(name); }
-    const ModelParametersPtr& ParametersPtr() const { return *this; }
-    const ModelParameters& Parameters() const { return *ParametersPtr(); }
+    const ModelParameters& Parameters() const { return **this; }
 };
 typedef TModel<function<Variable(Variable)>> UnaryModel;
 typedef TModel<function<Variable(Variable,Variable)>> BinaryModel;
@@ -198,7 +197,7 @@ UnaryModel Sequential(const vector<UnaryModel>& fns)
     for (size_t i = 0l; i < fns.size(); i++)
     {
         auto name = L"[" + std::to_wstring(i) + L"]";
-        captured[name] = fns[i];//.ParametersPtr();
+        captured[name] = fns[i];
     }
     return UnaryModel({}, captured, [=](Variable x)
     {
@@ -227,7 +226,7 @@ struct Sequence
     static UnaryModel Fold(const BinaryModel& stepFunction)
     {
         map<wstring, shared_ptr<ModelParameters>> captured;
-        captured[L"step"] = stepFunction;//.ParametersPtr();
+        captured[L"step"] = stepFunction;
         auto recurrence = Recurrence(stepFunction);
         return UnaryModel({}, captured, [=](Variable x)
         {
@@ -364,9 +363,9 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
     auto zero   = Constant({ hiddenDim }, 0.0f, device);
     return UnaryModel({},
     {
-        { L"embed",  embed /*.ParametersPtr()*/ },
-        { L"step",   step  /*.ParametersPtr()*/ },
-        { L"linear", linear/*.ParametersPtr()*/ }
+        { L"embed",  embed  },
+        { L"step",   step   },
+        { L"linear", linear }
     },
     [=](Variable x) -> Variable
     {
