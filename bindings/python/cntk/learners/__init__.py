@@ -851,15 +851,15 @@ def rmsprop(parameters, lr,
                                    need_ave_multiplier, additional_options)
 
 @typemap
-def cntkprop(update, parameters,):
+def universal(update, parameters):
     '''
-    Creates an CNTK learner instance to learn the parameters.
+    Creates a generic learner whose update is a CNTK function.
 
     Args:
         update: function that takes two arguments a parameter and a gradient and 
          returns a :class:`~cntk.ops.functions.Function` that performs the 
-         desired updates. The returned function has to contain ``assign`` 
-         operations for the update to have an effect.
+         desired updates. The returned function has to contain :func:``~cntk.ops.assign`` 
+         operations for the updates to have an effect.
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
@@ -867,10 +867,11 @@ def cntkprop(update, parameters,):
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
     '''
-    updates = dict()
+    from .. import constant
+    updates = list()
     for p in parameters:
-        g = constant()
+        g = constant(0, shape=p.shape, dtype=p.dtype, name='grad')
         fpg = update(p,g)
-        updates = {p: (g, fpg)}
-
-    return cntk_py.cntklearner(updates)
+        updates.append((g, fpg))
+    
+    return cntk_py.universal_learner(parameters, updates)

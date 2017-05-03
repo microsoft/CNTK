@@ -4473,9 +4473,9 @@ namespace CNTK
 
     typedef std::function<FunctionPtr(Parameter, Variable)> NetworkFactory;
 
-    CNTK_API LearnerPtr CNTKLearner(NetworkFactory f, const std::vector<Parameter>& parameters);
+    CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, NetworkFactory f);
 
-    CNTK_API LearnerPtr CNTKLearner(FunctionPtr f, const std::vector<Parameter>& parameters);
+    CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr> >& updates);
 
     ///
     /// Distributed Learner.

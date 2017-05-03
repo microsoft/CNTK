@@ -331,15 +331,15 @@ namespace CNTK
     };
 
 
-    class LearnerCNTK : public LearnerBase
+    class LearnerUniversal : public LearnerBase
     {
-        std::unordered_map<Parameter, std::pair<Variable, FunctionPtr>> m_updates;
+        std::unordered_map<Parameter, std::pair<Variable, FunctionPtr> > m_updates;
         static const std::unordered_map<Variable, ValuePtr> m_empty;
 
     public:
-        LearnerCNTK(NetworkFactory f, const std::vector<Parameter>& parameters);
+        LearnerUniversal(const std::vector<Parameter>& parameters, NetworkFactory f);
 
-        LearnerCNTK(const std::unordered_map<Parameter, std::pair<Variable, FunctionPtr>>& updates);
+        LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr>>& updates);
 
     protected:
 
