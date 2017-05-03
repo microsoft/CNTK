@@ -12,17 +12,6 @@
 
 namespace CNTK 
 {
-    // p = placeholder('parameter')
-    // g = placeholder('gradient')
-    // S = parameter(p.shape())
-    // Snew = C.assign(S, S + g * g)
-    // return C.assign(p, p - d['lr'] * g / C.sqrt(Snew)) 
-
-    // A learner which allows the new values of the parameters to be computed with the same 
-    // mechanism as the rest of the network
-
-    
-
     // An abstract base class at the root of the standard learners hierarchy
     // It implements most of the learner functionality, except for the actual update function,
     // and adds a few pre-/postprocessing methods (which are invoked before and after the update).
@@ -284,6 +273,7 @@ namespace CNTK
             const MomentumSchedule& momentumSchedule,
             bool unitGain,
             const MomentumSchedule& varianceMomentumSchedule,
+            double epsilon,
             AdditionalLearningOptions additionalOptions);
 
     protected:
@@ -303,6 +293,7 @@ namespace CNTK
 
         mutable std::unordered_map<Parameter, double> m_smoothedCounts;
         MomentumSchedule m_varianceMomentumSchedule;
+        double m_epsilon;
     };
 
     class LearnerRMSProp : public LearnerBase

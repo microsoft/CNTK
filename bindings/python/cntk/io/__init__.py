@@ -512,7 +512,7 @@ def HTKFeatureDeserializer(streams):
     return cntk_py.htk_feature_deserializer(feat)
 
 
-def HTKMLFDeserializer(label_mapping_file, streams):
+def HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = False):
     '''
     Configures an HTK label reader that reads speech HTK format MLF (Master
     Label File)
@@ -522,6 +522,7 @@ def HTKMLFDeserializer(label_mapping_file, streams):
         streams: any dictionary-like object that contains a mapping from stream
           names to :class:`StreamDef` objects. Each StreamDef object configures
           a label stream.
+        phoneBoundaries (bool): if phone boundaries should be considered (should be set to True for CTC training, False otherwise)
     '''
     if len(streams) != 1:
         raise ValueError("HTKMLFDeserializer only accepts a single stream")
@@ -535,7 +536,7 @@ def HTKMLFDeserializer(label_mapping_file, streams):
         master_label_files = stream['mlf']
         if not isinstance(master_label_files, list):
             master_label_files = [master_label_files]
-        return cntk_py.htk_mlf_deserializer(stream_name, label_mapping_file, dimension, master_label_files)
+        return cntk_py.htk_mlf_deserializer(stream_name, label_mapping_file, dimension, master_label_files, phoneBoundaries)
 
 
 def ImageDeserializer(filename, streams):

@@ -154,9 +154,9 @@ class Learner(cntk_py.Learner):
 
     def reset_learning_rate(self, learning_rate):
         '''
-        Resets the learning rate. The new schedule is adjusted to be relative 
-        to the current number of elapsed samples/sweeps: the 0 offset in 
-        the new schedule corresponds to the current value of elapsed samples/sweeps, 
+        Resets the learning rate. The new schedule is adjusted to be relative
+        to the current number of elapsed samples/sweeps: the 0 offset in
+        the new schedule corresponds to the current value of elapsed samples/sweeps,
         and it takes effect from the current position in the training process onwards.
 
         Args:
@@ -481,7 +481,7 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
         momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the :cntkwiki:`this CNTK Wiki article <BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`.
-        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults
          to the value returned by :func:`default_unit_gain_value`.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
@@ -513,7 +513,7 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
     additional_options.use_mean_gradient = use_mean_gradient
-    
+
     return cntk_py.momentum_sgd_learner(parameters, lr, momentum, unit_gain,
                                         additional_options)
 
@@ -611,7 +611,7 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
 
     See also:
-        [1]  Matthew D. Zeiler1, `ADADELTA: AN ADAPTIVE LEARNING RATE METHOD 
+        [1]  Matthew D. Zeiler1, `ADADELTA: AN ADAPTIVE LEARNING RATE METHOD
         <https://arxiv.org/pdf/1212.5701.pdf>`_.
     '''
     gaussian_noise_injection_std_dev = \
@@ -629,7 +629,7 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
     return cntk_py.ada_delta_learner(parameters, lr, rho, epsilon,
                                     additional_options)
 
-                                    
+
 @typemap
 def adagrad(parameters, lr, need_ave_multiplier=True,
             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
@@ -698,9 +698,9 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
         momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the :cntkwiki:`this CNTK Wiki article <BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`.
-        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults
          to the value returned by :func:`default_unit_gain_value`.
-        variance_momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults 
+        variance_momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults
          to ``momentum_as_time_constant_schedule(720000)``.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
@@ -710,7 +710,7 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          of the Gaussian noise added to parameters post update, defaults to 0.0
         gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping 
+        gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
@@ -743,8 +743,8 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          variance_momentum=momentum_as_time_constant_schedule(720000),
          l1_regularization_weight=0.0, l2_regularization_weight=0.0,
          gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-         gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value()):
-    '''adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+         gradient_clipping_with_truncation=True, use_mean_gradient=default_use_mean_gradient_value(), epsilon=1e-8):
+    '''adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True, epsilon=1e-8)
     Creates an Adam learner instance to learn the parameters. See [1] for more
     information.
 
@@ -770,6 +770,8 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
         use_mean_gradient (bool, default ``False``): use averaged gradient as input to learner.
          Defaults to the value returned by :func:`default_use_mean_gradient_value()`.
+        epsilon (float, optional): numerical stability constant,
+         defaults to 1e-8
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
@@ -793,9 +795,9 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
     additional_options.use_mean_gradient = use_mean_gradient
-    
+
     return cntk_py.adam_learner(parameters, lr, momentum, unit_gain,
-                                variance_momentum, additional_options)
+                                variance_momentum, epsilon, additional_options)
 
 
 @typemap
@@ -850,15 +852,16 @@ def rmsprop(parameters, lr,
     return cntk_py.rmsprop_learner(parameters, lr, gamma, inc, dec, max, min,
                                    need_ave_multiplier, additional_options)
 
+
 @typemap
 def universal(update, parameters):
     '''
-    Creates a generic learner whose update is a CNTK function.
+    Creates a learner whose update is a CNTK function.
 
     Args:
-        update: function that takes two arguments a parameter and a gradient and 
-         returns a :class:`~cntk.ops.functions.Function` that performs the 
-         desired updates. The returned function has to contain :func:``~cntk.ops.assign`` 
+        update: function that takes two arguments a parameter and a gradient and
+         returns a :class:`~cntk.ops.functions.Function` that performs the
+         desired updates. The returned function has to contain :func:``~cntk.ops.assign``
          operations for the updates to have an effect.
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
@@ -873,5 +876,5 @@ def universal(update, parameters):
         g = constant(0, shape=p.shape, dtype=p.dtype, name='grad')
         fpg = update(p,g)
         updates.append((g, fpg))
-    
+
     return cntk_py.universal_learner(parameters, updates)

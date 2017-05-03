@@ -452,6 +452,7 @@ private:
         if (algo.autotuningState == AutotuningState::Running && batchSize > algo.maxMBSizeSeen)
         {
             algo.autotuningState = AutotuningState::Init;
+            cudaDeviceSynchronize(); // make sure no in-flight GPU kernels using workspace before release its memory
             workspace.Resize(0,0,0,false);
             algo.AlgoWorkspaceSize = 0;
             algo.MBSizeForCurrentWorkspace = 0;
