@@ -25,11 +25,11 @@ using namespace std;
 
 namespace Dynamite {
 
-struct ParameterBlock
+struct ModelParameters
 {
     map<wstring, Parameter> m_parameters;
-    map<wstring, shared_ptr<ParameterBlock>> m_parentParameters;
-    ParameterBlock(const vector<Parameter>& parameters, const map<wstring, shared_ptr<ParameterBlock>>& parentParameters)
+    map<wstring, shared_ptr<ModelParameters>> m_parentParameters;
+    ModelParameters(const vector<Parameter>& parameters, const map<wstring, shared_ptr<ModelParameters>>& parentParameters)
         : m_parentParameters(parentParameters)
     {
         for (const auto& p : parameters)
@@ -45,7 +45,7 @@ struct ParameterBlock
             LogicError("no such parameter: %ls", name.c_str());
         return iter->second;
     }
-    const ParameterBlock& Nested(const wstring& name) const
+    const ModelParameters& Nested(const wstring& name) const
     {
         auto iter = m_parentParameters.find(name);
         if (iter == m_parentParameters.end())
@@ -53,30 +53,31 @@ struct ParameterBlock
         return *iter->second;
     }
 };
+typedef shared_ptr<ModelParameters> ModelParametersPtr;
 
 template<class Base>
-class ModelT : public Base
+class TModel : public Base, public ModelParametersPtr
 {
-    shared_ptr<ParameterBlock> m_parameters;
 public:
-    ModelT(const Base& f) : Base(f){}
+    TModel(const Base& f) : Base(f){}
     // need to think a bit how to store nested NnaryModels
-    ModelT(const vector<Parameter>& parameters, const Base& f)
-        : Base(f), m_parameters(make_shared<ParameterBlock>(parameters, map<wstring, shared_ptr<ParameterBlock>>()))
+    TModel(const vector<Parameter>& parameters, const Base& f)
+        : Base(f), ModelParametersPtr(make_shared<ModelParameters>(parameters, map<wstring, shared_ptr<ModelParameters>>()))
     {
     }
-    ModelT(const vector<Parameter>& parameters, const map<wstring, shared_ptr<ParameterBlock>>& nested, const Base& f)
-        : Base(f), m_parameters(make_shared<ParameterBlock>(parameters, nested))
+    TModel(const vector<Parameter>& parameters, const map<wstring, shared_ptr<ModelParameters>>& nested, const Base& f)
+        : Base(f), ModelParametersPtr(make_shared<ModelParameters>(parameters, nested))
     {
     }
-    const Parameter& operator[](const wstring& name) { return m_parameters[name]; }
-    const ParameterBlock& Nested(const wstring& name) { return m_parameters->Nested(name); }
-    const shared_ptr<ParameterBlock>& GetParameterBlock() const { return m_parameters; }
+    const Parameter& operator[](const wstring& name) { return Parameters()[name]; }
+    const ModelParameters& Nested(const wstring& name) { return Parameters().Nested(name); }
+    const ModelParametersPtr& ParametersPtr() const { return *this; }
+    const ModelParameters& Parameters() const { return *ParametersPtr(); }
 };
-typedef ModelT<function<Variable(Variable)>> UnaryModel;
-typedef ModelT<function<Variable(Variable,Variable)>> BinaryModel;
-typedef ModelT<function<vector<Variable>(const vector<Variable>&)>> UnarySequenceModel;
-typedef ModelT<function<vector<Variable>(const vector<Variable>&, const vector<Variable>&)>> BinarySequenceModel;
+typedef TModel<function<Variable(Variable)>> UnaryModel;
+typedef TModel<function<Variable(Variable,Variable)>> BinaryModel;
+typedef TModel<function<vector<Variable>(const vector<Variable>&)>> UnarySequenceModel;
+typedef TModel<function<vector<Variable>(const vector<Variable>&, const vector<Variable>&)>> BinarySequenceModel;
 
 struct Batch
 {
@@ -193,11 +194,11 @@ UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& device)
 
 UnaryModel Sequential(const vector<UnaryModel>& fns)
 {
-    map<wstring, shared_ptr<ParameterBlock>> captured;
+    map<wstring, shared_ptr<ModelParameters>> captured;
     for (size_t i = 0l; i < fns.size(); i++)
     {
         auto name = L"[" + std::to_wstring(i) + L"]";
-        captured[name] = fns[i].GetParameterBlock();
+        captured[name] = fns[i];//.ParametersPtr();
     }
     return UnaryModel({}, captured, [=](Variable x)
     {
@@ -225,8 +226,8 @@ struct Sequence
 
     static UnaryModel Fold(const BinaryModel& stepFunction)
     {
-        map<wstring, shared_ptr<ParameterBlock>> captured;
-        captured[L"step"] = stepFunction.GetParameterBlock();
+        map<wstring, shared_ptr<ModelParameters>> captured;
+        captured[L"step"] = stepFunction;//.ParametersPtr();
         auto recurrence = Recurrence(stepFunction);
         return UnaryModel({}, captured, [=](Variable x)
         {
@@ -363,9 +364,9 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
     auto zero   = Constant({ hiddenDim }, 0.0f, device);
     return UnaryModel({},
     {
-        { L"embed",  embed.GetParameterBlock() },
-        { L"step",   step.GetParameterBlock() },
-        { L"linear", linear.GetParameterBlock() }
+        { L"embed",  embed /*.ParametersPtr()*/ },
+        { L"step",   step  /*.ParametersPtr()*/ },
+        { L"linear", linear/*.ParametersPtr()*/ }
     },
     [=](Variable x) -> Variable
     {
@@ -592,7 +593,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
     auto trainer = CreateTrainer(nullptr, loss, loss/*metric*/, { learner });
 
-    const size_t minibatchSize = 200;
+    const size_t minibatchSize = 1;//200;
     for (size_t repeats = 0; true; repeats++)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
@@ -630,20 +631,20 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         }
         //let s2sLoss = Batch::sum(Batch::Map(d_model_fn1)(vargs[0], vargs[0])); // for now auto-encoder
         //s2sLoss.Value();
-        if (repeats > 0) for (size_t xxx = 0; xxx < 5; xxx++)
+        if (repeats > 0) for (size_t xxx = 0; xxx < 1; xxx++)
         {
             // compute not directly comparable due to (1) no batching and (2) sparse, which may be expensive w.r.t. slicing, or not
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "d_criterion_fn: %.6f sec\n");
             mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
@@ -673,15 +674,15 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "CNTK static:    %.6f sec\n");
             trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
             crit = trainer->PreviousMinibatchLossAverage();
         }
         PrintTrainingProgress(trainer, repeats, /*outputFrequencyInMinibatches=*/ 1);
