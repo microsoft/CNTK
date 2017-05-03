@@ -145,6 +145,10 @@ if __name__ == "__main__":
                'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor')
     class_dict = {k: v for v, k in enumerate(classes)}
 
+    mappings_dir = os.path.join(pascal_directory, "mappings")
+    if not os.path.exists(mappings_dir):
+        os.makedirs(mappings_dir)
+
     if not os.path.exists(out_map_file_path):
         with open(in_map_file_path) as input_file:
             input_lines = input_file.readlines()
