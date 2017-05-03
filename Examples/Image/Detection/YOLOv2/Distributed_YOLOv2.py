@@ -71,7 +71,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         model_inputs_to_streams=input_map,
         mb_size=minibatch_size,
         progress_frequency=epoch_size,
-        checkpoint_config=CheckpointConfig(filename=os.path.join(model_path, model_name), restore=restore),
+        checkpoint_config=None, #CheckpointConfig(filename=os.path.join(model_path, model_name), restore=restore),
         test_config=TestConfig(source=test_source, mb_size=minibatch_size)
     ).train()
 
@@ -128,7 +128,7 @@ def yolov2_train_and_eval(image_file, gtb_file, num_quantization_bits=32, block_
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    data_path = os.path.join(abs_path, "..", "..", "..", "DataSets","Pascal", "mappings")
+    data_path = os.path.join(abs_path, "..", "..", "DataSets","Pascal", "mappings")
 
     parser.add_argument('-datadir', '--datadir', help='Data directory where the ImageNet dataset is located',
                         required=False, default=data_path)
