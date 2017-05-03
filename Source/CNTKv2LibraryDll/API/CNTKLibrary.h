@@ -1794,6 +1794,9 @@ namespace CNTK
         ///
         CNTK_API std::wstring AsString() const;
 
+        ///
+        /// Returns this Variable's timestamp.
+        ///
         CNTK_API size_t CurrentValueTimeStamp() const;
 
     protected:
@@ -1805,7 +1808,6 @@ namespace CNTK
         {}
 
     protected:
-        //friend class LearnerCNTK;
         CNTK_API NDArrayViewPtr Value() const;
         CNTK_API void SetValue(const NDArrayViewPtr& value);
 

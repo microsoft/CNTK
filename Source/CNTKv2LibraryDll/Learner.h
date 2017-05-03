@@ -12,16 +12,6 @@
 
 namespace CNTK 
 {
-    // p = placeholder('parameter')
-    // g = placeholder('gradient')
-    // S = parameter(p.shape())
-    // Snew = C.assign(S, S + g * g)
-    // return C.assign(p, p - d['lr'] * g / C.sqrt(Snew)) 
-
-    // A learner which allows the new values of the parameters to be computed with the same 
-    // mechanism as the rest of the network
-
-    
 
     // An abstract base class at the root of the standard learners hierarchy
     // It implements most of the learner functionality, except for the actual update function,

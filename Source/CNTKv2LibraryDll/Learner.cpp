@@ -8,7 +8,6 @@
 #include "TensorView.h"
 #include "Utils.h"
 #include "Serialization.h"
-#include <iostream>
 
 #define DISPATCH_TO_TYPED_UPDATE_FUNCTION                                                                     \
     switch (smoothedGradientValue->GetDataType())                                                             \

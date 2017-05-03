@@ -855,7 +855,7 @@ def rmsprop(parameters, lr,
 @typemap
 def universal(update, parameters):
     '''
-    Creates a generic learner whose update is a CNTK function.
+    Creates a learner whose update is a CNTK function.
 
     Args:
         update: function that takes two arguments a parameter and a gradient and 
