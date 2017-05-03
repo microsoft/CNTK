@@ -1808,7 +1808,6 @@ namespace CNTK
         {}
 
     protected:
-        //friend class LearnerCNTK;
         CNTK_API NDArrayViewPtr Value() const;
         CNTK_API void SetValue(const NDArrayViewPtr& value);
 
