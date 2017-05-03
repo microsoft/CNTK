@@ -128,7 +128,7 @@ def yolov2_train_and_eval(image_file, gtb_file, num_quantization_bits=32, block_
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    data_path = os.path.join(abs_path, "..", "..", "..", "DataSets", "ImageNet")
+    data_path = os.path.join(abs_path, "..", "..", "..", "DataSets","Pascal", "mappings")
 
     parser.add_argument('-datadir', '--datadir', help='Data directory where the ImageNet dataset is located',
                         required=False, default=data_path)
