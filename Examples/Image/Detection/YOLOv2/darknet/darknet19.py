@@ -5,12 +5,14 @@
 # ==============================================================================
 
 from __future__ import print_function
+
+import os
+
 from cntk import leaky_relu, reshape, softmax
 from cntk.layers import Convolution2D,BatchNormalization, MaxPooling, GlobalAveragePooling, Sequential, Activation, \
     default_options
 
-from Utils import *
-import os
+from darknet.Utils import *
 
 
 # Creates the feature extractor shared by the classifier (Darknet19) and the Detector (YOLOv2)
@@ -90,7 +92,7 @@ def put_classifier_on_feature_extractor(featureExtractor,nrOfClasses):
             GlobalAveragePooling()
         ]), shape=(nrOfClasses)),
         Activation(activation=softmax, name="classifier_output")
-    ], name="darknet19-classifier")
+    ], name="darknet-classifier")
 
 
 # Creates a Darknet19 classifier
@@ -100,7 +102,7 @@ def create_classification_model_darknet19(nrOfClasses, filter_mult=32):
 
 
 # Saves a model to the Output folder. If the models are already existing an ascending number is assigned to the model.
-def save_model(model, name="darknet19"):
+def save_model(model, name="darknet"):
     abs_path = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(abs_path, "Output", name + ".model")
     if os.path.exists(model_path):
@@ -121,20 +123,21 @@ def save_model(model, name="darknet19"):
 if __name__ == '__main__':
     from cntk.cntk_py import force_deterministic_algorithms
     force_deterministic_algorithms()
-
-    data_path = par_data_path # from PARAMETERS
+    data_path = par_data_path #from PARAMETERS
+    shift=-1
 
     # create
     model = create_classification_model_darknet19(num_classes) # num_classes from Utils
-    #  and normalizes the input features by subtracting 114 and dividing by 256
-    model2 = Sequential([[lambda x: (x - par_input_bias)], [lambda x: (x / 256)] , model])
+    #  and normalizes the input features by subtracting 114
+    model = Sequential([[lambda x: (x - par_input_bias)] ,model])
     print("Created Model!")
 
     # train
     reader = create_reader(os.path.join(data_path, par_trainset_label_file),  is_training=True)
     print("Created Readers!")
 
-    train_model(reader, model2, max_epochs=par_max_epochs, exponentShift=-1)
+    train_model(reader, model, max_epochs=par_max_epochs, exponentShift=shift)
+    shift-=1
     # save
     save_model(model, "darknet19_" + par_dataset_name)
 
@@ -143,7 +146,7 @@ if __name__ == '__main__':
 
     # test
     reader = create_reader(os.path.join(data_path, par_testset_label_file), is_training=False)
-    evaluate_model(reader, model2)
+    evaluate_model(reader, model)
 
     print("Done!")
 
