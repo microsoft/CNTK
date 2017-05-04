@@ -60,7 +60,7 @@ def build_pixelcnn_2_model(input,
     net = bk.conv2d(net, per_pixel_count, (1,1), (1,1), True, mask_type = 'b')
     return net
 
-def build_pixelcnn_pp_model(x, h = None, dropout_p=0.5, nr_resnet=1, nr_filters=160, per_pixel_count=100, resnet_nonlinearity=nn.concat_elu, nonlinearity=ct.elu, first_run=False):
+def build_pixelcnn_pp_model(x, h = None, dropout_p=0.5, nr_resnet=0, nr_filters=160, per_pixel_count=100, resnet_nonlinearity=nn.concat_elu, nonlinearity=ct.elu, first_run=False):
     """
     Based on PixelCNN++ from https://openreview.net/pdf?id=BJrFC6ceg, the implementation is 
     a port from https://github.com/openai/pixel-cnn/blob/master/pixel_cnn_pp 
@@ -73,49 +73,49 @@ def build_pixelcnn_pp_model(x, h = None, dropout_p=0.5, nr_resnet=1, nr_filters=
     """
     counters = {}
     xs = x.shape
-    x_pad = ct.splice(x, ct.constant(value=1., shape=(1,)+xs[1:]), axis=0) # add channel of ones to distinguish image from padding later on
+    x_pad = ct.splice(x, nn.ones((1,)+xs[1:]), axis=0) # add channel of ones to distinguish image from padding later on
     u_list = [nn.down_shift(nn.down_shifted_conv2d(x_pad, num_filters=nr_filters, filter_shape=(2, 3), counters=counters, first_run=first_run))] # stream for pixels above
     ul_list = [nn.down_shift(nn.down_shifted_conv2d(x_pad, num_filters=nr_filters, filter_shape=(1, 3), counters=counters, first_run=first_run)) + \
                 nn.right_shift(nn.down_right_shifted_conv2d(x_pad, num_filters=nr_filters, filter_shape=(2, 1), counters=counters, first_run=first_run))] # stream for up and to the left
 
     for rep in range(nr_resnet):
-        u_list.append(nn.gated_resnet(u_list[-1], conv=nn.down_shifted_conv2d, nonlinearity=resnet_nonlinearity, counters=counters, first_run=first_run))
-        ul_list.append(nn.gated_resnet(ul_list[-1], u_list[-1], conv=nn.down_right_shifted_conv2d, nonlinearity=resnet_nonlinearity, counters=counters, first_run=first_run))
+        u_list.append(nn.gated_resnet(u_list[-1], conv=nn.down_shifted_conv2d, nonlinearity=resnet_nonlinearity, dropout_p=dropout_p, counters=counters, first_run=first_run))
+        ul_list.append(nn.gated_resnet(ul_list[-1], u_list[-1], conv=nn.down_right_shifted_conv2d, nonlinearity=resnet_nonlinearity, dropout_p=dropout_p, counters=counters, first_run=first_run))
 
     u_list.append(nn.down_shifted_conv2d(u_list[-1], num_filters=nr_filters, strides=(2, 2), counters=counters, first_run=first_run))
     ul_list.append(nn.down_right_shifted_conv2d(ul_list[-1], num_filters=nr_filters, strides=(2, 2), counters=counters, first_run=first_run))
 
     for rep in range(nr_resnet):
-        u_list.append(nn.gated_resnet(u_list[-1], conv=nn.down_shifted_conv2d, nonlinearity=resnet_nonlinearity, counters=counters, first_run=first_run))
-        ul_list.append(nn.gated_resnet(ul_list[-1], u_list[-1], conv=nn.down_right_shifted_conv2d, nonlinearity=resnet_nonlinearity, counters=counters, first_run=first_run))
+        u_list.append(nn.gated_resnet(u_list[-1], conv=nn.down_shifted_conv2d, nonlinearity=resnet_nonlinearity, dropout_p=dropout_p, counters=counters, first_run=first_run))
+        ul_list.append(nn.gated_resnet(ul_list[-1], u_list[-1], conv=nn.down_right_shifted_conv2d, nonlinearity=resnet_nonlinearity, dropout_p=dropout_p, counters=counters, first_run=first_run))
 
     u_list.append(nn.down_shifted_conv2d(u_list[-1], num_filters=nr_filters, strides=(2, 2), counters=counters, first_run=first_run))
     ul_list.append(nn.down_right_shifted_conv2d(ul_list[-1], num_filters=nr_filters, strides=(2, 2), counters=counters, first_run=first_run))
 
     for rep in range(nr_resnet):
-        u_list.append(nn.gated_resnet(u_list[-1], conv=nn.down_shifted_conv2d, nonlinearity=resnet_nonlinearity, counters=counters, first_run=first_run))
-        ul_list.append(nn.gated_resnet(ul_list[-1], u_list[-1], conv=nn.down_right_shifted_conv2d, nonlinearity=resnet_nonlinearity, counters=counters, first_run=first_run))
+        u_list.append(nn.gated_resnet(u_list[-1], conv=nn.down_shifted_conv2d, nonlinearity=resnet_nonlinearity, dropout_p=dropout_p, counters=counters, first_run=first_run))
+        ul_list.append(nn.gated_resnet(ul_list[-1], u_list[-1], conv=nn.down_right_shifted_conv2d, nonlinearity=resnet_nonlinearity, dropout_p=dropout_p, counters=counters, first_run=first_run))
 
     # /////// down pass ////////
     u = u_list.pop()
     ul = ul_list.pop()
     for rep in range(nr_resnet):
-        u = nn.gated_resnet(u, u_list.pop(), conv=nn.down_shifted_conv2d, nonlinearity=resnet_nonlinearity, counters=counters, first_run=first_run)
-        ul = nn.gated_resnet(ul, ct.splice(u, ul_list.pop(), axis=0), conv=nn.down_right_shifted_conv2d, nonlinearity=resnet_nonlinearity, counters=counters, first_run=first_run)
+        u = nn.gated_resnet(u, u_list.pop(), conv=nn.down_shifted_conv2d, nonlinearity=resnet_nonlinearity, dropout_p=dropout_p, counters=counters, first_run=first_run)
+        ul = nn.gated_resnet(ul, ct.splice(u, ul_list.pop(), axis=0), conv=nn.down_right_shifted_conv2d, nonlinearity=resnet_nonlinearity, dropout_p=dropout_p, counters=counters, first_run=first_run)
 
     u = nn.down_shifted_deconv2d(u, num_filters=nr_filters, strides=(2, 2), counters=counters, first_run=first_run)
     ul = nn.down_right_shifted_deconv2d(ul, num_filters=nr_filters, strides=(2, 2), counters=counters, first_run=first_run)
 
     for rep in range(nr_resnet+1):
-        u = nn.gated_resnet(u, u_list.pop(), conv=nn.down_shifted_conv2d, nonlinearity=resnet_nonlinearity, counters=counters, first_run=first_run)
-        ul = nn.gated_resnet(ul, ct.splice(u, ul_list.pop(), axis=0), conv=nn.down_right_shifted_conv2d, nonlinearity=resnet_nonlinearity, counters=counters, first_run=first_run)
+        u = nn.gated_resnet(u, u_list.pop(), conv=nn.down_shifted_conv2d, nonlinearity=resnet_nonlinearity, dropout_p=dropout_p, counters=counters, first_run=first_run)
+        ul = nn.gated_resnet(ul, ct.splice(u, ul_list.pop(), axis=0), conv=nn.down_right_shifted_conv2d, nonlinearity=resnet_nonlinearity, dropout_p=dropout_p, counters=counters, first_run=first_run)
 
     u = nn.down_shifted_deconv2d(u, num_filters=nr_filters, strides=(2, 2), counters=counters, first_run=first_run)
     ul = nn.down_right_shifted_deconv2d(ul, num_filters=nr_filters, strides=(2, 2), counters=counters, first_run=first_run)
 
     for rep in range(nr_resnet+1):
-        u = nn.gated_resnet(u, u_list.pop(), conv=nn.down_shifted_conv2d, nonlinearity=resnet_nonlinearity, counters=counters, first_run=first_run)
-        ul = nn.gated_resnet(ul, ct.splice(u, ul_list.pop(), axis=0), conv=nn.down_right_shifted_conv2d, nonlinearity=resnet_nonlinearity, counters=counters, first_run=first_run)
+        u = nn.gated_resnet(u, u_list.pop(), conv=nn.down_shifted_conv2d, nonlinearity=resnet_nonlinearity, dropout_p=dropout_p, counters=counters, first_run=first_run)
+        ul = nn.gated_resnet(ul, ct.splice(u, ul_list.pop(), axis=0), conv=nn.down_right_shifted_conv2d, nonlinearity=resnet_nonlinearity, dropout_p=dropout_p, counters=counters, first_run=first_run)
 
     x_out = nn.nin(nonlinearity(ul),per_pixel_count, counters=counters, first_run=first_run)
 

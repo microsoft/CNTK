@@ -13,6 +13,12 @@ from cntk.internal import _as_tuple
 global_init = ct.normal(0.05) # paper 0.05
 global_g_init = ct.normal(0.05)
 
+def zeros(shape):
+    return ct.constant(value=0., shape=shape, dtype=np.float32)
+
+def ones(shape):
+    return ct.constant(value=1., shape=shape, dtype=np.float32)
+
 def squeeze(x, axes):
     reduce_axes = tuple()
     new_shape = None
@@ -159,20 +165,22 @@ def dense(x, num_units, nonlinearity=None, init=global_init, init_scale=1., coun
         g_new = ct.assign(g, scale_init)
         b_new = ct.assign(b, -m_init*scale_init)
 
-        linear = ct.reshape(scale_init, (num_units, 1)) * (x_init - ct.reshape(m_init, (num_units, 1))) + ct.reshape(g_new + b_new, (num_units, 1))*0
+        x_init = ct.reshape(scale_init, (num_units, 1)) * (x_init - ct.reshape(m_init, (num_units, 1))) + ct.reshape(g_new + b_new, (num_units, 1))*0
+        if nonlinearity is not None:
+            x_init = nonlinearity(x_init)
+        return x_init
+        
     else:
         V,g,b = get_parameters(scope, ['V','g','b'])
 
         # use weight normalization (Salimans & Kingma, 2016)
-        linear = ct.times(V, x)
+        x = ct.times(V, x)
         scaler = g / ct.sqrt(squeeze(ct.reduce_sum(ct.square(V), axis=1), axes=1))
 
-        linear = ct.reshape(scaler, (num_units, 1)) * linear + ct.reshape(b, (num_units, 1))
-
-    if nonlinearity is None:
-        return linear
-
-    return nonlinearity(linear)
+        x = ct.reshape(scaler, (num_units, 1)) * x + ct.reshape(b, (num_units, 1))
+        if nonlinearity is not None:
+            x = nonlinearity(x)
+        return x
 
 def conv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinearity=None, init=global_init, init_scale=1., counters={}, first_run=False):
     ''' Convolution layer. '''
@@ -195,7 +203,11 @@ def conv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinea
         g_new = ct.assign(g, scale_init)
         b_new = ct.assign(b, -m_init*scale_init)
 
-        linear = ct.reshape(scale_init, (num_filters, 1, 1))*(x_init-ct.reshape(m_init, (num_filters, 1, 1))) + ct.reshape(g_new + b_new, (num_filters, 1, 1))*0
+        x_init = ct.reshape(scale_init, (num_filters, 1, 1))*(x_init-ct.reshape(m_init, (num_filters, 1, 1))) + ct.reshape(g_new + b_new, (num_filters, 1, 1))*0
+        if nonlinearity is not None:
+            x_init = nonlinearity(x_init)
+        return x_init
+        
     else:
         V,g,b = get_parameters(scope, ['V','g','b'])
 
@@ -203,15 +215,11 @@ def conv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinea
         V_norm = l2_normalize(V, axes=(1, 2, 3))        
         W = ct.reshape(g, (num_filters, 1, 1, 1)) * V_norm
 
-        linear = ct.convolution(W, x, strides=x_channels_shape + strides, auto_padding=_as_tuple(pad)) + ct.reshape(b, (num_filters, 1, 1))
+        x = ct.convolution(W, x, strides=x_channels_shape + strides, auto_padding=_as_tuple(pad)) + ct.reshape(b, (num_filters, 1, 1))
 
-    # Batchnormalization
-    # linear = bnorm(linear, num_filters)
-
-    if nonlinearity is None:
-        return linear
-
-    return nonlinearity(linear)
+        if nonlinearity is not None:
+            x = nonlinearity(x)
+        return x
 
 def deconv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinearity=None, init=global_init, init_scale=1., counters={}, first_run=False):
     ''' Deconvolution layer. '''
@@ -240,7 +248,11 @@ def deconv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlin
         g_new = ct.assign(g, scale_init)
         b_new = ct.assign(b, -m_init*scale_init)
 
-        linear = ct.reshape(scale_init, (num_filters, 1, 1))*(x_init-ct.reshape(m_init, (num_filters, 1, 1))) + ct.reshape(g_new + b_new, (num_filters, 1, 1))*0
+        x_init = ct.reshape(scale_init, (num_filters, 1, 1))*(x_init-ct.reshape(m_init, (num_filters, 1, 1))) + ct.reshape(g_new + b_new, (num_filters, 1, 1))*0
+        if nonlinearity is not None:
+            x_init = nonlinearity(x_init)
+        return x_init
+        
     else:
         V,g,b = get_parameters(scope, ['V','g','b'])
 
@@ -248,20 +260,15 @@ def deconv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlin
         V_norm = l2_normalize(V, axes=(0, 2, 3))
         W = ct.reshape(g, (1, num_filters, 1, 1)) * V_norm
 
-        linear = ct.convolution_transpose(W, x, strides=x_channels_shape + strides, output_shape=output_shape, auto_padding=_as_tuple(pad)) + ct.reshape(b, (num_filters, 1, 1))
+        x = ct.convolution_transpose(W, x, strides=x_channels_shape + strides, output_shape=output_shape, auto_padding=_as_tuple(pad)) + ct.reshape(b, (num_filters, 1, 1))
 
-    # Batchnormalization
-    # linear = bnorm(linear, num_filters)
-
-    if nonlinearity is None:
-        return linear
-
-    return nonlinearity(linear)
+        if nonlinearity is not None:
+            x = nonlinearity(x)
+        return x
 
 def nin(x, num_units, **kwargs):
     """ a network in network layer (1x1 CONV) """
     s  = x.shape
-
     x = ct.reshape(x, (s[0], np.prod(s[1:])))
     x = dense(x, num_units, **kwargs)
     return ct.reshape(x, (num_units,)+s[1:])
@@ -295,36 +302,44 @@ def gated_resnet(x, a=None, h=None, nonlinearity=concat_elu, conv=conv2d, init=g
 
 def down_shift(x):
     xs = x.shape
-    # return tf.concat(1,[tf.zeros([xs[0],1,xs[2],xs[3]]), x[:,:xs[1]-1,:,:]]) # (B, 32,32,3)  BHWC
-    return ct.splice(ct.constant(value=0., shape=(xs[0],1,xs[2])), x[:,:xs[1]-1,:], axis=1) # (3,32,32) CHW
+    # return tf.concat([tf.zeros([xs[0], 1, xs[2], xs[3]]), x[:, :xs[1] - 1, :, :]], 1) BHWC
+    return ct.splice(zeros((xs[0], 1, xs[2])), x[:, :xs[1]-1, :], axis=1)             # CHW
 
 def right_shift(x):
     xs = x.shape
-    # return tf.concat(2,[tf.zeros([xs[0],xs[1],1,xs[3]]), x[:,:,:xs[2]-1,:]])  # (B, 32,32,3)  BHWC
-    return ct.splice(ct.constant(value=0., shape=(xs[0],xs[1],1)), x[:,:,:xs[2]-1], axis=2) # (3,32,32) CHW
+    # return f.concat([tf.zeros([xs[0], xs[1], 1, xs[3]]), x[:, :, :xs[2] - 1, :]], 2)  BHWC
+    return ct.splice(zeros((xs[0], xs[1], 1)), x[:, :, :xs[2]-1], axis=2)             # CHW
 
 def down_shifted_conv2d(x, num_filters, filter_shape=(2,3), strides=(1,1), **kwargs):
     # x = tf.pad(x, [[0,0],[filter_size[0]-1,0], [int((filter_size[1]-1)/2),int((filter_size[1]-1)/2)],[0,0]])
     xs = x.shape
-    pad_w = int((filter_shape[1]-1)/2)
-    x = ct.splice(ct.constant(value=0., shape=(xs[0],filter_shape[0]-1,xs[2])), x, axis=1) if filter_shape[0] > 1 else x; xs = x.shape
-    x = ct.splice(ct.constant(value=0., shape=(xs[0],xs[1],pad_w)), x, axis=2) if pad_w > 0 else x
-    x = ct.splice(x, ct.constant(value=0., shape=(xs[0],xs[1],pad_w)), axis=2) if pad_w > 0 else x
+    if filter_shape[0] > 1:
+        x = ct.splice(zeros((xs[0], filter_shape[0] - 1, xs[2])), x, axis=1)
+        xs = x.shape
+    x = ct.splice(zeros((xs[0], xs[1], int((filter_shape[1]-1)/2))), x, axis=2)
+    xs = x.shape
+    x = ct.splice(x, zeros((xs[0], xs[1], int((filter_shape[1]-1)/2))), axis=2)
     x = conv2d(x, num_filters, filter_shape=filter_shape, pad=False, strides=strides, **kwargs)
     return x
 
 def down_shifted_deconv2d(x, num_filters, filter_shape=(2,3), strides=(1,1), **kwargs):
     x = deconv2d(x, num_filters, filter_shape=filter_shape, pad=False, strides=strides, **kwargs)
     xs = x.shape
-    return x[:,:(xs[1]-filter_shape[0]+1),int((filter_shape[1]-1)/2):(xs[2]-int((filter_shape[1]-1)/2))]
+    #      x[:, :(xs[1] - filter_size[0] + 1), int((filter_size[1] - 1) / 2):(xs[2] - int((filter_size[1] - 1) / 2)), :]   BHWC
+    return x[:, :(xs[1] - filter_shape[0] + 1), int((filter_shape[1] - 1) / 2):(xs[2] - int((filter_shape[1] - 1) / 2))] # CHW
 
 def down_right_shifted_conv2d(x, num_filters, filter_shape=(2,2), strides=(1,1), **kwargs):
+    # x = tf.pad(x, [[0, 0], [filter_size[0] - 1, 0], [filter_size[1] - 1, 0], [0, 0]])
     xs = x.shape
-    x = ct.splice(ct.constant(value=0., shape=(xs[0],filter_shape[0]-1,xs[2])), x, axis=1) if filter_shape[0] > 1 else x; xs = x.shape
-    x = ct.splice(ct.constant(value=0., shape=(xs[0],xs[1],filter_shape[1]-1)), x, axis=2) if filter_shape[1] > 1 else x
+    if filter_shape[0] > 1:
+        x = ct.splice(zeros((xs[0], filter_shape[0] - 1, xs[2])), x, axis=1)
+        xs = x.shape
+    if filter_shape[1] > 1:
+        x = ct.splice(zeros((xs[0], xs[1], filter_shape[1] - 1)), x, axis=2)
     return conv2d(x, num_filters, filter_shape=filter_shape, pad=False, strides=strides, **kwargs)
 
 def down_right_shifted_deconv2d(x, num_filters, filter_shape=(2,2), strides=(1,1), **kwargs):
     x = deconv2d(x, num_filters, filter_shape=filter_shape, pad=False, strides=strides, **kwargs)
     xs = x.shape
-    return x[:,:(xs[1]-filter_shape[0]+1):,:(xs[2]-filter_shape[1]+1)]
+    #      x[:, :(xs[1] - filter_size[0] + 1):, :(xs[2] - filter_size[1] + 1), :]  BHWC
+    return x[:, :(xs[1] - filter_shape[0] + 1):, :(xs[2] - filter_shape[1] + 1)] # CHW
