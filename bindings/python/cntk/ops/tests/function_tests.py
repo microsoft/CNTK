@@ -39,26 +39,31 @@ def test_eval_by_node_name():
 def test_replace_placeholders():
     p = placeholder(shape=(1,))
     i = input(shape=(1,),
-                       needs_gradient=True,
-                       name='i')
+              needs_gradient=True,
+              name='i')
     res = p + 3
     res.replace_placeholders({p: i})
 
     assert res.eval({i: [[3]]}) == [6]
 
-    if False:
-        res2 = p + 2
-        from .. import plus
-        func = plus(res2, 10)
-        res2.replace_placeholders({p: func.output})
+    func = plus(i, 10)
+    res2 = p + 3
+    res2.replace_placeholders({p: func.output})
 
-        assert res2.eval({i: [3]}) == [15]
+    assert res2.eval({i: [[3]]}) == [16]
+
+    func = plus(i, 11)
+    res3 = p + 3
+    res3.replace_placeholders({p: func})
+
+    assert res3.eval({i: [[3]]}) == [17]
+
 
 def test_cloning():
     p = placeholder(shape=(1,), name='p')
     i = input(shape=(1,),
-                       needs_gradient=True,
-                       name='i')
+              needs_gradient=True,
+              name='i')
     res = p + i
 
     with pytest.raises(ValueError):
