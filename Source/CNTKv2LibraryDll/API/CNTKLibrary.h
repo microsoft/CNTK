@@ -5186,7 +5186,12 @@ namespace CNTK
     CNTK_API  Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms = {});
 
     /// 
-    /// Create an CTFDeserializer with the specified options
+    /// Create a Base64ImageDeserializer with the specified options
+    /// 
+    CNTK_API  Deserializer Base64ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms = {});
+
+    /// 
+    /// Create a CTFDeserializer with the specified options
     /// 
     CNTK_API  Deserializer CTFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams);
 

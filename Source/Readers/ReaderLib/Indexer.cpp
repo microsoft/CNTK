@@ -32,6 +32,8 @@ Indexer::Indexer(FILE* file, bool primary, bool skipSequenceIds, char streamPref
     {
         RuntimeError("Input file not open for reading");
     }
+
+    fseekOrDie(m_file, 0, SEEK_SET);
 }
 
 void Indexer::RefillBuffer()
@@ -195,7 +197,13 @@ bool Indexer::TryGetNumericSequenceId(size_t& id)
             return found;
         }
 
+        size_t temp = id;
         id = id * 10 + (c - '0');
+        if (temp > id)
+        {
+            RuntimeError("Overflow while reading a numeric sequence id (%zu-bit value).", sizeof(id));
+        }
+        
         found = true;
         ++m_pos;
 
