@@ -16,7 +16,7 @@ def build_model(input_norm, model, loss, first_run=False):
 
     return None
 
-def build_pixelcnn_model(input, 
+def build_pixelcnn_model(inputs, 
                          residual_block_count = 4, 
                          input_feature_map    = 256,
                          output_feature_map   = 1024,
@@ -25,14 +25,13 @@ def build_pixelcnn_model(input,
     Based on PixelRNN paper (https://arxiv.org/pdf/1601.06759v3.pdf), input must be normalized 
     from -1 to 1 range.
     '''
-    input_shape  = input.shape
+    input_shape  = inputs.shape
 
-    net = bk.conv2d(input, input_feature_map, (7,7), (1,1), True, mask_type = 'a')
+    net = bk.conv2d(inputs, input_feature_map, (7,7), (1,1), True, mask_type = 'a')
     for _ in range(residual_block_count):
         net = bk.residual_block(net, mask_type = 'b')
 
     net = bk.conv2d(net, output_feature_map, (1,1), (1,1), True, mask_type = 'b')
-
     net = bk.conv2d(net, per_pixel_count, (1,1), (1,1), True, mask_type = 'b')    
     return net
 
@@ -60,7 +59,7 @@ def build_pixelcnn_2_model(input,
     net = bk.conv2d(net, per_pixel_count, (1,1), (1,1), True, mask_type = 'b')
     return net
 
-def build_pixelcnn_pp_model(x, h = None, dropout_p=0.5, nr_resnet=0, nr_filters=160, per_pixel_count=100, resnet_nonlinearity=nn.concat_elu, nonlinearity=ct.elu, first_run=False):
+def build_pixelcnn_pp_model(x, h = None, dropout_p=0.5, nr_resnet=1, nr_filters=160, per_pixel_count=100, resnet_nonlinearity=nn.concat_elu, nonlinearity=ct.elu, first_run=False):
     """
     Based on PixelCNN++ from https://openreview.net/pdf?id=BJrFC6ceg, the implementation is 
     a port from https://github.com/openai/pixel-cnn/blob/master/pixel_cnn_pp 

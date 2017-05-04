@@ -5,7 +5,6 @@ import numpy as np
 import cntk as ct
 from . import nn as nn
 
-
 def sample_from(l, nr_mix, loss='mixture'):
     if loss == 'category':
         return np_softmax_256_sample(l)
@@ -40,9 +39,10 @@ def np_sample_from_discretized_mix_logistic(l, nr_mix=10):
     x1 = np.minimum(np.maximum(x[:,1,:,:] + coeffs[:,0,:,:]*x0, -1.), 1.)
     x2 = np.minimum(np.maximum(x[:,2,:,:] + coeffs[:,1,:,:]*x0 + coeffs[:,2,:,:]*x1, -1.), 1.)
 
-    return np.concatenate((np.reshape(x0,(xs[0],1)+xs[2:]), 
-                           np.reshape(x1,(xs[0],1)+xs[2:]), 
-                           np.reshape(x2,(xs[0],1)+xs[2:])), axis=1)
+    image = np.concatenate((np.reshape(x0,(xs[0],1)+xs[2:]), 
+                            np.reshape(x1,(xs[0],1)+xs[2:]), 
+                            np.reshape(x2,(xs[0],1)+xs[2:])), axis=1)
+    return (image + 1.)*127.5
 
 def np_sample_from_discretized_mix_logistic_2(l, nr_mix=10):
     ls = l.shape # NCHW
@@ -71,9 +71,10 @@ def np_sample_from_discretized_mix_logistic_2(l, nr_mix=10):
     x1 = np.minimum(np.maximum(x[:,1,:,:] + coeffs[:,0,:,:]*x0, -1.), 1.)
     x2 = np.minimum(np.maximum(x[:,2,:,:] + coeffs[:,1,:,:]*x0 + coeffs[:,2,:,:]*x1, -1.), 1.)
 
-    return np.concatenate((np.reshape(x0,(xs[0],1)+xs[2:]), 
-                           np.reshape(x1,(xs[0],1)+xs[2:]), 
-                           np.reshape(x2,(xs[0],1)+xs[2:])), axis=1)
+    image = np.concatenate((np.reshape(x0,(xs[0],1)+xs[2:]), 
+                            np.reshape(x1,(xs[0],1)+xs[2:]), 
+                            np.reshape(x2,(xs[0],1)+xs[2:])), axis=1)
+    return (image + 1.)*127.5
 
 def np_sample_from_discretized_mix_logistic_NHWC(l, nr_mix=10):
     l = np.ascontiguousarray(np.transpose(l, (0,2,3,1))) # From NCHW to NHWC
@@ -106,6 +107,7 @@ def np_sample_from_discretized_mix_logistic_NHWC(l, nr_mix=10):
     image = np.concatenate((np.reshape(x0, xs[:-1]+(1,)), 
                             np.reshape(x1, xs[:-1]+(1,)), 
                             np.reshape(x2, xs[:-1]+(1,))), axis=3)
+    image = (image + 1.)*127.5
     return np.ascontiguousarray(np.transpose(image, (0,3,1,2))) # From NHWC to NCHW
 
 def np_softmax_256_sample(l):

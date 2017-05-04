@@ -6,12 +6,12 @@ import cntk as ct
 
 from cntk.internal import _as_tuple
 
-def conv2d(input, num_filters, filter_shape, strides=(1,1), pad=True, mask_type=None, bias=True, input_condition=None, nonlinearity=ct.relu, init=ct.glorot_uniform()):
+def conv2d(inputs, num_filters, filter_shape, strides=(1,1), pad=True, mask_type=None, bias=True, input_condition=None, nonlinearity=ct.relu, init=ct.glorot_uniform()):
     '''
     Convolution layer with mask and conditional input support.
-    '''
+    '''    
     output_channels_shape = _as_tuple(num_filters)
-    input_channels_shape  = _as_tuple(input.shape[0])
+    input_channels_shape  = _as_tuple(inputs.shape[0])
     kernel_shape = input_channels_shape + filter_shape
 
     W = ct.parameter(output_channels_shape + kernel_shape, init=init, name='W')
@@ -31,9 +31,9 @@ def conv2d(input, num_filters, filter_shape, strides=(1,1), pad=True, mask_type=
 
     if bias:
         b = ct.parameter(output_channels_shape + (1,) * len(filter_shape), name='b')
-        linear = ct.convolution(W, input, strides=input_channels_shape + strides, auto_padding=_as_tuple(pad)) + b
+        linear = ct.convolution(W, inputs, strides=input_channels_shape + strides, auto_padding=_as_tuple(pad)) + b
     else:
-        linear = ct.convolution(W, input, strides=input_channels_shape + strides, auto_padding=_as_tuple(pad))
+        linear = ct.convolution(W, inputs, strides=input_channels_shape + strides, auto_padding=_as_tuple(pad))
 
     if input_condition is not None:
        input_condition_shape = input_condition.shape
