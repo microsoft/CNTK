@@ -241,9 +241,12 @@ namespace CNTK
         /// (cooperative) lock on the device (GPU). The default device can only be changed if it has not yet been frozen by being 
         /// implicitly used in any previous CNTK operation.
         ///
-        /// CNTK uses a cooperative synchronization for the device access, whereby only a single process can acquire 
-        /// a device lock. However, if exclusivity is not required, the same device can still be accessed without acquiring 
-        /// any locks (in which case, any existing lock corresponding to the device will be ignored).
+        /// CNTK uses cooperative locking for the device access, whereby only a single process can acquire 
+        /// a device lock. This locking mechanism allows CNTK processes to avoid device oversubscription only if they collectively
+        /// choose so. In other words, the device locked by one CNTK process, can still be accessed by another CNTK process without
+        /// acquiring any locks (i.e, the existing device lock can be ignored by other CNTK processes). This cooperative 
+        /// locking mechanism does not guarantee any kind of exclusive access to the device. The proper way to ensure exclusivity 
+        /// is to use tools provided by NVIDIA (nvidia smi).
         ///
         /// This methods returns false if  
         /// * the specified device appears in the list of excluded devices;
@@ -5493,8 +5496,6 @@ namespace CNTK
         CrossValidationConfig m_cv;
         TestConfig m_test;
     };
-
-    CNTK_API void PrintBuiltInfo();
 
     ///
     /// Base class for all classes that want to record training/evaluation progress.

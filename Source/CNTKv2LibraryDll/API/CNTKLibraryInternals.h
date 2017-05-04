@@ -58,6 +58,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     class ComputationNodeBase;
     typedef std::shared_ptr<ComputationNodeBase> ComputationNodeBasePtr;
+
+    struct GpuData;
 }}}
 
 // TODO: The following should be reconciled with the equivalent code in the CNTK implementation
@@ -302,6 +304,9 @@ namespace CNTK
 
         // This is an internal API, needed for testing.
         CNTK_API Dictionary ToDictionary(const MinibatchSourceConfig& dict);
+
+        CNTK_API void PrintBuiltInfo();
+        CNTK_API void PrintGpuInfo(const std::vector<Microsoft::MSR::CNTK::GpuData>& gpusData);
 
         class VariableResolver;
 
