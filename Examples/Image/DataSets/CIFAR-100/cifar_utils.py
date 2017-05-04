@@ -30,25 +30,24 @@ def readBatch(src):
     return res.astype(np.int)
 
 def loadData(src):
-    print ('Downloading ' + src)
-    fname, h = urlretrieve(src, './delete.me')
+    # print ('Downloading ' + src)
+    # fname, h = urlretrieve(src, './delete.me')
+    # print ('Done.')
+    # try:
+        # print ('Extracting files...')
+        # with tarfile.open(fname) as tar:
+        #     tar.extractall()
+        # print ('Done.')
+    print ('Preparing train set...')
+    trn = np.empty((0, NumFeat + 1), dtype=np.int)
+    batchName = './cifar-100-python/train'
+    trn = readBatch(batchName)
     print ('Done.')
-    try:
-        print ('Extracting files...')
-        with tarfile.open(fname) as tar:
-            tar.extractall()
-        print ('Done.')
-        print ('Preparing train set...')
-        trn = np.empty((0, NumFeat + 1), dtype=np.int)
-        for i in range(5):
-            batchName = './cifar-100-batches-py/data_batch_{0}'.format(i + 1)
-            trn = np.vstack((trn, readBatch(batchName)))
-        print ('Done.')
-        print ('Preparing test set...')
-        tst = readBatch('./cifar-100-batches-py/test_batch')
-        print ('Done.')
-    finally:
-        os.remove(fname)
+    print ('Preparing test set...')
+    tst = readBatch('./cifar-100-python/test')
+    print ('Done.')
+    # finally:
+        # os.remove(fname)
     return (trn, tst)
 
 def saveTxt(filename, ndarray):
@@ -105,14 +104,14 @@ def saveTrainImages(filename, foldername):
     dataMean = np.zeros((3, ImgSize, ImgSize)) # mean is in CHW format.
     with open('train_map.txt', 'w') as mapFile:
         with open('train_regrLabels.txt', 'w') as regrFile:
-            for ifile in range(1, 6):
-                with open(os.path.join('./cifar-100-batches-py', 'data_batch_' + str(ifile)), 'rb') as f:
+            for ifile in range(1, 2):
+                with open(os.path.join('./cifar-100-python', 'train'), 'rb') as f:
                     if sys.version_info[0] < 3: 
                         data = cp.load(f)
                     else: 
                         data = cp.load(f, encoding='latin1')
-                    for i in range(10000):
-                        fname = os.path.join(os.path.abspath(foldername), ('%05d.png' % (i + (ifile - 1) * 10000)))
+                    for i in range(50000):
+                        fname = os.path.join(os.path.abspath(foldername), ('%05d.png' % (i + (ifile - 1) * 50000)))
                         saveImage(fname, data['data'][i, :], data['labels'][i], mapFile, regrFile, 4, mean=dataMean)
     dataMean = dataMean / (50 * 1000)
     saveMean('CIFAR-100_mean.xml', dataMean)
@@ -122,7 +121,7 @@ def saveTestImages(filename, foldername):
       os.makedirs(foldername)
     with open('test_map.txt', 'w') as mapFile:
         with open('test_regrLabels.txt', 'w') as regrFile:
-            with open(os.path.join('./cifar-100-batches-py', 'test_batch'), 'rb') as f:
+            with open(os.path.join('./cifar-100-python', 'test'), 'rb') as f:
                 if sys.version_info[0] < 3: 
                     data = cp.load(f)
                 else: 
