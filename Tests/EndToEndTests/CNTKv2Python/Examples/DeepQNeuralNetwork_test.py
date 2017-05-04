@@ -12,44 +12,45 @@ import pytest
 import gym
 
 # Skip test if not on Linx as Atari Learning Env is not available
-if platform.system() != 'Linux':
-    pytest.skip('test only run on Linux (Gym Atari dependency)')
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(abs_path)
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "ReinforcementLearning"))
+def test_deep_q_neural_network(device_id):
+    if platform.system() != 'Linux':
+        pytest.skip('test only run on Linux (Gym Atari dependency)')
 
-dqn = __import__("DeepQNeuralNetwork")
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    sys.path.append(abs_path)
+    sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "ReinforcementLearning"))
 
-# 1. Make environment:
-ENV_NAME = 'Pong-v3'
-env = gym.make(ENV_NAME)
+    dqn = __import__("DeepQNeuralNetwork")
 
-# 2. Make agent
-agent = dqn.DeepQAgent((4, 84, 84), env.action_space.n, train_after=100, memory_size=1000, monitor=False)
+    # 1. Make environment:
+    ENV_NAME = 'Pong-v3'
+    env = gym.make(ENV_NAME)
 
-# Train
-current_step = 0
-max_steps = 1000
-current_state = dqn.as_ale_input(env.reset())
+    # 2. Make agent
+    agent = dqn.DeepQAgent((4, 84, 84), env.action_space.n, train_after=100, memory_size=1000, monitor=False)
 
-while current_step < max_steps:
-    action = agent.act(current_state)
-    new_state, reward, done, _ = env.step(action)
-    new_state = dqn.as_ale_input(new_state)
+    # Train
+    current_step = 0
+    max_steps = 1000
+    current_state = dqn.as_ale_input(env.reset())
 
-    # Clipping reward for training stability
-    reward = np.clip(reward, -1, 1)
+    while current_step < max_steps:
+        action = agent.act(current_state)
+        new_state, reward, done, _ = env.step(action)
+        new_state = dqn.as_ale_input(new_state)
 
-    agent.observe(current_state, action, reward, done)
-    agent.train()
+        # Clipping reward for training stability
+        reward = np.clip(reward, -1, 1)
 
-    current_state = new_state
+        agent.observe(current_state, action, reward, done)
+        agent.train()
 
-    if done:
-        current_state = dqn.as_ale_input(env.reset())
+        current_state = new_state
 
-    current_step += 1
+        if done:
+            current_state = dqn.as_ale_input(env.reset())
 
+        current_step += 1
 
-assert len(agent._memory) == 1000
+    assert len(agent._memory) == 1000
