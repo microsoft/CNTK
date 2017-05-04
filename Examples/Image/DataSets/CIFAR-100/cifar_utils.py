@@ -112,7 +112,7 @@ def saveTrainImages(filename, foldername):
                         data = cp.load(f, encoding='latin1')
                     for i in range(50000):
                         fname = os.path.join(os.path.abspath(foldername), ('%05d.png' % (i + (ifile - 1) * 50000)))
-                        saveImage(fname, data['data'][i, :], data['labels'][i], mapFile, regrFile, 4, mean=dataMean)
+                        saveImage(fname, data['data'][i, :], data['fine_labels'][i], mapFile, regrFile, 4, mean=dataMean)
     dataMean = dataMean / (50 * 1000)
     saveMean('CIFAR-100_mean.xml', dataMean)
 
@@ -128,4 +128,4 @@ def saveTestImages(filename, foldername):
                     data = cp.load(f, encoding='latin1')
                 for i in range(10000):
                     fname = os.path.join(os.path.abspath(foldername), ('%05d.png' % i))
-                    saveImage(fname, data['data'][i, :], data['labels'][i], mapFile, regrFile, 0)
+                    saveImage(fname, data['data'][i, :], data['fine_labels'][i], mapFile, regrFile, 0)
