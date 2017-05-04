@@ -53,7 +53,7 @@ def loadData(src):
 
 def saveTxt(filename, ndarray):
     with open(filename, 'w') as f:
-        labels = list(map(' '.join, np.eye(10, dtype=np.uint).astype(str)))
+        labels = list(map(' '.join, np.eye(100, dtype=np.uint).astype(str)))
         for row in ndarray:
             row_str = row.astype(str)
             label_str = labels[row[-1]]
@@ -106,7 +106,7 @@ def saveTrainImages(filename, foldername):
     with open('train_map.txt', 'w') as mapFile:
         with open('train_regrLabels.txt', 'w') as regrFile:
             for ifile in range(1, 6):
-                with open(os.path.join('./cifar-10-batches-py', 'data_batch_' + str(ifile)), 'rb') as f:
+                with open(os.path.join('./cifar-100-batches-py', 'data_batch_' + str(ifile)), 'rb') as f:
                     if sys.version_info[0] < 3: 
                         data = cp.load(f)
                     else: 
@@ -122,7 +122,7 @@ def saveTestImages(filename, foldername):
       os.makedirs(foldername)
     with open('test_map.txt', 'w') as mapFile:
         with open('test_regrLabels.txt', 'w') as regrFile:
-            with open(os.path.join('./cifar-10-batches-py', 'test_batch'), 'rb') as f:
+            with open(os.path.join('./cifar-100-batches-py', 'test_batch'), 'rb') as f:
                 if sys.version_info[0] < 3: 
                     data = cp.load(f)
                 else: 
