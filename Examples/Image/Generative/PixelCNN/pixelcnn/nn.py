@@ -41,12 +41,11 @@ def one_hot(indices, depth, axis=-1, dtype=np.float32):
     depth_range = np.arange(depth)
     if axis < 0:
         axis = rank + axis + 1
-    
+
     ls = values.shape[0:axis]
     rs = values.shape[axis:rank]
     targets = np.reshape(depth_range, (1,)*len(ls)+depth_range.shape+(1,)*len(rs))
     values = np.reshape(values, ls+(1,)+rs)
-    
     return np.asarray(targets == values, dtype=dtype)
 
 def concat_elu(x):

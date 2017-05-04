@@ -7,7 +7,7 @@ from . import nn as nn
 
 def loss_function(x, z, loss):
     if loss == 'category':
-        return softmax_256_loss(tx, z)        
+        return softmax_256_loss(x, z)        
     elif loss == 'mixture':
         return discretized_mix_logistic_loss(x, z)
     return None
@@ -187,6 +187,7 @@ def softmax_256_loss(x, l):
 
     # x: (3,32,32)
     # l: (3x256, 32, 32)
-    t = ct.reshape(nn.one_hot(x, depth=256, axis=0), (256, 3*32*32)) # (256, 3*32*32)
-    p = ct.reshape(l, (256, 3*32*32))
-    return ct.reduce_sum(ct.ops.cross_entropy_with_softmax(p, t, axis=0))
+    x = (x + 1.) * 255.0
+    x = ct.one_hot(x, 256, axis=0) # (256, 3,32,32)
+    l = ct.reshape(l, (256, 3,32,32))
+    return ct.reduce_sum(ct.cross_entropy_with_softmax(l, x, axis=0))

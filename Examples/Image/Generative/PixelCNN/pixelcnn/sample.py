@@ -7,7 +7,9 @@ from . import nn as nn
 
 
 def sample_from(l, nr_mix, loss='mixture'):
-    if loss == 'mixture':
+    if loss == 'category':
+        return np_softmax_256_sample(l)
+    elif loss == 'mixture':
         return np_sample_from_discretized_mix_logistic(l, nr_mix)
     return None
 
@@ -105,3 +107,14 @@ def np_sample_from_discretized_mix_logistic_NHWC(l, nr_mix=10):
                             np.reshape(x1, xs[:-1]+(1,)), 
                             np.reshape(x2, xs[:-1]+(1,))), axis=3)
     return np.ascontiguousarray(np.transpose(image, (0,3,1,2))) # From NHWC to NCHW
+
+def np_softmax_256_sample(l):
+    # Based on PixelRNN paper (https://arxiv.org/pdf/1601.06759v3.pdf)
+    ls = l.shape
+
+    # l: (B, 3x256, 32, 32) to (B, 256, 3, 32, 32)
+    l = ct.reshape(l, ls[0] + (256,3,32,32))
+    sel = nn.one_hot(np.argmax(l - np.log(-np.log(np.random.uniform(1e-5, 1. - 1e-5, l.shape).astype('f'))), axis=1), depth=256, dtype=np.float32)
+
+    x = np.sum(l*sel, 1)
+    return x

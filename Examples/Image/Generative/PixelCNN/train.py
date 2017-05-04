@@ -49,7 +49,6 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     # Input variables denoting the features and label data
     inputs_init = ct.input(shape=(num_channels, image_height, image_width))    
     inputs = ct.input(shape=(num_channels, image_height, image_width))
-    targets = ct.input(shape=(num_channels, image_height, image_width))
     labels = ct.input((num_classes))
 
     # apply model to input
@@ -60,7 +59,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     z = m.build_model(inputs_norm, model, loss)
 
     # loss and metric
-    ce = l.loss_function(inputs_norm, targets, z, loss)
+    ce = l.loss_function(inputs_norm, z, loss)
     pe = ct.relu(1.0) # dummy value to make reporting progress happy.
 
     # training config
