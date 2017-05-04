@@ -26,7 +26,7 @@ def readBatch(src):
             d = cp.load(f, encoding='latin1')
         data = d['data']
         feat = data
-    res = np.hstack((feat, np.reshape(d['labels'], (len(d['labels']), 1))))
+    res = np.hstack((feat, np.reshape(d['fine_labels'], (len(d['fine_labels']), 1))))
     return res.astype(np.int)
 
 def loadData(src):
