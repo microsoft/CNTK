@@ -460,7 +460,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AN4", "AN4", "{EDA80B25-B18
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{B3E3AF4A-FEF5-46AB-A72A-19AF4F1FDD49}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Speech\AN4\Config\FeedForward.cntk = Examples\Speech\AN4\Config\FeedForward.cntk
 		Examples\Speech\AN4\Config\LSTM-NDL_ndl_deprecated.cntk = Examples\Speech\AN4\Config\LSTM-NDL_ndl_deprecated.cntk
 		Examples\Speech\AN4\Config\lstmp-3layer-opt.ndl = Examples\Speech\AN4\Config\lstmp-3layer-opt.ndl
 	EndProjectSection
@@ -522,18 +521,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "config", "config", "{1C7D22
 		Examples\Speech\Miscellaneous\TIMIT\config\mtl_senones_dr.ndl = Examples\Speech\Miscellaneous\TIMIT\config\mtl_senones_dr.ndl
 		Examples\Speech\Miscellaneous\TIMIT\config\PAC-RNN.ndl = Examples\Speech\Miscellaneous\TIMIT\config\PAC-RNN.ndl
 		Examples\Speech\Miscellaneous\TIMIT\config\README.txt = Examples\Speech\Miscellaneous\TIMIT\config\README.txt
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_AdaptLearnRate.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_AdaptLearnRate.cntk
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_CrossValidateSimpleNetwork.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_CrossValidateSimpleNetwork.cntk
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_EvalSimpleNetwork.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_EvalSimpleNetwork.cntk
 		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainAutoEncoder_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainAutoEncoder_ndl_deprecated.cntk
 		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainLSTM_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainLSTM_ndl_deprecated.cntk
 		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiInput_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiInput_ndl_deprecated.cntk
 		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiTask_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainMultiTask_ndl_deprecated.cntk
 		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainNDLNetwork_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainNDLNetwork_ndl_deprecated.cntk
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainSimpleNetwork.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainSimpleNetwork.cntk
 		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainWithPreTrain_ndl_deprecated.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_TrainWithPreTrain_ndl_deprecated.cntk
 		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteBottleneck.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteBottleneck.cntk
-		Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteScaledLogLike.cntk = Examples\Speech\Miscellaneous\TIMIT\config\TIMIT_WriteScaledLogLike.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CPU", "CPU", "{5ED4F5DC-E016-4E10-BACD-6A760A0CDE89}"
@@ -573,16 +567,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReaderLib", "Source\Readers
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AN4", "AN4", "{AC7BA8D3-B4C8-42A4-8507-B359BB6D49E8}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FeedForward", "FeedForward", "{A17AC914-C539-4B47-A80F-9BD25C64E2A0}"
-	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.linux.cpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.linux.cpu.txt
-		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.linux.gpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.linux.gpu.txt
-		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.windows.cpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.windows.cpu.txt
-		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.windows.gpu.txt = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\baseline.windows.gpu.txt
-		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\run-test = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\run-test
-		Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\testcases.yml = Tests\EndToEndTests\Examples\Speech\AN4\FeedForward\testcases.yml
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{9F1F9C7C-2CC3-410C-ACDC-988B12D6AC14}"
 	ProjectSection(SolutionItems) = preProject
@@ -883,14 +867,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BrainScriptTests", "Tests\U
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TIMIT", "TIMIT", "{B586AA4C-0BB9-4629-9EDA-25FF2618AC9F}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TrainSimpleNetwork", "TrainSimpleNetwork", "{C2102C39-BF5F-4B12-9C41-849D1ED35EE8}"
-	ProjectSection(SolutionItems) = preProject
-		Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\baseline.linux.txt = Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\baseline.linux.txt
-		Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\baseline.windows.txt = Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\baseline.windows.txt
-		Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\run-test = Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\run-test
-		Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\testcases.yml = Tests\EndToEndTests\Examples\Speech\TIMIT\TrainSimpleNetwork\testcases.yml
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FullUtteranceLayers", "FullUtteranceLayers", "{4DDFD21D-E82C-4321-B380-8A9382E18107}"
 	ProjectSection(SolutionItems) = preProject
@@ -2103,7 +2079,6 @@ Global
 		{FB7AF7B9-6BEA-459F-94D9-94D53916D2B6} = {BD46CE02-3740-4526-80F6-CC7973B953E5}
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{AC7BA8D3-B4C8-42A4-8507-B359BB6D49E8} = {FB7AF7B9-6BEA-459F-94D9-94D53916D2B6}
-		{A17AC914-C539-4B47-A80F-9BD25C64E2A0} = {AC7BA8D3-B4C8-42A4-8507-B359BB6D49E8}
 		{9F1F9C7C-2CC3-410C-ACDC-988B12D6AC14} = {AC7BA8D3-B4C8-42A4-8507-B359BB6D49E8}
 		{7FE16CBE-B717-45C9-97FB-FA3191039568} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{91973E60-A7BE-4C86-8FDB-59C88A0B3715} = {33EBFE78-A1A8-4961-8938-92A271941F94}
@@ -2146,7 +2121,6 @@ Global
 		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{B586AA4C-0BB9-4629-9EDA-25FF2618AC9F} = {FB7AF7B9-6BEA-459F-94D9-94D53916D2B6}
-		{C2102C39-BF5F-4B12-9C41-849D1ED35EE8} = {B586AA4C-0BB9-4629-9EDA-25FF2618AC9F}
 		{4DDFD21D-E82C-4321-B380-8A9382E18107} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
 		{D293C7C7-B7D7-47CE-A796-45262C16F980} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
 		{4F534076-39A5-40E2-BF87-64EC464C52B2} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
