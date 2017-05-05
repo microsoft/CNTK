@@ -169,6 +169,7 @@ namespace CNTK
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::EditDistanceError) ||
             (op == PrimitiveOpType::ClassificationError) ||
+            (op == PrimitiveOpType::ForwardBackward) ||
             (op == PrimitiveOpType::Logistic) ||
             (op == PrimitiveOpType::LambdaRank) ||
             (op == PrimitiveOpType::NDCG))
@@ -267,7 +268,6 @@ namespace CNTK
             outputs.push_back(OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), Name()));
         else
         {
-            std::vector<Variable> secondaryOutputs;
             DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);
             std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, this, m_attributes);
             bool needsGradient = std::any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.NeedsGradient(); });
@@ -356,17 +356,11 @@ namespace CNTK
                                 InvalidArgument("UnpackSequence: Operand '%S' must have at least 2 dynamic axes.", m_inputs[0].AsString().c_str());
 
                             outputShape = m_inputs[0].Shape().AppendShape({ NDShape::FreeDimension });
-
-                            auto suppressMaskOutput = m_attributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
-                            if (!suppressMaskOutput)
-                            {
-                                auto maskOutput = OutputVariable({ NDShape::FreeDimension }, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, Name().empty() ? L"" : Name() + L"_UnpackSequenceMask");
-                                secondaryOutputs.push_back(maskOutput);
-                            }
                             break;
                         }
                         case PrimitiveOpType::ToSequence:
                         case PrimitiveOpType::ToSequenceLike:
+                        {
                             assert(((m_op == PrimitiveOpType::ToSequence) && (m_inputs.size() == 1)) || (m_inputs.size() == 2));
                             if (m_inputs[0].DynamicAxes().empty())
                                 InvalidArgument("Function '%S': Operand '%S' must have dynamic axes.", AsString().c_str(), m_inputs[0].AsString().c_str());
@@ -395,8 +389,10 @@ namespace CNTK
                                     InvalidArgument("Function '%S': Operand(1) '%S' must be a sequence (have at least 2 dynamic axes).", AsString().c_str(), m_inputs[1].AsString().c_str());
                             }
 
-                            outputShape = m_inputs[0].Shape().SubShape(0, m_inputs[0].Shape().Rank() - 1);
+                            auto operandShape = m_inputs[0].Shape();
+                            outputShape = operandShape.SubShape(0, operandShape.Rank() - 1);
                             break;
+                        }
                         case PrimitiveOpType::PackedIndex:
                             assert(m_inputs.size() == 2);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[1].Shape());
@@ -425,17 +421,30 @@ namespace CNTK
                         {
                             assert(m_inputs.size() == 1);
 
-                            auto axis1 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis1].Value<Axis>(), m_inputs[0].Shape());
-                            auto axis2 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis2].Value<Axis>(), m_inputs[0].Shape());
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec))
+                            {
+                                auto perm = AsVector<Axis>(m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+                                auto shape = m_inputs[0].Shape();
+                                for (auto& p : perm)
+                                    p = NormalizeStaticAxis(p, shape);
+                                outputShape = shape;
+                                for (size_t i = 0; i < perm.size(); ++i)
+                                    outputShape[i] = shape[perm[i].StaticAxisIndex()];
+                            }
+                            else
+                            {
+                                auto axis1 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis1].Value<Axis>(), m_inputs[0].Shape());
+                                auto axis2 = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis2].Value<Axis>(), m_inputs[0].Shape());
 
-                            if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
-                                LogicError("Function '%S': TransposeAxes operation currently does not support transposing dynamic axes.", AsString().c_str());
+                                if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
+                                    LogicError("Function '%S': TransposeAxes operation currently does not support transposing dynamic axes.", AsString().c_str());
 
-                            // We allow to transpose with an axes that exceeds the rank of the input.
-                            // The output rank is the max of the input rank, and either of the axes being transposed.
-                            auto outputRank = std::max(m_inputs[0].Shape().Rank(), (size_t)(std::max(axis1.StaticAxisIndex(), axis2.StaticAxisIndex()) + 1));
-                            outputShape = m_inputs[0].Shape().AppendShape(NDShape(outputRank - m_inputs[0].Shape().Rank(), 1));
-                            std::swap(outputShape[axis1.StaticAxisIndex()], outputShape[axis2.StaticAxisIndex()]);
+                                // We allow to transpose with an axes that exceeds the rank of the input.
+                                // The output rank is the max of the input rank, and either of the axes being transposed.
+                                auto outputRank = std::max(m_inputs[0].Shape().Rank(), (size_t)(std::max(axis1.StaticAxisIndex(), axis2.StaticAxisIndex()) + 1));
+                                outputShape = m_inputs[0].Shape().AppendShape(NDShape(outputRank - m_inputs[0].Shape().Rank(), 1));
+                                std::swap(outputShape[axis1.StaticAxisIndex()], outputShape[axis2.StaticAxisIndex()]);
+                            }
                             break;
                         }
                         case PrimitiveOpType::Slice:
@@ -491,7 +500,7 @@ namespace CNTK
                                 // propagate as much as we can
                                 // Note: If the sliceAxisDim is a free dimension and the slice size is relative to the sliceAxisDim then the 
                                 // corresponding outputDim is also a free dimension
-                                if (((sliceAxisDim != NDShape::FreeDimension) || (((beginIndex[i] >= 0) && (endIndex[i] > 0)) || ((beginIndex[i] < 0) && (endIndex[i] <= 0)))) &&
+                                if ((((sliceAxisDim != NDShape::FreeDimension) && (sliceAxisDim != NDShape::InferredDimension)) || (((beginIndex[i] >= 0) && (endIndex[i] > 0)) || ((beginIndex[i] < 0) && (endIndex[i] <= 0)))) &&
                                     ((ax.StaticAxisIndex() < (int)outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim)))
                                 {
                                     outputTensorShape.NarrowTo(ax.StaticAxisIndex(), realBeginIndex, realEndIndex);
@@ -502,7 +511,7 @@ namespace CNTK
                         }
                         case PrimitiveOpType::Reshape:
                         {
-                            auto& replacementShape = m_attributes[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
+                            auto replacementShape = m_attributes[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
 
                             auto beginAxis = Axis(0);
                             auto endAxis = Axis((int)m_inputs[0].Shape().Rank());
@@ -512,7 +521,7 @@ namespace CNTK
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameEndAxis))
                                 endAxis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameEndAxis].Value<Axis>(), m_inputs[0].Shape());
 
-                            outputShape = ReshapeOutputShape(m_inputs[0].Shape(), replacementShape, beginAxis, endAxis, true);
+                            outputShape = ReshapeOutputShape(m_inputs[0].Shape(), replacementShape, beginAxis, endAxis, /*inferDimensions =*/ false);
                             break;
                         }
                         case PrimitiveOpType::ROIPooling:
@@ -530,12 +539,15 @@ namespace CNTK
                             if (roiOutputShape.Rank() != 2)
                                 InvalidArgument("ROIPoolingNode: ROI shape '%S' must have rank 2 ([W x H]).", roiOutputShape.AsString().c_str());
 
-                            if (convMapShape[0] < outW || convMapShape[1] < outH)
-                                InvalidArgument("ROIPoolingNode: input Width (%d) must be >= ROI window Width (%d) and input Height (%d) must be >= ROI window Height (%d).",
-                                                (int)convMapShape[0], (int)outW, (int)convMapShape[1], (int)outH);
+                            if (!convMapShape.HasFreeOrInferredDimension())
+                            {
+                                if (convMapShape[0] < outW || convMapShape[1] < outH)
+                                    InvalidArgument("ROIPoolingNode: input Width (%d) must be >= ROI window Width (%d) and input Height (%d) must be >= ROI window Height (%d).",
+                                    (int)convMapShape[0], (int)outW, (int)convMapShape[1], (int)outH);
 
-                            if (convMapShape[2] < 1)
-                                InvalidArgument("ROIPoolingNode: input '%S' must have at least one channel ([W x H x C]).", m_inputs[0].AsString().c_str());
+                                if (convMapShape[2] < 1)
+                                    InvalidArgument("ROIPoolingNode: input '%S' must have at least one channel ([W x H x C]).", m_inputs[0].AsString().c_str());
+                            }
 
                             if (roisShape[0] != 4)
                                 InvalidArgument("ROIPoolingNode: ROI shape '%S' must be of the form: [4 x roisPerImage].", roisShape.AsString().c_str());
@@ -561,8 +573,11 @@ namespace CNTK
                             std::vector<bool> sharing = { true };
                             auto inputShape = m_inputs[0].Shape();
 
+                            if (inputShape.HasFreeDimension())
+                                LogicError("Function '%S': Currently pooling does not support operands with free static axes dimensions.", AsString().c_str());
+
                             // In case of pooling if the kernel shape is unknown, then treat it as global pooling.
-                            if ((poolingWindowsShape == NDShape::Unknown) && !inputShape.SubShape(0, inputShape.Rank() - 1).HasFreeDimension())
+                            if ((poolingWindowsShape == NDShape::Unknown) && !inputShape.SubShape(0, inputShape.Rank() - 1).HasFreeOrInferredDimension())
                             {
                                 if ((std::find(autoPadding.begin(), autoPadding.end(), true) != autoPadding.end()) || (lowerPad.TotalSize() > 0) || (upperPad.TotalSize() > 0))
                                     RuntimeError("Padding isn't allowed for Unknown pooling window shape!");
@@ -579,6 +594,9 @@ namespace CNTK
                             assert(m_inputs.size() == 2);
 
                             auto inputShape = m_inputs[0].Shape();
+                            if (inputShape.HasFreeDimension())
+                                LogicError("Function '%S': Currently unpooling does not support operands with free static axes dimensions.", AsString().c_str());
+
                             outputShape = m_inputs[1].Shape();
                             PoolingType unpoolingType = (PoolingType)(m_attributes[PrimitiveFunction::AttributeNamePoolingType].Value<size_t>());
                             if (unpoolingType != PoolingType::Max)
@@ -606,7 +624,7 @@ namespace CNTK
                         }
                         case PrimitiveOpType::SumAll:
                             assert(m_inputs.size() == 1);
-                            outputShape = { 1 };
+                            outputShape = {};
                             break;
                         case PrimitiveOpType::OneHot:
                         {
@@ -628,7 +646,17 @@ namespace CNTK
                             outputShape = outputShape.AppendShape({num_class});
                             if (axisIndex < len)
                                 outputShape = outputShape.AppendShape(inputShape.SubShape(axisIndex, len));
-
+                            break;
+                        }
+                        case PrimitiveOpType::Gather:
+                        {
+                            assert(m_inputs.size() == 2);
+                            auto inputShape1 = m_inputs[0].Shape();
+                            auto inputShape2 = m_inputs[1].Shape();
+                            auto inputDim2 = inputShape2.Dimensions();
+                            inputDim2.pop_back();
+                            outputShape = NDShape(inputDim2);
+                            outputShape = outputShape.AppendShape(inputShape1);
                             break;
                         }
                         case PrimitiveOpType::Times:
@@ -684,10 +712,11 @@ namespace CNTK
                             auto originalKernelShape = kernelShape;
 
                             auto inputShape = m_inputs[1].Shape();
+                            if (inputShape.HasFreeDimension())
+                                LogicError("Function '%S': Currently convolution does not support operands with free static axes dimensions.", AsString().c_str());
+
                             if (!transpose || tmpShape.IsUnknown() || tmpShape[0] == 0)
-                            {
                                 outputShape = ConvolutionOpOutputShape(m_op, inputShape, kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose, true);
-                            }
                             else
                             {
                                 NDShape inferredInputShape = ConvolutionOpOutputShape(m_op, tmpShape, kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, true);
@@ -871,12 +900,13 @@ namespace CNTK
 
                             if (operand.Shape().HasFreeDimension())
                                 InvalidArgument("OptimizedRNNStack: Operand '%S' with free dimension is unsupported.", operand.AsString().c_str());
+
                             // output dims
                             outputShape = operand.Shape();
                             outputShape[0] = (bidirectional ? 2 : 1) * hiddenSize;
                             // infer input size
                             // Note: Output dim is second axis, so say initOutputRank=-1.
-                            if (parameter.Shape().Rank() == 2)
+                            if (!operand.Shape().HasFreeOrInferredDimension() && (parameter.Shape().Rank() == 2))
                             {
                                 const auto recurrentOp = m_attributes[PrimitiveFunction::AttributeNameRecurrentOp].Value<std::wstring>();
                                 const auto attributes = RnnAttributes(bidirectional, numLayers, hiddenSize, recurrentOp, -1);
@@ -921,7 +951,15 @@ namespace CNTK
 
             auto primaryOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, Name().empty() ? L"" : Name());
             outputs.push_back(primaryOutput);
-            outputs.insert(outputs.end(), secondaryOutputs.begin(), secondaryOutputs.end());
+            if (m_op == PrimitiveOpType::UnpackSequence)
+            {
+                auto suppressMaskOutput = m_attributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
+                if (!suppressMaskOutput)
+                {
+                    auto maskOutput = OutputVariable({ NDShape::FreeDimension }, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, Name().empty() ? L"" : Name() + L"_UnpackSequenceMask");
+                    outputs.push_back(maskOutput);
+                }
+            }
         }
     }
 
@@ -1169,11 +1207,11 @@ namespace CNTK
 
         auto outputShape = AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape), AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPad, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutputDim));
 
-        // Any input dimensions that are free pass through as free
+        // Any input dimensions that are free/inferred pass through as free/inferred
         for (size_t i = 0; i < operandShape.Rank(); ++i)
         {
-            if (operandShape[i] == NDShape::FreeDimension)
-                outputShape[i] = NDShape::FreeDimension;
+            if ((operandShape[i] == NDShape::FreeDimension) || (operandShape[i] == NDShape::InferredDimension))
+                outputShape[i] = operandShape[i];
         }
         return outputShape;
     }

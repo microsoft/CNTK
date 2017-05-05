@@ -1038,6 +1038,17 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::TransposeAxes, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr Transpose(const Variable& operand, const std::vector<Axis>& permutation, const std::wstring& name)
+    {
+        //Check all the axes
+        if (!std::all_of(permutation.begin(), permutation.end(), [](const Axis& a) { return a.IsStaticAxis(); }))
+            LogicError("Transpose: Permutation vector must only contain static axes.");
+
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(permutation);
+        return UnaryOp(PrimitiveOpType::TransposeAxes, operand, std::move(additionalProperties), name);
+    }
+
     FunctionPtr Transpose(const Variable& operand, const std::wstring& name)
     {
         if (operand.Shape().Rank() <= 2)
@@ -1345,9 +1356,9 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::OneHot, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)
+    FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const std::wstring& name)
     {
-        return UnaryOp(PrimitiveOpType::SumAll, operand, Dictionary(), name);
+        return BinaryOp(PrimitiveOpType::Gather, indices, reference, Dictionary(), name);
     }
 
     FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name)

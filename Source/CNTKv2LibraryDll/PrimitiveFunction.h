@@ -99,6 +99,7 @@ namespace CNTK
         {PrimitiveOpType::ToSequenceLike, L"ToSequenceLikeOp"},
         {PrimitiveOpType::UnpackSequence, L"UnpackSequenceOp"},
         {PrimitiveOpType::Assign, L"Assign" },
+        {PrimitiveOpType::Gather, L"Gather"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -322,6 +323,9 @@ namespace CNTK
 
         static NDShape ReshapeOutputShape(const NDShape& operandShape, NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, bool inferDimensions)
         {
+            if (replacementShape.HasFreeDimension())
+                InvalidArgument("Reshape: Replacement shape '%S' must not have a free dimension.", replacementShape.AsString().c_str());
+
             int beginAxisIdx = beginAxis.StaticAxisIndex();
             int endAxisIdx = endAxis.StaticAxisIndex();
 
@@ -335,13 +339,9 @@ namespace CNTK
                 InvalidArgument("Reshape: end axis index (%d) is invalid for operand shape '%S'.", endAxisIdx, operandShape.AsString().c_str());
 
             auto operandSubshapeToReshape = operandShape.SubShape(beginAxisIdx, endAxisIdx);
-            if (operandSubshapeToReshape.HasFreeDimension() || operandSubshapeToReshape.HasInferredDimension())
-                InvalidArgument("Reshape: Operand subshape '%S' being reshaped must not have an inferred or free dimension.", operandSubshapeToReshape.AsString().c_str());
-
-            size_t inputElementsCount = operandSubshapeToReshape.TotalSize();
             auto inferredReplacementShape = replacementShape;
-            size_t targetElementsCount = 1;
             size_t inferredAxisIndex = SIZE_MAX;
+            size_t targetElementsCount = 1;
             for (size_t k = 0; k < inferredReplacementShape.Rank(); k++)
             {
                 if (inferredReplacementShape[k] != NDShape::InferredDimension)
@@ -353,13 +353,21 @@ namespace CNTK
             }
 
             if (inferredAxisIndex != SIZE_MAX)
-                inferredReplacementShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
+            {
+                if (!operandSubshapeToReshape.HasFreeOrInferredDimension())
+                {
+                    size_t inputElementsCount = operandSubshapeToReshape.TotalSize();
+                    inferredReplacementShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
+                }
+                else
+                    inferredReplacementShape[inferredAxisIndex] = operandSubshapeToReshape.HasInferredDimension() ? NDShape::InferredDimension : NDShape::FreeDimension;
+            }
 
             auto outputShape = operandShape.SubShape(0, beginAxisIdx);
             outputShape = outputShape.AppendShape(inferredReplacementShape);
             outputShape = outputShape.AppendShape(operandShape.SubShape(endAxisIdx));
 
-            if (outputShape.TotalSize() != operandShape.TotalSize())
+            if (!operandSubshapeToReshape.HasFreeOrInferredDimension() && (operandSubshapeToReshape.TotalSize() != inferredReplacementShape.TotalSize()))
             {
                 auto replacedSubShape = operandShape.SubShape(beginAxisIdx, endAxisIdx);
                 InvalidArgument("Reshape: Operand (sub-)dimensions '%S' incompatible with desired replacement (sub-)dimensions '%S'. Number of elements %s.",
@@ -693,7 +701,7 @@ namespace CNTK
               
                 if (i < operands.size() - 1)
                 {
-                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !(mainOperandShape.HasInferredDimension() || mainOperandShape.HasFreeDimension()))
+                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasFreeOrInferredDimension())
                     {
                         size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
                         paramShape[0] = total;
@@ -744,7 +752,8 @@ namespace CNTK
         // Version 10: Add Pow operator.
         // Version 11: Add ToSequence, ToSequenceLike and UnpackSequence operators.
         // Version 12: Add Assign node.
-        static const size_t s_serializationVersion = 12;
+        // Version 13: Add Gather op.
+        static const size_t s_serializationVersion = 13;
     };
 
     class UDFUtils

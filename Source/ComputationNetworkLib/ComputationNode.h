@@ -54,7 +54,8 @@
 #define CNTK_MODEL_VERSION_22 22 // Slice and pad accepts multiple axes 
 #define CNTK_MODEL_VERSION_23 23 // pooling: add include pad func for average pooling
 #define CNTK_MODEL_VERSION_24 24 // ReduceElements: add keepDimensions
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_24
+#define CNTK_MODEL_VERSION_25 25 // transpose: allow specifying a permutation
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_25
 
 
 // helper mode for debugging
@@ -667,7 +668,7 @@ public:
     void SetLearningRateMultiplier(float f) 
     { 
         if (f < 0)
-            InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are tring to set it to %f.", NodeDescription().c_str(), f);
+            InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are trying to set it to %f.", NodeDescription().c_str(), f);
         m_learningRateMultiplier = f; 
     }
     float GetLearningRateMultiplier() const { return m_learningRateMultiplier; }

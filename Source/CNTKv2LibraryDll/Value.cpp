@@ -323,7 +323,7 @@ namespace CNTK
         std::vector<NDArrayViewPtr> sequencesView(numOfSequences);
         for (size_t i = 0; i < numOfSequences; i++)
         {
-            // Sequence lenght is 1.
+            // Sequence length is 1.
             auto sequenceDataShape = sampleShape.AppendShape({ 1 });
             sequencesView[i] = MakeSharedObject<NDArrayView>(sequenceDataShape, batchData.data() + i * shapeSize, shapeSize, DeviceDescriptor::CPUDevice());
         }
@@ -590,6 +590,21 @@ namespace CNTK
             LogicError("Value::AsScalar: Scalar Value object must not have an associated mask");
 
         return Data()->AsScalar<ElementType>();
+    }
+
+    /* virtual */ bool Value::IsValid() const
+    {
+        return !!m_data;
+    }
+
+    std::wstring Value::AsString() const
+    {
+        wstringstream wss;
+        if (IsValid())
+            wss << L"Value(" << Shape().AsString() << ", " << DeviceKindName(Device().Type()) << L")";
+        else
+            wss << L"Value(###)";
+        return wss.str();
     }
 
     void PackedValue::Unpack() const

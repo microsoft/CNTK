@@ -6,32 +6,30 @@
 
 import os
 import re
-import numpy
+import numpy as np
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_202_Language_Understanding.ipynb")
-# Runs on GPU only, batch normalization training on CPU is not yet implemented.
-notebook_deviceIdsToRun = [0]
+notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_103D_MNIST_ConvolutionalNeuralNetwork.ipynb")
 
-def test_cntk_202_language_understanding_noErrors(nb):
+def test_cntk_103d_mnist_convolutionalneuralnetwork_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell
               for output in cell['outputs'] if output.output_type == "error"]
-    print(errors)
     assert errors == []
 
-def test_cntk_202_language_understanding_trainerror(nb):
+notebook_timeoutSeconds = 1500
+expectedEvalErrorByDeviceId = { -1: [1.3, 1.05] , 0: [1.3, 1.05] }
+
+def test_cntk_103d_mnist_convolutionalneuralnetwork_trainerror(nb, device_id):
     metrics = []
     for cell in nb.cells:
         try:
            if cell.cell_type == 'code':
-               m = re.search('Finished Evaluation.* metric = (?P<metric>\d+\.\d+)%', cell.outputs[0]['text'])
+               m = re.search('Average test error: (?P<metric>\d+\.\d+)%', cell.outputs[0]['text'])
                if m:
                    metrics.append(float(m.group('metric')))
         except IndexError:
            pass
         except KeyError:
            pass
-    expectedMetrics = [0.34, 0.4, 0.37, 0.21]
     # TODO tighten tolerances
-    assert numpy.allclose(expectedMetrics, metrics, atol=0.15)
-
+    assert np.allclose(expectedEvalErrorByDeviceId[device_id], metrics, atol=0.2)

@@ -138,7 +138,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
 
         bool shouldPrefetch = true;
         m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch, 
-            multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow);
+            multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow, GetRandomSeed(config));
     }
     else
     {

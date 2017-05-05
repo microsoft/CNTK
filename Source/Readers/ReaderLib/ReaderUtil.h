@@ -7,12 +7,18 @@
 
 #include "Reader.h"
 #include "SequenceEnumerator.h"
+#include "Config.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 class ConfigParameters;
 
 size_t GetRandomizationWindowFromConfig(const ConfigParameters& config);
+
+inline size_t GetRandomSeed(const ConfigParameters& config)
+{
+    return config(L"randomizationSeed", size_t(0));
+}
 
 // Returns the size of the type.
 inline size_t GetSizeByType(ElementType type)

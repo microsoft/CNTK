@@ -53,13 +53,6 @@ class DeviceDescriptor(cntk_py.DeviceDescriptor):
         '''
         return super(DeviceDescriptor, self).type()
 
-    def __str__(self):
-        if self.type() == DeviceKind.GPU:
-            details = 'GPU %i' % self.id()
-        else:
-            details = 'CPU'
-        return details
-
     def is_locked(self):
         '''
         Returns `True` if another CNTK process already holds an exclusive lock
@@ -145,16 +138,20 @@ def try_set_default_device(new_default_device, acquire_device_lock=False):
     The default device can only be changed if it has not yet been frozen by
     being implicitly used in any previous CNTK operation.
 
-    CNTK uses a cooperative synchronization for the device access, whereby only
-    a single process can acquire a device lock. However, if exclusivity is not
-    required, the same device can still be accessed without acquiring any locks
-    (in which case, any existing lock corresponding to the device will be
-    ignored).
+    CNTK uses cooperative locking for the device access, whereby only a single
+    process can acquire a device lock. This locking mechanism allows CNTK
+    processes to avoid device oversubscription only if they collectively
+    choose so. In other words, the device locked by one CNTK process, can
+    still be accessed by another CNTK process without acquiring any locks
+    (i.e, the existing device lock can be ignored by other CNTK processes).
+    This cooperative locking mechanism does not guarantee any kind of
+    exclusive access to the device. The proper way to ensure exclusivity  is
+    to use tools provided by NVIDIA (nvidia smi).
 
     Returns: `False` if
         * the specified device appears in the list of excluded devices;
         * `acquire_device_lock` is `True` and another process already holds a lock on the device;
-        * `acquire_device_lock` is `True` and `new_default_device` corresponds to a CPU device 
+        * `acquire_device_lock` is `True` and `new_default_device` corresponds to a CPU device
           (which cannot be locked).
     '''
     return cntk_py.DeviceDescriptor.try_set_default_device(new_default_device,

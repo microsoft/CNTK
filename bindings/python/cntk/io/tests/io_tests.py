@@ -150,7 +150,7 @@ def test_minibatch_source_config_constructor(tmpdir):
     dictionary = to_dictionary(config)
     check_default_config_keys(dictionary)
 
-    assert 7 == len(dictionary.keys())
+    assert 8 == len(dictionary.keys())
     assert dictionary['randomize'] is True
     assert DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS == dictionary['randomizationWindow']
     assert False == dictionary['sampleBasedRandomizationWindow']
@@ -159,7 +159,7 @@ def test_minibatch_source_config_constructor(tmpdir):
     dictionary = to_dictionary(config)
     check_default_config_keys(dictionary)
 
-    assert 7 == len(dictionary.keys())
+    assert 8 == len(dictionary.keys())
     assert dictionary['randomize'] is True
     assert DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS == dictionary['randomizationWindow']
     assert False == dictionary['sampleBasedRandomizationWindow']
@@ -228,7 +228,7 @@ def test_minibatch_source_config_other_properties(tmpdir):
     config.is_frame_mode_enabled = True
 
     dictionary = to_dictionary(config)
-    assert 7 == len(dictionary.keys())
+    assert 8 == len(dictionary.keys())
     assert TraceLevel.Info == dictionary['traceLevel']
     assert dictionary['frameMode'] is True
     assert dictionary['multiThreadedDeserialization'] is True
@@ -243,7 +243,7 @@ def test_minibatch_source_config_other_properties(tmpdir):
     config.is_frame_mode_enabled = False
 
     dictionary = to_dictionary(config)
-    assert 9 == len(dictionary.keys())
+    assert 10 == len(dictionary.keys())
     assert 0 == dictionary['traceLevel']
     assert dictionary['frameMode'] is False
     assert dictionary['multiThreadedDeserialization'] is False
@@ -446,6 +446,27 @@ def test_one_sweep(tmpdir):
         mb = source.next_minibatch(100, input_map)
 
         assert not mb
+
+def test_random_seed(tmpdir):
+    ctf = create_ctf_deserializer(tmpdir)
+    sources = [MinibatchSource(ctf),
+               MinibatchSource(ctf, randomization_seed=123),
+               MinibatchSource(ctf, randomization_seed=0),
+               MinibatchSource(ctf, randomization_seed=1)]
+
+    data = []
+
+    for source in sources:
+        input_map = {'features': source['features']}
+
+        mb = source.next_minibatch(100, input_map)
+        data.append(mb['features'].asarray())
+
+    assert not (data[0] == data[1]).all()
+    assert (data[0] == data[2]).all()
+    # after the first sweep (= 4 samples), the first reader is seeded 
+    # with 1, and should produce results identical to the last reader.
+    assert (data[0][4:] == data[3][:-4]).all()
 
 
 def test_large_minibatch(tmpdir):

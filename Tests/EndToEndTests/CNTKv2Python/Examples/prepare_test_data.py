@@ -77,7 +77,6 @@ def prepare_Grocery_data():
                              *"../../../../Examples/Image/DataSets/Grocery".split("/"))
     base_path = os.path.normpath(base_path)
 
-    # If val1024_map.txt don't exist locally, copy to local location
     if not os.path.isfile(os.path.join(base_path, 'test.txt')):
         # copy from backup location
         base_path_bak = os.path.join(os.environ[envvar],
@@ -89,6 +88,23 @@ def prepare_Grocery_data():
         with zipfile.ZipFile(zip_path) as myzip:
             myzip.extractall(os.path.join(base_path, '..'))
 
+    return base_path
+
+
+def prepare_fastrcnn_grocery_100_model():
+    base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             *"../../../../Examples/Image/PretrainedModels".split("/"))
+    base_path = os.path.normpath(base_path)
+
+    if not os.path.isfile(os.path.join(base_path, 'Fast-RCNN_grocery100.model')):
+        # copy from backup location
+        base_path_bak = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
+                                     *"PreTrainedModels/FRCN_Grocery/v0".split("/"))
+        base_path_bak = os.path.normpath(base_path_bak)
+
+        model_file_path = os.path.join(base_path, 'Fast-RCNN_grocery100.model')
+        copyfile(os.path.join(base_path_bak, 'Fast-RCNN_grocery100.model'), model_file_path)
+        print("copied model")
     return base_path
 
 def an4_dataset_directory():
@@ -129,3 +145,4 @@ def prepare_animals_data():
     dst_file = "Examples/Image/DataSets/Animals/Animals.zip"
     
     _data_copier([src_file], [dst_file])
+

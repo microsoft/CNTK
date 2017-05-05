@@ -198,7 +198,7 @@ def sanitize_value(shape, value, dtype, device):
 
 def sanitize_function(arg):
     '''
-    Tries to retrieve a Function from the argument or throws an exception if
+    Tries to retrieve a Function from the argument or raises a TypeError if
     that's not possible.
     '''
     from cntk.ops import combine
@@ -213,6 +213,36 @@ def sanitize_function(arg):
                         str(type(arg)))
 
     return arg
+
+
+def sanitize_variable_or_function(arg):
+    '''
+    Tries to retrieve a Variable or Function from the argument or raises a
+    TypeError if that's not possible.
+    '''
+    if isinstance(arg, (cntk_py.Variable, cntk_py.Function)):
+        return arg
+    else:
+        raise TypeError("expected an instance of Variable or single-output "
+                        "Function, but got '%s' instead" % str(type(arg)))
+
+
+def sanitize_variables_or_functions(arg):
+    '''
+    Tries to retrieve a list of Variables or Functions from the argument or
+    throws an exception if that's not possible. If `arg` is not an iterable, it
+    tries to return a list of a single item of the Variable or Function, or
+    raises a TypeError, if that's possible.
+    '''
+    if isinstance(arg, collections.Iterable):
+        try:
+            return [sanitize_variable_or_function(o) for o in arg]
+        except TypeError:
+            raise TypeError("expected list of Variables or single-output "
+                            "Functions, but got [%s] instead" %
+                            ', '.join(str(type(o)) for o in arg))
+    else:
+        return [sanitize_variable_or_function(arg)]
 
 
 def sanitize_var_map(op_arguments, arguments, precision=None,
@@ -496,6 +526,25 @@ def sanitize_Function_attributes(attributes):
         attributes['autoPadding'] = list(reversed(attributes['autoPadding']))
 
     return attributes
+    
+def sanitize_permutation(perm):
+    # Find the permutation such that when it is applied to the reverse 
+    # of an input gives the reverse of perm applied to the input
+    # Example: 
+    # input is [a, b, c, d], perm is [3, 0, 2, 1], perm of input is [d, a, c, b]
+    # we are looking for [2, 1, 3, 0] because when we apply it to [d, c, b, a]
+    # the result is [b, c, a, d] which is the revese of [d, a, c, b]
+
+    n = len(perm)
+    # first make sure the range of each element is valid
+    if not all(-n <= i < n for i in perm):
+        raise ValueError('invalid permutation element: elements must be from {-len(perm), ..., len(perm)-1}')
+    # next take care of negative indices
+    positive_perm = [perm[i] if perm[i]>=0 else n+perm[i] for i in range(n)]
+    # check for duplicates
+    if n != len(set(positive_perm)):
+        raise ValueError('duplicate item in permutation')
+    return [n-i-1 for i in reversed(positive_perm)]
 
 def memoize(func):
     class memodict(dict):

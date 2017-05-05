@@ -1754,7 +1754,7 @@ void Matrix<ElemType>::FSAdagradUpdate(size_t mbSize,
 ///
 template <class ElemType>
 void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
-    const double learnRatePerSample, const double meanMomentum, const double varMomentum, bool unitGainMomentum)
+    const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, bool unitGainMomentum)
 {
     smoothedCount++;
     // Bias correction
@@ -1764,19 +1764,19 @@ void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>&
     {
         m_CPUMatrix->Adam(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix,
         (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
-        biasCorrection, unitGainMomentum);
+        biasCorrection, (ElemType)epsilon, unitGainMomentum);
         SetDataLocation(CPU);
     },
     {
         m_GPUMatrix->Adam(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix,
         (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
-        biasCorrection, unitGainMomentum);
+        biasCorrection, (ElemType)epsilon, unitGainMomentum);
         SetDataLocation(GPU);
     },
     { NOT_IMPLEMENTED; },
     { gradients.m_GPUSparseMatrix->Adam(*m_GPUMatrix, *functionValues.m_GPUMatrix, 
         (ElemType)learnRatePerSample, (ElemType)meanMomentum, 
-        (ElemType)varMomentum, biasCorrection, unitGainMomentum); 
+        (ElemType)varMomentum, biasCorrection, (ElemType)epsilon, unitGainMomentum); 
         SetDataLocation(GPU); });
 
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
@@ -3342,6 +3342,37 @@ Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, vect
         m_CPUSparseMatrix->AssignOneHot(*a.m_CPUMatrix, shape, axis),
         m_GPUSparseMatrix->AssignOneHot(*a.m_GPUMatrix, shape, axis)
         );
+    
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::GatherFromTarget(const Matrix<ElemType>& indices, const Matrix<ElemType>& target, size_t row_elements)
+{
+    if (indices.IsEmpty() || target.IsEmpty())
+        LogicError("GatherFromTarget: Input matrix is empty.");
+
+    DISPATCH_MATRIX_ON_FLAG(&indices,
+                            this,
+                            m_CPUMatrix->GatherFromTarget(*indices.m_CPUMatrix, *target.m_CPUMatrix, row_elements),
+                            m_GPUMatrix->GatherFromTarget(*indices.m_GPUMatrix, *target.m_GPUMatrix, row_elements),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::ScatterToIndices(const Matrix<ElemType>& values, const Matrix<ElemType>& indices, size_t row_elements)
+{
+    if (indices.IsEmpty() || values.IsEmpty())
+        LogicError("ScatterAccordingIndices: input matrix is empty.");
+    
+    DISPATCH_MATRIX_ON_FLAG(&values,
+                            this,
+                            m_CPUMatrix->ScatterToIndices(*values.m_CPUMatrix, *indices.m_CPUMatrix, row_elements),
+                            m_GPUMatrix->ScatterToIndices(*values.m_GPUMatrix, *indices.m_GPUMatrix, row_elements),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
 
     return *this;
 }
@@ -5817,7 +5848,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothin
 //      delayConstraint=-1 means no constraint
 template<class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
-    const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, ElemType &totalScore, const std::vector<size_t> & uttToChanInd,
+    const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, Matrix<ElemType> &totalScore, const std::vector<size_t> & uttToChanInd,
     const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum, const std::vector<size_t> & uttPhoneNum,
     const size_t numParallelSequences, const size_t mbsize, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
 {
@@ -5833,9 +5864,9 @@ Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob,
 
     DISPATCH_MATRIX_ON_FLAG(&prob,
         this,
-        this->m_CPUMatrix->AssignCTCScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, totalScore,
+        this->m_CPUMatrix->AssignCTCScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, *totalScore.m_CPUMatrix,
             uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, isColWise),
-        this->m_GPUMatrix->AssignCTCScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, totalScore,
+        this->m_GPUMatrix->AssignCTCScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, *totalScore.m_GPUMatrix,
             uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, isColWise),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED

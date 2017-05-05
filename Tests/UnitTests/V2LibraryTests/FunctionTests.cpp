@@ -35,7 +35,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
 
             bool reduceAll = (reductionAxis < 0);
             if (reduceAll)
-                reduceSumFunc = ReduceSum(inputVar);
+                reduceSumFunc = ReduceSum(inputVar, Axis::AllAxes());
             else
                 reduceSumFunc = ReduceSum(inputVar, Axis(useNegativeAxisIndex ? (reductionAxis - (int)sampleRank) : reductionAxis));
 
@@ -297,7 +297,7 @@ void TestRecurrentFunctionCloning()
     auto placeholderReplacement = PastValue(plusOutput);
     plusOutput = plusOutput->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
 
-    auto reducedOutput = ReduceSum(plusOutput, L"sum");
+    auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
     auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
 
     std::unordered_set<FunctionPtr> visitedFunctions;
@@ -671,7 +671,7 @@ void TestRecurrenceShapeInference()
         auto placeholderReplacement = PastValue(plusOutput);
         plusOutput = plusOutput->ReplacePlaceholders({ { recurrenceForwardReference, placeholderReplacement } });
 
-        auto reducedOutput = ReduceSum(plusOutput, L"sum");
+        auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
         auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
 
         auto inputVar = InputVariable(inputShape, false, DataType::Float, true, L"input", { Axis::NewUniqueDynamicAxis(L"inputSequence"), Axis::DefaultBatchAxis() });

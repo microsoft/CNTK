@@ -14,15 +14,18 @@ import cntk as C
 from ..functions import *
 from ...train.trainer import *
 from ...initializer import glorot_uniform
-from .. import constant, parameter, input, placeholder, times, plus, sequence, as_composite, combine, convolution, splice, as_block
+from .. import constant, parameter, input, placeholder, times, plus, sequence,\
+        as_composite, combine, convolution, splice, as_block, alias
 from ... import InferredDimension, gpu, cpu
 from .ops_test_utils import compare_lists_of_np_arrays, AA, cntk_device
 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDefs, StreamDef
 
+
 def test_variable_forwarding():
     op = constant(value=2, shape=(3,4)) + 1
     assert op.shape == (3,4)
+
 
 def test_eval_by_node_name():
     i = input(shape=(1,), needs_gradient=True, name='i')
@@ -36,26 +39,31 @@ def test_eval_by_node_name():
 def test_replace_placeholders():
     p = placeholder(shape=(1,))
     i = input(shape=(1,),
-                       needs_gradient=True,
-                       name='i')
+              needs_gradient=True,
+              name='i')
     res = p + 3
     res.replace_placeholders({p: i})
 
     assert res.eval({i: [[3]]}) == [6]
 
-    if False:
-        res2 = p + 2
-        from .. import plus
-        func = plus(res2, 10)
-        res2.replace_placeholders({p: func.output})
+    func = plus(i, 10)
+    res2 = p + 3
+    res2.replace_placeholders({p: func.output})
 
-        assert res2.eval({i: [3]}) == [15]
+    assert res2.eval({i: [[3]]}) == [16]
+
+    func = plus(i, 11)
+    res3 = p + 3
+    res3.replace_placeholders({p: func})
+
+    assert res3.eval({i: [[3]]}) == [17]
+
 
 def test_cloning():
     p = placeholder(shape=(1,), name='p')
     i = input(shape=(1,),
-                       needs_gradient=True,
-                       name='i')
+              needs_gradient=True,
+              name='i')
     res = p + i
 
     with pytest.raises(ValueError):
@@ -366,7 +374,7 @@ def test_output_subset_evaluation(device_id):
         parameter_device = cpu()
     p = parameter(shape=(1), init=glorot_uniform(), device=parameter_device)
     op2 = (x2 - constant(value=10, shape=(1), device=device)) - p
-    
+
     op = combine([op1, op2]);
 
     _, result = op.forward({x1 : np.asarray([1, 2, 3])}, [op1], device=device)
@@ -385,7 +393,7 @@ def test_block_with_unused_outputs():
     input_var1 = input(shape=())
     input_var2 = input(shape=())
     block = as_block(combine([func1, func3]), [(p3, input_var1), (p5, input_var2)], 'multi_output_block')
-    
+
     eval_root = combine([block.outputs[0]])
     result = eval_root.eval({input_var1 : np.asarray([3], dtype=np.float32), input_var2 : np.asarray([-3], dtype=np.float32)})
     assert np.array_equal(result, [[ 4.]])
@@ -411,16 +419,6 @@ def test_update_signature():
 
     assert f.outputs[0].shape == (input_dim,)
     assert f.x.shape == (input_dim,)
-
-
-def test_transpose_0d_1d_operands():
-    x1 = C.input(())
-    with pytest.raises(ValueError):
-        transpose_0d = C.transpose(x1)
-
-    x2 = C.input(2)
-    with pytest.raises(ValueError):
-        transpose_1d = C.transpose(x2)
 
 
 def test_eval_again_with_prev_outputs_live(device_id):
@@ -456,7 +454,7 @@ def test_eval_again_with_prev_outputs_live(device_id):
     # is now erased, due to the subsequent eval call
     with pytest.raises(RuntimeError):
         assert np.array_equal(result1[out1.output].asarray(), [[3, 6]])
-    
+
     grad_op = out1 + out2
     grad1 = grad_op.grad({x : np.asarray([2, 5], dtype=np.float32)}, wrt=[w1, w2], device=dev)
     assert np.array_equal(grad1[w1], [2])
@@ -482,3 +480,26 @@ def test_eval_again_with_prev_outputs_live(device_id):
     # is now erased, due to the subsequent grad call
     with pytest.raises(RuntimeError):
         assert np.array_equal(grad1[w1].asarray(), [2])
+
+
+def test_outputs_passing():
+    in1 = input(shape=(1,))
+    a = alias(in1 + 1, name='a')
+    b = a + 2
+
+    expected = [[2], [3]]
+
+    result = b.eval({in1: [[1], [2]]}, outputs=a.outputs)
+    assert np.array_equal(result, expected)
+    
+    result = b.eval({in1: [[1], [2]]}, outputs=list(a.outputs))
+    assert np.array_equal(result, expected)
+    
+    result = b.eval({in1: [[1], [2]]}, outputs=a.output)
+    assert np.array_equal(result, expected)
+    
+    result = b.eval({in1: [[1], [2]]}, outputs=a)
+    assert np.array_equal(result, expected)
+    
+    with pytest.raises(TypeError):
+        b.eval({in1: [[1], [2]]}, outputs=[a.outputs])
