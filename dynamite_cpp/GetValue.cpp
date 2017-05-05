@@ -125,11 +125,11 @@ class Memoize
     };
     ReadyOps m_schedule;
 
-    // traverse the tree hanging off a Variable and
+    // recursively traverse the tree hanging off a Variable and
     //  - prepare all nodes for batched execution
     //  - schedule all ready operations
     // TODO: Once we are in the main build, change all Function to PrimitiveFunction directly.
-    void RTraverseOwner(const Variable& v)
+    void TraverseOwnerTree(const Variable& v)
     {
         let& fields = *v.m_dataFields;
         if (fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder)
@@ -153,7 +153,7 @@ class Memoize
             let& fields = *v.m_dataFields;
             if (!fields.m_value)
             {
-                RTraverseOwner(v);
+                TraverseOwnerTree(v);
                 if (!fields.m_value) // (in case of a Parameter, we now may have a value)
                 {
                     // no need for anything ref-counted since this is a local temp variable
@@ -173,7 +173,7 @@ class Memoize
     size_t m_numBatches = 0;
 
     // batch-execute a set of ops that are known to be batchable
-    void ExecuteBatchedAndUpdateSchedule(const deque<Function*>& ops)
+    void ExecuteBatchedOpAndUpdateSchedule(const deque<Function*>& ops)
     {
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
         // get a representative op
@@ -195,15 +195,17 @@ class Memoize
                 if (!m_args[i])
                     throw logic_error("input unexpectedly not available");
             }
-            auto out = NDArrayViewPtr();
+            NDArrayViewPtr out; // arena allocation will happen here
             op->m_outputs[0].m_dataFields->m_value =
                 op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
         }
 #else
         // batch all arguments
         // create a new PrimitiveFunction that executes this operation
-        // compute its Value   --TODO: we need a lower-level executor that just takes the op and the inputs' TensorViews?
-        auto out = NDArrayViewPtr();
+        // compute its Value   --TODO: we need a lower-level executor that just takes the op, inputs, and attributes?
+        // we can point to one of the ops for all info but the batched inputs
+        // but then how do we bach-prop if we don't have an actual
+        NDArrayViewPtr out;
         f0.ComputeKnowableValue(f0.Op(), args, f0.Attributes(), shape, move(out));
         // distribute the results to ops[]
 #endif
@@ -231,7 +233,7 @@ public:
         if (!fields.m_value)
         {
             // prepare and schedule first set
-            RTraverseOwner(v);
+            TraverseOwnerTree(v);
             // compute the entire graph
             deque<Function*> opBatch;
             while (!m_schedule.empty())
@@ -239,15 +241,10 @@ public:
                 // select the best amongst the scheduled ops
                 m_schedule.pop_best(opBatch);
                 // execute it, and also update all outputs' values and consumers, and the schedule 
-                ExecuteBatchedAndUpdateSchedule(opBatch);
+                ExecuteBatchedOpAndUpdateSchedule(opBatch);
             }
-            v.Value(); // old code--will disappear
         }
         return fields.m_value;
-    }
-
-    Memoize()
-    {
     }
 }; // class
 } // namespace
@@ -258,7 +255,7 @@ CNTK::NDArrayViewPtr GetValue(const CNTK::Variable& v)
     // naive version
     return v.Value();
 #else
-    auto getValue = CNTK::Memoize();
+    auto getValue = CNTK::Memoize(); // has some internal state
     return getValue(v);
 #endif
 }
