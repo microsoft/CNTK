@@ -38,12 +38,13 @@ def create_trainer(to_train, epoch_size, minibatch_size, num_quantization_bits, 
     if block_size != None and num_quantization_bits != 32:
         raise RuntimeError("Block momentum cannot be used with quantization, please remove quantized_bits option.")
 
-    lr_schedule = cntk.learning_rate_schedule([0.001] * 60 + [0.0001] * 30 + [0.00001], cntk.learners.UnitType.sample,
+    lr_schedule = cntk.learning_rate_schedule(par_lr_schedule, cntk.learners.UnitType.sample,
                                               epoch_size)
-    mm_schedule = cntk.learners.momentum_as_time_constant_schedule([-minibatch_size / np.log(0.9)], epoch_size)
+    mm_schedule = cntk.learners.momentum_as_time_constant_schedule([-minibatch_size / np.log(par_momentum)], epoch_size)
 
     # Instantiate the trainer object to drive the model training
-    local_learner = cntk.learners.momentum_sgd(to_train['output'].parameters, lr_schedule, mm_schedule, unit_gain=True,
+    #local_learner = cntk.learners.adam( to_train['output'].parameters, lr_schedule, mm_schedule, l2_regularization_weight=0.0005)
+    local_learner = cntk.learners.momentum_sgd(to_train['output'].parameters, lr_schedule, mm_schedule, unit_gain=False,
                                          l2_regularization_weight=0.0005)
 
     # Create trainer
@@ -54,7 +55,7 @@ def create_trainer(to_train, epoch_size, minibatch_size, num_quantization_bits, 
                                                               num_quantization_bits=num_quantization_bits,
                                                               distributed_after=warm_up)
 
-    return cntk.Trainer(to_train['output'], (to_train['mse'], to_train['mse']), parameter_learner, printer)
+    return cntk.Trainer(None, (to_train['mse'], to_train['mse']), parameter_learner, printer)
 
 
 # Train and test
@@ -71,19 +72,19 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         model_inputs_to_streams=input_map,
         mb_size=minibatch_size,
         progress_frequency=epoch_size,
-        checkpoint_config=None, #CheckpointConfig(filename=os.path.join(model_path, model_name), restore=restore),
+        checkpoint_config=None, # CheckpointConfig(filename=os.path.join(model_path, model_name), restore=restore),
         test_config=TestConfig(source=test_source, mb_size=minibatch_size)
     ).train()
 
 
 # Train and evaluate the network.
-def yolov2_train_and_eval(image_file, gtb_file, num_quantization_bits=32, block_size=3200, warm_up=0,
+def yolov2_train_and_eval(network, image_file, gtb_file, num_quantization_bits=32, block_size=3200, warm_up=0,
                            minibatch_size=64, epoch_size=5000, max_epochs=1,
                            restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=True):
     _cntk_py.set_computation_network_trace_level(0)
 
     progress_printer = ProgressPrinter(
-        freq=num_mbs_per_log,
+        freq=num_mbs_per_log if num_mbs_per_log is not None else int(epoch_size/10),
         tag='Training',
         log_to_file=log_to_file,
         rank=Communicator.rank(),
@@ -91,38 +92,12 @@ def yolov2_train_and_eval(image_file, gtb_file, num_quantization_bits=32, block_
         num_epochs=max_epochs)
 
 
-    model = yolo2.create_yolov2_net()
-
-    image_input = input((par_num_channels, par_image_height, par_image_width))
-    output = model(image_input)  # append model to image input
-
-    # input for ground truth boxes
-    num_gtb = par_max_gtbs
-    gtb_input = input((num_gtb * 5))  # 5 for class, x,y,w,h
-
-
-    training_model = user_function(TrainFunction2(output, gtb_input))
-
-    err = TrainFunction2.make_wh_sqrt(output) - TrainFunction2.make_wh_sqrt(
-        training_model.outputs[0])  # substrac "goal" --> error
-    sq_err = err * err
-    sc_err = sq_err * training_model.outputs[1]  # apply scales (lambda_coord, lambda_no_obj, zeros on not learned params)
-    mse = cntk.ops.reduce_mean(sc_err, axis=Axis.all_static_axes())
-
-    network = {
-        'feature' : image_input,
-        'gtb_in' : gtb_input,
-        'mse' : mse,
-        'output' : output
-    }
-
-
     trainer = create_trainer(network, epoch_size, minibatch_size, num_quantization_bits, progress_printer, block_size, warm_up)
     train_source = create_image_mb_source(image_file, gtb_file, True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(image_file, gtb_file, False, total_number_of_samples=FULL_DATA_SWEEP)
     train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore)
 
-    return mse
+    return network['output']
 
 
 if __name__ == '__main__':
@@ -174,11 +149,43 @@ if __name__ == '__main__':
     test_data = os.path.join(data_path, 'trainval2007_rois_center_rel.txt')
 
     output = None
+
+    ####################################################################################################################
+    model = yolo2.create_yolov2_net()
+
+    image_input = input((par_num_channels, par_image_height, par_image_width))
+    output = model(image_input)  # append model to image input
+
+    # input for ground truth boxes
+    num_gtb = par_max_gtbs
+    gtb_input = input((num_gtb * 5))  # 5 for class, x,y,w,h
+    ud_tf = TrainFunction2(output, gtb_input)
+    training_model = user_function(ud_tf)
+
+    # err = TrainFunction2.make_wh_sqrt(output) - TrainFunction2.make_wh_sqrt(
+    #    training_model.outputs[0])  # substrac "goal" --> error
+    err = training_model.outputs[0] - output
+    sq_err = err * err
+    sc_err = sq_err * training_model.outputs[
+        1]  # apply scales (lambda_coord, lambda_no_obj, zeros on not learned params)
+    mse = cntk.ops.reduce_mean(sc_err, axis=Axis.all_static_axes())
+
+    network = {
+        'feature': image_input,
+        'gtb_in': gtb_input,
+        'mse': mse,
+        'output': output,
+        'trainfunction': ud_tf
+    }
+
+    ####################################################################################################################
+
     try:
-        output = yolov2_train_and_eval(train_data, test_data,
+        logdir = args['logdir']
+        output = yolov2_train_and_eval(network, train_data, test_data,
                                max_epochs=args['num_epochs'],
                                restore=not args['restart'],
-                               log_to_file=args['logdir'],
+                               log_to_file=os.path.join(logdir, "logsrank0_1") if logdir is not None else None,
                                num_mbs_per_log=50,
                                num_quantization_bits=args['quantized_bits'],
                                block_size=args['block_samples'],
@@ -186,6 +193,31 @@ if __name__ == '__main__':
                                minibatch_size=args['minibatch_size'],
                                epoch_size=args['epoch_size'],
                                gen_heartbeat=True)
+        network['trainfunction'].set_lambda_coord(50)
+        output = yolov2_train_and_eval(network, train_data, test_data,
+                                       max_epochs=args['num_epochs'],
+                                       restore=not args['restart'],
+                                       log_to_file=os.path.join(logdir, "logsrank0_2") if logdir is not None else None,
+                                       num_mbs_per_log=50,
+                                       num_quantization_bits=args['quantized_bits'],
+                                       block_size=args['block_samples'],
+                                       warm_up=args['distributed_after'],
+                                       minibatch_size=args['minibatch_size'],
+                                       epoch_size=args['epoch_size'],
+                                       gen_heartbeat=True)
+        network['trainfunction'].set_lambda_coord(5)
+        output = yolov2_train_and_eval(network, train_data, test_data,
+                                       max_epochs=args['num_epochs'],
+                                       restore=not args['restart'],
+                                       log_to_file=os.path.join(logdir, "logsrank0_3") if logdir is not None else None,
+                                       num_mbs_per_log=50,
+                                       num_quantization_bits=args['quantized_bits'],
+                                       block_size=args['block_samples'],
+                                       warm_up=args['distributed_after'],
+                                       minibatch_size=args['minibatch_size'],
+                                       epoch_size=args['epoch_size'],
+                                       gen_heartbeat=True)
+
     finally:
         cntk.train.distributed.Communicator.finalize()
         print("Training finished!")

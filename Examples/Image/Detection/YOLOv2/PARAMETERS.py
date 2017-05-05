@@ -13,7 +13,7 @@ par_dataset_name = "Pascal_VOC_2007"
 par_trainset_label_file = "train_map.txt"
 par_testset_label_file = "test_map.txt"
 par_abs_path = os.path.dirname(os.path.abspath(__file__))
-par_max_epochs = 1
+par_max_epochs = 100
 par_downsample = 32
 par_max_gtbs = 50
 
@@ -46,7 +46,7 @@ elif(par_dataset_name == "Pascal_VOC_2007"):
     par_num_channels = 3
     par_num_classes = 20
     par_num_images = 500
-    par_epoch_size = 5
+    par_epoch_size = 5011
 
 par_anchorbox_scales =  [[1.08/13, 1.19/13],
                          [3.42/13, 4.41/13],
@@ -54,5 +54,9 @@ par_anchorbox_scales =  [[1.08/13, 1.19/13],
                          [9.42/13, 5.11/13],
                          [16.62/13, 10.52/13]]
 par_num_anchorboxes = len(par_anchorbox_scales)
+
+par_base_lr = 0.0001/500
+par_lr_schedule = [par_base_lr] * 60 + [par_base_lr*0.1] * 30 + [par_base_lr*0.01]
+par_momentum = 0.9
 
 
