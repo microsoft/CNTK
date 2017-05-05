@@ -11,11 +11,12 @@ import platform
 import pytest
 import gym
 
-# Skip test if not on Linx as Atari Learning Env is not available
+# Skip test if not on Linux as Atari Learning Env is not available
+
 
 def test_deep_q_neural_network(device_id):
     if platform.system() != 'Linux':
-        pytest.skip('test only run on Linux (Gym Atari dependency)')
+        pytest.skip('test only runs on Linux (Gym Atari dependency)')
 
     abs_path = os.path.dirname(os.path.abspath(__file__))
     sys.path.append(abs_path)
@@ -30,7 +31,7 @@ def test_deep_q_neural_network(device_id):
     # 2. Make agent
     agent = dqn.DeepQAgent((4, 84, 84), env.action_space.n, train_after=100, memory_size=1000, monitor=False)
 
-    # Train
+    # 3. Train
     current_step = 0
     max_steps = 1000
     current_state = dqn.as_ale_input(env.reset())
