@@ -55,15 +55,45 @@ class Memoize
         }
     };
 
-    unordered_map<Key, deque<Function*>> m_scheduledOps; // set of ready operations, batched
-
-    // schedule an operation that has been confirmed ready
-    void Schedule(Function* fp)
+    // class to manage the set of ready operations (the schedule)
+    class ReadyOps
     {
-        auto key = Key("*fp");
-        key[0] = (wchar_t)fp->Op();
-        m_scheduledOps[move(key)].push_back(fp);
-    }
+        vector<deque<Function*>> m_allOps;
+        static bool IsBatchableWith(const Function* a, const Function* b)
+        {
+            return a->Op() == b->Op(); // ... for now (won't actually work)
+        }
+    public:
+        // schedule an operation that has been confirmed ready
+        void Schedule(Function* fp)
+        {
+            // this naive implementation just scans linearly
+            // scan through all op sets to see if one is batchable with 'fp'
+            for (auto iter = m_allOps.begin(); iter != m_allOps.end(); iter++)
+            {
+                if (IsBatchableWith(fp, iter->front()))
+                {
+                    iter->push_back(fp);
+                    return;
+                }
+            }
+            // none fit: open a new set
+            m_allOps.push_back(deque<Function*>{ fp });
+        }
+        bool empty() const { return m_allOps.empty(); }
+        void pop_best(deque<Function*>& out)
+        {
+            // TODO: add priority for Barrier()
+            auto best = m_allOps.begin();
+            for (auto iter = best+1; iter != m_allOps.end(); iter++)
+                if (iter->size() > best->size())
+                    best = iter;
+            // and remove this one from the list
+            out = move(*best);
+            m_allOps.erase(best); // TODO: suboptimal complexity; a list in a self-allocated container would do
+        }
+    };
+    ReadyOps m_schedule;
 
     // traverse the tree hanging off a Variable and
     //  - prepare all nodes for batched execution
@@ -105,23 +135,24 @@ class Memoize
         f.m_pendingInputs = (int)pendingInputs;
         // if none then operation is ready
         if (pendingInputs == 0)
-            Schedule(&f); // add to ready set
+            m_schedule.Schedule(&f); // add to ready set
     }
 
     vector<Variable> m_inputs;
     vector<NDArrayViewPtr> m_args;
+    size_t m_numBatches = 0;
 
     // batch-execute a set of ops that are known to be batchable
-    void ExecuteBatchedAndUpdateSchedule(const deque<Function*>&& ops)
+    void ExecuteBatchedAndUpdateSchedule(const deque<Function*>& ops)
     {
-        // TODO: need to handle ops that have >1 output, such as Combine()
+        // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
         // get a representative op
         let& f0 = *ops.front();
-        fprintf(stderr, "executing %d instances of %S\n", (int)ops.size(), f0.OpName().c_str());
+        fprintf(stderr, "%d executing %d instances of %S\n", (int)++m_numBatches, (int)ops.size(), f0.OpName().c_str());
         m_inputs.resize(f0.m_inputs.size());
         m_args.resize(f0.m_inputs.size());
 #if 1
-        // for testing, compute them separately
+        // for correctness testing of underlying mechanism, compute them without actual batching
         for (let& op : ops)
         {
             if (op->m_outputs.size() != 1)
@@ -156,7 +187,7 @@ class Memoize
                 f->m_pendingInputs--;
                 // if it is now ready then schedule it
                 if (f->m_pendingInputs == 0)
-                    Schedule(f);
+                    m_schedule.Schedule(f);
             }
         }
     }
@@ -171,20 +202,14 @@ public:
         {
             // prepare and schedule first set
             RTraverseOwner(v);
-            // process everything
-            while (!m_scheduledOps.empty())
+            // compute the entire graph
+            deque<Function*> opBatch;
+            while (!m_schedule.empty())
             {
                 // select the best amongst the scheduled ops
-                // TODO: add priority for Barrier()
-                auto best = m_scheduledOps.begin();
-                for (auto iter = best; iter != m_scheduledOps.end(); iter++)
-                    if (iter->second.size() > best->second.size())
-                        best = iter;
-                // and remove this one from the list
-                auto opBatch = move(best->second);
-                m_scheduledOps.erase(best);
+                m_schedule.pop_best(opBatch);
                 // execute it, and also update all outputs' values and consumers, and the schedule 
-                ExecuteBatchedAndUpdateSchedule(move(opBatch));
+                ExecuteBatchedAndUpdateSchedule(opBatch);
             }
             v.Value(); // old code--will disappear
         }
