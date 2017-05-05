@@ -19,12 +19,6 @@ public class Main {
     public static void main(String[] args) throws IOException {
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
 
-        String libName = "Cntk.Core.JavaBinding-2.0rc2";
-        if (args[0].equals("debug")) {
-            libName += 'd';
-        }
-        System.loadLibrary(libName);
-
         DeviceDescriptor device = DeviceDescriptor.UseDefaultDevice();
         File dataPath = new File(args[1]);
 
