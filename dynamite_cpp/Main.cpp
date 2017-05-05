@@ -598,7 +598,15 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto criterion = criterion_fn(features, labels); // this sets the shapes
     auto loss   = criterion;
     //auto metric = criterion.second;
-    
+
+    // tie model parameters
+    d_model_fn.Nested(L"embed" )[L"E"].TieValueWith(model_fn.Nested(L"[0]")[L"E"]                );
+    d_model_fn.Nested(L"step"  )[L"W"].TieValueWith(model_fn.Nested(L"[1]").Nested(L"step")[L"W"]);
+    d_model_fn.Nested(L"step"  )[L"R"].TieValueWith(model_fn.Nested(L"[1]").Nested(L"step")[L"R"]);
+    d_model_fn.Nested(L"step"  )[L"b"].TieValueWith(model_fn.Nested(L"[1]").Nested(L"step")[L"b"]);
+    d_model_fn.Nested(L"linear")[L"W"].TieValueWith(model_fn.Nested(L"[2]")[L"W"]                );
+    d_model_fn.Nested(L"linear")[L"b"].TieValueWith(model_fn.Nested(L"[2]")[L"b"]                );
+
     // train
     auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
     auto trainer = CreateTrainer(nullptr, loss, loss/*metric*/, { learner });
@@ -635,32 +643,20 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         //mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value()->AsScalar<float>();
         //let s2sLoss = Batch::sum(Batch::Map(d_model_fn1)(vargs[0], vargs[0])); // for now auto-encoder
         //s2sLoss.Value();
-
-    // tie model parameters
-    d_model_fn.Nested(L"embed" )[L"E"].TieValueWith(model_fn.Nested(L"[0]")[L"E"]                  );
-    d_model_fn.Nested(L"step"  )[L"W"].TieValueWith(model_fn.Nested(L"[1]").Nested(L"step"  )[L"W"]);
-    d_model_fn.Nested(L"step"  )[L"R"].TieValueWith(model_fn.Nested(L"[1]").Nested(L"step"  )[L"R"]);
-    d_model_fn.Nested(L"step"  )[L"b"].TieValueWith(model_fn.Nested(L"[1]").Nested(L"step"  )[L"b"]);
-    d_model_fn.Nested(L"linear")[L"W"].TieValueWith(model_fn.Nested(L"[2]")[L"W"]                  );
-    d_model_fn.Nested(L"linear")[L"b"].TieValueWith(model_fn.Nested(L"[2]")[L"b"]                  );
-        let& x = d_model_fn.Nested(L"embed")[L"E"];
-        let& y = model_fn.Nested(L"[0]")[L"E"];
-        LogVal(x);
-        LogVal(y);
         for (size_t xxx = 0; xxx < 1; xxx++)
         {
             // compute not directly comparable due to (1) no batching and (2) sparse, which may be expensive w.r.t. slicing, or not
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "d_criterion_fn: %.6f sec\n");
             mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
@@ -679,17 +675,19 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             //mbLoss.Value()->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
-            // looks like it is computing something in a meaningful range
+        }
+        {
+            Microsoft::MSR::CNTK::ScopeTimer timer(3, "dynamite eval:  %.6f sec\n");
             fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", mbLoss.Value()->AsScalar<float>() / minibatchData[featureStreamInfo].numberOfSequences);
         }
 #endif
 #if 1
         // static CNTK
-        trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-        double crit = trainer->PreviousMinibatchLossAverage();
+        //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+        double crit;// = trainer->PreviousMinibatchLossAverage();
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "CNTK static:    %.6f sec\n");
-            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
+            trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
             //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
             //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
             //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
