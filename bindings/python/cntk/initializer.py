@@ -178,3 +178,23 @@ def initializer_with_rank(initializer, output_rank=None, filter_rank=None):
     if filter_rank is None:
         filter_rank = SentinelValueForInferParamInitRank
     return cntk_py.random_initializer_with_rank(initializer, output_rank, filter_rank)
+
+
+def truncated_gaussian(stdev, seed=None):
+    '''
+    Truncated Gaussian initializer. The resulting values are drawn from 
+    a truncated Gaussian distribution and are always within two 
+    standard deviations from the mean (which is 0).
+
+    Args:
+        stdev (float): standard deviation
+        seed (int): random seed
+
+    Returns:
+        initializer for :class:`~cntk.variables.Parameter`
+        initialized to truncated Gaussian distribution between `2*stdev[-1, 1]`
+    '''
+    if seed is None:
+        seed = SentinelValueForAutoSelectRandomSeed
+
+    return cntk_py.truncated_gaussian_initializer(stdev, seed)

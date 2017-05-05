@@ -354,6 +354,11 @@ namespace CNTK
         return newInitializerWithRanks;
     }
 
+    ParameterInitializer TruncatedGaussianInitializer(double scale, unsigned long seed)
+    {
+        return CreateInitializer(Microsoft::MSR::CNTK::TruncGaussianInitializerTypeName, scale, seed);
+    }
+
     Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
         : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, std::weak_ptr<Function>(), value, needsGradient, dynamicAxes, isSparse, name, uid))
     {}
@@ -385,7 +390,8 @@ namespace CNTK
 
             auto scale = initConfig[ScaleAttributeName].Value<double>();
             int outputRank = DefaultParamInitOutputRank, filterRank = DefaultParamInitFilterRank;
-            if (initializerType != Microsoft::MSR::CNTK::UniformInitializerTypeName)
+            if (initializerType != Microsoft::MSR::CNTK::UniformInitializerTypeName && 
+                initializerType != Microsoft::MSR::CNTK::TruncGaussianInitializerTypeName)
             {
                 outputRank = initConfig[OutputRankAttributeName].Value<int>();
                 filterRank = initConfig[FilterRankAttributeName].Value<int>();

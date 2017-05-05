@@ -1090,6 +1090,11 @@ void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
 {
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::SetTruncatedGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+{
+}
+
 //maskRate: percentage of values masked out (similar to dropout rate)
 //scaleValue: which scale value to set to the left ones (unmasked items).
 template <class ElemType>

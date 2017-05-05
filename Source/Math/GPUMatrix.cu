@@ -1344,6 +1344,32 @@ void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
     // CURAND_CALL(curandDestroyGenerator(gen));
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::SetTruncatedGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+{
+    // We use the method described in https://en.wikipedia.org/wiki/Truncated_normal_distribution
+    // i.e. generate uniform, scale it to the right range, pass it through the inverse cdf, scale by sigma, and add the mean 
+    PrepareDevice();
+    CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
+
+    cudaEvent_t done = nullptr;
+    CUDA_CALL(cudaEventCreate(&done)); // TODO: why not condition on do_sync, so that we can use SyncGuard?
+    if (sizeof(ElemType) == sizeof(float))
+        CURAND_CALL(curandGenerateUniform(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<float*>(Data()), GetNumElements()));
+    else
+        CURAND_CALL(curandGenerateUniformDouble(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<double*>(Data()), GetNumElements()));
+    CUDA_CALL(cudaEventRecord(done));
+    CUDA_CALL(cudaEventSynchronize(done));
+    // CURAND_CALL(curandDestroyGenerator(gen));
+    CUDA_CALL(cudaEventDestroy(done));
+
+    size_t N = GetNumElements();
+    size_t blocksPerGrid = (size_t)ceil(N / (double)GridDim::maxThreadsPerBlock);
+
+    SyncGuard syncGuard;
+    _truncated_normal_transform<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(Data(), N, mean, sigma);
+}
+
 //maskRate: percentage of values masked out (similar to dropout rate)
 //scaleValue: which scale value to set to the left ones (unmasked items).
 template <class ElemType>
