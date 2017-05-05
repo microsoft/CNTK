@@ -484,5 +484,14 @@
         "language":  ["Python"],
         "type":  ["Recipe"],
 	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Reinforcement Learning"],
+        "name": "Deep Q Neural Network",
+        "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning",
+        "description": "Train an agent to play Atari Games using Reinforcement Learning",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dataadded": "05/05/2017"
     }
 ]

@@ -23,7 +23,7 @@ dependencies:
   - sphinx==1.5.4
   - sphinx-rtd-theme==0.2.4
   - twine==1.8.1
-  - gym==0.5.2
+  - gym[atari]==0.8.1
   - pydot-ng==1.0.0
   - future==0.16.0
   - easydict==1.6.0
