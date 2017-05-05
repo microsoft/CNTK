@@ -14,7 +14,44 @@ from cntk.logging import ProgressPrinter
 from cntk.logging.graph import find_by_name, plot, get_node_outputs
 from cntk.io import ImageDeserializer, CTFDeserializer, MinibatchSource, TraceLevel
 import cntk.io.transforms as xforms
+import darknet.darknet19 as dn19
 from PARAMETERS import *
+
+if False:
+    ############# willi ###############
+    from cntk.ops.functions import UserFunction
+    from cntk import output_variable
+    import pdb
+    class LambdaFunc(UserFunction):
+        def __init__(self,
+                arg,
+                when=lambda arg: True,
+                execute=lambda arg: print(arg),
+                name=''):
+            self.when = when
+            self.execute = execute
+
+            super(LambdaFunc, self).__init__([arg], name=name)
+
+        def infer_outputs(self):
+            return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+
+        def forward(self, argument, device=None, outputs_to_retain=None):
+            if self.when(argument):
+                self.execute(argument)
+
+            return None, argument
+
+        def backward(self, state, root_gradients):
+            pdb.set_trace()
+            if self.when(root_gradients):
+                self.execute(root_gradients)
+            return root_gradients
+
+        def clone(self, cloned_inputs):
+            return LambdaFunc(cloned_inputs[0])
+    ############# willi ###############
+
 
 def create_better_last_layer(network, anchor_box_scales):
 
@@ -25,8 +62,8 @@ def create_better_last_layer(network, anchor_box_scales):
     output_height =  par_num_classes + 5 # TODO make Method parameter instead of constant
 
     # reorder array! now 125*7*7
-    #tp1 = ops.transpose(network, 0,2) # 7*7*125
-    #tp2 = ops.transpose(tp1, 0, 1) # 7*7*125
+    # tp1 = ops.transpose(network, 0,2) # 7*7*125
+    # tp2 = ops.transpose(tp1, 0, 1) # 7*7*125
     tp = ops.transpose(network, (1,2,0))
     reshaped = ops.reshape(tp, (output_width, output_height))
     #shape is now 245 * 25
@@ -69,10 +106,12 @@ def create_better_last_layer(network, anchor_box_scales):
     xs = np.asarray(xs, np.float32)
     ys = np.asarray(ys, np.float32)
     xys = np.concatenate((xs,ys), axis=1)
+    #grid_numbers = ops.constant(xys, name="Grid_Pos")
     grid_numbers = ops.constant(np.ascontiguousarray(xys, np.float32), name="Grid_Pos")
     ### scales
     scales = [[1.0 / n_gridcells_horizontal] * output_width, [1.0 / n_gridcells_vertical] * output_width]
     scales = np.asarray(scales, np.float32).transpose(1, 0)
+    #scale_imagedim_per_gridcell = ops.constant(scales, name="Scale_gridcells_to_relative")
     scale_imagedim_per_gridcell = ops.constant(np.ascontiguousarray(scales, np.float32), name="Scale_gridcells_to_relative")
     ## constants done!
 
@@ -93,11 +132,15 @@ def create_better_last_layer(network, anchor_box_scales):
                          ])
     ab_scales = ab_scales*n_gridcells_horizontal*n_gridcells_vertical
     ab_scales = np.asarray(ab_scales, np.float32)
+    #anchorbox_scale_mults = ops.constant(ab_scales, name="Anchorbox-scales")
     anchorbox_scale_mults = ops.constant(np.ascontiguousarray(ab_scales, np.float32), name="Anchorbox-scales")
     ## constants done
     # wh_preds = cntk.ops.times(wh_rels, anchorbox_scale_mults) # this is mat-mul not element-wise!
     wh_preds = wh_rels * anchorbox_scale_mults
 
+    #import pdb
+    #debug_node = LambdaFunc(wh_preds, when=lambda arg: np.max(arg)>1,
+    #                        execute=lambda x: pdb.set_trace())
 
     # Splice the parts back together!
     full_output = ops.splice(xy_preds, wh_preds, obj_preds, cls_preds, axis=1)
@@ -111,13 +154,11 @@ def create_detector():
         Convolution2D((3, 3), num_filters=1024, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
         Convolution2D((3, 3), num_filters=1024, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
 
-        Convolution2D((1, 1), num_filters=125, activation=lambda x: 0.1*x + 0.9*relu(x)),
+        Convolution2D((1, 1), num_filters=125),
     ], "YOLOv2_Detector")
     # return net
-    print(net.shape)
     # TODO remove hardcoded things such as n_grid which can be inferred - udf might be necessary
     net2 = create_better_last_layer(net,  anchor_box_scales=par_anchorbox_scales)
-    print(net.shape)
     return net2
 
 
@@ -137,13 +178,17 @@ def load_pretrained_resnet101_feature_extractor():
 
     # return combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: placeholder()})
     # make resnet a block!
-    net = combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: placeholder()})
+    net = combine([fe_output_layer.owner]).clone(CloneMethod.freeze, {feature_layer: placeholder()})
+    return net
     return as_block(
         net,[(net.arguments[0], net.arguments[0])],"ResNet_FE","ResNet_FE"
     )
 
-def create_feature_extractor(use_model = "pre_ResNet101_ImageNet"):
+def create_untrained_darknet19_fe():
+    return dn19.create_feature_extractor(32)
 
+def create_feature_extractor(use_model = "pre_ResNet101_ImageNet"):
+    #return create_untrained_darknet19_fe()
     if(use_model == "pre_Darknet_Cifar"):
         fe = load_pretrained_darknet_feature_extractor()
     elif(use_model == "pre_ResNet101_ImageNet"):
@@ -263,24 +308,26 @@ if __name__ == '__main__':
 
     # trainig params
     max_epochs = par_max_epochs
-    epoch_size = 5000
+    epoch_size = par_epoch_size
     minibatch_size = par_minibatch_size
 
-    lr_schedule = learning_rate_schedule([0.001]*60+[0.0001]*30+[0.00001], learners.UnitType.sample, epoch_size)
+    lr_schedule = learning_rate_schedule(par_lr_schedule, learners.UnitType.sample, epoch_size)
                                               #+ [0.005]*10
                                               #+ [0.0005]*5
                                               #+ [0.00005]*5
                                               #+ [0.00001]*5
                                               #+ [0.000005]*5
                                               #+ [0.000001], cntk.learners.UnitType.sample, epoch_size)
-    mm_schedule = learners.momentum_as_time_constant_schedule([-minibatch_size / np.log(0.9)], epoch_size)
+    mm_schedule = learners.momentum_schedule([-minibatch_size / np.log(par_momentum)], epoch_size)
 
     # Instantiate the trainer object to drive the model training
     learner = learners.momentum_sgd(mse.parameters, lr_schedule, mm_schedule, unit_gain=True, l2_regularization_weight=0.0005)
     trainer = Trainer(None, (mse, mse), [learner])
 
-    image_file = r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Pascal\mappings\trainval2007.txt"
-    roi_file = r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Pascal\mappings\trainval2007_rois_center_rel.txt"
+    image_file = os.path.join(par_abs_path, "..", "..", "DataSets", "Pascal", "mappings" , "trainval2007.txt")
+    roi_file = os.path.join(par_abs_path, "..", "..", "DataSets", "Pascal", "mappings" , "trainval2007_rois_center_rel.txt")
+    # image_file = r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Pascal\mappings\trainval2007.txt"
+    # roi_file = r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Pascal\mappings\trainval2007_rois_center_rel.txt"
     # minibatch_source = create_mb_source(img_height, img_width, img_channel, roi_input_size, image_file, roi_file)
     minibatch_source = create_mb_source(par_image_height, par_image_width, par_num_channels, (5 * num_gtb), image_file, roi_file)
 
@@ -312,21 +359,26 @@ if __name__ == '__main__':
             sample_count += data[image_input].num_samples  # count samples processed so far
             progress_printer.update_with_trainer(trainer=trainer, with_metric=True)  # log progress
             # print(progress_printer.avg_metric_since_start())
-            if(math.isnan(progress_printer.avg_metric_since_start())):
-                ipdb.set_trace()
+            #if(math.isnan(progress_printer.avg_metric_since_start())):
+                #ipdb.set_trace()
+                #print("debug nan!")
 
         progress_printer.epoch_summary(with_metric=True)
 
     #from darknet import save_model
     #save_model(output, name="YOLOv2_Pascal_VOC_2007_"+str(max_epochs)+"epochs")
 
+    """
+    model = load_model(r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\Detection\YOLOv2\Output\YOLOv2_Pascal_VOC_2007_30epochs.model.model")
+    image_input = input((par_num_channels, par_image_height, par_image_width))
+    output = model(image_input)  # append model to image input
+    """
+    image = os.path.join(par_abs_path, "..", "..", "DataSets", "Pascal", "VOCdevkit" , "VOC2007", "JPEGImages" , "000008.jpg")
+    predict_and_show_image(output, image, conf_threshold=0.9)
+    #predict_and_show_image(output, r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Pascal\VOCdevkit\VOC2007\JPEGImages\000008.jpg", conf_threshold=0.9)
 
-    #model = cntk.load_model(r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\Detection\YOLOv2\Output\YOLOv2_Pascal_VOC_2007_30epochs.model.model")
-    #image_input = input((par_num_channels, par_image_height, par_image_width))
-    #output = model(image_input)  # append model to image input
-    predict_and_show_image(output, r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Pascal\VOCdevkit\VOC2007\JPEGImages\000008.jpg", conf_threshold=0.9)
-
-    import ipdb
-    ipdb.set_trace()
+    #import ipdb
+    #ipdb.set_trace()
 
     print("Done!")
+
