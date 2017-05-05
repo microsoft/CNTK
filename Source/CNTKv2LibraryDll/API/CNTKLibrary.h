@@ -3457,6 +3457,8 @@ namespace CNTK
                                  std::unordered_map<Variable, Variable>& leafVariablesCloneMap,
                                  std::unordered_map<Variable, Variable>& placeholderReplacements);
 
+        CNTK_API virtual PrimitiveOpType Op() const { NOT_IMPLEMENTED; }
+
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
@@ -3468,7 +3470,7 @@ namespace CNTK
 
     private:
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
-        CNTK_API virtual NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const NDShape&, NDArrayViewPtr&&) const { NOT_IMPLEMENTED; }
+        CNTK_API virtual NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&) const { NOT_IMPLEMENTED; }
 
         std::vector<Variable> m_inputs; // primitives: direct input variables; composites: overall input variables, computed lazily (?)
         size_t/*std::once_flag*/ m_outputsInitFlag = 0;

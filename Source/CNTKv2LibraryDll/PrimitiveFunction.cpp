@@ -1289,13 +1289,23 @@ namespace CNTK
         for (size_t i = 0; i < args.size(); i++)
             args[i] = m_inputs[i].Value();
         NDArrayViewPtr out;
-        output.m_dataFields->m_value = move(ComputeKnowableValue(m_op, args, output.Shape(), move(out)));
+        output.m_dataFields->m_value = move(ComputeKnowableValue(m_op, args, m_attributes, output.Shape(), move(out)));
     }
-    /*virtual*/ NDArrayViewPtr PrimitiveFunction::ComputeKnowableValue(PrimitiveOpType primitiveOp, const vector<NDArrayViewPtr>& args, const NDShape& outputShape, NDArrayViewPtr&& out) const
+    // BUGBUG: OpName() is called on 'this' (affects only error messages)
+    /*virtual*/ NDArrayViewPtr PrimitiveFunction::ComputeKnowableValue(PrimitiveOpType primitiveOp, 
+        const vector<NDArrayViewPtr>& args, const Dictionary& attributes, const NDShape& outputShape, NDArrayViewPtr&& out) const
     {
         // allocate memory for the result
         if (primitiveOp != PrimitiveOpType::Slice && primitiveOp != PrimitiveOpType::Reshape) // not all ops need a new output
-            out = make_shared<NDArrayView>(m_inputs.front().GetDataType(), outputShape, args.front()->Device());
+        // ADD:
+        //case PrimitiveOpType::StopGradient:
+        //case PrimitiveOpType::Pass:
+        //case PrimitiveOpType::NoOp:
+        {
+            if (out)
+                LogicError("Variable '%S' Value(): An output buffer was passed for op %S that does not need one.", AsString().c_str(), OpName().c_str());
+            out = make_shared<NDArrayView>(args.front()->GetDataType(), outputShape, args.front()->Device());
+        }
         // perform the operation
         auto op = Microsoft::MSR::CNTK::ElementWiseOperator::opNone;
         auto reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
@@ -1317,7 +1327,7 @@ namespace CNTK
         case PrimitiveOpType::ReduceElements:
             {
                 op = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
-                const auto& reductionOpName = m_attributes[PrimitiveFunction::AttributeNameReductionOpName].Value<wstring>();
+                const auto& reductionOpName = attributes[PrimitiveFunction::AttributeNameReductionOpName].Value<wstring>();
                 if (reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
                     reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
                 else if (reductionOpName == PrimitiveFunction::InternalLogSumReductionOpName)
@@ -1333,10 +1343,10 @@ namespace CNTK
             // non-elementwise ops are done here
         case PrimitiveOpType::Times:
             //// (dup--delete this once tested)
-            //out->MatrixProduct(false, args[0], primitiveOp == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, m_attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
+            //out->MatrixProduct(false, args[0], primitiveOp == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
             //break;
         case PrimitiveOpType::TransposeTimes:
-            out->MatrixProduct(false, args[0], primitiveOp == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, m_attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
+            out->MatrixProduct(false, args[0], primitiveOp == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
             break;
             // ops that do not copy data
         case PrimitiveOpType::StopGradient:
@@ -1353,10 +1363,10 @@ namespace CNTK
             break;
         case PrimitiveOpType::Slice:
             {
-                auto axis       = m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-                auto beginIndex = m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-                auto endIndex   = m_attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
-                NormalizeStaticAxis(axis, m_inputs[0].Shape());
+                auto axis       = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                auto beginIndex = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+                auto endIndex   = attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
+                NormalizeStaticAxis(axis, args[0]->Shape());
                 out = args[0];
                 auto extent = out->Shape().Dimensions();
                 auto startOffset = vector<size_t>(extent.size(), 0);
@@ -1371,8 +1381,14 @@ namespace CNTK
             break;
         case PrimitiveOpType::Splice:
             {
-                auto axis = m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-                auto maxInputRank = MaxInputRank(m_inputs);
+                auto axis = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                size_t maxInputRank = args[0]->Shape().Rank();
+                for (int i = 1; i < args.size(); i++)
+                {
+                    auto inputRank = args[i]->Shape().Rank();
+                    if (maxInputRank < inputRank)
+                        maxInputRank = inputRank;
+                }
                 NormalizeStaticAxis(axis, NDShape(maxInputRank));
                 if (args.size() > 1)
                     NDArrayView::GatherBatch(args, axis.StaticAxisIndex(), out);
