@@ -1288,14 +1288,18 @@ namespace CNTK
         vector<NDArrayViewPtr> args(m_inputs.size());
         for (size_t i = 0; i < args.size(); i++)
             args[i] = m_inputs[i].Value();
-        // allocate memory for the result
         NDArrayViewPtr out;
-        if (m_op != PrimitiveOpType::Slice && m_op != PrimitiveOpType::Reshape) // not all ops need a new output
-            out = make_shared<NDArrayView>(m_inputs.front().GetDataType(), output.Shape(), args.front()->Device());
+        output.m_dataFields->m_value = move(ComputeKnowableValue(m_op, args, output.Shape(), move(out)));
+    }
+    /*virtual*/ NDArrayViewPtr PrimitiveFunction::ComputeKnowableValue(PrimitiveOpType primitiveOp, const vector<NDArrayViewPtr>& args, const NDShape& outputShape, NDArrayViewPtr&& out) const
+    {
+        // allocate memory for the result
+        if (primitiveOp != PrimitiveOpType::Slice && primitiveOp != PrimitiveOpType::Reshape) // not all ops need a new output
+            out = make_shared<NDArrayView>(m_inputs.front().GetDataType(), outputShape, args.front()->Device());
         // perform the operation
         auto op = Microsoft::MSR::CNTK::ElementWiseOperator::opNone;
         auto reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
-        switch (m_op)
+        switch (primitiveOp)
         {
             // elementwise ops are done outside, we just set the opcode
         case PrimitiveOpType::Plus:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;                break;
@@ -1329,10 +1333,10 @@ namespace CNTK
             // non-elementwise ops are done here
         case PrimitiveOpType::Times:
             //// (dup--delete this once tested)
-            //out->MatrixProduct(false, args[0], m_op == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, m_attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
+            //out->MatrixProduct(false, args[0], primitiveOp == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, m_attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
             //break;
         case PrimitiveOpType::TransposeTimes:
-            out->MatrixProduct(false, args[0], m_op == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, m_attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
+            out->MatrixProduct(false, args[0], primitiveOp == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, m_attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
             break;
             // ops that do not copy data
         case PrimitiveOpType::StopGradient:
@@ -1344,8 +1348,8 @@ namespace CNTK
             break;
         case PrimitiveOpType::Reshape:
              out = args[0];
-             if (out->Shape() != output.Shape())
-                 out = out->AsShape(output.Shape());
+             if (out->Shape() != outputShape)
+                 out = out->AsShape(outputShape);
             break;
         case PrimitiveOpType::Slice:
             {
@@ -1375,8 +1379,8 @@ namespace CNTK
                 else // only one: do nothing or at best reshape if a new axis is added
                 {
                     out = args[0];
-                    if (out->Shape() != output.Shape())
-                        out = out->AsShape(output.Shape());
+                    if (out->Shape() != outputShape)
+                        out = out->AsShape(outputShape);
                 }
             }
             break;
@@ -1458,6 +1462,6 @@ namespace CNTK
         // most common case: elementwise ops are done here instead
         if (op != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
             out->NumericOperation(args, 1.0, op, out, 0.0, reductionOp);
-        output.m_dataFields->m_value = out;
+        return out;
     }
 }

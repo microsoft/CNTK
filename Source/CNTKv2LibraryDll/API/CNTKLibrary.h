@@ -2953,6 +2953,7 @@ namespace CNTK
         friend class BlockFunction;
         friend class UDFUtils;
         friend class Trainer;
+        friend class Memoize;
 
         friend Variable GetCorrespondingOutputVariableFromClone(const Variable&, const FunctionPtr&, const FunctionPtr&);
 
@@ -3467,15 +3468,19 @@ namespace CNTK
 
     private:
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
+        CNTK_API virtual NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const NDShape&, NDArrayViewPtr&&) const { NOT_IMPLEMENTED; }
 
-        std::vector<Variable> m_inputs;
+        std::vector<Variable> m_inputs; // primitives: direct input variables; composites: overall input variables, computed lazily (?)
         size_t/*std::once_flag*/ m_outputsInitFlag = 0;
         std::vector<Variable> m_outputs;
 
-        FunctionPtr m_rootFunction; // nullptr for primitive Function instances
+        FunctionPtr m_rootFunction; // This is a PrimitiveFunctionPtr for composites, or a nullptr for PrimitiveFunction instances
         std::wstring m_name;
         std::wstring m_uid;
         Dictionary m_attributes;
+
+        int m_pendingInputs = -1;
+        std::vector<Function*> m_notify;
     };
 
     ///

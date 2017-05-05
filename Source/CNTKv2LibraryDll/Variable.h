@@ -31,6 +31,7 @@ namespace CNTK
         std::wstring m_uid;
         std::atomic<size_t> m_valueTimeStamp;
         Variable m_blockFunctionVariableMapping;
+        std::pair<std::shared_ptr<PrimitiveFunction>, size_t> m_lazySlice;
 
         VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, const std::weak_ptr<Function>& ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
             : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid), m_valueTimeStamp(0)

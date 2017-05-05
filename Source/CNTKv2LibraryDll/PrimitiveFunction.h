@@ -754,6 +754,8 @@ namespace CNTK
             return MakeSharedObject<PrimitiveFunction>(OpType(), clonedInputs, Dictionary(Attributes()), Name());
         }
 
+        virtual NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const NDShape&, NDArrayViewPtr&&) const;
+
     private:
         PrimitiveOpType m_op;
 

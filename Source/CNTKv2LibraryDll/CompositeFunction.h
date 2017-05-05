@@ -47,13 +47,14 @@ namespace CNTK
         friend class Trainer;
         friend class CompositeMinibatchSource;
         friend class PackedValue;
+        friend class Memoize;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
         friend void Internal::SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
 
-        friend void ComputeInputPerDimMeansAndInvStdDevs(const MinibatchSourcePtr& minibatchSource,
+        friend CNTK_API void ComputeInputPerDimMeansAndInvStdDevs(const MinibatchSourcePtr& minibatchSource,
                                                          std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>>& computedMeanAndInvStdDevs,
                                                          const DeviceDescriptor& device /*= DeviceDescriptor::CPUDevice()*/);
 
