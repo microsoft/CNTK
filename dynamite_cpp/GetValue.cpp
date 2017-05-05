@@ -61,12 +61,14 @@ class Memoize
     void Schedule(Function* fp)
     {
         auto key = Key("*fp");
+        key[0] = (wchar_t)fp->Op();
         m_scheduledOps[move(key)].push_back(fp);
     }
 
     // traverse the tree hanging off a Variable and
     //  - prepare all nodes for batched execution
     //  - schedule all ready operations
+    // TODO: Once we are in the main build, change all Function to PrimitiveFunction directly.
     void RTraverseOwner(const Variable& v)
     {
         let& fields = *v.m_dataFields;
@@ -106,22 +108,61 @@ class Memoize
             Schedule(&f); // add to ready set
     }
 
-    vector<Variable> m_args;
+    vector<Variable> m_inputs;
+    vector<NDArrayViewPtr> m_args;
 
     // batch-execute a set of ops that are known to be batchable
-    void ExecuteBatchedAndUpdateSchedule(const deque<Function*>& ops)
+    void ExecuteBatchedAndUpdateSchedule(const deque<Function*>&& ops)
     {
+        // TODO: need to handle ops that have >1 output, such as Combine()
         // get a representative op
         let& f0 = *ops.front();
-        // batch all arguments
+        fprintf(stderr, "executing %d instances of %S\n", (int)ops.size(), f0.OpName().c_str());
+        m_inputs.resize(f0.m_inputs.size());
         m_args.resize(f0.m_inputs.size());
+#if 1
+        // for testing, compute them separately
+        for (let& op : ops)
+        {
+            if (op->m_outputs.size() != 1)
+                throw logic_error("only functions with 1 output are supported");
+            m_inputs.resize(op->m_inputs.size());
+            m_args.resize(op->m_inputs.size());
+            for (size_t i = 0; i < op->m_inputs.size(); i++)
+            {
+                m_args[i] = op->m_inputs[i].m_dataFields->m_value;
+                if (!m_args[i])
+                    throw logic_error("input unexpectedly not available");
+            }
+            auto out = NDArrayViewPtr();
+            op->m_outputs[0].m_dataFields->m_value =
+                op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
+        }
+#else
+        // batch all arguments
         // create a new PrimitiveFunction that executes this operation
         // compute its Value   --TODO: we need a lower-level executor that just takes the op and the inputs' TensorViews?
+        auto out = NDArrayViewPtr();
+        f0.ComputeKnowableValue(f0.Op(), args, f0.Attributes(), shape, move(out));
         // distribute the results to ops[]
+#endif
         // update all ops' consumers
+        for (let& op : ops)
+        {
+            for (let& f : op->m_notify)
+            {
+                if (f->m_pendingInputs <= 0)
+                    throw logic_error("pending inputs already 0 yet we are executing it");
+                f->m_pendingInputs--;
+                // if it is now ready then schedule it
+                if (f->m_pendingInputs == 0)
+                    Schedule(f);
+            }
+        }
     }
 
 public:
+    // Value(), computed with automatic batching
     NDArrayViewPtr operator()(const Variable& v)
     {
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
@@ -135,12 +176,15 @@ public:
             {
                 // select the best amongst the scheduled ops
                 // TODO: add priority for Barrier()
-                deque<Function*>* bestOp = nullptr;
-                for (auto& kv : m_scheduledOps)
-                    if (!bestOp || kv.second.size() > bestOp->size())
-                        bestOp = &kv.second;
+                auto best = m_scheduledOps.begin();
+                for (auto iter = best; iter != m_scheduledOps.end(); iter++)
+                    if (iter->second.size() > best->second.size())
+                        best = iter;
+                // and remove this one from the list
+                auto opBatch = move(best->second);
+                m_scheduledOps.erase(best);
                 // execute it, and also update all outputs' values and consumers, and the schedule 
-                ExecuteBatchedAndUpdateSchedule(*bestOp);
+                ExecuteBatchedAndUpdateSchedule(move(opBatch));
             }
             v.Value(); // old code--will disappear
         }
@@ -155,7 +199,7 @@ public:
 
 CNTK::NDArrayViewPtr GetValue(const CNTK::Variable& v)
 {
-#if 1
+#if 0
     // naive version
     return v.Value();
 #else
