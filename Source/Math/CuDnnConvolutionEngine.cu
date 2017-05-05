@@ -44,16 +44,16 @@ public:
         if (mapCount != geometry.MapCount().GetNumElements())
             InvalidArgument("cuDNN does not support map tensor of this configuration."); 
 
-        const size_t minDimSize = (size_t)4;    // minimum descripter dim size is 4 for cuDNN 
+        const size_t minDimSize = (size_t)4;    // minimum descriptor dim size is 4 for cuDNN 
         const size_t filt_size = filt.GetRank();
         size_t dim_size = std::max(filt_size + 1, minDimSize);
         SmallVector<int> dims(dim_size, 1);
         for (int i = 0; i < filt_size -1; i++)
-            dims[dims.size() - 1 - i] = (int)filt[i];
+            dims[dim_size - 1 - i] = (int)filt[i];
         // Set map count(aka K) dimension.
         dims[0] = (int)mapCount;
         dims[1] = (int)filt[filt_size - 1];
-        CUDNN_CALL(cudnnSetFilterNdDescriptor_v4(m_kernel, dataType, FILTER_FORMAT, (int)dims.size(), dims.data()));
+        CUDNN_CALL(cudnnSetFilterNdDescriptor_v4(m_kernel, dataType, FILTER_FORMAT, (int)dim_size, dims.data()));
     }
 
     ~CuDnnKernel()
@@ -157,7 +157,7 @@ public:
         CUDNN_CALL(cudnnSetPoolingNdDescriptor(m_pool,
                                                kind == PoolKind::Max ? CUDNN_POOLING_MAX : poolMode,
                                                CUDNN_PROPAGATE_NAN,
-                                               (int)dims.size(), dims.data(), pad.data(), stride.data()));
+                                               (int)dim_size, dims.data(), pad.data(), stride.data()));
     }
 
     ~CuDnnPool()
