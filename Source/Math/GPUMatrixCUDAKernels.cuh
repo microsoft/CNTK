@@ -5190,7 +5190,7 @@ __global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LON
 
 template <class ElemType>
 __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum)
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
 {
     const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -5198,16 +5198,33 @@ __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemT
     for (; idx < size; idx += stride)
     {
         ElemType g = grad[idx];
-        ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
-        smoothAda[idx] = adaSqr;
         ElemType w;
-        if (sizeof(ElemType) == sizeof(double))
+        if (!adamax)
         {
-            w = adaMul * 1.0 / (sqrt(adaSqr) + epsilon);
+            ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+            smoothAda[idx] = adaSqr;
+            if (sizeof(ElemType) == sizeof(double))
+            {
+                w = adaMul * 1.0 / (sqrt(adaSqr) + epsilon);
+            }
+            else
+            {
+                w = adaMul * 1.0f / (sqrtf(adaSqr) + epsilon);
+            }
         }
         else
         {
-            w = adaMul * 1.0f / (sqrtf(adaSqr) + epsilon);
+            ElemType gAbs;
+            if (sizeof(ElemType) == sizeof(double))
+            {
+                gAbs = fabs(g);
+            }
+            else
+            {
+                gAbs = fabsf(g);
+            }
+            smoothAda[idx] = max(adaWeight * smoothAda[idx], gAbs);
+            w = adaMul / smoothAda[idx];
         }
 
         g = mom * smoothMom[idx] + unitGainFactor * g;
@@ -5221,7 +5238,7 @@ template <class ElemType>
 __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
     ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum)
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
 {
     const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -5229,16 +5246,34 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     for (; idx < size; idx += stride)
     {
         ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
-        ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
-        smoothAda[idx] = adaSqr;
         ElemType w;
-        if (sizeof(ElemType) == sizeof(double))
+        if (!adamax)
         {
-            w = adaMul * 1.0 / (sqrt(adaSqr) + epsilon);
+            ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+            smoothAda[idx] = adaSqr;
+
+            if (sizeof(ElemType) == sizeof(double))
+            {
+                w = adaMul * 1.0 / (sqrt(adaSqr) + epsilon);
+            }
+            else
+            {
+                w = adaMul * 1.0f / (sqrtf(adaSqr) + epsilon);
+            }
         }
         else
         {
-            w = adaMul * 1.0f / (sqrtf(adaSqr) + epsilon);
+            ElemType gAbs;
+            if (sizeof(ElemType) == sizeof(double))
+            {
+                gAbs = fabs(g);
+            }
+            else
+            {
+                gAbs = fabsf(g);
+            }
+            smoothAda[idx] = max(adaWeight * smoothAda[idx], gAbs);
+            w = adaMul / smoothAda[idx];
         }
 
         g = mom * smoothMom[idx] + unitGainFactor * g;
