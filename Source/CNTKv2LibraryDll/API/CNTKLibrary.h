@@ -1733,6 +1733,7 @@ namespace CNTK
         friend class Trainer;
         friend class PrimitiveFunction;
         friend class Utils;
+        friend class Memoize;
 
         template <typename T>
         friend struct std::hash;
