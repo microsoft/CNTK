@@ -38,6 +38,3 @@ Otherwise, a random action is taken. During the training, epsilon will slowly de
 ## Notes
 
 This example **is only available on Linux** as OpenAI ALE doesn't provide Windows interface.
-
-### [Python](./Python)
-
