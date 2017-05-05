@@ -60,7 +60,6 @@ namespace CNTK
         else
         {
             m_aggregatedLossFunction = m_lossFunction;
-
             std::function<std::pair<Variable, bool>(const FunctionPtr& root)> FindTrainingSampleCountVar;
             FindTrainingSampleCountVar = [&FindTrainingSampleCountVar](const FunctionPtr& root) -> std::pair<Variable, bool> {
                 const auto& outputs = root->Outputs();

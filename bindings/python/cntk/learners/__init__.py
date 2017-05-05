@@ -879,3 +879,12 @@ def universal(update, parameters):
         updates.append((g, fpg))
     
     return cntk_py.universal_learner(parameters, updates)
+
+@typemap
+def keras_learner(update_funcs, parameters):
+    updates = list()
+    for u in update_funcs:
+        g = u.find_by_name('keras_grad_placeholder')
+        updates.append((g, u))
+
+    return cntk_py.universal_learner(parameters, updates)

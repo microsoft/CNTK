@@ -105,10 +105,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     if not isinstance(arg, np.ndarray) or arg.dtype != fallback_dtype:
         # TODO: check whether Values can be ingested directly
         arg = asarray(arg, fallback_dtype)
-
-        if arg.shape == ():
-            arg.shape = (1,)
-
+		
     if reshape:
         arg = np.reshape(arg, reshape)
 
