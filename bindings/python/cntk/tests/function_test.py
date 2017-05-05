@@ -9,8 +9,8 @@ import numpy as np
 from cntk import *
 
 def test_outputs():
-    fwd_state = placeholder_variable("placeholder")
-    prev_state = past_value(fwd_state, name="prev_state")
+    fwd_state = placeholder("placeholder")
+    prev_state = sequence.past_value(fwd_state, name="prev_state")
     z = abs(prev_state, "abs")
     output = z.output
     z = z.replace_placeholders({fwd_state: z.output})
@@ -23,34 +23,33 @@ def test_outputs():
         print("Argument name: {}, argument owner name {}".format(arg.name, arg.owner.name))
 
 def test_0d_data_1d_sample_shape():
-    x = input_variable(shape=(1,))
+    x = input(shape=(1,))
     op = x + x
 
     with pytest.raises(ValueError):
         op.eval({x : [np.asarray(2)]})
 
 def test_1d_NDArrayView_copy():
-    x = input_variable(shape=(1,))
+    x = input(shape=(1,))
     op = x + 1
     result = op.eval({x : [np.asarray([1])]}, as_numpy=False)
-    result_slice = result.data().slice_view((0, 0, 0), (1,))
+    result_slice = result.data.slice_view((0, 0), (1,))
 
     w = parameter(init=np.asarray([1]))
     w.set_value(result_slice)
     
-    assert np.array_equal(w.value, np.asarray(result_slice))
+    assert np.array_equal(w.value, result_slice.asarray())
 
 def test_sequences_packed_in_single_ndarray():
     dim = 2
-    input_with_sequence_axis = input_variable(shape=(dim,))
-    input_without_sequence_axis = input_variable(shape=(dim,), dynamic_axes=[Axis.default_batch_axis()])
+    input_with_sequence_axis = sequence.input(shape=(dim,))
 
     data = np.asarray([[1, 2], [2, 3]])
     op = sequence.last(input_with_sequence_axis)
     result = op.eval({input_with_sequence_axis : data})
-    assert np.array_equal(result, [[[2., 3.]]])
+    assert np.array_equal(result, [[2., 3.]])
 
     result = op.eval({input_with_sequence_axis : (data, [True, True])})
-    assert np.array_equal(result, [[[1., 2.]], [[2., 3.]]])
+    assert np.array_equal(result, [[1., 2.], [2., 3.]])
 
     

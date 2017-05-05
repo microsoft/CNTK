@@ -27,6 +27,7 @@ namespace CNTK
         std::vector<ComputationNodeBasePtr> allInputNodes;
         std::unordered_map<StreamInformation, ComputationNodeBasePtr> streamToInputNodeMap;
         std::unordered_map<StreamInformation, Variable> streamToDummyInputVariableMap;
+        std::unordered_map<StreamInformation, Variable> streamToDummyOutputVariableMap;
         std::unordered_map<StreamInformation, ComputationNodeBasePtr> streamToMeanNodeMap;
         std::unordered_map<StreamInformation, ComputationNodeBasePtr> streamToInvStdDevNodeMap;
 
@@ -61,6 +62,7 @@ namespace CNTK
             allInputNodes.push_back(inputNode);
             streamToInputNodeMap[currentStreamInfo] = inputNode;
             streamToDummyInputVariableMap[currentStreamInfo] = inputVariable;
+            streamToDummyOutputVariableMap[currentStreamInfo] = OutputVariable(inputVariableShape, DataType::Float, {}, /*needsGradient =*/ false, currentStreamInfo.m_name);
             streamToMeanNodeMap[currentStreamInfo] = builder.Mean(inputNode);
             streamToInvStdDevNodeMap[currentStreamInfo] = builder.InvStdDev(inputNode);
         }
@@ -106,8 +108,8 @@ namespace CNTK
             if (computedMeanAndInvStdDevs[currentStreamKV.first].second != nullptr)
                 invStdDev = MakeSharedObject<Value>(computedMeanAndInvStdDevs[currentStreamKV.first].second);
 
-            CompositeFunction::GetNodeOutputOrGradient(streamToDummyInputVariableMap[currentStreamKV.first], mean, streamToMeanNodeMap[currentStreamKV.first], false /*getGradient*/);
-            CompositeFunction::GetNodeOutputOrGradient(streamToDummyInputVariableMap[currentStreamKV.first], invStdDev, streamToInvStdDevNodeMap[currentStreamKV.first], false /*getGradient*/);
+            CompositeFunction::GetNodeOutputOrGradient(streamToDummyOutputVariableMap[currentStreamKV.first], mean, streamToMeanNodeMap[currentStreamKV.first], false /*getGradient*/);
+            CompositeFunction::GetNodeOutputOrGradient(streamToDummyOutputVariableMap[currentStreamKV.first], invStdDev, streamToInvStdDevNodeMap[currentStreamKV.first], false /*getGradient*/);
 
             if (computedMeanAndInvStdDevs[currentStreamKV.first].first == nullptr)
                 computedMeanAndInvStdDevs[currentStreamKV.first].first = mean->Data();

@@ -45,8 +45,8 @@ namespace CNTK
         }
 
         auto dataType = gradientValues.begin()->first.GetDataType();
-        info.evalCriterionValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{ 1 }, DeviceDescriptor::CPUDevice());
-        info.trainingLossValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{ 1 }, DeviceDescriptor::CPUDevice());
+        info.evalCriterionValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{}, DeviceDescriptor::CPUDevice());
+        info.trainingLossValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{}, DeviceDescriptor::CPUDevice());
     }
 
     void DistributedLearnerBase::ConvertToOrdered(const std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, std::vector<std::pair<Parameter, NDArrayViewPtr>>& result)

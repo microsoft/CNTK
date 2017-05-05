@@ -75,7 +75,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(ReaderLibs);htkmlfreader.lib;HTKDeserializers.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ReaderLibs);Cntk.Reader.HTKMLF-$(CntkComponentVersion).lib;Cntk.Deserializers.HTK-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
@@ -143,6 +143,10 @@
     <Text Include="Config\HTKMLFReaderSimpleDataLoop9_Config.cntk" />
     <Text Include="Config\ImageReaderSimple_Config.cntk" />
     <Text Include="Config\UCIFastReaderSimpleDataLoop_Config.cntk" />
+    <Text Include="Control\CNTKBinaryReader\Simple_dense.txt" />
+    <Text Include="Control\CNTKBinaryReader\Simple_dense_312.txt" />
+    <Text Include="Control\CNTKBinaryReader\Simple_sparse.txt" />
+    <Text Include="Control\CNTKBinaryReader\Simple_sparse_seq.txt" />
     <Text Include="Control\CNTKTextFormatReader\100x100x3_jagged_sequences_dense_sorted.txt" />
     <Text Include="Control\CNTKTextFormatReader\100x1_1_dense.txt" />
     <Text Include="Control\CNTKTextFormatReader\100x1_2_dense.txt" />
@@ -218,6 +222,7 @@
     <Image Include="Data\images\red.jpg" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Config\CNTKBinaryReader\test.cntk" />
     <None Include="Config\CNTKTextFormatReader\dense.cntk" />
     <None Include="Config\CNTKTextFormatReader\edge_cases.cntk" />
     <None Include="Config\CNTKTextFormatReader\sparse.cntk" />
@@ -244,6 +249,9 @@
     <None Include="Config\ImageReaderLabelOutOfRange_Config.cntk" />
     <None Include="Config\ImageReaderMultiView_Config.cntk" />
     <None Include="Config\ImageReaderZip_Config.cntk" />
+    <None Include="Data\CNTKBinaryReader\simple.bin" />
+    <None Include="Data\CNTKBinaryReader\sparseoutput.bin" />
+    <None Include="Data\CNTKBinaryReader\sparseseqoutput.bin" />
     <None Include="Data\images\chunk0.zip" />
     <None Include="Data\images\chunk1.zip" />
     <None Include="Data\images\simple.zip" />

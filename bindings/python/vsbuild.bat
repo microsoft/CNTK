@@ -15,11 +15,14 @@ REM overridden at msbuild invocation.
 set p_OutDir=%~1
 set p_DebugBuild=%~2
 set p_GpuBuild=%~3
-set p_SWIG_PATH=%~4
-set p_CNTK_PY_VERSIONS=%~5
-set p_CNTK_PY27_PATH=%~6
-set p_CNTK_PY34_PATH=%~7
-set p_CNTK_PY35_PATH=%~8
+set p_CNTK_COMPONENT_VERSION=%~4
+set p_SWIG_PATH=%~5
+set p_CNTK_PY_VERSIONS=%~6
+set p_CNTK_PY27_PATH=%~7
+set p_CNTK_PY34_PATH=%~8
+set p_CNTK_PY35_PATH=%~9
+shift
+set p_CNTK_PY36_PATH=%~9
 
 REM Construct p_CNTK_PY_VERSIONS if not explicitly defined
 REM (Note: to disable Python build completely, no CNTK_PYx_PATH variable must be defined)
@@ -28,11 +31,12 @@ if not defined p_CNTK_PY_VERSIONS (
   if defined p_CNTK_PY27_PATH set p_CNTK_PY_VERSIONS=!p_CNTK_PY_VERSIONS! 27
   if defined p_CNTK_PY34_PATH set p_CNTK_PY_VERSIONS=!p_CNTK_PY_VERSIONS! 34
   if defined p_CNTK_PY35_PATH set p_CNTK_PY_VERSIONS=!p_CNTK_PY_VERSIONS! 35
+  if defined p_CNTK_PY36_PATH set p_CNTK_PY_VERSIONS=!p_CNTK_PY_VERSIONS! 36
 )
 
 REM Validate p_CNTK_PY_VERSIONS contents.
 for %%p in (%p_CNTK_PY_VERSIONS%) do (
-  if not "%%~p" == "27" if not "%%~p" == "34" if not "%%~p" == "35" echo Build for unsupported Python version '%%~p' requested, stopping&exit /b 1
+  if not "%%~p" == "27" if not "%%~p" == "34" if not "%%~p" == "35" if not "%%~p" == "36" echo Build for unsupported Python version '%%~p' requested, stopping&exit /b 1
 )
 
 REM Validate p_CNTK_PY_VERSIONS contents.
@@ -51,6 +55,7 @@ call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall" amd64
 set CNTK_LIB_PATH=%p_OutDir%
 set DIST_DIR=%p_OutDir%\Python
 set PATH=%p_SWIG_PATH%;%PATH%
+set CNTK_COMPONENT_VERSION=%p_CNTK_COMPONENT_VERSION%
 set MSSdk=1
 set DISTUTILS_USE_SDK=1
 

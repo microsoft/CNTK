@@ -138,7 +138,7 @@ has to learn to map the words to these vectors effectively. For example, the vec
 representing the word "cat" may somehow be close, in some sense, to the vector for "dog". 
 In our task we will learn these word embeddings from scratch. However, it is also 
 possible to initialize with a pre-computed word embedding such as 
-`GloVe <http://nlp.stanford.edu/projects/glove/>`_ which has been trained on 
+`GloVe <https://nlp.stanford.edu/projects/glove/>`_ which has been trained on 
 corpora containing billions of words. 
 
 Now that we've decided on our word representation and the type of recurrent neural 
@@ -176,10 +176,10 @@ classes for our sequences. As before, we define two input variables: one for the
 that input through an LSTM recurrent neural network layer, and returns a fixed-size output from the LSTM by selecting the last hidden state of the
 LSTM::
 
-    embedded_inputs = embedding(input, embedding_dim)
-    lstm_outputs = simple_lstm(embedded_inputs, LSTM_dim, cell_dim)[0]
-    thought_vector = sequence.last(lstm_outputs)
-    return linear_layer(thought_vector, num_output_classes)
+    lstm_classifier = Sequential([Embedding(embedding_dim),
+                                  Recurrence(LSTM(LSTM_dim, cell_dim))[0],
+                                  sequence.last,
+                                  Dense(num_output_classes)])
 
 That is the entire network definition. In the second line above we select the first output from the LSTM. In
 this implementation of the LSTM this is the actual output while the second output is the state of the LSTM.
@@ -204,7 +204,7 @@ an example with images. Feeding text data via NumPy arrays is not very different
 Each sequence must be its own NumPy array. Therefore if you have an input variable 
 that represents a small color image like this::
 
-    x = input_variable((3,32,32))
+    x = sequence.input((3,32,32))
 
 and you want to feed a sequence of 4 images `img1` to `img4`, to CNTK then
 you need to create a tensor containing all 4 images. For example::

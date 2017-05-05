@@ -28,8 +28,8 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSav
 
     auto labelsVarName = L"Labels";
     auto labelsVar = InputVariable({ numOutputClasses }, DataType::Float, labelsVarName);
-    auto trainingLoss = ReduceSum(CrossEntropyWithSoftmax(classifierOutput, labelsVar), L"LossFunction");
-    auto prediction = ReduceSum(ClassificationError(classifierOutput, labelsVar), L"ClassificationError");
+    auto trainingLoss = ReduceSum(CrossEntropyWithSoftmax(classifierOutput, labelsVar), Axis::AllAxes(), L"LossFunction");
+    auto prediction = ReduceSum(ClassificationError(classifierOutput, labelsVar), Axis::AllAxes(), L"ClassificationError");
 
     auto ffNet = Combine({ trainingLoss, prediction, classifierOutput }, L"ClassifierModel");
 
@@ -353,7 +353,7 @@ void TestTimesReduceSequenceAxis(
 
     FunctionPtr funcs[(int)FuncType::TotalTypes]=
     {
-        Times(inputVar[0], inputVar[1], 1, TimesReduceAllStaticAndSequenceAxes),
+        Times(inputVar[0], inputVar[1], 1, TimesReduceSequenceAxisWithoutInferredInputRank),
         Sequence::ReduceSum(Times(inputVar[0], inputVar[1]))
     };
 
@@ -379,7 +379,7 @@ void TestTimesReduceSequenceAxis(
 
     std::vector<ElementType> outputData[(int)FuncType::TotalTypes];
     ValuePtr outputValue[(int)FuncType::TotalTypes];
-    NDShape outputShape = funcs[0]->Output().Shape().AppendShape({ 1, numSequences });
+    NDShape outputShape = funcs[0]->Output().Shape().AppendShape({ numSequences });
 
     std::vector<ElementType> inputGradientData[(int)FuncType::TotalTypes][NumInputs];
     ValuePtr inputGradientValue[(int)FuncType::TotalTypes][NumInputs];
@@ -464,7 +464,7 @@ BOOST_AUTO_TEST_CASE(ReduceableTransposeTimesInCPU)
 
 BOOST_AUTO_TEST_CASE(TimesReduceSequenceAxis)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20, 7, 8 }, DeviceDescriptor::GPUDevice(0));
         TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20 }, DeviceDescriptor::GPUDevice(0));
@@ -473,16 +473,19 @@ BOOST_AUTO_TEST_CASE(TimesReduceSequenceAxis)
         TestTimesReduceSequenceAxis<double>(345, 1, true, false, { 7 }, DeviceDescriptor::GPUDevice(0));
     }
 
-    TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20, 7, 8 }, DeviceDescriptor::CPUDevice());
-    TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20 }, DeviceDescriptor::CPUDevice());
-    TestTimesReduceSequenceAxis<double>(345, 1, false, false, { 7, 8 }, DeviceDescriptor::CPUDevice());
-    TestTimesReduceSequenceAxis<double>(345, 1, true, false, { 7, 8 }, DeviceDescriptor::CPUDevice());
-    TestTimesReduceSequenceAxis<double>(345, 1, true, false, { 7 }, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+    {
+        TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20, 7, 8 }, DeviceDescriptor::CPUDevice());
+        TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20 }, DeviceDescriptor::CPUDevice());
+        TestTimesReduceSequenceAxis<double>(345, 1, false, false, { 7, 8 }, DeviceDescriptor::CPUDevice());
+        TestTimesReduceSequenceAxis<double>(345, 1, true, false, { 7, 8 }, DeviceDescriptor::CPUDevice());
+        TestTimesReduceSequenceAxis<double>(345, 1, true, false, { 7 }, DeviceDescriptor::CPUDevice());
+    }
 }
 
 BOOST_AUTO_TEST_CASE(FFTimesAndPlusInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false, true);
         TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false, false);
@@ -491,7 +494,7 @@ BOOST_AUTO_TEST_CASE(FFTimesAndPlusInGPU)
 
 BOOST_AUTO_TEST_CASE(FFNetworkCreationInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), true);
         TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), false);
@@ -500,8 +503,11 @@ BOOST_AUTO_TEST_CASE(FFNetworkCreationInGPU)
 
 BOOST_AUTO_TEST_CASE(FFNetworkCreationInCPU)
 {
-    TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), false);
-    TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), true);
+    if (ShouldRunOnCpu())
+    {
+        TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), false);
+        TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), true);
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

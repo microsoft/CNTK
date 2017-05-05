@@ -140,6 +140,60 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
 
 static double MomentumPerMB(double momentumPerSample, size_t minibatchSize);
 
+// Loops through criteria (i.e. score) and updates the best one if smaller value is found.
+static void UpdateBestEpochs(
+    const vector<EpochCriterion>& vScore,
+    const vector<wstring>& cvSetTrainAndEvalNodes,
+    const int epoch,
+    map<wstring, BestEpoch>& criteriaBestEpoch)
+{
+    for (size_t i = 0; i < vScore.size(); ++i)
+    {
+        BestEpoch& nodeBestEpoch = criteriaBestEpoch.at(cvSetTrainAndEvalNodes[i]);
+        if (vScore[i].Average() < nodeBestEpoch.criterionMinValue)
+        {
+            nodeBestEpoch.criterionMinValue = vScore[i].Average();
+            nodeBestEpoch.epochIndex = epoch;
+        }
+    }
+    LOGPRINTF(stderr, "Best epoch per criterion so far: [Validate] ");
+    for (size_t i = 0; i < cvSetTrainAndEvalNodes.size(); ++i)
+    {
+        const BestEpoch& bestEpoch = criteriaBestEpoch.at(cvSetTrainAndEvalNodes[i]);
+        fprintf(
+            stderr,
+            "%ls = %f (Epoch %d)",
+            cvSetTrainAndEvalNodes[i].c_str(),
+            bestEpoch.criterionMinValue,
+            bestEpoch.epochIndex + 1); // In actual loop epochs are 0 indexed but all outputs use 1 indexed.
+        if (i + 1 < cvSetTrainAndEvalNodes.size())
+            fprintf(stderr, "; ");
+    }
+    fprintf(stderr, "\n");
+}
+
+// For each criterion copies the best epoch to the new file with criterion name appended.
+template <class ElemType>
+static void CopyBestEpochs(
+    const map<wstring, BestEpoch>& criteriaBestEpoch, const SGD<ElemType>& sgd, const int lastEpoch)
+{
+    const wstring& modelBaseName = sgd.GetModelNameForEpoch(lastEpoch);
+
+    for (const auto& bestEpoch : criteriaBestEpoch)
+    {
+        const wstring modelCriterionName = modelBaseName + L"_" + bestEpoch.first;
+        const wstring modelEpochName = sgd.GetModelNameForEpoch(bestEpoch.second.epochIndex);
+        copyOrDie(modelEpochName, modelCriterionName);
+        LOGPRINTF(
+            stderr,
+            "Best epoch for criterion '%ls' is %d and model %ls copied to %ls\n",
+            bestEpoch.first.c_str(),
+            bestEpoch.second.epochIndex + 1, // In actual loop epochs are 0 indexed but all outputs use 1 indexed.
+            modelEpochName.c_str(),
+            modelCriterionName.c_str());
+    }
+}
+
 template <class ElemType>
 void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                       bool networkLoadedFromCheckpoint,
@@ -369,6 +423,19 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // the parallel training nodes from colliding to write the same file
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
             net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
+    }
+
+    if (m_saveBestModelPerCriterion)
+    {
+        m_criteriaBestEpoch.clear();
+        if (!criterionNodes.empty())
+        {
+            m_criteriaBestEpoch.emplace(criterionNodes[0]->NodeName(), BestEpoch());
+        }
+        for (const ComputationNodeBasePtr& node : evaluationNodes)
+        {
+            m_criteriaBestEpoch.emplace(node->NodeName(), BestEpoch());
+        }
     }
 
     size_t totalTrainingSamplesSeen = 0; // aggregated over all epochs, for logging purposes only
@@ -648,7 +715,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             }
 
             // BUGBUG: We should not use the training MB size. The training MB size is constrained by both convergence and memory. Eval is only constrained by memory.
-            let vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
+            let vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, UsingAsyncGradientAggregation(i + 1) ? m_mbSize[i] / m_mpi->NumNodesInUse() : m_mbSize[i]);
             LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validate] ", i + 1, (int)m_maxEpochs);
             for (size_t k = 0; k < vScore.size() /*&& k < 2*/; k++)
                 vScore[k].LogCriterion(cvSetTrainAndEvalNodes[k], /*addSemicolon=*/k + 1 < vScore.size());
@@ -663,6 +730,12 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 }
 
                 tensorBoardWriter->Flush();
+            }
+
+            if (m_saveBestModelPerCriterion)
+            {
+                // Loops through criteria (i.e. score) and updates the best one if smaller value is found.
+                UpdateBestEpochs(vScore, cvSetTrainAndEvalNodes, i, m_criteriaBestEpoch);
             }
 
             if (m_useCVSetControlLRIfCVExists)
@@ -802,11 +875,25 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 // Set i back to the loaded model
                 i -= m_learnRateAdjustInterval;
                 LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i+1); // report 1 based epoch number
-                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, chosenMinibatchSize);
+                SaveCheckPointInfo(
+                    i,
+                    totalTrainingSamplesSeen,
+                    learnRatePerSample,
+                    smoothedGradients,
+                    smoothedCounts,
+                    prevCriterion,
+                    chosenMinibatchSize);
             }
             else
             {
-                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, chosenMinibatchSize);
+                SaveCheckPointInfo(
+                    i,
+                    totalTrainingSamplesSeen,
+                    learnRatePerSample,
+                    smoothedGradients,
+                    smoothedCounts,
+                    prevCriterion,
+                    chosenMinibatchSize);
                 auto modelName = GetModelNameForEpoch(i);
                 if (m_traceLevel > 0)
                     LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
@@ -848,6 +935,13 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
     }
     // --- END OF MAIN EPOCH LOOP
+
+    // Check if we need to save best model per criterion and this is the main node as well.
+    if (m_saveBestModelPerCriterion && ((m_mpi == nullptr) || m_mpi->IsMainNode()))
+    {
+        // For each criterion copies the best epoch to the new file with criterion name appended.
+        CopyBestEpochs(m_criteriaBestEpoch, *this, m_maxEpochs - 1);
+    }
 
     // Synchronize all ranks before proceeding to ensure that
     // rank 0 has finished writing the model file
@@ -2190,7 +2284,7 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int d
         if (traceLevel > 0)
             fprintf(stderr, "Initializing dataParallelSGD with FP%d aggregation.\n", numGradientBits);
         if (Globals::UseV2Aggregator()) // Currently used to check V2 against baselines.
-            m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator());
+            m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator(m_packThresholdSizeInBytes));
         else
             m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, m_packThresholdSizeInBytes);
     }
@@ -2415,6 +2509,18 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECount");
 
+            if (m_saveBestModelPerCriterion)
+            {
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCriteria");
+                const int32_t criteriaSize = static_cast<int32_t>(m_criteriaBestEpoch.size());
+                fstream << criteriaSize;
+                for (const auto& criterion : m_criteriaBestEpoch)
+                {
+                    fstream << criterion.second.criterionMinValue << criterion.second.epochIndex;
+                }
+                fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriteria");
+            }
+
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
             if (m_pMASGDHelper)
                 m_pMASGDHelper->SaveToCheckPoint(fstream);
@@ -2512,6 +2618,23 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
     else // deal with legacy checkpoints
         std::fill(smoothedCounts.begin(), smoothedCounts.end(), static_cast<double>(minibatchSize));
 
+    if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BCriteria"))
+    {
+        int32_t criteriaSize = 0;
+        fstream >> criteriaSize;
+        // Sanity check: criteria size in checkpoint must be the same as preallocated one we shall fill in.
+        if (criteriaSize != static_cast<int32_t>(m_criteriaBestEpoch.size()))
+        {
+            RuntimeError(
+                "Criteria size mismatch: checkpoint size %d but input size %d",
+                criteriaSize,
+                static_cast<int32_t>(m_criteriaBestEpoch.size()));
+        }
+        for (auto& criterion : m_criteriaBestEpoch)
+            fstream >> criterion.second.criterionMinValue >> criterion.second.epochIndex;
+        fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"ECriteria");
+    }
+
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECKP");
 
     if (m_pMASGDHelper)
@@ -2529,7 +2652,7 @@ wstring SGD<ElemType>::GetCheckPointFileNameForEpoch(const int epoch)
 }
 
 template <class ElemType>
-wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel)
+wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel) const
 {
     int epoch1Base = epoch + 1;
     if (epoch1Base == m_maxEpochs || bLastModel)
@@ -3127,7 +3250,15 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             InvalidArgument("DataParallelASGD is not enabled in this version.\n");
 #else
             const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
-            m_nSyncSamplesPerWorker = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
+            m_nSyncSamplesPerWorker = configDataParallelASGD(L"syncPeriodPerWorker", ConfigRecordType::Array(intargvector(vector<int>{256})));
+#if 1       // legacy option
+            if (configDataParallelASGD.Exists(L"syncPeriod"))
+            {
+                if (configDataParallelASGD.Exists(L"syncPeriodPerWorker"))
+                    InvalidArgument("syncPeriod is a deprecated alias of syncPeriodPerWorker. It is not allowed to specify both of them");
+                m_nSyncSamplesPerWorker = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
+            }
+#endif
             m_isAsyncBufferEnabled = configDataParallelASGD(L"UsePipeline", false);
             m_isSimulateMA = configDataParallelASGD(L"SimModelAverage", false); // using parameter server-based version of ModelAveragingSGD
             if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning")) // adjust learning rate per m_adjustNumInBatch minibatchs until to original one,

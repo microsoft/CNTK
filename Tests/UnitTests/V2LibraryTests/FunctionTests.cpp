@@ -35,7 +35,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
 
             bool reduceAll = (reductionAxis < 0);
             if (reduceAll)
-                reduceSumFunc = ReduceSum(inputVar);
+                reduceSumFunc = ReduceSum(inputVar, Axis::AllAxes());
             else
                 reduceSumFunc = ReduceSum(inputVar, Axis(useNegativeAxisIndex ? (reductionAxis - (int)sampleRank) : reductionAxis));
 
@@ -109,7 +109,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
             auto inputVar = InputVariable({ inputShape }, DataType::Float, L"input");
             FunctionPtr reduceSumFunc = Sequence::ReduceSum(inputVar);
 
-            NDShape maskShape = { 1, numSequences };
+            NDShape maskShape = { numSequences };
             NDShape outputShape = reduceSumFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape(maskShape);
 
@@ -163,7 +163,12 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
             auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
-            auto sliceFunc = Slice(inputVar, Axis(useNegativeAxisIndex ? (sliceAxis - (int)sampleRank) : sliceAxis), beginOffset, endOffset);
+            std::vector<Axis> axis; 
+            std::vector<int> beginOffsetVec, endOffsetVec; 
+            axis.push_back(Axis(useNegativeAxisIndex ? (sliceAxis - (int)sampleRank) : sliceAxis)); 
+            beginOffsetVec.push_back(beginOffset); 
+            endOffsetVec.push_back(endOffset); 
+            auto sliceFunc = Slice(inputVar, axis, beginOffsetVec, endOffsetVec);
 
             NDShape outputShape = sliceFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape({ maxActualSequenceLength, numSequences });
@@ -227,7 +232,10 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
 
             size_t outputSequenceAxisLength = maxSliceLength;
             size_t outputBatchAxisLength = numSequences;
-            NDShape outputShape = sliceFunc->Output().Shape().AppendShape({ outputSequenceAxisLength, outputBatchAxisLength });
+            NDShape outputShape = sliceFunc->Output().Shape();
+            if (endAndBeginOffsetDiff != 1)
+                outputShape = outputShape.AppendShape({ outputSequenceAxisLength });
+            outputShape = outputShape.AppendShape({ outputBatchAxisLength });
             std::vector<float> outputData(outputShape.TotalSize(), 0);
             NDMaskPtr mask;
             if (endAndBeginOffsetDiff < 0)
@@ -289,7 +297,7 @@ void TestRecurrentFunctionCloning()
     auto placeholderReplacement = PastValue(plusOutput);
     plusOutput = plusOutput->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
 
-    auto reducedOutput = ReduceSum(plusOutput, L"sum");
+    auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
     auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
 
     std::unordered_set<FunctionPtr> visitedFunctions;
@@ -302,7 +310,7 @@ void TestRecurrentFunctionCloning()
     CompareFunctions(clonedFunctionWithParametersCloned, clonedFunctionWithParametersShared, ParameterCloningMethod::Share, {}, visitedFunctions);
 
     visitedFunctions.clear();
-    auto replacementInputVar = InputVariable({ inputDim }, true, DataType::Float, false, L"input2");
+    auto replacementInputVar = InputVariable({ inputDim }, true, DataType::Float, true, L"input2");
     std::unordered_map<Variable, Variable> cloningReplacements = { { *(clonedFunctionWithParametersShared->Arguments().begin()), replacementInputVar } };
     auto clonedFunctionWithParametersFrozen = clonedFunctionWithParametersShared->Clone(ParameterCloningMethod::Freeze, cloningReplacements);
     CompareFunctions(clonedFunctionWithParametersShared, clonedFunctionWithParametersFrozen, ParameterCloningMethod::Freeze, cloningReplacements, visitedFunctions);
@@ -443,11 +451,14 @@ void TestSplice()
 {
     srand(1);
 
-    TestSplice(4, 2, 0, DeviceDescriptor::CPUDevice());
-    TestSplice(3, 3, 2, DeviceDescriptor::CPUDevice());
-    TestSplice(2, 3, 3, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+    {
+        TestSplice(4, 2, 0, DeviceDescriptor::CPUDevice());
+        TestSplice(3, 3, 2, DeviceDescriptor::CPUDevice());
+        TestSplice(2, 3, 3, DeviceDescriptor::CPUDevice());
+    }
 
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestSplice(4, 3, 1, DeviceDescriptor::GPUDevice(0));
         TestSplice(3, 4, 2, DeviceDescriptor::GPUDevice(0));
@@ -531,7 +542,7 @@ void TestTimesIndirectSparseInputGradientSparse(const DeviceDescriptor& device)
     inputMap.insert(std::make_pair(input, inputValue));
 
     std::vector<float> outputData(numSequences);
-    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ 1, 1, numSequences }), outputData, false));
+    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ 1, numSequences }), outputData, false));
     std::unordered_map<Variable, ValuePtr> outputMap;
     outputMap.insert(std::make_pair(timesFunction->Output(), outputValue));
 
@@ -660,7 +671,7 @@ void TestRecurrenceShapeInference()
         auto placeholderReplacement = PastValue(plusOutput);
         plusOutput = plusOutput->ReplacePlaceholders({ { recurrenceForwardReference, placeholderReplacement } });
 
-        auto reducedOutput = ReduceSum(plusOutput, L"sum");
+        auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
         auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
 
         auto inputVar = InputVariable(inputShape, false, DataType::Float, true, L"input", { Axis::NewUniqueDynamicAxis(L"inputSequence"), Axis::DefaultBatchAxis() });
@@ -731,7 +742,7 @@ void TestFunctionOutputs(const DeviceDescriptor& device)
     }
 }
 
-void TestOuputVariableName(const DeviceDescriptor& device)
+void TestOutputVariableName(const DeviceDescriptor& device)
 {
     size_t inputDim = 10;
     size_t outputDim = 20;
@@ -942,6 +953,18 @@ void TestFindName(const DeviceDescriptor& device)
         minusFunc3->FindByName(blockFuncName, true);
     }, "The expected exception has not been caugth: multiple functions with the same name.");
 
+    // Test FindByName with multiple block functions, nestedSearchInsideBlockFunction is true
+    auto placeholder1 = PlaceholderVariable(L"inputPlaceholder1");
+    auto firstBlockPlusFuncName = L"FirstBlockPlus";
+    auto blockRoot1 = Plus(placeholder1, Constant::Scalar(1.0f), firstBlockPlusFuncName);
+    auto placeholder2 = PlaceholderVariable(L"inputPlaceholder2");
+    auto secondBlockPlusFuncName = L"SecondBlockPlus";
+    auto blockRoot2 = Plus(placeholder2, Constant::Scalar(1.0f), secondBlockPlusFuncName);
+    auto block2 = AsBlock(std::move(blockRoot2), { { placeholder2, InputVariable({}, DataType::Float)} }, L"Plus");
+    auto block1 = AsBlock(std::move(blockRoot1), { { placeholder1, block2->Output() } }, L"Plus");
+    CheckFindByNameResult(block1->FindByName(firstBlockPlusFuncName, true), blockRoot1);
+    CheckFindByNameResult(block1->FindByName(secondBlockPlusFuncName, true), blockRoot2);
+
     // Test FindAllWithName with block functions, nestedSearchInsideBlockFunction is false.
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherPlusFuncName), anotherPlusFuncName, 1);
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherMinusFuncName), anotherMinusFuncName, 0);
@@ -982,93 +1005,107 @@ BOOST_AUTO_TEST_SUITE(FunctionSuite)
 
 BOOST_AUTO_TEST_CASE(FindNameInCPU)
 {
-    TestFindName(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestFindName(DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(FindNameInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestFindName(DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(Splice)
 {
+    // Handles device internally.
     TestSplice();
 }
 
 BOOST_AUTO_TEST_CASE(ChangingParameterValuesInCPU)
 {
-    TestChangingParameterValues<float>(2, DeviceDescriptor::CPUDevice());
-    TestChangingParameterValues<double>(3, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+    {
+        TestChangingParameterValues<float>(2, DeviceDescriptor::CPUDevice());
+        TestChangingParameterValues<double>(3, DeviceDescriptor::CPUDevice());
+    }
 }
 
 BOOST_AUTO_TEST_CASE(ChangingParameterValuesInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestChangingParameterValues<double>(3, DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(TimesNodeShapeInference)
 {
-    TestTimesNodeShapeInference();
+    if (ShouldRunOnCpu())
+        TestTimesNodeShapeInference();
 }
 
 BOOST_AUTO_TEST_CASE(RecurrenceShapeInference)
 {
-    TestRecurrenceShapeInference();
+    if (ShouldRunOnCpu())
+        TestRecurrenceShapeInference();
 }
 
 BOOST_AUTO_TEST_CASE(SliceInCPU)
 {
-    TestSlice(2, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestSlice(2, DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(SliceInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestSlice(1, DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(ReduceSumInCPU)
 {
-    TestReduceSum(1, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestReduceSum(1, DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(ReduceSumInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestReduceSum(2, DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(RecurrentFunctionCloning)
 {
-    TestRecurrentFunctionCloning();
+    if (ShouldRunOnCpu())
+        TestRecurrentFunctionCloning();
 }
 
 BOOST_AUTO_TEST_CASE(TransposeInCPU)
 {
-    TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(TransposeInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(OutputVariableNameInCPU)
 {
-    TestOuputVariableName(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestOutputVariableName(DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(FunctionOutputs)
 {
-    TestFunctionOutputs(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestFunctionOutputs(DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(TimesIndirectSparseGradType)
 {
-    TestTimesIndirectSparseInputGradientSparse(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestTimesIndirectSparseInputGradientSparse(DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

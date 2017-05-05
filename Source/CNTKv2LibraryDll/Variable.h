@@ -8,7 +8,6 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <fstream>
-#include "Utils.h"
 
 namespace CNTK
 {
@@ -19,7 +18,7 @@ namespace CNTK
         NDShape m_shape;
         VariableKind m_varKind;
         ::CNTK::DataType m_dataType;
-        Function* m_ownerFunction; // Variable does not keep the Function alive
+        std::weak_ptr<Function> m_ownerFunction;
         std::unique_ptr<std::once_flag> m_initValueFlag;
         NDArrayViewPtr m_value;
         std::unique_ptr<ParameterInitializer> m_valueInitializer;
@@ -32,7 +31,7 @@ namespace CNTK
         std::atomic<size_t> m_valueTimeStamp;
         Variable m_blockFunctionVariableMapping;
 
-        VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
+        VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, const std::weak_ptr<Function>& ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
             : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid), m_valueTimeStamp(0)
         {
             if (value && (type != value->GetDataType()))
@@ -46,10 +45,26 @@ namespace CNTK
                 if (!retVal.second)
                     InvalidArgument("Dynamic axis named %S is specified more than once for Variable '%S'", currentDynamicAxis.Name().c_str(), AsString().c_str());
             }
+
+            if (m_varKind == VariableKind::Input)
+            {
+                for (auto dim : m_shape.Dimensions())
+                {
+                    if (dim == 0)
+                        InvalidArgument("Variable '%S' has invalid shape '%S'.", AsString().c_str(), m_shape.AsString().c_str());
+                }
+            }
+
+            if ((m_varKind == VariableKind::Parameter) || (m_varKind == VariableKind::Constant))
+            {
+                if (m_shape.HasFreeDimension())
+                    InvalidArgument("Parameter/Constant '%S' has invalid shape '%S'; it is illegal for a Parameter/Constant to have a FreeDimension.", AsString().c_str(), m_shape.AsString().c_str());
+            }
         }
 
         std::wstring AsString() const;
         std::shared_ptr<VariableFields> Clone() const;
+        FunctionPtr Owner() const;
 
         CNTK_API void SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device);
 

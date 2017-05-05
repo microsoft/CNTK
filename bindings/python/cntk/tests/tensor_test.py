@@ -22,21 +22,20 @@ def test_eval_scalar():
     assert np.all((c+[3,4]).eval() == [5,6])
 
 def test_numpy_conversion():
-    from ..utils import sanitize_value
+    from cntk.internal import sanitize_value
     from ..cntk_py import Value
 
     # check NDArrayView
     ndav = sanitize_value((2,3), 1, np.float32, None)
-    assert np.all(np.asarray(ndav) == np.ones((2,3)))
+    assert np.all(ndav.asarray() == np.ones((2,3)))
 
     # check Value
-    assert np.all(np.asarray(Value(ndav)) == np.ones((2,3)))
+    assert np.all(Value(ndav).asarray() == np.ones((2,3)))
 
     # check Constant
     c = constant(1, shape=(2,3))
-    assert np.all(np.asarray(c) == np.ones((2,3)))
+    assert np.all(c.asarray() == np.ones((2,3)))
     
     #check Parameter
     p = parameter(shape=(2,3), init=1)
-    assert np.all(np.asarray(p) == np.ones((2,3)))
-    
+    assert np.all(p.asarray() == np.ones((2,3)))

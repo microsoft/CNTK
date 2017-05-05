@@ -138,7 +138,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
 
         bool shouldPrefetch = true;
         m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch, 
-            multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow);
+            multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow, GetRandomSeed(config));
     }
     else
     {
@@ -217,6 +217,9 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
         readerConfig(L"deserializers", ConfigParameters::Array(argvector<ConfigValue>(vector<ConfigValue> {})));
 
     assert(m_deserializers.empty());
+
+    auto traceLevel = readerConfig.Find("traceLevel");
+
     bool primary = true;  // Currently, the first deserializer becomes primary - it drives chunking.
     for (size_t i = 0; i < deserializerConfigs.size(); ++i)
     {
@@ -224,6 +227,10 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
         ConfigParameters p = deserializerConfigs[i];
         p.Insert("frameMode", m_packingMode == PackingMode::sample ? "true" : "false");
         p.Insert("precision", m_precision);
+        if (!traceLevel.empty()) 
+        {
+            p.Insert("traceLevel", traceLevel);
+        }
 
         IDataDeserializerPtr d = CreateDeserializer(p, primary);
         primary = false;

@@ -126,9 +126,11 @@ namespace CNTK
     };
 
     ProgressWriter::ProgressWriter(size_t trainingUpdateWriteFrequency, size_t trainingFirstUpdatesToWrite,
-                                   size_t testUpdateWriteFrequency, size_t testFirstUpdatesToWrite)
+                                   size_t testUpdateWriteFrequency, size_t testFirstUpdatesToWrite,
+                                   size_t distributedSyncUpdateWriteFrequency, size_t distributedSyncFirstUpdatesToWrite)
         : m_training(std::make_unique<Impl>(trainingUpdateWriteFrequency, trainingFirstUpdatesToWrite)),
-        m_test(std::make_unique<Impl>(testUpdateWriteFrequency, testFirstUpdatesToWrite))
+        m_test(std::make_unique<Impl>(testUpdateWriteFrequency, testFirstUpdatesToWrite)),
+        m_distributedSync(std::make_unique<Impl>(distributedSyncUpdateWriteFrequency, distributedSyncFirstUpdatesToWrite))
     {
     }
 
@@ -158,6 +160,16 @@ namespace CNTK
             });
     }
 
+    void ProgressWriter::UpdateDistributedSync(size_t samples, const ValuePtr& accumulatedMetric)
+    {
+        m_distributedSync->Update(samples, nullptr, accumulatedMetric,
+            [this](const std::pair<size_t, size_t> samples, std::pair<size_t, size_t> updates,
+                   const std::pair<double, double> /*aggregateLoss*/, std::pair<double, double> aggregateMetric)
+        {
+            OnWriteDistributedSyncUpdate(samples, updates, aggregateMetric);
+        });
+    }
+    
     void ProgressWriter::WriteTrainingSummary(const ValuePtr& accumulatedLoss, const ValuePtr& accumulatedMetric)
     {
         m_training->WriteSummary(

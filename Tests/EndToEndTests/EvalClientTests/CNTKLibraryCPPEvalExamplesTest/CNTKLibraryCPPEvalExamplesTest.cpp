@@ -8,16 +8,18 @@
 #include <stdio.h>
 
 void MultiThreadsEvaluation(bool);
-bool IsGPUAvailable();
+bool ShouldRunOnCpu();
+bool ShouldRunOnGpu();
 
 int main()
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         fprintf(stderr, "\n##### Test CNTKLibraryCPPEvalExamples on GPU device. #####\n");
         MultiThreadsEvaluation(true);
     }
-    else
+
+    if (ShouldRunOnCpu())
     {
         fprintf(stderr, "\n##### Test CNTKLibraryCPPEvalExamples on CPU device. #####\n");
         MultiThreadsEvaluation(false);

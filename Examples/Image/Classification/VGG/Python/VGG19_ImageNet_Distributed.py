@@ -12,13 +12,13 @@ import numpy as np
 import cntk
 import _cntk_py
 
-from cntk.utils import *
+from cntk.logging import *
 from cntk.ops import *
 from cntk.distributed import data_parallel_distributed_learner, Communicator
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
 from cntk.layers import Placeholder, Block, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential, For
 from cntk.initializer import normal
-from cntk.training_session import *
+from cntk.train.training_session import *
 
 # default Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -59,15 +59,15 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
             features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
             labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
         randomize = is_training, 
-        epoch_size=total_number_of_samples,
+        max_samples=total_number_of_samples,
         multithreaded_deserializer = True)
 
 # Create the network.
 def create_vgg19():
 
     # Input variables denoting the features and label data
-    feature_var = input_variable((num_channels, image_height, image_width))
-    label_var = input_variable((num_classes))
+    feature_var = input((num_channels, image_height, image_width))
+    label_var = input((num_classes))
 
     # apply model to input
     # remove mean value 
@@ -162,11 +162,11 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
     # Train all minibatches 
     training_session(
         trainer=trainer, mb_source = train_source, 
-        var_to_stream = input_map, 
+        model_inputs_to_streams = input_map, 
         mb_size = minibatch_size,
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
-        cv_config = CrossValidationConfig(source=test_source, mb_size=minibatch_size)
+        test_config = TestConfig(source=test_source, mb_size=minibatch_size)
     ).train()
 
 # Train and evaluate the network.
@@ -212,7 +212,7 @@ if __name__=='__main__':
     if args['logdir'] is not None:
         log_dir = args['logdir']
     if args['device'] is not None:
-        cntk.device.set_default_device(cntk.device.gpu(args['device']))
+        cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
 
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'val_map.txt')

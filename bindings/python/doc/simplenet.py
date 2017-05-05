@@ -1,8 +1,8 @@
 from __future__ import print_function
 import numpy as np
 import cntk as C
-from cntk.learner import sgd, learning_rate_schedule, UnitType
-from cntk.utils import ProgressPrinter
+from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk.logging import ProgressPrinter
 from cntk.layers import Dense, Sequential
 
 def generate_random_data(sample_size, feature_dim, num_classes):
@@ -25,8 +25,8 @@ def ffnet():
     hidden_dimension = 50
 
     # input variables denoting the features and label data
-    features = C.input_variable((inputs), np.float32)
-    label = C.input_variable((outputs), np.float32)
+    features = C.input((inputs), np.float32)
+    label = C.input((outputs), np.float32)
 
     # Instantiate the feedforward classification model
     my_model = Sequential ([

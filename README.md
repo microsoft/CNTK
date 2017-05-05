@@ -1,44 +1,59 @@
-**The [CNTK Wiki](https://github.com/Microsoft/CNTK/wiki) has all information on CNTK including [setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine), [examples](https://github.com/Microsoft/CNTK/wiki/Examples), etc.**
-
-Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) and [BlockMomentumSGD](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#22-block-momentum-sgd) code is moved to a new Repository in GitHub. Read [this article](https://github.com/Microsoft/CNTK/wiki/Update-1bit-SGD-Submodule-Location) for details.
-
+**The [CNTK Wiki](https://github.com/Microsoft/CNTK/wiki) has all information on CNTK including [setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine), [examples](https://github.com/Microsoft/CNTK/wiki/Examples), etc.**  
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
+***2017-04-21.* CNTK 2.0 Release Candidate 2**  
+With Release Candidate 2 we reacted to customer feedback and improved/added features, functionality, and performance.
+
+Highlights:
+* New operators like `pow`, `sequence.reduce_max`, `sequence.softmax`.
+* New feature for Linux source builds (GPU Direct RDMA support in distributed gradients aggregation, NCCL support for Python in V2 gradients aggregation).
+* Support for Python 3.6 for source and binary installation; see [here](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine).
+* `UserMinibatchSource` to write custom minibatch sources; see [here](https://cntk.ai/pythondocs/extend.html#user-defined-minibatch-sources).
+* New C# APIs: `class NDArrayView` and methods, `SetMaxNumCPUThreads()`, `GetMaxNumCPUThreads()`, `SetTraceLevel()`, `GetTraceLevel()`
+* A new set of NuGet Packages is provided with this Release. 
+
+The [release notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_RC_2_Release_Notes) contain an overview. 
+Get the release from the [CNTK Releases Page](https://github.com/Microsoft/CNTK/releases).
+
+***2017-03-31.* V 2.0 Release Candidate 1**  
+With Release Candidate 1 the Microsoft Cognitive Toolkit enters the final set of enhancements before release of the production version of CNTK v.2.0. 
+
+Highlights:
+* The release candidate contains [all changes and improvements introduced in CNTK 2.0 during beta phase](https://github.com/Microsoft/CNTK/wiki/CNTK-2.0-Beta-Highlights).
+* Enables Caffe-converted pretrained models on image classification including AlexNet, ResNet, VGG and BN-Inception. 
+* Slice now supports multiple-axis slicing.
+* Improves performance and memory footprint
+* Improvements in the [device selection API](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_RC_1_Release_Notes).
+* New Python [model debugging functions](https://www.cntk.ai/pythondocs/cntk.debugging.html#module-cntk.debugging.debug).
+* Improvements in Python and C# API. See the [release notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_RC_1_Release_Notes) for detailed description.
+* New file names for [CNTK libraries and dlls](https://github.com/Microsoft/CNTK/wiki/CNTK-Shared-Libraries-Naming-Format).
+
+The [release notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_RC_1_Release_Notes) contain an overview. 
+Get the release from the [CNTK Releases Page](https://github.com/Microsoft/CNTK/releases).
+
+***2017-03-24.* Important Note breaking changes**
+There are breaking changes in master compared to beta15, click [here](https://github.com/Microsoft/CNTK/wiki/Breaking-changes-in-Master-compared-to-beta15) for more information.
+
+***2017-03-16.* V 2.0 Beta 15 Release available at Docker Hub**  
+CNTK V 2.0 Beta 15 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
+See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
+
+***2017-03-15.* V 2.0 Beta 15 Release**  
+Highlights of this Release:
+* Added support for TensorBoard output in BrainScript. [Read more here](https://github.com/Microsoft/CNTK/wiki/Using-TensorBoard-for-Visualization).
+* Learners can now be implemented in pure Python by means of `UserLearners`. [Read more here](https://www.cntk.ai/pythondocs/extend.html#user-learners).
+* New debugging helpers: `dump_function()`, `dump_signature()`.
+* Tensors can be indexed using advanced indexing. E.g. `x[[0,2,3]]` would return a tensor that contains the first, third and fourth element of the first axis.
+* Significant updates in the [Layers Library](https://www.cntk.ai/pythondocs/layerref.html) of Python API. See [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_15_Release_Notes) for detailed description.
+* Updates and [new examples](https://github.com/Microsoft/CNTK/wiki/CNTK-Eval-Examples#examples-for-evaluating-multiple-requests-in-parallel) in C# API.
+* Various bug fixes.
+
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_15_Release_Notes).  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
+
 ***2017-02-28.* V 2.0 Beta 12 Release available at Docker Hub**  
 CNTK V 2.0 Beta 12 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
-See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
-
-***2017-02-23.* V 2.0 Beta 12 Release**  
-Highlights of this Release:
-* New and updated features: new activation functions, support of `Argmax` and `Argmin`, improved performance of `numpy` interop, new functionality of existing operators, and more.
-* [CNTK for CPU on Windows can now be installed via `pip install` on Anaconda 3](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine). Other configurations will be enabled soon.
-* HTK deserializers are now exposed in Python. All deserializers are exposed in C++.
-* The memory pool implementation of CNTK has been updated with a new global optimization algorithm. Hyper memory compression has been removed.
-* New features in C++ API.
-* [New Eval examples for RNN models](https://github.com/Microsoft/CNTK/blob/master/Examples/Evaluation/CNTKLibraryCSEvalCPUOnlyExamples/CNTKLibraryCSEvalExamples.cs).
-* New [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package) with CNTK V2 C++ Library.
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_12_Release_Notes).  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
-
-***2017-02-13.* V 2.0 Beta 11 Release available at Docker Hub**  
-CNTK V 2.0 Beta 11 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
-See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
-
-***2017-02-10.* V 2.0 Beta 11 Release**  
-Highlights of this Release:
-* New and updated core and Python API features.
-* New Tutorials and Examples:
-  * [Transfer learning example to train custom image classifiers](https://github.com/Microsoft/CNTK/tree/v2.0.beta11.0/Examples/Image/TransferLearning).
-* New [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package).
-  * Note a *breaking change* due to Assembly Strong Name enabling. See [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_11_Release_Notes).
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_11_Release_Notes).  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
-
-***2017-02-08.* V 2.0 Beta 10 Release available at Docker Hub**  
-CNTK V 2.0 Beta 10 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
 See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
@@ -64,7 +79,7 @@ Cognitive Toolkit (CNTK) provides significant performance gains compared to othe
 
 > * CNTK’s LSTM performance is 5-10x faster than the other toolkits.
 > * For convolution (image tasks), CNTK is comparable, but note the authors were using CNTK 1.7.2, and current CNTK 2.0 beta 10 is over 30% faster than 1.7.2.
-> * For all networks, CTNK's performance was superior to TensorFlow performance.
+> * For all networks, CNTK's performance was superior to TensorFlow performance.
 
 Historically, CNTK has been a pioneer in optimizing performance on multi-GPU systems. We continue to maintain the edge ([NVidia news at SuperComputing 2016](http://nvidianews.nvidia.com/news/nvidia-and-microsoft-accelerate-ai-together) and [CRAY at NIPS 2016](https://www.onmsft.com/news/microsoft-and-cray-announce-partnership-to-speed-up-deep-learning-on-supercomputers)).
 

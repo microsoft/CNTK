@@ -32,10 +32,12 @@ Readme text
 *.ipynb text
 *.pl text
 *.ps1 text
+*.psm1 text
 *.ps text
 *.i text
 
 *.sh text eol=lf
+*.awk text eol=lf
 build-and-test text eol=lf
 configure text eol=lf
 generate_build_info text eol=lf
@@ -143,3 +145,4 @@ Examples/Image/Detection/FastRCNN/fastRCNN/*/*.pyd binary
 Examples/Image/Detection/FastRCNN/fastRCNN/*/*.so binary
 Tests/UnitTests/V2LibraryTests/data/*.bin binary
 Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/*.bin binary
+Tests/EndToEndTests/ParallelTraining/AsynchronousSGD/ASGD_Resnet.model.1 binary

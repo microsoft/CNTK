@@ -99,8 +99,8 @@ Train = [
             width = 224
             height = 224
             channels = 3
-            cropType = "Random"
-            cropRatio = 0.46666:0.875
+            cropType = "randomSide"
+            sideRatio = 0.46666:0.875
             jitterType = "UniRatio"
             meanFile = "$MeanDir$/ImageNet1K_mean.xml"
         ]
@@ -119,7 +119,7 @@ Train = [
             height = 224
             channels = 3
             cropType = "Center"
-            cropRatio = 0.875
+            sideRatio = 0.875
             meanFile = "$MeanDir$/ImageNet1K_mean.xml"
         ]
         labels = [
@@ -143,7 +143,7 @@ Eval = [
             height = 224
             channels = 3
             cropType = "Center"
-            cropRatio = 0.875
+            sideRatio = 0.875
             meanFile = "$MeanDir$/ImageNet1K_mean.xml"
         ]
         labels = [

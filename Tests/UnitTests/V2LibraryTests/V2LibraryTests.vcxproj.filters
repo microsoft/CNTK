@@ -94,5 +94,8 @@
     <None Include="data\batch.norm.no.sample.count.v1.bin">
       <Filter>Input Files</Filter>
     </None>
+    <None Include="data\learner.checkpoint.backcompat.bin">
+      <Filter>Input Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

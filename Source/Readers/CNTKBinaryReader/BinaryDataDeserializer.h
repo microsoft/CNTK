@@ -14,40 +14,102 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 
-class BinaryDataDeserialzer {
+class BinaryDataDeserialzer 
+{
 public:
+
+    BinaryDataDeserialzer(FILE* file, ElementType precision = ElementType::tfloat)
+    {
+        ReadName(file);
+        ReadDataType(file);
+        ReadSampleSize(file);
+        
+        if (precision != ElementType::tfloat && precision != ElementType::tdouble)
+            LogicError("Unsupported precision type %u.", (unsigned int)precision);
+
+        if ((m_dataType == DataType::tfloat && precision != ElementType::tfloat) ||
+            (m_dataType == DataType::tdouble && precision != ElementType::tdouble))
+            LogicError("Unsupported combination of the input data type %u and precision %u. "
+                "At the moment, both have to match.", (unsigned int)m_dataType, (unsigned int)precision);
+
+        m_precision = precision;
+    }
+
     virtual size_t GetSequenceDataForChunk(size_t numSequences, void* data, std::vector<SequenceDataPtr>& result) = 0;
 
-    StorageType GetStorageType() { return m_storageType; }
-    ElementType GetElementType() { return m_elemType; }
-    TensorShapePtr GetSampleLayout() { return make_shared<TensorShape>(m_numCols); }
-    virtual bool IsSequence() { return false; }
+    virtual StorageType GetStorageType() = 0;
 
-    size_t GetElemSizeBytes()
+    StreamDescriptionPtr GetStreamDescription() 
     {
-        if (m_elemType == ElementType::tfloat)
+        auto streamDescription = std::make_shared<StreamDescription>();
+        streamDescription->m_elementType = m_precision;
+        streamDescription->m_storageType = GetStorageType();
+        streamDescription->m_sampleLayout = GetSampleLayout();
+        streamDescription->m_name = m_name;
+        return streamDescription;
+    }
+
+    TensorShapePtr GetSampleLayout() 
+    {
+        return  make_shared<TensorShape>(m_sampleDimension);
+    }
+
+    size_t SizeOfDataType()
+    {
+        if (m_dataType == DataType::tfloat)
             return sizeof(float);
-        else if (m_elemType == ElementType::tdouble)
+        if (m_dataType == DataType::tdouble)
             return sizeof(double);
-        else
-            LogicError("Error, elemtype is not defined for BinaryDataDeserializer.");
+        
+        LogicError("Unsupported input data type %u.", (unsigned int)m_dataType);
     }
 
 protected:
+
+    enum class DataType : unsigned char
+    {
+        tfloat = 0,
+        tdouble = 1,
+        // TODO: 
+        // tbool = 2, 1 bit per value (one-hot data)
+        // tbyte = 3, 1 byte per value
+    };
+
+    virtual ~BinaryDataDeserialzer() = default;
+
+    void ReadName(FILE* file)
+    {
+        uint32_t len;
+        // read the name
+        CNTKBinaryFileHelper::ReadOrDie(&len, sizeof(len), 1, file);
+        vector<char> temp(len + 1 , '\0');
+        CNTKBinaryFileHelper::ReadOrDie(temp.data(), sizeof(char), len, file);
+        m_name = msra::strfun::utf16(temp.data());
+    }
+
+    void ReadDataType(FILE* file)
+    {
+        CNTKBinaryFileHelper::ReadOrDie(&m_dataType, sizeof(m_dataType), 1, file);
+        if (m_dataType> DataType::tdouble)
+            RuntimeError("Unsupported input data type %u.", (unsigned int)m_dataType);
+    }
+
+    void ReadSampleSize(FILE* file)
+    {
+        CNTKBinaryFileHelper::ReadOrDie(&m_sampleDimension, sizeof(m_sampleDimension), 1, file);
+    }
+
     struct DenseInputStreamBuffer : DenseSequenceData
     {
-        // capacity = expected number of samples * sample size
         const void* GetDataBuffer() override
         {
             return m_data;
         }
 
         void* m_data;
+        DataType m_dataType;
     };
 
-    // In case of sparse input, we also need a vector of
-    // indices (one index for each input value) and a vector
-    // of NNZ counts (one for each sample).
     struct SparseInputStreamBuffer : SparseSequenceData
     {
         SparseInputStreamBuffer()
@@ -60,16 +122,13 @@ protected:
             return m_data;
         }
         
-        std::vector<IndexType> m_indicesBuffer;
         void* m_data;
     };
 
-    
-protected:
-    StorageType m_storageType;
-    ElementType m_elemType;
-    size_t m_numCols;
-
+    ElementType m_precision;
+    DataType m_dataType;
+    uint32_t m_sampleDimension;
+    wstring m_name;
 };
 
 typedef shared_ptr<BinaryDataDeserialzer> BinaryDataDeserializerPtr;
@@ -77,156 +136,108 @@ typedef shared_ptr<BinaryDataDeserialzer> BinaryDataDeserializerPtr;
 class DenseBinaryDataDeserializer : public BinaryDataDeserialzer
 {
 public:
-    DenseBinaryDataDeserializer(FILE* infile)
-    {
-        // We don't have to read the storage type. We know we're dense
-        m_storageType = StorageType::dense;
+    using BinaryDataDeserialzer::BinaryDataDeserialzer;
 
-        // Read the element type, note it's stored as an int32
-        int32_t elemType;
-        CNTKBinaryFileHelper::readOrDie(&elemType, sizeof(elemType), 1, infile);
-        if (elemType == 0)
-            m_elemType = ElementType::tfloat;
-        else if (elemType == 1)
-            m_elemType = ElementType::tdouble;
-        else
-            RuntimeError("Unsupported element type %d.", elemType);
-
-        // Read the number of columns
-        int32_t numCols;
-        CNTKBinaryFileHelper::readOrDie(&numCols, sizeof(numCols), 1, infile);
-        m_numCols = numCols;
-    }
+    virtual  StorageType GetStorageType() override { return StorageType::dense; }
 
     size_t GetSequenceDataForChunk(size_t numSequences, void* data, std::vector<SequenceDataPtr>& result)
     {
-        size_t elemSize = GetElemSizeBytes();
+        size_t valueSize = SizeOfDataType();
         result.resize(numSequences);
-        for (size_t c = 0; c < numSequences; c++)
+        size_t offset = 0;
+        for (size_t i = 0; i < numSequences; i++)
         {
-            shared_ptr<DenseInputStreamBuffer> sequence = make_shared<DenseInputStreamBuffer>();
-            sequence->m_data            = (char*)data + c*m_numCols*elemSize;
-            sequence->m_numberOfSamples = 1;
-            sequence->m_sampleLayout    = std::make_shared<TensorShape>(m_numCols);
-            result[c]                   = sequence;
+            shared_ptr<DenseInputStreamBuffer> sequenceDataPtr = make_shared<DenseInputStreamBuffer>();
+            sequenceDataPtr->m_numberOfSamples = *(uint32_t*)((char*)data + offset);
+            offset += sizeof(uint32_t);
+            sequenceDataPtr->m_data = (char*)data + offset;
+            sequenceDataPtr->m_sampleLayout = GetSampleLayout();
+            sequenceDataPtr->m_elementType = m_precision;
+            result[i]  = sequenceDataPtr;
+            offset += m_sampleDimension * valueSize * sequenceDataPtr->m_numberOfSamples;
         }
 
-        // For dense, the number of bytes processed is just numRows * numCols * elemSize;
-        return numSequences * m_numCols * elemSize;
+        return offset;
     }
-
 };
 
 class SparseBinaryDataDeserializer : public BinaryDataDeserialzer
 {
 public:
-    SparseBinaryDataDeserializer(FILE* infile)
+    SparseBinaryDataDeserializer(FILE* file, ElementType precision = ElementType::tfloat)
+        :BinaryDataDeserialzer(file, precision)
     {
-        // Read the storage type. Currently we only support sparse_csc, 
-        // but for future compatability allow it to be a parameter.
-        int32_t storageType;
-        CNTKBinaryFileHelper::readOrDie(&storageType, sizeof(storageType), 1, infile);
-        if (storageType == 0)
-            m_storageType = StorageType::sparse_csc;
-        else
-            RuntimeError("Unsupported storage type %d.", storageType);
-
-        // Read the element type, note it's stored as an int32
-        int32_t elemType;
-        CNTKBinaryFileHelper::readOrDie(&elemType, sizeof(elemType), 1, infile);
-        if (elemType== 0)
-            m_elemType = ElementType::tfloat;
-        else if (elemType == 1)
-            m_elemType = ElementType::tdouble;
-        else
-            RuntimeError("Unsupported element type %d.", elemType);
-
-        int32_t isSequence;
-        CNTKBinaryFileHelper::readOrDie(&isSequence, sizeof(isSequence), 1, infile);
-        if (isSequence == 0)
-            m_isSequence = false;
-        else if (isSequence == 1)
-            m_isSequence = true;
-        else
-            RuntimeError("Unsupported sequence type %d.", isSequence);
-
-        // Read the number of columns
-        int32_t numCols;
-        CNTKBinaryFileHelper::readOrDie(&numCols, sizeof(numCols), 1, infile);
-        m_numCols = numCols;
+        if (IndexType(m_sampleDimension) < 0)
+        {
+            RuntimeError("Sample dimension is too large for an IndexType value.");
+        }
     }
-    
-    bool IsSequence() override { return m_isSequence; }
+
+    virtual  StorageType GetStorageType() override { return StorageType::sparse_csc; }
 
     // The format of data is: 
-    // int32_t: nnz for the entire chunk
-    // ElemType[nnz]: the values for the sparse sequences
-    // int32_t[nnz]: the row offsets for the sparse sequences
-    // int32_t[numSequences]: the column offsets for the sparse sequences
+    // sequence[numSequences], where each sequence consists of:
+    //   uint32_t: numSamples
+    //   uint32_t: nnz for the sequence
+    //   ElemType[nnz]: the values for the sparse sequences
+    //   int32_t[nnz]: the row offsets for the sparse sequences
+    //   int32_t[numSamples]: sizes (nnz counts) for each sample in the sequence
     size_t GetSequenceDataForChunk(size_t numSequences, void* data, std::vector<SequenceDataPtr>& result)
     {
-        size_t elemSize = GetElemSizeBytes();
+        size_t offset = 0;
         result.resize(numSequences);
-
-        // For sparse, the first int32_t is the number of nnz values in the entire set of sequences
-        int32_t totalNNz = *(int32_t*)data;
-
-        // the rest of this chunk
-        // Since we're not templating on ElemType, we use void for the values. Note that this is the only place
-        // this deserializer uses ElemType, the rest are int32_t for this deserializer.
-        void* values = (char*)data + sizeof(int32_t);
-
-        // Now the row offsets
-        int32_t* rowOffsets = (int32_t*)((char*)values + elemSize * totalNNz);
-
-        // Now the col offsets
-        int32_t* colOffsets = rowOffsets + totalNNz;
-
-        // Now we setup some helper members to process the chunk
-        for (size_t colIndex = 0; colIndex < numSequences; colIndex++)
+        for (size_t i = 0; i < numSequences; i++)
         {
-            shared_ptr<SparseInputStreamBuffer> sequence = make_shared<SparseInputStreamBuffer>();
-            // We can't popuplate sequence->m_chunk here, so delay that for later
-
-            // We know the number of elements in all of the samples, it's just this:
-            sequence->m_totalNnzCount = colOffsets[colIndex + 1] - colOffsets[colIndex];
-
-            // The values array is already properly packed, so just use it.
-            sequence->m_data = values;
-            
-            // The indices are correct (note they MUST BE IN INCREASING ORDER), but we will have to fix them up a 
-            // little bit, for now just use them
-            sequence->m_indices = rowOffsets;
-            for (int32_t curRow = 0; curRow < sequence->m_totalNnzCount; curRow++)
-            {
-                // Get the sample for the current index
-                size_t sampleNum = rowOffsets[curRow] / m_numCols;
-                // The current sample might be OOB, if so, fill in the the missing ones.
-                while(sequence->m_nnzCounts.size() < sampleNum+1)
-                    sequence->m_nnzCounts.push_back(0);
-                // Now that we have enough samples, increment the nnz for the sample
-                sequence->m_nnzCounts[sampleNum] += 1;
-                // Now that we've found it's sample, fix up the index.
-                rowOffsets[curRow] %= m_numCols;
-            }
-            sequence->m_numberOfSamples = (uint32_t)sequence->m_nnzCounts.size();
-            // update values, rowOffsets pointers
-            values = (char*)values + sequence->m_totalNnzCount * elemSize;
-            rowOffsets += sequence->m_totalNnzCount;
-
-            result[colIndex] = sequence;
+            shared_ptr<SparseInputStreamBuffer> sequenceDataPtr = make_shared<SparseInputStreamBuffer>();
+            offset += GetSequenceData((char*)data + offset, sequenceDataPtr);
+            sequenceDataPtr->m_sampleLayout = GetSampleLayout();
+            sequenceDataPtr->m_elementType = m_precision;
+            result[i] = sequenceDataPtr;
         }
 
-        // For sparse, we compute how many bytes we processed
-        // From the header to this function, we see that is:
-        // sizeof(int32_t) + totalNNz * sizeof(ElemType) + totalNNz * sizeof(int32_t) + numSequences * sizeof(int32_t)
-        return sizeof(int32_t) + totalNNz * (elemSize + sizeof(int32_t)) + (numSequences + 1) * sizeof(int32_t);
+        return offset;
     }
 
-private:
-    bool m_isSequence;
+    size_t GetSequenceData(void* data, shared_ptr<SparseInputStreamBuffer>& sequence)
+    {
+        size_t valueSize = SizeOfDataType();
+        size_t offset = 0;
 
+        // The very first value in the buffer is the number of samples in this sequence.
+        sequence->m_numberOfSamples = *(uint32_t*)data;
+        offset += sizeof(uint32_t);
 
+        // Next is the total number of elements in all of the samples.
+        uint32_t nnz = *(uint32_t*)((char*)data + offset);
+        if (IndexType(nnz) < 0) 
+        {
+            RuntimeError("NNZ count is too large for an IndexType value.");
+        }
+        sequence->m_totalNnzCount = nnz;
+        offset += sizeof(uint32_t);
+        
+        
+
+        // the rest of this sequence
+        // Since we're not templating on ElemType, we use void for the values. Note that this is the only place
+        // this deserializer uses ElemType, the rest are int32_t for this deserializer.
+        // The data is already properly packed, so just use it.
+        sequence->m_data = (char*)data + offset;
+        offset += valueSize * sequence->m_totalNnzCount;
+
+        // The indices are supposed to be correctly packed (i.e., in increasing order)
+        sequence->m_indices = (int32_t*)((char*)data + offset);
+        offset += sizeof(int32_t) * sequence->m_totalNnzCount;
+        
+        int32_t* begin = (int32_t*)((char*)data + offset);
+        offset += sizeof(int32_t) * sequence->m_numberOfSamples;
+        int32_t* end = (int32_t*)((char*)data + offset);
+        
+        sequence->m_nnzCounts.reserve(sequence->m_numberOfSamples);
+        sequence->m_nnzCounts.assign(begin, end);
+
+        return offset;
+    }
 };
 
     

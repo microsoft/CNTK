@@ -241,10 +241,13 @@ void TrainSequenceToSequenceTranslator()
 {
     fprintf(stderr, "\nTrainSequenceToSequenceTranslator..\n");
 
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, false, true, true);
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), true, false, false, false, true, true);
+    if (ShouldRunOnCpu())
+    {
+        TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, false, true, true);
+        TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), true, false, false, false, true, true);
+    }
 
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, true, false, false);
         TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), true, true, true, true, false, false);

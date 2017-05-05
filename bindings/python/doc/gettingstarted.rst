@@ -2,12 +2,12 @@ Getting started
 ===============
 You can optionally try the `tutorials <https://notebooks.azure.com/cntk/libraries/tutorials>`__ with pre-installed CNTK running in Azure Notebook hosted environment (for free) if you have not installed the toolkit in your own machine.
 
-If you have installed CNTK on your machine, after going through the `installation steps <https://github.com/Microsoft/CNTK/wiki/CNTK-Binary-Download-and-Configuration>`__, 
+If you have installed CNTK on your machine, after going through the :cntkwiki:`installation steps <CNTK-Binary-Download-and-Configuration>`,
 you can start using CNTK from Python right away (don't forget to ``activate`` your Python environment):
 
     >>> import cntk
     >>> cntk.__version__
-    '2.0.beta12.0+'
+    '2.0rc2+'
     
     >>> cntk.minus([1, 2, 3], [4, 5, 6]).eval()
     array([-3., -3., -3.], dtype=float32)
@@ -17,28 +17,33 @@ pass for that node using its inputs, and returns the result of the forward pass.
 more common case) is as follows:
 
     >>> import numpy as np
-    >>> x = cntk.input_variable(2)
-    >>> y = cntk.input_variable(2)
+    >>> x = cntk.input(2)
+    >>> y = cntk.input(2)
     >>> x0 = np.asarray([[2., 1.]], dtype=np.float32)
     >>> y0 = np.asarray([[4., 6.]], dtype=np.float32)
     >>> cntk.squared_error(x, y).eval({x:x0, y:y0})
-    array([[ 29.]], dtype=float32)
+    array([ 29.], dtype=float32)
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
 inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. 
 The squared error is then of course ``(2-4)**2 + (1-6)**2 = 29``.
 
-As the graph nodes implement the NumPy array interface, you can easily access
-their content and use them in other NumPy operations:
+Most of the data containers like parameters, constants, values, etc. implement
+the asarray() method, which returns a NumPy interface.
 
     >>> import cntk as C
     >>> c = C.constant(3, shape=(2,3))
-    >>> np.asarray(c)
+    >>> c.asarray()
     array([[ 3.,  3.,  3.],
            [ 3.,  3.,  3.]], dtype=float32)
-    >>> np.ones_like(c)
+    >>> np.ones_like(c.asarray())
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]], dtype=float32)
+
+For values that have a sequence axis, ``asarray()`` cannot work since, it requires
+the shape to be rectangular and sequences most of the time have different
+lengths. In that case, ``as_sequences(var)`` returns a list of NumPy arrays,
+where every NumPy arrays has the shape of the static axes of ``var``.
 
 Overview and first run
 ----------------------
@@ -60,10 +65,8 @@ can be vastly improved. To explicitly set the device to GPU, set the target devi
     from cntk.device import set_default_device, gpu
     set_default_device(gpu(0))
 
-Now let's setup a network that will learn a classifier based on the example fully connected classifier network 
-(``nn.fully_connected_classifier_net``). This is defined, along with several other simple and more complex DNN building blocks in 
-``Examples/common/nn.py``. Go to the ``[CNTK root]/Examples/common/`` directory and create a ``simplenet.py`` file with the 
-following contents:
+Now let's setup a network that will learn a classifier with fully connected layers using only the functions :func:`~cntk.layers.higher_order_layers.Sequential`
+and :func:`~cntk.layers.layers.Dense` from the Layers Library. Create a ``simplenet.py`` file with the following contents:
 
 .. literalinclude:: simplenet.py
 

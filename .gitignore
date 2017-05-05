@@ -218,6 +218,10 @@ bindings/python/cntk/libs/
 bindings/python/cntk/cntk_py_wrap.cpp
 bindings/python/cntk/cntk_py_wrap.h
 bindings/python/dist/
+bindings/python/doc/cntk.*.rst
+bindings/python/doc/cntk.rst
+bindings/python/doc/modules.rst
+bindings/python/doc/_build
 
 # Auto-generated sources from CNTK.proto
 Source/CNTKv2LibraryDll/proto/CNTK.pb.cc

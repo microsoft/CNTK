@@ -784,10 +784,15 @@ class ForwardBackwardNode : public  ComputationNodeNonLooping<ElemType>, public 
         return L"ForwardBackward";
     }
 public:
-    DeclareConstructorFromConfigWithNumInputs(ForwardBackwardNode);
     ForwardBackwardNode(DEVICEID_TYPE deviceId, const wstring & name, size_t blankTokenId=SIZE_MAX, int delayConstraint=-1) :
         Base(deviceId, name), m_blankTokenId(blankTokenId), m_delayConstraint(delayConstraint)
     {
+    }
+
+    ForwardBackwardNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : ForwardBackwardNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"blankTokenId"), configp->Get(L"delayConstraint"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     // Compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
@@ -887,7 +892,7 @@ public:
                 LogicError("ForwardBackwardNode: Please pass LabelsToGraph(labels) for second argument");
         }
 
-        SetDims(TensorShape(1), false);
+        SetDims(Environment().IsV2Library() ? TensorShape() : TensorShape(1), false);
     }
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -934,6 +939,20 @@ public:
         size_t cols = Input(0)->Value().GetNumCols();
         m_maxIndexes->Resize(1, cols);
         m_maxValues->Resize(1, cols);
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_delayConstraint;
+        fstream << m_blankTokenId;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_delayConstraint;
+        fstream >> m_blankTokenId;
     }
 
     int DelayConstraint() { return m_delayConstraint; }
@@ -993,4 +1012,133 @@ public:
 
 template class StopGradientNode<float>;
 template class StopGradientNode<double>;
+
+// -----------------------------------------------------------------------
+// AssignNode (RefInput, Input)
+// -----------------------------------------------------------------------
+template <class ElemType>
+class AssignNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"Assign"; }
+
+    shared_ptr<Matrix<ElemType>> m_result;
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(AssignNode);
+    AssignNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        m_result->Resize(Input(0)->Value());
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        auto& result = Value();
+        auto& inputValue = InputRef(1).Value();
+
+        m_result->AssignValuesOf(inputValue);
+        result.AssignValuesOf(inputValue);
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ PostForwardAndBackProp() override
+    {
+        auto& refValue = InputRef(0).Value();
+        refValue.AssignValuesOf(*m_result);
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        if (inputIndex == 1)
+            Input(1)->Gradient() += Gradient();
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateBinaryZip(isFinalValidationPass, false);
+
+        if (Input(0)->HasMBLayout() || Input(1)->HasMBLayout())
+            InvalidArgument("AssignNode: None of the inputs can have dynamic axes.");
+
+        if (Input(0)->GetSampleLayout() != Input(1)->GetSampleLayout())
+            InvalidArgument("AssignNode: All inputs should have same sample layout.");
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_result, matrixPool);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+};
+
+template class AssignNode<float>;
+template class AssignNode<double>;
+
+// -----------------------------------------------------------------------
+// OutputMultiplexerNode(userDefinedV2FunctionNode, outputIndex)
+// ComputationNode for selecting one of the multiple outputs of UserDefinedV2FunctionNode
+// This is needed since the CNTK computation engin natively does not support
+// nodes with multiple outputs and hence, we need a separate node to multiplex 
+// the additional outputs.
+// -----------------------------------------------------------------------
+
+// TODO: We currently only support external nodes that cannot be part of CNTK recurrent loops
+template <class ElemType>
+class OutputMultiplexerNode final : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"OutputMultiplexer"; }
+
+public:
+    OutputMultiplexerNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputIndex = 0)
+        : Base(deviceId, name), m_outputIndex(outputIndex)
+    {
+        if (outputIndex == 0)
+            LogicError("OutputMultiplexerNode ctor must not be instantiated with outputIndex == 0");
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        // TODO: We should avoid this copy but that requires carefully managing the 
+        // lifetimes of the Value objects since to be able to directly use the 
+        // input Value as its output, we have to make sure that the input's Value
+        // is not reused until all dependents of this node are finished.
+        auto inputNode = Input(0)->template As<MultiOutputNode<ElemType>>();
+        Value().AssignValuesOf(*inputNode->m_outputsValue[m_outputIndex]);
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        // TODO: We should avoid this copy but that requires carefully managing the 
+        // lifetimes of the Gradient objects since to be able to directly use the 
+        // Gradient as input's gradient, we have to make sure that the Gradient
+        // is not reused until all the inputs are finished backpropagating to their inputs.
+        auto inputNode = Input(0)->template As<MultiOutputNode<ElemType>>();
+        inputNode->m_outputsGradient[m_outputIndex]->SetValue(Gradient());
+    }
+
+    virtual void Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        auto inputNode = Input(0)->template As<MultiOutputNode<ElemType>>();
+        m_pMBLayout = inputNode->m_outputsMBLayout[m_outputIndex];
+        SetDims(inputNode->m_outputsShape[m_outputIndex], HasMBLayout());
+    }
+
+private:
+    size_t m_outputIndex;
+};
+
+template class OutputMultiplexerNode<float>;
+template class OutputMultiplexerNode<double>;
+
 } } }

@@ -2,9 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Matrix.cpp" />
-    <ClCompile Include="CPUMatrix.cpp">
-      <Filter>CPU</Filter>
-    </ClCompile>
     <ClCompile Include="CPUSparseMatrix.cpp">
       <Filter>CPU</Filter>
     </ClCompile>
@@ -49,6 +46,12 @@
       <Filter>CPU</Filter>
     </ClCompile>
     <ClCompile Include="DataTransferer.cpp" />
+    <ClCompile Include="CPUMatrixDouble.cpp">
+      <Filter>CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="CPUMatrixFloat.cpp">
+      <Filter>CPU</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -131,6 +134,9 @@
     <ClInclude Include="QuantizedOperations.h" />
     <ClInclude Include="BlockMultiplierMatrixUtil.h" />
     <ClInclude Include="DataTransferer.h" />
+    <ClInclude Include="CPUMatrixImpl.h">
+      <Filter>CPU</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">

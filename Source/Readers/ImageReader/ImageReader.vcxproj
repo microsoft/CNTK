@@ -52,6 +52,9 @@
   <PropertyGroup Condition="$(ReleaseBuild)">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup>
+    <TargetName>Cntk.Deserializers.Image-$(CntkComponentVersion)</TargetName>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>

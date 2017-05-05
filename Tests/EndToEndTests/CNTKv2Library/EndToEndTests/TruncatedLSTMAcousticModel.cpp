@@ -11,7 +11,7 @@ using namespace CNTK;
 
 using namespace std::placeholders;
 
-static FunctionPtr LSTMAcousticSequenceClassiferNet(const Variable& input, size_t numOutputClasses, size_t LSTMDim, size_t cellDim, size_t numLSTMs, const DeviceDescriptor& device, const std::wstring& outputName)
+static FunctionPtr LSTMAcousticSequenceClassifierNet(const Variable& input, size_t numOutputClasses, size_t LSTMDim, size_t cellDim, size_t numLSTMs, const DeviceDescriptor& device, const std::wstring& outputName)
 {
     auto pastValueRecurrenceHook = [](const Variable& x) { return PastValue(x); };
     FunctionPtr r = input;
@@ -21,7 +21,7 @@ static FunctionPtr LSTMAcousticSequenceClassiferNet(const Variable& input, size_
     return FullyConnectedLinearLayer(r, numOutputClasses, device, outputName);
 }
 
-void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bool testSaveAndReLoad)
+void TrainTruncatedLSTMAcousticModelClassifier(const DeviceDescriptor& device, bool testSaveAndReLoad)
 {
     const size_t baseFeaturesDim = 33;
     const size_t cellDim = 1024;
@@ -33,15 +33,17 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
     auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels");
 
     const size_t numSamplesForFeatureStatistics = MinibatchSource::FullDataSweep;
-    Dictionary frameModeConfig;
-    frameModeConfig[L"frameMode"] = true;
-    auto minibatchSource = CreateHTKMinibatchSource(baseFeaturesDim, numOutputClasses, frameModeConfig, numSamplesForFeatureStatistics, false);
+    
+    auto config = GetHTKMinibatchSourceConfig(baseFeaturesDim, numOutputClasses, numSamplesForFeatureStatistics, false);
+    config.isFrameModeEnabled = true;
+    auto minibatchSource = CreateCompositeMinibatchSource(config);
+
     auto featureStreamInfo = minibatchSource->StreamInfo(features);
     std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>> featureMeansAndInvStdDevs = { { featureStreamInfo, { nullptr, nullptr } } };
     ComputeInputPerDimMeansAndInvStdDevs(minibatchSource, featureMeansAndInvStdDevs);
 
     auto normalizedFeatures = PerDimMeanVarianceNormalize(features, featureMeansAndInvStdDevs[featureStreamInfo].first, featureMeansAndInvStdDevs[featureStreamInfo].second);
-    auto classifierOutput = LSTMAcousticSequenceClassiferNet(normalizedFeatures, numOutputClasses, hiddenDim, cellDim, numLSTMLayers, device, L"classifierOutput");
+    auto classifierOutput = LSTMAcousticSequenceClassifierNet(normalizedFeatures, numOutputClasses, hiddenDim, cellDim, numLSTMLayers, device, L"classifierOutput");
 
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
     auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
@@ -61,10 +63,10 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
 
     const size_t numTrainingSamples = 81920;
     const size_t truncationLength = 20;
-    Dictionary truncatedModeConfig;
-    truncatedModeConfig[L"truncated"] = true;
-    truncatedModeConfig[L"truncationLength"] = truncationLength;
-    minibatchSource = CreateHTKMinibatchSource(baseFeaturesDim, numOutputClasses, truncatedModeConfig, numTrainingSamples);
+
+    config = GetHTKMinibatchSourceConfig(baseFeaturesDim, numOutputClasses, numTrainingSamples);
+    config.truncationLength = truncationLength;
+    minibatchSource = CreateCompositeMinibatchSource(config);
 
     const size_t numberParallelSequencesPerMB1 = 16;
     const size_t numberParallelSequencesPerMB2 = 32;
@@ -98,12 +100,13 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
     }
 }
 
-void TrainTruncatedLSTMAcousticModelClassifer()
+void TrainTruncatedLSTMAcousticModelClassifier()
 {
-    fprintf(stderr, "\nTrainTruncatedLSTMAcousticModelClassifer..\n");
+    fprintf(stderr, "\nTrainTruncatedLSTMAcousticModelClassifier..\n");
 
-    if (IsGPUAvailable())
-        TrainTruncatedLSTMAcousticModelClassifer(DeviceDescriptor::GPUDevice(0), true);
+    if (ShouldRunOnGpu())
+        TrainTruncatedLSTMAcousticModelClassifier(DeviceDescriptor::GPUDevice(0), true);
 
-    TrainTruncatedLSTMAcousticModelClassifer(DeviceDescriptor::CPUDevice(), false);
+    if (ShouldRunOnCpu())
+        TrainTruncatedLSTMAcousticModelClassifier(DeviceDescriptor::CPUDevice(), false);
 }

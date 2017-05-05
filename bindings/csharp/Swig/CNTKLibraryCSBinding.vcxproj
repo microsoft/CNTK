@@ -65,7 +65,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>CNTKLibrary-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Cntk.Core-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>
@@ -100,11 +100,13 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup>
+    <TargetName>Cntk.Core.CSBinding-$(CntkComponentVersion)</TargetName>
+  </PropertyGroup>
   <ItemGroup>
     <CustomBuild Include="cntk_cs.i">
       <FileType>Document</FileType>
-      <Command>$(SWIG_PATH)\swig.exe -c++ -csharp -DMSC_VER -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(SolutionDir)bindings\csharp\CNTKLibraryManagedDll\SwigProxyClasses -dllimport CNTKLibraryCSBinding cntk_cs.i</Command>
+      <Command>$(SWIG_PATH)\swig.exe -c++ -csharp -DMSC_VER -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(SolutionDir)bindings\csharp\CNTKLibraryManagedDll\SwigProxyClasses -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i</Command>
       <Outputs>cntk_cs_wrap.cxx; cntk_cs_warp.h</Outputs>
       <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)bindings\common\CNTKValueExtend.i;std_unordered_map.i</AdditionalInputs>
     </CustomBuild>
