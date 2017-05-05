@@ -74,8 +74,8 @@ public:
     const ModelParameters& Nested(const wstring& name) { return Parameters().Nested(name); }
     const ModelParameters& Parameters() const { return **this; }
 };
-typedef TModel<function<Variable(Variable)>> UnaryModel;
-typedef TModel<function<Variable(Variable,Variable)>> BinaryModel;
+typedef TModel<function<Variable(const Variable&)>> UnaryModel;
+typedef TModel<function<Variable(const Variable&, const Variable&)>> BinaryModel;
 typedef TModel<function<vector<Variable>(const vector<Variable>&)>> UnarySequenceModel;
 typedef TModel<function<vector<Variable>(const vector<Variable>&, const vector<Variable>&)>> BinarySequenceModel;
 
@@ -155,7 +155,7 @@ struct UnaryBroadcastingModel : public UnaryModel
 {
     typedef UnaryModel Base;
     UnaryBroadcastingModel(const UnaryModel& f) : UnaryModel(f) { }
-    Variable operator() (Variable x) const
+    Variable operator() (const Variable& x) const
     {
         return Base::operator()(x);
     }
@@ -168,7 +168,7 @@ struct UnaryBroadcastingModel : public UnaryModel
 UnaryBroadcastingModel Embedding(size_t embeddingDim, const DeviceDescriptor& device)
 {
     auto E = Parameter({ embeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"E");
-    return UnaryModel({ E }, [=](Variable x)
+    return UnaryModel({ E }, [=](const Variable& x)
     {
         return Times(E, x);
     });
@@ -179,7 +179,7 @@ BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
     auto R = Parameter({ outputDim, outputDim                  }, DataType::Float, GlorotUniformInitializer(), device, L"R");
     auto b = Parameter({ outputDim }, 0.0f, device, L"b");
-    return BinaryModel({ W, R, b }, [=](Variable prevOutput, Variable input)
+    return BinaryModel({ W, R, b }, [=](const Variable& prevOutput, const Variable& input)
     {
         return ReLU(Times(W, input) + Times(R, prevOutput) + b);
     });
@@ -189,7 +189,7 @@ UnaryBroadcastingModel Linear(size_t outputDim, const DeviceDescriptor& device)
 {
     auto W = Parameter({ outputDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"W");
     auto b = Parameter({ outputDim }, 0.0f, device, L"b");
-    return UnaryModel({ W, b }, [=](Variable x) { return Times(W, x) + b; });
+    return UnaryModel({ W, b }, [=](const Variable& x) { return Times(W, x) + b; });
 }
 
 UnaryModel Sequential(const vector<UnaryModel>& fns)
@@ -200,7 +200,7 @@ UnaryModel Sequential(const vector<UnaryModel>& fns)
         auto name = L"[" + std::to_wstring(i) + L"]";
         captured[name] = fns[i];
     }
-    return UnaryModel({}, captured, [=](Variable x)
+    return UnaryModel({}, captured, [=](const Variable& x)
     {
         auto arg = Combine({ x });
         for (const auto& f : fns)
@@ -215,7 +215,7 @@ struct Sequence
 
     static UnaryModel Recurrence(const BinaryModel& stepFunction)
     {
-        return [=](Variable x)
+        return [=](const Variable& x)
         {
             auto dh = PlaceholderVariable();
             auto rec = stepFunction(PastValue(dh), x);
@@ -229,7 +229,7 @@ struct Sequence
         map<wstring, shared_ptr<ModelParameters>> captured;
         captured[L"step"] = stepFunction;
         auto recurrence = Recurrence(stepFunction);
-        return UnaryModel({}, captured, [=](Variable x)
+        return UnaryModel({}, captured, [=](const Variable& x)
         {
             return Sequence::Last(recurrence(x));
         });
@@ -248,10 +248,10 @@ struct Sequence
 const /*static*/ function<Variable(Variable)> Sequence::Last = [](Variable x) -> Variable { return CNTK::Sequence::Last(x); };
 
 // slice the last dimension (index with index i; then drop the axis)
-Variable Index(Variable x, size_t i)
+Variable Index(const Variable& input, size_t i)
 {
-    auto dims = x.Shape().Dimensions();
-    x = Slice(x, { Axis((int)x.Shape().Rank() - 1) }, { (int)i }, { (int)i + 1 });
+    auto dims = input.Shape().Dimensions();
+    Variable x = Slice(input, { Axis((int)input.Shape().Rank() - 1) }, { (int)i }, { (int)i + 1 });
     dims = x.Shape().Dimensions();
     dims.pop_back(); // drop last axis
     x = Reshape(x, dims);
@@ -343,7 +343,7 @@ UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, siz
 //function<pair<Variable,Variable>(Variable, Variable)> CreateCriterionFunction(UnaryModel model)
 BinaryModel CreateCriterionFunction(UnaryModel model)
 {
-    return [=](Variable features, Variable labels)
+    return [=](const Variable& features, const Variable& labels)
     {
         let z = model(features);
 
@@ -368,7 +368,7 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
         { L"step",   step   },
         { L"linear", linear }
     },
-    [=](Variable x) -> Variable
+    [=](const Variable& x) -> Variable
     {
         // 'x' is an entire sequence; last dimension is length
         let len = x.Shape().Dimensions().back();
@@ -433,7 +433,7 @@ UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const BinaryModel& s
     };
 }
 
-Variable softmax(Variable z)
+Variable softmax(const Variable& z)
 {
     let Z = ReduceLogSum(z, Axis::AllStaticAxes());
     let P = Exp(z - Z);
@@ -449,12 +449,12 @@ void Flush(const FunctionPtr& f)
     f->Output().Value();
 }
 
-function<Variable(const vector<Variable>&, Variable)> AttentionModel(size_t attentionDim, const DeviceDescriptor& device)
+function<Variable(const vector<Variable>&, const Variable&)> AttentionModel(size_t attentionDim, const DeviceDescriptor& device)
 {
     auto Wenc = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
     auto Wdec = Parameter({ attentionDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device);
     auto v    = Parameter({ attentionDim }, DataType::Float, GlorotUniformInitializer(), device);
-    return [=](const vector<Variable>& hEncs, Variable hDec)
+    return [=](const vector<Variable>& hEncs, const Variable& hDec)
     {
         // BUGBUG: suboptimal, redoing attention projection for inputs over again; need CSE
         Variable hEncsTensor = Splice(hEncs, Axis(1)); // [hiddenDim, inputLen]
@@ -524,7 +524,7 @@ BinarySequenceModel CreateModelFunctionS2SAtt(size_t numOutputClasses, size_t em
 
 function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCriterionFunctionUnrolled(UnaryModel model)
 {
-    BinaryModel criterion = [=](Variable feature, Variable label) -> Variable
+    BinaryModel criterion = [=](const Variable& feature, const Variable& label) -> Variable
     {
         let z = model(feature);
         //let loss = CNTK::CrossEntropyWithSoftmax(z, label);
