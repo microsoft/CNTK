@@ -10,6 +10,7 @@
 #include "Common.h"
 #include "TimerUtility.h"
 #include "Layers.h"
+#include "GetValue.h" // meat is here
 
 #include <iostream>
 #include <cstdio>
@@ -678,7 +679,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         }
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "dynamite eval:  %.6f sec\n");
-            fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", mbLoss.Value()->AsScalar<float>() / minibatchData[featureStreamInfo].numberOfSequences);
+            fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", GetValue(mbLoss)->AsScalar<float>() / minibatchData[featureStreamInfo].numberOfSequences);
         }
 #endif
 #if 1

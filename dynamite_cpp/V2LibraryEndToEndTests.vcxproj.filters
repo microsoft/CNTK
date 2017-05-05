@@ -20,12 +20,18 @@
     <ClCompile Include="..\..\cntk\Source\Common\TimerUtility.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GetValue.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Layers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GetValue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
