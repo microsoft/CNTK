@@ -603,7 +603,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
     auto trainer = CreateTrainer(nullptr, loss, loss/*metric*/, { learner });
 
-    const size_t minibatchSize = 1;//200;
+    const size_t minibatchSize = 200;
     for (size_t repeats = 0; true; repeats++)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
@@ -680,7 +680,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             //mbLoss.Value()->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
             // looks like it is computing something in a meaningful range
-            fprintf(stderr, "%.6f\n", mbLoss.Value()->AsScalar<float>() / minibatchData[featureStreamInfo].numberOfSequences);
+            fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", mbLoss.Value()->AsScalar<float>() / minibatchData[featureStreamInfo].numberOfSequences);
         }
 #endif
 #if 1
