@@ -30,24 +30,24 @@ def readBatch(src):
     return res.astype(np.int)
 
 def loadData(src):
-    # print ('Downloading ' + src)
-    # fname, h = urlretrieve(src, './delete.me')
-    # print ('Done.')
-    # try:
-        # print ('Extracting files...')
-        # with tarfile.open(fname) as tar:
-        #     tar.extractall()
-        # print ('Done.')
-    print ('Preparing train set...')
-    trn = np.empty((0, NumFeat + 1), dtype=np.int)
-    batchName = './cifar-100-python/train'
-    trn = readBatch(batchName)
+    print ('Downloading ' + src)
+    fname, h = urlretrieve(src, './delete.me')
     print ('Done.')
-    print ('Preparing test set...')
-    tst = readBatch('./cifar-100-python/test')
-    print ('Done.')
-    # finally:
-        # os.remove(fname)
+    try:
+        print ('Extracting files...')
+        with tarfile.open(fname) as tar:
+            tar.extractall()
+        print ('Done.')
+        print ('Preparing train set...')
+        trn = np.empty((0, NumFeat + 1), dtype=np.int)
+        batchName = './cifar-100-python/train'
+        trn = readBatch(batchName)
+        print ('Done.')
+        print ('Preparing test set...')
+        tst = readBatch('./cifar-100-python/test')
+        print ('Done.')
+    finally:
+        os.remove(fname)
     return (trn, tst)
 
 def saveTxt(filename, ndarray):
