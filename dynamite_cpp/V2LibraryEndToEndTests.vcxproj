@@ -61,7 +61,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\CNTK\Source\Common\Include;$(SolutionDir)Tests\EndToEndTests\CNTKv2Library\Common;$(SolutionDir)..\CNTK\Source\CNTKv2LibraryDll\API;$(SolutionDir)..\CNTK\Source\CNTKv2LibraryDll\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\CNTK\Source\Common\Include; $(SolutionDir)..\CNTK\Source\ComputationNetworkLib; $(SolutionDir)..\CNTK\Source\Readers\ReaderLib; $(SolutionDir)..\CNTK\Source\Math; $(SolutionDir)Tests\EndToEndTests\CNTKv2Library\Common;$(SolutionDir)..\CNTK\Source\CNTKv2LibraryDll\API;$(SolutionDir)..\CNTK\Source\CNTKv2LibraryDll\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\CNTK\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
