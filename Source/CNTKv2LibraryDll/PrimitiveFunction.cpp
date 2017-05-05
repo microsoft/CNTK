@@ -1328,11 +1328,19 @@ namespace CNTK
             break;
             // non-elementwise ops are done here
         case PrimitiveOpType::Times:
-            // (dup--delete this once tested)
-            out->MatrixProduct(false, args[0], m_op == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, m_attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
-            break;
+            //// (dup--delete this once tested)
+            //out->MatrixProduct(false, args[0], m_op == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, m_attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
+            //break;
         case PrimitiveOpType::TransposeTimes:
             out->MatrixProduct(false, args[0], m_op == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, m_attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
+            break;
+            // ops that do not copy data
+        case PrimitiveOpType::StopGradient:
+            out = args[0];
+            break;
+        case PrimitiveOpType::Pass:
+        case PrimitiveOpType::NoOp:
+            out = args[0];
             break;
         case PrimitiveOpType::Reshape:
              out = args[0];
@@ -1372,8 +1380,80 @@ namespace CNTK
                 }
             }
             break;
-        default:
+            // the following N-nary operations should be easy, mostly a matter of writing tests
+            // unary operations to be completed
+        case PrimitiveOpType::Sqrt:
+        case PrimitiveOpType::Floor:
+        case PrimitiveOpType::Abs:
+        case PrimitiveOpType::Reciprocal:
+        case PrimitiveOpType::ELU:
+        case PrimitiveOpType::Pow:
+        case PrimitiveOpType::Softmax:
+        case PrimitiveOpType::Hardmax:
+        case PrimitiveOpType::TransposeAxes:
+        case PrimitiveOpType::LogSoftmax:
+        case PrimitiveOpType::SumAll:
+            LogicError("Variable '%S' Value(): Memoziation of unary operator %S not implemented yet.", AsString().c_str(), OpName().c_str());
+            // binary operations to be completed
+        case PrimitiveOpType::Equal:
+        case PrimitiveOpType::NotEqual:
+        case PrimitiveOpType::Less:
+        case PrimitiveOpType::LessEqual:
+        case PrimitiveOpType::Greater:
+        case PrimitiveOpType::GreaterEqual:
+        case PrimitiveOpType::LogPlus:
+        case PrimitiveOpType::Logistic:
+        case PrimitiveOpType::CrossEntropyWithSoftmax:
+        case PrimitiveOpType::ClassificationError:
+        case PrimitiveOpType::SquaredError:
+            LogicError("Variable '%S' Value(): Memoziation of binary operator %S not implemented yet.", AsString().c_str(), OpName().c_str());
+            // ternary operations to be completed
+        case PrimitiveOpType::Clip:
+        case PrimitiveOpType::Select:
+            LogicError("Variable '%S' Value(): Memoziation of ternary operator %S not implemented yet.", AsString().c_str(), OpName().c_str());
+            // dynamic-axis related operations are not supported as dynamic axes require Inputs and are therefore not applicable here
+        case PrimitiveOpType::PackedIndex:
+        case PrimitiveOpType::GatherPacked:
+        case PrimitiveOpType::ScatterPacked:
+        case PrimitiveOpType::PastValue:
+        case PrimitiveOpType::FutureValue:
+        case PrimitiveOpType::Where:
+        case PrimitiveOpType::OptimizedRNNStack:
+        case PrimitiveOpType::ReconcileDynamicAxis:
+        case PrimitiveOpType::ToSequence:
+        case PrimitiveOpType::ToSequenceLike:
+        case PrimitiveOpType::UnpackSequence:
+            RuntimeError("Variable '%S' Value(): Memoziation of dynamic-axis related operation %S is not possible as they imply unknown inputs.", AsString().c_str(), OpName().c_str());
+            // some operations are not supported because they do not apply
+        case PrimitiveOpType::Combine:  // TODO: should be trivial to support, just need a test
+        case PrimitiveOpType::Block:    // TODO: recursively invoke, needs a test and investigation whether blocks are always singleton copies
+        case PrimitiveOpType::Assign:
+            RuntimeError("Variable '%S' Value(): Memoziation of operation %S not applicable.", AsString().c_str(), OpName().c_str());
+            // the following operations are not TensorView, and may be implementable through relatively simple calls to Matrix
+        case PrimitiveOpType::BatchNormalization:
+        case PrimitiveOpType::CosDistance:
+        case PrimitiveOpType::OneHot:
             LogicError("Variable '%S' Value(): Memoziation of operation %S not implemented yet.", AsString().c_str(), OpName().c_str());
+            // the following operations are not TensorView, and hence should be routed through V1 ComputationNodes
+            // convolution family
+        case PrimitiveOpType::Convolution:  // TODO: route these through TensorView
+        case PrimitiveOpType::Pooling:
+        case PrimitiveOpType::Unpooling:
+        case PrimitiveOpType::ROIPooling:
+            // random family
+        case PrimitiveOpType::Dropout:
+        case PrimitiveOpType::RandomSample:
+        case PrimitiveOpType::RandomSampleInclusionFrequency:
+            // special ops family
+        case PrimitiveOpType::LambdaRank:
+        case PrimitiveOpType::NDCG:
+        case PrimitiveOpType::EditDistanceError:
+        case PrimitiveOpType::LabelsToGraph:
+        case PrimitiveOpType::ForwardBackward:
+        case PrimitiveOpType::CosDistanceWithNegativeSamples:
+            LogicError("Variable '%S' Value(): Memoziation of operation %S not implemented yet.", AsString().c_str(), OpName().c_str());
+        default:
+            LogicError("Variable '%S' Value(): Memoziation of non-existent operation %S?", AsString().c_str(), OpName().c_str());
         }
         // most common case: elementwise ops are done here instead
         if (op != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
