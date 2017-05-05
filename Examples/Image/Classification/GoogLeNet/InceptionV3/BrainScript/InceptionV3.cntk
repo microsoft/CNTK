@@ -116,7 +116,7 @@ Train = {
             file = "$DataDir$/val_map.txt"
             input = {
                 features = { transforms = (
-                   { type = "Crop"; cropType = "Center"; areaRatio = 0.875 } :
+                   { type = "Crop"; cropType = "Center"; sideRatio = 0.875 } :
                    { type = "Scale"; width = $ImageW$; height = $ImageH$; channels = $ImageC$; interpolations = "linear" } :
                    { type = "Transpose" }
                 )}
@@ -138,7 +138,7 @@ Eval = [
             file = "$DataDir$/val_map.txt"
             input = {
                 features = { transforms = (
-                   { type = "Crop"; cropType = "Center"; areaRatio = 0.875 } :
+                   { type = "Crop"; cropType = "Center"; sideRatio = 0.875 } :
                    { type = "Scale"; width = $ImageW$; height = $ImageH$; channels = $ImageC$; interpolations = "linear" } :
                    { type = "Transpose" }
                 )}
