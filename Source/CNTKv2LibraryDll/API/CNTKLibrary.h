@@ -2132,6 +2132,12 @@ private:
 
         CNTK_API void RecordValueUpdate();
 
+        ///
+        /// Redirect an existing Parameter's m_value field to be a reference to another.
+        /// This is a bad hack for debugging only, not fully supported everywhere.
+        ///
+        CNTK_API void TieValueWith(const Parameter& other);
+
     private:
         explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
             : Variable(value->Shape(), VariableKind::Parameter, value->GetDataType(), value, true, {}, name, uid)
@@ -2222,11 +2228,6 @@ private:
         {
             return Variable::Value();
         }
-
-        ///
-        /// Redirect an existing Constant to be a reference to another
-        ///
-        CNTK_API void ShareWith(const Constant& other);
 
     private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)

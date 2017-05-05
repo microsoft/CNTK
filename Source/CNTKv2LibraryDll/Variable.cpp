@@ -553,6 +553,19 @@ namespace CNTK
         m_dataFields->m_valueTimeStamp++;
     }
 
+    void Parameter::TieValueWith(const Parameter& other)
+    {
+        // This is a bad hack, for debugging only.
+        other.Value(); // flush initializer
+        m_dataFields->m_dataType = other.m_dataFields->m_dataType;
+        m_dataFields->m_initValueFlag.reset();
+        m_dataFields->m_valueInitializer.reset();
+        m_dataFields->m_valueInitializationDevice.reset();
+        m_dataFields->m_shape = other.m_dataFields->m_shape;
+        m_dataFields->m_value = other.m_dataFields->m_value;
+        RecordValueUpdate();
+    }
+
     Constant::Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)
         : Variable(shape, VariableKind::Constant, dataType, nullptr, false, {}, name, Internal::GenerateUid(VariableKind::Constant))
     {
@@ -568,10 +581,5 @@ namespace CNTK
         auto constantValueCPU = originalConstantValue->DeepClone(DeviceDescriptor::CPUDevice(), true);
         NDArrayViewPtr newConstantValue = CloneAsDataType(constantValueCPU, dataType, true);
         return Constant(newConstantValue->DeepClone(originalConstantValue->Device(), originalConstantValue->IsReadOnly()), Name());
-    }
-
-    void Constant::ShareWith(const Constant& other)
-    {
-        m_dataFields = other.m_dataFields;
     }
 }
