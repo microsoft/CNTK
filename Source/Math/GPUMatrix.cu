@@ -3400,22 +3400,22 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
     //CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gens, seed));
     //CURAND_CALL(curandGenerateUniform(gens, d_rands, N));
 
-    float *rands = new float[N];
-    std::random_device rd;
-    std::default_random_engine generator((rd()));
-    std::uniform_real_distribution<float> dis(0., 1.);
-    for (int i = 0; i < N; i++) {
-        rands[i] = dis(generator);
-    }
-    float *d_rands;
-    CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
-    CUDA_CALL(cudaMemcpy(d_rands, rands, sizeof(float)*N, cudaMemcpyHostToDevice));
-    delete[] rands;
+    //float *rands = new float[N];
+    //std::random_device rd;
+    //std::default_random_engine generator((rd()));
+    //std::uniform_real_distribution<float> dis(0., 1.);
+    //for (int i = 0; i < N; i++) {
+    //    rands[i] = dis(generator);
+    //}
+    //float *d_rands;
+    //CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
+    //CUDA_CALL(cudaMemcpy(d_rands, rands, sizeof(float)*N, cudaMemcpyHostToDevice));
+    //delete[] rands;
 
     size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
-    _stochasticbinaryForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), d_rands, N, annealSlope);
-    CUDA_CALL(cudaFree(d_rands));
+    _stochasticbinaryForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), N, annealSlope);
+    //CUDA_CALL(cudaFree(d_rands));
     //CURAND_CALL(curandDestroyGenerator(gens));
 
 

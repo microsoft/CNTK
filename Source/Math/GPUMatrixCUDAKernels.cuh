@@ -622,7 +622,7 @@ __global__ void _generateRandomNumberNormalDistribution(float* vec, curandState 
 }
 
 template <class ElemType>
-__global__ void _stochasticbinaryForward(const ElemType* a, ElemType* b, float* rands, CUDA_LONG N, const float annealSlope) {
+__global__ void _stochasticbinaryForward(const ElemType* a, ElemType* b, CUDA_LONG N, const float annealSlope) {
 	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
 	if (id >= N)
 		return;
