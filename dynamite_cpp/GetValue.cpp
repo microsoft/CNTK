@@ -7,6 +7,7 @@
 #include "CNTKLibrary.h"
 #include "Variable.h"
 //#include "CompositeFunction.h"
+#include "PrimitiveOpType.h"
 
 #include <deque>
 #include <unordered_map>
@@ -61,7 +62,36 @@ class Memoize
         vector<deque<Function*>> m_allOps;
         static bool IsBatchableWith(const Function* a, const Function* b)
         {
-            return a->Op() == b->Op(); // ... for now (won't actually work)
+            // first it must be the same operation
+            let op = a->Op();
+            if (op != b->Op())
+                return false;
+            // all input dimensions must match
+            assert(a->m_inputs.size() == b->m_inputs.size());
+            for (size_t i = 0; i < a->m_inputs.size(); i++)
+            {
+                let& ia = a->m_inputs[i];
+                let& ib = b->m_inputs[i];
+                // there are a few special cases
+                if (op == PrimitiveOpType::Times && i == 0)
+                {
+                    // for Times, the first arg must be the same object, not just the same shape
+                    if (ia.m_dataFields != ib.m_dataFields)
+                        return false;
+                }
+                else
+                {
+                    // shapes must match
+                    if (ia.Shape() != ib.Shape())
+                        return false;
+                }
+                // another special case is reduction over all axes
+            }
+            // attributes must also match
+            if (a->m_attributes != b->m_attributes)
+                return false;
+            // all match: we can batch
+            return true;
         }
     public:
         // schedule an operation that has been confirmed ready
