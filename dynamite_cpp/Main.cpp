@@ -38,12 +38,13 @@ struct ModelParameters
             else
                 m_parameters.insert(make_pair(p.Name(), p));
     }
-    const Parameter& operator[](const wstring& name) const
+    /*const*/ Parameter& operator[](const wstring& name) const
     {
         auto iter = m_parameters.find(name);
         if (iter == m_parameters.end())
             LogicError("no such parameter: %ls", name.c_str());
-        return iter->second;
+        //return iter->second;
+        return const_cast<Parameter&>(iter->second);
     }
     const ModelParameters& Nested(const wstring& name) const
     {
@@ -555,14 +556,14 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
     const wstring trainingCTFPath = L"C:/work/CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf";
 
-    // dybamic model and criterion function
-    auto d_model_fn     = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim, device);
-    auto d_model_fn1    = CreateModelFunctionS2SAtt(inputDim, embeddingDim, 2*hiddenDim, attentionDim, device); // (Splice cannot concat, so hidden and embedding must be the same)
-    auto d_criterion_fn = CreateCriterionFunctionUnrolled(d_model_fn);
-
     // static model and criterion function
     auto model_fn = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
     auto criterion_fn = CreateCriterionFunction(model_fn);
+
+    // dybamic model and criterion function
+    auto d_model_fn = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim, device);
+    auto d_model_fn1 = CreateModelFunctionS2SAtt(inputDim, embeddingDim, 2 * hiddenDim, attentionDim, device); // (Splice cannot concat, so hidden and embedding must be the same)
+    auto d_criterion_fn = CreateCriterionFunctionUnrolled(d_model_fn);
 
     // data
     const wstring featuresName = L"features";
@@ -582,11 +583,17 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto features = InputVariable({ inputDim },         false/*true*/ /*isSparse*/, DataType::Float, featuresName);
     auto labels   = InputVariable({ numOutputClasses }, false/*useSparseLabels*/,   DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
 
-    //auto xxx = criterion_fn->Forward({ features, Input() }, { labels, Input() });
-
-    auto criterion = criterion_fn(features, labels);
+    auto criterion = criterion_fn(features, labels); // this sets the shapes
     auto loss   = criterion;
     //auto metric = criterion.second;
+
+    // tie model parameters
+    d_model_fn.Nested(L"embed" )[L"E"].TieValueWith(model_fn.Nested(L"[0]")[L"E"]                  );
+    d_model_fn.Nested(L"step"  )[L"W"].TieValueWith(model_fn.Nested(L"[1]").Nested(L"step"  )[L"W"]);
+    d_model_fn.Nested(L"step"  )[L"R"].TieValueWith(model_fn.Nested(L"[1]").Nested(L"step"  )[L"R"]);
+    d_model_fn.Nested(L"step"  )[L"b"].TieValueWith(model_fn.Nested(L"[1]").Nested(L"step"  )[L"b"]);
+    d_model_fn.Nested(L"linear")[L"W"].TieValueWith(model_fn.Nested(L"[2]")[L"W"]                  );
+    d_model_fn.Nested(L"linear")[L"b"].TieValueWith(model_fn.Nested(L"[2]")[L"b"]                  );
     
     // train
     auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
@@ -598,16 +605,19 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         if (minibatchData.empty())
             break;
+        fprintf(stderr, "#seq: %d, #words: %d\n", (int)minibatchData[featureStreamInfo].numberOfSequences, (int)minibatchData[featureStreamInfo].numberOfSamples);
 
 #if 1
         // Dynamite
-        fprintf(stderr, "#seq: %d, #words: %d\n", (int)minibatchData[featureStreamInfo].numberOfSequences, (int)minibatchData[featureStreamInfo].numberOfSamples);
         vector<vector<Variable>> args;
         Variable mbLoss;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "FromCNTKMB:     %.6f sec\n");
             //args = FromCNTKMB({ minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, FunctionPtr(loss)->Arguments(), device);
-            args = FromCNTKMB({ minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, { InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName), InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName,{ Axis::DefaultBatchAxis() }) }, device);
+            args = FromCNTKMB({ minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data },
+                              //{ InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName),
+                              //  InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName,{ Axis::DefaultBatchAxis() }) }, device);
+                              { features, labels }, device);
         }
         vector<vector<vector<Variable>>> vargs(args.size());
         for (size_t i = 0; i < args.size(); i++)
@@ -618,19 +628,10 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             for (size_t j = i; j < batch.size(); j++)
                 vbatch[j] = std::move(ToVector(batch[j]));
         }
-        mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value()->AsScalar<float>();
-        if (repeats > 0)
-        {
-            d_model_fn.Nested(L"embed" )[L"E"].Value()->CopyFrom(*model_fn.Nested(L"[0]")[L"E"].Value());
-            d_model_fn.Nested(L"step"  )[L"W"].Value()->CopyFrom(*model_fn.Nested(L"[1]").Nested(L"step"  )[L"W"].Value());
-            d_model_fn.Nested(L"step"  )[L"R"].Value()->CopyFrom(*model_fn.Nested(L"[1]").Nested(L"step"  )[L"R"].Value());
-            d_model_fn.Nested(L"step"  )[L"b"].Value()->CopyFrom(*model_fn.Nested(L"[1]").Nested(L"step"  )[L"b"].Value());
-            d_model_fn.Nested(L"linear")[L"W"].Value()->CopyFrom(*model_fn.Nested(L"[2]")[L"W"].Value());
-            d_model_fn.Nested(L"linear")[L"b"].Value()->CopyFrom(*model_fn.Nested(L"[2]")[L"b"].Value());
-        }
+        //mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value()->AsScalar<float>();
         //let s2sLoss = Batch::sum(Batch::Map(d_model_fn1)(vargs[0], vargs[0])); // for now auto-encoder
         //s2sLoss.Value();
-        if (repeats > 0) for (size_t xxx = 0; xxx < 1; xxx++)
+        for (size_t xxx = 0; xxx < 1; xxx++)
         {
             // compute not directly comparable due to (1) no batching and (2) sparse, which may be expensive w.r.t. slicing, or not
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "d_criterion_fn: %.6f sec\n");

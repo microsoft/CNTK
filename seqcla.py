@@ -86,9 +86,9 @@ def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
     return namespace.Sequential([
         namespace.Embedding(embedding_dim, name='embed'),
         namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu, name='rnn')),
-        namespace.identity,
+        #namespace.identity,
         #namespace.Barrier(),
-        #namespace.LogValues(),
+        namespace.LogValues(),
         namespace.Dense(num_output_classes, name='dense')
     ])
 
@@ -233,7 +233,7 @@ def train(debug_output=False):
         def log_time(dur):
             dur_per_sample = dur / len(args[0])
             samples_per_second = 1 / dur_per_sample
-            print('{:.2f} ms, {:.1f} samples/s'.format(dur * 1000, samples_per_second))
+            #print('{:.2f} ms, {:.1f} samples/s'.format(dur * 1000, samples_per_second))
 
         # CNTK dynamite
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
@@ -253,7 +253,7 @@ def train(debug_output=False):
 
         dend = time.time()
         #crit.dump_graph()
-        print(crit.get_value().device)
+        #print(crit.get_value().device)
         log_time(dend-dstart)
         loss = crit_nd / len(args[0])
         print(" " * 29, loss)

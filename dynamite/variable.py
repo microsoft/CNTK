@@ -6,7 +6,7 @@ import collections
 # some global settings we can control from outside, e.g. for debugging
 class VariableGlobalConfig:
     use_batching = True
-    use_coroutines = False
+    use_coroutines = True
     enable_tracing = False
     use_arena_allocator = False
 
