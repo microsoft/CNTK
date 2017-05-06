@@ -294,6 +294,7 @@ class Memoize
         let isTimes = (op == PrimitiveOpType::Times); // is special-cased
         let doNaively =
             isFree ||
+            isTimes && (f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
             //isTimes ||
             (op == PrimitiveOpType::Splice);
         if (doNaively)
@@ -361,6 +362,7 @@ class Memoize
             }
             if (isTimes)
                 m_args[0] = f0.m_inputs[0].m_dataFields->m_value;
+            bool anyBatchedInputs = false;
             for (size_t i = i0; i < numArgs; i++)
             {
                 auto& spliceArgs = m_spliceArgsBuffer[i];
@@ -370,28 +372,39 @@ class Memoize
                 {
                     auto out = NDArrayViewPtr();
                     m_args[i] = NDArrayView::GatherBatch(spliceArgs, maxRank, out);
+                    anyBatchedInputs = true;
                 }
             }
-            // execute the operation
-            let& unbatchedOutputShape = f0.m_outputs[0].Shape();
-            let outputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
-            NDArrayViewPtr out1;
-            NDArrayViewPtr out = f0.ComputeKnowableValue(f0.Op(), m_args, f0.Attributes(), outputShape, move(out1));
-            // implant all results
-            auto extent = outputShape.Dimensions();
-            vector<size_t> startOffset(outputShape.Rank(), 0);
-            extent[maxRank] = 1;
-            j = 0;
+            // execute the operation and implant the results
             for (auto op = ops.begin(); op != ops.end(); ++op)
             {
                 auto& fields = *op->m_outputs[0].m_dataFields;
                 if (fields.m_value)
                     throw logic_error("output already has a value?");
-                startOffset[maxRank] = j;
-                auto slice = out->IndexLastAxis(j);
-                //auto slice = sliceView->AsShape(fields.m_shape);
-                fields.m_value = move(slice);
-                j++;
+            }
+            NDArrayViewPtr out1; // (arena buffer goes here some day)
+            let& unbatchedOutputShape = f0.m_outputs[0].Shape();
+            if (!anyBatchedInputs) // short-circuit branch when all inputs were actually the same--we just compute them once
+            {
+                for (size_t i = 0; i < numArgs; i++)
+                    if (m_args[i] != f0.m_inputs[i].m_dataFields->m_value)
+                        throw logic_error("fast path unexpectedly got unexpected inputs");
+                auto out = f0.ComputeKnowableValue(f0.Op(), m_args, f0.Attributes(), unbatchedOutputShape, move(out1));
+                // implant all results
+                for (auto op = ops.begin(); op != ops.end(); ++op)
+                    op->m_outputs[0].m_dataFields->m_value = out; // not batched: just duplicate
+            }
+            else // main branch: computation as a batched operation
+            {
+                let outputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
+                auto out = f0.ComputeKnowableValue(f0.Op(), m_args, f0.Attributes(), outputShape, move(out1));
+                // implant all results
+                j = 0;
+                for (auto op = ops.begin(); op != ops.end(); ++op)
+                {
+                    op->m_outputs[0].m_dataFields->m_value = out->IndexLastAxis(j);
+                    j++;
+                }
             }
             // TODO: for backprop, we need to create a new PrimitiveFunction that executes this operation, or something we can backprop through
         }
