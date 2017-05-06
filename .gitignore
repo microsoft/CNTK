@@ -281,3 +281,13 @@ Tutorials/zip
 /CNTK.VC.db
 /CNTK.VC.VC.opendb
 /Local
+/ATISData
+/Documentation/CNTK-TechReport/lyx/CNTKBook-20151201.pdf
+/Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py
+/bindings/python/tutorials/CNTK_202_Language_Understanding.ipynb
+/Examples/Image/MNIST
+/Tutorials/ImageHandsOn/cifar-10-batches-py/data
+/Tutorials/vgg16_weights.bin
+/Tutorials/model_0.cmf
+/Tutorials/jup.bat
+/Tests/EndToEndTests/Image/Data/Train-28x28.txt

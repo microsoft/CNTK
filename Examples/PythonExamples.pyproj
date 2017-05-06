@@ -11,7 +11,7 @@
     <OutputPath>.</OutputPath>
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <InterpreterId>{4aa09c20-bd30-41b0-b691-0beca389326c}</InterpreterId>
+    <InterpreterId>{9a7a9026-48c1-4688-9d5d-e5699d47d074}</InterpreterId>
     <InterpreterVersion>3.5</InterpreterVersion>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <IsWindowsApplication>False</IsWindowsApplication>
@@ -342,6 +342,7 @@
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="{4aa09c20-bd30-41b0-b691-0beca389326c}\3.5" />
+    <InterpreterReference Include="{9a7a9026-48c1-4688-9d5d-e5699d47d074}\3.5" />
     <InterpreterReference Include="{c2abc240-2da9-4409-8b09-0ee30a5b56e2}\3.4" />
   </ItemGroup>
   <ItemGroup>

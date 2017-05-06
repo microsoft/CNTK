@@ -664,7 +664,7 @@ void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatr
 template <class ElemType>
 void GPUMatrix<ElemType>::GatherBatch(const std::function<const GPUMatrix<ElemType>&(size_t)>& inputs)
 {
-    let input0 = inputs(0);
+    let& input0 = inputs(0);
     let numItems = GetNumCols() / input0.GetNumCols();
     if (numItems * input0.GetNumCols() != GetNumCols())
         InvalidArgument("GatherBatch: Number of output columns is incompatible with the first input.");
