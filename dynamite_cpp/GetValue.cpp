@@ -64,9 +64,11 @@ class Memoize
     {
     protected:
         Function* head = nullptr;
+        size_t count; // note: count is only in here for diagnostics; only needed in builder
     public:
-        NonOwningFunctionList(Function* f) : head(f) { }
+        NonOwningFunctionList(Function* f) : head(f), count(1) { }
         Function* front() const { return head; }
+        size_t size() const { return count; }
         class FunctionListIterator
         {
             Function* iter;
@@ -82,9 +84,8 @@ class Memoize
     class NonOwningFunctionListBuilder : public NonOwningFunctionList // over Function, using m_link
     {
         Function* tail = nullptr;
-        size_t count;
     public:
-        NonOwningFunctionListBuilder(Function* f) : NonOwningFunctionList(f), tail(f), count(1) { f->m_link = nullptr; }
+        NonOwningFunctionListBuilder(Function* f) : NonOwningFunctionList(f), tail(f) { f->m_link = nullptr; }
         void append(Function* f)
         {
             if (!head)
@@ -94,7 +95,6 @@ class Memoize
             count++;
             f->m_link = nullptr;
         }
-        size_t size() const { return count; }
     };
 
     // class to manage the set of ready operations (the schedule)
@@ -174,7 +174,7 @@ class Memoize
         // test if no more ready ops
         bool empty() const { return m_allOps.empty(); }
         // select the next batched op to execute
-        NonOwningFunctionListBuilder pop_best()
+        NonOwningFunctionList pop_best()
         {
             auto best = m_allOps.begin();
             // TODO: we could have 3 ready-ops sets, based on priority
@@ -191,9 +191,8 @@ class Memoize
                     best = iter;
             }
             // and remove this one from the list
-            NonOwningFunctionListBuilder out = *best; // since NonOwningFunctionListBuilder uses unmanaged pointers, we can just copy it
-            // TODO: split off a base from NonOwningFunctionListBuilder that can only iterate but not append anymore
-            m_allOps.erase(best); // TODO: suboptimal complexity; a list in a self-allocated container would do
+            NonOwningFunctionList out = *best; // since NonOwningFunctionListBuilder uses unmanaged pointers, we can just copy it
+            m_allOps.erase(best); // TODO: suboptimal complexity; but a list has the same problem
             return out;
         }
     };
@@ -252,7 +251,7 @@ class Memoize
     size_t m_numBatches = 0;
 
     // batch-execute a set of ops that are known to be batchable
-    void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionListBuilder ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
+    void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionList ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
     {
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
         // get a representative op
