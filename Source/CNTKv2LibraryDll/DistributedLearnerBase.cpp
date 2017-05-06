@@ -54,7 +54,17 @@ namespace CNTK
         result.reserve(gradientValues.size());
         result.clear();
         for (auto g : gradientValues)
-            result.push_back(std::make_pair(g.first, g.second));
+        {
+            NDArrayViewPtr p = g.second;
+            // convert sparse gradient to dense for accumulation
+            if (p->GetStorageFormat() != StorageFormat::Dense)
+            {
+                NDArrayViewPtr pDense = MakeSharedObject<NDArrayView>(0, p->GetDataType(), p->Shape(), p->Device());
+                pDense->CopyFrom(*p);
+                p = pDense;
+            }
+            result.push_back(std::make_pair(g.first, p));
+        }
 
         std::sort(result.begin(), result.end(),
             [](const std::pair<Parameter, NDArrayViewPtr>& a, const std::pair<Parameter, NDArrayViewPtr>& b) { return a.first.Uid() < b.first.Uid(); });
