@@ -368,8 +368,8 @@ class Memoize
                 if (fields.m_value)
                     throw logic_error("output already has a value?");
                 startOffset[maxRank] = j;
-                let sliceView = out->SliceView(startOffset, extent);
-                auto slice = sliceView->AsShape(fields.m_shape);
+                auto slice = out->IndexLastAxis(j);
+                //auto slice = sliceView->AsShape(fields.m_shape);
                 fields.m_value = move(slice);
                 j++;
             }
