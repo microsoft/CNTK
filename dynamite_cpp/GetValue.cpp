@@ -60,31 +60,13 @@ class Memoize
             op == PrimitiveOpType::Slice;
     }
 
-    class FunctionList // over Function, using m_link
+    class NonOwningFunctionList // over Function, using m_link
     {
+    protected:
         Function* head = nullptr;
-        Function* tail = nullptr;
-        size_t count;
     public:
-        FunctionList(Function* f) : head(f), tail(f), count(1) { f->m_link = nullptr; }
+        NonOwningFunctionList(Function* f) : head(f) { }
         Function* front() const { return head; }
-        void append(Function* f)
-        {
-            if (!head)
-                throw logic_error("FunctionList must always be constructed with a first element");
-            tail->m_link = f;
-            tail = f;
-            count++;
-            f->m_link = nullptr;
-        }
-        size_t size() const { return count; }
-        //Function* pop_front()
-        //{
-        //    auto* front = head;
-        //    if (front)
-        //        head = head->m_link; // (we will keep 'tail' undefined (dangling) when head is NULL)
-        //    return front;
-        //}
         class FunctionListIterator
         {
             Function* iter;
@@ -97,11 +79,28 @@ class Memoize
         FunctionListIterator begin() const { return front(); }
         FunctionListIterator end()   const { return nullptr; }
     };
+    class NonOwningFunctionListBuilder : public NonOwningFunctionList // over Function, using m_link
+    {
+        Function* tail = nullptr;
+        size_t count;
+    public:
+        NonOwningFunctionListBuilder(Function* f) : NonOwningFunctionList(f), tail(f), count(1) { f->m_link = nullptr; }
+        void append(Function* f)
+        {
+            if (!head)
+                throw logic_error("NonOwningFunctionListBuilder must always be constructed with a first element");
+            tail->m_link = f;
+            tail = f;
+            count++;
+            f->m_link = nullptr;
+        }
+        size_t size() const { return count; }
+    };
 
     // class to manage the set of ready operations (the schedule)
     class ReadyOps
     {
-        vector<FunctionList> m_allOps; // m_allOps[] is a linked list
+        vector<NonOwningFunctionListBuilder> m_allOps; // m_allOps[] is a linked list
         // TODO: This must be turned into something hashable.
         // test whether two PrimitiveFunctions can be executed as a single batched operation
         static bool AreBatchable(const Function* a, const Function* b)
@@ -170,12 +169,12 @@ class Memoize
                 }
             }
             // none fit: open a new set
-            m_allOps.push_back(FunctionList(fp));
+            m_allOps.push_back(NonOwningFunctionListBuilder(fp));
         }
         // test if no more ready ops
         bool empty() const { return m_allOps.empty(); }
         // select the next batched op to execute
-        FunctionList pop_best()
+        NonOwningFunctionListBuilder pop_best()
         {
             auto best = m_allOps.begin();
             // TODO: we could have 3 ready-ops sets, based on priority
@@ -192,8 +191,8 @@ class Memoize
                     best = iter;
             }
             // and remove this one from the list
-            FunctionList out = *best; // since FunctionList uses unmanaged pointers, we can just copy it
-            // TODO: split off a base from FunctionList that can only iterate but not append anymore
+            NonOwningFunctionListBuilder out = *best; // since NonOwningFunctionListBuilder uses unmanaged pointers, we can just copy it
+            // TODO: split off a base from NonOwningFunctionListBuilder that can only iterate but not append anymore
             m_allOps.erase(best); // TODO: suboptimal complexity; a list in a self-allocated container would do
             return out;
         }
@@ -253,7 +252,7 @@ class Memoize
     size_t m_numBatches = 0;
 
     // batch-execute a set of ops that are known to be batchable
-    void ExecuteBatchedOpAndUpdateSchedule(FunctionList ops) // (note: FunctionList is so small that it is best copied)
+    void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionListBuilder ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
     {
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
         // get a representative op
