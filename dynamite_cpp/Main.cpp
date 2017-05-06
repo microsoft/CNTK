@@ -278,6 +278,36 @@ NDArrayViewPtr Index(NDArrayViewPtr data, size_t i)
     return data;
 }
 
+// helper for converting data to dense
+template<typename ElementType>
+NDArrayViewPtr MakeEye(size_t n, CNTK::DataType dataType, CNTK::DeviceDescriptor device)
+{
+    vector<ElementType> buffer(n*n, 0);
+    for (size_t i = 0; i < n; i++)
+        buffer[i*n + i] = 1;
+    auto eye = make_shared<NDArrayView>(dataType, NDShape{ n, n }, buffer.data(), buffer.size() * sizeof(ElementType), DeviceDescriptor::CPUDevice(), /*readOnly=*/false);
+    eye = eye->DeepClone(device);
+    return eye;
+}
+NDArrayViewPtr Eye(size_t n, CNTK::DataType dataType, CNTK::DeviceDescriptor device)
+{
+    static map<pair<size_t, CNTK::DataType>, NDArrayViewPtr> cached;
+    let key = make_pair(n, dataType);
+    auto iter = cached.find(key);
+    if (iter != cached.end())
+        return iter->second;
+    // need to create it
+    NDArrayViewPtr eye;  device;
+    switch (dataType)
+    {
+    case DataType::Float:  eye = MakeEye<float> (n, dataType, device);  break;
+    case DataType::Double: eye = MakeEye<double>(n, dataType, device); break;
+    default: throw logic_error("Eye: Unsupported DataType.");
+    }
+    cached[key] = eye;
+    return eye;
+}
+
 vector<vector<Variable>> FromCNTKMB(const vector<ValuePtr>& inputs, const vector<Variable>& variables, const DeviceDescriptor& device) // variables needed for axis info only
 // returns vector[numArgs] OF vector[numBatchItems] OF Constant[seqLen,sampleShape]
 {
@@ -302,27 +332,23 @@ vector<vector<Variable>> FromCNTKMB(const vector<ValuePtr>& inputs, const vector
         for (size_t s = 0; s < numSeq; s++)
         {
             auto data = sequences[s]; // NDArrayView
-            // convert sparse if needed
-            //if (data->IsSparse())
-            //    fprintf(stderr, "x\n");
-/*
-                global cached_eyes
-                dim = shape[1] # (BUGBUG: won't work for >1D sparse objects)
-                if dim not in cached_eyes:
-                    eye_np = np.array(np.eye(dim), np.float32)
-                    cached_eyes[dim] = cntk.NDArrayView.from_dense(eye_np)
-                eye = cached_eyes[dim]
-                data = data @ eye
-                assert shape == data.shape
-*/
-            // ... needs NDArrayView, and not needed for just building the graph
             // return in correct shape
             if (!hasAxis)
             {
                 assert(data->Shape().Dimensions().back() == 1);
                 data = Index(data, 0); // slice off sample axis (the last in C++)
             }
+#if 1
+            // convert sparse, since currently we cannot GatherBatch() sparse data
+            if (data->IsSparse())
+            {
+                // multiply with  an identity matrix
+                auto eye = Eye(data->Shape()[0], data->GetDataType(), data->Device());
+                data = NDArrayView::MatrixProduct(false, eye, false, data, false, 1.0, 1);
+            }
+#endif
             arg[s] = Constant(data);
+            data->GetDataType();
         }
     }
     return res;

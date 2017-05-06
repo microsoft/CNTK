@@ -300,11 +300,11 @@ class Memoize
             isTimes && (f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
             op == PrimitiveOpType::Splice ||
             batchSize == 1;
-        //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
-        //        isFree ? -1 : (int)m_numBatchedLaunches,
-        //        doNaively ? "" : "batch-",
-        //        (int)batchSize, f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str(),
-        //        (int)m_schedule.numBatchableOpsPending());
+        fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
+                isFree ? -1 : (int)m_numBatchedLaunches,
+                doNaively ? "" : "batch-",
+                (int)batchSize, f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str(),
+                (int)m_schedule.numBatchableOpsPending());
         if (doNaively)
         {
             if (op == PrimitiveOpType::Splice && batchSize != 1)
@@ -322,6 +322,9 @@ class Memoize
                 NDArrayViewPtr out; // arena allocation will happen here
                 op->m_outputs[0].m_dataFields->m_value =
                     op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
+                if (f0.Op() == PrimitiveOpType::Slice)
+                {
+                }
 #if 0           // test erffect of the unbatched sparse times
                 if (f0.Op() == PrimitiveOpType::Times)
                     op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
