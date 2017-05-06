@@ -718,8 +718,8 @@ int main(int argc, char *argv[])
     argc; argv;
     try
     {
-        //TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
-        TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
+        TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
+        //TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
     }
     catch (exception& e)
     {
