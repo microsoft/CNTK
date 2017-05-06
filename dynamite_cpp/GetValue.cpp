@@ -328,7 +328,6 @@ class Memoize
                 spliceArgs.clear();
                 if (spliceArgs.capacity() < batchSize)
                     spliceArgs.reserve(max(batchSize, 2 * spliceArgs.capacity()));
-                spliceArgs.resize(batchSize); // maybe don't even resize it smaller, as that will clear out the shared_ptrs; no need
                 // we could even do with un-managed pointers here; would save lots of ref-counting; or even use GatherBatch lambda
                 // determine max rank
                 let rank = f0.m_inputs[0].Shape().Rank();
@@ -344,15 +343,29 @@ class Memoize
                     auto& spliceArgs = m_spliceArgsBuffer[i];
                     let& arg = inputs[i].m_dataFields->m_value;
                     // TODO: some opt here for lazy slice
-                    spliceArgs[j] = arg;
+                    // optimization: if all args are the same, then don't batch
+                    if (!spliceArgs.empty() && spliceArgs.back() == arg)
+                        continue;
+                    // if we thought it is all the same, but then it turned out not to be, we need to fixc it up
+                    while (spliceArgs.size() < j)
+                        spliceArgs.push_back(spliceArgs.back());
+                    // append the arg
+                    spliceArgs.push_back(arg);
                 }
                 j++;
             }
+            if (op == PrimitiveOpType::Times && m_spliceArgsBuffer[0].size() != 1)
+                throw logic_error("incorrectly batched a matrix");
             for (size_t i = 0; i < numArgs; i++)
             {
                 auto& spliceArgs = m_spliceArgsBuffer[i];
-                auto out = NDArrayViewPtr();
-                m_args[i] = NDArrayView::GatherBatch(spliceArgs, maxRank, out);
+                if (spliceArgs.size() == 1) // optimized case: all ops share the same operand: no need to batch them
+                    m_args[i] = spliceArgs[0];
+                else
+                {
+                    auto out = NDArrayViewPtr();
+                    m_args[i] = NDArrayView::GatherBatch(spliceArgs, maxRank, out);
+                }
             }
             // execute the operation
             let& unbatchedOutputShape = f0.m_outputs[0].Shape();
