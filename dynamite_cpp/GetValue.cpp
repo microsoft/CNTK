@@ -194,7 +194,11 @@ class Memoize
                 if (!fields.m_value) // (in case of a Parameter, we now may have a value)
                 {
                     // no need for anything ref-counted since this is a local temp variable
-                    v.m_dataFields->m_ownerFunction.lock()->m_notify.push_back(&f);
+                    let fi = v.m_dataFields->m_ownerFunction.lock();
+                    if (!fi->m_notify1) // optimized for main case of 1 consumer. No std::vector in that case.
+                        fi->m_notify1 = &f;
+                    else
+                        fi->m_notifyN.push_back(&f);
                     pendingInputs++;
                 }
             }
@@ -252,7 +256,19 @@ class Memoize
         // update all ops' consumers
         for (let& op : ops)
         {
-            for (let& f : op->m_notify)
+            // notify first consumer (this is a special optimization)
+            auto* f = op->m_notify1;
+            if (f)
+            {
+                if (f->m_pendingInputs <= 0)
+                    throw logic_error("pending inputs already 0 yet we are executing it");
+                f->m_pendingInputs--;
+                // if it is now ready then schedule it
+                if (f->m_pendingInputs == 0)
+                    m_schedule.Schedule(f);
+            }
+            // notify all other consumer (this is a special optimization)
+            for (auto* f : op->m_notifyN)
             {
                 if (f->m_pendingInputs <= 0)
                     throw logic_error("pending inputs already 0 yet we are executing it");
