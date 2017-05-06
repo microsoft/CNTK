@@ -168,18 +168,6 @@ class Memoize
             // all match: we can batch
             return true;
         }
-        // high-pri (free ops) are batched first; low-pri (Barrier) last.
-        static int GetPriority(const Function* f)
-        {
-            let op = f->Op();
-            if (op == PrimitiveOpType::BarrierOp) // Barrier goes last
-                return 0;
-            else if (IsViewOp(op)) // free ops go first
-                return 2;
-            else
-                return 1;
-        }
-        // simple linked-list management
     public:
         // schedule an operation that has been confirmed ready
         void Schedule(Function* f)
@@ -211,27 +199,20 @@ class Memoize
         // select the next batched op to execute
         NonOwningFunctionList pop_best()
         {
+            // try all three queues, in priority order
             if (!m_viewOps.empty()) // view ops always go first
                 return move(m_viewOps);
-            else if (!m_regularOps.empty())
+            else if (!m_regularOps.empty()) // regular ops
             {
                 auto best = m_regularOps.begin();
-                // TODO: we could have 3 ready-ops sets, based on priority
                 for (auto iter = best + 1; iter != m_regularOps.end(); iter++)
                 {
-                    //let bestPri = GetPriority(best->front());
-                    //let iterPri = GetPriority(iter->front());
-                    //if (iterPri == -1)
-                    //    BreakPoint;
-                    //if (iterPri < bestPri)
-                    //    continue;
-                    if (//iterPri > bestPri ||
-                        iter->size() > best->size())
+                    if (iter->size() > best->size())
                         best = iter;
                 }
                 // and remove this one from the list
                 NonOwningFunctionList out = *best; // since NonOwningFunctionListBuilder uses unmanaged pointers, we can just copy it
-                m_regularOps.erase(best); // TODO: suboptimal complexity; but a list has the same problem
+                m_regularOps.erase(best); // TODO: suboptimal complexity; but a list has the same problem. Priority queue?
                 return out;
             }
             else
