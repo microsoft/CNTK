@@ -10,8 +10,8 @@ from cntk.internal import _as_tuple
 # some extra primitives and wrappers.
 #
 
-global_init = ct.normal(0.05) # paper 0.05
-global_g_init = ct.normal(0.05)
+global_init = ct.normal(0.01) # paper 0.05
+global_g_init = ct.normal(0.01)
 
 def zeros(shape):
     return ct.constant(value=0., shape=shape, dtype=np.float32)

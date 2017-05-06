@@ -36,9 +36,10 @@ def create_reader(map_file, is_training):
                            (map_file))
 
     transforms = []
-    transforms += [
-        xforms.crop(crop_type='center', crop_size=32)
-    ]
+    if is_training:
+        transforms += [
+            xforms.crop(crop_type='center', crop_size=32)
+        ]
     transforms += [
         xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')
     ]
@@ -89,11 +90,11 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     # training config
     epoch_size              = 50000
     init_minibatch_size     = 100
-    minibatch_size          = 12 if (model == 'pixelcnnpp') else 64
+    minibatch_size          = 12
     sampling_minibatch_size = 16
 
     # Set learning parameters
-    lr = 0.00001
+    lr = 0.001
     lr_decay = 0.6 #0.999995
 
     # Print progress
@@ -103,10 +104,10 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     learner = ct.learners.adam(z.parameters,
                                lr=ct.learning_rate_schedule(lr, unit=ct.UnitType.sample), 
                                momentum=ct.momentum_schedule(0.95), # Beta 1
-                               unit_gain=False,
+                               # unit_gain=False,
                                # use_mean_gradient=True,
-                               variance_momentum=ct.momentum_schedule(0.9995), # Beta 2
-                               gradient_clipping_threshold_per_sample=0.001
+                               variance_momentum=ct.momentum_schedule(0.9995) # Beta 2
+                               # gradient_clipping_threshold_per_sample=0.001
                                )
     trainer = ct.Trainer(z, (ce, pe), [learner], progress_writers)
 
@@ -146,7 +147,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
 
             sample_index += 1
 
-        sample(minibatch_size, z, inputs, nr_logistic_mix, loss, epoch, 0)
+        sample(sampling_minibatch_size, z, inputs, nr_logistic_mix, loss, epoch, 0)
 
         trainer.summarize_training_progress()
 
@@ -173,7 +174,7 @@ if __name__=='__main__':
 
     args = parser.parse_args()
     
-    reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), False)
+    reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), True)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), False)
 
     train(reader_train, reader_test, args.model, args.loss)
