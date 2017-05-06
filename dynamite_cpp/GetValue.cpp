@@ -285,7 +285,7 @@ class Memoize
         fprintf(stderr, "%d executing %d instances of %S -> %S\n", isFree ? -1 : (int)m_numBatches, (int)ops.size(), f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str());
         m_inputs.resize(f0.m_inputs.size());
         m_args.resize(f0.m_inputs.size());
-#if 1
+#if 0
         // for correctness testing of underlying mechanism, compute them without actual batching
         for (auto op = ops.begin(); op != ops.end(); ++op)
         //for (auto op : ops) // TODO: figure this out

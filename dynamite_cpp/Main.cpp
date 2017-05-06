@@ -349,7 +349,8 @@ BinaryModel CreateCriterionFunction(UnaryModel model)
         let z = model(features);
 
         //let loss   = CNTK::CrossEntropyWithSoftmax(z, labels);
-        let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(labels, z));
+        //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(labels, z));
+        let loss = Minus(ReduceLogSum(z, Axis(0)), TransposeTimes(labels, z));
         //let metric = CNTK::ClassificationError    (z, labels);
         return loss;
         //return make_pair(loss, metric);
@@ -438,7 +439,8 @@ UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const BinaryModel& s
 
 Variable softmax(const Variable& z)
 {
-    let Z = ReduceLogSum(z, Axis::AllStaticAxes());
+    //let Z = ReduceLogSum(z, Axis::AllStaticAxes());
+    let Z = ReduceLogSum(z, Axis(0));
     let P = Exp(z - Z);
     return P;
 }
@@ -517,7 +519,8 @@ BinarySequenceModel CreateModelFunctionS2SAtt(size_t numOutputClasses, size_t em
             state = decode(encoded, state, prevOut);
             let z = outProj(state);
             //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label[t], z, /*outputRank=*/0));
-            let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label[t], z, /*outputRank=*/0));
+            //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label[t], z, /*outputRank=*/0));
+            let loss = Minus(ReduceLogSum(z, Axis(0)), Times(label[t], z, /*outputRank=*/0));
             Flush(loss);
             losses[t] = loss;
         }
