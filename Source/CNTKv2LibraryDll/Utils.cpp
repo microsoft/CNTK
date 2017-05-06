@@ -519,6 +519,8 @@ namespace CNTK
 
     /*static*/ void Utils::VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape)
     {
+        // TODO: This is a temporary debugging aid and should be removed after the functionality to late bind
+        // inferred/free dimensions is more baked and stable.
         bool allowFreeOrInferredDimensionsInVar = true;
 
         if (var.GetDataType() != value->GetDataType())
@@ -555,7 +557,7 @@ namespace CNTK
         {
             // If the leading dim of the value shape is same as the total size of the varShape,
             // lets expand the leading dim to varShape for the purposes of the rest of the validation
-            if (allowFreeOrInferredDimensionsInVar && varShape.HasFreeOrInferredDimension())
+            if (allowFreeOrInferredDimensionsInVar && varShape.HasUnboundDimension())
             {
                 auto newVarShape = varShape;
                 for (size_t i = 0; i < newVarShape.Rank(); ++i)
@@ -618,7 +620,7 @@ namespace CNTK
 
         if (inferredVarShape)
         {
-            if (varShape.HasFreeOrInferredDimension())
+            if (varShape.HasUnboundDimension())
                 InvalidArgument("At least one of the free dimensions of Variable '%S' could not be resolved from the supplied value.", varShape.AsString().c_str());
 
             *inferredVarShape = varShape;

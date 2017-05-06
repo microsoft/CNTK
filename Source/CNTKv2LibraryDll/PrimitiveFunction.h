@@ -354,7 +354,7 @@ namespace CNTK
 
             if (inferredAxisIndex != SIZE_MAX)
             {
-                if (!operandSubshapeToReshape.HasFreeOrInferredDimension())
+                if (!operandSubshapeToReshape.HasUnboundDimension())
                 {
                     size_t inputElementsCount = operandSubshapeToReshape.TotalSize();
                     inferredReplacementShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
@@ -367,7 +367,7 @@ namespace CNTK
             outputShape = outputShape.AppendShape(inferredReplacementShape);
             outputShape = outputShape.AppendShape(operandShape.SubShape(endAxisIdx));
 
-            if (!operandSubshapeToReshape.HasFreeOrInferredDimension() && (operandSubshapeToReshape.TotalSize() != inferredReplacementShape.TotalSize()))
+            if (!operandSubshapeToReshape.HasUnboundDimension() && (operandSubshapeToReshape.TotalSize() != inferredReplacementShape.TotalSize()))
             {
                 auto replacedSubShape = operandShape.SubShape(beginAxisIdx, endAxisIdx);
                 InvalidArgument("Reshape: Operand (sub-)dimensions '%S' incompatible with desired replacement (sub-)dimensions '%S'. Number of elements %s.",
@@ -424,7 +424,7 @@ namespace CNTK
                     // accumulate the spliced dimension
                     if (k == index)
                     {
-                        if (dim == NDShape::InferredDimension)
+                        if ((dim == NDShape::InferredDimension) || (outputDims[index] == NDShape::InferredDimension))
                             outputDims[index] = NDShape::InferredDimension;
                         else if (dim == NDShape::FreeDimension)
                             InvalidArgument("Splice: Illegal to splice along an axis (%d) for which any of the inputs has a free dimension.", (int)index);
@@ -701,7 +701,7 @@ namespace CNTK
               
                 if (i < operands.size() - 1)
                 {
-                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasFreeOrInferredDimension())
+                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasUnboundDimension())
                     {
                         size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
                         paramShape[0] = total;

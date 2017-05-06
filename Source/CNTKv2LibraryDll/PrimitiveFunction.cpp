@@ -539,7 +539,7 @@ namespace CNTK
                             if (roiOutputShape.Rank() != 2)
                                 InvalidArgument("ROIPoolingNode: ROI shape '%S' must have rank 2 ([W x H]).", roiOutputShape.AsString().c_str());
 
-                            if (!convMapShape.HasFreeOrInferredDimension())
+                            if (!convMapShape.HasUnboundDimension())
                             {
                                 if (convMapShape[0] < outW || convMapShape[1] < outH)
                                     InvalidArgument("ROIPoolingNode: input Width (%d) must be >= ROI window Width (%d) and input Height (%d) must be >= ROI window Height (%d).",
@@ -577,7 +577,7 @@ namespace CNTK
                                 LogicError("Function '%S': Currently pooling does not support operands with free static axes dimensions.", AsString().c_str());
 
                             // In case of pooling if the kernel shape is unknown, then treat it as global pooling.
-                            if ((poolingWindowsShape == NDShape::Unknown) && !inputShape.SubShape(0, inputShape.Rank() - 1).HasFreeOrInferredDimension())
+                            if ((poolingWindowsShape == NDShape::Unknown) && !inputShape.SubShape(0, inputShape.Rank() - 1).HasUnboundDimension())
                             {
                                 if ((std::find(autoPadding.begin(), autoPadding.end(), true) != autoPadding.end()) || (lowerPad.TotalSize() > 0) || (upperPad.TotalSize() > 0))
                                     RuntimeError("Padding isn't allowed for Unknown pooling window shape!");
@@ -906,7 +906,7 @@ namespace CNTK
                             outputShape[0] = (bidirectional ? 2 : 1) * hiddenSize;
                             // infer input size
                             // Note: Output dim is second axis, so say initOutputRank=-1.
-                            if (!operand.Shape().HasFreeOrInferredDimension() && (parameter.Shape().Rank() == 2))
+                            if (!operand.Shape().HasUnboundDimension() && (parameter.Shape().Rank() == 2))
                             {
                                 const auto recurrentOp = m_attributes[PrimitiveFunction::AttributeNameRecurrentOp].Value<std::wstring>();
                                 const auto attributes = RnnAttributes(bidirectional, numLayers, hiddenSize, recurrentOp, -1);

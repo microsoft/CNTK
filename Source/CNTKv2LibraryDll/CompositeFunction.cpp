@@ -474,7 +474,7 @@ namespace CNTK
             if (fullyDefinedArgumentVar.Shape().HasFreeDimension() && (fullyDefinedArgumentsMap.find(fullyDefinedArgumentVar) != fullyDefinedArgumentsMap.end()))
                 fullyDefinedArgumentVar = fullyDefinedArgumentsMap.at(fullyDefinedArgumentVar);
 
-            if (fullyDefinedArgumentVar.Shape().HasFreeOrInferredDimension())
+            if (fullyDefinedArgumentVar.Shape().HasUnboundDimension())
                 InvalidArgument("Input Variable '%S' with unresolved shape %S found when compiling the Function graph.", fullyDefinedArgumentVar.AsString().c_str(), fullyDefinedArgumentVar.Shape().AsString().c_str());
 
             auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name(), useMangledNamesForComputationNodes);
@@ -1155,7 +1155,7 @@ namespace CNTK
         while ((adjustedNodeShape.GetRank() > varShape.Rank()) && (adjustedNodeShape.GetDim(adjustedNodeShape.GetRank() - 1) == 1))
             adjustedNodeShape.TrimRankInPlace(adjustedNodeShape.GetRank() - 1);
 
-        if (!varShape.HasFreeOrInferredDimension())
+        if (!varShape.HasUnboundDimension())
             return (AsNDShape(adjustedNodeShape) == varShape);
 
         if (varShape.Rank() != adjustedNodeShape.GetRank())
@@ -1847,6 +1847,9 @@ namespace CNTK
         auto backpropState = dynamic_cast<const CNTKBackPropState*>(state.get());
         if (backpropState == nullptr)
             InvalidArgument("Function '%S' Backward: Invalid backprop state passed.", AsString().c_str());
+
+        if (backPropagatedGradientValuesForInputs.empty())
+            InvalidArgument("Function '%S' Backward: List of inputs to compute gradients for, must not be empty.", AsString().c_str());
 
         // TODO: Support multiple concurrent backprop states
         std::unordered_map<Variable, uint64_t> currentBackpropRootTimeStamps = GetCurrentBackpropRootsTimeStamps();
