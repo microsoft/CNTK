@@ -8,7 +8,6 @@
 #include "Variable.h"
 #include "PrimitiveOpType.h"
 
-#include <deque>
 #include <unordered_map>
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
@@ -61,11 +60,48 @@ class Memoize
             op == PrimitiveOpType::Slice;
     }
 
+    class FunctionList // over Function, using m_link
+    {
+        Function* head = nullptr;
+        Function* tail = nullptr;
+        size_t count;
+    public:
+        FunctionList(Function* f) : head(f), tail(f), count(1) { f->m_link = nullptr; }
+        Function* front() const { return head; }
+        void append(Function* f)
+        {
+            if (!head)
+                throw logic_error("FunctionList must always be constructed with a first element");
+            tail->m_link = f;
+            tail = f;
+            count++;
+            f->m_link = nullptr;
+        }
+        size_t size() const { return count; }
+        //Function* pop_front()
+        //{
+        //    auto* front = head;
+        //    if (front)
+        //        head = head->m_link; // (we will keep 'tail' undefined (dangling) when head is NULL)
+        //    return front;
+        //}
+        class FunctionListIterator
+        {
+            Function* iter;
+        public:
+            FunctionListIterator(Function* f) : iter(f) { }
+            Function* operator->() const { return iter; }
+            Function* operator++() { iter = iter->m_link; return iter; }
+            bool operator!=(const FunctionListIterator& other) { return iter != other.iter; }
+        };
+        FunctionListIterator begin() const { return front(); }
+        FunctionListIterator end()   const { return nullptr; }
+    };
+
     // class to manage the set of ready operations (the schedule)
     class ReadyOps
     {
-        vector<deque<Function*>> m_allOps;
-        // TODO: the deque should instead become a linked list
+        vector<FunctionList> m_allOps; // m_allOps[] is a linked list
         // TODO: This must be turned into something hashable.
         // test whether two PrimitiveFunctions can be executed as a single batched operation
         static bool AreBatchable(const Function* a, const Function* b)
@@ -118,6 +154,7 @@ class Memoize
             else
                 return 1;
         }
+        // simple linked-list management
     public:
         // schedule an operation that has been confirmed ready
         void Schedule(Function* fp)
@@ -128,17 +165,17 @@ class Memoize
             {
                 if (AreBatchable(fp, iter->front()))
                 {
-                    iter->push_back(fp);
+                    iter->append(fp);
                     return;
                 }
             }
             // none fit: open a new set
-            m_allOps.push_back(deque<Function*>{ fp });
+            m_allOps.push_back(FunctionList(fp));
         }
         // test if no more ready ops
         bool empty() const { return m_allOps.empty(); }
         // select the next batched op to execute
-        void pop_best(deque<Function*>& out)
+        FunctionList pop_best()
         {
             auto best = m_allOps.begin();
             // TODO: we could have 3 ready-ops sets, based on priority
@@ -155,8 +192,10 @@ class Memoize
                     best = iter;
             }
             // and remove this one from the list
-            out = move(*best);
+            FunctionList out = *best; // since FunctionList uses unmanaged pointers, we can just copy it
+            // TODO: split off a base from FunctionList that can only iterate but not append anymore
             m_allOps.erase(best); // TODO: suboptimal complexity; a list in a self-allocated container would do
+            return out;
         }
     };
     ReadyOps m_schedule;
@@ -214,7 +253,7 @@ class Memoize
     size_t m_numBatches = 0;
 
     // batch-execute a set of ops that are known to be batchable
-    void ExecuteBatchedOpAndUpdateSchedule(const deque<Function*>& ops)
+    void ExecuteBatchedOpAndUpdateSchedule(FunctionList ops) // (note: FunctionList is so small that it is best copied)
     {
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
         // get a representative op
@@ -227,7 +266,8 @@ class Memoize
         m_args.resize(f0.m_inputs.size());
 #if 1
         // for correctness testing of underlying mechanism, compute them without actual batching
-        for (let& op : ops)
+        for (auto op = ops.begin(); op != ops.end(); ++op)
+        //for (auto op : ops) // TODO: figure this out
         {
             if (op->m_outputs.size() != 1)
                 throw logic_error("only functions with 1 output are supported");
@@ -254,7 +294,7 @@ class Memoize
         // distribute the results to ops[]
 #endif
         // update all ops' consumers
-        for (let& op : ops)
+        for (auto op = ops.begin(); op != ops.end(); ++op)
         {
             // notify first consumer (this is a special optimization)
             auto* f = op->m_notify1;
@@ -291,11 +331,10 @@ public:
             // prepare and schedule first set
             TraverseFunctionTree(v);
             // compute the entire graph
-            deque<Function*> opBatch;
             while (!m_schedule.empty())
             {
                 // select the best amongst the scheduled ops
-                m_schedule.pop_best(opBatch);
+                auto opBatch = m_schedule.pop_best();
                 // execute it, and also update all outputs' values and consumers, and the schedule 
                 ExecuteBatchedOpAndUpdateSchedule(opBatch);
             }
