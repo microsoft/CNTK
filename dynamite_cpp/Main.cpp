@@ -280,7 +280,7 @@ NDArrayViewPtr Index(NDArrayViewPtr data, size_t i)
 
 // helper for converting data to dense
 template<typename ElementType>
-NDArrayViewPtr MakeEye(size_t n, CNTK::DataType dataType, CNTK::DeviceDescriptor device)
+NDArrayViewPtr MakeEye(size_t n, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
 {
     vector<ElementType> buffer(n*n, 0);
     for (size_t i = 0; i < n; i++)
@@ -289,7 +289,7 @@ NDArrayViewPtr MakeEye(size_t n, CNTK::DataType dataType, CNTK::DeviceDescriptor
     eye = eye->DeepClone(device);
     return eye;
 }
-NDArrayViewPtr Eye(size_t n, CNTK::DataType dataType, CNTK::DeviceDescriptor device)
+NDArrayViewPtr Eye(size_t n, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
 {
     static map<pair<size_t, CNTK::DataType>, NDArrayViewPtr> cached;
     let key = make_pair(n, dataType);
@@ -302,7 +302,7 @@ NDArrayViewPtr Eye(size_t n, CNTK::DataType dataType, CNTK::DeviceDescriptor dev
     {
     case DataType::Float:  eye = MakeEye<float> (n, dataType, device);  break;
     case DataType::Double: eye = MakeEye<double>(n, dataType, device); break;
-    default: throw logic_error("Eye: Unsupported DataType.");
+    default: throw logic_error("Eye: Unsupported ype.");
     }
     cached[key] = eye;
     return eye;

@@ -273,7 +273,13 @@ class Memoize
             m_schedule.Schedule(&f); // add to ready set
     }
 
-    vector<Variable> m_inputs;
+    NDArrayViewPtr Alloc(const NDShape& shape, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
+    {
+        shape; dataType; device;
+        return nullptr;
+    }
+
+    //vector<Variable> m_inputs;
     vector<NDArrayViewPtr> m_args;
     size_t m_numBatchedLaunches = 0;
 
@@ -291,7 +297,7 @@ class Memoize
         if (!isFree)
             m_numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
-        m_inputs.resize(numArgs);
+        //m_inputs.resize(numArgs);
         m_args.resize(numArgs);
         // perform the op
         let isTimes = (op == PrimitiveOpType::Times); // is special-cased
@@ -315,17 +321,18 @@ class Memoize
             {
                 if (op->m_outputs.size() != 1)
                     throw logic_error("only functions with 1 output are supported");
-                m_inputs.resize(op->m_inputs.size());
+                //m_inputs.resize(op->m_inputs.size());
                 m_args.resize(op->m_inputs.size());
                 for (size_t i = 0; i < op->m_inputs.size(); i++)
                     m_args[i] = op->m_inputs[i].m_dataFields->m_value;
-                NDArrayViewPtr out; // arena allocation will happen here
+                NDArrayViewPtr out = Alloc(op->m_outputs[0].Shape(), m_args[0]->GetDataType(), m_args[0]->Device()); // arena allocation will happen here
                 op->m_outputs[0].m_dataFields->m_value =
                     op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
                 if (f0.Op() == PrimitiveOpType::Slice)
                 {
+                    // inject the lazyIndex
                 }
-#if 0           // test erffect of the unbatched sparse times
+#if 0           // test effect of the unbatched sparse times
                 if (f0.Op() == PrimitiveOpType::Times)
                     op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
 #endif
@@ -401,8 +408,13 @@ class Memoize
                 }
                 else
                 {
-                    auto out = NDArrayViewPtr();
-                    m_args[i] = NDArrayView::GatherBatch(spliceArgs, (int)maxRank, out);
+                    vector<size_t> shape;
+                    shape.reserve(maxRank + 1);
+                    shape = spliceArgs[0]->Shape().Dimensions();
+                    shape.resize(maxRank, 1);
+                    shape.push_back(spliceArgs.size());
+                    auto out = Alloc(shape, spliceArgs[0]->GetDataType(), spliceArgs[0]->Device());
+                    m_args[i] = NDArrayView::GatherBatch(spliceArgs, (int)maxRank, move(out));
                     //m_args[i] = NDArrayView::GatherBatch(spliceArgs, maxRank, out);
                     //fprintf(stderr, "Gathering %d items\n", (int)spliceArgs.size());
                     anyBatchedInputs = true;
@@ -415,13 +427,13 @@ class Memoize
                 if (fields.m_value)
                     throw logic_error("output already has a value?");
             }
-            NDArrayViewPtr out1; // (arena buffer goes here some day)
             let& unbatchedOutputShape = f0.m_outputs[0].Shape();
             if (!anyBatchedInputs) // short-circuit branch when all inputs were actually the same--we just compute them once
             {
                 for (size_t i = 0; i < numArgs; i++)
                     if (m_args[i] != f0.m_inputs[i].m_dataFields->m_value)
                         throw logic_error("fast path unexpectedly got unexpected inputs");
+                NDArrayViewPtr out1 = Alloc(unbatchedOutputShape, m_args[0]->GetDataType(), m_args[0]->Device()); // (arena buffer goes here some day)
                 auto out = f0.ComputeKnowableValue(f0.Op(), m_args, f0.Attributes(), unbatchedOutputShape, move(out1));
                 // implant all results
                 for (auto op = ops.begin(); op != ops.end(); ++op)
@@ -430,6 +442,7 @@ class Memoize
             else // main branch: computation as a batched operation
             {
                 let outputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
+                NDArrayViewPtr out1 = Alloc(outputShape, m_args[0]->GetDataType(), m_args[0]->Device()); // (arena buffer goes here some day)
                 auto out = f0.ComputeKnowableValue(f0.Op(), m_args, f0.Attributes(), outputShape, move(out1));
                 // implant all results
                 size_t j = 0;
