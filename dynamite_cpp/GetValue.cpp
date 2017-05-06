@@ -271,7 +271,9 @@ class Memoize
 
     vector<Variable> m_inputs;
     vector<NDArrayViewPtr> m_args;
-    size_t m_numBatches = 0;
+    size_t m_numBatchedLaunches = 0;
+
+    vector<vector<NDArrayViewPtr>> m_spliceArgsBuffer; // (keep this outside the function so that we can reuse the memory allocation)
 
     // batch-execute a set of ops that are known to be batchable
     void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionList ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
@@ -279,41 +281,101 @@ class Memoize
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
         // get a representative op
         let& f0 = *ops.front();
-        let isFree = IsViewOp(f0.Op());
+        let op = f0.Op();
+        let batchSize = ops.size();
+        let isFree = IsViewOp(op);
         if (!isFree)
-            m_numBatches++;
-        fprintf(stderr, "%d executing %d instances of %S -> %S\n", isFree ? -1 : (int)m_numBatches, (int)ops.size(), f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str());
-        m_inputs.resize(f0.m_inputs.size());
-        m_args.resize(f0.m_inputs.size());
-#if 0
-        // for correctness testing of underlying mechanism, compute them without actual batching
-        for (auto op = ops.begin(); op != ops.end(); ++op)
-        //for (auto op : ops) // TODO: figure this out
+            m_numBatchedLaunches++;
+        fprintf(stderr, "%d executing %d instances of %S -> %S\n", isFree ? -1 : (int)m_numBatchedLaunches, (int)batchSize, f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str());
+        let numArgs = f0.m_inputs.size();
+        m_inputs.resize(numArgs);
+        m_args.resize(numArgs);
+        // perform the op
+        let doNaively = isFree || (op == PrimitiveOpType::Times); // for now
+        if (doNaively)
         {
-            if (op->m_outputs.size() != 1)
-                throw logic_error("only functions with 1 output are supported");
-            m_inputs.resize(op->m_inputs.size());
-            m_args.resize(op->m_inputs.size());
-            for (size_t i = 0; i < op->m_inputs.size(); i++)
+            // for correctness testing of underlying mechanism, compute them without actual batching
+            for (auto op = ops.begin(); op != ops.end(); ++op)
+                //for (auto op : ops) // TODO: figure this out
             {
-                m_args[i] = op->m_inputs[i].m_dataFields->m_value;
-                if (!m_args[i])
-                    throw logic_error("input unexpectedly not available");
+                if (op->m_outputs.size() != 1)
+                    throw logic_error("only functions with 1 output are supported");
+                m_inputs.resize(op->m_inputs.size());
+                m_args.resize(op->m_inputs.size());
+                for (size_t i = 0; i < op->m_inputs.size(); i++)
+                {
+                    m_args[i] = op->m_inputs[i].m_dataFields->m_value;
+                    if (!m_args[i])
+                        throw logic_error("input unexpectedly not available");
+                }
+                NDArrayViewPtr out; // arena allocation will happen here
+                op->m_outputs[0].m_dataFields->m_value =
+                    op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
             }
-            NDArrayViewPtr out; // arena allocation will happen here
-            op->m_outputs[0].m_dataFields->m_value =
-                op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
         }
-#else
-        // batch all arguments
-        // create a new PrimitiveFunction that executes this operation
-        // compute its Value   --TODO: we need a lower-level executor that just takes the op, inputs, and attributes?
-        // we can point to one of the ops for all info but the batched inputs
-        // but then how do we bach-prop if we don't have an actual
-        NDArrayViewPtr out;
-        f0.ComputeKnowableValue(f0.Op(), args, f0.Attributes(), shape, move(out));
-        // distribute the results to ops[]
-#endif
+        else
+        {
+            // batch all arguments
+            if (numArgs > m_spliceArgsBuffer.size())
+                m_spliceArgsBuffer.resize(numArgs);
+            size_t maxRank = 0;
+            for (size_t i = 0; i < numArgs; i++)
+            {
+                // allocate buffers
+                auto& spliceArgs = m_spliceArgsBuffer[i];
+                spliceArgs.clear();
+                if (spliceArgs.capacity() < batchSize)
+                    spliceArgs.reserve(max(batchSize, 2 * spliceArgs.capacity()));
+                spliceArgs.resize(batchSize); // maybe don't even resize it smaller, as that will clear out the shared_ptrs; no need
+                // we could even do with un-managed pointers here; would save lots of ref-counting; or even use GatherBatch lambda
+                // determine max rank
+                let rank = f0.m_inputs[0].Shape().Rank();
+                if (rank > maxRank)
+                    maxRank = rank;
+            }
+            size_t j = 0;
+            for (auto op = ops.begin(); op != ops.end(); ++op)
+            {
+                let& inputs = op->m_inputs;
+                for (size_t i = 0; i < numArgs; i++)
+                {
+                    auto& spliceArgs = m_spliceArgsBuffer[i];
+                    let& arg = inputs[i].m_dataFields->m_value;
+                    // TODO: some opt here for lazy slice
+                    spliceArgs[j] = arg;
+                }
+                j++;
+            }
+            for (size_t i = 0; i < numArgs; i++)
+            {
+                auto& spliceArgs = m_spliceArgsBuffer[i];
+                auto out = NDArrayViewPtr();
+                m_args[i] = NDArrayView::GatherBatch(spliceArgs, maxRank, out);
+            }
+            // execute the operation
+            let& unbatchedOutputShape = f0.m_outputs[0].Shape();
+            let outputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
+            NDArrayViewPtr out1;
+            NDArrayViewPtr out = f0.ComputeKnowableValue(f0.Op(), m_args, f0.Attributes(), outputShape, move(out1));
+            // implant all results
+            auto extent = outputShape.Dimensions();
+            vector<size_t> startOffset(outputShape.Rank(), 0);
+            extent[maxRank] = 1;
+            j = 0;
+            for (auto op = ops.begin(); op != ops.end(); ++op)
+            {
+                auto& fields = *op->m_outputs[0].m_dataFields;
+                if (fields.m_value)
+                    throw logic_error("output already has a value?");
+                startOffset[maxRank] = j;
+                let sliceView = out->SliceView(startOffset, extent);
+                auto slice = sliceView->AsShape(fields.m_shape);
+                fields.m_value = move(slice);
+                j++;
+            }
+            // TODO: for backprop, we need to create a new PrimitiveFunction that executes this operation, or something we can backprop through
+        }
+
         // update all ops' consumers
         for (auto op = ops.begin(); op != ops.end(); ++op)
         {
