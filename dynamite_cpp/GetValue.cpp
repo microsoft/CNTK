@@ -48,7 +48,9 @@ class Memoize
     //     - Splice() for each of the N inputs
     // 'free' ops are always batched together and get executed first
 
-    static bool IsFreeOp(PrimitiveOpType op)
+    // predicate whether an op is only taking a view on its input
+    // These are considered zero-cost, always batched whole-sale, and always done first.
+    static bool IsViewOp(PrimitiveOpType op)
     {
         return
             op == PrimitiveOpType::StopGradient ||
@@ -63,18 +65,20 @@ class Memoize
     class ReadyOps
     {
         vector<deque<Function*>> m_allOps;
+        // TODO: the deque should instead become a linked list
         // TODO: This must be turned into something hashable.
-        static bool IsBatchableWith(const Function* a, const Function* b)
+        // test whether two PrimitiveFunctions can be executed as a single batched operation
+        static bool AreBatchable(const Function* a, const Function* b)
         {
             // first it must be the same operation
             let op = a->Op();
             // free ops always get batched; even if they have different op-codes
-            if (IsFreeOp(op) && op != PrimitiveOpType::BarrierOp)
+            if (IsViewOp(op) && op != PrimitiveOpType::BarrierOp)
                 return true;
             // op codes must match
             if (op != b->Op())
                 return false;
-            // all input dimensions must match (with a few special cases)
+            // all input dimensions must match (with exception of a few special cases)
             assert(a->m_inputs.size() == b->m_inputs.size());
             for (size_t i = 0; i < a->m_inputs.size(); i++)
             {
@@ -84,6 +88,8 @@ class Memoize
                 if (op == PrimitiveOpType::Times && i == 0)
                 {
                     // for Times, the first arg must be the same object, not just the same shape
+                    // TODO: a special case is a dot product, which we can write as ReduceSum(ElementTimes(a,b))
+                    //       This would require to rewrite the graph though; can we do that?
                     if (ia.m_dataFields != ib.m_dataFields)
                         return false;
                 }
@@ -106,11 +112,11 @@ class Memoize
         {
             let op = f->Op();
             if (op == PrimitiveOpType::BarrierOp) // Barrier goes last
-                return -1;
-            else if (IsFreeOp(op)) // free ops go first
-                return 1;
-            else
                 return 0;
+            else if (IsViewOp(op)) // free ops go first
+                return 2;
+            else
+                return 1;
         }
     public:
         // schedule an operation that has been confirmed ready
@@ -120,7 +126,7 @@ class Memoize
             // scan through all op sets to see if one is batchable with 'fp'
             for (auto iter = m_allOps.begin(); iter != m_allOps.end(); iter++)
             {
-                if (IsBatchableWith(fp, iter->front()))
+                if (AreBatchable(fp, iter->front()))
                 {
                     iter->push_back(fp);
                     return;
@@ -159,6 +165,7 @@ class Memoize
     //  - prepare all nodes for batched execution
     //  - schedule all ready operations
     // TODO: Once we are in the main build, change all Function to PrimitiveFunction directly.
+    // TODO: What to do with multi-valued functions? Which ones are there? What is Combine(), a barrier?
     void TraverseFunctionTree(const Variable& v)
     {
         let& fields = *v.m_dataFields;
@@ -208,7 +215,7 @@ class Memoize
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
         // get a representative op
         let& f0 = *ops.front();
-        let isFree = IsFreeOp(f0.Op());
+        let isFree = IsViewOp(f0.Op());
         if (!isFree)
             m_numBatches++;
         fprintf(stderr, "%d executing %d instances of %S -> %S\n", isFree ? -1 : (int)m_numBatches, (int)ops.size(), f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str());
