@@ -196,6 +196,8 @@ class Memoize
         }
         // test if no more ready ops
         bool empty() const { return m_viewOps.empty() && m_regularOps.empty() && m_barrierOps.empty(); }
+        size_t size() const { return (m_viewOps.size() > 0) +  + (m_barrierOps.size() > 0); }
+        size_t numBatchableOpsPending() const { return m_regularOps.size(); }
         // select the next batched op to execute
         NonOwningFunctionList pop_best()
         {
@@ -273,7 +275,7 @@ class Memoize
     vector<NDArrayViewPtr> m_args;
     size_t m_numBatchedLaunches = 0;
 
-    vector<vector<NDArrayViewPtr>> m_spliceArgsBuffer; // (keep this outside the function so that we can reuse the memory allocation)
+    vector<NDArrayViewPtr> m_spliceArgsBuffer; // (keep this outside the function so that we can reuse the memory allocation)
 
     // batch-execute a set of ops that are known to be batchable
     void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionList ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
@@ -286,7 +288,6 @@ class Memoize
         let isFree = IsViewOp(op);
         if (!isFree)
             m_numBatchedLaunches++;
-        fprintf(stderr, "%d executing %d instances of %S -> %S\n", isFree ? -1 : (int)m_numBatchedLaunches, (int)batchSize, f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str());
         let numArgs = f0.m_inputs.size();
         m_inputs.resize(numArgs);
         m_args.resize(numArgs);
@@ -295,24 +296,27 @@ class Memoize
         let doNaively =
             isFree ||
             isTimes && (f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
-            //isTimes ||
-            (op == PrimitiveOpType::Splice);
+            op == PrimitiveOpType::Splice ||
+            batchSize == 1;
+        fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
+                isFree ? -1 : (int)m_numBatchedLaunches,
+                doNaively ? "" : "batch-",
+                (int)batchSize, f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str(),
+                (int)m_schedule.numBatchableOpsPending());
         if (doNaively)
         {
+            if (op == PrimitiveOpType::Splice && batchSize != 1)
+                BreakPoint;
             // for correctness testing of underlying mechanism, compute them without actual batching
             for (auto op = ops.begin(); op != ops.end(); ++op)
-                //for (auto op : ops) // TODO: figure this out
+            //for (auto op : ops) // TODO: figure this out
             {
                 if (op->m_outputs.size() != 1)
                     throw logic_error("only functions with 1 output are supported");
                 m_inputs.resize(op->m_inputs.size());
                 m_args.resize(op->m_inputs.size());
                 for (size_t i = 0; i < op->m_inputs.size(); i++)
-                {
                     m_args[i] = op->m_inputs[i].m_dataFields->m_value;
-                    if (!m_args[i])
-                        throw logic_error("input unexpectedly not available");
-                }
                 NDArrayViewPtr out; // arena allocation will happen here
                 op->m_outputs[0].m_dataFields->m_value =
                     op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
@@ -321,57 +325,77 @@ class Memoize
         else
         {
             // batch all arguments
-            if (numArgs > m_spliceArgsBuffer.size())
-                m_spliceArgsBuffer.resize(numArgs);
             size_t maxRank = 0;
             size_t i0 = isTimes ? 1 : 0;
             if (isTimes)
                 BreakPoint;
             for (size_t i = i0; i < numArgs; i++)
             {
-                // allocate buffers
-                auto& spliceArgs = m_spliceArgsBuffer[i];
-                spliceArgs.clear();
-                if (spliceArgs.capacity() < batchSize)
-                    spliceArgs.reserve(max(batchSize, 2 * spliceArgs.capacity()));
                 // we could even do with un-managed pointers here; would save lots of ref-counting; or even use GatherBatch lambda
                 // determine max rank
                 let rank = f0.m_inputs[i].Shape().Rank();
                 if (rank > maxRank)
                     maxRank = rank;
             }
-            size_t j = 0;
-            for (auto op = ops.begin(); op != ops.end(); ++op) // create the batched tensors
+            bool anyBatchedInputs = false;
+            if (isTimes)
+                m_args[0] = f0.m_inputs[0].m_dataFields->m_value;
+            for (size_t i = i0; i < numArgs; i++)
             {
-                let& inputs = op->m_inputs;
-                for (size_t i = i0; i < numArgs; i++)
+                // create splice args
+                // allocate buffers
+                auto& spliceArgs = m_spliceArgsBuffer;
+                spliceArgs.clear();
+                if (spliceArgs.capacity() < batchSize)
+                    spliceArgs.reserve(max(batchSize, 2 * spliceArgs.capacity()));
+                let* pfields0 = f0.m_inputs[i].m_dataFields.get(); // as long as non-NULL, we are consecutive
+                if (!pfields0->m_lazyIndex.first) // only if it is an indexed slice, actually
+                    pfields0 = nullptr;
+                size_t j = 0;
+                for (auto op = ops.begin(); op != ops.end(); ++op, j++) // create the batched tensors
                 {
-                    auto& spliceArgs = m_spliceArgsBuffer[i];
-                    let& arg = inputs[i].m_dataFields->m_value;
-                    // TODO: some opt here for lazy slice
+                    let* pfields = op->m_inputs[i].m_dataFields.get();
+                    let& arg = pfields->m_value;
                     // optimization: if all args are the same, then don't batch
-                    if (!spliceArgs.empty() && spliceArgs.back() == arg)
+                    if (spliceArgs.size() == 1 && spliceArgs[0] == arg)
                         continue;
                     // if we thought it is all the same, but then it turned out not to be, we need to fixc it up
                     while (spliceArgs.size() < j)
                         spliceArgs.push_back(spliceArgs.back());
+                    // optimization: if all args are consecutive slices, then use a slice view instead
+                    if (pfields0 &&
+                        (pfields->m_lazyIndex.first  != pfields0->m_lazyIndex.first ||
+                         pfields->m_lazyIndex.second != pfields0->m_lazyIndex.second + j))
+                        pfields0 = nullptr; // not consecutive
                     // append the arg
                     spliceArgs.push_back(arg);
                 }
-                j++;
-            }
-            if (isTimes)
-                m_args[0] = f0.m_inputs[0].m_dataFields->m_value;
-            bool anyBatchedInputs = false;
-            for (size_t i = i0; i < numArgs; i++)
-            {
-                auto& spliceArgs = m_spliceArgsBuffer[i];
+                // and splice
                 if (spliceArgs.size() == 1) // optimized case: all ops share the same operand: no need to batch them
                     m_args[i] = spliceArgs[0];
+                else if (pfields0) // they are consecutive: can short-circuit as a slice view
+                {
+                    let& from = pfields0->m_lazyIndex.first;
+                    let begin = pfields0->m_lazyIndex.second;
+                    let& fromDims = from->Shape().Dimensions();
+                    if (begin == 0 && j == fromDims.back()) // full range: just take it
+                        m_args[i] = from;
+                    else // sub-range: take a slice veiw
+                    {
+                        vector<size_t> extent = fromDims;
+                        vector<size_t> startOffset(extent.size(), 0);
+                        startOffset.back() = begin;
+                        extent.back() = j;
+                        m_args[i] = from->SliceView(startOffset, extent);
+                    }
+                    anyBatchedInputs = true;
+                }
                 else
                 {
                     auto out = NDArrayViewPtr();
                     m_args[i] = NDArrayView::GatherBatch(spliceArgs, maxRank, out);
+                    //m_args[i] = NDArrayView::GatherBatch(spliceArgs, maxRank, out);
+                    fprintf(stderr, "Gathering %d items\n", (int)spliceArgs.size());
                     anyBatchedInputs = true;
                 }
             }
@@ -399,10 +423,12 @@ class Memoize
                 let outputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
                 auto out = f0.ComputeKnowableValue(f0.Op(), m_args, f0.Attributes(), outputShape, move(out1));
                 // implant all results
-                j = 0;
+                size_t j = 0;
                 for (auto op = ops.begin(); op != ops.end(); ++op)
                 {
-                    op->m_outputs[0].m_dataFields->m_value = out->IndexLastAxis(j);
+                    auto& fields = *op->m_outputs[0].m_dataFields;
+                    fields.m_value = out->IndexLastAxis(j);
+                    fields.m_lazyIndex = make_pair(out, j); // remember where we came from
                     j++;
                 }
             }
