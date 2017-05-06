@@ -7,10 +7,8 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import numbers
-from numbers import Number
 from . import sequence
 from .functions import CloneMethod, Function, load_model, register_native_user_function, native_user_function
-from ..variables import Variable, Parameter, Constant
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
@@ -405,10 +403,10 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
         >>> x = C.input(img.shape)
         >>> y = C.pooling(x, C.MAX_POOLING, (2,2), (2,2))
         >>> C.unpooling(y, x, C.MAX_UNPOOLING, (2,2), (2,2)).eval({x : [img]})
-	array([[[[  0.,   0.,   0.,   0.],
-		  [  0.,   5.,   0.,   7.],
-		  [  0.,   0.,   0.,   0.],
-		  [  0.,  13.,   0.,  15.]]]], dtype=float32)
+        array([[[[  0.,   0.,   0.,   0.],
+                  [  0.,   5.,   0.,   7.],
+                  [  0.,   0.,   0.,   0.],
+                  [  0.,  13.,   0.,  15.]]]], dtype=float32)
 
     Args:
         operand: unpooling input
@@ -2122,7 +2120,7 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
         x: input tensor, the value must be positive integer and less than num_class
         num_classes: the number of class in one hot tensor
         sparse_output: if set as True, we will create the one hot tensor as sparse.
-		axis: The axis to fill (default: -1, a new inner-most axis).
+        axis: The axis to fill (default: -1, a new inner-most axis).
         name (str, optional, keyword only): the name of the Function instance in the network
 
     Returns:
@@ -2136,7 +2134,7 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
 @typemap
 def gather(reference, indices):
     '''
-    Retrieves the elements of indices in the tensor reference. 
+    Retrieves the elements of indices in the tensor reference.
 
     Example:
         >>> c = np.asarray([[[0],[1]],[[4],[5]]]).astype('f')
@@ -2152,14 +2150,14 @@ def gather(reference, indices):
                [[[  8.,   9.]],
         <BLANKLINE>
                 [[ 10.,  11.]]]], dtype=float32)
-        
+
     Args:
         reference: A tensor
         indices: An integer tensor of indices
 
     Returns:
         :class:`~cntk.ops.functions.Function`
-	'''
+    '''
     from cntk.cntk_py import gather_op
     return gather_op(indices, reference)
 ##########################################################################
@@ -2701,7 +2699,7 @@ def _input_spec(shape, dtype=default_override_or(np.float32), needs_gradient=Fal
 def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
           dynamic_axes=[Axis.default_batch_axis()], name=''):
     '''
-    input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, dynamic_axes=[Axis.default_batch_axis()], name='')
+    DEPRECATED.
 
     It creates an input in the network: a place where data,
     such as features and labels, should be provided.
@@ -2712,6 +2710,32 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, sequence axis)
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.variables.Variable`
+    '''
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use '
+                  'input_variable() instead.', DeprecationWarning)
+
+    return input_variable(shape, dtype, needs_gradient, is_sparse, dynamic_axes, name)
+
+@typemap
+def input_variable(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
+                   dynamic_axes=[Axis.default_batch_axis()], name=''):
+    '''
+    input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, dynamic_axes=[Axis.default_batch_axis()], name='')
+
+    It creates an input in the network: a place where data,
+    such as features and labels, should be provided.
+
+    Args:
+        shape (tuple or int): the shape of the input tensor
+        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
+        is_sparse (bool, optional): whether the variable is sparse (`False` by default)
+        dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -2731,34 +2755,6 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
     # TODO sparse for numpy arrays
 
     return input_variable(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
-
-@typemap
-def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
-                   dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
-    '''
-    DEPRECATED.
-
-    It creates an input in the network: a place where data,
-    such as features and labels, should be provided.
-
-    Args:
-        shape (tuple or int): the shape of the input tensor
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
-        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
-        is_sparse (bool, optional): whether the variable is sparse (`False` by default)
-        dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
-        name (str, optional): the name of the Function instance in the network
-
-    Returns:
-        :class:`~cntk.variables.Variable`
-    '''
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-            'input() or sequence.input() instead.', DeprecationWarning)
-    if (type(dynamic_axes) in (list, tuple)) and (len(dynamic_axes) == 2):
-        return sequence.input(shape, dtype, needs_gradient, is_sparse, dynamic_axes[1], name)
-    else:
-        return input(shape, dtype, needs_gradient, is_sparse, dynamic_axes, name)
 
 @typemap
 def output_variable(shape, dtype, dynamic_axes, needs_gradient=True, name=''):

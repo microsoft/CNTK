@@ -7,7 +7,7 @@
 from __future__ import division, print_function
 import numpy as np
 import cntk as C
-from .. import *
+#from .. import *
 from cntk import parameter, input
 
 import pytest
@@ -42,20 +42,20 @@ def sweep_based_schedule_fails():
 
 def test_momentum_schedule():
     m = 2500
-    ms = momentum_as_time_constant_schedule([m])
+    ms = C.momentum_as_time_constant_schedule([m])
     assert ms[0] ==  np.exp(-1.0 / np.asarray(m))
 
-    ms = momentum_as_time_constant_schedule(m)
+    ms = C.momentum_as_time_constant_schedule(m)
     assert ms[0] ==  np.exp(-1.0 / np.asarray(m))
 
     mlist = [980, 520]
-    msl = momentum_as_time_constant_schedule(mlist)
+    msl = C.momentum_as_time_constant_schedule(mlist)
     expected = np.exp(-1.0 / np.asarray(mlist))
     assert all(mi == ei for mi,ei in zip(msl,expected))
 
 @pytest.mark.parametrize("params, expectation", MOMENTUM_SCHEDULE_PARAMS)
 def test_momentum_schedule_per_sample(params, expectation):
-    l = momentum_schedule(*params)
+    l = C.momentum_schedule(*params)
     assert [l[i] for i in range(len(expectation))] == expectation
 
 def test_learner_init():
@@ -75,51 +75,51 @@ def test_learner_init():
     param = learner_parameter[0]
     assert isinstance(param, Parameter)
 
-    unit_gain_value = default_unit_gain_value()
+    unit_gain_value = C.default_unit_gain_value()
     assert unit_gain_value
 
-    momentum_time_constant = momentum_as_time_constant_schedule(1100)
+    momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
-    momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant)
-    momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
-    momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant, unit_gain=unit_gain_value)
+    C.momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant)
+    C.momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
+    C.momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant, unit_gain=unit_gain_value)
 
-    set_default_unit_gain_value(False)
-    unit_gain_value = default_unit_gain_value()
+    C.set_default_unit_gain_value(False)
+    unit_gain_value = C.default_unit_gain_value()
     assert not unit_gain_value
 
     lr_per_sample = learning_rate_schedule([0.1, 0.2], UnitType.sample)
-    nesterov(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
-    nesterov(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
-    nesterov(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
+    C.nesterov(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
+    C.nesterov(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
+    C.nesterov(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
 
     lr_per_sample = learning_rate_schedule([0.1]*3 +[0.2]*2 +[0.3], UnitType.sample)
-    adagrad(res.parameters, lr=lr_per_sample, need_ave_multiplier=True)
+    C.adagrad(res.parameters, lr=lr_per_sample, need_ave_multiplier=True)
 
-    set_default_unit_gain_value(True)
-    unit_gain_value = default_unit_gain_value()
+    C.set_default_unit_gain_value(True)
+    unit_gain_value = C.default_unit_gain_value()
     assert unit_gain_value
 
     lr_per_sample = learning_rate_schedule([(3,0.1), (2, 0.2), (1, 0.3)], UnitType.sample)
-    fsadagrad(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
-    fsadagrad(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
-    fsadagrad(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
+    C.fsadagrad(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
+    C.fsadagrad(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
+    C.fsadagrad(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
 
     gamma, inc, dec, max, min = [0.1]*5
     lr_per_sample = learning_rate_schedule([0.1, 0.2], UnitType.sample, 100)
-    rmsprop(res.parameters, lr_per_sample, gamma, inc, dec, max, min, True)
+    C.rmsprop(res.parameters, lr_per_sample, gamma, inc, dec, max, min, True)
 
-    set_default_use_mean_gradient_value(False)
-    use_mean_gradient_value = default_use_mean_gradient_value()
+    C.set_default_use_mean_gradient_value(False)
+    use_mean_gradient_value = C.default_use_mean_gradient_value()
     assert not use_mean_gradient_value
 
-    adadelta(res.parameters, lr_per_sample)
+    C.adadelta(res.parameters, lr_per_sample)
     
-    set_default_use_mean_gradient_value(True)
-    use_mean_gradient_value = default_use_mean_gradient_value()
+    C.set_default_use_mean_gradient_value(True)
+    use_mean_gradient_value = C.default_use_mean_gradient_value()
     assert use_mean_gradient_value
 
-    adadelta(res.parameters, lr_per_sample)
+    C.adadelta(res.parameters, lr_per_sample)
 
 def test_learner_update():
     i = input(shape=(1,), needs_gradient=True, name='a')
@@ -148,11 +148,11 @@ def test_noise_injection_with_checkpointing():
     w3 = parameter(shape=shape, init=initializer.glorot_uniform(seed=123))
     
     lr=learning_rate_schedule(0.5, UnitType.sample)
-    m=momentum_schedule(0.99)
+    m=C.momentum_schedule(0.99)
 
-    learner1 = momentum_sgd([w1], lr, m, gaussian_noise_injection_std_dev=0.5)
-    learner2 = momentum_sgd([w2], lr, m, gaussian_noise_injection_std_dev=0.5)
-    learner3 = momentum_sgd([w3], lr, m, gaussian_noise_injection_std_dev=0.5)
+    learner1 = C.momentum_sgd([w1], lr, m, gaussian_noise_injection_std_dev=0.5)
+    learner2 = C.momentum_sgd([w2], lr, m, gaussian_noise_injection_std_dev=0.5)
+    learner3 = C.momentum_sgd([w3], lr, m, gaussian_noise_injection_std_dev=0.5)
 
     assert np.allclose(w1.value, w2.value) and np.allclose(w1.value, w3.value)
 
@@ -169,7 +169,7 @@ def test_noise_injection_with_checkpointing():
         learner3.update({w3: v}, 1)
         assert np.allclose(w1.value, w3.value)
 
-class TestProgressWriter(cntk_py.ProgressWriter):
+class TestProgressWriter(C.cntk_py.ProgressWriter):
 
     def __init__(self):
         super(TestProgressWriter, self).__init__(1, 0, 1, 0, sys.maxsize, 0)
@@ -195,9 +195,9 @@ def test_learner_logging():
     writer = TestProgressWriter();
     lr_values = [0.3, 0.2, 0.1, 0]
     m_values = [0.6, 0.7, 0.8]
-    learner = momentum_sgd(z.parameters, 
+    learner = C.momentum_sgd(z.parameters,
                   learning_rate_schedule(lr_values, UnitType.sample, 1),
-                  momentum_schedule(m_values, 1))
+                  C.momentum_schedule(m_values, 1))
     trainer = Trainer(z, (ce, errs), [learner], writer)
 
     for i in range(10):
@@ -211,13 +211,13 @@ def test_learner_logging():
         assert (values[i] == writer.log_output[i])
 
 def test_training_parameter_schedule():
-    training_parameter_schedule(0.01, unit='minibatch')
-    training_parameter_schedule(0.01, unit='sample')
+    C.training_parameter_schedule(0.01, unit='minibatch')
+    C.training_parameter_schedule(0.01, unit='sample')
 
     with pytest.raises(ValueError):
-        training_parameter_schedule(0.01, unit='not_supported')
+        C.training_parameter_schedule(0.01, unit='not_supported')
     with pytest.raises(ValueError):
-        training_parameter_schedule(0.01, unit=5)
+        C.training_parameter_schedule(0.01, unit=5)
 
 def test_sweep_based_schedule(tmpdir, device_id):
     from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs

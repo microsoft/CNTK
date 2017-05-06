@@ -4,16 +4,12 @@
 # for full license information.
 # ==============================================================================
 
-import math
-import numpy as np
-import pytest
 from cntk import Function, sequence
-from ..trainer import *
-from cntk.learners import *
 from .. import distributed
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
-from cntk import parameter, input, times, plus, reduce_sum
+from cntk import parameter, plus, reduce_sum
+import cntk as C
 
 def create_data_parallel_distributed_learner(learner, quantized, distributed_after):
     return distributed.data_parallel_distributed_learner(
@@ -44,9 +40,9 @@ def run_distributed_training(tmpdir, create_func):
     ce = cross_entropy_with_softmax(z, labels)
     errs = classification_error(z, labels)
 
-    momentum_time_constant = momentum_as_time_constant_schedule(1100)
-    lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    dist_learner = create_func(momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True))
+    momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
+    lr_per_sample = C.learning_rate_schedule(0.007, C.UnitType.sample)
+    dist_learner = create_func(C.momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True))
 
     communicator = dist_learner.communicator()
     workers = communicator.workers()
@@ -58,7 +54,7 @@ def run_distributed_training(tmpdir, create_func):
 
     assert found_rank
 
-    trainer = Trainer(z, (ce, errs), [ dist_learner ])
+    trainer = C.Trainer(z, (ce, errs), [ dist_learner ])
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}

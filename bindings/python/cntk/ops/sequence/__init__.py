@@ -8,14 +8,42 @@ from cntk.internal import typemap, sanitize_input
 from cntk.internal.utils import get_data_type
 
 from ...axis import Axis
-from ...default_options import get_default_override, default_override_or
+from ...default_options import default_override_or
 ##########################################################################
 # variable ops
 ##########################################################################
 
+
 @typemap
 def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
           sequence_axis=Axis.default_dynamic_axis(), name=''):
+    '''
+    DEPRECATED.
+
+    It creates an input in the network: a place where data,
+    such as features and labels, should be provided.
+
+    Args:
+        shape (tuple or int): the shape of the input tensor
+        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
+        is_sparse (bool, optional): whether the variable is sparse (`False` by default)
+        sequence_axis (:class:`~cntk.Axis`): a dynamic axis (e.g., default_dynamic_axis())
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.variables.Variable`
+    '''
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use '
+                  'input_variable() instead.', DeprecationWarning)
+
+    return input_variable(shape, dtype, needs_gradient, is_sparse, sequence_axis, name)
+
+
+@typemap
+def input_variable(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
+                   sequence_axis=Axis.default_dynamic_axis(), name=''):
     '''input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, sequence_axis=Axis.default_dynamic_axis(), name='')
 
     It creates an input in the network: a place where data,
@@ -26,18 +54,19 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
         dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
-        dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
+        sequence_axis (:class:`~cntk.Axis`): a dynamic axis (e.g., default_dynamic_axis())
         name (str, optional): the name of the Function instance in the network
 
     Returns:
         :class:`~cntk.variables.Variable`
     '''
-    from ... import input
-    return input(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse, dynamic_axes=[Axis.default_batch_axis(), sequence_axis], name=name)
+    from ... import input_variable
+    return input_variable(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse, dynamic_axes=[Axis.default_batch_axis(), sequence_axis], name=name)
 
 ##########################################################################
 # sequence ops
 ##########################################################################
+
 
 @typemap
 def unpack(x, padding_value, no_mask_output=False, name=''):
@@ -235,7 +264,7 @@ def delay(x, initial_state=None, time_step=1, name=''):
         time_step (int): the number of time steps to look into the past, where negative values mean to look into the future, and 0 means a no-op (default 1).
         name (str, optional): the name of the Function instance in the network
     '''
-    from ...ops import alias, element_select, element_divide, placeholder, exp 
+    from ...ops import alias
     if time_step > 0:
         return past_value  (x, time_step= time_step, initial_state=initial_state, name=name)
     elif time_step < 0:
@@ -403,7 +432,7 @@ def where(condition, name=''):
         >>> # repeat frame[1] twice, frame[3] three times, and frame[4] twice
         >>> C.sequence.where(C.sequence.input(1)).eval([[[1], [2], [1], [3], [2]]])
         [array([ 0.,  1.,  1.,  2.,  3.,  3.,  3.,  4.,  4.], dtype=float32)]
-        >>> # note that the above are the indices that are passed to 
+        >>> # note that the above are the indices that are passed to
 
         >>> # repeat frames with a fractional factor
         >>> C.sequence.where(C.sequence.input(1)).eval([[[1.2]]*10])
@@ -454,7 +483,7 @@ def gather(seq, condition, new_sequence_axis_typeinfo=None, name=''):
         new_sequence_axis_typeinfo:  tuple of integers indicating
             the scaling and additive factors for the length of the new sequence axis
             w.r.t. the operand sequence. This is used to determine the sequence axis
-            to be used for the output of the gather operation. If this argument is left 
+            to be used for the output of the gather operation. If this argument is left
             unspecified, a new independent sequence axis is created.
         name (str): the name of the node in the network
     Returns:
@@ -511,7 +540,7 @@ def scatter(seq, condition, new_sequence_axis_typeinfo=None, name=''):
         new_sequence_axis_typeinfo:  tuple of integers indicating
             the scaling and additive factors for the length of the new sequence axis
             w.r.t. the condition sequence. This is used to determine the sequence axis
-            to be used for the output of the gather operation. If this argument is left 
+            to be used for the output of the gather operation. If this argument is left
             unspecified a new independent sequence axis is created.
         name (str): the name of the node in the network
     Returns:
@@ -599,6 +628,7 @@ def reduce_sum(seq, name=''):
     seq = sanitize_input(seq, get_data_type(seq))
     return sequence_reduce_sum(seq, name)
 
+
 @typemap
 def reduce_max(seq, name=''):
     '''
@@ -614,6 +644,7 @@ def reduce_max(seq, name=''):
     from cntk.cntk_py import sequence_reduce_max
     seq = sanitize_input(seq, get_data_type(seq))
     return sequence_reduce_max(seq, name)
+
 
 @typemap
 def softmax(seq, name = ''):

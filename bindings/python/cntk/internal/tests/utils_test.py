@@ -6,14 +6,15 @@
 
 import numpy as np
 import scipy.sparse as sparse
-csr = sparse.csr_matrix
 import pytest
 
-from cntk.tests.test_utils import precision, PRECISION_TO_TYPE
-from cntk.ops import *
-from cntk.internal import *
+import cntk as C
+from cntk.internal import sanitize_dtype_numpy, sanitize_dtype_cntk, sanitize_input, sanitize_dynamic_axes, sanitize_batch
+from cntk.internal.utils import get_data_type
 from cntk import Value
 from cntk import sequence
+
+csr = sparse.csr_matrix
 
 AA = np.asarray
 
@@ -25,9 +26,9 @@ def test_sanitize_dtype_numpy():
 
 def test_sanitize_dtype_cntk():
     for dtype in ['float', 'float32', np.float32, int]:
-        assert sanitize_dtype_cntk(dtype) == cntk_py.DataType_Float, dtype
+        assert sanitize_dtype_cntk(dtype) == C.cntk_py.DataType_Float, dtype
     for dtype in [float, 'float64', np.float64]:
-        assert sanitize_dtype_cntk(dtype) == cntk_py.DataType_Double, dtype
+        assert sanitize_dtype_cntk(dtype) == C.cntk_py.DataType_Double, dtype
 
 @pytest.mark.parametrize("data, dtype", [
     ([1], np.float32),
@@ -41,19 +42,19 @@ def test_sanitize_input(data, dtype):
     assert inp.dtype == dtype
 
 def test_axes():
-    axes = [Axis.default_batch_axis(), Axis.default_dynamic_axis()]
-    assert tuple(axes) == Axis.default_input_variable_dynamic_axes()
+    axes = [C.Axis.default_batch_axis(), C.Axis.default_dynamic_axis()]
+    assert tuple(axes) == C.Axis.default_input_variable_dynamic_axes()
     assert sanitize_dynamic_axes(axes) == \
-            tuple(reversed(Axis.default_input_variable_dynamic_axes()))
+            tuple(reversed(C.Axis.default_input_variable_dynamic_axes()))
 
-    assert (Axis.default_dynamic_axis(),) == \
-            sanitize_dynamic_axes(Axis.default_dynamic_axis())
+    assert (C.Axis.default_dynamic_axis(),) == \
+            sanitize_dynamic_axes(C.Axis.default_dynamic_axis())
 
 def test_get_data_type():
-    pa32 = parameter(init=np.asarray(2, dtype=np.float32))
-    pa64 = parameter(init=np.asarray(2, dtype=np.float64))
-    pl = placeholder(shape=(2))
-    c = constant(value=3.0)
+    pa32 = C.parameter(init=np.asarray(2, dtype=np.float32))
+    pa64 = C.parameter(init=np.asarray(2, dtype=np.float64))
+    pl = C.placeholder(shape=(2))
+    c = C.constant(value=3.0)
     n32 = AA(1, dtype=np.float32)
     n64 = AA(1, dtype=np.float64)
 
@@ -63,7 +64,7 @@ def test_get_data_type():
     assert get_data_type(n32, n64) == np.float64
     assert get_data_type(pl, n64) == np.float64
     assert get_data_type(pl, n32) == np.float32
-    assert get_data_type(pl, pl) == None
+    assert get_data_type(pl, pl) is None
     # variable's type shall take precedence over provided data
     assert get_data_type(pa32, n64) == np.float32
     assert get_data_type(pa64, n64) == np.float64

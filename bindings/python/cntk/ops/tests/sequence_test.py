@@ -11,10 +11,10 @@ Unit tests for the sequence_softmax.
 import numpy as np
 import pytest
 import cntk as C
-from .. import *
-from cntk.losses import *
-from ...axis import Axis
-from ... import sequence, input
+#from .. import *
+#from cntk.losses import *
+#from ...axis import Axis
+#from ... import sequence, input
 from .ops_test_utils import cntk_device
 from cntk.tests.test_utils import _to_dense, _to_csr
 
@@ -26,7 +26,7 @@ def test_lstm_over_lstm_thought_vectors(device_id):
     hidden_dim = 2
     num_labels = 2
     x_seq_input = C.sequence.input((C.FreeDimension, input_vocab_size), is_sparse=True, name='features')
-    label_seq_input = C.sequence.input(num_labels, is_sparse=True, sequence_axis=Axis('label_sequence'), name='labels')
+    label_seq_input = C.sequence.input(num_labels, is_sparse=True, sequence_axis=C.Axis('label_sequence'), name='labels')
     with C.default_options(initial_state=0.1):
         model = C.layers.Embedding(emb_dim, name='embed')(x_seq_input)
         model = C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=False)(model)
@@ -67,8 +67,8 @@ def test_lstm_over_lstm_thought_vectors(device_id):
 def test_sequence_max():
   np.random.seed(0)
   a = np.float32(np.random.rand(20,100,8))
-  src = sequence.input(shape=(8), sequence_axis=Axis("Seq"))
-  out = sequence.reduce_max(src)
+  src = C.sequence.input(shape=(8), sequence_axis=C.Axis("Seq"))
+  out = C.sequence.reduce_max(src)
   val = out.eval({src:a})
   expected = np.max(a, 1) 
   assert np.allclose(val, expected)
@@ -76,8 +76,8 @@ def test_sequence_max():
 def test_neg_sequence_max():
   np.random.seed(0)
   a = np.float32(-np.random.rand(20,100,8))
-  src = sequence.input(shape=(8), sequence_axis=Axis("Seq"))
-  out = sequence.reduce_max(src)
+  src = C.sequence.input(shape=(8), sequence_axis=C.Axis("Seq"))
+  out = C.sequence.reduce_max(src)
   val = out.eval({src:a})
   expected = np.max(a, 1) 
   assert np.allclose(val, expected)
@@ -91,8 +91,8 @@ def np_softmax(a):
 def test_sequence_softmax():
   np.random.seed(0)
   a = np.float32(np.random.rand(20,100,8))
-  src = sequence.input(shape=(8), sequence_axis=Axis("Seq"))
-  out = sequence.softmax(src)
+  src = C.sequence.input(shape=(8), sequence_axis=C.Axis("Seq"))
+  out = C.sequence.softmax(src)
   val = out.eval({src:a})
   expected = np_softmax(a)
   assert np.allclose(val, expected)
