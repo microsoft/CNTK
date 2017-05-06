@@ -51,6 +51,7 @@ class Memoize
     // These are considered zero-cost, always batched whole-sale, and always done first.
     static bool IsViewOp(PrimitiveOpType op)
     {
+        // if really needed, this can be done as a bit-test
         return
             op == PrimitiveOpType::StopGradient ||
             op == PrimitiveOpType::Pass         ||
@@ -63,12 +64,33 @@ class Memoize
     class NonOwningFunctionList // over Function, using m_link
     {
     protected:
-        Function* head = nullptr;
+        Function* head;
         size_t count; // note: count is only in here for diagnostics; only needed in builder
     public:
+        NonOwningFunctionList() { clear(); }
         NonOwningFunctionList(Function* f) : head(f), count(1) { }
+        void operator=(const NonOwningFunctionList& other)
+        {
+            head  = other.head;
+            count = other.count;
+        }
+        NonOwningFunctionList(const NonOwningFunctionList& other)
+        {
+            *this = other;
+        }
+        NonOwningFunctionList(NonOwningFunctionList&& other)
+        {
+            *this = other;
+            other.clear();
+        }
         Function* front() const { return head; }
+        bool empty() const { return !head; }
         size_t size() const { return count; }
+        void clear()
+        {
+            head = nullptr;
+            count = 0;
+        }
         class FunctionListIterator
         {
             Function* iter;
@@ -83,14 +105,16 @@ class Memoize
     };
     class NonOwningFunctionListBuilder : public NonOwningFunctionList // over Function, using m_link
     {
-        Function* tail = nullptr;
+        Function* tail; // note: value undefined when list empty
     public:
+        NonOwningFunctionListBuilder() : NonOwningFunctionList() { }
         NonOwningFunctionListBuilder(Function* f) : NonOwningFunctionList(f), tail(f) { f->m_link = nullptr; }
         void append(Function* f)
         {
             if (!head)
-                throw logic_error("NonOwningFunctionListBuilder must always be constructed with a first element");
-            tail->m_link = f;
+                head = f;
+            else
+                tail->m_link = f;
             tail = f;
             count++;
             f->m_link = nullptr;
@@ -100,7 +124,9 @@ class Memoize
     // class to manage the set of ready operations (the schedule)
     class ReadyOps
     {
-        vector<NonOwningFunctionListBuilder> m_allOps; // m_allOps[] is a linked list
+        NonOwningFunctionListBuilder m_viewOps;
+        vector<NonOwningFunctionListBuilder> m_regularOps; // m_regularOps[] is a linked list
+        NonOwningFunctionListBuilder m_barrierOps;
         // TODO: This must be turned into something hashable.
         // test whether two PrimitiveFunctions can be executed as a single batched operation
         static bool AreBatchable(const Function* a, const Function* b)
@@ -109,7 +135,7 @@ class Memoize
             let op = a->Op();
             // free ops always get batched; even if they have different op-codes
             if (IsViewOp(op) && op != PrimitiveOpType::BarrierOp)
-                return true;
+                throw logic_error("should not get here for view ops or barrier ops");
             // op codes must match
             if (op != b->Op())
                 return false;
@@ -156,44 +182,60 @@ class Memoize
         // simple linked-list management
     public:
         // schedule an operation that has been confirmed ready
-        void Schedule(Function* fp)
+        void Schedule(Function* f)
         {
-            // this naive implementation just scans linearly
-            // scan through all op sets to see if one is batchable with 'fp'
-            for (auto iter = m_allOps.begin(); iter != m_allOps.end(); iter++)
+            let op = f->Op();
+            // we manage three ready sets, since two common kinds are very simple
+            if (op == PrimitiveOpType::BarrierOp)
+                m_barrierOps.append(f);
+            else if (IsViewOp(op))
+                m_viewOps.append(f);
+            else
             {
-                if (AreBatchable(fp, iter->front()))
+                // this naive implementation just scans linearly
+                // scan through all op sets to see if one is batchable with 'f'
+                for (auto iter = m_regularOps.begin(); iter != m_regularOps.end(); iter++)
                 {
-                    iter->append(fp);
-                    return;
+                    if (AreBatchable(f, iter->front()))
+                    {
+                        iter->append(f);
+                        return;
+                    }
                 }
+                // none fit: open a new set
+                m_regularOps.push_back(NonOwningFunctionListBuilder(f));
             }
-            // none fit: open a new set
-            m_allOps.push_back(NonOwningFunctionListBuilder(fp));
         }
         // test if no more ready ops
-        bool empty() const { return m_allOps.empty(); }
+        bool empty() const { return m_viewOps.empty() && m_regularOps.empty() && m_barrierOps.empty(); }
         // select the next batched op to execute
         NonOwningFunctionList pop_best()
         {
-            auto best = m_allOps.begin();
-            // TODO: we could have 3 ready-ops sets, based on priority
-            for (auto iter = best + 1; iter != m_allOps.end(); iter++)
+            if (!m_viewOps.empty()) // view ops always go first
+                return move(m_viewOps);
+            else if (!m_regularOps.empty())
             {
-                let bestPri = GetPriority(best->front());
-                let iterPri = GetPriority(iter->front());
-                if (iterPri == -1)
-                    BreakPoint;
-                if (iterPri < bestPri)
-                    continue;
-                if (iterPri > bestPri ||
-                    iter->size() > best->size())
-                    best = iter;
+                auto best = m_regularOps.begin();
+                // TODO: we could have 3 ready-ops sets, based on priority
+                for (auto iter = best + 1; iter != m_regularOps.end(); iter++)
+                {
+                    //let bestPri = GetPriority(best->front());
+                    //let iterPri = GetPriority(iter->front());
+                    //if (iterPri == -1)
+                    //    BreakPoint;
+                    //if (iterPri < bestPri)
+                    //    continue;
+                    if (//iterPri > bestPri ||
+                        iter->size() > best->size())
+                        best = iter;
+                }
+                // and remove this one from the list
+                NonOwningFunctionList out = *best; // since NonOwningFunctionListBuilder uses unmanaged pointers, we can just copy it
+                m_regularOps.erase(best); // TODO: suboptimal complexity; but a list has the same problem
+                return out;
             }
-            // and remove this one from the list
-            NonOwningFunctionList out = *best; // since NonOwningFunctionListBuilder uses unmanaged pointers, we can just copy it
-            m_allOps.erase(best); // TODO: suboptimal complexity; but a list has the same problem
-            return out;
+            else
+                return move(m_barrierOps); // barriers only get returned when no other op is available
         }
     };
     ReadyOps m_schedule;
