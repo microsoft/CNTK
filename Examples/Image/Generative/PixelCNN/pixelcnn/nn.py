@@ -184,8 +184,9 @@ def dense(x, num_units, nonlinearity=None, init=global_init, init_scale=1., coun
 def masked_conv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinearity=None, mask_type=None, h=None, bias=True, init=ct.glorot_uniform()):
     ''' Convolution layer with mask and conditional input support. '''
     output_channels_shape = _as_tuple(num_filters)
-    x_channels_shape  = _as_tuple(x.shape[0])
-    
+    x_channels_shape      = _as_tuple(x.shape[0])
+    paddings              = (False,) + (pad,)*len(filter_shape)
+
     W = ct.parameter((num_filters, x.shape[0]) + filter_shape, init=init, name='W')
 
     if mask_type is not None:
@@ -202,9 +203,9 @@ def masked_conv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, n
 
     if bias:
         b = ct.parameter((num_filters, 1, 1), name='b')        
-        x = ct.convolution(W, x, strides=x_channels_shape + strides, auto_padding=_as_tuple(pad)) + b
+        x = ct.convolution(W, x, strides=x_channels_shape + strides, auto_padding=paddings) + b
     else:
-        x = ct.convolution(W, x, strides=x_channels_shape + strides, auto_padding=_as_tuple(pad))
+        x = ct.convolution(W, x, strides=x_channels_shape + strides, auto_padding=paddings)
 
     if h is not None:
        h_shape = h.shape
@@ -220,7 +221,8 @@ def conv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinea
 
     scope = get_name('conv2d', counters)
     output_channels_shape = _as_tuple(num_filters)
-    x_channels_shape  = _as_tuple(x.shape[0])
+    x_channels_shape      = _as_tuple(x.shape[0])
+    paddings              = (False,) + (pad,)*len(filter_shape)
 
     if first_run:
         V = ct.parameter(output_channels_shape + x_channels_shape + filter_shape, init=init, name='V'); set_parameter(scope, 'V', V)
@@ -229,7 +231,7 @@ def conv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinea
 
         # use weight normalization (Salimans & Kingma, 2016)
         V_norm = l2_normalize(V, axes=(1, 2, 3))
-        x_init = ct.convolution(V_norm, x, strides=x_channels_shape + strides, auto_padding=_as_tuple(pad))
+        x_init = ct.convolution(V_norm, x, strides=x_channels_shape + strides, auto_padding=paddings)
 
         m_init, v_init = moments(x_init, axes=(ct.Axis.default_batch_axis(),1,2))
         scale_init = init_scale / ct.sqrt(v_init + 1e-8)
@@ -248,7 +250,7 @@ def conv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinea
         V_norm = l2_normalize(V, axes=(1, 2, 3))        
         W = ct.reshape(g, (num_filters, 1, 1, 1)) * V_norm
 
-        x = ct.convolution(W, x, strides=x_channels_shape + strides, auto_padding=_as_tuple(pad)) + ct.reshape(b, (num_filters, 1, 1))
+        x = ct.convolution(W, x, strides=x_channels_shape + strides, auto_padding=paddings) + ct.reshape(b, (num_filters, 1, 1))
 
         if nonlinearity is not None:
             x = nonlinearity(x)
@@ -261,6 +263,7 @@ def deconv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlin
     output_channels_shape = _as_tuple(num_filters)
     x_shape               = x.shape # CHW
     x_channels_shape      = _as_tuple(x.shape[0])
+    paddings              = (False,) + (pad,)*len(filter_shape)
 
     if pad:
         output_shape = (num_filters, x_shape[1] * strides[0], x_shape[2] * strides[1])
@@ -274,7 +277,7 @@ def deconv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlin
 
         # use weight normalization (Salimans & Kingma, 2016)
         V_norm = l2_normalize(V, axes=(0, 2, 3))
-        x_init = ct.convolution_transpose(V_norm, x, strides=x_channels_shape + strides, output_shape=output_shape, auto_padding=_as_tuple(pad))
+        x_init = ct.convolution_transpose(V_norm, x, strides=x_channels_shape + strides, output_shape=output_shape, auto_padding=paddings)
 
         m_init, v_init = moments(x_init, axes=(ct.Axis.default_batch_axis(),1,2))
         scale_init = init_scale / ct.sqrt(v_init + 1e-8)
@@ -293,7 +296,7 @@ def deconv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlin
         V_norm = l2_normalize(V, axes=(0, 2, 3))
         W = ct.reshape(g, (1, num_filters, 1, 1)) * V_norm
 
-        x = ct.convolution_transpose(W, x, strides=x_channels_shape + strides, output_shape=output_shape, auto_padding=_as_tuple(pad)) + ct.reshape(b, (num_filters, 1, 1))
+        x = ct.convolution_transpose(W, x, strides=x_channels_shape + strides, output_shape=output_shape, auto_padding=paddings) + ct.reshape(b, (num_filters, 1, 1))
 
         if nonlinearity is not None:
             x = nonlinearity(x)
