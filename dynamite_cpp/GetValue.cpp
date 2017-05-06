@@ -291,8 +291,10 @@ class Memoize
         m_inputs.resize(numArgs);
         m_args.resize(numArgs);
         // perform the op
-        let doNaively = isFree ||
-            (op == PrimitiveOpType::Times) ||
+        let isTimes = (op == PrimitiveOpType::Times); // is special-cased
+        let doNaively =
+            isFree ||
+            //isTimes ||
             (op == PrimitiveOpType::Splice);
         if (doNaively)
         {
@@ -321,7 +323,10 @@ class Memoize
             if (numArgs > m_spliceArgsBuffer.size())
                 m_spliceArgsBuffer.resize(numArgs);
             size_t maxRank = 0;
-            for (size_t i = 0; i < numArgs; i++)
+            size_t i0 = isTimes ? 1 : 0;
+            if (isTimes)
+                BreakPoint;
+            for (size_t i = i0; i < numArgs; i++)
             {
                 // allocate buffers
                 auto& spliceArgs = m_spliceArgsBuffer[i];
@@ -330,15 +335,15 @@ class Memoize
                     spliceArgs.reserve(max(batchSize, 2 * spliceArgs.capacity()));
                 // we could even do with un-managed pointers here; would save lots of ref-counting; or even use GatherBatch lambda
                 // determine max rank
-                let rank = f0.m_inputs[0].Shape().Rank();
+                let rank = f0.m_inputs[i].Shape().Rank();
                 if (rank > maxRank)
                     maxRank = rank;
             }
             size_t j = 0;
-            for (auto op = ops.begin(); op != ops.end(); ++op)
+            for (auto op = ops.begin(); op != ops.end(); ++op) // create the batched tensors
             {
                 let& inputs = op->m_inputs;
-                for (size_t i = 0; i < numArgs; i++)
+                for (size_t i = i0; i < numArgs; i++)
                 {
                     auto& spliceArgs = m_spliceArgsBuffer[i];
                     let& arg = inputs[i].m_dataFields->m_value;
@@ -354,9 +359,9 @@ class Memoize
                 }
                 j++;
             }
-            if (op == PrimitiveOpType::Times && m_spliceArgsBuffer[0].size() != 1)
-                throw logic_error("incorrectly batched a matrix");
-            for (size_t i = 0; i < numArgs; i++)
+            if (isTimes)
+                m_args[0] = f0.m_inputs[0].m_dataFields->m_value;
+            for (size_t i = i0; i < numArgs; i++)
             {
                 auto& spliceArgs = m_spliceArgsBuffer[i];
                 if (spliceArgs.size() == 1) // optimized case: all ops share the same operand: no need to batch them
