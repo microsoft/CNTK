@@ -298,7 +298,20 @@ class Memoize
         return region->AsShape(shape);
     }
 
-    //vector<Variable> m_inputs;
+    // return the m_value field of a variable, but possibly realizing it lazily if it is an index operation
+    const NDArrayViewPtr& LazyIndexedValue(const Variable& v)
+    {
+        auto& fields = *v.m_dataFields;
+        if (!fields.m_value)
+        {
+            let& from = fields.m_lazyIndex.first;
+            if (!from)
+                throw logic_error("variable unexpectedly has no value yet");
+            fields.m_value = from->IndexLastAxis(fields.m_lazyIndex.second);
+        }
+        return fields.m_value;
+    }
+
     vector<NDArrayViewPtr> m_args;
     size_t m_numBatchedLaunches = 0;
 
@@ -309,7 +322,7 @@ class Memoize
     {
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
         // get a representative op
-        let& f0 = *ops.front();
+        auto& f0 = *ops.front();
         let op = f0.Op();
         let batchSize = ops.size();
         let isFree = IsViewOp(op);
@@ -322,7 +335,7 @@ class Memoize
         let isTimes = (op == PrimitiveOpType::Times); // is special-cased
         let doNaively =
             isFree ||
-            isTimes && (f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
+            isTimes && f0.m_inputs[1].m_dataFields->m_value && (f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
             op == PrimitiveOpType::Splice ||
             batchSize == 1;
         fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
@@ -343,7 +356,7 @@ class Memoize
                 //m_inputs.resize(op->m_inputs.size());
                 m_args.resize(op->m_inputs.size());
                 for (size_t i = 0; i < op->m_inputs.size(); i++)
-                    m_args[i] = op->m_inputs[i].m_dataFields->m_value;
+                    m_args[i] = LazyIndexedValue(op->m_inputs[i]);
                 NDArrayViewPtr out = isFree ? nullptr : Alloc(op->m_outputs[0].Shape(), m_args[0]->GetDataType(), m_args[0]->Device()); // arena allocation will happen here
                 op->m_outputs[0].m_dataFields->m_value =
                     op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
@@ -374,7 +387,7 @@ class Memoize
             }
             bool anyBatchedInputs = false;
             if (isTimes)
-                m_args[0] = f0.m_inputs[0].m_dataFields->m_value;
+                m_args[0] = LazyIndexedValue(f0.m_inputs[0]); // (should not have to do anything lazy, actually)
             for (size_t i = i0; i < numArgs; i++)
             {
                 // create splice args
@@ -390,18 +403,18 @@ class Memoize
                 for (auto op = ops.begin(); op != ops.end(); ++op, j++) // create the batched tensors
                 {
                     let* pfields = op->m_inputs[i].m_dataFields.get();
-                    let& arg = pfields->m_value;
+                    // optimization: if all args are consecutive slices, then use a slice view instead
+                    if (pfields0 &&
+                        (pfields->m_lazyIndex.first != pfields0->m_lazyIndex.first ||
+                            pfields->m_lazyIndex.second != pfields0->m_lazyIndex.second + j))
+                        pfields0 = nullptr; // not consecutive
+                    let& arg = pfields->m_value; // TODO: LazyIndex
                     // optimization: if all args are the same, then don't batch
                     if (spliceArgs.size() == 1 && spliceArgs[0] == arg)
                         continue;
                     // if we thought it is all the same, but then it turned out not to be, we need to fixc it up
                     while (spliceArgs.size() < j)
                         spliceArgs.push_back(spliceArgs.back());
-                    // optimization: if all args are consecutive slices, then use a slice view instead
-                    if (pfields0 &&
-                        (pfields->m_lazyIndex.first  != pfields0->m_lazyIndex.first ||
-                         pfields->m_lazyIndex.second != pfields0->m_lazyIndex.second + j))
-                        pfields0 = nullptr; // not consecutive
                     // append the arg
                     spliceArgs.push_back(arg);
                 }
@@ -440,12 +453,8 @@ class Memoize
                 }
             }
             // execute the operation and implant the results
-            for (auto op = ops.begin(); op != ops.end(); ++op)
-            {
-                auto& fields = *op->m_outputs[0].m_dataFields;
-                if (fields.m_value)
-                    throw logic_error("output already has a value?");
-            }
+            //for (auto op = ops.begin(); op != ops.end(); ++op)
+            //    auto& fields = *op->m_outputs[0].m_dataFields;
             let& unbatchedOutputShape = f0.m_outputs[0].Shape();
             if (!anyBatchedInputs) // short-circuit branch when all inputs were actually the same--we just compute them once
             {
@@ -508,7 +517,7 @@ public:
     NDArrayViewPtr operator()(const Variable& v)
     {
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
-        let& fields = *v.m_dataFields;
+        auto& fields = *v.m_dataFields;
         if (!fields.m_value)
         {
             // prepare and schedule first set
@@ -522,7 +531,7 @@ public:
                 ExecuteBatchedOpAndUpdateSchedule(opBatch);
             }
         }
-        return fields.m_value;
+        return LazyIndexedValue(v);
     }
 }; // class
 } // namespace
