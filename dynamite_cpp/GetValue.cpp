@@ -6,7 +6,6 @@
 #include "GetValue.h"
 #include "CNTKLibrary.h"
 #include "Variable.h"
-//#include "CompositeFunction.h"
 #include "PrimitiveOpType.h"
 
 #include <deque>
@@ -17,6 +16,8 @@
 #define let const auto
 
 using namespace std;
+
+#define BreakPoint fprintf(stderr, "") // use this inside a conditional to be able to set a breakpoint in Release code
 
 namespace CNTK
 {
@@ -45,28 +46,35 @@ class Memoize
     //  - hence, we create N+1 new nodes:
     //     - the new batched op
     //     - Splice() for each of the N inputs
+    // 'free' ops are always batched together and get executed first
 
-    // the Key determines which operations are batchable with each other (those with the same Key)
-    typedef string Key;
-    struct Key1 : public string
+    static bool IsFreeOp(PrimitiveOpType op)
     {
-        Key1(const Function& f)
-        {
-            assign("xxx");
-        }
-    };
+        return
+            op == PrimitiveOpType::StopGradient ||
+            op == PrimitiveOpType::Pass         ||
+            op == PrimitiveOpType::NoOp         ||
+            op == PrimitiveOpType::BarrierOp    ||
+            op == PrimitiveOpType::Reshape      ||
+            op == PrimitiveOpType::Slice;
+    }
 
     // class to manage the set of ready operations (the schedule)
     class ReadyOps
     {
         vector<deque<Function*>> m_allOps;
+        // TODO: This must be turned into something hashable.
         static bool IsBatchableWith(const Function* a, const Function* b)
         {
             // first it must be the same operation
             let op = a->Op();
+            // free ops always get batched; even if they have different op-codes
+            if (IsFreeOp(op) && op != PrimitiveOpType::BarrierOp)
+                return true;
+            // op codes must match
             if (op != b->Op())
                 return false;
-            // all input dimensions must match
+            // all input dimensions must match (with a few special cases)
             assert(a->m_inputs.size() == b->m_inputs.size());
             for (size_t i = 0; i < a->m_inputs.size(); i++)
             {
@@ -93,6 +101,17 @@ class Memoize
             // all match: we can batch
             return true;
         }
+        // high-pri (free ops) are batched first; low-pri (Barrier) last.
+        static int GetPriority(const Function* f)
+        {
+            let op = f->Op();
+            if (op == PrimitiveOpType::BarrierOp) // Barrier goes last
+                return -1;
+            else if (IsFreeOp(op)) // free ops go first
+                return 1;
+            else
+                return 0;
+        }
     public:
         // schedule an operation that has been confirmed ready
         void Schedule(Function* fp)
@@ -110,14 +129,25 @@ class Memoize
             // none fit: open a new set
             m_allOps.push_back(deque<Function*>{ fp });
         }
+        // test if no more ready ops
         bool empty() const { return m_allOps.empty(); }
+        // select the next batched op to execute
         void pop_best(deque<Function*>& out)
         {
-            // TODO: add priority for Barrier()
             auto best = m_allOps.begin();
-            for (auto iter = best+1; iter != m_allOps.end(); iter++)
-                if (iter->size() > best->size())
+            // TODO: we could have 3 ready-ops sets, based on priority
+            for (auto iter = best + 1; iter != m_allOps.end(); iter++)
+            {
+                let bestPri = GetPriority(best->front());
+                let iterPri = GetPriority(iter->front());
+                if (iterPri == -1)
+                    BreakPoint;
+                if (iterPri < bestPri)
+                    continue;
+                if (iterPri > bestPri ||
+                    iter->size() > best->size())
                     best = iter;
+            }
             // and remove this one from the list
             out = move(*best);
             m_allOps.erase(best); // TODO: suboptimal complexity; a list in a self-allocated container would do
@@ -129,7 +159,7 @@ class Memoize
     //  - prepare all nodes for batched execution
     //  - schedule all ready operations
     // TODO: Once we are in the main build, change all Function to PrimitiveFunction directly.
-    void TraverseOwnerTree(const Variable& v)
+    void TraverseFunctionTree(const Variable& v)
     {
         let& fields = *v.m_dataFields;
         if (fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder)
@@ -153,7 +183,7 @@ class Memoize
             let& fields = *v.m_dataFields;
             if (!fields.m_value)
             {
-                TraverseOwnerTree(v);
+                TraverseFunctionTree(v);
                 if (!fields.m_value) // (in case of a Parameter, we now may have a value)
                 {
                     // no need for anything ref-counted since this is a local temp variable
@@ -178,7 +208,10 @@ class Memoize
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
         // get a representative op
         let& f0 = *ops.front();
-        fprintf(stderr, "%d executing %d instances of %S\n", (int)++m_numBatches, (int)ops.size(), f0.OpName().c_str());
+        let isFree = IsFreeOp(f0.Op());
+        if (!isFree)
+            m_numBatches++;
+        fprintf(stderr, "%d executing %d instances of %S -> %S\n", isFree ? -1 : (int)m_numBatches, (int)ops.size(), f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str());
         m_inputs.resize(f0.m_inputs.size());
         m_args.resize(f0.m_inputs.size());
 #if 1
@@ -233,7 +266,7 @@ public:
         if (!fields.m_value)
         {
             // prepare and schedule first set
-            TraverseOwnerTree(v);
+            TraverseFunctionTree(v);
             // compute the entire graph
             deque<Function*> opBatch;
             while (!m_schedule.empty())

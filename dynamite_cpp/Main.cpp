@@ -182,7 +182,7 @@ BinaryModel RNNStep(size_t outputDim, const DeviceDescriptor& device)
     auto b = Parameter({ outputDim }, 0.0f, device, L"b");
     return BinaryModel({ W, R, b }, [=](const Variable& prevOutput, const Variable& input)
     {
-        return ReLU(Times(W, input) + Times(R, prevOutput) + b);
+        return ReLU(Times(W, input) + b + Times(R, prevOutput));
     });
 }
 
@@ -359,10 +359,11 @@ BinaryModel CreateCriterionFunction(UnaryModel model)
 // SequenceClassification.py
 UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
-    auto embed  = Embedding(embeddingDim, device);
-    auto step   = RNNStep(hiddenDim, device);
-    auto linear = Linear(numOutputClasses, device);
-    auto zero   = Constant({ hiddenDim }, 0.0f, device);
+    auto embed   = Embedding(embeddingDim, device);
+    auto step    = RNNStep(hiddenDim, device);
+    auto barrier = [](const Variable& x) -> Variable { return Barrier(x); };
+    auto linear  = Linear(numOutputClasses, device);
+    auto zero    = Constant({ hiddenDim }, 0.0f, device);
     return UnaryModel({},
     {
         { L"embed",  embed  },
@@ -382,6 +383,7 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
             xt = embed(xt);
             state = step(state, xt);
         }
+        state = barrier(state); // for better batching
         return linear(state);
     });
 }
@@ -532,7 +534,10 @@ function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCrite
         auto s1 = label.Shape();
         auto z1 = z.Shape();
         //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(label, z, /*outputRank=*/0));
-        let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label, z, /*outputRank=*/0));
+        //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label, z, /*outputRank=*/0));
+        // TODO: reduce ops must be able to drop the axis
+        // TODO: dynamite should rewrite Times() that is really a dot product
+        let loss = Reshape(Minus(ReduceLogSum(z, Axis(0)), ReduceSum(ElementTimes(label, z), Axis(0))), NDShape());
         return loss;
     };
     // create a batch mapper (which will allow suspension)

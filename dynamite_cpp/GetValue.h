@@ -7,5 +7,8 @@
 
 #include "CNTKLibrary.h"
 
+#define Barrier Alias
+#define BarrierOp NoOp
+
 // this will eventually become Variable::Value()
 CNTK::NDArrayViewPtr GetValue(const CNTK::Variable&);
