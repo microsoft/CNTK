@@ -1678,6 +1678,8 @@ namespace CNTK
 
             if (sanitizedOutput.IsOutput())
                 m_perOutputVarArgumentDependencies[sanitizedOutput] = AsComposite(sanitizedOutput.Owner())->Arguments();
+            else if (sanitizedOutput.IsParameter() || sanitizedOutput.IsConstant())
+                m_perOutputVarArgumentDependencies[sanitizedOutput] = {};
             else
                 m_perOutputVarArgumentDependencies[sanitizedOutput] = { sanitizedOutput };
         }
