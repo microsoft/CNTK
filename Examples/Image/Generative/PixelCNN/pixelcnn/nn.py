@@ -11,7 +11,7 @@ from cntk.internal import _as_tuple
 #
 
 global_init = ct.normal(0.05) # paper 0.05
-global_g_init = ct.normal(0.01)
+global_g_init = ct.normal(0.05)
 
 def zeros(shape):
     return ct.constant(value=0., shape=shape, dtype=np.float32)

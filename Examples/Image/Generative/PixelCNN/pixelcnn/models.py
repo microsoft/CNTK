@@ -1,8 +1,6 @@
 
 import cntk as ct
 import pixelcnn.nn as nn
-import pixelcnn.blocks as bk
-
 
 def build_model(input_norm, model, loss, first_run=False):
     per_pixel_count = 3*256 if (loss == 'category') else 100

@@ -93,7 +93,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     sampling_minibatch_size = 16
 
     # Set learning parameters
-    lr = 0.001
+    lr = 0.00001
     lr_decay = 0.6 #0.999995
 
     # Print progress
@@ -103,11 +103,11 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     learner = ct.learners.adam(z.parameters,
                                lr=ct.learning_rate_schedule(lr, unit=ct.UnitType.sample), 
                                momentum=ct.momentum_schedule(0.95), # Beta 1
-                               # unit_gain=False,
-                               use_mean_gradient=True,
-                               variance_momentum=ct.momentum_schedule(0.9995) # Beta 2
+                               unit_gain=False,
+                               # use_mean_gradient=True,
+                               variance_momentum=ct.momentum_schedule(0.9995), # Beta 2
                                # l1_regularization_weight = 0.001
-                               # l2_regularization_weight = 0.001
+                               l2_regularization_weight = 0.001
                                # gradient_clipping_threshold_per_sample=1
                                )
     trainer = ct.Trainer(z, (ce, pe), [learner], progress_writers)
