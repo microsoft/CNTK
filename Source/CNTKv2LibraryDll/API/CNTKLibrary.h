@@ -465,6 +465,20 @@ namespace CNTK
         }
 
         ///
+        /// Creates and returns a new shape constructed by appending an axis of the given dimension, padding if needed.
+        ///
+        NDShape AppendAxis(size_t axisIndex, size_t dim) const
+        {
+            if (axisIndex < Rank())
+                LogicError("AppendAxis: invalid axisIndex.");
+            std::vector<size_t> newShapeDims(axisIndex + 1);
+            std::copy(m_shapeDims.begin(), m_shapeDims.end(), newShapeDims.begin());
+            std::fill(newShapeDims.begin() + Rank(), newShapeDims.begin() + axisIndex, 1);
+            newShapeDims[axisIndex] = dim;
+            return newShapeDims;
+        }
+
+        ///
         /// Create a string representation of 'this' NDShape for display/printing purposes
         ///
         std::wstring AsString() const
@@ -774,6 +788,12 @@ namespace CNTK
         /// corresponding to the specified slice of 'this' view.
         ///
         CNTK_API NDArrayViewPtr SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly = false) const;
+
+        ///
+        /// Creates a new NDArrayView which is a view that indexes the last axis.
+        /// The axis itself is dropped in the returned view.
+        ///
+        CNTK_API NDArrayViewPtr IndexLastAxis(size_t index, bool readOnly = false) const;
 
         ///
         /// Creates a new NDArrayView which is an alias of 'this' view but with a new shape.
@@ -3482,7 +3502,9 @@ namespace CNTK
         Dictionary m_attributes;
 
         int m_pendingInputs = -1;
-        std::vector<Function*> m_notify;
+        Function* m_notify1 = nullptr;
+        std::vector<Function*> m_notifyN;
+        Function* m_link;
     };
 
     ///

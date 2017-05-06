@@ -1295,17 +1295,53 @@ namespace CNTK
     /*virtual*/ NDArrayViewPtr PrimitiveFunction::ComputeKnowableValue(PrimitiveOpType primitiveOp, 
         const vector<NDArrayViewPtr>& args, const Dictionary& attributes, const NDShape& outputShape, NDArrayViewPtr&& out) const
     {
-        // allocate memory for the result
-        if (primitiveOp != PrimitiveOpType::Slice && primitiveOp != PrimitiveOpType::Reshape) // not all ops need a new output
-        // ADD:
-        //case PrimitiveOpType::StopGradient:
-        //case PrimitiveOpType::Pass:
-        //case PrimitiveOpType::NoOp:
+        // first handle ops that do not create new data
+        if (primitiveOp == PrimitiveOpType::StopGradient ||
+            primitiveOp == PrimitiveOpType::Pass ||
+            primitiveOp == PrimitiveOpType::NoOp ||
+            primitiveOp == PrimitiveOpType::Reshape ||
+            primitiveOp == PrimitiveOpType::Slice)
         {
             if (out)
                 LogicError("Variable '%S' Value(): An output buffer was passed for op %S that does not need one.", AsString().c_str(), OpName().c_str());
-            out = make_shared<NDArrayView>(args.front()->GetDataType(), outputShape, args.front()->Device());
+            out = args[0];
+            switch (primitiveOp)
+            {
+            // ops that do not copy data
+            case PrimitiveOpType::StopGradient:
+            case PrimitiveOpType::Pass:
+            case PrimitiveOpType::NoOp:
+                break;
+            case PrimitiveOpType::Reshape:
+                 if (out->Shape() != outputShape)
+                     out = out->AsShape(outputShape);
+                break;
+            case PrimitiveOpType::Slice:
+                {
+                    auto axis       = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                    auto beginIndex = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+                    auto endIndex   = attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
+                    NormalizeStaticAxis(axis, args[0]->Shape());
+                    auto extent = out->Shape().Dimensions();
+                    auto startOffset = vector<size_t>(extent.size(), 0);
+                    auto axisIndex = axis.StaticAxisIndex();
+                    if (startOffset[axisIndex] != beginIndex || extent[axisIndex] != endIndex - beginIndex)
+                    {
+                        startOffset[axisIndex] = beginIndex;
+                        extent[axisIndex] = endIndex - beginIndex;
+                        out = out->SliceView(startOffset, extent, true); // slice it
+                    }
+                }
+                break;
+            }
+            return out;
         }
+
+        // ops that generate output: allocate memory for the result unless memory was passed in
+        if (!out)
+            out = make_shared<NDArrayView>(args.front()->GetDataType(), outputShape, args.front()->Device());
+        else if (out->Shape() != outputShape)
+            LogicError("Variable '%S' Value(): The out buffer passed to op %S does not match outputShape.", AsString().c_str(), OpName().c_str());
         // perform the operation
         auto op = Microsoft::MSR::CNTK::ElementWiseOperator::opNone;
         auto reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
@@ -1347,37 +1383,6 @@ namespace CNTK
             //break;
         case PrimitiveOpType::TransposeTimes:
             out->MatrixProduct(false, args[0], primitiveOp == PrimitiveOpType::TransposeTimes, args[1], false, 1.0, attributes[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>(), out);
-            break;
-            // ops that do not copy data
-        case PrimitiveOpType::StopGradient:
-            out = args[0];
-            break;
-        case PrimitiveOpType::Pass:
-        case PrimitiveOpType::NoOp:
-            out = args[0];
-            break;
-        case PrimitiveOpType::Reshape:
-             out = args[0];
-             if (out->Shape() != outputShape)
-                 out = out->AsShape(outputShape);
-            break;
-        case PrimitiveOpType::Slice:
-            {
-                auto axis       = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-                auto beginIndex = attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-                auto endIndex   = attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
-                NormalizeStaticAxis(axis, args[0]->Shape());
-                out = args[0];
-                auto extent = out->Shape().Dimensions();
-                auto startOffset = vector<size_t>(extent.size(), 0);
-                auto axisIndex = axis.StaticAxisIndex();
-                if (startOffset[axisIndex] != beginIndex || extent[axisIndex] != endIndex - beginIndex)
-                {
-                    startOffset[axisIndex] = beginIndex;
-                    extent[axisIndex] = endIndex - beginIndex;
-                    out = out->SliceView(startOffset, extent, true); // slice it
-                }
-            }
             break;
         case PrimitiveOpType::Splice:
             {

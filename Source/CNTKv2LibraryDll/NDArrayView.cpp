@@ -337,14 +337,6 @@ namespace CNTK
         // perform operation in-place on result object
         const auto          op = (Microsoft::MSR::CNTK::ElementWiseOperator) (opInt);
         const auto reductionOp = reductionOpInt != -1 ? (Microsoft::MSR::CNTK::ElementWiseOperator) (reductionOpInt) : Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
-        if (inputs.size() < 1 || inputs.size() > 3)
-            LogicError("NDArrayView::NumericOperation: Invalid number of inputs: %d", (int)inputs.size());
-        // types must match
-        for (const auto& input : inputs)
-        {
-            if (input->m_dataType != out->m_dataType)
-                LogicError("NDArrayView::NumericOperation: Input argument's DataType %s differs from result's DataType %s", DataTypeName(input->m_dataType), DataTypeName(out->m_dataType));
-        }
         switch (out->m_dataType)
         {
         case DataType::Float:
@@ -359,6 +351,8 @@ namespace CNTK
             case 3:
                 out->WritableNativeTensorView<float>().DoTernaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), inputs[1]->NativeTensorView<float>(), inputs[2]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
                 break;
+            default:
+                LogicError("NDArrayView::NumericOperation: Invalid number of inputs: %d", (int)inputs.size());
             }
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
@@ -373,13 +367,15 @@ namespace CNTK
             case 3:
                 out->WritableNativeTensorView<double>().DoTernaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), inputs[1]->NativeTensorView<double>(), inputs[2]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
                 break;
+            default:
+                LogicError("NDArrayView::NumericOperation: Invalid number of inputs: %d", (int)inputs.size());
             }
             break;
         default:
             LogicError("NDArrayView::NumericOperation: Unsupported DataType %s", DataTypeName(out->m_dataType));
             break;
         }
-        return out->shared_from_this(); // return ourselves to allow for chaining
+        return out;
     }
 
     /*static*/ NDArrayViewPtr NDArrayView::MatrixProduct(bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank, NDArrayViewPtr out, double beta)
@@ -411,12 +407,6 @@ namespace CNTK
             out = MakeSharedObject<NDArrayView>(inputA->GetDataType(), inputA->GetStorageFormat(), shapeC, inputA->Device());
             beta = 0; // newly created object is already 0
         }
-        // types must match
-        for (const auto& input : { inputA, inputB })
-        {
-            if (input->m_dataType != out->m_dataType)
-                LogicError("NDArrayView::MatrixProduct: Input argument's DataType %s differs from result's DataType %s", DataTypeName(input->m_dataType), DataTypeName(out->m_dataType));
-        }
         switch (out->m_dataType)
         {
         case DataType::Float:
@@ -429,7 +419,7 @@ namespace CNTK
             LogicError("NDArrayView::MatrixProduct: Unsupported DataType %s", DataTypeName(out->m_dataType));
             break;
         }
-        return out->shared_from_this(); // return ourselves to allow for chaining
+        return out;
     }
 
     /*static*/ NDArrayViewPtr NDArrayView::GatherBatch(const std::vector<NDArrayViewPtr>& inputs, int axis, NDArrayViewPtr out)
@@ -495,7 +485,7 @@ namespace CNTK
         if (std::find(extent.begin(), extent.end(), 0) != extent.end())
             InvalidArgument("NDArrayView::SliceView: Specified slice extent is zero along at least one of the axes.");
 
-        bool anyPrevAxisSliced = false;
+        bool anyPrevAxisSliced = false; // (only used for error check)
         NDShape sliceViewShape(extent);
         std::vector<size_t> endOffset(rank);
         std::vector<size_t> lastOffset(rank);
@@ -575,6 +565,93 @@ namespace CNTK
         }
         default:
             LogicError("NDArrayView::SliceView: Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+
+        return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), sliceViewShape, IsReadOnly() || readOnly, tensorView);
+    }
+
+    NDArrayViewPtr NDArrayView::IndexLastAxis(size_t index, bool readOnly) const
+    {
+        auto rank = Shape().Rank();
+        if (rank == 0)
+            InvalidArgument("NDArrayView::IndexLastAxis: Cannot index a scalar.");
+
+        auto sliceViewShape = m_viewShape.SubShape(0, rank - 1); // final shape drops final axis
+        // if last axis already has only 1 element then just reshape it away
+        if (m_viewShape[rank - 1] == 1)
+            return AsShape(sliceViewShape);
+
+        std::vector<size_t> startOffset(rank, 0);
+        std::vector<size_t> endOffset = m_viewShape.Dimensions();
+        startOffset[rank - 1] = index;
+        endOffset[rank - 1] = index + 1;
+        std::vector<size_t> lastOffset(rank);
+        for (size_t i = 0; i < rank; ++i)
+            lastOffset[i] = endOffset[i] - 1;
+
+        // beyond this point is code duplication from ViewSlice()
+        // TODO: simplify further, we can get rid of the vector mallocs altogether
+
+        auto flatBufferOffset = AsTensorShape(Shape()).Locate(startOffset);  // offset and length into underlying ElementType array...
+        auto flatBufferLength = AsTensorShape(Shape()).Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
+        void* tensorView = nullptr;
+        // At this point, it is guaranteed that the slice is consecutive in memory. We distinguish two cases:
+        // If the slice is expressable a column slice, we will use ColumnSlice(). This will work with sparse data.
+        // If, on the other hand, it is a row slice in a single column (such as a single element), we will
+        // reshape the matrix into a flat row vector, and then slice the elements.
+        // The latter will fail for sparse matrices, as sparse columns can only be slice-viewed as an entire column.
+        switch (m_dataType)
+        {
+        case DataType::Float:
+        {
+            auto currentMatrix = GetMatrix<float>();
+            std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
+            shared_ptr<Matrix<float>> slicedMatrixView;
+            if (flatBufferOffset % currentMatrixDims.first == 0 && flatBufferLength % currentMatrixDims.first == 0)
+            {
+                slicedMatrixView = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(flatBufferOffset / currentMatrixDims.first, flatBufferLength / currentMatrixDims.first));
+            }
+            else
+            {
+                auto sliced = currentMatrix->Reshaped(1, currentMatrixDims.first * currentMatrixDims.second).ColumnSlice(flatBufferOffset, flatBufferLength);
+                sliced.Reshape(flatBufferLength, 1);
+                slicedMatrixView = make_shared<Matrix<float>>(std::move(sliced));
+            }
+            tensorView = new TensorView<float>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
+            break;
+        }
+        case DataType::Double:
+        {
+#if 1
+            auto currentMatrix = GetMatrix<double>();
+            std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
+            shared_ptr<Matrix<double>> slicedMatrixView;
+            if (flatBufferOffset % currentMatrixDims.first == 0 && flatBufferLength % currentMatrixDims.first == 0)
+            {
+                slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(flatBufferOffset / currentMatrixDims.first, flatBufferLength / currentMatrixDims.first));
+            }
+            else
+            {
+                auto sliced = currentMatrix->Reshaped(1, currentMatrixDims.first * currentMatrixDims.second).ColumnSlice(flatBufferOffset, flatBufferLength);
+                sliced.Reshape(flatBufferLength, 1);
+                slicedMatrixView = make_shared<Matrix<double>>(std::move(sliced));
+            }
+#else // keeping old version for easier comparison in case something goes wrong--to be deleted soon
+            // TODO: This was changed on master; below is latest. Maybe it does the same as my change above. Test this.
+            auto currentMatrix = GetMatrix<double>();
+            std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
+            std::shared_ptr<Matrix<double>> slicedMatrixView;
+            if (sliceViewMatrixDims.first != currentMatrixDims.first)
+                slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->Reshaped(1, currentMatrix->GetNumElements()).ColumnSlice(flatBufferOffset, sliceViewShape.TotalSize()));
+            else
+                slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
+#endif
+            tensorView = new TensorView<double>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
+            break;
+        }
+        default:
+            LogicError("NDArrayView::IndexLastAxis: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
         }
 
