@@ -291,7 +291,9 @@ class Memoize
         m_inputs.resize(numArgs);
         m_args.resize(numArgs);
         // perform the op
-        let doNaively = isFree || (op == PrimitiveOpType::Times); // for now
+        let doNaively = isFree ||
+            (op == PrimitiveOpType::Times) ||
+            (op == PrimitiveOpType::Splice);
         if (doNaively)
         {
             // for correctness testing of underlying mechanism, compute them without actual batching
