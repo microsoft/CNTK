@@ -299,7 +299,7 @@ class Memoize
     }
 
     // return the m_value field of a variable, but possibly realizing it lazily if it is an index operation
-    const NDArrayViewPtr& LazyIndexedValue(const Variable& v)
+    const NDArrayViewPtr& LazilyIndexedValue(const Variable& v)
     {
         auto& fields = *v.m_dataFields;
         if (!fields.m_value)
@@ -356,14 +356,15 @@ class Memoize
                 //m_inputs.resize(op->m_inputs.size());
                 m_args.resize(op->m_inputs.size());
                 for (size_t i = 0; i < op->m_inputs.size(); i++)
-                    m_args[i] = LazyIndexedValue(op->m_inputs[i]);
+                    m_args[i] = LazilyIndexedValue(op->m_inputs[i]);
                 NDArrayViewPtr out = isFree ? nullptr : Alloc(op->m_outputs[0].Shape(), m_args[0]->GetDataType(), m_args[0]->Device()); // arena allocation will happen here
                 op->m_outputs[0].m_dataFields->m_value =
                     op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
-                if (f0.Op() == PrimitiveOpType::Slice)
-                {
-                    // inject the lazyIndex
-                }
+                // TODO: realize splice ops that are index ops as a m_lazyIndex at this point
+                //if (f0.Op() == PrimitiveOpType::Slice)
+                //{
+                //    // inject the lazyIndex
+                //}
 #if 0           // test effect of the unbatched sparse times
                 if (f0.Op() == PrimitiveOpType::Times)
                     op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
@@ -387,7 +388,7 @@ class Memoize
             }
             bool anyBatchedInputs = false;
             if (isTimes)
-                m_args[0] = LazyIndexedValue(f0.m_inputs[0]); // (should not have to do anything lazy, actually)
+                m_args[0] = LazilyIndexedValue(f0.m_inputs[0]); // (should not have to do anything lazy, actually)
             for (size_t i = i0; i < numArgs; i++)
             {
                 // create splice args
@@ -396,23 +397,38 @@ class Memoize
                 spliceArgs.clear();
                 if (spliceArgs.capacity() < batchSize)
                     spliceArgs.reserve(max(batchSize, 2 * spliceArgs.capacity()));
+                // optimization: if all args are consecutive slices, then use a slice view instead
                 let* pfields0 = f0.m_inputs[i].m_dataFields.get(); // as long as non-NULL, we are consecutive
                 if (!pfields0->m_lazyIndex.first) // only if it is an indexed slice, actually
                     pfields0 = nullptr;
+                // loop over all batched ops
                 size_t j = 0;
                 for (auto op = ops.begin(); op != ops.end(); ++op, j++) // create the batched tensors
                 {
-                    let* pfields = op->m_inputs[i].m_dataFields.get();
                     // optimization: if all args are consecutive slices, then use a slice view instead
-                    if (pfields0 &&
-                        (pfields->m_lazyIndex.first != pfields0->m_lazyIndex.first ||
-                            pfields->m_lazyIndex.second != pfields0->m_lazyIndex.second + j))
-                        pfields0 = nullptr; // not consecutive
-                    let& arg = pfields->m_value; // TODO: LazyIndex
+                    if (pfields0)
+                    {
+                        let* pfields = op->m_inputs[i].m_dataFields.get();
+                        // we continue to be in optimized state
+                        if (pfields->m_lazyIndex.first  == pfields0->m_lazyIndex.first &&
+                            pfields->m_lazyIndex.second == pfields0->m_lazyIndex.second + j)
+                            continue;
+                        // nope, chain has been broken: must fix up spliceArgs up to here
+                        // This is suboptimal in that we lost the reference to the originating input.
+                        // So we cannot remember the realized SliceView there.
+                        let& from = pfields0->m_lazyIndex.first;
+                        let begin = pfields0->m_lazyIndex.second;
+                        while (spliceArgs.size() < j)
+                            spliceArgs.push_back(from->IndexLastAxis(begin + spliceArgs.size()));
+                        pfields0 = nullptr; // no longer in consecutive hypothesis
+                    }
+                    let& arg = LazilyIndexedValue(op->m_inputs[i]);
                     // optimization: if all args are the same, then don't batch
                     if (spliceArgs.size() == 1 && spliceArgs[0] == arg)
                         continue;
                     // if we thought it is all the same, but then it turned out not to be, we need to fixc it up
+                    if (spliceArgs.size() < j)
+                        throw logic_error("untested");
                     while (spliceArgs.size() < j)
                         spliceArgs.push_back(spliceArgs.back());
                     // append the arg
@@ -477,7 +493,9 @@ class Memoize
                 for (auto op = ops.begin(); op != ops.end(); ++op)
                 {
                     auto& fields = *op->m_outputs[0].m_dataFields;
-                    fields.m_value = out->IndexLastAxis(j);
+                    // semantically, this is fields.m_value = out->IndexLastAxis(j);
+                    // but it gets deferred to save effort
+                    //fields.m_value = out->IndexLastAxis(j);
                     fields.m_lazyIndex = make_pair(out, j); // remember where we came from
                     j++;
                 }
@@ -531,7 +549,7 @@ public:
                 ExecuteBatchedOpAndUpdateSchedule(opBatch);
             }
         }
-        return LazyIndexedValue(v);
+        return LazilyIndexedValue(v);
     }
 }; // class
 } // namespace
