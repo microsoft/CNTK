@@ -273,10 +273,29 @@ class Memoize
             m_schedule.Schedule(&f); // add to ready set
     }
 
+    //NDArrayViewPtr m_currentArena;
+    //size_t m_currentArenaUsed;
+    static const size_t ARENASIZE = 64000000; // we allocate in this chunk size
+
     NDArrayViewPtr Alloc(const NDShape& shape, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
     {
-        shape; dataType; device;
-        return nullptr;
+        static NDArrayViewPtr m_currentArena;
+        static size_t m_currentArenaUsed;
+        let numElements = shape.TotalSize();
+        // if too large then plain alloc
+        if (numElements > ARENASIZE)
+            return make_shared<NDArrayView>(dataType, CNTK::StorageFormat::Dense, shape, device);
+        // if arena not large enough then waste its remainder and just allocate a fresh one
+        if (!m_currentArena || numElements > (ARENASIZE - m_currentArenaUsed))
+        {
+            m_currentArena = make_shared<NDArrayView>(dataType, CNTK::StorageFormat::Dense, NDShape{ ARENASIZE }, device);
+            m_currentArenaUsed = 0;
+        }
+        vector<size_t> startOffset{ m_currentArenaUsed };
+        vector<size_t> extent{ numElements };
+        NDArrayViewPtr region = m_currentArena->SliceView(startOffset, extent);
+        m_currentArenaUsed += numElements;
+        return region->AsShape(shape);
     }
 
     //vector<Variable> m_inputs;
@@ -325,7 +344,7 @@ class Memoize
                 m_args.resize(op->m_inputs.size());
                 for (size_t i = 0; i < op->m_inputs.size(); i++)
                     m_args[i] = op->m_inputs[i].m_dataFields->m_value;
-                NDArrayViewPtr out = Alloc(op->m_outputs[0].Shape(), m_args[0]->GetDataType(), m_args[0]->Device()); // arena allocation will happen here
+                NDArrayViewPtr out = isFree ? nullptr : Alloc(op->m_outputs[0].Shape(), m_args[0]->GetDataType(), m_args[0]->Device()); // arena allocation will happen here
                 op->m_outputs[0].m_dataFields->m_value =
                     op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
                 if (f0.Op() == PrimitiveOpType::Slice)
