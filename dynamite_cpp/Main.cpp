@@ -656,15 +656,16 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         {
             // compute not directly comparable due to (1) no batching and (2) sparse, which may be expensive w.r.t. slicing, or not
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "d_criterion_fn: %.6f sec\n");
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
+            //GetValue(mbLoss)->AsScalar<float>();
             mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
@@ -685,10 +686,12 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             //mbLoss.Value()->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
         }
+        double loss1;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "dynamite eval:  %.6f sec\n");
-            fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", GetValue(mbLoss)->AsScalar<float>() / minibatchData[featureStreamInfo].numberOfSequences);
+            loss1 = GetValue(mbLoss)->AsScalar<float>();
         }
+        fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", loss1 / minibatchData[featureStreamInfo].numberOfSequences);
 #endif
 #if 1
         // static CNTK

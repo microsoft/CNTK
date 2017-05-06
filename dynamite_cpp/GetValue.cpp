@@ -12,6 +12,8 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
+#pragma warning (disable: 4456) // until I fixed the shdowing
+
 #define let const auto
 
 using namespace std;
@@ -228,15 +230,15 @@ class Memoize
     //  - schedule all ready operations
     // TODO: Once we are in the main build, change all Function to PrimitiveFunction directly.
     // TODO: What to do with multi-valued functions? Which ones are there? What is Combine(), a barrier?
-    void TraverseFunctionTree(const Variable& v)
+    void TraverseFunctionTree(const Variable& var)
     {
-        let& fields = *v.m_dataFields;
+        let& fields = *var.m_dataFields;
         if (fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder)
             throw logic_error("Value() depends on Input or Placeholder, it is not knowable.");
         if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
         {
             if (!fields.m_value) // force-initialize Parameters
-                v.Value();
+                var.Value();
             if (!fields.m_value) // TODO: need to do this first
                 throw logic_error("Parameter/Constant has no Value??");
             return;
@@ -298,11 +300,11 @@ class Memoize
             isTimes && (f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
             op == PrimitiveOpType::Splice ||
             batchSize == 1;
-        fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
-                isFree ? -1 : (int)m_numBatchedLaunches,
-                doNaively ? "" : "batch-",
-                (int)batchSize, f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str(),
-                (int)m_schedule.numBatchableOpsPending());
+        //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
+        //        isFree ? -1 : (int)m_numBatchedLaunches,
+        //        doNaively ? "" : "batch-",
+        //        (int)batchSize, f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str(),
+        //        (int)m_schedule.numBatchableOpsPending());
         if (doNaively)
         {
             if (op == PrimitiveOpType::Splice && batchSize != 1)
@@ -320,6 +322,10 @@ class Memoize
                 NDArrayViewPtr out; // arena allocation will happen here
                 op->m_outputs[0].m_dataFields->m_value =
                     op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
+#if 0           // test erffect of the unbatched sparse times
+                if (f0.Op() == PrimitiveOpType::Times)
+                    op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
+#endif
             }
         }
         else
@@ -393,9 +399,9 @@ class Memoize
                 else
                 {
                     auto out = NDArrayViewPtr();
-                    m_args[i] = NDArrayView::GatherBatch(spliceArgs, maxRank, out);
+                    m_args[i] = NDArrayView::GatherBatch(spliceArgs, (int)maxRank, out);
                     //m_args[i] = NDArrayView::GatherBatch(spliceArgs, maxRank, out);
-                    fprintf(stderr, "Gathering %d items\n", (int)spliceArgs.size());
+                    //fprintf(stderr, "Gathering %d items\n", (int)spliceArgs.size());
                     anyBatchedInputs = true;
                 }
             }
