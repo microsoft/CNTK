@@ -11,7 +11,7 @@ from cntk.internal import _as_tuple
 #
 
 global_init = ct.normal(0.05) # paper 0.05
-global_g_init = ct.normal(0.05)
+global_g_init = ct.normal(0.01)
 
 def zeros(shape):
     return ct.constant(value=0., shape=shape, dtype=np.float32)
@@ -123,7 +123,7 @@ def get_parameters(scope, names):
         vars.append(get_parameter(scope, name))
     return vars
 
-def bnorm(input, num_filters):
+def bnorm(x, num_filters):
     ''' Batchnormalization layer. '''
 
     output_channels_shape = _as_tuple(num_filters)
@@ -134,7 +134,7 @@ def bnorm(input, num_filters):
     running_mean   = ct.constant(0., output_channels_shape)
     running_invstd = ct.constant(0., output_channels_shape)
     running_count  = ct.constant(0., (1))
-    return ct.batch_normalization(input,
+    return ct.batch_normalization(x,
                                   scale_params, 
                                   bias_params, 
                                   running_mean, 
@@ -180,6 +180,40 @@ def dense(x, num_units, nonlinearity=None, init=global_init, init_scale=1., coun
         if nonlinearity is not None:
             x = nonlinearity(x)
         return x
+
+def masked_conv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinearity=None, mask_type=None, h=None, bias=True, init=ct.glorot_uniform()):
+    ''' Convolution layer with mask and conditional input support. '''
+    output_channels_shape = _as_tuple(num_filters)
+    x_channels_shape  = _as_tuple(x.shape[0])
+    
+    W = ct.parameter((num_filters, x.shape[0]) + filter_shape, init=init, name='W')
+
+    if mask_type is not None:
+        filter_center = (filter_shape[0] // 2, filter_shape[1] // 2)
+
+        mask = np.ones(W.shape, dtype=np.float32)
+        mask[:,:,filter_center[0]:,filter_center[1]+1:] = 0
+        mask[:,:,filter_center[0]+1:,:] = 0.
+
+        if mask_type == 'a':
+            mask[:,:,filter_center[0],filter_center[1]] = 0
+
+        W = ct.element_times(W, ct.constant(mask))
+
+    if bias:
+        b = ct.parameter((num_filters, 1, 1), name='b')        
+        x = ct.convolution(W, x, strides=x_channels_shape + strides, auto_padding=_as_tuple(pad)) + b
+    else:
+        x = ct.convolution(W, x, strides=x_channels_shape + strides, auto_padding=_as_tuple(pad))
+
+    if h is not None:
+       h_shape = h.shape
+       Wc = ct.parameter(h_shape + output_channels_shape + (1,) * len(filter_shape), init=init, name='Wc')
+       x = x + ct.times(h, Wc)
+
+    if nonlinearity is not None:
+        x = nonlinearity(x)
+    return x
 
 def conv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlinearity=None, init=global_init, init_scale=1., counters={}, first_run=False):
     ''' Convolution layer. '''
@@ -272,6 +306,40 @@ def nin(x, num_units, **kwargs):
     x = dense(x, num_units, **kwargs)
     return ct.reshape(x, (num_units,)+s[1:])
 
+def masked_resnet(x, h=None, init=ct.glorot_uniform()):
+    '''
+    Residual block, from PixelRNN paper (https://arxiv.org/pdf/1601.06759v3.pdf), used
+    to build up the hidden layers in PixelCNN.
+    '''
+    num_filters_2h = x.shape[0]
+    num_filters_h  = num_filters_2h // 2
+
+    l = masked_conv2d(x, num_filters_h, filter_shape=(1,1), mask_type='b', h=h, init=init)
+    l = masked_conv2d(l, num_filters_h, filter_shape=(3,3), mask_type='b', h=h, init=init)
+    l = masked_conv2d(l, num_filters_2h, filter_shape=(1,1), mask_type='b', h=h, init=init)
+
+    return x + l
+
+def masked_gated_resnet(input_v, input_h, filter_shape, h=None, init=ct.glorot_uniform()):
+    '''
+    Condition PixelCNN building block (https://arxiv.org/pdf/1606.05328v2.pdf), it is composed of vertical stack
+    and horizontal stack with resnet connection. 
+    '''
+    num_filters = input_h.shape[0]
+    v = masked_conv2d(input_v, 2*num_filters, filter_shape=filter_shape, strides=(1,1), mask_type='b', h=h, bias=False, init=init)
+    h = masked_conv2d(input_h, 2*num_filters, filter_shape=(1, filter_shape[1]), strides=(1,1), bias=False, init=init)    
+    h = h + masked_conv2d(v, 2*num_filters, filter_shape=(1,1), strides=(1,1), bias=False, init=init)
+
+    # Vertical stack
+    v = ct.element_times(ct.tanh(v[:num_filters,:,:]), ct.sigmoid(v[num_filters:2*num_filters,:,:]))
+
+    # Horizontal stack
+    h = ct.element_times(ct.tanh(h[:num_filters,:,:]), ct.sigmoid(h[num_filters:2*num_filters,:,:]))
+    h = masked_conv2d(h, num_filters, filter_shape=(1,1), strides=(1,1), bias=False, init=init)
+    h = h + input_h
+
+    return v, h
+
 def gated_resnet(x, a=None, h=None, nonlinearity=concat_elu, conv=conv2d, init=global_init, dropout_p=0., counters={}, first_run=False):
     xs = x.shape
     num_filters = xs[0]
@@ -284,7 +352,7 @@ def gated_resnet(x, a=None, h=None, nonlinearity=concat_elu, conv=conv2d, init=g
     c1 = nonlinearity(c1)
     if dropout_p > 0:
         c1 = ct.dropout(c1, dropout_p)
-    c2 = conv(c1, num_filters * 2, counters=counters, first_run=first_run)
+    c2 = conv(c1, num_filters * 2, init_scale=0.1, counters=counters, first_run=first_run)
 
     # add projection of h vector if included: conditional generation
     if h is not None:

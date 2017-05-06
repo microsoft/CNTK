@@ -68,6 +68,7 @@ def gated_conv2d(input, num_filters, filter_shape, strides = (1,1), pad = True, 
 
     return ct.element_times(f, g)
 
+# def conv2d(inputs, num_filters, filter_shape, strides=(1,1), pad=True, mask_type=None, bias=True, input_condition=None, nonlinearity=ct.relu, init=ct.glorot_uniform()):
 def gated_residual_block(input_v, input_h, filter_shape, mask_type = None, input_condition=None, init=ct.glorot_uniform()):
     '''
     Condition PixelCNN building block (https://arxiv.org/pdf/1606.05328v2.pdf), it is composed of vertical stack

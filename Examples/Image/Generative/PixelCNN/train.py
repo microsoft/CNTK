@@ -1,5 +1,6 @@
 from __future__ import print_function
 import os
+import sys
 import time
 import math
 import argparse
@@ -36,6 +37,9 @@ def create_reader(map_file, is_training):
 
     transforms = []
     transforms += [
+        xforms.crop(crop_type='center', crop_size=32)
+    ]
+    transforms += [
         xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')
     ]
     # deserializer
@@ -43,6 +47,26 @@ def create_reader(map_file, is_training):
         features = ct.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
         labels   = ct.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
         randomize=is_training)
+
+def sample(batch_size, z, inputs,  nr_mix, loss, epoch, sample_index):
+    x_gen = np.zeros((batch_size,) + image_shape, dtype=np.float32)
+    for y in range(image_height):
+        for x in range(image_width):
+            if loss == 'category':
+                for c in range(num_channels):
+                    new_x_gen    = z.eval({inputs:x_gen})
+                    new_x_gen_np = np.asarray(sp.sample_from(new_x_gen, nr_mix, loss), dtype=np.float32)
+                    x_gen[:,c,y,x] = new_x_gen_np[:,c,y,x]
+            else:
+                new_x_gen    = z.eval({inputs:x_gen})
+                new_x_gen_np = np.asarray(sp.sample_from(new_x_gen, nr_mix, loss), dtype=np.float32)
+                x_gen[:,:,y,x] = new_x_gen_np[:,:,y,x]                                
+
+    sample_x = np.ascontiguousarray(np.transpose(x_gen, (0,2,3,1)))
+    img_tile = plotting.img_tile(sample_x[:int(np.floor(np.sqrt(batch_size))**2)], aspect_ratio=1.0, border_color=1.0, stretch=True)
+    img = plotting.plot_img(img_tile, title="Samples from epoch {} image {}.".format(epoch, sample_index+1))
+    plotting.plt.savefig("image_{}_{}.png".format(epoch, sample_index+1))
+    plotting.plt.close('all')
 
 def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs = 100):
 
@@ -63,13 +87,14 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     pe = ct.relu(1.0) # dummy value to make reporting progress happy.
 
     # training config
-    epoch_size          = 50000
-    init_minibatch_size = 100
-    minibatch_size      = 12 if (model == 'pixelcnnpp') else 64
+    epoch_size              = 50000
+    init_minibatch_size     = 100
+    minibatch_size          = 12 if (model == 'pixelcnnpp') else 64
+    sampling_minibatch_size = 16
 
     # Set learning parameters
     lr = 0.001
-    lr_decay = 0.9 #0.999995
+    lr_decay = 0.6 #0.999995
 
     # Print progress
     progress_writers = [ct.logging.ProgressPrinter(tag='Training', freq=100, num_epochs=max_epochs)] # freq=100
@@ -78,12 +103,12 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     learner = ct.learners.adam(z.parameters,
                                lr=ct.learning_rate_schedule(lr, unit=ct.UnitType.sample), 
                                momentum=ct.momentum_schedule(0.95), # Beta 1
-                               unit_gain=False,
+                               # unit_gain=False,
                                use_mean_gradient=True,
-                               variance_momentum=ct.momentum_schedule(0.9995), # Beta 2
+                               variance_momentum=ct.momentum_schedule(0.9995) # Beta 2
                                # l1_regularization_weight = 0.001
                                # l2_regularization_weight = 0.001
-                               # gradient_clipping_threshold_per_sample=10
+                               # gradient_clipping_threshold_per_sample=1
                                )
     trainer = ct.Trainer(z, (ce, pe), [learner], progress_writers)
 
@@ -96,6 +121,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     ct.logging.log_number_of_parameters(z); print()
 
     # perform model training
+    prev_loss_before_sample = sys.float_info.max
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         training_loss = 0
@@ -109,41 +135,29 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
 
         sample_index = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
-            t0 = time.perf_counter()
             data = reader_train.next_minibatch(min(minibatch_size, epoch_size-sample_count), input_map=input_map)            
-            t1 = time.perf_counter()
             trainer.train_minibatch({inputs:data[inputs].asarray()})
-            t2 = time.perf_counter()
 
             sample_count  += trainer.previous_minibatch_sample_count
             training_loss += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count
 
-        lr *= lr_decay
-        learner.reset_learning_rate(ct.learning_rate_schedule(lr, unit=ct.UnitType.sample))
+            # sample from the model
+            if ((prev_loss_before_sample - trainer.previous_minibatch_loss_average) / prev_loss_before_sample) > 0.25:
+                # sample(sampling_minibatch_size, z, inputs, nr_logistic_mix, loss, epoch, sample_index)
+                prev_loss_before_sample = trainer.previous_minibatch_loss_average
 
-        # sample from the model
-        t3 = time.perf_counter()
-        if (loss == 'mixture'):
-            x_gen = np.zeros((16,) + image_shape, dtype=np.float32)
-            for y in range(image_height):
-                for x in range(image_width):
-                    new_x_gen    = z.eval({inputs:x_gen})
-                    new_x_gen_np = np.asarray(sp.sample_from(new_x_gen, nr_logistic_mix, loss))
-                    x_gen[:,:,y,x] = new_x_gen_np[:,:,y,x]
+            sample_index += 1
 
-            sample_x = np.ascontiguousarray(np.transpose(x_gen, (0,2,3,1)))
-            img_tile = plotting.img_tile(sample_x, aspect_ratio=1.0, border_color=1.0, stretch=True)
-            img = plotting.plot_img(img_tile, title="Samples from epoch {} image {}.".format(epoch, sample_index+1))
-            plotting.plt.savefig("image_{}_{}.png".format(epoch, sample_index+1))
-            plotting.plt.close('all')
-        t4 = time.perf_counter()
-        sample_index += 1
+        sample(minibatch_size, z, inputs, nr_logistic_mix, loss, epoch, 0)
 
         trainer.summarize_training_progress()
 
+        lr *= lr_decay
+        learner.reset_learning_rate(ct.learning_rate_schedule(lr, unit=ct.UnitType.sample))
+
         # convert loss to bits/dim
-        bits_per_dim = training_loss/(np.log(2.)*np.prod((image_height,image_width,num_channels))*sample_count)
-        print("Bits per dimension: {}".format(bits_per_dim))
+        bits_per_dim = training_loss / (np.log(2.)*np.prod(image_shape)*sample_count)
+        progress_writers[0].log("Bits per dimension: {}".format(bits_per_dim))
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
