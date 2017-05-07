@@ -125,3 +125,15 @@ def test_slice_with_inferred_static_axis():
     assert y.shape == (-1, -1, 3)
     y = C.splice(x, C.constant(value=0, shape=padding_shape), axis=0)
     assert y.shape == (-1, -1, 3)
+
+
+def test_free_dimension_broadcast():
+    i0 = C.sequence.input(shape=(5,))
+    i0_unpacked, _ = C.sequence.unpack(i0, padding_value=0).outputs
+    i1 = C.input(shape=(5,))
+    m = i0_unpacked * i1
+    assert m.shape == (-3, 5)
+
+    i1 = C.input(shape=(1,5,))
+    m = i0_unpacked * i1
+    assert m.shape == (-3, 5)

@@ -471,37 +471,41 @@ namespace CNTK
             {
                 if ((leftOperandShape[i] == NDShape::InferredDimension) && (rightOperandShape[i] == NDShape::InferredDimension))
                     outputDims[i] = NDShape::InferredDimension;
-                else if ((leftOperandShape[i] == NDShape::InferredDimension) || (leftOperandShape[i] == NDShape::FreeDimension) || (leftOperandShape[i] == 1))
+                else if (leftOperandShape[i] == NDShape::FreeDimension)
+                {
+                    if (rightOperandShape[i] == NDShape::InferredDimension)
+                        InvalidArgument("Binary elementwise operation %S: Right operand '%S' shape '%S' dimension cannot be inferred from a left operand '%S' shape '%S' free dimension.",
+                            PrimitiveOpTypeName(op).c_str(),
+                            rightOperand.AsString().c_str(),
+                            rightOperandShape.AsString().c_str(),
+                            leftOperand.AsString().c_str(),
+                            leftOperandShape.AsString().c_str());
+
+                    outputDims[i] = (rightOperandShape[i] == 1) ? NDShape::FreeDimension : rightOperandShape[i];
+                }
+                else if (rightOperandShape[i] == NDShape::FreeDimension)
+                {
+                    if (leftOperandShape[i] == NDShape::InferredDimension)
+                        InvalidArgument("Binary elementwise operation %S: Left operand '%S' shape '%S' dimension cannot be inferred from a right operand '%S' shape '%S' free dimension.",
+                            PrimitiveOpTypeName(op).c_str(),
+                            leftOperand.AsString().c_str(),
+                            leftOperandShape.AsString().c_str(),
+                            rightOperand.AsString().c_str(),
+                            rightOperandShape.AsString().c_str());
+
+                    outputDims[i] = (leftOperandShape[i] == 1) ? NDShape::FreeDimension : leftOperandShape[i];
+                }
+                else if ((leftOperandShape[i] == NDShape::InferredDimension) || (leftOperandShape[i] == 1))
                 {
                     outputDims[i] = rightOperandShape[i];
                     if (leftOperandShape[i] == NDShape::InferredDimension)
-                    {
-                        if (rightOperandShape[i] == NDShape::FreeDimension)
-                            InvalidArgument("Binary elementwise operation %S: Left operand '%S' shape '%S' dimension cannot be inferred from a right operand '%S' shape '%S' free dimension.",
-                                PrimitiveOpTypeName(op).c_str(),
-                                leftOperand.AsString().c_str(),
-                                leftOperandShape.AsString().c_str(),
-                                rightOperand.AsString().c_str(),
-                                rightOperandShape.AsString().c_str());
-
                         leftOperandShape[i] = rightOperandShape[i];
-                    }
                 }
-                else if ((rightOperandShape[i] == NDShape::InferredDimension) || (rightOperandShape[i] == NDShape::FreeDimension) || (rightOperandShape[i] == 1))
+                else if ((rightOperandShape[i] == NDShape::InferredDimension) || (rightOperandShape[i] == 1))
                 {
                     outputDims[i] = leftOperandShape[i];
                     if (rightOperandShape[i] == NDShape::InferredDimension)
-                    {
-                        if (leftOperandShape[i] == NDShape::FreeDimension)
-                            InvalidArgument("Binary elementwise operation %S: Right operand '%S' shape '%S' dimension cannot be inferred from a left operand '%S' shape '%S' free dimension.",
-                                PrimitiveOpTypeName(op).c_str(),
-                                rightOperand.AsString().c_str(),
-                                rightOperandShape.AsString().c_str(),
-                                leftOperand.AsString().c_str(),
-                                leftOperandShape.AsString().c_str());
-
                         rightOperandShape[i] = leftOperandShape[i];
-                    }
                 }
                 else
                 {
@@ -516,8 +520,7 @@ namespace CNTK
                     outputDims[i] = leftOperandShape[i];
                 }
             }
-
-            
+                        
             UNUSED(broadcastAllowed);
             // BUGBUG: if (broadcastAllowed) is missing here?
 
