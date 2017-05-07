@@ -42,6 +42,7 @@
 // For debug
 static int __iteration_index = 0;
 static int __count = 0;
+static bool __open_dump = false;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -2364,8 +2365,9 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 
     FILE *dumpFile = nullptr;
     bool isDump = false;
-    isDump = __count < 1;
+    isDump = __count < 1 && __open_dump;
 
+    //printf("%s\n", isDump ? "true" : "false");
     if (isDump)
     {
         char dumpFileName[100];

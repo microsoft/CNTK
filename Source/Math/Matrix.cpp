@@ -1585,6 +1585,8 @@ void Matrix<ElemType>::MomentumSGDUpdate(Matrix<ElemType>& gradients,
 {
     DecideAndMoveToRightDevice(smoothedGradients, gradients, *this);
 
+    //printf("%s\n", unitGainMomentum ? "true" : "false");
+    unitGainMomentum = false;
     const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
