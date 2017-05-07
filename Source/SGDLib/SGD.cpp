@@ -39,6 +39,10 @@
 #include <map>
 #include <set>
 
+// For debug
+static int __iteration_index = 0;
+static int __count = 0;
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
@@ -1366,6 +1370,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         ProfilerTimeEnd(profGradientAgg, profilerEvtMainGradient);
         auto profWeights = ProfilerTimeBegin();
 
+        __count = 0;
+        __iteration_index++;
+
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
@@ -1390,6 +1397,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     if (smoothedGradientIter->HasNan("TrainOneEpoch/UpdateWeights(): "))
                         LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
+
                     double nodeDependentLearningRatePerSample = learnRatePerSample * node->GetLearningRateMultiplier();
                     double nodeDependentRegMultiplier = dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->GetRegMultiplier();
                     double momentumPerSample = GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences());
@@ -2344,6 +2352,7 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 {
     // we use simple linear (instead of log linear) exponentiation here
     const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
+
 #if DUMPOUTPUT
     LOGPRINTF(stderr, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%ld\n",
               learnRatePerSample, momentum, actualMBSize);
@@ -2352,6 +2361,21 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     gradientValues.Print("Gradient Input");
     smoothedGradientValues.Print("Smoothed Gradient Input");
 #endif
+
+    FILE *dumpFile = nullptr;
+    bool isDump = false;
+    isDump = __count < 1;
+
+    if (isDump)
+    {
+        char dumpFileName[100];
+        sprintf(dumpFileName, "dump_iter%06d_buf%06d.txt", __iteration_index, __count++);
+        dumpFile = fopen(dumpFileName, "w+");
+        LOGPRINTF(dumpFile, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%llu\n",
+            learnRatePerSample, momentum, actualMBSize);
+        LOGPRINTF(dumpFile, "GradUpdateType()=%d, GradientUpdateNoiseStd()=%0.8f\n",
+            GradUpdateType(), GradientUpdateNoiseStd());
+    }
 
     // make actualMBSize is a valid value
     assert(actualMBSize > 0);
@@ -2380,6 +2404,13 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 
     if (adpType == GradientsUpdateType::None)
     {
+        if (isDump)
+        {
+            gradientValues.DumpToFile(dumpFile, "Accumulated Gradient Input", 0, 20);
+            functionValues.DumpToFile(dumpFile, "Before-Calc Weight Input", 0, 20);
+            smoothedGradientValues.DumpToFile(dumpFile, "Before-Calc Momentum", 0, 20);
+        }
+
         // even if momentum is 0.0, still need to call a momentum-based update to store 
         // [learning rate * current gradient values] in the smoothed gradients, in case
         // the momentum value for the next epoch is non-zero.
@@ -2392,6 +2423,12 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
         {
             functionValues.NesterovAcceleratedMomentumSGDUpdate(gradientValues, smoothedGradientValues, 
                                                                 ElemType(learnRatePerSample), ElemType(momentum));
+        }
+
+        if (isDump)
+        {
+            functionValues.DumpToFile(dumpFile, "After-Calc Weight Input", 0, 20);
+            smoothedGradientValues.DumpToFile(dumpFile, "After-Calc Momentum", 0, 20);
         }
     }
     else if (adpType == GradientsUpdateType::AdaGrad)
@@ -2413,10 +2450,27 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {
+        auto n = gradientValues.GetNumElements();
+        if (isDump)
+        {
+            gradientValues.DumpToFile(dumpFile, "Accumulated Gradient Input", 0, 20);
+            functionValues.DumpToFile(dumpFile, "Before-Calc Weight Input", 0, 20);
+            smoothedGradientValues.DumpToFile(dumpFile, "Before-Calc Accumulated Variances", 0, 20);
+            smoothedGradientValues.DumpToFile(dumpFile, "Before-Calc Momentum", n, n + 20);
+        }
+
         auto learningRate = learnRatePerSample * actualMBSize;
         Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
-        smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learningRate, 
+        smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learningRate,
                                          momentum, (ElemType) m_rpi.gamma, needAveMultiplier);
+
+        if (isDump)
+        {
+            gradientValues.DumpToFile(dumpFile, "Mean Gradient Input", 0, 20);
+            functionValues.DumpToFile(dumpFile, "After-Calc Weight Input", 0, 20);
+            smoothedGradientValues.DumpToFile(dumpFile, "After-Calc Accumulated Variances", 0, 20);
+            smoothedGradientValues.DumpToFile(dumpFile, "After-Calc Momentum", n, n + 20);
+        }
     }
 
     if (noiseStd > 0)
@@ -2434,6 +2488,12 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 #if DUMPOUTPUT
     functionValues.Print("Parameter Update");
 #endif
+
+    if (isDump)
+    {
+        fflush(dumpFile);
+        fclose(dumpFile);
+    }
 }
 
 // protected:

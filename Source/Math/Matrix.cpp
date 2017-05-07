@@ -4134,6 +4134,62 @@ void Matrix<ElemType>::Print(const char* matrixName /*=nullptr*/) const
     Print(matrixName, 0, GetNumRows() - 1, 0, GetNumCols() - 1);
 }
 
+template <class ElemType>
+void Matrix<ElemType>::DumpToFile(FILE* fd, const char* matrixName, ptrdiff_t rowStart, ptrdiff_t rowEnd, ptrdiff_t colStart, ptrdiff_t colEnd) const
+{
+    DEVICEID_TYPE orgdevice = GetDeviceId();
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        nullptr,
+        // CPU:
+        m_CPUMatrix->DumpToFile(fd, matrixName, rowStart, rowEnd, colStart, colEnd),
+        // GPU;
+        {
+            _transferToDevice(CPUDEVICE, false, false);
+            m_CPUMatrix->DumpToFile(fd, matrixName, rowStart, rowEnd, colStart, colEnd);
+            _transferToDevice(orgdevice, false, false);
+        },
+        // CPU, sparse:
+        m_CPUSparseMatrix->DumpToFile(fd, matrixName),
+        // GPU, sparse:
+        {
+            _transferToDevice(CPUDEVICE, false, false);
+            m_CPUSparseMatrix->DumpToFile(fd, matrixName);
+            _transferToDevice(orgdevice, false, false);
+        });
+}
+
+template <class ElemType>
+void Matrix<ElemType>::DumpToFile(FILE* fd, const char* matrixName, ptrdiff_t posStart, ptrdiff_t posEnd) const
+{
+    DEVICEID_TYPE orgdevice = GetDeviceId();
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        nullptr,
+        // CPU:
+        m_CPUMatrix->DumpToFile(fd, matrixName, posStart, posEnd),
+        // GPU;
+        {
+            _transferToDevice(CPUDEVICE, false, false);
+            m_CPUMatrix->DumpToFile(fd, matrixName, posStart, posEnd);
+            _transferToDevice(orgdevice, false, false);
+        },
+        // CPU, sparse:
+        m_CPUSparseMatrix->DumpToFile(fd, matrixName),
+        // GPU, sparse:
+        {
+            _transferToDevice(CPUDEVICE, false, false);
+            m_CPUSparseMatrix->DumpToFile(fd, matrixName);
+            _transferToDevice(orgdevice, false, false);
+        });
+}
+
+template <class ElemType>
+void Matrix<ElemType>::DumpToFile(FILE* fd, const char* matrixName /*=nullptr*/) const
+{
+    DumpToFile(fd, matrixName, 0, GetNumRows() - 1, 0, GetNumCols() - 1);
+}
+
 //helpfer function used for convolution neural network
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignPackedConvolutionInput(const Matrix<ElemType>& inputSubBatch,

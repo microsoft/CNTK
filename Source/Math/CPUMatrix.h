@@ -324,6 +324,9 @@ public:
 
     void Print(const char* matrixName, ptrdiff_t rowStart, ptrdiff_t rowEnd, ptrdiff_t colStart, ptrdiff_t colEnd) const;
     void Print(const char* matrixName = nullptr) const; // print whole matrix. can be expensive
+    void DumpToFile(FILE* fd, const char* matrixName, ptrdiff_t rowStart, ptrdiff_t rowEnd, ptrdiff_t colStart, ptrdiff_t colEnd) const;
+    void DumpToFile(FILE* fd, const char* matrixName, ptrdiff_t posStart, ptrdiff_t posEnd) const;
+    void DumpToFile(FILE* fd, const char* matrixName = nullptr) const; // dump whole matrix. can be expensive
 
     void ReadFromFile(FILE* f, const char* matrixName); // matrixName is used to verify that correct matrix is read.
     void WriteToFile(FILE* f, const char* matrixName);  // matrixName is used to verify that correct matrix is read.

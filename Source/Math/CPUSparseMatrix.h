@@ -247,7 +247,9 @@ public:
 public:
     void Print(const char* matrixName, ptrdiff_t rowStart, ptrdiff_t rowEnd, ptrdiff_t colStart, ptrdiff_t colEnd) const;
     void Print(const char* matrixName = NULL) const; // print whole matrix. can be expensive
-
+    void DumpToFile(FILE* fd, const char* matrixName, ptrdiff_t rowStart, ptrdiff_t rowEnd, ptrdiff_t colStart, ptrdiff_t colEnd) const;
+    void DumpToFile(FILE* fd, const char* matrixName = NULL) const; // dump whole matrix. can be expensive
+    
 public:
     const ElemType* NzValues() const
     {

@@ -536,6 +536,40 @@ void CPUSparseMatrix<ElemType>::Print(const char* matrixName, ptrdiff_t /*rowSta
 }
 
 template <class ElemType>
+void CPUSparseMatrix<ElemType>::DumpToFile(FILE* fd, const char* matrixName) const
+{
+    DumpToFile(fd, matrixName, 0, 0, 0, 0);
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::DumpToFile(FILE* fd, const char* matrixName, ptrdiff_t /*rowStart*/, ptrdiff_t /*rowEnd*/, ptrdiff_t /*colStart*/, ptrdiff_t /*colEnd*/) const
+{
+    if (this->GetFormat() != matrixFormatSparseCSC && this->GetFormat() != matrixFormatSparseCSR)
+    {
+        return;
+        // NOT_IMPLEMENTED;
+    }
+
+    fprintf(fd, "%s\n", matrixName);
+
+    const ElemType* dataBuffer = NzValues();
+    const size_t nz = MajorIndexCount();
+    CPUSPARSE_INDEX_TYPE* unCompressedIndex = MajorIndexLocation();
+    CPUSPARSE_INDEX_TYPE* compressedIndex = SecondaryIndexLocation();
+
+    for (size_t i = 0, j = 0; i < nz; ++i)
+    {
+        if (i >= compressedIndex[j])
+        {
+            fprintf(fd, "\n");
+            j++;
+        }
+        fprintf(fd, "%d:%.f ", unCompressedIndex[i], dataBuffer[i]);
+    }
+    fprintf(fd, "\n");
+}
+
+template <class ElemType>
 CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
 {
     if (startColumn + numCols > m_numCols)
