@@ -73,3 +73,4 @@ def test_constant_eval():
     result = op.eval({})
     assert np.array_equal(result[c_plus_1.output], [2.0])
     assert np.array_equal(result[c], 1.0)
+
