@@ -55,7 +55,8 @@ public:
                 continue;
 
             auto argumentVar = arguments[j++];
-            auto argumentValue = ::CNTK::Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(argumentVar, nullptr, input.Value(), input.GetMBLayout());
+            auto argumentShape = ::CNTK::AsNDShape(input.GetSampleLayout());
+            auto argumentValue = ::CNTK::Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(argumentShape, argumentVar.DynamicAxes(), input.Value(), input.GetMBLayout());
             argumentValues.insert(std::make_pair(argumentVar, argumentValue));
         }
         assert(j == arguments.size());
@@ -78,7 +79,19 @@ public:
         for (size_t i = 0; i < outputs.size(); ++i)
         {
             auto output = outputs[i];
-            auto outputMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElemType>(output, outputValues[output]);
+            ::CNTK::NDShape inferredVarShape;
+            auto outputMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElemType>(output, outputValues[output], &inferredVarShape);
+
+            if (inferredVarShape.IsUnknown() || inferredVarShape.HasUnboundDimension())
+                LogicError("The output shape '%S' of an external user defined Function '%S' must be fully defined.", inferredVarShape.AsString().c_str(), m_externalFunction->AsString().c_str());
+
+            if (output.Shape().HasFreeDimension())
+            {
+                this->m_outputsShape[i] = ::CNTK::AsTensorShape(inferredVarShape);
+                if (i == 0)
+                    SetDims(this->m_outputsShape[i], HasMBLayout());
+            }
+
             this->m_outputsValue[i]->SetValue(*outputMatrixAndLayout.first);
 
             if ((this->m_outputsMBLayout[i] != nullptr) && (outputMatrixAndLayout.second == nullptr))
@@ -122,7 +135,7 @@ public:
             // input, and reuse them for subsequence inputs.
             ::CNTK::ValuePtr gradientValue;
             if (output.NeedsGradient())
-                gradientValue = ::CNTK::Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(output, nullptr, *this->m_outputsGradient[i], this->m_outputsMBLayout[i]);
+                gradientValue = ::CNTK::Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(::CNTK::AsNDShape(this->m_outputsShape[i]), output.DynamicAxes(), *this->m_outputsGradient[i], this->m_outputsMBLayout[i]);
 
             outputGradientValues.insert({ output, gradientValue });
         }
@@ -186,9 +199,6 @@ public:
             }
 
             auto outputNDShape = output.Shape();
-            if (outputNDShape.IsUnknown() || outputNDShape.HasUnboundDimension())
-                LogicError("The output shape of an external user defined Function should be fully determined by the time CNTK engine validation executes");
-
             auto outputDynamicAxes = output.DynamicAxes();
             if (outputDynamicAxes.empty())
             {
@@ -225,13 +235,19 @@ public:
                 else
                     this->m_outputsHasNewMBLayout[i] = false;
 
-                this->m_outputsShape[i] = ::CNTK::AsTensorShape(outputNDShape);
+                for (size_t k = 0; k < outputNDShape.Rank(); ++k)
+                {
+                    if ((outputNDShape[k] == ::CNTK::NDShape::FreeDimension) || (outputNDShape[k] == ::CNTK::NDShape::InferredDimension))
+                        outputNDShape[k] = 1;
+                }
             }
+
+            this->m_outputsShape[i] = ::CNTK::AsTensorShape(outputNDShape);
 
             if (i == 0)
             {
                 m_pMBLayout = this->m_outputsMBLayout[i];
-                SetDims(::CNTK::AsTensorShape(outputNDShape), HasMBLayout());
+                SetDims(this->m_outputsShape[i], HasMBLayout());
             }
         }
     }
