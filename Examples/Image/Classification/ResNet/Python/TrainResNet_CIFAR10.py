@@ -159,7 +159,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--network', help='network type, resnet20 or resnet110', required=False, default='resnet20')
-    parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='10')
+    parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='160')
     parser.add_argument('-p', '--profiler_dir', help='directory for saving profiler output', required=False, default=None)
     parser.add_argument('-m', '--model_dir', help='directory for saving model', required=False, default=None)
     parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir', help='Directory where TensorBoard logs should be created', required=False, default=None)
