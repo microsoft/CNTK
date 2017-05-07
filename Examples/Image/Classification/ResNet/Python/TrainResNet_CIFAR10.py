@@ -13,7 +13,9 @@ from cntk import input, cross_entropy_with_softmax, classification_error, reduce
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 import cntk.io.transforms as xforms
 from cntk import Trainer, cntk_py
-from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.learners import *
+from Proximal import *
+
 from cntk.debugging import set_computation_network_trace_level
 from cntk.logging import *
 from cntk.debugging import *
@@ -86,15 +88,14 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
 
     # progress writers
-    progress_writers = [ProgressPrinter(tag='Training', num_epochs=max_epochs)]
+    progress_writers = [ProgressPrinter(tag='Training', num_epochs=max_epochs, log_to_file='ResNet20_CIFAR10_proximal.log')]
     tensorboard_writer = None
     if tensorboard_logdir is not None:
         tensorboard_writer = TensorBoardProgressWriter(freq=10, log_dir=tensorboard_logdir, model=z)
         progress_writers.append(tensorboard_writer)
 
     # trainer object
-    learner = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
-                           l2_regularization_weight = l2_reg_weight)
+    learner = Proximal_gd(z.parameters, lr_schedule, l2_regularization_weight = l2_reg_weight)
     trainer = Trainer(z, (ce, pe), learner, progress_writers)
 
     # define mapping from reader streams to network inputs
@@ -158,7 +159,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--network', help='network type, resnet20 or resnet110', required=False, default='resnet20')
-    parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='160')
+    parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='10')
     parser.add_argument('-p', '--profiler_dir', help='directory for saving profiler output', required=False, default=None)
     parser.add_argument('-m', '--model_dir', help='directory for saving model', required=False, default=None)
     parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir', help='Directory where TensorBoard logs should be created', required=False, default=None)
