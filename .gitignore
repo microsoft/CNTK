@@ -241,11 +241,13 @@ bindings/java/Swig/cntk_java_wrap.h
 bindings/java/Swig/cntk_java_wrap.cxx
 bindings/java/**/*.class
 bindings/java/Swig/com/
-bindings/java/JavaEvalTest/.idea
-bindings/java/JavaEvalTest/data
 bindings/java/**/target
 bindings/java/**/*.jar
-bindings/java/.idea/
+
+# Java Eval Tests
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/.idea
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/data
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/out
 
 # Examples and Tutorials
 Examples/Image/DataSets/Pascal/VOC*
