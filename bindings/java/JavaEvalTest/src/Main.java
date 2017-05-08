@@ -86,7 +86,7 @@ public class Main {
         outputDataMap.getitem(outputVar).CopyVariableValueToFloat(outputVar, outputBuffer);
 
 
-        float[] trueResults = {
+        float[] expectedResults = {
                 2.820341f,
                 9.967621f,
                 0.028942442f,
@@ -98,9 +98,10 @@ public class Main {
                 -4.393841f,
                 1.4517201f};
 
-        for (int j = 0; j < outputBuffer.get(0).size(); j++) {
-            System.out.println(outputBuffer.get(0).get(j) + " ");
-            if (!equals(trueResults[j], outputBuffer.get(0).get(j))) {
+        FloatVector results = outputBuffer.get(0);
+        for (int j = 0; j < results.size(); j++) {
+            System.out.println(results.get(j) + " ");
+            if (!equals(expectedResults[j], results.get(j))) {
                 throw new RuntimeException("Test Failed on output " + j);
             }
         }
