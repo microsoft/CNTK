@@ -19,13 +19,13 @@ model_path = os.path.join(abs_path, "Models")
 # Define the reader for both training and evaluation action.
 def create_reader(path, is_training, input_dim, label_dim):
     return cntk.io.MinibatchSource(cntk.io.CTFDeserializer(path, cntk.io.StreamDefs(
-        features  = cntk.io.StreamDef(field='features', shape=input_dim),
-        labels    = cntk.io.StreamDef(field='labels',   shape=label_dim)
-    )), randomize=is_training, max_sweeps = cntk.io.INFINITELY_REPEAT if is_training else 1)
+        features=cntk.io.StreamDef(field='features', shape=input_dim),
+        labels=cntk.io.StreamDef(field='labels', shape=label_dim)
+    )), randomize=is_training, max_sweeps=cntk.io.INFINITELY_REPEAT if is_training else 1)
 
 
 # Creates and trains a feedforward classification model for MNIST images
-def convnet_cifar10(debug_output=False):
+def convnet_cifar10(debug_output=False, epoch_size=50000, minibatch_size=64, max_epochs=30):
     _cntk_py.set_computation_network_trace_level(0)
 
     image_height = 32
@@ -60,11 +60,6 @@ def convnet_cifar10(debug_output=False):
     pe = cntk.metrics.classification_error(z, label_var)
 
     reader_train = create_reader(os.path.join(data_path, 'Train_cntk_text.txt'), True, input_dim, num_output_classes)
-
-    # training config
-    epoch_size = 50000                  # for now we manually specify epoch size
-    minibatch_size = 64
-    max_epochs = 30
 
     # Set learning parameters
     lr_per_sample          = [0.0015625]*10 + [0.00046875]*10 + [0.00015625]
