@@ -3315,12 +3315,12 @@ namespace CNTK
         /// Registers a native user-defined Function that can be subsequently instantiated using the Function::NativeUserFunction method.
         ///
         // TODO: Do we need an Unregister to unload the module?
-        CNTK_API static void RegisterNativeUserFunction(const std::wstring& uniqueOpName, const std::wstring& moduleName, const std::wstring& factoryMethodName);
+        CNTK_API static void RegisterNativeUserFunction(const std::wstring& uniqueOpId, const std::wstring& moduleName, const std::wstring& factoryMethodName);
 
         ///
         /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
         ///
-        CNTK_API static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName = L"");
+        CNTK_API static FunctionPtr NativeUserFunction(const std::wstring& opId, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName = L"");
 
         ///
         /// Register a callback function to be invoked when deserializing a user-defined Function with the corresponding op name.

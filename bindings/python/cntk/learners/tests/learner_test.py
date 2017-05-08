@@ -373,7 +373,7 @@ def test_0d_1d_parameter_set_value():
     w_0d.value = w_0d_grad.data
     assert w_0d.value == 2.
 
-    w_1d = C.parameter((2))
+    w_1d = C.parameter(shape=2)
     op = x + w_1d
     w_1d_grad = op.grad({x : np.asarray([1, 2], dtype=np.float32)}, wrt=[w_1d], as_numpy=False)
     w_1d.value = w_1d_grad.data

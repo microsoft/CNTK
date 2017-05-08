@@ -306,16 +306,16 @@ namespace CNTK
                             LogicError("PastValue/FutureValue Function '%S': Input operand '%S' with #dynamic axes != 2 (1 sequence axis and 1 batch axis) is not supported.", AsString().c_str(), inputOperandVar.AsString().c_str());
                     }
 
-                    outputShape = BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], true, true);
+                    outputShape = BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], /*inferInputDimensions =*/ true);
                     break;
                 }
                 case PrimitiveOpType::Clip:
                     assert(m_inputs.size() == 3);
-                    outputShape = NaryElementwiseOpOutputShape(m_op, m_inputs, true, true);
+                    outputShape = NaryElementwiseOpOutputShape(m_op, m_inputs, /*inferInputDimensions =*/ true);
                     break;
                 case PrimitiveOpType::Select:
                     assert(m_inputs.size() == 3);
-                    outputShape = NaryElementwiseOpOutputShape(m_op, m_inputs, true, true);
+                    outputShape = NaryElementwiseOpOutputShape(m_op, m_inputs, /*inferInputDimensions =*/ true);
                     break;
                 default:
                     // For all other operations, shapes of all inputs must be known to determine the output shape
@@ -760,7 +760,7 @@ namespace CNTK
                                 assert(m_inputs.size() == 2);
 
                             // Validate that the first 2 operands are elementwise compatible and also infer operand shapes as needed
-                            BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], true, true);
+                            BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], /*inferInputDimensions =*/ true);
 
                             if (m_op == PrimitiveOpType::ClassificationError)
                             {
@@ -770,7 +770,7 @@ namespace CNTK
                             else if (m_op == PrimitiveOpType::Logistic)
                             {
                                 if (m_inputs.size() == 3)
-                                    BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[2], true, true);
+                                    BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[2], /*inferInputDimensions =*/ true);
                             }
 
                             outputShape = {};
@@ -1236,14 +1236,14 @@ namespace CNTK
         return anyParameterOperandDimsInferred;
     }
 
-    /*static*/ NDShape PrimitiveFunction::NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed, bool inferInputDimensions)
+    /*static*/ NDShape PrimitiveFunction::NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool inferInputDimensions)
     {
         assert(operands.size() > 1);
 
         // TODO: Is this logic of transitively constructing the output shape from the operands correct?
         Variable dummyOutputVariable = PlaceholderVariable(NDShape());
         for (auto& operand : operands)
-            dummyOutputVariable.m_dataFields->m_shape = BinaryElementwiseOpOutputShape(op, dummyOutputVariable, operand, broadcastAllowed, inferInputDimensions);
+            dummyOutputVariable.m_dataFields->m_shape = BinaryElementwiseOpOutputShape(op, dummyOutputVariable, operand, inferInputDimensions);
 
         return dummyOutputVariable.Shape();
     }

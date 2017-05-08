@@ -210,7 +210,7 @@ namespace CNTK
         std::unordered_set<Parameter> uniqueParameters(parameters.begin(), parameters.end());
 
         if (uniqueParameters.size() != parameters.size())
-            LogicError("Learner parameters contain duplicates.");
+            InvalidArgument("Learner's parameters list must not contain duplicates.");
 
         if (allocateSmoothGradients)
         {
