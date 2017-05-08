@@ -40,9 +40,9 @@
 #include <set>
 
 // For debug
+#define OPEN_DUMP 0
 static int __iteration_index = 0;
 static int __count = 0;
-static bool __open_dump = false;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -2363,9 +2363,10 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     smoothedGradientValues.Print("Smoothed Gradient Input");
 #endif
 
+#if OPEN_DUMP
     FILE *dumpFile = nullptr;
     bool isDump = false;
-    isDump = __count < 1 && __open_dump;
+    isDump = __count < 1;
 
     //printf("%s\n", isDump ? "true" : "false");
     if (isDump)
@@ -2378,6 +2379,7 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
         LOGPRINTF(dumpFile, "GradUpdateType()=%d, GradientUpdateNoiseStd()=%0.8f\n",
             GradUpdateType(), GradientUpdateNoiseStd());
     }
+#endif
 
     // make actualMBSize is a valid value
     assert(actualMBSize > 0);
@@ -2406,12 +2408,14 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 
     if (adpType == GradientsUpdateType::None)
     {
+#if OPEN_DUMP
         if (isDump)
         {
             gradientValues.DumpToFile(dumpFile, "Accumulated Gradient Input", 0, 20);
             functionValues.DumpToFile(dumpFile, "Before-Calc Weight Input", 0, 20);
             smoothedGradientValues.DumpToFile(dumpFile, "Before-Calc Momentum", 0, 20);
         }
+#endif
 
         // even if momentum is 0.0, still need to call a momentum-based update to store 
         // [learning rate * current gradient values] in the smoothed gradients, in case
@@ -2427,11 +2431,13 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
                                                                 ElemType(learnRatePerSample), ElemType(momentum));
         }
 
+#if OPEN_DUMP
         if (isDump)
         {
             functionValues.DumpToFile(dumpFile, "After-Calc Weight Input", 0, 20);
             smoothedGradientValues.DumpToFile(dumpFile, "After-Calc Momentum", 0, 20);
         }
+#endif
     }
     else if (adpType == GradientsUpdateType::AdaGrad)
     {
@@ -2452,6 +2458,7 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {
+#if OPEN_DUMP
         auto n = gradientValues.GetNumElements();
         if (isDump)
         {
@@ -2460,12 +2467,14 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
             smoothedGradientValues.DumpToFile(dumpFile, "Before-Calc Accumulated Variances", 0, 20);
             smoothedGradientValues.DumpToFile(dumpFile, "Before-Calc Momentum", n, n + 20);
         }
+#endif
 
         auto learningRate = learnRatePerSample * actualMBSize;
         Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
         smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learningRate,
                                          momentum, (ElemType) m_rpi.gamma, needAveMultiplier);
 
+#if OPEN_DUMP
         if (isDump)
         {
             gradientValues.DumpToFile(dumpFile, "Mean Gradient Input", 0, 20);
@@ -2473,6 +2482,7 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
             smoothedGradientValues.DumpToFile(dumpFile, "After-Calc Accumulated Variances", 0, 20);
             smoothedGradientValues.DumpToFile(dumpFile, "After-Calc Momentum", n, n + 20);
         }
+#endif
     }
 
     if (noiseStd > 0)
@@ -2491,11 +2501,13 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     functionValues.Print("Parameter Update");
 #endif
 
+#if OPEN_DUMP
     if (isDump)
     {
         fflush(dumpFile);
         fclose(dumpFile);
     }
+#endif
 }
 
 // protected:
