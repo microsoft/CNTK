@@ -1627,16 +1627,15 @@ void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
     ElemType learningRate,
     ElemType momentum,
     ElemType RMS_GAMMA,
-    const bool needAveMultiplier)
+    bool unitGainMomentum)
 {
-    UNUSED(needAveMultiplier);
-
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
     {
         NOT_IMPLEMENTED;
     }
 
     const ElemType floor = 1.0;
+    const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
 
     size_t n = GetNumElements();
     int blocksPerGrid = (c.GetNumElements() + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
@@ -1662,7 +1661,7 @@ void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
     _rmsprop4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
         avars, moms, val,
         Data(), ColOrRow2BlockId(), GetNumRows(),
-        n, learningRate, momentum, RMS_GAMMA, floor);
+        n, learningRate, momentum, RMS_GAMMA, floor, unitGainFactor);
 }
 
 template <class ElemType>
