@@ -58,7 +58,12 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %template(AxisVector) std::vector<CNTK::Axis>;
 %template(NDArrayViewPtrVector) std::vector<std::shared_ptr<CNTK::NDArrayView>>;
 %template(BoolVector) std::vector<bool>;
+
+#ifdef SWIGJAVA
+%ignore std::vector<CNTK::DeviceDescriptor>::vector(size_type);
+#endif
 %template(DeviceDescriptorVector) std::vector<CNTK::DeviceDescriptor>;
+
 %template(SizeTVectorVector) std::vector<std::vector<size_t>>;
 %template(FloatVectorVector) std::vector<std::vector<float>>;
 %template(DoubleVectorVector) std::vector<std::vector<double>>;
