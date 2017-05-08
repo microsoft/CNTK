@@ -22,6 +22,11 @@ public class Main {
         DeviceDescriptor device = DeviceDescriptor.UseDefaultDevice();
         File dataPath = new File(args[1]);
 
+
+        // Load the model.
+        // The model resnet20_cifar10_python.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
+        // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
+        // Renaming the output model might be necessary
         Function modelFunc = Function.Load(new File(dataPath, "resnet20_cifar10_python.dnn").getAbsolutePath(), device);
         Variable outputVar = modelFunc.getOutputs().get(0);
         Variable inputVar = modelFunc.getArguments().get(0);

@@ -1,9 +1,11 @@
 setlocal enableextensions enabledelayedexpansion
 set project_dir=%~f1
-set output_dir=%~f2
+set test_dir=%~f2
+set output_dir=%~f3
 
 echo Generating Java binding...
 echo The project directory is "%project_dir%"
+echo The test directory is "%test_dir%"
 echo The output directory is "%output_dir%"
 
 if not exist "%project_dir%com\microsoft\CNTK\" mkdir "%project_dir%com\microsoft\CNTK\"
@@ -32,7 +34,7 @@ rd com /q /s || (
 )
 
 rem build test projects
-cd "%project_dir%..\JavaEvalTest"
+cd "%test_dir%JavaEvalTest"
 echo Building java test projects.
 
 "%JAVA_HOME%\bin\javac" -cp "%project_dir%cntk.jar" src\Main.java || (
@@ -55,8 +57,8 @@ if not exist "%output_dir%java" (
 xcopy /Y "%project_dir%cntk.jar" "%output_dir%java\" || (
   echo Copying "%project_dir%cntk.jar" to "%output_dir%java" failed!
   exit /B 1)
-xcopy /Y "%project_dir%..\JavaEvalTest\src\Main.class" "%output_dir%java\" || (
-  echo Copying "%project_dir%..\JavaEvalTest\src\Main.class" to "%output_dir%java" failed!
+xcopy /Y "%test_dir%JavaEvalTest\src\Main.class" "%output_dir%java\" || (
+  echo Copying "%test_dir%JavaEvalTest\src\Main.class" to "%output_dir%java" failed!
   exit /B 1
 )
 

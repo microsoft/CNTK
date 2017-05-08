@@ -1,8 +1,8 @@
 dataDir: .
 
 tags: 
-  - bvt-l (build_sku == 'cpu')
-  - nightly-l (build_sku == 'cpu')
+  - bvt-l ((build_sku == 'cpu') or (build_sku == 'gpu'))
+  - nightly-l ((build_sku == 'cpu') or (build_sku == 'gpu'))
 
 testCases:
   Test case EvaluateSingleImage:

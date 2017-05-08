@@ -248,6 +248,7 @@ bindings/java/**/*.jar
 Tests/EndToEndTests/EvalClientTests/JavaEvalTest/.idea
 Tests/EndToEndTests/EvalClientTests/JavaEvalTest/data
 Tests/EndToEndTests/EvalClientTests/JavaEvalTest/out
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/**/*.class
 
 # Examples and Tutorials
 Examples/Image/DataSets/Pascal/VOC*

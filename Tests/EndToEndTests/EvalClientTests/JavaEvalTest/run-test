@@ -22,7 +22,7 @@ else
   ModelFile="$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn"
 fi
 
-LocalDataDir="$TEST_ROOT_DIR/../../bindings/java/JavaEvalTest/data"
+LocalDataDir="$TEST_ROOT_DIR/EvalClientTests/JavaEvalTest/data"
 if [ ! -d "$LocalDataDir" ]; then
   mkdir "$LocalDataDir"
 fi

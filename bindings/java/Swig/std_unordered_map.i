@@ -2,19 +2,6 @@
  * std_unordered_map.i
  *
  * SWIG typemaps for std::unordered_map< K, T>
- *
- * The C# wrapper is made to look and feel like a C# System.Collections.Generic.IDictionary<>.
- *
- * Using this wrapper is fairly simple. For example, to create a unordered_map from integers to doubles use:
- *
- *   %include <std_unordered_map.i>
- *   %template(MapIntDouble) std::unordered_map<int, double>
- *
- * Notes:
- * 1) IEnumerable<> is implemented in the proxy class which is useful for using LINQ with
- *    C++ std::unordered_map wrappers.
- *
- * Warning: heavy macro usage in this file. Use swig -E to get a sane view on the real file contents!
  * ----------------------------------------------------------------------------- */
 
 %{
