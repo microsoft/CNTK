@@ -128,7 +128,7 @@ Example:
     ... def f(x):
     ...    return sigmoid(x)
     >>> try:
-    ...     x = input((42,))
+    ...     x = C.input((42,))
     ...     y = f(x)
     ... except TypeError as e:
     ...     print('ERROR: ' + str(e))

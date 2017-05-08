@@ -9,15 +9,14 @@ Utils for operations unit tests
 """
 
 import numpy as np
-import pytest
-
+import cntk as C
 from cntk.tests.test_utils import *
-
 from cntk.device import cpu, gpu
 from ...ops.functions import Function
 from cntk.internal import sanitize_dtype_cntk
 from cntk.internal.utils import eval as cntk_eval
-from .. import constant, input
+from .. import constant
+
 
 def cntk_device(device_id):
     '''
@@ -40,7 +39,7 @@ def _test_unary_op(precision, device_id, op_func,
 
     value = AA(value, dtype=PRECISION_TO_TYPE[precision])
 
-    a = input(shape=value.shape,
+    a = C.input(shape=value.shape,
               dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
               name='a')
@@ -68,12 +67,12 @@ def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
     left_value = AA(left_operand, dtype=dt)
     right_value = AA(right_operand, dtype=dt)
 
-    a = input(shape=left_value.shape,
+    a = C.input(shape=left_value.shape,
               dtype=sanitize_dtype_cntk(precision),
               needs_gradient=True,
               name='a')
 
-    b = input(shape=right_value.shape,
+    b = C.input(shape=right_value.shape,
               dtype=sanitize_dtype_cntk(precision),
               needs_gradient=True,
               name='b')

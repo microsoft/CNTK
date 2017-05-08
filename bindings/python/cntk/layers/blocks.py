@@ -11,15 +11,14 @@ e.g. the LSTM block.
 
 from __future__ import division
 import numpy as np
-from cntk import input, placeholder, combine, alias, sequence, parameter, constant
-from cntk.variables import Record, Constant, Parameter
-from cntk.axis import Axis
-from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus
-from .typing import Signature
+from cntk import placeholder, combine, alias
+from cntk.variables import Constant, Parameter
+from cntk.ops import times, slice, sigmoid, tanh, softplus
+#from .typing import Signature
 from cntk.internal import _as_tuple
 from cntk.initializer import glorot_uniform
 from _cntk_py import InferredDimension
-from cntk.default_options import *
+from cntk.default_options import get_default_override, default_override_or
 
 from cntk.ops.functions import Function
 
@@ -96,11 +95,11 @@ def ForwardDeclaration(name='forward_declaration'):
      >>> # create a graph with a recurrent loop to compute the length of an input sequence
      >>> from cntk.layers.typing import *
      >>> x = C.input(**Sequence[Tensor[2]])
-     >>> ones_like_input = sequence.broadcast_as(1, x)  # sequence of scalar ones of same length as input
+     >>> ones_like_input = C.sequence.broadcast_as(1, x)  # sequence of scalar ones of same length as input
      >>> out_fwd = ForwardDeclaration()  # placeholder for the state variables
-     >>> out = sequence.past_value(out_fwd, initial_state=0) + ones_like_input
+     >>> out = C.sequence.past_value(out_fwd, initial_state=0) + ones_like_input
      >>> out_fwd.resolve_to(out)
-     >>> length = sequence.last(out)
+     >>> length = C.sequence.last(out)
      >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
      >>> x0
          array([[[ 0.,  1.],
@@ -114,7 +113,7 @@ def ForwardDeclaration(name='forward_declaration'):
     '''
     var_fwd = placeholder(name=name)
     def resolve_to(var):
-        from cntk import cntk_py
+        #from cntk import cntk_py
         #if isinstance(var, cntk_py.Function):
         #    var.replace_placeholders({var_fwd: var.output})  # resolves var_fwd := var
         #else:

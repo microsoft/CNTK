@@ -8,13 +8,13 @@
 Unit tests for Variable and its descendents.
 """
 
-from ..variables import *
+#from ..variables import *
 from .. import times, placeholder, constant, plus, input, alias
 import numpy as np
-
+import cntk as C
 import pytest
 
-VARIABLE_TYPES = [Constant, Parameter]
+VARIABLE_TYPES = [C.Constant, C.Parameter]
 
 
 @pytest.mark.parametrize("variable_type", VARIABLE_TYPES)
@@ -43,7 +43,7 @@ VALUES = [
         ]
 
 def test_parameter_set_value():
-    p = Parameter(shape=(2,3), init=1);
+    p = C.Parameter(shape=(2,3), init=1);
     n = np.random.randn(2, 3)
     p.value = n
     assert np.all(p.value == n.astype(p.dtype))
@@ -55,17 +55,17 @@ def test_parameter_set_value():
     value = output[op.output]
     assert np.all(value == 2*n.astype(p.dtype))
 
-    p.value = sanitize_value(p.shape, 1.0, np.float32, None)
+    p.value = C.internal.sanitize_value(p.shape, 1.0, np.float32, None)
     assert np.all(p.value == np.ones((2,3)))
 
 @pytest.mark.parametrize("value", VALUES)
 def test_constant_value(value):
-    c = Constant(value=value)
+    c = C.Constant(value=value)
     assert np.allclose(c.value, value)
 
 @pytest.mark.parametrize("value", VALUES)
 def test_parameter_value(value):
-    c = Parameter(init=value)
+    c = C.Parameter(init=value)
     assert np.allclose(c.value, value)
 
 def test_constant():

@@ -4,27 +4,20 @@
 # for full license information.
 # ==============================================================================
 
-import os
-import math
 import warnings
 import numpy as np
-from cntk import Value
-from cntk import Function
-from cntk import times, sequence, as_block, element_select
+from cntk import Value, Function, sequence, as_block, times, parameter, plus, reduce_sum
 from cntk.ops.tests.ops_test_utils import cntk_device
-from ..trainer import *
-from cntk.learners import *
-from cntk.layers import *
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
-from cntk import parameter, input, times, plus, reduce_sum, Axis, cntk_py
 import pytest
 from scipy.sparse import csr_matrix as csr
+import cntk as C
 
 @pytest.mark.parametrize("no_eval_function", [True, False])
 def test_trainer(tmpdir, no_eval_function):
-    in1 = input(shape=(1,))
-    labels = input(shape=(1,))
+    in1 = C.input(shape=(1,))
+    labels = C.input(shape=(1,))
     p = parameter(shape=(2,), init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
@@ -33,10 +26,10 @@ def test_trainer(tmpdir, no_eval_function):
     else:
         errs = classification_error(z, labels)
 
-    momentum_time_constant = momentum_as_time_constant_schedule(1100)
-    lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, (ce, errs),
-            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True)])
+    momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
+    lr_per_sample = C.learning_rate_schedule(0.007, C.UnitType.sample)
+    trainer = C.Trainer(z, (ce, errs),
+            [C.momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True)])
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}
@@ -52,19 +45,19 @@ def test_trainer(tmpdir, no_eval_function):
     # Ensure that Swig is not leaking raw types
     assert isinstance(trainer.model, Function)
     assert trainer.model.__doc__
-    assert isinstance(trainer.parameter_learners[0], Learner)
+    assert isinstance(trainer.parameter_learners[0], C.Learner)
 
 def test_output_to_retain():
-    in1 = input(shape=(1,))
-    labels = input(shape=(1,))
+    in1 = C.input(shape=(1,))
+    labels = C.input(shape=(1,))
     p = parameter(shape=(2,), init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
     errs = classification_error(z, labels)
-    momentum_time_constant = momentum_as_time_constant_schedule(1100)
-    lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, (ce, errs),
-            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True)])
+    momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
+    lr_per_sample = C.learning_rate_schedule(0.007, C.UnitType.sample)
+    trainer = C.Trainer(z, (ce, errs),
+            [C.momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True)])
     in1_value = [[1], [2]]
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}
@@ -76,7 +69,7 @@ def test_epochsize_wrn_for_momentum_time_constant():
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
 
-        momentum_as_time_constant_schedule(1100, epoch_size=1000)
+        C.momentum_as_time_constant_schedule(1100, epoch_size=1000)
 
         assert len(w) == 1
         assert issubclass(w[-1].category, RuntimeWarning)
@@ -86,7 +79,7 @@ def test_epochsize_wrn_for_parameter_schedule():
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
 
-        training_parameter_schedule(0.01, UnitType.sample, epoch_size=1000)
+        C.training_parameter_schedule(0.01, C.UnitType.sample, epoch_size=1000)
 
         assert len(w) == 1
         assert issubclass(w[-1].category, RuntimeWarning)
@@ -95,7 +88,7 @@ def test_epochsize_wrn_for_parameter_schedule():
 def test_eval_sparse_dense(tmpdir, device_id):
     from cntk import Axis
     from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
-    from cntk.ops import input, times
+    from cntk.ops import times
 
     input_vocab_dim = label_vocab_dim = 69
 
@@ -219,21 +212,21 @@ def test_model_not_criterion_subset():
     model2_dim = 4
     x = sequence.input((input_dim,))
 
-    core = Embedding(proj_dim)
-    model1 = Dense(model1_dim)(sequence.last(core(x)))
-    model1_label = input((model1_dim,))
+    core = C.layers.Embedding(proj_dim)
+    model1 = C.layers.Dense(model1_dim)(sequence.last(core(x)))
+    model1_label = C.input((model1_dim,))
     ce_model1 = cross_entropy_with_softmax(model1, model1_label)
     pe_model1 = classification_error(model1, model1_label)
     
-    model2 = Dense(model2_dim)(core(x))
+    model2 = C.layers.Dense(model2_dim)(core(x))
     model2_label = sequence.input((model2_dim,))
     ce_model2 = cross_entropy_with_softmax(model2, model2_label)
     pe_model2 = classification_error(model2, model2_label)
 
     ce = 0.5 * sequence.reduce_sum(ce_model2) + 0.5 * ce_model1
 
-    lr_schedule = learning_rate_schedule(0.003, UnitType.sample)
-    trainer_multitask = Trainer(model1, (ce, pe_model1), sgd(ce.parameters, lr=lr_schedule))
+    lr_schedule = C.learning_rate_schedule(0.003, C.UnitType.sample)
+    trainer_multitask = C.Trainer(model1, (ce, pe_model1), C.sgd(ce.parameters, lr=lr_schedule))
 
     x_data = np.asarray([[2., 1.], [1., 2.]], np.float32)
     model1_label_data = np.asarray([1., 0., 0.], np.float32)
@@ -245,40 +238,40 @@ def test_model_not_criterion_subset():
 def test_model_one_output_of_multi_output_function():
     input_dim = 2
     proj_dim = 11
-    x = input((input_dim,))
+    x = C.input((input_dim,))
 
-    x_placeholder = placeholder()
+    x_placeholder = C.placeholder()
     w = parameter((input_dim, proj_dim))
     b = parameter((proj_dim,))
     proj = times(x_placeholder, w)
     proj_plus_bias = proj + b
-    combined_model = as_block(combine([proj, proj_plus_bias]), [(x_placeholder, x)], 'dense_op')
+    combined_model = as_block(C.combine([proj, proj_plus_bias]), [(x_placeholder, x)], 'dense_op')
 
-    labels = input((proj_dim,))
-    lr_schedule = learning_rate_schedule(0.003, UnitType.sample)
+    labels = C.input((proj_dim,))
+    lr_schedule = C.learning_rate_schedule(0.003, C.UnitType.sample)
     ce = cross_entropy_with_softmax(combined_model.outputs[0], labels)
     pe = classification_error(combined_model.outputs[0], labels)
-    trainer_multitask = Trainer(combined_model.outputs[0], (ce, pe), sgd(ce.parameters, lr=lr_schedule))
+    trainer_multitask = C.Trainer(combined_model.outputs[0], (ce, pe), C.sgd(ce.parameters, lr=lr_schedule))
 
 
 def test_trainer_with_some_params_not_learned():
     input_dim = 2
     proj_dim = 2
-    x = input(shape=(input_dim,))
-    W = parameter(shape=(input_dim, proj_dim), init=glorot_uniform())
-    B = parameter(shape=(proj_dim,), init=glorot_uniform())
+    x = C.input(shape=(input_dim,))
+    W = parameter(shape=(input_dim, proj_dim), init=C.glorot_uniform())
+    B = parameter(shape=(proj_dim,), init=C.glorot_uniform())
     t = times(x, W)
     z = t + B
 
     W_orig_value = W.value
     B_orig_value = B.value
 
-    labels = input(shape=(proj_dim,))
+    labels = C.input(shape=(proj_dim,))
     ce = cross_entropy_with_softmax(z, labels)
     pe = classification_error(z, labels)
 
-    lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
-    trainer = Trainer(z, (ce, pe), sgd([W], lr_per_sample))
+    lr_per_sample = C.learning_rate_schedule(0.1, C.UnitType.sample)
+    trainer = C.Trainer(z, (ce, pe), C.sgd([W], lr_per_sample))
 
     x_value = [[1, 1],[2, 2]]
     label_value = [[0, 1], [1, 0]]
@@ -298,7 +291,7 @@ def test_disallow_seq_starts_with_Value_objects():
     one_hot_batch = [[2,5], [0,1,6]]
     dim = 10
 
-    in1 = input(shape=(dim,), is_sparse=True)
+    in1 = C.input(shape=(dim,), is_sparse=True)
     z = times(in1, np.eye(dim))
     batch = Value.one_hot(one_hot_batch, num_classes=dim)
 
@@ -309,20 +302,20 @@ def test_disallow_seq_starts_with_Value_objects():
         result = z.eval({in1: (batch, len(batch)*[True])})
 
 def test_scalar_input():
-    scalar = input((1,), dtype=np.float32, name='tscalar')
+    scalar = C.input((1,), dtype=np.float32, name='tscalar')
     op = scalar + parameter(init=np.asarray([1]), dtype=np.float32)
 
-    lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
-    trainer = Trainer(op, (op, None), sgd(op.parameters, lr_per_sample))
+    lr_per_sample = C.learning_rate_schedule(0.1, C.UnitType.sample)
+    trainer = C.Trainer(op, (op, None), C.sgd(op.parameters, lr_per_sample))
     trainer.train_minibatch({scalar: np.zeros((2,1), dtype=np.float32)})
 
     
 def test_empty_minibatch():
-    scalar = input((1,), dtype=np.float32, name='tscalar')
+    scalar = C.input((1,), dtype=np.float32, name='tscalar')
     op = scalar + parameter(init=np.asarray([1]), dtype=np.float32)
 
-    lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
-    trainer = Trainer(op, (op, None), sgd(op.parameters, lr_per_sample))
+    lr_per_sample = C.learning_rate_schedule(0.1, C.UnitType.sample)
+    trainer = C.Trainer(op, (op, None), C.sgd(op.parameters, lr_per_sample))
     trainer.train_minibatch({})
 
 

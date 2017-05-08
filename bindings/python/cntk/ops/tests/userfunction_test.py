@@ -10,13 +10,9 @@ Unit tests for function extension
 from __future__ import division, print_function
 import numpy as np
 import pytest
-import os 
 import cntk as C
 
-from cntk import *
-from cntk.train.trainer import *
-from cntk.learners import *
-from cntk.ops.functions import Function, UserFunction, UserFunctionDeserializer
+from cntk.ops.functions import Function, UserFunction
 from .ops_test_utils import AA
 
 class MyPlus(UserFunction):
@@ -27,7 +23,7 @@ class MyPlus(UserFunction):
         self.backward_calls = 0
 
     def infer_outputs(self):
-        return [output_variable(self.inputs[0].shape,
+        return [C.output_variable(self.inputs[0].shape,
             self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
 
     def clone(self, cloned_inputs):
@@ -63,9 +59,9 @@ class MyPlus(UserFunction):
 
 def test_ext_eval_1():
     dim = 4
-    p = parameter(shape=(dim,), init=10, name='p')
-    i = sequence.input(dim, needs_gradient=True, name='i_var')
-    m = user_function(MyPlus(i, constant(3)))
+    p = C.parameter(shape=(dim,), init=10, name='p')
+    i = C.sequence.input(dim, needs_gradient=True, name='i_var')
+    m = C.user_function(MyPlus(i, C.constant(3)))
     z = m+p
 
     input_data = np.random.rand(dim)
@@ -88,9 +84,9 @@ def test_ext_eval_freedimension_input():
 
 def test_ext_eval_2_only_param():
     dim = 4
-    p = parameter(shape=(dim,), init=10, name='p')
-    i = sequence.input(dim, needs_gradient=True, name='i_var')
-    m = user_function(MyPlus(p, constant(3)))
+    p = C.parameter(shape=(dim,), init=10, name='p')
+    i = C.sequence.input(dim, needs_gradient=True, name='i_var')
+    m = C.user_function(MyPlus(p, C.constant(3)))
     # combine does not work
     # z = combine([m.output])
     z = m+i
@@ -101,8 +97,8 @@ def test_ext_eval_2_only_param():
 
 def test_ext_eval_3_no_input():
     dim = 4
-    p = parameter(shape=(dim,), init=10, name='p')
-    m = user_function(MyPlus(p, constant(3)))
+    p = C.parameter(shape=(dim,), init=10, name='p')
+    m = C.user_function(MyPlus(p, C.constant(3)))
     z = m+0
 
     result = z.eval()
@@ -112,8 +108,8 @@ def test_ext_eval_3_no_input():
 def test_ext_eval_4_a_inside_graph():
     dim = 4
     p_init = 10
-    p = parameter(shape=(dim,), init=p_init, name='p')
-    m = user_function(MyPlus(p, constant(3)))
+    p = C.parameter(shape=(dim,), init=p_init, name='p')
+    m = C.user_function(MyPlus(p, C.constant(3)))
     z = p * m
 
     result = z.eval()
@@ -123,8 +119,8 @@ def test_ext_eval_4_a_inside_graph():
 def test_ext_eval_4_b_inside_graph():
     dim = 4
     p_init = 10
-    p = parameter(shape=(dim,), init=p_init, name='p')
-    z = user_function(p * MyPlus(p, constant(3)))
+    p = C.parameter(shape=(dim,), init=p_init, name='p')
+    z = C.user_function(p * MyPlus(p, C.constant(3)))
 
     result = z.eval()
     # No batch dimension since we have no input
@@ -133,9 +129,9 @@ def test_ext_eval_4_b_inside_graph():
 def test_ext_eval_5_times():
     dim = 2
     p_init = 10
-    p = parameter(shape=(dim,), init=p_init, name='p')
-    m = user_function(MyPlus(p, constant(3)))
-    z = times(m, parameter(shape=(2,50), init=2))
+    p = C.parameter(shape=(dim,), init=p_init, name='p')
+    m = C.user_function(MyPlus(p, C.constant(3)))
+    z = C.times(m, C.parameter(shape=(2,50), init=2))
 
     result = z.eval()
     # No batch dimension since we have no input
@@ -143,13 +139,13 @@ def test_ext_eval_5_times():
 
 def test_ext_eval_6_clone():
     dim = 4
-    i = sequence.input(dim, needs_gradient=True, name='i_var')
+    i = C.sequence.input(dim, needs_gradient=True, name='i_var')
     m = i + 3
 
-    p = parameter(shape=(dim,), init=10, name='p')
+    p = C.parameter(shape=(dim,), init=10, name='p')
     z = m + p
 
-    m_udf = user_function(MyPlus(i, constant(3)))
+    m_udf = C.user_function(MyPlus(i, C.constant(3)))
     z_clone = z.clone('share', {m : m_udf} );
 
     input_data = np.random.rand(dim)
@@ -158,10 +154,10 @@ def test_ext_eval_6_clone():
 
 def test_ext_eval_7_placeholder():
     dim = 4
-    p = parameter(shape=(dim,), init=10, name='p')
-    i = sequence.input(dim, needs_gradient=True, name='i_var')
-    pl = placeholder()
-    m = user_function(MyPlus(pl, constant(3)))
+    p = C.parameter(shape=(dim,), init=10, name='p')
+    i = C.sequence.input(dim, needs_gradient=True, name='i_var')
+    pl = C.placeholder()
+    m = C.user_function(MyPlus(pl, C.constant(3)))
     z = m+p
     z.replace_placeholder(i)
 
@@ -172,16 +168,16 @@ def test_ext_eval_7_placeholder():
 def test_ext_train(tmpdir):
     dim = 4
 
-    p = parameter(shape=(dim,), init=10)
-    i = sequence.input(dim, needs_gradient=True, name='i_var')
-    m = MyPlus(i, constant(3), 'my_plus')
+    p = C.parameter(shape=(dim,), init=10)
+    i = C.sequence.input(dim, needs_gradient=True, name='i_var')
+    m = MyPlus(i, C.constant(3), 'my_plus')
     # keeping m unwrapped since we need to access its member variables
-    z = user_function(m)+p
+    z = C.user_function(m)+p
 
-    momentum_time_constant = momentum_as_time_constant_schedule(1100)
-    lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, (z+0, z+0), \
-                      [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
+    momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
+    lr_per_sample = C.learning_rate_schedule(0.007, C.UnitType.sample)
+    trainer = C.Trainer(z, (z+0, z+0), \
+                      [C.momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
                       True)])
 
     i = 0
@@ -199,15 +195,15 @@ def test_ext_train(tmpdir):
 
     buf = open(filepath, 'rb').read()
 
-    # this is only need for Python 2.7 
+    # this is only need for Python 2.7
     # (which does not distinguish between bytes and strings)
     if isinstance(buf, str):
         buf = bytearray(buf)
 
     z1 = Function.load(buf)
-    
+
     m1 = z1.find_by_name('my_plus')
-    #m1 is an instance of UserFunction, cannot directly downcast it to MyPlus, 
+    #m1 is an instance of UserFunction, cannot directly downcast it to MyPlus,
     #using serialize as workaround:
     state = m1.serialize()['state']
 
@@ -215,9 +211,9 @@ def test_ext_train(tmpdir):
 
 def test_udf_clone():
     dim = 4
-    i = sequence.input(dim, needs_gradient=True, name='i_var')
-    m_udf = user_function(MyPlus(i, constant(3)))
-    p = parameter(shape=(dim,), init=10, name='p')
+    i = C.sequence.input(dim, needs_gradient=True, name='i_var')
+    m_udf = C.user_function(MyPlus(i, C.constant(3)))
+    p = C.parameter(shape=(dim,), init=10, name='p')
     z = m_udf + p
 
     z_clone = z.clone('share');
@@ -242,7 +238,7 @@ def test_ext_backpropstate(payload):
             super(TestBackPropState, self).__init__([arg])
 
         def infer_outputs(self):
-            return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+            return [C.output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
 
         def forward(self, argument, device=None, outputs_to_retain=None):
             return self.payload, argument
@@ -253,13 +249,13 @@ def test_ext_backpropstate(payload):
 
     dim = 4
 
-    p = parameter(shape=(dim,), init=10)
-    in1 = input(dim, needs_gradient=True, name='i_var')
-    m = user_function(TestBackPropState(in1, payload))
+    p = C.parameter(shape=(dim,), init=10)
+    in1 = C.input(dim, needs_gradient=True, name='i_var')
+    m = C.user_function(TestBackPropState(in1, payload))
     z = m+p
 
-    lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(None, (z), [sgd(z.parameters, lr_per_sample)])
+    lr_per_sample = C.learning_rate_schedule(0.007, C.UnitType.sample)
+    trainer = C.Trainer(None, (z), [C.sgd(z.parameters, lr_per_sample)])
 
     for i in range(100):
         input_data = np.random.rand(dim)
@@ -281,7 +277,7 @@ class LambdaFunc(UserFunction):
         return 'conditional_exec_lambda'
 
     def infer_outputs(self):
-        return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+        return [C.output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
 
     def forward(self, argument, device=None, outputs_to_retain=None):
         if self.when(argument):
@@ -304,27 +300,27 @@ def test_ext_lambdafunc(tmpdir):
 
     cb = CallbackCounter()
 
-    p = parameter(shape=(dim,), init=1)
-    i = input(dim, needs_gradient=True, name='i_var')
+    p = C.parameter(shape=(dim,), init=1)
+    i = C.input(dim, needs_gradient=True, name='i_var')
     k = i*p
     m = LambdaFunc(k,
             when=lambda arg: np.sum(arg)>1,
             execute=cb.inc)
-    m = user_function(m)
+    m = C.user_function(m)
     z0 = m+0
 
     filepath = str(tmpdir / 'test_ext_lambdafunc.dat')
     z0.save(filepath)
     z = Function.load(filepath, udf_factory_callback_map =
         {
-            'conditional_exec_lambda' :     
-            lambda x, *unused: 
+            'conditional_exec_lambda' :
+            lambda x, *unused:
                 LambdaFunc(x, when=lambda arg: np.sum(arg)>1, execute=cb.inc)
         })
-    momentum_time_constant = momentum_as_time_constant_schedule(1100)
-    lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, (z+0, z+0), \
-                      [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
+    momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
+    lr_per_sample = C.learning_rate_schedule(0.007, C.UnitType.sample)
+    trainer = C.Trainer(z, (z+0, z+0), \
+                      [C.momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
                       True)])
 
     i = 0
@@ -340,25 +336,25 @@ class PlusAndLast(UserFunction):
     impl_func = None
 
     def __init__(self, arg1, arg2, name='f1'):
-        i1 = input(arg1.shape, arg1.dtype, name='i1', dynamic_axes=arg1.dynamic_axes)
-        i2 = input(arg2.shape, arg2.dtype, name='i2', dynamic_axes=arg2.dynamic_axes)
-        self.impl_func = sequence.last(i1 + sequence.broadcast_as(i2, i1))
+        i1 = C.input(arg1.shape, arg1.dtype, name='i1', dynamic_axes=arg1.dynamic_axes)
+        i2 = C.input(arg2.shape, arg2.dtype, name='i2', dynamic_axes=arg2.dynamic_axes)
+        self.impl_func = C.sequence.last(i1 + C.sequence.broadcast_as(i2, i1))
 
         super(PlusAndLast, self).__init__([arg1, arg2], name=name)
 
     def infer_outputs(self):
         impl_func_output = self.impl_func.output
-        return [output_variable(impl_func_output.shape, impl_func_output.dtype, impl_func_output.dynamic_axes)]
+        return [C.output_variable(impl_func_output.shape, impl_func_output.dtype, impl_func_output.dynamic_axes)]
 
     def forward(self, arguments, device=None, outputs_to_retain=None):
         _, result = self.impl_func.forward({self.impl_func.arguments[0] : arguments[0], self.impl_func.arguments[1] : arguments[1]}, [self.impl_func.output])
         return None, result[self.impl_func.output]
 
 def test_udf_plus_and_last():
-    x = sequence.input(shape=(2,))
-    y = input(shape=(2,))
+    x = C.sequence.input(shape=(2,))
+    y = C.input(shape=(2,))
 
-    func = user_function(PlusAndLast(x, y))
+    func = C.user_function(PlusAndLast(x, y))
 
     dt_precision = np.float32
     operand1 = [AA([[1., 2.], [3., 4.]], dtype=dt_precision)]
@@ -375,8 +371,8 @@ class MultiOutputUserFunction(UserFunction):
         super(MultiOutputUserFunction, self).__init__([arg1, arg2], name=name)
 
     def infer_outputs(self):
-        return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes),
-                output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+        return [C.output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes),
+                C.output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
 
     def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
         assert len(self.inputs)==2
@@ -395,9 +391,9 @@ class MultiOutputUserFunction(UserFunction):
 
 def test_multioutput_udf():
     dim = 2
-    x = sequence.input(dim, needs_gradient=True, name='x')
-    y = sequence.input(dim, needs_gradient=True, name='y')
-    op = user_function(MultiOutputUserFunction(x, y))
+    x = C.sequence.input(dim, needs_gradient=True, name='x')
+    y = C.sequence.input(dim, needs_gradient=True, name='y')
+    op = C.user_function(MultiOutputUserFunction(x, y))
 
     x_data = [AA([[1., 2.], [3., 4.]], dtype=np.float32)]
     y_data = [AA([[5., 6.], [7., 8.]], dtype=np.float32)]
@@ -412,9 +408,9 @@ def test_multioutput_udf():
 
 def test_udf_op_name():
     dim = 4
-    p = parameter(shape=(dim,), init=10, name='p')
-    i = input(dim, needs_gradient=True, name='i_var')
-    m = user_function(MyPlus(i, constant(3)))
+    p = C.parameter(shape=(dim,), init=10, name='p')
+    i = C.input(dim, needs_gradient=True, name='i_var')
+    m = C.user_function(MyPlus(i, C.constant(3)))
     assert str(m.root_function) != ''
 
 class MyPlusWithNoGradientToRightOperand(UserFunction):
@@ -422,7 +418,7 @@ class MyPlusWithNoGradientToRightOperand(UserFunction):
         super(MyPlusWithNoGradientToRightOperand, self).__init__([arg1, arg2], name=name)
 
     def infer_outputs(self):
-        return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+        return [C.output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
 
     def forward(self, arguments, device=None, outputs_to_retain=None):
         assert len(self.inputs)==2
@@ -436,9 +432,9 @@ class MyPlusWithNoGradientToRightOperand(UserFunction):
 
 def test_udf_no_gradient_for_some_inputs():
     dim = 2
-    x = sequence.input(dim, needs_gradient=True, name='x')
-    y = sequence.input(dim, needs_gradient=True, name='y')
-    op = user_function(MyPlusWithNoGradientToRightOperand(x, y))
+    x = C.sequence.input(dim, needs_gradient=True, name='x')
+    y = C.sequence.input(dim, needs_gradient=True, name='y')
+    op = C.user_function(MyPlusWithNoGradientToRightOperand(x, y))
 
     x_data = [AA([[1., 2.], [3., 4.]], dtype=np.float32)]
     y_data = [AA([[5., 6.], [7., 8.]], dtype=np.float32)]
@@ -454,7 +450,7 @@ class MyPlusWithNoGradientNeededForOutput(UserFunction):
         super(MyPlusWithNoGradientNeededForOutput, self).__init__([arg1, arg2], name=name)
 
     def infer_outputs(self):
-        return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes, needs_gradient=False)]
+        return [C.output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes, needs_gradient=False)]
 
     def forward(self, arguments, device=None, outputs_to_retain=None):
         assert len(self.inputs)==2
@@ -469,9 +465,9 @@ class MyPlusWithNoGradientNeededForOutput(UserFunction):
 
 def test_udf_output_needs_no_gradient():
     dim = 2
-    x = sequence.input(dim, needs_gradient=True, name='x')
-    y = sequence.input(dim, needs_gradient=True, name='y')
-    op = user_function(MyPlusWithNoGradientNeededForOutput(x, y))
+    x = C.sequence.input(dim, needs_gradient=True, name='x')
+    y = C.sequence.input(dim, needs_gradient=True, name='y')
+    op = C.user_function(MyPlusWithNoGradientNeededForOutput(x, y))
 
     x_data = [AA([[1., 2.], [3., 4.]], dtype=np.float32)]
     y_data = [AA([[5., 6.], [7., 8.]], dtype=np.float32)]
@@ -485,17 +481,17 @@ def test_udf_output_needs_no_gradient():
 
 
 def test_native_user_function():
-    ops.register_native_user_function('NativeUserTimesFunction', 'Cntk.ExtensibilityExamples-' + C.__version__.rstrip('+'), 'CreateUserTimesFunction')
-    dev = cpu()
-    x = input((2))
-    w = parameter((2, 2), init=np.asarray([[0.5, 2], [-0.5, 1.5]], dtype=np.float32), device=dev)
+    C.ops.functions.register_native_user_function('NativeUserTimesFunction', 'Cntk.ExtensibilityExamples-' + C.__version__.rstrip('+'), 'CreateUserTimesFunction')
+    dev = C.cpu()
+    x = C.input((2))
+    w = C.parameter((2, 2), init=np.asarray([[0.5, 2], [-0.5, 1.5]], dtype=np.float32), device=dev)
     attributes = {'param_rank' : 2, 'padding' : True}
-    op = ops.native_user_function('NativeUserTimesFunction', [w, x], attributes, 'native_user_times_function')
+    op = C.ops.functions.native_user_function('NativeUserTimesFunction', [w, x], attributes, 'native_user_times_function')
 
-    x_data = NDArrayView.from_dense(np.asarray([[0.1, 0.2], [-0.1, 0.3]], dtype=np.float32), device=dev)
+    x_data = C.NDArrayView.from_dense(np.asarray([[0.1, 0.2], [-0.1, 0.3]], dtype=np.float32), device=dev)
     result = op.eval({x : x_data}, device=dev)
     assert np.allclose(result, [[-0.05, 0.5], [-0.2, 0.25]])
 
     native_times_primitive = op.find_by_name('native_user_times_function')
     assert native_times_primitive.attributes == attributes
- 
+
