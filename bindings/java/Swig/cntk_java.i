@@ -30,7 +30,7 @@
 
 // Java specific extention.
 %typemap(javacode) CNTK::DeviceDescriptor %{
-    public java.util.ArrayList<DeviceDescriptor> getAllDevices() {
+    public java.util.List<DeviceDescriptor> getAllDevices() {
         DeviceDescriptorVector devices = GetAllDevices();
         java.util.ArrayList<DeviceDescriptor> ret = new java.util.ArrayList<DeviceDescriptor>((int)devices.size());
         for (int i = 0; i < devices.size(); ++i){
@@ -99,7 +99,7 @@
 
     private UnorderedMapVariableValuePtr outMap = new UnorderedMapVariableValuePtr();
 
-    public java.util.ArrayList<Variable> getOutputs() {
+    public java.util.List<Variable> getOutputs() {
         if (outputVector == null) {
             outputVector = GetOutputs();
             outputList = new java.util.ArrayList<Variable>((int)outputVector.size());
@@ -110,7 +110,7 @@
         return outputList;
     }
 
-    public java.util.ArrayList<Variable> getArguments() {
+    public java.util.List<Variable> getArguments() {
         if (argumentVector == null) {
             argumentVector = GetArguments();
             argumentList = new java.util.ArrayList<Variable>((int)argumentVector.size());
