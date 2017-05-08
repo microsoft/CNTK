@@ -35,6 +35,16 @@ def cntk_device(device_id):
         return gpu(device_id)
 
 
+def mem_used():
+    '''
+    Return the non-swapped physical memory the Python process is using.
+    '''
+    import os
+    import psutil
+    process = psutil.Process(os.getpid())
+    return process.memory_info().rss
+
+
 def _test_unary_op(precision, device_id, op_func,
                    value, expected_forward, expected_backward_all, op_param_dict={}):
 
