@@ -1561,14 +1561,15 @@ __global__ void _rmsprop(
     ElemType learningRate,
     ElemType momentum,
     ElemType RMS_GAMMA,
-    ElemType floor)
+    ElemType floor,
+    ElemType unitGainFactor)
 {
     CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i >= N)
         return;
 
     avars[i] = RMS_GAMMA * avars[i] + (ElemType(1.0) - RMS_GAMMA) * (mean_grad[i] * mean_grad[i]);
-    moms[i] = moms[i] * momentum + (mean_grad[i] * learningRate) / (sqrt(avars[i] + floor));
+    moms[i] = moms[i] * momentum + unitGainFactor * (mean_grad[i] * learningRate) / (sqrt(avars[i] + floor));
     val[i] -= moms[i];
 }
 
@@ -1580,7 +1581,8 @@ __global__ void _rmsprop4BlockSparseCol(
     ElemType learningRate,
     ElemType momentum,
     ElemType RMS_GAMMA,
-    ElemType floor)
+    ElemType floor,
+    ElemType unitGainFactor)
 {
     CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i >= N)
@@ -1589,7 +1591,7 @@ __global__ void _rmsprop4BlockSparseCol(
     ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, i);
 
     avars[i] = RMS_GAMMA * avars[i] + (ElemType(1.0) - RMS_GAMMA) * (g * g);
-    moms[i] = moms[i] * momentum + (g * learningRate) / (sqrt(avars[i] + floor));
+    moms[i] = moms[i] * momentum + unitGainFactor * (g * learningRate) / (sqrt(avars[i] + floor));
     val[i] -= moms[i];
 }
 

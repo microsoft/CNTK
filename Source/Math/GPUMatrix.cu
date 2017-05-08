@@ -1469,11 +1469,10 @@ void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
                                   ElemType learningRate,
                                   ElemType momentum,
                                   ElemType RMS_GAMMA,
-                                  const bool needAveMultiplier)
+                                  bool unitGainMomentum)
 {
-    UNUSED(needAveMultiplier);
-
     const ElemType floor = 1.0;
+    const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
     ElemType* mean_grad = gradients.Data();
     ElemType* val = functionValues.Data();
 
@@ -1498,7 +1497,7 @@ void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
 
     _rmsprop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, moms, val, mean_grad, n,
                                                                        learningRate, momentum, RMS_GAMMA,
-                                                                       floor);
+                                                                       floor, unitGainFactor);
 }
 
 template <class ElemType>

@@ -270,7 +270,7 @@ void GPUSparseMatrix<ElemType>::Adam(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>
 }
 
 template<class ElemType>
-void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>&, GPUMatrix<ElemType>&, ElemType, ElemType, ElemType, const bool)
+void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>&, GPUMatrix<ElemType>&, ElemType, ElemType, ElemType, bool)
 {
 }
 
@@ -1115,7 +1115,7 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemTyp
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType momentum, ElemType RMS_GAMMA, const bool needAveMultiplier)
+void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType momentum, ElemType RMS_GAMMA, bool unitGainMomentum)
 {
 
 }

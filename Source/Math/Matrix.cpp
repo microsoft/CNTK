@@ -1586,7 +1586,7 @@ void Matrix<ElemType>::MomentumSGDUpdate(Matrix<ElemType>& gradients,
     DecideAndMoveToRightDevice(smoothedGradients, gradients, *this);
 
     //printf("%s\n", unitGainMomentum ? "true" : "false");
-    unitGainMomentum = false;
+    //unitGainMomentum = false;
     const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
@@ -1775,15 +1775,15 @@ void Matrix<ElemType>::RmsPropUpdate(Matrix<ElemType>& gradients,
                                    const double learningRate,
                                    const double momentum,
                                    ElemType RMS_GAMMA,
-                                   const bool needAveMultiplier)
+                                   bool unitGainMomentum)
 {
     DecideAndMoveToRightDevice(*this, gradients, functionValues);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
-        { m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, (ElemType)learningRate, (ElemType)momentum, RMS_GAMMA, needAveMultiplier); SetDataLocation(CPU); },
-        { m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learningRate, (ElemType)momentum, RMS_GAMMA, needAveMultiplier); SetDataLocation(GPU); },
+        { m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, (ElemType)learningRate, (ElemType)momentum, RMS_GAMMA, unitGainMomentum); SetDataLocation(CPU); },
+        { m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learningRate, (ElemType)momentum, RMS_GAMMA, unitGainMomentum); SetDataLocation(GPU); },
         { NOT_IMPLEMENTED; },
-        { gradients.m_GPUSparseMatrix->RmsProp(*m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learningRate, (ElemType)momentum, RMS_GAMMA, needAveMultiplier); SetDataLocation(GPU); });
+        { gradients.m_GPUSparseMatrix->RmsProp(*m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learningRate, (ElemType)momentum, RMS_GAMMA, unitGainMomentum); SetDataLocation(GPU); });
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 

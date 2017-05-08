@@ -233,7 +233,7 @@ public:
                   ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum);
 
     void RmsProp(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate,
-                     ElemType momentum, ElemType RMS_GAMMA, const bool needAveMultiplier);
+                     ElemType momentum, ElemType RMS_GAMMA, bool unitGainMomentum);
 
     void AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
 

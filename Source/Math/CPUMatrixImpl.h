@@ -1275,9 +1275,10 @@ void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
                                   ElemType learningRate,
                                   ElemType momentum,
                                   ElemType RMS_GAMMA,
-                                  const bool needAveMultiplier)
+                                  bool unitGainMomentum)
 {
     const ElemType floor = 1.0;
+    const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
 
     size_t n = gradients.GetNumElements();
     ElemType* mean_grad = gradients.Data();
@@ -1307,7 +1308,7 @@ void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
     for (long i = 0; i < n; i++)
     {
         avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (mean_grad[i] * mean_grad[i]);
-        moms[i] = moms[i] * momentum + (mean_grad[i] * learningRate) / (sqrt(avars[i] + floor));
+        moms[i] = moms[i] * momentum + unitGainFactor * (mean_grad[i] * learningRate) / (sqrt(avars[i] + floor));
         val[i] -= moms[i];
     }
 }

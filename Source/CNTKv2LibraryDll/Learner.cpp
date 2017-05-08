@@ -750,7 +750,7 @@ namespace CNTK
                                               learningRate,
                                               momentum,
                                               ElementType(m_gamma),
-                                              m_needAveMultiplier);
+                                              UseUnitGainMomentum());
     }
 
     // Explicit template instantiations
