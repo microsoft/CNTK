@@ -1353,7 +1353,7 @@ ifeq ("$(JAVA_SUPPORT)","true")
 
 BINDINGS_DIR=bindings
 JAVA_SWIG_DIR=$(BINDINGS_DIR)/java/Swig
-JAVA_TEST_DIR=$(BINDINGS_DIR)/java/JavaEvalTest
+JAVA_TEST_DIR=Tests/EndToEndTests/EvalClientTests/JavaEvalTest
 GENERATED_JAVA_DIR=$(JAVA_SWIG_DIR)/com/microsoft/CNTK
 JDK_BIN_PATH=$(JDK_PATH)/bin
 JDK_INCLUDE_PATH:=$(JDK_PATH)/include
