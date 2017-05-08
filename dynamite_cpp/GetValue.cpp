@@ -338,11 +338,11 @@ class Memoize
             isTimes && f0.m_inputs[1].m_dataFields->m_value && (f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
             op == PrimitiveOpType::Splice ||
             batchSize == 1;
-        fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
-                isFree ? -1 : (int)m_numBatchedLaunches,
-                doNaively ? "" : "batch-",
-                (int)batchSize, f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str(),
-                (int)m_schedule.numBatchableOpsPending());
+        //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
+        //        isFree ? -1 : (int)m_numBatchedLaunches,
+        //        doNaively ? "" : "batch-",
+        //        (int)batchSize, f0.OpName().c_str(), f0.m_outputs[0].Shape().AsString().c_str(),
+        //        (int)m_schedule.numBatchableOpsPending());
         if (doNaively)
         {
             if (op == PrimitiveOpType::Splice && batchSize != 1)

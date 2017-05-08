@@ -666,15 +666,15 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
                               //  InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName,{ Axis::DefaultBatchAxis() }) }, device);
                               { features, labels }, device);
         }
-        vector<vector<vector<Variable>>> vargs(args.size());
-        for (size_t i = 0; i < args.size(); i++)
-        {
-            let& batch = args[i]; // vector of variable-len tensors
-            auto& vbatch = vargs[i];
-            vbatch.resize(batch.size());
-            for (size_t j = i; j < batch.size(); j++)
-                vbatch[j] = std::move(ToVector(batch[j]));
-        }
+        //vector<vector<vector<Variable>>> vargs(args.size());
+        //for (size_t i = 0; i < args.size(); i++)
+        //{
+        //    let& batch = args[i]; // vector of variable-len tensors
+        //    auto& vbatch = vargs[i];
+        //    vbatch.resize(batch.size());
+        //    for (size_t j = i; j < batch.size(); j++)
+        //        vbatch[j] = std::move(ToVector(batch[j]));
+        //}
         //mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value()->AsScalar<float>();
         //let s2sLoss = Batch::sum(Batch::Map(d_model_fn1)(vargs[0], vargs[0])); // for now auto-encoder
         //s2sLoss.Value();
