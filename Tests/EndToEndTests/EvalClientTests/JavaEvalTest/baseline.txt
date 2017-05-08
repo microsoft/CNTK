@@ -1,56 +1,40 @@
 CPU info:
-    CPU Model Name: Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
-    Hardware threads: 8
-    Total Memory: 16607308 kB
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 24
+    Total Memory: 268381192 kB
 -------------------------------------------------------------------
-+ [[ -z C:\repos\test_data ]]
-+ [[ ! -d C:\repos\test_data ]]
++ set -e -o pipefail
++ [[ -z c:\Data\CNTKTestData ]]
++ [[ ! -d c:\Data\CNTKTestData ]]
 + '[' Windows_NT == Windows_NT ']'
-+ '[' release == release ']'
-+ TEST_STRING=Release
-+ '[' cpu == cpu ']'
-+ TEST_STRING=Release_CpuOnly
-+ SOURCE_DIR='C:\repos\cntk'
-+ DLL_DIR='C:\repos\cntk\x64\Release_CpuOnly'
-+ cd /cygdrive/c/repos/cntk/x64/release_CpuOnly
-+ ../../bindings/java/Swig/run-java-test.cmd 'C:\repos\cntk' 'C:\repos\cntk\x64\Release_CpuOnly'
-
-C:\repos\cntk\x64\release_CpuOnly>SET SOL_DIR=C:\repos\cntk 
-
-C:\repos\cntk\x64\release_CpuOnly>SET BUILD_PATH=C:\repos\cntk\x64\Release_CpuOnly 
-
-C:\repos\cntk\x64\release_CpuOnly>SET START_PATH=C:\cygwin64\usr\local\bin;C:\cygwin64\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\ProgramData\Oracle\Java\javapath;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\cmake\bin;C:\Program Files\Java\jdk1.8.0_121;C:\Program Files\Java\jdk1.8.0_121\bin 
-
-C:\repos\cntk\x64\release_CpuOnly>SET PATH=C:\cygwin64\usr\local\bin;C:\cygwin64\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\ProgramData\Oracle\Java\javapath;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\cmake\bin;C:\Program Files\Java\jdk1.8.0_121;C:\Program Files\Java\jdk1.8.0_121\bin;C:\repos\cntk\x64\Release_CpuOnly 
-
-C:\repos\cntk\x64\release_CpuOnly>pushd "C:\repos\cntk\bindings\java\JavaEvalTest" 
-
-C:\repos\cntk\bindings\java\JavaEvalTest>"C:\Program Files\Java\jdk1.8.0_121\bin\javac" -cp "C:\repos\cntk\bindings\java\SwigProxyClasses\cntk.jar" src\Main.java   || (
-echo "Java Compilation Failed"  
- popd 
- SET PATH="C:\cygwin64\usr\local\bin;C:\cygwin64\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\ProgramData\Oracle\Java\javapath;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\cmake\bin;C:\Program Files\Java\jdk1.8.0_121;C:\Program Files\Java\jdk1.8.0_121\bin"   
- EXIT /B 1 
-) 
-
-C:\repos\cntk\bindings\java\JavaEvalTest>"C:\Program Files\Java\jdk1.8.0_121\bin\java" -Djava.library.path=C:\repos\cntk\x64\Release_CpuOnly -classpath "C:\repos\cntk\bindings\java\JavaEvalTest\src;C:\repos\cntk\bindings\java\SwigProxyClasses\cntk.jar" Main   || (
-echo "Running Java Failed"  
- popd 
- SET PATH="C:\cygwin64\usr\local\bin;C:\cygwin64\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\ProgramData\Oracle\Java\javapath;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\cmake\bin;C:\Program Files\Java\jdk1.8.0_121;C:\Program Files\Java\jdk1.8.0_121\bin"   
- EXIT /B 1 
-) 
-EvaluateSingleImage-1.887479 
--4.768533 
-0.1516971 
-6.805476 
--0.3840595 
-3.4106512 
-1.3302777 
--0.87714916 
--2.18046 
--4.1666183 
+++ cygpath -au 'c:\Data\CNTKTestData/Bindings/Java'
++ TestDataDir=/cygdrive/c/Data/CNTKTestData/Bindings/Java
+++ cygpath -au 'c:\Data\CNTKTestData/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn'
++ ModelFile=/cygdrive/c/Data/CNTKTestData/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn
++ LocalDataDir=/cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/../../bindings/java/JavaEvalTest/data
++ '[' '!' -d /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/../../bindings/java/JavaEvalTest/data ']'
++ mkdir /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/../../bindings/java/JavaEvalTest/data
++ cp /cygdrive/c/Data/CNTKTestData/Bindings/Java/00000.png /cygdrive/c/Data/CNTKTestData/Bindings/Java/00001.png /cygdrive/c/Data/CNTKTestData/Bindings/Java/00002.png /cygdrive/c/Data/CNTKTestData/Bindings/Java/00003.png /cygdrive/c/Data/CNTKTestData/Bindings/Java/00004.png /cygdrive/c/Data/CNTKTestData/Bindings/Java/00005.png /cygdrive/c/Data/CNTKTestData/Bindings/Java/z.model /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/../../bindings/java/JavaEvalTest/data
++ cp /cygdrive/c/Data/CNTKTestData/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/../../bindings/java/JavaEvalTest/data
++ '[' Windows_NT == Windows_NT ']'
+++ cygpath -aw /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/debug_CpuOnly
++ DllDir='C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\debug_CpuOnly'
+++ cygpath -aw /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/../../bindings/java/JavaEvalTest/data
++ WindowsDataDir='C:\jenkins\workspace\CNTK-Test-Windows-W1\bindings\java\JavaEvalTest\data'
++ PATH='/cygdrive/c/Program Files/Microsoft MPI/Bin:/cygdrive/c/ProgramData/Oracle/Java/javapath:/cygdrive/c/Windows/system32:/cygdrive/c/Windows:/cygdrive/c/Windows/System32/Wbem:/cygdrive/c/Windows/System32/WindowsPowerShell/v1.0:/cygdrive/c/Program Files/Mellanox/MLNX_VPI/IB/Tools:/cygdrive/c/Program Files/Mellanox/MLNX_CIMProvider/lib/mft:/cygdrive/c/Program Files (x86)/NVIDIA Corporation/PhysX/Common:/cygdrive/c/Program Files (x86)/Windows Kits/8.1/Windows Performance Toolkit:/cygdrive/c/Program Files/Microsoft SQL Server/110/Tools/Binn:/usr/bin:/cygdrive/c/Git/cmd:/cygdrive/c/Program Files (x86)/Microsoft SDKs/TypeScript/1.0:/cygdrive/c/local/systools:/cygdrive/c/Program Files/Git/cmd:/cygdrive/c/Users/svcphil/.dnx/bin:/cygdrive/c/Program Files/Microsoft DNX/Dnvm:/cygdrive/c/Program Files/Microsoft SQL Server/120/Tools/Binn:/cygdrive/c/Program Files/Microsoft SQL Server/130/Tools/Binn:/cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/debug_CpuOnly'
++ cd /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/debug_CpuOnly
++ java.exe '-Djava.library.path=C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\debug_CpuOnly' -classpath 'C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\debug_CpuOnly\java;C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\debug_CpuOnly\java\cntk.jar' Main debug 'C:\jenkins\workspace\CNTK-Test-Windows-W1\bindings\java\JavaEvalTest\data'
+Working Directory = C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\debug_CpuOnly
+EvaluateSingleImage
+2.8203409 
+9.967622 
+0.028943261 
+4.3497787 
+-12.513831 
+7.1701574 
+-4.5479918 
+-3.6897635 
+-4.39384 
+1.4517208 
 Evaluation Complete
-
-C:\repos\cntk\bindings\java\JavaEvalTest>popd
-
-C:\repos\cntk\x64\Release_CpuOnly>SET PATH="C:\cygwin64\usr\local\bin;C:\cygwin64\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\ProgramData\Oracle\Java\javapath;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\cmake\bin;C:\Program Files\Java\jdk1.8.0_121;C:\Program Files\Java\jdk1.8.0_121\bin"  
-+ exit 0
+Selected CPU as the process wide default device.
