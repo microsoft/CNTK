@@ -68,7 +68,7 @@ def test_op_combine(left_operand, right_operand, operations, expected_results, d
 
 
 def test_op_combine_input_var():
-    from .. import combine, input
+    from .. import combine
 
     x = C.input(shape=(2))
     func = combine([x])

@@ -3,6 +3,7 @@ from enum import Enum, unique
 import warnings
 import collections
 
+import cntk
 from cntk import cntk_py, Value
 from cntk.device import DeviceDescriptor, cpu
 from cntk.internal import map_if_possible, typemap, sanitize_var_map,\
@@ -120,13 +121,13 @@ class Function(cntk_py.Function):
         # An input is created if the parameter is annotated with a Tensor(...) type.
         # In this case, CNTK will immediately trigger type inference.
         # Unannotated parameters will yield placeholder_variables instead.
-        from .. import placeholder, input
+        from .. import placeholder
         def make_arg_variable(name, annotations):
             from ..variables import Variable
             var_type = annotations.get(name, None)
             var_type = Variable._Type._sanitize(var_type)
             if isinstance(var_type, Variable._Type):
-                return input(name=name, **var_type)
+                return cntk.input(name=name, **var_type)
             else:
                 return placeholder(name=name)
 
@@ -298,13 +299,13 @@ class Function(cntk_py.Function):
         '''
         arg_map = self.argument_map(*arg_types, **kwarg_types) # map type specs to Function parameters
         def to_input(arg_type, name):
-            from cntk import input
+            #from cntk import input
             from ..variables import Variable
             if isinstance(arg_type, (int, tuple)): # just passed a shape
-                return input(shape=_as_tuple(arg_type), name=name)
+                return cntk.input(shape=_as_tuple(arg_type), name=name)
             arg_type = Variable._Type._sanitize(arg_type)
             if isinstance(arg_type, Variable._Type): # full type given as Tensor[...] etc.
-                return input(name=name, **arg_type)
+                return cntk.input(name=name, **arg_type)
             raise TypeError("update_signature() expects arguments of type int, tuple of int, or Type.Variable")
         # map the given types:
         #  - create an Input with the given Type or shape
@@ -328,8 +329,8 @@ class Function(cntk_py.Function):
             if isinstance(arg, cntk_py.Variable):
                 return arg
             else:
-                from cntk import input
-                return input(arg)
+                #from cntk import input
+                return cntk.input(arg)
 
         args = [to_input(arg) for arg in arg_types]
         arg_map = dict(zip(placeholders, args))

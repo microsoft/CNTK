@@ -10,6 +10,7 @@ Unit tests for reshaping operations.
 
 from __future__ import division
 import numpy as np
+import cntk as C
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, \
                             AA, precision, PRECISION_TO_TYPE, cntk_device
@@ -40,14 +41,14 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
     # test if they get wrongly permuted during test. To this end we multiply
     # the reshaping result with itself.
     dev = cntk_device(device_id)
-    from .. import reshape, element_times, input
+    from .. import reshape, element_times
 
     num_tensor_elements = np.multiply.reduce(input_shape)
     input_tensor = np.arange(
         num_tensor_elements, dtype=PRECISION_TO_TYPE[precision]).reshape(input_shape)
     input_reshaped = input_tensor.reshape(expected_output_shape)
 
-    a = input(shape=input_tensor.shape,
+    a = C.input(shape=input_tensor.shape,
               dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
               name='a')
@@ -88,14 +89,14 @@ def test_op_reshape_subshape(input_shape, replacement_shape, begin_axis, end_axi
     # the reshaping result with itself.
     dev = cntk_device(device_id)
     from cntk.internal import sanitize_dtype_cntk
-    from .. import reshape, element_times, input
+    from .. import reshape, element_times
 
     num_tensor_elements = np.multiply.reduce(input_shape)
     input_tensor = np.arange(
         num_tensor_elements, dtype=PRECISION_TO_TYPE[precision]).reshape(input_shape)
     input_reshaped = input_tensor.reshape(expected_output_shape)
 
-    a = input(shape=input_tensor.shape,
+    a = C.input(shape=input_tensor.shape,
               dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
               name='a')
@@ -121,7 +122,7 @@ def test_op_reshape_subshape(input_shape, replacement_shape, begin_axis, end_axi
 # Test that reshape accumulates the gradient in its input operand
 # instead of overwriting the input operand gradient
 def test_op_reshape_gradient_accumulation(device_id, precision):
-    from .. import reshape, input
+    from .. import reshape
 
     input_shape = (2,3)
     output_shape = (3,2)
@@ -132,7 +133,7 @@ def test_op_reshape_gradient_accumulation(device_id, precision):
         num_tensor_elements, dtype=PRECISION_TO_TYPE[precision])
     input_reshaped = input_tensor.reshape(expected_output_shape)
 
-    a = input(shape=input_tensor.shape,
+    a = C.input(shape=input_tensor.shape,
               dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
               name='a')
@@ -513,7 +514,7 @@ def test_op_broadcast_as(device_id, precision):
 
 
 def test_op_broadcast_as_in_loop(device_id):
-    from .. import sequence, placeholder, input
+    from .. import sequence, placeholder
 
     a_data = [AA([1]), AA([2]), AA([3])]
     b_data = [AA([[2]]), AA([[2], [3]]), AA([[2], [3], [4]])]

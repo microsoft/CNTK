@@ -11,10 +11,7 @@ import cntk as C
 csr = sparse.csr_matrix
 AA = np.asarray
 
-#from ..core import *
-#from cntk.tests.test_utils import *
 from cntk.ops.tests.ops_test_utils import cntk_device
-#from cntk import *
 from cntk.internal import _value_as_sequence_or_array
 from cntk import asvalue
 from cntk.tests.test_utils import _to_dense, _to_csr

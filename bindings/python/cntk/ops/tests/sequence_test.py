@@ -11,10 +11,6 @@ Unit tests for the sequence_softmax.
 import numpy as np
 import pytest
 import cntk as C
-#from .. import *
-#from cntk.losses import *
-#from ...axis import Axis
-#from ... import sequence, input
 from .ops_test_utils import cntk_device
 from cntk.tests.test_utils import _to_dense, _to_csr
 

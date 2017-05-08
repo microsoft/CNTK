@@ -79,7 +79,7 @@ def test_op_as_block(input_shape, output_shape, expected_output_shape, device_id
 
 def test_combine_op_as_block():
     # We test using combine as the operation that is encapsulated in a block
-    from .. import combine, placeholder, as_block, input
+    from .. import combine, placeholder, as_block
 
     f = combine([placeholder()])
     f = as_block(f, [(f.placeholders[0], placeholder())], 'id')
@@ -101,7 +101,7 @@ def test_combine_op_as_block():
 
 
 def test_block_with_duplicate_inputs():
-    from .. import placeholder, as_block, input
+    from .. import placeholder, as_block
     x = C.input((1,), name='input')
     
     left_operand_placeholder = placeholder(name='left_placeholder')
@@ -112,7 +112,7 @@ def test_block_with_duplicate_inputs():
 
 
 def test_as_block_with_function_in_arguments_map():
-    from .. import placeholder, as_block, input
+    from .. import placeholder, as_block
     x = C.input((1,), name='input')
     x_plus_2 = x + 2
     
@@ -128,7 +128,7 @@ def test_as_block_with_function_in_arguments_map():
 
 
 def test_block_clone():
-    from .. import placeholder, as_block, input, parameter, times
+    from .. import placeholder, as_block, parameter, times
 
     x = C.input((1,), name='input')
     
@@ -149,7 +149,7 @@ def test_block_clone():
 
 
 def test_root_block_clone():
-    from .. import placeholder, as_block, input, parameter, times
+    from .. import placeholder, as_block, parameter, times
 
     x = C.input((1,), name='input')
     

@@ -15,7 +15,7 @@ import pytest
 from .ops_test_utils import _test_binary_op, AA, precision, PRECISION_TO_TYPE,\
         unittest_helper
 
-from cntk import input, dropout, combine
+from cntk import dropout, combine
 import cntk as C
 
 def test_sequence_grad_as_numpy_false(device_id, precision):
@@ -36,15 +36,15 @@ def test_sequence_grad_as_numpy_false(device_id, precision):
     assert np.array_equal(result[2], np.asarray([[3.], [3.], [3.]]))
 
 def test_grad_with_no_arguments_needing_gradients():
-    x = input(10)
+    x = C.input(10)
     z = dropout(x, .4)
     with pytest.raises(ValueError):
         _, result = z.grad({x: [np.array([5]*150, "float32").reshape(15, 10)]}, outputs=[z])
 
 def test_eval_not_all_outputs():
-    x = input(1)
+    x = C.input(1)
     x_data = [AA([3], dtype=np.float32)]
-    y = input(1)
+    y = C.input(1)
     y_data = [AA([2], dtype=np.float32)]
     plus_func = x + 1
     minus_func = y - 1

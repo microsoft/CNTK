@@ -7,8 +7,7 @@
 from __future__ import division, print_function
 import numpy as np
 import cntk as C
-#from .. import *
-from cntk import parameter, input
+from cntk import parameter
 
 import pytest
 import sys
@@ -59,7 +58,7 @@ def test_momentum_schedule_per_sample(params, expectation):
     assert [l[i] for i in range(len(expectation))] == expectation
 
 def test_learner_init():
-    i = input(shape=(1,), needs_gradient=True, name='a')
+    i = C.input(shape=(1,), needs_gradient=True, name='a')
     w = parameter(shape=(1,))
 
     res = i * w
@@ -122,7 +121,7 @@ def test_learner_init():
     C.adadelta(res.parameters, lr_per_sample)
 
 def test_learner_update():
-    i = input(shape=(1,), needs_gradient=True, name='a')
+    i = C.input(shape=(1,), needs_gradient=True, name='a')
     w_init = 1
     w = parameter(shape=(1,), init=w_init)
     res = i * w
@@ -184,11 +183,11 @@ def test_learner_logging():
     from cntk.logging import ProgressPrinter
     from cntk import cross_entropy_with_softmax, classification_error
 
-    features = input(shape=(1,), needs_gradient=True, name='a')
+    features = C.input(shape=(1,), needs_gradient=True, name='a')
     w_init = 1
     w = parameter(shape=(1,), init=w_init)
     z = features * w
-    labels = input(shape=(1,), name='b')
+    labels = C.input(shape=(1,), name='b')
     ce = cross_entropy_with_softmax(z, labels)
     errs = classification_error(z, labels)
 

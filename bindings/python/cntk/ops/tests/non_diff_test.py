@@ -10,6 +10,7 @@ Unit tests for operations that are not differentiable.
 
 from __future__ import division
 import numpy as np
+import cntk as C
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, precision, PRECISION_TO_TYPE
 
@@ -95,8 +96,8 @@ def test_op_round(operand, expected, device_id, precision):
                    expected_forward, expected_backward)
 
 def test_input_variable():
-    from .. import input, sequence
-    i = input(shape=(2,3), name='i')
+    from .. import sequence
+    i = C.input(shape=(2,3), name='i')
     assert i.shape == (2,3)
     assert i.name == 'i'
     assert len(i.dynamic_axes)==1

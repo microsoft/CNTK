@@ -217,7 +217,7 @@ def test_model_not_criterion_subset():
     model1_label = C.input((model1_dim,))
     ce_model1 = cross_entropy_with_softmax(model1, model1_label)
     pe_model1 = classification_error(model1, model1_label)
-    
+
     model2 = C.layers.Dense(model2_dim)(core(x))
     model2_label = sequence.input((model2_dim,))
     ce_model2 = cross_entropy_with_softmax(model2, model2_label)
@@ -233,7 +233,7 @@ def test_model_not_criterion_subset():
     model2_label_data = np.asarray([[0., 1., 0., 0.], [0., 0., 0., 1.]], np.float32)
     trainer_multitask.train_minibatch({x : [x_data], model1_label : [model1_label_data], model2_label : [model2_label_data]})
 
-# Tests the creation of a trainer when the model passed to the Trainer is 
+# Tests the creation of a trainer when the model passed to the Trainer is
 # one of the outputs of a multi-output Function
 def test_model_one_output_of_multi_output_function():
     input_dim = 2
@@ -309,7 +309,7 @@ def test_scalar_input():
     trainer = C.Trainer(op, (op, None), C.sgd(op.parameters, lr_per_sample))
     trainer.train_minibatch({scalar: np.zeros((2,1), dtype=np.float32)})
 
-    
+
 def test_empty_minibatch():
     scalar = C.input((1,), dtype=np.float32, name='tscalar')
     op = scalar + parameter(init=np.asarray([1]), dtype=np.float32)
@@ -326,8 +326,8 @@ def test_scalar_loss_function():
     l = C.input((2,))
     proj = C.layers.Dense(2)(x)
     loss = C.reduce_sum(C.cross_entropy_with_softmax(proj, l), axis=C.Axis.all_axes()) * 1.0
-    lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
-    trainer = C.Trainer(None, (loss, None), sgd(loss.parameters, lr_per_sample))
+    lr_per_sample = C.learning_rate_schedule(0.1, C.UnitType.sample)
+    trainer = C.Trainer(None, (loss, None), C.sgd(loss.parameters, lr_per_sample))
     result = trainer.train_minibatch({x : np.asarray([[.1], [-.1]], dtype=np.float32), l : np.asarray([[0, 1], [1, 0]], dtype=np.float32)})
     assert result
     assert trainer.total_number_of_samples_seen == 2
