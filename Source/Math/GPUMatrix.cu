@@ -662,24 +662,24 @@ void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatr
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::GatherBatch(const std::function<const GPUMatrix<ElemType>&(size_t)>& inputs)
+void GPUMatrix<ElemType>::GatherBatch(const std::function<shared_ptr<GPUMatrix<ElemType>>(size_t)>& inputs)
 {
-    let& input0 = inputs(0);
-    let numItems = GetNumCols() / input0.GetNumCols();
-    if (numItems * input0.GetNumCols() != GetNumCols())
+    let input0 = inputs(0); // TODO: can we avoid the extra shared_ptr and just get a const&? (did not work initially)
+    let numItems = GetNumCols() / input0->GetNumCols();
+    if (numItems * input0->GetNumCols() != GetNumCols())
         InvalidArgument("GatherBatch: Number of output columns is incompatible with the first input.");
-    if (GetNumRows() != input0.GetNumRows())
+    if (GetNumRows() != input0->GetNumRows())
         InvalidArgument("GatherBatch: First input is incompatible with output.");
 
     // GPU version, naive: (same as CPU)
     for (auto i = 0; i < numItems; i++)
     {
-        let& input = (i == 0) ? input0 : inputs(i);
-        if (input.GetNumRows() != input0.GetNumRows() || input.GetNumCols() != input0.GetNumCols())
+        let input = (i == 0) ? input0 : inputs(i);
+        if (input->GetNumRows() != input0->GetNumRows() || input->GetNumCols() != input0->GetNumCols())
             InvalidArgument("GatherBatch: All inputs must have the same dimensions.");
-        let numInCols = input0.GetNumCols();
+        let numInCols = input0->GetNumCols();
         let startColumn = i * numInCols;
-        CUDA_CALL(cudaMemcpy(Data() + LocateColumn(startColumn), input.Data(), sizeof(ElemType) * m_numRows * numInCols, cudaMemcpyDeviceToDevice));
+        CUDA_CALL(cudaMemcpy(Data() + LocateColumn(startColumn), input->Data(), sizeof(ElemType) * m_numRows * numInCols, cudaMemcpyDeviceToDevice));
     }
 }
 

@@ -857,11 +857,11 @@ void Matrix<ElemType>::GatherBatch(const std::function<shared_ptr<Matrix<ElemTyp
         },
         {
             // GPU version: perform as a singe CUDA launch
-            m_GPUMatrix->GatherBatch([&](size_t i) -> const GPUMatrix<ElemType>&
+            m_GPUMatrix->GatherBatch([&](size_t i) -> shared_ptr<GPUMatrix<ElemType>>
             {
                 let input = (i == 0) ? input0 : inputs(i);
                 // TODO: check device or move
-                return *input->m_GPUMatrix;
+                return input->m_GPUMatrix;
             });
         },
         { NOT_IMPLEMENTED; },
