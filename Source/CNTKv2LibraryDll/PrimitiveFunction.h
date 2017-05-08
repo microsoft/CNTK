@@ -99,6 +99,7 @@ namespace CNTK
         {PrimitiveOpType::ToSequenceLike, L"ToSequenceLikeOp"},
         {PrimitiveOpType::UnpackSequence, L"UnpackSequenceOp"},
         {PrimitiveOpType::Assign, L"Assign" },
+        {PrimitiveOpType::Gather, L"Gather"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -348,9 +349,6 @@ namespace CNTK
                 InvalidArgument("Reshape: end axis index (%d) is invalid for operand shape '%S'.", endAxisIdx, operandShape.AsString().c_str());
 
             auto operandSubshapeToReshape = operandShape.SubShape(beginAxisIdx, endAxisIdx);
-            if (operandSubshapeToReshape.HasInferredDimension())
-                InvalidArgument("Reshape: Operand subshape '%S' being reshaped must not have an inferred dimension.", operandSubshapeToReshape.AsString().c_str());
-
             auto inferredReplacementShape = replacementShape;
             size_t inferredAxisIndex = SIZE_MAX;
             size_t targetElementsCount = 1;
@@ -366,20 +364,20 @@ namespace CNTK
 
             if (inferredAxisIndex != SIZE_MAX)
             {
-                if (!operandSubshapeToReshape.HasFreeDimension())
+                if (!operandSubshapeToReshape.HasUnboundDimension())
                 {
                     size_t inputElementsCount = operandSubshapeToReshape.TotalSize();
                     inferredReplacementShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
                 }
                 else
-                    inferredReplacementShape[inferredAxisIndex] = NDShape::FreeDimension;
+                    inferredReplacementShape[inferredAxisIndex] = operandSubshapeToReshape.HasInferredDimension() ? NDShape::InferredDimension : NDShape::FreeDimension;
             }
 
             auto outputShape = operandShape.SubShape(0, beginAxisIdx);
             outputShape = outputShape.AppendShape(inferredReplacementShape);
             outputShape = outputShape.AppendShape(operandShape.SubShape(endAxisIdx));
 
-            if (!operandSubshapeToReshape.HasFreeDimension() && (operandSubshapeToReshape.TotalSize() != inferredReplacementShape.TotalSize()))
+            if (!operandSubshapeToReshape.HasUnboundDimension() && (operandSubshapeToReshape.TotalSize() != inferredReplacementShape.TotalSize()))
             {
                 auto replacedSubShape = operandShape.SubShape(beginAxisIdx, endAxisIdx);
                 InvalidArgument("Reshape: Operand (sub-)dimensions '%S' incompatible with desired replacement (sub-)dimensions '%S'. Number of elements %s.",
@@ -436,7 +434,7 @@ namespace CNTK
                     // accumulate the spliced dimension
                     if (k == index)
                     {
-                        if (dim == NDShape::InferredDimension)
+                        if ((dim == NDShape::InferredDimension) || (outputDims[index] == NDShape::InferredDimension))
                             outputDims[index] = NDShape::InferredDimension;
                         else if (dim == NDShape::FreeDimension)
                             InvalidArgument("Splice: Illegal to splice along an axis (%d) for which any of the inputs has a free dimension.", (int)index);
@@ -488,37 +486,41 @@ namespace CNTK
             {
                 if ((leftOperandShape[i] == NDShape::InferredDimension) && (rightOperandShape[i] == NDShape::InferredDimension))
                     outputDims[i] = NDShape::InferredDimension;
-                else if ((leftOperandShape[i] == NDShape::InferredDimension) || (leftOperandShape[i] == NDShape::FreeDimension) || (leftOperandShape[i] == 1))
+                else if (leftOperandShape[i] == NDShape::FreeDimension)
+                {
+                    if (rightOperandShape[i] == NDShape::InferredDimension)
+                        InvalidArgument("Binary elementwise operation %S: Right operand '%S' shape '%S' dimension cannot be inferred from a left operand '%S' shape '%S' free dimension.",
+                            PrimitiveOpTypeName(op).c_str(),
+                            rightOperand.AsString().c_str(),
+                            rightOperandShape.AsString().c_str(),
+                            leftOperand.AsString().c_str(),
+                            leftOperandShape.AsString().c_str());
+
+                    outputDims[i] = (rightOperandShape[i] == 1) ? NDShape::FreeDimension : rightOperandShape[i];
+                }
+                else if (rightOperandShape[i] == NDShape::FreeDimension)
+                {
+                    if (leftOperandShape[i] == NDShape::InferredDimension)
+                        InvalidArgument("Binary elementwise operation %S: Left operand '%S' shape '%S' dimension cannot be inferred from a right operand '%S' shape '%S' free dimension.",
+                            PrimitiveOpTypeName(op).c_str(),
+                            leftOperand.AsString().c_str(),
+                            leftOperandShape.AsString().c_str(),
+                            rightOperand.AsString().c_str(),
+                            rightOperandShape.AsString().c_str());
+
+                    outputDims[i] = (leftOperandShape[i] == 1) ? NDShape::FreeDimension : leftOperandShape[i];
+                }
+                else if ((leftOperandShape[i] == NDShape::InferredDimension) || (leftOperandShape[i] == 1))
                 {
                     outputDims[i] = rightOperandShape[i];
                     if (leftOperandShape[i] == NDShape::InferredDimension)
-                    {
-                        if (rightOperandShape[i] == NDShape::FreeDimension)
-                            InvalidArgument("Binary elementwise operation %S: Left operand '%S' shape '%S' dimension cannot be inferred from a right operand '%S' shape '%S' free dimension.",
-                                PrimitiveOpTypeName(op).c_str(),
-                                leftOperand.AsString().c_str(),
-                                leftOperandShape.AsString().c_str(),
-                                rightOperand.AsString().c_str(),
-                                rightOperandShape.AsString().c_str());
-
                         leftOperandShape[i] = rightOperandShape[i];
-                    }
                 }
-                else if ((rightOperandShape[i] == NDShape::InferredDimension) || (rightOperandShape[i] == NDShape::FreeDimension) || (rightOperandShape[i] == 1))
+                else if ((rightOperandShape[i] == NDShape::InferredDimension) || (rightOperandShape[i] == 1))
                 {
                     outputDims[i] = leftOperandShape[i];
                     if (rightOperandShape[i] == NDShape::InferredDimension)
-                    {
-                        if (leftOperandShape[i] == NDShape::FreeDimension)
-                            InvalidArgument("Binary elementwise operation %S: Right operand '%S' shape '%S' dimension cannot be inferred from a left operand '%S' shape '%S' free dimension.",
-                                PrimitiveOpTypeName(op).c_str(),
-                                rightOperand.AsString().c_str(),
-                                rightOperandShape.AsString().c_str(),
-                                leftOperand.AsString().c_str(),
-                                leftOperandShape.AsString().c_str());
-
                         rightOperandShape[i] = leftOperandShape[i];
-                    }
                 }
                 else
                 {
@@ -533,8 +535,7 @@ namespace CNTK
                     outputDims[i] = leftOperandShape[i];
                 }
             }
-
-            
+                        
             UNUSED(broadcastAllowed);
             // BUGBUG: if (broadcastAllowed) is missing here?
 
@@ -718,7 +719,7 @@ namespace CNTK
               
                 if (i < operands.size() - 1)
                 {
-                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !(mainOperandShape.HasInferredDimension() || mainOperandShape.HasFreeDimension()))
+                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasUnboundDimension())
                     {
                         size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
                         paramShape[0] = total;
@@ -773,7 +774,8 @@ namespace CNTK
         // Version 10: Add Pow operator.
         // Version 11: Add ToSequence, ToSequenceLike and UnpackSequence operators.
         // Version 12: Add Assign node.
-        static const size_t s_serializationVersion = 12;
+        // Version 13: Add Gather op.
+        static const size_t s_serializationVersion = 13;
     };
 
     class UDFUtils

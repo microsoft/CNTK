@@ -43,7 +43,8 @@ public:
         bool shouldPrefetch,
         bool multithreadedGetNextSequences = false,
         size_t maxNumberOfInvalidSequences = 0, // per worker
-        bool sampleBasedRandomizationWindow = true);
+        bool sampleBasedRandomizationWindow = true,
+        size_t seedOffset = 0);
 
     // Starts a new epoch.
     virtual void StartEpoch(const EpochConfiguration& config) override;
@@ -117,6 +118,9 @@ private:
 
     // Current sweep.
     size_t m_sweep;
+
+    // Offset used together with the current sweep to seed rngs.
+    size_t m_seedOffset;
 
     // Total number of samples in a sweep.
     size_t m_sweepSizeInSamples;

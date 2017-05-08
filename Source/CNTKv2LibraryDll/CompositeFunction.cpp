@@ -474,7 +474,7 @@ namespace CNTK
             if (fullyDefinedArgumentVar.Shape().HasFreeDimension() && (fullyDefinedArgumentsMap.find(fullyDefinedArgumentVar) != fullyDefinedArgumentsMap.end()))
                 fullyDefinedArgumentVar = fullyDefinedArgumentsMap.at(fullyDefinedArgumentVar);
 
-            if (fullyDefinedArgumentVar.Shape().HasFreeDimension())
+            if (fullyDefinedArgumentVar.Shape().HasUnboundDimension())
                 InvalidArgument("Input Variable '%S' with unresolved shape %S found when compiling the Function graph.", fullyDefinedArgumentVar.AsString().c_str(), fullyDefinedArgumentVar.Shape().AsString().c_str());
 
             auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name(), useMangledNamesForComputationNodes);
@@ -809,6 +809,9 @@ namespace CNTK
                     computationNodePtr = New<OneHotNode<ElementType>>(network->GetDeviceId(), numClass, is_sparse, axis.StaticAxisIndex(), internalNodeName);
                     break;
                 }
+                case PrimitiveOpType::Gather:
+                    computationNodePtr = New<GatherNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::Plus:
                     computationNodePtr = New<PlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
@@ -1152,7 +1155,7 @@ namespace CNTK
         while ((adjustedNodeShape.GetRank() > varShape.Rank()) && (adjustedNodeShape.GetDim(adjustedNodeShape.GetRank() - 1) == 1))
             adjustedNodeShape.TrimRankInPlace(adjustedNodeShape.GetRank() - 1);
 
-        if (!varShape.HasFreeDimension() && !varShape.HasInferredDimension())
+        if (!varShape.HasUnboundDimension())
             return (AsNDShape(adjustedNodeShape) == varShape);
 
         if (varShape.Rank() != adjustedNodeShape.GetRank())
@@ -1356,6 +1359,27 @@ namespace CNTK
                 InvalidArgument("%d unbound Placeholder(s) '%S' found in the Function. "
                     "All Placeholders of a Function must be bound (to a variable) before performing a Forward computation.",
                     (int)placeholders.size(), NamedListString(placeholders).c_str());
+
+            // Lets update the composite Function graph's inputs with any inferred dimensions that 
+            // were determined from the shapes of the supplied data
+            auto networkArguments = Arguments();
+            bool anyInferredDimensionsFilled = false;
+            for (auto argument : networkArguments)
+            {
+                if (argument.Shape().HasInferredDimension())
+                {
+                    auto fullyDefinedArgument = m_fullyDefinedArgumentsMap.at(argument);
+                    for (size_t i = 0; i < argument.Shape().Rank(); ++i)
+                        if (argument.Shape()[i] == NDShape::InferredDimension)
+                        {
+                            argument.m_dataFields->m_shape[i] = fullyDefinedArgument.Shape()[i];
+                            anyInferredDimensionsFilled = true;
+                        }
+                }
+            }
+
+            if (anyInferredDimensionsFilled)
+                ValidateOrUpdateOutputs();
 
             std::tie(m_computationNetwork, m_variableToNodeMap) = CreateComputationNetwork<ElementType>(this->shared_from_this(), device, outputs, m_fullyDefinedArgumentsMap, m_inputsExcludedFromGradientComputation, /*useMangledNamesForComputationNodes =*/ false);
 
@@ -1654,6 +1678,8 @@ namespace CNTK
 
             if (sanitizedOutput.IsOutput())
                 m_perOutputVarArgumentDependencies[sanitizedOutput] = AsComposite(sanitizedOutput.Owner())->Arguments();
+            else if (sanitizedOutput.IsParameter() || sanitizedOutput.IsConstant())
+                m_perOutputVarArgumentDependencies[sanitizedOutput] = {};
             else
                 m_perOutputVarArgumentDependencies[sanitizedOutput] = { sanitizedOutput };
         }
@@ -1823,6 +1849,9 @@ namespace CNTK
         auto backpropState = dynamic_cast<const CNTKBackPropState*>(state.get());
         if (backpropState == nullptr)
             InvalidArgument("Function '%S' Backward: Invalid backprop state passed.", AsString().c_str());
+
+        if (backPropagatedGradientValuesForInputs.empty())
+            InvalidArgument("Function '%S' Backward: List of inputs to compute gradients for, must not be empty.", AsString().c_str());
 
         // TODO: Support multiple concurrent backprop states
         std::unordered_map<Variable, uint64_t> currentBackpropRootTimeStamps = GetCurrentBackpropRootsTimeStamps();

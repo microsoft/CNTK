@@ -349,7 +349,8 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Internal::DisableProfiler;
 %ignore_function CNTK::Internal::AreEquivalent;
 %ignore_function CNTK::Internal::AreEqual;
-%ignore_function CNTK::PrintBuiltInfo;
+%ignore_function CNTK::Internal::PrintBuiltInfo;
+%ignore_function CNTK::Internal::PrintGpuInfo;
 %ignore_function CNTK::Internal::DefaultPackThresholdSizeInBytes;
 %ignore_function CNTK::Internal::ToDictionary;
 

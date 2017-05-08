@@ -1380,6 +1380,11 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::OneHot, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const std::wstring& name)
+    {
+        return BinaryOp(PrimitiveOpType::Gather, indices, reference, Dictionary(), name);
+    }
+
     FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, axis, name);

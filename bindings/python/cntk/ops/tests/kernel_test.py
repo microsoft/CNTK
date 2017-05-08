@@ -19,7 +19,8 @@ CONVOLUTION_OPERANDS = [
     ([[[5., 6.],  # (1, 2, 2) map
        [3., 4.]]],
      [[[1., 2.],  # (1, 2, 2) input operand
-       [7., 8.]]]),
+       [7., 8.]]],
+     True),       # Use input shape with inferred dimension
     ([[[1., 2.],  # (3, 2, 2) map
        [3., 4.]],
       [[1., 2.],
@@ -31,12 +32,13 @@ CONVOLUTION_OPERANDS = [
       [[5., 6.],
        [7., 8.]],
       [[9., 10.],
-       [11., 12.]]])
+       [11., 12.]]],
+      False)      # Do not use input shape with inferred dimension
 ]
 
 
-@pytest.mark.parametrize("convolution_map, convolution_input", CONVOLUTION_OPERANDS)
-def test_op_convolution_without_padding(convolution_map, convolution_input, device_id, precision):
+@pytest.mark.parametrize("convolution_map, convolution_input, use_input_shape_with_inferred_dimension", CONVOLUTION_OPERANDS)
+def test_op_convolution_without_padding(convolution_map, convolution_input, use_input_shape_with_inferred_dimension, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
 
@@ -50,7 +52,11 @@ def test_op_convolution_without_padding(convolution_map, convolution_input, devi
 
     backward = AA(conv_map)
 
-    a = C.input(shape=conv_input.shape,
+    conv_input_shape = conv_input.shape
+    if use_input_shape_with_inferred_dimension:
+        conv_input_shape = tuple(-1 for x in conv_input_shape)
+
+    a = C.input(shape=conv_input_shape,
                 dtype=sanitize_dtype_cntk(precision),
                 needs_gradient=True,
                 name='a')
@@ -116,24 +122,27 @@ POOLING_GEOMETRY_DATA = [
      (1, 3, 3), # strides
      [True], # padding flag
      [[[[ 21,   23],
-        [ 33,   35]]]]), # result
+        [ 33,   35]]]], # result
+     True), # Use input shape with inferred dimension
     ([1, 1, 8, 8],
      (1, 4, 4),
      (1, 5, 5),
      [False],
-     [[[[ 27 ]]]]),
+     [[[[ 27 ]]]],
+     False),
     ([1, 1, 6, 6],
      (1, 4, 4),
      (1, 2, 2),
      [True, False],
      [[[[ 15, 17],
         [ 27, 29],
-        [ 33, 35]]]])
+        [ 33, 35]]]],
+     True)
 ]
 # the pooling geometry test also tests convolution geometry since they go through the same path
 # in the CPU code
-@pytest.mark.parametrize("input_size, pooling_window, strides, padding, result", POOLING_GEOMETRY_DATA)
-def test_op_pooling_geometry(input_size, pooling_window, strides, padding, result, device_id, precision):
+@pytest.mark.parametrize("input_size, pooling_window, strides, padding, result, use_input_shape_with_inferred_dimension", POOLING_GEOMETRY_DATA)
+def test_op_pooling_geometry(input_size, pooling_window, strides, padding, result, use_input_shape_with_inferred_dimension, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
 
     # fill input operand with a sequence 1,2,3,... til total size and then
@@ -142,7 +151,11 @@ def test_op_pooling_geometry(input_size, pooling_window, strides, padding, resul
     x = np.arange(total_size, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = C.input(shape=input_operand.shape[1:],
+    pool_input_shape = input_operand.shape[1:]
+    if use_input_shape_with_inferred_dimension:
+        pool_input_shape = tuple(-1 for x in pool_input_shape)
+
+    a = C.input(shape=pool_input_shape,
                 dtype=sanitize_dtype_cntk(precision),
                 needs_gradient=False,
                 name='a')

@@ -1889,9 +1889,14 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
 
     Args:
         x: tensor to be reshaped
-        shape (tuple): a tuple defining the resulting shape
+        shape (tuple): a tuple defining the resulting shape. The specified shape tuple
+         may contain -1 for at most one axis, which is automatically inferred to the 
+         correct dimension size by dividing the total size of the sub-shape being reshaped 
+         with the product of the dimensions of all the non-inferred axes of the replacement
+         shape.
         begin_axis (int or None): shape replacement begins at this axis. Negative values
-         are counting from the end. `None` is the same as 0. To refer to the end of the shape tuple, pass `Axis.new_leading_axis()`
+         are counting from the end. `None` is the same as 0. To refer to the end of the shape tuple, 
+         pass `Axis.new_leading_axis()`.
         end_axis (int or None): shape replacement ends at this axis (excluding this axis).
          Negative values are counting from the end. `None` refers to the end of the shape tuple.
         name (str, optional): the name of the Function instance in the network
@@ -2133,10 +2138,38 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
     axis = sanitize_axis(axis)
     return one_hot_op(x, num_classes, sparse_output, axis, name)
 
+@typemap
+def gather(reference, indices):
+    '''
+    Retrieves the elements of indices in the tensor reference. 
+
+    Example:
+        >>> c = np.asarray([[[0],[1]],[[4],[5]]]).astype('f')
+        >>> x = C.input((2,1))
+        >>> d = np.arange(12).reshape(6,2).astype('f')
+        >>> y = C.constant(d)
+        >>> C.gather(y, x).eval({x:c})
+        array([[[[  0.,   1.]],
+        <BLANKLINE>
+                [[  2.,   3.]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[  8.,   9.]],
+        <BLANKLINE>
+                [[ 10.,  11.]]]], dtype=float32)
+        
+    Args:
+        reference: A tensor
+        indices: An integer tensor of indices
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+	'''
+    from cntk.cntk_py import gather_op
+    return gather_op(indices, reference)
 ##########################################################################
 # reduction ops
 ##########################################################################
-
 
 @typemap
 def reduce_sum(x, axis=None, name=''):

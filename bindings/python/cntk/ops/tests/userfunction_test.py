@@ -72,6 +72,20 @@ def test_ext_eval_1():
     result = z.eval([input_data])
     assert np.allclose(result[0][0], input_data+3+10)
 
+def test_ext_eval_freedimension_input():
+    i = sequence.input((C.FreeDimension), needs_gradient=True, name='i_var')
+    m = user_function(MyPlus(i, constant(3)))
+
+    input_data = np.random.rand(3)
+    gradient_value, result = m.grad({ i : input_data}, wrt=[i], outputs=[m.output])
+    assert np.allclose(result[0][0], input_data+3)
+    assert np.allclose(gradient_value[0][0], np.ones_like(input_data))
+    
+    input_data = np.random.rand(6)
+    gradient_value, result = m.grad({ i : input_data}, wrt=[i], outputs=[m.output])
+    assert np.allclose(result[0][0], input_data+3)
+    assert np.allclose(gradient_value[0][0], np.ones_like(input_data))
+
 def test_ext_eval_2_only_param():
     dim = 4
     p = parameter(shape=(dim,), init=10, name='p')

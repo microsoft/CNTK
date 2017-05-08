@@ -241,9 +241,12 @@ namespace CNTK
         /// (cooperative) lock on the device (GPU). The default device can only be changed if it has not yet been frozen by being 
         /// implicitly used in any previous CNTK operation.
         ///
-        /// CNTK uses a cooperative synchronization for the device access, whereby only a single process can acquire 
-        /// a device lock. However, if exclusivity is not required, the same device can still be accessed without acquiring 
-        /// any locks (in which case, any existing lock corresponding to the device will be ignored).
+        /// CNTK uses cooperative locking for the device access, whereby only a single process can acquire 
+        /// a device lock. This locking mechanism allows CNTK processes to avoid device oversubscription only if they collectively
+        /// choose so. In other words, the device locked by one CNTK process, can still be accessed by another CNTK process without
+        /// acquiring any locks (i.e, the existing device lock can be ignored by other CNTK processes). This cooperative 
+        /// locking mechanism does not guarantee any kind of exclusive access to the device. The proper way to ensure exclusivity 
+        /// is to use tools provided by NVIDIA (nvidia smi).
         ///
         /// This methods returns false if  
         /// * the specified device appears in the list of excluded devices;
@@ -438,11 +441,20 @@ namespace CNTK
         }
 
         ///
+        /// Returns a boolean value indicating if the dimension size for any of the axes of 'this' shape is free or inferred
+        /// i.e. (== NDShape::FreeDimension or == NDShape::InferredDimension).
+        ///
+        bool HasUnboundDimension() const
+        {
+            return HasFreeDimension() || HasInferredDimension();
+        }
+
+        ///
         /// Returns the total size of the rectangular shape that 'this' shape denotes.
         ///
         size_t TotalSize() const
         {
-            if (HasInferredDimension() || HasFreeDimension())
+            if (HasUnboundDimension())
                 RuntimeError("NDShape::TotalSize: TotalSize cannot be determined for a NDShape '%S' with one or more dimensions being InferredDimension or FreeDimension.", AsString().c_str());
 
             size_t totalSize = 1;
@@ -2847,7 +2859,7 @@ namespace CNTK
         void ResizeOutputBuffer(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
             auto shape = outputVariable.Shape();
-            if (shape == NDShape::Unknown || shape.HasInferredDimension() || shape.HasFreeDimension())
+            if (shape == NDShape::Unknown || shape.HasUnboundDimension())
                 RuntimeError("The outputVariable '%S' shape '%S' is unknown shape, has inferred dimension or free dimension for at least one axis.",
                               outputVariable.AsString().c_str(), shape.AsString().c_str());
 
@@ -3903,8 +3915,15 @@ namespace CNTK
         return FutureValue(operand, defaultInitialState, offset, name);
     }
 
+    ///
+    /// Create an instance of the CNTK build-in operation to get the one_hot tensor on specified input along the specified axis
+    ///
     CNTK_API FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name = std::wstring());
 
+    ///
+    /// Create an instance of the CNTK build-in operation to get a tensor that is gathered from reference tensor by indices.
+    ///
+    CNTK_API FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const std::wstring& name = L"");
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the specified axis
     ///
@@ -4553,6 +4572,7 @@ namespace CNTK
                                     bool unitGain = DefaultUnitGainValue(),
                                     const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
                                     double epsilon = 1e-8,
+                                    bool adamax = false,
                                     AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
@@ -5130,6 +5150,11 @@ namespace CNTK
         size_t randomizationWindowInSamples { 0 };
 
         ///
+        /// Initial randomization seed value (incremented every sweep when the input data is re-randomized).
+        ///
+        size_t randomizationSeed { 0 };
+
+        ///
         /// Output verbosity level.
         ///
         TraceLevel traceLevel{ GetTraceLevel() };
@@ -5589,8 +5614,6 @@ namespace CNTK
         CrossValidationConfig m_cv;
         TestConfig m_test;
     };
-
-    CNTK_API void PrintBuiltInfo();
 
     ///
     /// Base class for all classes that want to record training/evaluation progress.

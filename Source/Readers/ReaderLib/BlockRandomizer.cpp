@@ -23,7 +23,8 @@ BlockRandomizer::BlockRandomizer(
     bool shouldPrefetch,
     bool multithreadedGetNextSequence,
     size_t maxNumberOfInvalidSequences,
-    bool sampleBasedRandomizationWindow)
+    bool sampleBasedRandomizationWindow,
+    size_t seedOffset)
     : m_verbosity(verbosity),
       m_deserializer(deserializer),
       m_sweep(SIZE_MAX),
@@ -34,7 +35,8 @@ BlockRandomizer::BlockRandomizer(
       m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRange, sampleBasedRandomizationWindow)),
       m_multithreadedGetNextSequences(multithreadedGetNextSequence),
       m_prefetchedChunk(CHUNKID_MAX),
-      m_cleaner(maxNumberOfInvalidSequences)
+      m_cleaner(maxNumberOfInvalidSequences),
+      m_seedOffset(seedOffset)
 {
     assert(deserializer != nullptr);
 
@@ -108,10 +110,10 @@ void BlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
         m_sweep = sweep;
 
         // Rerandomizing the chunks.
-        m_chunkRandomizer->Randomize((unsigned int)m_sweep);
+        m_chunkRandomizer->Randomize(m_seedOffset + m_sweep);
 
         // Resetting sequence randomizer.
-        m_sequenceRandomizer->Reset(m_sweep);
+        m_sequenceRandomizer->Reset(m_seedOffset + m_sweep);
         m_currentWindowRange = {};
     }
 }

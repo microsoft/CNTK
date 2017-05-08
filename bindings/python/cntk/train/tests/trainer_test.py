@@ -324,3 +324,19 @@ def test_empty_minibatch():
     lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
     trainer = Trainer(op, (op, None), sgd(op.parameters, lr_per_sample))
     trainer.train_minibatch({})
+
+
+def test_scalar_loss_function():
+    import cntk as C
+
+    x = C.input((1,))
+    l = C.input((2,))
+    proj = C.layers.Dense(2)(x)
+    loss = C.reduce_sum(C.cross_entropy_with_softmax(proj, l), axis=C.Axis.all_axes()) * 1.0
+    lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
+    trainer = C.Trainer(None, (loss, None), sgd(loss.parameters, lr_per_sample))
+    result = trainer.train_minibatch({x : np.asarray([[.1], [-.1]], dtype=np.float32), l : np.asarray([[0, 1], [1, 0]], dtype=np.float32)})
+    assert result
+    assert trainer.total_number_of_samples_seen == 2
+
+

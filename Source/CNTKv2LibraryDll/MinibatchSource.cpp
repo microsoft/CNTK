@@ -437,12 +437,14 @@ namespace CNTK
                 augmentedConfiguration[L"randomize"] = true;
                 augmentedConfiguration[L"randomizationWindow"] = configuration.randomizationWindowInSamples;
                 augmentedConfiguration[L"sampleBasedRandomizationWindow"] = true;
+                augmentedConfiguration[L"randomizationSeed"] = configuration.randomizationSeed;
             }
             else if (configuration.randomizationWindowInChunks != 0) 
             {
                 augmentedConfiguration[L"randomize"] = true;
                 augmentedConfiguration[L"randomizationWindow"] = configuration.randomizationWindowInChunks;
                 augmentedConfiguration[L"sampleBasedRandomizationWindow"] = false;
+                augmentedConfiguration[L"randomizationSeed"] = configuration.randomizationSeed;
             }
             else 
             {

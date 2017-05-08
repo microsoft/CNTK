@@ -989,6 +989,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorials", "Tutorials", "{
 		Tutorials\CNTK_103A_MNIST_DataLoader.ipynb = Tutorials\CNTK_103A_MNIST_DataLoader.ipynb
 		Tutorials\CNTK_103B_MNIST_LogisticRegression.ipynb = Tutorials\CNTK_103B_MNIST_LogisticRegression.ipynb
 		Tutorials\CNTK_103C_MNIST_MultiLayerPerceptron.ipynb = Tutorials\CNTK_103C_MNIST_MultiLayerPerceptron.ipynb
+		Tutorials\CNTK_103D_MNIST_ConvolutionalNeuralNetwork.ipynb = Tutorials\CNTK_103D_MNIST_ConvolutionalNeuralNetwork.ipynb
 		Tutorials\CNTK_201A_CIFAR-10_DataLoader.ipynb = Tutorials\CNTK_201A_CIFAR-10_DataLoader.ipynb
 		Tutorials\CNTK_201B_CIFAR-10_ImageHandsOn.ipynb = Tutorials\CNTK_201B_CIFAR-10_ImageHandsOn.ipynb
 		Tutorials\CNTK_202_Language_Understanding.ipynb = Tutorials\CNTK_202_Language_Understanding.ipynb
