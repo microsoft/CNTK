@@ -1257,7 +1257,7 @@ class UserFunction(Function):
 
         # Since the state will frequently not be used, we cache the None-state
         # to speed up.
-        self._none_state =  cntk_py.UserBackPropState(self, cpu(), None)
+        self._none_state =  cntk_py.UserBackPropState.create(self, cpu(), None)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
@@ -1266,7 +1266,7 @@ class UserFunction(Function):
 
     def _get_none_state(self, device=cpu()):
         if self._none_state.device() != device:
-            self._none_state =  cntk_py.UserBackPropState(self, device, None)
+            self._none_state = cntk_py.UserBackPropState.create(self, device, None)
 
         return self._none_state
 
@@ -1308,7 +1308,7 @@ class UserFunction(Function):
         if state is None:
             state = self._get_none_state(device)
         elif not isinstance(state, cntk_py.BackPropState):
-            state = cntk_py.UserBackPropState(self, device, state)
+            state = cntk_py.UserBackPropState.create(self, device, state)
 
         if self.as_numpy:
             for k,v in outputs.items():

@@ -1806,12 +1806,16 @@ namespace CNTK {
     class UserBackPropState;
     typedef std::shared_ptr<UserBackPropState> UserBackPropStatePtr;
 
-    class UserBackPropState : public BackPropState {
+    class UserBackPropState : public BackPropState
+    {
+
+        template <typename T, typename ...CtorArgTypes>
+        friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
+
     public:
-        UserBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
-            : BackPropState(function, computeDevice), m_userData(userData)
+        static BackPropStatePtr Create(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
         {
-            Py_INCREF(m_userData);
+            return MakeSharedObject<UserBackPropState>(function, computeDevice, userData);
         }
 
         const PyObject* Data() const
@@ -1835,6 +1839,12 @@ namespace CNTK {
         }
 
     private:
+        UserBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
+            : BackPropState(function, computeDevice), m_userData(userData)
+        {
+            Py_INCREF(m_userData);
+        }
+
         const PyObject* m_userData;
     };
 }
