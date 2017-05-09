@@ -673,6 +673,11 @@ namespace CNTK
         return str;
     }
 
+    /*static*/ void DeviceDescriptor::EnableSynchronousGPUKernelExecution()
+    {
+        Internal::EnableSynchronousGPUKernelExecution();
+    }
+
     /*static*/ DeviceDescriptor DeviceDescriptor::GPUDevice(unsigned int deviceId) 
     {       
         const auto& allDevices = AllDevices();

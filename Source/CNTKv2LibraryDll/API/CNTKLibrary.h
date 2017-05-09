@@ -279,6 +279,11 @@ namespace CNTK
         ///
         CNTK_API std::wstring AsString() const;
 
+        ///
+        /// Static method to switch GPUs to sync mode (useful for profiling).
+        ///
+        CNTK_API static void EnableSynchronousGPUKernelExecution();
+
     private:
         DeviceDescriptor(unsigned int deviceId, DeviceKind deviceType)
             : m_deviceId(deviceId), m_deviceType(deviceType)
