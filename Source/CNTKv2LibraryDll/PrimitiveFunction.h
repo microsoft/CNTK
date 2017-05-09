@@ -100,6 +100,7 @@ namespace CNTK
         {PrimitiveOpType::UnpackSequence, L"UnpackSequenceOp"},
         {PrimitiveOpType::Assign, L"Assign" },
         {PrimitiveOpType::Gather, L"Gather"},
+        {PrimitiveOpType::Sigmoid2, L"Sigmoid2"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
