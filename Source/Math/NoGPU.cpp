@@ -1091,7 +1091,7 @@ void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::SetTruncatedGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+void GPUMatrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
 {
 }
 

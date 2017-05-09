@@ -27,14 +27,14 @@ void LearnableParameter<ElemType>::InitShape(const TensorShape& shape)
     Value().Invalidate();
 }
 
-enum distributionType
+enum DistributionType
 {
     Uniform = 0,
-    Gaussian = 1,
-    TruncGaussian = 2,
+    Normal = 1,
+    TruncNormal = 2,
 };
 
-static pair<distributionType, double/*stddev or range*/> ParseRandomizationType(const wstring& type, size_t fanOut = 1, size_t fanIn = 1);
+static pair<DistributionType, double/*stddev or range*/> ParseRandomizationType(const wstring& type, size_t fanOut = 1, size_t fanIn = 1);
 
 // constructor from config
 // Parameterization is a little wicked. An older version required to specify the type of initialization
@@ -217,21 +217,21 @@ void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString,
 //  glorotUniform: sqrt(6 / (fanin+fanout))
 //  heNormal:      sqrt(2 / fanin)
 //  heUniform:     sqrt(6 / fanin)
-//  TruncGaussian: 1.0    
-// returns (Gaussian,0) for unrecognized string
-static pair<distributionType, double/*stddev or range*/> ParseRandomizationType(const wstring& type, size_t fanOut /* = 1*/, size_t fanIn /*= 1*/)
+//  TruncNormal: 1.0    
+// returns (Normal,0) for unrecognized string
+static pair<DistributionType, double/*stddev or range*/> ParseRandomizationType(const wstring& type, size_t fanOut /* = 1*/, size_t fanIn /*= 1*/)
 {
-    if      (type == UniformBSInitializerTypeName)     return make_pair(Uniform,       0.05f);
-    else if (type == UniformInitializerTypeName)       return make_pair(Uniform,       1.0f);
-    else if (type == GaussianInitializerTypeName)      return make_pair(Gaussian,      0.2 / sqrt(fanIn));
-    else if (type == NormalInitializerTypeName)        return make_pair(Gaussian,      1.0f);
-    else if (type == XavierInitializerTypeName)        return make_pair(Uniform,       sqrt(3.0 / fanIn));
-    else if (type == GlorotUniformInitializerTypeName) return make_pair(Uniform,       sqrt(6.0 / (fanIn + fanOut)));
-    else if (type == GlorotNormalInitializerTypeName)  return make_pair(Gaussian,      sqrt(2.0 / (fanIn + fanOut)));
-    else if (type == HeUniformInitializerTypeName)     return make_pair(Uniform,       sqrt(6.0 / fanIn));
-    else if (type == HeNormalInitializerTypeName)      return make_pair(Gaussian,      sqrt(2.0 / fanIn));
-    else if (type == TruncGaussianInitializerTypeName) return make_pair(TruncGaussian, 1.0);
-    else                                               return make_pair(Gaussian,      0.0);
+    if      (type == UniformBSInitializerTypeName)     return make_pair(Uniform,     0.05f);
+    else if (type == UniformInitializerTypeName)       return make_pair(Uniform,     1.0f);
+    else if (type == GaussianInitializerTypeName)      return make_pair(Normal,      0.2 / sqrt(fanIn));
+    else if (type == NormalInitializerTypeName)        return make_pair(Normal,      1.0f);
+    else if (type == XavierInitializerTypeName)        return make_pair(Uniform,     sqrt(3.0 / fanIn));
+    else if (type == GlorotUniformInitializerTypeName) return make_pair(Uniform,     sqrt(6.0 / (fanIn + fanOut)));
+    else if (type == GlorotNormalInitializerTypeName)  return make_pair(Normal,      sqrt(2.0 / (fanIn + fanOut)));
+    else if (type == HeUniformInitializerTypeName)     return make_pair(Uniform,     sqrt(6.0 / fanIn));
+    else if (type == HeNormalInitializerTypeName)      return make_pair(Normal,      sqrt(2.0 / fanIn));
+    else if (type == TruncNormalInitializerTypeName)   return make_pair(TruncNormal, 1.0);
+    else                                               return make_pair(Normal,      0.0);
 }
 
 // initialize with random numbers
@@ -280,12 +280,12 @@ std::tuple<size_t, size_t, ElemType> LearnableParameter<ElemType>::InitRandom(Ma
     // the random seed offset is set via the "randomSeedOffset" parameter in config
     if (initOnCPUOnly)
         valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, true);
-    if (opts.first == distributionType::Uniform)
+    if (opts.first == DistributionType::Uniform)
         valueMatrix.SetUniformRandomValue(-range, range, randomSeed);
-    else if (opts.first == distributionType::Gaussian)
+    else if (opts.first == DistributionType::Normal)
         valueMatrix.SetGaussianRandomValue(0, range, randomSeed);
-    else if (opts.first == distributionType::TruncGaussian)
-        valueMatrix.SetTruncatedGaussianRandomValue(0, range, randomSeed);
+    else if (opts.first == DistributionType::TruncNormal)
+        valueMatrix.SetTruncatedNormalRandomValue(0, range, randomSeed);
     else
         LogicError("InitRandom: Unknown distribution type '%d'", opts.first);
     if (initOnCPUOnly)

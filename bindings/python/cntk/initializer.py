@@ -20,7 +20,7 @@ def uniform(scale, seed=None):
     Returns:
         initializer for :class:`~cntk.variables.Parameter`
         initialized to uniform distribution between `scale*[-1.0, 1.0]`
-        note this maps to the "uniform1" distribution in BrainScript. 
+        note this maps to the "uniform1" distribution in BrainScript.
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -39,7 +39,7 @@ def normal(scale, output_rank=SentinelValueForInferParamInitRank, filter_rank=Se
 
     Returns:
         initializer for :class:`~cntk.variables.Parameter`
-        initialized to normal distribution with mean `0` and standard deviation `scale`. 
+        initialized to normal distribution with mean `0` and standard deviation `scale`.
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -180,10 +180,10 @@ def initializer_with_rank(initializer, output_rank=None, filter_rank=None):
     return cntk_py.random_initializer_with_rank(initializer, output_rank, filter_rank)
 
 
-def truncated_gaussian(stdev, seed=None):
+def truncated_normal(stdev, seed=None):
     '''
-    Truncated Gaussian initializer. The resulting values are drawn from 
-    a truncated Gaussian distribution and are always within two 
+    Truncated normal initializer. The resulting values are drawn from
+    a truncated normal distribution and are always within two
     standard deviations from the mean (which is 0).
 
     Args:
@@ -197,4 +197,4 @@ def truncated_gaussian(stdev, seed=None):
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
 
-    return cntk_py.truncated_gaussian_initializer(stdev, seed)
+    return cntk_py.truncated_normal_initializer(stdev, seed)

@@ -97,7 +97,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::HeNormalInitializer;
 %ignore_function CNTK::BilinearInitializer;
 %ignore_function CNTK::RandomInitializerWithRank;
-%ignore_function CNTK::TruncatedGaussianInitializer;
+%ignore_function CNTK::TruncatedNormalInitializer;
 
 %ignore_struct std::hash<::CNTK::Parameter>;
 %ignore_struct CNTK::hash<::CNTK::Constant>;

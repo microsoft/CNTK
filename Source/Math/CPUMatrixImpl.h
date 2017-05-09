@@ -1041,13 +1041,13 @@ void CPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::SetTruncatedGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+void CPUMatrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
 {
     if (sigma <= 0)
-        InvalidArgument("SetTruncatedGaussianRandomValue: sigma must be a positive value.");
+        InvalidArgument("SetTruncatedNormalRandomValue: sigma must be a positive value.");
 
     if (IsEmpty())
-        LogicError("SetTruncatedGaussianRandomValue: Matrix is empty.");
+        LogicError("SetTruncatedNormalRandomValue: Matrix is empty.");
 
     auto& us = *this;
 

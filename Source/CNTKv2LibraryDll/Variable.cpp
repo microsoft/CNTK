@@ -354,9 +354,9 @@ namespace CNTK
         return newInitializerWithRanks;
     }
 
-    ParameterInitializer TruncatedGaussianInitializer(double scale, unsigned long seed)
+    ParameterInitializer TruncatedNormalInitializer(double scale, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::TruncGaussianInitializerTypeName, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::TruncNormalInitializerTypeName, scale, seed);
     }
 
     Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)

@@ -1513,18 +1513,18 @@ void Matrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemTyp
 }
 
 template <class ElemType>
-void Matrix<ElemType>::SetTruncatedGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+void Matrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
 {
     if (sigma <= 0)
-        InvalidArgument("SetTruncatedGaussianRandomValue: sigma must be a positive value.");
+        InvalidArgument("SetTruncatedNormalRandomValue: sigma must be a positive value.");
 
     if (IsEmpty())
         return;
 
     DISPATCH_MATRIX_ON_FLAG(this,
         this,
-        m_CPUMatrix->SetTruncatedGaussianRandomValue(mean, sigma, seed),
-        m_GPUMatrix->SetTruncatedGaussianRandomValue(mean, sigma, seed),
+        m_CPUMatrix->SetTruncatedNormalRandomValue(mean, sigma, seed),
+        m_GPUMatrix->SetTruncatedNormalRandomValue(mean, sigma, seed),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
 }
