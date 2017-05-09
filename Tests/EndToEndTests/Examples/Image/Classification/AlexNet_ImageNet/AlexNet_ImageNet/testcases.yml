@@ -1,4 +1,4 @@
-dataDir: ../../../../../../../Examples/Image/DataSets/ImageNet/test_data
+dataDir: ../../../../../../../Examples/Image/DataSets/ImageNet
 
 tags:
     - bvt-e (build_sku == 'gpu') and (device == 'gpu') and (flavor == 'release') 
