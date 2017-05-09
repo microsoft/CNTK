@@ -30,7 +30,7 @@ image_shape     = (num_channels, image_height, image_width)
 nr_logistic_mix = 10
 
 # Define the reader for both training and evaluation action.
-def create_reader(map_file, is_training):
+def create_reader(map_file, is_training, randomize=False):
     if not os.path.exists(map_file):
         raise RuntimeError("File '%s' does not exist. Please run install_cifar10.py from DataSets/CIFAR-10 to fetch them" %
                            (map_file))
@@ -47,9 +47,9 @@ def create_reader(map_file, is_training):
     return ct.io.MinibatchSource(ct.io.ImageDeserializer(map_file, ct.io.StreamDefs(
         features = ct.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
         labels   = ct.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
-        randomize=is_training)
+        randomize=randomize)
 
-def sample(batch_size, z, inputs,  nr_mix, loss, epoch, sample_index):
+def sample(batch_size, z, inputs,  nr_mix, loss, epoch, sample_index=-1):
     x_gen = np.zeros((batch_size,) + image_shape, dtype=np.float32)
     for y in range(image_height):
         for x in range(image_width):
@@ -65,8 +65,12 @@ def sample(batch_size, z, inputs,  nr_mix, loss, epoch, sample_index):
 
     sample_x = np.ascontiguousarray(np.transpose(x_gen, (0,2,3,1)))
     img_tile = plotting.img_tile(sample_x[:int(np.floor(np.sqrt(batch_size))**2)], aspect_ratio=1.0, border_color=1.0, stretch=True)
-    img = plotting.plot_img(img_tile, title="Samples from epoch {} image {}.".format(epoch, sample_index+1))
-    plotting.plt.savefig("image_{}_{}.png".format(epoch, sample_index+1))
+    if sample_index >= 0:
+        img = plotting.plot_img(img_tile, title="Samples after epoch {} images {}.".format(epoch+1, sample_index+1))
+        plotting.plt.savefig("image_{}_{}.png".format(epoch+1, sample_index+1))        
+    else:
+        img = plotting.plot_img(img_tile, title="Samples after epoch {}.".format(epoch+1))
+        plotting.plt.savefig("image_{}.png".format(epoch+1))
     plotting.plt.close('all')
 
 def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs = 100):
@@ -95,7 +99,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
 
     # Set learning parameters
     lr = 0.001
-    lr_decay = 0.6 #0.999995
+    lr_decay = 0.8 #0.999995
 
     # Print progress
     progress_writers = [ct.logging.ProgressPrinter(tag='Training', freq=100, num_epochs=max_epochs)] # freq=100
@@ -104,10 +108,10 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     learner = ct.learners.adam(z.parameters,
                                lr=ct.learning_rate_schedule(lr, unit=ct.UnitType.sample), 
                                momentum=ct.momentum_schedule(0.95), # Beta 1
-                               # unit_gain=False,
-                               # use_mean_gradient=True,
-                               variance_momentum=ct.momentum_schedule(0.9995) # Beta 2
-                               # gradient_clipping_threshold_per_sample=0.001
+                               unit_gain=False,
+                               use_mean_gradient=True,
+                               variance_momentum=ct.momentum_schedule(0.9995), # Beta 2
+                               gradient_clipping_threshold_per_sample=0.0001
                                )
     trainer = ct.Trainer(z, (ce, pe), [learner], progress_writers)
 
@@ -147,7 +151,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
 
             sample_index += 1
 
-        sample(sampling_minibatch_size, z, inputs, nr_logistic_mix, loss, epoch, 0)
+        sample(sampling_minibatch_size, z, inputs, nr_logistic_mix, loss, epoch)
 
         trainer.summarize_training_progress()
 
@@ -174,7 +178,7 @@ if __name__=='__main__':
 
     args = parser.parse_args()
     
-    reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), True)
-    reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), False)
+    reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), True, True)
+    reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), False, False)
 
     train(reader_train, reader_test, args.model, args.loss)

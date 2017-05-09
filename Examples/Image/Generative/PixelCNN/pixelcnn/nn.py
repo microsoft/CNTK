@@ -10,8 +10,8 @@ from cntk.internal import _as_tuple
 # some extra primitives and wrappers.
 #
 
-global_init = ct.normal(0.01) # paper 0.05
-global_g_init = ct.normal(0.01)
+global_init = ct.normal(0.05) # paper 0.05
+global_g_init = ct.normal(0.05)
 
 def zeros(shape):
     return ct.constant(value=0., shape=shape, dtype=np.float32)
@@ -54,7 +54,6 @@ def concat_elu(x):
 
 def log_sum_exp(x, axis):
     """ numerically stable log_sum_exp implementation that prevents overflow """
-    rank = len(x.shape)
     m = squeeze(ct.reduce_max(x, axis), axes=axis)
     m2 = ct.reduce_max(x, axis)
     y = ct.exp(x-m2)
@@ -297,7 +296,7 @@ def deconv2d(x, num_filters, filter_shape=(3,3), strides=(1,1), pad=True, nonlin
         W = ct.reshape(g, (1, num_filters, 1, 1)) * V_norm
 
         x = ct.convolution_transpose(W, x, strides=x_channels_shape + strides, output_shape=output_shape, auto_padding=paddings) + ct.reshape(b, (num_filters, 1, 1))
-
+        
         if nonlinearity is not None:
             x = nonlinearity(x)
         return x
@@ -349,8 +348,6 @@ def gated_resnet(x, a=None, h=None, nonlinearity=concat_elu, conv=conv2d, init=g
 
     c1 = conv(nonlinearity(x), num_filters, counters=counters, first_run=first_run)
     if a is not None: # add short-cut connection if auxiliary input 'a' is given
-        ashape = a.shape
-        c1s = c1.shape
         c1 += nin(nonlinearity(a), num_filters, counters=counters, first_run=first_run)
     c1 = nonlinearity(c1)
     if dropout_p > 0:
@@ -359,8 +356,7 @@ def gated_resnet(x, a=None, h=None, nonlinearity=concat_elu, conv=conv2d, init=g
 
     # add projection of h vector if included: conditional generation
     if h is not None:
-       h_shape = h.shape()
-       Wh = ct.parameter(h_shape + (2 * num_filters,), init=init, name='Wh')
+       Wh = ct.parameter(h.shape + (2 * num_filters,), init=init, name='Wh')
        c2 = c2 + ct.reshape(ct.times(h, Wc), (2 * num_filters, 1, 1))
 
     a = c2[:num_filters,:,:]
