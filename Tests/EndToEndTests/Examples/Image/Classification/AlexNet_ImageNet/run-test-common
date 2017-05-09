@@ -19,12 +19,11 @@ if [[ ! -d $TEST_DATA_DIR || ! -e $TEST_DATA_DIR/val1024.zip || ! -e $TEST_DATA_
         fi
 
         # Copy the test data to the test run directory
-        DataDir=$TEST_RUN_DIR/TestData
+        DataDir=$TEST_ROOT_DIR/../../Examples/Image/DataSets/ImageNet/test_data
         mkdir $DataDir
         cp -R $DataSourceDir/val1024.zip $DataDir || exit $?
-        cp -R $DataSourceDir/ImageNet1K_mean.xml $DataDir || exit $?
         cp -R $DataSourceDir/val1024_map.txt $DataDir/train_map.txt || exit $?
-        cp -R $DataSourceDir/val1024_map.txt $DataDir/test_map.txt || exit $?
+        cp -R $DataSourceDir/val1024_map.txt $DataDir/val_map.txt || exit $?
         Copied=1
     else
         echo Error: cannot find data. Please see Examples/Image/DataSets/ImageNet/README.md for instructions to get it.
