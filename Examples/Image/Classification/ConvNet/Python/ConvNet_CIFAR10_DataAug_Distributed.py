@@ -214,20 +214,19 @@ if __name__=='__main__':
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'test_map.txt')
 
-    try:
-        convnet_cifar10_dataaug(train_data, test_data, mean_data,
-                                minibatch_size=args['minibatch_size'],
-                                epoch_size=args['epoch_size'],
-                                num_quantization_bits=args['quantized_bits'],
-                                block_size=args['block_samples'],
-                                warm_up=args['distributed_after'],
-                                max_epochs=args['num_epochs'],
-                                restore=not args['restart'],
-                                log_to_file=args['logdir'],
-                                num_mbs_per_log=100,
-                                gen_heartbeat=True,
-                                profiling=args['profile'],
-                                tensorboard_logdir=args['tensorboard_logdir'])
-    finally:
-        cntk.train.distributed.Communicator.finalize()
+    convnet_cifar10_dataaug(train_data, test_data, mean_data,
+                            minibatch_size=args['minibatch_size'],
+                            epoch_size=args['epoch_size'],
+                            num_quantization_bits=args['quantized_bits'],
+                            block_size=args['block_samples'],
+                            warm_up=args['distributed_after'],
+                            max_epochs=args['num_epochs'],
+                            restore=not args['restart'],
+                            log_to_file=args['logdir'],
+                            num_mbs_per_log=100,
+                            gen_heartbeat=True,
+                            profiling=args['profile'],
+                            tensorboard_logdir=args['tensorboard_logdir'])
+    # Must call MPI finalize when process exit without exceptions
+    cntk.train.distributed.Communicator.finalize()
 

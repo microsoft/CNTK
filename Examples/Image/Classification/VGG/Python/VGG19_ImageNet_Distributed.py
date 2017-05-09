@@ -217,15 +217,14 @@ if __name__=='__main__':
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'val_map.txt')
 
-    try:
-        vgg19_train_and_eval(train_data, test_data, 
-                             minibatch_size=args['minibatch_size'], 
-                             epoch_size=args['epoch_size'],
-                             num_quantization_bits=args['quantized_bits'],
-                             max_epochs=args['num_epochs'],
-                             restore=not args['restart'],
-                             log_to_file=args['logdir'],
-                             num_mbs_per_log=200,
-                             gen_heartbeat=True)
-    finally:
-        cntk.distributed.Communicator.finalize()    
+    vgg19_train_and_eval(train_data, test_data, 
+                         minibatch_size=args['minibatch_size'], 
+                         epoch_size=args['epoch_size'],
+                         num_quantization_bits=args['quantized_bits'],
+                         max_epochs=args['num_epochs'],
+                         restore=not args['restart'],
+                         log_to_file=args['logdir'],
+                         num_mbs_per_log=200,
+                         gen_heartbeat=True)
+    # Must call MPI finalize when process exit without exceptions
+    cntk.distributed.Communicator.finalize()    
