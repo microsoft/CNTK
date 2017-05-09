@@ -1,4 +1,4 @@
-# ResNet-50 with ImageNet -- 50 layers bottleneck ResNet for image classification
+# Node: ResNet-18 with ImageNet -- 18 layers bottleneck ResNet for image classification
 # Reference: "Deep Residual Learning for Image Recognition" https://arxiv.org/abs/1512.03385
 
 command = TrainNetwork:BNStatistics:Eval
@@ -12,8 +12,8 @@ outputDir = "$RootDir$/Output"
 modelDir = "$OutputDir$/Models"
 
 meanDir = "$dataDir$"
-modelPath = "$modelDir$/ResNet_50"
-stderr = "$outputDir$/ResNet_50_BS_out"
+modelPath = "$modelDir$/ResNet_18"
+stderr = "$outputDir$/ResNet_18_BS_out"
 
 parallelTrain = true
 
@@ -26,34 +26,23 @@ TrainNetwork = {
         imageShape  = 224:224:3                 # image dimensions
         labelDim    = 1000                      # number of distinct labels
 
-        cMap        = 64:128:256:512:1024:2048  
-        numLayers   = 2:3:5:2
+        cMap        = 64:128:256:512 
         bnTimeConst = 4096
-
-        # stride in BottleneckInc
-        stride1x1 = (1:1)
-        stride3x3 = (2:2)
 
         model = Sequential(
             # conv1 and max pooling
             ConvBNReLULayer {cMap[0], (7:7), (2:2), bnTimeConst} :
             MaxPoolingLayer {(3:3), stride = 2, pad = true} :
+            ResNetBasicStack {2, cMap[0], bnTimeConst} :
 
-            # conv2_x
-            ResNetBottleneckInc {cMap[2], cMap[0], (1:1), (1:1), bnTimeConst} :
-            ResNetBottleneckStack {numLayers[0], cMap[2], cMap[0], bnTimeConst} :
+            ResNetBasicInc {cMap[1], (2:2), bnTimeConst} :
+            ResNetBasic {cMap[1], bnTimeConst} :
 
-            # conv3_x
-            ResNetBottleneckInc {cMap[3], cMap[1], stride1x1, stride3x3, bnTimeConst} :
-            ResNetBottleneckStack {numLayers[1], cMap[3], cMap[1], bnTimeConst} :
+            ResNetBasicInc {cMap[2], (2:2), bnTimeConst} :
+            ResNetBasic {cMap[2], bnTimeConst} :
 
-            # conv4_x
-            ResNetBottleneckInc {cMap[4], cMap[2], stride1x1, stride3x3, bnTimeConst} :
-            ResNetBottleneckStack {numLayers[2], cMap[4], cMap[2], bnTimeConst} :
-
-            # conv5_x
-            ResNetBottleneckInc {cMap[5], cMap[3], stride1x1, stride3x3, bnTimeConst} :
-            ResNetBottleneckStack {numLayers[3], cMap[5], cMap[3], bnTimeConst} :
+            ResNetBasicInc {cMap[3], (2:2), bnTimeConst} :
+            ResNetBasicStack {2, cMap[3], bnTimeConst} :
 
             # avg pooling
             AveragePoolingLayer {(7: 7), stride = 1} :
@@ -85,13 +74,13 @@ TrainNetwork = {
     SGD = {
         epochSize = 0
         minibatchSize = 256
-        maxEpochs = 120
+        maxEpochs = 125
         learningRatesPerMB = 1*30: 0.1*30: 0.01*30: 0.001
         momentumPerMB = 0.9
         gradUpdateType = "None"
         L2RegWeight = 0.0001
         dropoutRate = 0
-        numMBsToShowResult = 100
+        numMBsToShowResult = 500
 
         disableRegInBatchNormalization = true
 
@@ -116,7 +105,7 @@ TrainNetwork = {
             cropType = "RandomSide"
             jitterType = "UniRatio"
             sideRatio = 0.46666:0.875
-            aspectRatioRadius = 0.8:1.0
+            aspectRatio = 0.8:1.0
             brightnessRadius = 0.2
             contrastRadius = 0.2
             saturationRadius = 0.4
