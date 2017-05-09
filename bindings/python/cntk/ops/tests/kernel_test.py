@@ -192,7 +192,7 @@ def test_op_avg_pooling(input_size, pooling_window, strides, result, device_id, 
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = C.sequence.input(shape=input_operand.shape[2:],
+    a = C.sequence.input_variable(shape=input_operand.shape[2:],
                          dtype=sanitize_dtype_cntk(precision),
                          needs_gradient=True,
                          name='a')
@@ -254,7 +254,7 @@ def test_op_max_pooling(input_size, pooling_window, strides, autopad, result, de
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = C.sequence.input(shape=input_operand.shape[2:],
+    a = C.sequence.input_variable(shape=input_operand.shape[2:],
                          dtype=sanitize_dtype_cntk(precision),
                          needs_gradient=True,
                          name='a')
@@ -291,7 +291,7 @@ def test_op_max_unpooling(input_size, pooling_window, strides, autopad, result, 
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = C.sequence.input(shape=input_operand.shape[2:],
+    a = C.sequence.input_variable(shape=input_operand.shape[2:],
                          dtype=sanitize_dtype_cntk(precision),
                          needs_gradient=True,
                          name='a')

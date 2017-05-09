@@ -23,8 +23,8 @@ def cosine_distance(x, y, name=''):
     Example:
         >>> a = np.asarray([-1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]).reshape(3,2,2)
         >>> b = np.asarray([1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1]).reshape(3,2,2)
-        >>> x = C.sequence.input(shape=(2,))
-        >>> y = C.sequence.input(shape=(2,))
+        >>> x = C.sequence.input_variable(shape=(2,))
+        >>> y = C.sequence.input_variable(shape=(2,))
         >>> np.round(C.cosine_distance(x,y).eval({x:a,y:b}),5)
         array([[-1.,  1.],
                [ 1.,  0.],
@@ -61,8 +61,8 @@ def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, nam
     Example:
         >>> qry = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
         >>> doc = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
-        >>> x = C.sequence.input(shape=(4,))
-        >>> y = C.sequence.input(shape=(4,))
+        >>> x = C.sequence.input_variable(shape=(4,))
+        >>> y = C.sequence.input_variable(shape=(4,))
         >>> model = C.cosine_distance_with_negative_samples(x, y, shift=1, num_negative_samples=2)
         >>> np.round(model.eval({x: qry, y: doc}), decimals=4)
         array([[[ 1. ,  0.5,  0. ]],

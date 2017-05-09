@@ -152,7 +152,7 @@ def test_op_reduce_prod(input_data, axis, device_id, precision):
 def test_op_reduce_all(input_data, axis, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     data = AA(input_data, dtype=dt)
-    a = C.sequence.input(shape=data.shape,
+    a = C.sequence.input_variable(shape=data.shape,
                          dtype=sanitize_dtype_cntk(dt),
                          needs_gradient=True,
                          name='a')

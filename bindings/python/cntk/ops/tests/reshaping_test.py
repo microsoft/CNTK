@@ -307,7 +307,7 @@ def test_op_slice_sequence(input_data, slice_params, expected_result,
 
     t = Axis.new_unique_dynamic_axis('t')
     sample_shape = input_data.shape[1:]
-    a = C.sequence.input(shape=sample_shape,
+    a = C.sequence.input_variable(shape=sample_shape,
                          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
                          needs_gradient=True,
                          sequence_axis=t,

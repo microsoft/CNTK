@@ -112,7 +112,7 @@ def test_eval_sparse_dense(tmpdir, device_id):
         labels    = StreamDef(field='S1', shape=label_vocab_dim,  is_sparse=True)
     )), randomize=False, max_samples = 2)
 
-    raw_input = sequence.input(shape=input_vocab_dim, sequence_axis=Axis('inputAxis'), name='raw_input', is_sparse=True)
+    raw_input = sequence.input_variable(shape=input_vocab_dim, sequence_axis=Axis('inputAxis'), name='raw_input', is_sparse=True)
 
     mb_valid = mbs.next_minibatch(minibatch_size_in_samples=100,
             input_map={raw_input : mbs.streams.features},
@@ -144,7 +144,7 @@ def test_eval_sparse_no_seq(batch_index_data, device_id):
     dim = 10
     multiplier = 2
     for var_is_sparse in [True, False]:
-        in1 = sequence.input(shape=(dim,), is_sparse=var_is_sparse)
+        in1 = sequence.input_variable(shape=(dim,), is_sparse=var_is_sparse)
         z = times(in1, multiplier*np.eye(dim))
         batch = np.eye(dim)[batch_index_data]
         expected = batch * multiplier
@@ -163,7 +163,7 @@ def test_eval_sparse_seq_1(batch, device_id):
     dim = 4
     multiplier = 2
     for var_is_sparse in [True, False]:
-        in1 = sequence.input(shape=(dim,), is_sparse=var_is_sparse)
+        in1 = sequence.input_variable(shape=(dim,), is_sparse=var_is_sparse)
         z = times(in1, multiplier*np.eye(dim))
         if isinstance(batch[0], list):
             expected = [np.vstack([m.todense() * multiplier for m in seq]) for seq in
@@ -188,7 +188,7 @@ def test_eval_one_hot_seq(one_hot_batch, device_id):
     multiplier = 2
 
     for var_is_sparse in [True, False]:
-        in1 = sequence.input(shape=(dim,), is_sparse=var_is_sparse)
+        in1 = sequence.input_variable(shape=(dim,), is_sparse=var_is_sparse)
         # Convert CNTK node value to dense so that we can compare it later
         z = times(in1, np.eye(dim)*multiplier)
         # Convert expectation to dense
@@ -210,7 +210,7 @@ def test_model_not_criterion_subset():
     proj_dim = 11
     model1_dim = 3
     model2_dim = 4
-    x = sequence.input((input_dim,))
+    x = sequence.input_variable((input_dim,))
 
     core = C.layers.Embedding(proj_dim)
     model1 = C.layers.Dense(model1_dim)(sequence.last(core(x)))
@@ -219,7 +219,7 @@ def test_model_not_criterion_subset():
     pe_model1 = classification_error(model1, model1_label)
 
     model2 = C.layers.Dense(model2_dim)(core(x))
-    model2_label = sequence.input((model2_dim,))
+    model2_label = sequence.input_variable((model2_dim,))
     ce_model2 = cross_entropy_with_softmax(model2, model2_label)
     pe_model2 = classification_error(model2, model2_label)
 

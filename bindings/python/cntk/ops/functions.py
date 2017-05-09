@@ -615,7 +615,7 @@ class Function(cntk_py.Function):
         Example:
             >>> # Passing sparse values as one-hot with a vocabulary size of 5
             >>> vocab_size = 5
-            >>> v = C.sequence.input(shape=(vocab_size,), is_sparse=True)
+            >>> v = C.sequence.input_variable(shape=(vocab_size,), is_sparse=True)
             >>> f = C.times(v, np.eye(vocab_size))
             >>> # Passing a batch of two sequences:
             >>> # 1st sequence: word 1
@@ -631,7 +631,7 @@ class Function(cntk_py.Function):
             >>> # Doing the same, but with a CSR matrix from scipy.sparse
             >>> vocab_size = 5
             >>> from scipy.sparse import csr_matrix
-            >>> v = C.sequence.input(shape=(vocab_size,), is_sparse=True)
+            >>> v = C.sequence.input_variable(shape=(vocab_size,), is_sparse=True)
             >>> f = C.times(v, np.eye(vocab_size))
             >>> # Note that csr_matrix automatically uses a sparse representation underneath.
             >>> sparse_batch = [csr_matrix([[0,1,0,0,0]]), csr_matrix([[0,0,1,0,0], [0,0,0,0,1]])]

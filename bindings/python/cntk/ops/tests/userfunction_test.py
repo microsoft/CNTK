@@ -60,7 +60,7 @@ class MyPlus(UserFunction):
 def test_ext_eval_1():
     dim = 4
     p = C.parameter(shape=(dim,), init=10, name='p')
-    i = C.sequence.input(dim, needs_gradient=True, name='i_var')
+    i = C.sequence.input_variable(dim, needs_gradient=True, name='i_var')
     m = C.user_function(MyPlus(i, C.constant(3)))
     z = m+p
 
@@ -69,7 +69,7 @@ def test_ext_eval_1():
     assert np.allclose(result[0][0], input_data+3+10)
 
 def test_ext_eval_freedimension_input():
-    i = C.sequence.input((C.FreeDimension), needs_gradient=True, name='i_var')
+    i = C.sequence.input_variable((C.FreeDimension), needs_gradient=True, name='i_var')
     m = C.user_function(MyPlus(i, C.constant(3)))
 
     input_data = np.random.rand(3)
@@ -85,7 +85,7 @@ def test_ext_eval_freedimension_input():
 def test_ext_eval_2_only_param():
     dim = 4
     p = C.parameter(shape=(dim,), init=10, name='p')
-    i = C.sequence.input(dim, needs_gradient=True, name='i_var')
+    i = C.sequence.input_variable(dim, needs_gradient=True, name='i_var')
     m = C.user_function(MyPlus(p, C.constant(3)))
     # combine does not work
     # z = combine([m.output])
@@ -139,7 +139,7 @@ def test_ext_eval_5_times():
 
 def test_ext_eval_6_clone():
     dim = 4
-    i = C.sequence.input(dim, needs_gradient=True, name='i_var')
+    i = C.sequence.input_variable(dim, needs_gradient=True, name='i_var')
     m = i + 3
 
     p = C.parameter(shape=(dim,), init=10, name='p')
@@ -155,7 +155,7 @@ def test_ext_eval_6_clone():
 def test_ext_eval_7_placeholder():
     dim = 4
     p = C.parameter(shape=(dim,), init=10, name='p')
-    i = C.sequence.input(dim, needs_gradient=True, name='i_var')
+    i = C.sequence.input_variable(dim, needs_gradient=True, name='i_var')
     pl = C.placeholder()
     m = C.user_function(MyPlus(pl, C.constant(3)))
     z = m+p
@@ -169,7 +169,7 @@ def test_ext_train(tmpdir):
     dim = 4
 
     p = C.parameter(shape=(dim,), init=10)
-    i = C.sequence.input(dim, needs_gradient=True, name='i_var')
+    i = C.sequence.input_variable(dim, needs_gradient=True, name='i_var')
     m = MyPlus(i, C.constant(3), 'my_plus')
     # keeping m unwrapped since we need to access its member variables
     z = C.user_function(m)+p
@@ -211,7 +211,7 @@ def test_ext_train(tmpdir):
 
 def test_udf_clone():
     dim = 4
-    i = C.sequence.input(dim, needs_gradient=True, name='i_var')
+    i = C.sequence.input_variable(dim, needs_gradient=True, name='i_var')
     m_udf = C.user_function(MyPlus(i, C.constant(3)))
     p = C.parameter(shape=(dim,), init=10, name='p')
     z = m_udf + p
@@ -351,7 +351,7 @@ class PlusAndLast(UserFunction):
         return None, result[self.impl_func.output]
 
 def test_udf_plus_and_last():
-    x = C.sequence.input(shape=(2,))
+    x = C.sequence.input_variable(shape=(2,))
     y = C.input(shape=(2,))
 
     func = C.user_function(PlusAndLast(x, y))
@@ -391,8 +391,8 @@ class MultiOutputUserFunction(UserFunction):
 
 def test_multioutput_udf():
     dim = 2
-    x = C.sequence.input(dim, needs_gradient=True, name='x')
-    y = C.sequence.input(dim, needs_gradient=True, name='y')
+    x = C.sequence.input_variable(dim, needs_gradient=True, name='x')
+    y = C.sequence.input_variable(dim, needs_gradient=True, name='y')
     op = C.user_function(MultiOutputUserFunction(x, y))
 
     x_data = [AA([[1., 2.], [3., 4.]], dtype=np.float32)]
@@ -432,8 +432,8 @@ class MyPlusWithNoGradientToRightOperand(UserFunction):
 
 def test_udf_no_gradient_for_some_inputs():
     dim = 2
-    x = C.sequence.input(dim, needs_gradient=True, name='x')
-    y = C.sequence.input(dim, needs_gradient=True, name='y')
+    x = C.sequence.input_variable(dim, needs_gradient=True, name='x')
+    y = C.sequence.input_variable(dim, needs_gradient=True, name='y')
     op = C.user_function(MyPlusWithNoGradientToRightOperand(x, y))
 
     x_data = [AA([[1., 2.], [3., 4.]], dtype=np.float32)]
@@ -465,8 +465,8 @@ class MyPlusWithNoGradientNeededForOutput(UserFunction):
 
 def test_udf_output_needs_no_gradient():
     dim = 2
-    x = C.sequence.input(dim, needs_gradient=True, name='x')
-    y = C.sequence.input(dim, needs_gradient=True, name='y')
+    x = C.sequence.input_variable(dim, needs_gradient=True, name='x')
+    y = C.sequence.input_variable(dim, needs_gradient=True, name='y')
     op = C.user_function(MyPlusWithNoGradientNeededForOutput(x, y))
 
     x_data = [AA([[1., 2.], [3., 4.]], dtype=np.float32)]

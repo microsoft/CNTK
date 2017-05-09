@@ -245,8 +245,8 @@ def test_sweep_based_schedule(tmpdir, device_id):
         labels    = StreamDef(field='S1', shape=input_dim,  is_sparse=True)
     )), randomize=False)
 
-    in1 = sequence.input(shape=(input_dim,))
-    labels = sequence.input(shape=(input_dim,))
+    in1 = sequence.input_variable(shape=(input_dim,))
+    labels = sequence.input_variable(shape=(input_dim,))
     p = parameter(shape=(input_dim,), init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)

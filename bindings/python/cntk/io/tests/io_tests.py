@@ -744,7 +744,7 @@ def test_usermbsource_training(tmpdir):
             classification_error, learning_rate_schedule, sgd, Trainer, \
             training_session, times, UnitType, input
 
-    feature = sequence.input(shape=(input_dim,))
+    feature = sequence.input_variable(shape=(input_dim,))
     label = input(shape=(num_output_classes,))
     p = parameter(shape=(input_dim,num_output_classes), init=10)
     z = times(sequence.reduce_sum(feature), p, name='z')

@@ -1696,7 +1696,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
     or input data (which has a batch dimension, as needed for sequence-to-sequence models).
 
     Example:
-        >>> x = C.sequence.input(shape=(3,2))
+        >>> x = C.sequence.input_variable(shape=(3,2))
         >>> # Create one sequence with 4 tensors of shape (3, 2)
         >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
         >>> y = C.future_value(x) # using initial state of 0 by default
@@ -1749,7 +1749,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     or input data (which has a batch dimension, as needed for sequence-to-sequence models).
 
     Example:
-        >>> x = C.sequence.input(shape=(3,2))
+        >>> x = C.sequence.input_variable(shape=(3,2))
         >>> # Create one sequence with 4 tensors of shape (3, 2)
         >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
         >>> # this demonstrates how past_value shifts the sequence by one, padding with initial_state
@@ -2180,7 +2180,7 @@ def reduce_sum(x, axis=None, name=''):
     will happen across the batch axis (In this case the input must not be a sequence).
 
     Example:
-        >>> x = C.sequence.input((2,2))
+        >>> x = C.sequence.input_variable((2,2))
         >>> # create a batch of 2 sequences each containing 2 2x2 matrices
         >>> x0 = np.arange(16,dtype=np.float32).reshape(2,2,2,2)
         >>> # reduce over all static axes

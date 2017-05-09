@@ -563,7 +563,7 @@ def memoize(func):
 @memoize
 def _sparse_to_dense_network_cache(input_shape, is_sequence, device):
     if is_sequence:
-        temp_input = C.sequence.input(input_shape, is_sparse=True)
+        temp_input = C.sequence.input_variable(input_shape, is_sparse=True)
     else:
         temp_input = C.input(input_shape, is_sparse=True)
 

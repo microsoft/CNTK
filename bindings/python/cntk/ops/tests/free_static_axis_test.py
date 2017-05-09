@@ -35,7 +35,7 @@ def test_free_static_dimension_basic():
 
 
 def test_free_static_axis_in_recurrence():
-    x = C.sequence.input((C.FreeDimension, 2))
+    x = C.sequence.input_variable((C.FreeDimension, 2))
     out_placeholder = C.placeholder()
     out_past = C.sequence.past_value(out_placeholder)
     wh = C.parameter(init=np.asarray([[2, 5], [1, 3]], dtype=np.float32))
@@ -104,7 +104,7 @@ def test_free_and_inferred_static_dimension():
 
 
 def test_inferred_static_axis_in_recurrence():
-    x = C.sequence.input((-1, 2))
+    x = C.sequence.input_variable((-1, 2))
     out_placeholder = C.placeholder()
     out_past = C.sequence.past_value(out_placeholder)
     wh = C.parameter(init=np.asarray([[2, 5], [1, 3]], dtype=np.float32))
@@ -128,7 +128,7 @@ def test_slice_with_inferred_static_axis():
 
 
 def test_free_dimension_broadcast():
-    i0 = C.sequence.input(shape=(5,))
+    i0 = C.sequence.input_variable(shape=(5,))
     i0_unpacked, _ = C.sequence.unpack(i0, padding_value=0).outputs
     i1 = C.input(shape=(5,))
     m = i0_unpacked * i1

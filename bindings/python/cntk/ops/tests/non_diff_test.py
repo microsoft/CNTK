@@ -102,7 +102,7 @@ def test_input_variable():
     assert i.name == 'i'
     assert len(i.dynamic_axes)==1
 
-    sequence_i = sequence.input(shape=(3,2), name='sequence_i')
+    sequence_i = sequence.input_variable(shape=(3,2), name='sequence_i')
     assert sequence_i.shape == (3,2)
     assert sequence_i.name == 'sequence_i'
     assert len(sequence_i.dynamic_axes)==2

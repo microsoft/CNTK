@@ -28,8 +28,8 @@ def test_lstm_over_lstm_thought_vectors(device_id):
     emb_dim = 2
     hidden_dim = 2
     num_labels = 2
-    x_seq_input = C.sequence.input((C.FreeDimension, input_vocab_size), is_sparse=True, name='features')
-    label_seq_input = C.sequence.input(num_labels, is_sparse=True, sequence_axis=C.Axis('label_sequence'), name='labels')
+    x_seq_input = C.sequence.input_variable((C.FreeDimension, input_vocab_size), is_sparse=True, name='features')
+    label_seq_input = C.sequence.input_variable(num_labels, is_sparse=True, sequence_axis=C.Axis('label_sequence'), name='labels')
     with C.default_options(initial_state=0.1):
         model = C.layers.Embedding(emb_dim, name='embed')(x_seq_input)
         model = C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=False)(model)
@@ -47,7 +47,7 @@ def test_lstm_over_lstm_thought_vectors(device_id):
     seq2_data = [[[0, 0, 1], [0, 1, 1], [1, 0, 1]], [[0, 1, 0], [1, 0, 1], [0, 0, 0]]]
     csr_seq2 = _to_csr(seq2_data)
     ndarrayview2 = C.NDArrayView.from_csr(csr_seq2, shape=(2, 3, 3), device=C.cpu())
-    x_seq_data = C.Value.create(C.sequence.input((3, 3), is_sparse=True), [ndarrayview1, ndarrayview2], device=C.cpu()).data
+    x_seq_data = C.Value.create(C.sequence.input_variable((3, 3), is_sparse=True), [ndarrayview1, ndarrayview2], device=C.cpu()).data
 
     seq1_label_data = [[0, 1], [0, 1], [1, 0]]
     seq2_label_data = [[1, 0], [0, 1]]
@@ -70,7 +70,7 @@ def test_lstm_over_lstm_thought_vectors(device_id):
 def test_sequence_max():
   np.random.seed(0)
   a = np.float32(np.random.rand(20,100,8))
-  src = C.sequence.input(shape=(8), sequence_axis=C.Axis("Seq"))
+  src = C.sequence.input_variable(shape=(8), sequence_axis=C.Axis("Seq"))
   out = C.sequence.reduce_max(src)
   val = out.eval({src:a})
   expected = np.max(a, 1) 
@@ -79,7 +79,7 @@ def test_sequence_max():
 def test_neg_sequence_max():
   np.random.seed(0)
   a = np.float32(-np.random.rand(20,100,8))
-  src = C.sequence.input(shape=(8), sequence_axis=C.Axis("Seq"))
+  src = C.sequence.input_variable(shape=(8), sequence_axis=C.Axis("Seq"))
   out = C.sequence.reduce_max(src)
   val = out.eval({src:a})
   expected = np.max(a, 1) 
@@ -94,7 +94,7 @@ def np_softmax(a):
 def test_sequence_softmax():
   np.random.seed(0)
   a = np.float32(np.random.rand(20,100,8))
-  src = C.sequence.input(shape=(8), sequence_axis=C.Axis("Seq"))
+  src = C.sequence.input_variable(shape=(8), sequence_axis=C.Axis("Seq"))
   out = C.sequence.softmax(src)
   val = out.eval({src:a})
   expected = np_softmax(a)
@@ -136,14 +136,14 @@ def test_to_sequence_backprop(device_id):
     emb_dim = 2
     hidden_dim = 2
     num_labels = 2
-    x_seq_input = C.sequence.input(input_vocab_size, is_sparse=True, name='features')
+    x_seq_input = C.sequence.input_variable(input_vocab_size, is_sparse=True, name='features')
     with C.default_options(initial_state=0.1):
         model = C.layers.Embedding(emb_dim, name='embed')(x_seq_input)
         model = C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=False)(model)
         model = C.layers.Dense(num_labels, name='classify')(model)
 
     z = model
-    label_seq_input = C.sequence.input(num_labels, is_sparse=True, name='labels')
+    label_seq_input = C.sequence.input_variable(num_labels, is_sparse=True, name='labels')
     ce = C.cross_entropy_with_softmax(z, label_seq_input)
 
     seq1_data = [[0, 1, 1], [0, 1, 0], [1, 0, 0]]
@@ -217,7 +217,7 @@ def test_sequence_unpack_backprop(device_id):
     emb_dim = 2
     hidden_dim = 2
     num_labels = 2
-    x_seq_input = C.sequence.input(input_vocab_size, is_sparse=True, name='features')
+    x_seq_input = C.sequence.input_variable(input_vocab_size, is_sparse=True, name='features')
     label_input = C.input(num_labels, is_sparse=True, name='labels')
     with C.default_options(initial_state=0.1):
         model = C.layers.Embedding(emb_dim, name='embed')(x_seq_input)
@@ -246,13 +246,13 @@ def test_sequence_unpack_backprop(device_id):
             assert np.array_equal(reference_grad_value, grad_value)
 
 def test_to_sequence_error_for_operand_with_sequence_axis():
-    x = C.sequence.input(C.FreeDimension, 2)
+    x = C.sequence.input_variable(C.FreeDimension, 2)
     with pytest.raises(ValueError):
         op = C.to_sequence(x)
 
 
 def test_sequence_reduce_sum_over_scalar():
-    x = C.sequence.input(shape=(), needs_gradient=True)
+    x = C.sequence.input_variable(shape=(), needs_gradient=True)
     op = C.sequence.reduce_sum(x)
 
     grad, result = op.grad({x : [np.asarray([-1, 3, 5], dtype=np.float32), np.asarray([2, -5], dtype=np.float32), np.asarray([-2], dtype=np.float32)]}, outputs=[op])
@@ -263,7 +263,7 @@ def test_sequence_reduce_sum_over_scalar():
 
 
 def test_sequence_reduce_over_reduced_scalar():
-    x = C.sequence.input(shape=(1), needs_gradient=True)
+    x = C.sequence.input_variable(shape=(1), needs_gradient=True)
     op = C.sequence.reduce_sum(C.reduce_sum(x))
 
     grad, result = op.grad({x : np.asarray([[-1], [3], [5]], dtype=np.float32)}, outputs=[op])
@@ -280,7 +280,7 @@ def test_op_broadcast_as(device_id, precision):
               AA([[2], [3], [4]], dtype=PRECISION_TO_TYPE[precision])]
 
     a = C.input(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), name='a')
-    b = C.sequence.input(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), name='b')
+    b = C.sequence.input_variable(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), name='b')
 
     broadcast_a_as_b = C.sequence.broadcast_as(a, b)
 
@@ -296,7 +296,7 @@ def test_op_broadcast_as_in_loop(device_id):
     b_data = [AA([[2]]), AA([[2], [3]]), AA([[2], [3], [4]])]
 
     a = C.input(shape=(1,), name='a')
-    b = C.sequence.input(shape=(1,), name='b')
+    b = C.sequence.input_variable(shape=(1,), name='b')
 
     out_placeholder = C.placeholder()
     out_delayed = C.sequence.past_value(out_placeholder, time_step=5)
@@ -313,10 +313,10 @@ def test_op_gather_dynamic_axes_equivalence(device_id, precision):
     input_data1 = AA([1], dtype=PRECISION_TO_TYPE[precision])
     input_data2 = AA([2], dtype=PRECISION_TO_TYPE[precision])
 
-    a = C.sequence.input(shape=input_data1.shape,
+    a = C.sequence.input_variable(shape=input_data1.shape,
                        dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
                        name='a')
-    b = C.sequence.input(shape=input_data2.shape,
+    b = C.sequence.input_variable(shape=input_data2.shape,
                        dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
                        name='b')
 
@@ -338,10 +338,10 @@ def test_op_gather_derived_dynamic_axes_equivalence(device_id, precision):
     input_data1 = AA([1], dtype=PRECISION_TO_TYPE[precision])
     input_data2 = AA([2], dtype=PRECISION_TO_TYPE[precision])
 
-    a = C.sequence.input(shape=input_data1.shape,
+    a = C.sequence.input_variable(shape=input_data1.shape,
                        dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
                        name='a')
-    b = C.sequence.input(shape=input_data2.shape,
+    b = C.sequence.input_variable(shape=input_data2.shape,
                        dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
                        name='b')
 
@@ -364,7 +364,7 @@ def test_op_gather_sparse(device_id):
     vocab_size = 6
     input_data = Value.one_hot(input_sparse_indices, vocab_size)
 
-    a = C.sequence.input(shape=(vocab_size,), is_sparse=True, name='a')
+    a = C.sequence.input_variable(shape=(vocab_size,), is_sparse=True, name='a')
 
     a_last = C.sequence.last(a)
     a_last_dense = C.times(a_last, np.eye(vocab_size))
@@ -382,7 +382,7 @@ def test_op_scatter_sparse(device_id):
     vocab_size = 6
     input_data = Value.one_hot(input_sparse_indices, vocab_size)
 
-    a = C.sequence.input(shape=(vocab_size,), is_sparse=True, name='a')
+    a = C.sequence.input_variable(shape=(vocab_size,), is_sparse=True, name='a')
 
     a_last_scatter = C.sequence.scatter(C.sequence.last(a), C.sequence.is_first(a))
     a_last_scatter_dense = C.times(a_last_scatter, np.eye(vocab_size))
@@ -393,7 +393,7 @@ def test_op_scatter_sparse(device_id):
 
 
 def test_op_sequence_reduce_sum(device_id, precision):
-    a = C.sequence.input(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), needs_gradient=True, name='a')
+    a = C.sequence.input_variable(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), needs_gradient=True, name='a')
 
     sequence_sum_a_plus_sequence_sum_a = C.sequence.reduce_sum(a) + C.sequence.reduce_sum(a)
 

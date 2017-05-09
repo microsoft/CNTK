@@ -190,7 +190,7 @@ def test_data_type_inference():
     assert (param1.dtype == np.float64)
 
 def test_recurrence_shape_inference():
-    i = C.sequence.input((2,))
+    i = C.sequence.input_variable((2,))
     p = C.placeholder()
     p_past = C.sequence.past_value(p)
     p_past_plus_i = p_past + i
@@ -200,7 +200,7 @@ def test_recurrence_shape_inference():
 
 def test_sequence_data_mismatch():
     x = C.input((1,), name='x')
-    ones = C.sequence.input((1,), name='ones')
+    ones = C.sequence.input_variable((1,), name='ones')
     y_broadcast_last = C.sequence.broadcast_as(C.sequence.last(ones), x)
     y_broadcast_first = C.sequence.broadcast_as(C.sequence.first(ones), x)
 

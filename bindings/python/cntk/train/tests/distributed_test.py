@@ -33,8 +33,8 @@ def create_block_momentum_distributed_learner_with_time_constant(learner, distri
 
 def run_distributed_training(tmpdir, create_func):
 
-    in1 = sequence.input(shape=1)
-    labels = sequence.input(shape=1)
+    in1 = sequence.input_variable(shape=1)
+    labels = sequence.input_variable(shape=1)
     p = parameter(shape=2, init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
@@ -122,8 +122,8 @@ def test_distributed_mb_source(tmpdir):
         labels    = StreamDef(field='S1', shape=input_dim,  is_sparse=True)
         )), 
         randomize=False, max_samples=36) # A bit more than a sweep
-    input = sequence.input(shape=(input_dim,))
-    label = sequence.input(shape=(input_dim,))
+    input = sequence.input_variable(shape=(input_dim,))
+    label = sequence.input_variable(shape=(input_dim,))
     input_map = {
         input : mb0.streams.features,
         label : mb0.streams.labels

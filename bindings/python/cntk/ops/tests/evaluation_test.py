@@ -20,7 +20,7 @@ import cntk as C
 def test_sequence_grad_as_numpy_false(device_id, precision):
     from .. import sequence
 
-    a = sequence.input(shape=(1,), dtype=PRECISION_TO_TYPE[precision], needs_gradient=True, name='a')
+    a = sequence.input_variable(shape=(1,), dtype=PRECISION_TO_TYPE[precision], needs_gradient=True, name='a')
 
     sequence_sum_a_plus_sequence_sum_a = sequence.reduce_sum(a) + sequence.reduce_sum(a)
 

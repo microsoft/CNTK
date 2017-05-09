@@ -42,7 +42,7 @@ def test_1d_NDArrayView_copy():
 
 def test_sequences_packed_in_single_ndarray():
     dim = 2
-    input_with_sequence_axis = C.sequence.input(shape=(dim,))
+    input_with_sequence_axis = C.sequence.input_variable(shape=(dim,))
 
     data = np.asarray([[1, 2], [2, 3]])
     op = C.sequence.last(input_with_sequence_axis)

@@ -26,7 +26,7 @@ def test_axis_comparison():
     assert a1 == a2
 
 def test_axis_str():
-    i = C.sequence.input((1, 3))
+    i = C.sequence.input_variable((1, 3))
     assert str(C.Axis.all_axes()) == "Axis('AllAxes')"
     assert str(C.Axis.all_static_axes()) == "Axis('AllStaticAxes')"
     assert str(C.Axis.unknown_dynamic_axes()) == "(Axis('UnknownAxes'),)"

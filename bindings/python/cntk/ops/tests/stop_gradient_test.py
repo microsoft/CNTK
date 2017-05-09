@@ -13,8 +13,8 @@ import cntk as C
 
 
 def test_stop_gradient():
-    x = C.sequence.input(shape=(2,), sequence_axis=C.Axis("B"), needs_gradient=True)
-    y = C.sequence.input(shape=(2,), sequence_axis=C.Axis("B"), needs_gradient=True)
+    x = C.sequence.input_variable(shape=(2,), sequence_axis=C.Axis("B"), needs_gradient=True)
+    y = C.sequence.input_variable(shape=(2,), sequence_axis=C.Axis("B"), needs_gradient=True)
     z = C.element_times(x, y)
     w = z + C.stop_gradient(z)
     a = np.reshape(np.float32([0.25, 0.5, 0.1, 1]), (1, 2, 2))

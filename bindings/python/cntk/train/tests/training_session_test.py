@@ -61,8 +61,8 @@ def mb_source(tmpdir, fileprefix, max_samples=FULL_DATA_SWEEP):
 
 
 def create_sample_model(device, writer=None):
-    in1 = sequence.input(shape=(input_dim,))
-    labels = sequence.input(shape=(input_dim,))
+    in1 = sequence.input_variable(shape=(input_dim,))
+    labels = sequence.input_variable(shape=(input_dim,))
     p = parameter(shape=(input_dim,), init=10, device=device)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)

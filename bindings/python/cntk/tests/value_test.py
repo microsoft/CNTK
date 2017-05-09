@@ -23,7 +23,7 @@ def _dense_value_to_ndarray_test(data, num_of_dynamic_axes, expected_value_shape
     shape = (5,)
 
     if num_of_dynamic_axes == 2:
-        var = C.sequence.input(shape)
+        var = C.sequence.input_variable(shape)
     elif num_of_dynamic_axes == 1:
         var = C.input(shape)
     else:
@@ -47,7 +47,7 @@ def _sparse_value_to_csr_test(data, num_of_dynamic_axes, expected_value_shape, e
     shape = (3,)
 
     if num_of_dynamic_axes == 2:
-        var = C.sequence.input(shape, is_sparse=True)
+        var = C.sequence.input_variable(shape, is_sparse=True)
     elif num_of_dynamic_axes == 1:
         var = C.input(shape, is_sparse=True)
     else:
@@ -155,7 +155,7 @@ def test_sparse_failing_value_to_csr(data, num_of_dynamic_axes, expected_value_s
 def test_asarray_method():
     shape = (3,)
 
-    var = C.sequence.input(shape, is_sparse=True)
+    var = C.sequence.input_variable(shape, is_sparse=True)
 
     data = [csr([[1,0,2], [5,0,1]])]
     # conversion array -> value
@@ -232,7 +232,7 @@ def test_2d_sparse_sequences_value(device_id):
     csr_seq2 = _to_csr(seq2_data)
     ndarrayview2 = C.NDArrayView.from_csr(csr_seq2, shape=(1, 2, 3), device=C.cpu())
 
-    x = C.sequence.input((2, 3))
+    x = C.sequence.input_variable((2, 3))
     sequence_value = C.Value.create(x, [ndarrayview1, ndarrayview2], device=dev)
     assert np.array_equal(_to_dense(sequence_value.data), [seq1_data, [seq2_data, [[0, 0, 0], [0, 0, 0]]]])
 

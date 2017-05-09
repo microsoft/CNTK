@@ -14,7 +14,7 @@ def _graph_dict():
     # providing something to traverse.
     d = {}
 
-    d['i1'] = C.sequence.input(shape=(2, 3), sequence_axis=Axis('ia'), name='i1')
+    d['i1'] = C.sequence.input_variable(shape=(2, 3), sequence_axis=Axis('ia'), name='i1')
     d['c1'] = C.constant(shape=(2, 3), value=6, name='c1')
     d['p1'] = C.parameter(shape=(3, 2), init=7, name='p1')
 
