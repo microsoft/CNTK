@@ -8,6 +8,8 @@
 Utils for operations unit tests
 """
 
+import os
+import psutil
 import numpy as np
 import pytest
 
@@ -39,8 +41,6 @@ def mem_used():
     '''
     Return the non-swapped physical memory the Python process is using.
     '''
-    import os
-    import psutil
     process = psutil.Process(os.getpid())
     return process.memory_info().rss
 

@@ -42,12 +42,14 @@ def linear_layer(input_var, output_dim):
     t = times(input_var, times_param)
     return bias_param + t
 
+
 def dense_layer(inp, output_dim, nonlinearity):
     r = linear_layer(inp, output_dim)
     r = nonlinearity(r)
     if isinstance(r, UserFunction):
         r = user_function(r)
     return r
+
 
 def fully_connected_classifier_net(inp, num_output_classes, hidden_layer_dim,
                                    num_hidden_layers, nonlinearity):
@@ -70,7 +72,7 @@ def print_training_progress(trainer, mb, frequency):
 
 
 def train(nonlinearity, num_hidden_layers, device_id, 
-          minibatch_size=10, num_samples=10000):
+          minibatch_size=10, num_samples=100000):
     from cntk.cntk_py import always_allow_setting_default_device
     always_allow_setting_default_device()
     try_set_default_device(cntk_device(device_id))
@@ -78,9 +80,6 @@ def train(nonlinearity, num_hidden_layers, device_id,
 
     learning_rate = 0.5
     lr_schedule = learning_rate_schedule(learning_rate, UnitType.minibatch)
-
-    mysamplesize = 64
-    features, labels = generate_random_data_sample(mysamplesize, input_dim, num_output_classes)
 
     hidden_layers_dim = 50
 
@@ -101,41 +100,48 @@ def train(nonlinearity, num_hidden_layers, device_id,
     training_progress_output_freq = 20
 
     # Preallocate so that we don't measure the memory incrase
-    losses = [0]*num_minibatches_to_train
-    errors = [0]*num_minibatches_to_train
+    losses = np.zeros(num_minibatches_to_train)
+    errors = np.zeros(num_minibatches_to_train)
 
-    mem = [0]*num_minibatches_to_train
+    mem = np.zeros(num_minibatches_to_train)
 
-    # Accept at most 500K memory increase. This is in line with the non-UDF,
-    # pure CNTK usage.
-    MEMORY_THRESH = 500 * 1024
+    features, labels = generate_random_data_sample(minibatch_size,
+                                                   input_dim,
+                                                   num_output_classes)
 
+    # Set a maximum number of training runs, in which the memory is allowed to
+    # increase. Most likely these will be the first training runs.
+    MEM_INCREASE_COUNT_TOLERANCE = 40
+
+    dev = cntk_device(device_id)
     i = 0
     while i < num_minibatches_to_train:
         mem[i] = mem_used()
 
-        features, labels = generate_random_data_sample(minibatch_size,
-                                                       input_dim,
-                                                       num_output_classes)
-
         # Specify the input variables mapping in the model to actual minibatch
         # data for training.
         trainer.train_minibatch({inp: features, label: labels},
-                                device=cntk_device(device_id))
+                                device=dev)
 
         batchsize, loss, error = print_training_progress(trainer, i,
                                                          training_progress_output_freq)
 
-        if not (loss == "NA" or error == "NA"):
-            losses[i] = loss
-            errors[i] = error
+        if loss == "NA" or error == "NA":
+            loss = error = np.nan
+
+        losses[i] = loss
+        errors[i] = error
 
         i += 1
 
-    mem_diff = mem[-1] - mem[10] 
-    if mem_diff > MEMORY_THRESH:
-        raise ValueError('Memory leak detected with %s: %i' %
-                         (nonlinearity, mem_diff))
+    mem_deltas = np.diff(mem)
+    
+    if (mem_deltas > 0).sum() > MEM_INCREASE_COUNT_TOLERANCE:
+        raise ValueError('Potential Memory leak detected with %s: %s' %
+                         (nonlinearity, mem_deltas[mem_deltas != 0]))
+
+    losses = losses[~np.isnan(losses)]
+    errors = errors[~np.isnan(errors)]
 
     return losses, errors
 
@@ -156,7 +162,8 @@ class MySigmoid(UserFunction):
 
     def infer_outputs(self):
         return [output_variable(self.inputs[0].shape, self.inputs[0].dtype,
-            self.inputs[0].dynamic_axes)]
+                self.inputs[0].dynamic_axes)]
+
 
 def test_ext_user_sigmoid(device_id):
     np.random.seed(0)
@@ -166,10 +173,11 @@ def test_ext_user_sigmoid(device_id):
     assert np.allclose(exp_losses, act_losses)
     assert np.allclose(exp_errors, act_errors)
 
+
 def measure_runtime(device_id):
     import timeit
     np.random.seed(0)
-    for num_hidden_layers in [1,2,4,8,16]:
+    for num_hidden_layers in [1, 2, 4, 8, 16]:
         t = timeit.Timer('train(MySigmoid, %i, %s)'%(num_hidden_layers,
             device_id), setup="from __main__ import train, MySigmoid")
         timings_my_sigmoid = t.repeat(number=10)
