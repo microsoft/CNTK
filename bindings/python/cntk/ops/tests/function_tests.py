@@ -156,7 +156,6 @@ def test_evaluating_multiple_outputs():
     input_data.shape = (1, 1) + input_data.shape
 
     res = z.eval({a: input_data})
-    print(res)
 
     expected_forward_out1 = [[4.]]
     expected_forward_out2 = [[7.]]

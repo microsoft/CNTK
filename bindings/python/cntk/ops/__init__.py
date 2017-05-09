@@ -2929,7 +2929,7 @@ def per_dim_mean_variance_normalize(operand, mean, inv_stddev, name=''):
 @typemap
 def stop_gradient(input, name=''):
     '''
-    Outputs its input as it and prevents any gradient contribution from its output to its input.
+    Outputs its input as it is and prevents any gradient contribution from its output to its input.
 
     Args:
         input: class:`~cntk.ops.functions.Function` that outputs a tensor

@@ -5,7 +5,7 @@
 # ==============================================================================
 
 """
-Unit tests for the stop_gradient class.
+Unit tests for the stop_gradient.
 """
 
 import numpy as np
@@ -26,3 +26,4 @@ def test_stop_gradient():
     grad = w.backward(bwd, {w.output: np.ones_like(value)}, set([x, y]))
     assert np.allclose(grad[x], b)
     assert np.allclose(grad[y], a)
+

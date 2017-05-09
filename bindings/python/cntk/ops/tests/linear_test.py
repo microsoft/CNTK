@@ -148,10 +148,6 @@ def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, p
                     expected_backward,
                     device_id, precision)
 
-# -- minus operation tests --
-# TODO: enable once the function is exposed
-
-
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_minus(left_operand, right_operand, device_id, precision):
     expected_forward = AA([left_operand], dtype=PRECISION_TO_TYPE[
@@ -169,9 +165,6 @@ def test_op_minus(left_operand, right_operand, device_id, precision):
     _test_binary_op(precision, device_id, '-',
                     left_operand, right_operand,
                     expected_forward, expected_backward)
-
-# -- element times tests --
-
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_element_times(left_operand, right_operand, device_id, precision):
@@ -192,7 +185,6 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
                     expected_forward, expected_backward)
 
 
-# -- element divide tests --
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_element_divide(left_operand, right_operand, device_id, precision):
     expected_forward = AA([left_operand]) / AA([right_operand])
