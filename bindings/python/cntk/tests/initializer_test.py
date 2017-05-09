@@ -36,6 +36,6 @@ def test_initializer_init(device_id):
     _check(glorot_normal(scale=10, output_rank=1, filter_rank=2), 'glorot_normal')
     _check(he_uniform(scale=10, output_rank=1, filter_rank=2), 'he_uniform')
     _check(he_normal(scale=10, output_rank=1, filter_rank=2), 'he_normal')
-    _check(truncated_gaussian(stdev=10), 'truncated_gaussian')
-    
-    _check_min_max(truncated_gaussian(stdev=2), -4, 4, 'truncated_gaussian')
+    _check(truncated_normal(stdev=10), 'truncated_gaussian')
+
+    _check_min_max(truncated_normal(stdev=2), -4, 4, 'truncated_gaussian')
