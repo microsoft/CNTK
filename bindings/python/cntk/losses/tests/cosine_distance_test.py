@@ -17,7 +17,7 @@ def test_cosine_distance():
   b = np.reshape(np.arange(0, 5, dtype=np.float32), (1,5))
   
   src = C.sequence.input_variable(shape=(5), sequence_axis=C.Axis("Seq"))
-  tgt = C.input(shape=(5))
+  tgt = C.input_variable(shape=(5))
   tgt_br = C.sequence.broadcast_as(tgt, src)
   cos_seq = C.cosine_distance(src, tgt_br)
   assert len(cos_seq.dynamic_axes)==2

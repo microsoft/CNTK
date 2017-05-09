@@ -187,7 +187,7 @@ computation can be moved to the constructor::
             self.new_p = {}
             self.grad_input = {}
 
-            self.sample_count_input = cntk.input((), name='count')
+            self.sample_count_input = cntk.input_variable((), name='count')
 
             lr = lr_schedule[0]  # assuming constant learning rate
             eta = lr / self.sample_count_input
@@ -195,7 +195,7 @@ computation can be moved to the constructor::
             # we need one graph per parameter shape
             for param in parameters:
                 p_shape = param.shape
-                self.grad_input[p_shape] = cntk.input(p_shape)
+                self.grad_input[p_shape] = cntk.input_variable(p_shape)
                 self.new_p[p_shape] = param - eta * self.grad_input[p_shape]
 
         def update(self, gradient_values, training_sample_count, sweep_end):
@@ -360,8 +360,8 @@ e.g.::
 
     # instantiating the user minibatch source
     mbs = MyDataSource(input_dim, num_output_classes)
-    feature = sequence.input(shape=(input_dim,))
-    label = input(shape=(num_output_classes,))
+    feature = sequence.input_variable(shape=(input_dim,))
+    label = cntk.input_variable(shape=(num_output_classes,))
 
     # setting up the model
     # ...

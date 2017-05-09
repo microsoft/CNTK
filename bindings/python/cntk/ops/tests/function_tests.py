@@ -22,7 +22,7 @@ def test_variable_forwarding():
 
 
 def test_eval_by_node_name():
-    i = C.input(shape=(1,), needs_gradient=True, name='i')
+    i = C.input_variable(shape=(1,), needs_gradient=True, name='i')
     res = i + 3
 
     assert res.eval({i: [[3]]}) == [6]
@@ -32,7 +32,7 @@ def test_eval_by_node_name():
 
 def test_replace_placeholders():
     p = C.placeholder(shape=(1,))
-    i = C.input(shape=(1,),
+    i = C.input_variable(shape=(1,),
               needs_gradient=True,
               name='i')
     res = p + 3
@@ -55,7 +55,7 @@ def test_replace_placeholders():
 
 def test_cloning():
     p = C.placeholder(shape=(1,), name='p')
-    i = C.input(shape=(1,),
+    i = C.input_variable(shape=(1,),
               needs_gradient=True,
               name='i')
     res = p + i
@@ -95,8 +95,8 @@ def test_replace_placeholder_s():
     assert op.eval() == 26
 
 def test_exception_for_unnamed_arguments():
-    i1 = C.input((1,2), name='i1')
-    i2 = C.input((2,1), name='i2')
+    i1 = C.input_variable((1,2), name='i1')
+    i2 = C.input_variable((2,1), name='i2')
     root_node = C.plus(i1, i2)
     input1 = [[[1,2]]]
     input2 = [[[[1],[2]]]]
@@ -106,8 +106,8 @@ def test_exception_for_unnamed_arguments():
         result = root_node.eval([input1, input2])
 
 def test_output_in_intermediate_node():
-    x = C.input((2,))
-    y = C.input((2,))
+    x = C.input_variable((2,))
+    y = C.input_variable((2,))
     x0 = np.asarray([[2., 1.]], np.float32)
     y0 = np.asarray([[4., 6.]], np.float32)
 
@@ -129,8 +129,8 @@ def test_output_in_intermediate_node():
     assert compare_lists_of_np_arrays(list(two_nodes_output[1].values()), expected_results)
 
 def test_getting_output_from_non_existent_node():
-    x = C.input((2,))
-    y = C.input((2,))
+    x = C.input_variable((2,))
+    y = C.input_variable((2,))
     x0 = np.asarray([[2., 1.]])
     y0 = np.asarray([[4., 6.]])
 
@@ -146,7 +146,7 @@ def test_getting_output_from_non_existent_node():
 def test_evaluating_multiple_outputs():
     input_data = AA([1], np.float32)
 
-    a = C.input(shape=input_data.shape, name='a')
+    a = C.input_variable(shape=input_data.shape, name='a')
     a_plus_1 = a + 1
     out1 = ((a_plus_1 + 2) - 1) + 1
     out2 = ((a_plus_1 + 4) - 1) + 2
@@ -163,8 +163,8 @@ def test_evaluating_multiple_outputs():
     assert np.array_equal(res[out2.output], expected_forward_out2)
 
 def test_set_name():
-    x = C.input((1,))
-    y = C.input((1,))
+    x = C.input_variable((1,))
+    y = C.input_variable((1,))
     x_plus_y = x + y
     assert (x_plus_y.name == '')
     x_plus_y.name = 'x_plus_y'
@@ -182,7 +182,7 @@ def test_set_name():
 
 
 def test_data_type_inference():
-    x_float = C.input((1,), dtype = np.float64)
+    x_float = C.input_variable((1,), dtype = np.float64)
     param1 = C.parameter((C.InferredDimension, 1), init = C.glorot_uniform(), dtype = C.cntk_py.DataType_Unknown)
     assert (param1.get_data_type() == C.cntk_py.DataType_Unknown)
 
@@ -199,7 +199,7 @@ def test_recurrence_shape_inference():
     assert p_past_plus_i.output.shape == (2,)
 
 def test_sequence_data_mismatch():
-    x = C.input((1,), name='x')
+    x = C.input_variable((1,), name='x')
     ones = C.sequence.input_variable((1,), name='ones')
     y_broadcast_last = C.sequence.broadcast_as(C.sequence.last(ones), x)
     y_broadcast_first = C.sequence.broadcast_as(C.sequence.first(ones), x)
@@ -216,7 +216,7 @@ def test_sequence_data_mismatch():
 def test_clone_with_function_in_substitution_map():
     input_dim = 1
     proj_dim = 2
-    x = C.input((input_dim,))
+    x = C.input_variable((input_dim,))
     w = C.parameter((input_dim, proj_dim))
     t = C.times(x, w)
     b = C.parameter((proj_dim))
@@ -227,16 +227,16 @@ def test_clone_with_function_in_substitution_map():
     t_plus_b_clone = just_b.clone('share', {p : t})
 
 def test_clone_with_slice():
-    i1 = C.input((2,2), name='i1')
-    i2 = C.input((2,2), name='i2')
+    i1 = C.input_variable((2,2), name='i1')
+    i2 = C.input_variable((2,2), name='i2')
     x = C.splice(i1, i2, axis=0)
     W = C.constant(1, (4,1), name='W')
     y = C.convolution(W, x)
     assert(y.shape == (4,2))
 
     from ..functions import CloneMethod
-    x1 = C.input((2,1), name='x1')
-    x2 = C.input((2,1), name='x2')
+    x1 = C.input_variable((2,1), name='x1')
+    x2 = C.input_variable((2,1), name='x2')
     p1 = C.placeholder()
     p2 = C.placeholder()
     y_cloned = y.clone('clone', {i1:p1, i2:p2})
@@ -246,7 +246,7 @@ def test_clone_with_slice():
 def test_as_composite():
     input_dim = 1
     proj_dim = 2
-    x = C.input((input_dim,))
+    x = C.input_variable((input_dim,))
     b = C.parameter((proj_dim))
     w = C.parameter((input_dim, proj_dim))
     func_name = 't_plus_b'
@@ -262,7 +262,7 @@ def test_as_composite():
 def test_input_order():
     input_dim = 1
     proj_dim = 2
-    x = C.input((input_dim,), name='x')
+    x = C.input_variable((input_dim,), name='x')
     b = C.parameter((proj_dim), name='b')
     w = C.parameter((input_dim, proj_dim), name='w')
     func_name = 't_plus_b'
@@ -284,7 +284,7 @@ def test_input_order():
 def test_combine_duplicated_inputs():
     input_dim = 1
     proj_dim = 2
-    x = C.input((input_dim,), name='x')
+    x = C.input_variable((input_dim,), name='x')
     b = C.parameter((proj_dim), name='b')
     w = C.parameter((input_dim, proj_dim), name='w')
     func_name = 't_plus_b'
@@ -305,8 +305,8 @@ def test_combine_duplicated_inputs():
 
 
 def test_extra_arguments_in_eval():
-    x1 = C.input((1,), name='x1')
-    x2 = C.input((1,), name='x2')
+    x1 = C.input_variable((1,), name='x1')
+    x2 = C.input_variable((1,), name='x2')
     x1_plus_1 = x1 + 1
     x1_plus_1_plus_x2 = x1_plus_1 + x2
 
@@ -330,7 +330,7 @@ def test_MinibatchData_and_Value_as_input(tmpdir):
 
     mb = mb_source.next_minibatch(1)
 
-    f1 = C.input(shape=(1,),
+    f1 = C.input_variable(shape=(1,),
                        needs_gradient=True,
                        name='f')
     res = f1 * 2
@@ -353,10 +353,10 @@ def test_output_subset_evaluation(device_id):
         pytest.skip('Test only runs when GPU available')
 
     device = cntk_device(device_id)
-    x1 = C.input(shape=())
+    x1 = C.input_variable(shape=())
     op1 = C.constant(value=1, shape=(1), device=device) + (C.constant(value=1, shape=(1), device=device) + x1)
 
-    x2 = C.input(shape=(1))
+    x2 = C.input_variable(shape=(1))
 
     # Deliberately locate the parameter on a different device
     # instead of the actual compute target device, so that
@@ -383,8 +383,8 @@ def test_block_with_unused_outputs():
     func2 = C.as_block(p2 + 1, [(p2, p4)], 'plus_func_2')
     p5 = C.placeholder()
     func3 = C.as_block(C.combine([func2]), [(p4, p5)], 'empty_block')
-    input_var1 = C.input(shape=())
-    input_var2 = C.input(shape=())
+    input_var1 = C.input_variable(shape=())
+    input_var2 = C.input_variable(shape=())
     block = C.as_block(C.combine([func1, func3]), [(p3, input_var1), (p5, input_var2)], 'multi_output_block')
 
     eval_root = C.combine([block.outputs[0]])
@@ -393,7 +393,7 @@ def test_block_with_unused_outputs():
 
 def test_constant_data_type_mismatch():
     a = C.constant(np.triu(np.ones(5)), shape=(5,5))
-    i = C.input(shape=(5,5))
+    i = C.input_variable(shape=(5,5))
     b = a * i
 
     with pytest.raises(ValueError):
@@ -415,7 +415,7 @@ def test_update_signature():
 
 
 def test_eval_again_with_prev_outputs_live(device_id):
-    x = C.input(2)
+    x = C.input_variable(2)
     dev = cntk_device(device_id)
     w1 = C.parameter(init=np.asarray([1], dtype=np.float32), device=dev)
     w2 = C.parameter(init=np.asarray([-1], dtype=np.float32), device=dev)
@@ -476,7 +476,7 @@ def test_eval_again_with_prev_outputs_live(device_id):
 
 
 def test_outputs_passing():
-    in1 = C.input(shape=(1,))
+    in1 = C.input_variable(shape=(1,))
     a = C.alias(in1 + 1, name='a')
     b = a + 2
 

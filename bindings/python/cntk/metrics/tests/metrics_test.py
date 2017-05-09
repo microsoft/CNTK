@@ -126,9 +126,9 @@ def test_ndcg(value, output, gain, device_id, precision):
 
     from cntk.metrics import ndcg_at_1
 
-    g = C.input((1,))
-    s = C.input((1,))
-    n = C.input((1,))
+    g = C.input_variable((1,))
+    s = C.input_variable((1,))
+    n = C.input_variable((1,))
     f = ndcg_at_1(s, n, g)
 
     actual_value = f.eval({s:score, n:gain, g:group})
@@ -146,8 +146,8 @@ EDIT_DISTANCE_ERROR_TEST_CASES = [
 
 @pytest.mark.parametrize("left_input, right_input, subPen, delPen, insPen, squashInputs, tokensToIgnore, result", EDIT_DISTANCE_ERROR_TEST_CASES)
 def test_edit_distance_error(left_input, right_input, subPen, delPen, insPen, squashInputs, tokensToIgnore, result, device_id, precision):
-    i1 = C.input(shape=(2,))
-    i2 = C.input(shape=(2,))
+    i1 = C.input_variable(shape=(2,))
+    i2 = C.input_variable(shape=(2,))
     arguments = {i1 : left_input, i2 : right_input}
     a = edit_distance_error(i1, i2, subPen, delPen, insPen, squashInputs, tokensToIgnore)
     assert np.allclose(result, a.eval(arguments))

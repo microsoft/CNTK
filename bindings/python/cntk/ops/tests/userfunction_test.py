@@ -250,7 +250,7 @@ def test_ext_backpropstate(payload):
     dim = 4
 
     p = C.parameter(shape=(dim,), init=10)
-    in1 = C.input(dim, needs_gradient=True, name='i_var')
+    in1 = C.input_variable(dim, needs_gradient=True, name='i_var')
     m = C.user_function(TestBackPropState(in1, payload))
     z = m+p
 
@@ -301,7 +301,7 @@ def test_ext_lambdafunc(tmpdir):
     cb = CallbackCounter()
 
     p = C.parameter(shape=(dim,), init=1)
-    i = C.input(dim, needs_gradient=True, name='i_var')
+    i = C.input_variable(dim, needs_gradient=True, name='i_var')
     k = i*p
     m = LambdaFunc(k,
             when=lambda arg: np.sum(arg)>1,
@@ -336,8 +336,8 @@ class PlusAndLast(UserFunction):
     impl_func = None
 
     def __init__(self, arg1, arg2, name='f1'):
-        i1 = C.input(arg1.shape, arg1.dtype, name='i1', dynamic_axes=arg1.dynamic_axes)
-        i2 = C.input(arg2.shape, arg2.dtype, name='i2', dynamic_axes=arg2.dynamic_axes)
+        i1 = C.input_variable(arg1.shape, arg1.dtype, name='i1', dynamic_axes=arg1.dynamic_axes)
+        i2 = C.input_variable(arg2.shape, arg2.dtype, name='i2', dynamic_axes=arg2.dynamic_axes)
         self.impl_func = C.sequence.last(i1 + C.sequence.broadcast_as(i2, i1))
 
         super(PlusAndLast, self).__init__([arg1, arg2], name=name)
@@ -352,7 +352,7 @@ class PlusAndLast(UserFunction):
 
 def test_udf_plus_and_last():
     x = C.sequence.input_variable(shape=(2,))
-    y = C.input(shape=(2,))
+    y = C.input_variable(shape=(2,))
 
     func = C.user_function(PlusAndLast(x, y))
 
@@ -409,7 +409,7 @@ def test_multioutput_udf():
 def test_udf_op_name():
     dim = 4
     p = C.parameter(shape=(dim,), init=10, name='p')
-    i = C.input(dim, needs_gradient=True, name='i_var')
+    i = C.input_variable(dim, needs_gradient=True, name='i_var')
     m = C.user_function(MyPlus(i, C.constant(3)))
     assert str(m.root_function) != ''
 
@@ -483,7 +483,7 @@ def test_udf_output_needs_no_gradient():
 def test_native_user_function():
     C.ops.functions.register_native_user_function('NativeUserTimesFunction', 'Cntk.ExtensibilityExamples-' + C.__version__.rstrip('+'), 'CreateUserTimesFunction')
     dev = C.cpu()
-    x = C.input((2))
+    x = C.input_variable((2))
     w = C.parameter((2, 2), init=np.asarray([[0.5, 2], [-0.5, 1.5]], dtype=np.float32), device=dev)
     attributes = {'param_rank' : 2, 'padding' : True}
     op = C.ops.functions.native_user_function('NativeUserTimesFunction', [w, x], attributes, 'native_user_times_function')

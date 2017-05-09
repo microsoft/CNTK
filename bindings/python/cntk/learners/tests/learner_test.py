@@ -58,7 +58,7 @@ def test_momentum_schedule_per_sample(params, expectation):
     assert [l[i] for i in range(len(expectation))] == expectation
 
 def test_learner_init():
-    i = C.input(shape=(1,), needs_gradient=True, name='a')
+    i = C.input_variable(shape=(1,), needs_gradient=True, name='a')
     w = parameter(shape=(1,))
 
     res = i * w
@@ -121,7 +121,7 @@ def test_learner_init():
     C.adadelta(res.parameters, lr_per_sample)
 
 def test_learner_update():
-    i = C.input(shape=(1,), needs_gradient=True, name='a')
+    i = C.input_variable(shape=(1,), needs_gradient=True, name='a')
     w_init = 1
     w = parameter(shape=(1,), init=w_init)
     res = i * w
@@ -183,11 +183,11 @@ def test_learner_logging():
     from cntk.logging import ProgressPrinter
     from cntk import cross_entropy_with_softmax, classification_error
 
-    features = C.input(shape=(1,), needs_gradient=True, name='a')
+    features = C.input_variable(shape=(1,), needs_gradient=True, name='a')
     w_init = 1
     w = parameter(shape=(1,), init=w_init)
     z = features * w
-    labels = C.input(shape=(1,), name='b')
+    labels = C.input_variable(shape=(1,), name='b')
     ce = cross_entropy_with_softmax(z, labels)
     errs = classification_error(z, labels)
 
@@ -309,8 +309,8 @@ def ffnet():
     hidden_dimension = 3
 
     # input variables denoting the features and label data
-    features = C.input((inputs), np.float32)
-    label = C.input((outputs), np.float32)
+    features = C.input_variable((inputs), np.float32)
+    label = C.input_variable((outputs), np.float32)
 
     # Instantiate the feedforward classification model
     my_model = Sequential ([
@@ -355,7 +355,7 @@ def test_sgd_with_noise():
     assert(True)
 
 def test_0d_1d_parameter_set_value():
-    x = C.input(2)
+    x = C.input_variable(2)
     w_0d = C.parameter(())
     op = x + w_0d
     w_0d_grad = op.grad({x : np.asarray([1, 2], dtype=np.float32)}, wrt=[w_0d], as_numpy=False)

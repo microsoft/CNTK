@@ -183,7 +183,7 @@ def SequentialClique(functions, name=''):
     Example:
      >>> from cntk.layers import *
      >>> from cntk.ops import abs, sqrt, square
-     >>> x = C.input(2)
+     >>> x = C.input_variable(2)
      >>> seq_clique = SequentialClique([abs, sqrt, square])
      >>> seq_clique(x).eval(np.array([2, 8], np.float32)) # 400 = square((8 + abs(8)) + sqrt(8 + abs(8)))
          array([[  36.,  400.]], dtype=float32)

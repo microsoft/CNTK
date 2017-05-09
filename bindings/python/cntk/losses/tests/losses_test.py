@@ -151,9 +151,9 @@ def test_lambda_rank(grad, value, output, gain, device_id, precision):
 
     from cntk.losses import lambda_rank
 
-    g = C.input((1,))
-    s = C.input((1,), needs_gradient=True)
-    n = C.input((1,))
+    g = C.input_variable((1,))
+    s = C.input_variable((1,), needs_gradient=True)
+    n = C.input_variable((1,))
     f = lambda_rank(s, n, g)
 
     actual_grad, actual_value = f.grad({s:score, n:gain, g:group}, [s], [f.output])

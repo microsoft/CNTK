@@ -41,14 +41,14 @@ def _graph_dict():
 def _simple_dict():
     d = {}
 
-    d['i1'] = C.input(shape=(2, 3), name='i1')
+    d['i1'] = C.input_variable(shape=(2, 3), name='i1')
     d['c1'] = C.constant(shape=(2, 3), value=6, name='c1')
     d['p1'] = C.parameter(shape=(3, 2), init=7, name='p1')
     d['op1'] = C.plus(d['i1'], d['c1'], name='op1')
     d['op2'] = C.times(d['op1'], d['p1'], name='op2')
     d['root'] = d['op2']
 
-    d['target'] = C.input((), name='label')
+    d['target'] = C.input_variable((), name='label')
     d['all'] = C.combine([d['root'], C.minus(
         d['target'], C.constant(1, name='c2'), name='minus')], name='all')
 
@@ -178,7 +178,7 @@ def test_depth_first_search_blocks(depth, prefix_count):
             ]
         )
 
-    in1 = C.input(shape=(3, 256, 256), name='image')
+    in1 = C.input_variable(shape=(3, 256, 256), name='image')
     img = image_to_vec(in1)
 
     found = C.logging.graph.depth_first_search(img, lambda x: True, depth=depth)

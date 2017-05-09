@@ -48,7 +48,7 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
         num_tensor_elements, dtype=PRECISION_TO_TYPE[precision]).reshape(input_shape)
     input_reshaped = input_tensor.reshape(expected_output_shape)
 
-    a = C.input(shape=input_tensor.shape,
+    a = C.input_variable(shape=input_tensor.shape,
               dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
               name='a')
@@ -96,7 +96,7 @@ def test_op_reshape_subshape(input_shape, replacement_shape, begin_axis, end_axi
         num_tensor_elements, dtype=PRECISION_TO_TYPE[precision]).reshape(input_shape)
     input_reshaped = input_tensor.reshape(expected_output_shape)
 
-    a = C.input(shape=input_tensor.shape,
+    a = C.input_variable(shape=input_tensor.shape,
               dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
               name='a')
@@ -133,7 +133,7 @@ def test_op_reshape_gradient_accumulation(device_id, precision):
         num_tensor_elements, dtype=PRECISION_TO_TYPE[precision])
     input_reshaped = input_tensor.reshape(expected_output_shape)
 
-    a = C.input(shape=input_tensor.shape,
+    a = C.input_variable(shape=input_tensor.shape,
               dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
               name='a')
@@ -266,7 +266,7 @@ def test_op_slice_overload(input_data, slices, expected_result,
     expected_forward = AA([expected_result], dtype=dtype)
     expected_backward = [grad_slice(input_data, slices)]
 
-    a = C.input(shape=value.shape,
+    a = C.input_variable(shape=value.shape,
                 dtype=sanitize_dtype_cntk(dtype),
                 needs_gradient=True,
                 name='a')
@@ -362,11 +362,11 @@ def test_op_splice(input_data1, input_data2, axis, expected_result, device_id, p
 
     input_data1 = AA(input_data1, dtype=PRECISION_TO_TYPE[precision])
     input_data2 = AA(input_data2, dtype=PRECISION_TO_TYPE[precision])
-    a = C.input(shape=input_data1.shape,
+    a = C.input_variable(shape=input_data1.shape,
                 dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
                 needs_gradient=True,
                 name='a')
-    b = C.input(shape=input_data2.shape,
+    b = C.input_variable(shape=input_data2.shape,
                 dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
                 needs_gradient=True,
                 name='b')
@@ -400,11 +400,11 @@ def test_op_splice(input_data1, input_data2, axis, expected_result, device_id, p
 
 
 def test_swapaxes_0d_1d_operands():
-    x1 = C.input(())
+    x1 = C.input_variable(())
     with pytest.raises(ValueError):
         swapaxes_0d = C.swapaxes(x1)
 
-    x2 = C.input(2)
+    x2 = C.input_variable(2)
     with pytest.raises(ValueError):
         swapaxes_1d = C.swapaxes(x2)
 
@@ -428,9 +428,9 @@ def test_transpose_backward():
     p = (2, 0, 1)
     x0 = np.arange(np.prod(shape), dtype=np.float32).reshape(*shape)
     shapet = tuple(shape[i] for i in p)
-    x = C.input(shape, needs_gradient=True)
+    x = C.input_variable(shape, needs_gradient=True)
     y = C.reduce_sum(C.cos(C.transpose(x, p)))
-    xt = C.input(shapet, needs_gradient=True)
+    xt = C.input_variable(shapet, needs_gradient=True)
     yt = C.reduce_sum(C.cos(xt))
     g = np.squeeze(y.grad({x:x0}))
     gt = np.squeeze(yt.grad({xt:np.transpose(x0, p)}))
@@ -439,7 +439,7 @@ def test_transpose_backward():
 
 def test_op_reshape_free_dimension(device_id):
     dev = cntk_device(device_id)
-    x = C.input((C.FreeDimension, 2, 2))
+    x = C.input_variable((C.FreeDimension, 2, 2))
 
     x_reshaped_1 = C.reshape(x, (-1,), 0, 2)
     data = [[[1, 2], [3, 4]]]
@@ -460,7 +460,7 @@ def test_op_reshape_free_dimension(device_id):
 def test_gather_op(device_id, precision):
     a_data = [AA([[0],[1]], dtype=PRECISION_TO_TYPE[precision]),
               AA([[3],[4]], dtype=PRECISION_TO_TYPE[precision])]
-    a = C.input((2,1))
+    a = C.input_variable((2,1))
     r_data = np.arange(12).reshape(6,2).astype('f')
     r = C.parameter(shape=r_data.data, init=r_data)
     res = C.gather(r, a).eval({a:a_data})
@@ -473,7 +473,7 @@ def test_gather_op(device_id, precision):
     
     b_data = [AA([[0,2],[1,3]], dtype=PRECISION_TO_TYPE[precision]),
               AA([[2,4],[3,5]], dtype=PRECISION_TO_TYPE[precision])]
-    b = C.input((2,2))
+    b = C.input_variable((2,2))
     res2 = C.gather(r, b).eval({b:b_data})
 
     expectd2 = np.asarray([[[[0., 1.],[4.,5.]],[[2., 3.],[6., 7.]]],[[[4., 5.],[8.,9.]],[[6., 7.], [10., 11.]]]])

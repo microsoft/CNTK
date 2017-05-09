@@ -25,9 +25,9 @@ def _dense_value_to_ndarray_test(data, num_of_dynamic_axes, expected_value_shape
     if num_of_dynamic_axes == 2:
         var = C.sequence.input_variable(shape)
     elif num_of_dynamic_axes == 1:
-        var = C.input(shape)
+        var = C.input_variable(shape)
     else:
-        var = C.input(shape, dynamic_axes=[])
+        var = C.input_variable(shape, dynamic_axes=[])
 
     # conversion array -> value
     val = asvalue(var, data)
@@ -49,9 +49,9 @@ def _sparse_value_to_csr_test(data, num_of_dynamic_axes, expected_value_shape, e
     if num_of_dynamic_axes == 2:
         var = C.sequence.input_variable(shape, is_sparse=True)
     elif num_of_dynamic_axes == 1:
-        var = C.input(shape, is_sparse=True)
+        var = C.input_variable(shape, is_sparse=True)
     else:
-        var = C.input(shape, is_sparse=True, dynamic_axes=[])
+        var = C.input_variable(shape, is_sparse=True, dynamic_axes=[])
 
     # conversion csr array -> value
     val = asvalue(var, data)
@@ -164,7 +164,7 @@ def test_asarray_method():
     for a, d in zip(as_csr, data):
         assert (a==d).toarray().all()
 
-    var = C.input(shape, is_sparse=True)
+    var = C.input_variable(shape, is_sparse=True)
 
     data = csr([[1,0,2], [5,0,1]])
     # conversion array -> value
@@ -238,7 +238,7 @@ def test_2d_sparse_sequences_value(device_id):
 
 def test_as_shape_to_1d(device_id):
     dev = cntk_device(device_id)
-    x = C.input(1)
+    x = C.input_variable(1)
     w_1d = C.parameter((1), device=dev)
     assert np.array_equal(w_1d.value, [0])
 
@@ -250,7 +250,7 @@ def test_as_shape_to_1d(device_id):
 
 
 def test_is_valid(device_id):
-    a = C.input((2,), needs_gradient=True)
+    a = C.input_variable((2,), needs_gradient=True)
     b = a*a
     a0 = np.array([1,2],dtype=np.float32)
     g = b.grad({a:a0}, as_numpy=False)

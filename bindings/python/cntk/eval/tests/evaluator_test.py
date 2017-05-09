@@ -13,13 +13,13 @@ def test_eval():
     input_dim = 2
     proj_dim = 2
 
-    x = C.input(shape=(input_dim,))
+    x = C.input_variable(shape=(input_dim,))
     W = C.parameter(shape=(input_dim, proj_dim), init=[[1, 0], [0, 1]])
     B = C.parameter(shape=(proj_dim,), init=[[0, 1]])
     t = C.times(x, W)
     z = t + B
 
-    labels = C.input(shape=(proj_dim,))
+    labels = C.input_variable(shape=(proj_dim,))
     pe = classification_error(z, labels)
 
     tester = C.eval.Evaluator(pe)

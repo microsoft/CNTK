@@ -214,7 +214,7 @@ def test_op_reduce_over_batch_axis(input_data, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
 
     data = AA(input_data, dtype=dt)
-    a = C.input(shape=data.shape[1:],
+    a = C.input_variable(shape=data.shape[1:],
                 dtype=sanitize_dtype_cntk(dt),
                 needs_gradient=True,
                 name='a')

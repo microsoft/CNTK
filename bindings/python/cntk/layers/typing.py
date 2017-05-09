@@ -49,7 +49,7 @@ Example:
 
     >>> # This is just the same as saying
     >>> f = Dense(500)
-    >>> _ = f.replace_placeholders({f.arguments[0]: C.input(shape=(13,42), dynamic_axes=[Axis.default_batch_axis()])})
+    >>> _ = f.replace_placeholders({f.arguments[0]: C.input_variable(shape=(13,42), dynamic_axes=[Axis.default_batch_axis()])})
     >>> f.shape
     (500,)
 
@@ -105,7 +105,7 @@ Example:
     ...     inp = Tensor[32]()   # attempt to create an instance of type Tensor[32]
     ... except TypeError as e:
     ...     print('ERROR: ' + str(e))
-    ERROR: abstract type Tensor[32] cannot be instantiated; use 'input(**Tensor[32])' instead
+    ERROR: abstract type Tensor[32] cannot be instantiated; use 'input_variable(**Tensor[32])' instead
 
     >>> # types are not inputs
     >>> try:
@@ -113,7 +113,7 @@ Example:
     ...     y = sigmoid(inp)
     ... except ValueError as e:
     ...     print('ERROR: ' + str(e))
-    ERROR: Input is a type object (Tensor[32]). Did you mean to pass 'input(Tensor[32])'?
+    ERROR: Input is a type object (Tensor[32]). Did you mean to pass 'input_variable(**Tensor[32])'?
 
     >>> # nested sequences are currently not supported
     >>> try:
@@ -128,7 +128,7 @@ Example:
     ... def f(x):
     ...    return sigmoid(x)
     >>> try:
-    ...     x = C.input((42,))
+    ...     x = C.input_variable((42,))
     ...     y = f(x)
     ... except TypeError as e:
     ...     print('ERROR: ' + str(e))

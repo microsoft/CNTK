@@ -35,15 +35,15 @@ def test_sequence_grad_as_numpy_false(device_id, precision):
     assert np.array_equal(result[2], np.asarray([[3.], [3.], [3.]]))
 
 def test_grad_with_no_arguments_needing_gradients():
-    x = C.input(10)
+    x = C.input_variable(10)
     z = dropout(x, .4)
     with pytest.raises(ValueError):
         _, result = z.grad({x: [np.array([5]*150, "float32").reshape(15, 10)]}, outputs=[z])
 
 def test_eval_not_all_outputs():
-    x = C.input(1)
+    x = C.input_variable(1)
     x_data = [AA([3], dtype=np.float32)]
-    y = C.input(1)
+    y = C.input_variable(1)
     y_data = [AA([2], dtype=np.float32)]
     plus_func = x + 1
     minus_func = y - 1
@@ -56,7 +56,7 @@ def test_eval_not_all_outputs():
     assert np.array_equal(result, np.asarray([[1.]]))
 
 def test_grad_custimized_root():
-    x = C.input(shape=(1,), needs_gradient=True)
+    x = C.input_variable(shape=(1,), needs_gradient=True)
     y = C.sqrt(x)
     y2 = C.log(x)
     combine = C.combine([y.output, y2.output])

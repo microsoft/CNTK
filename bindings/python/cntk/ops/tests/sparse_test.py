@@ -38,7 +38,7 @@ def test_times_2d_sparse_operand(device_id):
     res = a_dense.eval({a : input_data}, device=dev)
     assert np.array_equal(res, [[w_init[input_sparse_indices[0]]], [w_init[input_sparse_indices[1]]], [w_init[input_sparse_indices[2]]]])
 
-    a_no_sequence = C.input(shape=sample_shape, is_sparse=True, name='a')
+    a_no_sequence = C.input_variable(shape=sample_shape, is_sparse=True, name='a')
     a_no_sequence_dense = times(a_no_sequence, w)
     res = a_no_sequence_dense.eval({a_no_sequence : input_data}, device=dev)
     assert np.array_equal(res, [w_init[input_sparse_indices[0]], w_init[input_sparse_indices[1]], w_init[input_sparse_indices[2]]])
@@ -188,7 +188,7 @@ def test_times_sparse_operand_reduce_multiple_axes():
     w_init = np.float32(np.random.rand(vocab_size, additional_axis_dim2, out_dim))
     input_shape = (additional_axis_dim1, additional_axis_dim2, vocab_size)
 
-    a = C.input(shape=input_shape, is_sparse=True, name='input')
+    a = C.input_variable(shape=input_shape, is_sparse=True, name='input')
     w = C.parameter(init=w_init)
     
     with pytest.raises(RuntimeError):
@@ -196,7 +196,7 @@ def test_times_sparse_operand_reduce_multiple_axes():
 
 
 def test_non_sequence_sparse_one_hot():
-    i = C.input(())
+    i = C.input_variable(())
     sparse_one_hot = C.one_hot(i, num_classes=3, sparse_output=True)
     indices = np.asarray([2, 0, 1])
     result = sparse_one_hot.eval({i : indices})
@@ -217,7 +217,7 @@ def test_gather_2D_using_one_hot_and_times():
 
 
 def test_2d_non_sequence_sparse_one_hot():
-    x = C.input((2,))
+    x = C.input_variable((2,))
     num_classes = 3
     sparse_one_hot = C.one_hot(x, num_classes, sparse_output=True)
     indices = np.asarray([[2, 1], [0, 2], [1, 0]])
@@ -245,7 +245,7 @@ def test_gather_implementation_using_one_hot_and_times():
     w_init = np.asarray([[0,1],[2,3],[4,5],[6,7]]).astype(np.float32)
     w = C.parameter(init=w_init)
 
-    x = C.input((2,))
+    x = C.input_variable((2,))
     sparse_one_hot = C.one_hot(x, num_classes, sparse_output=True)
     t = C.times(sparse_one_hot, w)
     indices = np.asarray([[0,3],[2,1]], dtype=np.float32)
@@ -256,7 +256,7 @@ def test_gather_implementation_using_one_hot_and_times():
 
 def test_2d_sparse_csr_batch_input(device_id):
     dev = cntk_device(device_id)
-    features = C.input((2, 3), is_sparse=True)
+    features = C.input_variable((2, 3), is_sparse=True)
     w = C.parameter(init=np.asarray([[0.5, 1], [-.5, 2], [1., 1.5]], dtype=np.float32), device=dev)
     t = C.times(features, w)
     features_data = [sp.sparse.csr_matrix(np.asarray([[1.,0.,0.], [0.,1.,0.]], dtype=np.float32)),
@@ -272,13 +272,13 @@ def test_sparse_block_row_input(device_id):
     w_init = np.asarray([[0,1],[2,3],[4,5]]).astype(np.float32)
     w = C.parameter(init=w_init, device=dev)
 
-    x = C.input(())
+    x = C.input_variable(())
     sparse_one_hot = C.one_hot(x, num_classes, sparse_output=True)
     t = C.times(sparse_one_hot, w)
     indices = np.asarray([0,2], dtype=np.float32)
     w_grad_value = t.grad({x : indices}, wrt=[w], device=dev, as_numpy=False)
 
-    grad_i = C.input(w.shape)
+    grad_i = C.input_variable(w.shape)
     new_param_value = (0.01*grad_i + w).eval({grad_i : w_grad_value}, device=dev)
     assert np.array_equal(new_param_value, np.asarray([[[ 0.01, 1.01], [2., 3.], [4.01, 5.01]]], dtype=np.float32))
  

@@ -9,10 +9,10 @@ import os
 import math
 import argparse
 import numpy as np
-import cntk
 import _cntk_py
 import cntk.io.transforms as xforms
 
+import cntk as C
 from cntk.logging import *
 from cntk.ops import *
 from cntk.distributed import data_parallel_distributed_learner, Communicator
@@ -67,8 +67,8 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
 def create_vgg16():
 
     # Input variables denoting the features and label data
-    feature_var = input((num_channels, image_height, image_width))
-    label_var = input((num_classes))
+    feature_var = C.input_variable((num_channels, image_height, image_width))
+    label_var = C.input_variable((num_classes))
 
     # apply model to input
     # remove mean value 
@@ -136,12 +136,12 @@ def create_vgg16():
 def create_trainer(network, epoch_size, num_quantization_bits, progress_printer):
     # Set learning parameters
     lr_per_mb         = [0.01]*20 + [0.001]*20 + [0.0001]*20 + [0.00001]*10 + [0.000001]
-    lr_schedule       = cntk.learning_rate_schedule(lr_per_mb, unit=cntk.learner.UnitType.minibatch, epoch_size=epoch_size)
-    mm_schedule       = cntk.learner.momentum_schedule(0.9)
+    lr_schedule       = C.learning_rate_schedule(lr_per_mb, unit=C.learner.UnitType.minibatch, epoch_size=epoch_size)
+    mm_schedule       = C.learner.momentum_schedule(0.9)
     l2_reg_weight     = 0.0005 # CNTK L2 regularization is per sample, thus same as Caffe
     
     # Create learner
-    local_learner = cntk.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=l2_reg_weight)
+    local_learner = C.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=l2_reg_weight)
     # Since we reuse parameter settings (learning rate, momentum) from Caffe, we set unit_gain to False to ensure consistency 
     parameter_learner = data_parallel_distributed_learner(
         local_learner, 
@@ -149,7 +149,7 @@ def create_trainer(network, epoch_size, num_quantization_bits, progress_printer)
         distributed_after=0)
 
     # Create trainer
-    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, progress_printer)
+    return C.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, progress_printer)
 
 # Train and test
 def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore):
@@ -160,7 +160,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         network['label']: train_source.streams.labels
     }
 
-    mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size)
+    mb_size_schedule = C.minibatch_size_schedule(minibatch_size)
 
     # Train all minibatches 
     training_session(
@@ -215,7 +215,7 @@ if __name__=='__main__':
     if args['logdir'] is not None:
         log_dir = args['logdir']
     if args['device'] is not None:
-        cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
+        C.device.try_set_default_device(C.device.gpu(args['device']))
 
     if not os.path.isdir(data_path):
         raise RuntimeError("Directory %s does not exist" % data_path)
@@ -234,4 +234,4 @@ if __name__=='__main__':
                              num_mbs_per_log=200,
                              gen_heartbeat=True)
     finally:
-        cntk.distributed.Communicator.finalize()    
+        C.distributed.Communicator.finalize()

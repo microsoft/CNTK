@@ -79,8 +79,8 @@ def train(nonlinearity, num_hidden_layers, device_id):
 
     hidden_layers_dim = 50
 
-    inp = C.input((input_dim), np.float32)
-    label = C.input((num_output_classes), np.float32)
+    inp = C.input_variable((input_dim), np.float32)
+    label = C.input_variable((num_output_classes), np.float32)
 
     z = fully_connected_classifier_net(inp, num_output_classes, hidden_layers_dim,
                                        num_hidden_layers, nonlinearity)

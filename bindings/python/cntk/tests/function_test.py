@@ -23,14 +23,14 @@ def test_outputs():
         print("Argument name: {}, argument owner name {}".format(arg.name, arg.owner.name))
 
 def test_0d_data_1d_sample_shape():
-    x = C.input(shape=(1,))
+    x = C.input_variable(shape=(1,))
     op = x + x
 
     with pytest.raises(ValueError):
         op.eval({x : [np.asarray(2)]})
 
 def test_1d_NDArrayView_copy():
-    x = C.input(shape=(1,))
+    x = C.input_variable(shape=(1,))
     op = x + 1
     result = op.eval({x : [np.asarray([1])]}, as_numpy=False)
     result_slice = result.data.slice_view((0, 0), (1,))

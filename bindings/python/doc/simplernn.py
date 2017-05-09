@@ -37,8 +37,8 @@ def train_sequence_classifier():
     num_output_classes = 5
 
     # Input variables denoting the features and label data
-    features = sequence.input(shape=input_dim, is_sparse=True)
-    label = C.input(num_output_classes)
+    features = sequence.input_variable(shape=input_dim, is_sparse=True)
+    label = C.input_variable(num_output_classes)
 
     # Instantiate the sequence classification model
     classifier_output = LSTM_sequence_classifier_net(

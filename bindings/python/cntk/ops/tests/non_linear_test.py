@@ -161,7 +161,7 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
     for i in range(count):
         value = np.ones(shape=shape, dtype=PRECISION_TO_TYPE[precision])
 
-        a = C.input(shape=value.shape,
+        a = C.input_variable(shape=value.shape,
                   dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
                   needs_gradient=True,
                   name='a')
@@ -192,7 +192,7 @@ def test_op_dropout_with_explicit_seed(device_id, precision):
 
     value = np.ones(shape=(100,100), dtype=PRECISION_TO_TYPE[precision])
 
-    a = C.input(shape=value.shape,
+    a = C.input_variable(shape=value.shape,
               dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
               name='a')
@@ -234,7 +234,7 @@ def test_op_dropout_with_explicit_seed(device_id, precision):
 def test_op_dropout_bad_input(dropout_rate):
     from cntk import dropout
 
-    a = C.input(shape=(1, 2), dtype='float', needs_gradient=True, name='a')
+    a = C.input_variable(shape=(1, 2), dtype='float', needs_gradient=True, name='a')
 
     with pytest.raises(ValueError):
         dropout_node = dropout(a, dropout_rate=dropout_rate)
@@ -492,7 +492,7 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
 
     from cntk import batch_normalization
 
-    a = C.input(shape=(1), dtype=dtype, needs_gradient=False, name='a')
+    a = C.input_variable(shape=(1), dtype=dtype, needs_gradient=False, name='a')
 
     with pytest.warns(Warning):
         op = batch_normalization(a, scale, bias, run_mean, run_variance, False,

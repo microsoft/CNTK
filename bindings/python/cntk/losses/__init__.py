@@ -181,8 +181,8 @@ def squared_error(output, target, name=''):
     This is often used as a training criterion.
 
     Example:
-        >>> i1 = C.input((1,2))
-        >>> i2 = C.input((1,2))
+        >>> i1 = C.input_variable((1,2))
+        >>> i2 = C.input_variable((1,2))
         >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[2., 1.]]], dtype=np.float32), i2:np.asarray([[[4., 6.]]], dtype=np.float32)})
         array([ 29.], dtype=float32)
 
@@ -227,9 +227,9 @@ def lambda_rank(output, gain, group, name=''):
     In the backward direction it back-propagates LambdaRank gradients.
 
     Example:
-        >>> group = C.input((1,))
-        >>> score = C.input((1,), needs_gradient=True)
-        >>> gain  = C.input((1,))
+        >>> group = C.input_variable((1,))
+        >>> score = C.input_variable((1,), needs_gradient=True)
+        >>> gain  = C.input_variable((1,))
         >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1)
         >>> s = np.array([1, 2, 3, 4], dtype=np.float32).reshape(4,1)
         >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1)

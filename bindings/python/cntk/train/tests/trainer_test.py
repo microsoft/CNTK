@@ -16,8 +16,8 @@ import cntk as C
 
 @pytest.mark.parametrize("no_eval_function", [True, False])
 def test_trainer(tmpdir, no_eval_function):
-    in1 = C.input(shape=(1,))
-    labels = C.input(shape=(1,))
+    in1 = C.input_variable(shape=(1,))
+    labels = C.input_variable(shape=(1,))
     p = parameter(shape=(2,), init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
@@ -48,8 +48,8 @@ def test_trainer(tmpdir, no_eval_function):
     assert isinstance(trainer.parameter_learners[0], C.Learner)
 
 def test_output_to_retain():
-    in1 = C.input(shape=(1,))
-    labels = C.input(shape=(1,))
+    in1 = C.input_variable(shape=(1,))
+    labels = C.input_variable(shape=(1,))
     p = parameter(shape=(2,), init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
@@ -214,7 +214,7 @@ def test_model_not_criterion_subset():
 
     core = C.layers.Embedding(proj_dim)
     model1 = C.layers.Dense(model1_dim)(sequence.last(core(x)))
-    model1_label = C.input((model1_dim,))
+    model1_label = C.input_variable((model1_dim,))
     ce_model1 = cross_entropy_with_softmax(model1, model1_label)
     pe_model1 = classification_error(model1, model1_label)
 
@@ -238,7 +238,7 @@ def test_model_not_criterion_subset():
 def test_model_one_output_of_multi_output_function():
     input_dim = 2
     proj_dim = 11
-    x = C.input((input_dim,))
+    x = C.input_variable((input_dim,))
 
     x_placeholder = C.placeholder()
     w = parameter((input_dim, proj_dim))
@@ -247,7 +247,7 @@ def test_model_one_output_of_multi_output_function():
     proj_plus_bias = proj + b
     combined_model = as_block(C.combine([proj, proj_plus_bias]), [(x_placeholder, x)], 'dense_op')
 
-    labels = C.input((proj_dim,))
+    labels = C.input_variable((proj_dim,))
     lr_schedule = C.learning_rate_schedule(0.003, C.UnitType.sample)
     ce = cross_entropy_with_softmax(combined_model.outputs[0], labels)
     pe = classification_error(combined_model.outputs[0], labels)
@@ -257,7 +257,7 @@ def test_model_one_output_of_multi_output_function():
 def test_trainer_with_some_params_not_learned():
     input_dim = 2
     proj_dim = 2
-    x = C.input(shape=(input_dim,))
+    x = C.input_variable(shape=(input_dim,))
     W = parameter(shape=(input_dim, proj_dim), init=C.glorot_uniform())
     B = parameter(shape=(proj_dim,), init=C.glorot_uniform())
     t = times(x, W)
@@ -266,7 +266,7 @@ def test_trainer_with_some_params_not_learned():
     W_orig_value = W.value
     B_orig_value = B.value
 
-    labels = C.input(shape=(proj_dim,))
+    labels = C.input_variable(shape=(proj_dim,))
     ce = cross_entropy_with_softmax(z, labels)
     pe = classification_error(z, labels)
 
@@ -291,7 +291,7 @@ def test_disallow_seq_starts_with_Value_objects():
     one_hot_batch = [[2,5], [0,1,6]]
     dim = 10
 
-    in1 = C.input(shape=(dim,), is_sparse=True)
+    in1 = C.input_variable(shape=(dim,), is_sparse=True)
     z = times(in1, np.eye(dim))
     batch = Value.one_hot(one_hot_batch, num_classes=dim)
 
@@ -302,7 +302,7 @@ def test_disallow_seq_starts_with_Value_objects():
         result = z.eval({in1: (batch, len(batch)*[True])})
 
 def test_scalar_input():
-    scalar = C.input((1,), dtype=np.float32, name='tscalar')
+    scalar = C.input_variable((1,), dtype=np.float32, name='tscalar')
     op = scalar + parameter(init=np.asarray([1]), dtype=np.float32)
 
     lr_per_sample = C.learning_rate_schedule(0.1, C.UnitType.sample)
@@ -311,7 +311,7 @@ def test_scalar_input():
 
 
 def test_empty_minibatch():
-    scalar = C.input((1,), dtype=np.float32, name='tscalar')
+    scalar = C.input_variable((1,), dtype=np.float32, name='tscalar')
     op = scalar + parameter(init=np.asarray([1]), dtype=np.float32)
 
     lr_per_sample = C.learning_rate_schedule(0.1, C.UnitType.sample)
@@ -322,8 +322,8 @@ def test_empty_minibatch():
 def test_scalar_loss_function():
     import cntk as C
 
-    x = C.input((1,))
-    l = C.input((2,))
+    x = C.input_variable((1,))
+    l = C.input_variable((2,))
     proj = C.layers.Dense(2)(x)
     loss = C.reduce_sum(C.cross_entropy_with_softmax(proj, l), axis=C.Axis.all_axes()) * 1.0
     lr_per_sample = C.learning_rate_schedule(0.1, C.UnitType.sample)

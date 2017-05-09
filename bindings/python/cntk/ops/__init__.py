@@ -30,8 +30,8 @@ def combine(operands, name=''):
      with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
 
     Example:
-        >>> in1 = C.input((4,))
-        >>> in2 = C.input((4,))
+        >>> in1 = C.input_variable((4,))
+        >>> in2 = C.input_variable((4,))
 
         >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
         >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
@@ -152,7 +152,7 @@ def labels_to_graph(labels, name=''):
 
     Example:
         >>> num_classes = 2
-        >>> labels = C.input((num_classes))
+        >>> labels = C.input_variable((num_classes))
         >>> graph = C.labels_to_graph(labels)
 
     Args:
@@ -216,7 +216,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
 
     Example:
         >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
-        >>> x = C.input(img.shape)
+        >>> x = C.input_variable(img.shape)
         >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
         >>> kernel = C.constant(value = filter)
         >>> np.round(C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}),5)
@@ -276,7 +276,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
 
     Example:
         >>> img = np.reshape(np.arange(9.0, dtype = np.float32), (1, 3, 3))
-        >>> x = C.input(img.shape)
+        >>> x = C.input_variable(img.shape)
         >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
         >>> kernel = C.constant(value = filter)
         >>> np.round(C.convolution_transpose(kernel, x, auto_padding = [False]).eval({x: [img]}),5)
@@ -359,7 +359,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
 
     Example:
         >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-        >>> x = C.input(img.shape)
+        >>> x = C.input_variable(img.shape)
         >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : [img]})
         array([[[[  2.5,   4.5],
                   [ 10.5,  12.5]]]], dtype=float32)
@@ -400,7 +400,7 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
 
     Example:
         >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-        >>> x = C.input(img.shape)
+        >>> x = C.input_variable(img.shape)
         >>> y = C.pooling(x, C.MAX_POOLING, (2,2), (2,2))
         >>> C.unpooling(y, x, C.MAX_UNPOOLING, (2,2), (2,2)).eval({x : [img]})
         array([[[[  0.,   0.,   0.,   0.],
@@ -1772,7 +1772,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
                  [ 16.,  17.]]], dtype=float32)]
 
         >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
-        >>> s = C.input(shape=(3,2))  # not a sequence, e.g. a final encoder hidden state
+        >>> s = C.input_variable(shape=(3,2))  # not a sequence, e.g. a final encoder hidden state
         >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,1,3,2))
         >>> s0
         array([[[[ 0. ,  0.5],
@@ -1836,7 +1836,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
     Example:
         >>> from _cntk_py import InferredDimension, constant_initializer
         >>> W = C.parameter((InferredDimension,4), constant_initializer(0.1))
-        >>> x = C.input(shape=(4,))
+        >>> x = C.input_variable(shape=(4,))
         >>> s = np.reshape(np.arange(20.0, dtype=np.float32), (5,4))
         >>> t = np.reshape(np.arange(12.0, dtype=np.float32), (3,4))
         >>> f = C.optimized_rnnstack(x, W, 8, 2) # doctest: +SKIP
@@ -1880,7 +1880,7 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
     The output tensor has the shape specified by 'shape'.
 
     Example:
-        >>> i1 = C.input(shape=(3,2))
+        >>> i1 = C.input_variable(shape=(3,2))
         >>> C.reshape(i1, (2,3)).eval({i1:np.asarray([[[[0., 1.],[2., 3.],[4., 5.]]]], dtype=np.float32)})
         array([[[ 0.,  1.,  2.],
                  [ 3.,  4.,  5.]]], dtype=float32)
@@ -1992,7 +1992,7 @@ def slice(x, axis, begin_index, end_index, name=''):
     Example:
         >>> # slice using input variable
         >>> # create 2x3 matrix
-        >>> x1 = C.input((2,3))
+        >>> x1 = C.input_variable((2,3))
         >>> # slice index 1 (second) at first axis
         >>> C.slice(x1, 0, 1, 2).eval({x1: np.asarray([[[1,2,-3],
         ...                                             [4, 5, 6]]],dtype=np.float32)})
@@ -2113,7 +2113,7 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
         >>> data = np.asarray([[1, 2],
         ...                    [4, 5]], dtype=np.float32)
 
-        >>> x = C.input((2,))
+        >>> x = C.input_variable((2,))
         >>> C.one_hot(x, 6, False).eval({x:data})
         array([[[ 0.,  1.,  0.,  0.,  0.,  0.],
                 [ 0.,  0.,  1.,  0.,  0.,  0.]],
@@ -2143,7 +2143,7 @@ def gather(reference, indices):
 
     Example:
         >>> c = np.asarray([[[0],[1]],[[4],[5]]]).astype('f')
-        >>> x = C.input((2,1))
+        >>> x = C.input_variable((2,1))
         >>> d = np.arange(12).reshape(6,2).astype('f')
         >>> y = C.constant(d)
         >>> C.gather(y, x).eval({x:c})
@@ -2221,7 +2221,7 @@ def reduce_sum(x, axis=None, name=''):
         >>> (np.sum(x1)+np.sum(x2))/(x1.size+x2.size)
         4.5
         >>> # reduce over batch axis
-        >>> xv = C.input((2,2))
+        >>> xv = C.input_variable((2,2))
         >>> xd = np.arange(8,dtype=np.float32).reshape(2,2,2)
         >>> C.reduce_sum(xv,axis=C.Axis.default_batch_axis()).eval({xv:xd})
         array([[  4.,   6.],
@@ -2248,7 +2248,7 @@ def reduce_log_sum_exp(x, axis=None, name=''):
     elements across the specified axis.
 
     Example:
-        >>> x = C.input(shape=(3,2))
+        >>> x = C.input_variable(shape=(3,2))
         >>> val = np.reshape(np.arange(6.0, dtype=np.float32), (3,2))
         >>> lse = C.reduce_log_sum_exp(x)
         >>> lse.eval({x:[val]})

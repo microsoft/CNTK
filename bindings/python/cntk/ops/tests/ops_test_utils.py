@@ -39,7 +39,7 @@ def _test_unary_op(precision, device_id, op_func,
 
     value = AA(value, dtype=PRECISION_TO_TYPE[precision])
 
-    a = C.input(shape=value.shape,
+    a = C.input_variable(shape=value.shape,
               dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
               name='a')
@@ -67,12 +67,12 @@ def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
     left_value = AA(left_operand, dtype=dt)
     right_value = AA(right_operand, dtype=dt)
 
-    a = C.input(shape=left_value.shape,
+    a = C.input_variable(shape=left_value.shape,
               dtype=sanitize_dtype_cntk(precision),
               needs_gradient=True,
               name='a')
 
-    b = C.input(shape=right_value.shape,
+    b = C.input_variable(shape=right_value.shape,
               dtype=sanitize_dtype_cntk(precision),
               needs_gradient=True,
               name='b')

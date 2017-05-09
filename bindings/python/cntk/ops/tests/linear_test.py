@@ -83,7 +83,7 @@ def test_op_plus_gradient_accumulation(device_id, precision):
     value = AA([[1]], dtype=dt_precision)
 
     from cntk import times_transpose, Axis
-    a = C.input(shape=(1,), dtype=dt_precision, needs_gradient=True, name='a')
+    a = C.input_variable(shape=(1,), dtype=dt_precision, needs_gradient=True, name='a')
 
     input_op = a + a
 
@@ -349,7 +349,7 @@ def test_op_times_reduce_sequence_axis(device_id, precision):
 def test_per_dim_mean_var_norm():
     mean = np.asarray([2.], dtype=np.float32)
     inv_stddev = np.asarray([0.5], dtype=np.float32)
-    x = C.input((1,))
+    x = C.input_variable((1,))
     func = C.per_dim_mean_variance_normalize(x, mean, inv_stddev)
     result = func.eval({x : np.asarray([[3.], [1.]], dtype=np.float32)})
     assert np.array_equal(result, [[.5], [-.5]])

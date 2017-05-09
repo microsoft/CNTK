@@ -207,7 +207,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
                  [ 16.,  17.]]], dtype=float32)]
 
         >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
-        >>> s = C.input((3,2))  # not a sequence, e.g. a final encoder hidden state
+        >>> s = C.input_variable((3,2))  # not a sequence, e.g. a final encoder hidden state
         >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,3,2))
         >>> s0
         array([[[ 0. ,  0.5],

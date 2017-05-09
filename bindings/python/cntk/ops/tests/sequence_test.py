@@ -103,7 +103,7 @@ def test_sequence_softmax():
 
 def test_to_sequence_basic(device_id):
     dev = cntk_device(device_id)
-    x = C.input((C.FreeDimension, 2))
+    x = C.input_variable((C.FreeDimension, 2))
     x_seq = C.to_sequence(x)
     assert len(x_seq.dynamic_axes) == 2
 
@@ -111,8 +111,8 @@ def test_to_sequence_basic(device_id):
     result = x_seq.eval({x : x_data}, device=dev)
     assert np.array_equal(result, x_data)
 
-    x = C.input((C.FreeDimension, 2, 3), is_sparse=True)
-    x_seq_lens = C.input(())
+    x = C.input_variable((C.FreeDimension, 2, 3), is_sparse=True)
+    x_seq_lens = C.input_variable(())
     x_seq = C.to_sequence(x, x_seq_lens)
     
     seq1_data = [[[0, 1, 1], [0, 1, 0]], [[1, 0, 0], [1, 0, 1]]]
@@ -122,7 +122,7 @@ def test_to_sequence_basic(device_id):
     csr_seq2 = _to_csr([seq2_data, [[0, 0, 0], [0, 0, 0]]])
     ndarrayview2 = C.NDArrayView.from_csr(csr_seq2, shape=(2, 2, 3), device=C.cpu())
 
-    x_data = C.Value.create(C.input((2, 2, 3), is_sparse=True), [ndarrayview1, ndarrayview2], device=dev).data
+    x_data = C.Value.create(C.input_variable((2, 2, 3), is_sparse=True), [ndarrayview1, ndarrayview2], device=dev).data
     x_seq_lens_data = np.asarray([2, 1], dtype=np.float32)
     result = x_seq.eval({x : x_data, x_seq_lens : x_seq_lens_data}, device=dev, as_numpy=False)
     result_dense = _to_dense(result, True)
@@ -156,8 +156,8 @@ def test_to_sequence_backprop(device_id):
     
     # Create a clone of the model that uses a non-sequence input 
     # and converts it to a sequence using to_sequence
-    x_non_seq_input = C.input((C.FreeDimension, input_vocab_size), is_sparse=True, name='non_seq_features')
-    x_seq_lens = C.input((), name='sequence_lengths')
+    x_non_seq_input = C.input_variable((C.FreeDimension, input_vocab_size), is_sparse=True, name='non_seq_features')
+    x_seq_lens = C.input_variable((), name='sequence_lengths')
     x_seq = C.to_sequence(x_non_seq_input, x_seq_lens)
     x_seq = C.reconcile_dynamic_axes(C.times(x_seq, np.eye(input_vocab_size, dtype=np.float32)), label_seq_input)
     ce_clone = ce.clone('share', {x_seq_input : x_seq})
@@ -190,8 +190,8 @@ def test_sequence_unpack_basic(device_id):
     p_unpacked_outputs = C.sequence.unpack(p, padding_value=0).outputs
     assert len(p_unpacked_outputs) == 2
 
-    x = C.input((C.FreeDimension, 2, 3), is_sparse=False)
-    x_seq_lens = C.input(())
+    x = C.input_variable((C.FreeDimension, 2, 3), is_sparse=False)
+    x_seq_lens = C.input_variable(())
     x_seq = C.to_sequence(x, x_seq_lens)
     x_seq_unpacked = C.sequence.unpack(x_seq, padding_value=-1000.0)
     x_seq_unpacked_value_output = x_seq_unpacked.outputs[0]
@@ -218,7 +218,7 @@ def test_sequence_unpack_backprop(device_id):
     hidden_dim = 2
     num_labels = 2
     x_seq_input = C.sequence.input_variable(input_vocab_size, is_sparse=True, name='features')
-    label_input = C.input(num_labels, is_sparse=True, name='labels')
+    label_input = C.input_variable(num_labels, is_sparse=True, name='labels')
     with C.default_options(initial_state=0.1):
         model = C.layers.Embedding(emb_dim, name='embed')(x_seq_input)
         model = C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=False)(model)
@@ -279,7 +279,7 @@ def test_op_broadcast_as(device_id, precision):
               AA([[2], [3]], dtype=PRECISION_TO_TYPE[precision]),
               AA([[2], [3], [4]], dtype=PRECISION_TO_TYPE[precision])]
 
-    a = C.input(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), name='a')
+    a = C.input_variable(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), name='a')
     b = C.sequence.input_variable(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), name='b')
 
     broadcast_a_as_b = C.sequence.broadcast_as(a, b)
@@ -295,7 +295,7 @@ def test_op_broadcast_as_in_loop(device_id):
     a_data = [AA([1]), AA([2]), AA([3])]
     b_data = [AA([[2]]), AA([[2], [3]]), AA([[2], [3], [4]])]
 
-    a = C.input(shape=(1,), name='a')
+    a = C.input_variable(shape=(1,), name='a')
     b = C.sequence.input_variable(shape=(1,), name='b')
 
     out_placeholder = C.placeholder()
