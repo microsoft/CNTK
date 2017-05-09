@@ -2784,7 +2784,7 @@ namespace CNTK
             std::vector<ptrdiff_t> sequenceBeginIndices(numOfSequences, 0);
             std::vector<size_t> sequenceLengths(numOfSequences, maxSequenceLen);
             GetSequenceStartsAndLengths(Mask(), sequenceBeginIndices, sequenceLengths, outputVariable.DynamicAxes().size());
-            for (auto seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
+            for (size_t seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
             {
                 if (sequenceBeginIndices[seqIndex] != 0)
                     RuntimeError("Currently, only sequence starting with SequenceBegin is supported.");
@@ -2929,6 +2929,8 @@ namespace CNTK
         CNTK_API virtual void Backward(const BackPropStatePtr& state,
                                        const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                                        std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs);
+
+        CNTK_API virtual void PrintStatistics() {}
 
     protected:
         ///
@@ -4790,6 +4792,8 @@ namespace CNTK
         /// Writes the summary of training progress and resets the accumulators.
         ///
         CNTK_API void SummarizeTrainingProgress();
+
+        CNTK_API void PrintStatistics();
 
     private:
         template <typename T1, typename ...CtorArgTypes>

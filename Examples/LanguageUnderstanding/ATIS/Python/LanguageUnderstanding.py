@@ -12,7 +12,7 @@ from cntk.layers import *  # Layers library
 from cntk.layers.typing import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
 from cntk import Trainer, Value
-from cntk.learners import fsadagrad, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.learners import adadelta, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk import splice, relu
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
@@ -146,9 +146,8 @@ def train(reader, model, max_epochs):
     #epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
 
     # SGD parameters
-    learner = fsadagrad(criterion.parameters,
+    learner = adadelta(criterion.parameters,
                         lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
-                        momentum   = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
                         gradient_clipping_threshold_per_sample = 15,
                         gradient_clipping_with_truncation = True)
 
@@ -174,6 +173,8 @@ def train(reader, model, max_epochs):
             progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
+    trainer.print_statistics()
+    
     return loss, metric # return values from last epoch
 
 
@@ -225,7 +226,7 @@ def evaluate(reader, model):
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='8')
+    parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='1')
     parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir',
                         help='Directory where TensorBoard logs should be created', required=False, default=None)
 

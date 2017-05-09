@@ -126,6 +126,14 @@ namespace CNTK
             return CompositeFunctionOpName;
         }
 
+        void PrintStatistics() override
+        {
+            if (m_computationNetwork)
+            {
+                m_computationNetwork->PrintNodeStatistics();
+            }
+        }
+
         template <typename FunctionType>
         static void PreorderTraverseVariables(const FunctionPtr& rootFunction, const FunctionType& functor, bool pythonOperandOrder = false)
         {

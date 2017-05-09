@@ -56,7 +56,7 @@ def convnet_mnist(debug_output=False):
     # training config
     epoch_size = 60000                    # for now we manually specify epoch size
     minibatch_size = 64
-    max_epochs = 40
+    max_epochs = 1
 
     # Set learning parameters
     lr_per_sample    = [0.001]*10 + [0.0005]*10 + [0.0001]
@@ -87,6 +87,8 @@ def convnet_mnist(debug_output=False):
 
         trainer.summarize_training_progress()
         z.save(os.path.join(model_path, "ConvNet_MNIST_{}.dnn".format(epoch)))
+    
+    trainer.print_statistics()
     
     # Load test data
     reader_test = create_reader(os.path.join(data_path, 'Test-28x28_cntk_text.txt'), False, input_dim, num_output_classes)

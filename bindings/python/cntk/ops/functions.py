@@ -993,6 +993,9 @@ class Function(cntk_py.Function):
         The internally generated unique name of the function.
         '''
         return super(Function, self).uid()
+        
+    def print_statistics(self):
+        return super(Function, self).print_statistics()
 
     @typemap
     def replace_placeholders(self, substitutions):

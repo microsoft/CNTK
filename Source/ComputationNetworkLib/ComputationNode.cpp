@@ -653,11 +653,33 @@ template <class ElemType>
 
     // and make sure dimensions are what we expect
     VerifyDataSize(Value());
+
+    m_forwardBeginTime = std::chrono::system_clock::now();
+    m_forwardCount++;
 }
+
+template<class ElemType>
+void ComputationNode<ElemType>::PrintForwardBackwardTime()
+{
+    fprintf(stderr, "%-20S forward avg %07fs, backward avg %07fs (count = %d, %d)\n",
+        m_nodeName.c_str(),
+        m_forwardTime.count() / m_forwardCount,
+        m_backwardTime.count() / m_backwardCount,
+        m_forwardCount,
+        m_backwardCount);
+
+    m_forwardTime = std::chrono::duration<float>(0);
+    m_backwardTime = std::chrono::duration<float>(0);
+    m_forwardCount = 0;
+    m_backwardCount = 0;
+}
+
 
 template <class ElemType>
 /*virtual*/ void ComputationNode<ElemType>::EndForwardProp()
 {
+    m_forwardTime += (std::chrono::system_clock::now() - m_forwardBeginTime);
+    
     Base::EndForwardProp();
 
     if (HasEnvironmentPtr() && Environment().trackGapNans)
@@ -703,12 +725,17 @@ template <class ElemType>
             if (InputUsedInComputingInputNodesGradients(i))
                 VerifyValueShape(InputRef(i));
         }
+
+        m_backwardBeginTime = std::chrono::system_clock::now();
+        m_backwardCount++;
     }
 }
 
 template <class ElemType>
 /*virtual*/ void ComputationNode<ElemType>::EndBackprop()
 {
+    m_backwardTime += (std::chrono::system_clock::now() - m_backwardBeginTime);
+
     Base::EndBackprop();
 
     if (HasEnvironmentPtr() && Environment().trackGapNans)

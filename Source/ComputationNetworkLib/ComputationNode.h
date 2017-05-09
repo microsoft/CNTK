@@ -1362,6 +1362,8 @@ public:
         }
     }
 
+    void PrintForwardBackwardTime();
+
 protected:
 
     // AttachInputs() from config
@@ -2101,6 +2103,14 @@ protected:
     static std::map<size_t, std::map<size_t, shared_ptr<Matrix<ElemType>>>> s_constOnes;
 
     MatrixType m_preferredGradientMatrixType = UNDETERMINED;
+
+    std::chrono::system_clock::time_point m_forwardBeginTime;
+    std::chrono::system_clock::time_point m_backwardBeginTime;
+
+    int m_forwardCount = 0;
+    int m_backwardCount = 0;
+    std::chrono::duration<float> m_forwardTime = std::chrono::duration<float>(0);
+    std::chrono::duration<float> m_backwardTime = std::chrono::duration<float>(0);
 };
 
 // convenience wrapper for ComputationNode::New()
