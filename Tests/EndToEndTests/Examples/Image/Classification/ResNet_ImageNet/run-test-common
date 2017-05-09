@@ -2,7 +2,7 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
-ConfigDir=$TEST_DIR/../../../../../../../Examples/Image/Classification/AlexNet/BrainScript
+ConfigDir=$TEST_DIR/../../../../../../../Examples/Image/Classification/ResNet/BrainScript
 
 export MKL_NUM_THREADS=4
 export MKL_CBWR=COMPATIBLE

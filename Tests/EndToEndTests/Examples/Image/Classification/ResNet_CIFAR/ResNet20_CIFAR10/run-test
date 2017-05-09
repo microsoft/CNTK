@@ -2,4 +2,4 @@
 
 . $TEST_DIR/../run-test-common
 
-cntkrun ResNet20_CIFAR10.cntk "forceDeterministicAlgorithms=true stderr=- TrainConvNet=[SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=8]]"
+cntkrun ResNet20_CIFAR10.cntk "forceDeterministicAlgorithms=true stderr=- TrainConvNet=[SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=8,learningRatesPerMB=1.28]]"
