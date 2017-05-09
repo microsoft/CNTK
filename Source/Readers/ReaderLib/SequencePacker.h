@@ -51,6 +51,16 @@ protected:
     // A minibatch size for this worker in global samples.
     size_t m_globalMinibatchSizeInSamples;
 
+private:
+    void PackDenseParallel(
+        int sequenceIndex,
+        const vector<MBLayout::SequenceInfo>& sequenceInfos,
+        const StreamBatch& batch,
+        const MBLayoutPtr& layout,
+        char* buffer,
+        size_t sampleSize,
+        size_t elementSize,
+        const StreamDescriptionPtr& stream);
 };
 
 typedef std::shared_ptr<SequencePacker> SequencePackerPtr;

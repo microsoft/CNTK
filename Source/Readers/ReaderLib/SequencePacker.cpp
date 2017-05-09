@@ -132,6 +132,63 @@ void SequencePacker::CheckSampleShape(const std::vector<SequenceDataPtr>& miniba
     }
 }
 
+void SequencePacker::PackDenseParallel(
+    int sequenceIndex,
+    const vector<MBLayout::SequenceInfo>& sequenceInfos,
+    const StreamBatch& batch,
+    const MBLayoutPtr& layout,
+    char* buffer,
+    size_t sampleSize,
+    size_t elementSize,
+    const StreamDescriptionPtr& stream)
+{
+    const auto& sequenceInfo = sequenceInfos[sequenceIndex];
+
+    // skip gaps
+    if (sequenceInfo.seqId == GAP_SEQUENCE_ID)
+        return;
+
+    const auto& sequence = batch[sequenceInfo.seqId];
+    size_t numSamples = sequence->m_numberOfSamples;
+    assert(numSamples == sequenceInfo.GetNumTimeSteps());
+
+    // Iterate over all samples in the sequence, keep track of the sample offset (which is especially
+    // important for sparse input, where offset == number of preceding nnz elements).
+    for (size_t sampleIndex = 0, sampleOffset = 0; sampleIndex < numSamples; ++sampleIndex)
+    {
+        // Compute the offset into the destination buffer, using the layout information 
+        // to get the column index corresponding to the given sample.
+        auto destinationOffset = layout->GetColumnIndex(sequenceInfo, sampleIndex) * sampleSize;
+        // verify that there's enough space left in the buffer to fit a full sample.
+        assert(destinationOffset <= buffer.m_size - sampleSize);
+        auto* destination = buffer + destinationOffset;
+        if (stream->m_storageType == StorageType::dense)
+        {
+            // verify that the offset (an invariant for dense).
+            assert(sampleOffset == sampleIndex * sampleSize);
+            PackDenseSample(destination, sequence, sampleOffset, sampleSize);
+            sampleOffset += sampleSize;
+        }
+        else if (stream->m_storageType == StorageType::sparse_csc)
+        {
+            // TODO: make type casts members of the SparseSequenceData
+            SparseSequenceDataPtr sparseSequence = static_pointer_cast<SparseSequenceData>(sequence);
+            // make sure that the sequence meta-data is correct.
+            assert(numSamples == sparseSequence->m_nnzCounts.size());
+            PackSparseSampleAsDense(destination, sparseSequence, sampleIndex, sampleOffset, sampleSize, elementSize);
+            // move the offset by nnz count of the sample.
+            sampleOffset += sparseSequence->m_nnzCounts[sampleIndex];
+            // verify that the offset is within the bounds (less or equal 
+            // to the total nnz count of the sequence).
+            assert(sampleOffset <= sparseSequence->m_totalNnzCount);
+        }
+        else
+        {
+            RuntimeError("Storage type %d is not supported.", (int)stream->m_storageType);
+        }
+    }
+}
+
 MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t streamIndex)
 {
     assert(m_outputStreamDescriptions[streamIndex]->m_storageType == StorageType::dense);
@@ -146,59 +203,11 @@ MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t str
     }
 
     auto elementSize = GetSizeByType(stream->m_elementType);
-
     const auto& sequenceInfos = pMBLayout->GetAllSequences();
 
-    // Copy samples from the
-    // source sequences into the buffer (at appropriate offsets).
-
-    auto process = [&](int i) -> void
+    auto process = [&](int i)
     {
-        const auto& sequenceInfo = sequenceInfos[i];
-        // skip gaps
-        if (sequenceInfo.seqId == GAP_SEQUENCE_ID)
-            return;
-
-        const auto& sequence = batch[sequenceInfo.seqId];
-        size_t numSamples = sequence->m_numberOfSamples;
-        assert(numSamples == sequenceInfo.GetNumTimeSteps());
-
-        char* bufferPtr = buffer.m_data.get();
-        // Iterate over all samples in the sequence, keep track of the sample offset (which is especially
-        // important for sparse input, where offset == number of preceding nnz elements).
-        for (size_t sampleIndex = 0, sampleOffset = 0; sampleIndex < numSamples; ++sampleIndex)
-        {
-            // Compute the offset into the destination buffer, using the layout information 
-            // to get the column index corresponding to the given sample.
-            auto destinationOffset = pMBLayout->GetColumnIndex(sequenceInfo, sampleIndex) * sampleSize;
-            // verify that there's enough space left in the buffer to fit a full sample.
-            assert(destinationOffset <= buffer.m_size - sampleSize);
-            auto* destination = bufferPtr + destinationOffset;
-            if (stream->m_storageType == StorageType::dense)
-            {
-                // verify that the offset (an invariant for dense).
-                assert(sampleOffset == sampleIndex * sampleSize);
-                PackDenseSample(destination, sequence, sampleOffset, sampleSize);
-                sampleOffset += sampleSize;
-            }
-            else if (stream->m_storageType == StorageType::sparse_csc)
-            {
-                // TODO: make type casts members of the SparseSequenceData
-                SparseSequenceDataPtr sparseSequence = static_pointer_cast<SparseSequenceData>(sequence);
-                // make sure that the sequence meta-data is correct.
-                assert(numSamples == sparseSequence->m_nnzCounts.size());
-                PackSparseSampleAsDense(destination, sparseSequence, sampleIndex, sampleOffset, sampleSize, elementSize);
-                // move the offset by nnz count of the sample.
-                sampleOffset += sparseSequence->m_nnzCounts[sampleIndex];
-                // verify that the offset is within the bounds (less or equal 
-                // to the total nnz count of the sequence).
-                assert(sampleOffset <= sparseSequence->m_totalNnzCount);
-            }
-            else
-            {
-                RuntimeError("Storage type %d is not supported.", (int)stream->m_storageType);
-            }
-        }
+        PackDenseParallel(i, sequenceInfos, batch, pMBLayout, buffer.m_data.get(), sampleSize, elementSize, stream);
     };
 
     ExceptionCapture capture;
