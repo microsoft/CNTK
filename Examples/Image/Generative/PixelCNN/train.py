@@ -75,6 +75,9 @@ def sample(batch_size, z, inputs,  nr_mix, loss, epoch, sample_index=-1):
 
 def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs = 100):
 
+    # Enable NaN check.
+    # ct.debugging.set_checked_mode(True)
+
     # Input variables denoting the features and label data
     inputs_init = ct.input(shape=(num_channels, image_height, image_width))    
     inputs = ct.input(shape=(num_channels, image_height, image_width))
@@ -89,12 +92,11 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
 
     # loss and metric
     ce = l.loss_function(inputs_norm, z, loss)
-    pe = ct.relu(1.0) # dummy value to make reporting progress happy.
 
     # training config
     epoch_size              = 50000
-    init_minibatch_size     = 100
-    minibatch_size          = 12
+    init_minibatch_size     = 1 #100
+    minibatch_size          = 1 #12
     sampling_minibatch_size = 16
 
     # Set learning parameters
@@ -111,9 +113,9 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
                                unit_gain=False,
                                use_mean_gradient=True,
                                variance_momentum=ct.momentum_schedule(0.9995), # Beta 2
-                               gradient_clipping_threshold_per_sample=0.0001
+                               gradient_clipping_threshold_per_sample=0.0000001
                                )
-    trainer = ct.Trainer(z, (ce, pe), [learner], progress_writers)
+    trainer = ct.Trainer(z, (ce, None), [learner], progress_writers)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -130,7 +132,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
         training_loss = 0
 
         # first_run
-        if epoch == -1:
+        if epoch == 0:
             reader_state = reader_train.get_checkpoint_state()
             data = reader_train.next_minibatch(min(init_minibatch_size, epoch_size), input_map=input_map)
             z_init.eval({inputs_init:data[inputs].asarray()})
