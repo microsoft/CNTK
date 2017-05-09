@@ -25,7 +25,7 @@ def create_reader(path, is_training, input_dim, label_dim):
 
 
 # Creates and trains a feedforward classification model for MNIST images
-def convnet_cifar10(debug_output=False, epoch_size=50000, minibatch_size=64, max_epochs=30):
+def convnet_cifar10(debug_output=False, data_path=data_path, epoch_size=50000, minibatch_size=64, max_epochs=30):
     _cntk_py.set_computation_network_trace_level(0)
 
     image_height = 32
