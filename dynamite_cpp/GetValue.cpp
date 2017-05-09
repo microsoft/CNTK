@@ -233,13 +233,14 @@ class Memoize
     void TraverseFunctionTree(const Variable& var)
     {
         let& fields = *var.m_dataFields;
+        if (fields.m_value)
+            throw logic_error("TraverseFunctionTree() must not be called on variables that already have a value.");
         if (fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder)
             throw logic_error("Value() depends on Input or Placeholder, it is not knowable.");
         if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
         {
-            if (!fields.m_value) // force-initialize Parameters
-                var.Value();
-            if (!fields.m_value) // TODO: need to do this first
+            var.Value(); // this initializes it
+            if (!fields.m_value)
                 throw logic_error("Parameter/Constant has no Value??");
             return;
         }
@@ -416,6 +417,10 @@ class Memoize
                         // nope, chain has been broken: must fix up spliceArgs up to here
                         // This is suboptimal in that we lost the reference to the originating input.
                         // So we cannot remember the realized SliceView there.
+                        // TODO: Per Jon's suggestion, we can be a little loose here. For a variable-length
+                        // scenario, we will loose entries in the middle. We can allow to keep a few around
+                        // in garbage-in-garbage-out. If, say, there are additional 20% gap values, we just
+                        // carry them forward, and ignore them when implanting the result.
                         let& from = pfields0->m_lazyIndex.first;
                         let begin = pfields0->m_lazyIndex.second;
                         while (spliceArgs.size() < j)
@@ -532,7 +537,7 @@ class Memoize
 
 public:
     // Value(), computed with automatic batching
-    NDArrayViewPtr operator()(const Variable& v)
+    NDArrayViewPtr GetValue(const Variable& v)
     {
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
         auto& fields = *v.m_dataFields;
@@ -551,16 +556,46 @@ public:
         }
         return LazilyIndexedValue(v);
     }
+
+    // implant gradients into all variables
+    void Backward(const CNTK::Variable& root, const std::vector<CNTK::Variable>& variables)
+    {
+        // mark all nodes that we actually must traverse in order to get the desired gradients
+        // Also we set up the backpointers so that we can implement a pull model.
+        variables;
+        //x
+        // first get the forward computation, batching, etc. done if not yet
+        GetValue(root);
+        // implant the first gradient if not present yet
+        if (!root.m_dataFields->m_gradient)
+        {
+            if (root.Value()->Shape() != NDShape{})
+                throw logic_error("Backward: root must be a scalar, or root gradient must have been implamnted already");
+            root.m_dataFields->m_gradient = Alloc(NDShape{}, root.Value()->GetDataType(), root.Value()->Device());
+            root.m_dataFields->m_gradient->SetValue(1.0f);
+        }
+        // perform backprop
+    }
 }; // class
 } // namespace
 
+// this will become Variable::Value()
+// Computes lazily the value of a node. Does nothing if called again.
 CNTK::NDArrayViewPtr GetValue(const CNTK::Variable& v)
 {
 #if 0
-    // naive version
+    // naive version for comparison purposes
     return v.Value();
 #else
-    auto getValue = CNTK::Memoize(); // has some internal state
-    return getValue(v);
+    auto autoBatcher = CNTK::Memoize();
+    return autoBatcher.GetValue(v);
 #endif
+}
+
+// Perform backprop.
+// CNTK grad() allows to pass multiple roots. Does that ever make sense in this context?
+void Backward(const CNTK::Variable& root, const std::vector<CNTK::Variable>& variables)
+{
+    auto autoBatcher = CNTK::Memoize(); // has some internal state
+    autoBatcher.Backward(root, variables);
 }

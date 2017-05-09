@@ -12,3 +12,5 @@
 
 // this will eventually become Variable::Value()
 CNTK::NDArrayViewPtr GetValue(const CNTK::Variable&);
+// and back-prop
+void Backward(const CNTK::Variable& root, const std::vector<CNTK::Variable>& parameters);
