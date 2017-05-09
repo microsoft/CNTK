@@ -160,7 +160,7 @@ void SequencePacker::PackDenseParallel(
         // to get the column index corresponding to the given sample.
         auto destinationOffset = layout->GetColumnIndex(sequenceInfo, sampleIndex) * sampleSize;
         // verify that there's enough space left in the buffer to fit a full sample.
-        assert(destinationOffset <= buffer.m_size - sampleSize);
+        //assert(destinationOffset <= buffer.m_size - sampleSize);
         auto* destination = buffer + destinationOffset;
         if (stream->m_storageType == StorageType::dense)
         {
