@@ -391,7 +391,7 @@ namespace CNTK
             auto scale = initConfig[ScaleAttributeName].Value<double>();
             int outputRank = DefaultParamInitOutputRank, filterRank = DefaultParamInitFilterRank;
             if (initializerType != Microsoft::MSR::CNTK::UniformInitializerTypeName && 
-                initializerType != Microsoft::MSR::CNTK::TruncGaussianInitializerTypeName)
+                initializerType != Microsoft::MSR::CNTK::TruncNormalInitializerTypeName)
             {
                 outputRank = initConfig[OutputRankAttributeName].Value<int>();
                 filterRank = initConfig[FilterRankAttributeName].Value<int>();
