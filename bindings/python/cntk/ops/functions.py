@@ -281,6 +281,7 @@ class Function(cntk_py.Function):
                 continue
             if not arg_type.shape_is_known:
                 raise TypeError(param_name() + ' has a known shape, and cannot be passed a Variable of unknown shape')
+            # TODO: add tests for this complex condition
             if len(arg_type.shape) < len(param_type.shape) or \
                    arg_type.shape[-len(param_type.shape):] != param_type.shape or \
                    (arg_type.dynamic_axes and arg_type.dynamic_axes != param_type.dynamic_axes) or \
