@@ -11,7 +11,6 @@
 
 #include "GPUMatrix.h"
 #include "GPUMatrixCUDAKernels.cuh"
-//#include "GPUSparseMatrix.h"
 #include "GPUTensor.h"
 #include "CommonMatrix.h"
 #define TENSOR_OPS_DECL __device__ __host__
@@ -661,21 +660,65 @@ void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatr
     }
 }
 
+template <size_t N, class ElemType>
+class GatherMemcpyPointerArray
+{
+    size_t numElements;
+    ElemType* pointers[N];
+public:
+    // reading out data
+    __device__ __host__ size_t size() const { return (size_t)numElements; }
+    __device__ __host__ const ElemType* operator[](size_t i) const { return pointers[i]; }
+    // cast as a struct with a different template parameter
+    template<size_t Nother>
+    const GatherMemcpyPointerArray<Nother, ElemType>& AsRef() const
+    {
+        if (numElements > Nother)
+            LogicError("GatherMemcpyPointerArray: Attempted to cast to a templated buffer size that is too small.");
+        return *new GatherMemcpyPointerArray<Nother, ElemType>();
+        //return (GatherMemcpyPointerArray<Nother, ElemType>&)*this;
+    }
+    // creating the array
+    GatherMemcpyPointerArray() { clear(); }
+    size_t capacity() const { return N; }
+    void clear() { numElements = 0; }
+    void push_back(ElemType* p)
+    {
+        assert(numElements < (CUDA_LONG)N);
+        pointers[numElements++] = p;
+    }
+};
+// TODO: do this template abomination the right way
+template<size_t Nother>
+struct AsRef
+{
+    template <size_t N, class ElemType>
+    static const GatherMemcpyPointerArray<Nother, ElemType>& AsRef1(const GatherMemcpyPointerArray<N, ElemType>& other)
+    {
+        if (other.size() > Nother)
+            LogicError("GatherMemcpyPointerArray: Attempted to cast to a templated buffer size that is too small.");
+        return reinterpret_cast<const GatherMemcpyPointerArray<Nother, ElemType>&>(other);
+    }
+};
+template <size_t N, class ElemType>
+__global__ void _gatherMemcpy(ElemType* outData, GatherMemcpyPointerArray<N, ElemType> inputPointers, const CUDA_LONG inputSize)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    CUDA_LONG col = id / inputSize; // thread grid is organized as concatenation of columns
+    if (col >= inputPointers.size())
+        return;
+    CUDA_LONG row = id - (col * inputSize);
+    outData[IDX2C(row, col, inputSize)] = inputPointers[col][row];
+}
+
 // helper function template for GatherBatch() below
 template <size_t N, class ElemType>
-void GatherMemcpy(ElemType* outData, ElemType* inputPointers[], size_t numInputPointers, size_t inputSize)
+void GatherMemcpy(ElemType* outData, const GatherMemcpyPointerArray<N, ElemType>& inputPointersArray, size_t inputSize)
 {
-    if (numInputPointers > N)
-        LogicError("MultiMemcpy: Called with actual #items > templated buffer size.");
-#if 0
-    GridDim grid(numInputPointers * inputSize);
-    // Launch a kernel to do the strided copy
-    CUDA_LONG N = (CUDA_LONG)(numInputPointers * inputSize);
-    int blocksPerGrid = (int)ceil(1.0 * N / GridDim::maxThreadsPerBlock);
-    PrepareDevice();
+#if 1
+    GridDim grid(inputPointersArray.size() * inputSize);
     SyncGuard syncGuard;
-    let* inputPointersArray = (struct { ElemType* inputPointers[N]; })(inputPointers);
-    _gatherMemcpy<N, ElemType> <<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(outData, fromMatrix.Data(), N, (CUDA_LONG)m_numRows, (CUDA_LONG)destNumColsStride, (CUDA_LONG)srcNumColsStride);
+    _gatherMemcpy<N, ElemType> <<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(outData, inputPointersArray, (CUDA_LONG)inputSize);
 #else
     // naive reference implementation
     for (size_t j = 0; j < numInputPointers; j++)
@@ -697,40 +740,41 @@ void GPUMatrix<ElemType>::GatherBatch(const std::function<shared_ptr<GPUMatrix<E
     let numInCols = input0->GetNumCols();
     let inputSize = m_numRows * numInCols;
 #define GATHER_BATCH_MAX_CHUNK_SIZE (4096/sizeof(void*)) // max bytes for function args in CUDA 8 is 4k
-    ElemType* inputPointerBuffer[GATHER_BATCH_MAX_CHUNK_SIZE-10]; // leave some space fro extra function args
+    GatherMemcpyPointerArray<GATHER_BATCH_MAX_CHUNK_SIZE - 10, ElemType> inputPointerBuffer; // leave some space fro extra function args
     size_t chunkSize = GATHER_BATCH_MAX_CHUNK_SIZE; // max number of pointers to pass in a single CUDA launch
     size_t i1;
-    for (auto i0 = 0; i0 < numItems; i0 = i1) // we hop through the indices in chunks
+    for (auto i0 = 0; i0 < numItems; i0 += inputPointerBuffer.size()) // we hop through the indices in chunks
     {
         // We do this in chunks so that we can pass a chunk of pointers through the CUDA kernel's argument list.
         // The alternative, passing all pointers through a memory buffer, will require resource lifetime
         // management tied to when the CUDA kernel completes, which is much harder to implement, so for now try this.
         while (numItems - i0 <= chunkSize / 2)
             chunkSize = chunkSize / 2; // use next smaller kernel, to save transfer time and memory
-        i1 = min(i0 + min(chunkSize, _countof(inputPointerBuffer)), numItems); // collect input pointers up to this
+        i1 = min(i0 + min(chunkSize, inputPointerBuffer.capacity()), numItems); // collect input pointers up to this
+        inputPointerBuffer.clear();
         for (size_t i = i0; i < i1; i++) // collect up input pointers
         {
             let input = (i == 0) ? input0 : inputs(i);
             if (input->GetNumRows() != input0->GetNumRows() || input->GetNumCols() != input0->GetNumCols())
                 InvalidArgument("GatherBatch: All inputs must have the same dimensions.");
-            inputPointerBuffer[i - i0] = input->Data();
+            inputPointerBuffer.push_back(input->Data());
         }
         // now copy all inputs we have collected in inputPointerBuffer
         let startColumn = i0 * numInCols;
         auto* outData = Data() + LocateColumn(startColumn);
-        let numInputs = i1 - i0;
+        PrepareDevice();
         switch (chunkSize)
         {
-        case 1:                           GatherMemcpy<1,                           ElemType>(outData, inputPointerBuffer, numInputs, inputSize); break;
-        case 2:                           GatherMemcpy<2,                           ElemType>(outData, inputPointerBuffer, numInputs, inputSize); break;
-        case 4:                           GatherMemcpy<4,                           ElemType>(outData, inputPointerBuffer, numInputs, inputSize); break;
-        case 8:                           GatherMemcpy<8,                           ElemType>(outData, inputPointerBuffer, numInputs, inputSize); break;
-        case 16:                          GatherMemcpy<16,                          ElemType>(outData, inputPointerBuffer, numInputs, inputSize); break;
-        case 32:                          GatherMemcpy<32,                          ElemType>(outData, inputPointerBuffer, numInputs, inputSize); break;
-        case 64:                          GatherMemcpy<64,                          ElemType>(outData, inputPointerBuffer, numInputs, inputSize); break;
-        case 128:                         GatherMemcpy<128,                         ElemType>(outData, inputPointerBuffer, numInputs, inputSize); break;
-        case 256:                         GatherMemcpy<256,                         ElemType>(outData, inputPointerBuffer, numInputs, inputSize); break;
-        case GATHER_BATCH_MAX_CHUNK_SIZE: GatherMemcpy<GATHER_BATCH_MAX_CHUNK_SIZE, ElemType>(outData, inputPointerBuffer, numInputs, inputSize); break;
+        case 1:                           GatherMemcpy(outData, AsRef<1  >::AsRef1(inputPointerBuffer), inputSize); break;
+        case 2:                           GatherMemcpy(outData, AsRef<2  >::AsRef1(inputPointerBuffer), inputSize); break;
+        case 4:                           GatherMemcpy(outData, AsRef<4  >::AsRef1(inputPointerBuffer), inputSize); break;
+        case 8:                           GatherMemcpy(outData, AsRef<8  >::AsRef1(inputPointerBuffer), inputSize); break;
+        case 16:                          GatherMemcpy(outData, AsRef<16 >::AsRef1(inputPointerBuffer), inputSize); break;
+        case 32:                          GatherMemcpy(outData, AsRef<32 >::AsRef1(inputPointerBuffer), inputSize); break;
+        case 64:                          GatherMemcpy(outData, AsRef<64 >::AsRef1(inputPointerBuffer), inputSize); break;
+        case 128:                         GatherMemcpy(outData, AsRef<128>::AsRef1(inputPointerBuffer), inputSize); break;
+        case 256:                         GatherMemcpy(outData, AsRef<256>::AsRef1(inputPointerBuffer), inputSize); break;
+        case GATHER_BATCH_MAX_CHUNK_SIZE: GatherMemcpy(outData,                    inputPointerBuffer,  inputSize); break;
         default: LogicError("GatherBatch: Missed a case.");
         }
     }

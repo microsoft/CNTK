@@ -151,6 +151,9 @@
     <None Include="GPUWatcher.cu">
       <Filter>GPU</Filter>
     </None>
+    <None Include="GPUMatrixCUDAKernels.cuh">
+      <Filter>GPU</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
