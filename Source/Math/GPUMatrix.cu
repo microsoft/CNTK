@@ -673,10 +673,9 @@ public:
     template<size_t Nother>
     const GatherMemcpyPointerArray<Nother, ElemType>& AsRef() const
     {
-        if (numElements > Nother)
+        if (size() > Nother)
             LogicError("GatherMemcpyPointerArray: Attempted to cast to a templated buffer size that is too small.");
-        return *new GatherMemcpyPointerArray<Nother, ElemType>();
-        //return (GatherMemcpyPointerArray<Nother, ElemType>&)*this;
+        return reinterpret_cast<const GatherMemcpyPointerArray<Nother, ElemType>&>(*this);
     }
     // creating the array
     GatherMemcpyPointerArray() { clear(); }
@@ -765,6 +764,7 @@ void GPUMatrix<ElemType>::GatherBatch(const std::function<shared_ptr<GPUMatrix<E
         PrepareDevice();
         switch (chunkSize)
         {
+        //case 1:                           GatherMemcpy(outData, inputPointerBuffer.AsRef<1  >(), inputSize); break;
         case 1:                           GatherMemcpy(outData, AsRef<1  >::AsRef1(inputPointerBuffer), inputSize); break;
         case 2:                           GatherMemcpy(outData, AsRef<2  >::AsRef1(inputPointerBuffer), inputSize); break;
         case 4:                           GatherMemcpy(outData, AsRef<4  >::AsRef1(inputPointerBuffer), inputSize); break;
@@ -774,7 +774,7 @@ void GPUMatrix<ElemType>::GatherBatch(const std::function<shared_ptr<GPUMatrix<E
         case 64:                          GatherMemcpy(outData, AsRef<64 >::AsRef1(inputPointerBuffer), inputSize); break;
         case 128:                         GatherMemcpy(outData, AsRef<128>::AsRef1(inputPointerBuffer), inputSize); break;
         case 256:                         GatherMemcpy(outData, AsRef<256>::AsRef1(inputPointerBuffer), inputSize); break;
-        case GATHER_BATCH_MAX_CHUNK_SIZE: GatherMemcpy(outData,                    inputPointerBuffer,  inputSize); break;
+        case GATHER_BATCH_MAX_CHUNK_SIZE: GatherMemcpy(outData,                    inputPointerBuffer , inputSize); break;
         default: LogicError("GatherBatch: Missed a case.");
         }
     }
