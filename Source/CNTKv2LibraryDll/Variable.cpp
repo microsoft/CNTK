@@ -44,7 +44,7 @@ namespace CNTK
 
     const std::wstring& Variable::Uid() const
     {
-        return m_dataFields->m_uid; 
+        return m_dataFields->Uid(); 
     }
     
     DataType Variable::GetDataType() const
@@ -222,7 +222,7 @@ namespace CNTK
         if (m_name != L"")
             wss << m_name;
         else
-            wss << m_uid;
+            wss << Uid();
         bool reverse = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
         if (reverse)
             wss << "', " << DynamicAxesAsString(m_dynamicAxes, reverse) << ", " << m_shape.AsString() << ")";

@@ -52,7 +52,7 @@ namespace CNTK
                 {
                     // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.
                     //outputVar.m_dataFields->m_uid = m_uid + L"_" + VariableKindName(outputVar.Kind()) + L"_" + std::to_wstring(i/*m_outputs.size()*/);
-                    outputVar.m_dataFields->m_uid = m_uid + L"_" + VariableKindName(outputVar.Kind()) + std::to_wstring(i/*m_outputs.size()*/);
+                    outputVar.m_dataFields->m_uid = Uid() + L"_" + VariableKindName(outputVar.Kind()) + std::to_wstring(i/*m_outputs.size()*/);
                 }
 
                 outputVar.m_outputComposite.reset();
@@ -240,6 +240,12 @@ namespace CNTK
             InvalidArgument("Illegal to set name of a Function '%S' with an existing name '%S'", this->AsString().c_str(), Name().c_str());
 
         m_name = name;
+    }
+    
+    const std::wstring& Function::Uid() const
+    {
+        // TODO: generate lazily
+        return m_uid;
     }
 
     bool Function::IsBlock() const

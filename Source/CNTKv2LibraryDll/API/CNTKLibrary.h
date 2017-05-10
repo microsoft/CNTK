@@ -3157,7 +3157,7 @@ namespace CNTK
         ///
         /// Returns the internally generated unique name of the Function
         ///
-        const std::wstring& Uid() const { return m_uid; }
+        CNTK_API const std::wstring& Uid() const;
 
         ///
         /// Returns the primitive Function at the root of the graph of Functions underlying this Function.

@@ -21,7 +21,7 @@ namespace CNTK
         // graph
         std::weak_ptr<Function> m_ownerFunction;
         std::wstring m_name;
-        std::wstring m_uid; // TODO: create this lazily
+        std::wstring m_uid;
         Variable m_blockFunctionVariableMapping;
 
         // variable type
@@ -46,7 +46,8 @@ namespace CNTK
         std::unique_ptr<DeviceDescriptor> m_valueInitializationDevice;
 
         VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, const std::weak_ptr<Function>& ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
-            : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid), m_valueTimeStamp(0)
+            : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value),
+              m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid), m_valueTimeStamp(0)
         {
             if (value && (type != value->GetDataType()))
                 InvalidArgument("The DataType of the Parameter/Constant Variable '%S' does not match the DataType of the associated Value", AsString().c_str());
@@ -83,6 +84,11 @@ namespace CNTK
         std::shared_ptr<VariableFields> Clone() const;
         FunctionPtr Owner() const;
         bool OwnerIs(const Function* f) const;
+        const std::wstring& Uid() const
+        {
+            // TODO: create this lazily
+            return m_uid;
+        }
 
         CNTK_API void SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device);
 
