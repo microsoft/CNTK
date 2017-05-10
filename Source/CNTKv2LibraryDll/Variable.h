@@ -21,7 +21,7 @@ namespace CNTK
         // graph
         std::weak_ptr<Function> m_ownerFunction;
         std::wstring m_name;
-        std::wstring m_uid;
+        mutable std::wstring m_uid;
         Variable m_blockFunctionVariableMapping;
 
         // variable type
@@ -86,7 +86,9 @@ namespace CNTK
         bool OwnerIs(const Function* f) const;
         const std::wstring& Uid() const
         {
-            // TODO: create this lazily
+            // create this lazily, since we don't look at the uid for most nodes
+            if (m_uid.empty())
+                m_uid = Internal::GenerateUid(m_varKind);
             return m_uid;
         }
 

@@ -2113,7 +2113,7 @@ private:
         /// Construct a parameter whose initial contents are a copy of the specified 'value'
         ///
         explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name = std::wstring())
-            : Parameter(value, name, Internal::GenerateUid(VariableKind::Parameter))
+            : Parameter(value, name, std::wstring())//, Internal::GenerateUid(VariableKind::Parameter))
         {}
 
         // TODO: Constructor to move a specified NDArrayView value
@@ -3515,7 +3515,7 @@ namespace CNTK
 
         FunctionPtr m_rootFunction; // This is a PrimitiveFunctionPtr for composites, or a nullptr for PrimitiveFunction instances
         std::wstring m_name;
-        std::wstring m_uid;
+        mutable std::wstring m_uid;
         Dictionary m_attributes;
 
         int m_pendingInputs = -1;
