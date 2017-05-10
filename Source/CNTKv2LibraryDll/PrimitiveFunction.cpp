@@ -951,7 +951,7 @@ namespace CNTK
                 }
             }
 
-            auto primaryOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, Name().empty() ? L"" : Name());
+            auto primaryOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, Name());// .empty() ? L"" : Name());
             outputs.push_back(primaryOutput);
             if (m_op == PrimitiveOpType::UnpackSequence)
             {

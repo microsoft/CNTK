@@ -44,9 +44,8 @@ namespace CNTK
 
     const std::wstring& Variable::Uid() const
     {
-        return m_dataFields->Uid(); 
+        return m_dataFields->Uid();
     }
-    
     DataType Variable::GetDataType() const
     {
         return m_dataFields->m_dataType; 
@@ -247,6 +246,29 @@ namespace CNTK
     {
         auto ownerFunctionPtr = m_ownerFunction.lock();
         return ownerFunctionPtr.get() == f;
+    }
+
+    const std::wstring& VariableFields::Uid() const
+    {
+        // we create the uid string lazily, since we don't look at it for most nodes
+        if (m_uid.empty())
+        {
+            if (m_varKind == VariableKind::Output && Owner() && Owner()->IsPrimitive())
+            {
+                // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.
+                auto owner = Owner();
+                auto outputs = owner->Outputs();
+                size_t i;
+                for (i = 0; i < outputs.size(); i++)
+                    if (outputs[i].m_dataFields.get() == this)
+                        break;
+                m_uid = owner->Uid() + L"_" + VariableKindName(m_varKind) + L"_" + std::to_wstring(i);
+            }
+            else
+                // otherwise just use the kind
+                m_uid = Internal::GenerateUid(m_varKind);
+        }
+        return m_uid;
     }
 
     std::shared_ptr<VariableFields> VariableFields::Clone() const
@@ -567,7 +589,7 @@ namespace CNTK
     }
 
     Constant::Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)
-        : Variable(shape, VariableKind::Constant, dataType, nullptr, false, {}, name, Internal::GenerateUid(VariableKind::Constant))
+        : Variable(shape, VariableKind::Constant, dataType, nullptr, false, {}, name, std::wstring())// Internal::GenerateUid(VariableKind::Constant))
     {
         m_dataFields->SetValueInitialization(initializer, device);
     }

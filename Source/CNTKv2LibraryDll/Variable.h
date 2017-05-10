@@ -84,13 +84,7 @@ namespace CNTK
         std::shared_ptr<VariableFields> Clone() const;
         FunctionPtr Owner() const;
         bool OwnerIs(const Function* f) const;
-        const std::wstring& Uid() const
-        {
-            // create this lazily, since we don't look at the uid for most nodes
-            if (m_uid.empty())
-                m_uid = Internal::GenerateUid(m_varKind);
-            return m_uid;
-        }
+        const std::wstring& Uid() const;
 
         CNTK_API void SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device);
 

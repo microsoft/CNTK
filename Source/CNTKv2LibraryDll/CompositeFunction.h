@@ -70,7 +70,8 @@ namespace CNTK
         }
 
     public:
-        static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = std::wstring(), const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
+        static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = std::wstring(),
+                                           const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
         {
             std::unordered_set<FunctionPtr> visitedFunctions;
 
@@ -218,7 +219,8 @@ namespace CNTK
             }
         }
 
-        CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name, const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
+        CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name,
+                          const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
             : Function({}, Dictionary(), rootFunction, name, uid),
             m_allPrimitiveFunctions(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
         {}

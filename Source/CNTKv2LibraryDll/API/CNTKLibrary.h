@@ -1771,6 +1771,7 @@ namespace CNTK
         friend class PrimitiveFunction;
         friend class Utils;
         friend class Memoize;
+        friend struct VariableFields;
 
         template <typename T>
         friend struct std::hash;
@@ -2079,7 +2080,7 @@ private:
     ///
     inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name /*= L""*/)
     {
-        return Variable(shape, VariableKind::Output, dataType, nullptr, needsGradient, dynamicAxes, /*isSparse =*/ false, name, Internal::GenerateUid(VariableKind::Output));
+        return Variable(shape, VariableKind::Output, dataType, nullptr, needsGradient, dynamicAxes, /*isSparse =*/ false, name, std::wstring());// Internal::GenerateUid(VariableKind::Output));
     }
 
     static const int SentinelValueForInferParamInitRank = std::numeric_limits<int>::max();
@@ -2206,7 +2207,7 @@ private:
         /// Construct a Constant whose initial contents are a copy of the specified value
         ///
         Constant(const NDArrayViewPtr& value, const std::wstring& name = std::wstring())
-            : Constant(value, name, Internal::GenerateUid(VariableKind::Constant))
+            : Constant(value, name, std::wstring())// Internal::GenerateUid(VariableKind::Constant))
         {}
 
         // TODO: Constructor to move a specified NDArrayView value

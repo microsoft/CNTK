@@ -45,15 +45,14 @@ namespace CNTK
             {
                 auto& outputVar = outputs[i];
 
-                if (outputVar.IsOutput() && outputVar.OwnerIs(nullptr))
+                if (outputVar.IsOutput()/*could be something else for Combine()*/ && outputVar.OwnerIs(nullptr))
                     outputVar.SetOwner(shared_from_this());
 
-                if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.OwnerIs(this))
-                {
-                    // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.
-                    //outputVar.m_dataFields->m_uid = m_uid + L"_" + VariableKindName(outputVar.Kind()) + L"_" + std::to_wstring(i/*m_outputs.size()*/);
-                    outputVar.m_dataFields->m_uid = Uid() + L"_" + VariableKindName(outputVar.Kind()) + std::to_wstring(i/*m_outputs.size()*/);
-                }
+                //if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.OwnerIs(this))
+                //{
+                //    // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.
+                //    outputVar.m_dataFields->m_uid = Uid() + L"_" + VariableKindName(outputVar.Kind()) + L"_" + std::to_wstring(i/*m_outputs.size()*/);
+                //}
 
                 outputVar.m_outputComposite.reset();
 //#if 1
