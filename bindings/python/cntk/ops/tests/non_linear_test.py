@@ -12,13 +12,12 @@ the forward and the backward pass
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, cntk_device
+from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, precision, PRECISION_TO_TYPE, cntk_device
 from cntk.tests.test_utils import TOLERANCE_ABSOLUTE
-from cntk.utils import eval as cntk_eval
+from cntk.internal.utils import eval as cntk_eval
 from cntk.internal import sanitize_dtype_cntk
 from .. import constant
-from ..variables import Parameter, Constant
-from cntk import set_default_device
+from cntk.variables import Parameter, Constant
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
 # the backward result returned by CNTK log() for epsilon
@@ -52,11 +51,11 @@ def test_op_clip(min_value, max_value, x, device_id, precision):
     from .. import clip
     dev = cntk_device(device_id)
 
-    expected_forward = [np.clip(AA([x], dtype=PRECISION_TO_TYPE[precision]), AA(
-        min_value, dtype=PRECISION_TO_TYPE[precision]), AA(max_value, dtype=PRECISION_TO_TYPE[precision]))]
+    expected_forward = np.clip(AA([x], dtype=PRECISION_TO_TYPE[precision]), AA(
+        min_value, dtype=PRECISION_TO_TYPE[precision]), AA(max_value, dtype=PRECISION_TO_TYPE[precision]))
 
     expected_backward = {
-        'arg': [[np.array(np.logical_not(np.logical_or(np.greater(x, max_value), np.less(x, min_value))), dtype=PRECISION_TO_TYPE[precision])]]
+        'arg': [np.array(np.logical_not(np.logical_or(np.greater(x, max_value), np.less(x, min_value))), dtype=PRECISION_TO_TYPE[precision])]
     }
 
     const_min_value = constant(min_value, device=dev)
@@ -75,10 +74,10 @@ TENSORS = [
 @pytest.mark.parametrize("operand", TENSORS)
 def test_op_sigmoid(operand, device_id, precision):
     s = 1.0 / (1.0 + np.exp(-AA(operand, dtype=PRECISION_TO_TYPE[precision])))
-    expected_forward = [AA([s])]
+    expected_forward = AA([s])
 
     expected_backward = {
-        'arg': [[s * (1 - s)]],
+        'arg': [s * (1 - s)],
     }
 
     from .. import sigmoid
@@ -95,7 +94,7 @@ def test_op_softplus(operand, device_id, precision):
             s[0,1] = 0  # np baseline is 0.000045
         if operand[5][0] == 10:
             s[5,0] = 10 # np baseline is 10.000045
-    expected_forward = [AA([s])]
+    expected_forward = AA([s])
 
     from .. import softplus
     _test_unary_op(precision, device_id, softplus, operand,
@@ -105,7 +104,7 @@ def test_op_softplus(operand, device_id, precision):
 @pytest.mark.parametrize("operand", TENSORS)
 def test_op_exp(operand, device_id, precision):
     e = np.exp(AA(operand, dtype=PRECISION_TO_TYPE[precision]))
-    expected_forward = [AA([e])]
+    expected_forward = AA([e])
 
     expected_backward = {
         'arg': expected_forward,
@@ -120,13 +119,13 @@ def test_op_exp(operand, device_id, precision):
 def test_op_abs(operand, device_id, precision):
     t = np.abs(AA(operand, dtype=PRECISION_TO_TYPE[precision]))
 
-    expected_forward = [AA([t])]
+    expected_forward = AA([t])
 
     # For 0 NumPy gives a gradient non, while CNTK gives 0
     backward = operand / np.abs(operand)
     backward[np.isnan(backward)] = 0
     expected_backward = {
-        'arg': [[backward]]
+        'arg': [backward]
     }
 
     from .. import abs
@@ -137,10 +136,10 @@ def test_op_abs(operand, device_id, precision):
 @pytest.mark.parametrize("operand", TENSORS)
 def test_op_tanh(operand, device_id, precision):
     t = np.tanh(AA(operand, dtype=PRECISION_TO_TYPE[precision]))
-    expected_forward = [AA([t])]
+    expected_forward = AA([t])
 
     expected_backward = {
-        'arg': [[1 - t**2]],
+        'arg': [1 - t**2],
     }
 
     from .. import tanh
@@ -151,7 +150,7 @@ def test_op_tanh(operand, device_id, precision):
 @pytest.mark.parametrize("shape", [(3, 9), (10, 20, 30)])
 @pytest.mark.parametrize("dropout_rate", [0.0, 0.2, 0.5, 0.8])
 def test_op_dropout(shape, dropout_rate, device_id, precision):
-    from cntk import dropout
+    from cntk import dropout, input
 
     count = 10
     resulted_non_zeros = 0
@@ -161,14 +160,14 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
     for i in range(count):
         value = np.ones(shape=shape, dtype=PRECISION_TO_TYPE[precision])
 
-        a = I(shape=value.shape,
-              dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
-              needs_gradient=True,
-              name='a')
+        a = input(shape=value.shape,
+                  dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+                  needs_gradient=True,
+                  name='a')
 
         dropout_node = dropout(a, dropout_rate=dropout_rate)
 
-        value.shape = (1, 1) + value.shape
+        value.shape = (1,) + value.shape
         forward_input = {a: value}
 
         forward, backward = cntk_eval(dropout_node,
@@ -187,12 +186,54 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
     assert(abs(resulted_non_zeros - expected_non_zeros) <
            max_off)
 
+def test_op_dropout_with_explicit_seed(device_id, precision):
+    from cntk import combine, dropout, input
+
+    value = np.ones(shape=(100,100), dtype=PRECISION_TO_TYPE[precision])
+
+    a = input(shape=value.shape,
+              dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+              needs_gradient=True,
+              name='a')
+
+    seed = 123;
+
+    dropout_nodes= [
+        dropout(a, dropout_rate=0.5, seed=seed),
+        dropout(a, dropout_rate=0.5, seed=seed),
+        dropout(a, dropout_rate=0.5, seed=seed+1),
+        dropout(a, dropout_rate=0.5)
+    ]
+
+    cloned_nodes = [x.clone('clone') for x in dropout_nodes]
+
+    value.shape = (1, 1) + value.shape
+    
+    results = []
+    for node in dropout_nodes + cloned_nodes:
+        forward_input = {node.inputs[0]: value}
+        forward, backward = cntk_eval(node,
+                                      forward_input,
+                                      precision,
+                                      cntk_device(device_id),
+                                      backward_pass=True)
+
+        results.append(forward[node.output])
+    
+    assert np.allclose(results[0], results[1])
+    assert not np.allclose(results[0], results[2])
+    assert not np.allclose(results[0], results[3])
+
+    clones = results[len(dropout_nodes):]
+    for i in range(len(clones)):
+        assert np.allclose(results[i], clones[i])
+
 
 @pytest.mark.parametrize("dropout_rate", [-0.1, 1.0, 100])
 def test_op_dropout_bad_input(dropout_rate):
-    from cntk import dropout
+    from cntk import dropout, input
 
-    a = I(shape=(1, 2), dtype='float', needs_gradient=True, name='a')
+    a = input(shape=(1, 2), dtype='float', needs_gradient=True, name='a')
 
     with pytest.raises(ValueError):
         dropout_node = dropout(a, dropout_rate=dropout_rate)
@@ -202,12 +243,12 @@ def test_op_dropout_bad_input(dropout_rate):
 def test_op_sqrt(operand, device_id, precision):
     t = np.sqrt(AA(operand, dtype=PRECISION_TO_TYPE[precision]))
     t[np.isnan(t)] = 0
-    expected_forward = [AA([t])]
+    expected_forward = AA([t])
 
     backward = 1 / (2 * t)
 
     expected_backward = {
-        'arg': [[backward]]
+        'arg': [backward]
     }
 
     from cntk import sqrt
@@ -219,11 +260,11 @@ def test_op_sqrt(operand, device_id, precision):
 def test_op_square(operand, device_id, precision):
     s = AA(operand, dtype=PRECISION_TO_TYPE[
            precision]) * AA(operand, dtype=PRECISION_TO_TYPE[precision])
-    expected_forward = [AA([s])]
+    expected_forward = AA([s])
 
     backward = 2 * AA(operand, dtype=PRECISION_TO_TYPE[precision])
     expected_backward = {
-        'arg': [[backward]]
+        'arg': [backward]
     }
 
     from cntk import square
@@ -238,7 +279,7 @@ def test_op_log(operand, device_id, precision):
     t[np.isnan(t)] = LOG_OF_EPS_IN_LOG
     t[np.isneginf(t)] = LOG_OF_EPS_IN_LOG
 
-    expected_forward = [AA([t])]
+    expected_forward = AA([t])
 
     backward = 1 / AA(operand, dtype=PRECISION_TO_TYPE[precision])
     backward[np.isnan(backward)] = "inf"
@@ -247,7 +288,7 @@ def test_op_log(operand, device_id, precision):
     backward[backward <= 0] = BACKWARD_RESULST_FOR_LOG_EPS
 
     expected_backward = {
-        'arg': [[backward]]
+        'arg': [backward]
     }
 
     from cntk import log
@@ -260,12 +301,12 @@ def test_op_log(operand, device_id, precision):
 def test_op_reciprocal(operand, device_id, precision):
     t = 1 / AA(operand, dtype=PRECISION_TO_TYPE[precision])
     t[np.isinf(t)] = 0
-    expected_forward = [AA([t])]
+    expected_forward = AA([t])
 
     backward = -1 * t * t
 
     expected_backward = {
-        'arg': [[backward]]
+        'arg': [backward]
     }
 
     from cntk import reciprocal
@@ -277,10 +318,10 @@ def test_op_reciprocal(operand, device_id, precision):
 @pytest.mark.parametrize("operand", TENSORS)
 def test_op_relu(operand, device_id, precision):
     t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
-    expected_forward = [[np.maximum(np.zeros_like(t), t)]]
+    expected_forward = [np.maximum(np.zeros_like(t), t)]
 
     expected_backward = {
-        'arg': [[AA(t > np.zeros_like(t), dtype=int)]]
+        'arg': [AA(t > np.zeros_like(t), dtype=int)]
     }
 
     from cntk import relu
@@ -295,9 +336,9 @@ def test_op_elu(operand, device_id, precision):
 
     t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
 
-    expected_forward = [[elu_f(t)]]
+    expected_forward = [elu_f(t)]
     expected_backward = {
-        'arg': [[elu_b(t)]]
+        'arg': [elu_b(t)]
     }
 
     from cntk import elu
@@ -312,9 +353,9 @@ def test_op_leaky_relu(operand, device_id, precision):
 
     t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
 
-    expected_forward = [[leaky_relu_f(t)]]
+    expected_forward = [leaky_relu_f(t)]
     expected_backward = {
-        'arg': [[leaky_relu_b(t)]]
+        'arg': [leaky_relu_b(t)]
     }
 
     from cntk import leaky_relu
@@ -332,9 +373,9 @@ def test_op_param_relu(operand, device_id, precision):
     a = AA(np.ones_like(t)*0.5, dtype=PRECISION_TO_TYPE[precision])
     alpha = constant(a, device=dev)
 
-    expected_forward = [[param_relu_f(t)]]
+    expected_forward = [param_relu_f(t)]
     expected_backward = {
-        'arg': [[param_relu_b(t)]]
+        'arg': [param_relu_b(t)]
     }
 
     from cntk import param_relu
@@ -352,9 +393,9 @@ def test_op_softplus(operand, device_id, precision):
 
     t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
 
-    expected_forward = [[softplus_f(t)]]
+    expected_forward = [softplus_f(t)]
     expected_backward = {
-        'arg': [[softplus_b(t)]]
+        'arg': [softplus_b(t)]
     }
 
     from .. import softplus
@@ -377,7 +418,7 @@ def test_op_softmax(sample, device_id, precision):
     exp_x = np.exp(x_max)
     forward = exp_x / np.sum(exp_x)
 
-    expected_forward = [AA([forward])]
+    expected_forward = AA([forward])
 
     sample_length = len(forward)
     grad = np.zeros((sample_length, sample_length),
@@ -393,7 +434,7 @@ def test_op_softmax(sample, device_id, precision):
     backward = grad.sum(axis=0)
 
     expected_backward = {
-        'arg': [[backward]]
+        'arg': [backward]
     }
 
     from cntk import softmax
@@ -414,10 +455,10 @@ def test_op_hardmax(sample, device_id, precision):
             forward[i] = 1
             break
 
-    expected_forward = [AA([forward])]
+    expected_forward = AA([forward])
 
     expected_backward = {
-        'arg': [[np.zeros_like(forward)]]
+        'arg': [np.zeros_like(forward)]
     }
 
     from cntk import hardmax
@@ -432,7 +473,7 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
     epsilon = 0.00001
     dev = cntk_device(device_id)
 
-    t = AA(sample, dtype=dtype).reshape(-1,1,1)
+    t = AA(sample, dtype=dtype).reshape(-1,1)
     mean = 1
     var = 2
     init_scale = 3
@@ -442,15 +483,15 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
 
     expected_forward = AA(forward)
 
-    scale        = Parameter(init=AA([init_scale], dtype=dtype), device=dev)
-    bias         = Parameter(init=AA([init_bias], dtype=dtype), device=dev)
-    run_mean     = constant(mean, shape=(1), device=dev)
-    run_variance = constant(var,  shape=(1), device=dev)
-    run_count    = constant(0,               device=dev)
+    scale        = Parameter(init=AA([init_scale], dtype=dtype), dtype=dtype, device=dev)
+    bias         = Parameter(init=AA([init_bias], dtype=dtype), dtype=dtype, device=dev)
+    run_mean     = constant(mean, shape=(1), dtype=dtype, device=dev)
+    run_variance = constant(var,  shape=(1), dtype=dtype, device=dev)
+    run_count    = constant(0,               dtype=dtype, device=dev)
 
-    from cntk import batch_normalization
+    from cntk import batch_normalization, input
 
-    a = I(shape=(1), dtype=dtype, needs_gradient=False, name='a')
+    a = input(shape=(1), dtype=dtype, needs_gradient=False, name='a')
 
     with pytest.warns(Warning):
         op = batch_normalization(a, scale, bias, run_mean, run_variance, False,
@@ -463,3 +504,28 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
     forward_input = {a: t}
 
     unittest_helper(op_node, forward_input, expected_forward, expected_backward=None, device_id=device_id, precision=precision)
+
+TENSOR_PAIRS = [
+    ([0.3], [0.1]),
+    ([[0.1]], [[0.3]]),
+    ([[1.5, 2.1]], [[-2., -3.]]),
+    ([[1., 2.], [3., 4.], [1., 2.]],
+     [[2., 2.], [3., 1.], [-1., -2.]])
+]
+
+@pytest.mark.parametrize("base, exponent", TENSOR_PAIRS)
+def test_op_pow(base, exponent, device_id, precision):
+    dt =  PRECISION_TO_TYPE[precision]
+    base = AA(base,dtype=dt)
+    exponent = AA(exponent,dtype=dt)
+    expected_forward = base ** exponent
+
+    expected_backward = {
+            'left_arg':  [exponent * base**(exponent-1)],
+            'right_arg': [expected_forward * np.log(base)]
+        }
+
+    from .. import pow
+    _test_binary_op(precision, device_id, pow,
+                    base, exponent,
+                    AA([expected_forward]), expected_backward)

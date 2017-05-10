@@ -18,7 +18,7 @@ def uniform(scale, seed=None):
         seed (int): random seed
 
     Returns:
-        initializer for :class:`cntk.ops.variables.Parameter`
+        initializer for :class:`~cntk.variables.Parameter`
         initialized to uniform distribution between `scale*[-1.0, 1.0]`
         note this maps to the "uniform1" distribution in BrainScript. 
     '''
@@ -38,7 +38,7 @@ def normal(scale, output_rank=SentinelValueForInferParamInitRank, filter_rank=Se
         seed (int): random seed
 
     Returns:
-        initializer for :class:`cntk.ops.variables.Parameter`
+        initializer for :class:`~cntk.variables.Parameter`
         initialized to normal distribution with mean `0` and standard deviation `scale`. 
     '''
     if seed is None:
@@ -57,7 +57,7 @@ def xavier(scale=DefaultParamInitScale, output_rank=SentinelValueForInferParamIn
         seed (int): random seed
 
     Returns:
-        initializer for :class:`~cntk.ops.variables.Parameter`
+        initializer for :class:`~cntk.variables.Parameter`
         initialized to Gaussian distribution with mean `0` and standard
         deviation $$scale*sqrt(3.0/fanIn)$$
     '''
@@ -77,7 +77,7 @@ def glorot_uniform(scale=DefaultParamInitScale, output_rank=SentinelValueForInfe
         seed (int): random seed
 
     Returns:
-        initializer for :class:`~cntk.ops.variables.Parameter`
+        initializer for :class:`~cntk.variables.Parameter`
         initialized to uniform distribution between
         $$scale*sqrt(6.0/(fanIn+fanOut))*[-1,1]$$
     '''
@@ -97,7 +97,7 @@ def glorot_normal(scale=DefaultParamInitScale, output_rank=SentinelValueForInfer
         seed (int): random seed
 
     Returns:
-        initializer for :class:`~cntk.ops.variables.Parameter`
+        initializer for :class:`~cntk.variables.Parameter`
         initialized to Gaussian distribution with mean `0` and standard
         deviation $$scale*sqrt(2.0/(fanIn+fanOut))$$
     '''
@@ -117,7 +117,7 @@ def he_uniform(scale=DefaultParamInitScale, output_rank=SentinelValueForInferPar
         seed (int): random seed
 
     Returns:
-        initializer for :class:`~cntk.ops.variables.Parameter`
+        initializer for :class:`~cntk.variables.Parameter`
         initialized to uniform distribution between
         $$scale*sqrt(6.0/fanIn)*[-1,1]$$
     '''
@@ -137,7 +137,7 @@ def he_normal(scale=DefaultParamInitScale, output_rank=SentinelValueForInferPara
         seed (int): random seed
 
     Returns:
-        initializer for :class:`~cntk.ops.variables.Parameter`
+        initializer for :class:`~cntk.variables.Parameter`
         initialized to Gaussian distribution with mean `0` and standard
         deviation $$scale*sqrt(2.0/fanIn)$$
     '''
@@ -155,7 +155,7 @@ def bilinear(kernel_width, kernel_height):
         kernel_height (int): kernel height
 
     Returns:
-        initializer for :class:`~cntk.ops.variables.Parameter`
+        initializer for :class:`~cntk.variables.Parameter`
         useful for deconvolution layer
     '''
     return cntk_py.bilinear_initializer(kernel_width, kernel_height)
@@ -171,7 +171,7 @@ def initializer_with_rank(initializer, output_rank=None, filter_rank=None):
         filter_rank (int): new filter rank value
 
     Returns:
-        new initializer for :class:`~cntk.ops.variables.Parameter` with specified output_rank and filter_rank
+        new initializer for :class:`~cntk.variables.Parameter` with specified output_rank and filter_rank
     '''
     if output_rank is None:
         output_rank = SentinelValueForInferParamInitRank

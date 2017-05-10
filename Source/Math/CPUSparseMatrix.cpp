@@ -175,6 +175,64 @@ CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
     ZeroValues();
 }
 
+template <class ElemType>
+CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
+{
+    if (a.IsEmpty())
+        LogicError("AssignOneHot: Matrix a is empty.");
+
+    if (GetFormat() != matrixFormatSparseCSC)
+        LogicError("AssignOneHot: Matrix format is not supported.");
+
+    if (axis >= shape.size())
+        LogicError("AssignOneHot: axis is not correct");
+
+    int item_size = 1;
+    for (size_t i = 0; i < shape.size() && i < axis; i++)
+        item_size *= (int)shape[i];
+
+    int num_class = (int)shape[axis];
+
+    auto nRows = item_size * num_class;
+    auto nCols = a.GetNumElements() / item_size;
+    if (((GetNumRows() != 0) && (GetNumRows() != nRows)) || ((GetNumCols() != 0) && (GetNumCols() != nCols)))
+        LogicError("AssignOneHot: Target matrix size is not correct");
+
+    RequireSizeAndAllocate(nRows, nCols, a.GetNumElements());
+
+    CPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
+    CPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
+    ElemType* data = NzValues();
+    ElemType* indices = a.Data();
+#pragma omp parallel for
+    for (long i = 0; i < a.GetNumElements(); i++)
+    {
+        int block_id = i / item_size;
+        int item_id = i % item_size;
+        // for invalid indices, theorically they should not belong to nz elements.
+        // but if we scan the indices to count the valid indices number,
+        // it will be difficult for parallel calculation, especially on GPU.
+        // here we chose to keep those elements in nz element list, but with value 0 an at row 0
+        if (indices[i] >= 0 && indices[i] < num_class)
+        {
+            data[i] = 1;
+            majorIndices[i] = ((int)indices[i] * item_size) + item_id;
+        }
+        else
+        {
+            data[i] = 0;
+            majorIndices[i] = item_id;
+        }
+
+        if (item_id == 0)
+            secondaryIndices[block_id + 1] = item_size * (block_id + 1);
+    }
+
+    secondaryIndices[0] = 0;
+
+    return *this;
+}
+
 #pragma endregion Constructors and Destructor
 
 #pragma region Basic Operators
@@ -645,7 +703,6 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
     memcpy(NzValues(), h_Val, sizeof(ElemType)*nz);
 }
 
-#if 0 // add it back with test
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, const ElemType* val, const size_t numBlocks, const size_t numRows, const size_t numCols)
 {
@@ -659,7 +716,6 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, c
     memcpy(GetBlockIds(), blockIds, sizeof(size_t)*(numBlocks));
     memcpy(Data(), val, sizeof(ElemType)*numBlocks*numRows);
 }
-#endif
 
 template <class ElemType>
 ElemType* CPUSparseMatrix<ElemType>::Data()  const
@@ -677,23 +733,27 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
         LogicError("Error, calling allocate with dimensions (%d, %d), but the matrix has dimension (%d, %d).", (int)numRows, (int)numCols, (int)GetNumRows(), (int)GetNumCols());
 
     size_t numNZElemToReserve = max(numNZElemRequested, (size_t) 1);
-    size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
+    size_t newCompIndexSize;
+    if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+        newCompIndexSize = numCols + 1;
+    else if (GetFormat() == MatrixFormat::matrixFormatSparseCSR)
+        newCompIndexSize = numRows + 1;
+    else
+        newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
+
     bool reallocate = (GetSizeAllocated() < numNZElemToReserve || (GetSizeAllocated() > numNZElemToReserve && !growOnly) || GetCompIndexSize() < newCompIndexSize);
 
     if (reallocate)
     {
         if (GetFormat() == MatrixFormat::matrixFormatSparseCSC || GetFormat() == MatrixFormat::matrixFormatSparseCSR)
         {
+            // The initialization of the following buffer is done by new []().
             auto* pArray      = new ElemType[numNZElemToReserve]();
             auto* unCompIndex = new CPUSPARSE_INDEX_TYPE[numNZElemToReserve]();
             auto* compIndex   = new CPUSPARSE_INDEX_TYPE[newCompIndexSize]();
 
             if (keepExistingValues && (NzCount() > numNZElemToReserve || GetCompIndexSize() > newCompIndexSize))
                 LogicError("Allocate: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
-
-            memset(pArray, 0, sizeof(ElemType) * numNZElemToReserve);
-            memset(unCompIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * numNZElemToReserve);
-            memset(compIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * newCompIndexSize);
 
             if (keepExistingValues && NzCount() > 0)
             {
@@ -748,7 +808,7 @@ void CPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, con
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
 {
-    RequireSize(numRows, numCols, matrixFormat, growOnly);
+    RequireSize(numRows, numCols, numNZElemToReserve, matrixFormat, growOnly);
     
     size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
     bool reallocate = (GetSizeAllocated() < numNZElemToReserve || (GetSizeAllocated() > numNZElemToReserve && !growOnly) || GetCompIndexSize() < newCompIndexSize);
@@ -764,10 +824,10 @@ void CPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t n
 }
 
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const MatrixFormat matrixFormat, const bool growOnly /*= true*/)
+void CPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/)
 {
     if (GetFormat() != matrixFormat || GetNumRows() != numRows || GetNumCols() != numCols)
-        Resize(numRows, numCols, 0, matrixFormat, growOnly);
+        Resize(numRows, numCols, numNZElemToReserve, matrixFormat, growOnly);
 }
 
 template <class ElemType>
@@ -1048,6 +1108,45 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
     }
 }
 
+// c[:,j] = alpha * v[j] * a[:,j] + beta * c[:,j]
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& a, const CPUMatrix<ElemType>& v, ElemType beta, CPUMatrix<ElemType>& c)
+{
+    if (v.GetNumRows() != 1 && v.GetNumCols() != 1)
+        InvalidArgument("the argument v must be a vector"); // v is a vector
+
+    if (a.GetFormat() != matrixFormatSparseCSC)
+        NOT_IMPLEMENTED;
+
+    if (beta == 0)
+    {
+        c.RequireSize(a.GetNumRows(), a.GetNumCols());
+        c.SetValue((ElemType)0);
+    }
+    else
+        c.VerifySize(a.GetNumRows(), a.GetNumCols()); // Can't resize if beta != 0
+
+    const ElemType* vd = v.Data();
+
+#pragma omp parallel for
+    for (long col = 0; col < (long)a.GetNumCols(); col++)
+    {
+        auto start = a.SecondaryIndexLocation()[col];
+        auto end = a.SecondaryIndexLocation()[col + 1];
+
+        for (auto p = start; p < end; p++)
+        {
+            auto row = a.MajorIndexLocation()[p];
+            ElemType val = a.Buffer()[p];
+
+            if (beta == 0) // don't even read the memory if beta is 0
+                c(row, col) = alpha * vd[col] * val;
+            else
+                c(row, col) = alpha * vd[col] * val + beta * c(row, col);
+        }
+    }
+}
+
 // dense += sparse
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const CPUSparseMatrix<ElemType>& lhs, CPUMatrix<ElemType>& rhs)
@@ -1293,6 +1392,50 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
         return aveMultiplier / nz;
     else
         return 1;
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
+{
+    size_t numColsNeeded = 2 * GetNumCols();
+
+    if (c.IsEmpty() || (c.GetNumCols() < numColsNeeded))
+    {
+        c.RequireSize(GetNumRows(), numColsNeeded);
+        c.SetValue(0.0);
+    }
+
+    if (c.GetNumRows() != GetNumRows() || c.GetNumCols() != numColsNeeded)
+        LogicError("The matrix gradients does not have expected dimensions.");
+
+    if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
+        LogicError("Unsupported sparse format.");
+
+    size_t n = GetNumElements();
+    ElemType* grad = Data();
+    ElemType* smoothAda = c.Data();
+    ElemType* smoothX2 = c.Data() + n;
+    ElemType* val = functionValues.Data();
+
+#pragma omp parallel for
+    // TODO: Unroll 4-times for better performance leveraging vectorization
+    for (int j = 0; j < (int)GetBlockSize(); j++)
+    {
+        size_t i = GetBlockIds()[j] - GetBlockIdShift();
+        size_t len = GetNumRows();
+        size_t start = j * len;
+        for (size_t p = start; p < start + len; p++)
+        {
+            size_t denseIndex = i * len + (p - start);
+            ElemType g = grad[p];
+            ElemType adaSqr = rho * smoothAda[denseIndex] + (1 - rho) * g * g;
+            smoothAda[denseIndex] = adaSqr;
+            ElemType x2 = smoothX2[denseIndex];
+            ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
+            smoothX2[denseIndex] = rho * smoothX2[denseIndex] + (1 - rho) * deltaX * deltaX;
+            val[denseIndex] += learningRate * deltaX;
+        }
+    }
 }
 
 template <class ElemType>

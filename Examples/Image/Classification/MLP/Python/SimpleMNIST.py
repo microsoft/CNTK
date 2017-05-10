@@ -8,16 +8,18 @@ import argparse
 import numpy as np
 import sys
 import os
-from cntk import Trainer, minibatch_size_schedule 
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.learner import sgd, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
-from cntk.training_session import *
-from cntk.utils import ProgressPrinter, TensorBoardProgressWriter
+from cntk.train import Trainer, minibatch_size_schedule 
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
+from cntk.device import cpu, try_set_default_device
+from cntk.learners import adadelta, learning_rate_schedule, UnitType
+from cntk.ops import input, relu, element_times, constant
+from cntk.layers import Dense, Sequential, For
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
+from cntk.train.training_session import *
+from cntk.logging import ProgressPrinter, TensorBoardProgressWriter
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "common"))
-from nn import fully_connected_classifier_net
 
 def check_path(path):
     if not os.path.exists(path):
@@ -30,7 +32,7 @@ def create_reader(path, is_training, input_dim, label_dim):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
         features  = StreamDef(field='features', shape=input_dim, is_sparse=False),
         labels    = StreamDef(field='labels',   shape=label_dim, is_sparse=False)
-    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+    )), randomize=is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
 
 
 # Creates and trains a feedforward classification model for MNIST images
@@ -42,13 +44,14 @@ def simple_mnist(tensorboard_logdir=None):
     hidden_layers_dim = 200
 
     # Input variables denoting the features and label data
-    input = input_variable(input_dim, np.float32)
-    label = input_variable(num_output_classes, np.float32)
+    feature = input(input_dim, np.float32)
+    label = input(num_output_classes, np.float32)
 
     # Instantiate the feedforward classification model
-    scaled_input = element_times(constant(0.00390625), input)
-    z = fully_connected_classifier_net(
-        scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, relu)
+    scaled_input = element_times(constant(0.00390625), feature)
+
+    z = Sequential([For(range(num_hidden_layers), lambda i: Dense(hidden_layers_dim, activation=relu)),
+                    Dense(num_output_classes)])(scaled_input)
 
     ce = cross_entropy_with_softmax(z, label)
     pe = classification_error(z, label)
@@ -61,7 +64,7 @@ def simple_mnist(tensorboard_logdir=None):
     reader_train = create_reader(path, True, input_dim, num_output_classes)
 
     input_map = {
-        input  : reader_train.streams.features,
+        feature  : reader_train.streams.features,
         label  : reader_train.streams.labels
     }
 
@@ -81,14 +84,14 @@ def simple_mnist(tensorboard_logdir=None):
         progress_writers.append(TensorBoardProgressWriter(freq=10, log_dir=tensorboard_logdir, model=z))
 
     # Instantiate the trainer object to drive the model training
-    lr_per_minibatch = learning_rate_schedule(0.2, UnitType.minibatch)
-    trainer = Trainer(z, (ce, pe), sgd(z.parameters, lr=lr_per_minibatch), progress_writers)
+    lr = learning_rate_schedule(1, UnitType.sample)
+    trainer = Trainer(z, (ce, pe), adadelta(z.parameters, lr), progress_writers)
 
     training_session(
         trainer=trainer,
         mb_source = reader_train,
         mb_size = minibatch_size,
-        var_to_stream = input_map,
+        model_inputs_to_streams = input_map,
         max_samples = num_samples_per_sweep * num_sweeps_to_train_with,
         progress_frequency=num_samples_per_sweep
     ).train()
@@ -100,7 +103,7 @@ def simple_mnist(tensorboard_logdir=None):
     reader_test = create_reader(path, False, input_dim, num_output_classes)
 
     input_map = {
-        input  : reader_test.streams.features,
+        feature  : reader_test.streams.features,
         label  : reader_test.streams.labels
     }
 
@@ -121,7 +124,7 @@ def simple_mnist(tensorboard_logdir=None):
 if __name__=='__main__':
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    # set_default_device(cpu())
+    # try_set_default_device(cpu())
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir',

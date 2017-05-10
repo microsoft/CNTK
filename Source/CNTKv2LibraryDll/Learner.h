@@ -54,9 +54,17 @@ namespace CNTK
             return learningRate;
         }
 
+        void ReportTrainingParameterValue(const TrainingParameterSchedule<double>& schedule, const std::wstring& name) const;
+
+        // A map cointaining hyperparameter names and corresponging values that's used to track and report changes 
+        // in hyperparameter values.
+        mutable std::map <std::wstring, double> m_trainingParametersMap;
+
         AdditionalLearningOptions m_additionalOptions;
 
         std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
+
+        mutable size_t m_noiseInjectionSeed;
 
         // The following four static protected methods expose private methods of NDArrayView class
         // (which declares LearnerBase as friend class), so that they are available to subclasses.
@@ -205,6 +213,25 @@ namespace CNTK
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
     };
 
+    class LearnerAdaDelta : public LearnerBase
+    {
+    public:
+        LearnerAdaDelta(
+            const std::vector<Parameter>& parameters,
+            const LearningRateSchedule& learningRateSchedule,
+            double rho, double epsilon,
+            AdditionalLearningOptions additionalOptions);
+
+    protected:
+        double m_rho;
+        double m_epsilon;
+
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+
+        template <typename ElementType>
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+    };
+
     class LearnerFSAdaGrad : public LearnerMomentumSGD
     {
     public:
@@ -245,6 +272,8 @@ namespace CNTK
             const MomentumSchedule& momentumSchedule,
             bool unitGain,
             const MomentumSchedule& varianceMomentumSchedule,
+            double epsilon,
+            bool adamax,
             AdditionalLearningOptions additionalOptions);
 
     protected:
@@ -264,6 +293,8 @@ namespace CNTK
 
         mutable std::unordered_map<Parameter, double> m_smoothedCounts;
         MomentumSchedule m_varianceMomentumSchedule;
+        double m_epsilon;
+        bool m_adamax;
     };
 
     class LearnerRMSProp : public LearnerBase

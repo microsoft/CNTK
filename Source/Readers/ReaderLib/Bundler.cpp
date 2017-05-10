@@ -71,7 +71,7 @@ void Bundler::CreateChunkDescriptions()
     m_chunks.reserve(chunks.size());
 
     if (m_verbosity)
-        fprintf(stderr, "Bundler::CreateChunkDescriptions(): creating descriptions for %" PRIu64 " chunks\n", m_chunks.size());
+        fprintf(stderr, "Bundler::CreateChunkDescriptions(): creating descriptions for %" PRIu64 " chunks\n", chunks.size());
 
     // If there is not cleaning required simply build chunks based on the chunk descriptions of the primary deserializer.
     if (!m_cleanse)
@@ -85,6 +85,7 @@ void Bundler::CreateChunkDescriptions()
             cd->m_original = c;
             m_chunks.push_back(cd);
         }
+
         return;
     }
 
@@ -149,6 +150,10 @@ void Bundler::CreateChunkDescriptions()
 
     if (m_verbosity)
         fprintf(stderr, "Bundler::CreateChunkDescriptions(): finished cleaning of %" PRIu64 " chunks\n", m_chunks.size());
+
+    if(m_chunks.empty())
+        RuntimeError("Could not reconcile data between different deserializers."
+            " Keys of logical sequences do not match.");
 }
 
 // Gets chunk descriptions.

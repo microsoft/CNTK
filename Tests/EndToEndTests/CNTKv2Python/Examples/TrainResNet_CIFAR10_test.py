@@ -10,7 +10,7 @@ import shutil
 import sys
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
-from cntk.device import set_default_device
+from cntk.device import try_set_default_device
 import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -24,7 +24,7 @@ from TrainResNet_CIFAR10 import train_and_evaluate, create_reader
 def test_cifar_resnet_error(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU')
-    set_default_device(cntk_device(device_id))
+    try_set_default_device(cntk_device(device_id))
     
     base_path = prepare_CIFAR10_data()
     # change dir to locate data.zip correctly

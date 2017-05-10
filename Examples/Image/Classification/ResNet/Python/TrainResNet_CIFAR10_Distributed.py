@@ -11,15 +11,15 @@ import math
 import cntk
 import numpy as np
 
-from cntk.utils import *
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
+from cntk.logging import *
+from cntk import input, cross_entropy_with_softmax, classification_error
 from cntk import Trainer, cntk_py 
-from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
-from _cntk_py import set_computation_network_trace_level
-from cntk.device import set_default_device, gpu
-from cntk.distributed import data_parallel_distributed_learner, block_momentum_distributed_learner, Communicator
-from cntk.training_session import *
-
+from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.debugging import set_computation_network_trace_level
+from cntk.device import try_set_default_device, gpu
+from cntk import data_parallel_distributed_learner, block_momentum_distributed_learner, Communicator
+from cntk.train.training_session import *
+from cntk.debugging import *
 from resnet_models import *
 
 # Paths relative to current python file.
@@ -42,8 +42,8 @@ model_name   = "ResNet_CIFAR10_DataAug.model"
 # Create network
 def create_resnet_network(network_name):
     # Input variables denoting the features and label data
-    input_var = input_variable((num_channels, image_height, image_width))
-    label_var = input_variable((num_classes))
+    input_var = input((num_channels, image_height, image_width))
+    label_var = input((num_classes))
 
     # create model, and configure learning parameters 
     if network_name == 'resnet20': 
@@ -113,10 +113,10 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
     training_session(
         trainer=trainer, mb_source = train_source, 
         mb_size = minibatch_size,
-        var_to_stream = input_map,
+        model_inputs_to_streams = input_map,
         checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
         progress_frequency=epoch_size,
-        cv_config = CrossValidationConfig(source=test_source, mb_size=16)
+        test_config = TestConfig(source=test_source, mb_size=16)
     ).train()
     
     if profiling:
@@ -173,7 +173,7 @@ if __name__=='__main__':
     if args['outputdir'] != None:
         model_path = args['outputdir'] + "/models"
     if args['device'] != None:
-        set_default_device(gpu(args['device']))
+        try_set_default_device(gpu(args['device']))
 
     if args['epoch_size'] is not None:
         epoch_size = args['epoch_size']
@@ -196,18 +196,17 @@ if __name__=='__main__':
     # Create distributed trainer factory
     print("Start training: quantize_bit = {}, epochs = {}, distributed_after = {}".format(num_quantization_bits, epochs, warm_up))
 
-    try:
-        resnet_cifar10(train_data, test_data, mean_data,
-                       network_name, 
-                       epoch_size,
-                       num_quantization_bits,
-                       block_size=args['block_samples'],
-                       warm_up=args['distributed_after'],
-                       max_epochs=epochs,
-                       restore=not args['restart'],
-                       scale_up=scale_up,
-                       log_to_file=args['logdir'],
-                       profiling=args['profile'])
-    finally:
-        # Must call MPI finalize when process exit
-        Communicator.finalize()
+    resnet_cifar10(train_data, test_data, mean_data,
+                   network_name, 
+                   epoch_size,
+                   num_quantization_bits,
+                   block_size=args['block_samples'],
+                   warm_up=args['distributed_after'],
+                   max_epochs=epochs,
+                   restore=not args['restart'],
+                   scale_up=scale_up,
+                   log_to_file=args['logdir'],
+                   profiling=args['profile'])
+
+    # Must call MPI finalize when process exit without exceptions
+    Communicator.finalize()

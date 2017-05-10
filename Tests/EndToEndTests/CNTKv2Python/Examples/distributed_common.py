@@ -13,7 +13,6 @@ import re
 import pytest
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
-from cntk.device import set_default_device
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 example_dir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python")
@@ -45,6 +44,7 @@ def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error,
     if match_exactly:
         assert results[0] == results[1]
     else:
-        assert np.allclose(float(results[0]), float(results[1]), atol=per_minibatch_tolerance)
-
+        if abs((float(results[0]) - float(results[1]))) > per_minibatch_tolerance:
+            print(str_out)
+            assert False
     assert np.allclose(float(results[0])/100, expected_test_error, atol=error_tolerance)

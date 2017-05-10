@@ -983,6 +983,65 @@ void CreateBatchOfSequencesTestOneHot(const DeviceDescriptor device, bool readOn
     }
 }
 
+void CheckSparseValueEqualToDenseValue(ValuePtr sparseValue, ValuePtr denseValue, const DeviceDescriptor device)
+{
+    auto sparseValueInDenseView = MakeSharedObject<NDArrayView>(sparseValue->GetDataType(), sparseValue->Shape(), device);
+    sparseValueInDenseView->CopyFrom(*sparseValue->Data());
+    auto sparseValueInDense = MakeSharedObject<Value>(sparseValueInDenseView, sparseValue->Mask());
+    BOOST_TEST(Internal::AreEqual(*denseValue, *sparseValueInDense), "Value created using sparse input does not match expectation");
+}
+
+template <typename ElementType>
+void CreateSequenceTestSprse(const DeviceDescriptor device, bool readOnly)
+{
+    size_t maxDimSize = 110;
+    std::default_random_engine dimSizeGenerator;
+    std::uniform_int_distribution<size_t> dimSizeDistribution(1, maxDimSize);
+    size_t maxSequenceLen = 50;
+
+    std::vector<ElementType> referenceDenseData;
+    std::vector<SparseIndexType> colsStarts;
+    std::vector<SparseIndexType> rowIndices;
+    std::vector<ElementType> nonZeroValues;
+    size_t numNonZeroValues;
+    size_t dimSize;
+    size_t seqLen;
+    ValuePtr sparseValue, denseValue;
+
+    int testRun = 4;
+    for (int i = 0; i < testRun; i++)
+    {
+        // Test without using seqStartFlag
+        dimSize = dimSizeDistribution(dimSizeGenerator);
+        seqLen = GenerateSequenceLengths(1, maxSequenceLen)[0];
+        std::tie(referenceDenseData, colsStarts, rowIndices, nonZeroValues, numNonZeroValues) = GenerateSequenceInCSC<ElementType>(dimSize, seqLen);
+
+        // Not using seqStartFlag.
+        sparseValue = Value::CreateSequence<ElementType>( { dimSize }, seqLen, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, device, readOnly);
+        denseValue = Value::CreateSequence<ElementType>({ dimSize }, referenceDenseData, device, readOnly);
+        CheckSparseValueEqualToDenseValue(sparseValue, denseValue, device);
+
+        // Using seqStartFlag.
+        auto seqStartFlag = static_cast<int>(rand()) % 2 == 0 ? true : false;
+        sparseValue = Value::CreateSequence({ dimSize }, seqLen, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, seqStartFlag, device, readOnly);
+        denseValue = Value::CreateSequence({ dimSize }, referenceDenseData, seqStartFlag, device, readOnly);
+        CheckSparseValueEqualToDenseValue(sparseValue, denseValue, device);
+    }
+
+    dimSize = dimSizeDistribution(dimSizeGenerator);
+    seqLen = GenerateSequenceLengths(1, maxSequenceLen)[0];
+    std::tie(referenceDenseData, colsStarts, rowIndices, nonZeroValues, numNonZeroValues) = GenerateSequenceInCSC<ElementType>(dimSize * dimSize, seqLen);
+
+    sparseValue = Value::CreateSequence({ dimSize * dimSize }, seqLen, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, device, readOnly);
+    denseValue = Value::CreateSequence({ dimSize * dimSize }, referenceDenseData, device, readOnly);
+    CheckSparseValueEqualToDenseValue(sparseValue, denseValue, device);
+
+    std::tie(referenceDenseData, colsStarts, rowIndices, nonZeroValues, numNonZeroValues) = GenerateSequenceInCSC<ElementType>(dimSize, seqLen * dimSize);
+    sparseValue = Value::CreateSequence<ElementType>({ dimSize, dimSize }, seqLen, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, device, readOnly);
+    denseValue = Value::CreateSequence({ dimSize, dimSize }, referenceDenseData, device, readOnly);
+    CheckSparseValueEqualToDenseValue(sparseValue, denseValue, device);
+}
+
 struct ValueFixture
 {
     ValueFixture()
@@ -1126,6 +1185,15 @@ BOOST_AUTO_TEST_CASE(CreateBatchOfSequencesOneHotInCPU)
     CreateBatchOfSequencesTestOneHot<double>(DeviceDescriptor::CPUDevice(), false);
 }
 
+BOOST_AUTO_TEST_CASE(CreateSequenceSparseInCPU)
+{
+    if (!ShouldRunOnCpu())
+        return;
+
+    CreateSequenceTestSprse<float>(DeviceDescriptor::CPUDevice(), false);
+    CreateSequenceTestSprse<double>(DeviceDescriptor::CPUDevice(), true);
+}
+
 BOOST_AUTO_TEST_CASE(SettingParameterValuesManuallyInGPU)
 {
     if (ShouldRunOnGpu())
@@ -1256,6 +1324,15 @@ BOOST_AUTO_TEST_CASE(CreateBatchOfSequencesOneHotInGPU)
     {
         CreateBatchOfSequencesTestOneHot<float>(DeviceDescriptor::GPUDevice(0), false);
         CreateBatchOfSequencesTestOneHot<double>(DeviceDescriptor::GPUDevice(0), true);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CreateSequenceSparseInGPU)
+{
+    if (ShouldRunOnGpu())
+    {
+        CreateSequenceTestSprse<float>(DeviceDescriptor::GPUDevice(0), false);
+        CreateSequenceTestSprse<double>(DeviceDescriptor::GPUDevice(0), true);
     }
 }
 

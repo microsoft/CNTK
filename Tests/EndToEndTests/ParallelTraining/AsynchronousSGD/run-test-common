@@ -23,10 +23,12 @@ if [[ ! -d $TEST_DATA_DIR || ! -e $TEST_DATA_DIR/Train_cntk_text.txt || ! -e $TE
         DataDir=$TEST_RUN_DIR/TestData
         mkdir $DataDir
         mkdir $DataDir/cifar-10-batches-py
+        mkdir -p $TEST_RUN_DIR/Models
         cp -R $DataSourceDir/*_cntk_text.txt $DataDir || exit $?
         cp -R $DataSourceDir/cifar-10-batches-py/data.zip $DataDir/cifar-10-batches-py || exit $?
         cp -R $DataSourceDir/cifar-10-batches-py/CIFAR-10_mean.xml $DataDir || exit $?
         cp -R $DataSourceDir/cifar-10-batches-py/*_map.txt $DataDir || exit $?
+        cp ASGD_Resnet.model.1 $TEST_RUN_DIR/Models/ || exit $?
         Copied=1
     else
         echo Error: cannot find data. Please see Examples/Image/DataSets/CIFAR10/README.md for instructions to get it.

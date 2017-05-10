@@ -20,6 +20,7 @@
 #include "Profiler.h"
 #include "MASGD.h"
 #include "ASGDHelper.h"
+#include <map>
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
 #define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
@@ -33,6 +34,8 @@ namespace CNTK { namespace Internal {
 }}
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+struct BestEpoch;
 
 enum class LearningRateSearchAlgorithm : int
 {
@@ -96,6 +99,12 @@ struct GradientUpdateInfo
     // for FSAdaGrad:
     double targetAdagradAvDenom = 1;
     size_t varianceTimeConstant = 2 * 3600 * 100; // originally was: 2h of speech
+};
+
+struct BestEpoch
+{
+    double criterionMinValue = numeric_limits<double>::max();
+    int32_t epochIndex = -1;
 };
 
 // ---------------------------------------------------------------------------
@@ -344,6 +353,7 @@ public:
           // TODO: The next few do not belong into SGD any more than the network or reader we operate on. Either move network and reader in here, or move these out.
           m_modelPath((const wstring&) configSGD(L"modelPath")),
           m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
+          m_saveBestModelPerCriterion(configSGD(L"saveBestModelPerCriterion", false)),
           m_trainCriterionNodeName((const wstring&) configSGD(L"trainCriterionNodeName", L"")),
           m_evalCriterionNodeName ((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
           m_traceNodeNamesReal    (configSGD(L"traceNodeNamesReal",     ConfigRecordType::Array(stringargvector()))),
@@ -516,7 +526,7 @@ public:
     // return -1 if nothing exists
     int DetermineStartEpoch(const bool makeMode);
 
-    wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false);
+    wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false) const;
 
 protected:
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
@@ -565,6 +575,9 @@ public:
 protected:
     std::wstring m_modelPath;
     bool m_keepCheckPointFiles;
+    bool m_saveBestModelPerCriterion;
+    // Mapping from criterion to the best epoch on validation data set.
+    std::map<std::wstring, BestEpoch> m_criteriaBestEpoch;
 
     std::wstring m_trainCriterionNodeName;
     std::wstring m_evalCriterionNodeName;

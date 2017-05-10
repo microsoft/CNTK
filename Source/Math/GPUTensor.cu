@@ -21,7 +21,7 @@
 #include <cuda_runtime.h>
 #include "cublas_v2.h"
 #include <assert.h>
-#include<limits.h>
+#include <limits.h>
 
 // use fast divisor
 #define USE_FAST_DIVMOD
@@ -852,11 +852,14 @@ static shared_ptr<ElemType> GetReductionBuffer(size_t N)
     let deviceId = GridDim::GetCurrentDeviceId();
     if (deviceId >= _countof(reductionBuffersCache)) // index check w.r.t. our hard-coded dimensions
         return AllocateReductionBuffer<ElemType>(N); // out of bounds: don't cache
-    if (!reductionBuffersCache[deviceId])
+
+    static std::once_flag initializedFlag[_countof(reductionBuffersCache)];
+    std::call_once(initializedFlag[deviceId], [deviceId, N]
     {
         reductionBuffersCache[deviceId] = AllocateReductionBuffer<ElemType>(N);
         reductionBuffersCacheSize[deviceId] = N;
-    }
+    });
+
     if (N > reductionBuffersCacheSize[deviceId]) // buffer size check
         LogicError("GetReductionBuffer: Must be called with the number of multiprocs, which may not change.");
     return reductionBuffersCache[deviceId];

@@ -63,7 +63,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(OutDir);$(BOOST_LIB_PATH)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>EvalDll.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Cntk.Eval-$(CntkComponentVersion).lib; %(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">

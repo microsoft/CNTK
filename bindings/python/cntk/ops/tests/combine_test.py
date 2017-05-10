@@ -11,8 +11,9 @@ Unit tests for combine operation, only forward pass is tested
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import AA, I, precision, PRECISION_TO_TYPE, compare_lists_of_np_arrays, cntk_device
-from ...utils import eval as cntk_eval
+import cntk as C
+from .ops_test_utils import AA, precision, PRECISION_TO_TYPE, compare_lists_of_np_arrays, cntk_device
+from cntk.internal.utils import eval as cntk_eval
 from cntk.internal import sanitize_dtype_cntk
 from .. import plus, minus
 from cntk.losses import cross_entropy_with_softmax
@@ -35,15 +36,15 @@ def test_op_combine(left_operand, right_operand, operations, expected_results, d
     left_value = AA(left_operand, dtype=dt)
     right_value = AA(right_operand, dtype=dt)
 
-    a = I(shape=left_value.shape,
-          dtype=sanitize_dtype_cntk(precision),
-          needs_gradient=True,
-          name='a')
+    a = C.input(shape=left_value.shape,
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=True,
+                name='a')
 
-    b = I(shape=right_value.shape,
-          dtype=sanitize_dtype_cntk(precision),
-          needs_gradient=True,
-          name='b')
+    b = C.input(shape=right_value.shape,
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=True,
+                name='b')
 
     left_value.shape = (1, 1) + left_value.shape
     right_value.shape = (1, 1) + right_value.shape
@@ -67,9 +68,9 @@ def test_op_combine(left_operand, right_operand, operations, expected_results, d
 
 
 def test_op_combine_input_var():
-    from .. import combine, input_variable
+    from .. import combine, input
 
-    x = input_variable(shape=(2))
+    x = C.input(shape=(2))
     func = combine([x])
     value = [[1, 2]]
     res = func.eval({x : value})

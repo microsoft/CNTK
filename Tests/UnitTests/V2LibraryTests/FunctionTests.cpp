@@ -35,7 +35,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
 
             bool reduceAll = (reductionAxis < 0);
             if (reduceAll)
-                reduceSumFunc = ReduceSum(inputVar);
+                reduceSumFunc = ReduceSum(inputVar, Axis::AllAxes());
             else
                 reduceSumFunc = ReduceSum(inputVar, Axis(useNegativeAxisIndex ? (reductionAxis - (int)sampleRank) : reductionAxis));
 
@@ -163,7 +163,12 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
             auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
-            auto sliceFunc = Slice(inputVar, Axis(useNegativeAxisIndex ? (sliceAxis - (int)sampleRank) : sliceAxis), beginOffset, endOffset);
+            std::vector<Axis> axis; 
+            std::vector<int> beginOffsetVec, endOffsetVec; 
+            axis.push_back(Axis(useNegativeAxisIndex ? (sliceAxis - (int)sampleRank) : sliceAxis)); 
+            beginOffsetVec.push_back(beginOffset); 
+            endOffsetVec.push_back(endOffset); 
+            auto sliceFunc = Slice(inputVar, axis, beginOffsetVec, endOffsetVec);
 
             NDShape outputShape = sliceFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape({ maxActualSequenceLength, numSequences });
@@ -292,7 +297,7 @@ void TestRecurrentFunctionCloning()
     auto placeholderReplacement = PastValue(plusOutput);
     plusOutput = plusOutput->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
 
-    auto reducedOutput = ReduceSum(plusOutput, L"sum");
+    auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
     auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
 
     std::unordered_set<FunctionPtr> visitedFunctions;
@@ -305,7 +310,7 @@ void TestRecurrentFunctionCloning()
     CompareFunctions(clonedFunctionWithParametersCloned, clonedFunctionWithParametersShared, ParameterCloningMethod::Share, {}, visitedFunctions);
 
     visitedFunctions.clear();
-    auto replacementInputVar = InputVariable({ inputDim }, true, DataType::Float, false, L"input2");
+    auto replacementInputVar = InputVariable({ inputDim }, true, DataType::Float, true, L"input2");
     std::unordered_map<Variable, Variable> cloningReplacements = { { *(clonedFunctionWithParametersShared->Arguments().begin()), replacementInputVar } };
     auto clonedFunctionWithParametersFrozen = clonedFunctionWithParametersShared->Clone(ParameterCloningMethod::Freeze, cloningReplacements);
     CompareFunctions(clonedFunctionWithParametersShared, clonedFunctionWithParametersFrozen, ParameterCloningMethod::Freeze, cloningReplacements, visitedFunctions);
@@ -666,7 +671,7 @@ void TestRecurrenceShapeInference()
         auto placeholderReplacement = PastValue(plusOutput);
         plusOutput = plusOutput->ReplacePlaceholders({ { recurrenceForwardReference, placeholderReplacement } });
 
-        auto reducedOutput = ReduceSum(plusOutput, L"sum");
+        auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
         auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
 
         auto inputVar = InputVariable(inputShape, false, DataType::Float, true, L"input", { Axis::NewUniqueDynamicAxis(L"inputSequence"), Axis::DefaultBatchAxis() });
@@ -947,6 +952,18 @@ void TestFindName(const DeviceDescriptor& device)
     VerifyException([&minusFunc3, &blockFuncName]() {
         minusFunc3->FindByName(blockFuncName, true);
     }, "The expected exception has not been caugth: multiple functions with the same name.");
+
+    // Test FindByName with multiple block functions, nestedSearchInsideBlockFunction is true
+    auto placeholder1 = PlaceholderVariable(L"inputPlaceholder1");
+    auto firstBlockPlusFuncName = L"FirstBlockPlus";
+    auto blockRoot1 = Plus(placeholder1, Constant::Scalar(1.0f), firstBlockPlusFuncName);
+    auto placeholder2 = PlaceholderVariable(L"inputPlaceholder2");
+    auto secondBlockPlusFuncName = L"SecondBlockPlus";
+    auto blockRoot2 = Plus(placeholder2, Constant::Scalar(1.0f), secondBlockPlusFuncName);
+    auto block2 = AsBlock(std::move(blockRoot2), { { placeholder2, InputVariable({}, DataType::Float)} }, L"Plus");
+    auto block1 = AsBlock(std::move(blockRoot1), { { placeholder1, block2->Output() } }, L"Plus");
+    CheckFindByNameResult(block1->FindByName(firstBlockPlusFuncName, true), blockRoot1);
+    CheckFindByNameResult(block1->FindByName(secondBlockPlusFuncName, true), blockRoot2);
 
     // Test FindAllWithName with block functions, nestedSearchInsideBlockFunction is false.
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherPlusFuncName), anotherPlusFuncName, 1);

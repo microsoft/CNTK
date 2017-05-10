@@ -4,7 +4,7 @@
 # ==============================================================================
 
 from . import cntk_py
-from cntk.internal import typemap
+from cntk.internal.swig_helper import typemap
 
 class Axis(cntk_py.Axis):
     '''

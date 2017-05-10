@@ -8,10 +8,10 @@
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-from ..ops.functions import CloneMethod, Function, load_model
-from ..ops.variables import Variable, Parameter, Constant
-from ..utils import get_data_type
+from ..ops.functions import CloneMethod, Function
+from ..variables import Variable, Parameter, Constant
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, typemap
+from cntk.internal.utils import get_data_type
 from ..axis import Axis
 
 
@@ -23,8 +23,8 @@ def cosine_distance(x, y, name=''):
     Example:
         >>> a = np.asarray([-1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]).reshape(3,2,2)
         >>> b = np.asarray([1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1]).reshape(3,2,2)
-        >>> x = C.input_variable(shape=(2,))
-        >>> y = C.input_variable(shape=(2,))
+        >>> x = C.sequence.input(shape=(2,))
+        >>> y = C.sequence.input(shape=(2,))
         >>> np.round(C.cosine_distance(x,y).eval({x:a,y:b}),5)
         array([[-1.,  1.],
                [ 1.,  0.],
@@ -61,8 +61,8 @@ def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, nam
     Example:
         >>> qry = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
         >>> doc = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
-        >>> x = C.input_variable(shape=(4,))
-        >>> y = C.input_variable(shape=(4,))
+        >>> x = C.sequence.input(shape=(4,))
+        >>> y = C.sequence.input(shape=(4,))
         >>> model = C.cosine_distance_with_negative_samples(x, y, shift=1, num_negative_samples=2)
         >>> np.round(model.eval({x: qry, y: doc}), decimals=4)
         array([[[ 1. ,  0.5,  0. ]],
@@ -72,7 +72,8 @@ def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, nam
                [[ 1. ,  0. ,  0.5]]], dtype=float32)
 
     Args:
-        x, y: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        y: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
         shift: non-zero positive integer representing number of shift to generate a negative sample
         num_negative_samples: number of negative samples to generate, a non-zero positive integer 
         name (str, optional): the name of the Function instance in the network
@@ -180,13 +181,13 @@ def squared_error(output, target, name=''):
     This is often used as a training criterion.
 
     Example:
-        >>> i1 = C.input_variable((1,2))
-        >>> i2 = C.input_variable((1,2))
-        >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32), i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
-        array([[ 29.]], dtype=float32)
+        >>> i1 = C.input((1,2))
+        >>> i2 = C.input((1,2))
+        >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[2., 1.]]], dtype=np.float32), i2:np.asarray([[[4., 6.]]], dtype=np.float32)})
+        array([ 29.], dtype=float32)
 
-        >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[[1., 2.]]]], dtype=np.float32), i2:np.asarray([[[[1., 2.]]]], dtype=np.float32)})
-        array([[ 0.]], dtype=float32)
+        >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[1., 2.]]], dtype=np.float32), i2:np.asarray([[[1., 2.]]], dtype=np.float32)})
+        array([ 0.], dtype=float32)
 
     Args:
         output: the output values from the network
@@ -201,3 +202,58 @@ def squared_error(output, target, name=''):
     output = sanitize_input(output, dtype)
     target = sanitize_input(target, dtype)
     return squared_error(output, target, name)
+
+@typemap
+def lambda_rank(output, gain, group, name=''):
+    r'''
+    Groups samples according to ``group``, sorts
+    them within each group based on ``output`` and
+    computes the Normalized Discounted Cumulative Gain
+    (NDCG) at infinity for each group. Concretely,
+    the Discounted Cumulative Gain (DCG) at infinity is:
+
+    :math:`\mathrm{DCG_{\infty}}()=\sum_{i=0}^{\infty} \frac{gain_{(i)}}{\log(i+2)}`
+
+    where :math:`gain_{(i)}` means the gain of the :math:`i`-th ranked sample.
+
+    The NDCG is just the DCG  divided by the maximum achievable DCG (obtained
+    by placing the samples with the largest gain at the top of the ranking).
+
+    Samples in the same group must appear in order of decreasing gain.
+
+    It returns 1 minus the average NDCG across all the groups in the minibatch
+    multiplied by 100 times the number of samples in the minibatch.
+
+    In the backward direction it back-propagates LambdaRank gradients.
+
+    Example:
+        >>> group = C.input((1,))
+        >>> score = C.input((1,), needs_gradient=True)
+        >>> gain  = C.input((1,))
+        >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1)
+        >>> s = np.array([1, 2, 3, 4], dtype=np.float32).reshape(4,1)
+        >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1)
+        >>> f = C.lambda_rank(score, gain, group)
+        >>> np.round(f.grad({score:s, gain:n, group: g}, wrt=[score]),4)
+        array([[-0.2121],
+        <BLANKLINE>
+               [ 0.2121],
+        <BLANKLINE>
+               [-0.1486],
+        <BLANKLINE>
+               [ 0.1486]], dtype=float32)
+
+    Args:
+        output: score of each sample
+        gain: gain of each sample
+        group: group of each sample
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import lambda_rank
+    dtype = get_data_type(output, gain, group)
+    output = sanitize_input(output, dtype)
+    gain = sanitize_input(gain, dtype)
+    group = sanitize_input(group, dtype)
+    return lambda_rank(output, gain, group, name)

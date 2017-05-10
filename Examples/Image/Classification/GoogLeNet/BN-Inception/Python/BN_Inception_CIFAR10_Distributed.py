@@ -14,10 +14,11 @@ import _cntk_py
 
 import cntk.io.transforms as xforms
 from cntk.training_session import *
-from cntk.utils import *
+from cntk.logging import *
 from cntk.ops import *
 from cntk.distributed import data_parallel_distributed_learner, Communicator
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
+from cntk.debugging import *
 
 from BN_Inception import bn_inception_cifar_model
 
@@ -63,15 +64,15 @@ def create_image_mb_source(map_file, mean_file, is_training, total_number_of_sam
             features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
             labels   = StreamDef(field='label', shape=num_classes))),
         randomize = is_training,
-        epoch_size=total_number_of_samples,
+        max_samples=total_number_of_samples,
         multithreaded_deserializer = True)
 
 # Create the network.
 def create_bn_inception():
 
     # Input variables denoting the features and label data
-    feature_var = input_variable((num_channels, image_height, image_width))
-    label_var = input_variable((num_classes))
+    feature_var = input((num_channels, image_height, image_width))
+    label_var = input((num_classes))
 
     bn_time_const = 4096
     z = bn_inception_cifar_model(feature_var, num_classes, bn_time_const)
@@ -136,7 +137,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 
     training_session = cntk.training_session(
         trainer = trainer, mb_source = train_source, 
-        var_to_stream = input_map, 
+        model_inputs_to_streams = input_map, 
         mb_size = minibatch_size,
         checkpoint_config = CheckpointConfig(frequency=epoch_size, filename=os.path.join(model_path, model_name), restore=restore),
         progress_frequency = epoch_size,
@@ -216,15 +217,14 @@ if __name__=='__main__':
     if not os.path.exists(mean_data):
         raise RuntimeError("Can not find the mean file. Please put the 'CIFAR-10_mean.xml' file in Data Directory or Config Directory.")
 
-    try:
-        bn_inception_train_and_eval(train_data, test_data, mean_data,
-                             epoch_size=args['epoch_size'],
-                             num_quantization_bits=args['quantized_bits'],
-                             max_epochs=args['num_epochs'],
-                             restore=not args['restart'],
-                             log_to_file=args['logdir'],
-                             num_mbs_per_log=100,
-                             gen_heartbeat=True,
-                             scale_up=bool(args['scale_up']))
-    finally:
-        cntk.distributed.Communicator.finalize()    
+    bn_inception_train_and_eval(train_data, test_data, mean_data,
+                         epoch_size=args['epoch_size'],
+                         num_quantization_bits=args['quantized_bits'],
+                         max_epochs=args['num_epochs'],
+                         restore=not args['restart'],
+                         log_to_file=args['logdir'],
+                         num_mbs_per_log=100,
+                         gen_heartbeat=True,
+                         scale_up=bool(args['scale_up']))
+    # Must call MPI finalize when process exit without exceptions
+    cntk.distributed.Communicator.finalize()    

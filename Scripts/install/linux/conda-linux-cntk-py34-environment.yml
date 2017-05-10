@@ -17,10 +17,14 @@ dependencies:
 - setuptools=27.2.0=py34_0
 - six=1.10.0=py34_0
 - wheel=0.29.0=py34_0
+- opencv=3.1.0=np111py34_1
 - pip:
   - pytest==3.0.3
-  - sphinx==1.4.8
-  - sphinx-rtd-theme==0.1.9
+  - sphinx==1.5.4
+  - sphinx-rtd-theme==0.2.4
   - twine==1.8.1
-  - gym==0.5.2
+  - gym[atari]==0.8.1
   - pydot-ng==1.0.0
+  - future==0.16.0
+  - easydict==1.6.0
+  - scikit-image==0.12.3

@@ -13,7 +13,7 @@ import cntk
 import _cntk_py
 import cntk.io.transforms as xforms
 
-from cntk.utils import *
+from cntk.logging import *
 from cntk.ops import *
 from cntk.distributed import data_parallel_distributed_learner, Communicator
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
@@ -60,15 +60,15 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
             features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
             labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
         randomize = is_training, 
-        epoch_size=total_number_of_samples,
+        max_samples=total_number_of_samples,
         multithreaded_deserializer = True)
 
 # Create the network.
 def create_vgg16():
 
     # Input variables denoting the features and label data
-    feature_var = input_variable((num_channels, image_height, image_width))
-    label_var = input_variable((num_classes))
+    feature_var = input((num_channels, image_height, image_width))
+    label_var = input((num_classes))
 
     # apply model to input
     # remove mean value 
@@ -165,11 +165,11 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
     # Train all minibatches 
     training_session(
         trainer=trainer, mb_source = train_source,
-        var_to_stream = input_map,
+        model_inputs_to_streams = input_map,
         mb_size_schedule = mb_size_schedule,
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
-        cv_config = CrossValidationConfig(source=test_source, schedule=mb_size_schedule)
+        test_config = TestConfig(source=test_source, mb_size=mb_size_schedule)
     ).train()
 
 # Train and evaluate the network.
@@ -215,7 +215,7 @@ if __name__=='__main__':
     if args['logdir'] is not None:
         log_dir = args['logdir']
     if args['device'] is not None:
-        cntk.device.set_default_device(cntk.device.gpu(args['device']))
+        cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
 
     if not os.path.isdir(data_path):
         raise RuntimeError("Directory %s does not exist" % data_path)
@@ -223,15 +223,14 @@ if __name__=='__main__':
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'val_map.txt')
 
-    try:
-        vgg16_train_and_eval(train_data, test_data, 
-                             minibatch_size=args['minibatch_size'], 
-                             epoch_size=args['epoch_size'],
-                             num_quantization_bits=args['quantized_bits'],
-                             max_epochs=args['num_epochs'],
-                             restore=not args['restart'],
-                             log_to_file=args['logdir'],
-                             num_mbs_per_log=200,
-                             gen_heartbeat=True)
-    finally:
-        cntk.distributed.Communicator.finalize()    
+    vgg16_train_and_eval(train_data, test_data, 
+                         minibatch_size=args['minibatch_size'], 
+                         epoch_size=args['epoch_size'],
+                         num_quantization_bits=args['quantized_bits'],
+                         max_epochs=args['num_epochs'],
+                         restore=not args['restart'],
+                         log_to_file=args['logdir'],
+                         num_mbs_per_log=200,
+                         gen_heartbeat=True)
+    # Must call MPI finalize when process exit without exceptions
+    cntk.distributed.Communicator.finalize()    

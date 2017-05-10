@@ -16,8 +16,6 @@ from cntk.ops import *
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.ops.functions import UserFunction
 
-from cntk.utils import get_train_eval_criterion, get_train_loss
-
 np.random.seed(0)
 
 input_dim = 2
@@ -44,16 +42,16 @@ def linear_layer(input_var, output_dim):
     t = times(input_var, times_param)
     return bias_param + t
 
-def dense_layer(input, output_dim, nonlinearity):
-    r = linear_layer(input, output_dim)
+def dense_layer(inp, output_dim, nonlinearity):
+    r = linear_layer(inp, output_dim)
     r = nonlinearity(r)
     if isinstance(r, UserFunction):
         r = user_function(r)
     return r
 
-def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim,
+def fully_connected_classifier_net(inp, num_output_classes, hidden_layer_dim,
                                    num_hidden_layers, nonlinearity):
-    h = dense_layer(input, hidden_layer_dim, nonlinearity)
+    h = dense_layer(inp, hidden_layer_dim, nonlinearity)
     for i in range(1, num_hidden_layers):
         h = dense_layer(h, hidden_layer_dim, nonlinearity)
     r = linear_layer(h, num_output_classes)
@@ -64,15 +62,15 @@ def print_training_progress(trainer, mb, frequency):
     eval_error = "NA"
 
     if mb%frequency == 0:
-        training_loss = get_train_loss(trainer)
-        eval_error = get_train_eval_criterion(trainer)
+        training_loss = trainer.previous_minibatch_loss_average
+        eval_error = trainer.previous_minibatch_evaluation_average
 
     return mb, training_loss, eval_error
 
 def train(nonlinearity, num_hidden_layers, device_id):
     from cntk.cntk_py import always_allow_setting_default_device
     always_allow_setting_default_device()
-    set_default_device(cntk_device(device_id))
+    try_set_default_device(cntk_device(device_id))
     np.random.seed(0)
 
     learning_rate = 0.5
@@ -83,10 +81,10 @@ def train(nonlinearity, num_hidden_layers, device_id):
 
     hidden_layers_dim = 50
 
-    input = input_variable((input_dim), np.float32)
-    label = input_variable((num_output_classes), np.float32)
+    inp = input((input_dim), np.float32)
+    label = input((num_output_classes), np.float32)
 
-    z = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim,
+    z = fully_connected_classifier_net(inp, num_output_classes, hidden_layers_dim,
                                        num_hidden_layers, nonlinearity)
 
     loss = cross_entropy_with_softmax(z, label)
@@ -109,7 +107,7 @@ def train(nonlinearity, num_hidden_layers, device_id):
         features, labels = generate_random_data_sample(minibatch_size, input_dim, num_output_classes)
 
         # Specify the input variables mapping in the model to actual minibatch data for training
-        trainer.train_minibatch({input : features, label : labels},
+        trainer.train_minibatch({inp : features, label : labels},
                 device=cntk_device(device_id))
         batchsize, loss, error = print_training_progress(trainer, i,
                                                          training_progress_output_freq)

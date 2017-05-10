@@ -16,7 +16,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CNTK</RootNamespace>
-    <AssemblyName>CNTKLibraryManaged-2.0</AssemblyName>
+    <AssemblyName>Cntk.Core.Managed-$(CntkComponentVersion)</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -55,6 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="SwigProxyClasses\Axis.cs" />
@@ -73,14 +74,14 @@
     <Compile Include="SwigProxyClasses\Function.cs" />
     <Compile Include="SwigProxyClasses\MaskKind.cs" />
     <Compile Include="SwigProxyClasses\NDArrayView.cs" />
-    <Compile Include="SwigProxyClasses\NDArrayViewVector.cs" />
+    <Compile Include="SwigProxyClasses\NDArrayViewPtrVector.cs" />
     <Compile Include="SwigProxyClasses\NDMask.cs" />
     <Compile Include="SwigProxyClasses\NDShape.cs" />
     <Compile Include="SwigProxyClasses\ParameterCloningMethod.cs" />
     <Compile Include="SwigProxyClasses\SizeTVector.cs" />
     <Compile Include="SwigProxyClasses\SizeTVectorVector.cs" />
     <Compile Include="SwigProxyClasses\StorageFormat.cs" />
-    <Compile Include="SwigProxyClasses\SWIGTYPE_p_void.cs" />
+    <Compile Include="SwigProxyClasses\TraceLevel.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapVariableValuePtr.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapVariableVariable.cs" />
     <Compile Include="SwigProxyClasses\Value.cs" />

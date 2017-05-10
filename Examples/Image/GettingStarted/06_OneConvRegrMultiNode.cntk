@@ -3,7 +3,7 @@
 # For running from Visual Studio add
 # currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
 
-command = trainNetwork
+command = trainNetwork:testNetwork
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 

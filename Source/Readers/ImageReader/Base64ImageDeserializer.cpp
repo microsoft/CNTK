@@ -36,7 +36,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // Make sure we always have 0 at the end for buffer overrun.
             m_buffer[descriptor.m_byteSize] = 0;
-            m_chunkOffset = descriptor.m_sequences.front().m_fileOffsetBytes;
+            m_chunkOffset = descriptor.m_offset;
 
             // Read chunk into memory.
             int rc = _fseeki64(m_deserializer.m_dataFile.get(), m_chunkOffset, SEEK_SET);
@@ -48,7 +48,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         std::string KeyOf(const SequenceDescriptor& s) const
         {
-            return m_deserializer.m_corpus->IdToKey(s.m_key.m_sequence);
+            return m_deserializer.m_corpus->IdToKey(s.m_key);
         }
 
         void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
@@ -57,7 +57,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const size_t copyId = m_deserializer.m_multiViewCrop ? sequenceIndex % ImageDeserializerBase::NumMultiViewCopies : 0;
 
             const auto& sequence = m_descriptor.m_sequences[innerSequenceIndex];
-            const size_t offset = sequence.m_fileOffsetBytes - m_chunkOffset;
+            const size_t offset = sequence.OffsetInChunk();
 
             // m_buffer always end on 0, so no overrun can happen.
             const char* currentSequence = &m_buffer[0] + offset;
@@ -83,7 +83,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t labelDimension = m_deserializer.m_labelGenerator->LabelDimension();
             if (classId >= labelDimension)
                 RuntimeError(
-                    "Image with id '%s' has invalid class id '%" PRIu64 "'. It is exceeding the label dimension of '%" PRIu64,
+                    "Image with id '%s' has invalid class id '%zu'. It is exceeding the label dimension of '%zu'",
                     KeyOf(sequence).c_str(), classId, labelDimension);
 
             // Let's find the end of the label, we still expect to find the data afterwards.
@@ -107,14 +107,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             cv::Mat image;
             if (!DecodeBase64(imageStart, currentSequence, decodedImage))
             {
-                fprintf(stderr, "WARNING: Cannot decode sequence with id %" PRIu64 " in the input file '%ls'\n", sequence.m_key.m_sequence, m_deserializer.m_fileName.c_str());
+                fprintf(stderr, "WARNING: Cannot decode sequence with id %zu in the input file '%ls'\n", sequence.m_key, m_deserializer.m_fileName.c_str());
             }
             else
             {
                 image = cv::imdecode(decodedImage, m_deserializer.m_grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
             }
 
-            m_deserializer.PopulateSequenceData(image, classId, copyId, sequence.m_key, result);
+            m_deserializer.PopulateSequenceData(image, classId, copyId, { sequence.m_key, 0 }, result);
         }
     };
 
@@ -179,17 +179,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t sequenceCopies = m_multiViewCrop ? NumMultiViewCopies : 1;
         result.reserve(sequenceCopies * chunk.m_sequences.size());
         size_t currentId = 0;
-        for (auto const& s : chunk.m_sequences)
+        for (uint32_t indexInChunk = 0; indexInChunk < chunk.m_sequences.size(); ++indexInChunk)
         {
-            assert(currentId / sequenceCopies == s.m_indexInChunk);
+            auto const& s = chunk.m_sequences[indexInChunk];
+            assert(currentId / sequenceCopies == indexInChunk);
             for (size_t i = 0; i < sequenceCopies; ++i)
             {
                 result.push_back(
                 {
                     currentId,
                     s.m_numberOfSamples,
-                    s.m_chunkId,
-                    s.m_key
+                    chunkId,
+                    { s.m_key, 0 }
                 });
 
                 currentId++;
@@ -212,8 +213,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (sequenceLocation == keys.end())
             return false;
 
-        const auto& chunks = index.m_chunks;
-        result = chunks[sequenceLocation->second.first].m_sequences[sequenceLocation->second.second];
+        assert(sequenceLocation->second.first < index.m_chunks.size());
+        const auto& chunk = index.m_chunks[sequenceLocation->second.first];
+
+        assert(sequenceLocation->second.second < chunk.m_sequences.size());
+        const auto sequence = chunk.m_sequences[sequenceLocation->second.second];
+
+        result.m_chunkId = sequenceLocation->second.first;
+        result.m_indexInChunk = sequenceLocation->second.second;
+        result.m_key = { sequence.m_key, 0 };
+        result.m_numberOfSamples = sequence.m_numberOfSamples;
         return true;
     }
 

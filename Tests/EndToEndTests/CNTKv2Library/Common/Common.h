@@ -133,8 +133,8 @@ inline void SaveAndReloadModel(FunctionPtr& functionPtr, const std::vector<Varia
             throw std::runtime_error("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
     }
 
-    functionPtr->SaveModel(tempModelPath);
-    functionPtr = Function::LoadModel(tempModelPath, device);
+    functionPtr->Save(tempModelPath);
+    functionPtr = Function::Load(tempModelPath, device);
 
     if (_wunlink(tempModelPath.c_str()) != 0)
         throw std::runtime_error("Error deleting temp model file 'feedForward.net'");
@@ -639,4 +639,4 @@ inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second
     }
 }
 
-MinibatchSourcePtr CreateHTKMinibatchSource(size_t featureDim, size_t numOutputClasses, const Dictionary& readModeConfig, size_t epochSize, bool randomize = true);
+MinibatchSourceConfig GetHTKMinibatchSourceConfig(size_t featureDim, size_t numOutputClasses, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true);

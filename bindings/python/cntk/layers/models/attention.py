@@ -5,7 +5,7 @@
 # ==============================================================================
 
 '''
-attention -- standard attention model
+Standard attention model.
 '''
 
 from __future__ import division
@@ -20,6 +20,8 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
                    go_backwards=default_override_or(False),
                    enable_self_stabilization=default_override_or(True), name=''):
     '''
+    AttentionModel(attention_dim, attention_span=None, attention_axis=None, init=glorot_uniform(), go_backwards=False, enable_self_stabilization=True, name='')
+
     Layer factory function to create a function object that implements an attention model
     as described in Bahdanau, et al., "Neural machine translation by jointly learning to align and translate."
     '''
@@ -31,6 +33,8 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
     # until CNTK can handle multiple nested dynamic loops, we require fixed windows and fake it
     if attention_span is None or attention_axis is None:
         raise NotImplementedError('AttentionModel currently requires a fixed attention_span and a static attention_axis to be specified')
+    if attention_span <= 0:
+        raise ValueError('attention_span must be a positive value')
 
     # model parameters
     with default_options(bias=False): # all the projections have no bias

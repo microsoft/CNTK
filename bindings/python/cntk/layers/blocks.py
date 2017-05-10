@@ -5,16 +5,17 @@
 # ==============================================================================
 
 '''
-blocks -- basic building blocks that are semantically not layers (not used in a layered fashion)
-          e.g. the LSTM
+Basic building blocks that are semantically not layers (not used in a layered fashion),
+e.g. the LSTM block.
 '''
 
 from __future__ import division
 import numpy as np
-from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias, sequence
+from cntk import input, placeholder, combine, alias, sequence, parameter, constant
+from cntk.variables import Record, Constant, Parameter
 from cntk.axis import Axis
-from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus, past_value, future_value
-from cntk.utils import Record, Signature
+from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus
+from .typing import Signature
 from cntk.internal import _as_tuple
 from cntk.initializer import glorot_uniform
 from _cntk_py import InferredDimension
@@ -67,7 +68,7 @@ def _get_initial_state_or_default(initial_state):
 
 def BlockFunction(op_name, name):
     '''
-    Decorator for defining a @Function as a BlockFunction. Same as @Function, but wrap the content into an as_block().
+    Decorator for defining a @Function as a BlockFunction. Same as @Function, but wrap the content into an :func:`~cntk.ops.as_block`.
     '''
     return lambda f: Function(f, make_block=True, op_name=op_name, name=name)
 
@@ -76,102 +77,42 @@ def _inject_name(f, name):
     Call this at the end of any layer or block that takes an optional name argument.
     '''
     if name:
+        if not isinstance(f, Function):
+            f = Function(f)
         if len(f.outputs) == 1:
             f = alias(f, name=name)
         else:
             f = combine(list(f.outputs), name=name) # BUGBUG: Does this actually name things?
     return f
 
-# TODO: Move this into the lower layer where these are defined.
-# some mappings--these currently exist only so that I can name the nodes for debugging
-def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
-    '''
-    Parameter(shape, init, dtype=np.float32, name='')
-
-    Constructs a Parameter variable.
-
-    Args:
-        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        init (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `W`
-        dtype (np.dtype, defaults to np.float32): data type
-        name (str, defaults to ''): the name of the Function instance in the network
-    '''
-    
-    pure = get_default_override(None, pure=default_override_or(False))
-    if pure:
-        raise TypeError('parameters cannot be created inside a @Function def')
-    dtype = get_default_override(Parameter, dtype=dtype)
-    init = _initializer_for(init)
-    return parameter(shape, init=init, dtype=dtype, name=name)
-
-def Constant(value, shape=None, dtype=default_override_or(np.float32), name=''):
-    '''
-    Constant(value, shape=None, dtype=np.float32, name='')
-
-    Constructs a Variable object that is constant.
-
-    Args:
-        value (object): the object you want to make constant
-        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        dtype (np.dtype, defaults to np.float32): data type
-        name (str, defaults to ''): the name of the Function instance in the network
-    '''
-
-    dtype = get_default_override(Constant, dtype=dtype)
-    return constant(value, shape=shape, dtype=dtype, name=name)
-
-# TODO: this function should not be necessary anymore
-def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_sparse=False,
-          dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
-    '''
-    Input(shape, dtype=np.float32, needs_gradient=True, is_sparse=False, dynamic_axes=Axis.default_input_variable_dynamic_axes(), name='')
-
-    Constructs an Input variable.
-
-    Args:
-        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        dtype (np.dtype, defaults to np.float32): data type
-        needs_gradient (bool, defaults to `True`):
-        is_sparse (bool, defaults to `False`):
-        dynamic_axes (object, Axis.default_input_variable_dynamic_axes):
-        name (str, defaults to ''): the name of the Function instance in the network
-        
-    '''
-
-    dtype = get_default_override(Input, dtype=dtype)
-    return input_variable(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
-                          dynamic_axes=dynamic_axes, name=name)
-
-def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholder'):
-    '''
-    Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholder')
-
-    Constructs a Placeholder variable.
-
-    Args:
-        shape (`int` or `tuple` of `ints`, defaults to `None`): vector or tensor dimension of the output of this layer
-        dynamic_axes (object, defaults to `None`):
-        is_sparse (bool, defaults to `False`):
-        name (str, defaults to 'placeholder'): the name of the Function instance in the network
-        
-    '''
-
-    if shape is not None or dynamic_axes is not None or is_sparse is not None:
-        import warnings
-        warnings.warn('Placeholder() no longer requires shapes, axes, or spares to be specified. Please just remove the arguments.', DeprecationWarning)
-    return placeholder_variable(name=name)
-    # TODO: delete these vv once confirmed that this is indeed not used anymore
-    #p = placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, is_sparse=is_sparse, name=name) # TODO: use (*args, **kwargs)?
-    # BUGBUG: placeholder does not know is_sparse
-    #return placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, name=name) # TODO: use (*args, **kwargs)?
-
 def ForwardDeclaration(name='forward_declaration'):
     '''
     Helper for recurrent network declarations.
-    Returns a Placeholder variable with an added method resolve_to() to be called
+    Returns a placeholder variable with an added method ``resolve_to()`` to be called
     at the end to close the loop.
+    This is used for explicit graph building with recurrent connections.
+
+    Example:
+     >>> # create a graph with a recurrent loop to compute the length of an input sequence
+     >>> from cntk.layers.typing import *
+     >>> x = C.input(**Sequence[Tensor[2]])
+     >>> ones_like_input = sequence.broadcast_as(1, x)  # sequence of scalar ones of same length as input
+     >>> out_fwd = ForwardDeclaration()  # placeholder for the state variables
+     >>> out = sequence.past_value(out_fwd, initial_state=0) + ones_like_input
+     >>> out_fwd.resolve_to(out)
+     >>> length = sequence.last(out)
+     >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
+     >>> x0
+         array([[[ 0.,  1.],
+                 [ 2.,  3.],
+                 [ 4.,  5.]]], dtype=float32)
+     >>> length(x0)
+         array([[ 3.]], dtype=float32)
+
+    Returns:
+        a placeholder variable with a method ``resolve_to()`` that resolves it to another variable
     '''
-    var_fwd = Placeholder(name=name)
+    var_fwd = placeholder(name=name)
     def resolve_to(var):
         from cntk import cntk_py
         #if isinstance(var, cntk_py.Function):
@@ -182,11 +123,17 @@ def ForwardDeclaration(name='forward_declaration'):
     var_fwd.resolve_to = resolve_to
     return var_fwd
 
+
 @Function
 def identity(keep):
     '''
+    identity()
     Identity function.
-    There is no factory for it because there is only one identity function.
+    This is useful to pass to layers that accept, e.g., a non-linearity,
+    but you wish to have none.
+
+    Example:
+     >>> linear_layer = Dense(500, activation=identity)
     '''
     # Note: We cannot use alias() here since parameter-shape inference cannot be done through alias().
     return combine([keep])
@@ -201,10 +148,27 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
 
     This takes `enable_self_stabilization` as a flag that allows to disable itself. Useful if this is a global default.
 
+    Note: Some other layers (specifically, recurrent units like :func:`~cntk.layers.blocks.LSTM`) also have the option to
+    use the ``Stabilizer()`` layer internally. That is enabled by passing `enable_self_stabilization=True`
+    to those layers. In conjunction with those, the rule is that an explicit ``Stabilizer()`` must be
+    inserted by the user for the main data input, whereas the recurrent layer will own the stabilizer(s)
+    for the internal recurrent connection(s).
     Note: Unlike the original paper, which proposed a linear or exponential scalar,
     CNTK uses a sharpened Softplus: 1/steepness ln(1+e^{steepness*beta}).
     The softplus behaves linear for weights around and above 1 (like the linear scalar) while guaranteeing
     positiveness (like the exponentional variant) but is also more robust by avoiding exploding gradients.
+
+    Example:
+     >>> # recurrent model with self-stabilization
+     >>> from cntk.layers import *
+     >>> with default_options(enable_self_stabilization=True): # enable stabilizers by default for LSTM()
+     ...     model = Sequential([
+     ...         Embedding(300),
+     ...         Stabilizer(),           # stabilizer for main data input of recurrence
+     ...         Recurrence(LSTM(512)),  # LSTM owns its own stabilizers for the recurrent connections
+     ...         Stabilizer(),
+     ...         Dense(10)
+     ...     ])
 
     Args:
         steepness (`int`, defaults to 4):
@@ -331,7 +295,8 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
             ht
 
         # returns the new state as a tuple with names but order matters
-        return (Function.NamedOutput(h=h), Function.NamedOutput(c=c))
+        #return (Function.NamedOutput(h=h), Function.NamedOutput(c=c))
+        return (h, c)
 
     # GRU model function
     # in this case:
@@ -369,14 +334,16 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
             ht
 
         # returns the new state as a tuple with names but order matters
-        return Function.NamedOutput(h=h)
+        #return Function.NamedOutput(h=h)
+        return h
 
     def rnn(dh, x):
         dhs = Sdh(dh)  # previous value, stabilized
         ht = activation (times(x, W) + times(dhs, H) + b)
         h = times(Sht(ht), Wmr) if has_projection else \
             ht
-        return Function.NamedOutput(h=h)
+        #return Function.NamedOutput(h=h)
+        return h
 
     function = {
         'RNNUnit': rnn,
@@ -396,20 +363,29 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
     LSTM(shape, cell_shape=None, activation=tanh, use_peepholes=False, init=glorot_uniform(), init_bias=0, enable_self_stabilization=False, name='')
 
     Layer factory function to create an LSTM block for use inside a recurrence.
+    The LSTM block implements one step of the recurrence and is stateless. It accepts the previous state as its first two arguments,
+    and outputs its new state as a two-valued tuple ``(h,c)``.
+
+    Example:
+     >>> # a typical recurrent LSTM layer
+     >>> from cntk.layers import *
+     >>> lstm_layer = Recurrence(LSTM(500))
 
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        cell_shape (tuple, defaults to `None`): 
-        activation (:class:`~cntk.ops.functions.Function`, defaults to tanh): function to apply at the end, e.g. `relu`
+        cell_shape (tuple, defaults to `None`): if given, then the output state is first computed at `cell_shape`
+         and linearly projected to `shape`
+        activation (:class:`~cntk.ops.functions.Function`, defaults to :func:`~cntk.ops.tanh`): function to apply at the end, e.g. `relu`
         use_peepholes (bool, defaults to `False`):
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
-        enable_self_stabilization (bool, defaults to `False`):
+        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :func:`~cntk.layers.blocks.Stabilizer`
+         to all state-related projections (but not the data input)
         name (str, defaults to ''): the name of the Function instance in the network
 
     Returns:
         cntk.ops.functions.Function:
-        A function (prev_h, prev_c, input) -> h)
+        A function ``(prev_h, prev_c, input) -> (h, c)`` that implements one step of a recurrent LSTM layer.
     '''
 
     activation                = get_default_override(RNNUnit, activation=activation)
@@ -427,24 +403,33 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
 def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
             init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
             enable_self_stabilization=default_override_or(False),
-            name=''): # (prev_h, x) -> (h)
+            name=''):
     '''
     RNNUnit(shape, cell_shape=None, activation=sigmoid, init=glorot_uniform(), init_bias=0, enable_self_stabilization=False, name='')
 
     Layer factory function to create a plain RNN block for use inside a recurrence.
+    The RNN block implements one step of the recurrence and is stateless. It accepts the previous state as its first argument,
+    and outputs its new state.
+
+    Example:
+     >>> # a plain relu RNN layer
+     >>> from cntk.layers import *
+     >>> relu_rnn_layer = Recurrence(RNNUnit(500, activation=C.relu))
 
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        cell_shape (tuple, defaults to `None`): 
+        cell_shape (tuple, defaults to `None`): if given, then the output state is first computed at `cell_shape`
+         and linearly projected to `shape`
         activation (:class:`~cntk.ops.functions.Function`, defaults to signmoid): function to apply at the end, e.g. `relu`
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
-        enable_self_stabilization (bool, defaults to `False`):
+        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :func:`~cntk.layers.blocks.Stabilizer`
+         to all state-related projections (but not the data input)
         name (str, defaults to ''): the name of the Function instance in the network
 
     Returns:
         cntk.ops.functions.Function:
-        A function (prev_h, input) -> h) where h = activation (W * input + R * prev_h + b)
+        A function ``(prev_h, input) -> h`` where ``h = activation(input @ W + prev_h @ R + b)``
     '''
 
     activation                = get_default_override(RNNUnit, activation=activation)
@@ -460,24 +445,33 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
 def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
         init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
         enable_self_stabilization=default_override_or(False),
-        name=''): # (prev_h, x) -> (h)
+        name=''):
     '''
     GRU(shape, cell_shape=None, activation=tanh, init=glorot_uniform(), init_bias=0, enable_self_stabilization=False, name='')
 
     Layer factory function to create a GRU block for use inside a recurrence.
+    The GRU block implements one step of the recurrence and is stateless. It accepts the previous state as its first argument,
+    and outputs its new state.
+
+    Example:
+     >>> # a gated recurrent layer
+     >>> from cntk.layers import *
+     >>> gru_layer = Recurrence(GRU(500))
 
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        cell_shape (tuple, defaults to `None`): 
-        activation (:class:`~cntk.ops.functions.Function`, defaults to tanh): function to apply at the end, e.g. `relu`
+        cell_shape (tuple, defaults to `None`): if given, then the output state is first computed at `cell_shape`
+         and linearly projected to `shape`
+        activation (:class:`~cntk.ops.functions.Function`, defaults to :func:`~cntk.ops.tanh`): function to apply at the end, e.g. `relu`
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
-        enable_self_stabilization (bool, defaults to `False`):
+        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :func:`~cntk.layers.blocks.Stabilizer`
+         to all state-related projections (but not the data input)
         name (str, defaults to ''): the name of the Function instance in the network
 
     Returns:
         cntk.ops.functions.Function:
-        A function (prev_h, input) -> h)
+        A function ``(prev_h, input) -> h`` that implements one step of a recurrent GRU layer.
     '''
 
     activation                = get_default_override(GRU, activation=activation)

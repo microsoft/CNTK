@@ -3,7 +3,7 @@ dataDir: .
 tags:
   # GPU only, at this stage.
   - bvt-i (build_sku == 'gpu') and (device == 'gpu') and ((os == 'linux') or (flavor == 'release'))
-  - nightly-i (build_sku == 'gpu') and (device == 'gpu')
+  - nightly-i (build_sku == 'gpu') and (device == 'gpu') and ((os == 'linux') or (flavor == 'release'))
 
 testCases:
   Test cases pass:

@@ -10,11 +10,13 @@ import argparse
 import math
 from cntk.layers import *  # Layers library
 from cntk.layers.typing import *
-from cntk.utils import *
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk import Trainer
-from cntk.learner import adam_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
-from cntk.ops import cross_entropy_with_softmax, classification_error, splice, relu
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
+from cntk import Trainer, Value
+from cntk.learners import fsadagrad, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk import splice, relu
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
+from cntk.logging import *
 
 ########################
 # variables and stuff  #
@@ -40,7 +42,7 @@ def create_reader(path, is_training):
         query         = StreamDef(field='S0', shape=vocab_size,  is_sparse=True),
         intent_labels = StreamDef(field='S1', shape=num_intents, is_sparse=True),  # (used for intent classification variant)
         slot_labels   = StreamDef(field='S2', shape=num_labels,  is_sparse=True)
-    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+    )), randomize=is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
 
 ########################
 # define the model     #
@@ -110,7 +112,7 @@ def peek(model, epoch):
     # run a sequence through
     seq = 'BOS flights from new york to seattle EOS'  # example string
     w = [query_dict[w] for w in seq.split()]          # convert to word indices
-    z = model(one_hot([w], vocab_size))               # run it through the model
+    z = model(Value.one_hot([w], vocab_size))               # run it through the model
     best = np.argmax(z,axis=2)                        # classify
     # show result
     print("Example Sentence After Epoch [{}]".format(epoch))
@@ -135,7 +137,7 @@ def train(reader, model, max_epochs):
     labels = reader.streams.slot_labels
     #labels = reader.streams.intent_labels  # for intent classification
 
-    #from cntk.graph import plot
+    #from cntk.logging.graph import plot
     #plot(criterion, filename=data_dir + "/model.pdf")
 
     # iteration parameters  --needed here because learner schedule needs it
@@ -144,12 +146,11 @@ def train(reader, model, max_epochs):
     #epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
 
     # SGD parameters
-    learner = adam_sgd(criterion.parameters,
-                       lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
-                       momentum   = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
-                       low_memory = True,
-                       gradient_clipping_threshold_per_sample = 15,
-                       gradient_clipping_with_truncation = True)
+    learner = fsadagrad(criterion.parameters,
+                        lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
+                        momentum   = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
+                        gradient_clipping_threshold_per_sample = 15,
+                        gradient_clipping_with_truncation = True)
 
     # trainer
     trainer = Trainer(None, criterion, learner)
@@ -184,7 +185,7 @@ def train(reader, model, max_epochs):
 # TODO: replace by a proper such class once available
 def Evaluator(model, criterion):
     from cntk import Trainer
-    from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+    from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
     loss, metric = Trainer._get_loss_metric(criterion)
     parameters = set(loss.parameters)
     if model:

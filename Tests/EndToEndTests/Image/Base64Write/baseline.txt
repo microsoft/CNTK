@@ -1,0 +1,236 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2620 v3 @ 2.40GHz
+    Hardware threads: 24
+    Total Memory: 33476764 kB
+-------------------------------------------------------------------
+d:\TestPreparation/PreTrainedModels/EvalModels
+=== Running /cygdrive/c/repo/cntk_github4/CNTK/x64/release/cntk.exe configFile=C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Base64Write/EvalNetOnImages.cntk currentDirectory=C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Data RunDir=F:\cygwin64\tmp\cntk-test-20170320141259.195125\Image_Base64Write@release_gpu DataDir=C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Data ConfigDir=C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Base64Write OutputDir=F:\cygwin64\tmp\cntk-test-20170320141259.195125\Image_Base64Write@release_gpu DeviceId=0 timestamping=true EvalModelDir=d:\TestPreparation/PreTrainedModels/EvalModels
+CNTK 2.0.beta15.0+ (HEAD 58eafe, Mar 20 2017 11:02:35) on ELDAK-0 at 2017/03/20 14:13:01
+
+C:\repo\cntk_github4\CNTK\x64\release\cntk.exe  configFile=C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Base64Write/EvalNetOnImages.cntk  currentDirectory=C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Data  RunDir=F:\cygwin64\tmp\cntk-test-20170320141259.195125\Image_Base64Write@release_gpu  DataDir=C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Data  ConfigDir=C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Base64Write  OutputDir=F:\cygwin64\tmp\cntk-test-20170320141259.195125\Image_Base64Write@release_gpu  DeviceId=0  timestamping=true  EvalModelDir=d:\TestPreparation/PreTrainedModels/EvalModels
+Changed current directory to C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Data
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Mar 20 2017 10:57:06
+		Last modified date: Mon Mar 20 10:07:09 2017
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: yes
+		With ASGD: yes
+		Math lib: mkl
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+		CUB_PATH: c:\local\cub-1.4.1
+		CUDNN_PATH: c:\local\cudnn-8.0-v5.1\cuda
+		Build Branch: eldak/writeBase64Warning
+		Build SHA1: 86aa59812995ef8b783b2b8bb9cf88b08ab67d06
+		Built by eldak on ELDAK-0
+		Build Path: c:\repo\cntk_github4\CNTK\Source\CNTKv2LibraryDll\
+		MPI distribution: Microsoft MPI
+		MPI version: 7.1.12437.25
+-------------------------------------------------------------------
+03/20/2017 14:13:01: -------------------------------------------------------------------
+03/20/2017 14:13:01: GPU info:
+
+03/20/2017 14:13:01: 		Device[0]: cores = 1536; computeCapability = 5.2; type = "GeForce GTX 960"; total memory = 2048 MB; free memory = 1845 MB
+03/20/2017 14:13:01: 		Device[1]: cores = 576; computeCapability = 5.0; type = "Quadro K620"; total memory = 2048 MB; free memory = 2017 MB
+03/20/2017 14:13:01: -------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: EvalNetOnImages.cntk:command=Output
+configparameters: EvalNetOnImages.cntk:ConfigDir=C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Base64Write
+configparameters: EvalNetOnImages.cntk:currentDirectory=C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Data
+configparameters: EvalNetOnImages.cntk:data=C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Data\ImagesAndLabels_4Bad2Good.tsv
+configparameters: EvalNetOnImages.cntk:DataDir=C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Data
+configparameters: EvalNetOnImages.cntk:deviceId=0
+configparameters: EvalNetOnImages.cntk:EvalModelDir=d:\TestPreparation/PreTrainedModels/EvalModels
+configparameters: EvalNetOnImages.cntk:maxErrors=30
+configparameters: EvalNetOnImages.cntk:Output={
+    action = write
+    writeSequenceKey = true
+    outputNodeNames = OutputNodes.z
+    outputPath = F:\cygwin64\tmp\cntk-test-20170320141259.195125\Image_Base64Write@release_gpu/OutputNodes
+    minibatchSize = 2
+    modelPath = "d:\TestPreparation/PreTrainedModels/EvalModels/test_base64.model"
+    reader = {
+        verbosity = 0 ;  randomize = false
+        deserializers = ({
+            type = "Base64ImageDeserializer" ; module = "ImageReader"
+            file = "C:\repo\cntk_github4\CNTK\Tests\EndToEndTests\Image\Data\ImagesAndLabels_4Bad2Good.tsv"
+            input = {
+                features = {
+                    transforms = (
+                        { type = "Crop" ; cropType = "Center" ; cropRatio = 1.0 ; jitterType = "UniRatio" }:
+                        { type = "Scale" ; width = 224 ; height = 224 ; channels = 3 ; interpolations = "Linear" }:
+                        { type = "Transpose" }
+                    )
+                }
+                labels = { labelDim = 2 }
+            }
+        })
+    }
+}
+
+configparameters: EvalNetOnImages.cntk:OutputDir=F:\cygwin64\tmp\cntk-test-20170320141259.195125\Image_Base64Write@release_gpu
+configparameters: EvalNetOnImages.cntk:parallelTrain=false
+configparameters: EvalNetOnImages.cntk:precision=float
+configparameters: EvalNetOnImages.cntk:RunDir=F:\cygwin64\tmp\cntk-test-20170320141259.195125\Image_Base64Write@release_gpu
+configparameters: EvalNetOnImages.cntk:timestamping=true
+configparameters: EvalNetOnImages.cntk:traceLevel=1
+03/20/2017 14:13:01: Commands: Output
+03/20/2017 14:13:01: precision = "float"
+
+03/20/2017 14:13:01: ##############################################################################
+03/20/2017 14:13:01: #                                                                            #
+03/20/2017 14:13:01: # Output command (write action)                                              #
+03/20/2017 14:13:01: #                                                                            #
+03/20/2017 14:13:01: ##############################################################################
+
+
+Post-processing network...
+
+3 roots:
+	CE = CrossEntropyWithSoftmax()
+	Err = ClassificationError()
+	OutputNodes.z = Plus()
+
+Validating network. 48 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [2 x *]
+Validating --> OutputNodes.W = LearnableParameter() :  -> [2 x 128]
+Validating --> h2.W = LearnableParameter() :  -> [128 x 128]
+Validating --> h1.W = LearnableParameter() :  -> [128 x 6 x 6 x 256]
+Validating --> conv5.W = LearnableParameter() :  -> [256 x 2304]
+Validating --> conv4.W = LearnableParameter() :  -> [256 x 3456]
+Validating --> conv3.W = LearnableParameter() :  -> [384 x 1728]
+Validating --> conv2.W = LearnableParameter() :  -> [192 x 1600]
+Validating --> conv1.W = LearnableParameter() :  -> [64 x 363]
+Validating --> features = InputValue() :  -> [224 x 224 x 3 x *]
+Validating --> conv1.c = Convolution (conv1.W, features) : [64 x 363], [224 x 224 x 3 x *] -> [56 x 56 x 64 x *]
+Validating --> conv1.b = LearnableParameter() :  -> [1 x 1 x 64]
+Validating --> conv1.z = Plus (conv1.c, conv1.b) : [56 x 56 x 64 x *], [1 x 1 x 64] -> [56 x 56 x 64 x *]
+Validating --> conv1.y = RectifiedLinear (conv1.z) : [56 x 56 x 64 x *] -> [56 x 56 x 64 x *]
+Validating --> pool1 = MaxPooling (conv1.y) : [56 x 56 x 64 x *] -> [27 x 27 x 64 x *]
+Validating --> conv2.c = Convolution (conv2.W, pool1) : [192 x 1600], [27 x 27 x 64 x *] -> [27 x 27 x 192 x *]
+Validating --> conv2.b = LearnableParameter() :  -> [1 x 1 x 192]
+Validating --> conv2.z = Plus (conv2.c, conv2.b) : [27 x 27 x 192 x *], [1 x 1 x 192] -> [27 x 27 x 192 x *]
+Validating --> conv2.y = RectifiedLinear (conv2.z) : [27 x 27 x 192 x *] -> [27 x 27 x 192 x *]
+Validating --> pool2 = MaxPooling (conv2.y) : [27 x 27 x 192 x *] -> [13 x 13 x 192 x *]
+Validating --> conv3.c = Convolution (conv3.W, pool2) : [384 x 1728], [13 x 13 x 192 x *] -> [13 x 13 x 384 x *]
+Validating --> conv3.b = LearnableParameter() :  -> [1 x 1 x 384]
+Validating --> conv3.z = Plus (conv3.c, conv3.b) : [13 x 13 x 384 x *], [1 x 1 x 384] -> [13 x 13 x 384 x *]
+Validating --> conv3.y = RectifiedLinear (conv3.z) : [13 x 13 x 384 x *] -> [13 x 13 x 384 x *]
+Validating --> conv4.c = Convolution (conv4.W, conv3.y) : [256 x 3456], [13 x 13 x 384 x *] -> [13 x 13 x 256 x *]
+Validating --> conv4.b = LearnableParameter() :  -> [1 x 1 x 256]
+Validating --> conv4.z = Plus (conv4.c, conv4.b) : [13 x 13 x 256 x *], [1 x 1 x 256] -> [13 x 13 x 256 x *]
+Validating --> conv4.y = RectifiedLinear (conv4.z) : [13 x 13 x 256 x *] -> [13 x 13 x 256 x *]
+Validating --> conv5.c = Convolution (conv5.W, conv4.y) : [256 x 2304], [13 x 13 x 256 x *] -> [13 x 13 x 256 x *]
+Validating --> conv5.b = LearnableParameter() :  -> [1 x 1 x 256]
+Validating --> conv5.z = Plus (conv5.c, conv5.b) : [13 x 13 x 256 x *], [1 x 1 x 256] -> [13 x 13 x 256 x *]
+Validating --> conv5.y = RectifiedLinear (conv5.z) : [13 x 13 x 256 x *] -> [13 x 13 x 256 x *]
+Validating --> pool3 = MaxPooling (conv5.y) : [13 x 13 x 256 x *] -> [6 x 6 x 256 x *]
+Validating --> h1.t = Times (h1.W, pool3) : [128 x 6 x 6 x 256], [6 x 6 x 256 x *] -> [128 x *]
+Validating --> h1.b = LearnableParameter() :  -> [128]
+Validating --> h1.z = Plus (h1.t, h1.b) : [128 x *], [128] -> [128 x *]
+Validating --> h1.y = RectifiedLinear (h1.z) : [128 x *] -> [128 x *]
+Validating --> h1_d = Dropout (h1.y) : [128 x *] -> [128 x *]
+Validating --> h2.t = Times (h2.W, h1_d) : [128 x 128], [128 x *] -> [128 x *]
+Validating --> h2.b = LearnableParameter() :  -> [128]
+Validating --> h2.z = Plus (h2.t, h2.b) : [128 x *], [128] -> [128 x *]
+Validating --> h2.y = RectifiedLinear (h2.z) : [128 x *] -> [128 x *]
+Validating --> h2_d = Dropout (h2.y) : [128 x *] -> [128 x *]
+Validating --> OutputNodes.t = Times (OutputNodes.W, h2_d) : [2 x 128], [128 x *] -> [2 x *]
+Validating --> OutputNodes.b = LearnableParameter() :  -> [2]
+Validating --> OutputNodes.z = Plus (OutputNodes.t, OutputNodes.b) : [2 x *], [2] -> [2 x *]
+Validating --> CE = CrossEntropyWithSoftmax (labels, OutputNodes.z) : [2 x *], [2 x *] -> [1]
+Validating --> Err = ClassificationError (labels, OutputNodes.z) : [2 x *], [2 x *] -> [1]
+
+Validating network. 30 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+conv1.c: using cuDNN convolution engine for geometry: Input: 224 x 224 x 3, Output: 56 x 56 x 64, Kernel: 11 x 11 x 3, Map: 1 x 1 x 64, Stride: 4 x 4 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+pool1: using cuDNN convolution engine for geometry: Input: 56 x 56 x 64, Output: 27 x 27 x 64, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+conv2.c: using cuDNN convolution engine for geometry: Input: 27 x 27 x 64, Output: 27 x 27 x 192, Kernel: 5 x 5 x 64, Map: 1 x 1 x 192, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+pool2: using cuDNN convolution engine for geometry: Input: 27 x 27 x 192, Output: 13 x 13 x 192, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+conv3.c: using cuDNN convolution engine for geometry: Input: 13 x 13 x 192, Output: 13 x 13 x 384, Kernel: 3 x 3 x 192, Map: 1 x 1 x 384, Stride: 1 x 1 x 192, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+conv4.c: using cuDNN convolution engine for geometry: Input: 13 x 13 x 384, Output: 13 x 13 x 256, Kernel: 3 x 3 x 384, Map: 1 x 1 x 256, Stride: 1 x 1 x 384, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+conv5.c: using cuDNN convolution engine for geometry: Input: 13 x 13 x 256, Output: 13 x 13 x 256, Kernel: 3 x 3 x 256, Map: 1 x 1 x 256, Stride: 1 x 1 x 256, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+pool3: using cuDNN convolution engine for geometry: Input: 13 x 13 x 256, Output: 6 x 6 x 256, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+
+
+
+Post-processing network complete.
+
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 48 matrices, 29 are shared as 4, and 19 are not shared.
+
+Here are the ones that share memory:
+	{ CE : [1]
+	  Err : [1] }
+	{ conv1.z : [56 x 56 x 64 x *]
+	  conv2.c : [27 x 27 x 192 x *]
+	  conv2.y : [27 x 27 x 192 x *]
+	  conv3.c : [13 x 13 x 384 x *]
+	  conv3.y : [13 x 13 x 384 x *]
+	  conv4.y : [13 x 13 x 256 x *]
+	  conv5.z : [13 x 13 x 256 x *]
+	  h1.z : [128 x *]
+	  h1_d : [128 x *]
+	  h2.z : [128 x *]
+	  h2_d : [128 x *]
+	  pool3 : [6 x 6 x 256 x *] }
+	{ conv1.c : [56 x 56 x 64 x *]
+	  conv1.y : [56 x 56 x 64 x *]
+	  conv2.z : [27 x 27 x 192 x *]
+	  conv3.z : [13 x 13 x 384 x *]
+	  conv4.c : [13 x 13 x 256 x *] }
+	{ OutputNodes.t : [2 x *]
+	  conv4.z : [13 x 13 x 256 x *]
+	  conv5.c : [13 x 13 x 256 x *]
+	  conv5.y : [13 x 13 x 256 x *]
+	  h1.t : [128 x *]
+	  h1.y : [128 x *]
+	  h2.t : [128 x *]
+	  h2.y : [128 x *]
+	  pool1 : [27 x 27 x 64 x *]
+	  pool2 : [13 x 13 x 192 x *] }
+
+Here are the ones that don't share memory:
+	{conv1.b : [1 x 1 x 64]}
+	{conv1.W : [64 x 363]}
+	{conv2.b : [1 x 1 x 192]}
+	{conv4.b : [1 x 1 x 256]}
+	{conv2.W : [192 x 1600]}
+	{conv3.b : [1 x 1 x 384]}
+	{conv4.W : [256 x 3456]}
+	{conv3.W : [384 x 1728]}
+	{conv5.b : [1 x 1 x 256]}
+	{conv5.W : [256 x 2304]}
+	{h2.W : [128 x 128]}
+	{features : [224 x 224 x 3 x *]}
+	{h1.W : [128 x 6 x 6 x 256]}
+	{h2.b : [128]}
+	{labels : [2 x *]}
+	{OutputNodes.b : [2]}
+	{OutputNodes.W : [2 x 128]}
+	{h1.b : [128]}
+	{OutputNodes.z : [2 x *]}
+
+WARNING: Could not decompress sequence with id 'bad1'
+WARNING: Could not decompress sequence with id 'bad2'
+Minibatch[0]: ActualMBSize = 1
+WARNING: Could not decompress sequence with id 'bad3'
+WARNING: Could not decompress sequence with id 'bad4'
+Minibatch[1]: ActualMBSize = 1
+Written to F:\cygwin64\tmp\cntk-test-20170320141259.195125\Image_Base64Write@release_gpu/OutputNodes*
+Total Samples Evaluated = 2
+
+03/20/2017 14:13:04: Action "write" complete.
+
+03/20/2017 14:13:04: __COMPLETED__

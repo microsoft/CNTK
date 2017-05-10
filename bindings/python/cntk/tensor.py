@@ -4,6 +4,8 @@
 # for full license information.
 # ==============================================================================
 
+import warnings
+from scipy import sparse
 
 class TensorOpsMixin(object):
     '''
@@ -156,41 +158,90 @@ def _add_tensor_ops(klass):
 
 
 class ArrayMixin(object):
-    @property
-    def __array_interface__(self):
-        try:
-            # This checks for a MinibatchData object.
-            np_array = self.value
-        except AttributeError:
-            try:
-                # This checks for a Value object. Trying with self.to_ndarray first would lead to
-                # a infinite recursion, since Value has a to_ndarray method
-                np_array = self.data().to_ndarray()
-            except AttributeError:
-                try:
-                    np_array = self.to_ndarray()
-                except AttributeError:
-                    # Ideally an exception would be raised here, but getattr would swallow it
-                    # so we return None
-                    return None
+    def asarray(self):
+        '''
+        Converts the instance's data to a NumPy array.
+        '''
+        import cntk
+        result = None
+        if isinstance(self, cntk.Constant):
+            ndav = super(cntk.Constant, self).value()
+            is_sparse = ndav.is_sparse()
+        elif isinstance(self, cntk.Parameter):
+            ndav = super(cntk.Parameter, self).value()
+            is_sparse = ndav.is_sparse()
+        elif isinstance(self, (cntk.cntk_py.Constant, cntk.cntk_py.Parameter)):
+            ndav = self.value()
+            is_sparse = ndav.is_sparse()
 
-        interface_copy = np_array.__array_interface__
+        elif isinstance(self, (cntk.cntk_py.NDArrayView, cntk.cntk_py.NDMask)):
+            ndav = self
+            if isinstance(self, cntk.NDArrayView):
+                is_sparse = ndav.is_sparse
+            elif isinstance(self, cntk.cntk_py.NDArrayView):
+                is_sparse = ndav.is_sparse()
+            else:
+                is_sparse = False
 
-        # for np arrays (other than 0-d arrays) data entry in __array_interface__ dict
-        # must be replaced with data member of array
-        if len(np_array.shape):
-            interface_copy["data"] = np_array.data
+        # Value and MinibatchData have a mask, which means that we need the
+        # corresponding Variable to do the proper conversion. For easy
+        # discoverability, we nevertheless add asarray() to those classes as
+        # well, but issue a warning.
+        elif isinstance(self, cntk.cntk_py.Value) or isinstance(self, cntk.cntk_py.MinibatchData):
+
+            if isinstance(self, cntk.cntk_py.MinibatchData):
+                value = self.data
+            else:
+                value = self
+
+            if isinstance(value, cntk.Value):
+                is_sparse = value.is_sparse
+                has_mask = super(cntk.Value, value).mask() is not None
+                ndav = value.data
+            else:
+                is_sparse = value.is_sparse()
+                has_mask = value.mask() is not None
+                ndav = value.data()
+
+            if has_mask:
+                warnings.warn('asarray() will ignore the mask information. '
+                              'Please use as_sequences() to do the proper '
+                              'conversion.')
+
+        if is_sparse:
+            from cntk.internal.sanitize import _sparse_to_dense_network_cache
+
+            device = ndav.device
+            if callable(device):
+                device = device()
+
+            network = _sparse_to_dense_network_cache(ndav.shape[1:], False,
+                                                     device)
+            warnings.warn('converting Value object to CSR format might be slow')
+
+            dense_data = network.eval(self, device=device)
+
+            def to_csr(dense_data):
+                if len(dense_data.shape) > 2:
+                    raise ValueError('Cannot convert a sparse NDArrayView or Value object '
+                                     'with shape %s of rank > 2 to a scipy.csr matrix.' % str(dense_data.shape))
+                return sparse.csr_matrix(dense_data)
+
+            if isinstance(dense_data, list):
+                result = [to_csr(d) for d in dense_data]
+            else:
+                result = to_csr(dense_data)
+
         else:
-            # save a reference to np_array so that it does not disappear
-            self.np_array = np_array
+            result = ndav.to_ndarray()
 
-        return interface_copy
+        return result
 
-def _add_array_interface(klass):
-    array_interface_name = '__array_interface__'
+def _add_asarray(klass):
+    member_name = 'asarray'
 
-    if getattr(klass, array_interface_name, None):
+    if getattr(klass, member_name, None):
         raise ValueError('class "%s" has already an attribute "%s"' %
-                         (klass, array_interface_name))
+                         (klass, member_name))
 
-    setattr(klass, array_interface_name, getattr(ArrayMixin, array_interface_name))
+    setattr(klass, member_name, ArrayMixin.__dict__[member_name])

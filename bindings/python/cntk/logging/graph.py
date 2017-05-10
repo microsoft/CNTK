@@ -5,39 +5,43 @@
 # ==============================================================================
 
 import os
-from cntk.ops import Variable
+from cntk.variables import Variable
 
 
-def depth_first_search(root, visitor):
+def depth_first_search(root, visitor, depth=0):
     '''
     Generic function that walks through the graph starting at ``root`` and
     uses function ``visitor`` on each node to check whether it should be
     returned.
 
     Args:
-        root (:class:`~cntk.ops.functions.Function` or :class:`~cntk.ops.variables.Variable`): the root to start the journey from
+        root (:class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`): the root to start the journey from
         visitor (Python function or lambda): function that takes a node as
          argument and returns ``True`` if that node should be returned.
+        depth (int, default 0): how deep into the block hierarchy the DFS
+         algorithm should go into. Set to -1 for infinite depth.
     Returns:
         List of functions, for which ``visitor`` was ``True``
     '''
-    stack = [root.root_function] # node
+    stack = [(root.root_function, depth)] # node
     accum = []         # final result (list of all unique nodes)
     visited = set()    # [node.uid]
 
     while stack:
-        node = stack.pop(0)
+        node, depth = stack.pop(0)
         if node.uid in visited:
             continue
         from cntk import cntk_py
-        if isinstance(node, cntk_py.Function) and node.is_block:
+        dive_into_blocks = 0 < depth or depth == -1
+        if isinstance(node, cntk_py.Function) and node.is_block and \
+                dive_into_blocks:
             composite = node.block_root
             # BlockFunction node
             mapping = node.block_arguments_mapping
             # redirect the composite's inputs to the true inputs
-            stack.extend([actual_input for _, actual_input in mapping]) # traverse into actual composite inputs
+            stack.extend([(actual_input, depth-1) for _, actual_input in mapping]) # traverse into actual composite inputs
             visited |= {comp_input.uid for comp_input, _ in mapping}    # don't traverse into the mapped-away inputs
-            stack.append(composite)
+            stack.append((composite, depth-1))
             visited.add(node.uid)
             if visitor(node):
                 accum.append(node)
@@ -45,12 +49,12 @@ def depth_first_search(root, visitor):
             # BlockFunctions are short-circuited, and not added to accum[]
         try:
             # Function node
-            stack = list(node.root_function.inputs) + stack
+            stack = list((i, depth) for i in node.root_function.inputs) + stack
         except AttributeError:
             # OutputVariable node
             try:
                 if node.is_output:
-                    stack.insert(0, node.owner)
+                    stack.insert(0, (node.owner, depth))
                     visited.add(node.uid)
                     continue
             except AttributeError:
@@ -69,14 +73,16 @@ def depth_first_search(root, visitor):
 
     return accum
 
-def find_all_with_name(node, node_name):
+def find_all_with_name(node, node_name, depth=0):
     '''
     Finds functions in the graph starting from ``node`` and doing a depth-first
     search.
 
     Args:
-        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.ops.variables.Variable`): the node to start the journey from
+        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`): the node to start the journey from
         node_name (`str`): name for which we are search nodes
+        depth (int, default 0): how deep into the block hierarchy the DFS
+         algorithm should go into. Set to -1 for infinite depth.
 
     Returns:
         List of primitive (or block) functions having the specified name
@@ -85,16 +91,19 @@ def find_all_with_name(node, node_name):
         :func:`~cntk.ops.functions.Function.find_all_with_name` in class
         :class:`~cntk.ops.functions.Function`.
     '''
-    return depth_first_search(node, lambda x: x.name == node_name)
+    return depth_first_search(node, lambda x: x.name == node_name,
+                              depth)
 
-def find_by_name(node, node_name):
+def find_by_name(node, node_name, depth=0):
     '''
     Finds a function in the graph starting from ``node`` and doing a depth-first
     search. It assumes that the name occurs only once.
 
     Args:
-        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.ops.variables.Variable`): the node to start the journey from
+        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`): the node to start the journey from
         node_name (`str`): name for which we are search nodes
+        depth (int, default 0): how deep into the block hierarchy the DFS
+         algorithm should go into. Set to -1 for infinite depth.
 
     Returns:
         Primitive (or block) function having the specified name
@@ -108,7 +117,8 @@ def find_by_name(node, node_name):
         raise ValueError('node name has to be a string. You gave '
                          'a %s' % type(node_name))
 
-    result = depth_first_search(node, lambda x: x.name == node_name)
+    result = depth_first_search(node, lambda x: x.name == node_name,
+                                depth)
 
     if len(result) > 1:
         raise ValueError('found multiple functions matching "%s". '
@@ -345,7 +355,7 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None):
     return result
 
 
-def get_node_outputs(node):
+def get_node_outputs(node, depth=0):
     '''
     Walks through every node of the graph starting at ``node``
     and returns a list of all node outputs.
@@ -356,7 +366,7 @@ def get_node_outputs(node):
     Returns:
         A list of all node outputs
     '''
-    node_list = depth_first_search(node, lambda x: True)
+    node_list = depth_first_search(node, lambda x: True, depth)
     node_outputs = []
     for node in node_list:
         try:

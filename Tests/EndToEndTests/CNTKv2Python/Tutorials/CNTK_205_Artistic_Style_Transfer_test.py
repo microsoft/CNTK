@@ -16,7 +16,7 @@ def test_cntk_205_artistic_style_transfer_noErrors(nb):
     assert errors == []
 
 expected_objective = 316284.22
-relative_tolerance = 3e-2 # would be tighter if specific to python 2 vs. 3
+relative_tolerance = 1e-1 # would be tighter if specific to python 2 vs. 3
 
 def test_cntk_205_artistic_style_transfer_evalCorrect(nb):
     testCell = [cell for cell in nb.cells

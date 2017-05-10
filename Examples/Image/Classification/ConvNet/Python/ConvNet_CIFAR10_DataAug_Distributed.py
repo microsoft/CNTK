@@ -12,7 +12,9 @@ import numpy as np
 import cntk
 import _cntk_py
 import cntk.io.transforms as xforms
-from cntk.training_session import *
+from cntk.train.training_session import *
+from cntk.logging import *
+from cntk.debugging import *
 
 # default Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -48,20 +50,20 @@ def create_image_mb_source(map_file, mean_file, train, total_number_of_samples):
             features = cntk.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
             labels   = cntk.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
         randomize=train,
-        epoch_size=total_number_of_samples,
+        max_samples=total_number_of_samples,
         multithreaded_deserializer = True)
 
 # Create the network.
 def create_conv_network():
 
     # Input variables denoting the features and label data
-    feature_var = cntk.ops.input_variable((num_channels, image_height, image_width))
-    label_var = cntk.ops.input_variable((num_classes))
+    feature_var = cntk.input((num_channels, image_height, image_width))
+    label_var = cntk.input((num_classes))
 
     # apply model to input
-    scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), feature_var)
+    scaled_input = cntk.element_times(cntk.constant(0.00390625), feature_var)
 
-    with cntk.layers.default_options(activation=cntk.ops.relu, pad=True):
+    with cntk.layers.default_options(activation=cntk.relu, pad=True):
         z = cntk.layers.Sequential([
             cntk.layers.For(range(2), lambda : [
                 cntk.layers.Convolution2D((3,3), 64),
@@ -76,10 +78,10 @@ def create_conv_network():
         ])(scaled_input)
 
     # loss and metric
-    ce = cntk.ops.cross_entropy_with_softmax(z, label_var)
-    pe = cntk.ops.classification_error(z, label_var)
+    ce = cntk.cross_entropy_with_softmax(z, label_var)
+    pe = cntk.classification_error(z, label_var)
 
-    cntk.utils.log_number_of_parameters(z) ; print()
+    cntk.logging.log_number_of_parameters(z) ; print()
 
     return {
         'feature': feature_var,
@@ -94,23 +96,23 @@ def create_conv_network():
 def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up, progress_writers):
     # Set learning parameters
     lr_per_sample     = [0.0015625]*20 + [0.00046875]*20 + [0.00015625]*20 + [0.000046875]*10 + [0.000015625]
-    lr_schedule       = cntk.learning_rate_schedule(lr_per_sample, unit=cntk.learner.UnitType.sample, epoch_size=epoch_size)
+    lr_schedule       = cntk.learning_rate_schedule(lr_per_sample, unit=cntk.learners.UnitType.sample, epoch_size=epoch_size)
     mm_time_constant  = [0]*20 + [600]*20 + [1200]
-    mm_schedule       = cntk.learner.momentum_as_time_constant_schedule(mm_time_constant, epoch_size=epoch_size)
+    mm_schedule       = cntk.learners.momentum_as_time_constant_schedule(mm_time_constant, epoch_size=epoch_size)
     l2_reg_weight     = 0.002
 
     # Create learner
     if block_size != None and num_quantization_bits != 32:
         raise RuntimeError("Block momentum cannot be used with quantization, please remove quantized_bits option.")
 
-    local_learner = cntk.learner.momentum_sgd(network['output'].parameters,
+    local_learner = cntk.learners.momentum_sgd(network['output'].parameters,
                                               lr_schedule, mm_schedule,
                                               l2_regularization_weight=l2_reg_weight)
 
     if block_size != None:
-        parameter_learner = cntk.distributed.block_momentum_distributed_learner(local_learner, block_size=block_size)
+        parameter_learner = cntk.train.distributed.block_momentum_distributed_learner(local_learner, block_size=block_size)
     else:
-        parameter_learner = cntk.distributed.data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
+        parameter_learner = cntk.train.distributed.data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
 
     # Create trainer
     return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, progress_writers)
@@ -126,21 +128,21 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 
     # Train all minibatches
     if profiling:
-        cntk.start_profiler(sync_gpu=True)
+        start_profiler(sync_gpu=True)
 
     training_session(
         trainer=trainer, mb_source = train_source,
-        var_to_stream = input_map, 
+        model_inputs_to_streams = input_map, 
         mb_size = minibatch_size,
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(frequency = epoch_size,
                                              filename = os.path.join(model_path, "ConvNet_CIFAR10_DataAug"),
                                              restore = restore),
-        cv_config = CrossValidationConfig(source = test_source, mb_size=minibatch_size)
+        test_config = TestConfig(source = test_source, mb_size=minibatch_size)
     ).train()
 
     if profiling:
-        cntk.stop_profiler()
+        stop_profiler()
 
 # Train and evaluate the network.
 def convnet_cifar10_dataaug(train_data, test_data, mean_data, minibatch_size=64, epoch_size=50000, num_quantization_bits=32,
@@ -150,19 +152,24 @@ def convnet_cifar10_dataaug(train_data, test_data, mean_data, minibatch_size=64,
 
     network = create_conv_network()
 
-    progress_writers = [cntk.utils.ProgressPrinter(
+    distributed_sync_report_freq = None
+    if block_size is not None:
+        distributed_sync_report_freq = 1
+
+    progress_writers = [cntk.logging.ProgressPrinter(
         freq=num_mbs_per_log,
         tag='Training',
         log_to_file=log_to_file,
-        rank=cntk.distributed.Communicator.rank(),
+        rank=cntk.train.distributed.Communicator.rank(),
         gen_heartbeat=gen_heartbeat,
-        num_epochs=max_epochs)]
+        num_epochs=max_epochs,
+        distributed_freq=distributed_sync_report_freq)]
 
     if tensorboard_logdir is not None:
-        progress_writers.append(cntk.utils.TensorBoardProgressWriter(
+        progress_writers.append(cntk.logging.TensorBoardProgressWriter(
         freq=num_mbs_per_log,
         log_dir=tensorboard_logdir,
-        rank=cntk.distributed.Communicator.rank(),
+        rank=cntk.train.distributed.Communicator.rank(),
         model=network['output']))
 
     trainer = create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up, progress_writers)
@@ -196,7 +203,7 @@ if __name__=='__main__':
     if args['logdir'] is not None:
         log_dir = args['logdir']
     if args['device'] is not None:
-        cntk.device.set_default_device(cntk.device.gpu(args['device']))
+        cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
 
     data_path = args['datadir']
 
@@ -207,20 +214,19 @@ if __name__=='__main__':
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'test_map.txt')
 
-    try:
-        convnet_cifar10_dataaug(train_data, test_data, mean_data,
-                                minibatch_size=args['minibatch_size'],
-                                epoch_size=args['epoch_size'],
-                                num_quantization_bits=args['quantized_bits'],
-                                block_size=args['block_samples'],
-                                warm_up=args['distributed_after'],
-                                max_epochs=args['num_epochs'],
-                                restore=not args['restart'],
-                                log_to_file=args['logdir'],
-                                num_mbs_per_log=100,
-                                gen_heartbeat=False,
-                                profiling=args['profile'],
-                                tensorboard_logdir=args['tensorboard_logdir'])
-    finally:
-        cntk.distributed.Communicator.finalize()
+    convnet_cifar10_dataaug(train_data, test_data, mean_data,
+                            minibatch_size=args['minibatch_size'],
+                            epoch_size=args['epoch_size'],
+                            num_quantization_bits=args['quantized_bits'],
+                            block_size=args['block_samples'],
+                            warm_up=args['distributed_after'],
+                            max_epochs=args['num_epochs'],
+                            restore=not args['restart'],
+                            log_to_file=args['logdir'],
+                            num_mbs_per_log=100,
+                            gen_heartbeat=True,
+                            profiling=args['profile'],
+                            tensorboard_logdir=args['tensorboard_logdir'])
+    # Must call MPI finalize when process exit without exceptions
+    cntk.train.distributed.Communicator.finalize()
 
