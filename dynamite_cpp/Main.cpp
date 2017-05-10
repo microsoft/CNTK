@@ -731,6 +731,8 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             //mbLoss.Value()->AsScalar<float>();
         }
         let d_parameters = d_model_fn.Parameters();
+        fprintf(stderr, "uid of first parameter: %S\n", mbLoss.Uid().c_str());
+        fprintf(stderr, "uid of loss: %S\n", d_parameters[0].Uid().c_str());
         Backward(mbLoss, vector<Variable>(d_parameters.begin(), d_parameters.end()));
         double loss1;
         {
