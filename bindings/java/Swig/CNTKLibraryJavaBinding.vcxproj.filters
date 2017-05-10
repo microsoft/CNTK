@@ -34,7 +34,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\common\CNTK_ExceptionHandling.i">
+    <None Include="..\..\common\CNTKExceptionHandling.i">
       <Filter>Interface FIles</Filter>
     </None>
     <None Include="..\..\common\CNTKValueExtend.i">

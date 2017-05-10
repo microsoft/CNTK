@@ -107,7 +107,7 @@
       <FileType>Document</FileType>
       <Command>$(SWIG_PATH)\swig.exe -c++ -csharp -DMSC_VER -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(SolutionDir)bindings\csharp\CNTKLibraryManagedDll\SwigProxyClasses -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i</Command>
       <Outputs>cntk_cs_wrap.cxx; cntk_cs_warp.h</Outputs>
-      <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h;$(SolutionDir)Source\Common\Include\ExceptionWithCallStack.h;$(SolutionDir)bindings\common\CNTKValueExtend.i;$(SolutionDir)bindings\common\CNTK_ExceptionHandling.i;$(SolutionDir)bindings\common\CNTKManagedCommon.i;std_unordered_map.i</AdditionalInputs>
+      <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h;$(SolutionDir)Source\Common\Include\ExceptionWithCallStack.h;$(SolutionDir)bindings\common\CNTKValueExtend.i;$(SolutionDir)bindings\common\CNTKExceptionHandling.i;$(SolutionDir)bindings\common\CNTKManagedCommon.i;std_unordered_map.i</AdditionalInputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -121,7 +121,7 @@
   <ItemGroup>
     <None Include="..\..\common\CNTKManagedCommon.i" />
     <None Include="..\..\common\CNTKValueExtend.i" />
-    <None Include="..\..\common\CNTK_ExceptionHandling.i" />
+    <None Include="..\..\common\CNTKExceptionHandling.i" />
     <None Include="std_unordered_map.i" />
   </ItemGroup>
   <Target Name="CheckDependencies">

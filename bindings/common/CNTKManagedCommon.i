@@ -382,7 +382,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %apply double INPUT[]  { double *dataBuffer }
 
 // exception handling
-%include "CNTK_ExceptionHandling.i"
+%include "CNTKExceptionHandling.i"
 
 // class DeviceDescriptor
 %rename (GetAllDevices) CNTK::DeviceDescriptor::AllDevices;
