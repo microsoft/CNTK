@@ -234,7 +234,7 @@ class Memoize
     //  - it only runs once
     //  - m_value must not have been set (don't call this function if it has)
     //  - m_pendingInputs has been initialized to -1 by the constructor
-    // This function also sets up the m_notify fields. When it returns, they are all complete.
+    // This function also sets up the m_consumers fields. When it returns, they are all complete.
     void TraverseFunctionTreeForward(const Variable& var)
     {
         let& fields = *var.m_dataFields;
@@ -260,7 +260,7 @@ class Memoize
         size_t pendingInputs = 0;
         for (let& v : f.m_inputs)
         {
-            let& fields = *v.m_dataFields;
+            auto& fields = *v.m_dataFields;
             // recursively traverse
             if (!fields.m_value)
             {
@@ -268,11 +268,11 @@ class Memoize
                 if (!fields.m_value) // (in case of a Parameter, we now may have a value)
                 {
                     // record ourselves as a consumer of the input--this is used for batching and for Backward()
-                    auto fi = fields.m_ownerFunction.lock();
-                    if (!fi->m_notify1) // optimized for main case of 1 consumer. No std::vector in that case.
-                        fi->m_notify1 = &f;
+                    // TODO: Think this through for Combine(), where m_input==m_outputs.
+                    if (!fields.m_consumers.first) // optimized for main case of 1 consumer. No std::vector in that case.
+                        fields.m_consumers.first = &f;
                     else
-                        fi->m_notifyN.push_back(&f);
+                        fields.m_consumers.second.push_back(&f);
                     // 
                     pendingInputs++;
                 }
@@ -507,6 +507,7 @@ class Memoize
                 size_t j = 0;
                 for (auto op = ops.begin(); op != ops.end(); ++op)
                 {
+                    // TODO: review this w.r.t. multi-output functions
                     auto& fields = *op->m_outputs[0].m_dataFields;
                     // semantically, this is fields.m_value = out->IndexLastAxis(j);
                     // but it gets deferred to save effort
@@ -515,32 +516,35 @@ class Memoize
                     j++;
                 }
             }
-            // TODO: for backprop, we need to create a new PrimitiveFunction that executes this operation, or something we can backprop through
         }
 
         // update all ops' consumers
         for (auto op = ops.begin(); op != ops.end(); ++op)
         {
-            // notify first consumer (this is a special optimization)
-            auto* f = op->m_notify1;
-            if (f)
+            for (let& output : op->m_outputs)
             {
-                if (f->m_pendingInputs <= 0)
-                    throw logic_error("pending inputs already 0 yet we are executing it");
-                f->m_pendingInputs--;
-                // if it is now ready then schedule it
-                if (f->m_pendingInputs == 0)
-                    m_schedule.Schedule(f);
-            }
-            // notify all other consumers (this is a special optimization)
-            for (auto* f : op->m_notifyN)
-            {
-                if (f->m_pendingInputs <= 0)
-                    throw logic_error("pending inputs already 0 yet we are executing it");
-                f->m_pendingInputs--;
-                // if it is now ready then schedule it
-                if (f->m_pendingInputs == 0)
-                    m_schedule.Schedule(f);
+                // notify first consumer (this is a special optimization)
+                let& fields = *op->m_outputs[0].m_dataFields;
+                auto* f = fields.m_consumers.first;
+                if (f)
+                {
+                    if (f->m_pendingInputs <= 0)
+                        throw logic_error("pending inputs already 0 yet we are executing it");
+                    f->m_pendingInputs--;
+                    // if it is now ready then schedule it
+                    if (f->m_pendingInputs == 0)
+                        m_schedule.Schedule(f);
+                }
+                // notify all other consumers (this is a special optimization)
+                for (auto* f : fields.m_consumers.second)
+                {
+                    if (f->m_pendingInputs <= 0)
+                        throw logic_error("pending inputs already 0 yet we are executing it");
+                    f->m_pendingInputs--;
+                    // if it is now ready then schedule it
+                    if (f->m_pendingInputs == 0)
+                        m_schedule.Schedule(f);
+                }
             }
         }
     }
@@ -567,7 +571,7 @@ class Memoize
         // enqueue consumers
         {
             // and recursively traverse the inputs
-            //for (let& fc : f.m_notifyN)
+            //for (let& fc : f.m_consumers.second)
             //    head = TraverseFunctionTreeBackward(v, head);
 
 
