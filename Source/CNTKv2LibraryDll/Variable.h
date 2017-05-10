@@ -16,22 +16,34 @@ namespace CNTK
         friend class CompositeFunction;
         friend class Memoize;
 
-        NDShape m_shape;
         VariableKind m_varKind;
-        ::CNTK::DataType m_dataType;
+
+        // graph
         std::weak_ptr<Function> m_ownerFunction;
-        std::unique_ptr<std::once_flag> m_initValueFlag;
+        std::wstring m_name;
+        std::wstring m_uid; // TODO: create this lazily
+        Variable m_blockFunctionVariableMapping;
+
+        // variable type
+        NDShape m_shape;
+        ::CNTK::DataType m_dataType;
+        bool m_needsGradient;
+        std::vector<Axis> m_dynamicAxes; // TODO: make this a shared_ptr?
+        bool m_isSparse;
+
+        // value
         NDArrayViewPtr m_value;
+        NDArrayViewPtr m_gradient;
+        std::pair<NDArrayViewPtr, size_t> m_lazyIndex;
+
+        // computation
+        std::atomic<size_t> m_valueTimeStamp;
+        std::pair<Function*, std::vector<Function*>> m_consumers;
+
+        // lazy initialization
+        std::unique_ptr<std::once_flag> m_initValueFlag;
         std::unique_ptr<ParameterInitializer> m_valueInitializer;
         std::unique_ptr<DeviceDescriptor> m_valueInitializationDevice;
-        bool m_needsGradient;
-        std::wstring m_name;
-        std::vector<Axis> m_dynamicAxes;
-        bool m_isSparse;
-        std::wstring m_uid;
-        std::atomic<size_t> m_valueTimeStamp;
-        Variable m_blockFunctionVariableMapping;
-        std::pair<NDArrayViewPtr, size_t> m_lazyIndex;
 
         VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, const std::weak_ptr<Function>& ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
             : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid), m_valueTimeStamp(0)

@@ -3519,8 +3519,6 @@ namespace CNTK
         Dictionary m_attributes;
 
         int m_pendingInputs = -1;
-        Function* m_notify1 = nullptr;
-        std::vector<Function*> m_notifyN;
         Function* m_link;
     };
 

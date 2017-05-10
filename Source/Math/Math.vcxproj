@@ -177,7 +177,6 @@
     <ClInclude Include="TensorView.h" />
     <ClInclude Include="Quantizers.h" />
     <ClInclude Include="QuantizedOperations.h" />
-    <None Include="GPUMatrixCUDAKernels.cuh" />
     <None Include="GPUWatcher.cu" />
     <None Include="GPUWatcher.h">
       <FileType>CppHeader</FileType>

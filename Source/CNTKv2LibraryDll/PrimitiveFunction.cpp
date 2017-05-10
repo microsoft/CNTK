@@ -1315,6 +1315,7 @@ namespace CNTK
         NDArrayViewPtr out;
         output.m_dataFields->m_value = move(ComputeKnowableValue(m_op, args, m_attributes, output.Shape(), move(out)));
     }
+
     // BUGBUG: OpName() is called on 'this' (affects only error messages)
     /*virtual*/ NDArrayViewPtr PrimitiveFunction::ComputeKnowableValue(PrimitiveOpType primitiveOp, 
         const vector<NDArrayViewPtr>& args, const Dictionary& attributes, const NDShape& outputShape, NDArrayViewPtr&& out) const
