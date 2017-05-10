@@ -217,6 +217,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::ElementSelect;
 %ignore_function CNTK::Splice;
 %ignore_function CNTK::StopGradient;
+%ignore_function CNTK::Assign;
 %ignore_function CNTK::ELU;
 %ignore_function CNTK::LeakyReLU;
 %ignore_function CNTK::PReLU;
@@ -348,6 +349,8 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 %ignore_function CNTK::Internal::SetComputationNetworkTraceLevel;
 %ignore_function CNTK::Internal::GetComputationNetworkTraceLevel;
+%ignore_function CNTK::Internal::SetGPUMemoryAllocationTraceLevel;
+%ignore_function CNTK::Internal::ForceSynchronousCUDAKernelExecutions;
 %ignore_function CNTK::Internal::ForceDeterministicAlgorithms;
 %ignore_function CNTK::Internal::ShouldForceDeterministicAlgorithms;
 %ignore_function CNTK::Internal::EnableSynchronousGPUKernelExecution;
