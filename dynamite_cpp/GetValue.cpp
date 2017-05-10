@@ -581,22 +581,18 @@ class Memoize
     }
 
     // perform back propagation
-    static NDArrayViewPtr BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t i,
-                                     PrimitiveOpType primitiveOp, const Dictionary& attributes,
-                                     const vector<const NDArrayView*>& outputValues, const vector<const NDArrayView*>& inputValues,
-                                     NDArrayViewPtr&& gradient, double beta)
+    static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t i,
+                           PrimitiveOpType primitiveOp, const Dictionary& attributes,
+                           const vector<const NDArrayView*>& outputValues, const vector<const NDArrayView*>& inputValues,
+                           const NDArrayViewPtr& gradient, double beta)
     {
-        // allocate target gradient if not yet  --TODO: do we even need that?
-        if (!gradient)
-            gradient = make_shared<NDArrayView>(inputValues[i]->GetDataType(), inputValues[i]->Shape(), inputValues[i]->Device());
-        else if (gradient->Shape() != inputValues[i]->Shape())
-            LogicError("Variable '%S' Value(): The out buffer passed to op %S does not match outputShape.", L""/*AsString().c_str()*/, L""/*OpName().c_str()*/);
-        //switch (primitiveOp)
-        //{
+        if (beta == 0)
+            gradient->SetValue(0.0f); // TODO: actually use beta in all ops
+        switch (primitiveOp)
+        {
         //    // elementwise ops are done outside, we just set the opcode
         //case PrimitiveOpType::Plus:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;                break;
-        //}
-        return gradient;
+        }
     }
 
     // back-propagate all outputs' m_gradients to all inputs
@@ -616,14 +612,14 @@ class Memoize
         for (let& output : outputs) // output values and gradients coming from consumer
         {
             let& fields = *output.m_dataFields;
-            if (!fields.m_gradient || !fields.m_value)
-                throw logic_error("Backward: gradient from consumer unexpectedly unavailable (or value)");
-            m_outputValuesBuffer   .push_back(fields.m_value.get());
+            if (!fields.m_gradient)
+                throw logic_error("Backward: gradient from consumer unexpectedly unavailable");
+            m_outputValuesBuffer   .push_back(LazilyIndexedValue(output).get());
             m_outputGradientsBuffer.push_back(fields.m_gradient.get());
         }
         m_inputValuesBuffer.clear(); // input values
         for (let& input : inputs)
-            m_inputValuesBuffer.push_back(input.m_dataFields->m_value.get());
+            m_inputValuesBuffer.push_back(LazilyIndexedValue(input).get()); // inefficient!! But fine for now, I just want correctness.
         // compute gradients for all inputs
         let numInputs = inputs.size();
         for (size_t i = 0; i < numInputs; i++)
@@ -633,16 +629,16 @@ class Memoize
             // BUGBUG: need to set up needsGradient flags based on what variables are selected
             if (!fields.m_needsGradient)
                 continue;
-            // for now just allocate the gradient, so that we can test the propagation
-            auto inputGradient = move(fields.m_gradient);
+            // get or create the desired gradient's TensorView
+            auto inputGradient = fields.m_gradient;
             let isFirst = !inputGradient;
-            if (isFirst)
-            {
+            if (isFirst) // first time: allocate the gradient memory
                 inputGradient = Alloc(input.Shape(), input.GetDataType(), input.Value()->Device());
-                inputGradient->SetValue(0.0f); // TODO: remove this, replace by beta
-            }
             double beta = isFirst ? 0 : 1;
-            fields.m_gradient = move(BackpropTo(m_outputGradientsBuffer, i, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBuffer, move(inputGradient), beta));
+            // backprop into the input
+            BackpropTo(m_outputGradientsBuffer, i, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBuffer, inputGradient, beta);
+            if (isFirst)
+                fields.m_gradient = inputGradient;
         }
     }
 
