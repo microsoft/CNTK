@@ -90,6 +90,12 @@ void GranularGPUDataTransferer::RecordGPUToCPUCopy()
     cudaEventRecord(m_fetchCompleteEvent, GetFetchStream()) || "cudaEventRecord failed";
 }
 
+void GranularGPUDataTransferer::ZeroMemoryAsync(void* gpuBuffer, size_t numBytes)
+{
+    PrepareDevice(m_deviceId);
+    cudaMemsetAsync(gpuBuffer, 0, numBytes, GetAssignStream()) || "cudaMemSetAsync failed";
+}
+
 void GranularGPUDataTransferer::WaitForCopyGPUToCPU()
 {
     PrepareDevice(m_deviceId);

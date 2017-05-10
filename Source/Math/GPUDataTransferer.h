@@ -46,6 +46,8 @@ public:
     void WaitForSyncPointOnFetchStreamAsync() override;
     void WaitForSyncPointOnAssignStreamAsync() override;
 
+    void ZeroMemoryAsync(void* gpuBuffer, size_t numBytes) override;
+
 #ifndef CPUONLY
 private:
     // Not owned by this class, are always injected.

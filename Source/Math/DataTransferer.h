@@ -32,6 +32,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class MATH_API DataTransferer
     {
     public:
+        // Asynchronously zeros memory on GPU.
+        virtual void ZeroMemoryAsync(void* gpuBuffer, size_t numBytes) = 0;
+
         // Asynchronously starts copying data from gpu into cpu buffer on internal stream.
         virtual void CopyGPUToCPUAsync(const void* gpuBuffer, size_t numElements, size_t elementSize, void* cpuBuffer) = 0;
 

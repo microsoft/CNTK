@@ -681,7 +681,7 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
 // WARNING: When memory is reallocated, existing information will be lost.
 // TODO: add keepExistingValues (default to true) argument so that the existing values are kept even after reallocation
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
+void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/, DataTransferer* transferer)
 {
     // BugBug: This doesn't work because allocate is called from Resize sometimes and resize expects allocate to know the old values not the new values, so this won't work.
     if (GetNumRows() != numRows || GetNumCols() != numCols)
@@ -699,11 +699,18 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
         ElemType* pArray = (ElemType*)(buf);
 
         // Note this is required due to m_nz 
-        CUDA_CALL(cudaMemset(pArray, 0, bufferSizeNeeded));
+        if (transferer)
+            transferer->ZeroMemoryAsync(pArray, bufferSizeNeeded);
+        else
+            CUDA_CALL(cudaMemset(pArray, 0, bufferSizeNeeded));
+
         if (Buffer() != nullptr)
         {
             if (keepExistingValues)
             {
+                if(transferer)
+                    RuntimeError("Async reallocation is not currently supported.");
+
                 if (NzCount() > numNZElemToReserve || BufferSizeAllocated() > bufferSizeNeeded)
                     LogicError("Resize: To keep values m_nz should <= numNZElemToReserve.");
 
@@ -725,50 +732,49 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
     else // if requested size is smaller, keeping original values does not make sense
     {
         SetSizeAllocated(ElemCountFromBufferSize(numRows, numCols, GetFormat(), BufferSizeAllocated()));
-        CUDA_CALL(cudaMemset(Buffer(), 0, BufferSizeAllocated()));
+        ClearNzCount(transferer);
     }
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*= 10000*/, const bool growOnly /*= true*/, bool keepExistingValues /*= false*/)
+void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*= 10000*/, const bool growOnly /*= true*/, bool keepExistingValues /*= false*/, DataTransferer* transferer)
 {
-    RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, GetFormat(), growOnly, keepExistingValues);
+    RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, GetFormat(), growOnly, keepExistingValues, transferer);
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
+void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/, DataTransferer* transferer)
 {
-    RequireSize(numRows, numCols, numNZElemToReserve, matrixFormat, growOnly);
+    RequireSize(numRows, numCols, numNZElemToReserve, matrixFormat, growOnly, transferer);
     
     size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
     bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
 
     if (reallocate)
-        Allocate(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues);
-
+        Allocate(numRows, numCols, numNZElemToReserve, growOnly, keepExistingValues, transferer);
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const bool growOnly /*= true*/)
+void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const bool growOnly /*= true*/, DataTransferer* transferer)
 {
-    RequireSize(numRows, numCols, GetFormat(), growOnly);
+    RequireSize(numRows, numCols, GetFormat(), growOnly, transferer);
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/)
+void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, DataTransferer* transferer)
 {
     if (GetFormat() != matrixFormat || GetNumRows() != numRows || GetNumCols() != numCols)
-        Resize(numRows, numCols, numNZElemToReserve, matrixFormat, growOnly);
+        Resize(numRows, numCols, numNZElemToReserve, matrixFormat, growOnly, transferer);
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*= 10000*/, const bool growOnly /*= true*/)
+void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*= 10000*/, const bool growOnly /*= true*/, DataTransferer* transferer)
 {
-    Resize(numRows, numCols, numNZElemToReserve, GetFormat(), growOnly);
+    Resize(numRows, numCols, numNZElemToReserve, GetFormat(), growOnly, transferer);
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/)
+void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, DataTransferer* transferer)
 {
     VerifyResizable(__FUNCTION__);
 
@@ -789,9 +795,9 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
     bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
 
     if (reallocate)
-        Allocate(numRows, numCols, numNZElemToReserve, growOnly, false);
+        Allocate(numRows, numCols, numNZElemToReserve, growOnly, false, transferer);
     else
-        ClearNzCount();
+        ClearNzCount(transferer);
 }
 
 // Reset matrix to 0.
@@ -804,14 +810,17 @@ void GPUSparseMatrix<ElemType>::Reset()
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::ClearNzCount()
+void GPUSparseMatrix<ElemType>::ClearNzCount(DataTransferer* transferer)
 {
     // We are now going to reset m_nz to 0. 
     // To reset m_nz to 0, we must do 2 things.
     //    1. We must clear the secondary column index.
     //    2. Set the block size to 0.
     // These requirements can be deduced by the NzCount method.
-    CUDA_CALL(cudaMemset(Buffer(), 0, BufferSizeAllocated()));
+    if (transferer)
+        transferer->ZeroMemoryAsync(Buffer(), BufferSizeAllocated());
+    else
+        CUDA_CALL(cudaMemset(Buffer(), 0, BufferSizeAllocated()));
     SetBlockSize(0);
 }
 
@@ -911,7 +920,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 
     SetComputeDeviceId(PrepareDevice(devId));
     SetFormat(matrixFormatSparseCSC);
-    RequireSizeAndAllocate(numRows, numCols, nz, true, false);
+    RequireSizeAndAllocate(numRows, numCols, nz, true, false, transferer);
 
     if (transferer && IsOnDevice)
         RuntimeError("Currently it is prohibited to copy data asynchronous from device to device.");
@@ -920,14 +929,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 
     cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
     if (transferer)
-    {
-        // TODO: All RequireSizeAndAllocate should be async and use a transferer.
-        // Currently there are some memset operations that can be still executing on the default stream,
-        // Here we have to wait for them to finish.
-        transferer->RecordComputeStreamSyncPoint();
-        transferer->WaitForSyncPointOnAssignStreamAsync();
         transferer->CopyCPUToGPUAsync(h_Val, nz, sizeof(ElemType), Data());
-    }
     else
         CUDA_CALL(cudaMemcpy(Data(), h_Val, nz * sizeof(ElemType), kind));
 
@@ -3077,8 +3079,8 @@ template GPUMatrix<char> GPUSparseMatrix<char>::CopyToDenseMatrix() const;
 template void GPUSparseMatrix<char>::CopyToDenseMatrix(GPUMatrix<char>&) const;
 template void GPUSparseMatrix<char>::CopyToCPUSparseMatrix(CPUSparseMatrix<char>&) const;
 template void GPUSparseMatrix<char>::ChangeDeviceTo(int);
-template void GPUSparseMatrix<char>::Resize(const size_t, const size_t, const size_t, const bool);
-template void GPUSparseMatrix<char>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);
+template void GPUSparseMatrix<char>::Resize(const size_t, const size_t, const size_t, const bool, DataTransferer*);
+template void GPUSparseMatrix<char>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool, DataTransferer*);
 template void GPUSparseMatrix<char>::Reset();
 template GPUSPARSE_INDEX_TYPE GPUSparseMatrix<char>::SecondaryIndexValueAt(size_t) const;
 template GPUSparseMatrix<char>::~GPUSparseMatrix();
@@ -3102,8 +3104,8 @@ template GPUMatrix<short> GPUSparseMatrix<short>::CopyToDenseMatrix() const;
 template void GPUSparseMatrix<short>::CopyToDenseMatrix(GPUMatrix<short>&) const;
 template void GPUSparseMatrix<short>::CopyToCPUSparseMatrix(CPUSparseMatrix<short>&) const;
 template void GPUSparseMatrix<short>::ChangeDeviceTo(int);
-template void GPUSparseMatrix<short>::Resize(const size_t, const size_t, const size_t, const bool);
-template void GPUSparseMatrix<short>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);
+template void GPUSparseMatrix<short>::Resize(const size_t, const size_t, const size_t, const bool, DataTransferer*);
+template void GPUSparseMatrix<short>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool, DataTransferer*);
 template void GPUSparseMatrix<short>::Reset();
 template GPUSPARSE_INDEX_TYPE GPUSparseMatrix<short>::SecondaryIndexValueAt(size_t) const;
 template GPUSparseMatrix<short>::~GPUSparseMatrix();
@@ -3116,7 +3118,7 @@ template void GPUSparseMatrix<short>::ColumnwiseScaleAndWeightedAdd(short, const
 
 template GPUSparseMatrix<int>::GPUSparseMatrix(DEVICEID_TYPE, const MatrixFormat);
 template GPUSparseMatrix<int>::~GPUSparseMatrix();
-template void GPUSparseMatrix<int>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);
+template void GPUSparseMatrix<int>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool, DataTransferer*);
 
 template <class ElemType>
 MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
