@@ -144,35 +144,35 @@ void GPUSparseMatrix<ElemType>::ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<E
 //-------------------------------------------------------------------------
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::ClearNzCount()
+void GPUSparseMatrix<ElemType>::ClearNzCount(DataTransferer*)
 {
 }
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
+void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues, DataTransferer*)
 {
 }
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues)
+void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues, DataTransferer*)
 {
 }
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues)
+void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues, DataTransferer*)
 {
 }
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat format, const bool growOnly)
+void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat format, const bool growOnly, DataTransferer*)
 {
 }
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const bool growOnly)
+void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const bool growOnly, DataTransferer*)
 {
 }
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly)
+void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, DataTransferer*)
 {
 }
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly)
+void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, DataTransferer*)
 {
 }
 
@@ -2291,6 +2291,8 @@ void GPUMatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent<do
 #pragma region GPUDataTransferer functions
 
 GranularGPUDataTransferer::~GranularGPUDataTransferer() {}
+
+void GranularGPUDataTransferer::ZeroMemoryAsync(void* /*gpuBuffer*/, size_t /*bytes*/) {}
 
 void GranularGPUDataTransferer::CopyGPUToCPUAsync(const void* /*gpuBuffer*/, size_t /*numElements*/, size_t /*elementSize*/, void* /*cpuBuffer*/) {}
 
