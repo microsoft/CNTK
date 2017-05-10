@@ -99,6 +99,7 @@ class Memoize
         public:
             FunctionListIterator(Function* f) : iter(f) { }
             Function* operator->() const { return iter; }
+            Function& operator*() const { return *iter; } // TODO: This is weird, figure this out
             Function* operator++() { iter = iter->m_link; return iter; }
             bool operator!=(const FunctionListIterator& other) { return iter != other.iter; }
         };
@@ -111,7 +112,7 @@ class Memoize
     public:
         NonOwningFunctionListBuilder() : NonOwningFunctionList() { }
         NonOwningFunctionListBuilder(Function* f) : NonOwningFunctionList(f), tail(f) { f->m_link = nullptr; }
-        void append(Function* f)
+        void push_back(Function* f)
         {
             if (!head)
                 head = f;
@@ -177,9 +178,9 @@ class Memoize
             let op = f->Op();
             // we manage three ready sets, since two common kinds are very simple
             if (op == PrimitiveOpType::BarrierOp)
-                m_barrierOps.append(f);
+                m_barrierOps.push_back(f);
             else if (IsViewOp(op))
-                m_viewOps.append(f);
+                m_viewOps.push_back(f);
             else
             {
                 // this naive implementation just scans linearly
@@ -188,7 +189,7 @@ class Memoize
                 {
                     if (AreBatchable(f, iter->front()))
                     {
-                        iter->append(f);
+                        iter->push_back(f);
                         return;
                     }
                 }
@@ -543,7 +544,7 @@ class Memoize
     // This function assumes:
     //  - m_pendingInputs != -2
     //    BUGBUG: This is a bad one; what if users get a gradient and then continue to build on top?
-    void TraverseFunctionTreeBackward(const Variable& var, Function*& head)
+    void TraverseFunctionTreeBackward(const Variable& var, NonOwningFunctionListBuilder& head)
     {
         let& fields = *var.m_dataFields;
         // if already has a gradient (from an earlier call), then skip this branch of the tree
@@ -557,7 +558,7 @@ class Memoize
             TraverseFunctionTreeBackward(f, head);
     }
     // seond half of this fnction
-    void TraverseFunctionTreeBackward(Function* f, Function*& head)
+    void TraverseFunctionTreeBackward(Function* f, NonOwningFunctionListBuilder& head)
     {
         // if we have already visited this Function then done
         if (f->m_pendingInputs == -2)
@@ -575,11 +576,7 @@ class Memoize
         // enqueue ourselves
         // Add to the end of the queue *after* we recurse (we do "height" first traversal).
         // Needed because this is called multiple times for multiple roots, and those have to go to the end.
-        if (!head)
-            head = f;
-        else
-            head->m_link = f;
-        f->m_link = nullptr;
+        head.push_back(f);
     }
 
     // back-propagate all outputs' m_gradients to all inputs
@@ -631,12 +628,12 @@ public:
         GetValue(root);
         // traverse the graph from the bottom (the variables to get the gradients for)
         // to form an ordered list of nodes to process
-        Function* head = nullptr;
+        NonOwningFunctionListBuilder order;
         for (auto& var : variables)
             if (!var.m_dataFields->m_needsGradient)
                 logic_error("Backward: cannot compute gradient for variable with m_needsGradient being False.");
             else
-                TraverseFunctionTreeBackward(var, head);
+                TraverseFunctionTreeBackward(var, order);
         // implant the first gradient if not present yet
         if (!root.m_dataFields->m_gradient)
         {
@@ -649,10 +646,9 @@ public:
         // perform backprop
         // This traverses the tree top-down, where each node pulls gradient(s) from its consumer(s).
         // This way we can optimize operations, such as a matrix product or gradient of GatherBatch().
-        size_t numBackwardedFunctions = 0;
-        for (auto* f = head; f; f = f->m_link, numBackwardedFunctions++)
-            Backward(f);
-        fprintf(stderr, "%d functions back-propagated through\n", (int)numBackwardedFunctions);
+        fprintf(stderr, "Back-propagating through %d functions\n", (int)order.size());
+        for (auto f = order.begin(); f != order.end(); ++f)
+            Backward(&*f);
     }
 }; // class
 } // namespace
