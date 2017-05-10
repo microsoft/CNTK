@@ -159,6 +159,9 @@ def mem_leak_check(nonlinearity, num_hidden_layers, device_id,
     # Long-term this test needs to be run in a separate process over a longer
     # period of time.
     MEM_INCREASE_FRACTION_TOLERANCE = 0.01
+    # Set a maximum allowed memory increase. This is required because the
+    # pytest process involves some memory fluctuations.
+    MEM_INCREASE_TOLERANCE = 100*1024
 
     dev = cntk_device(device_id)
     i = 0
@@ -174,15 +177,16 @@ def mem_leak_check(nonlinearity, num_hidden_layers, device_id,
     mem_deltas = np.diff(mem)
     iterations_with_mem_increase = (mem_deltas > 0).sum()
     mem_inc_fraction = iterations_with_mem_increase/num_minibatches_to_train
-    rough_mem_diff = mem[-1] - mem[10]
+    mem_diff = mem[-1] - mem[10]
 
-    if mem_inc_fraction > MEM_INCREASE_FRACTION_TOLERANCE and rough_mem_diff > 0:
+    if mem_inc_fraction > MEM_INCREASE_FRACTION_TOLERANCE and \
+            mem_diff > MEM_INCREASE_TOLERANCE:
         # For the rough leak estimation we take the memory footprint after the
         # dust of the first train_minibatch runs has settled.
         mem_changes = mem_deltas[mem_deltas != 0]
         raise ValueError('Potential memory leak of ~ %i KB (%i%% of MBs '
                          'increased memory usage) detected with %s:\n%s' %
-                         (int(rough_mem_diff/1024), int(mem_inc_fraction*100), 
+                         (int(mem_diff/1024), int(mem_inc_fraction*100), 
                              nonlinearity, mem_changes))
 
 
