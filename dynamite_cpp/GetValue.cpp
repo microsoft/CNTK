@@ -196,6 +196,16 @@ class Memoize
                 m_regularOps.push_back(NonOwningFunctionListBuilder(f));
             }
         }
+        // notify a function that an input has become available; schedule it when all inputs are now available
+        void NotifyInputAvailable(Function* f)
+        {
+            if (f->m_pendingInputs <= 0)
+                throw logic_error("NotifyInputAvailable: pending inputs already 0 yet we are executing it");
+            f->m_pendingInputs--;
+            // if it is now ready then schedule it
+            if (f->m_pendingInputs == 0)
+                Schedule(f);
+        }
         // test if no more ready ops
         bool empty() const { return m_viewOps.empty() && m_regularOps.empty() && m_barrierOps.empty(); }
         size_t size() const { return (m_viewOps.size() > 0) +  + (m_barrierOps.size() > 0); }
@@ -234,7 +244,7 @@ class Memoize
     //  - it only runs once
     //  - m_value must not have been set (don't call this function if it has)
     //  - m_pendingInputs has been initialized to -1 by the constructor
-    // This function also sets up the m_consumers fields. When it returns, they are all complete.
+    // This function also sets up the m_consumers fields. When it returns, they are all correctly set up.
     void TraverseFunctionTreeForward(const Variable& var)
     {
         let& fields = *var.m_dataFields;
@@ -254,28 +264,23 @@ class Memoize
             throw logic_error("TraverseFunctionTreeForward() should not have been called on variables that already have a gradient.");
         if (f.m_pendingInputs != -1) // already visited
             return;
-        // determine how many inputs are pending
-        // and also recurse
-        // and also set up the consumer list
+        // determine how many inputs are pending; and also recurse and set up the consumer list
         size_t pendingInputs = 0;
         for (let& v : f.m_inputs)
         {
             auto& fields = *v.m_dataFields;
+            // record ourselves as a consumer of the input--this is used for batching and for Backward()
+            // TODO: Think this through for Combine(), where m_input==m_outputs.
+            if (!fields.m_consumers.first) // optimized for main case of 1 consumer. No std::vector in that case.
+                fields.m_consumers.first = &f;
+            else
+                fields.m_consumers.second.push_back(&f);
             // recursively traverse
             if (!fields.m_value)
             {
                 TraverseFunctionTreeForward(v);
                 if (!fields.m_value) // (in case of a Parameter, we now may have a value)
-                {
-                    // record ourselves as a consumer of the input--this is used for batching and for Backward()
-                    // TODO: Think this through for Combine(), where m_input==m_outputs.
-                    if (!fields.m_consumers.first) // optimized for main case of 1 consumer. No std::vector in that case.
-                        fields.m_consumers.first = &f;
-                    else
-                        fields.m_consumers.second.push_back(&f);
-                    // 
                     pendingInputs++;
-                }
             }
         }
         f.m_pendingInputs = (int)pendingInputs;
@@ -290,7 +295,7 @@ class Memoize
 
     NDArrayViewPtr Alloc(const NDShape& shape, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
     {
-        static NDArrayViewPtr m_currentArena;
+        static NDArrayViewPtr m_currentArena; // for now static so that it carries over across invocations, to save the allocation
         static size_t m_currentArenaUsed;
         let numElements = shape.TotalSize();
         // if too large then plain alloc
@@ -367,7 +372,7 @@ class Memoize
                 //m_inputs.resize(op->m_inputs.size());
                 m_args.resize(op->m_inputs.size());
                 for (size_t i = 0; i < op->m_inputs.size(); i++)
-                    m_args[i] = LazilyIndexedValue(op->m_inputs[i]);
+                    m_args[i] = LazilyIndexedValue(op->m_inputs[i]); // (if this is a lazy slice, then now we must resolve it)
                 NDArrayViewPtr out = isFree ? nullptr : Alloc(op->m_outputs[0].Shape(), m_args[0]->GetDataType(), m_args[0]->Device()); // arena allocation will happen here
                 op->m_outputs[0].m_dataFields->m_value =
                     op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
@@ -459,7 +464,7 @@ class Memoize
                     let& fromDims = from->Shape().Dimensions();
                     if (begin == 0 && j == fromDims.back()) // full range: just take it
                         m_args[i] = from;
-                    else // sub-range: take a slice veiw
+                    else // sub-range: take a slice view
                     {
                         vector<size_t> extent = fromDims;
                         vector<size_t> startOffset(extent.size(), 0);
@@ -523,28 +528,13 @@ class Memoize
         {
             for (let& output : op->m_outputs)
             {
-                // notify first consumer (this is a special optimization)
+                // notify consumers
                 let& fields = *op->m_outputs[0].m_dataFields;
-                auto* f = fields.m_consumers.first;
+                auto* f = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
                 if (f)
-                {
-                    if (f->m_pendingInputs <= 0)
-                        throw logic_error("pending inputs already 0 yet we are executing it");
-                    f->m_pendingInputs--;
-                    // if it is now ready then schedule it
-                    if (f->m_pendingInputs == 0)
-                        m_schedule.Schedule(f);
-                }
-                // notify all other consumers (this is a special optimization)
-                for (auto* f : fields.m_consumers.second)
-                {
-                    if (f->m_pendingInputs <= 0)
-                        throw logic_error("pending inputs already 0 yet we are executing it");
-                    f->m_pendingInputs--;
-                    // if it is now ready then schedule it
-                    if (f->m_pendingInputs == 0)
-                        m_schedule.Schedule(f);
-                }
+                    m_schedule.NotifyInputAvailable(f);
+                for (auto* f : fields.m_consumers.second) // all other consumers
+                    m_schedule.NotifyInputAvailable(f);
             }
         }
     }
@@ -553,40 +543,58 @@ class Memoize
     // This function assumes:
     //  - m_pendingInputs != -2
     //    BUGBUG: This is a bad one; what if users get a gradient and then continue to build on top?
-    Function* TraverseFunctionTreeBackward(const Variable& var, Function* head)
+    void TraverseFunctionTreeBackward(const Variable& var, Function*& head)
     {
         let& fields = *var.m_dataFields;
         // if already has a gradient (from an earlier call), then skip this branch of the tree
         if (fields.m_gradient)
-            return head; // will not be recorded in the nodes list
-        auto& f = *fields.m_ownerFunction.lock();
-        // if we have already visited this node then done
-        if (f.m_pendingInputs == -2)
-            return head;
+            return; // will not be recorded in the nodes list
+        // traverse all consumers
+        auto* f = fields.m_consumers.first;
+        if (f)
+            TraverseFunctionTreeBackward(f, head);
+        for (auto* f : fields.m_consumers.second)
+            TraverseFunctionTreeBackward(f, head);
+    }
+    // seond half of this fnction
+    void TraverseFunctionTreeBackward(Function* f, Function*& head)
+    {
+        // if we have already visited this Function then done
+        if (f->m_pendingInputs == -2)
+            return;
         // mark as visited
         // Note: If users call Backward() multiple times (e.g. for different variables),
         // and this branch of the graph has already been processed then, then we will have
         // a -2 here but also a gradient, therefore we will not reach this test here.
-        f.m_pendingInputs = -2;
-        // enqueue consumers
+        f->m_pendingInputs = -2;
+        // and recursively traverse the inputs
+        // TODO: handle StopGradient here, e.g. return a flag whether we visitied a StopGradient op.
+        for (let& output : f->m_outputs)
+            TraverseFunctionTreeBackward(output, head);
+        // TODO: if no input actually wanted a gradient computed, then we don't need to compute ours either
+        // enqueue ourselves
+        // Add to the end of the queue *after* we recurse (we do "height" first traversal).
+        // Needed because this is called multiple times for multiple roots, and those have to go to the end.
+        if (!head)
+            head = f;
+        else
+            head->m_link = f;
+        f->m_link = nullptr;
+    }
+
+    // back-propagate all outputs' m_gradients to all inputs
+    // TODO: not all inputs want gradients. How to control this? Needs the same flag as the StopGradient question. Can we use m_needsGradient?
+    void Backward(Function* f)
+    {
+        for (auto& output : f->m_outputs)
         {
-            // and recursively traverse the inputs
-            //for (let& fc : f.m_consumers.second)
-            //    head = TraverseFunctionTreeBackward(v, head);
-
-
-            // this is not working. Parameters' ownerFunction is not what I need here.
-
-
-            // if no input actually wanted a gradient computed, then we don't need to compute ours either
-            //throw logic_error("TraverseFunctionTreeForward() must not be called on variables that already have a value.");
-            //if (head == headStart)
-            //    return headStart;
-            // enqueue ourselves
-            f.m_link = head;
-            head = &f;
+            auto& fields = *output.m_dataFields;
+            if (!fields.m_gradient)
+                throw logic_error("Backward: gradient from consumer unexpectedly unavailable");
+            // for now just allocate the gradient, so that we can test the propagation
+            fields.m_gradient = Alloc(output.Shape(), output.GetDataType(), output.Value()->Device());
+            fields.m_gradient->SetValue(0.0f);
         }
-        return head;
     }
 
 public:
@@ -618,26 +626,33 @@ public:
     // (which we won't be able to verify at present--we could remember the gradient root in the Variable).
     void Backward(const CNTK::Variable& root, const std::vector<CNTK::Variable>& variables)
     {
+        // first get the forward computation, batching, etc. done if not yet
+        // This will also set up the m_consumers chains, which we rely on.
+        GetValue(root);
         // traverse the graph from the bottom (the variables to get the gradients for)
         // to form an ordered list of nodes to process
+        Function* head = nullptr;
         for (auto& var : variables)
             if (!var.m_dataFields->m_needsGradient)
                 logic_error("Backward: cannot compute gradient for variable with m_needsGradient being False.");
             else
-                Function* head = TraverseFunctionTreeBackward(var, /*head=*/nullptr);
-        // first get the forward computation, batching, etc. done if not yet
-        GetValue(root);
+                TraverseFunctionTreeBackward(var, head);
         // implant the first gradient if not present yet
         if (!root.m_dataFields->m_gradient)
         {
-            if (root.Value()->Shape() != NDShape{})
-                throw logic_error("Backward: root must be a scalar, or root gradient must have been implamnted already");
-            root.m_dataFields->m_gradient = Alloc(NDShape{}, root.Value()->GetDataType(), root.Value()->Device());
+            // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
+            //if (root.Value()->Shape() != NDShape{})
+            //    throw logic_error("Backward: root must be a scalar, or root gradient must have been implanted already");
+            root.m_dataFields->m_gradient = Alloc(root.Shape(), root.GetDataType(), root.Value()->Device());
             root.m_dataFields->m_gradient->SetValue(1.0f);
         }
         // perform backprop
         // This traverses the tree top-down, where each node pulls gradient(s) from its consumer(s).
         // This way we can optimize operations, such as a matrix product or gradient of GatherBatch().
+        size_t numBackwardedFunctions = 0;
+        for (auto* f = head; f; f = f->m_link, numBackwardedFunctions++)
+            Backward(f);
+        fprintf(stderr, "%d functions back-propagated through\n", (int)numBackwardedFunctions);
     }
 }; // class
 } // namespace

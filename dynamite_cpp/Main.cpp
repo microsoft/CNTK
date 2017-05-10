@@ -54,12 +54,22 @@ struct ModelParameters
             LogicError("no such captured model: %ls", name.c_str());
         return *iter->second;
     }
+    // recursively traverse and collect all Parameters
+    const vector<Parameter>& AppendParametersTo(vector<Parameter>& res) const
+    {
+        for (let& kv : m_parameters)
+            res.push_back(kv.second);
+        for (let& kv : m_parentParameters)
+            kv.second->AppendParametersTo(res);
+        return res;
+    }
 };
 typedef shared_ptr<ModelParameters> ModelParametersPtr;
 
 template<class Base>
 class TModel : public Base, public ModelParametersPtr
 {
+    const ModelParameters& ParameterSet() const { return **this; }
 public:
     TModel(const Base& f) : Base(f){}
     // need to think a bit how to store nested NnaryModels
@@ -71,9 +81,14 @@ public:
         : Base(f), ModelParametersPtr(make_shared<ModelParameters>(parameters, nested))
     {
     }
-    const Parameter& operator[](const wstring& name) { return Parameters()[name]; }
-    const ModelParameters& Nested(const wstring& name) { return Parameters().Nested(name); }
-    const ModelParameters& Parameters() const { return **this; }
+    const Parameter& operator[](const wstring& name) { return ParameterSet()[name]; }
+    const ModelParameters& Nested(const wstring& name) { return ParameterSet().Nested(name); }
+    vector<Parameter> Parameters() const
+    {
+        vector<Parameter> res;
+        ParameterSet().AppendParametersTo(res);
+        return res;
+    }
 };
 typedef TModel<function<Variable(const Variable&)>> UnaryModel;
 typedef TModel<function<Variable(const Variable&, const Variable&)>> BinaryModel;
@@ -715,6 +730,8 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             //mbLoss.Value()->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
         }
+        let d_parameters = d_model_fn.Parameters();
+        Backward(mbLoss, vector<Variable>(d_parameters.begin(), d_parameters.end()));
         double loss1;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "dynamite eval:  %.6f sec\n");
