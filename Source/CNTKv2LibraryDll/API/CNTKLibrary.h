@@ -1804,7 +1804,7 @@ namespace CNTK
         CNTK_API size_t CurrentValueTimeStamp() const;
 
     protected:
-#ifdef SWIG
+#ifdef SWIGPYTHON
     public:
 #endif
         Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name, const std::wstring& uid)
@@ -1816,7 +1816,7 @@ namespace CNTK
         CNTK_API void SetValue(const NDArrayViewPtr& value);
 
     private:
-#ifdef SWIG
+#ifdef SWIGPYTHON
     public:
 #endif
         Variable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes, const std::wstring& uid)
@@ -3453,7 +3453,7 @@ namespace CNTK
         std::wstring m_uid;
         Dictionary m_attributes;
 
-#ifdef SWIG
+#ifdef SWIGPYTHON
     public:
         void SetNative(bool native) { m_native = native; }
 #endif
@@ -4266,7 +4266,7 @@ namespace CNTK
             : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, U, epochSize)
         { }
 
-#ifdef SWIG // for Python interop (adds indexer)
+#ifdef SWIGPYTHON // for Python interop (adds indexer)
         const T __getitem__(size_t count) const
         {
             return TrainingParameterSchedule<T>::operator[](count);
@@ -4325,7 +4325,7 @@ namespace CNTK
             ConvertToPerSampleValues();
         }
 
-#ifdef SWIG // for Python interop (adds indexer)
+#ifdef SWIGPYTHON // for Python interop (adds indexer)
         const double __getitem__(size_t count) const
         {
             return operator[](count);
