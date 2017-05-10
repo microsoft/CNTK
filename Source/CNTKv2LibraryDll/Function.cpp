@@ -972,7 +972,7 @@ namespace CNTK
         else
         {
             first = true;
-            for (auto out : Outputs())
+            for (auto out : Outputs()) // TODO: RawOutputs() sufficient?
                 wss << (first ? (first = false, "") : ", ") << out.AsString();
         }
         return wss.str();

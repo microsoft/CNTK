@@ -248,7 +248,7 @@ namespace CNTK
                 return false;
             }
 
-            auto outputs1 = f1->Outputs();
+            auto outputs1 = f1->Outputs(); // TODO: RawOutputs() sufficient?
             auto outputs2 = f2->Outputs();
 
             if (outputs1.size() != outputs2.size())

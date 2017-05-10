@@ -257,7 +257,7 @@ namespace CNTK
             {
                 // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.
                 auto owner = Owner();
-                auto outputs = owner->Outputs(); // TODO: RawOutputs() is sufficient here
+                auto outputs = owner->Outputs(); // TODO: RawOutputs() is sufficient here, but unfortunately not accessible
                 size_t i;
                 for (i = 0; i < outputs.size(); i++)
                     if (outputs[i].m_dataFields.get() == this)

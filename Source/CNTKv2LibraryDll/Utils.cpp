@@ -473,7 +473,7 @@ namespace CNTK
             return false;
 
         auto owner = var.Owner();
-        return (var == owner->Outputs()[0]) && (owner->Outputs().size() > 1);
+        return (var == owner->Outputs()[0]) && (owner->Outputs().size() > 1); // TODO: is RawOutput() sufficient?
     }
 
     std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName)
