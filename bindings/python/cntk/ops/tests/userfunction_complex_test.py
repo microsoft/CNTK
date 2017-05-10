@@ -71,8 +71,8 @@ def print_training_progress(trainer, mb, frequency):
     return mb, training_loss, eval_error
 
 
-def train(nonlinearity, num_hidden_layers, device_id, 
-          minibatch_size=10, num_samples=100000):
+def train(nonlinearity, num_hidden_layers, device_id,
+          minibatch_size=10, num_samples=1000):
     from cntk.cntk_py import always_allow_setting_default_device
     always_allow_setting_default_device()
     try_set_default_device(cntk_device(device_id))
@@ -99,9 +99,54 @@ def train(nonlinearity, num_hidden_layers, device_id,
 
     training_progress_output_freq = 20
 
-    # Preallocate so that we don't measure the memory incrase
-    losses = np.zeros(num_minibatches_to_train)
-    errors = np.zeros(num_minibatches_to_train)
+    losses = []
+    errors = []
+
+    for i in range(num_minibatches_to_train):
+        features, labels = generate_random_data_sample(minibatch_size,
+                                                       input_dim,
+                                                       num_output_classes)
+
+        # Specify the input variables mapping in the model to actual minibatch
+        # data for training.
+        trainer.train_minibatch({inp: features, label: labels},
+                                device=cntk_device(device_id))
+
+        batchsize, loss, error = print_training_progress(trainer, i,
+                                                         training_progress_output_freq)
+
+        if not (loss == "NA" or error == "NA"):
+            losses.append(loss)
+            errors.append(error)
+
+    return losses, errors
+
+
+def mem_leak_check(nonlinearity, num_hidden_layers, device_id,
+                   minibatch_size=1, num_samples=10000):
+    from cntk.cntk_py import always_allow_setting_default_device
+    always_allow_setting_default_device()
+    try_set_default_device(cntk_device(device_id))
+    np.random.seed(0)
+
+    learning_rate = 0.5
+    lr_schedule = learning_rate_schedule(learning_rate, UnitType.minibatch)
+
+    hidden_layers_dim = 50
+
+    inp = input((input_dim), np.float32)
+    label = input((num_output_classes), np.float32)
+
+    z = fully_connected_classifier_net(inp, num_output_classes, hidden_layers_dim,
+                                       num_hidden_layers, nonlinearity)
+
+    loss = cross_entropy_with_softmax(z, label)
+    eval_error = classification_error(z, label)
+
+    learner = sgd(z.parameters, lr_schedule)
+    trainer = Trainer(z, (loss, eval_error), [learner])
+
+    num_minibatches_to_train = int(num_samples / minibatch_size)
 
     mem = np.zeros(num_minibatches_to_train)
 
@@ -109,9 +154,11 @@ def train(nonlinearity, num_hidden_layers, device_id,
                                                    input_dim,
                                                    num_output_classes)
 
-    # Set a maximum number of training runs, in which the memory is allowed to
+    # Set a maximum fraction of iterations, in which the memory is allowed to
     # increase. Most likely these will be the first training runs.
-    MEM_INCREASE_COUNT_TOLERANCE = 40
+    # Long-term this test needs to be run in a separate process over a longer
+    # period of time.
+    MEM_INCREASE_FRACTION_TOLERANCE = 0.01
 
     dev = cntk_device(device_id)
     i = 0
@@ -122,28 +169,21 @@ def train(nonlinearity, num_hidden_layers, device_id,
         # data for training.
         trainer.train_minibatch({inp: features, label: labels},
                                 device=dev)
-
-        batchsize, loss, error = print_training_progress(trainer, i,
-                                                         training_progress_output_freq)
-
-        if loss == "NA" or error == "NA":
-            loss = error = np.nan
-
-        losses[i] = loss
-        errors[i] = error
-
         i += 1
 
     mem_deltas = np.diff(mem)
-    
-    if (mem_deltas > 0).sum() > MEM_INCREASE_COUNT_TOLERANCE:
-        raise ValueError('Potential Memory leak detected with %s: %s' %
-                         (nonlinearity, mem_deltas[mem_deltas != 0]))
+    iterations_with_mem_increase = (mem_deltas > 0).sum()
+    mem_inc_fraction = iterations_with_mem_increase/num_minibatches_to_train
+    rough_mem_diff = mem[-1] - mem[10]
 
-    losses = losses[~np.isnan(losses)]
-    errors = errors[~np.isnan(errors)]
-
-    return losses, errors
+    if mem_inc_fraction > MEM_INCREASE_FRACTION_TOLERANCE and rough_mem_diff > 0:
+        # For the rough leak estimation we take the memory footprint after the
+        # dust of the first train_minibatch runs has settled.
+        mem_changes = mem_deltas[mem_deltas != 0]
+        raise ValueError('Potential memory leak of ~ %i KB (%i%% of MBs '
+                         'increased memory usage) detected with %s:\n%s' %
+                         (int(rough_mem_diff/1024), int(mem_inc_fraction*100), 
+                             nonlinearity, mem_changes))
 
 
 class MySigmoid(UserFunction):
@@ -166,12 +206,15 @@ class MySigmoid(UserFunction):
 
 
 def test_ext_user_sigmoid(device_id):
-    np.random.seed(0)
-    act_losses, act_errors = train(MySigmoid, 4, device_id)
-    np.random.seed(0)
     exp_losses, exp_errors = train(sigmoid, 4, device_id)
+    act_losses, act_errors = train(MySigmoid, 4, device_id)
     assert np.allclose(exp_losses, act_losses)
     assert np.allclose(exp_errors, act_errors)
+
+
+def test_mem_leak(device_id):
+    mem_leak_check(sigmoid, 4, device_id)
+    mem_leak_check(MySigmoid, 4, device_id)
 
 
 def measure_runtime(device_id):
