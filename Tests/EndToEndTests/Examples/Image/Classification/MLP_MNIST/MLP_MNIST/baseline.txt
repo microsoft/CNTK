@@ -1,0 +1,400 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU X5680 @ 3.33GHz
+    Hardware threads: 12
+    Total Memory: 33537232 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/d/GitHub/CNTK/x64/release/cntk.exe configFile=D:\GitHub\CNTK\Examples\Image\Classification\MLP\BrainScript/MLP_MNIST.cntk currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\MNIST RunDir=C:\cygwin64\tmp\cntk-test-20170508135957.222853\Examples\Image\Classification\MLP_MNIST_MLP_MNIST@release_gpu DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\MNIST ConfigDir=D:\GitHub\CNTK\Examples\Image\Classification\MLP\BrainScript OutputDir=C:\cygwin64\tmp\cntk-test-20170508135957.222853\Examples\Image\Classification\MLP_MNIST_MLP_MNIST@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true stderr=- trainNetwork=[SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=16]]
+CNTK 2.0rc2+ (HEAD fbb53d, May  8 2017 10:15:58) on CHAZHANG at 2017/05/08 21:59:59
+
+D:\GitHub\CNTK\x64\release\cntk.exe  configFile=D:\GitHub\CNTK\Examples\Image\Classification\MLP\BrainScript/MLP_MNIST.cntk  currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\MNIST  RunDir=C:\cygwin64\tmp\cntk-test-20170508135957.222853\Examples\Image\Classification\MLP_MNIST_MLP_MNIST@release_gpu  DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\MNIST  ConfigDir=D:\GitHub\CNTK\Examples\Image\Classification\MLP\BrainScript  OutputDir=C:\cygwin64\tmp\cntk-test-20170508135957.222853\Examples\Image\Classification\MLP_MNIST_MLP_MNIST@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  stderr=-  trainNetwork=[SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=16]]
+Changed current directory to D:\GitHub\CNTK\Examples\Image\DataSets\MNIST
+05/08/2017 21:59:59: Redirecting stderr to file -_trainNetwork_testNetwork.log
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: May  8 2017 10:09:53
+		Last modified date: Mon May  8 09:12:53 2017
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: yes
+		With ASGD: yes
+		Math lib: mkl
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+		CUB_PATH: C:\src\cub-1.4.1
+		CUDNN_PATH: C:\local\cudnn-8.0-v5.1\cuda
+		Build Branch: master
+		Build SHA1: 190dc1b3042d62c20aeba5bd336bbeaa8a6466ca
+		Built by chazhang on CHAZHANG
+		Build Path: D:\GitHub\CNTK\Source\CNTKv2LibraryDll\
+		MPI distribution: Microsoft MPI
+		MPI version: 7.0.12437.6
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+GPU info:
+
+		Device[0]: cores = 2688; computeCapability = 3.5; type = "GeForce GTX TITAN"; total memory = 6144 MB; free memory = 5649 MB
+-------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: MLP_MNIST.cntk:command=trainNetwork:testNetwork
+configparameters: MLP_MNIST.cntk:ConfigDir=D:\GitHub\CNTK\Examples\Image\Classification\MLP\BrainScript
+configparameters: MLP_MNIST.cntk:currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\MNIST
+configparameters: MLP_MNIST.cntk:dataDir=D:\GitHub\CNTK\Examples\Image\DataSets\MNIST
+configparameters: MLP_MNIST.cntk:deviceId=0
+configparameters: MLP_MNIST.cntk:forceDeterministicAlgorithms=true
+configparameters: MLP_MNIST.cntk:modelPath=C:\cygwin64\tmp\cntk-test-20170508135957.222853\Examples\Image\Classification\MLP_MNIST_MLP_MNIST@release_gpu/Models/MLP_MNIST
+configparameters: MLP_MNIST.cntk:outputDir=C:\cygwin64\tmp\cntk-test-20170508135957.222853\Examples\Image\Classification\MLP_MNIST_MLP_MNIST@release_gpu
+configparameters: MLP_MNIST.cntk:precision=float
+configparameters: MLP_MNIST.cntk:rootDir=../../..
+configparameters: MLP_MNIST.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20170508135957.222853\Examples\Image\Classification\MLP_MNIST_MLP_MNIST@release_gpu
+configparameters: MLP_MNIST.cntk:stderr=-
+configparameters: MLP_MNIST.cntk:testNetwork={
+    action = test
+minibatchSize = 1024    
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "D:\GitHub\CNTK\Examples\Image\DataSets\MNIST/Test-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}
+
+configparameters: MLP_MNIST.cntk:timestamping=true
+configparameters: MLP_MNIST.cntk:traceLevel=1
+configparameters: MLP_MNIST.cntk:trainNetwork={
+    action = "train"
+    BrainScriptNetworkBuilder = {
+imageShape = 28:28:1                        
+labelDim = 10                               
+        featScale = 1/256
+        Scale{f} = x => Constant(f) .* x
+        model = Sequential (
+            Scale {featScale} :
+            DenseLayer  {768, init="gaussian", initValueScale=1.5} : Dropout: ReLU : 
+            DenseLayer  {512, init="gaussian", initValueScale=1.5} : Dropout: ReLU : 
+            DenseLayer  {256, init="gaussian", initValueScale=1.5} : Dropout: ReLU :  
+            LinearLayer {labelDim}
+        )
+        features = Input {imageShape}
+        labels = Input {labelDim}
+        z = model (features)
+        ce   = CrossEntropyWithSoftmax (labels, z)
+        errs = ClassificationError (labels, z)
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    }
+    SGD = {
+        epochSize = 60000
+        minibatchSize = 64
+        maxEpochs = 40
+        learningRatesPerSample = 0.001*10:0.0005*10:0.0001
+		dropoutRate = 0.5
+        momentumAsTimeConstant = 600*10:4096
+        numMBsToShowResult = 500
+    }
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "D:\GitHub\CNTK\Examples\Image\DataSets\MNIST/Train-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }    
+} [SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=16]]
+
+05/08/2017 21:59:59: Commands: trainNetwork testNetwork
+05/08/2017 21:59:59: precision = "float"
+05/08/2017 21:59:59: WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.
+
+05/08/2017 21:59:59: ##############################################################################
+05/08/2017 21:59:59: #                                                                            #
+05/08/2017 21:59:59: # trainNetwork command (train action)                                        #
+05/08/2017 21:59:59: #                                                                            #
+05/08/2017 21:59:59: ##############################################################################
+
+05/08/2017 21:59:59: 
+Creating virgin network.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[10 x 0] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[256 x 0] as gaussian later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[512 x 0] as gaussian later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[768 x 0] as gaussian later when dimensions are fully known.
+
+Post-processing network...
+
+3 roots:
+	ce = CrossEntropyWithSoftmax()
+	errs = ClassificationError()
+	z = Plus()
+
+Validating network. 28 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> model.arrayOfFunctions[10].W = LearnableParameter() :  -> [10 x 0]
+Validating --> model.arrayOfFunctions[7].arrayOfFunctions[0].W = LearnableParameter() :  -> [256 x 0]
+Validating --> model.arrayOfFunctions[4].arrayOfFunctions[0].W = LearnableParameter() :  -> [512 x 0]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [768 x 0]
+Validating --> z.x._._.x._._.x._._.x.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *]
+Validating --> _z.x._._.x._._.x._._.x = ElementTimes (z.x._._.x._._.x._._.x.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [768 x 28 x 28 x 1].
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[768 x 28 x 28 x 1] <- gaussian(seed=4, init dims=[768 x 784], range=0.010714(0.007143*1.500000), onCPU=true.
+)Validating --> z.x._._.x._._.x._._.x.PlusArgs[0] = Times (model.arrayOfFunctions[1].arrayOfFunctions[0].W, _z.x._._.x._._.x._._.x) : [768 x 28 x 28 x 1], [28 x 28 x 1 x *] -> [768 x *]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].b = LearnableParameter() :  -> [768]
+Validating --> z.x._._.x._._.x._._.x = Plus (z.x._._.x._._.x._._.x.PlusArgs[0], model.arrayOfFunctions[1].arrayOfFunctions[0].b) : [768 x *], [768] -> [768 x *]
+Validating --> z.x._._.x._._.x._ = Dropout (z.x._._.x._._.x._._.x) : [768 x *] -> [768 x *]
+Validating --> _z.x._._.x._._.x = RectifiedLinear (z.x._._.x._._.x._) : [768 x *] -> [768 x *]
+Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [512 x 768].
+Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[512 x 768] <- gaussian(seed=3, init dims=[512 x 768], range=0.010825(0.007217*1.500000), onCPU=true.
+)Validating --> z.x._._.x._._.x.PlusArgs[0] = Times (model.arrayOfFunctions[4].arrayOfFunctions[0].W, _z.x._._.x._._.x) : [512 x 768], [768 x *] -> [512 x *]
+Validating --> model.arrayOfFunctions[4].arrayOfFunctions[0].b = LearnableParameter() :  -> [512]
+Validating --> z.x._._.x._._.x = Plus (z.x._._.x._._.x.PlusArgs[0], model.arrayOfFunctions[4].arrayOfFunctions[0].b) : [512 x *], [512] -> [512 x *]
+Validating --> z.x._._.x._ = Dropout (z.x._._.x._._.x) : [512 x *] -> [512 x *]
+Validating --> _z.x._._.x = RectifiedLinear (z.x._._.x._) : [512 x *] -> [512 x *]
+Node 'model.arrayOfFunctions[7].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [256 x 512].
+Node 'model.arrayOfFunctions[7].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[256 x 512] <- gaussian(seed=2, init dims=[256 x 512], range=0.013258(0.008839*1.500000), onCPU=true.
+)Validating --> z.x._._.x.PlusArgs[0] = Times (model.arrayOfFunctions[7].arrayOfFunctions[0].W, _z.x._._.x) : [256 x 512], [512 x *] -> [256 x *]
+Validating --> model.arrayOfFunctions[7].arrayOfFunctions[0].b = LearnableParameter() :  -> [256]
+Validating --> z.x._._.x = Plus (z.x._._.x.PlusArgs[0], model.arrayOfFunctions[7].arrayOfFunctions[0].b) : [256 x *], [256] -> [256 x *]
+Validating --> z.x._ = Dropout (z.x._._.x) : [256 x *] -> [256 x *]
+Validating --> z.x = RectifiedLinear (z.x._) : [256 x *] -> [256 x *]
+Node 'model.arrayOfFunctions[10].W' (LearnableParameter operation) operation: Tensor shape was inferred as [10 x 256].
+Node 'model.arrayOfFunctions[10].W' (LearnableParameter operation): Initializing Parameter[10 x 256] <- glorotUniform(seed=1, init dims=[10 x 256], range=0.150188(0.150188*1.000000), onCPU=true.
+)Validating --> z.PlusArgs[0] = Times (model.arrayOfFunctions[10].W, z.x) : [10 x 256], [256 x *] -> [10 x *]
+Validating --> model.arrayOfFunctions[10].b = LearnableParameter() :  -> [10]
+Validating --> z = Plus (z.PlusArgs[0], model.arrayOfFunctions[10].b) : [10 x *], [10] -> [10 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, z) : [10 x *], [10 x *] -> [1]
+Validating --> errs = ClassificationError (labels, z) : [10 x *], [10 x *] -> [1]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+
+Post-processing network complete.
+
+05/08/2017 22:00:00: 
+Model has 28 nodes. Using GPU 0.
+
+05/08/2017 22:00:00: Training criterion:   ce = CrossEntropyWithSoftmax
+05/08/2017 22:00:00: Evaluation criterion: errs = ClassificationError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 51 matrices, 32 are shared as 6, and 19 are not shared.
+
+Here are the ones that share memory:
+	{ _z.x._._.x : [512 x *]
+	  _z.x._._.x._._.x : [768 x *] (gradient)
+	  model.arrayOfFunctions[1].arrayOfFunctions[0].W : [768 x 28 x 28 x 1] (gradient)
+	  z.x._._.x._._.x : [512 x *]
+	  z.x._._.x._._.x._ : [768 x *]
+	  z.x._._.x._._.x._._.x.PlusArgs[0] : [768 x *] }
+	{ _z.x._._.x : [512 x *] (gradient)
+	  z.x : [256 x *]
+	  z.x._._.x : [256 x *]
+	  z.x._._.x._ : [512 x *]
+	  z.x._._.x._._.x : [512 x *] (gradient)
+	  z.x._._.x._._.x.PlusArgs[0] : [512 x *]
+	  z.x._._.x._._.x._ : [768 x *] (gradient)
+	  z.x._._.x._._.x._._.x : [768 x *]
+	  z.x._._.x._._.x._._.x.PlusArgs[0] : [768 x *] (gradient) }
+	{ _z.x._._.x._._.x : [768 x *]
+	  z.x._._.x._._.x._._.x : [768 x *] (gradient) }
+	{ model.arrayOfFunctions[4].arrayOfFunctions[0].W : [512 x 768] (gradient)
+	  z : [10 x *] (gradient)
+	  z.PlusArgs[0] : [10 x *]
+	  z.x._ : [256 x *] (gradient)
+	  z.x._._.x.PlusArgs[0] : [256 x *] (gradient) }
+	{ model.arrayOfFunctions[1].arrayOfFunctions[0].b : [768] (gradient)
+	  z : [10 x *]
+	  z.x : [256 x *] (gradient)
+	  z.x._ : [256 x *]
+	  z.x._._.x : [256 x *] (gradient)
+	  z.x._._.x.PlusArgs[0] : [256 x *]
+	  z.x._._.x._ : [512 x *] (gradient)
+	  z.x._._.x._._.x.PlusArgs[0] : [512 x *] (gradient) }
+	{ model.arrayOfFunctions[7].arrayOfFunctions[0].W : [256 x 512] (gradient)
+	  z.PlusArgs[0] : [10 x *] (gradient) }
+
+Here are the ones that don't share memory:
+	{labels : [10 x *]}
+	{model.arrayOfFunctions[10].b : [10]}
+	{model.arrayOfFunctions[10].W : [10 x 256]}
+	{model.arrayOfFunctions[7].arrayOfFunctions[0].b : [256]}
+	{model.arrayOfFunctions[7].arrayOfFunctions[0].W : [256 x 512]}
+	{errs : [1]}
+	{ce : [1]}
+	{model.arrayOfFunctions[7].arrayOfFunctions[0].b : [256] (gradient)}
+	{model.arrayOfFunctions[4].arrayOfFunctions[0].b : [512]}
+	{model.arrayOfFunctions[10].b : [10] (gradient)}
+	{model.arrayOfFunctions[4].arrayOfFunctions[0].W : [512 x 768]}
+	{model.arrayOfFunctions[10].W : [10 x 256] (gradient)}
+	{ce : [1] (gradient)}
+	{features : [28 x 28 x 1 x *]}
+	{_z.x._._.x._._.x._._.x : [28 x 28 x 1 x *]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].b : [768]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].W : [768 x 28 x 28 x 1]}
+	{z.x._._.x._._.x._._.x.ElementTimesArgs[0] : [1 x 1]}
+	{model.arrayOfFunctions[4].arrayOfFunctions[0].b : [512] (gradient)}
+
+
+05/08/2017 22:00:00: Training 1130506 parameters in 8 out of 8 parameter tensors and 23 nodes with gradient:
+
+05/08/2017 22:00:00: 	Node 'model.arrayOfFunctions[10].W' (LearnableParameter operation) : [10 x 256]
+05/08/2017 22:00:00: 	Node 'model.arrayOfFunctions[10].b' (LearnableParameter operation) : [10]
+05/08/2017 22:00:01: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [768 x 28 x 28 x 1]
+05/08/2017 22:00:01: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].b' (LearnableParameter operation) : [768]
+05/08/2017 22:00:01: 	Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].W' (LearnableParameter operation) : [512 x 768]
+05/08/2017 22:00:01: 	Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].b' (LearnableParameter operation) : [512]
+05/08/2017 22:00:01: 	Node 'model.arrayOfFunctions[7].arrayOfFunctions[0].W' (LearnableParameter operation) : [256 x 512]
+05/08/2017 22:00:01: 	Node 'model.arrayOfFunctions[7].arrayOfFunctions[0].b' (LearnableParameter operation) : [256]
+
+05/08/2017 22:00:01: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+Setting dropout rate to 0.5.
+
+05/08/2017 22:00:01: Starting Epoch 1: learning rate per sample = 0.001000  effective momentum = 0.898824  momentum as time constant = 600.0 samples
+
+05/08/2017 22:00:01: Starting minibatch loop.
+(GPU): creating curand object with seed 0
+(GPU): creating curand object with seed 1
+(GPU): creating curand object with seed 2
+05/08/2017 22:00:02:  Epoch[ 1 of 3]-Minibatch[   1-  16, 50.00%]: ce = 2.30184174 * 1024; errs = 88.184% * 1024; time = 1.6009s; samplesPerSecond = 639.6
+05/08/2017 22:00:02:  Epoch[ 1 of 3]-Minibatch[  17-  32, 100.00%]: ce = 2.30038643 * 1024; errs = 84.766% * 1024; time = 0.0417s; samplesPerSecond = 24572.3
+05/08/2017 22:00:02: Finished Epoch[ 1 of 3]: [Training] ce = 2.30111408 * 2048; errs = 86.475% * 2048; totalSamplesSeen = 2048; learningRatePerSample = 0.001; epochTime=1.65165s
+05/08/2017 22:00:02: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170508135957.222853\Examples\Image\Classification\MLP_MNIST_MLP_MNIST@release_gpu/Models/MLP_MNIST.1'
+
+05/08/2017 22:00:02: Starting Epoch 2: learning rate per sample = 0.001000  effective momentum = 0.898824  momentum as time constant = 600.0 samples
+
+05/08/2017 22:00:02: Starting minibatch loop.
+(GPU): creating curand object with seed 3
+(GPU): creating curand object with seed 4
+(GPU): creating curand object with seed 5
+05/08/2017 22:00:03:  Epoch[ 2 of 3]-Minibatch[   1-  16, 50.00%]: ce = 2.29803061 * 1024; errs = 83.887% * 1024; time = 0.1511s; samplesPerSecond = 6777.5
+05/08/2017 22:00:03:  Epoch[ 2 of 3]-Minibatch[  17-  32, 100.00%]: ce = 2.29530358 * 1024; errs = 80.371% * 1024; time = 0.0434s; samplesPerSecond = 23608.3
+05/08/2017 22:00:03: Finished Epoch[ 2 of 3]: [Training] ce = 2.29666710 * 2048; errs = 82.129% * 2048; totalSamplesSeen = 4096; learningRatePerSample = 0.001; epochTime=0.19624s
+05/08/2017 22:00:03: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170508135957.222853\Examples\Image\Classification\MLP_MNIST_MLP_MNIST@release_gpu/Models/MLP_MNIST.2'
+
+05/08/2017 22:00:03: Starting Epoch 3: learning rate per sample = 0.001000  effective momentum = 0.898824  momentum as time constant = 600.0 samples
+
+05/08/2017 22:00:03: Starting minibatch loop.
+(GPU): creating curand object with seed 6
+(GPU): creating curand object with seed 7
+(GPU): creating curand object with seed 8
+05/08/2017 22:00:03:  Epoch[ 3 of 3]-Minibatch[   1-  16, 50.00%]: ce = 2.28963256 * 1024; errs = 78.906% * 1024; time = 0.0720s; samplesPerSecond = 14216.2
+05/08/2017 22:00:03:  Epoch[ 3 of 3]-Minibatch[  17-  32, 100.00%]: ce = 2.28485131 * 1024; errs = 74.512% * 1024; time = 0.0358s; samplesPerSecond = 28569.9
+05/08/2017 22:00:03: Finished Epoch[ 3 of 3]: [Training] ce = 2.28724194 * 2048; errs = 76.709% * 2048; totalSamplesSeen = 6144; learningRatePerSample = 0.001; epochTime=0.110093s
+05/08/2017 22:00:03: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170508135957.222853\Examples\Image\Classification\MLP_MNIST_MLP_MNIST@release_gpu/Models/MLP_MNIST'
+
+05/08/2017 22:00:03: Action "train" complete.
+
+
+05/08/2017 22:00:03: ##############################################################################
+05/08/2017 22:00:03: #                                                                            #
+05/08/2017 22:00:03: # testNetwork command (test action)                                          #
+05/08/2017 22:00:03: #                                                                            #
+05/08/2017 22:00:03: ##############################################################################
+
+
+Post-processing network...
+
+3 roots:
+	ce = CrossEntropyWithSoftmax()
+	errs = ClassificationError()
+	z = Plus()
+
+Validating network. 28 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *1]
+Validating --> model.arrayOfFunctions[10].W = LearnableParameter() :  -> [10 x 256]
+Validating --> model.arrayOfFunctions[7].arrayOfFunctions[0].W = LearnableParameter() :  -> [256 x 512]
+Validating --> model.arrayOfFunctions[4].arrayOfFunctions[0].W = LearnableParameter() :  -> [512 x 768]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [768 x 28 x 28 x 1]
+Validating --> z.x._._.x._._.x._._.x.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *1]
+Validating --> _z.x._._.x._._.x._._.x = ElementTimes (z.x._._.x._._.x._._.x.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
+Validating --> z.x._._.x._._.x._._.x.PlusArgs[0] = Times (model.arrayOfFunctions[1].arrayOfFunctions[0].W, _z.x._._.x._._.x._._.x) : [768 x 28 x 28 x 1], [28 x 28 x 1 x *1] -> [768 x *1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].b = LearnableParameter() :  -> [768]
+Validating --> z.x._._.x._._.x._._.x = Plus (z.x._._.x._._.x._._.x.PlusArgs[0], model.arrayOfFunctions[1].arrayOfFunctions[0].b) : [768 x *1], [768] -> [768 x *1]
+Validating --> z.x._._.x._._.x._ = Dropout (z.x._._.x._._.x._._.x) : [768 x *1] -> [768 x *1]
+Validating --> _z.x._._.x._._.x = RectifiedLinear (z.x._._.x._._.x._) : [768 x *1] -> [768 x *1]
+Validating --> z.x._._.x._._.x.PlusArgs[0] = Times (model.arrayOfFunctions[4].arrayOfFunctions[0].W, _z.x._._.x._._.x) : [512 x 768], [768 x *1] -> [512 x *1]
+Validating --> model.arrayOfFunctions[4].arrayOfFunctions[0].b = LearnableParameter() :  -> [512]
+Validating --> z.x._._.x._._.x = Plus (z.x._._.x._._.x.PlusArgs[0], model.arrayOfFunctions[4].arrayOfFunctions[0].b) : [512 x *1], [512] -> [512 x *1]
+Validating --> z.x._._.x._ = Dropout (z.x._._.x._._.x) : [512 x *1] -> [512 x *1]
+Validating --> _z.x._._.x = RectifiedLinear (z.x._._.x._) : [512 x *1] -> [512 x *1]
+Validating --> z.x._._.x.PlusArgs[0] = Times (model.arrayOfFunctions[7].arrayOfFunctions[0].W, _z.x._._.x) : [256 x 512], [512 x *1] -> [256 x *1]
+Validating --> model.arrayOfFunctions[7].arrayOfFunctions[0].b = LearnableParameter() :  -> [256]
+Validating --> z.x._._.x = Plus (z.x._._.x.PlusArgs[0], model.arrayOfFunctions[7].arrayOfFunctions[0].b) : [256 x *1], [256] -> [256 x *1]
+Validating --> z.x._ = Dropout (z.x._._.x) : [256 x *1] -> [256 x *1]
+Validating --> z.x = RectifiedLinear (z.x._) : [256 x *1] -> [256 x *1]
+Validating --> z.PlusArgs[0] = Times (model.arrayOfFunctions[10].W, z.x) : [10 x 256], [256 x *1] -> [10 x *1]
+Validating --> model.arrayOfFunctions[10].b = LearnableParameter() :  -> [10]
+Validating --> z = Plus (z.PlusArgs[0], model.arrayOfFunctions[10].b) : [10 x *1], [10] -> [10 x *1]
+Validating --> ce = CrossEntropyWithSoftmax (labels, z) : [10 x *1], [10 x *1] -> [1]
+Validating --> errs = ClassificationError (labels, z) : [10 x *1], [10 x *1] -> [1]
+
+Validating network. 17 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+
+Post-processing network complete.
+
+evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 28 matrices, 15 are shared as 2, and 13 are not shared.
+
+Here are the ones that share memory:
+	{ _z.x._._.x : [512 x *1]
+	  _z.x._._.x._._.x : [768 x *1]
+	  _z.x._._.x._._.x._._.x : [28 x 28 x 1 x *1]
+	  z : [10 x *1]
+	  z.x : [256 x *1]
+	  z.x._._.x : [256 x *1]
+	  z.x._._.x._._.x : [512 x *1]
+	  z.x._._.x._._.x._._.x : [768 x *1] }
+	{ z.PlusArgs[0] : [10 x *1]
+	  z.x._ : [256 x *1]
+	  z.x._._.x.PlusArgs[0] : [256 x *1]
+	  z.x._._.x._ : [512 x *1]
+	  z.x._._.x._._.x.PlusArgs[0] : [512 x *1]
+	  z.x._._.x._._.x._ : [768 x *1]
+	  z.x._._.x._._.x._._.x.PlusArgs[0] : [768 x *1] }
+
+Here are the ones that don't share memory:
+	{ce : [1]}
+	{model.arrayOfFunctions[7].arrayOfFunctions[0].b : [256]}
+	{model.arrayOfFunctions[7].arrayOfFunctions[0].W : [256 x 512]}
+	{z.x._._.x._._.x._._.x.ElementTimesArgs[0] : [1 x 1]}
+	{errs : [1]}
+	{model.arrayOfFunctions[4].arrayOfFunctions[0].W : [512 x 768]}
+	{labels : [10 x *1]}
+	{features : [28 x 28 x 1 x *1]}
+	{model.arrayOfFunctions[10].W : [10 x 256]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].W : [768 x 28 x 28 x 1]}
+	{model.arrayOfFunctions[4].arrayOfFunctions[0].b : [512]}
+	{model.arrayOfFunctions[10].b : [10]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].b : [768]}
+
+05/08/2017 22:00:04: Minibatch[1-10]: errs = 66.700% * 10000; ce = 2.27636420 * 10000
+05/08/2017 22:00:04: Final Results: Minibatch[1-10]: errs = 66.700% * 10000; ce = 2.27636420 * 10000; perplexity = 9.74119886
+
+05/08/2017 22:00:04: Action "test" complete.
+
+05/08/2017 22:00:04: __COMPLETED__

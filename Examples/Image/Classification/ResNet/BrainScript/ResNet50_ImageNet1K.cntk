@@ -8,7 +8,7 @@ precision = "float"; traceLevel = 1 ; deviceId = "auto"
 rootDir = "." ; configDir = "$RootDir$" ; dataDir = "$RootDir$" ;
 outputDir = "$rootDir$/Output" ;
 
-meanDir = "$rootDir$/../../../DataSets/ImageNet"
+meanDir = "$dataDir$"
 modelPath = "$outputDir$/Models/ResNet_50"
 stderr = "$outputDir$/ResNet_50_BS_out"
 

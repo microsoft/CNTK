@@ -55,7 +55,7 @@ def prepare_CIFAR10_data():
 
 def prepare_ImageNet_data():
     base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             *"../../../../Examples/Image/DataSets/ImageNet/test_data".split("/"))
+                             *"../../../../Examples/Image/DataSets/ImageNet".split("/"))
     base_path = os.path.normpath(base_path)
     if not os.path.isdir(base_path):
         os.mkdir(base_path)
