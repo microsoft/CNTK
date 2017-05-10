@@ -588,8 +588,14 @@ class Memoize
             auto& fields = *output.m_dataFields;
             if (!fields.m_gradient)
                 throw logic_error("Backward: gradient from consumer unexpectedly unavailable");
+        }
+        for (auto& input : f->m_inputs)
+        {
+            auto& fields = *input.m_dataFields;
+            //if (fields.m_gradient)
+            //    throw logic_error("Backward: gradient from consumer unexpectedly already there");
             // for now just allocate the gradient, so that we can test the propagation
-            fields.m_gradient = Alloc(output.Shape(), output.GetDataType(), output.Value()->Device());
+            fields.m_gradient = Alloc(input.Shape(), input.GetDataType(), input.Value()->Device());
             fields.m_gradient->SetValue(0.0f);
         }
     }
@@ -621,6 +627,9 @@ public:
     // implant gradients into all variables
     // It can be called multipel times for the same root; but not for different roots
     // (which we won't be able to verify at present--we could remember the gradient root in the Variable).
+
+    // BUGBUG!!! This is now again operating on the unbatched graph!! Must keep batching info!
+
     void Backward(const CNTK::Variable& root, const std::vector<CNTK::Variable>& variables)
     {
         // first get the forward computation, batching, etc. done if not yet
