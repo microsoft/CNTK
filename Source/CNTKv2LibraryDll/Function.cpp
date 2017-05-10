@@ -108,6 +108,15 @@ namespace CNTK
         : Function(inputs, std::move(functionConfig), nullptr, name, uid)
     {}
 
+    Variable Function::OutputImpl() const // optimized version of OutputsImpl()[0]
+    {
+        const auto& outputs = RawOutputs();
+        if (outputs.size() != 1)
+            RuntimeError("A Function instance '%S' with more than one output cannot be implicitly converted to a Variable.", AsString().c_str());
+        std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : AsComposite(const_cast<Function*>(this)->shared_from_this());
+        return outputs[0].CompositePreservingCopy(composite);
+    }
+
     std::shared_ptr<std::vector<Variable>> Function::OutputsImpl() const
     {
         std::vector<Variable> outputs;

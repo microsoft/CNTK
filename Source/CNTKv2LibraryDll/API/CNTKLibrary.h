@@ -3223,11 +3223,12 @@ namespace CNTK
         ///
         Variable Output() const
         {
-            auto outputs = Outputs();
-            if (outputs.size() > 1)
-                RuntimeError("A Function instance '%S' with more than one output cannot be implicitly converted to a Variable.", AsString().c_str());
-
-            return outputs[0];
+            return OutputImpl();
+            //auto outputs = Outputs();
+            //if (outputs.size() > 1)
+            //    RuntimeError("A Function instance '%S' with more than one output cannot be implicitly converted to a Variable.", AsString().c_str());
+            //
+            //return outputs[0];
         }
 
         ///
@@ -3476,6 +3477,7 @@ namespace CNTK
 
         CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl(bool pythonOperandOrder = false) const;
         CNTK_API std::shared_ptr<std::vector<Variable>> OutputsImpl() const;
+        CNTK_API Variable Function::OutputImpl() const;
 
         void ValidateOrUpdateOutputs();
         void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified, std::vector<Variable>& buffer);
