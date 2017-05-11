@@ -13,7 +13,7 @@ par_dataset_name = "Pascal_VOC_2007"
 par_trainset_label_file = "train_map.txt"
 par_testset_label_file = "test_map.txt"
 par_abs_path = os.path.dirname(os.path.abspath(__file__))
-par_max_epochs = 100
+par_max_epochs = 3
 par_downsample = 32
 par_max_gtbs = 50
 
@@ -39,7 +39,7 @@ elif(par_dataset_name == "ImageNet50k"):
     par_minibatch_size = 24
 
 elif(par_dataset_name == "Pascal_VOC_2007"):
-    par_minibatch_size = 64
+    par_minibatch_size = 256#64
     par_image_width = 224
     par_image_height = 224
     par_input_bias = 114
@@ -55,8 +55,13 @@ par_anchorbox_scales =  [[1.08/13, 1.19/13],
                          [16.62/13, 10.52/13]]
 par_num_anchorboxes = len(par_anchorbox_scales)
 
-par_base_lr = 0.0001/500
-par_lr_schedule = [par_base_lr] * 60 + [par_base_lr*0.1] * 30 + [par_base_lr*0.01]
+par_base_lr = 0.001
+par_lr_schedule = [par_base_lr*10] * 5 + [par_base_lr] * 60+ [par_base_lr*0.1] * 30 + [par_base_lr*0.01]
 par_momentum = 0.9
+
+
+
+
+
 
 
