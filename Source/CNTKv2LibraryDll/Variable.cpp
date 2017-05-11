@@ -175,8 +175,12 @@ namespace CNTK
             LogicError("Variable '%S' SetValue(): Can only be invoked on a Parameter variable.", AsString().c_str());
         else if (GetDataType() != value->GetDataType()) 
             LogicError("Variable '%S' SetValue(): 'source' and 'destination' have different data types.", AsString().c_str());
-        else if (Shape() != value->Shape() && (AsTensorShape(Shape()) != AsTensorShape(value->Shape())))
+        if (Shape() != value->Shape() && (AsTensorShape(Shape()) != AsTensorShape(value->Shape())))
+#if 1       // for expedience we just bypass the check --TODO: check whether non-inferred dimensions match, then update the inferred ones
+            m_dataFields->m_shape = value->Shape();
+#else
             LogicError("Variable '%S' SetValue(): 'source' shape '%S' differs 'destination' shape '%S'.", AsString().c_str(), value->Shape().AsString().c_str(), Shape().AsString().c_str());
+#endif
 
         bool alreadySet = false;
         if (m_dataFields->m_initValueFlag)
