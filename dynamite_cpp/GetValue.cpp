@@ -745,7 +745,7 @@ public:
 
     // BUGBUG!!! This is now again operating on the unbatched graph!! Must keep batching info!
 
-    vector<CNTK::NDArrayViewPtr> Backward(const CNTK::Variable& root, const std::vector<CNTK::Variable>& variables)
+    void Backward(const Variable& root, unordered_map<Parameter, NDArrayViewPtr>& gradients)
     {
         // first get the forward computation, batching, etc. done if not yet
         // This will also set up the m_consumers chains, which we rely on.
@@ -753,11 +753,11 @@ public:
         // traverse the graph from the bottom (the variables to get the gradients for)
         // to form an ordered list of nodes to process
         NonOwningFunctionListBuilder order;
-        for (auto& var : variables)
-            if (!var.m_dataFields->m_needsGradient)
+        for (auto& kv : gradients)
+            if (!kv.first.m_dataFields->m_needsGradient)
                 logic_error("Backward: cannot compute gradient for variable with m_needsGradient being False.");
             else
-                TraverseFunctionTreeBackward(var, order);
+                TraverseFunctionTreeBackward(kv.first, order);
         // implant the first gradient if not present yet
         if (!root.m_dataFields->m_gradient)
         {
@@ -773,11 +773,9 @@ public:
         fprintf(stderr, "Back-propagating through %d functions\n", (int)order.size());
         for (auto f = order.begin(); f != order.end(); ++f)
             Backward(&*f);
-        // return all gradients as NArrayViewPtrs in a vector that matches the variables parameter
-        vector<NDArrayViewPtr> res; res.reserve(variables.size());
-        for (let& var : variables)
-            res.push_back(var.m_dataFields->m_gradient);
-        return res;
+        // implant the results into the map the user passed in
+        for (auto& kv : gradients)
+            kv.second = kv.first.m_dataFields->m_gradient;
     }
 }; // class
 } // namespace
@@ -797,8 +795,8 @@ CNTK::NDArrayViewPtr GetValue(const CNTK::Variable& v)
 
 // Perform backprop.
 // CNTK grad() allows to pass multiple roots. Does that ever make sense in this context?
-vector<CNTK::NDArrayViewPtr> Backward(const CNTK::Variable& root, const std::vector<CNTK::Variable>& variables)
+void Backward(const CNTK::Variable& root, std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& gradients)
 {
     auto autoBatcher = CNTK::Memoize(); // has some internal state
-    return autoBatcher.Backward(root, variables);
+    autoBatcher.Backward(root, gradients);
 }
