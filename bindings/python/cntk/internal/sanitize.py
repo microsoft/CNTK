@@ -5,7 +5,9 @@
 
 import numbers
 import collections
+from functools import lru_cache
 import numpy as np
+import cntk as C
 
 from .. import cntk_py
 from ..axis import Axis
@@ -555,6 +557,7 @@ def sanitize_permutation(perm):
         raise ValueError('duplicate item in permutation')
     return [n-i-1 for i in reversed(positive_perm)]
 
+# Workaround for Python 2.7 not having functools.lru_cache
 def memoize(func):
     class memodict(dict):
         def __init__(self, f):
@@ -568,12 +571,10 @@ def memoize(func):
 
 @memoize
 def _sparse_to_dense_network_cache(input_shape, is_sequence, device):
-    from cntk.ops import times, input, sequence
-
     if is_sequence:
-        temp_input = sequence.input(input_shape, is_sparse=True)
+        temp_input = C.sequence.input_variable(input_shape, is_sparse=True)
     else:
-        temp_input = input(input_shape, is_sparse=True)
+        temp_input = C.input_variable(input_shape, is_sparse=True)
 
     eye_shape = input_shape[-1]
-    return times(temp_input, np.eye(eye_shape))
+    return C.times(temp_input, np.eye(eye_shape))

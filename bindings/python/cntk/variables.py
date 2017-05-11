@@ -254,7 +254,7 @@ class VariableMixin(object):
         The complete type of the data represented by this Variable as a single object that has data members of the same name.
 
         Example:
-        >>> x = C.input(13, name='my_input')
+        >>> x = C.input_variable(13, name='my_input')
         >>> x
         Input('my_input', [#], [13])
         >>> x._type.shape, x._type.dynamic_axes, x._type.is_sparse, x._type.needs_gradient
@@ -328,7 +328,7 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
          >>> W = C.Parameter((C.InferredDimension, 42), init=C.glorot_uniform())
          >>> W.shape   # -1 indicates dimension yet to be inferred
              (-1, 42)
-         >>> x = C.input(13)
+         >>> x = C.input_variable(13)
          >>> y = C.times(x, W)  # times operation now knows that the input dimension of W must be 13
          >>> W.shape          # hence, the shape has been updated
              (13, 42)

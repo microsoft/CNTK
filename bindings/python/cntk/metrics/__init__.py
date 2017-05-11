@@ -35,9 +35,9 @@ def ndcg_at_1(output, gain, group, name=''):
     This is a forward-only operation, there is no gradient for it.
 
     Example:
-        >>> group = C.input((1,))
-        >>> score = C.input((1,))
-        >>> gain  = C.input((1,))
+        >>> group = C.input_variable((1,))
+        >>> score = C.input_variable((1,))
+        >>> gain  = C.input_variable((1,))
         >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1,1)
         >>> s = np.array([2, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
         >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
