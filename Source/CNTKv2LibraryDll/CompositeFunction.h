@@ -81,7 +81,7 @@ namespace CNTK
             Collect(rootFunction, visitedFunctions);
 #endif
 
-            auto composite = MakeSharedObject<CompositeFunction>(rootFunction, std::move(visitedFunctions), name, uid);
+            auto composite = MakeSharedObject<CompositeFunction>(rootFunction, make_shared<FastFunctionCollection>(std::move(visitedFunctions)), name, uid);
 
             // Initialize the outputs
             composite->InitOutputs();
@@ -203,7 +203,7 @@ namespace CNTK
                                             std::unordered_set<Variable>& replacedPlaceholders) override
         {
             // If any of the placeholders were replaced with Output variables, let's add the graph of function underneath 
-            // each of those to 'm_allPrimitiveFunctionsHolder' set
+            // each of those to 'GetAllPrimitiveFunctionsCollection()' set
             for (auto replacedPlaceholder : replacedPlaceholders)
             {
                 auto replacingVariable = placeholderReplacements.at(replacedPlaceholder);
@@ -213,8 +213,8 @@ namespace CNTK
                     std::unordered_set<FunctionPtr> visitedFunctions2;
                     Collect(ownerFunc, visitedFunctions2);
 
-                    // Add the newly visited functions to 'm_allPrimitiveFunctionsHolder'
-                    m_allPrimitiveFunctionsHolder.Merge(move(visitedFunctions2));
+                    // Add the newly visited functions to 'GetAllPrimitiveFunctionsCollection()'
+                    GetAllPrimitiveFunctionsCollection()->Merge(move(visitedFunctions2));
                 }
             }
         }
@@ -225,6 +225,7 @@ namespace CNTK
         {
             std::unordered_set<FunctionPtr> m_set;
         public:
+            typedef shared_ptr<FastFunctionCollection> FastFunctionCollectionPtr;
             FastFunctionCollection(std::unordered_set<FunctionPtr>&& set) : m_set(std::move(set)) { }
             void Merge(std::unordered_set<FunctionPtr>&& visitedFunctions2)
             {
@@ -236,7 +237,18 @@ namespace CNTK
                 return m_set;
             }
         };
-        CompositeFunction(const FunctionPtr& rootFunction, FastFunctionCollection&& allPrimitiveFunctions, const std::wstring& name,
+        typedef FastFunctionCollection::FastFunctionCollectionPtr FastFunctionCollectionPtr;
+
+        // TODO: if this can never be empty, we can remove this accessor again
+        FastFunctionCollectionPtr GetAllPrimitiveFunctionsCollection() const
+        {
+            if (!m_allPrimitiveFunctionsHolder)
+                LogicError("GetAllPrimitiveFunctionsCollection: somehow this was not set");
+                //m_allPrimitiveFunctionsHolder = make_shared<>();
+            return m_allPrimitiveFunctionsHolder;
+        };
+
+        CompositeFunction(const FunctionPtr& rootFunction, FastFunctionCollectionPtr&& allPrimitiveFunctions, const std::wstring& name,
                           const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
             : Function({}, Dictionary(), rootFunction, name, uid),
             m_allPrimitiveFunctionsHolder(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
@@ -367,7 +379,7 @@ namespace CNTK
 
         // Set of all primitive functions in the graph underlying 'this' Function. Also keeps the primitive Function objects alive 
         // by holding strong references to them
-        FastFunctionCollection m_allPrimitiveFunctionsHolder;
+        FastFunctionCollectionPtr m_allPrimitiveFunctionsHolder;
 
         // A map from Variable objects to ComputationNode objects in the ComputationNetwork instance that implements 'this' Composite Function
         std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_variableToNodeMap;

@@ -554,9 +554,9 @@ namespace CNTK
 
             // Remove the initial state inputs of PastValue and FutureValue functions from the maps if they are a scalar constant
             // since these are not part of the internal CNTK serialized computation graph
-            std::function<void(const CompositeFunction::FastFunctionCollection&, std::map<std::wstring, Variable>&)> RemovePastAndFutureValueInitialStateScalarConstants;
-            RemovePastAndFutureValueInitialStateScalarConstants = [&RemovePastAndFutureValueInitialStateScalarConstants](const CompositeFunction::FastFunctionCollection& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
-                for (auto funcPtr : allPrimitiveFunctions.AsIterable())
+            std::function<void(const CompositeFunction::FastFunctionCollectionPtr&, std::map<std::wstring, Variable>&)> RemovePastAndFutureValueInitialStateScalarConstants;
+            RemovePastAndFutureValueInitialStateScalarConstants = [&RemovePastAndFutureValueInitialStateScalarConstants](const CompositeFunction::FastFunctionCollectionPtr& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
+                for (auto funcPtr : allPrimitiveFunctions->AsIterable())
                 {
                     auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
                     if ((primitiveFunction->OpType() == PrimitiveOpType::PastValue) || (primitiveFunction->OpType() == PrimitiveOpType::FutureValue))
@@ -569,16 +569,16 @@ namespace CNTK
                     {
                         auto blockFunction = dynamic_cast<const BlockFunction*>(primitiveFunction);
                         auto blockComposite = dynamic_cast<const CompositeFunction*>(blockFunction->Composite().get());
-                        RemovePastAndFutureValueInitialStateScalarConstants(blockComposite->m_allPrimitiveFunctionsHolder, modelLeafVariableMap);
+                        RemovePastAndFutureValueInitialStateScalarConstants(blockComposite->GetAllPrimitiveFunctionsCollection(), modelLeafVariableMap);
                     }
                 }
             };
 
         auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
-            RemovePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctionsHolder, loadedModelLeafVariablesMap);
+            RemovePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->GetAllPrimitiveFunctionsCollection(), loadedModelLeafVariablesMap);
 
             auto trainerModelCompositeFunction = dynamic_cast<CompositeFunction*>(this);
-            RemovePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctionsHolder, trainerModelLeafVariablesMap);
+            RemovePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->GetAllPrimitiveFunctionsCollection(), trainerModelLeafVariablesMap);
 
             // Now update the trainer's model parameters and constants with those from the loaded model
             for (auto nameVarPair : trainerModelLeafVariablesMap)
