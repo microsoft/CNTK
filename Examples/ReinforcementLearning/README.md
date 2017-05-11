@@ -28,7 +28,7 @@ Some options are available:
 ## Details
 
 This example uses OpenAI Atari Learning Environment to train an agent on various Atari games using reinforcement learning.
-As a Action-Value based network, Deep Q Neural Network will try to estimate the expected reward for each action by looking
+As an Action-Value based network, a Deep Q Neural Network will try to estimate the expected reward for each action by looking
 at the N last states (s_t, s_t-1, ..., s_t-N).
 
 This agent has an exploration process, that allows it to take random actions to have a better understanding of the game dynamics.
