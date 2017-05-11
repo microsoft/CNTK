@@ -644,7 +644,7 @@ class Memoize
                     //  PrimitiveFunction::InternalProdReductionOpName
                     LogicError("Variable '%S' Value(): Gradient of reduction op %S not yet implemented.", L""/*AsString().c_str()*/, reductionOpName.c_str());
             }
-            op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break; // BUGBUG: depends on the type
+            break;
             // hard stuff
         case PrimitiveOpType::Splice:
             {
