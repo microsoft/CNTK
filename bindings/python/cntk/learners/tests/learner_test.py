@@ -13,10 +13,10 @@ from cntk import parameter, input
 import pytest
 import sys
 
-import cntk as C
 from cntk.logging import ProgressPrinter
-from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk.learners import sgd, learning_rate_schedule, UnitType, universal
 from cntk.layers import Dense, Sequential
+
 LR_SCHEDULE_PARAMS = [
         ((0.2, UnitType.sample), [0.2]),
         ((0.2, UnitType.sample), [0.2, 0.2, 0.2, 0.2]),
@@ -303,7 +303,7 @@ def test_learner_empy_parameters_list():
         learner = C.sgd([], lr_per_sample)
 
 
-def ffnet():
+def ffnet(learner):
     inputs = 3
     outputs = 3
     layers = 2
@@ -315,17 +315,16 @@ def ffnet():
 
     # Instantiate the feedforward classification model
     my_model = Sequential ([
-                    Dense(hidden_dimension, activation=C.sigmoid),
-                    Dense(outputs)])
+                    Dense(hidden_dimension, activation=C.sigmoid, init=C.glorot_uniform(seed=98052)),
+                    Dense(outputs, init=C.glorot_uniform(seed=98052))])
     z = my_model(features)
 
     ce = C.cross_entropy_with_softmax(z, label)
     pe = C.classification_error(z, label)
 
     # Instantiate the trainer object to drive the model training
-    lr_per_minibatch = learning_rate_schedule(0.125, UnitType.minibatch)
     progress_printer = ProgressPrinter(0)
-    trainer = C.Trainer(z, (ce, pe), [sgd(z.parameters, lr=lr_per_minibatch, gaussian_noise_injection_std_dev=0.01)], [progress_printer])
+    trainer = C.Trainer(z, (ce, pe), [learner(z.parameters)], [progress_printer])
 
     # Get minibatches of training data and perform model training
     minibatch_size = 25
@@ -351,9 +350,21 @@ def test_sgd_with_noise():
     # in some layers. This tests that cuRand library will not
     # complain about generating an odd number of random values
     np.random.seed(98052)
-    ffnet()
+    learner = lambda params: sgd(params, lr=learning_rate_schedule(0.125, UnitType.minibatch), gaussian_noise_injection_std_dev=0.01)
+    ffnet(learner)
     # We just verify that we did not crash
     assert(True)
+
+def test_universal():
+    np.random.seed(98052)
+    builtin_sgd = lambda params: sgd(params, lr=learning_rate_schedule(0.125, UnitType.minibatch))
+    builtin_last_avg_error, builtin_avg_error = ffnet(builtin_sgd)
+    np.random.seed(98052)
+    my_sgd = lambda p, g: C.assign(p, p - 0.125/25 * g)
+    universal_sgd = lambda params: universal(my_sgd, params)
+    my_last_avg_error, my_avg_error = ffnet(universal_sgd)
+    assert np.allclose(my_last_avg_error, builtin_last_avg_error)
+    assert np.allclose(my_avg_error, builtin_avg_error)
 
 def test_0d_1d_parameter_set_value():
     x = C.input(2)

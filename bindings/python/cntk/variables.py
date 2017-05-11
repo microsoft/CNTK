@@ -459,3 +459,14 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
         '''
         return super(Constant, self).value().to_ndarray()
 
+
+    @value.setter
+    def value(self, val):
+        if isinstance(val, np.ndarray):
+            ndarray = NDArrayView.from_dense(val.astype(self.dtype))
+            super(Constant, self).set_value(ndarray)
+        elif isinstance(val, cntk_py.NDArrayView):
+            super(Constant, self).set_value(val)
+        else:
+            raise TypeError("Unsupported value type: %s", type(val))
+

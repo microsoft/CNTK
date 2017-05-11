@@ -1797,6 +1797,12 @@ namespace CNTK
         ///
         CNTK_API std::wstring AsString() const;
 
+        ///
+        /// Returns this Variable's timestamp. 
+        /// Timestamps are used to determine if a Variable's value is up to date and, if not, computations that depend on this Variable's value will be re-executed.
+        ///
+        CNTK_API size_t CurrentValueTimeStamp() const;
+
     protected:
 #ifdef SWIG
     public:
@@ -2066,13 +2072,11 @@ private:
         /// Copies the contents of the 'value' NDArrayView into the view backing 'this' 
         /// parameter's value. The shapes of both views must be identical.
         ///
-        void SetValue(const NDArrayViewPtr& value)
+        CNTK_API void SetValue(const NDArrayViewPtr& value)
         {
             Variable::SetValue(value);
             RecordValueUpdate();
         }
-
-        CNTK_API size_t CurrentValueTimeStamp() const;
 
         CNTK_API void RecordValueUpdate();
 
@@ -2167,6 +2171,12 @@ private:
             return Variable::Value();
         }
 
+        ///
+        /// Copies the contents of the 'value' NDArrayView into the view backing 'this' 
+        /// Constant's value. The shapes of both views must be identical.
+        ///
+        CNTK_API void SetValue(const NDArrayViewPtr& value);
+
     private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
             : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value, false, {}, name, uid)
@@ -2176,6 +2186,8 @@ private:
         /// Construct a constant of specified shape whose contents are initialized using the specified initializer
         ///
         CNTK_API Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"");
+
+        void RecordValueUpdate();
     };
 
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 
@@ -4542,6 +4554,17 @@ namespace CNTK
                                         double rho = 0.95,
                                         double epsilon = 1e-8,
                                         AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
+
+    ///
+    /// A shorthand for the type of a function that takes a Parameter and a Variable as arguments and returns a Function.
+    /// It can be used with UniversalLearner.
+    /// 
+    typedef std::function<FunctionPtr(Parameter, Variable)> ParameterUpdateFunctor;
+
+    ///
+    /// Create an instance of a learner whose update is given by the specified factory which returns a CNTK FunctionPtr.
+    ///
+    CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func);
 
     ///
     /// Distributed Learner.
