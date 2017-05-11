@@ -78,7 +78,7 @@ namespace CNTK
             // Call Collect to get the set of all functions in the graph
 #undef NO_ALL_PRIMITIVE_FUNCTIONS_HACK // hack to skip building m_allPrimitiveFunctionsSet for timing tests, as this has O(N^2) complexity
 #ifndef NO_ALL_PRIMITIVE_FUNCTIONS_HACK
-            Collect(rootFunction, visitedFunctions);
+            CollectAllPrimitiveFunctions(rootFunction, visitedFunctions);
 #endif
 
             auto composite = MakeSharedObject<CompositeFunction>(rootFunction, make_shared<FastFunctionCollection>(std::move(visitedFunctions)), name, uid);
@@ -211,7 +211,7 @@ namespace CNTK
                 {
                     auto ownerFunc = replacingVariable.Owner();
                     std::unordered_set<FunctionPtr> visitedFunctions2;
-                    Collect(ownerFunc, visitedFunctions2);
+                    CollectAllPrimitiveFunctions(ownerFunc, visitedFunctions2);
 
                     // Add the newly visited functions to 'GetAllPrimitiveFunctionsCollection()'
                     GetAllPrimitiveFunctionsCollection()->Merge(move(visitedFunctions2));
@@ -262,7 +262,7 @@ namespace CNTK
         }
 
          // Recursively traverses the Function graph and populates the provided set of functions.
-        static void Collect(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& functions)
+        static void CollectAllPrimitiveFunctions(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& functions)
         {
             // Call Traverse to get the set of all functions in the graph
             PreorderTraverseFunctions(rootFunction, functions, [](const FunctionPtr& f){});
