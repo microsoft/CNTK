@@ -42,6 +42,7 @@
 %rename(_stream_infos) CNTK::SwigMinibatchSource::StreamInfos(PyObject*);
 %rename(_next_minibatch) CNTK::SwigMinibatchSource::_GetNextMinibatch;
 %rename(_register_udf_deserialize_callback) CNTK::Internal::RegisterUDFDeserializeCallbackWrapper;
+%rename(base64_image_deserializer) CNTK::Base64ImageDeserializer;
 
 %rename(_none) CNTK::DictionaryValue::Type::None;
 
