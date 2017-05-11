@@ -675,6 +675,11 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             break;
         fprintf(stderr, "#seq: %d, #words: %d\n", (int)minibatchData[featureStreamInfo].numberOfSequences, (int)minibatchData[featureStreamInfo].numberOfSamples);
 
+        LogVal(d_model_fn.Nested(L"linear")[L"b"]); LogVal(model_fn.Nested(L"[2]")[L"b"]);
+        LogVal(d_model_fn.Nested(L"linear")[L"W"]); LogVal(model_fn.Nested(L"[2]")[L"W"]);
+        LogVal(d_model_fn.Nested(L"step")[L"W"]);   LogVal(model_fn.Nested(L"[1]").Nested(L"step")[L"W"]);
+        LogVal(d_model_fn.Nested(L"embed")[L"E"]);  LogVal(model_fn.Nested(L"[0]")[L"E"]);
+
 #if 1
         // Dynamite
         vector<vector<Variable>> args;
@@ -776,8 +781,8 @@ int main(int argc, char *argv[])
     argc; argv;
     try
     {
-        TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
-        //TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
+        //TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
+        TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
     }
     catch (exception& e)
     {
