@@ -214,13 +214,29 @@ namespace CNTK
                     Collect(ownerFunc, visitedFunctions2);
 
                     // Add the newly visited functions to 'm_allPrimitiveFunctionsHolder'
-                    m_allPrimitiveFunctionsHolder.insert(visitedFunctions2.begin(), visitedFunctions2.end());
+                    m_allPrimitiveFunctionsHolder.Merge(move(visitedFunctions2));
                 }
             }
         }
 
-        typedef std::unordered_set<FunctionPtr> AllPrimitiveFunctionsHolder;
-        CompositeFunction(const FunctionPtr& rootFunction, AllPrimitiveFunctionsHolder&& allPrimitiveFunctions, const std::wstring& name,
+        // class to store a set of functions
+        // To avoid O(n^2) complexity, the set is stored as a tree of sets when expedient.
+        class FastFunctionCollection
+        {
+            std::unordered_set<FunctionPtr> m_set;
+        public:
+            FastFunctionCollection(std::unordered_set<FunctionPtr>&& set) : m_set(std::move(set)) { }
+            void Merge(std::unordered_set<FunctionPtr>&& visitedFunctions2)
+            {
+                m_set.insert(visitedFunctions2.begin(), visitedFunctions2.end());
+            }
+            // note: this is expensive. If this is a problem, implement a proper iterator.
+            const std::unordered_set<FunctionPtr> AsIterable() const
+            {
+                return m_set;
+            }
+        };
+        CompositeFunction(const FunctionPtr& rootFunction, FastFunctionCollection&& allPrimitiveFunctions, const std::wstring& name,
                           const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
             : Function({}, Dictionary(), rootFunction, name, uid),
             m_allPrimitiveFunctionsHolder(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
@@ -351,7 +367,7 @@ namespace CNTK
 
         // Set of all primitive functions in the graph underlying 'this' Function. Also keeps the primitive Function objects alive 
         // by holding strong references to them
-        AllPrimitiveFunctionsHolder m_allPrimitiveFunctionsHolder;
+        FastFunctionCollection m_allPrimitiveFunctionsHolder;
 
         // A map from Variable objects to ComputationNode objects in the ComputationNetwork instance that implements 'this' Composite Function
         std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_variableToNodeMap;

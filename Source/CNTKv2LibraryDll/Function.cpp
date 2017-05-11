@@ -554,9 +554,9 @@ namespace CNTK
 
             // Remove the initial state inputs of PastValue and FutureValue functions from the maps if they are a scalar constant
             // since these are not part of the internal CNTK serialized computation graph
-            std::function<void(const std::unordered_set<FunctionPtr>&, std::map<std::wstring, Variable>&)> RemovePastAndFutureValueInitialStateScalarConstants;
-            RemovePastAndFutureValueInitialStateScalarConstants = [&RemovePastAndFutureValueInitialStateScalarConstants](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
-                for (auto funcPtr : allPrimitiveFunctions)
+            std::function<void(const CompositeFunction::FastFunctionCollection&, std::map<std::wstring, Variable>&)> RemovePastAndFutureValueInitialStateScalarConstants;
+            RemovePastAndFutureValueInitialStateScalarConstants = [&RemovePastAndFutureValueInitialStateScalarConstants](const CompositeFunction::FastFunctionCollection& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
+                for (auto funcPtr : allPrimitiveFunctions.AsIterable())
                 {
                     auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
                     if ((primitiveFunction->OpType() == PrimitiveOpType::PastValue) || (primitiveFunction->OpType() == PrimitiveOpType::FutureValue))
