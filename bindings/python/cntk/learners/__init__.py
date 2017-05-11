@@ -6,7 +6,7 @@
 from enum import Enum, unique
 import warnings
 import numpy as np
-import inspect
+import cntk.internal.utils as utils
 
 from .. import cntk_py, NDArrayView, asarray
 from cntk.internal import typemap
@@ -889,9 +889,10 @@ def universal(update_func, parameters):
         >>> # now trainer can be used as any other Trainer
 
     '''
+
     from .. import constant
-    argspec = inspect.getfullargspec(update_func)
-    if len(argspec.args) != 2:
+    args, _ = utils.get_python_function_arguments(update_func)
+    if len(args) != 2:
         raise ValueError('update_func must be a function that accepts two arguments (parameter, gradient)')
     updates = []
     for p in parameters:

@@ -363,8 +363,8 @@ def test_universal():
     my_sgd = lambda p, g: C.assign(p, p - 0.125/25 * g)
     universal_sgd = lambda params: universal(my_sgd, params)
     my_last_avg_error, my_avg_error = ffnet(universal_sgd)
-    assert(my_last_avg_error == builtin_last_avg_error)
-    assert(my_avg_error == builtin_avg_error)
+    assert np.allclose(my_last_avg_error, builtin_last_avg_error)
+    assert np.allclose(my_avg_error, builtin_avg_error)
 
 def test_0d_1d_parameter_set_value():
     x = C.input(2)
