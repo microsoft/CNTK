@@ -8,6 +8,7 @@
 #include "Variable.h"
 #include "PrimitiveOpType.h"
 #include "PrimitiveFunction.h"
+#include "CommonMatrix.h"
 
 #include <unordered_map>
 
@@ -586,13 +587,50 @@ class Memoize
                            const vector<const NDArrayView*>& outputValues, const vector<const NDArrayView*>& inputValues,
                            const NDArrayViewPtr& gradient, double beta)
     {
-        if (beta == 0)
-            gradient->SetValue(0.0f); // TODO: actually use beta in all ops
+        if (beta == 0) // TODO: limit this to those ops that do not support beta
+        {
+            gradient->SetValue(0.0f);
+            beta = 1;
+        }
+        auto op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opNone;
+        auto op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opNone;
+        const NDArrayView* arg1 = outputGradients[0];
+        const NDArrayView* arg2 = nullptr;
+        double alpha = 1;
         switch (primitiveOp)
         {
-        //    // elementwise ops are done outside, we just set the opcode
-        //case PrimitiveOpType::Plus:           op = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;                break;
+            // NOTE: For now, this only implements the operators needed for the prototype
+            // binary operations with simple TensorView implementation
+        case PrimitiveOpType::Plus:           op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
+        case PrimitiveOpType::Minus:          op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; alpha = i == 0 ? 1 : -1; break;
+        case PrimitiveOpType::ElementTimes:   op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct; arg2 = inputValues[1 - i]; break;
+            // Times family
+        case PrimitiveOpType::Times:
+            break;
+            // unary operations with simple TensorView implementation
+        case PrimitiveOpType::ReLU:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithLinearRectifierDerivativeFromOutput; arg2 = outputValues[0]; break;
+            // no-op operations with simple TensorView implementation
+            // NOTE: These do not need any data copy if there is only one consumer, which we won't know here. That case will be caught in the batched version.
+        case PrimitiveOpType::NoOp:           op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
+        case PrimitiveOpType::Reshape:        op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
+            // gradients that are copies with broadcasting
+        case PrimitiveOpType::ReduceElements: op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break; // BUGBUG: depends on the type
+            // hard stuff
+        case PrimitiveOpType::Splice:
+            break;
+        default:
+            //fprintf(stderr, "NEEDS: %S\n", PrimitiveOpTypeName(primitiveOp).c_str());
+            LogicError("Variable '%S' Value(): Backpropagation for operation %S not implemented yet.", L""/*AsString().c_str()*/, PrimitiveOpTypeName(primitiveOp).c_str());
+            //LogicError("Variable '%S' Value(): Backpropagation for non-existent operation %S?", L""/*AsString().c_str()*/, PrimitiveOpTypeName(primitiveOp).c_str());
         }
+        // the simple TensorView operations are performed out here
+        // TODO: we can eliminate the vector<> by passing a std::function, possibly?
+        if (op1Arg != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
+            gradient->NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() },
+                                       alpha, op1Arg, gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+        else if (op2Args != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
+            gradient->NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(), const_cast<NDArrayView*>(arg2)->shared_from_this() },
+                                       alpha, op2Args, gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
     }
 
     // back-propagate all outputs' m_gradients to all inputs
@@ -602,11 +640,9 @@ class Memoize
     vector<const NDArrayView*> m_inputValuesBuffer;
     void Backward(Function* f)
     {
-        //let* pf = dynamic_cast<PrimitiveFunction*>(f);
         let& outputs = f->m_outputs;
         let& inputs =  f->m_inputs;
-        //let numOutputs = outputs.size();
-        // get the TensorViews
+        // get the TensorViews for everything we may compute the gradient from
         m_outputValuesBuffer.clear();
         m_outputGradientsBuffer.clear();
         for (let& output : outputs) // output values and gradients coming from consumer
