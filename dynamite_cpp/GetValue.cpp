@@ -745,7 +745,7 @@ public:
 
     // BUGBUG!!! This is now again operating on the unbatched graph!! Must keep batching info!
 
-    void Backward(const CNTK::Variable& root, const std::vector<CNTK::Variable>& variables)
+    vector<CNTK::NDArrayViewPtr> Backward(const CNTK::Variable& root, const std::vector<CNTK::Variable>& variables)
     {
         // first get the forward computation, batching, etc. done if not yet
         // This will also set up the m_consumers chains, which we rely on.
@@ -773,6 +773,11 @@ public:
         fprintf(stderr, "Back-propagating through %d functions\n", (int)order.size());
         for (auto f = order.begin(); f != order.end(); ++f)
             Backward(&*f);
+        // return all gradients as NArrayViewPtrs in a vector that matches the variables parameter
+        vector<NDArrayViewPtr> res; res.reserve(variables.size());
+        for (let& var : variables)
+            res.push_back(var.m_dataFields->m_gradient);
+        return res;
     }
 }; // class
 } // namespace
@@ -792,8 +797,8 @@ CNTK::NDArrayViewPtr GetValue(const CNTK::Variable& v)
 
 // Perform backprop.
 // CNTK grad() allows to pass multiple roots. Does that ever make sense in this context?
-void Backward(const CNTK::Variable& root, const std::vector<CNTK::Variable>& variables)
+vector<CNTK::NDArrayViewPtr> Backward(const CNTK::Variable& root, const std::vector<CNTK::Variable>& variables)
 {
     auto autoBatcher = CNTK::Memoize(); // has some internal state
-    autoBatcher.Backward(root, variables);
+    return autoBatcher.Backward(root, variables);
 }
