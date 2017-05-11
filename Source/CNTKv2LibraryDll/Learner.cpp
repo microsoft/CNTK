@@ -827,28 +827,39 @@ namespace CNTK
         return MakeSharedObject<LearnerAdaDelta>(parameters, learningRateSchedule, rho, epsilon, additionalOptions);
     }
 
-    /* static */ const std::unordered_map<Variable, ValuePtr>  LearnerUniversal::m_empty = {};
+    
 
 
-    LearnerUniversal::LearnerUniversal(const std::vector<Parameter>& parameters, NetworkFactory f)
-        : LearnerBase(parameters, LearningRateSchedule(1.0, CNTK::LearningRateSchedule::UnitType::Sample), AdditionalLearningOptions(), /*allocateSmoothGradients*/ true)
+    LearnerUniversal::LearnerUniversal(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func)
+        : LearnerBase(parameters, LearningRateSchedule(1.0, CNTK::LearningRateSchedule::UnitType::Sample), AdditionalLearningOptions(), /*allocateSmoothGradients*/ false)
     {
         for (const auto& p : parameters)
         {
             //we do not support sparse gradients for now 
-            auto g = Constant(p.Shape(), p.GetDataType(), 0.0, DeviceDescriptor::UseDefaultDevice(), L"gradient");
-            FunctionPtr fpg = f(p, g);
-            m_updates.insert({ p, {g, fpg} });
+            auto grad = Constant(p.Shape(), p.GetDataType(), 0.0, p.Value()->Device(), L"gradient");
+            FunctionPtr result = func(p, grad);
+            m_updateFunctions.insert({ p, {grad, result } });
         }
+        AllocateDummySmoothedGradients(parameters);
     }
 
-    LearnerUniversal::LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr>>& updates)
-        : LearnerBase(parameters, LearningRateSchedule(1.0, CNTK::LearningRateSchedule::UnitType::Sample), AdditionalLearningOptions(), /*allocateSmoothGradients*/ true)
+    LearnerUniversal::LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr>>& updateFunctions)
+        : LearnerBase(parameters, LearningRateSchedule(1.0, CNTK::LearningRateSchedule::UnitType::Sample), AdditionalLearningOptions(), /*allocateSmoothGradients*/ false)
     {
-        if (parameters.size() != updates.size())
-            LogicError("Number of parameters (%zd) does not match number of updates (%zd)", parameters.size(), updates.size());
+        if (parameters.size() != updateFunctions.size())
+            LogicError("Number of parameters (%zd) does not match number of updateFunctions (%zd)", parameters.size(), updateFunctions.size());
         for (size_t i = 0; i < parameters.size(); ++i)
-            m_updates.insert({ parameters[i], updates[i] });
+        {
+            auto&& param = parameters[i];
+            auto&& grad = updateFunctions[i].first;
+            auto&& inputs = updateFunctions[i].second->Inputs();
+            if (std::find(inputs.begin(), inputs.end(), param) == inputs.end())
+                LogicError("Update function for parameter %ls does not contain the parameter in its computation", param.AsString().c_str());
+            if (std::find(inputs.begin(), inputs.end(), grad) == inputs.end())
+                fprintf(stderr, "WARNING: Update function for parameter %ls does not contain the gradient in its computation\n", param.AsString().c_str());
+            m_updateFunctions.insert({ parameters[i], updateFunctions[i] });
+        }
+        AllocateDummySmoothedGradients(parameters);
     }
 
     /*virtual*/ void LearnerUniversal::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
@@ -861,22 +872,23 @@ namespace CNTK
     void LearnerUniversal::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
         const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
     {
-        auto pair = m_updates.at(parameter);
+        static const std::unordered_map<Variable, ValuePtr> m_empty = {};
+        auto pair = m_updateFunctions.at(parameter);
         auto grad = Constant(pair.first);
         grad.SetValue(gradientValue);
         FunctionPtr update = pair.second;
-        std::unordered_map<Variable, ValuePtr> out; 
+        std::unordered_map<Variable, ValuePtr> out;
         for (const auto& o : update->Outputs())
             out.insert({ o, nullptr });
-        update->Forward(m_empty, out);
+        update->Forward(m_empty, out, parameter.Value()->Device());
     }
 
-    LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, NetworkFactory f)
+    LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func)
     {
-        return MakeSharedObject<LearnerUniversal>(parameters, f);
+        return MakeSharedObject<LearnerUniversal>(parameters, func);
     }
 
-    LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr>>& updates)
+    LearnerPtr Internal::UniversalLearner(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr>>& updates)
     {
         return MakeSharedObject<LearnerUniversal>(parameters, updates);
     }

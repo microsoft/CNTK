@@ -518,6 +518,8 @@ namespace CNTK
 
     size_t Variable::CurrentValueTimeStamp() const
     {
+        if (!IsParameter() && !IsConstant())
+            LogicError("Variable '%S' CurrentValueTimeStamp: Variable must be a Parameter or Constant", AsString().c_str());
         return m_dataFields->m_valueTimeStamp.load(); 
     }
 
@@ -525,6 +527,7 @@ namespace CNTK
     {
         m_dataFields->m_valueTimeStamp++;
     }
+
 
     Constant::Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)
         : Variable(shape, VariableKind::Constant, dataType, nullptr, false, {}, name, Internal::GenerateUid(VariableKind::Constant))
@@ -546,5 +549,11 @@ namespace CNTK
     void Constant::RecordValueUpdate()
     {
         m_dataFields->m_valueTimeStamp++;
+    }
+
+    void Constant::SetValue(const NDArrayViewPtr& value)
+    {
+        Variable::SetValue(value);
+        RecordValueUpdate();
     }
 }

@@ -43,6 +43,7 @@
 %rename(_infer_outputs) CNTK::Function::InferOutputs;
 %rename(_stream_infos) CNTK::SwigMinibatchSource::StreamInfos(PyObject*);
 %rename(_next_minibatch) CNTK::SwigMinibatchSource::_GetNextMinibatch;
+%rename(universal_learner) CNTK::Internal::UniversalLearner;
 
 %rename(_none) CNTK::DictionaryValue::Type::None;
 
@@ -173,6 +174,8 @@
 %ignore CNTK::Internal::GetComputationNetworkTraceLevel;
 %ignore CNTK::Internal::TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
 %ignore CNTK::Internal::Convolution; 
+// These aren't exported from C++ but the corresponding internal versions are
+%ignore CNTK::UniversalLearner;
 
 %ignore CNTK::Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 

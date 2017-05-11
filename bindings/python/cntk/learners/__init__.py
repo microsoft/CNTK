@@ -6,6 +6,7 @@
 from enum import Enum, unique
 import warnings
 import numpy as np
+import inspect
 
 from .. import cntk_py, NDArrayView, asarray
 from cntk.internal import typemap
@@ -854,27 +855,48 @@ def rmsprop(parameters, lr,
 
 
 @typemap
-def universal(update, parameters):
+def universal(update_func, parameters):
     '''
-    Creates a learner whose update is a CNTK function.
+    Creates a learner which uses a CNTK function to update the parameters.
 
     Args:
-        update: function that takes two arguments a parameter and a gradient and
+        update_func: function that takes a parameter and a gradient as arguments and
          returns a :class:`~cntk.ops.functions.Function` that performs the
-         desired updates. The returned function has to contain :func:``~cntk.ops.assign``
-         operations for the updates to have an effect.
-        parameters (list of parameters): list of network parameters to tune.
-         These can be obtained by the root operator's ``parameters``.
-        lr (output of :func:`learning_rate_schedule`): learning rate schedule.
+         desired updates. The returned function updates the parameters by
+         means of containing :func:`~cntk.ops.assign` operations.
+         If ``update_func`` does not contain :func:`~cntk.ops.assign` operations
+         the parameters will not be updated.
+        parameters (list): list of network parameters to tune.
+         These can be obtained by the root operator's `parameters`.
 
     Returns:
         Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
+
+    Examples:
+        >>> def my_adagrad(p,g):
+        ...     accumulator = C.constant(0, shape=p.shape, dtype=p.dtype, name='accum')
+        ...     accum_new = C.assign(accumulator, g * g)
+        ...     return C.assign(p, p - 0.01 * g / C.sqrt(accum_new + 1e-6))
+        ...
+        >>> x = C.input_variable((10,))
+        >>> y = C.input_variable((2,))
+        >>> z = C.layers.Sequential([C.layers.Dense(100, activation=C.relu), C.layers.Dense(2)])(x)
+        >>> loss = C.cross_entropy_with_softmax(z, y)
+        >>> learner = C.universal(my_adagrad, z.parameters)
+        >>> trainer = C.Trainer(z, loss, learner)
+        >>> # now trainer can be used as any other Trainer
+
     '''
     from .. import constant
-    updates = list()
+    argspec = inspect.getfullargspec(update_func)
+    if len(argspec.args) != 2:
+        raise ValueError('update_func must be a function that accepts two arguments (parameter, gradient)')
+    updates = []
     for p in parameters:
+        if any(dim<0 for dim in p.shape):
+            raise ValueError('parameter %s has inferred dimensions. Please create the learner after all parameter shapes have been determined'%str(p))
         g = constant(0, shape=p.shape, dtype=p.dtype, name='grad')
-        fpg = update(p,g)
-        updates.append((g, fpg))
+        result = update_func(p, g)
+        updates.append((g, result))
 
     return cntk_py.universal_learner(parameters, updates)

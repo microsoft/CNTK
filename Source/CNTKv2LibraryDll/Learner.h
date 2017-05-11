@@ -324,13 +324,22 @@ namespace CNTK
 
     class LearnerUniversal : public LearnerBase
     {
-        std::unordered_map<Parameter, std::pair<Variable, FunctionPtr> > m_updates;
-        static const std::unordered_map<Variable, ValuePtr> m_empty;
+        std::unordered_map<Parameter, std::pair<Variable, FunctionPtr> > m_updateFunctions;
 
     public:
-        LearnerUniversal(const std::vector<Parameter>& parameters, NetworkFactory f);
+        LearnerUniversal(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func);
 
-        LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr>>& updates);
+        LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr> >& updateFunctions);
+    
+    private:
+        void AllocateDummySmoothedGradients(const std::vector<Parameter>& parameters)
+        {
+            for (const auto& parameter : parameters)
+            {
+                m_smoothedGradientValues.emplace(parameter, AllocateNDArrayView(parameter, {}));
+            }
+        }
+
 
     protected:
 

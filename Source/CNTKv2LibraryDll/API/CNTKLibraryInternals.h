@@ -141,6 +141,7 @@ namespace CNTK
     class BlockFunction;
     class Function;
     class Variable;
+    class Parameter;
     class Axis;
     class DeviceDescriptor;
     enum class PrimitiveOpType : unsigned int;
@@ -302,6 +303,21 @@ namespace CNTK
 
         // This is an internal API, needed for testing.
         CNTK_API Dictionary ToDictionary(const MinibatchSourceConfig& dict);
+
+        
+#ifndef SWIG
+        /// Convenience constructor that should be used by foreign language bindings.
+        /// This is the Proper declaration understood by a real C++ compiler.
+        CNTK_API LearnerPtr UniversalLearner(const std::vector<::CNTK::Parameter>& parameters, const std::vector<std::pair<::CNTK::Variable, ::CNTK::FunctionPtr> >& updates);
+#else
+        /// Convenience constructor that should be used by foreign language bindings.
+        /// Workaround declaration for SWIG. 
+        /// This is for now necessary because it has been elusive to find an equivalent of 
+        /// %template() std::vector<std::pair<CNTK::Variable, std::shared_ptr<CNTK::Function>>>;
+        /// which will generate correct code (i.e. code that will accept a list of tuples in the foreign language)
+        /// when the proper declaration is processed by SWIG.
+        CNTK_API LearnerPtr UniversalLearner(const std::vector<CNTK::Parameter>& parameters, const std::vector<std::pair<CNTK::Variable, CNTK::FunctionPtr> >& updates);
+#endif
 
         class VariableResolver;
 
