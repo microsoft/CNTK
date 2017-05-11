@@ -89,6 +89,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 %ignore_class CNTK::IDictionarySerializable;
 %ignore_class CNTK::DictionaryValue;
+// To suppress SWIG warning 302: Identifier redefined.
+%ignore CNTK::DictionaryValue::operator=;
+%ignore CNTK::DictionaryValue::Value;
 %ignore_class CNTK::Dictionary;
 %ignore_class CNTK::ParameterInitializer;
 
@@ -111,8 +114,28 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::RandomInitializerWithRank;
 %ignore_function CNTK::TruncatedNormalInitializer;
 
-%ignore_struct std::hash<::CNTK::Parameter>;
-%ignore_struct CNTK::hash<::CNTK::Constant>;
+%ignore std::hash<CNTK::Parameter>;
+%ignore_struct std::hash<::CNTK::Constant>;
+%ignore_struct std::hash<::CNTK::Axis>;
+%ignore_struct std::hash<::CNTK::NDShape>;
+%ignore_struct std::hash<::CNTK::Variable>;
+
+// Specialization of non-template function - hash,
+// TODO: it is not clear how to limit this only to hash, but we do not use partial specialization in other places.
+#pragma SWIG nowarn=-317
+
+// Disabling enable_shared_from_this - we never use this class to actually access the object.
+%warnfilter(401) CNTK::NDArrayView;
+%warnfilter(401) CNTK::NDMask;
+%warnfilter(401) CNTK::Function;
+%warnfilter(401) CNTK::Internal::UDFDeserializeCallbackWrapper;
+%warnfilter(401) CNTK::Trainer;
+%warnfilter(401) CNTK::Evaluator;
+%warnfilter(401) CNTK::Value;
+%warnfilter(401) CNTK::BackPropState;
+%warnfilter(401) CNTK::MinibatchSource;
+
+%warnfilter(340) CNTK::NoOp;
 
 %ignore_function CNTK::Value::UnpackVariableValue;
 
@@ -371,7 +394,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Internal::ToDictionary;
 
 %ignore_class CNTK::Internal::TensorBoardFileWriter;
-// This is to suppress warning 302.
+// Suppress SWIG warning 302: Identifier redefined.
 %ignore CNTK::Internal::TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
 
 %ignore_struct CNTK::GPUProperties;
