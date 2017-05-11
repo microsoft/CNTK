@@ -140,7 +140,7 @@ class Memoize
             let op = a->Op();
             // free ops always get batched; even if they have different op-codes
             if (IsViewOp(op) && op != PrimitiveOpType::BarrierOp)
-                throw logic_error("should not get here for view ops or barrier ops");
+                LogicError("should not get here for view ops or barrier ops");
             // op codes must match
             if (op != b->Op())
                 return false;
@@ -203,7 +203,7 @@ class Memoize
         void NotifyInputAvailable(Function* f)
         {
             if (f->m_pendingInputs <= 0)
-                throw logic_error("NotifyInputAvailable: pending inputs already 0 yet we are executing it");
+                LogicError("NotifyInputAvailable: pending inputs already 0 yet we are executing it");
             f->m_pendingInputs--;
             // if it is now ready then schedule it
             if (f->m_pendingInputs == 0)
@@ -252,19 +252,19 @@ class Memoize
     {
         let& fields = *var.m_dataFields;
         if (fields.m_value)
-            throw logic_error("TraverseFunctionTreeForward() should not have been called on variables that already have a value.");
+            LogicError("TraverseFunctionTreeForward() should not have been called on variables that already have a value.");
         if (fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder)
-            throw logic_error("Value() depends on Input or Placeholder, it is not knowable.");
+            LogicError("Value() depends on Input or Placeholder, it is not knowable.");
         if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
         {
             var.Value(); // this initializes it
             if (!fields.m_value)
-                throw logic_error("Parameter/Constant has no Value??");
+                LogicError("Parameter/Constant has no Value??");
             return;
         }
         auto& f = *fields.m_ownerFunction.lock();
         if (f.m_pendingInputs == -2 || fields.m_gradient) // (-2 means we've already run gradient; therefore we must have a value and should not get here)
-            throw logic_error("TraverseFunctionTreeForward() should not have been called on variables that already have a gradient.");
+            LogicError("TraverseFunctionTreeForward() should not have been called on variables that already have a gradient.");
         if (f.m_pendingInputs != -1) // already visited
             return;
         // determine how many inputs are pending; and also recurse and set up the consumer list
@@ -325,7 +325,7 @@ class Memoize
         {
             let& from = fields.m_lazyIndex.first;
             if (!from)
-                throw logic_error("variable unexpectedly has no value yet");
+                LogicError("variable unexpectedly has no value yet");
             fields.m_value = from->IndexLastAxis(fields.m_lazyIndex.second);
         }
         return fields.m_value;
@@ -371,7 +371,7 @@ class Memoize
             //for (auto op : ops) // TODO: figure this out
             {
                 if (op->m_outputs.size() != 1)
-                    throw logic_error("only functions with 1 output are supported");
+                    LogicError("only functions with 1 output are supported");
                 //m_inputs.resize(op->m_inputs.size());
                 m_args.resize(op->m_inputs.size());
                 for (size_t i = 0; i < op->m_inputs.size(); i++)
@@ -451,7 +451,7 @@ class Memoize
                         continue;
                     // if we thought it is all the same, but then it turned out not to be, we need to fixc it up
                     if (spliceArgs.size() < j)
-                        throw logic_error("untested");
+                        LogicError("untested");
                     while (spliceArgs.size() < j)
                         spliceArgs.push_back(spliceArgs.back());
                     // append the arg
@@ -499,7 +499,7 @@ class Memoize
             {
                 for (size_t i = 0; i < numArgs; i++)
                     if (m_args[i] != f0.m_inputs[i].m_dataFields->m_value)
-                        throw logic_error("fast path unexpectedly got unexpected inputs");
+                        LogicError("fast path unexpectedly got unexpected inputs");
                 NDArrayViewPtr out1 = Alloc(unbatchedOutputShape, m_args[0]->GetDataType(), m_args[0]->Device()); // (arena buffer goes here some day)
                 auto out = f0.ComputeKnowableValue(f0.Op(), m_args, f0.Attributes(), unbatchedOutputShape, move(out1));
                 // implant all results
@@ -587,13 +587,15 @@ class Memoize
                            const vector<const NDArrayView*>& outputValues, const vector<const NDArrayView*>& inputValues,
                            const NDArrayViewPtr& gradient, double beta)
     {
+#if 0   // TODO: bring this back once we have gradient functions that do not support beta
         if (beta == 0) // TODO: limit this to those ops that do not support beta
         {
             gradient->SetValue(0.0f);
             beta = 1;
         }
-        auto op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opNone;
-        auto op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opNone;
+#endif
+        auto op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // this gets set for 1-argument TensorView ops for execution after the switch()
+        auto op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // and this for 2-arg ops; all others execute inside the switch()
         const NDArrayView* arg1 = outputGradients[0];
         const NDArrayView* arg2 = nullptr;
         double alpha = 1;
@@ -630,9 +632,9 @@ class Memoize
                 if (reductionOpName == L"Sum"/*PrimitiveFunction::InternalSumReductionOpName*/) // TODO: uncomment these symbols once we have access
                     op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
                 else if (reductionOpName == L"LogSum"/*PrimitiveFunction::InternalLogSumReductionOpName*/)
-                    gradient->NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(),
-                                                 const_cast<NDArrayView*>( inputValues[0])->shared_from_this(),
-                                                 const_cast<NDArrayView*>(outputValues[0])->shared_from_this() },
+                    gradient->NumericOperation({ const_cast<NDArrayView*>(outputGradients[0])->shared_from_this(),
+                                                 const_cast<NDArrayView*>(    inputValues[0])->shared_from_this(),
+                                                 const_cast<NDArrayView*>(   outputValues[0])->shared_from_this() },
                                                alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithExpOfDiff,
                                                gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
                 else
@@ -645,28 +647,13 @@ class Memoize
             op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break; // BUGBUG: depends on the type
             // hard stuff
         case PrimitiveOpType::Splice:
-#if 0
             {
-                // THIS IS FWD
-                auto axis = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-                size_t maxInputRank = args[0]->Shape().Rank();
-                for (int i = 1; i < args.size(); i++)
-                {
-                    auto inputRank = args[i]->Shape().Rank();
-                    if (maxInputRank < inputRank)
-                        maxInputRank = inputRank;
-                }
-                NormalizeStaticAxis(axis, NDShape(maxInputRank));
-                if (args.size() > 1)
-                    NDArrayView::GatherBatch(args, axis.StaticAxisIndex(), out);
-                else // only one: do nothing or at best reshape if a new axis is added
-                {
-                    out = args[0];
-                    if (out->Shape() != outputShape)
-                        out = out->AsShape(outputShape);
-                }
+                auto axis = attributes[L"axis"/*PrimitiveFunction::AttributeNameAxis*/].Value<Axis>();
+                if (axis.StaticAxisIndex() != arg1->Shape().Rank() -1)
+                    LogicError("NDArrayView::GatherBatch: Currently only splicing in a new slowest-changing axis is supported.");
+                gradient->NumericOperation({ arg1->IndexLastAxis(i) },
+                                           alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
             }
-#endif
             break;
         default:
             //fprintf(stderr, "NEEDS: %S\n", PrimitiveOpTypeName(primitiveOp).c_str());
@@ -699,7 +686,7 @@ class Memoize
         {
             let& fields = *output.m_dataFields;
             if (!fields.m_gradient)
-                throw logic_error("Backward: gradient from consumer unexpectedly unavailable");
+                LogicError("Backward: gradient from consumer unexpectedly unavailable");
             m_outputValuesBuffer   .push_back(LazilyIndexedValue(output).get());
             m_outputGradientsBuffer.push_back(fields.m_gradient.get());
         }
@@ -776,7 +763,7 @@ public:
         {
             // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
             //if (root.Value()->Shape() != NDShape{})
-            //    throw logic_error("Backward: root must be a scalar, or root gradient must have been implanted already");
+            //    LogicError("Backward: root must be a scalar, or root gradient must have been implanted already");
             root.m_dataFields->m_gradient = Alloc(root.Shape(), root.GetDataType(), root.Value()->Device());
             root.m_dataFields->m_gradient->SetValue(1.0f);
         }
