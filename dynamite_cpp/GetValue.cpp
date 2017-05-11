@@ -597,9 +597,9 @@ class Memoize
         const NDArrayView* arg1 = outputGradients[0];
         const NDArrayView* arg2 = nullptr;
         double alpha = 1;
+        // NOTE: For now, this only implements the operators needed for the prototype
         switch (primitiveOp)
         {
-            // NOTE: For now, this only implements the operators needed for the prototype
             // binary operations with simple TensorView implementation
         case PrimitiveOpType::Plus:           op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
         case PrimitiveOpType::Minus:          op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; alpha = i == 0 ? 1 : -1; break;
@@ -624,9 +624,49 @@ class Memoize
         case PrimitiveOpType::NoOp:           op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
         case PrimitiveOpType::Reshape:        op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
             // gradients that are copies with broadcasting
-        case PrimitiveOpType::ReduceElements: op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break; // BUGBUG: depends on the type
+        case PrimitiveOpType::ReduceElements:
+            {
+                const auto& reductionOpName = attributes[L"reductionOpName"/*PrimitiveFunction::AttributeNameReductionOpName*/].Value<wstring>();
+                if (reductionOpName == L"Sum"/*PrimitiveFunction::InternalSumReductionOpName*/) // TODO: uncomment these symbols once we have access
+                    op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
+                else if (reductionOpName == L"LogSum"/*PrimitiveFunction::InternalLogSumReductionOpName*/)
+                    gradient->NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(),
+                                                 const_cast<NDArrayView*>( inputValues[0])->shared_from_this(),
+                                                 const_cast<NDArrayView*>(outputValues[0])->shared_from_this() },
+                                               alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithExpOfDiff,
+                                               gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                else
+                    //  PrimitiveFunction::InternalMeanReductionOpName
+                    //  PrimitiveFunction::InternalMaxReductionOpName
+                    //  PrimitiveFunction::InternalMinReductionOpName
+                    //  PrimitiveFunction::InternalProdReductionOpName
+                    LogicError("Variable '%S' Value(): Gradient of reduction op %S not yet implemented.", L""/*AsString().c_str()*/, reductionOpName.c_str());
+            }
+            op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break; // BUGBUG: depends on the type
             // hard stuff
         case PrimitiveOpType::Splice:
+#if 0
+            {
+                // THIS IS FWD
+                auto axis = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                size_t maxInputRank = args[0]->Shape().Rank();
+                for (int i = 1; i < args.size(); i++)
+                {
+                    auto inputRank = args[i]->Shape().Rank();
+                    if (maxInputRank < inputRank)
+                        maxInputRank = inputRank;
+                }
+                NormalizeStaticAxis(axis, NDShape(maxInputRank));
+                if (args.size() > 1)
+                    NDArrayView::GatherBatch(args, axis.StaticAxisIndex(), out);
+                else // only one: do nothing or at best reshape if a new axis is added
+                {
+                    out = args[0];
+                    if (out->Shape() != outputShape)
+                        out = out->AsShape(outputShape);
+                }
+            }
+#endif
             break;
         default:
             //fprintf(stderr, "NEEDS: %S\n", PrimitiveOpTypeName(primitiveOp).c_str());
