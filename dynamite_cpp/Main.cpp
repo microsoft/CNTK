@@ -745,20 +745,20 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             gradients[p] = nullptr;
         double loss1;
         {
-            Microsoft::MSR::CNTK::ScopeTimer timer(3, "dynamite eval:  %.6f sec\n");
+            Microsoft::MSR::CNTK::ScopeTimer timer(3, "### CNTK Dynamite:  %.6f sec\n");
+#if 1       // model update with Dynamite
             Backward(mbLoss, gradients);
+            d_learner->Update(gradients, minibatchData[labelStreamInfo].numberOfSamples);
+#endif
             loss1 = GetValue(mbLoss)->AsScalar<float>();
         }
         fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", loss1 / minibatchData[featureStreamInfo].numberOfSequences);
-#endif
-#if 1   // model update with Dynamite
-        d_learner->Update(gradients, minibatchData[labelStreamInfo].numberOfSamples);
 #endif
 #if 1   // static CNTK
         //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
         double crit;// = trainer->PreviousMinibatchLossAverage();
         {
-            Microsoft::MSR::CNTK::ScopeTimer timer(3, "CNTK static:    %.6f sec\n");
+            Microsoft::MSR::CNTK::ScopeTimer timer(3, "### CNTK Static:    %.6f sec\n");
             trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
             //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
             //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
