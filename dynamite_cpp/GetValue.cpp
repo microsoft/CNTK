@@ -532,7 +532,7 @@ class Memoize
             for (let& output : op->m_outputs)
             {
                 // notify consumers
-                let& fields = *op->m_outputs[0].m_dataFields;
+                let& fields = *output.m_dataFields;
                 auto* f = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
                 if (f)
                     m_schedule.NotifyInputAvailable(f);

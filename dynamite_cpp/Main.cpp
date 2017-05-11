@@ -675,10 +675,10 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             break;
         fprintf(stderr, "#seq: %d, #words: %d\n", (int)minibatchData[featureStreamInfo].numberOfSequences, (int)minibatchData[featureStreamInfo].numberOfSamples);
 
-        LogVal(d_model_fn.Nested(L"linear")[L"b"]); LogVal(model_fn.Nested(L"[2]")[L"b"]);
-        LogVal(d_model_fn.Nested(L"linear")[L"W"]); LogVal(model_fn.Nested(L"[2]")[L"W"]);
-        LogVal(d_model_fn.Nested(L"step")[L"W"]);   LogVal(model_fn.Nested(L"[1]").Nested(L"step")[L"W"]);
-        LogVal(d_model_fn.Nested(L"embed")[L"E"]);  LogVal(model_fn.Nested(L"[0]")[L"E"]);
+        //LogVal(d_model_fn.Nested(L"linear")[L"b"]); LogVal(model_fn.Nested(L"[2]")[L"b"]);
+        //LogVal(d_model_fn.Nested(L"linear")[L"W"]); LogVal(model_fn.Nested(L"[2]")[L"W"]);
+        //LogVal(d_model_fn.Nested(L"step")[L"W"]);   LogVal(model_fn.Nested(L"[1]").Nested(L"step")[L"W"]);
+        //LogVal(d_model_fn.Nested(L"embed")[L"E"]);  LogVal(model_fn.Nested(L"[0]")[L"E"]);
 
 #if 1
         // Dynamite
@@ -738,15 +738,15 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             //mbLoss.Value()->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
         }
-        fprintf(stderr, "uid of first parameter: %S\n", mbLoss.Uid().c_str());
-        fprintf(stderr, "uid of loss: %S\n", d_parameters[0].Uid().c_str());
+        //fprintf(stderr, "uid of first parameter: %S\n", mbLoss.Uid().c_str());
+        //fprintf(stderr, "uid of loss: %S\n", d_parameters[0].Uid().c_str());
         unordered_map<Parameter, NDArrayViewPtr> gradients;
         for (let& p : d_parameters)
             gradients[p] = nullptr;
-        Backward(mbLoss, gradients);
         double loss1;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "dynamite eval:  %.6f sec\n");
+            Backward(mbLoss, gradients);
             loss1 = GetValue(mbLoss)->AsScalar<float>();
         }
         fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", loss1 / minibatchData[featureStreamInfo].numberOfSequences);
@@ -781,8 +781,8 @@ int main(int argc, char *argv[])
     argc; argv;
     try
     {
-        //TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
-        TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
+        TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
+        //TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
     }
     catch (exception& e)
     {
