@@ -122,6 +122,7 @@
     <None Include="..\..\common\CNTKManagedCommon.i" />
     <None Include="..\..\common\CNTKValueExtend.i" />
     <None Include="..\..\common\CNTKExceptionHandling.i" />
+    <None Include="..\..\common\CNTKWarnFilters.i" />
     <None Include="std_unordered_map.i" />
   </ItemGroup>
   <Target Name="CheckDependencies">

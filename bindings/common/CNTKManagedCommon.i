@@ -120,23 +120,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_struct std::hash<::CNTK::NDShape>;
 %ignore_struct std::hash<::CNTK::Variable>;
 
-// Specialization of non-template function - hash,
-// TODO: it is not clear how to limit this only to hash, but we do not use partial specialization in other places.
-#pragma SWIG nowarn=-317
-
-// Disabling enable_shared_from_this - we never use this class to actually access the object.
-%warnfilter(401) CNTK::NDArrayView;
-%warnfilter(401) CNTK::NDMask;
-%warnfilter(401) CNTK::Function;
-%warnfilter(401) CNTK::Internal::UDFDeserializeCallbackWrapper;
-%warnfilter(401) CNTK::Trainer;
-%warnfilter(401) CNTK::Evaluator;
-%warnfilter(401) CNTK::Value;
-%warnfilter(401) CNTK::BackPropState;
-%warnfilter(401) CNTK::MinibatchSource;
-
-%warnfilter(340) CNTK::NoOp;
-
 %ignore_function CNTK::Value::UnpackVariableValue;
 
 %ignore_class CNTK::Function::CompositeFunction;
@@ -399,6 +382,8 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 %ignore_struct CNTK::GPUProperties;
 %ignore_function CNTK::DeviceDescriptor::GetGPUProperties;
+
+%include "CNTKWarnFilters.i"
 
 // define typemap for dataBuffer
 %apply float INPUT[]  { float *dataBuffer }

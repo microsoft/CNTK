@@ -46,6 +46,9 @@
     <None Include="..\..\common\CNTKManagedCommon.i">
       <Filter>InterfaceFiles</Filter>
     </None>
+    <None Include="..\..\common\CNTKWarnFilters.i">
+      <Filter>InterfaceFiles</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="cntk_cs.i">

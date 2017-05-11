@@ -74,7 +74,7 @@
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
-    <Link/>
+    <Link />
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
     </ProjectReference>
@@ -122,6 +122,7 @@
     <None Include="..\..\common\CNTKManagedCommon.i" />
     <None Include="..\..\common\CNTKValueExtend.i" />
     <None Include="..\..\common\CNTKExceptionHandling.i" />
+    <None Include="..\..\common\CNTKWarnFilters.i" />
     <None Include="..\..\..\Tests\EndToEndTests\EvalClientTests\JavaEvalTest\src\Main.java" />
     <None Include="generate-java-bindings.cmd" />
     <None Include="std_unordered_map.i" />
