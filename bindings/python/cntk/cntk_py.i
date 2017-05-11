@@ -21,9 +21,8 @@
 %rename(_add_progress_writers) CNTK::Internal::AddProgressWriters;
 %rename(_backward) CNTK::Function::Backward;
 %rename(_infer_outputs) CNTK::Function::InferOutputs;
-%rename(_serialize) CNTK::Function::Serialize;
+%rename(_serialize_impl) CNTK::Function::Serialize;
 %rename(_deserialize) CNTK::Function::Deserialize;
-%rename(_deserialize) CNTK::Internal::UDFDeserializer::Deserialize;
 %rename(_update) CNTK::Learner::Update;
 %rename(sgd_learner) CNTK::SGDLearner;
 %rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
@@ -40,9 +39,11 @@
 %rename(ctf_deserializer) CNTK::CTFDeserializer;
 %rename(htk_feature_deserializer) CNTK::HTKFeatureDeserializer;
 %rename(htk_mlf_deserializer) CNTK::HTKMLFDeserializer;
-%rename(_infer_outputs) CNTK::Function::InferOutputs;
 %rename(_stream_infos) CNTK::SwigMinibatchSource::StreamInfos(PyObject*);
 %rename(_next_minibatch) CNTK::SwigMinibatchSource::_GetNextMinibatch;
+%rename(universal_learner) CNTK::Internal::UniversalLearner;
+%rename(_register_udf_deserialize_callback) CNTK::Internal::RegisterUDFDeserializeCallbackWrapper;
+%rename(base64_image_deserializer) CNTK::Base64ImageDeserializer;
 
 %rename(_none) CNTK::DictionaryValue::Type::None;
 
@@ -77,7 +78,7 @@
 %warnfilter(401) CNTK::NDArrayView;
 %warnfilter(401) CNTK::NDMask;
 %warnfilter(401) CNTK::Function;
-%warnfilter(401) CNTK::Internal::UDFDeserializer;
+%warnfilter(401) CNTK::Internal::UDFDeserializeCallbackWrapper;
 %warnfilter(401) CNTK::Trainer;
 %warnfilter(401) CNTK::Evaluator;
 %warnfilter(401) CNTK::Value;
@@ -85,6 +86,8 @@
 %warnfilter(401) CNTK::MinibatchSource;
 
 %warnfilter(401, 509) CNTK::MomentumAsTimeConstantSchedule;
+
+%warnfilter(340) CNTK::NoOp;
 
 // The following operators are not supported in Python.
 %ignore operator<<;
@@ -151,6 +154,7 @@
 %template() std::vector<std::pair<size_t, double>>;
 %template() std::vector<std::pair<size_t, size_t>>;
 %template() std::vector<std::pair<CNTK::Variable, CNTK::Variable>>;
+%template() std::vector<std::pair<CNTK::Variable, std::shared_ptr<CNTK::Function>>>;
 %template() std::vector<CNTK::Dictionary>;
 %template() std::vector<std::wstring>;
 %template() std::pair<std::vector<std::shared_ptr<CNTK::NDArrayView>>, std::vector<bool>>;
@@ -172,8 +176,11 @@
 %ignore CNTK::Internal::GetComputationNetworkTraceLevel;
 %ignore CNTK::Internal::TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
 %ignore CNTK::Internal::Convolution; 
+// These aren't exported from C++ but the corresponding internal versions are
+%ignore CNTK::UniversalLearner;
 
-%ignore CNTK::Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
+%ignore CNTK::Function::RegisterUDFDeserializeCallback;
+%ignore CNTK::Function::GetUDFDeserializeCallback;
 
 %{
 #define SWIG_FILE_WITH_INIT
@@ -616,19 +623,32 @@ public:
     }
 }
 
-// Callback support
+
 %feature("director") CNTK::Function;
-%feature("director") CNTK::Internal::UDFDeserializer;
 %feature("nodirector") CNTK::Function::OnPlaceholdersReplaced;
 %feature("nodirector") CNTK::Function::OpName;
+// Callback support
+%feature("director") CNTK::Internal::UDFDeserializeCallbackWrapper;
+
+%typemap(directorout) std::shared_ptr<CNTK::Function> (void * swig_argp, int swig_res = 0) {
+  if ($input == Py_None) {
+    $result = $ltype();
+  } else {
+    swig_res = SWIG_ConvertPtr($input, &swig_argp, $descriptor(std::shared_ptr<CNTK::Function> *), %convertptr_flags);
+    if (!SWIG_IsOK(swig_res)) {
+      %dirout_fail(swig_res,"$type");
+    }
+    $result = *(%reinterpret_cast(swig_argp, $&ltype));
+  }
+}
 
 // Since there're three overloads of Function::Load, both "rename" and "compactdefaultargs" are needed
 // to make pybuffer_binary work correctly with default arguments.
-%rename(load_from_buffer) CNTK::Function::Load(const char*, size_t, const DeviceDescriptor&, const Internal::UDFDeserializerPtr&);
-%feature("compactdefaultargs") CNTK::Function::Load(const char*, size_t, const DeviceDescriptor&, const Internal::UDFDeserializerPtr&);
+%rename(load_from_buffer) CNTK::Function::Load(const char*, size_t, const DeviceDescriptor&);
+%feature("compactdefaultargs") CNTK::Function::Load(const char*, size_t, const DeviceDescriptor&);
 
 // This overload is not used in python at the moment.
-%ignore CNTK::Function::Load(std::istream&, const DeviceDescriptor&, const Internal::UDFDeserializerPtr&);
+%ignore CNTK::Function::Load(std::istream&, const DeviceDescriptor&);
 
 %feature("director") CNTK::Learner;
 %feature("nodirector") CNTK::Learner::Parameters;
@@ -813,7 +833,7 @@ public:
     }
 %enddef
 
-// Implementing typemapping for a virtual function UDFDeserializer::Deserialize (it has a dictionary
+// Implementing typemapping for UDFDeserializeCallbackWrapper (it has a dictionary
 // as one of its input parameters), which needs to be implemented in Python.
 
 %typemap(directorin, fragment="DictionaryValueToPy") const CNTK::Dictionary&
@@ -1393,7 +1413,6 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::Trainer)
 %shared_ptr(CNTK::TrainingSession)
 %shared_ptr(CNTK::Function)
-%shared_ptr(CNTK::Internal::UDFDeserializer)
 %shared_ptr(CNTK::NDArrayView)
 %shared_ptr(CNTK::Value)
 %shared_ptr(CNTK::NDMask)
@@ -1405,6 +1424,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::DistributedLearner)
 %shared_ptr(CNTK::Internal::TensorBoardFileWriter)
 %shared_ptr(CNTK::ProgressWriter)
+%shared_ptr(CNTK::Internal::UDFDeserializeCallbackWrapper)
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
@@ -1786,6 +1806,7 @@ namespace CNTK
 %template(random_uniform_float) CNTK::NDArrayView::RandomUniform<float>;
 %template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
+%template(DictionaryValueFromNDArrayView) CNTK::DictionaryValue::DictionaryValue<CNTK::NDArrayView>;
 
 %template(training_parameter_per_sample_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
 %template(training_parameter_per_minibatch_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Minibatch>;
@@ -1806,12 +1827,16 @@ namespace CNTK {
     class UserBackPropState;
     typedef std::shared_ptr<UserBackPropState> UserBackPropStatePtr;
 
-    class UserBackPropState : public BackPropState {
+    class UserBackPropState : public BackPropState
+    {
+
+        template <typename T, typename ...CtorArgTypes>
+        friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
+
     public:
-        UserBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
-            : BackPropState(function, computeDevice), m_userData(userData)
+        static BackPropStatePtr Create(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
         {
-            Py_INCREF(m_userData);
+            return MakeSharedObject<UserBackPropState>(function, computeDevice, userData);
         }
 
         const PyObject* Data() const
@@ -1835,6 +1860,12 @@ namespace CNTK {
         }
 
     private:
+        UserBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
+            : BackPropState(function, computeDevice), m_userData(userData)
+        {
+            Py_INCREF(m_userData);
+        }
+
         const PyObject* m_userData;
     };
 }

@@ -45,6 +45,9 @@ namespace CNTK
     const std::wstring internalWorkerStateKey = L"internal_worker_state";
     const std::wstring externalWorkerStateKey = L"external_worker_state";
     const std::wstring userDefinedStateKey = L"user_defined_state";
+    const std::wstring udfModuleNameKey = L"module";
+    const std::wstring udfFactoryMethodNameKey = L"deserialize_method";
+    const std::wstring nativeUDFKey = L"native";
 
     template <typename T> 
     inline std::string GetVersionsString(size_t currentVersion, size_t dictVersion)

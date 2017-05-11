@@ -39,6 +39,18 @@ public:
     // Checks lables type in the configuration.
     void CheckLabelType();
 
+    // Returns scp root path.
+    std::string GetRootPath();
+
+    // Returns scp file path.
+    std::string GetScpFilePath();
+
+    // Returns scp file dir.
+    std::string GetScpDir();
+
+    // Adjusts utterance path according to the given root path and scp directory.
+    void AdjustUtterancePath(const std::string& rootPath, const string& scpDir, std::string& path);
+
     // Gets names of feature, label, hmm and lattice files from the configuration.
     void GetDataNamesFromConfig(
         std::vector<std::wstring>& features,

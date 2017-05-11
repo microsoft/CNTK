@@ -150,6 +150,9 @@ cntk_module = Extension(
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
     language="c++",
+    depends = [os.path.join(CNTK_SOURCE_PATH, "Common", "Include", "ExceptionWithCallStack.h")] +
+        [os.path.join(cntkBindingCommon, f) for f in ["CNTK_ExceptionHandling.i", "CNTKValueExtend.i"]] +
+        [os.path.join(cntkV2LibraryInclude, f) for f in ["CNTKLibraryInternals.h", "CNTKLibrary.h"]],
 )
 
 # Do not include examples

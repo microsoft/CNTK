@@ -27,6 +27,14 @@ We currently offer the BN-Inception (https://arxiv.org/abs/1502.03167) and Incep
 
 ## Pre-trained Models
 
+### CNTK Pre-trained
+Models pre-trained with CNTK scripts.
+
+|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/InceptionV3_ImageNet_CNTK.model
+|:---------|:---
+|Training script | [InceptionV3.cntk](./InceptionV3/BrainScript/InceptionV3.cntk)
+|Single crop top 1 / top 5 error | 21.878% / 5.972%
+
 ### Caffe-Converted
 
 #### BN-Inception

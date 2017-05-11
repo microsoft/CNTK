@@ -36,6 +36,9 @@ namespace CNTK
 
     void DistributedCommunicator::Finalize()
     {
+        auto mpi = MPIWrapper::GetInstance(false);
+        if (mpi)
+            mpi->Finalize();
         MPIWrapper::DeleteInstance();
     }
 

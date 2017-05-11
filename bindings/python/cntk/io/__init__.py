@@ -542,6 +542,34 @@ def HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = False):
             master_label_files = [master_label_files]
         return cntk_py.htk_mlf_deserializer(stream_name, label_mapping_file, dimension, master_label_files, phoneBoundaries)
 
+def _process_image_deserializer_args(filename, streams, deserializer):
+    image_stream_name = None
+
+    # Streams with the same name are not allowed, make sure the default is
+    # unique.
+    label_stream_name = '_ignore_labels_' + str(uuid.uuid1())
+    num_labels = 2
+    transforms = []
+    for key in streams:
+        s = streams[key]
+        alias = s.stream_alias
+        if alias == "image":
+            image_stream_name = key
+            transforms = s.transforms
+        elif alias == "label":
+            label_stream_name = key
+            num_labels = s.dim
+        else:
+            raise ValueError(
+                "{}: invalid field name '{}', allowed are "
+                "'image' and 'label'".format(deserializer, alias))
+    
+    if image_stream_name is None:
+        raise ValueError("{}: stream name ('image' or 'label') must be "
+            "specified".format(deserializer))
+    
+    return (filename, label_stream_name, num_labels, 
+        image_stream_name, transforms)
 
 def ImageDeserializer(filename, streams):
     '''
@@ -561,33 +589,29 @@ def ImageDeserializer(filename, streams):
     See also:
         :cntkwiki:`Image reader definition <BrainScript-Image-reader>`
     '''
-    image_stream_name = None
+    args = _process_image_deserializer_args(filename, streams, 
+        'ImageDeserializer')
+    return cntk_py.image_deserializer(*args)
 
-    # Streams with the same name are not allowed, make sure the default is
-    # unique.
-    label_stream_name = '_ignore_labels_' + str(uuid.uuid1())
-    num_labels = 2
-    transforms = []
-    for key in streams:
-        s = streams[key]
-        alias = s.stream_alias
-        if alias == "image":
-            image_stream_name = key
-            transforms = s.transforms
-        elif alias == "label":
-            label_stream_name = key
-            num_labels = s.dim
-        else:
-            raise ValueError(
-                "ImageDeserializer: invalid field name '{}', allowed are "
-                "'image' and 'label'".format(alias))
-    if image_stream_name is None:
-        raise ValueError(
-            "ImageDeserializer: stream name ('image' or 'label') must be "
-            "specified")
-    return cntk_py.image_deserializer(filename, label_stream_name, num_labels,
-                                      image_stream_name, transforms)
+def Base64ImageDeserializer(filename, streams):
+    '''
+    Configures the image reader that reads base64 encoded images and corresponding 
+    labels from a file of the form::
 
+        [sequenceId <tab>] <numerical label (0-based class id)> <tab> <base64 encoded image>
+
+    Similarly to the ImageDeserializer, the sequenceId prefix is optional and can be omitted.
+
+    Args:
+        filename (str): file name of the input file dataset that contains images 
+        and corresponding labels
+
+    See also:
+        :cntkwiki:`Base64ImageDeserializer options <BrainScript-and-Python---Understanding-and-Extending-Readers#base64imagedeserializer-options>`
+    '''
+    args = _process_image_deserializer_args(filename, streams, 
+        'Base64ImageDeserializer')
+    return cntk_py.base64_image_deserializer(*args)
 
 def CTFDeserializer(filename, streams):
     '''

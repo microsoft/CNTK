@@ -651,6 +651,32 @@ def test_layers_convolution_2d():
     np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=5, \
         err_msg="Error in convolution2D computation with stride = 1 and zeropad = True")
 
+##########################################################
+# Test convolutional 1D layer for correctness (p=False s = 1)
+##########################################################
+def test_layers_convolution_1d():
+    inC, inW = 1, 3
+    y = input((inC, inW))
+
+    dat = np.ones([1, inC, inW], dtype = np.float32)
+
+    model = Convolution1D((3, ),
+                          num_filters=1,
+                          activation=None,
+                          pad=False,
+                          strides=1, name='foo')
+    # shape should be
+    model_shape = model(y).foo.shape
+    np.testing.assert_array_equal(model_shape, (1, 1), \
+        "Error in convolution1D with stride = 1 and padding")
+
+    res = model(y).eval({y: dat})
+
+    expected_res = np.sum(model.foo.W.value)
+
+    np.testing.assert_array_almost_equal(res[0][0][0], expected_res, decimal=5, \
+        err_msg="Error in convolution1D computation with stride = 1 and zeropad = True")
+
 ####################################
 # sequential convolution without reduction dimension
 ####################################

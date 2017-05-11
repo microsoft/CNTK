@@ -8,6 +8,8 @@
 Utils for operations unit tests
 """
 
+import os
+import psutil
 import numpy as np
 import pytest
 
@@ -33,6 +35,14 @@ def cntk_device(device_id):
         return cpu()
     else:
         return gpu(device_id)
+
+
+def mem_used():
+    '''
+    Return the non-swapped physical memory the Python process is using.
+    '''
+    process = psutil.Process(os.getpid())
+    return process.memory_info().rss
 
 
 def _test_unary_op(precision, device_id, op_func,

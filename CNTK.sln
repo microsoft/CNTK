@@ -1538,6 +1538,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SaveBestModelPerCriterion",
 		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\testcases.yml = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\testcases.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Java", "Java", "{F37067BD-8BB1-4F93-AEF4-F37434613AE4}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKLibraryJavaBinding", "bindings\java\Swig\CNTKLibraryJavaBinding.vcxproj", "{5D1972FA-F0A4-4035-8E63-8BAEF0230097}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -2029,6 +2036,16 @@ Global
 		{4CF94A50-0D17-432A-8B5A-8458E91C44A6}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
 		{4CF94A50-0D17-432A-8B5A-8458E91C44A6}.Release|x64.ActiveCfg = Release|x64
 		{4CF94A50-0D17-432A-8B5A-8458E91C44A6}.Release|x64.Build.0 = Release|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Debug|x64.ActiveCfg = Debug|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Debug|x64.Build.0 = Debug|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release_NoOpt|x64.ActiveCfg = Release_NoOpt|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release|x64.ActiveCfg = Release|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2241,5 +2258,7 @@ Global
 		{58E3A257-91BE-4DC7-8991-70BFABE0A671} = {8071EF60-30F7-4A77-81AA-ADCA0E18B1E3}
 		{4CF94A50-0D17-432A-8B5A-8458E91C44A6} = {7A27E076-296E-41A8-BA76-164071251372}
 		{C1189678-4FFA-4258-971F-3262B44FCA99} = {6994C86D-A672-4254-824A-51F4DFEB807F}
+		{F37067BD-8BB1-4F93-AEF4-F37434613AE4} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097} = {F37067BD-8BB1-4F93-AEF4-F37434613AE4}
 	EndGlobalSection
 EndGlobal

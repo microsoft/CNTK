@@ -151,8 +151,8 @@ namespace CNTK
 
     void Variable::SetValue(const NDArrayViewPtr& value)
     {
-        if (!IsParameter())
-            LogicError("Variable '%S' SetValue(): Can only be invoked on a Parameter variable.", AsString().c_str());
+        if (!(IsParameter() || IsConstant()))
+            LogicError("Variable '%S' SetValue(): Can only be invoked on a Parameter or Constant variable.", AsString().c_str());
         else if (GetDataType() != value->GetDataType()) 
             LogicError("Variable '%S' SetValue(): 'source' and 'destination' have different data types.", AsString().c_str());
         else if (Shape() != value->Shape() && (AsTensorShape(Shape()) != AsTensorShape(value->Shape())))
@@ -522,8 +522,10 @@ namespace CNTK
         m_dataFields->SetValueInitialization(initializer, device);
     }
 
-    size_t Parameter::CurrentValueTimeStamp() const
+    size_t Variable::CurrentValueTimeStamp() const
     {
+        if (!IsParameter() && !IsConstant())
+            LogicError("Variable '%S' CurrentValueTimeStamp: Variable must be a Parameter or Constant", AsString().c_str());
         return m_dataFields->m_valueTimeStamp.load(); 
     }
 
@@ -531,6 +533,7 @@ namespace CNTK
     {
         m_dataFields->m_valueTimeStamp++;
     }
+
 
     Constant::Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)
         : Variable(shape, VariableKind::Constant, dataType, nullptr, false, {}, name, Internal::GenerateUid(VariableKind::Constant))
@@ -547,5 +550,16 @@ namespace CNTK
         auto constantValueCPU = originalConstantValue->DeepClone(DeviceDescriptor::CPUDevice(), true);
         NDArrayViewPtr newConstantValue = CloneAsDataType(constantValueCPU, dataType, true);
         return Constant(newConstantValue->DeepClone(originalConstantValue->Device(), originalConstantValue->IsReadOnly()), Name());
+    }
+
+    void Constant::RecordValueUpdate()
+    {
+        m_dataFields->m_valueTimeStamp++;
+    }
+
+    void Constant::SetValue(const NDArrayViewPtr& value)
+    {
+        Variable::SetValue(value);
+        RecordValueUpdate();
     }
 }

@@ -181,7 +181,7 @@ class VariableMixin(object):
             '''
             raise TypeError("abstract type " + str(self) + " cannot be instantiated; use 'input(**" + str(self) + ")' instead")
 
-        _unknown_shape = (-2,)
+        _unknown_shape = (-2,) # TODO: take this from the catacombs of cntk_py
 
         def __str__(self):
             '''
@@ -228,10 +228,10 @@ class VariableMixin(object):
         @property
         def shape_is_known(self):
             shape = getattr(self, 'shape', None)
-            return not shape or shape != Variable._Type._unknown_shape
+            return shape is not None and shape != Variable._Type._unknown_shape
 
         @staticmethod
-        def _sanitize(type):
+        def _sanitize(the_type):
             '''
             Converts type into Variable._Type if given a float, float32, or float64.
             '''
@@ -239,14 +239,14 @@ class VariableMixin(object):
             import sys
             if sys.version_info >= (3,5):
                 from typing import GenericMeta
-                if isinstance(type, GenericMeta):
+                if isinstance(the_type, GenericMeta):
                     raise TypeError("Python's typing.Sequence is not a valid CNTK type; use cntk.layers.typing.Sequence instead")
-            if type == float:
+            if the_type == float:
                 return Variable._Type(shape=(), is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
-            elif type == np.float32 or  type == np.float64:
-                return Variable._Type(shape=(), dtype=type, is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
+            elif the_type == np.float32 or  the_type == np.float64:
+                return Variable._Type(shape=(), dtype=the_type, is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
             else:
-                return type
+                return the_type
 
     @property
     def _type(self):
@@ -458,4 +458,15 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
         NumPy array of the value
         '''
         return super(Constant, self).value().to_ndarray()
+
+
+    @value.setter
+    def value(self, val):
+        if isinstance(val, np.ndarray):
+            ndarray = NDArrayView.from_dense(val.astype(self.dtype))
+            super(Constant, self).set_value(ndarray)
+        elif isinstance(val, cntk_py.NDArrayView):
+            super(Constant, self).set_value(val)
+        else:
+            raise TypeError("Unsupported value type: %s", type(val))
 
