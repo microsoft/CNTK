@@ -182,11 +182,11 @@ class TrainFunction(UserFunction):
         if True:
             ####### np-version ###############
             gtb_inputs.shape = (gtb_inputs.shape[0], int(gtb_inputs.shape[1]/5), 5)
-            gtb_xmins = np.floor(np.maximum( (gtb_inputs[:, :, 0] - (.5* gtb_inputs[:,:,2])) * self.grid_size_hor, 0))
-            gtb_xmaxs = np.floor(np.minimum( (gtb_inputs[:, :, 0] + (.5 * gtb_inputs[:, :, 2])) * self.grid_size_hor, self.grid_size_hor-1))
+            gtb_xmins = np.floor(np.maximum( (gtb_inputs[:, :, 0] - (.5* gtb_inputs[:,:,2])) * self.grid_size_hor, 0)).astype(int)
+            gtb_xmaxs = np.floor(np.minimum( (gtb_inputs[:, :, 0] + (.5 * gtb_inputs[:, :, 2])) * self.grid_size_hor, self.grid_size_hor-1)).astype(int)
 
-            gtb_ymins = np.floor(np.maximum((gtb_inputs[:, :, 1] - (.5 * gtb_inputs[:, :, 3])) * self.grid_size_ver, 0))
-            gtb_ymaxs = np.floor(np.minimum((gtb_inputs[:, :, 1] + (.5 * gtb_inputs[:, :, 3])) * self.grid_size_ver, self.grid_size_ver-1))
+            gtb_ymins = np.floor(np.maximum((gtb_inputs[:, :, 1] - (.5 * gtb_inputs[:, :, 3])) * self.grid_size_ver, 0)).astype(int)
+            gtb_ymaxs = np.floor(np.minimum((gtb_inputs[:, :, 1] + (.5 * gtb_inputs[:, :, 3])) * self.grid_size_ver, self.grid_size_ver-1)).astype(int)
             cls_indexs = (gtb_inputs[:,:,4] - 1).astype(int)
 
             original_shape = array_goal.shape
