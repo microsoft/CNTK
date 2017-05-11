@@ -675,7 +675,7 @@ class Memoize
     vector<const NDArrayView*> m_outputValuesBuffer;
     vector<const NDArrayView*> m_outputGradientsBuffer;
     vector<const NDArrayView*> m_inputValuesBuffer;
-    void Backward(Function* f)
+    void BackpropToInputs(Function* f)
     {
         let& outputs = f->m_outputs;
         let& inputs =  f->m_inputs;
@@ -686,7 +686,7 @@ class Memoize
         {
             let& fields = *output.m_dataFields;
             if (!fields.m_gradient)
-                LogicError("Backward: gradient from consumer unexpectedly unavailable");
+                LogicError("BackpropToInputs: gradient from consumer unexpectedly unavailable");
             m_outputValuesBuffer   .push_back(LazilyIndexedValue(output).get());
             m_outputGradientsBuffer.push_back(fields.m_gradient.get());
         }
@@ -757,7 +757,11 @@ public:
             if (!kv.first.m_dataFields->m_needsGradient)
                 logic_error("Backward: cannot compute gradient for variable with m_needsGradient being False.");
             else
+            {
+                // we must destroy the gradient of parameters since those are not constructed anew each time
+                kv.first.m_dataFields->m_gradient.reset();
                 TraverseFunctionTreeBackward(kv.first, order);
+            }
         // implant the first gradient if not present yet
         if (!root.m_dataFields->m_gradient)
         {
@@ -772,10 +776,16 @@ public:
         // This way we can optimize operations, such as a matrix product or gradient of GatherBatch().
         fprintf(stderr, "Back-propagating through %d functions\n", (int)order.size());
         for (auto f = order.begin(); f != order.end(); ++f)
-            Backward(&*f);
+            BackpropToInputs(&*f);
         // implant the results into the map the user passed in
         for (auto& kv : gradients)
+        {
             kv.second = kv.first.m_dataFields->m_gradient;
+            // and make sure we don't get into an incorrect consumer chain
+            // BUGBUG: This is brittle. Forward sets this up, and we won't know whether we are called multiple times (we shouldn't though).
+            kv.first.m_dataFields->m_consumers.first = nullptr;
+            kv.first.m_dataFields->m_consumers.second.clear();
+        }
     }
 }; // class
 } // namespace
