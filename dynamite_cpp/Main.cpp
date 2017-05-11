@@ -645,17 +645,17 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto features = InputVariable({ inputDim },         false/*true*/ /*isSparse*/, DataType::Float, featuresName);
     auto labels   = InputVariable({ numOutputClasses }, false/*useSparseLabels*/,   DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
 
-    auto criterion = criterion_fn(features, labels); // this sets the shapes
+    auto criterion = criterion_fn(features, labels); // this sets the shapes and initializes all parameters
     auto loss   = criterion;
     //auto metric = criterion.second;
 
     // tie model parameters
-    d_model_fn.Nested(L"embed" )[L"E"].TieValueWith(model_fn.Nested(L"[0]")[L"E"]                );
-    d_model_fn.Nested(L"step"  )[L"W"].TieValueWith(model_fn.Nested(L"[1]").Nested(L"step")[L"W"]);
-    d_model_fn.Nested(L"step"  )[L"R"].TieValueWith(model_fn.Nested(L"[1]").Nested(L"step")[L"R"]);
-    d_model_fn.Nested(L"step"  )[L"b"].TieValueWith(model_fn.Nested(L"[1]").Nested(L"step")[L"b"]);
-    d_model_fn.Nested(L"linear")[L"W"].TieValueWith(model_fn.Nested(L"[2]")[L"W"]                );
-    d_model_fn.Nested(L"linear")[L"b"].TieValueWith(model_fn.Nested(L"[2]")[L"b"]                );
+    d_model_fn.Nested(L"embed" )[L"E"].SetValue(model_fn.Nested(L"[0]")[L"E"]                .Value());
+    d_model_fn.Nested(L"step"  )[L"W"].SetValue(model_fn.Nested(L"[1]").Nested(L"step")[L"W"].Value());
+    d_model_fn.Nested(L"step"  )[L"R"].SetValue(model_fn.Nested(L"[1]").Nested(L"step")[L"R"].Value());
+    d_model_fn.Nested(L"step"  )[L"b"].SetValue(model_fn.Nested(L"[1]").Nested(L"step")[L"b"].Value());
+    d_model_fn.Nested(L"linear")[L"W"].SetValue(model_fn.Nested(L"[2]")[L"W"]                .Value());
+    d_model_fn.Nested(L"linear")[L"b"].SetValue(model_fn.Nested(L"[2]")[L"b"]                .Value());
 
     // train
     let d_parameters = d_model_fn.Parameters();
@@ -748,8 +748,8 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 #endif
 #if 1   // model update with Dynamite
         d_learner->Update(gradients, minibatchData[labelStreamInfo].numberOfSamples);
-#else
-        // static CNTK
+#endif
+#if 1   // static CNTK
         //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
         double crit;// = trainer->PreviousMinibatchLossAverage();
         {
