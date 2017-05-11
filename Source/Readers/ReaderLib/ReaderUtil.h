@@ -155,15 +155,15 @@ private:
 
 // Boost split is too slow, this one gives almost 200% better results for initial parsing of big text files.
 // Splits the incoming sequence given by begin and end according to the delimiters without string copies.
-template<typename T>
+template<class T>
 inline void Split(T* begin, T* end, const std::vector<bool>& delimiters, std::vector<boost::iterator_range<T*>>& result)
 {
-    assert(delimiters.size() > std::numeric_limits<T>::max());
+    assert(delimiters.size() > std::numeric_limits<unsigned char>::max());
 
-    char* start = begin;
+    auto start = begin;
     while (begin != end)
     {
-        if (delimiters[*begin])
+        if (delimiters[static_cast<unsigned char>(*begin)])
         {
             result.push_back(boost::make_iterator_range(start, begin));
             start = begin + 1;
@@ -190,12 +190,12 @@ inline std::vector<bool> DelimiterHash(const std::vector<char>& values)
 template<class T>
 inline T* ReadTillDelimiter(T* begin, T* end, const std::vector<bool>& delimiters, boost::iterator_range<T*>& result)
 {
-    assert(delimiters.size() > std::numeric_limits<T>::max());
+    assert(delimiters.size() > std::numeric_limits<unsigned char>::max());
 
-    T* start = begin;
+    auto start = begin;
     while (begin != end)
     {
-        if (delimiters[*begin])
+        if (delimiters[static_cast<unsigned char>(*begin)])
         {
             result = boost::make_iterator_range(start, begin);
             return begin + 1;
