@@ -53,13 +53,13 @@ if False:
     ############# willi ###############
 
 
-def create_better_last_layer(network, anchor_box_scales):
+def create_output_activation_layer(network, anchor_box_scales):
 
     n_gridcells_horizontal = int(par_image_width / par_downsample)
     n_gridcells_vertical =  int(par_image_height / par_downsample)
     n_anchorboxes=len(anchor_box_scales)
-    output_width = n_gridcells_horizontal * n_gridcells_vertical * n_anchorboxes # TODO make Method parameter instead of constant
-    output_height =  par_num_classes + 5 # TODO make Method parameter instead of constant
+    output_width = n_gridcells_horizontal * n_gridcells_vertical * n_anchorboxes
+    output_height =  par_num_classes + 5
 
     # reorder array! now 125*7*7
     # tp1 = ops.transpose(network, 0,2) # 7*7*125
@@ -74,7 +74,7 @@ def create_better_last_layer(network, anchor_box_scales):
     objectnesses =  ops.slice(reshaped, axis=1, begin_index=4, end_index=5, name="Obj_Out")
     cls_outs = ops.slice(reshaped, axis=1, begin_index=5, end_index=output_height, name="Cls_Out")
 
-    if False:
+    if False: # Test-case to see if bounding-box placement is ok!
         xy_cords = xy_cords * [0]
         wh_mults = wh_mults * [0]
 
@@ -106,7 +106,6 @@ def create_better_last_layer(network, anchor_box_scales):
     xs = np.asarray(xs, np.float32)
     ys = np.asarray(ys, np.float32)
     xys = np.concatenate((xs,ys), axis=1)
-    #grid_numbers = ops.constant(xys, name="Grid_Pos")
     grid_numbers = ops.constant(np.ascontiguousarray(xys, np.float32), name="Grid_Pos")
     ### scales
     scales = [[1.0 / n_gridcells_horizontal] * output_width, [1.0 / n_gridcells_vertical] * output_width]
@@ -116,7 +115,6 @@ def create_better_last_layer(network, anchor_box_scales):
     ## constants done!
 
     xy_in_gridcells = ops.plus(xy_rel_in_grid, grid_numbers)
-    #xy_preds = cntk.ops.times(xy_in_gridcells, scale_imagedim_per_gridcell) # this is mat-mul not element-wise!
     xy_preds = xy_in_gridcells * scale_imagedim_per_gridcell
 
 
@@ -138,38 +136,35 @@ def create_better_last_layer(network, anchor_box_scales):
     # wh_preds = cntk.ops.times(wh_rels, anchorbox_scale_mults) # this is mat-mul not element-wise!
     wh_preds = wh_rels * anchorbox_scale_mults
 
-    #import pdb
-    #debug_node = LambdaFunc(wh_preds, when=lambda arg: np.max(arg)>1,
-    #                        execute=lambda x: pdb.set_trace())
-
     # Splice the parts back together!
     full_output = ops.splice(xy_preds, wh_preds, obj_preds, cls_preds, axis=1)
-    # full_output = reshape(full_output, (output_width*output_height))
     return full_output
 
 
-def create_detector():
+def create_detector(batchnormalization = False):
     net = Sequential([
         Convolution2D((3, 3), num_filters=1024, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
+        BatchNormalization(),
         Convolution2D((3, 3), num_filters=1024, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
+        BatchNormalization(),
         Convolution2D((3, 3), num_filters=1024, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
+        #BatchNormalization(),
 
         Convolution2D((1, 1), num_filters=125),
     ], "YOLOv2_Detector")
-    # return net
-    # TODO remove hardcoded things such as n_grid which can be inferred - udf might be necessary
-    net2 = create_better_last_layer(net,  anchor_box_scales=par_anchorbox_scales)
+
+    net2 = create_output_activation_layer(net, anchor_box_scales=par_anchorbox_scales)
     return net2
 
 
-
 def load_pretrained_darknet_feature_extractor():
-    loaded_model = load_model(".\Output\darknet19_CIFAR10_6.model")
+    loaded_model = load_model(".\Output\darknet19_CIFAR10_7.model")
 
     feature_layer = find_by_name(loaded_model, "feature_layer")
     fe_output_layer = find_by_name(loaded_model, "featureExtractor_output")
 
     return combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: placeholder()})
+
 
 def load_pretrained_resnet101_feature_extractor():
     loaded_model = load_model(os.path.join(par_abs_path, "..", "..", "PretrainedModels", "ResNet101_ImageNet.model"))
@@ -177,24 +172,24 @@ def load_pretrained_resnet101_feature_extractor():
     fe_output_layer = find_by_name(loaded_model, "res5c_relu")
 
     # return combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: placeholder()})
-    # make resnet a block!
+
     net = combine([fe_output_layer.owner]).clone(CloneMethod.freeze, {feature_layer: placeholder()})
     return net
-    return as_block(
-        net,[(net.arguments[0], net.arguments[0])],"ResNet_FE","ResNet_FE"
-    )
+    # make resnet a block if desired
+    #return as_block(net,[(net.arguments[0], net.arguments[0])],"ResNet_FE","ResNet_FE")
+
 
 def create_untrained_darknet19_fe():
     return dn19.create_feature_extractor(32)
 
+
 def create_feature_extractor(use_model = "pre_ResNet101_ImageNet"):
-    #return create_untrained_darknet19_fe()
     if(use_model == "pre_Darknet_Cifar"):
         fe = load_pretrained_darknet_feature_extractor()
     elif(use_model == "pre_ResNet101_ImageNet"):
         fe = load_pretrained_resnet101_feature_extractor()
-    # print(fe.shape)
     return fe
+
 
 def create_yolov2_net():
     return create_detector()(create_feature_extractor())
@@ -204,7 +199,7 @@ def create_yolov2_net():
 #   Main                                                                                                               #
 ########################################################################################################################
 
-def predict_and_show_image(model, path, conf_threshold = 0.5):
+def predict_image(model, path, conf_threshold = 0.5, show=True):
     import matplotlib.pyplot as mp
     import cv2
 
@@ -212,7 +207,6 @@ def predict_and_show_image(model, path, conf_threshold = 0.5):
     resized = cv2.resize(cv_img, (par_image_width, par_image_height), interpolation=cv2.INTER_NEAREST)
     bgr_image = np.asarray(resized, dtype=np.float32)
     hwc_format = np.ascontiguousarray(np.rollaxis(bgr_image, 2))
-    # compute model output
 
     arguments = {model.arguments[0]: [hwc_format]}
 
@@ -225,9 +219,7 @@ def predict_and_show_image(model, path, conf_threshold = 0.5):
         box = predictions[j]
         if (box[4] > conf_threshold):
             box_list.append(box)
-    print("box" + ":" + str(len(box_list)))
-
-
+    # print("box" + ":" + str(len(box_list)))
 
     # draw rectangles!
 
@@ -237,8 +229,8 @@ def predict_and_show_image(model, path, conf_threshold = 0.5):
         box = box_list[j]
         xmin = int(par_image_width * box[0] - par_image_width * box[2] / 2)
         xmax = int(xmin + par_image_width * box[2])
-        ymin = int(par_image_width * box[1] - par_image_width * box[3] / 2)
-        ymax = int(ymin + par_image_width * box[3])
+        ymin = int(par_image_height * box[1] - par_image_height * box[3] / 2)
+        ymax = int(ymin + par_image_height * box[3])
         if(xmax > 223 or ymax > 223 or xmin < 0 or ymin < 0):
             print("Box out of bounds: (" + str(xmin) +","+ str(ymin) +") ("+ str(xmax) +","+ str(ymax) +")")
             # print(box[5:])
@@ -250,21 +242,22 @@ def predict_and_show_image(model, path, conf_threshold = 0.5):
         color = (255, 255 - int(j*255/box_list_len), int(j*255/box_list_len))
 
         cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 1)
-        print(box[5:])
+        # print(box[5:])
         detected_class = np.argmax(box[5:]) + 1
 
 
-        cv2.putText(image, str(detected_class), (xmin, ymax), cv2.FONT_HERSHEY_SIMPLEX, 0, color,1)
+        cv2.putText(image, str(detected_class), (xmin, ymax), cv2.FONT_HERSHEY_SIMPLEX, 1, color,1)
 
-
-    mp.imshow(image)
-    mp.plot()
-    mp.show()
-    return
+    if show:
+        mp.imshow(image)
+        mp.plot()
+        mp.show()
+    return image
 
 def create_mb_source(img_height, img_width, img_channels, output_size, image_file, roi_file, randomize = False, multithreaded_deserializer=False, max_samples=io.INFINITELY_REPEAT, max_epochs = io.INFINITELY_REPEAT):
     transforms = []
 
+    #import ipdb;ipdb.set_trace()
     transforms += [
         xforms.scale(width=img_width, height=img_height, channels=img_channels, interpolations='linear',
                      scale_mode='fill'),
@@ -295,16 +288,13 @@ if __name__ == '__main__':
 
     # input for ground truth boxes
     num_gtb = par_max_gtbs
-    gtb_input = input((num_gtb*5)) # 5 for class, x,y,w,h
+    gtb_input = input((num_gtb*5)) # 5 for  x,y,w,h,class
 
-    from TrainUDF2 import *
-    training_model = user_function(TrainFunction2(output, gtb_input))
-    # plot(training_model, filename=os.path.join(par_abs_path, "YOLOv2_train.pdf"))
+    from ErrorFunction import get_error
+    mse = get_error(output, gtb_input, cntk_only=False)
 
-    err = TrainFunction2.make_wh_sqrt(output) - TrainFunction2.make_wh_sqrt(training_model.outputs[0]) # substrac "goal" --> error
-    sq_err = err * err
-    sc_err = sq_err * training_model.outputs[1] # apply scales (lambda_coord, lambda_no_obj, zeros on not learned params)
-    mse = ops.reduce_mean(sc_err, axis=Axis.all_static_axes())
+    plot(mse, filename=os.path.join(par_abs_path,"Trainnet.pdf"))
+
 
     # trainig params
     max_epochs = par_max_epochs
@@ -312,12 +302,6 @@ if __name__ == '__main__':
     minibatch_size = par_minibatch_size
 
     lr_schedule = learning_rate_schedule(par_lr_schedule, learners.UnitType.sample, epoch_size)
-                                              #+ [0.005]*10
-                                              #+ [0.0005]*5
-                                              #+ [0.00005]*5
-                                              #+ [0.00001]*5
-                                              #+ [0.000005]*5
-                                              #+ [0.000001], cntk.learners.UnitType.sample, epoch_size)
     mm_schedule = learners.momentum_schedule([-minibatch_size / np.log(par_momentum)], epoch_size)
 
     # Instantiate the trainer object to drive the model training
@@ -326,9 +310,7 @@ if __name__ == '__main__':
 
     image_file = os.path.join(par_abs_path, "..", "..", "DataSets", "Pascal", "mappings" , "trainval2007.txt")
     roi_file = os.path.join(par_abs_path, "..", "..", "DataSets", "Pascal", "mappings" , "trainval2007_rois_center_rel.txt")
-    # image_file = r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Pascal\mappings\trainval2007.txt"
-    # roi_file = r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Pascal\mappings\trainval2007_rois_center_rel.txt"
-    # minibatch_source = create_mb_source(img_height, img_width, img_channel, roi_input_size, image_file, roi_file)
+
     minibatch_source = create_mb_source(par_image_height, par_image_width, par_num_channels, (5 * num_gtb), image_file, roi_file)
 
     # define mapping from reader streams to network inputs
@@ -340,7 +322,6 @@ if __name__ == '__main__':
     progress_printer = ProgressPrinter(freq= int(epoch_size / 10), tag='Training', rank=Communicator.rank(), gen_heartbeat=True,
                                        num_epochs=max_epochs)
 
-    import ipdb
 
     for epoch in range(max_epochs):  # loop over epochs
         print("---Start new epoch---")
@@ -350,35 +331,31 @@ if __name__ == '__main__':
             # get next minibatch data
             data = minibatch_source.next_minibatch(min(minibatch_size, epoch_size - sample_count),
                                                    input_map=input_map)  # fetch minibatch.
-            # get the roi data of the current minibatch
-            roii = data[gtb_input]
-            roii = roii.asarray()
+            gtbs = (data[gtb_input]).asarray()
 
-            # train width teaching and sclaing vector
-            trainer.train_minibatch({image_input: data[image_input].asarray(), gtb_input:roii}, device=gpu(0))  # update model with it
+            trainer.train_minibatch({image_input: data[image_input].asarray(), gtb_input:gtbs}, device=gpu(0))  # update model with it
             sample_count += data[image_input].num_samples  # count samples processed so far
             progress_printer.update_with_trainer(trainer=trainer, with_metric=True)  # log progress
-            # print(progress_printer.avg_metric_since_start())
-            #if(math.isnan(progress_printer.avg_metric_since_start())):
-                #ipdb.set_trace()
-                #print("debug nan!")
+            print(progress_printer.avg_metric_since_start())
 
         progress_printer.epoch_summary(with_metric=True)
 
-    #from darknet import save_model
-    #save_model(output, name="YOLOv2_Pascal_VOC_2007_"+str(max_epochs)+"epochs")
+    save_path = os.path.join(par_abs_path,  "outputdir")
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    output.save_model(os.path.join(save_path, "YOLOv2.model"))
 
-    """
-    model = load_model(r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\Detection\YOLOv2\Output\YOLOv2_Pascal_VOC_2007_30epochs.model.model")
-    image_input = input((par_num_channels, par_image_height, par_image_width))
-    output = model(image_input)  # append model to image input
-    """
-    image = os.path.join(par_abs_path, "..", "..", "DataSets", "Pascal", "VOCdevkit" , "VOC2007", "JPEGImages" , "000008.jpg")
-    predict_and_show_image(output, image, conf_threshold=0.9)
-    #predict_and_show_image(output, r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Pascal\VOCdevkit\VOC2007\JPEGImages\000008.jpg", conf_threshold=0.9)
+    # alternatively to training a model you can reload a pretrained!
+    #model = load_model(r".\outputdir\YOLOv2.model")
+    #image_input = input((par_num_channels, par_image_height, par_image_width))
+    #output = model(image_input)  # append model to image input
 
-    #import ipdb
-    #ipdb.set_trace()
+    #predict a few images
+    names = ["000018.jpg","000118.jpg","001118.jpg","002118.jpg"]
+    threshold_objectness = 0.5
+    for i in range(len(names)):
+        image = os.path.join(par_abs_path, "..", "..", "DataSets", "Pascal", "VOCdevkit" , "VOC2007", "JPEGImages" ,names[i])
+        predict_image(output, image, conf_threshold=threshold_objectness)
 
     print("Done!")
 

@@ -16,14 +16,8 @@ from cntk import leaky_relu, reshape, softmax, param_relu, relu, user_function
 from cntk.logging import ProgressPrinter
 
 import YOLOv2 as yolo2
-from TrainUDF2 import *
+from TrainUDFyolov2 import *
 from PARAMETERS import *
-
-# default Paths relative to current python file.
-abs_path = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(abs_path, "Models")
-model_name = "YOLOv2"
-log_dir = None
 
 
 # Create a minibatch source.
@@ -43,7 +37,6 @@ def create_trainer(to_train, epoch_size, minibatch_size, num_quantization_bits, 
     mm_schedule = cntk.learners.momentum_as_time_constant_schedule([-minibatch_size / np.log(par_momentum)], epoch_size)
 
     # Instantiate the trainer object to drive the model training
-    #local_learner = cntk.learners.adam( to_train['output'].parameters, lr_schedule, mm_schedule, l2_regularization_weight=0.0005)
     local_learner = cntk.learners.momentum_sgd(to_train['output'].parameters, lr_schedule, mm_schedule, unit_gain=False,
                                          l2_regularization_weight=0.0005)
 
@@ -103,7 +96,7 @@ def yolov2_train_and_eval(network, image_file, gtb_file, num_quantization_bits=3
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    data_path = os.path.join(abs_path, "..", "..", "DataSets","Pascal", "mappings")
+    data_path = os.path.join(par_abs_path, "..", "..", "DataSets","Pascal", "mappings")
 
     parser.add_argument('-datadir', '--datadir', help='Data directory where the ImageNet dataset is located',
                         required=False, default=data_path)
@@ -129,7 +122,9 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
 
+    output_dir = None
     if args['outputdir'] is not None:
+        output_dir = args['outputdir']
         model_path = args['outputdir'] + "/models"
     if args['logdir'] is not None:
         log_dir = args['logdir']
@@ -159,57 +154,29 @@ if __name__ == '__main__':
     # input for ground truth boxes
     num_gtb = par_max_gtbs
     gtb_input = input((num_gtb * 5))  # 5 for class, x,y,w,h
-    ud_tf = TrainFunction2(output, gtb_input)
-    training_model = user_function(ud_tf)
 
-    # err = TrainFunction2.make_wh_sqrt(output) - TrainFunction2.make_wh_sqrt(
-    #    training_model.outputs[0])  # substrac "goal" --> error
-    err = training_model.outputs[0] - output
-    sq_err = err * err
-    sc_err = sq_err * training_model.outputs[
-        1]  # apply scales (lambda_coord, lambda_no_obj, zeros on not learned params)
-    mse = cntk.ops.reduce_mean(sc_err, axis=Axis.all_static_axes())
+
+    from ErrorFunction import get_error
+    mse = get_error(output, gtb_input, cntk_only=False)
 
     network = {
         'feature': image_input,
         'gtb_in': gtb_input,
         'mse': mse,
         'output': output,
-        'trainfunction': ud_tf
+        #'trainfunction': ud_tf
     }
 
     ####################################################################################################################
 
     try:
         logdir = args['logdir']
+        nr_of_epoch = args['num_epochs']
+
         output = yolov2_train_and_eval(network, train_data, test_data,
-                               max_epochs=args['num_epochs'],
-                               restore=not args['restart'],
-                               log_to_file=os.path.join(logdir, "logsrank0_1") if logdir is not None else None,
-                               num_mbs_per_log=50,
-                               num_quantization_bits=args['quantized_bits'],
-                               block_size=args['block_samples'],
-                               warm_up=args['distributed_after'],
-                               minibatch_size=args['minibatch_size'],
-                               epoch_size=args['epoch_size'],
-                               gen_heartbeat=True)
-        network['trainfunction'].set_lambda_coord(50)
-        output = yolov2_train_and_eval(network, train_data, test_data,
-                                       max_epochs=args['num_epochs'],
+                                       max_epochs=nr_of_epoch,
                                        restore=not args['restart'],
-                                       log_to_file=os.path.join(logdir, "logsrank0_2") if logdir is not None else None,
-                                       num_mbs_per_log=50,
-                                       num_quantization_bits=args['quantized_bits'],
-                                       block_size=args['block_samples'],
-                                       warm_up=args['distributed_after'],
-                                       minibatch_size=args['minibatch_size'],
-                                       epoch_size=args['epoch_size'],
-                                       gen_heartbeat=True)
-        network['trainfunction'].set_lambda_coord(5)
-        output = yolov2_train_and_eval(network, train_data, test_data,
-                                       max_epochs=args['num_epochs'],
-                                       restore=not args['restart'],
-                                       log_to_file=os.path.join(logdir, "logsrank0_3") if logdir is not None else None,
+                                       log_to_file=logdir,
                                        num_mbs_per_log=50,
                                        num_quantization_bits=args['quantized_bits'],
                                        block_size=args['block_samples'],
@@ -222,9 +189,7 @@ if __name__ == '__main__':
         cntk.train.distributed.Communicator.finalize()
         print("Training finished!")
 
-    if output is not None:
-        from darknet.darknet19 import save_model
-        save_model(output, "YOLOv2_ResNet101-backed_" + str(args['num_epochs']) + "epochs")
-
-   # model = load_model(r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\Detection\YOLOv2\darknet\Output\YOLOv2_ResNet101-backed_1epochs_3.model")
-
+    if output is not None and output_dir is not None:
+        save_path = os.path.join(output_dir, "YOLOv2.model")
+        output.save_model(save_path)
+        print("Saved model to " + save_path)
