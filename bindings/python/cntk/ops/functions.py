@@ -584,7 +584,7 @@ class Function(cntk_py.Function):
              to be performed.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
 
@@ -735,8 +735,8 @@ class Function(cntk_py.Function):
         state = super(Function, self)._forward(in_var_map, output_map, device,
                                                keep_for_backward)
         if as_numpy:
-            for k, val in output_map.items():
-                output_map[k] = _value_as_sequence_or_array(val, k)
+            for k, v in output_map.items():
+                output_map[k] = _value_as_sequence_or_array(v, k)
 
         return state, output_map
 
@@ -770,7 +770,7 @@ class Function(cntk_py.Function):
              the gradients have to be computed.
             as_numpy (bool): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
 
@@ -781,11 +781,16 @@ class Function(cntk_py.Function):
         Returns:
             dict: mapping of ``variables`` to NumPy arrays
         '''
+        if state is None:
+            raise ValueError('You are attempting to backpropagate on a '
+                'minibatch for which the corresponding forward operation did not '
+                'keep any intermediate results, Please set keep_for_backward in '
+                'forward to the variables in root_gradients.keys()')
         device = state.device()
         root_gradients = sanitize_var_map(self.outputs, root_gradients,
                                           None, device)
 
-        var_gradients = dict((var, None) for var in variables)
+        var_gradients = {var: None for var in variables}
 
         self._backward(state, root_gradients, var_gradients)
 
@@ -824,10 +829,10 @@ class Function(cntk_py.Function):
              computation is performed. If `None`, the default device is used.
             as_numpy (bool, default `True`): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
-            grad_root (:class:`~cntk.variables.Variable`, optional): specify the root of gradients calculation. 
+            grad_root (:class:`~cntk.variables.Variable`, optional): specify the root of gradients calculation.
              If not specified, the output of this function will be used as gradient root.
 
         Returns:
@@ -1212,7 +1217,7 @@ def register_native_user_function(op_name, module_name, factory_method_name):
         op_name (str): Name of the native user-defined Function to register.
          This name must be unique and an error will be reported if it matches
          the 'op_name' specified for a previously registered native user-defined Function.
-        module_name (str): Name of the module containing the factory method for creating 
+        module_name (str): Name of the module containing the factory method for creating
          instances of the native user-defined Function being registered. This is typically
          the name of a DLL/so which exports a factory method for creating instances of the
          native user-defined Function.
@@ -1230,10 +1235,10 @@ def native_user_function(op_name, operands, attributes=None, user_function_insta
 
     Args:
         op_name (str): Name of the native user-defined Function to instantiate.
-         This name must be the name that was used when registering the native user-function 
+         This name must be the name that was used when registering the native user-function
          with the 'register_native_user_function' method.
         operands (list): input operands of the new instance of the native user-defined Function.
-        user_function_instance_name (str): Name of the instance of the created native 
+        user_function_instance_name (str): Name of the instance of the created native
          user-defined Function.
 
     Returns:
@@ -1245,6 +1250,7 @@ def native_user_function(op_name, operands, attributes=None, user_function_insta
     attributes = _py_dict_to_cntk_dict(attributes)
     return cntk_py.Function_native_user_function(op_name, operands, attributes, user_function_instance_name)
 
+
 @typemap
 def load_model(model, device=None):
     '''
@@ -1252,11 +1258,13 @@ def load_model(model, device=None):
     '''
     return Function.load(model, device)
 
+
 @typemap
 def save_model(model, filename): # legacy name
     warnings.warn('This will be removed in future versions. Please use '
             'model.save(...) instead', DeprecationWarning)
     return model.save(filename)
+
 
 class UserFunction(Function):
     '''
@@ -1280,7 +1288,7 @@ class UserFunction(Function):
 
         # Since the state will frequently not be used, we cache the None-state
         # to speed up.
-        self._none_state =  cntk_py.UserBackPropState(self, cpu(), None)
+        self._none_state =  cntk_py.UserBackPropState.create(self, cpu(), None)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
@@ -1289,7 +1297,7 @@ class UserFunction(Function):
 
     def _get_none_state(self, device=cpu()):
         if self._none_state.device() != device:
-            self._none_state =  cntk_py.UserBackPropState(self, device, None)
+            self._none_state = cntk_py.UserBackPropState.create(self, device, None)
 
         return self._none_state
 
@@ -1331,7 +1339,7 @@ class UserFunction(Function):
         if state is None:
             state = self._get_none_state(device)
         elif not isinstance(state, cntk_py.BackPropState):
-            state = cntk_py.UserBackPropState(self, device, state)
+            state = cntk_py.UserBackPropState.create(self, device, state)
 
         if self.as_numpy:
             for k,v in outputs.items():
