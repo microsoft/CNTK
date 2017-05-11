@@ -76,7 +76,7 @@ namespace CNTK
             std::unordered_set<FunctionPtr> visitedFunctions;
 
             // Call Collect to get the set of all functions in the graph
-#undef NO_ALL_PRIMITIVE_FUNCTIONS_HACK // hack to skip building m_allPrimitiveFunctions for timing tests, as this has O(N^2) complexity
+#undef NO_ALL_PRIMITIVE_FUNCTIONS_HACK // hack to skip building m_allPrimitiveFunctionsSet for timing tests, as this has O(N^2) complexity
 #ifndef NO_ALL_PRIMITIVE_FUNCTIONS_HACK
             Collect(rootFunction, visitedFunctions);
 #endif
@@ -203,7 +203,7 @@ namespace CNTK
                                             std::unordered_set<Variable>& replacedPlaceholders) override
         {
             // If any of the placeholders were replaced with Output variables, let's add the graph of function underneath 
-            // each of those to 'm_allPrimitiveFunctions' set
+            // each of those to 'm_allPrimitiveFunctionsHolder' set
             for (auto replacedPlaceholder : replacedPlaceholders)
             {
                 auto replacingVariable = placeholderReplacements.at(replacedPlaceholder);
@@ -213,16 +213,17 @@ namespace CNTK
                     std::unordered_set<FunctionPtr> visitedFunctions2;
                     Collect(ownerFunc, visitedFunctions2);
 
-                    // Add the newly visited functions to 'm_allPrimitiveFunctions' set
-                    m_allPrimitiveFunctions.insert(visitedFunctions2.begin(), visitedFunctions2.end());
+                    // Add the newly visited functions to 'm_allPrimitiveFunctionsHolder'
+                    m_allPrimitiveFunctionsHolder.insert(visitedFunctions2.begin(), visitedFunctions2.end());
                 }
             }
         }
 
-        CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name,
+        typedef std::unordered_set<FunctionPtr> AllPrimitiveFunctionsHolder;
+        CompositeFunction(const FunctionPtr& rootFunction, AllPrimitiveFunctionsHolder&& allPrimitiveFunctions, const std::wstring& name,
                           const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
             : Function({}, Dictionary(), rootFunction, name, uid),
-            m_allPrimitiveFunctions(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
+            m_allPrimitiveFunctionsHolder(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
         {}
 
         std::vector<Variable> DetermineInputs(bool pythonOperandOrder = false) const
@@ -350,7 +351,7 @@ namespace CNTK
 
         // Set of all primitive functions in the graph underlying 'this' Function. Also keeps the primitive Function objects alive 
         // by holding strong references to them
-        std::unordered_set<FunctionPtr> m_allPrimitiveFunctions;
+        AllPrimitiveFunctionsHolder m_allPrimitiveFunctionsHolder;
 
         // A map from Variable objects to ComputationNode objects in the ComputationNetwork instance that implements 'this' Composite Function
         std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_variableToNodeMap;

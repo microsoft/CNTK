@@ -569,16 +569,16 @@ namespace CNTK
                     {
                         auto blockFunction = dynamic_cast<const BlockFunction*>(primitiveFunction);
                         auto blockComposite = dynamic_cast<const CompositeFunction*>(blockFunction->Composite().get());
-                        RemovePastAndFutureValueInitialStateScalarConstants(blockComposite->m_allPrimitiveFunctions, modelLeafVariableMap);
+                        RemovePastAndFutureValueInitialStateScalarConstants(blockComposite->m_allPrimitiveFunctionsHolder, modelLeafVariableMap);
                     }
                 }
             };
 
         auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
-            RemovePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
+            RemovePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctionsHolder, loadedModelLeafVariablesMap);
 
             auto trainerModelCompositeFunction = dynamic_cast<CompositeFunction*>(this);
-            RemovePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctions, trainerModelLeafVariablesMap);
+            RemovePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctionsHolder, trainerModelLeafVariablesMap);
 
             // Now update the trainer's model parameters and constants with those from the loaded model
             for (auto nameVarPair : trainerModelLeafVariablesMap)

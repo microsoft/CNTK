@@ -55,7 +55,7 @@ namespace CNTK
         if (!m_computationNetwork)
             return;
 
-        for (auto& function : m_allPrimitiveFunctions)
+        for (auto& function : m_allPrimitiveFunctionsHolder)
         {
             auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
             if (!primitiveFunction->IsStateful())
@@ -82,7 +82,7 @@ namespace CNTK
         UpdateInternalState();
 
         Dictionary stateDictionary;
-        for (auto& function : m_allPrimitiveFunctions)
+        for (auto& function : m_allPrimitiveFunctionsHolder)
         {
             auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(function.get());
             if (!primitiveFunction->IsStateful())
@@ -381,7 +381,7 @@ namespace CNTK
         if (state.Size() == 0)
             return;
 
-        for (const auto& function : m_allPrimitiveFunctions)
+        for (const auto& function : m_allPrimitiveFunctionsHolder)
         {
             auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
             if (!primitiveFunction->IsStateful())
