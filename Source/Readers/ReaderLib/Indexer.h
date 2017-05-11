@@ -15,7 +15,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // Sequence metadata that allows indexing a sequence in a binary file.
 struct SequenceDescriptor
 {
-    SequenceDescriptor(KeyType key, uint32_t numberOfSamples)
+    SequenceDescriptor(size_t key, uint32_t numberOfSamples)
         : m_offsetInChunk(0),
           m_byteSize(0), 
           m_numberOfSamples(numberOfSamples),
@@ -23,7 +23,7 @@ struct SequenceDescriptor
     {
     }
 
-    const KeyType m_key;                      // Sequence key, uniquely identifies the sequence.
+    const size_t m_key;                       // Sequence key, uniquely identifies the sequence.
     const uint32_t m_numberOfSamples;         // Number of samples in a sequence.
 
     uint32_t OffsetInChunk() const

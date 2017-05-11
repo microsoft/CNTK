@@ -760,7 +760,7 @@ BOOST_AUTO_TEST_CASE(HTKIVectorFrame)
     };
 
     test({ L"frameMode=true" }, "Simple_Test");
-    test({ L"frameMode=true", L"shouldExpand=true" }, "Simple_TestDeserializers");
+    test({ L"frameMode=true", L"shouldExpand=true", L"hashSequenceKeys=true" }, "Simple_TestDeserializers");
 };
 
 BOOST_AUTO_TEST_CASE(HTKNoPropagationOfUtteranceIVectorFrame)
@@ -815,7 +815,7 @@ BOOST_AUTO_TEST_CASE(HTKIVectorSequence)
     };
 
     test({ L"frameMode=false", L"precision=float" }, "Simple_Test");
-    test({ L"frameMode=false", L"precision=float", L"shouldExpand=true" }, "Simple_TestDeserializers");
+    test({ L"frameMode=false", L"precision=float", L"shouldExpand=true", L"hashSequenceKeys=true" }, "Simple_TestDeserializers");
 };
 
 BOOST_AUTO_TEST_CASE(HTKIVectorBptt)
@@ -841,7 +841,7 @@ BOOST_AUTO_TEST_CASE(HTKIVectorBptt)
             additionalParameters);
     };
     test({ L"frameMode=false", L"truncated=true" }, "Simple_Test");
-    test({ L"frameMode=false", L"truncated=true, truncationLength=30", L"shouldExpand=true" }, "Simple_TestDeserializers");
+    test({ L"frameMode=false", L"truncated=true, truncationLength=30", L"shouldExpand=true", L"hashSequenceKeys=true" }, "Simple_TestDeserializers");
 };
 
 BOOST_AUTO_TEST_SUITE_END()

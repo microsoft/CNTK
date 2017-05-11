@@ -23,6 +23,7 @@
 #include "BlockFunction.h"
 #include "SpecialPurposeNodes.h"
 #include "SequenceReshapeNodes.h"
+#include "UserDefinedFunction.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -58,7 +59,7 @@ namespace CNTK
         for (auto& function : m_allPrimitiveFunctions)
         {
             auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
-            if (!primitiveFunction->IsStateful())
+            if (!primitiveFunction || !primitiveFunction->IsStateful())
                 continue;
 
             // TODO: same for BatchNorm
@@ -85,7 +86,7 @@ namespace CNTK
         for (auto& function : m_allPrimitiveFunctions)
         {
             auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(function.get());
-            if (!primitiveFunction->IsStateful())
+            if (!primitiveFunction || !primitiveFunction->IsStateful())
                 continue;
 
             // TODO: same for BatchNorm
@@ -224,7 +225,7 @@ namespace CNTK
         return composite;
     }
 
-    /*static*/ FunctionPtr CompositeFunction::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device, const Internal::UDFDeserializerPtr& deserializer)
+    /*static*/ FunctionPtr CompositeFunction::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device)
     {
         static const vector<std::wstring> s_requiredDictionaryKeys = { inputsKey, functionsKey };
        
@@ -254,7 +255,7 @@ namespace CNTK
         {
             auto functionDict = dictionaryValue.Value<Dictionary>();
             FunctionPtr root = UDFUtils::IsUDF(functionDict) ?
-                UDFUtils::Deserialize(functionDict, uidToInputMap, device, deserializer) :
+                UDFUtils::Deserialize(functionDict, uidToInputMap, device) :
                 PrimitiveFunction::Deserialize(functionDict, uidToInputMap, allPrimitiveFunctions, allPlaceholderReplacements, device);
             allPrimitiveFunctions.insert(root);
 
@@ -303,7 +304,7 @@ namespace CNTK
         for (auto& function : functions)
         {
             auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
-            if (!primitiveFunction->IsStateful())
+            if (!primitiveFunction || !primitiveFunction->IsStateful())
                 continue;
 
             if (stateDictionary.Contains(primitiveFunction->Uid()))
@@ -340,7 +341,7 @@ namespace CNTK
             vector<wstring> uids;
             PreorderTraverseFunctions(function.RootFunction(), [&uids](const FunctionPtr& funcPtr) {
                 auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
-                if (primitiveFunction->IsStateful()) 
+                if (primitiveFunction && primitiveFunction->IsStateful())
                 {
                     uids.push_back(funcPtr->Uid());
                 }
@@ -384,7 +385,7 @@ namespace CNTK
         for (const auto& function : m_allPrimitiveFunctions)
         {
             auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
-            if (!primitiveFunction->IsStateful())
+            if (!primitiveFunction || !primitiveFunction->IsStateful())
                 continue;
 
             auto functionState = state[primitiveFunction->Uid()].Value<Dictionary>();
@@ -474,7 +475,7 @@ namespace CNTK
             if (fullyDefinedArgumentVar.Shape().HasFreeDimension() && (fullyDefinedArgumentsMap.find(fullyDefinedArgumentVar) != fullyDefinedArgumentsMap.end()))
                 fullyDefinedArgumentVar = fullyDefinedArgumentsMap.at(fullyDefinedArgumentVar);
 
-            if (fullyDefinedArgumentVar.Shape().HasFreeOrInferredDimension())
+            if (fullyDefinedArgumentVar.Shape().HasUnboundDimension())
                 InvalidArgument("Input Variable '%S' with unresolved shape %S found when compiling the Function graph.", fullyDefinedArgumentVar.AsString().c_str(), fullyDefinedArgumentVar.Shape().AsString().c_str());
 
             auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name(), useMangledNamesForComputationNodes);
@@ -1155,7 +1156,7 @@ namespace CNTK
         while ((adjustedNodeShape.GetRank() > varShape.Rank()) && (adjustedNodeShape.GetDim(adjustedNodeShape.GetRank() - 1) == 1))
             adjustedNodeShape.TrimRankInPlace(adjustedNodeShape.GetRank() - 1);
 
-        if (!varShape.HasFreeOrInferredDimension())
+        if (!varShape.HasUnboundDimension())
             return (AsNDShape(adjustedNodeShape) == varShape);
 
         if (varShape.Rank() != adjustedNodeShape.GetRank())
@@ -1681,6 +1682,8 @@ namespace CNTK
 
             if (sanitizedOutput.IsOutput())
                 m_perOutputVarArgumentDependencies[sanitizedOutput] = AsComposite(sanitizedOutput.Owner())->Arguments();
+            else if (sanitizedOutput.IsParameter() || sanitizedOutput.IsConstant())
+                m_perOutputVarArgumentDependencies[sanitizedOutput] = {};
             else
                 m_perOutputVarArgumentDependencies[sanitizedOutput] = { sanitizedOutput };
         }
@@ -1850,6 +1853,9 @@ namespace CNTK
         auto backpropState = dynamic_cast<const CNTKBackPropState*>(state.get());
         if (backpropState == nullptr)
             InvalidArgument("Function '%S' Backward: Invalid backprop state passed.", AsString().c_str());
+
+        if (backPropagatedGradientValuesForInputs.empty())
+            InvalidArgument("Function '%S' Backward: List of inputs to compute gradients for, must not be empty.", AsString().c_str());
 
         // TODO: Support multiple concurrent backprop states
         std::unordered_map<Variable, uint64_t> currentBackpropRootTimeStamps = GetCurrentBackpropRootsTimeStamps();

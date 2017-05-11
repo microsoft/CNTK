@@ -69,7 +69,7 @@ void Indexer::BuildFromLines()
         {
             auto sequenceOffset = offset;
             offset = GetFileOffset() + 1;
-            m_index.AddSequence(SequenceDescriptor{ KeyType{ lines, 0 }, 1 }, sequenceOffset, offset);
+            m_index.AddSequence(SequenceDescriptor{ lines, 1 }, sequenceOffset, offset);
             ++m_pos;
             ++lines;
         }
@@ -83,7 +83,7 @@ void Indexer::BuildFromLines()
     {
         // There's a number of characters, not terminated by a newline,
         // add a sequence to the index, parser will have to deal with it.
-        m_index.AddSequence(SequenceDescriptor{ KeyType{ lines, 0 }, 1 }, offset, m_fileOffsetEnd);
+        m_index.AddSequence(SequenceDescriptor{ lines, 1 }, offset, m_fileOffsetEnd);
     }
 }
 
@@ -153,7 +153,7 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
         {
             // found a new sequence, which starts at the [offset] bytes into the file
             // adding the previous one to the index.
-            m_index.AddSequence(SequenceDescriptor{ KeyType { previousId, 0}, numberOfSamples }, sequenceOffset, offset);
+            m_index.AddSequence(SequenceDescriptor{ previousId, numberOfSamples }, sequenceOffset, offset);
 
             sequenceOffset = offset;
             previousId = id;
@@ -161,7 +161,7 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
         }
     }
 
-    m_index.AddSequence(SequenceDescriptor{ KeyType{ previousId, 0 }, numberOfSamples }, sequenceOffset, m_fileOffsetEnd);
+    m_index.AddSequence(SequenceDescriptor{ previousId, numberOfSamples }, sequenceOffset, m_fileOffsetEnd);
 }
 
 void Indexer::SkipLine()
@@ -272,7 +272,7 @@ void Index::AddSequence(SequenceDescriptor&& sd, size_t startOffsetInFile, size_
         if (location.second != chunk->m_sequences.size())
             RuntimeError("Number of sequences overflow the chunk capacity.");
 
-        m_keyToSequenceInChunk.insert(std::make_pair(sd.m_key.m_sequence, location));
+        m_keyToSequenceInChunk.insert(std::make_pair(sd.m_key, location));
     }
 
     sd.SetOffsetInChunk(startOffsetInFile - chunk->m_offset);

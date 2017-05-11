@@ -107,6 +107,15 @@ void TestAdamLearner(size_t numParameters, size_t numMinibatches, bool unitGainM
 }
 
 template <typename ElementType>
+void TestAdamaxLearner(size_t numParameters, size_t numMinibatches, bool unitGainMomentum, const DeviceDescriptor& device)
+{
+    NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
+    auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
+    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum, MomentumPerSampleSchedule(0.99), 1e-8, true);
+    TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+}
+
+template <typename ElementType>
 void TestRMSPropLearner(size_t numParameters, size_t numMinibatches, const DeviceDescriptor& device)
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
@@ -438,6 +447,18 @@ BOOST_AUTO_TEST_CASE(CreateAndUpdateUniversalLearner)
     {
         TestUniversalLearner<float>(numParameters, numMinibatches, device);
         TestUniversalLearner<double>(numParameters, numMinibatches, device);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CreateAndUpdateAdamaxLearner)
+{
+    for (auto& device : devices)
+    {
+        for (auto& gain : unitGain)
+        {
+            TestAdamaxLearner<float>(numParameters, numMinibatches, gain, device);
+            TestAdamaxLearner<double>(numParameters, numMinibatches, gain, device);
+        }
     }
 }
 

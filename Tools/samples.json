@@ -127,6 +127,15 @@
     },
     {
         "category": ["Image"],
+        "name":  "MNIST Convolutional Neural Network (CNN) OCR",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103D_MNIST_ConvolutionalNeuralNetwork.ipynb",
+        "description":  "Recognize hand written digits (OCR) with MNIST data using CNN.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "5/1/2017"
+    },
+    {
+        "category": ["Image"],
         "name":  "MNIST Autoencoder Dim Reduction",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_105_Basic_Autoencoder_for_Dimensionality_Reduction.ipynb",
         "description":  "Compress (using autoencoder) hand written digits from MNIST data with no human input (unsupervised learning).",
@@ -475,5 +484,14 @@
         "language":  ["Python"],
         "type":  ["Recipe"],
 	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Reinforcement Learning"],
+        "name": "Deep Q Neural Network",
+        "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning",
+        "description": "Train an agent to play Atari Games using Reinforcement Learning",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dataadded": "05/05/2017"
     }
 ]

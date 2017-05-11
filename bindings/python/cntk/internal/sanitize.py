@@ -18,6 +18,15 @@ def is_string(s):
     '''
     return isinstance(s, ("".__class__, u"".__class__))
 
+def is_byte_buffer(s):
+    '''
+    Tests whether ``s`` is a byte buffer (not a string) in a way that 
+    works on Python 2 and 3.
+    '''
+    return (isinstance(s, bytearray) or
+        (isinstance(s, type(b'')) and not isinstance(b'', str)))
+
+
 def _as_tuple(x):
     '''
     Convert an argument to a tuple.

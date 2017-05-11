@@ -14,8 +14,10 @@ import cntk as C
 from .. import *
 from cntk.losses import *
 from ...axis import Axis
-from ... import sequence, input
-from .ops_test_utils import cntk_device
+from ... import sequence, input, placeholder, times
+from cntk import Value
+from cntk.internal import sanitize_dtype_cntk
+from .ops_test_utils import cntk_device, AA, precision, PRECISION_TO_TYPE
 from cntk.tests.test_utils import _to_dense, _to_csr
 
 
@@ -242,7 +244,6 @@ def test_sequence_unpack_backprop(device_id):
             grad_value = param_grads_2[param].asarray()
             assert np.array_equal(reference_grad_value, grad_value)
 
-
 def test_to_sequence_error_for_operand_with_sequence_axis():
     x = C.sequence.input(C.FreeDimension, 2)
     with pytest.raises(ValueError):
@@ -268,3 +269,154 @@ def test_sequence_reduce_over_reduced_scalar():
     assert np.array_equal(result, [7])
     assert np.array_equal(grad[0], [[1], [1], [1]])
 
+def test_op_broadcast_as(device_id, precision):
+
+    a_data = [AA([1], dtype=PRECISION_TO_TYPE[precision]),
+              AA([2], dtype=PRECISION_TO_TYPE[precision]),
+              AA([3], dtype=PRECISION_TO_TYPE[precision])]
+    b_data = [AA([[2]], dtype=PRECISION_TO_TYPE[precision]),
+              AA([[2], [3]], dtype=PRECISION_TO_TYPE[precision]),
+              AA([[2], [3], [4]], dtype=PRECISION_TO_TYPE[precision])]
+
+    a = C.input(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), name='a')
+    b = sequence.input(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), name='b')
+
+    broadcast_a_as_b = sequence.broadcast_as(a, b)
+
+    res = broadcast_a_as_b.eval({a: a_data, b: b_data})
+    assert np.array_equal(res[0], np.asarray([[1.]]))
+    assert np.array_equal(res[1], np.asarray([[2.], [2.]]))
+    assert np.array_equal(res[2], np.asarray([[3.], [3.], [3.]]))
+
+
+def test_op_broadcast_as_in_loop(device_id):
+
+    a_data = [AA([1]), AA([2]), AA([3])]
+    b_data = [AA([[2]]), AA([[2], [3]]), AA([[2], [3], [4]])]
+
+    a = C.input(shape=(1,), name='a')
+    b = sequence.input(shape=(1,), name='b')
+
+    out_placeholder = placeholder()
+    out_delayed = sequence.past_value(out_placeholder, time_step=5)
+    out_delayed_plus_b = out_delayed + b
+    out = sequence.broadcast_as(a, out_delayed_plus_b)
+    out.replace_placeholder(out)
+
+    res = out.eval({a: a_data, b: b_data})
+    assert np.array_equal(res[0], np.asarray([[1.]]))
+    assert np.array_equal(res[1], np.asarray([[2.], [2.]]))
+    assert np.array_equal(res[2], np.asarray([[3.], [3.], [3.]]))
+
+def test_op_gather_dynamic_axes_equivalence(device_id, precision):
+    input_data1 = AA([1], dtype=PRECISION_TO_TYPE[precision])
+    input_data2 = AA([2], dtype=PRECISION_TO_TYPE[precision])
+
+    a = sequence.input(shape=input_data1.shape,
+                       dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+                       name='a')
+    b = sequence.input(shape=input_data2.shape,
+                       dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+                       name='b')
+
+    is_last_a = sequence.is_last(a)
+    a_last = sequence.gather(a, is_last_a)
+    b_last = sequence.gather(b, is_last_a)
+    z = a_last + b_last
+
+    # create batch
+    input_data1.shape = (1, 1) + input_data1.shape
+    input_data2.shape = (1, 1) + input_data2.shape
+
+    res = z.eval({a: input_data1, b: input_data2})
+    expected_forward = [[[3.]]]
+    assert np.array_equal(res, expected_forward)
+
+
+def test_op_gather_derived_dynamic_axes_equivalence(device_id, precision):
+    input_data1 = AA([1], dtype=PRECISION_TO_TYPE[precision])
+    input_data2 = AA([2], dtype=PRECISION_TO_TYPE[precision])
+
+    a = sequence.input(shape=input_data1.shape,
+                       dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+                       name='a')
+    b = sequence.input(shape=input_data2.shape,
+                       dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+                       name='b')
+
+    a_last = sequence.gather(a, sequence.is_last(a), new_sequence_axis_typeinfo=(0, 1))
+    b_last = sequence.gather(b, sequence.is_last(b), new_sequence_axis_typeinfo=(0, 1))
+
+    z = a_last + b_last
+
+    # create batch
+    input_data1.shape = (1, 1) + input_data1.shape
+    input_data2.shape = (1, 1) + input_data2.shape
+
+    res = z.eval({a: input_data1, b: input_data2})
+    expected_forward = [[3.]]
+    assert np.array_equal(res, expected_forward)
+
+
+def test_op_gather_sparse(device_id):
+    input_sparse_indices = [[1, 3, 5, 5], [2, 4], [0, 2]]
+    vocab_size = 6
+    input_data = Value.one_hot(input_sparse_indices, vocab_size)
+
+    a = sequence.input(shape=(vocab_size,), is_sparse=True, name='a')
+
+    a_last = sequence.last(a)
+    a_last_dense = times(a_last, np.eye(vocab_size))
+    res = a_last_dense.eval({a : input_data})
+    assert np.array_equal(res, [[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 0]])
+
+    a_last_2 = sequence.slice(a, -2, 0)
+    a_last_2_dense = times(a_last_2, np.eye(vocab_size))
+    res = a_last_2_dense.eval({a : input_data})
+    assert np.array_equal(res, [[[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1]], [[0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0]], [[1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0]]])
+
+
+def test_op_scatter_sparse(device_id):
+    input_sparse_indices = [[1, 3, 5, 5], [2, 4], [0, 2]]
+    vocab_size = 6
+    input_data = Value.one_hot(input_sparse_indices, vocab_size)
+
+    a = sequence.input(shape=(vocab_size,), is_sparse=True, name='a')
+
+    a_last_scatter = sequence.scatter(sequence.last(a), sequence.is_first(a))
+    a_last_scatter_dense = times(a_last_scatter, np.eye(vocab_size))
+    res = a_last_scatter_dense.eval({a : input_data})
+    assert np.array_equal(res[0], np.asarray([[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]))
+    assert np.array_equal(res[1], np.asarray([[0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0]]))
+    assert np.array_equal(res[2], np.asarray([[0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0]]))
+
+
+def test_op_sequence_reduce_sum(device_id, precision):
+    a = sequence.input(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), needs_gradient=True, name='a')
+
+    sequence_sum_a_plus_sequence_sum_a = sequence.reduce_sum(a) + sequence.reduce_sum(a)
+
+    a_data = [AA([[2]], dtype=PRECISION_TO_TYPE[precision]),
+              AA([[2], [3]], dtype=PRECISION_TO_TYPE[precision]),
+              AA([[2], [3], [4]], dtype=PRECISION_TO_TYPE[precision])]
+
+    actual_grad = sequence_sum_a_plus_sequence_sum_a.grad({a: a_data}, [a])
+    assert np.array_equal(actual_grad[0], np.asarray([[2.]]))
+    assert np.array_equal(actual_grad[1], np.asarray([[2.], [2.]]))
+    assert np.array_equal(actual_grad[2], np.asarray([[2.], [2.], [2.]]))
+
+    res = sequence_sum_a_plus_sequence_sum_a.eval({a: a_data})
+    assert np.array_equal(res[0], np.asarray([4.]))
+    assert np.array_equal(res[1], np.asarray([10.]))
+    assert np.array_equal(res[2], np.asarray([18.]))
+
+    # Verify that calling sequence reduction on a placeholder with known
+    # shape but unknown dynamic axes does not result in a problem
+    p = C.placeholder(shape=(1,))
+    r = sequence.reduce_sum(p)
+    r.replace_placeholder(a)
+
+    res = r.eval({a: a_data})
+    assert np.array_equal(res[0], np.asarray([2.]))
+    assert np.array_equal(res[1], np.asarray([5.]))
+    assert np.array_equal(res[2], np.asarray([9.]))

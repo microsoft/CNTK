@@ -1,4 +1,11 @@
-//This file contains exception handling common for Python and C#
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+// CNTK_ExceptionHandling.i -- exception handling common for Python, C# and Java
+//
+
+//This file contains exception handling common for Python, C# and Java
 %{
     #include "ExceptionWithCallStack.h"
 %}

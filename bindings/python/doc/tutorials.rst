@@ -11,6 +11,7 @@ Tutorials
      CNTK 103 Part A: :cntktut:`MNIST data preparation <CNTK_103A_MNIST_DataLoader>`,
      Part B: :cntktut:`Multi-class logistic regression classifier <CNTK_103B_MNIST_LogisticRegression>`
      Part C: :cntktut:`Multi-layer perceptron classifier <CNTK_103C_MNIST_MultiLayerPerceptron>`
+     Part D: :cntktut:`Convolutional neural network classifier <CNTK_103D_MNIST_ConvolutionalNeuralNetwork>`
 
 #.  *Learn how to predict the stock market*
      CNTK 104: :cntktut:`Time Series basics <CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy>` with finance data

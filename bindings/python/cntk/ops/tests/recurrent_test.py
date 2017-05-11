@@ -151,9 +151,6 @@ def test_op_delay_with_initial_state(input_size, time_step, initial_state_size, 
                 if t < initial_state_size[1]:
                     initial_state_backward[seq_idx,t] = initial_state_bw_val
 
-    print(initial_state_size)
-    print(initial_state_backward)
-
     expected_backward = {
         a: backward,
         i: initial_state_backward
