@@ -606,6 +606,16 @@ class Memoize
         case PrimitiveOpType::ElementTimes:   op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct; arg2 = inputValues[1 - i]; break;
             // Times family
         case PrimitiveOpType::Times:
+        case PrimitiveOpType::TransposeTimes:
+            arg2 = inputValues[1 - i];
+            if (i == 0) // left input
+                gradient->MatrixProduct(/*transC=*/primitiveOp == PrimitiveOpType::TransposeTimes,
+                                        { const_cast<NDArrayView*>(arg1)->shared_from_this() }, /*transA=*/false,
+                                        { const_cast<NDArrayView*>(arg2)->shared_from_this() }, /*transB=*/true, alpha, 0, gradient, beta);
+            else // right input
+                gradient->MatrixProduct(/*transC=*/false,
+                                        { const_cast<NDArrayView*>(arg2)->shared_from_this() }, /*transA=*/primitiveOp != PrimitiveOpType::TransposeTimes,
+                                        { const_cast<NDArrayView*>(arg1)->shared_from_this() }, /*transB=*/false, alpha, 0, gradient, beta);
             break;
             // unary operations with simple TensorView implementation
         case PrimitiveOpType::ReLU:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithLinearRectifierDerivativeFromOutput; arg2 = outputValues[0]; break;
