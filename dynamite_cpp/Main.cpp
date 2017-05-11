@@ -658,6 +658,9 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     d_model_fn.Nested(L"linear")[L"b"].TieValueWith(model_fn.Nested(L"[2]")[L"b"]                );
 
     // train
+    let d_parameters = d_model_fn.Parameters();
+    auto d_learner = SGDLearner(d_parameters, LearningRatePerSampleSchedule(0.05));
+
     auto learner = SGDLearner(FunctionPtr(loss)->Parameters(), LearningRatePerSampleSchedule(0.05));
     auto trainer = CreateTrainer(nullptr, loss, loss/*metric*/, { learner });
 
@@ -730,7 +733,6 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             //mbLoss.Value()->AsScalar<float>();
             //mbLoss.Value()->AsScalar<float>();
         }
-        let d_parameters = d_model_fn.Parameters();
         fprintf(stderr, "uid of first parameter: %S\n", mbLoss.Uid().c_str());
         fprintf(stderr, "uid of loss: %S\n", d_parameters[0].Uid().c_str());
         unordered_map<Parameter, NDArrayViewPtr> gradients;
@@ -744,7 +746,9 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         }
         fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", loss1 / minibatchData[featureStreamInfo].numberOfSequences);
 #endif
-#if 1
+#if 1   // model update with Dynamite
+        d_learner->Update(gradients, minibatchData[labelStreamInfo].numberOfSamples);
+#else
         // static CNTK
         //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
         double crit;// = trainer->PreviousMinibatchLossAverage();
