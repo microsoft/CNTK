@@ -47,11 +47,11 @@ def create_image_mb_source(map_file, mean_file, train, total_number_of_samples):
     # deserializer
     return cntk.io.MinibatchSource(
         cntk.io.ImageDeserializer(map_file, cntk.io.StreamDefs(
-            features = cntk.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-            labels   = cntk.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+            features=cntk.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
+            labels=cntk.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
         randomize=train,
         max_samples=total_number_of_samples,
-        multithreaded_deserializer = True)
+        multithreaded_deserializer=True)
 
 # Create the network.
 def create_conv_network():
@@ -115,7 +115,7 @@ def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_
         parameter_learner = cntk.train.distributed.data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
 
     # Create trainer
-    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, progress_writers)
+    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, progress_writers), parameter_learner
 
 # Train and test
 def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore, profiling=False):
@@ -131,14 +131,14 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         start_profiler(sync_gpu=True)
 
     training_session(
-        trainer=trainer, mb_source = train_source,
-        model_inputs_to_streams = input_map, 
+        trainer=trainer, mb_source=train_source,
+        model_inputs_to_streams=input_map,
         mb_size = minibatch_size,
         progress_frequency=epoch_size,
-        checkpoint_config = CheckpointConfig(frequency = epoch_size,
-                                             filename = os.path.join(model_path, "ConvNet_CIFAR10_DataAug"),
-                                             restore = restore),
-        test_config = TestConfig(source = test_source, mb_size=minibatch_size)
+        checkpoint_config=CheckpointConfig(frequency=epoch_size,
+                                           filename=os.path.join(model_path, "ConvNet_CIFAR10_DataAug"),
+                                           restore=restore),
+        test_config = TestConfig(source=test_source, mb_size=minibatch_size, frequency=epoch_size)
     ).train()
 
     if profiling:
@@ -146,7 +146,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 
 # Train and evaluate the network.
 def convnet_cifar10_dataaug(train_data, test_data, mean_data, minibatch_size=64, epoch_size=50000, num_quantization_bits=32,
-                            block_size=3200, warm_up=0, max_epochs=2, restore=False, log_to_file=None, 
+                            block_size=3200, warm_up=0, max_epochs=2, restore=False, log_to_file=None,
                             num_mbs_per_log=None, gen_heartbeat=False, profiling=False, tensorboard_logdir=None):
     _cntk_py.set_computation_network_trace_level(0)
 
@@ -172,11 +172,23 @@ def convnet_cifar10_dataaug(train_data, test_data, mean_data, minibatch_size=64,
         rank=cntk.train.distributed.Communicator.rank(),
         model=network['output']))
 
-    trainer = create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up, progress_writers)
+    trainer, parameter_learner = create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up, progress_writers)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
     train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore, profiling)
 
+    '''
+    Save the trained model
+    Only the main worker should save the model, otherwise it will conflict.
+
+    The saved model can be loaded using model.load_model(path)
+    Ex:
+    model = z.load_model(final_model_path)
+    pred = model.eval(x)
+    '''
+    final_model_path = os.path.join(model_path, "ConvNet_CIFAR10_DataAug_Final")
+    if parameter_learner.communicator().is_main():
+        trainer.model.save_model(final_model_path)
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
