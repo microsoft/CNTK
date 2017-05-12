@@ -12,17 +12,16 @@ e.g. a fully connected layer with non-linearity.
 from __future__ import division
 import numpy as np
 from ..ops.functions import Function
-from ..variables import Variable, Record, Constant
-from ..ops import parameter, input, placeholder, combine
-from ..ops import times, element_times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
+from ..variables import Parameter, Record, Constant
+import cntk as C
+from ..ops import times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, reduce_mean, sqrt
 from cntk.internal import _as_tuple
 from cntk.cntk_py import sentinel_value_for_auto_select_random_seed as SentinelValueForAutoSelectRandomSeed
-from .blocks import *
-from .higher_order_layers import *
-from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # helpers
+from .blocks import _initializer_for, _INFERRED, identity, BlockFunction, UntestedBranchError  # helpers
+from cntk.default_options import is_default_override, get_default_override, default_override_or
 
 
-def Dense(shape, activation=default_override_or(identity), init=default_override_or(glorot_uniform()),
+def Dense(shape, activation=default_override_or(identity), init=default_override_or(C.glorot_uniform()),
           input_rank=None, map_rank=None,
           bias=default_override_or(True), init_bias=default_override_or(0),
           name=''):
@@ -37,7 +36,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
 
     Example:
      >>> f = Dense(5, activation=C.relu)
-     >>> x = input(3)
+     >>> x = C.input_variable(3)
      >>> h = f(x)
      >>> h.shape
          (5,)
@@ -47,7 +46,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
          array([ 0.,  0.,  0.,  0.,  0.], dtype=float32)
 
      >>> # activation through default options
-     >>> with default_options(activation=C.relu):
+     >>> with C.default_options(activation=C.relu):
      ...     f = Dense(500)
 
     The ``Dense`` layer can be applied to inputs that are tensors, not just vectors.
@@ -59,7 +58,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
 
     Example:
      >>> f = Dense(5, activation=C.softmax) # a 5-class classifier
-     >>> x = input((64,16,16)) # e.g. an image reduced by a convolution stack
+     >>> x = C.input_variable((64,16,16)) # e.g. an image reduced by a convolution stack
      >>> y = f(x)
      >>> y.shape
      (5,)
@@ -72,7 +71,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
 
     Example:
      >>> f = Dense(5, activation=C.softmax, input_rank=2) # a 5-class classifier
-     >>> x = input((10, 3, 3)) # e.g. 10 parallel 3x3 objects. Input has input_rank=2 axes
+     >>> x = C.input_variable((10, 3, 3)) # e.g. 10 parallel 3x3 objects. Input has input_rank=2 axes
      >>> y = f(x)
      >>> y.shape  # the 10 parallel objects are classified separately, the "10" dimension is retained
      (10, 5)
@@ -80,7 +79,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
      (3, 3, 5)
 
      >>> f = Dense(5, activation=C.softmax, map_rank=2)
-     >>> x = input((4, 6, 3, 3, 3)) # e.g. 24 parallel 3x3x3 objects arranged in a 4x6 grid. The grid is to be retained
+     >>> x = C.input_variable((4, 6, 3, 3, 3)) # e.g. 24 parallel 3x3x3 objects arranged in a 4x6 grid. The grid is to be retained
      >>> y = f(x)
      >>> y.shape  # the 4x6 elements are classified separately, the grid structure is retained
      (4, 6, 5)
@@ -100,7 +99,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
      name (str, defaults to ''): the name of the function instance in the network
 
     Returns:
-        cntk.ops.functions.Function: 
+        cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
     '''
 
@@ -152,7 +151,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     return dense
 
 
-def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=None, name=''):
+def Embedding(shape=None, init=default_override_or(C.glorot_uniform()), weights=None, name=''):
     '''
     Embedding(shape=None, init=glorot_uniform(), weights=None, name='')
 
@@ -182,7 +181,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     Example:
      >>> # learnable embedding
      >>> f = Embedding(5)
-     >>> x = input(3)
+     >>> x = C.input_variable(3)
      >>> e = f(x)
      >>> e.shape
          (5,)
@@ -194,7 +193,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
      >>> f.E.value
          array([[ 0.5,  0.3,  0.1,  0.4,  0.2],
                 [ 0.7,  0.6,  0.3,  0.2,  0.9]], dtype=float32)
-     >>> x = input(2, is_sparse=True)
+     >>> x = C.input_variable(2, is_sparse=True)
      >>> e = f(x)
      >>> e.shape
          (5,)
@@ -289,7 +288,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
                 num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                 sequential=False, # time convolution if True (filter_shape[0] corresponds to dynamic axis)
                 activation=default_override_or(identity),
-                init=default_override_or(glorot_uniform()),
+                init=default_override_or(C.glorot_uniform()),
                 pad=default_override_or(False),
                 strides=1,
                 sharing=True,     # (must be True currently)
@@ -335,7 +334,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
     Example:
      >>> # 2D convolution of 5x4 receptive field with output feature-map depth 128:
      >>> f = Convolution((5,4), 128, activation=C.relu)
-     >>> x = input((3,480,640))  # 3-channel color image
+     >>> x = C.input_variable((3,480,640))  # 3-channel color image
      >>> h = f(x)
      >>> h.shape
          (128, 476, 637)
@@ -344,7 +343,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
 
      >>> # 2D convolution over a one-channel black-and-white image, padding, and stride 2 along width dimension
      >>> f = Convolution((3,3), 128, reduction_rank=0, pad=True, strides=(1,2), activation=C.relu)
-     >>> x = input((480,640))
+     >>> x = C.input_variable((480,640))
      >>> h = f(x)
      >>> h.shape
          (128, 480, 320)
@@ -354,7 +353,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
      >>> # 3D convolution along dynamic axis over a sequence of 2D color images
      >>> from cntk.layers.typing import Sequence, Tensor
      >>> f = Convolution((2,5,4), 128, sequential=True, activation=C.relu) # over 2 consecutive frames
-     >>> x = input(**Sequence[Tensor[3,480,640]])  # a variable-length video of 640x480 RGB images
+     >>> x = C.input_variable(**Sequence[Tensor[3,480,640]])  # a variable-length video of 640x480 RGB images
      >>> h = f(x)
      >>> h.shape   # this is the shape per video frame: 637x476 activation vectors of length 128 each
          (128, 476, 637)
@@ -455,7 +454,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
         if num_inserted_axes != 0:
             # x: (in_depth, spatial_shape)
             x = reshape(x, (1,) * num_inserted_axes,    # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
-                        begin_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else Axis.new_leading_axis(),
+                        begin_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else C.Axis.new_leading_axis(),
                         end_axis  =-filter_rank_without_seq if filter_rank_without_seq != 0 else None)
             # x: (in_depth or emulated_in_depth, emulated_1D_extra, seq_filter_shape, spatial_shape)
         # sequential convolution is implemented through explicit stacking for now, since the C++ cannot handle it
@@ -496,7 +495,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
 def Convolution1D(filter_shape,     # shape of receptive field, e.g. (3)
                   num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                   activation=default_override_or(identity),
-                  init=default_override_or(glorot_uniform()),
+                  init=default_override_or(C.glorot_uniform()),
                   pad=default_override_or(False),
                   strides=1,
                   bias=default_override_or(True),
@@ -531,13 +530,13 @@ def Convolution1D(filter_shape,     # shape of receptive field, e.g. (3)
         A function that accepts one argument and applies the convolution operation to it
 
     '''
-    
+
     activation = get_default_override(Convolution1D, activation=activation)
     init       = get_default_override(Convolution1D, init=init)
     pad        = get_default_override(Convolution1D, pad=pad)
     bias       = get_default_override(Convolution1D, bias=bias)
     init_bias  = get_default_override(Convolution1D, init_bias=init_bias)
-    if len(_as_tuple(filter_shape)) != 1: 
+    if len(_as_tuple(filter_shape)) != 1:
          raise ValueError('Convolution1D: filter_shape must be a scalar')
     return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution1D', name=name)
 
@@ -545,7 +544,7 @@ def Convolution1D(filter_shape,     # shape of receptive field, e.g. (3)
 def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must be a 2-element tuple.
                   num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                   activation=default_override_or(identity),
-                  init=default_override_or(glorot_uniform()),
+                  init=default_override_or(C.glorot_uniform()),
                   pad=default_override_or(False),
                   strides=1,
                   bias=default_override_or(True),
@@ -586,7 +585,7 @@ def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must
     pad        = get_default_override(Convolution2D, pad=pad)
     bias       = get_default_override(Convolution2D, bias=bias)
     init_bias  = get_default_override(Convolution2D, init_bias=init_bias)
-    if len(_as_tuple(filter_shape)) > 2: 
+    if len(_as_tuple(filter_shape)) > 2:
          raise ValueError('Convolution2D: filter_shape must be a scalar or a 2D tuple, e.g. 3 or (3,3)')
     filter_shape = _pad_to_shape((0,0), filter_shape, 'filter_shape')
     return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution2D', name=name)
@@ -595,7 +594,7 @@ def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must
 def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Must be a 3-element tuple.
                   num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                   activation=default_override_or(identity),
-                  init=default_override_or(glorot_uniform()),
+                  init=default_override_or(C.glorot_uniform()),
                   pad=default_override_or(False),
                   strides=1,
                   bias=default_override_or(True),
@@ -636,7 +635,7 @@ def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Mu
     pad        = get_default_override(Convolution3D, pad=pad)
     bias       = get_default_override(Convolution3D, bias=bias)
     init_bias  = get_default_override(Convolution3D, init_bias=init_bias)
-    if len(_as_tuple(filter_shape)) > 3: 
+    if len(_as_tuple(filter_shape)) > 3:
          raise ValueError('Convolution3D: filter_shape must be a scalar or a 3D tuple, e.g. 3 or (3,3,3)')
     filter_shape = _pad_to_shape((0,0,0), filter_shape, 'filter_shape')
     return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution3D', name=name)
@@ -647,15 +646,15 @@ def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Mu
 def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (3,3)
                          num_filters,
                          activation=default_override_or(identity),
-                         init=default_override_or(glorot_uniform()),
+                         init=default_override_or(C.glorot_uniform()),
                          pad=default_override_or(False),
                          strides=1,
                          sharing=True,     # (must be True currently)
                          bias=default_override_or(True),
                          init_bias=default_override_or(0),
-                         output_shape=None, 
+                         output_shape=None,
                          reduction_rank=1, # (must be 1 currently)
-                         max_temp_mem_size_in_samples=0, 
+                         max_temp_mem_size_in_samples=0,
                          name=''):
 
     '''
@@ -668,13 +667,13 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
     The item-grid dimensions are referred to as the *spatial* dimensions (e.g. dimensions of an image),
     while the vector dimensions of the individual items are often called *feature-map depth*.
 
-    Convolution transpose is also known as ``fractionally strided convolutional layers``, or, ``deconvolution``. 
+    Convolution transpose is also known as ``fractionally strided convolutional layers``, or, ``deconvolution``.
     This operation is used in image and language processing applications. It supports arbitrary
-    dimensions, strides, and padding. 
+    dimensions, strides, and padding.
 
     The forward and backward computation of convolution transpose is the inverse of convolution. That is, during forward
-    pass the input layer's items are spread into the output same as the backward spread of gradients in convolution. The 
-    backward pass, on the other hand, performs a convolution same as the forward pass of convolution. 
+    pass the input layer's items are spread into the output same as the backward spread of gradients in convolution. The
+    backward pass, on the other hand, performs a convolution same as the forward pass of convolution.
 
     The size (spatial extent) of the receptive field for convolution transpose is given by ``filter_shape``.
     E.g. to specify a 2D convolution transpose, ``filter_shape`` should be a tuple of two integers, such as `(5,5)`;
@@ -685,12 +684,12 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
     The dimension of the output items generated for each item position is given by ``num_filters``.
 
     A ``ConvolutionTranspose`` instance owns its weight parameter tensors `W` and `b`, and exposes them as an attributes ``.W`` and ``.b``.
-    The weights will have the shape ``(input_feature_map_depth, num_filters, *filter_shape)``. 
+    The weights will have the shape ``(input_feature_map_depth, num_filters, *filter_shape)``.
 
     Example:
      >>> # 2D convolution transpose of 3x4 receptive field with output feature-map depth 128:
      >>> f = ConvolutionTranspose((3,4), 128, activation=C.relu)
-     >>> x = input((3,480,640))  # 3-channel color image
+     >>> x = C.input_variable((3,480,640))  # 3-channel color image
      >>> h = f(x)
      >>> h.shape
          (128, 482, 643)
@@ -707,14 +706,14 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
       the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero.
       Use a `tuple` to specify a per-axis value.
      strides (`int` or tuple of `int`\ s, default 1): stride of the convolution (increment when sliding the filter over the input). Use a `tuple` to specify a per-axis value.
-     sharing (`bool`, default `True`): weight sharing, must be True for now. 
+     sharing (`bool`, default `True`): weight sharing, must be True for now.
      bias (`bool`, optional, default `True`): the layer will have no bias if `False` is passed here
      init_bias (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `b`
-     output_shape (`int` or tuple of `int`\ s): output shape. When strides > 2, the output shape is non-deterministic. User can specify the wanted output shape. Note the 
-      specified shape must satisify the condition that if a convolution is perform from the output with the same setting, the result must have same shape as the input. 
-     reduction_rank (`int`, default 1): must be 1 for now. 
+     output_shape (`int` or tuple of `int`\ s): output shape. When strides > 2, the output shape is non-deterministic. User can specify the wanted output shape. Note the
+      specified shape must satisify the condition that if a convolution is perform from the output with the same setting, the result must have same shape as the input.
+     reduction_rank (`int`, default 1): must be 1 for now.
       that is stored with tensor shape (H,W) instead of (1,H,W)
-     max_temp_mem_size_in_samples (`int`, default 0): set to a positive number to define the maximum workspace memory for convolution. 
+     max_temp_mem_size_in_samples (`int`, default 0): set to a positive number to define the maximum workspace memory for convolution.
      name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -740,14 +739,14 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
     if not sharing:
         NotImplementedError("ConvolutionTranspose: sharing option currently must be True")
     output_channels_shape = _as_tuple(num_filters)
-    kernel_shape = _INFERRED * reduction_rank + filter_shape # kernel := filter plus reductionDims  
-    if output_shape is None:  
-        kernel_shape = output_channels_shape + filter_shape 
+    kernel_shape = _INFERRED * reduction_rank + filter_shape # kernel := filter plus reductionDims
+    if output_shape is None:
+        kernel_shape = output_channels_shape + filter_shape
     param_shape = _INFERRED * reduction_rank + kernel_shape
 
-    output_full_shape = output_shape 
+    output_full_shape = output_shape
     if output_shape is not None:
-        output_full_shape = output_channels_shape + output_shape 
+        output_full_shape = output_channels_shape + output_shape
 
     filter_rank = len(filter_shape)
     init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-1))
@@ -761,7 +760,7 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
                                   strides=strides,
                                   sharing=sharing,
                                   auto_padding=(False,) * reduction_rank + pad, # convolution_transpose() currently has no reduction_rank parameter, so we must pass an explicit False for the reduction axis
-                                  output_shape=output_full_shape, 
+                                  output_shape=output_full_shape,
                                   max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         if bias:
             r = r + b
@@ -771,15 +770,15 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
     return convolve_transposed
 
 # ConvolutionTranspose1D -- create a 1D convolution transpose layer with optional non-linearity
-def ConvolutionTranspose1D(filter_shape,        # a scalar, e.g., 3 
+def ConvolutionTranspose1D(filter_shape,        # a scalar, e.g., 3
                            num_filters,
                            activation=default_override_or(identity),
-                           init=default_override_or(glorot_uniform()),
+                           init=default_override_or(C.glorot_uniform()),
                            pad=default_override_or(False),
                            strides=1,
                            bias=default_override_or(True),
                            init_bias=default_override_or(0),
-                           output_shape=None, 
+                           output_shape=None,
                            name=''):
     '''
     ConvolutionTranspose1D(filter_shape, num_filters, activation=identity, init=glorot_uniform(), pad=False, strides=1, bias=True, init_bias=0, output_shape=None, name='')
@@ -794,20 +793,20 @@ def ConvolutionTranspose1D(filter_shape,        # a scalar, e.g., 3
     bias       = get_default_override(ConvolutionTranspose1D, bias=bias)
     init_bias  = get_default_override(ConvolutionTranspose1D, init_bias=init_bias)
     output_shape = get_default_override(ConvolutionTranspose1D, output_shape=output_shape)
-    if len(_as_tuple(filter_shape)) != 1: 
+    if len(_as_tuple(filter_shape)) != 1:
          raise ValueError('ConvolutionTranspose1D: filter_shape must be a scalar')
     return ConvolutionTranspose(filter_shape, num_filters, activation, init, pad, strides, True, bias, init_bias, output_shape, name=name)
 
 # ConvolutionTranspose2D -- create a 2D convolution transpose layer with optional non-linearity
-def ConvolutionTranspose2D(filter_shape,        # a 2D tuple, e.g., (3,3) 
+def ConvolutionTranspose2D(filter_shape,        # a 2D tuple, e.g., (3,3)
                            num_filters,
                            activation=default_override_or(identity),
-                           init=default_override_or(glorot_uniform()),
+                           init=default_override_or(C.glorot_uniform()),
                            pad=default_override_or(False),
                            strides=1,
                            bias=default_override_or(True),
                            init_bias=default_override_or(0),
-                           output_shape=None, 
+                           output_shape=None,
                            name=''):
     '''
     ConvolutionTranspose2D(filter_shape, num_filters, activation=identity, init=glorot_uniform(), pad=False, strides=1, bias=True, init_bias=0, output_shape=None, name='')
@@ -822,21 +821,21 @@ def ConvolutionTranspose2D(filter_shape,        # a 2D tuple, e.g., (3,3)
     bias       = get_default_override(ConvolutionTranspose2D, bias=bias)
     init_bias  = get_default_override(ConvolutionTranspose2D, init_bias=init_bias)
     output_shape = get_default_override(ConvolutionTranspose2D, output_shape=output_shape)
-    if len(_as_tuple(filter_shape)) > 2: 
+    if len(_as_tuple(filter_shape)) > 2:
          raise ValueError('ConvolutionTranspose2D: filter_shape must be a scalar or a 2D tuple, e.g. 3 or (3,3)')
     filter_shape = _pad_to_shape((0,0), filter_shape, 'filter_shape')
     return ConvolutionTranspose(filter_shape, num_filters, activation, init, pad, strides, True, bias, init_bias, output_shape, name=name)
 
 # ConvolutionTranspose3D -- create a 3D convolution transpose layer with optional non-linearity
-def ConvolutionTranspose3D(filter_shape,        # a 3D tuple, e.g., (3,3,3) 
+def ConvolutionTranspose3D(filter_shape,        # a 3D tuple, e.g., (3,3,3)
                            num_filters,
                            activation=default_override_or(identity),
-                           init=default_override_or(glorot_uniform()),
+                           init=default_override_or(C.glorot_uniform()),
                            pad=default_override_or(False),
                            strides=1,
                            bias=default_override_or(True),
                            init_bias=default_override_or(0),
-                           output_shape=None, 
+                           output_shape=None,
                            name=''):
     '''
     ConvolutionTranspose3D(filter_shape, num_filters, activation=identity, init=glorot_uniform(), pad=False, strides=1, bias=True, init_bias=0, output_shape=None, name='')
@@ -851,7 +850,7 @@ def ConvolutionTranspose3D(filter_shape,        # a 3D tuple, e.g., (3,3,3)
     bias       = get_default_override(ConvolutionTranspose3D, bias=bias)
     init_bias  = get_default_override(ConvolutionTranspose3D, init_bias=init_bias)
     output_shape = get_default_override(ConvolutionTranspose3D, output_shape=output_shape)
-    if len(_as_tuple(filter_shape)) > 3: 
+    if len(_as_tuple(filter_shape)) > 3:
          raise ValueError('ConvolutionTranspose3D: filter_shape must be a scalar or a 3D tuple, e.g. 3 or (3,3,3)')
     filter_shape = _pad_to_shape((0,0,0), filter_shape, 'filter_shape')
     return ConvolutionTranspose(filter_shape, num_filters, activation, init, pad, strides, True, bias, init_bias, output_shape, name=name)
@@ -900,7 +899,7 @@ def MaxPooling(filter_shape,  # shape of receptive field, e.g. (3,3)
 
     Example:
      >>> f = MaxPooling((3,3), strides=2)  # reduce dimensionality by 2, pooling over windows of 3x3
-     >>> h = input((32,240,320))  # e.g. 32-dim feature map
+     >>> h = C.input_variable((32,240,320))  # e.g. 32-dim feature map
      >>> hp = f(h)
      >>> hp.shape  # spatial dimension has been halved due to stride, and lost one due to 3x3 window without padding
          (32, 119, 159)
@@ -952,7 +951,7 @@ def AveragePooling(filter_shape,  # shape of receptive field, e.g. (3,3)
 
     Example:
      >>> f = AveragePooling((3,3), strides=2)  # reduce dimensionality by 2, pooling over windows of 3x3
-     >>> h = input((32,240,320))  # e.g. 32-dim feature map
+     >>> h = C.input_variable((32,240,320))  # e.g. 32-dim feature map
      >>> hp = f(h)
      >>> hp.shape  # spatial dimension has been halved due to stride, and lost one due to 3x3 window without padding
          (32, 119, 159)
@@ -1063,7 +1062,7 @@ def MaxUnpooling(filter_shape,  # shape of receptive field, e.g. (3,3)
 
 
 # TODO: should the rate(s) be default_options?
-def Dropout(dropout_rate=None, 
+def Dropout(dropout_rate=None,
             keep_prob=None,
             seed = SentinelValueForAutoSelectRandomSeed,
             name=''):
@@ -1076,11 +1075,11 @@ def Dropout(dropout_rate=None,
 
     Example:
      >>> f = Dropout(0.2)   # "drop 20% of activations"
-     >>> h = input(3)
+     >>> h = C.input_variable(3)
      >>> hd = f(h)
 
      >>> f = Dropout(keep_prob=0.8)   # "keep 80%"
-     >>> h = input(3)
+     >>> h = C.input_variable(3)
      >>> hd = f(h)
 
     Args:
@@ -1108,7 +1107,7 @@ def Dropout(dropout_rate=None,
     return dropout_f
 
 
-def Activation(activation=default_override_or(identity), name=''): 
+def Activation(activation=default_override_or(identity), name=''):
     '''
     Activation(activation=identity, name='')
 
@@ -1136,7 +1135,7 @@ def Activation(activation=default_override_or(identity), name=''):
     activation = get_default_override(Activation, activation=activation)
     @BlockFunction('Activation', name)
     def activation_f(x):
-        return activation(x) 
+        return activation(x)
     return activation_f
 
 
@@ -1208,7 +1207,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
 
     return batch_normalize
 
-def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override_or(0.00001), name=''):    
+def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override_or(0.00001), name=''):
     '''
     LayerNormalization(initial_scale=1, initial_bias=0, epsilon=0.00001, name='')
 
@@ -1277,5 +1276,5 @@ def Label(name):
     '''
     @Function  # note: cannot be a BlockFunction since that would hide the label
     def label(x):
-        return alias(x, name=name)
+        return C.alias(x, name=name)
     return label

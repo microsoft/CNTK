@@ -3,6 +3,7 @@ from enum import Enum, unique
 import warnings
 import collections
 
+import cntk
 from cntk import cntk_py, Value
 from cntk.device import DeviceDescriptor, cpu
 from cntk.internal import map_if_possible, typemap, sanitize_var_map,\
@@ -125,13 +126,13 @@ class Function(cntk_py.Function):
         # An input is created if the parameter is annotated with a Tensor(...) type.
         # In this case, CNTK will immediately trigger type inference.
         # Unannotated parameters will yield placeholder_variables instead.
-        from .. import placeholder, input
+        from .. import placeholder
         def make_arg_variable(name, annotations):
             from ..variables import Variable
             var_type = annotations.get(name, None)
             var_type = Variable._Type._sanitize(var_type)
             if isinstance(var_type, Variable._Type):
-                return input(name=name, **var_type)
+                return cntk.input_variable(name=name, **var_type)
             else:
                 return placeholder(name=name)
 
@@ -304,13 +305,13 @@ class Function(cntk_py.Function):
         '''
         arg_map = self.argument_map(*arg_types, **kwarg_types) # map type specs to Function parameters
         def to_input(arg_type, name):
-            from cntk import input
+            #from cntk import input
             from ..variables import Variable
             if isinstance(arg_type, (int, tuple)): # just passed a shape
-                return input(shape=_as_tuple(arg_type), name=name)
+                return cntk.input_variable(shape=_as_tuple(arg_type), name=name)
             arg_type = Variable._Type._sanitize(arg_type)
             if isinstance(arg_type, Variable._Type): # full type given as Tensor[...] etc.
-                return input(name=name, **arg_type)
+                return cntk.input_variable(name=name, **arg_type)
             raise TypeError("update_signature() expects arguments of type int, tuple of int, or Type.Variable")
         # map the given types:
         #  - create an Input with the given Type or shape
@@ -334,8 +335,8 @@ class Function(cntk_py.Function):
             if isinstance(arg, cntk_py.Variable):
                 return arg
             else:
-                from cntk import input
-                return input(arg)
+                #from cntk import input
+                return cntk.input_variable(arg)
 
         args = [to_input(arg) for arg in arg_types]
         arg_map = dict(zip(placeholders, args))
@@ -611,7 +612,7 @@ class Function(cntk_py.Function):
 
         Example:
             >>> # Example of passing dense data
-            >>> v = C.input(shape=(3,))
+            >>> v = C.input_variable(shape=(3,))
             >>> f = C.reciprocal(v)
             >>> _, fv = f.forward({v:[[1, 2, 4]]})
             >>> list(fv.values())[0]
@@ -620,7 +621,7 @@ class Function(cntk_py.Function):
         Example:
             >>> # Passing sparse values as one-hot with a vocabulary size of 5
             >>> vocab_size = 5
-            >>> v = C.sequence.input(shape=(vocab_size,), is_sparse=True)
+            >>> v = C.sequence.input_variable(shape=(vocab_size,), is_sparse=True)
             >>> f = C.times(v, np.eye(vocab_size))
             >>> # Passing a batch of two sequences:
             >>> # 1st sequence: word 1
@@ -636,7 +637,7 @@ class Function(cntk_py.Function):
             >>> # Doing the same, but with a CSR matrix from scipy.sparse
             >>> vocab_size = 5
             >>> from scipy.sparse import csr_matrix
-            >>> v = C.sequence.input(shape=(vocab_size,), is_sparse=True)
+            >>> v = C.sequence.input_variable(shape=(vocab_size,), is_sparse=True)
             >>> f = C.times(v, np.eye(vocab_size))
             >>> # Note that csr_matrix automatically uses a sparse representation underneath.
             >>> sparse_batch = [csr_matrix([[0,1,0,0,0]]), csr_matrix([[0,0,1,0,0], [0,0,0,0,1]])]
@@ -751,7 +752,7 @@ class Function(cntk_py.Function):
 
         Example:
             >>> # compute the value and the derivative of the sigmoid at 0
-            >>> v = C.input(shape=(1,), needs_gradient=True)
+            >>> v = C.input_variable(shape=(1,), needs_gradient=True)
             >>> f = C.sigmoid(v)
             >>> df, fv = f.forward({v:[[0]]}, [f.output], set([f.output]))
             >>> value = list(fv.values())[0]
@@ -807,7 +808,7 @@ class Function(cntk_py.Function):
         The Function must have a single output.
 
         Example:
-            >>> x = C.input(shape=(1,), needs_gradient=True)
+            >>> x = C.input_variable(shape=(1,), needs_gradient=True)
             >>> y = C.sqrt(x)
             >>> a = np.asarray([1,4,16],dtype=np.float32).reshape(3,1)
             >>> y.grad({x:a})
@@ -1048,8 +1049,8 @@ class Function(cntk_py.Function):
         :func:`find_by_name`.
 
         Example:
-            >>> a = C.input(shape=1, name='i')
-            >>> b = C.input(shape=1, name='i')
+            >>> a = C.input_variable(shape=1, name='i')
+            >>> b = C.input_variable(shape=1, name='i')
             >>> c = C.plus(a, b, name='c')
             >>> len(c.find_all_with_name('i'))
             2
@@ -1080,8 +1081,8 @@ class Function(cntk_py.Function):
         :func:`find_all_with_name`.
 
         Example:
-            >>> a = C.input(shape=1, name='a')
-            >>> b = C.input(shape=1, name='b')
+            >>> a = C.input_variable(shape=1, name='a')
+            >>> b = C.input_variable(shape=1, name='b')
             >>> c = C.plus(a, b, name='c')
             >>> print(c.find_by_name('b').name)
             b
@@ -1155,16 +1156,16 @@ class Function(cntk_py.Function):
         When loading a model, CNTK will try to automatically reconstruct any
         (non-native) user-defined functions by invoking a static
         :func:`~cntk.ops.functions.UserFunction.deserialize` method of the
-        corresponding UserFunction sub-class. This method allows to override 
-        default UDF deserialization behavior by specifying a user- defined 
-        function op name and the corresponding callback that should be invoked 
+        corresponding UserFunction sub-class. This method allows to override
+        default UDF deserialization behavior by specifying a user- defined
+        function op name and the corresponding callback that should be invoked
         instead of the ``deserialize`` method.
 
         Args:
             op_name (str): unique op name of the user-defined function.
-            callback (function): a function taking three arguments (a list of 
+            callback (function): a function taking three arguments (a list of
              inputs to the UserFunction, a string name, and a state dictionary
-             generated by the corresponding :func:`~cntk.ops.functions.UserFunction.serialize` 
+             generated by the corresponding :func:`~cntk.ops.functions.UserFunction.serialize`
              method) and returns an instance of the user-defined function.
         '''
         if op_name in Function._udf_callback_map:
@@ -1179,7 +1180,7 @@ class Function(cntk_py.Function):
         Load the ``model``, that has been saved using :func:`~cntk.ops.functions.Function.save`.
 
         Args:
-            model (str, bytes or bytearray): either a file path of a model file or a byte buffer 
+            model (str, bytes or bytearray): either a file path of a model file or a byte buffer
              containing the binary representation of a model.
             device (:class:`~cntk.device.DeviceDescriptor`, defaults to the current globally default device):
              specifies the device to allocate the model on.
@@ -1201,10 +1202,10 @@ class Function(cntk_py.Function):
 
         if is_buffer:
             return cntk_py.Function.load_from_buffer(model, device)
-        
+
         if is_file:
             return cntk_py.Function.load(model, device)
-        
+
         raise ValueError('Cannot load a model that is neither a file nor a byte buffer.')
 
 @typemap
@@ -1452,7 +1453,7 @@ class UserFunction(Function):
         Args:
             inputs (list): a list of inputs to the function
             name (str): name of this function
-            state (dict): a state dictionary generated by the corresponding 
+            state (dict): a state dictionary generated by the corresponding
              :func:`~cntk.ops.functions.UserFunction.serialize` method.
 
         Returns:

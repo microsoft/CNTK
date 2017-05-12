@@ -5,6 +5,7 @@
 # ==============================================================================
 
 from __future__ import print_function
+import cntk as C
 from cntk import *
 from cntk.initializer import glorot_uniform
 from cntk.io import MinibatchSource, ImageDeserializer, CTFDeserializer, StreamDefs, StreamDef
@@ -17,7 +18,7 @@ from PARAMETERS import *
 import numpy as np
 import os, sys
 
-　
+
 ###############################################################
 ###############################################################
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -59,7 +60,7 @@ else:
 ###############################################################
 ###############################################################
 
-　
+
 # Instantiates a composite minibatch source for reading images, roi coordinates and roi labels for training Fast R-CNN
 def create_mb_source(img_height, img_width, img_channels, n_classes, n_rois, data_path, data_set):
     rois_dim = 4 * n_rois
@@ -94,7 +95,7 @@ def create_mb_source(img_height, img_width, img_channels, n_classes, n_rois, dat
     # define a composite reader
     return MinibatchSource([image_source, roi_source, label_source], epoch_size=sys.maxsize, randomize=data_set == "train")
 
-　
+
 # Defines the Fast R-CNN network model for detecting objects in images
 def frcn_predictor(features, rois, n_classes):
     # Load the pretrained classification net and find nodes
@@ -121,7 +122,7 @@ def frcn_predictor(features, rois, n_classes):
 
     return z
 
-　
+
 # Trains a Fast R-CNN model
 def train_fast_rcnn(debug_output=False):
     if debug_output:
@@ -132,9 +133,9 @@ def train_fast_rcnn(debug_output=False):
                                         num_classes, num_rois, base_path, "train")
 
     # Input variables denoting features, rois and label data
-    image_input = input((num_channels, image_height, image_width))
-    roi_input   = input((num_rois, 4))
-    label_input = input((num_rois, num_classes))
+    image_input = C.input_variable((num_channels, image_height, image_width))
+    roi_input   = C.input_variable((num_rois, 4))
+    label_input = C.input_variable((num_rois, num_classes))
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -177,7 +178,7 @@ def train_fast_rcnn(debug_output=False):
 
     return frcn_output
 
-　
+
 # Tests a Fast R-CNN model
 def test_fast_rcnn(model):
     test_minibatch_source = create_mb_source(image_height, image_width, num_channels,
@@ -201,7 +202,7 @@ def test_fast_rcnn(model):
 
     return
 
-　
+
 # The main method trains and evaluates a Fast R-CNN model.
 # If a trained model is already available it is loaded an no training will be performed.
 if __name__ == '__main__':

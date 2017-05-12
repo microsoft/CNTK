@@ -6,6 +6,7 @@
 # ==============================================================================
 
 import numpy as np
+import cntk as C
 import pytest
 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDefs, StreamDef, \
@@ -803,10 +804,10 @@ def test_usermbsource_training(tmpdir):
 
     from cntk import sequence, parameter, plus, cross_entropy_with_softmax, \
             classification_error, learning_rate_schedule, sgd, Trainer, \
-            training_session, times, UnitType, input
+            training_session, times, UnitType
 
-    feature = sequence.input(shape=(input_dim,))
-    label = input(shape=(num_output_classes,))
+    feature = sequence.input_variable(shape=(input_dim,))
+    label = C.input_variable(shape=(num_output_classes,))
     p = parameter(shape=(input_dim,num_output_classes), init=10)
     z = times(sequence.reduce_sum(feature), p, name='z')
     ce = cross_entropy_with_softmax(z, label)

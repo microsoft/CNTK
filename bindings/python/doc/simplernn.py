@@ -4,7 +4,7 @@ from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs,\
         INFINITELY_REPEAT
 from cntk.learners import sgd, learning_rate_schedule, UnitType
-from cntk import input, cross_entropy_with_softmax, \
+from cntk import input_variable, cross_entropy_with_softmax, \
         classification_error, sequence
 from cntk.logging import ProgressPrinter
 from cntk.layers import Sequential, Embedding, Recurrence, LSTM, Dense
@@ -22,7 +22,7 @@ def create_reader(path, is_training, input_dim, label_dim):
 def LSTM_sequence_classifier_net(input, num_output_classes, embedding_dim,
                                 LSTM_dim, cell_dim):
     lstm_classifier = Sequential([Embedding(embedding_dim),
-                                  Recurrence(LSTM(LSTM_dim, cell_dim))[0],
+                                  Recurrence(LSTM(LSTM_dim, cell_dim)),
                                   sequence.last,
                                   Dense(num_output_classes)])
     return lstm_classifier(input)
@@ -37,8 +37,8 @@ def train_sequence_classifier():
     num_output_classes = 5
 
     # Input variables denoting the features and label data
-    features = sequence.input(shape=input_dim, is_sparse=True)
-    label = input(num_output_classes)
+    features = sequence.input_variable(shape=input_dim, is_sparse=True)
+    label = input_variable(num_output_classes)
 
     # Instantiate the sequence classification model
     classifier_output = LSTM_sequence_classifier_net(

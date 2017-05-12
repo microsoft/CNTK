@@ -16,7 +16,7 @@ def cntk_baseline_conv2d():
     import cntk as C
     import cntk.contrib.crosstalk.crosstalk_cntk as crct
     ci = crct.instance
-    input_var = C.input(shape=sample_shape)
+    input_var = C.input_variable(shape=sample_shape)
     input_reshaped = C.reshape(input_var, (1,)+sample_shape)
     conv_out = C.layers.Convolution2D(filter_shape, num_filters, init_bias=C.glorot_uniform())(input_reshaped)
     ci.watch(conv_out, 'conv2d', var_type=cstk.Conv2DAttr,
@@ -35,7 +35,7 @@ def tf_baseline_conv2d():
     ci = crtf.instance
 
     tf.reset_default_graph()
-    
+
     x = tf.placeholder(tf.float32, [batch_size, num_chars, char_emb_dim])
     filter_bank = tf.get_variable("char_filter_bank",
                                   shape=[filter_width, char_emb_dim, num_filters],
@@ -47,7 +47,7 @@ def tf_baseline_conv2d():
     ci.watch(cstk.Conv2DArgs(W=crtf.find_trainable('char_filter_bank'), b=crtf.find_trainable('char_filter_biases')), 'conv2d', var_type=cstk.Conv2DAttr,
                attr=cstk.Conv2DAttr(filter_shape=(filter_width, char_emb_dim,), num_filters=num_filters))
     ci.watch(char_conv, 'conv2d_out', var_type=crtf.VariableType)
-    
+
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         data = {x:input_data}
@@ -75,8 +75,8 @@ def test_cntk_conv2d():
     import cntk as C
     import cntk.contrib.crosstalk.crosstalk_cntk as crct
     ci = crct.instance
-        
-    input_var = C.input(shape=sample_shape)
+
+    input_var = C.input_variable(shape=sample_shape)
     input_reshaped = C.reshape(input_var, (1,)+sample_shape)
     conv_out = C.layers.Convolution2D(filter_shape, num_filters, activation=None)(input_reshaped)
     ci.watch(conv_out, 'conv2d', var_type=cstk.Conv2DAttr,
