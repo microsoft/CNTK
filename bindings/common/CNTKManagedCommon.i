@@ -387,9 +387,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 %include "CNTKWarnFilters.i"
 
+#ifdef SWIGCSHARP
 // define typemap for dataBuffer
 %apply float INPUT[]  { float *dataBuffer }
 %apply double INPUT[]  { double *dataBuffer }
+#endif
 
 // exception handling
 %include "CNTKExceptionHandling.i"
@@ -471,7 +473,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 // Customize type mapping for modelBuffer, used by Load
 // template taken from various.i
-%apply char* INPUT { char* modelBuffer }
 %typemap(jni) (char* modelBuffer) "jbyteArray"
 %typemap(jtype) (char* modelBuffer) "byte[]"
 %typemap(jstype) (char* modelBuffer) "byte[]"
@@ -532,11 +533,13 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (_MarkSequenceBegin) CNTK::NDMask::MarkSequenceBegin;
 %rename (_InvalidateSection) CNTK::NDMask::InvalidateSection;
 
+#ifdef SWIGCSHARP
 // class Value
 %apply int INPUT[]  { int *colStarts }
 %apply int INPUT[]  { int *rowIndices }
 %apply float INPUT[]  { float *nonZeroValues }
 %apply double INPUT[]  { double *nonZeroValues }
+#endif
 
 %rename (GetDevice) CNTK::Value::Device;
 %rename (GetShape) CNTK::Value::Shape;
