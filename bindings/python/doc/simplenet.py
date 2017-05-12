@@ -25,8 +25,8 @@ def ffnet():
     hidden_dimension = 50
 
     # input variables denoting the features and label data
-    features = C.input((inputs), np.float32)
-    label = C.input((outputs), np.float32)
+    features = C.input_variable((inputs), np.float32)
+    label = C.input_variable((outputs), np.float32)
 
     # Instantiate the feedforward classification model
     my_model = Sequential ([

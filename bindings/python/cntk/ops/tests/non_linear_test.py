@@ -11,6 +11,7 @@ the forward and the backward pass
 
 from __future__ import division
 import numpy as np
+import cntk as C
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, precision, PRECISION_TO_TYPE, cntk_device
 from cntk.tests.test_utils import TOLERANCE_ABSOLUTE
@@ -150,7 +151,7 @@ def test_op_tanh(operand, device_id, precision):
 @pytest.mark.parametrize("shape", [(3, 9), (10, 20, 30)])
 @pytest.mark.parametrize("dropout_rate", [0.0, 0.2, 0.5, 0.8])
 def test_op_dropout(shape, dropout_rate, device_id, precision):
-    from cntk import dropout, input
+    from cntk import dropout
 
     count = 10
     resulted_non_zeros = 0
@@ -160,7 +161,7 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
     for i in range(count):
         value = np.ones(shape=shape, dtype=PRECISION_TO_TYPE[precision])
 
-        a = input(shape=value.shape,
+        a = C.input_variable(shape=value.shape,
                   dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
                   needs_gradient=True,
                   name='a')
@@ -187,11 +188,11 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
            max_off)
 
 def test_op_dropout_with_explicit_seed(device_id, precision):
-    from cntk import combine, dropout, input
+    from cntk import combine, dropout
 
     value = np.ones(shape=(100,100), dtype=PRECISION_TO_TYPE[precision])
 
-    a = input(shape=value.shape,
+    a = C.input_variable(shape=value.shape,
               dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
               name='a')
@@ -231,9 +232,9 @@ def test_op_dropout_with_explicit_seed(device_id, precision):
 
 @pytest.mark.parametrize("dropout_rate", [-0.1, 1.0, 100])
 def test_op_dropout_bad_input(dropout_rate):
-    from cntk import dropout, input
+    from cntk import dropout
 
-    a = input(shape=(1, 2), dtype='float', needs_gradient=True, name='a')
+    a = C.input_variable(shape=(1, 2), dtype='float', needs_gradient=True, name='a')
 
     with pytest.raises(ValueError):
         dropout_node = dropout(a, dropout_rate=dropout_rate)
@@ -489,9 +490,9 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
     run_variance = constant(var,  shape=(1), dtype=dtype, device=dev)
     run_count    = constant(0,               dtype=dtype, device=dev)
 
-    from cntk import batch_normalization, input
+    from cntk import batch_normalization
 
-    a = input(shape=(1), dtype=dtype, needs_gradient=False, name='a')
+    a = C.input_variable(shape=(1), dtype=dtype, needs_gradient=False, name='a')
 
     with pytest.warns(Warning):
         op = batch_normalization(a, scale, bias, run_mean, run_variance, False,

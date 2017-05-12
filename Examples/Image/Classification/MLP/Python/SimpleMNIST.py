@@ -8,11 +8,12 @@ import argparse
 import numpy as np
 import sys
 import os
+import cntk as C
 from cntk.train import Trainer, minibatch_size_schedule 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
 from cntk.device import cpu, try_set_default_device
 from cntk.learners import adadelta, learning_rate_schedule, UnitType
-from cntk.ops import input, relu, element_times, constant
+from cntk.ops import relu, element_times, constant
 from cntk.layers import Dense, Sequential, For
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
@@ -44,8 +45,8 @@ def simple_mnist(tensorboard_logdir=None):
     hidden_layers_dim = 200
 
     # Input variables denoting the features and label data
-    feature = input(input_dim, np.float32)
-    label = input(num_output_classes, np.float32)
+    feature = C.input_variable(input_dim, np.float32)
+    label = C.input_variable(num_output_classes, np.float32)
 
     # Instantiate the feedforward classification model
     scaled_input = element_times(constant(0.00390625), feature)

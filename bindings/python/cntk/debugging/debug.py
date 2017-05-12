@@ -6,9 +6,7 @@
 import sys
 from collections import defaultdict
 
-from cntk import cntk_py, user_function
-
-from cntk.ops import output_variable, CloneMethod
+from cntk import cntk_py, user_function, output_variable, CloneMethod
 
 from cntk.ops.functions import UserFunction
 from cntk.internal import map_if_possible
@@ -111,9 +109,9 @@ def set_checked_mode(enable):
      Checked mode enables additional runtime verification such as:
         - Tracking NaN occurences in sequence gaps.
         - Function graph verification after binding of free static axes to actual values at runtime
-     
+
      Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
-    
+
     Args:
         enable (bool): whether to enable checked mode (with performance impact)
     '''
