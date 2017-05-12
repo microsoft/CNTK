@@ -16,7 +16,7 @@ def cntk_baseline_lstm():
     import cntk as C
     import cntk.contrib.crosstalk.crosstalk_cntk as crct
     ci = crct.instance
-    input_var = C.sequence.input(shape=(in_dim))
+    input_var = C.sequence.input_variable(shape=(in_dim))
     fwbw = C.splice(C.layers.Recurrence(C.layers.LSTM(dim, init_bias=C.glorot_uniform()))(input_var), C.layers.Recurrence(C.layers.LSTM(dim), go_backwards=True)(input_var))
     ci.watch(fwbw, 'birnn', var_type=cstk.RnnAttr,
           attr=cstk.RnnAttr(bidirectional=True, op_type='lstm', input_dim=in_dim, hidden_dim=dim, forget_bias=0))
@@ -35,7 +35,7 @@ def tf_baseline_lstm():
     ci = crtf.instance
 
     tf.reset_default_graph()
-    
+
     with tf.variable_scope("rnn"):
         x = tf.placeholder(tf.float32, [batch_size, max_seq_len, in_dim])
         l = tf.placeholder(tf.int32, [batch_size])
@@ -60,7 +60,7 @@ def tf_baseline_lstm():
             output = tf.concat([fw,bw], 2)
         else:
             raise Exception('only supports 0.12.* and 1.*')
-            
+
         ci.watch(output, 'birnn_out', var_type=crtf.VariableType)
 
     with tf.Session() as sess:
@@ -88,8 +88,8 @@ def test_cntk_cudnn():
     import cntk as C
     import cntk.contrib.crosstalk.crosstalk_cntk as crct
     ci = crct.instance
-        
-    input_var = C.sequence.input(shape=(in_dim))
+
+    input_var = C.sequence.input_variable(shape=(in_dim))
     data = {input_var:data_cntk}
     ci.set_data(data)
     ci.set_workdir(workdir)
@@ -99,12 +99,12 @@ def test_cntk_cudnn():
     ci.watch(cudnn_fwbw, 'cntk_birnn_cudnn', var_type=cstk.RnnAttr,
           attr=cstk.RnnAttr(bidirectional=True, op_type='lstm', input_dim=in_dim, hidden_dim=dim, forget_bias=0))
     ci.watch(cudnn_fwbw, 'cntk_birnn_cudnn_out')
-    
+
     ci.assign('cntk_birnn_cudnn', load=True, load_name='cntk_birnn')
     assert ci.compare('cntk_birnn_cudnn_out', compare_name='cntk_birnn_out')
 
     ci.fetch('cntk_birnn_cudnn', save=True)
     ci.assign('cntk_birnn_cudnn', load=True)
     assert ci.compare('cntk_birnn_cudnn_out', compare_name='cntk_birnn_out')
-    
+
     ci.reset()
