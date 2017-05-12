@@ -41,13 +41,13 @@ def test_text_format(tmpdir):
 
         # try minibatch
         def eval_batch(batch):
-            v_fixed_seq = C.sequence.input(4)
+            v_fixed_seq = C.sequence.input_variable(4)
             fixed_seq_op_result = (C.sequence.last(v_fixed_seq) * 1).eval(
                 {v_fixed_seq: batch[ds.stream_info_mapping['fixed_len_seq']]})
-            v_vlen_seq = C.sequence.input(3)
+            v_vlen_seq = C.sequence.input_variable(3)
             v_vlen_seq_op_result = (C.sequence.last(v_vlen_seq) * 1).eval(
                 {v_vlen_seq: batch[ds.stream_info_mapping['vlen_seq']]})
-            v_label = C.input(1)
+            v_label = C.input_variable(1)
             v_label_op_result = (v_label * 1).eval({v_label: batch[ds.stream_info_mapping['label']]})
             return fixed_seq_op_result, v_vlen_seq_op_result, v_label_op_result
 

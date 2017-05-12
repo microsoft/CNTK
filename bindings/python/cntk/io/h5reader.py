@@ -188,12 +188,12 @@ class H5DataSource(UserMinibatchSource):
                     res_data.append(np.reshape(seq, dshape))
                     sample_count = sample_count + seq_len
 
-                data = Value.create(var=sequence.input(shape=elm_shape), data=res_data, device=self.device)
+                data = Value.create(var=sequence.input_variable(shape=elm_shape), data=res_data, device=self.device)
                 sample_count = int(sample_count)
             else:
                 sample_count = num_seq
                 dshape = dataset.shape[1:]
-                data = Value.create(var=sequence.input(shape=dshape), data=data, device=self.device)
+                data = Value.create(var=sequence.input_variable(shape=dshape), data=data, device=self.device)
 
             batch_data = MinibatchData(data, num_seq, sample_count, sweep_end)
             result[strm_info] = batch_data
