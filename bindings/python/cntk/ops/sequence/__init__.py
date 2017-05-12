@@ -44,7 +44,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
 @typemap
 def input_variable(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
                    sequence_axis=Axis.default_dynamic_axis(), name=''):
-    '''input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, sequence_axis=Axis.default_dynamic_axis(), name='')
+    '''input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, sequence_axis=Axis.default_dynamic_axis(), name='')
 
     It creates an input in the network: a place where data,
     such as features and labels, should be provided.

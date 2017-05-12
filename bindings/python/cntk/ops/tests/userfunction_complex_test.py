@@ -11,7 +11,7 @@ from __future__ import division, print_function
 import numpy as np
 import cntk as C
 
-from cntk.ops.tests.ops_test_utils import cntk_device
+from cntk.ops.tests.ops_test_utils import cntk_device, mem_used
 from cntk.ops.functions import UserFunction
 from cntk import sigmoid
 
@@ -125,25 +125,25 @@ def mem_leak_check(nonlinearity, num_hidden_layers, device_id,
                    minibatch_size=1, num_samples=10000):
     from cntk.cntk_py import always_allow_setting_default_device
     always_allow_setting_default_device()
-    try_set_default_device(cntk_device(device_id))
+    C.try_set_default_device(cntk_device(device_id))
     np.random.seed(0)
 
     learning_rate = 0.5
-    lr_schedule = learning_rate_schedule(learning_rate, UnitType.minibatch)
+    lr_schedule = C.learning_rate_schedule(learning_rate, C.UnitType.minibatch)
 
     hidden_layers_dim = 50
 
-    inp = input((input_dim), np.float32)
-    label = input((num_output_classes), np.float32)
+    inp = C.input_variable((input_dim), np.float32)
+    label = C.input_variable((num_output_classes), np.float32)
 
     z = fully_connected_classifier_net(inp, num_output_classes, hidden_layers_dim,
                                        num_hidden_layers, nonlinearity)
 
-    loss = cross_entropy_with_softmax(z, label)
-    eval_error = classification_error(z, label)
+    loss = C.cross_entropy_with_softmax(z, label)
+    eval_error = C.classification_error(z, label)
 
-    learner = sgd(z.parameters, lr_schedule)
-    trainer = Trainer(z, (loss, eval_error), [learner])
+    learner = C.sgd(z.parameters, lr_schedule)
+    trainer = C.Trainer(z, (loss, eval_error), [learner])
 
     num_minibatches_to_train = int(num_samples / minibatch_size)
 

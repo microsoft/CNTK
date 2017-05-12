@@ -6,12 +6,8 @@
 
 from __future__ import division
 from __future__ import print_function
-import numpy as np
-from ..ops.functions import CloneMethod, Function
-from ..variables import Variable, Parameter, Constant
-from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, typemap
+from cntk.internal import sanitize_input, sanitize_axis, typemap
 from cntk.internal.utils import get_data_type
-from ..axis import Axis
 
 
 @typemap
@@ -98,6 +94,7 @@ def classification_error(output_vector, target_vector, axis=-1, topN=1, name='')
     axis = sanitize_axis(axis)
     return classification_error(output_vector, target_vector, topN, axis, name)
 
+
 @typemap
 def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashInputs=False, tokensToIgnore=[], name=''):
     '''
@@ -120,8 +117,8 @@ def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashIn
     Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 
     Example:
-        i1 = cntk.input(shape=(2,))
-        i2 = cntk.input(shape=(2,))
+        i1 = C.input_variable(shape=(2,))
+        i2 = C.input_variable(shape=(2,))
         arguments = {i1 : [[1, 3], [2, 0]], i2 : [[2, 0], [2, 0]]}
         a = edit_distance_error(i1, i2, 0, 1, 1, True, [1])
         print(a.eval(arguments))

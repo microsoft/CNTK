@@ -5,7 +5,6 @@
 
 import numbers
 import collections
-from functools import lru_cache
 import numpy as np
 import cntk as C
 
@@ -22,7 +21,7 @@ def is_string(s):
 
 def is_byte_buffer(s):
     '''
-    Tests whether ``s`` is a byte buffer (not a string) in a way that 
+    Tests whether ``s`` is a byte buffer (not a string) in a way that
     works on Python 2 and 3.
     '''
     return (isinstance(s, bytearray) or
@@ -76,12 +75,12 @@ def sanitize_shape(shape):
 def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """sanitize_input(arg, fallback_dtype=np.float32, reshape=None)
     Convert to :class:`~cntk.variables.Variable` so that it can be passed
-    as Variable to the CNTK operators. 
+    as Variable to the CNTK operators.
 
       * If ``arg`` is a NumPy array and its type is neither `np.float32` nor
         `np.float64`, it sets it to `np.float32`.
       * If ``arg`` is an op, it is assumed that it has only one output, which
-        will be returned. 
+        will be returned.
 
     Args:
         arg (number, NumPy array, :class:`~cntk.variables.Variable`, or :class:`~cntk.ops.functions.Function`): input
@@ -107,7 +106,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
         return arg
 
     if isinstance(arg, Variable._Type):
-        raise ValueError("Input is a type object (" + str(arg) + "). Did you mean to pass 'input(" + str(arg) + ")'?")
+        raise ValueError("Input is a type object (" + str(arg) + "). Did you mean to pass 'input_variable(**" + str(arg) + ")'?")
 
     # maybe a Python list that we can interpret as a NumPy array?
     if isinstance(arg, list) and not arg:
@@ -468,7 +467,7 @@ def sanitize_axis(axis):
     else:
         return axis
 
-def sanitize_axis_list(axes): 
+def sanitize_axis_list(axes):
     '''
     Sanitizes a list of axes.
 
@@ -484,7 +483,7 @@ def sanitize_axis_list(axes):
     if not type(axes) in (list, tuple):
         axes = [axes]
     retAxes = []
-    for ax in axes: 
+    for ax in axes:
         retAxes.append(sanitize_axis(ax))
     return retAxes
 
@@ -512,12 +511,12 @@ def _sanitize_common_conv_args(strides, auto_padding):
     auto_padding = list(reversed(auto_padding))
 
     return strides, auto_padding
-    
+
 def sanitize_pooling_args(pooling_window_shape, strides, auto_padding):
     pooling_window_shape = sanitize_shape(pooling_window_shape)
     strides, auto_padding = _sanitize_common_conv_args(strides, auto_padding)
     return pooling_window_shape, strides, auto_padding
-    
+
 def sanitize_convolution_args(strides, sharing, auto_padding):
     strides, auto_padding = _sanitize_common_conv_args(strides, auto_padding)
 
@@ -537,11 +536,11 @@ def sanitize_Function_attributes(attributes):
         attributes['autoPadding'] = list(reversed(attributes['autoPadding']))
 
     return attributes
-    
+
 def sanitize_permutation(perm):
-    # Find the permutation such that when it is applied to the reverse 
+    # Find the permutation such that when it is applied to the reverse
     # of an input gives the reverse of perm applied to the input
-    # Example: 
+    # Example:
     # input is [a, b, c, d], perm is [3, 0, 2, 1], perm of input is [d, a, c, b]
     # we are looking for [2, 1, 3, 0] because when we apply it to [d, c, b, a]
     # the result is [b, c, a, d] which is the revese of [d, a, c, b]

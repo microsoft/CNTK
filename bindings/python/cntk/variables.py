@@ -177,9 +177,9 @@ class VariableMixin(object):
             ...     inp = Tensor[32]()
             ... except TypeError as e:
             ...     print('ERROR: ' + str(e))
-            ERROR: abstract type Tensor[32] cannot be instantiated; use 'input(**Tensor[32])' instead
+            ERROR: abstract type Tensor[32] cannot be instantiated; use 'input_variable(**Tensor[32])' instead
             '''
-            raise TypeError("abstract type " + str(self) + " cannot be instantiated; use 'input(**" + str(self) + ")' instead")
+            raise TypeError("abstract type " + str(self) + " cannot be instantiated; use 'input_variable(**" + str(self) + ")' instead")
 
         _unknown_shape = (-2,) # TODO: take this from the catacombs of cntk_py
 
