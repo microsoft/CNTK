@@ -10,6 +10,10 @@
 #undef UNUSED
 %}
 
+%{
+    #pragma warning(disable : 4267) //warning C4267: 'initializing': conversion from 'size_t' to 'jsize', possible loss of data
+%}
+
 %include "CNTKManagedCommon.i"
 
 %pragma(java) jniclasscode=%{

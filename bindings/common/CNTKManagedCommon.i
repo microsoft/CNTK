@@ -25,7 +25,7 @@
 
 %{
     #include "CNTKLibrary.h"
-    #pragma warning(disable : 4100)
+    #pragma warning(disable : 4100) //unreferenced formal parameter
 %}
 
 // shared_ptr definitions
