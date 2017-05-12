@@ -287,6 +287,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::CreateEvaluator;
 %ignore_struct CNTK::StreamInformation;
 %ignore_struct std::hash<::CNTK::StreamInformation>;
+%ignore operator==(const StreamInformation& left, const StreamInformation& right);
 
 %ignore_struct CNTK::MinibatchData;
 %ignore_class CNTK::MinibatchSource;
@@ -299,6 +300,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::TextFormatMinibatchSource;
 %ignore_function CNTK::ComputeInputPerDimMeansAndInvStdDevs;
 %ignore_struct CNTK::DistributedWorkerDescriptor;
+%ignore operator==(const DistributedWorkerDescriptor& left, const DistributedWorkerDescriptor& right);
 %ignore_class CNTK::DistributedCommunicator;
 %ignore_class CNTK::QuantizedDistributedCommunicator;
 %ignore_function CNTK::MPICommunicator;
@@ -398,12 +400,12 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (GetDeviceType) CNTK::DeviceDescriptor::Type;
 %rename (GetId) CNTK::DeviceDescriptor::Id;
 %rename (_SetExcludedDevices) CNTK::DeviceDescriptor::SetExcludedDevices;
-%rename (AreEqualDeviceDescriptor) CNTK::operator==(const DeviceDescriptor& left, const DeviceDescriptor& right);
+// %rename (AreEqualDeviceDescriptor) CNTK::operator==(const DeviceDescriptor& left, const DeviceDescriptor& right);
 
 // class Axis
 %rename (GetName) CNTK::Axis::Name;
 %rename (IsOrderedAxis) CNTK::Axis::IsOrdered;
-%rename (AreEqualAxis) CNTK::operator==(const Axis& first, const Axis& second);
+// %rename (AreEqualAxis) CNTK::operator==(const Axis& first, const Axis& second);
 %ignore_function CNTK::Axis::DefaultDynamicAxis();
 %ignore_function CNTK::Axis::OperandSequenceAxis();
 %ignore_function CNTK::Axis::DefaultBatchAxis();
@@ -411,6 +413,8 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Axis::AllAxes();
 %ignore_function CNTK::Axis::DefaultInputVariableDynamicAxes();
 %ignore_function CNTK::Axis::UnknownDynamicAxes();
+
+%rename(AreEqual) operator==;
 
 // class Function
 %ignore CNTK::Function::BlockArgumentsMapping;
@@ -497,13 +501,13 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (_IsConstant) CNTK::Variable::IsConstant;
 %rename (_IsPlaceholder) CNTK::Variable::IsPlaceholder;
 %rename (GetOwner) CNTK::Variable::Owner;
-%rename (AreEqualVariable) CNTK::operator==(const Variable& first, const Variable& second);
+// %rename (AreEqualVariable) CNTK::operator==(const Variable& first, const Variable& second);
 
 // class NDShape
 %rename (GetDimensions) CNTK::NDShape::Dimensions;
 %rename (GetRank) CNTK::NDShape::Rank;
 %rename (GetTotalSize) CNTK::NDShape::TotalSize;
-%rename (AreEqualShape) CNTK::operator==(const NDShape& first, const NDShape& second);
+// %rename (AreEqualShape) CNTK::operator==(const NDShape& first, const NDShape& second);
 %rename (_IsUnknown) CNTK::NDShape::IsUnknown;
 %rename (_HasInferredDimension) CNTK::NDShape::HasInferredDimension;
 %rename (_HasFreeDimension) CNTK::NDShape::HasFreeDimension;

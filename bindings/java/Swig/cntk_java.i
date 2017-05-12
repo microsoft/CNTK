@@ -45,12 +45,12 @@
         if (o == null) return false;
         DeviceDescriptor p = (DeviceDescriptor)o;
         if (p == null) return false;
-        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public boolean equals(DeviceDescriptor p) {
         if (p == null) return false;
-        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     @Override
@@ -66,12 +66,12 @@
         if (o == null) return false;
         Axis p = (Axis)o;
         if (p == null) return false;
-        return CNTKLib.AreEqualAxis(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public boolean equals(Axis p) {
         if (p == null) return false;
-        return CNTKLib.AreEqualAxis(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     @Override
@@ -138,12 +138,12 @@
         if (o == null) return false;
         Variable p = (Variable)o;
         if (p == null) return false;
-        return CNTKLib.AreEqualVariable(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public boolean equals(Variable p) {
         if (p == null) return false;
-        return CNTKLib.AreEqualVariable(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     @Override
@@ -167,12 +167,12 @@
         if (o == null) return false;
         NDShape p = (NDShape)o;
         if (p == null) return false;
-        return CNTKLib.AreEqualShape(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public boolean equals(NDShape p) {
         if (p == null) return false;
-        return CNTKLib.AreEqualShape(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     @Override

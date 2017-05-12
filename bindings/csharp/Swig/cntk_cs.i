@@ -7,6 +7,10 @@
 
 %include "CNTKManagedCommon.i"
 
+// Operator overloading is not supported by Python.
+// %rename(eq) operator==;
+// %rename(eq) operator==;
+
 // C# specific extenstion
 %typemap(cscode) CNTK::DeviceDescriptor %{
     public int Id
@@ -59,7 +63,7 @@
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public bool Equals(DeviceDescriptor p)
@@ -71,7 +75,7 @@
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public override int GetHashCode()
@@ -140,7 +144,7 @@
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualAxis(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public bool Equals(Axis p)
@@ -152,7 +156,7 @@
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualAxis(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public override int GetHashCode()
@@ -415,7 +419,7 @@
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualVariable(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public bool Equals(Variable p)
@@ -427,7 +431,7 @@
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualVariable(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public override int GetHashCode()
@@ -546,7 +550,7 @@
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualShape(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public bool Equals(NDShape p)
@@ -558,7 +562,7 @@
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualShape(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public override int GetHashCode()
