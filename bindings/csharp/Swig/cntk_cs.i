@@ -74,29 +74,6 @@
         return CNTKLib.AreEqualDeviceDescriptor(this, p);
     }
 
-    public static bool operator ==(DeviceDescriptor first, DeviceDescriptor second)
-    {
-        // If both are null, or both are same instance, return true.
-        if (System.Object.ReferenceEquals(first, second))
-        {
-            return true;
-        }
-
-        // If one is null, but not both, return false.
-        if (((object)first == null) || ((object)second == null))
-        {
-            return false;
-        }
-
-        // Return true if the fields match:
-        return CNTKLib.AreEqualDeviceDescriptor(first, second);
-    }
-
-    public static bool operator !=(DeviceDescriptor first, DeviceDescriptor second)
-    {
-        return !(first == second);
-    }
-
     public override int GetHashCode()
     {
         return this.GetDeviceType().GetHashCode();
@@ -176,29 +153,6 @@
 
         // Return true if the fields match:
         return CNTKLib.AreEqualAxis(this, p);
-    }
-
-    public static bool operator ==(Axis first, Axis second)
-    {
-        // If both are null, or both are same instance, return true.
-        if (System.Object.ReferenceEquals(first, second))
-        {
-            return true;
-        }
-
-        // If one is null, but not both, return false.
-        if (((object)first == null) || ((object)second == null))
-        {
-            return false;
-        }
-
-        // Return true if the fields match:
-        return CNTKLib.AreEqualAxis(first, second);
-    }
-
-    public static bool operator !=(Axis first, Axis second)
-    {
-        return !(first == second);
     }
 
     public override int GetHashCode()
@@ -476,29 +430,6 @@
         return CNTKLib.AreEqualVariable(this, p);
     }
 
-    public static bool operator ==(Variable first, Variable second)
-    {
-        // If both are null, or both are same instance, return true.
-        if (System.Object.ReferenceEquals(first, second))
-        {
-            return true;
-        }
-
-        // If one is null, but not both, return false.
-        if (((object)first == null) || ((object)second == null))
-        {
-            return false;
-        }
-
-        // Return true if the fields match:
-        return CNTKLib.AreEqualVariable(first, second);
-    }
-
-    public static bool operator !=(Variable first, Variable second)
-    {
-        return !(first == second);
-    }
-
     public override int GetHashCode()
     {
         // Todo: the hash value in C++ is size_t, but only in in C#
@@ -628,29 +559,6 @@
 
         // Return true if the fields match:
         return CNTKLib.AreEqualShape(this, p);
-    }
-
-    public static bool operator ==(NDShape first, NDShape second)
-    {
-        // If both are null, or both are same instance, return true.
-        if (System.Object.ReferenceEquals(first, second))
-        {
-            return true;
-        }
-
-        // If one is null, but not both, return false.
-        if (((object)first == null) || ((object)second == null))
-        {
-            return false;
-        }
-
-        // Return true if the fields match:
-        return CNTKLib.AreEqualShape(first, second);
-    }
-
-    public static bool operator !=(NDShape first, NDShape second)
-    {
-        return !(first == second);
     }
 
     public override int GetHashCode()
