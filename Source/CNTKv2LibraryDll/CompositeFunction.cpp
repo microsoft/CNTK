@@ -891,6 +891,14 @@ namespace CNTK
                 case PrimitiveOpType::SquaredError:
                     computationNodePtr = New<SquareErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::CenterLoss:
+                {
+                    auto alpha = functionConfig[PrimitiveFunction::AttributeCenterLossAlpha].Value<double>();
+                    auto dimEmbedding = functionConfig[PrimitiveFunction::AttributeCenterLossDimEmbedding].Value<size_t>();
+                    auto numClasses = functionConfig[PrimitiveFunction::AttributeCenterLossNumClasses].Value<size_t>();
+                    computationNodePtr = New<CenterLossNode<ElementType>>(network->GetDeviceId(), internalNodeName, (ElementType)alpha, dimEmbedding, numClasses);
+                    break;
+                }
                 case PrimitiveOpType::CrossEntropyWithSoftmax:
                     computationNodePtr = New<CrossEntropyWithSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;

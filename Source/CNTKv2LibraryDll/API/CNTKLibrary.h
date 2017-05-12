@@ -3691,7 +3691,9 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in operation to compute squared-error for specified input operands.
     ///
-    CNTK_API FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
+    CNTK_API FunctionPtr SquaredError(const Variable& features, const Variable& labels, const std::wstring& name = L"");
+
+    CNTK_API FunctionPtr CenterLoss(const Variable& prediction, const Variable& targets, double alpha, size_t dimEmbedding, size_t numClasses, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation to compute cross-entropy with softmax for specified input operands.

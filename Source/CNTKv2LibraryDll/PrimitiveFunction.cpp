@@ -99,6 +99,9 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceAxisNamePrefix = L"sequenceAxis";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackPaddingValue = L"sequenceUnpackPaddingValue";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput = L"sequenceUnpackSuppressMaskOutput";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeCenterLossAlpha = L"centerLossAlpha";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeCenterLossDimEmbedding = L"centerLossDimEmbedding";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeCenterLossNumClasses = L"centerLossNumClasses";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -166,6 +169,7 @@ namespace CNTK
         if ((op == PrimitiveOpType::SumAll) ||
             (op == PrimitiveOpType::ReduceElements && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>() == Axis::AllAxes()) ||
             (op == PrimitiveOpType::SquaredError) ||
+            (op == PrimitiveOpType::CenterLoss) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::EditDistanceError) ||
             (op == PrimitiveOpType::ClassificationError) ||
@@ -747,6 +751,7 @@ namespace CNTK
                         case PrimitiveOpType::LambdaRank:
                         case PrimitiveOpType::CosDistance:
                         case PrimitiveOpType::SquaredError:
+                        case PrimitiveOpType::CenterLoss:
                         case PrimitiveOpType::EditDistanceError:
                         case PrimitiveOpType::ClassificationError:
                         case PrimitiveOpType::NDCG:

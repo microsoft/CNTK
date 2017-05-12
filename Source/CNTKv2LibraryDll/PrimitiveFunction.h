@@ -61,6 +61,7 @@ namespace CNTK
         {PrimitiveOpType::TransposeTimes, L"TransposeTimes"},
         {PrimitiveOpType::Convolution, L"Convolution"},
         {PrimitiveOpType::SquaredError, L"SquaredError"},
+        {PrimitiveOpType::CenterLoss, L"CenterLoss"},
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::EditDistanceError, L"EditDistanceError" },
@@ -260,6 +261,9 @@ namespace CNTK
         static const std::wstring AttributeNameSequenceAxisNamePrefix;
         static const std::wstring AttributeNameSequenceUnpackPaddingValue;
         static const std::wstring AttributeNameSequenceUnpackSuppressMaskOutput;
+        static const std::wstring AttributeCenterLossAlpha;
+        static const std::wstring AttributeCenterLossDimEmbedding;
+        static const std::wstring AttributeCenterLossNumClasses;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)

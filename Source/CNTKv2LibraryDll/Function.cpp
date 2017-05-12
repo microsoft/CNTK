@@ -1259,6 +1259,16 @@ namespace CNTK
         return AsBlock(std::move(squaredErrorComposite), { { predictionPlaceholder, prediction }, { targetPlaceholder, targets } }, L"SquaredError", name);
     }
 
+    FunctionPtr CenterLoss(const Variable& features, const Variable& labels, double alpha, size_t dimEmbedding, size_t numClasses, const std::wstring& name)
+    {
+
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeCenterLossAlpha] = alpha;
+        additionalProperties[PrimitiveFunction::AttributeCenterLossDimEmbedding] = dimEmbedding;
+        additionalProperties[PrimitiveFunction::AttributeCenterLossNumClasses] = numClasses;
+        return BinaryOp(PrimitiveOpType::CenterLoss, labels, features, std::move(additionalProperties), name);
+    }
+
     FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name)
     {
         auto predictionPlaceholder = PlaceholderVariable(L"prediction");

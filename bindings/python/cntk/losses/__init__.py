@@ -204,6 +204,11 @@ def squared_error(output, target, name=''):
     return squared_error(output, target, name)
 
 @typemap
+def center_loss(features, labels, alpha, dimEmbedding, numClasses, name=''):
+    from cntk.cntk_py import center_loss
+    return center_loss(features, labels, alpha, dimEmbedding, numClasses, name)
+
+@typemap
 def lambda_rank(output, gain, group, name=''):
     r'''
     Groups samples according to ``group``, sorts

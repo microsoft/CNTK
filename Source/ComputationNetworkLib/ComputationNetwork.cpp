@@ -457,6 +457,7 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
 {
     // TODO: just use return!
     if (nodePtr->OperationName() == OperationNameOf(SquareErrorNode) ||
+        nodePtr->OperationName() == OperationNameOf(CenterLossNode) ||
         nodePtr->OperationName() == OperationNameOf(LogisticNode) ||
         nodePtr->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
         nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||

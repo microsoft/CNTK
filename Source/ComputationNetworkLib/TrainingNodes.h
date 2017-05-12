@@ -23,6 +23,110 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+
+/*labels, embedding*/
+template <class ElemType>
+class CenterLossNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"CenterLoss"; }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(CenterLossNode);
+    CenterLossNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType alpha=0.0, size_t dimEmbedding=0, size_t numClasses=0)
+        : Base(deviceId, name), m_alpha(alpha)
+    {
+        m_centroids = make_shared<Matrix<ElemType>>(Matrix<ElemType>::Zeros(dimEmbedding, numClasses, deviceId));
+    }
+
+    /*
+    virtual void UpdateFunctionMBSize() override
+    {
+        m_leftMinusRight->Resize(Input(0)->Value()); //Incorrect resizing, shoudln't matter though
+    }
+    */
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+
+        if (inputIndex == 1)
+        {
+            FrameRange fr(InputRef(0).GetMBLayout());
+            auto gradient = InputRef(inputIndex).GradientFor(fr);
+            Matrix<ElemType>::Multiply1x1AndWeightedAdd(2.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient);
+            m_leftMinusRight->Print("m_leftMinusRight");
+            Matrix<ElemType>::Scale(m_alpha, *m_leftMinusRight);
+            m_leftMinusRight->Print("m_leftMinusRight_scaled");
+            InputRef(0).ValueFor(fr).Print("InputRef0");
+            m_centroids->ScatterToIndices(*m_leftMinusRight, InputRef(0).MaskedValueFor(fr), m_centroids->GetNumRows());
+            m_centroids->Print("m_centroids");
+        }
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        FrameRange fr(InputRef(0).GetMBLayout());
+
+        auto labelVal = InputRef(0).MaskedValueFor(fr);
+        labelVal.Print("Labels (Input 0)");
+        InputRef(1).ValueFor(fr).Print("Features (Input 1");
+        m_centroids->Print("m_centroids");
+
+        m_centroids_batch->Resize(m_centroids->GetNumRows(), labelVal.GetNumCols());
+        m_centroids_batch->GatherFromTarget(labelVal, *m_centroids, m_centroids->GetNumRows());
+        m_centroids_batch->Print("Centroids Batch");
+        m_leftMinusRight->AssignDifferenceOf(InputRef(1).ValueFor(fr), *m_centroids_batch);
+        ElemType v = m_leftMinusRight->FrobeniusNorm(); // v = sqrt( sum{ (I0[i] - I1[i])^2 } )
+        Value().VerifySize(1, 1);
+        Value().SetValue(v * v);  // Value = sum{ (I0[i] - I1[i])^2 }
+#if NANCHECK
+        Value().HasNan("CenterLoss");
+#endif
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateBinaryReduce(isFinalValidationPass);
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<CenterLossNode<ElemType>>(nodeP);
+            node->m_leftMinusRight->SetValue(*m_leftMinusRight);
+            node->m_centroids->SetValue(*m_centroids);
+            node->m_centroids_batch->SetValue(*m_centroids_batch);
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_leftMinusRight, matrixPool);
+        RequestMatrixFromPool(m_centroids, matrixPool);
+        RequestMatrixFromPool(m_centroids_batch, matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_leftMinusRight, matrixPool);
+        ReleaseMatrixToPool(m_centroids, matrixPool);
+        ReleaseMatrixToPool(m_centroids_batch, matrixPool);
+    }
+
+private:
+    shared_ptr<Matrix<ElemType>> m_leftMinusRight;
+    shared_ptr<Matrix<ElemType>> m_centroids;
+    shared_ptr<Matrix<ElemType>> m_centroids_batch;
+    ElemType m_alpha;
+
+};
+
 // -----------------------------------------------------------------------
 // SquareErrorNode (left, right)
 // = SumElements ((left - right) .* (left - right))
@@ -41,10 +145,12 @@ public:
     {
     }
 
+ 
     virtual void UpdateFunctionMBSize() override
     {
-        m_leftMinusRight->Resize(Input(0)->Value());
+       m_leftMinusRight->Resize(Input(0)->Value());
     }
+ 
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
