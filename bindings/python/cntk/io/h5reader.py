@@ -9,21 +9,23 @@ from ..device import use_default_device
 #TODO: support sparse tensors
 class H5DataSource(UserMinibatchSource):
     """
-     Args:
-         datagroup: data group which is the minibatch source. It can be either
-             * an h5py data group which is composed of a dictionary of h5py dataset,
-             * a Python dictionary mapping from name to h5py dataset
-             If a dataset is a sequence,
-                 * it must  be a variable length 1-d array (see  https://support.hdfgroup.org/HDF5/doc1.6/UG/11_Datatypes.html);
-                 * it is required to set three attributes:
-                     1) dataset.attrs['is_seq']: bool,
-                     2) dataset.attrs['shape']: tuple or list for element data shape,
-                     3) dataset.attrs['dtype']: numpy element datatype string (see https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html),
-                        e.g.:  'i4':   # 32-bit signed integer;
-                               'f4':   # 32-bit floating-point number;
-         device: The device to hold the data; cpu or gpu; default is use_default_device()
-     For more information on h5py, please see: http://docs.h5py.org/en/latest/index.html
-     Example:
+    Data Source on HDF5 data. For more information on HDF5 format and the Python API: h5py, please see: http://docs.h5py.org/en/latest/index.html.
+
+    Args:
+        datagroup: data group which is the minibatch source. It can be either
+            * an h5py data group which is composed of a dictionary of h5py dataset, 
+            * a Python dictionary mapping from name to h5py dataset
+                If a dataset is a sequence,
+                * it must  be a variable length 1-d array (see  https://support.hdfgroup.org/HDF5/doc1.6/UG/11_Datatypes.html); 
+                * it is required to set three attributes: 
+                    1) dataset.attrs['is_seq']: bool,  
+                    2) dataset.attrs['shape']: tuple or list for element data shape,
+                    3) dataset.attrs['dtype']: numpy element datatype string (see https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html), 
+                       e.g.:  'i4':   # 32-bit signed integer; 
+                              'f4':   # 32-bit floating-point number. 
+        device: The device to hold the data; cpu  or  gpu; default  is  use_default_device().
+
+    Example:
          with h5py.File("my-test-data.h5", "w") as f:
              #sequence lenth is fixed to 3; element shape is (4, )
              fixed_len_seq = f.create_dataset("fixed_len_seq", (100, 3, 4), dtype=np.float32)
@@ -43,7 +45,7 @@ class H5DataSource(UserMinibatchSource):
 
              label = f.create_dataset("label", (100,1), dtype=np.float32) 
 
-             #create facke data
+             #create fake data
              for i in range(100):
                  fixed_len_seq[i] = np.ones((3, 4)) * i
                  #vlen is between 3 and 10
@@ -153,7 +155,7 @@ class H5DataSource(UserMinibatchSource):
             num_seq = num_seq + 1
             end = (end + 1) % self.num_data_points
             if sample_count > num_samples_in_batch:
-                break;
+                break
         self.next_idx = end
 
         sweep_end = False if end > start else True
