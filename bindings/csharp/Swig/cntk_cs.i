@@ -7,10 +7,6 @@
 
 %include "CNTKManagedCommon.i"
 
-// Operator overloading is not supported by Python.
-// %rename(eq) operator==;
-// %rename(eq) operator==;
-
 // C# specific extenstion
 %typemap(cscode) CNTK::DeviceDescriptor %{
     public int Id
