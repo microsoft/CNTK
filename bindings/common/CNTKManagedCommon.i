@@ -55,11 +55,10 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %template(AxisVector) std::vector<CNTK::Axis>;
 %template(NDArrayViewPtrVector) std::vector<std::shared_ptr<CNTK::NDArrayView>>;
 %template(BoolVector) std::vector<bool>;
-
 #ifdef SWIGJAVA
+// need to be defined before %template(DeviceDescriptorVector)
 %ignore std::vector<CNTK::DeviceDescriptor>::vector(size_type);
 #endif
-
 %template(DeviceDescriptorVector) std::vector<CNTK::DeviceDescriptor>;
 %template(SizeTVectorVector) std::vector<std::vector<size_t>>;
 %template(FloatVectorVector) std::vector<std::vector<float>>;
@@ -377,12 +376,13 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Internal::ToDictionary;
 
 %ignore_class CNTK::Internal::TensorBoardFileWriter;
-// Suppress SWIG warning 302: Identifier redefined.
+// suppress SWIG warning 302: Identifier redefined.
 %ignore CNTK::Internal::TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
 
 %ignore_struct CNTK::GPUProperties;
 %ignore_function CNTK::DeviceDescriptor::GetGPUProperties;
 
+// include common warning filters
 %include "CNTKWarnFilters.i"
 
 #ifdef SWIGCSHARP
