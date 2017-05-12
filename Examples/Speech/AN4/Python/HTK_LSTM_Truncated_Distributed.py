@@ -13,9 +13,8 @@ import cntk
 import _cntk_py
 from cntk.train.distributed import *
 from cntk.io import MinibatchSource, HTKFeatureDeserializer, HTKMLFDeserializer, StreamDef, StreamDefs
-from cntk.layers import Recurrence, Dense, LSTM
+from cntk.layers import Recurrence, Dense, LSTM, Sequential, For
 from cntk.learners import *
-from cntk.layers.models import Sequential, For
 from cntk import cross_entropy_with_softmax, classification_error, sequence
 from cntk.train.training_session import *
 
