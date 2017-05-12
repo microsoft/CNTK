@@ -849,6 +849,20 @@ void ComputationNetwork::MarkValueNonSharableNodes()
     for (auto& node : nodes)
     {
         auto inputs = node->GetInputs();
+
+        // Mark the UserDefinedV2FunctionNode and all its inputs as ValueNonShareable, since
+        // the inputs and outputs of a UDF may be externally preserved by the UDF implementation
+        // for bakcpropagation and thus reusing them within the network is not possible as 
+        // we do not control when the user actually releases the input/output Matrices that
+        // they may have help in the backprop state returned from the UDF's forward pass.
+        bool isUserDefinedV2FunctionNode = (node->OperationName() == L"UserDefinedV2Function");
+        if (isUserDefinedV2FunctionNode)
+        {
+            node->MarkValueNonSharable();
+            for (auto input : inputs)
+                input->MarkValueNonSharable();
+        }
+
         wstring myname = node->NodeName();
         bool allParametersOrPreComputeNodes = true;
 
