@@ -39,7 +39,6 @@
 %shared_ptr(std::vector<float>);
 
 // temaplate definitions
-
 #ifdef SWIGCSHARP
 // bool/double/float are already enabled with SWIG_STD_VECTOR_ENHANCED in std_vector.i
 SWIG_STD_VECTOR_ENHANCED(size_t)
@@ -60,8 +59,8 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 #ifdef SWIGJAVA
 %ignore std::vector<CNTK::DeviceDescriptor>::vector(size_type);
 #endif
-%template(DeviceDescriptorVector) std::vector<CNTK::DeviceDescriptor>;
 
+%template(DeviceDescriptorVector) std::vector<CNTK::DeviceDescriptor>;
 %template(SizeTVectorVector) std::vector<std::vector<size_t>>;
 %template(FloatVectorVector) std::vector<std::vector<float>>;
 %template(DoubleVectorVector) std::vector<std::vector<double>>;
@@ -70,7 +69,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %template(FunctionPtrVector) std::vector<std::shared_ptr<CNTK::Function>>;
 
 // ignore items not needed.
-
 #define %ignore_function %rename("$ignore", %$isfunction, fullname=1)
 #define %ignore_class %rename("$ignore", %$isclass, fullname=1)
 #define %ignore_namespace %rename("$ignore", %$isnamespace, fullname=1)
@@ -461,16 +459,13 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Internal::IsNativeUserFunctionRegistered;
 
 #ifdef SWIGCSHARP
-
 // Customize type mapping for modelBuffer, used by Load
 %typemap(ctype) (char* modelBuffer) "char*"
 %typemap(imtype) (char* modelBuffer) "byte[]"
 %typemap(cstype) (char* modelBuffer) "byte[]"
-
 #endif  // SWIGCSHARP
 
 #ifdef SWIGJAVA
-
 // Customize type mapping for modelBuffer, used by Load
 // template taken from various.i
 %typemap(jni) (char* modelBuffer) "jbyteArray"
@@ -485,7 +480,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %typemap(javain) (char* modelBuffer) "$javainput"
 /* Prevent default freearg typemap from being used */
 %typemap(freearg) (char* modelBuffer) ""
-
 #endif  // SWIGJAVA
 
 // class Varaiable
