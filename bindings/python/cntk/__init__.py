@@ -28,6 +28,7 @@ from . import debugging
 from . import logging
 from . import io
 from . import layers
+from . import utils
 
 from .sample_installer import install_samples
 

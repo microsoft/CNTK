@@ -1834,8 +1834,8 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
         name (str, optional): the name of the Function instance in the network
 
     Example:
-        >>> from _cntk_py import InferredDimension, constant_initializer
-        >>> W = C.parameter((InferredDimension,4), constant_initializer(0.1))
+        >>> from _cntk_py import constant_initializer
+        >>> W = C.parameter((C.InferredDimension,4), constant_initializer(0.1))
         >>> x = C.input_variable(shape=(4,))
         >>> s = np.reshape(np.arange(20.0, dtype=np.float32), (5,4))
         >>> t = np.reshape(np.arange(12.0, dtype=np.float32), (3,4))
@@ -1858,8 +1858,9 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
     # FIXME figure out how to only SKIP the doctest in CPU
     from cntk.cntk_py import optimized_rnnstack
     operand = sanitize_input(operand)
-    if recurrent_op not in set(['lstm','gru','relu','tanh']):
+    if recurrent_op not in set(['lstm','gru','rnnReLU','rnnTanh']):
         raise(ValueError('unsupported recurrent_op value "%s"'%recurrent_op))
+
     return optimized_rnnstack(operand, weights, hidden_size, num_layers,
                        bidirectional, recurrent_op, name)
 
