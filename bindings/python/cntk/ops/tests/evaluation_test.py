@@ -5,8 +5,7 @@
 # ==============================================================================
 
 """
-Unit tests for evaluation operations, each operation is tested for
-the forward and the backward pass
+Unit tests for evaluation operations (grad and eval)
 """
 
 from __future__ import division
@@ -65,3 +64,12 @@ def test_grad_custimized_root():
     grads = combine.grad({x:a}, grad_root = y.output)
     expect_grad = np.asarray([[0.5],[0.25],[0.125]], dtype=np.float32)
     assert np.array_equal(grads, expect_grad)
+
+def test_constant_eval():
+    c = C.Constant(value=1)
+    c_plus_1 = c + 1
+    op = C.combine([c_plus_1, c])
+    result = op.eval({})
+    assert np.array_equal(result[c_plus_1.output], [2.0])
+    assert np.array_equal(result[c], 1.0)
+

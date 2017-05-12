@@ -337,7 +337,9 @@ namespace CNTK
         return color;
     }
 
-    Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    Deserializer BuildImageDeserializer(const std::wstring deserializer,
+        const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels,
+        const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms) 
     {
         Deserializer img;
         std::vector<DictionaryValue> actualTransforms;
@@ -348,8 +350,20 @@ namespace CNTK
         xforms[L"transforms"] = actualTransforms;
         Dictionary input;
         input.Add(imageStreamName.c_str(), xforms, labelStreamName.c_str(), labeldim);
-        img.Add(L"type", L"ImageDeserializer", L"file", fileName, L"input", input);
+        img.Add(L"type", deserializer, L"file", fileName, L"input", input);
         return img;
+    }
+
+    Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, 
+        const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    {
+        return BuildImageDeserializer(L"ImageDeserializer", fileName, labelStreamName, numLabels, imageStreamName, transforms);
+    }
+
+    Deserializer Base64ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, 
+        const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    {
+        return BuildImageDeserializer(L"Base64ImageDeserializer", fileName, labelStreamName, numLabels, imageStreamName, transforms);
     }
 
     Deserializer CTFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams)
@@ -470,6 +484,7 @@ namespace CNTK
                 static const std::unordered_map<std::wstring, std::wstring> deserializerTypeNameToModuleNameMap = {
                     { L"CNTKTextFormatDeserializer", L"CNTKTextFormatReader" },
                     { L"ImageDeserializer",          L"ImageReader" },
+                    { L"Base64ImageDeserializer",    L"ImageReader" },
                     { L"HTKFeatureDeserializer",     L"HTKDeserializers" },
                     { L"HTKMLFDeserializer",         L"HTKDeserializers" },
                 };

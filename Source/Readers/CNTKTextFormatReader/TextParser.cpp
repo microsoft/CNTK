@@ -220,7 +220,7 @@ void TextParser<ElemType>::GetSequencesForChunk(ChunkIdType chunkId, std::vector
             sequenceIndex,
             s.m_numberOfSamples,
             chunkId,
-            s.m_key
+            KeyType{ s.m_key, 0 }
         });
     }
 }
@@ -370,7 +370,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
                     "WARNING: Could not read a row (# %" PRIu64 ")"
                     " while loading sequence (id = %" PRIu64 ") %ls.\n",
                     i + 1,
-                    sequenceDsc.m_key.m_sequence,
+                    sequenceDsc.m_key,
                     GetFileInfo().c_str());
             }
             IncrementNumberOfErrorsOrDie();
@@ -384,7 +384,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
                     "WARNING: Exhausted all input"
                     " expected for the current sequence (id = %" PRIu64 ") %ls,"
                     " but only read %" PRIu64 " out of %" PRIu64 " expected rows.\n",
-                    sequenceDsc.m_key.m_sequence,
+                    sequenceDsc.m_key,
                     GetFileInfo().c_str(), numRowsRead, expectedRowCount);
             }
             break;
@@ -401,7 +401,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         {
             fprintf(stderr,
                 "ERROR: Input ('%ls') is empty in sequence (id = %" PRIu64 ") %ls.\n",
-                m_streams[i]->m_name.c_str(), sequenceDsc.m_key.m_sequence, GetFileInfo().c_str());
+                m_streams[i]->m_name.c_str(), sequenceDsc.m_key, GetFileInfo().c_str());
             hasEmptyInputs = true;
         }
 
@@ -414,7 +414,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
                     "WARNING: Input ('%ls') contains more samples than expected"
                     " (%u vs. %" PRIu64 ") for sequence (id = %" PRIu64 ") %ls.\n",
                     m_streams[i]->m_name.c_str(), sequence[i]->m_numberOfSamples, expectedRowCount,
-                    sequenceDsc.m_key.m_sequence, GetFileInfo().c_str());
+                    sequenceDsc.m_key, GetFileInfo().c_str());
             }
         }
         maxInputLength = max(sequence[i]->m_numberOfSamples, maxInputLength);
@@ -437,7 +437,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             fprintf(stderr,
                 "WARNING: Maximum per-input number of samples for sequence (id = %" PRIu64 ") %ls"
                 " is less than expected (%u vs. %" PRIu64 ").\n",
-                sequenceDsc.m_key.m_sequence,
+                sequenceDsc.m_key,
                 GetFileInfo().c_str(), maxInputLength, expectedRowCount);
         }
         IncrementNumberOfErrorsOrDie();
@@ -448,10 +448,10 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         fprintf(stderr,
             "INFO: Finished loading sequence (id = %" PRIu64 ") %ls,"
             " successfully read %" PRIu64 " out of expected %" PRIu64 " rows.\n",
-            sequenceDsc.m_key.m_sequence, GetFileInfo().c_str(), numRowsRead, expectedRowCount);
+            sequenceDsc.m_key, GetFileInfo().c_str(), numRowsRead, expectedRowCount);
     }
 
-    FillSequenceMetadata(sequence, sequenceDsc.m_key);
+    FillSequenceMetadata(sequence, { sequenceDsc.m_key, 0 });
     return sequence;
 }
 
@@ -1312,7 +1312,7 @@ bool TextParser<ElemType>::GetSequenceDescriptionByKey(const KeyType& key, Seque
     result.m_chunkId = sequenceLocation->second.first;
     result.m_indexInChunk = sequenceLocation->second.second;
     result.m_numberOfSamples = sequence.m_numberOfSamples;
-    result.m_key = sequence.m_key;
+    result.m_key = key;
     return true;
 }
 

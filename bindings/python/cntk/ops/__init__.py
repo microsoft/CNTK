@@ -1889,9 +1889,14 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
 
     Args:
         x: tensor to be reshaped
-        shape (tuple): a tuple defining the resulting shape
+        shape (tuple): a tuple defining the resulting shape. The specified shape tuple
+         may contain -1 for at most one axis, which is automatically inferred to the 
+         correct dimension size by dividing the total size of the sub-shape being reshaped 
+         with the product of the dimensions of all the non-inferred axes of the replacement
+         shape.
         begin_axis (int or None): shape replacement begins at this axis. Negative values
-         are counting from the end. `None` is the same as 0. To refer to the end of the shape tuple, pass `Axis.new_leading_axis()`
+         are counting from the end. `None` is the same as 0. To refer to the end of the shape tuple, 
+         pass `Axis.new_leading_axis()`.
         end_axis (int or None): shape replacement ends at this axis (excluding this axis).
          Negative values are counting from the end. `None` refers to the end of the shape tuple.
         name (str, optional): the name of the Function instance in the network
@@ -2928,7 +2933,7 @@ def per_dim_mean_variance_normalize(operand, mean, inv_stddev, name=''):
 @typemap
 def stop_gradient(input, name=''):
     '''
-    Outputs its input as it and prevents any gradient contribution from its output to its input.
+    Outputs its input as it is and prevents any gradient contribution from its output to its input.
 
     Args:
         input: class:`~cntk.ops.functions.Function` that outputs a tensor

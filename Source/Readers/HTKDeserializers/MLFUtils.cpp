@@ -6,11 +6,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 #include "MLFUtils.h"
+#include "ReaderUtil.h"
 
 // Disabling some deprecation warnings in boost.
 // Classes that we use are not deprecated.
 #pragma warning(disable:4348 4459 4100)
-#include <boost/algorithm/string.hpp>
 #include <boost/spirit/include/qi.hpp>
 #pragma warning(default:4348 4459 4100)
 
@@ -60,8 +60,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         buffer.push_back(0); // this makes it a proper C string
 
         vector<boost::iterator_range<char*>> lines;
-        auto range = boost::make_iterator_range(buffer.data(), buffer.data() + buffer.size());
-        boost::split(lines, range, boost::is_any_of("\r\n"));
+        const static std::vector<bool> delim = DelimiterHash({ '\r', '\n' });
+        Split(buffer.data(), buffer.data() + buffer.size(), delim, lines);
 
         EraseEmptyLines(lines);
         return lines;
@@ -147,7 +147,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         vector<boost::iterator_range<char*>> lines;
         lines.reserve(512);
 
-        boost::split(lines, sequenceData, boost::is_any_of("\r\n"));
+        const static std::vector<bool> delim = DelimiterHash({ '\r', '\n' });
+        Split(sequenceData.begin(), sequenceData.end(), delim, lines);
         EraseEmptyLines(lines);
 
         // Start parsing of actual entry
@@ -187,7 +188,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t i = s; i < e; i++)
         {
             tokens.clear();
-            boost::split(tokens, lines[i], boost::is_any_of(" "));
+
+            const static std::vector<bool> spaceDelim = DelimiterHash({ ' ' });
+            Split(lines[i].begin(), lines[i].end(), spaceDelim, tokens);
 
             auto& current = utterance[i - s];
             current.Build(tokens, m_states ? m_states->States() : empty, sequenceOffset + std::distance(sequenceData.begin(), lines[i].begin()));

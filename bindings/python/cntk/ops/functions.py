@@ -13,7 +13,8 @@ from cntk.internal import map_if_possible, typemap, sanitize_var_map,\
                           _value_as_sequence_or_array
 from cntk.internal.utils import get_python_function_arguments, \
                                 map_function_arguments, _py_dict_to_cntk_dict
-from cntk.internal import UserFunctionDeserializer
+from cntk.internal import _UDFDeserializeCallbackWrapper, _serialize
+from cntk.internal.sanitize import is_byte_buffer
 from ..variables import Record, Variable
 
 
@@ -89,6 +90,10 @@ class Function(cntk_py.Function):
     If `BlockFunction()` passes `True`, then the result will be wrapped
     in :func:`~cntk.ops.as_block()`, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
     '''
+
+    _udf_callback_map = {}
+    _deserializer = _UDFDeserializeCallbackWrapper(_udf_callback_map)
+    cntk_py._register_udf_deserialize_callback(_deserializer)
 
     # We override the constructors to implement an overload that constructs
     # a CNTK Functions from a Python function (@Function).
@@ -281,6 +286,7 @@ class Function(cntk_py.Function):
                 continue
             if not arg_type.shape_is_known:
                 raise TypeError(param_name() + ' has a known shape, and cannot be passed a Variable of unknown shape')
+            # TODO: add tests for this complex condition
             if len(arg_type.shape) < len(param_type.shape) or \
                    arg_type.shape[-len(param_type.shape):] != param_type.shape or \
                    (arg_type.dynamic_axes and arg_type.dynamic_axes != param_type.dynamic_axes) or \
@@ -578,7 +584,7 @@ class Function(cntk_py.Function):
              to be performed.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
 
@@ -729,8 +735,8 @@ class Function(cntk_py.Function):
         state = super(Function, self)._forward(in_var_map, output_map, device,
                                                keep_for_backward)
         if as_numpy:
-            for k, val in output_map.items():
-                output_map[k] = _value_as_sequence_or_array(val, k)
+            for k, v in output_map.items():
+                output_map[k] = _value_as_sequence_or_array(v, k)
 
         return state, output_map
 
@@ -764,7 +770,7 @@ class Function(cntk_py.Function):
              the gradients have to be computed.
             as_numpy (bool): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
 
@@ -775,11 +781,16 @@ class Function(cntk_py.Function):
         Returns:
             dict: mapping of ``variables`` to NumPy arrays
         '''
+        if state is None:
+            raise ValueError('You are attempting to backpropagate on a '
+                'minibatch for which the corresponding forward operation did not '
+                'keep any intermediate results, Please set keep_for_backward in '
+                'forward to the variables in root_gradients.keys()')
         device = state.device()
         root_gradients = sanitize_var_map(self.outputs, root_gradients,
                                           None, device)
 
-        var_gradients = dict((var, None) for var in variables)
+        var_gradients = {var: None for var in variables}
 
         self._backward(state, root_gradients, var_gradients)
 
@@ -818,10 +829,10 @@ class Function(cntk_py.Function):
              computation is performed. If `None`, the default device is used.
             as_numpy (bool, default `True`): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
-            grad_root (:class:`~cntk.variables.Variable`, optional): specify the root of gradients calculation. 
+            grad_root (:class:`~cntk.variables.Variable`, optional): specify the root of gradients calculation.
              If not specified, the output of this function will be used as gradient root.
 
         Returns:
@@ -1139,24 +1150,42 @@ class Function(cntk_py.Function):
         return self.restore(filename)
 
     @staticmethod
+    def register_udf_deserialize_callback(op_name, callback):
+        '''
+        Register a callback function to be invoked when deserializing a user-
+        defined function with the corresponding op name.
+
+        When loading a model, CNTK will try to automatically reconstruct any
+        (non-native) user-defined functions by invoking a static
+        :func:`~cntk.ops.functions.UserFunction.deserialize` method of the
+        corresponding UserFunction sub-class. This method allows to override 
+        default UDF deserialization behavior by specifying a user- defined 
+        function op name and the corresponding callback that should be invoked 
+        instead of the ``deserialize`` method.
+
+        Args:
+            op_name (str): unique op name of the user-defined function.
+            callback (function): a function taking three arguments (a list of 
+             inputs to the UserFunction, a string name, and a state dictionary
+             generated by the corresponding :func:`~cntk.ops.functions.UserFunction.serialize` 
+             method) and returns an instance of the user-defined function.
+        '''
+        if op_name in Function._udf_callback_map:
+            raise ValueError("A callback for the UserFunction with op name {}"
+                " has already been registered.".format(op_name));
+        Function._udf_callback_map[op_name] = callback
+
+    @staticmethod
     @typemap
-    def load(model, device=None, udf_factory_callback_map=None):
+    def load(model, device=None):
         '''
         Load the ``model``, that has been saved using :func:`~cntk.ops.functions.Function.save`.
 
         Args:
-            model (str or bytes): either a filepath of a model file or a byte buffer 
+            model (str, bytes or bytearray): either a file path of a model file or a byte buffer 
              containing the binary representation of a model.
             device (:class:`~cntk.device.DeviceDescriptor`, defaults to the current globally default device):
              specifies the device to allocate the model on.
-            udf_factory_callback_map (dict, default is `None`): if the model contains any user-defined
-             functions, CNTK will try to automatically reconstruct them by invoking a static
-             ``deserialize`` method of the corresponding Function sub-class. This method takes three 
-             arguments (a list of inputs to the function, a string name, and a state dictionary
-             generated by the corresponding :func:`~cntk.ops.functions.UserFunction.serialize` method) and
-             returns an instance of the user-defined function. This optional argument allows to override
-             default UDF deserialization behavior by providing a map of user-function op names and 
-             corresponding lambdas that should be invoked instead of the ``deserialize`` method.
 
         Returns:
             root node
@@ -1164,10 +1193,7 @@ class Function(cntk_py.Function):
         if not device:
             device = DeviceDescriptor.use_default_device()
 
-        deserializer = UserFunctionDeserializer(udf_factory_callback_map)
-
-        is_buffer = isinstance(model, type(b'')) and not isinstance(b'', str)
-        is_buffer = is_buffer or isinstance(model, bytearray)
+        is_buffer = is_byte_buffer(model)
 
         is_file = False
         if not is_buffer:
@@ -1177,10 +1203,10 @@ class Function(cntk_py.Function):
                 pass
 
         if is_buffer:
-            return cntk_py.Function.load_from_buffer(model, device, deserializer)
+            return cntk_py.Function.load_from_buffer(model, device)
         
         if is_file:
-            return cntk_py.Function.load(model, device, deserializer)
+            return cntk_py.Function.load(model, device)
         
         raise ValueError('Cannot load a model that is neither a file nor a byte buffer.')
 
@@ -1194,7 +1220,7 @@ def register_native_user_function(op_name, module_name, factory_method_name):
         op_name (str): Name of the native user-defined Function to register.
          This name must be unique and an error will be reported if it matches
          the 'op_name' specified for a previously registered native user-defined Function.
-        module_name (str): Name of the module containing the factory method for creating 
+        module_name (str): Name of the module containing the factory method for creating
          instances of the native user-defined Function being registered. This is typically
          the name of a DLL/so which exports a factory method for creating instances of the
          native user-defined Function.
@@ -1212,10 +1238,10 @@ def native_user_function(op_name, operands, attributes=None, user_function_insta
 
     Args:
         op_name (str): Name of the native user-defined Function to instantiate.
-         This name must be the name that was used when registering the native user-function 
+         This name must be the name that was used when registering the native user-function
          with the 'register_native_user_function' method.
         operands (list): input operands of the new instance of the native user-defined Function.
-        user_function_instance_name (str): Name of the instance of the created native 
+        user_function_instance_name (str): Name of the instance of the created native
          user-defined Function.
 
     Returns:
@@ -1227,18 +1253,21 @@ def native_user_function(op_name, operands, attributes=None, user_function_insta
     attributes = _py_dict_to_cntk_dict(attributes)
     return cntk_py.Function_native_user_function(op_name, operands, attributes, user_function_instance_name)
 
+
 @typemap
-def load_model(model, device=None, udf_factory_callback_map=None):
+def load_model(model, device=None):
     '''
     Alias for :func:`~cntk.ops.functions.Function.load`.
     '''
-    return Function.load(model, device, udf_factory_callback_map)
+    return Function.load(model, device)
+
 
 @typemap
 def save_model(model, filename): # legacy name
     warnings.warn('This will be removed in future versions. Please use '
             'model.save(...) instead', DeprecationWarning)
     return model.save(filename)
+
 
 class UserFunction(Function):
     '''
@@ -1254,13 +1283,15 @@ class UserFunction(Function):
          `False` passes the data as CNTK Value objects.
         name (str): name of this function
     '''
+
     def __init__(self, inputs, as_numpy=True, name=''):
         super(UserFunction, self).__init__(inputs, name)
+        self.set_native(False)
         self.as_numpy = as_numpy
 
         # Since the state will frequently not be used, we cache the None-state
         # to speed up.
-        self._none_state =  cntk_py.UserBackPropState(self, cpu(), None)
+        self._none_state =  cntk_py.UserBackPropState.create(self, cpu(), None)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
@@ -1269,7 +1300,7 @@ class UserFunction(Function):
 
     def _get_none_state(self, device=cpu()):
         if self._none_state.device() != device:
-            self._none_state =  cntk_py.UserBackPropState(self, device, None)
+            self._none_state = cntk_py.UserBackPropState.create(self, device, None)
 
         return self._none_state
 
@@ -1311,7 +1342,7 @@ class UserFunction(Function):
         if state is None:
             state = self._get_none_state(device)
         elif not isinstance(state, cntk_py.BackPropState):
-            state = cntk_py.UserBackPropState(self, device, state)
+            state = cntk_py.UserBackPropState.create(self, device, state)
 
         if self.as_numpy:
             for k,v in outputs.items():
@@ -1405,13 +1436,35 @@ class UserFunction(Function):
         '''
         raise NotImplementedError('clone has to be overwritten')
 
-    def _serialize(self):
-        dictionary = {}
-        dictionary['class'] = self.__class__.__name__
-        dictionary['module'] = self.__class__.__module__
-        dictionary['op_name'] = self.op_name
-        dictionary['state'] = self.serialize()
+    def _serialize_impl(self):
+        dictionary = _serialize(self)
         return _py_dict_to_cntk_dict(dictionary)
+
+    @staticmethod
+    def deserialize(inputs, name, state):
+        '''
+        A stub deserialize method for illustration purposes. User-defined functions
+        need to provide their own implementation in order for CNTK to be able to
+        reconstruct them when loading a model.
+
+        Args:
+            inputs (list): a list of inputs to the function
+            name (str): name of this function
+            state (dict): a state dictionary generated by the corresponding 
+             :func:`~cntk.ops.functions.UserFunction.serialize` method.
+
+        Returns:
+            An instance of the user-defined function.
+        '''
+        raise NotImplementedError('a stub method for illustration purposes.')
+
+    @property
+    def op_name(self):
+        '''
+        Unique operation name of this user-defined function.
+        This property defaults to '<module>.<class>', but can be overridden.
+        '''
+        return self.__class__._op_name()
 
     def serialize(self):
         '''
@@ -1421,3 +1474,7 @@ class UserFunction(Function):
         to be preserved in the model dictionary.
         '''
         return {}
+
+    @classmethod
+    def _op_name(cls):
+        return cls.__module__ + '.' + cls.__name__

@@ -148,9 +148,9 @@ from ..axis import Axis
 from ..variables import Variable, Record
 from cntk.internal import sanitize_shape, _as_tuple
 from cntk.internal.utils import get_python_function_arguments, map_function_arguments
+import numpy as np
 
 def _make_tensor_meta(cls_name, **kwargs):
-    import numpy as np
     class TensorMeta(type):
         def __getitem__(self, shape):
             if not isinstance(shape, tuple):

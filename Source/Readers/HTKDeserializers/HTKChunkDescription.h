@@ -43,9 +43,9 @@ public:
     HTKChunkDescription(ChunkIdType chunkId) : m_chunkId(chunkId) { };
 
     // Gets number of utterances in the chunk.
-    size_t GetNumberOfUtterances() const
+    uint32_t GetNumberOfUtterances() const
     {
-        return m_utterances.size();
+        return static_cast<uint32_t>(m_utterances.size());
     }
 
     ChunkIdType GetChunkId() const
@@ -64,6 +64,8 @@ public:
         m_firstFrames.push_back(m_totalFrames);
         m_totalFrames += utterance.GetNumberOfFrames();
         m_utterances.push_back(std::move(utterance));
+        if (m_utterances.size() > std::numeric_limits<uint32_t>::max())
+            RuntimeError("Chunk overflow happened: too many utterances.");
     }
 
     // Gets total number of frames in the chunk.
@@ -134,7 +136,7 @@ public:
         {
             // feature reader (we reinstantiate it for each block, i.e. we reopen the file actually)
             // if this is the first feature read ever, we explicitly open the first file to get the information such as feature dimension
-            msra::asr::htkfeatreader reader;
+            htkfeatreader reader;
 
             // read all utterances; if they are in the same archive, htkfeatreader will be efficient in not closing the file
             m_frames.resize(featureDimension, m_totalFrames);

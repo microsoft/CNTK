@@ -102,7 +102,7 @@ protected:
 
     string KeyOf(const SequenceDescriptor& s)
     {
-        return m_deserializer.m_corpus->IdToKey(s.m_key.m_sequence);
+        return m_deserializer.m_corpus->IdToKey(s.m_key);
     }
 
     void CleanBuffer()
@@ -350,6 +350,11 @@ MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParamet
     InitializeStream(name);
 }
 
+static inline bool LessByFirstItem(const std::tuple<size_t, size_t, size_t>& a, const std::tuple<size_t, size_t, size_t>& b)
+{
+    return std::get<0>(a) < std::get<0>(b);
+}
+
 void MLFDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus, const ConfigHelper& config, const wstring& stateListPath)
 {
     // Similarly to the old reader, currently we assume all Mlfs will have same root name (key)
@@ -387,12 +392,7 @@ void MLFDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus, co
             for (uint32_t i = 0; i < chunk.m_sequences.size(); ++i)
             {
                 const auto& sequence = chunk.m_sequences[i];
-
-                if (m_keyToSequence.size() <= sequence.m_key.m_sequence)
-                    m_keyToSequence.resize(sequence.m_key.m_sequence + 1, emptyPair);
-
-                assert(m_keyToSequence[sequence.m_key.m_sequence] == emptyPair);
-                m_keyToSequence[sequence.m_key.m_sequence] = make_pair(static_cast<ChunkIdType>(m_chunks.size()), i);
+                m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key, static_cast<ChunkIdType>(m_chunks.size()), i));
             }
 
             totalNumSequences += chunk.m_numberOfSequences;
@@ -403,6 +403,8 @@ void MLFDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus, co
                 RuntimeError("Number of chunks exceeded overflow limit.");
         }
     }
+
+    std::sort(m_keyToChunkLocation.begin(), m_keyToChunkLocation.end(), LessByFirstItem);
 
     fprintf(stderr, "MLFDeserializer: '%zu' utterances with '%zu' frames\n",
         totalNumSequences,
@@ -489,31 +491,32 @@ ChunkPtr MLFDeserializer::GetChunk(ChunkIdType chunkId)
 
 bool MLFDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
 {
-    if (key.m_sequence >= m_keyToSequence.size())
+    auto found = std::lower_bound(m_keyToChunkLocation.begin(), m_keyToChunkLocation.end(), std::make_tuple(key.m_sequence, 0, 0),
+        LessByFirstItem);
+
+    if (found == m_keyToChunkLocation.end() || std::get<0>(*found) != key.m_sequence)
+    {
         return false;
+    }
 
-    auto chunkAndSequenceIndex =  m_keyToSequence[key.m_sequence];
+    auto chunkId = std::get<1>(*found);
+    auto sequenceIndexInChunk = std::get<2>(*found);
 
-    // Check whether the sequence is invalid.
-    if (chunkAndSequenceIndex.first == numeric_limits<uint32_t>::max() &&
-        chunkAndSequenceIndex.second == numeric_limits<uint32_t>::max())
-        return false;
+    const auto* chunk = m_chunks[chunkId];
+    const auto& sequence = chunk->m_sequences[sequenceIndexInChunk];
 
-    const auto* chunk = m_chunks[chunkAndSequenceIndex.first];
-    const auto& sequence = chunk->m_sequences[chunkAndSequenceIndex.second];
-
-    result.m_chunkId = chunkAndSequenceIndex.first;
+    result.m_chunkId = std::get<1>(*found);
     result.m_key = key;
 
     if (m_frameMode)
     {
-        result.m_indexInChunk = chunk->m_sequenceOffsetInChunkInSamples[chunkAndSequenceIndex.second] + key.m_sample;
+        result.m_indexInChunk = chunk->m_sequenceOffsetInChunkInSamples[sequenceIndexInChunk] + key.m_sample;
         result.m_numberOfSamples = 1;
     }
     else
     {
         assert(result.m_key.m_sample == 0);
-        result.m_indexInChunk = chunkAndSequenceIndex.second;
+        result.m_indexInChunk = sequenceIndexInChunk;
         result.m_numberOfSamples = sequence.m_numberOfSamples;
     }
     return true;
