@@ -461,7 +461,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 #ifdef SWIGCSHARP
 
 // Customize type mapping for modelBuffer, used by Load
-// %apply char* INPUT { char* modelBuffer }
 %typemap(ctype) (char* modelBuffer) "char*"
 %typemap(imtype) (char* modelBuffer) "byte[]"
 %typemap(cstype) (char* modelBuffer) "byte[]"
