@@ -1403,7 +1403,7 @@ class UserFunction(Function):
                 variables[k] = result
 
         if self.as_numpy:
-            for k,v in variables.items():
+            for k, v in variables.items():
                 if v is not None:
                     variables[k] = sanitize_batch(k, v, None, device)
 
@@ -1424,6 +1424,11 @@ class UserFunction(Function):
         '''
         Creates a clone of this user-defined function.
 
+        It assumes that the constructor signature of the user's implementation
+        of the user function takes the inputs as individual arguments followed
+        by the operator name. If the signature is different, then this method
+        needs to be overriden. 
+
         Args:
             cloned_inputs: list of cloned inputs to the new user-defined
              Function clone to be created.
@@ -1431,7 +1436,7 @@ class UserFunction(Function):
         Returns:
             A cloned instance of this user-defined function.
         '''
-        raise NotImplementedError('clone has to be overwritten')
+        return self.__class__(*cloned_inputs, name=self.name)
 
     def _serialize_impl(self):
         dictionary = _serialize(self)

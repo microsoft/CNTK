@@ -30,6 +30,7 @@ fed into backward(). Note that one can pass any Python value (including
 tuple, strings, etc.)::
 
     from cntk.ops.functions import UserFunction
+    from cntk import output_variable
 
     class MySigmoid(UserFunction):
         def __init__(self, arg, name='MySigmoid'):

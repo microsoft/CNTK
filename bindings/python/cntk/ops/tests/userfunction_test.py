@@ -30,9 +30,6 @@ class MyPlus(UserFunction):
         return [output_variable(self.inputs[0].shape,
             self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
 
-    def clone(self, cloned_inputs):
-        return MyPlus(cloned_inputs[0], cloned_inputs[1])
-
     def forward(self, arguments, device=None, outputs_to_retain=None):
         assert len(self.inputs)==2
 
