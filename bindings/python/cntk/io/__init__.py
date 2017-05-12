@@ -14,7 +14,6 @@ from cntk.variables import Record
 
 import numpy as np
 import uuid
-
 INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
 '''int: constant used to specify a minibatch scheduling unit to equal the size of the full data sweep.'''
 
@@ -815,3 +814,5 @@ def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
         lines.append('%i\t|' % seq_idx + ' |'.join(line))
 
     return '\n'.join(lines)
+
+
