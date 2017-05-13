@@ -651,12 +651,11 @@ class Memoize
         f.m_pendingInputs = 0; // used as a visited flag
     }
 
-    // recursively process the tree *upwards* (through consumer chain)
+    // form a traversal order by recursively process the tree *upwards* (through consumer chain)
     // This function assumes:
     //  - m_pendingInputs != -2
     //    BUGBUG: This is a bad one; what if users get a gradient and then continue to build on top?
-    // BUGBUG: We must traverse the batched operations, but those don't have the consumer chains set up.
-    void TraverseFunctionTreeBackward(const Variable& var, NonOwningFunctionListBuilder& head)
+    void TraverseFunctionTreeBackward(const Variable& var, NonOwningFunctionListBuilder& order)
     {
         let& fields = *var.m_dataFields;
         // if already has a gradient (from an earlier call), then skip this branch of the tree
@@ -665,14 +664,14 @@ class Memoize
         // traverse all consumers
         auto* f = fields.m_consumers.first;
         if (f)
-            TraverseFunctionTreeBackward(f, head);
+            TraverseFunctionTreeBackward(f, order);
         for (auto* f : fields.m_consumers.second)
-            TraverseFunctionTreeBackward(f, head);
+            TraverseFunctionTreeBackward(f, order);
     }
     // seond half of this function
-    void TraverseFunctionTreeBackward(Function* f, NonOwningFunctionListBuilder& head)
+    void TraverseFunctionTreeBackward(Function* f, NonOwningFunctionListBuilder& order)
     {
-        // if we have already visited this Function then done
+        // if we have already visited this Function (it's already in 'order') then done
         if (f->m_pendingInputs == -2)
             return;
         // mark as visited
@@ -681,14 +680,12 @@ class Memoize
         // a -2 here but also a gradient, therefore we will not reach this test here.
         f->m_pendingInputs = -2;
         // and recursively traverse the inputs
-        // TODO: handle StopGradient here, e.g. return a flag whether we visitied a StopGradient op.
         for (let& output : f->m_outputs)
-            TraverseFunctionTreeBackward(output, head);
-        // TODO: if no input actually wanted a gradient computed, then we don't need to compute ours either
+            TraverseFunctionTreeBackward(output, order);
         // enqueue ourselves
         // Add to the end of the queue *after* we recurse (we do "height" first traversal).
         // Needed because this is called multiple times for multiple roots, and those have to go to the end.
-        head.push_back(f);
+        order.push_back(f);
     }
 
     // perform back propagation
@@ -816,7 +813,10 @@ class Memoize
             auto inputGradient = fields.m_gradient;
             let isFirst = !inputGradient;
             if (isFirst) // first time: allocate the gradient memory
+            {
+                // TODO: allocate them as separate objects; and allow user to pass buffers in
                 inputGradient = AllocateTensorInArena(input.Shape(), input.GetDataType(), input.Value()->Device());
+            }
             double beta = isFirst ? 0 : 1;
             // backprop into the input
             BackpropTo(m_outputGradientsBuffer, i, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferRaw, inputGradient, beta);
@@ -897,8 +897,8 @@ public:
         // set up the m_consumer fields, which Backward() will work off
         TraverseFunctionTreeForwardForBackward(root); // (gotta improve the name of these things)
         // BUGBUG: how to reset m_pendingInputs when there is no gradient on that path?
-        // traverse the graph from the bottom (the variables to get the gradients for)
-        // to form an ordered list of nodes to process
+        // form ordered list of nodes to process
+        // (traverse the graph from the bottom from the variables to get the gradients for)
         NonOwningFunctionListBuilder order;
         for (auto& kv : gradients)
         {
@@ -929,7 +929,7 @@ public:
         for (auto& kv : gradients)
             kv.second = kv.first.m_dataFields->m_gradient;
         //AssertTreeStateGetValue(root); // (sanity check)  --TODO: gotta think this through e.g. nodes for which no gradient is requested
-        // WORKAROUND for above
+        // WORKAROUND for above. With this, we can at least com,pute more than 1 gradient fro a parameter
         for (auto& kv : gradients)
         {
             let& param = kv.first;
