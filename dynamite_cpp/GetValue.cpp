@@ -540,41 +540,33 @@ class Memoize
             // execute the operation and implant the results
             // BUGBUG: The newly created Function objects must get their consumer chain set up.
             let& unbatchedOutputShape = f0.m_outputs[0].Shape();
-            if (!anyBatchedInputs) // short-circuit branch when all inputs were actually the same--we just compute them once
-            {
-                // execute it
-                let& output = MemoizeKnowableValueInArena(f0);
-                output;
-                //let& outValue = output.m_dataFields->m_value;
-                for (auto op = ops.begin(); op != ops.end(); ++op)
-                {
-                    auto& fields = *op->m_outputs[0].m_dataFields;
-                    //fields.m_value = outValue; // not batched: just duplicate  // TODO: why even store the value at this point, and not do it lazily?
-                    fields.m_lazyIndex = make_pair(f0.shared_from_this(), SIZE_MAX); // SIZE_MAX means don't slice
-                    // we remember where we came from for backprop in this case
-                    // TODO: set up batchedOp.m_consumers
-                }
-            }
-            else // main branch: computation as a batched operation; batched inputs have been prepared in m_batchedInputs[]
+            FunctionPtr batchedOp;
+            if (anyBatchedInputs)
             {
                 // create a new Function for the batched op
+                // Batched inputs have been prepared in m_batchedInputs[].
                 let expectedOutputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
-                let batchedOp = Function::RawPrimitiveFunction(f0.Op(), vector<Variable>(m_batchedInputs), expectedOutputShape, Dictionary(f0.Attributes()));
-                // and execute it
-                MemoizeKnowableValueInArena(*batchedOp);
-                // BUGBUG: must set up consumer chain for the Splice op
-                // implant all results
-                size_t j = 0;
-                for (auto op = ops.begin(); op != ops.end(); ++op)
-                {
-                    // TODO: review this w.r.t. multi-output functions
-                    auto& fields = *op->m_outputs[0].m_dataFields;
-                    // semantically, this is fields.m_value = out->IndexLastAxis(j);
-                    // but it gets deferred to save effort
-                    fields.m_lazyIndex = make_pair(batchedOp, j); // remember where we came from
-                    // TODO: set up batchedOp.m_consumers
+                batchedOp = Function::RawPrimitiveFunction(f0.Op(), vector<Variable>(m_batchedInputs), expectedOutputShape, Dictionary(f0.Attributes()));
+            }
+            else
+            {
+                batchedOp = f0.shared_from_this(); // all inputs identical: compute it only once
+            }
+            // execute it
+            MemoizeKnowableValueInArena(*batchedOp);
+            // implant all results (all as lazy/virtual references through m_lazyIndex)
+            size_t j = anyBatchedInputs ? 0 : SIZE_MAX;
+            for (auto op = ops.begin(); op != ops.end(); ++op)
+            {
+                // TODO: review this w.r.t. multi-output functions
+                // we remember where we came from for backprop in this case
+                auto& fields = *op->m_outputs[0].m_dataFields;
+                fields.m_lazyIndex = make_pair(batchedOp, j);
+                // semantically, this will compute as fields.m_value = out->IndexLastAxis(j);
+                // but it gets deferred to save effort
+                if (j != SIZE_MAX) // SIZE_MAX means don't slice
                     j++;
-                }
+                // TODO: set up batchedOp.m_consumers
             }
             // release the ref counts on the batched inputs
             m_batchedInputs.clear();
