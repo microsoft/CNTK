@@ -339,6 +339,8 @@ class Memoize
     vector<NDArrayViewPtr> m_inputValuesBuffer; // Use a buffer for this that does not get destructed, to reuse the memory allocation.
     const Variable& MemoizeKnowableValueInArena(Function& f, bool isFree = false)
     {
+        if (f.m_outputs.size() != 1)
+            LogicError("MemoizeKnowableValueInArena: only functions with 1 output are supported");
         // fetch the NDArrayViewPtrs for all inputs
         auto& inputValues = m_inputValuesBuffer;
         let& inputs = f.m_inputs;
@@ -360,6 +362,14 @@ class Memoize
     size_t m_numBatchedLaunches = 0; // (for statistics only)
 
     // batch-execute a set of ops that are known to be batchable
+    // For every batched operation, this generates a new Function object for the op itself, and one
+    // for a splice operation for each batched inputs.
+    // I.e. this is not a full graph transform, but rather a graph augmentation, so that during backprop,
+    // we can recover the batched operations, while the original graph does not get modified.
+    // Any batched operation will generate its result in a dense tensor with a batch dimension.
+    // The consumers of the original ops will get a back-reference in the m_lazyIndex field.
+    // If such a result is ever accessed individually, it will lead to a lazy NDArrayView::SliceView() call
+    // (but no Splice Function object is used for this).
     void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionList ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
     {
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
@@ -385,13 +395,9 @@ class Memoize
         //        (int)m_schedule.numBatchableOpsPending());
         if (doNaively)
         {
-            if (op == PrimitiveOpType::Splice && batchSize != 1)
-                BreakPoint;
             // for correctness testing of underlying mechanism, compute them without actual batching
             for (auto op = ops.begin(); op != ops.end(); ++op)
             {
-                if (op->m_outputs.size() != 1)
-                    LogicError("only functions with 1 output are supported");
                 // execute it
                 MemoizeKnowableValueInArena(*op, isFree);
                 // TODO: realize splice ops that are index ops as a m_lazyIndex at this point
@@ -409,7 +415,7 @@ class Memoize
         // Every resulting batched op consists of the following new operations:
         //  - a Splice() or Slice() for each input (e.g. 2 for a binary op)
         //  - a PrimitiveFunction that is the op itself
-        //  - m_lazyIndex entries that represent a "virtual" Slice() that is never stored as a Function since that would be prohibitive.
+        //  - m_lazyIndex entries that represent a "virtual" Slice() that is never created as a Function object to saved mallocs.
         // As for resource management, m_lazyIndex will hold a strong ref to the PrimitiveFunction;
         // and we will hack its m_inputs[].m_outputComposite to hold a strong reference to the Splice() or Slice().
         // (This is a little ugly since m_outputComposite is meant to hold a CompositeFunction, but we misuse it
@@ -417,12 +423,12 @@ class Memoize
         else
         {
             // batch all arguments
+            // TODO: see if this can be sped up using un-managed pointers (save lots of ref-counting); or even use GatherBatch lambda
             m_batchedInputs.resize(numArgs);
             size_t maxRank = 0;
             size_t i0 = isTimes ? 1 : 0;
             for (size_t i = i0; i < numArgs; i++)
             {
-                // we could even do with un-managed pointers here; would save lots of ref-counting; or even use GatherBatch lambda
                 // determine max rank
                 let rank = f0.m_inputs[i].Shape().Rank();
                 if (rank > maxRank)
@@ -472,7 +478,7 @@ class Memoize
 #endif
                     let& input = op->m_inputs[i];
                     // optimization: if all args are the same, then don't batch
-                    // TODO: The same input could be used multiple times. E.g. discover with a unique identifier.
+                    // BUGBUG: Unhandled opportunity: The same input could be used multiple times. E.g. discover with a unique identifier.
                     if (spliceInputs.size() == 1 && spliceInputs[0].m_dataFields.get() == input.m_dataFields.get())
                         continue;
                     // if we thought it is all the same, but then it turned out not to be, we need to fixc it up
@@ -516,7 +522,7 @@ class Memoize
                     outputShape.resize(maxRank, 1);             // pad to maxRank
                     outputShape.push_back(spliceInputs.size()); // and add the batch axis
                     auto additionalProperties = Dictionary(); // create additional arguments
-                    additionalProperties[L"axis"/*PrimitiveFunction::AttributeNameAxis*/] = Axis(maxRank);
+                    additionalProperties[L"axis"/*PrimitiveFunction::AttributeNameAxis*/] = Axis((int)maxRank);
                     let spliceOp = Function::RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(spliceInputs), outputShape, move(additionalProperties));
                     // and execute it
                     let& output = MemoizeKnowableValueInArena(*spliceOp);
@@ -540,8 +546,7 @@ class Memoize
                 let& outValue = output.m_dataFields->m_value;
                 for (auto op = ops.begin(); op != ops.end(); ++op)
                 {
-                    let& output = op->m_outputs[0];
-                    auto& fields = *output.m_dataFields;
+                    auto& fields = *op->m_outputs[0].m_dataFields;
                     fields.m_value = outValue; // not batched: just duplicate
                     fields.m_lazyIndex = make_pair(f0.shared_from_this(), SIZE_MAX); // SIZE_MAX means don't slice
                     // we remember where we came from for backprop in this case
@@ -551,8 +556,7 @@ class Memoize
             {
                 // create a new Function for the batched op
                 let expectedOutputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
-                auto attributes = f0.Attributes();
-                let batchedOp = Function::RawPrimitiveFunction(f0.Op(), vector<Variable>(m_batchedInputs), expectedOutputShape, move(attributes));
+                let batchedOp = Function::RawPrimitiveFunction(f0.Op(), vector<Variable>(m_batchedInputs), expectedOutputShape, Dictionary(f0.Attributes()));
                 // and execute it
                 MemoizeKnowableValueInArena(*batchedOp);
                 // implant all results
