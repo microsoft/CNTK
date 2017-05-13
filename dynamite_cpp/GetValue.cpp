@@ -292,11 +292,11 @@ class Memoize
             m_schedule.Schedule(&f); // add to ready set
     }
 
+    // allocate a new tensor in a large arena
     //NDArrayViewPtr m_currentArena;
     //size_t m_currentArenaUsed;
     static const size_t ARENASIZE = 64000000; // we allocate in this chunk size
-
-    NDArrayViewPtr Alloc(const NDShape& shape, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
+    NDArrayViewPtr AllocateTensorInArena(const NDShape& shape, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
     {
         static NDArrayViewPtr m_currentArena; // for now static so that it carries over across invocations, to save the allocation
         static size_t m_currentArenaUsed;
@@ -331,25 +331,22 @@ class Memoize
         return fields.m_value;
     }
 
-    // helper to fill in an array of NDArrayViewPtrs from the array of input Variables
-    // Use a buffer for this that does not get destructed, to reuse the memory allocation.
-    vector<NDArrayViewPtr> m_fetchInputValuesBuffer;
-    vector<NDArrayViewPtr>& FetchInputValues(const vector<Variable>& inputs)
-    {
-        m_fetchInputValuesBuffer.resize(inputs.size());
-        for (size_t i = 0; i < inputs.size(); i++)
-            m_fetchInputValuesBuffer[i] = LazilyIndexedValue(inputs[i]); // (if this is a lazy slice, then now we must resolve it)
-        return m_fetchInputValuesBuffer;
-    }
-
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
+    vector<NDArrayViewPtr> m_inputValuesBuffer; // Use a buffer for this that does not get destructed, to reuse the memory allocation.
     const Variable& MemoizeKnowableValueInArena(Function& f, bool isFree = false)
     {
-        let& inputValues = FetchInputValues(f.m_inputs); // get the NDArrayViewPtrs for all of f's inputs
+        // fetch the NDArrayViewPtrs for all inputs
+        auto& inputValues = m_inputValuesBuffer;
+        let& inputs = f.m_inputs;
+        inputValues.resize(inputs.size());
+        for (size_t i = 0; i < inputs.size(); i++)
+            inputValues[i] = LazilyIndexedValue(inputs[i]); // (if this is a lazy slice, then now we must resolve it)\
+        // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
-        auto outValue = isFree ? nullptr : Alloc(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device()); // allocate in arena
-        output.m_dataFields->m_value = move(f.ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue))); // execute
+        auto outValue = isFree ? nullptr : AllocateTensorInArena(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
+        // execute it
+        output.m_dataFields->m_value = move(f.ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue)));
         return output;
     }
 
@@ -419,8 +416,6 @@ class Memoize
             m_batchedInputs.resize(numArgs);
             size_t maxRank = 0;
             size_t i0 = isTimes ? 1 : 0;
-            if (isTimes)
-                BreakPoint;
             for (size_t i = i0; i < numArgs; i++)
             {
                 // we could even do with un-managed pointers here; would save lots of ref-counting; or even use GatherBatch lambda
@@ -430,12 +425,12 @@ class Memoize
                     maxRank = rank;
             }
             bool anyBatchedInputs = false;
-            if (isTimes) // TODO: change to if (i0 == 1)
+            if (i0 == 1) // Times(): matrix must be identical
                 m_batchedInputs[0] = f0.m_inputs[0];
             for (size_t i = i0; i < numArgs; i++)
             {
-                // create splice args
-                // allocate buffers
+                // create splice args for this argument
+                // allocate buffers to hold the arguments
                 auto& spliceInputs = m_spliceArgsBuffer; // TODO rename to gatherInputs and m_gatherArgsBuffer
                 assert(spliceInputs.empty()); // previous use must have cleared it
                 if (spliceInputs.capacity() < batchSize)
@@ -518,17 +513,16 @@ class Memoize
                     outputShape.push_back(spliceInputs.size()); // and add the batch axis
                     auto additionalProperties = Dictionary(); // create additional arguments
                     additionalProperties[L"axis"/*PrimitiveFunction::AttributeNameAxis*/] = Axis(maxRank);
-                    //auto spliceInputsCopy = spliceInputs;
                     let spliceOp = Function::RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(spliceInputs), outputShape, move(additionalProperties));
                     // and execute it
                     let& output = MemoizeKnowableValueInArena(*spliceOp);
-                    anyBatchedInputs = true;
                     // and that's our input to the batched operation
                     // To make sure we hold a reference to this PrimitiveFunction, inject a strong ref to the spliceOp into the copy of its Output.
                     // Note that we abuse the composite field for a non-composite, which works because it is just a FunctionPtr, and we own it.
                     //m_batchedInputs[i] = output.CompositePreservingCopy(spliceOp);
                     m_batchedInputs[i] = output;
                     m_batchedInputs[i].m_outputComposite = spliceOp;
+                    anyBatchedInputs = true;
                 }
                 // release shared_ptrs asap
                 spliceInputs.clear();
@@ -571,7 +565,7 @@ class Memoize
             m_batchedInputs.clear();
         }
 
-        // update all ops' consumers
+        // update all ops' consumers and schedule them when possible
         for (auto op = ops.begin(); op != ops.end(); ++op)
         {
             for (let& output : op->m_outputs)
@@ -719,7 +713,7 @@ class Memoize
     // TODO: not all inputs want gradients. How to control this? Needs the same flag as the StopGradient question. Can we use m_needsGradient?
     vector<const NDArrayView*> m_outputValuesBuffer;
     vector<const NDArrayView*> m_outputGradientsBuffer;
-    vector<const NDArrayView*> m_inputValuesBufferBuffer; // TODO: share with m_fetchInputValuesBuffer
+    vector<const NDArrayView*> m_inputValuesBufferRaw;
     void BackpropToInputs(Function* f)
     {
         let& outputs = f->m_outputs;
@@ -735,9 +729,9 @@ class Memoize
             m_outputValuesBuffer   .push_back(LazilyIndexedValue(output).get());
             m_outputGradientsBuffer.push_back(fields.m_gradient.get());
         }
-        m_inputValuesBufferBuffer.clear(); // input values
+        m_inputValuesBufferRaw.clear(); // input values
         for (let& input : inputs)
-            m_inputValuesBufferBuffer.push_back(LazilyIndexedValue(input).get()); // inefficient!! But fine for now, I just want correctness.
+            m_inputValuesBufferRaw.push_back(LazilyIndexedValue(input).get()); // inefficient!! But fine for now, I just want correctness.
         // compute gradients for all inputs
         let numInputs = inputs.size();
         for (size_t i = 0; i < numInputs; i++)
@@ -751,10 +745,10 @@ class Memoize
             auto inputGradient = fields.m_gradient;
             let isFirst = !inputGradient;
             if (isFirst) // first time: allocate the gradient memory
-                inputGradient = Alloc(input.Shape(), input.GetDataType(), input.Value()->Device());
+                inputGradient = AllocateTensorInArena(input.Shape(), input.GetDataType(), input.Value()->Device());
             double beta = isFirst ? 0 : 1;
             // backprop into the input
-            BackpropTo(m_outputGradientsBuffer, i, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferBuffer, inputGradient, beta);
+            BackpropTo(m_outputGradientsBuffer, i, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferRaw, inputGradient, beta);
             if (isFirst)
                 fields.m_gradient = inputGradient;
         }
@@ -813,7 +807,7 @@ public:
             // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
             //if (root.Value()->Shape() != NDShape{})
             //    LogicError("Backward: root must be a scalar, or root gradient must have been implanted already");
-            root.m_dataFields->m_gradient = Alloc(root.Shape(), root.GetDataType(), root.Value()->Device());
+            root.m_dataFields->m_gradient = AllocateTensorInArena(root.Shape(), root.GetDataType(), root.Value()->Device());
             root.m_dataFields->m_gradient->SetValue(1.0f);
         }
         // perform backprop
