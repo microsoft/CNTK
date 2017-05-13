@@ -1424,6 +1424,7 @@ namespace CNTK
                     NDArrayView::GatherBatch(args, axis.StaticAxisIndex(), out);
                 else // only one: do nothing or at best reshape if a new axis is added
                 {
+                    // BUGBUG: This is a 'free' op, should be caught earlier.
                     out = args[0];
                     if (out->Shape() != outputShape)
                         out = out->AsShape(outputShape);

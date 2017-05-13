@@ -266,6 +266,12 @@ namespace CNTK
             : Function(inputs, std::move(functionConfig), functionName, uid), m_op(op)
         {}
 
+        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& outputShape, Dictionary&& functionConfig)
+            : Function(std::move(inputs),  // BUGBUG: possibly buggy due to undefined C++ arg eval order
+                       std::vector<Variable>({ OutputVariable(outputShape, inputs[0].GetDataType(),{}, std::any_of(inputs.begin(), inputs.end(), [](const Variable& input) { return input.NeedsGradient(); }), std::wstring()) }),
+                       std::move(functionConfig), nullptr, std::wstring(), std::wstring()), m_op(op)
+        {}
+
     public:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
             : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, GenerateUid(op))

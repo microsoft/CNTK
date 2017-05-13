@@ -108,6 +108,16 @@ namespace CNTK
         : Function(inputs, std::move(functionConfig), nullptr, name, uid)
     {}
 
+    /*static*/ FunctionPtr Function::RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes)
+    {
+        auto res = MakeSharedObject<PrimitiveFunction>(op, move(inputs), shape, move(attributes));
+        //std::call_once(m_outputsInitFlag, [this]() {});
+        res->m_outputsInitFlag++;
+        res->m_outputs.front().SetOwner(res);
+        // BUGBUG: This ^^ belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
+        return res;
+    }
+
     Variable Function::OutputImpl() const // optimized version of OutputsImpl()[0]
     {
         const auto& outputs = RawOutputs();
@@ -158,6 +168,10 @@ namespace CNTK
             }
         }
     }
+
+    Function::Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid)
+        : m_inputs(std::move(inputs)), m_outputs(std::move(outputs)), m_rootFunction(std::move(rootFunction)), m_name(std::move(name)), m_uid(std::move(uid)), m_attributes(std::move(functionConfig))
+    {}
 
     /*virtual*/ Function::~Function() {}
 

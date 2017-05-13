@@ -34,7 +34,7 @@ namespace CNTK
         // value
         NDArrayViewPtr m_value;
         NDArrayViewPtr m_gradient;
-        std::pair<NDArrayViewPtr, size_t> m_lazyIndex;
+        std::pair<FunctionPtr, size_t> m_lazyIndex;
 
         // computation
         std::atomic<size_t> m_valueTimeStamp;
