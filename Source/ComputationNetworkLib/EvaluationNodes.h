@@ -576,7 +576,7 @@ public:
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
     // tokensToIgnore - list of samples to ignore during edit distance evaluation
-    static ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, MBLayoutPtr pMBLayout, 
+    ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, MBLayoutPtr pMBLayout, 
         float subPen, float delPen, float insPen, bool squashInputs, const vector<size_t>& tokensToIgnore)
     {
         std::vector<int> firstSeqVec, secondSeqVec;
@@ -616,8 +616,9 @@ public:
 
                 //calculate edit distance
                 size_t firstSize = firstSeqVec.size();
-                totalSampleNum += firstSize;
                 size_t secondSize = secondSeqVec.size();
+                totalSampleNum += Environment().IsV2Library() ? secondSize : firstSize;
+
                 grid.Resize(firstSize + 1, secondSize + 1);
                 insMatrix.Resize(firstSize + 1, secondSize + 1);
                 delMatrix.Resize(firstSize + 1, secondSize + 1);
