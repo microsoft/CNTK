@@ -342,6 +342,17 @@ class Memoize
         return m_fetchInputValuesBuffer;
     }
 
+    // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
+    const Variable& MemoizeKnowableValueInArena(Function& f, bool isFree = false)
+    {
+        let& inputValues = FetchInputValues(f.m_inputs); // get the NDArrayViewPtrs for all of f's inputs
+        let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
+        let& outputShape = output.Shape();
+        auto outValue = isFree ? nullptr : Alloc(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device()); // allocate in arena
+        output.m_dataFields->m_value = move(f.ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue))); // execute
+        return output;
+    }
+
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
     vector<Variable> m_batchedInputs;
     vector<Variable> m_spliceArgsBuffer;
@@ -380,10 +391,8 @@ class Memoize
             {
                 if (op->m_outputs.size() != 1)
                     LogicError("only functions with 1 output are supported");
-                let& inputValues = FetchInputValues(op->m_inputs);
-                NDArrayViewPtr out = isFree ? nullptr : Alloc(op->m_outputs[0].Shape(), inputValues[0]->GetDataType(), inputValues[0]->Device()); // arena allocation will happen here
-                op->m_outputs[0].m_dataFields->m_value =
-                    move(op->ComputeKnowableValue(op->Op(), inputValues, op->Attributes(), op->m_outputs[0].Shape(), move(out)));
+                // execute it
+                MemoizeKnowableValueInArena(*op, isFree);
                 // TODO: realize splice ops that are index ops as a m_lazyIndex at this point
                 //if (f0.Op() == PrimitiveOpType::Slice)
                 //{
@@ -512,16 +521,13 @@ class Memoize
                     //auto spliceInputsCopy = spliceInputs;
                     let spliceOp = Function::RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(spliceInputs), outputShape, move(additionalProperties));
                     // and execute it
-                    let& inputValues = FetchInputValues(spliceOp->m_inputs);
-                    auto out1 = Alloc(spliceOp->m_outputs[0].Shape(), inputValues[0]->GetDataType(), inputValues[0]->Device());
-                    // TODO: factor this pattern out into MemoizeKnowableValueInArena()
-                    spliceOp->m_outputs[0].m_dataFields->m_value = spliceOp->ComputeKnowableValue(spliceOp->Op(), inputValues, spliceOp->Attributes(), outputShape, move(out1));
+                    let& output = MemoizeKnowableValueInArena(*spliceOp);
                     anyBatchedInputs = true;
                     // and that's our input to the batched operation
                     // To make sure we hold a reference to this PrimitiveFunction, inject a strong ref to the spliceOp into the copy of its Output.
                     // Note that we abuse the composite field for a non-composite, which works because it is just a FunctionPtr, and we own it.
-                    //m_batchedInputs[i] = spliceOp->m_outputs[0].CompositePreservingCopy(spliceOp);
-                    m_batchedInputs[i] = spliceOp->m_outputs[0];
+                    //m_batchedInputs[i] = output.CompositePreservingCopy(spliceOp);
+                    m_batchedInputs[i] = output;
                     m_batchedInputs[i].m_outputComposite = spliceOp;
                 }
                 // release shared_ptrs asap
@@ -531,17 +537,14 @@ class Memoize
             let& unbatchedOutputShape = f0.m_outputs[0].Shape();
             if (!anyBatchedInputs) // short-circuit branch when all inputs were actually the same--we just compute them once
             {
-                let& inputValues = FetchInputValues(f0.m_inputs);
-                NDArrayViewPtr out1 = Alloc(unbatchedOutputShape, inputValues[0]->GetDataType(), inputValues[0]->Device()); // (arena buffer goes here some day)
-                f0.m_outputs[0].m_dataFields->m_value =
-                    f0.ComputeKnowableValue(f0.Op(), inputValues, f0.Attributes(), unbatchedOutputShape, move(out1)); // ### use Memoize directly through the main op
-                // implant all results
-                let& out = f0.m_outputs[0].m_dataFields->m_value;
+                // execute it
+                let& output = MemoizeKnowableValueInArena(f0);
+                let& outValue = output.m_dataFields->m_value;
                 for (auto op = ops.begin(); op != ops.end(); ++op)
                 {
                     // BUGBUG: need to keep a back pointer to the function as well, for backprop
                     // If we don't, it will not do batched backprop, but otherwise still work. So do that later.
-                    op->m_outputs[0].m_dataFields->m_value = out; // not batched: just duplicate // ###
+                    op->m_outputs[0].m_dataFields->m_value = outValue; // not batched: just duplicate // ###
                 }
             }
             else // main branch: computation as a batched operation; batched inputs have been prepared in m_batchedInputs[]
@@ -551,11 +554,7 @@ class Memoize
                 auto attributes = f0.Attributes();
                 let batchedOp = Function::RawPrimitiveFunction(f0.Op(), vector<Variable>(m_batchedInputs), expectedOutputShape, move(attributes));
                 // and execute it
-                let& inputValues = FetchInputValues(batchedOp->m_inputs);
-                let outputShape = batchedOp->m_outputs[0].Shape();
-                NDArrayViewPtr out1 = Alloc(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
-                batchedOp->m_outputs[0].m_dataFields->m_value =
-                    batchedOp->ComputeKnowableValue(batchedOp->Op(), inputValues, batchedOp->Attributes(), outputShape, move(out1)); // ### use Memoize directly
+                MemoizeKnowableValueInArena(*batchedOp);
                 // implant all results
                 size_t j = 0;
                 for (auto op = ops.begin(); op != ops.end(); ++op)
