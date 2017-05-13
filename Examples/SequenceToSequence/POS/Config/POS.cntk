@@ -1,0 +1,95 @@
+RunRootDir = ".."      # default if not overridden
+DataDir    = "$RunRootDir$/Data"
+OutDir     = "$RunRootDir$/Out"
+
+command = train
+
+deviceId = auto 
+ExpId = pos-0
+
+modelPath  = "$OutDir$/$ExpId$/POS.dnn"
+stderr     = "$OutDir$/$ExpId$/POS"
+
+inputVocabDim = 19122
+labelDim = 44
+hiddenDim = 30
+embeddingDim = 20
+
+#---------------------------
+# network
+#---------------------------
+
+BrainScriptNetworkBuilder = (new ComputationNetwork [
+  inputVocabDim = $inputVocabDim$
+  labelDim = $labelDim$
+  hiddenDim = $hiddenDim$
+  embeddingDim = $embeddingDim$
+  precision = "float"
+  maxLayer = 2
+  
+  netDims[i:0..maxLayer] = hiddenDim
+
+  Word = Input (inputVocabDim, tag='feature')
+  Part = Input (labelDim, tag='label')
+  
+  Einput = BS.Parameters.WeightParam ($inputVocabDim$, embeddingDim)
+  inputEmbedded = TransposeTimes (Einput, Word)
+  net = BS.RNNs.RecurrentLSTMPStack (netDims, cellDims=netDims, inputEmbedded, inputDim=embeddingDim)
+  netOutput = net[Length (netDims) - 1].h
+
+  Woutput = BS.Parameters.WeightParam ($hiddenDim$, $labelDim$)
+  Boutput = BS.Parameters.BiasParam ($labelDim$)
+  netFlass = TransposeTimes (Woutput, netOutput)
+  z = netFlass + Boutput
+  P = Softmax (z, tag='output')
+  ce = CrossEntropyWithSoftmax (Part, z, tag='criterion')
+  errs = ErrorPrediction (Part, z, tag='evaluation')
+])
+
+train = [
+  action = "train"
+  traceLevel = 1
+  epochSize = 0
+
+  reader = [
+    readerType = "CNTKTextFormatReader"
+    file = "$DataDir$/pos.train"
+    randomize = "true"
+
+    input = [ 
+      Word = [ 
+        dim = "$inputVocabDim$"
+        format = "sparse"
+      ]
+      Part = [
+        dim = "$labelDim$"
+        format = "sparse"
+      ]
+    ]
+  ]
+
+  SGD = [ 
+    modelPath = "$modelPath$"
+    epochSize = 0
+    keepCheckPointFiles = "false"
+    maxEpochs = 100
+    minibatchSize = 128*2:256*2:512 
+    learningRatesPerMB = 10*2:5*2:2.5
+    momentumPerMB = 0.1*2:0.5*2:0.9
+    dropoutRate = 0.0
+    gradUpdateType = "RMSProp"
+
+    # settings for Auto Adjust Learning Rate
+    AutoAdjust = [
+        autoAdjustLR = "adjustAfterEpoch"
+        reduceLearnRateIfImproveLessThan = 0.001
+        continueReduce = false
+        increaseLearnRateIfImproveMoreThan = 1000000000
+        learnRateDecreaseFactor = 0.5
+        learnRateIncreaseFactor = 1.382
+        numMiniBatch4LRSearch = 100
+        numPrevLearnRates = 5
+        numBestSearchEpoch = 1
+    ]
+  ]
+]
