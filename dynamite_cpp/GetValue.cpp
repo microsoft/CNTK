@@ -620,7 +620,13 @@ class Memoize
             LogicError("TraverseFunctionTreeForwardForBackward() unexpectedly encountered a node with m_needsGradient=false??");
         if (fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder)
             LogicError("TraverseFunctionTreeForwardForBackward() unexpectedly encountered an Input or a Placeholder??");
-        auto& f = *fields.m_ownerFunction.lock();
+        //auto pf = fields.m_lazyIndex.first ? fields.m_lazyIndex.first : fields.m_ownerFunction.lock();
+        auto pf = fields.m_ownerFunction.lock();
+        auto& f = *pf;
+        TraverseFunctionTreeForwardForBackward(f);
+    }
+    void TraverseFunctionTreeForwardForBackward(Function& f)
+    {
         if (f.m_pendingInputs == -2) // graph is cyclic??
             LogicError("TraverseFunctionTreeForwardForBackward() unexpectedly encountered a cyclic graph??");
         if (f.m_pendingInputs != -1) // already visited
@@ -633,18 +639,18 @@ class Memoize
         // determine how many inputs are pending; and also recurse and set up the consumer list
         for (let& v : f.m_inputs)
         {
-            auto& inputFields = *v.m_dataFields;
-            if (!inputFields.m_needsGradient)
+            auto& fields = *v.m_dataFields;
+            if (!fields.m_needsGradient)
                 continue; // skip inputs that receive no gradients
             // this input will receive a gradient; reset it (later, we *accumulate* into it since nodes can receive gradients from multiple consumers)
             // Note that Backward() returns shared_ptrs to the gradient values, so they won't get lost.
             // BUGBUG: (But they get reallocated over again, and will hold the entire arena!!) BUGBUG!
-            inputFields.m_gradient.reset();
+            fields.m_gradient.reset();
             // record ourselves as a consumer of the input
-            if (!inputFields.m_consumers.first)
-                inputFields.m_consumers.first = &f;
+            if (!fields.m_consumers.first)
+                fields.m_consumers.first = &f;
             else
-                inputFields.m_consumers.second.push_back(&f);
+                fields.m_consumers.second.push_back(&f);
             // now process recursively the inputs
             TraverseFunctionTreeForwardForBackward(v);
         }
