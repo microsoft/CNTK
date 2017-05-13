@@ -7,6 +7,10 @@
 import os
 import re
 
+# Because of randomization in training we set a fixed random seed to ensure repeatable outputs
+from _cntk_py import set_fixed_random_seed
+set_fixed_random_seed(1)
+
 abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_204_Sequence_To_Sequence.ipynb")
 
