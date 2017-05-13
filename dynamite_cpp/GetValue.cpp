@@ -324,9 +324,13 @@ class Memoize
         if (!fields.m_value)
         {
             let& from = fields.m_lazyIndex.first->m_outputs[0].m_dataFields->m_value;
+            let index = fields.m_lazyIndex.second;
             if (!from)
                 LogicError("variable unexpectedly has no value yet");
-            fields.m_value = from->IndexLastAxis(fields.m_lazyIndex.second);
+            if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
+                fields.m_value = from;
+            else
+                fields.m_value = from->IndexLastAxis(index);
         }
         return fields.m_value;
     }
@@ -536,9 +540,11 @@ class Memoize
                 let& outValue = output.m_dataFields->m_value;
                 for (auto op = ops.begin(); op != ops.end(); ++op)
                 {
-                    // BUGBUG: need to keep a back pointer to the function as well, for backprop
-                    // If we don't, it will not do batched backprop, but otherwise still work. So do that later.
-                    op->m_outputs[0].m_dataFields->m_value = outValue; // not batched: just duplicate // ###
+                    let& output = op->m_outputs[0];
+                    auto& fields = *output.m_dataFields;
+                    fields.m_value = outValue; // not batched: just duplicate
+                    fields.m_lazyIndex = make_pair(f0.shared_from_this(), SIZE_MAX); // SIZE_MAX means don't slice
+                    // we remember where we came from for backprop in this case
                 }
             }
             else // main branch: computation as a batched operation; batched inputs have been prepared in m_batchedInputs[]
@@ -554,7 +560,8 @@ class Memoize
                 for (auto op = ops.begin(); op != ops.end(); ++op)
                 {
                     // TODO: review this w.r.t. multi-output functions
-                    auto& fields = *op->m_outputs[0].m_dataFields;
+                    let& output = op->m_outputs[0];
+                    auto& fields = *output.m_dataFields;
                     // semantically, this is fields.m_value = out->IndexLastAxis(j);
                     // but it gets deferred to save effort
                     fields.m_lazyIndex = make_pair(batchedOp, j); // remember where we came from
@@ -598,7 +605,7 @@ class Memoize
         for (auto* f : fields.m_consumers.second)
             TraverseFunctionTreeBackward(f, head);
     }
-    // seond half of this fnction
+    // seond half of this function
     void TraverseFunctionTreeBackward(Function* f, NonOwningFunctionListBuilder& head)
     {
         // if we have already visited this Function then done
