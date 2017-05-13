@@ -256,14 +256,13 @@ class Memoize
             LogicError("Value() depends on Input or Placeholder, it is not knowable.");
         if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
         {
-            var.Value(); // this initializes it
+            if (!fields.m_value)
+                var.Value(); // this initializes it
             if (!fields.m_value)
                 LogicError("Parameter/Constant has no Value??");
             return;
         }
         auto& f = *fields.m_ownerFunction.lock();
-        if (f.m_pendingInputs == -2 || fields.m_gradient) // (-2 means we've already run gradient; therefore we must have a value and should not get here)
-            LogicError("TraverseFunctionTreeForward() should not have been called on variables that already have a gradient.");
         if (f.m_pendingInputs != -1) // already visited
             return;
         // determine how many inputs are pending; and also recurse and set up the consumer list
@@ -293,6 +292,7 @@ class Memoize
     }
 
     // allocate a new tensor in a large arena
+    // TODO: move this function up since it is ahred between fo2ward and backward
     //NDArrayViewPtr m_currentArena;
     //size_t m_currentArenaUsed;
     static const size_t ARENASIZE = 64000000; // we allocate in this chunk size
@@ -356,6 +356,13 @@ class Memoize
         return output;
     }
 
+    static void ResetPendingToIdle(Function& f)
+    {
+        if (f.m_pendingInputs != 0)
+            LogicError("ResetPendingToIdle: pendingINputs is not 0, so we should not have gotten here");
+        f.m_pendingInputs = -1; // unknown
+    }
+
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
     vector<Variable> m_batchedInputs;
     vector<Variable> m_spliceArgsBuffer;
@@ -370,6 +377,7 @@ class Memoize
     // The consumers of the original ops will get a back-reference in the m_lazyIndex field.
     // If such a result is ever accessed individually, it will lead to a lazy NDArrayView::SliceView() call
     // (but no Splice Function object is used for this).
+    // All ops passed to this function must get their m_pendingInputs changed from 0 to -1 (newly created batched ones also will have -1).
     void ExecuteBatchedOpAndUpdateSchedule(NonOwningFunctionList ops) // (note: NonOwningFunctionListBuilder is so small that it is best copied)
     {
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
@@ -400,6 +408,8 @@ class Memoize
             {
                 // execute it
                 MemoizeKnowableValueInArena(*op, isFree);
+                // reset state
+                ResetPendingToIdle(*op);
                 // TODO: realize splice ops that are index ops as a m_lazyIndex at this point
                 //if (f0.Op() == PrimitiveOpType::Slice)
                 //{
@@ -567,6 +577,8 @@ class Memoize
                 if (j != SIZE_MAX) // SIZE_MAX means don't slice
                     j++;
                 // TODO: set up batchedOp.m_consumers
+                // reset state
+                ResetPendingToIdle(*op);
             }
             // release the ref counts on the batched inputs
             m_batchedInputs.clear();
@@ -590,6 +602,53 @@ class Memoize
                 fields.m_consumers.second.clear();
             }
         }
+    }
+
+    // recursively traverse the tree hanging off a Variable and build the m_consumer fields
+    // Unlike forward prop, we...
+    //  - can skip any branch that does not need a gradient (!m_needsGradient and StopGradient ops).
+    //  - short-circuit into batched ops (m_lazyIndex) so that we backprop through them instead
+    // All nodes that were traversed have all input's m_consumers set up and their m_pendingInputs set to 0.
+    void TraverseFunctionTreeForwardForBackward(const Variable& var)
+    {
+        auto& fields = *var.m_dataFields;
+        if (!fields.m_value)
+            LogicError("TraverseFunctionTreeForwardForBackward() has no value yet??");
+        if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
+            return; // reached a leaf
+        if (!fields.m_needsGradient)
+            LogicError("TraverseFunctionTreeForwardForBackward() unexpectedly encountered a node with m_needsGradient=false??");
+        if (fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder)
+            LogicError("TraverseFunctionTreeForwardForBackward() unexpectedly encountered an Input or a Placeholder??");
+        auto& f = *fields.m_ownerFunction.lock();
+        if (f.m_pendingInputs == -2) // graph is cyclic??
+            LogicError("TraverseFunctionTreeForwardForBackward() unexpectedly encountered a cyclic graph??");
+        if (f.m_pendingInputs != -1) // already visited
+            return;
+        if (f.Op() == PrimitiveOpType::StopGradient)
+            LogicError("TraverseFunctionTreeForwardForBackward() unexpectedly encountered a StopGradient, which should have propagated m_needsGradient=false upwards");
+        // we are now in a Function that should backprop its gradient
+        // TODO: implement short-circuiting here
+        f.m_pendingInputs = -2; // (temp value to detect cycles; not really needed)
+        // determine how many inputs are pending; and also recurse and set up the consumer list
+        for (let& v : f.m_inputs)
+        {
+            auto& inputFields = *v.m_dataFields;
+            if (!inputFields.m_needsGradient)
+                continue; // skip inputs that receive no gradients
+            // this input will receive a gradient; reset it (later, we *accumulate* into it since nodes can receive gradients from multiple consumers)
+            // Note that Backward() returns shared_ptrs to the gradient values, so they won't get lost.
+            // BUGBUG: (But they get reallocated over again, and will hold the entire arena!!) BUGBUG!
+            inputFields.m_gradient.reset();
+            // record ourselves as a consumer of the input
+            if (!inputFields.m_consumers.first)
+                inputFields.m_consumers.first = &f;
+            else
+                inputFields.m_consumers.second.push_back(&f);
+            // now process recursively the inputs
+            TraverseFunctionTreeForwardForBackward(v);
+        }
+        f.m_pendingInputs = 0; // used as a visited flag
     }
 
     // recursively process the tree *upwards* (through consumer chain)
@@ -722,7 +781,7 @@ class Memoize
     }
 
     // back-propagate all outputs' m_gradients to all inputs
-    // TODO: not all inputs want gradients. How to control this? Needs the same flag as the StopGradient question. Can we use m_needsGradient?
+    // by pulling gradients from all m_consumers
     vector<const NDArrayView*> m_outputValuesBuffer;
     vector<const NDArrayView*> m_outputGradientsBuffer;
     vector<const NDArrayView*> m_inputValuesBufferRaw;
@@ -767,7 +826,7 @@ class Memoize
     }
 
     // helper to verify that the tree is clean
-    void AssertTreeStateGetValue(const Variable& v, bool post) const
+    void AssertTreeStateGetValue(const Variable& v) const
     {
         let& fields = *v.m_dataFields;
         if (fields.m_consumers.first || !fields.m_consumers.second.empty())
@@ -775,11 +834,10 @@ class Memoize
         let owner = fields.m_ownerFunction.lock();
         if (owner)
         {
-            if (!post)  // TODO: remove this once we figured out how to reset m_pendingInputs
             if (owner->m_pendingInputs != -1)
                 LogicError("AssertTreeStateGetValue: m_pendingInputs should be -1");
             for (let& input : owner->m_inputs)
-                AssertTreeStateGetValue(input, post);
+                AssertTreeStateGetValue(input);
         }
     }
 
@@ -789,21 +847,20 @@ public:
     //  - Function::m_pendingInputs:
     //     - #inputs that still need to be computed before a node's value can be computed
     //     - also used as a 'visited' flag during traversal
-    //     - upon entry and exit of this function, this must be -1
-    //       BUGBUG: It would break some logic to reset it to -1. Solve this.
-    //               Why again can we not make it 0? Maybe there is a secondary condition that allows us to?
+    //     - upon entry and exit of this function, this must be -1 (idle)
     //  - Variable::m_consumers:
     //     - set of consumers of this value. Used to count m_pendingInputs.
     //     - must be empty upon entry and exit
     // plus more temp fields:
-    //  - m_link: pointer to next Function in the same batchable op
+    //  - Function::m_link: pointer to next Function in the same batchable op
     // And it leaves the following:
-    //  - m_value: updated
+    //  - m_value: updated as desired
+    //    TODO: values not needed by user or gradient should use scratch space
     //  - m_lazyIndex: if a slice or view came from a batched operation, this points to it
     //     - Any newly created batched ops are referenced this way.
     NDArrayViewPtr GetValue(const Variable& v)
     {
-        AssertTreeStateGetValue(v, false); // (sanity check)
+        AssertTreeStateGetValue(v); // (sanity check)
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
         auto& fields = *v.m_dataFields;
         if (!fields.m_value)
@@ -820,72 +877,65 @@ public:
             }
             assert(fields.m_value);
         }
-        AssertTreeStateGetValue(v, true); // (sanity check)
+        AssertTreeStateGetValue(v); // (sanity check)
         return LazilyIndexedValue(v);
     }
 
     // implant gradients into all variables
-    // It can be called multipel times for the same root; but not for different roots
-    // (which we won't be able to verify at present--we could remember the gradient root in the Variable).
+    // Unlike GetValue(), this is eager. If you call it twice, it's a completely new computation.
+    // If you need multiple gradients, ask for them in a single go.
 
     // BUGBUG!!! This is now again operating on the unbatched graph!! Must keep batching info!
 
     void Backward(const Variable& root, unordered_map<Parameter, NDArrayViewPtr>& gradients)
     {
+        if (!root.m_dataFields->m_needsGradient)
+            logic_error("Backward: cannot compute gradient for root with m_needsGradient being False.");
+        // BUGBUG: make sure some edge cases are done right: root.m_needsGradient=false; gradients contains root
         // first get the forward computation, batching, etc. done if not yet
-        // This will also set up the m_consumers chains, which we rely on.  --TODO: remove this
         GetValue(root);
+        // set up the m_consumer fields, which Backward() will work off
+        TraverseFunctionTreeForwardForBackward(root); // (gotta improve the name of these things)
+        // BUGBUG: how to reset m_pendingInputs when there is no gradient on that path?
         // traverse the graph from the bottom (the variables to get the gradients for)
         // to form an ordered list of nodes to process
-        // TODO: Can this be achieved with a depth-first traversal that also sets up the consumer chains?
-        //       Not if not all gradients are requested--we won't know which branches we can skip.
-        //       So we must re-traverse the tree to rebuild the consumer chains.
-        //       Why we cannot just keep the consumer chain from GetValue():
-        //        - a Parameter can be involved in multiple computations, and computations due to their lazy nature
-        //          may be hanging in there for a long time (it's not always just a single GetValue() call).
-        //          Thus, we cannot assume we can send *any* information from GetValue() to backprop through
-        //          something that is being consumed, such as a Parameter! (but anything inside the tree itself is fine,
-        //          such as batched ops)
-        // ==> we MUST rebuild the m_consumer chain by another traversal.
         NonOwningFunctionListBuilder order;
         for (auto& kv : gradients)
-            if (!kv.first.m_dataFields->m_needsGradient)
-                logic_error("Backward: cannot compute gradient for variable with m_needsGradient being False.");
-            else
-            {
-                // we must destroy the gradient of parameters since those are not constructed anew each time
-                // BUGBUG: What if we compute multiple root's gradients into the same parameter?
-                //         How do we know it is a second call?
-                //         Answer: Must be called only once. Each call recomputes gradients for the given root set.
-                //         Once computed, one must use the gradients; next call will overwrite them.
-                //         Or better, multiple calls should simply be forbidden, and taht should be checked.
-                //         That also works for the gradients themselves.
-                kv.first.m_dataFields->m_gradient.reset();
-                TraverseFunctionTreeBackward(kv.first, order);
-            }
-        // implant the first gradient if not present yet
-        if (!root.m_dataFields->m_gradient)
         {
-            // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
-            //if (root.Value()->Shape() != NDShape{})
-            //    LogicError("Backward: root must be a scalar, or root gradient must have been implanted already");
-            root.m_dataFields->m_gradient = AllocateTensorInArena(root.Shape(), root.GetDataType(), root.Value()->Device());
-            root.m_dataFields->m_gradient->SetValue(1.0f);
+            let& param = kv.first;
+            let& fields = *param.m_dataFields;
+            if (!fields.m_consumers.first) // if no consumer entry, we did not reach this gradient
+                logic_error("Backward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
+            if (!fields.m_needsGradient) // (we could also just leafve the gradient 0)
+                logic_error("Backward: cannot compute gradient for variable with m_needsGradient being False.");
+            TraverseFunctionTreeBackward(param, order);
         }
+        // implant the first gradient
+        // TODO: allow user to pass in the starting value
+        // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
+        //if (root.Value()->Shape() != NDShape{})
+        //    LogicError("Backward: root must be a scalar, or root gradient must have been implanted already");
+        root.m_dataFields->m_gradient = AllocateTensorInArena(root.Shape(), root.GetDataType(), root.Value()->Device());
+        root.m_dataFields->m_gradient->SetValue(1.0f);
         // perform backprop
         // This traverses the tree top-down, where each node pulls gradient(s) from its consumer(s).
         // This way we can optimize operations, such as a matrix product or gradient of GatherBatch().
         fprintf(stderr, "Back-propagating through %d functions\n", (int)order.size());
         for (auto f = order.begin(); f != order.end(); ++f)
+        {
             BackpropToInputs(&*f);
+        }
         // implant the results into the map the user passed in
         for (auto& kv : gradients)
-        {
             kv.second = kv.first.m_dataFields->m_gradient;
-            // and make sure we don't get into an incorrect consumer chain
-            // BUGBUG: This is brittle. Forward sets this up, and we won't know whether we are called multiple times (we shouldn't though).
-            kv.first.m_dataFields->m_consumers.first = nullptr;
-            kv.first.m_dataFields->m_consumers.second.clear();
+        //AssertTreeStateGetValue(root); // (sanity check)  --TODO: gotta think this through e.g. nodes for which no gradient is requested
+        // WORKAROUND for above
+        for (auto& kv : gradients)
+        {
+            let& param = kv.first;
+            auto& fields = *param.m_dataFields;
+            fields.m_consumers.first = nullptr;
+            fields.m_consumers.second.clear();
         }
     }
 }; // class

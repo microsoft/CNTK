@@ -746,11 +746,12 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         double loss1;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "### CNTK Dynamite:  %.6f sec\n");
-#if 0       // model update with Dynamite
+            loss1 = GetValue(mbLoss)->AsScalar<float>();
+#if 1       // model update with Dynamite
             Backward(mbLoss, gradients);
             d_learner->Update(gradients, minibatchData[labelStreamInfo].numberOfSamples);
 #endif
-            loss1 = GetValue(mbLoss)->AsScalar<float>();
+            //loss1 = GetValue(mbLoss)->AsScalar<float>(); // BUGBUG: currently fails after backprop due to state control issue
         }
         fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", loss1 / minibatchData[featureStreamInfo].numberOfSequences);
 #endif
