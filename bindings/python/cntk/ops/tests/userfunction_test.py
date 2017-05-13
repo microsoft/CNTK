@@ -635,11 +635,15 @@ class MyArgumentPreservingPlus(UserFunction):
 
     def forward(self, arguments, device=None, outputs_to_retain=None):
         result = self.compute_func.eval({self.compute_func.arguments[0] : arguments[0], self.compute_func.arguments[1] : arguments[1]}, as_numpy=False)
-        return arguments, result
+        self.backprop_state = arguments
+        return self.backprop_state, result
 
+    def backward(self, state, root_gradients, variables):
+        assert state == self.backprop_state
+        variables[self.inputs[0]] = root_gradients
 
 def test_udf_input_values_no_sharing():
-    i = C.input_variable(1, name='i_var')
+    i = C.input_variable(1, needs_gradient=True, name='i_var')
     m = C.user_function(MyArgumentPreservingPlus(i + 1, i + 2))
     
     w = C.parameter(shape=(1,), init=1)
@@ -648,5 +652,5 @@ def test_udf_input_values_no_sharing():
     m3 = C.splice(m2, m2, axis=0)
     m4 = C.splice(m3, m3, axis=0)
 
-    grad_value, result = m4.grad({i : np.asarray([2], dtype=np.float32)}, outputs=[m4], wrt=[w])
+    grad_value, result = m4.grad({i : np.asarray([2], dtype=np.float32)}, outputs=[m4], wrt=[w, i])
     assert np.array_equal(result, [[8,  8,  8,  8,  8,  8,  8,  8]])

@@ -1334,10 +1334,14 @@ class UserFunction(Function):
         else:
             state = self.forward(args, outputs, device, outputs_to_retain)
 
-        if state is None:
-            state = self._get_none_state(device)
-        elif not isinstance(state, cntk_py.BackPropState):
-            state = cntk_py.UserBackPropState.create(self, device, state)
+        if isinstance(state, cntk_py.BackPropState):
+            self._state_wrapped = False
+        else:
+            self._state_wrapped = True
+            if state is None:
+                state = self._get_none_state(device)
+            else:
+                state = cntk_py.UserBackPropState.create(self, device, state)
 
         if self.as_numpy:
             for k,v in outputs.items():
@@ -1379,12 +1383,11 @@ class UserFunction(Function):
                 if v.needs_gradient:
                     root_gradients[v] = _value_as_sequence_or_array(root_gradients[v], v)
 
-            state = cntk_py.UserBackPropState.data(state)
+        if not isinstance(state, cntk_py.BackPropState):
+            raise ValueError('state must be of type BackPropState')
 
-        else:
-            if not isinstance(state, cntk_py.BackPropState):
-                raise ValueError('if as_numpy=False, state must be of '
-                        'type BackPropState')
+        if self._state_wrapped:
+            state = cntk_py.UserBackPropState.data(state)
 
         map_if_possible(variables)
 
