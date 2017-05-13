@@ -746,7 +746,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         double loss1;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "### CNTK Dynamite:  %.6f sec\n");
-#if 1       // model update with Dynamite
+#if 0       // model update with Dynamite
             Backward(mbLoss, gradients);
             d_learner->Update(gradients, minibatchData[labelStreamInfo].numberOfSamples);
 #endif

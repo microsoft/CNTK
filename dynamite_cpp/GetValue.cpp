@@ -247,7 +247,6 @@ class Memoize
     //  - it only runs once
     //  - m_value must not have been set (don't call this function if it has)
     //  - m_pendingInputs has been initialized to -1 by the constructor
-    // This function also sets up the m_consumers fields. When it returns, they are all correctly set up.
     void TraverseFunctionTreeForward(const Variable& var)
     {
         let& fields = *var.m_dataFields;
@@ -272,18 +271,19 @@ class Memoize
         for (let& v : f.m_inputs)
         {
             auto& fields = *v.m_dataFields;
-            // record ourselves as a consumer of the input--this is used for batching and for Backward()
-            // TODO: Think this through for Combine(), where m_input==m_outputs.
-            if (!fields.m_consumers.first) // optimized for main case of 1 consumer. No std::vector in that case.
-                fields.m_consumers.first = &f;
-            else
-                fields.m_consumers.second.push_back(&f);
             // recursively traverse
             if (!fields.m_value)
             {
                 TraverseFunctionTreeForward(v);
                 if (!fields.m_value) // (in case of a Parameter, we now may have a value)
+                {
                     pendingInputs++;
+                    // record ourselves as a consumer of the input
+                    if (!fields.m_consumers.first) // optimized for main case of 1 consumer. No std::vector in that case.
+                        fields.m_consumers.first = &f;
+                    else
+                        fields.m_consumers.second.push_back(&f);
+                }
             }
         }
         f.m_pendingInputs = (int)pendingInputs;
@@ -579,12 +579,15 @@ class Memoize
             for (let& output : op->m_outputs)
             {
                 // notify consumers
-                let& fields = *output.m_dataFields;
+                auto& fields = *output.m_dataFields;
                 auto* f = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
                 if (f)
                     m_schedule.NotifyInputAvailable(f);
                 for (auto* f : fields.m_consumers.second) // all other consumers
                     m_schedule.NotifyInputAvailable(f);
+                // clear consumer list (this operation is done)
+                fields.m_consumers.first = nullptr;
+                fields.m_consumers.second.clear();
             }
         }
     }
@@ -763,11 +766,43 @@ class Memoize
         }
     }
 
+    // helper to verify that the tree is clean
+    void AssertTreeStateGetValue(const Variable& v, bool post) const
+    {
+        let& fields = *v.m_dataFields;
+        if (fields.m_consumers.first || !fields.m_consumers.second.empty())
+            LogicError("AssertTreeStateGetValue: m_consumers should be empty");
+        let owner = fields.m_ownerFunction.lock();
+        if (owner)
+        {
+            if (!post)  // TODO: remove this once we figured out how to reset m_pendingInputs
+            if (owner->m_pendingInputs != -1)
+                LogicError("AssertTreeStateGetValue: m_pendingInputs should be -1");
+            for (let& input : owner->m_inputs)
+                AssertTreeStateGetValue(input, post);
+        }
+    }
+
 public:
     // Value(), computed with automatic batching
-    // BUGBUG: The execution should reset the m_pendingInputs values to -1 when done.
+    // This routine uses temporary fields that are assumed initialized in a specific way:
+    //  - Function::m_pendingInputs:
+    //     - #inputs that still need to be computed before a node's value can be computed
+    //     - also used as a 'visited' flag during traversal
+    //     - upon entry and exit of this function, this must be -1
+    //       BUGBUG: It would break some logic to reset it to -1. Solve this.
+    //  - Variable::m_consumers:
+    //     - set of consumers of this value. Used to count m_pendingInputs.
+    //     - must be empty upon entry and exit
+    // plus more temp fields:
+    //  - m_link: pointer to next Function in the same batchable op
+    // And it leaves the following:
+    //  - m_value: updated
+    //  - m_lazyIndex: if a slice or view came from a batched operation, this points to it
+    //     - Any newly created batched ops are referenced this way.
     NDArrayViewPtr GetValue(const Variable& v)
     {
+        AssertTreeStateGetValue(v, false); // (sanity check)
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
         auto& fields = *v.m_dataFields;
         if (!fields.m_value)
@@ -784,6 +819,7 @@ public:
             }
             assert(fields.m_value);
         }
+        AssertTreeStateGetValue(v, true); // (sanity check)
         return LazilyIndexedValue(v);
     }
 
