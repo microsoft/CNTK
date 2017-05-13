@@ -537,7 +537,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         size_t parallelWorkerIdx = ((m_mpi == nullptr) || !UsingParallelTrain(i)) ? 0 : m_mpi->CurrentNodeRank();
         size_t randSeedBase = (parallelWorkerIdx * m_maxEpochs) + i;
         ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate);
-        ComputationNetwork::SetIRngUserSeed<ElemType>(net, criterionNodes[0], randSeedBase);
+        ComputationNetwork::SetIRngUserSeed<ElemType>(net, criterionNodes[0], randSeedBase, m_useRandomDropout);
         ComputationNetwork::SetBatchNormalizationTimeConstants<ElemType>(net, criterionNodes[0], 
                                                                          m_batchNormalizationTimeConstant[i], prevNormalizationTimeConstant,
                                                                          m_batchNormalizationBlendTimeConstant[i], prevNormalizationBlendTimeConstant);
@@ -2936,6 +2936,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     // the total number of epochs to run.
     m_maxEpochs = configSGD(L"maxEpochs");
+
+    m_useRandomDropout = configSGD(L"useRandomDropout", false);
+
 
     // Note: Momentum is best specified as a MB-size agnostic fashion.
     // Because momentum per sample is a number very close to 1, it is more handy to use a logarithmic specification.

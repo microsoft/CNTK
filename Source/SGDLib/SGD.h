@@ -207,6 +207,8 @@ protected:
 
     // the total number of epochs to run.
     size_t m_maxEpochs;
+	
+    bool m_useRandomDropout = false;
 
     bool m_gradientClippingWithTruncation;
     double m_clippingThresholdPerSample;
