@@ -95,9 +95,9 @@ public:
             this->m_outputsValue[i]->SetValue(*outputMatrixAndLayout.first);
 
             if ((this->m_outputsMBLayout[i] != nullptr) && (outputMatrixAndLayout.second == nullptr))
-                LogicError("The UserDefinedFunction node has a non-null output MBLayout but none found from the (%S) user Function::Forward output Value", m_externalFunction->Name().c_str());
+                LogicError("The UserDefinedFunction node has a non-null output MBLayout but none found from the '%S' user Function::Forward output Value", m_externalFunction->Name().c_str());
             else if ((this->m_outputsMBLayout[i] == nullptr) && (outputMatrixAndLayout.second != nullptr))
-                LogicError("The UserDefinedFunction node does not have an output MBLayout but the (%S) user Function::Forward output Value have a non-null layout", m_externalFunction->Name().c_str());
+                LogicError("The UserDefinedFunction node does not have an output MBLayout but the '%S' user Function::Forward output Value has a non-null layout", m_externalFunction->Name().c_str());
             else if ((this->m_outputsMBLayout[i] == nullptr) && (outputMatrixAndLayout.second == nullptr))
                 ;
             else
@@ -107,7 +107,10 @@ public:
                 else
                 {
                     if (*this->m_outputsMBLayout[i] != *outputMatrixAndLayout.second)
-                        LogicError("The MBLayout of the output computed by the external function (%S) does not match the expected MBLayout", m_externalFunction->Name().c_str());
+                        LogicError("The MBLayout 'NumSequences=%zu, NumTimeSteps=%zu' of the output computed by the external function '%S' does not match the expected MBLayout 'NumSequences=%zu, NumTimeSteps=%zu'.",
+                            outputMatrixAndLayout.second->GetNumSequences(), outputMatrixAndLayout.second->GetNumTimeSteps(),
+                            m_externalFunction->Name().c_str(),
+                            this->m_outputsMBLayout[i]->GetNumSequences(), this->m_outputsMBLayout[i]->GetNumTimeSteps());
                 }
             }
         }
@@ -176,7 +179,10 @@ public:
             InputRef(i).Gradient() += *newInputGradientMatrixAndLayout.first;
 
             if (*InputRef(i).GetMBLayout() != *newInputGradientMatrixAndLayout.second)
-                LogicError("The MBLayout of the input (%lu) gradient computed by the external function (%S) does not match the expected MBLayout", (unsigned long)i, this->GetName().c_str());
+                LogicError("The MBLayout 'NumSequences=%zu, NumTimeSteps=%zu' of the Input(%zu) gradient computed by the external function '%S' does not match the expected MBLayout 'NumSequences=%zu, NumTimeSteps=%zu'.",
+                    newInputGradientMatrixAndLayout.second->GetNumSequences(), newInputGradientMatrixAndLayout.second->GetNumTimeSteps(),
+                    i, this->GetName().c_str(),
+                    InputRef(i).GetMBLayout()->GetNumSequences(), InputRef(i).GetMBLayout()->GetNumTimeSteps());
         }
 
         m_currentBackpropStatePtr = nullptr;
@@ -194,7 +200,7 @@ public:
 
             if (output.GetDataType() != ::CNTK::AsDataType<ElemType>())
             {
-                LogicError("The DataType (%s) of the external user defined Function's output does not match the internal ComputationNode's ElemType (%s)",
+                LogicError("The DataType '%s' of the external user defined Function's output does not match the internal ComputationNode's ElemType '%s'.",
                     DataTypeName(output.GetDataType()),
                     DataTypeName(::CNTK::AsDataType<ElemType>()));
             }
