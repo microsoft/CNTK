@@ -681,7 +681,7 @@ public:
 //
 // Exception handling
 //
-%include "CNTK_ExceptionHandling.i"
+%include "CNTKExceptionHandling.i"
 
 %feature("director:except") {
     if ($error != NULL) {
