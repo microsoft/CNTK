@@ -791,6 +791,7 @@ public:
     //     - also used as a 'visited' flag during traversal
     //     - upon entry and exit of this function, this must be -1
     //       BUGBUG: It would break some logic to reset it to -1. Solve this.
+    //               Why again can we not make it 0? Maybe there is a secondary condition that allows us to?
     //  - Variable::m_consumers:
     //     - set of consumers of this value. Used to count m_pendingInputs.
     //     - must be empty upon entry and exit
@@ -832,10 +833,20 @@ public:
     void Backward(const Variable& root, unordered_map<Parameter, NDArrayViewPtr>& gradients)
     {
         // first get the forward computation, batching, etc. done if not yet
-        // This will also set up the m_consumers chains, which we rely on.
+        // This will also set up the m_consumers chains, which we rely on.  --TODO: remove this
         GetValue(root);
         // traverse the graph from the bottom (the variables to get the gradients for)
         // to form an ordered list of nodes to process
+        // TODO: Can this be achieved with a depth-first traversal that also sets up the consumer chains?
+        //       Not if not all gradients are requested--we won't know which branches we can skip.
+        //       So we must re-traverse the tree to rebuild the consumer chains.
+        //       Why we cannot just keep the consumer chain from GetValue():
+        //        - a Parameter can be involved in multiple computations, and computations due to their lazy nature
+        //          may be hanging in there for a long time (it's not always just a single GetValue() call).
+        //          Thus, we cannot assume we can send *any* information from GetValue() to backprop through
+        //          something that is being consumed, such as a Parameter! (but anything inside the tree itself is fine,
+        //          such as batched ops)
+        // ==> we MUST rebuild the m_consumer chain by another traversal.
         NonOwningFunctionListBuilder order;
         for (auto& kv : gradients)
             if (!kv.first.m_dataFields->m_needsGradient)
@@ -843,6 +854,12 @@ public:
             else
             {
                 // we must destroy the gradient of parameters since those are not constructed anew each time
+                // BUGBUG: What if we compute multiple root's gradients into the same parameter?
+                //         How do we know it is a second call?
+                //         Answer: Must be called only once. Each call recomputes gradients for the given root set.
+                //         Once computed, one must use the gradients; next call will overwrite them.
+                //         Or better, multiple calls should simply be forbidden, and taht should be checked.
+                //         That also works for the gradients themselves.
                 kv.first.m_dataFields->m_gradient.reset();
                 TraverseFunctionTreeBackward(kv.first, order);
             }
