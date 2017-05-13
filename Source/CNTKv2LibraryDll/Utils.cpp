@@ -638,16 +638,18 @@ namespace CNTK
             LogicError("The specified ElementType %s does not match the Value object's DataType %s for Variable '%S'",
                         typeid(ElementType).name(), DataTypeName(value->GetDataType()), var.AsString().c_str());
 
+        auto CreateLayoutWithUnitBatchSizeAndSequenceLength = []() {
+            auto layout = std::make_shared<MBLayout>();
+            layout->InitAsFrameMode(1);
+            return layout;
+        };
+
         auto packedValue = dynamic_cast<PackedValue*>(value.get());
         if (packedValue && packedValue->IsPacked())
         {
             auto packedMatrixAndLayout = packedValue->PackedData<ElementType>();
             if (!var.DynamicAxes().empty() && (packedMatrixAndLayout.second == nullptr))
-            {
-                auto layout = std::make_shared<MBLayout>();
-                layout->InitAsFrameMode(1);
-                packedMatrixAndLayout.second = layout;
-            }
+                packedMatrixAndLayout.second = CreateLayoutWithUnitBatchSizeAndSequenceLength();
 
             return packedMatrixAndLayout;
         }

@@ -597,9 +597,9 @@ namespace CNTK
 
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes);
 
-    inline size_t ShapeRowColSplitPoint(const NDShape& varShape, bool isSparse)
+    inline size_t ShapeRowColSplitPoint(const NDShape& varShape, bool isSparse, bool noDynamicAxes)
     {
-        if (isSparse)
+        if (isSparse || noDynamicAxes)
             return std::min<size_t>(varShape.Rank(), 1);
         else
             return varShape.Rank();
@@ -607,7 +607,7 @@ namespace CNTK
 
     inline size_t VariableRowColSplitPoint(const Variable& var)
     {
-        return ShapeRowColSplitPoint(var.Shape(), var.IsSparse());
+        return ShapeRowColSplitPoint(var.Shape(), var.IsSparse(), var.DynamicAxes().empty());
     }
 
     bool IsPackedValue(const ValuePtr& value);
