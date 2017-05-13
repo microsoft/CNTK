@@ -538,18 +538,21 @@ class Memoize
                 spliceInputs.clear();
             }
             // execute the operation and implant the results
+            // BUGBUG: The newly created Function objects must get their consumer chain set up.
             let& unbatchedOutputShape = f0.m_outputs[0].Shape();
             if (!anyBatchedInputs) // short-circuit branch when all inputs were actually the same--we just compute them once
             {
                 // execute it
                 let& output = MemoizeKnowableValueInArena(f0);
-                let& outValue = output.m_dataFields->m_value;
+                output;
+                //let& outValue = output.m_dataFields->m_value;
                 for (auto op = ops.begin(); op != ops.end(); ++op)
                 {
                     auto& fields = *op->m_outputs[0].m_dataFields;
-                    fields.m_value = outValue; // not batched: just duplicate
+                    //fields.m_value = outValue; // not batched: just duplicate  // TODO: why even store the value at this point, and not do it lazily?
                     fields.m_lazyIndex = make_pair(f0.shared_from_this(), SIZE_MAX); // SIZE_MAX means don't slice
                     // we remember where we came from for backprop in this case
+                    // TODO: set up batchedOp.m_consumers
                 }
             }
             else // main branch: computation as a batched operation; batched inputs have been prepared in m_batchedInputs[]
@@ -559,16 +562,17 @@ class Memoize
                 let batchedOp = Function::RawPrimitiveFunction(f0.Op(), vector<Variable>(m_batchedInputs), expectedOutputShape, Dictionary(f0.Attributes()));
                 // and execute it
                 MemoizeKnowableValueInArena(*batchedOp);
+                // BUGBUG: must set up consumer chain for the Splice op
                 // implant all results
                 size_t j = 0;
                 for (auto op = ops.begin(); op != ops.end(); ++op)
                 {
                     // TODO: review this w.r.t. multi-output functions
-                    let& output = op->m_outputs[0];
-                    auto& fields = *output.m_dataFields;
+                    auto& fields = *op->m_outputs[0].m_dataFields;
                     // semantically, this is fields.m_value = out->IndexLastAxis(j);
                     // but it gets deferred to save effort
                     fields.m_lazyIndex = make_pair(batchedOp, j); // remember where we came from
+                    // TODO: set up batchedOp.m_consumers
                     j++;
                 }
             }
@@ -577,6 +581,7 @@ class Memoize
         }
 
         // update all ops' consumers and schedule them when possible
+        // BUGBUG: Consumer chain here should have been migrated to the batched op; and notifed from there.
         for (auto op = ops.begin(); op != ops.end(); ++op)
         {
             for (let& output : op->m_outputs)
@@ -596,6 +601,7 @@ class Memoize
     // This function assumes:
     //  - m_pendingInputs != -2
     //    BUGBUG: This is a bad one; what if users get a gradient and then continue to build on top?
+    // BUGBUG: We must traverse the batched operations, but those don't have the consumer chains set up.
     void TraverseFunctionTreeBackward(const Variable& var, NonOwningFunctionListBuilder& head)
     {
         let& fields = *var.m_dataFields;
