@@ -318,12 +318,12 @@ class Memoize
     }
 
     // return the m_value field of a variable, but possibly realizing it lazily if it is an index operation
-    const NDArrayViewPtr& LazilyIndexedValue(const Variable& v)
+    static const NDArrayViewPtr& LazilyIndexedValue(const Variable& v)
     {
         auto& fields = *v.m_dataFields;
         if (!fields.m_value)
         {
-            let& from = fields.m_lazyIndex.first;
+            let& from = fields.m_lazyIndex.first->m_outputs[0].m_dataFields->m_value;
             if (!from)
                 LogicError("variable unexpectedly has no value yet");
             fields.m_value = from->IndexLastAxis(fields.m_lazyIndex.second);
@@ -331,9 +331,21 @@ class Memoize
         return fields.m_value;
     }
 
+    // helper to fill in an array of NDArrayViewPtrs from the array of input Variables
+    // Use a buffer for this that does not get destructed, to reuse the memory allocation.
+    vector<NDArrayViewPtr> m_fetchInputValuesBuffer;
+    vector<NDArrayViewPtr>& FetchInputValues(const vector<Variable>& inputs)
+    {
+        m_fetchInputValuesBuffer.resize(inputs.size());
+        for (size_t i = 0; i < inputs.size(); i++)
+            m_fetchInputValuesBuffer[i] = LazilyIndexedValue(inputs[i]); // (if this is a lazy slice, then now we must resolve it)
+        return m_fetchInputValuesBuffer;
+    }
+
     // temp variables for ExecuteBatchedOpAndUpdateSchedule(); keep outside to reuse the memory allocation
-    vector<NDArrayViewPtr> m_args;
-    vector<NDArrayViewPtr> m_spliceArgsBuffer;
+    //vector<NDArrayViewPtr> m_spliceArgsBuffer;
+    vector<Variable> m_batchedInputs;
+    vector<Variable> m_spliceArgsBuffer;
     size_t m_numBatchedLaunches = 0; // (for statistics only)
 
     // batch-execute a set of ops that are known to be batchable
@@ -348,8 +360,6 @@ class Memoize
         if (!isFree)
             m_numBatchedLaunches++;
         let numArgs = f0.m_inputs.size();
-        //m_inputs.resize(numArgs);
-        m_args.resize(numArgs);
         // perform the op
         let isTimes = (op == PrimitiveOpType::Times); // is special-cased
         let doNaively =
@@ -368,17 +378,13 @@ class Memoize
                 BreakPoint;
             // for correctness testing of underlying mechanism, compute them without actual batching
             for (auto op = ops.begin(); op != ops.end(); ++op)
-            //for (auto op : ops) // TODO: figure this out
             {
                 if (op->m_outputs.size() != 1)
                     LogicError("only functions with 1 output are supported");
-                //m_inputs.resize(op->m_inputs.size());
-                m_args.resize(op->m_inputs.size());
-                for (size_t i = 0; i < op->m_inputs.size(); i++)
-                    m_args[i] = LazilyIndexedValue(op->m_inputs[i]); // (if this is a lazy slice, then now we must resolve it)
-                NDArrayViewPtr out = isFree ? nullptr : Alloc(op->m_outputs[0].Shape(), m_args[0]->GetDataType(), m_args[0]->Device()); // arena allocation will happen here
+                let& inputValues = FetchInputValues(op->m_inputs);
+                NDArrayViewPtr out = isFree ? nullptr : Alloc(op->m_outputs[0].Shape(), inputValues[0]->GetDataType(), inputValues[0]->Device()); // arena allocation will happen here
                 op->m_outputs[0].m_dataFields->m_value =
-                    op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
+                    move(op->ComputeKnowableValue(op->Op(), inputValues, op->Attributes(), op->m_outputs[0].Shape(), move(out)));
                 // TODO: realize splice ops that are index ops as a m_lazyIndex at this point
                 //if (f0.Op() == PrimitiveOpType::Slice)
                 //{
@@ -386,13 +392,28 @@ class Memoize
                 //}
 #if 0           // test effect of the unbatched sparse times
                 if (f0.Op() == PrimitiveOpType::Times)
-                    op->ComputeKnowableValue(op->Op(), m_args, op->Attributes(), op->m_outputs[0].Shape(), move(out));
+                    op->ComputeKnowableValue(op->Op(), m_inputValuesBuffer, op->Attributes(), op->m_outputs[0].Shape(), move(out));
 #endif
             }
         }
+        // execute the batchable operations as a batch
+        // Every resulting batched op consists of the following new operations:
+        //  - a Splice() or Slice() for each input (e.g. 2 for a binary op)
+        //  - a PrimitiveFunction that is the op itself
+        //  - m_lazyIndex entries that represent a "virtual" Slice() that is never stored as a Function since that would be prohibitive.
+        // As for resource management, m_lazyIndex will hold a strong ref to the PrimitiveFunction;
+        // and we will hack its m_inputs[].m_outputComposite to hold a strong reference to the Splice() or Slice().
+        // (This is a little ugly since m_outputComposite is meant to hold a CompositeFunction, but we misuse it
+        // to hold a PrimitiveFunction.)
+        // Note: We cannot use MemoizeKnowableValue() directly, since it does not allow to pass in the target tensor from the arena allocator.
+        // TODO: Create actual nodes for all batching operations; and then store those in m_lazyIndex, instead of a TensorView.
+        //       This will cost just a little (1 slice or gather >> 1 main op), but will allow us to back-prop through it.
+        //       Marked as ###
+        //       Every batched op consists of 
         else
         {
             // batch all arguments
+            m_batchedInputs.resize(numArgs);
             size_t maxRank = 0;
             size_t i0 = isTimes ? 1 : 0;
             if (isTimes)
@@ -406,24 +427,25 @@ class Memoize
                     maxRank = rank;
             }
             bool anyBatchedInputs = false;
-            if (isTimes)
-                m_args[0] = LazilyIndexedValue(f0.m_inputs[0]); // (should not have to do anything lazy, actually)
+            if (isTimes) // TODO: change to if (i0 == 1)
+                m_batchedInputs[0] = f0.m_inputs[0];
             for (size_t i = i0; i < numArgs; i++)
             {
                 // create splice args
                 // allocate buffers
-                auto& spliceArgs = m_spliceArgsBuffer;
-                spliceArgs.clear();
-                if (spliceArgs.capacity() < batchSize)
-                    spliceArgs.reserve(max(batchSize, 2 * spliceArgs.capacity()));
+                auto& spliceInputs = m_spliceArgsBuffer; // TODO rename to gatherInputs and m_gatherArgsBuffer
+                spliceInputs.clear();
+                if (spliceInputs.capacity() < batchSize)
+                    spliceInputs.reserve(max(batchSize, 2 * spliceInputs.capacity()));
                 // optimization: if all args are consecutive slices, then use a slice view instead
-                let* pfields0 = f0.m_inputs[i].m_dataFields.get(); // as long as non-NULL, we are consecutive
+                const VariableFields* pfields0 = nullptr;// @@@@@@@bring this back (as let*): f0.m_inputs[i].m_dataFields.get(); // as long as non-NULL, we are consecutive
                 if (!pfields0->m_lazyIndex.first) // only if it is an indexed slice, actually
                     pfields0 = nullptr;
                 // loop over all batched ops
                 size_t j = 0;
                 for (auto op = ops.begin(); op != ops.end(); ++op, j++) // create the batched tensors
                 {
+#if 0
                     // optimization: if all args are consecutive slices, then use a slice view instead
                     if (pfields0)
                     {
@@ -432,7 +454,7 @@ class Memoize
                         if (pfields->m_lazyIndex.first  == pfields0->m_lazyIndex.first &&
                             pfields->m_lazyIndex.second == pfields0->m_lazyIndex.second + j)
                             continue;
-                        // nope, chain has been broken: must fix up spliceArgs up to here
+                        // nope, chain has been broken: must fix up spliceInputs up to here
                         // This is suboptimal in that we lost the reference to the originating input.
                         // So we cannot remember the realized SliceView there.
                         // TODO: Per Jon's suggestion, we can be a little loose here. For a variable-length
@@ -441,54 +463,90 @@ class Memoize
                         // carry them forward, and ignore them when implanting the result.
                         let& from = pfields0->m_lazyIndex.first;
                         let begin = pfields0->m_lazyIndex.second;
-                        while (spliceArgs.size() < j)
-                            spliceArgs.push_back(from->IndexLastAxis(begin + spliceArgs.size()));
+                        while (spliceInputs.size() < j)
+                            spliceInputs.push_back(from->IndexLastAxis(begin + spliceInputs.size())); // ### this is expensive without an Index op
                         pfields0 = nullptr; // no longer in consecutive hypothesis
                     }
-                    let& arg = LazilyIndexedValue(op->m_inputs[i]);
+#endif
+                    let& input = op->m_inputs[i];
                     // optimization: if all args are the same, then don't batch
-                    if (spliceArgs.size() == 1 && spliceArgs[0] == arg)
+                    // TODO: The same input could be used multiple times. E.g. discover with a unique identifier.
+                    if (spliceInputs.size() == 1 && spliceInputs[0].m_dataFields.get() == input.m_dataFields.get())
                         continue;
                     // if we thought it is all the same, but then it turned out not to be, we need to fixc it up
-                    if (spliceArgs.size() < j)
+                    if (spliceInputs.size() < j)
                         LogicError("untested");
-                    while (spliceArgs.size() < j)
-                        spliceArgs.push_back(spliceArgs.back());
-                    // append the arg
-                    spliceArgs.push_back(arg);
+                    while (spliceInputs.size() < j)
+                        spliceInputs.push_back(spliceInputs.back());
+                    // append the input
+                    spliceInputs.push_back(input);
+                    // note: Variable is just two shared_ptrs, one being NULL; so this is cheap
+                    // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
                 }
                 // and splice
-                if (spliceArgs.size() == 1) // optimized case: all ops share the same operand: no need to batch them
-                    m_args[i] = spliceArgs[0];
+                if (spliceInputs.size() == 1) // optimized case: all ops share the same operand: no need to batch them
+                    m_batchedInputs[i] = spliceInputs[0];
+#if 0           // @@@@@bring this back
                 else if (pfields0) // they are consecutive: can short-circuit as a slice view
                 {
                     let& from = pfields0->m_lazyIndex.first;
                     let begin = pfields0->m_lazyIndex.second;
                     let& fromDims = from->Shape().Dimensions();
                     if (begin == 0 && j == fromDims.back()) // full range: just take it
-                        m_args[i] = from;
+                        m_inputValuesBuffer[i] = from;
                     else // sub-range: take a slice view
                     {
                         vector<size_t> extent = fromDims;
                         vector<size_t> startOffset(extent.size(), 0);
                         startOffset.back() = begin;
                         extent.back() = j;
-                        m_args[i] = from->SliceView(startOffset, extent);
+                        m_inputValuesBuffer[i] = from->SliceView(startOffset, extent); // ### Splice(); then execute it through ComputeKnowableValue()
                     }
                     anyBatchedInputs = true;
                 }
+#endif
                 else
                 {
-                    vector<size_t> shape;
-                    shape.reserve(maxRank + 1);
-                    shape = spliceArgs[0]->Shape().Dimensions();
-                    shape.resize(maxRank, 1);
-                    shape.push_back(spliceArgs.size());
-                    auto out = Alloc(shape, spliceArgs[0]->GetDataType(), spliceArgs[0]->Device());
-                    m_args[i] = NDArrayView::GatherBatch(spliceArgs, (int)maxRank, move(out));
-                    //m_args[i] = NDArrayView::GatherBatch(spliceArgs, maxRank, out);
-                    //fprintf(stderr, "Gathering %d items\n", (int)spliceArgs.size());
+                    //vector<size_t> shape;
+                    //shape.reserve(maxRank + 1);
+                    //let spliceArg0 = LazilyIndexedValue(spliceInputs[0]); // get the first one to read off shapes and device info
+                    //shape = spliceInputs[0].m_dataFields->m_shape.Dimensions();
+                    //shape.resize(maxRank, 1);
+                    //shape.push_back(spliceInputs.size());
+
+                    // create a new Function Splice()
+                    vector<size_t> expectedOutputShape;
+                    expectedOutputShape.reserve(maxRank + 1);
+                    expectedOutputShape = LazilyIndexedValue(spliceInputs[0])->Shape().Dimensions();
+                    expectedOutputShape.resize(maxRank, 1);             // pad to maxRank
+                    expectedOutputShape.push_back(spliceInputs.size()); // and add the batch axis
+                    auto additionalProperties = Dictionary();
+                    additionalProperties[L"axis"/*PrimitiveFunction::AttributeNameAxis*/] = Axis(maxRank);
+                    auto spliceInputsCopy = spliceInputs;
+                    let spliceOp = Function::RawPrimitiveFunction(PrimitiveOpType::Splice, move(spliceInputsCopy), expectedOutputShape, move(additionalProperties));
+                    //FunctionPtr spliceOp = MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Splice, spliceInputs, std::move(additionalProperties));
+                    // TODO: double-check how expensive this is ^^; e.g. shape inference. May need a special constructor that takes a shape.
+                    // and execute it
+                    let& inputValues = FetchInputValues(spliceOp->m_inputs);
+                    let& spliceArg0 = inputValues[0];// LazilyIndexedValue(spliceInputs[0]); // get the first one to read off shapes and device info
+                    //vector<size_t> shape;
+                    //shape.reserve(maxRank + 1);
+                    //shape = spliceArg0->Shape().Dimensions();
+                    //shape.resize(maxRank, 1);             // pad to maxRank
+                    //shape.push_back(spliceInputs.size()); // and add the batch axis
+                    let& outputShape = spliceOp->m_outputs[0].Shape(); // should be the same as expectedOutputShape; TODO: merge/rename the two
+                    auto out1 = Alloc(outputShape, spliceArg0->GetDataType(), spliceArg0->Device());
+                    // TODO: factor this pattern out into MemoizeKnowableValueInArena()
+                    spliceOp->m_outputs[0].m_dataFields->m_value = spliceOp->ComputeKnowableValue(spliceOp->Op(), inputValues, spliceOp->Attributes(), outputShape, move(out1));
                     anyBatchedInputs = true;
+                    //// ... convert spliceInputs to spliceArgs
+                    //m_inputValuesBuffer[i] = NDArrayView::GatherBatch(spliceInputs, (int)maxRank, move(out)); // ### Splice(); then execute it through ComputeKnowableValue()
+                    // and that's our input to the batched operation
+                    // To make sure we hold a reference to this PrimitiveFunction, inject a strong ref to the spliceOp into the copy of its Output.
+                    // Note that we abuse the composite field for a non-composite, which works because it is just a FunctionPtr, and we own it.
+                    //m_batchedInputs[i] = spliceOp->m_outputs[0].CompositePreservingCopy(spliceOp);
+                    m_batchedInputs[i] = spliceOp->m_outputs[0];
+                    m_batchedInputs[i].m_outputComposite = spliceOp;
                 }
             }
             // execute the operation and implant the results
@@ -497,20 +555,41 @@ class Memoize
             let& unbatchedOutputShape = f0.m_outputs[0].Shape();
             if (!anyBatchedInputs) // short-circuit branch when all inputs were actually the same--we just compute them once
             {
-                for (size_t i = 0; i < numArgs; i++)
-                    if (m_args[i] != f0.m_inputs[i].m_dataFields->m_value)
-                        LogicError("fast path unexpectedly got unexpected inputs");
-                NDArrayViewPtr out1 = Alloc(unbatchedOutputShape, m_args[0]->GetDataType(), m_args[0]->Device()); // (arena buffer goes here some day)
-                auto out = f0.ComputeKnowableValue(f0.Op(), m_args, f0.Attributes(), unbatchedOutputShape, move(out1));
+                let& inputValues = FetchInputValues(f0.m_inputs);
+                // TODO: check that there is no more use of m_inputValuesBuffer inside here
+                //for (size_t i = 0; i < numArgs; i++)
+                //    if (m_inputValuesBuffer[i] != f0.m_inputs[i].m_dataFields->m_value)
+                //        LogicError("fast path unexpectedly got unexpected inputs");
+                NDArrayViewPtr out1 = Alloc(unbatchedOutputShape, inputValues[0]->GetDataType(), inputValues[0]->Device()); // (arena buffer goes here some day)
+                f0.m_outputs[0].m_dataFields->m_value =
+                    f0.ComputeKnowableValue(f0.Op(), inputValues, f0.Attributes(), unbatchedOutputShape, move(out1)); // ### use Memoize directly through the main op
                 // implant all results
+                let& out = f0.m_outputs[0].m_dataFields->m_value;
                 for (auto op = ops.begin(); op != ops.end(); ++op)
-                    op->m_outputs[0].m_dataFields->m_value = out; // not batched: just duplicate
+                {
+                    // BUGBUG: need to keep a back pointer to the function as well, for backprop
+                    // If we don't, it will not do batched backprop, but otherwise still work. So do that later.
+                    op->m_outputs[0].m_dataFields->m_value = out; // not batched: just duplicate // ###
+                }
             }
-            else // main branch: computation as a batched operation
+            else // main branch: computation as a batched operation; batched inputs have been prepared in m_batchedInputs[]
             {
-                let outputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
-                NDArrayViewPtr out1 = Alloc(outputShape, m_args[0]->GetDataType(), m_args[0]->Device()); // (arena buffer goes here some day)
-                auto out = f0.ComputeKnowableValue(f0.Op(), m_args, f0.Attributes(), outputShape, move(out1));
+                // create a new Function for the batched op
+                let expectedOutputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
+                auto attributes = f0.Attributes();
+                auto batchedInputsCopy = m_batchedInputs;
+                let batchedOp = Function::RawPrimitiveFunction(f0.Op(), move(batchedInputsCopy), expectedOutputShape, move(attributes));
+                //FunctionPtr batchedOp = MakeSharedObject<PrimitiveFunction>(f0.Op(), m_batchedInputs, move(attributes));
+                // again we already know the shape so we could have a short-circuited version that skips shape inference
+                // The above removed the composite strong ref; so recover it. This should also be done in the special creation function. FACTOR THIS FIRST.
+                //for (size_t i = 0; i < m_batchedInputs.size(); i++)
+                //    batchedOp->m_inputs[i].m_outputComposite = m_batchedInputs[i].m_outputComposite;
+                // and execute it
+                let& inputValues = FetchInputValues(batchedOp->m_inputs);
+                let outputShape = batchedOp->m_outputs[0].Shape(); // unbatchedOutputShape.AppendAxis(maxRank, batchSize);
+                NDArrayViewPtr out1 = Alloc(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device()); // (arena buffer goes here some day)
+                batchedOp->m_outputs[0].m_dataFields->m_value =
+                    batchedOp->ComputeKnowableValue(batchedOp->Op(), inputValues, batchedOp->Attributes(), outputShape, move(out1)); // ### use Memoize directly
                 // implant all results
                 size_t j = 0;
                 for (auto op = ops.begin(); op != ops.end(); ++op)
@@ -520,10 +599,12 @@ class Memoize
                     // semantically, this is fields.m_value = out->IndexLastAxis(j);
                     // but it gets deferred to save effort
                     //fields.m_value = out->IndexLastAxis(j);
-                    fields.m_lazyIndex = make_pair(out, j); // remember where we came from
+                    fields.m_lazyIndex = make_pair(batchedOp, j); // remember where we came from
                     j++;
                 }
             }
+            // release the ref counts on the batched inputs
+            m_batchedInputs.clear();
         }
 
         // update all ops' consumers
@@ -674,7 +755,7 @@ class Memoize
     // TODO: not all inputs want gradients. How to control this? Needs the same flag as the StopGradient question. Can we use m_needsGradient?
     vector<const NDArrayView*> m_outputValuesBuffer;
     vector<const NDArrayView*> m_outputGradientsBuffer;
-    vector<const NDArrayView*> m_inputValuesBuffer;
+    vector<const NDArrayView*> m_inputValuesBufferBuffer;
     void BackpropToInputs(Function* f)
     {
         let& outputs = f->m_outputs;
@@ -690,9 +771,9 @@ class Memoize
             m_outputValuesBuffer   .push_back(LazilyIndexedValue(output).get());
             m_outputGradientsBuffer.push_back(fields.m_gradient.get());
         }
-        m_inputValuesBuffer.clear(); // input values
+        m_inputValuesBufferBuffer.clear(); // input values
         for (let& input : inputs)
-            m_inputValuesBuffer.push_back(LazilyIndexedValue(input).get()); // inefficient!! But fine for now, I just want correctness.
+            m_inputValuesBufferBuffer.push_back(LazilyIndexedValue(input).get()); // inefficient!! But fine for now, I just want correctness.
         // compute gradients for all inputs
         let numInputs = inputs.size();
         for (size_t i = 0; i < numInputs; i++)
@@ -709,7 +790,7 @@ class Memoize
                 inputGradient = Alloc(input.Shape(), input.GetDataType(), input.Value()->Device());
             double beta = isFirst ? 0 : 1;
             // backprop into the input
-            BackpropTo(m_outputGradientsBuffer, i, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBuffer, inputGradient, beta);
+            BackpropTo(m_outputGradientsBuffer, i, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferBuffer, inputGradient, beta);
             if (isFirst)
                 fields.m_gradient = inputGradient;
         }
