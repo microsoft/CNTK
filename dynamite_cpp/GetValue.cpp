@@ -17,10 +17,10 @@
 #pragma warning (disable: 4456) // until I fixed the shdowing
 
 #define let const auto
+#define fail_if(cond, err) (!!(cond) ? (LogicError(__FUNCTION__ ": " err),0) : 0)
+#define BreakPoint fprintf(stderr, "") // use this inside a conditional to be able to set a breakpoint in Release code
 
 using namespace std;
-
-#define BreakPoint fprintf(stderr, "") // use this inside a conditional to be able to set a breakpoint in Release code
 
 namespace CNTK
 {
@@ -609,33 +609,41 @@ class Memoize
     //  - can skip any branch that does not need a gradient (!m_needsGradient and StopGradient ops).
     //  - short-circuit into batched ops (m_lazyIndex) so that we backprop through them instead
     // All nodes that were traversed have all input's m_consumers set up and their m_pendingInputs set to 0.
-    void TraverseFunctionTreeForwardForBackward(const Variable& var)
+    void DetermineConsumersForBackward(const Variable& var)
     {
         auto& fields = *var.m_dataFields;
-        if (!fields.m_value)
-            LogicError("TraverseFunctionTreeForwardForBackward() has no value yet??");
+
         if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
             return; // reached a leaf
-        if (!fields.m_needsGradient)
-            LogicError("TraverseFunctionTreeForwardForBackward() unexpectedly encountered a node with m_needsGradient=false??");
-        if (fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder)
-            LogicError("TraverseFunctionTreeForwardForBackward() unexpectedly encountered an Input or a Placeholder??");
-        //auto pf = fields.m_lazyIndex.first ? fields.m_lazyIndex.first : fields.m_ownerFunction.lock();
-        auto pf = fields.m_ownerFunction.lock();
-        auto& f = *pf;
-        TraverseFunctionTreeForwardForBackward(f);
+
+        fail_if(!fields.m_value, "variable has no value yet??");
+        fail_if(!fields.m_needsGradient, "unexpectedly encountered a node with m_needsGradient=false??");
+        fail_if(fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder, "unexpectedly encountered an Input or a Placeholder??");
+
+        if(fields.m_lazyIndex.first)
+        {
+            auto& f = *fields.m_lazyIndex.first;
+            DetermineConsumersForBackward(f);
+        }
+        else
+        {
+            auto& f = *fields.m_ownerFunction.lock();
+            DetermineConsumersForBackward(f);
+        }
     }
-    void TraverseFunctionTreeForwardForBackward(Function& f)
+    void DetermineConsumersForBackward(Function& f)
     {
-        if (f.m_pendingInputs == -2) // graph is cyclic??
-            LogicError("TraverseFunctionTreeForwardForBackward() unexpectedly encountered a cyclic graph??");
+        fail_if(f.m_pendingInputs == -2, "unexpectedly encountered a cyclic graph??"); // graph is cyclic??
+
         if (f.m_pendingInputs != -1) // already visited
             return;
-        if (f.Op() == PrimitiveOpType::StopGradient)
-            LogicError("TraverseFunctionTreeForwardForBackward() unexpectedly encountered a StopGradient, which should have propagated m_needsGradient=false upwards");
+
+        fail_if(f.Op() == PrimitiveOpType::StopGradient, "unexpectedly encountered a StopGradient, which should have propagated m_needsGradient=false upwards");
+
         // we are now in a Function that should backprop its gradient
         // TODO: implement short-circuiting here
         f.m_pendingInputs = -2; // (temp value to detect cycles; not really needed)
+
         // determine how many inputs are pending; and also recurse and set up the consumer list
         for (let& v : f.m_inputs)
         {
@@ -652,7 +660,7 @@ class Memoize
             else
                 fields.m_consumers.second.push_back(&f);
             // now process recursively the inputs
-            TraverseFunctionTreeForwardForBackward(v);
+            DetermineConsumersForBackward(v);
         }
         f.m_pendingInputs = 0; // used as a visited flag
     }
@@ -897,11 +905,14 @@ public:
     {
         if (!root.m_dataFields->m_needsGradient)
             logic_error("Backward: cannot compute gradient for root with m_needsGradient being False.");
-        // BUGBUG: make sure some edge cases are done right: root.m_needsGradient=false; gradients contains root
+        // BUGBUG: make sure some edge cases are done right:
+        //  - root.m_needsGradient=false
+        //  - gradients contains root
+        //  - root is a m_lazyIndex
         // first get the forward computation, batching, etc. done if not yet
         GetValue(root);
         // set up the m_consumer fields, which Backward() will work off
-        TraverseFunctionTreeForwardForBackward(root); // (gotta improve the name of these things)
+        DetermineConsumersForBackward(root); // (gotta improve the name of these things)
         // BUGBUG: how to reset m_pendingInputs when there is no gradient on that path?
         // form ordered list of nodes to process
         // (traverse the graph from the bottom from the variables to get the gradients for)
