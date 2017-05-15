@@ -98,10 +98,13 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
+    data_path = os.path.join(par_abs_path, "..", "..", "DataSets","Pascal", "mappings")
+    parser.add_argument('-datadir', '--datadir', help='Data directory where the ImageNet dataset is located',required=False, default=data_path)
+    
     parser.add_argument('-images', '--images', help='File containing the images in ImageReader format',
-                        required=True)
+                        required=False, default=None)
     parser.add_argument('-gts', '--gts', help='File containing the bounding boxes and labels in CTF format',
-                        required=True)
+                        required=False, default=None)
     parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False,
                         default=None)
     parser.add_argument('-logdir', '--logdir', help='Log file', required=False, default=None)
@@ -140,9 +143,14 @@ if __name__ == '__main__':
 
         cntk.device.try_set_default_device(dev)
 
+    data_path = args['datadir']
     image_file = args['images']
     gt_file = args['gts']
-
+    if image_file is None or gt_file is None:
+        if not os.path.isdir(data_path):
+            raise RuntimeError("Directory %s does not exist" % data_path)
+        image_file = os.path.join(data_path, par_train_data_file)
+        gt_file = os.path.join(data_path, par_train_roi_file)
     output = None
 
     ####################################################################################################################
