@@ -652,7 +652,10 @@ class Memoize
             }
             else
             {
-                batchedOp = f0.shared_from_this(); // all inputs identical: compute it only once
+                // all inputs identical: compute it only once
+                batchedOp = Function::RawPrimitiveFunction(f0.Op(), vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), Dictionary(f0.Attributes()));
+                // TODO: the following is a little more efficient, but creates a cycle, so we should exclude the lazy index for the first op
+                //batchedOp = f0.shared_from_this();
             }
             // execute it
             MemoizeKnowableValueInArena(*batchedOp);
@@ -710,7 +713,7 @@ class Memoize
         else
         {
             // create new gradient
-#define NO_BATCHED_BACKPROP
+#undef NO_BATCHED_BACKPROP
 #ifndef NO_BATCHED_BACKPROP
             // if this op draws from a batched op, then the gradient lives in there as well; we return a view onto it
             if (fields.m_lazyIndex.first)
@@ -718,6 +721,8 @@ class Memoize
                 let& from  = fields.m_lazyIndex.first;
                 let  index = fields.m_lazyIndex.second;
                 let& fromOutput = from->m_outputs[0];
+                if (fromOutput.m_dataFields == v.m_dataFields)
+                    BreakPoint;
                 beta = LazilyCreateLazilyIndexedGradient(fromOutput);
                 let& fromGradient = fromOutput.m_dataFields->m_gradient;
                 if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
@@ -752,6 +757,7 @@ class Memoize
     void DetermineConsumersForBackward(const Variable& var)
     {
         auto& fields = *var.m_dataFields;
+        fields.m_visited = false; // we use this for backprop control  --TODO: consolidate these
 
         if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
             return; // reached a leaf
@@ -772,7 +778,6 @@ class Memoize
             auto& f = *fields.m_ownerFunction.lock();
             DetermineConsumersForBackward(f);
         }
-        fields.m_visited = false; // we use this for backprop control  --TODO: consolidate these
     }
     void DetermineConsumersForBackward(Function& f)
     {
@@ -791,7 +796,10 @@ class Memoize
         let& inputs = f.m_inputs;
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            let& input = inputs[i];
+            let* inputp = &inputs[i];
+            if (inputp->m_dataFields->m_lazyIndex.first)
+                inputp = &inputp->m_dataFields->m_lazyIndex.first->m_outputs[0];
+            let& input = *inputp;
             auto& fields = *input.m_dataFields;
             fields.m_visited = false; // TODO: clean this up
             if (!fields.m_needsGradient)
@@ -819,6 +827,7 @@ class Memoize
     __declspec(noinline) void BackwardFromAllConsumers(const Variable& var)
     {
         let& fields = *var.m_dataFields;
+        fail_if(!fields.m_needsGradient, "backprop into variable that does not need gradient");
         if (fields.m_visited)
             return;
         fields.m_visited = true;
@@ -828,13 +837,19 @@ class Memoize
         auto& c = fields.m_consumers.first;
         if (c.first)
         {
-            fail_if(c.first->m_inputs[c.second].m_dataFields != var.m_dataFields, "input is not the right variable??");
+            // (the following test would require the rediect through lazy indexc)
+            //fail_if(c.first->m_inputs[c.second].m_dataFields != var.m_dataFields, "input is not the right variable??");
             BackwardToOneInput(c.first, c.second);
         }
         for (auto& c : fields.m_consumers.second)
         {
-            fail_if(c.first->m_inputs[c.second].m_dataFields != var.m_dataFields, "input is not the right variable??");
+            //fail_if(c.first->m_inputs[c.second].m_dataFields != var.m_dataFields, "input is not the right variable??");
             BackwardToOneInput(c.first, c.second);
+        }
+        // perform the backprop operation
+        if (!fields.m_gradient)
+        {
+            BreakPoint;
         }
     }
     // second half of above function
@@ -847,6 +862,7 @@ class Memoize
         //fail_if(f->m_pendingInputs == -3, "unexpectedly encounted a cyclic graph");
         //f->m_pendingInputs = -3; // (mark for cycles, not really needed)
         // get all gradients incoming from consumer's consumers
+        // BUGBUG: can't do this, output of batched ops is not a real output, it has no consumer chain
         for (let& output : f->m_outputs)
             BackwardFromAllConsumers(output);
         // perform the backprop operation
@@ -855,8 +871,10 @@ class Memoize
             BreakPoint;
         }
         BackpropTo(f, index);
-        // mark as visited
-        //f->m_pendingInputs = -2;
+        if (!f->m_inputs[index].m_dataFields->m_gradient)
+        {
+            BreakPoint;
+        }
     }
 
     // back-propagate all outputs' m_gradients to all inputs
@@ -888,9 +906,9 @@ class Memoize
             m_outputGradientsBuffer.push_back(fields.m_gradient.get());
         }
         m_inputValuesBufferRaw.clear(); // input values
-        for (let& input : inputs)
+        for (let& input1 : inputs)
         {
-            let& fields = *input.m_dataFields;
+            let& fields = *input1.m_dataFields;
             fail_if(!fields.m_value, "unexpectedly ran into a function that has no m_value yet??");
             m_inputValuesBufferRaw.push_back(fields.m_value.get());
         }
