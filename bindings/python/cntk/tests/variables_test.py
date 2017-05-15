@@ -8,7 +8,8 @@
 Unit tests for Variable and its descendents.
 """
 
-from .. import times, placeholder, constant, plus, alias
+from .. import times, placeholder, constant, plus, alias,\
+    initializer
 import numpy as np
 import cntk as C
 import pytest
@@ -120,3 +121,18 @@ def test_getitem():
     with pytest.raises(ValueError):
         f = y[1:4:2]
         r = f.eval([np.array([[1, 2, 3, 4, 5]])])
+
+def test_initializer_scale():
+    # this should work fine:
+    p = C.Parameter(shape=(1,), init=initializer.uniform(1));
+    with pytest.raises(ValueError) as excinfo:
+        name = 'uniform_zero'
+        p = C.Parameter(shape=(1,), init=initializer.uniform(0), name=name);
+        assert 'CreateInitializer' in str(excinfo.value)
+        assert name in str(excinfo.value)
+
+    with pytest.raises(ValueError) as excinfo:
+        name = 'glorot_negative_one'
+        p = C.Parameter(shape=(1,), init=initializer.glorot_uniform(-1), name=name);
+        assert 'CreateInitializer' in str(excinfo.value)
+        assert name in str(excinfo.value)
