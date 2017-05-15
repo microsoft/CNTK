@@ -384,21 +384,23 @@ class Memoize
             return;
         // determine how many inputs are pending; and also recurse and set up the consumer list
         size_t pendingInputs = 0;
-        for (let& v : f.m_inputs)
+        let& inputs = f.m_inputs;
+        for (size_t i = 0; i < inputs.size(); i++)
         {
-            auto& fields = *v.m_dataFields;
+            let& input = inputs[i];
+            auto& fields = *input.m_dataFields;
             // recursively traverse
             if (!fields.m_value)
             {
-                TraverseFunctionTreeForward(v);
+                TraverseFunctionTreeForward(input);
                 if (!fields.m_value) // (in case of a Parameter, we now may have a value)
                 {
                     pendingInputs++;
                     // record ourselves as a consumer of the input
-                    if (!fields.m_consumers.first) // optimized for main case of 1 consumer. No std::vector in that case.
-                        fields.m_consumers.first = &f;
+                    if (!fields.m_consumers.first.first) // optimized for main case of 1 consumer. No std::vector in that case.
+                        fields.m_consumers.first = make_pair(&f, i); // note: we don't need i for forward; can optimize
                     else
-                        fields.m_consumers.second.push_back(&f);
+                        fields.m_consumers.second.push_back(make_pair(&f, i));
                 }
             }
         }
@@ -414,8 +416,7 @@ class Memoize
         auto& fields = *v.m_dataFields;
         if (fields.m_value)
             return fields.m_value;
-        if (!fields.m_lazyIndex.first)
-            LogicError("variable unexpectedly has no value yet");
+        fail_if(!fields.m_lazyIndex.first, "variable unexpectedly has no value yet, nor is it a slice view into a batched op");
         // the Function does not own its output, it is a slice view into another
         let& from = LazilyIndexedValue(fields.m_lazyIndex.first->m_outputs[0]);
         let index = fields.m_lazyIndex.second;
@@ -683,13 +684,13 @@ class Memoize
             {
                 // notify consumers
                 auto& fields = *output.m_dataFields;
-                auto* f = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
-                if (f)
-                    m_schedule.NotifyInputAvailable(f);
-                for (auto* f : fields.m_consumers.second) // all other consumers
-                    m_schedule.NotifyInputAvailable(f);
+                auto& c = fields.m_consumers.first; // first consumer (this is a special optimization to avoid a malloc in case of 1 consumer)
+                if (c.first)
+                    m_schedule.NotifyInputAvailable(c.first);
+                for (auto& c : fields.m_consumers.second) // all other consumers
+                    m_schedule.NotifyInputAvailable(c.first);
                 // clear consumer list (this operation is done)
-                fields.m_consumers.first = nullptr;
+                fields.m_consumers.first.first = nullptr;
                 fields.m_consumers.second.clear();
             }
         }
@@ -786,22 +787,25 @@ class Memoize
         f.m_pendingInputs = -2; // (temp value to detect cycles; not really needed)
 
         // determine how many inputs are pending; and also recurse and set up the consumer list
-        for (let& v : f.m_inputs)
+        let& inputs = f.m_inputs;
+        for (size_t i = 0; i < inputs.size(); i++)
         {
-            auto& fields = *v.m_dataFields;
+            let& input = inputs[i];
+            auto& fields = *input.m_dataFields;
             if (!fields.m_needsGradient)
                 continue; // skip inputs that receive no gradients
             // this input will receive a gradient; reset it (later, we *accumulate* into it since nodes can receive gradients from multiple consumers)
             // Note that Backward() returns shared_ptrs to the gradient values, so they won't get lost.
             // BUGBUG: (But they get reallocated over again, and will hold the entire arena!!) BUGBUG!
+            // BUGBUG: we must not kill the gradient buffers passed by the user
             fields.m_gradient.reset();
             // record ourselves as a consumer of the input
-            if (!fields.m_consumers.first)
-                fields.m_consumers.first = &f;
+            if (!fields.m_consumers.first.first)
+                fields.m_consumers.first = make_pair(&f, i);
             else
-                fields.m_consumers.second.push_back(&f);
+                fields.m_consumers.second.push_back(make_pair(&f, i));
             // now process recursively the inputs
-            DetermineConsumersForBackward(v);
+            DetermineConsumersForBackward(input);
         }
         f.m_pendingInputs = 0; // used as a visited flag
     }
@@ -814,16 +818,16 @@ class Memoize
     {
         let& fields = *var.m_dataFields;
         // have all consumers to push gradients from them into var
-        // TODO: do we need the index?
-        // TODO: additional optimization goes here
-        auto* f = fields.m_consumers.first;
-        if (f)
-            TraverseConsumerTreeBackward(f);
-        for (auto* f : fields.m_consumers.second)
-            TraverseConsumerTreeBackward(f);
+        // TODO: do we need the index? Answer is yes for batched backprop
+        // TODO: additional optimization goes here (GatherBatch, weight updates)
+        auto& c = fields.m_consumers.first;
+        if (c.first)
+            TraverseConsumerTreeBackward(c.first, c.second);
+        for (auto& c : fields.m_consumers.second)
+            TraverseConsumerTreeBackward(c.first, c.second);
     }
     // second half of this function
-    void TraverseConsumerTreeBackward(Function* f)
+    void TraverseConsumerTreeBackward(Function* f, size_t index)
     {
         // if we have already visited this Function (it's already in 'order') then done
         if (f->m_pendingInputs == -2)
@@ -833,8 +837,7 @@ class Memoize
         for (let& output : f->m_outputs)
             TraverseConsumerTreeBackward(output);
         // perform the backprop operation
-        // ...we really only want to push gradient into 'var'. Will that screw up the order?
-        BackpropToAllInputs(f);
+        BackpropTo(f, index);
         // mark as visited
         f->m_pendingInputs = -2;
     }
@@ -844,11 +847,16 @@ class Memoize
     vector<const NDArrayView*> m_outputValuesBuffer;
     vector<const NDArrayView*> m_outputGradientsBuffer;
     vector<const NDArrayView*> m_inputValuesBufferRaw;
-    void BackpropToAllInputs(Function* f)
+    void BackpropTo(Function* f, size_t index)
     {
-        let& outputs = f->m_outputs;
         let& inputs =  f->m_inputs;
+        auto& input = inputs[index];
+        auto& fields = *input.m_dataFields;
+        // BUGBUG: need to set up needsGradient flags based on what variables are selected
+        if (!fields.m_needsGradient)
+            return;
         // get the TensorViews for everything we may compute the gradient from
+        let& outputs = f->m_outputs;
         m_outputValuesBuffer.clear();
         m_outputGradientsBuffer.clear();
         for (let& output : outputs) // output values and gradients coming from consumer
@@ -869,27 +877,18 @@ class Memoize
             fail_if(!fields.m_value, "unexpectedly ran into a function that has no m_value yet??");
             m_inputValuesBufferRaw.push_back(fields.m_value.get());
         }
-        // compute gradients for all inputs
-        let numInputs = inputs.size();
-        for (size_t i = 0; i < numInputs; i++)
-        {
-            auto& input = inputs[i];
-            auto& fields = *input.m_dataFields;
-            // BUGBUG: need to set up needsGradient flags based on what variables are selected
-            if (!fields.m_needsGradient)
-                continue;
-            // get or create the desired gradient's TensorView
-            let beta = LazilyCreateLazilyIndexedGradient(input);
-            // backprop into the input
-            BackpropTo(m_outputGradientsBuffer, i, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferRaw, fields.m_gradient, beta);
-        }
+        // compute gradients for the desired input
+        // get or create the desired gradient's TensorView
+        let beta = LazilyCreateLazilyIndexedGradient(input);
+        // backprop into the input
+        CNTK::BackpropTo(m_outputGradientsBuffer, index, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferRaw, fields.m_gradient, beta);
     }
 
     // helper to verify that the tree is clean
     void AssertTreeStateGetValue(const Variable& v) const
     {
         let& fields = *v.m_dataFields;
-        if (fields.m_consumers.first || !fields.m_consumers.second.empty())
+        if (fields.m_consumers.first.first || !fields.m_consumers.second.empty())
             LogicError("AssertTreeStateGetValue: m_consumers should be empty");
         let owner = fields.m_ownerFunction.lock();
         if (owner)
@@ -982,7 +981,7 @@ public:
         {
             let& param = kv.first;
             let& fields = *param.m_dataFields;
-            if (!fields.m_consumers.first) // if no consumer entry, we did not reach this gradient
+            if (!fields.m_consumers.first.first) // if no consumer entry, we did not reach this gradient
                 logic_error("Backward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
             if (!fields.m_needsGradient) // (we could also just leafve the gradient 0)
                 logic_error("Backward: cannot compute gradient for variable with m_needsGradient being False.");
@@ -998,7 +997,7 @@ public:
         {
             let& param = kv.first;
             auto& fields = *param.m_dataFields;
-            fields.m_consumers.first = nullptr;
+            fields.m_consumers.first.first = nullptr;
             fields.m_consumers.second.clear();
         }
     }
