@@ -772,6 +772,7 @@ class Memoize
             auto& f = *fields.m_ownerFunction.lock();
             DetermineConsumersForBackward(f);
         }
+        fields.m_visited = false; // we use this for backprop control  --TODO: consolidate these
     }
     void DetermineConsumersForBackward(Function& f)
     {
@@ -792,6 +793,7 @@ class Memoize
         {
             let& input = inputs[i];
             auto& fields = *input.m_dataFields;
+            fields.m_visited = false; // TODO: clean this up
             if (!fields.m_needsGradient)
                 continue; // skip inputs that receive no gradients
             // this input will receive a gradient; reset it (later, we *accumulate* into it since nodes can receive gradients from multiple consumers)
@@ -810,36 +812,51 @@ class Memoize
         f.m_pendingInputs = 0; // used as a visited flag
     }
 
-    // form a traversal order by recursively process the tree *upwards* (through consumer chain)
+    // backprop gradient into 'var' by pulling all of its consumers (recursively)
     // This function assumes:
     //  - m_pendingInputs != -2
     //    BUGBUG: This is a bad one; what if users get a gradient and then continue to build on top?
-    __declspec(noinline) void TraverseConsumerTreeBackward(const Variable& var)
+    __declspec(noinline) void BackwardFromAllConsumers(const Variable& var)
     {
         let& fields = *var.m_dataFields;
+        if (fields.m_visited)
+            return;
+        fields.m_visited = true;
         // have all consumers to push gradients from them into var
         // TODO: do we need the index? Answer is yes for batched backprop
         // TODO: additional optimization goes here (GatherBatch, weight updates)
         auto& c = fields.m_consumers.first;
         if (c.first)
-            TraverseConsumerTreeBackward(c.first, c.second);
+        {
+            fail_if(c.first->m_inputs[c.second].m_dataFields != var.m_dataFields, "input is not the right variable??");
+            BackwardToOneInput(c.first, c.second);
+        }
         for (auto& c : fields.m_consumers.second)
-            TraverseConsumerTreeBackward(c.first, c.second);
+        {
+            fail_if(c.first->m_inputs[c.second].m_dataFields != var.m_dataFields, "input is not the right variable??");
+            BackwardToOneInput(c.first, c.second);
+        }
     }
-    // second half of this function
-    void TraverseConsumerTreeBackward(Function* f, size_t index)
+    // second half of above function
+    // Backprop from a consumer recursively into its n-th input.
+    void BackwardToOneInput(Function* f, size_t index)
     {
         // if we have already visited this Function (it's already in 'order') then done
-        if (f->m_pendingInputs == -2)
-            return;
-        fail_if(f->m_pendingInputs == -3, "unexpectedly encounted a cyclic graph");
-        f->m_pendingInputs = -3; // (mark for cycles, not really needed)
+        //if (f->m_pendingInputs == -2)
+        //    return;
+        //fail_if(f->m_pendingInputs == -3, "unexpectedly encounted a cyclic graph");
+        //f->m_pendingInputs = -3; // (mark for cycles, not really needed)
+        // get all gradients incoming from consumer's consumers
         for (let& output : f->m_outputs)
-            TraverseConsumerTreeBackward(output);
+            BackwardFromAllConsumers(output);
         // perform the backprop operation
+        if (!f->m_outputs[0].m_dataFields->m_gradient)
+        {
+            BreakPoint;
+        }
         BackpropTo(f, index);
         // mark as visited
-        f->m_pendingInputs = -2;
+        //f->m_pendingInputs = -2;
     }
 
     // back-propagate all outputs' m_gradients to all inputs
@@ -985,7 +1002,7 @@ public:
                 logic_error("Backward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
             if (!fields.m_needsGradient) // (we could also just leafve the gradient 0)
                 logic_error("Backward: cannot compute gradient for variable with m_needsGradient being False.");
-            TraverseConsumerTreeBackward(param);
+            BackwardFromAllConsumers(param);
         }
         //fprintf(stderr, "Back-propagated through %d functions\n", (int)order.size());
         // implant the results into the map the user passed in
