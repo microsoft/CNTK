@@ -140,6 +140,32 @@ class Memoize
     //     - Splice() for each of the N inputs
     // 'free' ops are always batched together and get executed first
 
+    // allocate a new tensor in a large arena
+    // TODO: move this function up since it is ahred between fo2ward and backward
+    //NDArrayViewPtr m_currentArena;
+    //size_t m_currentArenaUsed;
+    static const size_t ARENASIZE = 64000000; // we allocate in this chunk size
+    NDArrayViewPtr AllocateTensorInArena(const NDShape& shape, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
+    {
+        static NDArrayViewPtr m_currentArena; // for now static so that it carries over across invocations, to save the allocation
+        static size_t m_currentArenaUsed;
+        let numElements = shape.TotalSize();
+        // if too large then plain alloc
+        if (numElements > ARENASIZE)
+            return make_shared<NDArrayView>(dataType, CNTK::StorageFormat::Dense, shape, device);
+        // if arena not large enough then waste its remainder and just allocate a fresh one
+        if (!m_currentArena || numElements > (ARENASIZE - m_currentArenaUsed))
+        {
+            m_currentArena = make_shared<NDArrayView>(dataType, CNTK::StorageFormat::Dense, NDShape{ ARENASIZE }, device);
+            m_currentArenaUsed = 0;
+        }
+        vector<size_t> startOffset{ m_currentArenaUsed };
+        vector<size_t> extent{ numElements };
+        NDArrayViewPtr region = m_currentArena->SliceView(startOffset, extent);
+        m_currentArenaUsed += numElements;
+        return region->AsShape(shape);
+    }
+
     // predicate whether an op is only taking a view on its input
     // These are considered zero-cost, always batched whole-sale, and always done first.
     static bool IsViewOp(PrimitiveOpType op)
@@ -378,32 +404,6 @@ class Memoize
         // if none then operation is ready
         if (pendingInputs == 0)
             m_schedule.Schedule(&f); // add to ready set
-    }
-
-    // allocate a new tensor in a large arena
-    // TODO: move this function up since it is ahred between fo2ward and backward
-    //NDArrayViewPtr m_currentArena;
-    //size_t m_currentArenaUsed;
-    static const size_t ARENASIZE = 64000000; // we allocate in this chunk size
-    NDArrayViewPtr AllocateTensorInArena(const NDShape& shape, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
-    {
-        static NDArrayViewPtr m_currentArena; // for now static so that it carries over across invocations, to save the allocation
-        static size_t m_currentArenaUsed;
-        let numElements = shape.TotalSize();
-        // if too large then plain alloc
-        if (numElements > ARENASIZE)
-            return make_shared<NDArrayView>(dataType, CNTK::StorageFormat::Dense, shape, device);
-        // if arena not large enough then waste its remainder and just allocate a fresh one
-        if (!m_currentArena || numElements > (ARENASIZE - m_currentArenaUsed))
-        {
-            m_currentArena = make_shared<NDArrayView>(dataType, CNTK::StorageFormat::Dense, NDShape{ ARENASIZE }, device);
-            m_currentArenaUsed = 0;
-        }
-        vector<size_t> startOffset{ m_currentArenaUsed };
-        vector<size_t> extent{ numElements };
-        NDArrayViewPtr region = m_currentArena->SliceView(startOffset, extent);
-        m_currentArenaUsed += numElements;
-        return region->AsShape(shape);
     }
 
     // return the m_value field of a variable, but possibly realizing it lazily if it is an index operation
