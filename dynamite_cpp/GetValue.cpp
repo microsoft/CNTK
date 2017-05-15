@@ -588,7 +588,10 @@ class Memoize
                 if (allSame) // optimized case: all ops share the same operand: no need to batch them
                     // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
                     m_batchedInputs[i] = spliceInputs[0];
-                else if (allConsecutiveSlices) // they are consecutive: can short-circuit as a slice view
+                else
+#endif
+#if 0 // this fails after 4 minibatches with an A/V
+                if (allConsecutiveSlices) // they are consecutive: can short-circuit as a slice view
                 {
                     let& from  = lazyIndex0.first;
                     let  begin = lazyIndex0.second;
