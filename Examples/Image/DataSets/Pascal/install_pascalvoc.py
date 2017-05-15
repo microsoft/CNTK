@@ -9,6 +9,7 @@ import os
 import os.path
 import tarfile
 import zipfile
+import urllib
 try: 
     from urllib.request import urlretrieve 
 except ImportError: 

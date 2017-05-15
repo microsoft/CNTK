@@ -48,6 +48,17 @@ elif(par_dataset_name == "Pascal_VOC_2007"):
     par_num_images = 500
     par_epoch_size = 5011
 
+elif par_dataset_name == "Logo158":
+    par_minibatch_size = 64
+    par_image_width = 224
+    par_image_height = 224
+    par_input_bias = 114
+    par_num_channels = 3
+    par_num_classes = 158
+    par_num_images = 500
+    par_epoch_size = 4278
+    par_max_gtbs = 52
+
 par_anchorbox_scales =  [[1.08/13, 1.19/13],
                          [3.42/13, 4.41/13],
                          [6.63/13, 11.38/13],
