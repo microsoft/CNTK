@@ -14,7 +14,6 @@ from cntk.io import FULL_DATA_SWEEP
 from cntk import *
 from cntk import leaky_relu, reshape, softmax, param_relu, relu, user_function
 from cntk.logging import ProgressPrinter
-from cntk.train.distributed import Communicator
 
 import YOLOv2 as yolo2
 from TrainUDFyolov2 import *
@@ -78,7 +77,9 @@ def yolov2_train_and_eval(network, image_file, gtb_file, num_quantization_bits=3
     _cntk_py.set_computation_network_trace_level(0)
 
     progress_printer = ProgressPrinter(
-        freq=num_mbs_per_log if num_mbs_per_log is not None else int(epoch_size/10),
+        #freq=num_mbs_per_log if num_mbs_per_log is not None else int(epoch_size/10),
+        freq=100,
+        first=10,
         tag='Training',
         log_to_file=log_to_file,
         rank=Communicator.rank(),
@@ -97,11 +98,10 @@ def yolov2_train_and_eval(network, image_file, gtb_file, num_quantization_bits=3
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
+    data_path = os.path.join(par_abs_path, "..", "..", "DataSets","Pascal", "mappings")
 
-    parser.add_argument('-images', '--images', help='File containing the images in ImageReader format',
-                        required=True)
-    parser.add_argument('-gts', '--gts', help='File containing the bounding boxes and labels in CTF format',
-                        required=True)
+    parser.add_argument('-datadir', '--datadir', help='Data directory where the ImageNet dataset is located',
+                        required=False, default=data_path)
     parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False,
                         default=None)
     parser.add_argument('-logdir', '--logdir', help='Log file', required=False, default=None)
@@ -114,7 +114,10 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--restart',
                         help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)',
                         action='store_true')
-    parser.add_argument('-d', '--devices', type=str, help="Specifies the devices for the individual workers. Negative numbers: CPU. Positive numbers: GPU Id.",
+    parser.add_argument('-device', '--device', type=int, help="Force to run the script on a specified device",
+                        required=False, default=None)
+    parser.add_argument('-d', '--devices', type=str,
+                        help="Specifies the devices for the individual workers. Negative numbers: CPU. Positive numbers: GPU Id.",
                         required=False, default=None)
     parser.add_argument('-b', '--block_samples', type=int,
                         help="Number of samples per block for block momentum (BM) distributed learner (if 0 BM learner is not used)",
@@ -130,18 +133,29 @@ if __name__ == '__main__':
         model_path = args['outputdir'] + "/models"
     if args['logdir'] is not None:
         log_dir = args['logdir']
+    if args['device'] is not None:
+        # Setting one worker on GPU and one worker on CPU. Otherwise memory consumption is too high for a single GPU.
+        if Communicator.rank() == 0:
+            cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
+        else:
+            cntk.device.try_set_default_device(cntk.device.cpu())
     if args['devices'] is not None:
         # Setting one worker on GPU and one worker on CPU. Otherwise memory consumption is too high for a single GPU.
         dev = [int(d) for d in args['devices'].split(',')][Communicator.rank()]
-        if dev>=0:
+        if dev >= 0:
             dev = cntk.device.gpu(dev)
         else:
             dev = cntk.device.cpu()
 
         cntk.device.try_set_default_device(dev)
 
-    image_file = args['images']
-    gt_file = args['gts']
+    data_path = args['datadir']
+    #data_path = r"D:\DataSets\Logo158"
+    if not os.path.isdir(data_path):
+        raise RuntimeError("Directory %s does not exist" % data_path)
+
+    train_data = os.path.join(data_path, par_train_data_file)
+    roi_data = os.path.join(data_path, par_train_roi_file)
 
     output = None
 
@@ -173,7 +187,7 @@ if __name__ == '__main__':
         logdir = args['logdir']
         nr_of_epoch = args['num_epochs']
 
-        output = yolov2_train_and_eval(network, image_file, gt_file,
+        output = yolov2_train_and_eval(network, train_data, roi_data,
                                        max_epochs=nr_of_epoch,
                                        restore=not args['restart'],
                                        log_to_file=logdir,
@@ -186,7 +200,7 @@ if __name__ == '__main__':
                                        gen_heartbeat=True)
 
     finally:
-        Communicator.finalize()
+        cntk.train.distributed.Communicator.finalize()
         print("Training finished!")
 
     if output is not None and output_dir is not None:

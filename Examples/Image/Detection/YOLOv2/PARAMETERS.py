@@ -13,9 +13,11 @@ par_dataset_name = "Pascal_VOC_2007"
 par_trainset_label_file = "train_map.txt"
 par_testset_label_file = "test_map.txt"
 par_abs_path = os.path.dirname(os.path.abspath(__file__))
-par_max_epochs = 3
+par_max_epochs = 10
 par_downsample = 32
-par_max_gtbs = 50
+
+
+par_dense_size = 1024
 
 if(par_dataset_name == "CIFAR10"):
     par_image_height = 416 # 32*3  # Darknet19 scales input image down over all by a factor of 32. \\
@@ -39,36 +41,47 @@ elif(par_dataset_name == "ImageNet50k"):
     par_minibatch_size = 24
 
 elif(par_dataset_name == "Pascal_VOC_2007"):
-    par_minibatch_size = 256#64
-    par_image_width = 224
-    par_image_height = 224
-    par_input_bias = 114
-    par_num_channels = 3
-    par_num_classes = 20
-    par_num_images = 500
-    par_epoch_size = 5011
+    par_minibatch_size = 128    # minibatch size
+    par_image_width = 416       # width the image is scaled to
+    par_image_height = 416      # height the image is scaled to
+    par_input_bias = 114        # average input value
+    par_num_channels = 3        # nr of color-channels of the input
+    par_num_classes = 20        # nr of classes displayed
+    par_epoch_size = 5011       # nr of input images
+    par_max_gtbs = 50
+    par_train_data_file = 'trainval2007.txt'
+    par_train_roi_file = 'trainval2007_rois_center_rel.txt'
 
-elif par_dataset_name == "Logo158":
-    par_minibatch_size = 64
-    par_image_width = 224
-    par_image_height = 224
-    par_input_bias = 114
-    par_num_channels = 3
-    par_num_classes = 158
-    par_num_images = 500
-    par_epoch_size = 4278
+
+elif(par_dataset_name == "Logos158"):
+    par_minibatch_size = 128    # minibatch size
+    par_image_width = 416       # width the image is scaled to
+    par_image_height = 416      # height the image is scaled to
+    par_input_bias = 114        # average input value
+    par_num_channels = 3        # nr of color-channels of the input
+    par_num_classes = 158        # nr of classes displayed
+    par_epoch_size = 4278       # nr of input images
     par_max_gtbs = 52
+    par_train_data_file = 'logo_v5_img.txt'
+    par_train_roi_file = 'logo_v5_gts.txt'
 
-par_anchorbox_scales =  [[1.08/13, 1.19/13],
+
+par_anchorbox_scales =  [[1.08/13, 1.19/13], # priors [width, height] for the box predictions
                          [3.42/13, 4.41/13],
                          [6.63/13, 11.38/13],
                          [9.42/13, 5.11/13],
                          [16.62/13, 10.52/13]]
 par_num_anchorboxes = len(par_anchorbox_scales)
 
-par_base_lr = 0.001
-par_lr_schedule = [par_base_lr*10] * 5 + [par_base_lr] * 60+ [par_base_lr*0.1] * 30 + [par_base_lr*0.01]
+par_lamda_coord = 5
+par_lamda_no_obj = 0.5
+
+# apply custom learning rate here
+par_base_lr = 0.0001
+par_lr_schedule = [par_base_lr*10] * 5 + [par_base_lr] * 60+ [par_base_lr*0.1] * 30 + [par_base_lr*0.01]*60 + [par_base_lr*0.001]
 par_momentum = 0.9
+
+
 
 
 
