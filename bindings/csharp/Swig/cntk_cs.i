@@ -132,7 +132,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Negate;
 %ignore_function CNTK::operator-;
 %ignore_function CNTK::Sigmoid;
-%ignore_function CNTK::Sigmoid2;
 %ignore_function CNTK::Tanh;
 %ignore_function CNTK::Sin;
 %ignore_function CNTK::Cos;

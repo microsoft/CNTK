@@ -337,7 +337,7 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::UnpackSequence) == 72 &&
                   static_cast<size_t>(PrimitiveOpType::Assign) == 73 &&
                   static_cast<size_t>(PrimitiveOpType::Gather) == 74 &&
-                  static_cast<size_t>(PrimitiveOpType::Sigmoid2) == 75,
+                  static_cast<size_t>(PrimitiveOpType::SafeSigmoid) == 75,
                   "PrimitiveOpType enum value was modified.");
 }
 
