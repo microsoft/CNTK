@@ -925,12 +925,6 @@ namespace CNTK
         return CompositeFunction::Deserialize(modelDictionary, device);
     }
 
-    void Function::PrintGraph() const
-    {
-        CompositeFunction::PreorderTraverseFunctions(RootFunction(), [](const FunctionPtr& function) {
-        });
-    }
-
     std::wstring Function::AsString(bool doNotInferOutputs) const
     {
         wstringstream wss;

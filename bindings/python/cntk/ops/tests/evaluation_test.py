@@ -85,3 +85,25 @@ def test_input_without_dynamic_axes():
     assert np.allclose(eval_result, [3.006, 2.992])
     assert np.allclose(grad_result, [.01, .01])
 
+
+def test_grad_after_eval():
+    x = C.input_variable((C.FreeDimension, 2))
+    w = C.parameter(init=np.asarray([[2, 5], [1, 3]], dtype=np.float32))
+    t = C.times(x, w)
+
+    x_data = np.asarray([[0.5, 0.2]], np.float32)
+    t_val = t.eval({x : x_data})
+    assert np.array_equal(t_val, np.asarray([[[1.2, 3.1]]], dtype=np.float32))
+
+    w_grad, t_val = t.grad({x : x_data}, wrt=[w], outputs=[t])
+    assert np.array_equal(t_val, np.asarray([[[1.2, 3.1]]], dtype=np.float32))
+    assert np.array_equal(w_grad, np.asarray([[0.5, .5], [.2, .2]], dtype=np.float32))
+
+    x_data = np.asarray([[0.5, 0.2], [0.1, .6]], np.float32)
+    t_val = t.eval({x : x_data})
+    assert np.allclose(t_val, np.asarray([[[1.2, 3.1], [0.8, 2.3]]], dtype=np.float32))
+
+    w_grad, t_val = t.grad({x : x_data}, wrt=[w], outputs=[t])
+    assert np.allclose(t_val, np.asarray([[[1.2, 3.1], [0.8, 2.3]]], dtype=np.float32))
+    assert np.array_equal(w_grad, np.asarray([[0.6, .6], [.8, .8]], dtype=np.float32))
+    
