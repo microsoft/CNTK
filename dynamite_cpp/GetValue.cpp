@@ -569,6 +569,8 @@ class Memoize
                 let& lazyIndex0 = pfields0->m_lazyIndex; // for 'allConsecutiveSlices' test
                 let is0LazyIndex = (bool)lazyIndex0.first;
                 // loop over all batched ops
+                // BUGBUG: How about NoOp? (used for Barrier) Also Alias and Reshape actually
+                //         Seems if we can carry on a bacth, we should run them once; otherwise don't batch.
                 bool allSame = true;
                 bool allConsecutiveSlices = is0LazyIndex && lazyIndex0.second != SIZE_MAX; // to be consecutive, it must be a slice to start with
                 size_t j = 0;
@@ -605,7 +607,7 @@ class Memoize
                     // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
                     m_batchedInputs[i] = spliceInputs[0];
                 else
-#if 0 // this fails after 4 minibatches with an A/V
+#if 1 // this fails after 4 minibatches with an A/V
                 if (allConsecutiveSlices) // they are consecutive: can short-circuit as a slice view
                 {
                     let& from  = lazyIndex0.first;
