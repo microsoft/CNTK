@@ -24,7 +24,9 @@ using namespace std;
 
 namespace CNTK
 {
-// perform back propagation   --TODO: this does not belong into this namespace
+// perform back propagation
+// Gradient must have been allocated to the correct shape already.
+// If beta == 0 then gradient can be uninitialized memory.
 static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t i,
                         PrimitiveOpType primitiveOp, const Dictionary& attributes,
                         const vector<const NDArrayView*>& outputValues, const vector<const NDArrayView*>& inputValues,
@@ -54,13 +56,13 @@ static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t
     case PrimitiveOpType::TransposeTimes:
         arg2 = inputValues[1 - i];
         if (i == 0) // left input
-            gradient->MatrixProduct(/*transC=*/primitiveOp == PrimitiveOpType::TransposeTimes,
-                                    { const_cast<NDArrayView*>(arg1)->shared_from_this() }, /*transA=*/false,
-                                    { const_cast<NDArrayView*>(arg2)->shared_from_this() }, /*transB=*/true, alpha, 0, gradient, beta);
+            NDArrayView::MatrixProduct(/*transC=*/primitiveOp == PrimitiveOpType::TransposeTimes,
+                                      { const_cast<NDArrayView*>(arg1)->shared_from_this() }, /*transA=*/false,
+                                      { const_cast<NDArrayView*>(arg2)->shared_from_this() }, /*transB=*/true, alpha, 0, gradient, beta);
         else // right input
-            gradient->MatrixProduct(/*transC=*/false,
-                                    { const_cast<NDArrayView*>(arg2)->shared_from_this() }, /*transA=*/primitiveOp != PrimitiveOpType::TransposeTimes,
-                                    { const_cast<NDArrayView*>(arg1)->shared_from_this() }, /*transB=*/false, alpha, 0, gradient, beta);
+            NDArrayView::MatrixProduct(/*transC=*/false,
+                                      { const_cast<NDArrayView*>(arg2)->shared_from_this() }, /*transA=*/primitiveOp != PrimitiveOpType::TransposeTimes,
+                                      { const_cast<NDArrayView*>(arg1)->shared_from_this() }, /*transB=*/false, alpha, 0, gradient, beta);
         break;
         // unary operations with simple TensorView implementation
     case PrimitiveOpType::ReLU:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithLinearRectifierDerivativeFromOutput; arg2 = outputValues[0]; break;
@@ -75,11 +77,12 @@ static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t
             if (reductionOpName == L"Sum"/*PrimitiveFunction::InternalSumReductionOpName*/) // TODO: uncomment these symbols once we have access
                 op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
             else if (reductionOpName == L"LogSum"/*PrimitiveFunction::InternalLogSumReductionOpName*/)
-                gradient->NumericOperation({ const_cast<NDArrayView*>(outputGradients[0])->shared_from_this(),
+                NDArrayView::NumericOperation({ const_cast<NDArrayView*>(outputGradients[0])->shared_from_this(),
                                                 const_cast<NDArrayView*>(    inputValues[0])->shared_from_this(),
-                                                const_cast<NDArrayView*>(   outputValues[0])->shared_from_this() },
-                                            alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithExpOfDiff,
-                                            gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                                                const_cast<NDArrayView*>(   outputValues[0])->shared_from_this() }, alpha,
+                                              Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithExpOfDiff,
+                                              gradient, beta,
+                                              Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
             else
                 //  PrimitiveFunction::InternalMeanReductionOpName
                 //  PrimitiveFunction::InternalMaxReductionOpName
@@ -94,8 +97,31 @@ static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t
             auto axis = attributes[L"axis"/*PrimitiveFunction::AttributeNameAxis*/].Value<Axis>();
             if (axis.StaticAxisIndex() != arg1->Shape().Rank() -1)
                 LogicError("NDArrayView::GatherBatch: Currently only splicing in a new slowest-changing axis is supported.");
-            gradient->NumericOperation({ arg1->IndexLastAxis(i) },
-                                        alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+            NDArrayView::NumericOperation({ arg1->IndexLastAxis(i) }, alpha,
+                                          Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta,
+                                          Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+        }
+        break;
+    case PrimitiveOpType::Slice:
+        {
+            auto axis       = attributes[L"axis"      /*PrimitiveFunction::AttributeNameAxis*/      ].Value<Axis>();
+            auto beginIndex = attributes[L"beginIndex"/*PrimitiveFunction::AttributeNameBeginIndex*/].Value<int>();
+            auto endIndex   = attributes[L"endIndex"  /*PrimitiveFunction::AttributeNameEndIndex*/  ].Value<int>();
+            auto extent = gradient->Shape().Dimensions();
+            auto startOffset = vector<size_t>(extent.size(), 0);
+            auto axisIndex = axis.StaticAxisIndex();
+            if (startOffset[axisIndex] != beginIndex || extent[axisIndex] != endIndex - beginIndex)
+            {
+                if (beta == 0) // if beta = 0 then we must explicitly initialize the entire gradient matrix, not just the slice
+                    gradient->SetValue(0.0f);
+                startOffset[axisIndex] = beginIndex;
+                extent[axisIndex] = endIndex - beginIndex;
+                NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,
+                                              Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient->SliceView(startOffset, extent), beta,
+                                              Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+            }
+            else
+                op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; // full slice actually: just copy (like a NoOp)
         }
         break;
     default:
@@ -106,11 +132,13 @@ static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t
     // the simple TensorView operations are performed out here
     // TODO: we can eliminate the vector<> by passing a std::function, possibly?
     if (op1Arg != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
-        gradient->NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() },
-                                    alpha, op1Arg, gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+        NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() }, alpha,
+                                      op1Arg, gradient, beta,
+                                      Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
     else if (op2Args != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
-        gradient->NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(), const_cast<NDArrayView*>(arg2)->shared_from_this() },
-                                    alpha, op2Args, gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+        NDArrayView::NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(), const_cast<NDArrayView*>(arg2)->shared_from_this() }, alpha,
+                                      op2Args, gradient, beta,
+                                      Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
 }
 
 class Memoize
@@ -442,12 +470,9 @@ class Memoize
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
-        auto outValue = isFree ? nullptr : AllocateTensorInArena(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
-        // execute it
-        output.m_dataFields->m_value = move(f.ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue)));
-        // log
-#if 0
-        fprintf(stderr, "%S%S = %S(", f.Uid().c_str(), output.Shape().AsString().c_str(), f.OpName().c_str());
+        // logging
+#if 1
+        fprintf(stderr, "%S%S = %S(", f.Uid().c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
         for (size_t i = 0; i < inputs.size() && i < 4; i++)
         {
             let& input = inputs[i];
@@ -464,6 +489,9 @@ class Memoize
             fprintf(stderr, ", +%d", (int)(inputs.size() - 4));
         fprintf(stderr, ")\n");
 #endif
+        auto outValue = isFree ? nullptr : AllocateTensorInArena(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
+        // execute it
+        output.m_dataFields->m_value = move(f.ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue)));
         return output;
     }
 
@@ -629,7 +657,8 @@ class Memoize
                         additionalProperties[L"axis"      /*PrimitiveFunction::AttributeNameAxis*/      ] = Axis((int)axis);
                         additionalProperties[L"beginIndex"/*PrimitiveFunction::AttributeNameBeginIndex*/] = (int)begin;
                         additionalProperties[L"endIndex"  /*PrimitiveFunction::AttributeNameEndIndex*/  ] = (int)(begin + j);
-                        let spliceOp = Function::RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ f0.m_inputs[i] }, outputShape, move(additionalProperties));
+                        let spliceOp = Function::RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape, move(additionalProperties));
+                        spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
                         // and execute it
                         let& output = MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/true);
                         // and that's our input to the batched operation
