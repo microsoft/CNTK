@@ -341,7 +341,7 @@ namespace CNTK
                         case PrimitiveOpType::Cos:
                         case PrimitiveOpType::Pass:
                         case PrimitiveOpType::LabelsToGraph:
-                        case PrimitiveOpType::StopGradient:
+                        case PrimitiveOpType::StopGradient: // BUGBUG: StopGradient should also set m_needsGradient
                         case PrimitiveOpType::ELU:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());

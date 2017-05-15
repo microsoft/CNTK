@@ -38,7 +38,8 @@ namespace CNTK
 
         // computation
         std::atomic<size_t> m_valueTimeStamp;
-        std::pair<Function*, std::vector<Function*>> m_consumers;
+        std::pair<std::pair<Function*,size_t>, std::vector<std::pair<Function*, size_t>>> m_consumers;
+        mutable bool m_visited;
 
         // lazy initialization
         std::unique_ptr<std::once_flag> m_initValueFlag;
