@@ -335,6 +335,38 @@ class Memoize
         return fields.m_value;
     }
 
+    // return the m_gradient field of a variable, but possibly realizing it lazily if it is an index operation
+    // and lazily create the NDArrayView
+    pair<NDArrayViewPtr, double> LazilyIndexedGradientRef(const Variable& v, bool lazy = false)
+    {
+        auto& fields = *v.m_dataFields;
+#if 0
+        if (fields.m_lazyIndex.first)
+        {
+            let& fromFunction = fields.m_lazyIndex.first;
+            let  index        = fields.m_lazyIndex.second;
+            let fromGradientAndBeta = LazilyIndexedGradientRef(fromFunction->m_inputs[0], lazy);
+            let& fromGradient = fromGradientAndBeta.first;
+            let  beta         = fromGradientAndBeta.second;
+            if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
+                return make_pair(fromGradient, beta);
+            else
+            {
+                if (beta == 0) // gradient is fresh: explicitly reset all (since we are slicing into the input gradientm, we cannot use the beta mechanism)
+                    fromGradient->SetValue(0.0f);
+                return make_pair(fromGradient->IndexLastAxis(index), 1.0);
+            }
+        }
+#endif
+        // return existing m_gradient, or create a new one if needed
+        if (fields.m_gradient)
+            return make_pair(fields.m_gradient, 1.0);
+        fail_if(!lazy, "gradient unexpectedly not available");
+        // TODO: allocate parameters as separate objects; and allow user to pass buffers in
+        fields.m_gradient = AllocateTensorInArena(fields.m_shape, fields.m_dataType, fields.m_value->Device());
+        return make_pair(fields.m_gradient, 0.0);
+    }
+
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
     vector<NDArrayViewPtr> m_inputValuesBuffer; // Use a buffer for this that does not get destructed, to reuse the memory allocation.
     const Variable& MemoizeKnowableValueInArena(Function& f, bool isFree = false)
@@ -620,12 +652,14 @@ class Memoize
         fail_if(!fields.m_needsGradient, "unexpectedly encountered a node with m_needsGradient=false??");
         fail_if(fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder, "unexpectedly encountered an Input or a Placeholder??");
 
+#if 0   // disable this to backprop through unbatched ops
         if(fields.m_lazyIndex.first)
         {
             auto& f = *fields.m_lazyIndex.first;
             DetermineConsumersForBackward(f);
         }
         else
+#endif
         {
             auto& f = *fields.m_ownerFunction.lock();
             DetermineConsumersForBackward(f);
@@ -669,12 +703,9 @@ class Memoize
     // This function assumes:
     //  - m_pendingInputs != -2
     //    BUGBUG: This is a bad one; what if users get a gradient and then continue to build on top?
-    void TraverseFunctionTreeBackward(const Variable& var, NonOwningFunctionListBuilder& order)
+    __declspec(noinline) void TraverseFunctionTreeBackward(const Variable& var, NonOwningFunctionListBuilder& order)
     {
         let& fields = *var.m_dataFields;
-        // if already has a gradient (from an earlier call), then skip this branch of the tree
-        if (fields.m_gradient)
-            return; // will not be recorded in the nodes list
         // traverse all consumers
         auto* f = fields.m_consumers.first;
         if (f)
@@ -682,27 +713,27 @@ class Memoize
         for (auto* f : fields.m_consumers.second)
             TraverseFunctionTreeBackward(f, order);
     }
-    // seond half of this function
+    // second half of this function
     void TraverseFunctionTreeBackward(Function* f, NonOwningFunctionListBuilder& order)
     {
         // if we have already visited this Function (it's already in 'order') then done
         if (f->m_pendingInputs == -2)
             return;
-        // mark as visited
-        // Note: If users call Backward() multiple times (e.g. for different variables),
-        // and this branch of the graph has already been processed then, then we will have
-        // a -2 here but also a gradient, therefore we will not reach this test here.
-        f->m_pendingInputs = -2;
+        fail_if(f->m_pendingInputs == -3, "unexpectedly encounted a cyclic graph");
+        f->m_pendingInputs = -3; // (mark for cycles, not really needed)
         // and recursively traverse the inputs
         for (let& output : f->m_outputs)
             TraverseFunctionTreeBackward(output, order);
         // enqueue ourselves
         // Add to the end of the queue *after* we recurse (we do "height" first traversal).
         // Needed because this is called multiple times for multiple roots, and those have to go to the end.
-        order.push_back(f);
+        BackpropToInputs(f);
+        //order.push_back(f);
+        // mark as visited
+        f->m_pendingInputs = -2;
     }
 
-    // perform back propagation
+    // perform back propagation   --TODO: this does not belong into this namespace
     static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t i,
                            PrimitiveOpType primitiveOp, const Dictionary& attributes,
                            const vector<const NDArrayView*>& outputValues, const vector<const NDArrayView*>& inputValues,
@@ -806,10 +837,8 @@ class Memoize
         for (let& output : outputs) // output values and gradients coming from consumer
         {
             let& fields = *output.m_dataFields;
-            if (!fields.m_gradient)
-                LogicError("BackpropToInputs: gradient from consumer unexpectedly unavailable");
             m_outputValuesBuffer   .push_back(LazilyIndexedValue(output).get());
-            m_outputGradientsBuffer.push_back(fields.m_gradient.get());
+            m_outputGradientsBuffer.push_back(LazilyIndexedGradientRef(output).first.get());
         }
         m_inputValuesBufferRaw.clear(); // input values
         for (let& input : inputs)
@@ -824,18 +853,11 @@ class Memoize
             if (!fields.m_needsGradient)
                 continue;
             // get or create the desired gradient's TensorView
-            auto inputGradient = fields.m_gradient;
-            let isFirst = !inputGradient;
-            if (isFirst) // first time: allocate the gradient memory
-            {
-                // TODO: allocate them as separate objects; and allow user to pass buffers in
-                inputGradient = AllocateTensorInArena(input.Shape(), input.GetDataType(), input.Value()->Device());
-            }
-            double beta = isFirst ? 0 : 1;
+            auto inputGradientAndBeta = LazilyIndexedGradientRef(input, true);
+            let& inputGradient = inputGradientAndBeta.first;
+            let  beta          = inputGradientAndBeta.second;
             // backprop into the input
             BackpropTo(m_outputGradientsBuffer, i, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferRaw, inputGradient, beta);
-            if (isFirst)
-                fields.m_gradient = inputGradient;
         }
     }
 
@@ -913,6 +935,21 @@ public:
         GetValue(root);
         // set up the m_consumer fields, which Backward() will work off
         DetermineConsumersForBackward(root); // (gotta improve the name of these things)
+        // implant the first gradient
+        // TODO: allow user to pass in the starting value
+        // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
+        //if (root.Value()->Shape() != NDShape{})
+        //    LogicError("Backward: root must be a scalar, or root gradient must have been implanted already");
+        root.m_dataFields->m_gradient = AllocateTensorInArena(root.Shape(), root.GetDataType(), root.Value()->Device());
+        root.m_dataFields->m_gradient->SetValue(1.0f);
+        // if user passed NDArrayViewPtrs for the gradients, then keep using them
+        // This way, the same buffers can be recycled.
+        for (auto& kv : gradients)
+        {
+            if (kv.second)
+                kv.second->SetValue(0.0f); // BUGBUG: inefficient; better reset to 0 lazily
+            kv.first.m_dataFields->m_gradient = kv.second; // (if null then these will be set inside)
+        }
         // BUGBUG: how to reset m_pendingInputs when there is no gradient on that path?
         // form ordered list of nodes to process
         // (traverse the graph from the bottom from the variables to get the gradients for)
@@ -927,21 +964,16 @@ public:
                 logic_error("Backward: cannot compute gradient for variable with m_needsGradient being False.");
             TraverseFunctionTreeBackward(param, order);
         }
-        // implant the first gradient
-        // TODO: allow user to pass in the starting value
-        // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
-        //if (root.Value()->Shape() != NDShape{})
-        //    LogicError("Backward: root must be a scalar, or root gradient must have been implanted already");
-        root.m_dataFields->m_gradient = AllocateTensorInArena(root.Shape(), root.GetDataType(), root.Value()->Device());
-        root.m_dataFields->m_gradient->SetValue(1.0f);
         // perform backprop
         // This traverses the tree top-down, where each node pulls gradient(s) from its consumer(s).
         // This way we can optimize operations, such as a matrix product or gradient of GatherBatch().
-        fprintf(stderr, "Back-propagating through %d functions\n", (int)order.size());
-        for (auto f = order.begin(); f != order.end(); ++f)
-        {
-            BackpropToInputs(&*f);
-        }
+        //fprintf(stderr, "Back-propagating through %d functions\n", (int)order.size());
+        //for (auto f = order.begin(); f != order.end(); ++f)
+        //{
+        //    // TODO: batchable gradient ops are consecutive and have the same f... umm
+        //    //       No this is wrong. We need a list over Variables, not Functions. Maybe we can traverse m_consumers directly?
+        //    BackpropToInputs(&*f);
+        //}
         // implant the results into the map the user passed in
         for (auto& kv : gradients)
             kv.second = kv.first.m_dataFields->m_gradient;

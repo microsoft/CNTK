@@ -742,7 +742,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         //fprintf(stderr, "uid of loss: %S\n", d_parameters[0].Uid().c_str());
         unordered_map<Parameter, NDArrayViewPtr> gradients;
         for (let& p : d_parameters)
-            gradients[p] = nullptr;
+            gradients[p] = nullptr; // TryGetGradient(p); // TODO: get the existing gradient matrix from the parameter
         double loss1;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "### CNTK Dynamite:  %.6f sec\n");
