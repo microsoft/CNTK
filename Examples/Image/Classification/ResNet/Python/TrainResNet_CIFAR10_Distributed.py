@@ -11,6 +11,7 @@ import math
 import cntk
 import numpy as np
 
+import cntk as C
 from cntk.logging import *
 from cntk import input, cross_entropy_with_softmax, classification_error
 from cntk import Trainer, cntk_py 
@@ -42,8 +43,8 @@ model_name   = "ResNet_CIFAR10_DataAug.model"
 # Create network
 def create_resnet_network(network_name):
     # Input variables denoting the features and label data
-    input_var = input((num_channels, image_height, image_width))
-    label_var = input((num_classes))
+    input_var = C.input_variable((num_channels, image_height, image_width))
+    label_var = C.input_variable((num_classes))
 
     # create model, and configure learning parameters 
     if network_name == 'resnet20': 
@@ -196,18 +197,17 @@ if __name__=='__main__':
     # Create distributed trainer factory
     print("Start training: quantize_bit = {}, epochs = {}, distributed_after = {}".format(num_quantization_bits, epochs, warm_up))
 
-    try:
-        resnet_cifar10(train_data, test_data, mean_data,
-                       network_name, 
-                       epoch_size,
-                       num_quantization_bits,
-                       block_size=args['block_samples'],
-                       warm_up=args['distributed_after'],
-                       max_epochs=epochs,
-                       restore=not args['restart'],
-                       scale_up=scale_up,
-                       log_to_file=args['logdir'],
-                       profiling=args['profile'])
-    finally:
-        # Must call MPI finalize when process exit
-        Communicator.finalize()
+    resnet_cifar10(train_data, test_data, mean_data,
+                   network_name, 
+                   epoch_size,
+                   num_quantization_bits,
+                   block_size=args['block_samples'],
+                   warm_up=args['distributed_after'],
+                   max_epochs=epochs,
+                   restore=not args['restart'],
+                   scale_up=scale_up,
+                   log_to_file=args['logdir'],
+                   profiling=args['profile'])
+
+    # Must call MPI finalize when process exit without exceptions
+    Communicator.finalize()

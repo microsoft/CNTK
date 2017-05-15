@@ -1,0 +1,14 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+export MKL_NUM_THREADS=4
+export MKL_CBWR=COMPATIBLE
+export OMP_NUM_THREADS=1
+
+ConfigDir=$TEST_DIR/../../../../../../../Examples/Image/Classification/MLP/BrainScript
+
+[[ -d $TEST_DATA_DIR && -f $TEST_DATA_DIR/Train-28x28_cntk_text.txt && -f $TEST_DATA_DIR/Test-28x28_cntk_text.txt ]] || {
+    echo Error: cannot find data. Please see Examples/Image/DataSets/MNIST/README.md for instructions to get it.
+    exit 1
+}

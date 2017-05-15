@@ -7,10 +7,8 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import numbers
-from numbers import Number
 from . import sequence
 from .functions import CloneMethod, Function, load_model, register_native_user_function, native_user_function
-from ..variables import Variable, Parameter, Constant
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
@@ -32,8 +30,8 @@ def combine(operands, name=''):
      with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
 
     Example:
-        >>> in1 = C.input((4,))
-        >>> in2 = C.input((4,))
+        >>> in1 = C.input_variable((4,))
+        >>> in2 = C.input_variable((4,))
 
         >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
         >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
@@ -154,7 +152,7 @@ def labels_to_graph(labels, name=''):
 
     Example:
         >>> num_classes = 2
-        >>> labels = C.input((num_classes))
+        >>> labels = C.input_variable((num_classes))
         >>> graph = C.labels_to_graph(labels)
 
     Args:
@@ -218,7 +216,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
 
     Example:
         >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
-        >>> x = C.input(img.shape)
+        >>> x = C.input_variable(img.shape)
         >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
         >>> kernel = C.constant(value = filter)
         >>> np.round(C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}),5)
@@ -278,7 +276,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
 
     Example:
         >>> img = np.reshape(np.arange(9.0, dtype = np.float32), (1, 3, 3))
-        >>> x = C.input(img.shape)
+        >>> x = C.input_variable(img.shape)
         >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
         >>> kernel = C.constant(value = filter)
         >>> np.round(C.convolution_transpose(kernel, x, auto_padding = [False]).eval({x: [img]}),5)
@@ -361,7 +359,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
 
     Example:
         >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-        >>> x = C.input(img.shape)
+        >>> x = C.input_variable(img.shape)
         >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : [img]})
         array([[[[  2.5,   4.5],
                   [ 10.5,  12.5]]]], dtype=float32)
@@ -402,13 +400,13 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
 
     Example:
         >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-        >>> x = C.input(img.shape)
+        >>> x = C.input_variable(img.shape)
         >>> y = C.pooling(x, C.MAX_POOLING, (2,2), (2,2))
         >>> C.unpooling(y, x, C.MAX_UNPOOLING, (2,2), (2,2)).eval({x : [img]})
-	array([[[[  0.,   0.,   0.,   0.],
-		  [  0.,   5.,   0.,   7.],
-		  [  0.,   0.,   0.,   0.],
-		  [  0.,  13.,   0.,  15.]]]], dtype=float32)
+        array([[[[  0.,   0.,   0.,   0.],
+                  [  0.,   5.,   0.,   7.],
+                  [  0.,   0.,   0.,   0.],
+                  [  0.,  13.,   0.,  15.]]]], dtype=float32)
 
     Args:
         operand: unpooling input
@@ -1698,7 +1696,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
     or input data (which has a batch dimension, as needed for sequence-to-sequence models).
 
     Example:
-        >>> x = C.sequence.input(shape=(3,2))
+        >>> x = C.sequence.input_variable(shape=(3,2))
         >>> # Create one sequence with 4 tensors of shape (3, 2)
         >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
         >>> y = C.future_value(x) # using initial state of 0 by default
@@ -1751,7 +1749,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     or input data (which has a batch dimension, as needed for sequence-to-sequence models).
 
     Example:
-        >>> x = C.sequence.input(shape=(3,2))
+        >>> x = C.sequence.input_variable(shape=(3,2))
         >>> # Create one sequence with 4 tensors of shape (3, 2)
         >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
         >>> # this demonstrates how past_value shifts the sequence by one, padding with initial_state
@@ -1774,7 +1772,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
                  [ 16.,  17.]]], dtype=float32)]
 
         >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
-        >>> s = C.input(shape=(3,2))  # not a sequence, e.g. a final encoder hidden state
+        >>> s = C.input_variable(shape=(3,2))  # not a sequence, e.g. a final encoder hidden state
         >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,1,3,2))
         >>> s0
         array([[[[ 0. ,  0.5],
@@ -1836,9 +1834,9 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
         name (str, optional): the name of the Function instance in the network
 
     Example:
-        >>> from _cntk_py import InferredDimension, constant_initializer
-        >>> W = C.parameter((InferredDimension,4), constant_initializer(0.1))
-        >>> x = C.input(shape=(4,))
+        >>> from _cntk_py import constant_initializer
+        >>> W = C.parameter((C.InferredDimension,4), constant_initializer(0.1))
+        >>> x = C.input_variable(shape=(4,))
         >>> s = np.reshape(np.arange(20.0, dtype=np.float32), (5,4))
         >>> t = np.reshape(np.arange(12.0, dtype=np.float32), (3,4))
         >>> f = C.optimized_rnnstack(x, W, 8, 2) # doctest: +SKIP
@@ -1860,8 +1858,9 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
     # FIXME figure out how to only SKIP the doctest in CPU
     from cntk.cntk_py import optimized_rnnstack
     operand = sanitize_input(operand)
-    if recurrent_op not in set(['lstm','gru','relu','tanh']):
+    if recurrent_op not in set(['lstm','gru','rnnReLU','rnnTanh']):
         raise(ValueError('unsupported recurrent_op value "%s"'%recurrent_op))
+
     return optimized_rnnstack(operand, weights, hidden_size, num_layers,
                        bidirectional, recurrent_op, name)
 
@@ -1882,7 +1881,7 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
     The output tensor has the shape specified by 'shape'.
 
     Example:
-        >>> i1 = C.input(shape=(3,2))
+        >>> i1 = C.input_variable(shape=(3,2))
         >>> C.reshape(i1, (2,3)).eval({i1:np.asarray([[[[0., 1.],[2., 3.],[4., 5.]]]], dtype=np.float32)})
         array([[[ 0.,  1.,  2.],
                  [ 3.,  4.,  5.]]], dtype=float32)
@@ -1994,7 +1993,7 @@ def slice(x, axis, begin_index, end_index, name=''):
     Example:
         >>> # slice using input variable
         >>> # create 2x3 matrix
-        >>> x1 = C.input((2,3))
+        >>> x1 = C.input_variable((2,3))
         >>> # slice index 1 (second) at first axis
         >>> C.slice(x1, 0, 1, 2).eval({x1: np.asarray([[[1,2,-3],
         ...                                             [4, 5, 6]]],dtype=np.float32)})
@@ -2115,7 +2114,7 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
         >>> data = np.asarray([[1, 2],
         ...                    [4, 5]], dtype=np.float32)
 
-        >>> x = C.input((2,))
+        >>> x = C.input_variable((2,))
         >>> C.one_hot(x, 6, False).eval({x:data})
         array([[[ 0.,  1.,  0.,  0.,  0.,  0.],
                 [ 0.,  0.,  1.,  0.,  0.,  0.]],
@@ -2127,7 +2126,7 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
         x: input tensor, the value must be positive integer and less than num_class
         num_classes: the number of class in one hot tensor
         sparse_output: if set as True, we will create the one hot tensor as sparse.
-		axis: The axis to fill (default: -1, a new inner-most axis).
+        axis: The axis to fill (default: -1, a new inner-most axis).
         name (str, optional, keyword only): the name of the Function instance in the network
 
     Returns:
@@ -2141,11 +2140,11 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
 @typemap
 def gather(reference, indices):
     '''
-    Retrieves the elements of indices in the tensor reference. 
+    Retrieves the elements of indices in the tensor reference.
 
     Example:
         >>> c = np.asarray([[[0],[1]],[[4],[5]]]).astype('f')
-        >>> x = C.input((2,1))
+        >>> x = C.input_variable((2,1))
         >>> d = np.arange(12).reshape(6,2).astype('f')
         >>> y = C.constant(d)
         >>> C.gather(y, x).eval({x:c})
@@ -2157,14 +2156,14 @@ def gather(reference, indices):
                [[[  8.,   9.]],
         <BLANKLINE>
                 [[ 10.,  11.]]]], dtype=float32)
-        
+
     Args:
         reference: A tensor
         indices: An integer tensor of indices
 
     Returns:
         :class:`~cntk.ops.functions.Function`
-	'''
+    '''
     from cntk.cntk_py import gather_op
     return gather_op(indices, reference)
 ##########################################################################
@@ -2182,7 +2181,7 @@ def reduce_sum(x, axis=None, name=''):
     will happen across the batch axis (In this case the input must not be a sequence).
 
     Example:
-        >>> x = C.sequence.input((2,2))
+        >>> x = C.sequence.input_variable((2,2))
         >>> # create a batch of 2 sequences each containing 2 2x2 matrices
         >>> x0 = np.arange(16,dtype=np.float32).reshape(2,2,2,2)
         >>> # reduce over all static axes
@@ -2223,7 +2222,7 @@ def reduce_sum(x, axis=None, name=''):
         >>> (np.sum(x1)+np.sum(x2))/(x1.size+x2.size)
         4.5
         >>> # reduce over batch axis
-        >>> xv = C.input((2,2))
+        >>> xv = C.input_variable((2,2))
         >>> xd = np.arange(8,dtype=np.float32).reshape(2,2,2)
         >>> C.reduce_sum(xv,axis=C.Axis.default_batch_axis()).eval({xv:xd})
         array([[  4.,   6.],
@@ -2250,7 +2249,7 @@ def reduce_log_sum_exp(x, axis=None, name=''):
     elements across the specified axis.
 
     Example:
-        >>> x = C.input(shape=(3,2))
+        >>> x = C.input_variable(shape=(3,2))
         >>> val = np.reshape(np.arange(6.0, dtype=np.float32), (3,2))
         >>> lse = C.reduce_log_sum_exp(x)
         >>> lse.eval({x:[val]})
@@ -2706,7 +2705,7 @@ def _input_spec(shape, dtype=default_override_or(np.float32), needs_gradient=Fal
 def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
           dynamic_axes=[Axis.default_batch_axis()], name=''):
     '''
-    input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, dynamic_axes=[Axis.default_batch_axis()], name='')
+    DEPRECATED.
 
     It creates an input in the network: a place where data,
     such as features and labels, should be provided.
@@ -2717,6 +2716,32 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, sequence axis)
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.variables.Variable`
+    '''
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use '
+                  'input_variable() instead.', DeprecationWarning)
+
+    return input_variable(shape, dtype, needs_gradient, is_sparse, dynamic_axes, name)
+
+@typemap
+def input_variable(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
+                   dynamic_axes=[Axis.default_batch_axis()], name=''):
+    '''
+    input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, dynamic_axes=[Axis.default_batch_axis()], name='')
+
+    It creates an input in the network: a place where data,
+    such as features and labels, should be provided.
+
+    Args:
+        shape (tuple or int): the shape of the input tensor
+        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
+        is_sparse (bool, optional): whether the variable is sparse (`False` by default)
+        dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -2736,34 +2761,6 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
     # TODO sparse for numpy arrays
 
     return input_variable(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
-
-@typemap
-def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
-                   dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
-    '''
-    DEPRECATED.
-
-    It creates an input in the network: a place where data,
-    such as features and labels, should be provided.
-
-    Args:
-        shape (tuple or int): the shape of the input tensor
-        dtype (np.float32 or np.float64): data type. Default is np.float32.
-        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
-        is_sparse (bool, optional): whether the variable is sparse (`False` by default)
-        dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
-        name (str, optional): the name of the Function instance in the network
-
-    Returns:
-        :class:`~cntk.variables.Variable`
-    '''
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-            'input() or sequence.input() instead.', DeprecationWarning)
-    if (type(dynamic_axes) in (list, tuple)) and (len(dynamic_axes) == 2):
-        return sequence.input(shape, dtype, needs_gradient, is_sparse, dynamic_axes[1], name)
-    else:
-        return input(shape, dtype, needs_gradient, is_sparse, dynamic_axes, name)
 
 @typemap
 def output_variable(shape, dtype, dynamic_axes, needs_gradient=True, name=''):

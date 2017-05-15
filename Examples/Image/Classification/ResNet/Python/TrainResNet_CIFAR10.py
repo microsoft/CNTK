@@ -9,7 +9,8 @@ import os
 import argparse
 
 import numpy as np
-from cntk import input, cross_entropy_with_softmax, classification_error, reduce_mean
+import cntk as C
+from cntk import cross_entropy_with_softmax, classification_error, reduce_mean
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 import cntk.io.transforms as xforms
 from cntk import Trainer, cntk_py
@@ -58,8 +59,8 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
-    input_var = input((num_channels, image_height, image_width))
-    label_var = input((num_classes))
+    input_var = C.input_variable((num_channels, image_height, image_width))
+    label_var = C.input_variable((num_classes))
 
     # create model, and configure learning parameters
     if network_name == 'resnet20':

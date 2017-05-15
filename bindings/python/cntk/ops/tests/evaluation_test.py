@@ -14,13 +14,13 @@ import pytest
 from .ops_test_utils import _test_binary_op, AA, precision, PRECISION_TO_TYPE,\
         unittest_helper
 
-from cntk import input, dropout, combine
+from cntk import dropout, combine
 import cntk as C
 
 def test_sequence_grad_as_numpy_false(device_id, precision):
     from .. import sequence
 
-    a = sequence.input(shape=(1,), dtype=PRECISION_TO_TYPE[precision], needs_gradient=True, name='a')
+    a = sequence.input_variable(shape=(1,), dtype=PRECISION_TO_TYPE[precision], needs_gradient=True, name='a')
 
     sequence_sum_a_plus_sequence_sum_a = sequence.reduce_sum(a) + sequence.reduce_sum(a)
 
@@ -35,15 +35,15 @@ def test_sequence_grad_as_numpy_false(device_id, precision):
     assert np.array_equal(result[2], np.asarray([[3.], [3.], [3.]]))
 
 def test_grad_with_no_arguments_needing_gradients():
-    x = input(10)
+    x = C.input_variable(10)
     z = dropout(x, .4)
     with pytest.raises(ValueError):
         _, result = z.grad({x: [np.array([5]*150, "float32").reshape(15, 10)]}, outputs=[z])
 
 def test_eval_not_all_outputs():
-    x = input(1)
+    x = C.input_variable(1)
     x_data = [AA([3], dtype=np.float32)]
-    y = input(1)
+    y = C.input_variable(1)
     y_data = [AA([2], dtype=np.float32)]
     plus_func = x + 1
     minus_func = y - 1
@@ -55,8 +55,9 @@ def test_eval_not_all_outputs():
     result = func.eval({y : y_data}, [minus_func])
     assert np.array_equal(result, np.asarray([[1.]]))
 
+
 def test_grad_custimized_root():
-    x = C.input(shape=(1,), needs_gradient=True)
+    x = C.input_variable(shape=(1,), needs_gradient=True)
     y = C.sqrt(x)
     y2 = C.log(x)
     combine = C.combine([y.output, y2.output])
@@ -65,6 +66,7 @@ def test_grad_custimized_root():
     expect_grad = np.asarray([[0.5],[0.25],[0.125]], dtype=np.float32)
     assert np.array_equal(grads, expect_grad)
 
+
 def test_constant_eval():
     c = C.Constant(value=1)
     c_plus_1 = c + 1
@@ -72,4 +74,14 @@ def test_constant_eval():
     result = op.eval({})
     assert np.array_equal(result[c_plus_1.output], [2.0])
     assert np.array_equal(result[c], 1.0)
+
+
+def test_input_without_dynamic_axes():
+    x = C.input_variable(shape=(2,), dynamic_axes=[], needs_gradient=True, name='x')
+    assert len(x.dynamic_axes) == 0
+
+    op = x * .01 + 3.0
+    grad_result, eval_result = op.grad({x : np.asarray([.6, -.8], dtype=np.float32)}, outputs=[op], wrt=[x])
+    assert np.allclose(eval_result, [3.006, 2.992])
+    assert np.allclose(grad_result, [.01, .01])
 

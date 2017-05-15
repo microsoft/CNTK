@@ -8,7 +8,7 @@ from __future__ import print_function
 import numpy as np
 import sys
 import os
-import cntk
+import cntk as C
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -17,10 +17,10 @@ model_path = os.path.join(abs_path, "Output", "Models")
 
 # Define the reader for both training and evaluation action.
 def create_reader(path, is_training, input_dim, label_dim):
-    return cntk.io.MinibatchSource(cntk.io.CTFDeserializer(path, cntk.io.StreamDefs(
-        features  = cntk.io.StreamDef(field='features', shape=input_dim),
-        labels    = cntk.io.StreamDef(field='labels',   shape=label_dim)
-    )), randomize=is_training, max_sweeps = cntk.io.INFINITELY_REPEAT if is_training else 1)
+    return C.io.MinibatchSource(C.io.CTFDeserializer(path, C.io.StreamDefs(
+        features  = C.io.StreamDef(field='features', shape=input_dim),
+        labels    = C.io.StreamDef(field='labels',   shape=label_dim)
+    )), randomize=is_training, max_sweeps = C.io.INFINITELY_REPEAT if is_training else 1)
 
 
 # Trains and tests a simple auto encoder for MNIST images using deconvolution
@@ -32,23 +32,23 @@ def deconv_mnist(max_epochs=3):
     num_output_classes = 10
 
     # Input variable and normalization
-    input_var = cntk.ops.input((num_channels, image_height, image_width), np.float32)
-    scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_var, name="input_node")
+    input_var = C.ops.input_variable((num_channels, image_height, image_width), np.float32)
+    scaled_input = C.ops.element_times(C.ops.constant(0.00390625), input_var, name="input_node")
 
     # Define the auto encoder model
     cMap = 1
-    conv1   = cntk.layers.Convolution2D  ((5,5), cMap, pad=True, activation=cntk.ops.relu)(scaled_input)
-    pool1   = cntk.layers.MaxPooling   ((4,4), (4,4), name="pooling_node")(conv1)
-    unpool1 = cntk.layers.MaxUnpooling ((4,4), (4,4))(pool1, conv1)
-    z       = cntk.layers.ConvolutionTranspose2D((5,5), num_channels, pad=True, bias=False, init=cntk.glorot_uniform(0.001), name="output_node")(unpool1)
+    conv1   = C.layers.Convolution2D  ((5,5), cMap, pad=True, activation=C.ops.relu)(scaled_input)
+    pool1   = C.layers.MaxPooling   ((4,4), (4,4), name="pooling_node")(conv1)
+    unpool1 = C.layers.MaxUnpooling ((4,4), (4,4))(pool1, conv1)
+    z       = C.layers.ConvolutionTranspose2D((5,5), num_channels, pad=True, bias=False, init=C.glorot_uniform(0.001), name="output_node")(unpool1)
 
-    # define rmse loss function (should be 'err = cntk.ops.minus(deconv1, scaled_input)')
-    f2        = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_var)
-    err       = cntk.ops.reshape(cntk.ops.minus(z, f2), (784))
-    sq_err    = cntk.ops.element_times(err, err)
-    mse       = cntk.ops.reduce_mean(sq_err)
-    rmse_loss = cntk.ops.sqrt(mse)
-    rmse_eval = cntk.ops.sqrt(mse)
+    # define rmse loss function (should be 'err = C.ops.minus(deconv1, scaled_input)')
+    f2        = C.ops.element_times(C.ops.constant(0.00390625), input_var)
+    err       = C.ops.reshape(C.ops.minus(z, f2), (784))
+    sq_err    = C.ops.element_times(err, err)
+    mse       = C.ops.reduce_mean(sq_err)
+    rmse_loss = C.ops.sqrt(mse)
+    rmse_eval = C.ops.sqrt(mse)
 
     reader_train = create_reader(os.path.join(data_path, 'Train-28x28_cntk_text.txt'), True, input_dim, num_output_classes)
 
@@ -57,20 +57,20 @@ def deconv_mnist(max_epochs=3):
     minibatch_size = 64
 
     # Set learning parameters
-    lr_schedule = cntk.learning_rate_schedule([0.00015], cntk.learners.UnitType.sample, epoch_size)
-    mm_schedule = cntk.learners.momentum_as_time_constant_schedule([600], epoch_size)
+    lr_schedule = C.learning_rate_schedule([0.00015], C.learners.UnitType.sample, epoch_size)
+    mm_schedule = C.learners.momentum_as_time_constant_schedule([600], epoch_size)
 
     # Instantiate the trainer object to drive the model training
-    learner = cntk.learners.momentum_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=True)
-    progress_printer = cntk.logging.ProgressPrinter(tag='Training')
-    trainer = cntk.Trainer(z, (rmse_loss, rmse_eval), learner, progress_printer)
+    learner = C.learners.momentum_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=True)
+    progress_printer = C.logging.ProgressPrinter(tag='Training')
+    trainer = C.Trainer(z, (rmse_loss, rmse_eval), learner, progress_printer)
 
     # define mapping from reader streams to network inputs
     input_map = {
         input_var : reader_train.streams.features
     }
 
-    cntk.logging.log_number_of_parameters(z) ; print()
+    C.logging.log_number_of_parameters(z) ; print()
 
     # Get minibatches of images to train with and perform model training
     for epoch in range(max_epochs):       # loop over epochs

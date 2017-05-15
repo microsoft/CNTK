@@ -13,10 +13,9 @@ import cntk
 import _cntk_py
 from cntk.train.distributed import *
 from cntk.io import MinibatchSource, HTKFeatureDeserializer, HTKMLFDeserializer, StreamDef, StreamDefs
-from cntk.layers import Recurrence, Dense, LSTM
+from cntk.layers import Recurrence, Dense, LSTM, Sequential, For
 from cntk.learners import *
-from cntk.layers.models import Sequential, For
-from cntk import input, cross_entropy_with_softmax, classification_error, sequence
+from cntk import cross_entropy_with_softmax, classification_error, sequence
 from cntk.train.training_session import *
 
 # default Paths relative to current python file.
@@ -44,8 +43,8 @@ def create_mb_source(features_file, labels_file, label_mapping_filem, total_numb
 
 def create_recurrent_network():
     # Input variables denoting the features and label data
-    features = sequence.input(((2*context+1)*feature_dim))
-    labels = sequence.input((num_classes))
+    features = sequence.input_variable(((2*context+1)*feature_dim))
+    labels = sequence.input_variable((num_classes))
 
     # create network
     model = Sequential([For(range(3), lambda : Recurrence(LSTM(256))),
@@ -180,4 +179,5 @@ if __name__=='__main__':
                                 tensorboard_logdir=args['tensorboard_logdir'])
     finally:
         os.chdir(abs_path)
-        Communicator.finalize()
+    # Must call MPI finalize when process exit without exceptions
+    Communicator.finalize()

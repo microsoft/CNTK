@@ -14,7 +14,7 @@ import pytest
 import cntk as C
 
 def test_free_static_dimension_basic():
-    x = C.input((C.FreeDimension, 2))
+    x = C.input_variable((C.FreeDimension, 2))
     w = C.parameter(init=np.asarray([[2, 5], [1, 3]], dtype=np.float32))
     t = C.times(x, w)
 
@@ -35,7 +35,7 @@ def test_free_static_dimension_basic():
 
 
 def test_free_static_axis_in_recurrence():
-    x = C.sequence.input((C.FreeDimension, 2))
+    x = C.sequence.input_variable((C.FreeDimension, 2))
     out_placeholder = C.placeholder()
     out_past = C.sequence.past_value(out_placeholder)
     wh = C.parameter(init=np.asarray([[2, 5], [1, 3]], dtype=np.float32))
@@ -50,7 +50,7 @@ def test_free_static_axis_in_recurrence():
 
 
 def test_reshape_free_static_axis():
-    x = C.input((C.FreeDimension, 2, 3))
+    x = C.input_variable((C.FreeDimension, 2, 3))
     x_reshaped = C.reshape(x, (-1), 0, 2)
     assert x_reshaped.shape == (C.FreeDimension, 3)
     x_data = np.arange(12).reshape(2, 2, 3)
@@ -79,7 +79,7 @@ def test_reshape_free_static_axis():
    
 
 def test_free_and_inferred_static_dimension():
-    x = C.input((C.FreeDimension, -1))
+    x = C.input_variable((C.FreeDimension, -1))
     w = C.parameter(init=np.asarray([[2, 5], [1, 3]], dtype=np.float32))
     t = C.times(x, w)
 
@@ -104,7 +104,7 @@ def test_free_and_inferred_static_dimension():
 
 
 def test_inferred_static_axis_in_recurrence():
-    x = C.sequence.input((-1, 2))
+    x = C.sequence.input_variable((-1, 2))
     out_placeholder = C.placeholder()
     out_past = C.sequence.past_value(out_placeholder)
     wh = C.parameter(init=np.asarray([[2, 5], [1, 3]], dtype=np.float32))
@@ -119,7 +119,7 @@ def test_inferred_static_axis_in_recurrence():
 
 
 def test_slice_with_inferred_static_axis():
-    x = C.input(shape=(C.InferredDimension, C.InferredDimension, 3))
+    x = C.input_variable(shape=(C.InferredDimension, C.InferredDimension, 3))
     padding_shape = (3, C.InferredDimension, 3)
     y = C.splice(C.constant(value=0, shape=padding_shape), x, axis=0)
     assert y.shape == (-1, -1, 3)
@@ -128,12 +128,12 @@ def test_slice_with_inferred_static_axis():
 
 
 def test_free_dimension_broadcast():
-    i0 = C.sequence.input(shape=(5,))
+    i0 = C.sequence.input_variable(shape=(5,))
     i0_unpacked, _ = C.sequence.unpack(i0, padding_value=0).outputs
-    i1 = C.input(shape=(5,))
+    i1 = C.input_variable(shape=(5,))
     m = i0_unpacked * i1
     assert m.shape == (-3, 5)
 
-    i1 = C.input(shape=(1,5,))
+    i1 = C.input_variable(shape=(1,5,))
     m = i0_unpacked * i1
     assert m.shape == (-3, 5)

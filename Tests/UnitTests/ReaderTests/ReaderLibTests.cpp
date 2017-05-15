@@ -101,7 +101,7 @@ public:
                 i,
                 m_sequenceLength,
                 (ChunkIdType) (i / m_numSequencesPerChunk),
-                KeyType(0, i)
+                KeyType(0, static_cast<uint32_t>(i))
             });
         }
 
@@ -157,7 +157,7 @@ public:
                 i,
                 m_sequenceLength,
                 chunkId,
-                { 0, i }
+                { 0, static_cast<uint32_t>(i) }
             });
         }
     }
@@ -1019,7 +1019,7 @@ BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
     fwrite("4\n", sizeof(char), 2, test);
     fclose(test);
 
-    CorpusDescriptor corpus(L"test.tmp", true);
+    CorpusDescriptor corpus(L"test.tmp", true, false);
     BOOST_CHECK_EQUAL(false, corpus.IsIncluded("0"));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded("1"));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded("2"));
@@ -1028,6 +1028,24 @@ BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
     BOOST_CHECK_EQUAL(false, corpus.IsIncluded("5"));
 
     remove("test.tmp");
+}
+
+BOOST_AUTO_TEST_CASE(LiteralCorpusDescriptorWithHash)
+{
+    CorpusDescriptor corpus(false, true);
+
+    // The constants are offline calculated hash values according to CorpusDescriptor::Hash.
+    BOOST_CHECK_EQUAL(corpus.KeyToId("100"), 193358996);
+    BOOST_CHECK_EQUAL(corpus.KeyToId("not"), 193419184);
+}
+
+BOOST_AUTO_TEST_CASE(NumericCorpusDescriptorWithHash)
+{
+    BOOST_REQUIRE_EXCEPTION(
+        CorpusDescriptor corpus(true, true),
+        runtime_error,
+        [](const runtime_error& e)
+        { return string("Hashing should not be used with numeric sequence keys.") == e.what(); });
 }
 
 BOOST_AUTO_TEST_CASE(CheckEpochBoundarySingleWorker)

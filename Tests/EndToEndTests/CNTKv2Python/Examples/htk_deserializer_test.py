@@ -30,8 +30,8 @@ def test_htk_deserializers():
 
     reader = MinibatchSource([fd,ld])
 
-    features = C.sequence.input(((2*context+1)*feature_dim))
-    labels = C.sequence.input((num_classes))
+    features = C.sequence.input_variable(((2*context+1)*feature_dim))
+    labels = C.sequence.input_variable((num_classes))
 
     model = Sequential([For(range(3), lambda : Recurrence(LSTM(256))),
                         Dense(num_classes)])
