@@ -695,7 +695,7 @@ class Memoize
         }
     }
 
-    // ===== forward =====
+    // ===== backward =====
 
     // lazily create m_gradient, which may live in a batched op
     // Returns beta = 0 if gradient was newly created, otherwise 1
@@ -709,7 +709,8 @@ class Memoize
         else
         {
             // create new gradient
-#if 1
+#define NO_BATCHED_BACKPROP
+#ifndef NO_BATCHED_BACKPROP
             // if this op draws from a batched op, then the gradient lives in there as well; we return a view onto it
             if (fields.m_lazyIndex.first)
             {
@@ -758,7 +759,7 @@ class Memoize
         fail_if(!fields.m_needsGradient, "unexpectedly encountered a node with m_needsGradient=false??");
         fail_if(fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder, "unexpectedly encountered an Input or a Placeholder??");
 
-#if 1   // disable this to backprop through unbatched ops
+#ifndef NO_BATCHED_BACKPROP
         if(fields.m_lazyIndex.first)
         {
             auto& f = *fields.m_lazyIndex.first;
@@ -853,7 +854,9 @@ class Memoize
         for (let& output : outputs) // output values and gradients coming from consumer
         {
             let& fields = *output.m_dataFields;
+#ifndef NO_BATCHED_BACKPROP
             fail_if(fields.m_lazyIndex.first, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
+#endif
             fail_if(!fields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
             fail_if(!fields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
             m_outputValuesBuffer   .push_back(fields.m_value.get());
