@@ -446,6 +446,7 @@ class Memoize
         // execute it
         output.m_dataFields->m_value = move(f.ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue)));
         // log
+#if 0
         fprintf(stderr, "%S%S = %S(", f.Uid().c_str(), output.Shape().AsString().c_str(), f.OpName().c_str());
         for (size_t i = 0; i < inputs.size() && i < 4; i++)
         {
@@ -462,6 +463,7 @@ class Memoize
         if (inputs.size() > 4)
             fprintf(stderr, ", +%d", (int)(inputs.size() - 4));
         fprintf(stderr, ")\n");
+#endif
         return output;
     }
 
