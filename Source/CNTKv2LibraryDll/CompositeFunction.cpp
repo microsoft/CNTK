@@ -648,8 +648,8 @@ namespace CNTK
                 case PrimitiveOpType::Hardmax:
                     computationNodePtr = New<HardmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
-                case PrimitiveOpType::SafeSigmoid:
-                    computationNodePtr = New<SafeSigmoidNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                case PrimitiveOpType::StableSigmoid:
+                    computationNodePtr = New<StableSigmoidNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
                 case PrimitiveOpType::TransposeAxes:
                 {

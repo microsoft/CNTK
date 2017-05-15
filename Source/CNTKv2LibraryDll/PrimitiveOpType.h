@@ -84,7 +84,7 @@ namespace CNTK
         UnpackSequence = 72,
         Assign = 73,
         Gather = 74,
-        SafeSigmoid = 75,
+        StableSigmoid = 75,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.
