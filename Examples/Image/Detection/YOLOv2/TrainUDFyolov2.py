@@ -113,9 +113,9 @@ class TrainFunction(UserFunction):
         array_goal = np.zeros((mb_size, num_vectors, 5), np.float32)
         array_scale = np.asarray(list_scales, np.float32)
 
-        for slice in range(mb_size):
+        for sample_idx in range(mb_size):
 
-            gtb_array = gtb_inputs[slice].reshape((int(len(gtb_inputs[slice]) / 5), 5))  # shape (50,5)
+            gtb_array = gtb_inputs[sample_idx].reshape((int(len(gtb_inputs[sample_idx]) / 5), 5))  # shape (50,5)
             # Here we are going completely for numpy and for loops and no cntk/parallised ops! TODO Switch to CNTK implementation
             for i in range(len(gtb_array)):
                 if gtb_array[i][4] == 0: break  # gtb list is in the padding area! (cls cannot be 0!)
@@ -141,27 +141,27 @@ class TrainFunction(UserFunction):
                 if (highest_iou_index is not None):
                     vector_index = y * self.grid_size_hor * self.num_anchorboxes + x * self.num_anchorboxes + highest_iou_index
 
-                    predicted_bb = eval_results[slice][vector_index][0:4]
+                    predicted_bb = eval_results[sample_idx][vector_index][0:4]
                     actual_iou = self.calc_iou(gtb_array[i][0:4], predicted_bb)
 
                     # BUT set only if the gridcell is not already responsible for another gtb with higher iou
-                    if actual_iou > array_goal[slice][vector_index][4]:
-                        array_goal[slice][vector_index][0] = gtb_array[i][0]
-                        array_goal[slice][vector_index][1] = gtb_array[i][1]
-                        array_goal[slice][vector_index][2] = gtb_array[i][2]
-                        array_goal[slice][vector_index][3] = gtb_array[i][3]
-                        array_goal[slice][vector_index][4] = actual_iou
+                    if actual_iou > array_goal[sample_idx][vector_index][4]:
+                        array_goal[sample_idx][vector_index][0] = gtb_array[i][0]
+                        array_goal[sample_idx][vector_index][1] = gtb_array[i][1]
+                        array_goal[sample_idx][vector_index][2] = gtb_array[i][2]
+                        array_goal[sample_idx][vector_index][3] = gtb_array[i][3]
+                        array_goal[sample_idx][vector_index][4] = actual_iou
 
                         # set scale for responsible vector
                         for z in range(4):
-                            array_scale[slice][vector_index][z] = self.lambda_coord
-                        array_scale[slice][vector_index][4] = 1
+                            array_scale[sample_idx][vector_index][z] = self.lambda_coord
+                        array_scale[sample_idx][vector_index][4] = 1
 
                         # delete the default lamda_no_obj from the scales of the other vectors
                         for ab in range(self.num_anchorboxes):
                             index = y * self.grid_size_ver * self.num_anchorboxes + x * self.num_anchorboxes + ab
                             if index != vector_index:
-                                array_scale[slice][index][4] = 0 # set obj of non relevant values --> 0
+                                array_scale[sample_idx][index][4] = 0 # set obj of non relevant values --> 0
 
         return array_goal, array_scale
 
@@ -192,15 +192,15 @@ class TrainFunction(UserFunction):
             original_shape = array_goal.shape
             array_goal.shape=(mb_size, self.grid_size_ver, self.grid_size_hor, self.num_anchorboxes, num_cls)
 
-            for slice in range(mb_size):
+            for sample_idx in range(mb_size):
                 for i in range(gtb_inputs.shape[1]):
-                    cls_index = cls_indexs[slice][i]
+                    cls_index = cls_indexs[sample_idx][i]
                     if cls_index < 0: break #first padding box reached!
-                    array_goal[ slice,
-                                gtb_ymins[slice][i]:gtb_ymaxs[slice][i] + 1,
-                                gtb_xmins[slice][i]:gtb_xmaxs[slice][i] + 1,
+                    array_goal[ sample_idx,
+                                gtb_ymins[sample_idx][i]:gtb_ymaxs[sample_idx][i] + 1,
+                                gtb_xmins[sample_idx][i]:gtb_xmaxs[sample_idx][i] + 1,
                                 :,
-                                cls_indexs[slice][i] ] += 1
+                                cls_indexs[sample_idx][i] ] += 1
             array_goal.shape = original_shape
 
             divisor_wzero = np.add.reduce(array_goal, axis=2)
@@ -216,10 +216,10 @@ class TrainFunction(UserFunction):
             ##############################
         else:
             ####### loop-version ########
-            for slice in range(mb_size):
+            for sample_idx in range(mb_size):
 
                 divisors = [0]*num_vectors
-                gtb_array = gtb_inputs[slice].reshape((int(len(gtb_inputs[slice]) / 5), 5))  # shape (50,5)
+                gtb_array = gtb_inputs[sample_idx].reshape((int(len(gtb_inputs[sample_idx]) / 5), 5))  # shape (50,5)
                 # Here we are going completely for numpy and for loops and no cntk/parallised ops! TODO Switch to CNTK implementation
                 for i in range(len(gtb_array)):
                     if gtb_array[i][4] == 0: break  # gtb list is in the padding area! (cls cannot be 0!)
@@ -240,14 +240,14 @@ class TrainFunction(UserFunction):
                         for y in range(top_gc_index, bottom_gc_index + 1):
                             curr_vector_offset = (y * self.grid_size_hor + x) * self.num_anchorboxes
                             for z in range(self.num_anchorboxes):
-                                array_goal[slice][curr_vector_offset + z][cls_index] += 1
+                                array_goal[sample_idx][curr_vector_offset + z][cls_index] += 1
                                 divisors[curr_vector_offset + z] += 1
 
                     for z in range(len(divisors)):
                         if divisors[z] > 0:
                             for s in range(num_cls):
-                                array_scale[slice][z][s]=1
-                                array_goal[slice][z][s] /= divisors[z]
+                                array_scale[sample_idx][z][s]=1
+                                array_goal[sample_idx][z][s] /= divisors[z]
 
             return array_goal, array_scale
 
