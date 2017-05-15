@@ -6,6 +6,7 @@
 
 import warnings
 from scipy import sparse
+import os
 
 class TensorOpsMixin(object):
     '''
@@ -98,6 +99,15 @@ class TensorOpsMixin(object):
         r = self
         axis0 = 0
 
+        try:
+            align_axis_flag = os.environ['align_axis'] == '1'
+        except KeyError:
+            align_axis_flag = False
+
+        if align_axis_flag:
+            if (hasattr(self, 'dynamic_axes') and len(self.dynamic_axes) > 0):
+                axis0 = -len(self.dynamic_axes)
+
         for axis, s in enumerate(arg):
             if s is Ellipsis: # ellipsis means index relative to end after this point
                 axis0 = -len(arg)
@@ -114,7 +124,10 @@ class TensorOpsMixin(object):
                 begin = s.start or 0
                 end   = s.stop  or 0
                 if begin != 0 or end != 0:
-                    r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end)
+                    if (axis + axis0) < 0:
+                        raise ValueError("slicing on dynamic axis is not supported")
+                    else:
+                        r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end)
             elif isinstance(s, (tuple, list)):
                 # Select multiple elements from the same dimension. This is
                 # different from NumPy's advanced indexing, since we just go
