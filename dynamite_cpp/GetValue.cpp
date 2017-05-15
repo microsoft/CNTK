@@ -548,74 +548,77 @@ class Memoize
                 if (spliceInputs.capacity() < batchSize)
                     spliceInputs.reserve(max(batchSize, 2 * spliceInputs.capacity()));
                 // optimization: if all args are consecutive slices, then use a slice view instead
-                const VariableFields* pfields0 = nullptr;// @@@@@@@bring this back (as let*): f0.m_inputs[i].m_dataFields.get(); // as long as non-NULL, we are consecutive
-                if (!pfields0->m_lazyIndex.first) // only if it is an indexed slice, actually
-                    pfields0 = nullptr;
+                let* pfields0 = f0.m_inputs[i].m_dataFields.get();
+                let& lazyIndex0 = pfields0->m_lazyIndex; // for 'allConsecutiveSlices' test
+                let is0LazyIndex = (bool)lazyIndex0.first;
                 // loop over all batched ops
+                bool allSame = true;
+                bool allConsecutiveSlices = is0LazyIndex && lazyIndex0.second != SIZE_MAX; // to be consecutive, it must be a slice to start with
                 size_t j = 0;
                 for (auto op = ops.begin(); op != ops.end(); ++op, j++) // create the batched tensors
                 {
-#if 0
+                    let& input = op->m_inputs[i];
+                    let* pfields = input.m_dataFields.get();
+                    let& lazyIndex = pfields->m_lazyIndex;
+                    // optimization: if all args are the same, then don't batch
+                    allSame = allSame &&
+                        (pfields == pfields0 ||                 // same
+                         (is0LazyIndex && lazyIndex == lazyIndex0)); // or same view  --TODO: could this need to be checked recursively?
                     // optimization: if all args are consecutive slices, then use a slice view instead
-                    if (pfields0)
+                    if (allConsecutiveSlices)
                     {
-                        let* pfields = op->m_inputs[i].m_dataFields.get();
-                        // we continue to be in optimized state
-                        if (pfields->m_lazyIndex.first  == pfields0->m_lazyIndex.first &&
-                            pfields->m_lazyIndex.second == pfields0->m_lazyIndex.second + j)
-                            continue;
-                        // nope, chain has been broken: must fix up spliceInputs up to here
-                        // This is suboptimal in that we lost the reference to the originating input.
-                        // So we cannot remember the realized SliceView there.
+                        // optimization: if consecutive slices, then recover the original batched tensor
+                        allConsecutiveSlices = allConsecutiveSlices &&
+                            lazyIndex.first  == lazyIndex0.first    &&
+                            lazyIndex.second == lazyIndex0.second + j;
                         // TODO: Per Jon's suggestion, we can be a little loose here. For a variable-length
                         // scenario, we will loose entries in the middle. We can allow to keep a few around
                         // in garbage-in-garbage-out. If, say, there are additional 20% gap values, we just
                         // carry them forward, and ignore them when implanting the result.
-                        let& from = pfields0->m_lazyIndex.first;
-                        let begin = pfields0->m_lazyIndex.second;
-                        while (spliceInputs.size() < j)
-                            spliceInputs.push_back(from->IndexLastAxis(begin + spliceInputs.size())); // ### this is expensive without an Index op
-                        pfields0 = nullptr; // no longer in consecutive hypothesis
+                        if (!allConsecutiveSlices)
+                            BreakPoint;
                     }
-#endif
-                    let& input = op->m_inputs[i];
-                    // optimization: if all args are the same, then don't batch
-                    // BUGBUG: Unhandled opportunity: The same input could be used multiple times. E.g. discover with a unique identifier.
-                    if (spliceInputs.size() == 1 && spliceInputs[0].m_dataFields.get() == input.m_dataFields.get())
-                        continue;
-                    // if we thought it is all the same, but then it turned out not to be, we need to fixc it up
-                    if (spliceInputs.size() < j)
-                        LogicError("untested");
-                    while (spliceInputs.size() < j)
-                        spliceInputs.push_back(spliceInputs.back());
                     // append the input
                     spliceInputs.push_back(input);
                     // note: Variable is just two shared_ptrs, one being NULL; so this is cheap
                     // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
                 }
                 // and splice
-                if (spliceInputs.size() == 1) // optimized case: all ops share the same operand: no need to batch them
+#if 0 // somehow fails with R*0, expecting a [25 x 5] but onyl being fed a single vector
+                if (allSame) // optimized case: all ops share the same operand: no need to batch them
+                    // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
                     m_batchedInputs[i] = spliceInputs[0];
-#if 0           // @@@@@bring this back
-                else if (pfields0) // they are consecutive: can short-circuit as a slice view
+                else if (allConsecutiveSlices) // they are consecutive: can short-circuit as a slice view
                 {
-                    let& from = pfields0->m_lazyIndex.first;
-                    let begin = pfields0->m_lazyIndex.second;
-                    let& fromDims = from->Shape().Dimensions();
-                    if (begin == 0 && j == fromDims.back()) // full range: just take it
-                        m_inputValuesBuffer[i] = from;
-                    else // sub-range: take a slice view
+                    let& from  = lazyIndex0.first;
+                    let  begin = lazyIndex0.second;
+                    let& output = from->m_outputs[0];
+                    fail_if(!output.m_dataFields->m_value, "value not yet available??");
+                    let& fromDims = output.Shape().Dimensions();
+                    let axis = fromDims.size() - 1;
+                    if (begin == 0 && j == fromDims[axis]) // full range: just take it
+                        m_batchedInputs[i] = output; // note: graph already has a strong ref to output elsewhere
+                    else // sub-range: splice it by taking a slice view on the previously spliced batch
                     {
-                        vector<size_t> extent = fromDims;
-                        vector<size_t> startOffset(extent.size(), 0);
-                        startOffset.back() = begin;
-                        extent.back() = j;
-                        m_inputValuesBuffer[i] = from->SliceView(startOffset, extent); // ### Splice(); then execute it through ComputeKnowableValue()
+                        // create a new Function Splice()
+                        vector<size_t> outputShape = fromDims; // determine output shape
+                        outputShape[axis] = j;
+                        auto additionalProperties = Dictionary(); // create additional arguments
+                        additionalProperties[L"axis"      /*PrimitiveFunction::AttributeNameAxis*/      ] = Axis((int)axis);
+                        additionalProperties[L"beginIndex"/*PrimitiveFunction::AttributeNameBeginIndex*/] = (int)begin;
+                        additionalProperties[L"endIndex"  /*PrimitiveFunction::AttributeNameEndIndex*/  ] = (int)(begin + j);
+                        let spliceOp = Function::RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ f0.m_inputs[i] }, outputShape, move(additionalProperties));
+                        // and execute it
+                        let& output = MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/true);
+                        // and that's our input to the batched operation
+                        //m_batchedInputs[i] = output.CompositePreservingCopy(spliceOp);
+                        m_batchedInputs[i] = output;
+                        m_batchedInputs[i].m_outputComposite = spliceOp;
                     }
                     anyBatchedInputs = true;
                 }
-#endif
                 else
+#endif
                 {
                     // create a new Function Splice()
                     vector<size_t> outputShape; // determine output shape
