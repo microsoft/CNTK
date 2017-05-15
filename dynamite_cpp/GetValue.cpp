@@ -703,18 +703,19 @@ class Memoize
     // This function assumes:
     //  - m_pendingInputs != -2
     //    BUGBUG: This is a bad one; what if users get a gradient and then continue to build on top?
-    __declspec(noinline) void TraverseFunctionTreeBackward(const Variable& var, NonOwningFunctionListBuilder& order)
+    __declspec(noinline) void TraverseFunctionTreeBackward(const Variable& var)
     {
         let& fields = *var.m_dataFields;
         // traverse all consumers
+        // TODO: additional optimization goes here
         auto* f = fields.m_consumers.first;
         if (f)
-            TraverseFunctionTreeBackward(f, order);
+            TraverseFunctionTreeBackward(f);
         for (auto* f : fields.m_consumers.second)
-            TraverseFunctionTreeBackward(f, order);
+            TraverseFunctionTreeBackward(f);
     }
     // second half of this function
-    void TraverseFunctionTreeBackward(Function* f, NonOwningFunctionListBuilder& order)
+    void TraverseFunctionTreeBackward(Function* f)
     {
         // if we have already visited this Function (it's already in 'order') then done
         if (f->m_pendingInputs == -2)
@@ -723,12 +724,9 @@ class Memoize
         f->m_pendingInputs = -3; // (mark for cycles, not really needed)
         // and recursively traverse the inputs
         for (let& output : f->m_outputs)
-            TraverseFunctionTreeBackward(output, order);
-        // enqueue ourselves
-        // Add to the end of the queue *after* we recurse (we do "height" first traversal).
-        // Needed because this is called multiple times for multiple roots, and those have to go to the end.
+            TraverseFunctionTreeBackward(output);
+        // perform the backprop operation
         BackpropToInputs(f);
-        //order.push_back(f);
         // mark as visited
         f->m_pendingInputs = -2;
     }
@@ -951,9 +949,9 @@ public:
             kv.first.m_dataFields->m_gradient = kv.second; // (if null then these will be set inside)
         }
         // BUGBUG: how to reset m_pendingInputs when there is no gradient on that path?
-        // form ordered list of nodes to process
-        // (traverse the graph from the bottom from the variables to get the gradients for)
-        NonOwningFunctionListBuilder order;
+        // perform backprop
+        // This traverses the tree top-down, where each node pulls gradient(s) from its consumer(s).
+        // This way we can optimize operations, such as a matrix product or gradient of GatherBatch().
         for (auto& kv : gradients)
         {
             let& param = kv.first;
@@ -962,18 +960,9 @@ public:
                 logic_error("Backward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
             if (!fields.m_needsGradient) // (we could also just leafve the gradient 0)
                 logic_error("Backward: cannot compute gradient for variable with m_needsGradient being False.");
-            TraverseFunctionTreeBackward(param, order);
+            TraverseFunctionTreeBackward(param);
         }
-        // perform backprop
-        // This traverses the tree top-down, where each node pulls gradient(s) from its consumer(s).
-        // This way we can optimize operations, such as a matrix product or gradient of GatherBatch().
-        //fprintf(stderr, "Back-propagating through %d functions\n", (int)order.size());
-        //for (auto f = order.begin(); f != order.end(); ++f)
-        //{
-        //    // TODO: batchable gradient ops are consecutive and have the same f... umm
-        //    //       No this is wrong. We need a list over Variables, not Functions. Maybe we can traverse m_consumers directly?
-        //    BackpropToInputs(&*f);
-        //}
+        //fprintf(stderr, "Back-propagated through %d functions\n", (int)order.size());
         // implant the results into the map the user passed in
         for (auto& kv : gradients)
             kv.second = kv.first.m_dataFields->m_gradient;
