@@ -112,6 +112,7 @@ static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t
             auto axisIndex = axis.StaticAxisIndex();
             if (startOffset[axisIndex] != beginIndex || extent[axisIndex] != endIndex - beginIndex)
             {
+                // backprop into a slice of 'gradient'
                 if (beta == 0) // if beta = 0 then we must explicitly initialize the entire gradient matrix, not just the slice
                     gradient->SetValue(0.0f);
                 startOffset[axisIndex] = beginIndex;
@@ -624,8 +625,6 @@ class Memoize
                         // scenario, we will loose entries in the middle. We can allow to keep a few around
                         // in garbage-in-garbage-out. If, say, there are additional 20% gap values, we just
                         // carry them forward, and ignore them when implanting the result.
-                        if (!allConsecutiveSlices)
-                            BreakPoint;
                     }
                     // append the input
                     spliceInputs.push_back(input);
@@ -637,7 +636,6 @@ class Memoize
                     // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
                     m_batchedInputs[i] = spliceInputs[0];
                 else
-#if 1 // this fails after 4 minibatches with an A/V
                 if (allConsecutiveSlices) // they are consecutive: can short-circuit as a slice view
                 {
                     let& from  = lazyIndex0.first;
@@ -669,7 +667,6 @@ class Memoize
                     anyBatchedInputs = true;
                 }
                 else
-#endif
                 {
                     // create a new Function Splice()
                     vector<size_t> outputShape; // determine output shape
@@ -778,8 +775,6 @@ class Memoize
                 let& from  = fields.m_lazyIndex.first;
                 let  index = fields.m_lazyIndex.second;
                 let& fromOutput = from->m_outputs[0];
-                if (fromOutput.m_dataFields == v.m_dataFields)
-                    BreakPoint;
                 beta = LazilyCreateLazilyIndexedGradient(fromOutput);
                 let& fromGradient = fromOutput.m_dataFields->m_gradient;
                 if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
@@ -903,35 +898,16 @@ class Memoize
             //fail_if(c.first->m_inputs[c.second].m_dataFields != var.m_dataFields, "input is not the right variable??");
             BackwardToOneInput(c.first, c.second);
         }
-        // perform the backprop operation
-        if (!fields.m_gradient)
-        {
-            BreakPoint;
-        }
     }
     // second half of above function
     // Backprop from a consumer recursively into its n-th input.
     void BackwardToOneInput(Function* f, size_t index)
     {
-        // if we have already visited this Function (it's already in 'order') then done
-        //if (f->m_pendingInputs == -2)
-        //    return;
-        //fail_if(f->m_pendingInputs == -3, "unexpectedly encounted a cyclic graph");
-        //f->m_pendingInputs = -3; // (mark for cycles, not really needed)
         // get all gradients incoming from consumer's consumers
-        // BUGBUG: can't do this, output of batched ops is not a real output, it has no consumer chain
         for (let& output : f->m_outputs)
             BackwardFromAllConsumers(output);
         // perform the backprop operation
-        if (!f->m_outputs[0].m_dataFields->m_gradient)
-        {
-            BreakPoint;
-        }
         BackpropTo(f, index);
-        if (!f->m_inputs[index].m_dataFields->m_gradient)
-        {
-            BreakPoint;
-        }
     }
 
     // back-propagate all outputs' m_gradients to all inputs
