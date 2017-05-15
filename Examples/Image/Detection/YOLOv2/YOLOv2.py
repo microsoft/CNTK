@@ -17,41 +17,6 @@ import cntk.io.transforms as xforms
 import darknet.darknet19 as dn19
 from PARAMETERS import *
 
-if False:
-    ############# willi ###############
-    from cntk.ops.functions import UserFunction
-    from cntk import output_variable
-    import pdb
-    class LambdaFunc(UserFunction):
-        def __init__(self,
-                arg,
-                when=lambda arg: True,
-                execute=lambda arg: print(arg),
-                name=''):
-            self.when = when
-            self.execute = execute
-
-            super(LambdaFunc, self).__init__([arg], name=name)
-
-        def infer_outputs(self):
-            return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
-
-        def forward(self, argument, device=None, outputs_to_retain=None):
-            if self.when(argument):
-                self.execute(argument)
-
-            return None, argument
-
-        def backward(self, state, root_gradients):
-            pdb.set_trace()
-            if self.when(root_gradients):
-                self.execute(root_gradients)
-            return root_gradients
-
-        def clone(self, cloned_inputs):
-            return LambdaFunc(cloned_inputs[0])
-    ############# willi ###############
-
 
 def create_output_activation_layer(network, anchor_box_scales):
 
@@ -67,6 +32,7 @@ def create_output_activation_layer(network, anchor_box_scales):
     tp = ops.transpose(network, (1,2,0))
     reshaped = ops.reshape(tp, (output_width, output_height))
     #shape is now 245 * 25
+
 
     # slicing the array into subarrays
     xy_cords = ops.slice(reshaped, axis=1, begin_index=0, end_index=2, name="XY-Out")
@@ -141,16 +107,16 @@ def create_output_activation_layer(network, anchor_box_scales):
     return full_output
 
 
-def create_detector(batchnormalization = False):
+def create_detector(output_depth = (5+par_num_classes)*par_num_anchorboxes, batchnormalization = False):
     net = Sequential([
-        Convolution2D((3, 3), num_filters=1024, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
+        Convolution2D((3, 3), num_filters=par_dense_size, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
         BatchNormalization(),
-        Convolution2D((3, 3), num_filters=1024, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
+        Convolution2D((3, 3), num_filters=par_dense_size, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
         BatchNormalization(),
-        Convolution2D((3, 3), num_filters=1024, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
+        Convolution2D((3, 3), num_filters=par_dense_size, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
         #BatchNormalization(),
 
-        Convolution2D((1, 1), num_filters=125),
+        Convolution2D((1, 1), num_filters=output_depth),
     ], "YOLOv2_Detector")
 
     net2 = create_output_activation_layer(net, anchor_box_scales=par_anchorbox_scales)
@@ -169,11 +135,14 @@ def load_pretrained_darknet_feature_extractor():
 def load_pretrained_resnet101_feature_extractor():
     loaded_model = load_model(os.path.join(par_abs_path, "..", "..", "PretrainedModels", "ResNet101_ImageNet.model"))
     feature_layer = find_by_name(loaded_model, "data")
+    #first_conv = find_by_name(loaded_model, "conv1")
+    #first_conv = first_conv(placeholder(shape=(par_num_channels, par_image_width, par_image_height)))
     fe_output_layer = find_by_name(loaded_model, "res5c_relu")
-
+    #return combine([fe_output_layer.owner]).clone(CloneMethod.freeze, {first_conv: placeholder()})
     # return combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: placeholder()})
+    ph = placeholder(shape=(par_num_channels, par_image_width, par_image_height),name="input_ph")
+    net = combine([fe_output_layer.owner]).clone(CloneMethod.freeze, {feature_layer: ph})
 
-    net = combine([fe_output_layer.owner]).clone(CloneMethod.freeze, {feature_layer: placeholder()})
     return net
     # make resnet a block if desired
     #return as_block(net,[(net.arguments[0], net.arguments[0])],"ResNet_FE","ResNet_FE")
@@ -222,7 +191,6 @@ def predict_image(model, path, conf_threshold = 0.5, show=True):
     # print("box" + ":" + str(len(box_list)))
 
     # draw rectangles!
-
     image = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
     box_list_len = len(box_list)
     for j in range(box_list_len):
@@ -231,11 +199,11 @@ def predict_image(model, path, conf_threshold = 0.5, show=True):
         xmax = int(xmin + par_image_width * box[2])
         ymin = int(par_image_height * box[1] - par_image_height * box[3] / 2)
         ymax = int(ymin + par_image_height * box[3])
-        if(xmax > 223 or ymax > 223 or xmin < 0 or ymin < 0):
+        if(xmax >= par_image_width or ymax >= par_image_height or xmin < 0 or ymin < 0):
             print("Box out of bounds: (" + str(xmin) +","+ str(ymin) +") ("+ str(xmax) +","+ str(ymax) +")")
             # print(box[5:])
-        xmax = 223 if xmax > 223 else xmax
-        ymax = 223 if ymax > 223 else ymax
+        xmax = par_image_width-1 if xmax >= par_image_width else xmax
+        ymax = par_image_height-1 if ymax >= par_image_height else ymax
         xmin = 0 if xmin < 0 else xmin
         ymin = 0 if ymin < 0 else ymin
 
@@ -256,8 +224,6 @@ def predict_image(model, path, conf_threshold = 0.5, show=True):
 
 def create_mb_source(img_height, img_width, img_channels, output_size, image_file, roi_file, randomize = False, multithreaded_deserializer=False, max_samples=io.INFINITELY_REPEAT, max_epochs = io.INFINITELY_REPEAT):
     transforms = []
-
-    #import ipdb;ipdb.set_trace()
     transforms += [
         xforms.scale(width=img_width, height=img_height, channels=img_channels, interpolations='linear',
                      scale_mode='fill'),
@@ -278,14 +244,16 @@ if __name__ == '__main__':
 
     model = create_yolov2_net()
     print("created model!")
-
+    #model = load_pretrained_resnet101_feature_extractor()
     # plot
+    print("beep")
     plot(model, filename=os.path.join(par_abs_path, "YOLOv2.pdf"))
-
+    print("buup")
 
     image_input= input((par_num_channels, par_image_height, par_image_width))
     output = model(image_input) # append model to image input
-
+    plot(output, filename=os.path.join(par_abs_path, "YOLOv2_in.pdf"))
+    """
     # input for ground truth boxes
     num_gtb = par_max_gtbs
     gtb_input = input((num_gtb*5)) # 5 for  x,y,w,h,class
@@ -305,7 +273,7 @@ if __name__ == '__main__':
     mm_schedule = learners.momentum_schedule([-minibatch_size / np.log(par_momentum)], epoch_size)
 
     # Instantiate the trainer object to drive the model training
-    learner = learners.momentum_sgd(mse.parameters, lr_schedule, mm_schedule, unit_gain=True, l2_regularization_weight=0.0005)
+    learner = learners.momentum_sgd(mse.parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=0.0005)
     trainer = Trainer(None, (mse, mse), [learner])
 
     image_file = os.path.join(par_abs_path, "..", "..", "DataSets", "Pascal", "mappings" , "trainval2007.txt")
@@ -344,18 +312,20 @@ if __name__ == '__main__':
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     output.save_model(os.path.join(save_path, "YOLOv2.model"))
-
+    """
     # alternatively to training a model you can reload a pretrained!
-    #model = load_model(r".\outputdir\YOLOv2.model")
-    #image_input = input((par_num_channels, par_image_height, par_image_width))
-    #output = model(image_input)  # append model to image input
+    model = load_model(r".\outputdir\YOLOv2.model")
+    image_input = input((par_num_channels, par_image_height, par_image_width))
+    output = model(image_input)  # append model to image input
 
     #predict a few images
     names = ["000018.jpg","000118.jpg","001118.jpg","002118.jpg"]
-    threshold_objectness = 0.5
+    threshold_objectness = 0.505
     for i in range(len(names)):
         image = os.path.join(par_abs_path, "..", "..", "DataSets", "Pascal", "VOCdevkit" , "VOC2007", "JPEGImages" ,names[i])
         predict_image(output, image, conf_threshold=threshold_objectness)
 
     print("Done!")
 
+    import ipdb;ipdb.set_trace()
+    predict_image(output,r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Pascal\VOCdevkit\VOC2007\JPEGImages\000001.jpg",0.501)
