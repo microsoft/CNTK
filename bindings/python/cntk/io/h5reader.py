@@ -18,7 +18,7 @@ class H5DataSource(UserMinibatchSource):
           it is required to set three attributes: 1) dataset.attrs['is_seq']: bool; 2) dataset.attrs['shape']: a tuple or list of integers which defines the element data 
           shape; 3) dataset.attrs['dtype']: numpy element datatype string (see https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html), e.g.:  'i4': 32-bit 
           signed integer; 'f4':   32-bit floating-point number.
-        device (`DeviceDescriptor`, defaults to `None`): CNTK DeviceDescriptor; default  is  use_default_device().
+        device (`DeviceDescriptor`, defaults to `None`): CNTK DeviceDescriptor; default is use_default_device().
 
     Example:
      >>> with h5py.File("my-test-data.h5", "w") as f:
@@ -52,13 +52,13 @@ class H5DataSource(UserMinibatchSource):
      ...    batch_size = 30
      ...    for i in range( (100 // batch_size) + 2):
      ...         batch = ds.next_minibatch(batch_size)
-     ...         v_fixed_seq = C.sequence.input(4)
+     ...         v_fixed_seq = sequence.input_variable(4)
      ...         fixed_seq_op_result = (C.sequence.last(v_fixed_seq) * 1).eval({v_fixed_seq: batch[ds.stream_info_mapping['fixed_len_seq']]})
      ...         print(fixed_seq_op_result)
-     ...         v_vlen_seq = C.sequence.input(3)
-     ...         v_vlen_seq_op_result = (C.sequence.last(v_vlen_seq) * 1).eval({v_vlen_seq: batch[ds.stream_info_mapping['vlen_seq']]})
+     ...         v_vlen_seq = sequence.input_variable(3)
+     ...         v_vlen_seq_op_result = (sequence.last(v_vlen_seq) * 1).eval({v_vlen_seq: batch[ds.stream_info_mapping['vlen_seq']]})
      ...         print(v_vlen_seq_op_result)
-     ...         v_label = C.input(1)
+     ...         v_label = C.input_variable(1)
      ...         v_label_op_result = (v_label * 1).eval({v_label: batch[ds.stream_info_mapping['label']]})
      ...         print(v_label_op_result)
      ...    f.close()
@@ -174,7 +174,6 @@ class H5DataSource(UserMinibatchSource):
                     dshape = [seq_len] + elm_shape
                     res_data.append(np.reshape(seq, dshape))
                     sample_count = sample_count + seq_len
-
                 data = Value.create(var=sequence.input_variable(shape=elm_shape), data=res_data, device=mydevice)
                 sample_count = int(sample_count)
             else:
