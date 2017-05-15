@@ -77,7 +77,7 @@ else:
 
 
 if 'CNTK_LIBRARIES' in os.environ:
-  rt_libs = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split()]
+  rt_libs = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split(';' if IS_WINDOWS else None)]
 else:
   rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
                                                         '*' + libname_rt_ext))]
