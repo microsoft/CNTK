@@ -166,6 +166,8 @@ class Memoize
         return region->AsShape(shape);
     }
 
+    // ===== forward =====
+
     // predicate whether an op is only taking a view on its input
     // These are considered zero-cost, always batched whole-sale, and always done first.
     static bool IsViewOp(PrimitiveOpType op)
@@ -422,51 +424,6 @@ class Memoize
                 fields.m_value = from->IndexLastAxis(index);
         }
         return fields.m_value;
-    }
-
-    // lazily create m_gradient, which may live in a batched op
-    // Returns beta = 0 if gradient was newly created, otherwise 1
-    __declspec(noinline) double LazilyCreateLazilyIndexedGradient(const Variable& v)
-    {
-        auto& fields = *v.m_dataFields;
-        // if gradient exists then return it
-        double beta;
-        if (fields.m_gradient)
-            beta = 1.0;
-        else
-        {
-            // create new gradient
-#if 1
-            // if this op draws from a batched op, then the gradient lives in there as well; we return a view onto it
-            if (fields.m_lazyIndex.first)
-            {
-                let& from  = fields.m_lazyIndex.first;
-                let  index = fields.m_lazyIndex.second;
-                let& fromOutput = from->m_outputs[0];
-                beta = LazilyCreateLazilyIndexedGradient(fromOutput);
-                let& fromGradient = fromOutput.m_dataFields->m_gradient;
-                if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
-                    fields.m_gradient = fromGradient;
-                else // it's a slice: gradient is a slice view into from's output gradient
-                {
-                    if (beta == 0.0) // gradient is fresh: explicitly reset all (since we are slicing into the input gradientm, we cannot use the beta mechanism)
-                    {
-                        fromGradient->SetValue(0.0f);
-                        beta = 1.0;
-                    }
-                    fields.m_gradient = fromGradient->IndexLastAxis(index);
-                }
-            }
-            else
-#endif
-            {
-                // create a new one
-                // TODO: allocate parameters as separate objects; and allow user to pass buffers in
-                fields.m_gradient = AllocateTensorInArena(fields.m_shape, fields.m_dataType, fields.m_value->Device());
-                beta = 0.0; // has not been initialized (...actually has; but this saves memory round trips)
-            }
-        }
-        return beta;
     }
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
@@ -736,6 +693,53 @@ class Memoize
                 fields.m_consumers.second.clear();
             }
         }
+    }
+
+    // ===== forward =====
+
+    // lazily create m_gradient, which may live in a batched op
+    // Returns beta = 0 if gradient was newly created, otherwise 1
+    __declspec(noinline) double LazilyCreateLazilyIndexedGradient(const Variable& v)
+    {
+        auto& fields = *v.m_dataFields;
+        // if gradient exists then return it
+        double beta;
+        if (fields.m_gradient)
+            beta = 1.0;
+        else
+        {
+            // create new gradient
+#if 1
+            // if this op draws from a batched op, then the gradient lives in there as well; we return a view onto it
+            if (fields.m_lazyIndex.first)
+            {
+                let& from  = fields.m_lazyIndex.first;
+                let  index = fields.m_lazyIndex.second;
+                let& fromOutput = from->m_outputs[0];
+                beta = LazilyCreateLazilyIndexedGradient(fromOutput);
+                let& fromGradient = fromOutput.m_dataFields->m_gradient;
+                if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
+                    fields.m_gradient = fromGradient;
+                else // it's a slice: gradient is a slice view into from's output gradient
+                {
+                    if (beta == 0.0) // gradient is fresh: explicitly reset all (since we are slicing into the input gradientm, we cannot use the beta mechanism)
+                    {
+                        fromGradient->SetValue(0.0f);
+                        beta = 1.0;
+                    }
+                    fields.m_gradient = fromGradient->IndexLastAxis(index);
+                }
+            }
+            else
+#endif
+            {
+                // create a new one
+                // TODO: allocate parameters as separate objects; and allow user to pass buffers in
+                fields.m_gradient = AllocateTensorInArena(fields.m_shape, fields.m_dataType, fields.m_value->Device());
+                beta = 0.0; // has not been initialized (...actually has; but this saves memory round trips)
+            }
+        }
+        return beta;
     }
 
     // recursively traverse the tree hanging off a Variable and build the m_consumer fields
