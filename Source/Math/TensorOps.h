@@ -109,7 +109,7 @@ DECL ElemType Sigmoid(ElemType z)
 #endif
 }
 
-// Numeric stable Sigmoid, we can't remove the old one due to Speech dependency.
+// Numerically stable Sigmoid, we can't remove the old one due to Speech dependency.
 template <class ElemType>
 DECL ElemType StableSigmoid(ElemType z)
 {
