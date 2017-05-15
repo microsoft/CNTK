@@ -24,6 +24,95 @@ using namespace std;
 
 namespace CNTK
 {
+// perform back propagation   --TODO: this does not belong into this namespace
+static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t i,
+                        PrimitiveOpType primitiveOp, const Dictionary& attributes,
+                        const vector<const NDArrayView*>& outputValues, const vector<const NDArrayView*>& inputValues,
+                        const NDArrayViewPtr& gradient, double beta)
+{
+#if 0   // TODO: bring this back once we have gradient functions that do not support beta
+    if (beta == 0) // TODO: limit this to those ops that do not support beta
+    {
+        gradient->SetValue(0.0f);
+        beta = 1;
+    }
+#endif
+    auto op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // this gets set for 1-argument TensorView ops for execution after the switch()
+    auto op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // and this for 2-arg ops; all others execute inside the switch()
+    const NDArrayView* arg1 = outputGradients[0];
+    const NDArrayView* arg2 = nullptr;
+    double alpha = 1;
+    // NOTE: For now, this only implements the operators needed for the prototype
+    switch (primitiveOp)
+    {
+        // binary operations with simple TensorView implementation
+    case PrimitiveOpType::Plus:           op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
+    case PrimitiveOpType::Minus:          op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; alpha = i == 0 ? 1 : -1; break;
+    case PrimitiveOpType::ElementTimes:   op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct; arg2 = inputValues[1 - i]; break;
+        // Times family
+    case PrimitiveOpType::Times:
+    case PrimitiveOpType::TransposeTimes:
+        arg2 = inputValues[1 - i];
+        if (i == 0) // left input
+            gradient->MatrixProduct(/*transC=*/primitiveOp == PrimitiveOpType::TransposeTimes,
+                                    { const_cast<NDArrayView*>(arg1)->shared_from_this() }, /*transA=*/false,
+                                    { const_cast<NDArrayView*>(arg2)->shared_from_this() }, /*transB=*/true, alpha, 0, gradient, beta);
+        else // right input
+            gradient->MatrixProduct(/*transC=*/false,
+                                    { const_cast<NDArrayView*>(arg2)->shared_from_this() }, /*transA=*/primitiveOp != PrimitiveOpType::TransposeTimes,
+                                    { const_cast<NDArrayView*>(arg1)->shared_from_this() }, /*transB=*/false, alpha, 0, gradient, beta);
+        break;
+        // unary operations with simple TensorView implementation
+    case PrimitiveOpType::ReLU:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithLinearRectifierDerivativeFromOutput; arg2 = outputValues[0]; break;
+        // no-op operations with simple TensorView implementation
+        // NOTE: These do not need any data copy if there is only one consumer, which we won't know here. That case will be caught in the batched version.
+    case PrimitiveOpType::NoOp:           op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
+    case PrimitiveOpType::Reshape:        op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
+        // gradients that are copies with broadcasting
+    case PrimitiveOpType::ReduceElements:
+        {
+            const auto& reductionOpName = attributes[L"reductionOpName"/*PrimitiveFunction::AttributeNameReductionOpName*/].Value<wstring>();
+            if (reductionOpName == L"Sum"/*PrimitiveFunction::InternalSumReductionOpName*/) // TODO: uncomment these symbols once we have access
+                op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
+            else if (reductionOpName == L"LogSum"/*PrimitiveFunction::InternalLogSumReductionOpName*/)
+                gradient->NumericOperation({ const_cast<NDArrayView*>(outputGradients[0])->shared_from_this(),
+                                                const_cast<NDArrayView*>(    inputValues[0])->shared_from_this(),
+                                                const_cast<NDArrayView*>(   outputValues[0])->shared_from_this() },
+                                            alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithExpOfDiff,
+                                            gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+            else
+                //  PrimitiveFunction::InternalMeanReductionOpName
+                //  PrimitiveFunction::InternalMaxReductionOpName
+                //  PrimitiveFunction::InternalMinReductionOpName
+                //  PrimitiveFunction::InternalProdReductionOpName
+                LogicError("Variable '%S' Value(): Gradient of reduction op %S not yet implemented.", L""/*AsString().c_str()*/, reductionOpName.c_str());
+        }
+        break;
+        // hard stuff
+    case PrimitiveOpType::Splice:
+        {
+            auto axis = attributes[L"axis"/*PrimitiveFunction::AttributeNameAxis*/].Value<Axis>();
+            if (axis.StaticAxisIndex() != arg1->Shape().Rank() -1)
+                LogicError("NDArrayView::GatherBatch: Currently only splicing in a new slowest-changing axis is supported.");
+            gradient->NumericOperation({ arg1->IndexLastAxis(i) },
+                                        alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+        }
+        break;
+    default:
+        //fprintf(stderr, "NEEDS: %S\n", PrimitiveOpTypeName(primitiveOp).c_str());
+        LogicError("Variable '%S' Value(): Backpropagation for operation %S not implemented yet.", L""/*AsString().c_str()*/, PrimitiveOpTypeName(primitiveOp).c_str());
+        //LogicError("Variable '%S' Value(): Backpropagation for non-existent operation %S?", L""/*AsString().c_str()*/, PrimitiveOpTypeName(primitiveOp).c_str());
+    }
+    // the simple TensorView operations are performed out here
+    // TODO: we can eliminate the vector<> by passing a std::function, possibly?
+    if (op1Arg != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
+        gradient->NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() },
+                                    alpha, op1Arg, gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+    else if (op2Args != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
+        gradient->NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(), const_cast<NDArrayView*>(arg2)->shared_from_this() },
+                                    alpha, op2Args, gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+}
+
 class Memoize
 {
     // how graphs work in CNTK V2:
@@ -743,95 +832,6 @@ class Memoize
         BackpropToInputs(f);
         // mark as visited
         f->m_pendingInputs = -2;
-    }
-
-    // perform back propagation   --TODO: this does not belong into this namespace
-    static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t i,
-                           PrimitiveOpType primitiveOp, const Dictionary& attributes,
-                           const vector<const NDArrayView*>& outputValues, const vector<const NDArrayView*>& inputValues,
-                           const NDArrayViewPtr& gradient, double beta)
-    {
-#if 0   // TODO: bring this back once we have gradient functions that do not support beta
-        if (beta == 0) // TODO: limit this to those ops that do not support beta
-        {
-            gradient->SetValue(0.0f);
-            beta = 1;
-        }
-#endif
-        auto op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // this gets set for 1-argument TensorView ops for execution after the switch()
-        auto op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // and this for 2-arg ops; all others execute inside the switch()
-        const NDArrayView* arg1 = outputGradients[0];
-        const NDArrayView* arg2 = nullptr;
-        double alpha = 1;
-        // NOTE: For now, this only implements the operators needed for the prototype
-        switch (primitiveOp)
-        {
-            // binary operations with simple TensorView implementation
-        case PrimitiveOpType::Plus:           op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
-        case PrimitiveOpType::Minus:          op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; alpha = i == 0 ? 1 : -1; break;
-        case PrimitiveOpType::ElementTimes:   op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProduct; arg2 = inputValues[1 - i]; break;
-            // Times family
-        case PrimitiveOpType::Times:
-        case PrimitiveOpType::TransposeTimes:
-            arg2 = inputValues[1 - i];
-            if (i == 0) // left input
-                gradient->MatrixProduct(/*transC=*/primitiveOp == PrimitiveOpType::TransposeTimes,
-                                        { const_cast<NDArrayView*>(arg1)->shared_from_this() }, /*transA=*/false,
-                                        { const_cast<NDArrayView*>(arg2)->shared_from_this() }, /*transB=*/true, alpha, 0, gradient, beta);
-            else // right input
-                gradient->MatrixProduct(/*transC=*/false,
-                                        { const_cast<NDArrayView*>(arg2)->shared_from_this() }, /*transA=*/primitiveOp != PrimitiveOpType::TransposeTimes,
-                                        { const_cast<NDArrayView*>(arg1)->shared_from_this() }, /*transB=*/false, alpha, 0, gradient, beta);
-            break;
-            // unary operations with simple TensorView implementation
-        case PrimitiveOpType::ReLU:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithLinearRectifierDerivativeFromOutput; arg2 = outputValues[0]; break;
-            // no-op operations with simple TensorView implementation
-            // NOTE: These do not need any data copy if there is only one consumer, which we won't know here. That case will be caught in the batched version.
-        case PrimitiveOpType::NoOp:           op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
-        case PrimitiveOpType::Reshape:        op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
-            // gradients that are copies with broadcasting
-        case PrimitiveOpType::ReduceElements:
-            {
-                const auto& reductionOpName = attributes[L"reductionOpName"/*PrimitiveFunction::AttributeNameReductionOpName*/].Value<wstring>();
-                if (reductionOpName == L"Sum"/*PrimitiveFunction::InternalSumReductionOpName*/) // TODO: uncomment these symbols once we have access
-                    op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
-                else if (reductionOpName == L"LogSum"/*PrimitiveFunction::InternalLogSumReductionOpName*/)
-                    gradient->NumericOperation({ const_cast<NDArrayView*>(outputGradients[0])->shared_from_this(),
-                                                 const_cast<NDArrayView*>(    inputValues[0])->shared_from_this(),
-                                                 const_cast<NDArrayView*>(   outputValues[0])->shared_from_this() },
-                                               alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithExpOfDiff,
-                                               gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-                else
-                    //  PrimitiveFunction::InternalMeanReductionOpName
-                    //  PrimitiveFunction::InternalMaxReductionOpName
-                    //  PrimitiveFunction::InternalMinReductionOpName
-                    //  PrimitiveFunction::InternalProdReductionOpName
-                    LogicError("Variable '%S' Value(): Gradient of reduction op %S not yet implemented.", L""/*AsString().c_str()*/, reductionOpName.c_str());
-            }
-            break;
-            // hard stuff
-        case PrimitiveOpType::Splice:
-            {
-                auto axis = attributes[L"axis"/*PrimitiveFunction::AttributeNameAxis*/].Value<Axis>();
-                if (axis.StaticAxisIndex() != arg1->Shape().Rank() -1)
-                    LogicError("NDArrayView::GatherBatch: Currently only splicing in a new slowest-changing axis is supported.");
-                gradient->NumericOperation({ arg1->IndexLastAxis(i) },
-                                           alpha, Microsoft::MSR::CNTK::ElementWiseOperator::opCopy, gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-            }
-            break;
-        default:
-            //fprintf(stderr, "NEEDS: %S\n", PrimitiveOpTypeName(primitiveOp).c_str());
-            LogicError("Variable '%S' Value(): Backpropagation for operation %S not implemented yet.", L""/*AsString().c_str()*/, PrimitiveOpTypeName(primitiveOp).c_str());
-            //LogicError("Variable '%S' Value(): Backpropagation for non-existent operation %S?", L""/*AsString().c_str()*/, PrimitiveOpTypeName(primitiveOp).c_str());
-        }
-        // the simple TensorView operations are performed out here
-        // TODO: we can eliminate the vector<> by passing a std::function, possibly?
-        if (op1Arg != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
-            gradient->NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this() },
-                                       alpha, op1Arg, gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-        else if (op2Args != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
-            gradient->NumericOperation({ const_cast<NDArrayView*>(arg1)->shared_from_this(), const_cast<NDArrayView*>(arg2)->shared_from_this() },
-                                       alpha, op2Args, gradient, beta, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
     }
 
     // back-propagate all outputs' m_gradients to all inputs
