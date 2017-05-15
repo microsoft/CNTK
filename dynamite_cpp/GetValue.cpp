@@ -335,36 +335,49 @@ class Memoize
         return fields.m_value;
     }
 
-    // return the m_gradient field of a variable, but possibly realizing it lazily if it is an index operation
-    // and lazily create the NDArrayView
-    pair<NDArrayViewPtr, double> LazilyIndexedGradientRef(const Variable& v, bool lazy = false)
+    // lazily create m_gradient, which may live in a batched op
+    // Returns beta = 0 if gradient was newly created, otherwise 1
+    __declspec(noinline) double LazilyCreateLazilyIndexedGradient(const Variable& v)
     {
         auto& fields = *v.m_dataFields;
-#if 0
-        if (fields.m_lazyIndex.first)
+        // if gradient exists then return it
+        double beta;
+        if (fields.m_gradient)
+            beta = 1.0;
+        else
         {
-            let& fromFunction = fields.m_lazyIndex.first;
-            let  index        = fields.m_lazyIndex.second;
-            let fromGradientAndBeta = LazilyIndexedGradientRef(fromFunction->m_inputs[0], lazy);
-            let& fromGradient = fromGradientAndBeta.first;
-            let  beta         = fromGradientAndBeta.second;
-            if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
-                return make_pair(fromGradient, beta);
-            else
+            // create new gradient
+#if 1
+            // if this op draws from a batched op, then the gradient lives in there as well; we return a view onto it
+            if (fields.m_lazyIndex.first)
             {
-                if (beta == 0) // gradient is fresh: explicitly reset all (since we are slicing into the input gradientm, we cannot use the beta mechanism)
-                    fromGradient->SetValue(0.0f);
-                return make_pair(fromGradient->IndexLastAxis(index), 1.0);
+                let& from  = fields.m_lazyIndex.first;
+                let  index = fields.m_lazyIndex.second;
+                let& fromOutput = from->m_outputs[0];
+                beta = LazilyCreateLazilyIndexedGradient(fromOutput);
+                let& fromGradient = fromOutput.m_dataFields->m_gradient;
+                if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
+                    fields.m_gradient = fromGradient;
+                else // it's a slice: gradient is a slice view into from's output gradient
+                {
+                    if (beta == 0.0) // gradient is fresh: explicitly reset all (since we are slicing into the input gradientm, we cannot use the beta mechanism)
+                    {
+                        fromGradient->SetValue(0.0f);
+                        beta = 1.0;
+                    }
+                    fields.m_gradient = fromGradient->IndexLastAxis(index);
+                }
+            }
+            else
+#endif
+            {
+                // create a new one
+                // TODO: allocate parameters as separate objects; and allow user to pass buffers in
+                fields.m_gradient = AllocateTensorInArena(fields.m_shape, fields.m_dataType, fields.m_value->Device());
+                beta = 0.0; // has not been initialized (...actually has; but this saves memory round trips)
             }
         }
-#endif
-        // return existing m_gradient, or create a new one if needed
-        if (fields.m_gradient)
-            return make_pair(fields.m_gradient, 1.0);
-        fail_if(!lazy, "gradient unexpectedly not available");
-        // TODO: allocate parameters as separate objects; and allow user to pass buffers in
-        fields.m_gradient = AllocateTensorInArena(fields.m_shape, fields.m_dataType, fields.m_value->Device());
-        return make_pair(fields.m_gradient, 0.0);
+        return beta;
     }
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
@@ -652,7 +665,7 @@ class Memoize
         fail_if(!fields.m_needsGradient, "unexpectedly encountered a node with m_needsGradient=false??");
         fail_if(fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder, "unexpectedly encountered an Input or a Placeholder??");
 
-#if 0   // disable this to backprop through unbatched ops
+#if 1   // disable this to backprop through unbatched ops
         if(fields.m_lazyIndex.first)
         {
             auto& f = *fields.m_lazyIndex.first;
@@ -703,29 +716,30 @@ class Memoize
     // This function assumes:
     //  - m_pendingInputs != -2
     //    BUGBUG: This is a bad one; what if users get a gradient and then continue to build on top?
-    __declspec(noinline) void TraverseFunctionTreeBackward(const Variable& var)
+    __declspec(noinline) void TraverseConsumerTreeBackward(const Variable& var)
     {
         let& fields = *var.m_dataFields;
-        // traverse all consumers
+        // have all consumers to push gradients from them into var
+        // TODO: do we need the index?
         // TODO: additional optimization goes here
         auto* f = fields.m_consumers.first;
         if (f)
-            TraverseFunctionTreeBackward(f);
+            TraverseConsumerTreeBackward(f);
         for (auto* f : fields.m_consumers.second)
-            TraverseFunctionTreeBackward(f);
+            TraverseConsumerTreeBackward(f);
     }
     // second half of this function
-    void TraverseFunctionTreeBackward(Function* f)
+    void TraverseConsumerTreeBackward(Function* f)
     {
         // if we have already visited this Function (it's already in 'order') then done
         if (f->m_pendingInputs == -2)
             return;
         fail_if(f->m_pendingInputs == -3, "unexpectedly encounted a cyclic graph");
         f->m_pendingInputs = -3; // (mark for cycles, not really needed)
-        // and recursively traverse the inputs
         for (let& output : f->m_outputs)
-            TraverseFunctionTreeBackward(output);
+            TraverseConsumerTreeBackward(output);
         // perform the backprop operation
+        // ...we really only want to push gradient into 'var'. Will that screw up the order?
         BackpropToInputs(f);
         // mark as visited
         f->m_pendingInputs = -2;
@@ -835,12 +849,19 @@ class Memoize
         for (let& output : outputs) // output values and gradients coming from consumer
         {
             let& fields = *output.m_dataFields;
-            m_outputValuesBuffer   .push_back(LazilyIndexedValue(output).get());
-            m_outputGradientsBuffer.push_back(LazilyIndexedGradientRef(output).first.get());
+            fail_if(fields.m_lazyIndex.first, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
+            fail_if(!fields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
+            fail_if(!fields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
+            m_outputValuesBuffer   .push_back(fields.m_value.get());
+            m_outputGradientsBuffer.push_back(fields.m_gradient.get());
         }
         m_inputValuesBufferRaw.clear(); // input values
         for (let& input : inputs)
-            m_inputValuesBufferRaw.push_back(LazilyIndexedValue(input).get()); // inefficient!! But fine for now, I just want correctness.
+        {
+            let& fields = *input.m_dataFields;
+            fail_if(!fields.m_value, "unexpectedly ran into a function that has no m_value yet??");
+            m_inputValuesBufferRaw.push_back(fields.m_value.get());
+        }
         // compute gradients for all inputs
         let numInputs = inputs.size();
         for (size_t i = 0; i < numInputs; i++)
@@ -851,11 +872,9 @@ class Memoize
             if (!fields.m_needsGradient)
                 continue;
             // get or create the desired gradient's TensorView
-            auto inputGradientAndBeta = LazilyIndexedGradientRef(input, true);
-            let& inputGradient = inputGradientAndBeta.first;
-            let  beta          = inputGradientAndBeta.second;
+            let beta = LazilyCreateLazilyIndexedGradient(input);
             // backprop into the input
-            BackpropTo(m_outputGradientsBuffer, i, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferRaw, inputGradient, beta);
+            BackpropTo(m_outputGradientsBuffer, i, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferRaw, fields.m_gradient, beta);
         }
     }
 
@@ -960,7 +979,7 @@ public:
                 logic_error("Backward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
             if (!fields.m_needsGradient) // (we could also just leafve the gradient 0)
                 logic_error("Backward: cannot compute gradient for variable with m_needsGradient being False.");
-            TraverseFunctionTreeBackward(param);
+            TraverseConsumerTreeBackward(param);
         }
         //fprintf(stderr, "Back-propagated through %d functions\n", (int)order.size());
         // implant the results into the map the user passed in
