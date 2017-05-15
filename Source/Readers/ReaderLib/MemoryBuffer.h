@@ -20,6 +20,9 @@ public:
     // Pointer to the start of the buffer.
     const char* Start() const { return m_data.data(); }
 
+    // Number of bytes left in the buffer
+    size_t Left() const { return End() - m_current; }
+
     // Pointer to the end of the buffer.
     const char* End() const { return m_data.data() + m_data.size(); }
 
@@ -39,9 +42,11 @@ public:
     // If no new lines is present, returns null, otherwise returns a new position.
     const char* MoveToNextLine()
     {
-        m_current = (char*)memchr(m_current, g_Row_Delimiter, End() - m_current);
+        assert(!Eof());
+        m_current = (char*)memchr(m_current, g_rowDelimiter, End() - m_current);
         if (m_current)
         {
+            ++m_line;
             ++m_current;
             return m_current;
         }
@@ -51,6 +56,8 @@ public:
             return nullptr;
         }
     }
+
+    size_t CurrentLine() const { return m_line; }
 
     // Returns true if no more data available.
     bool Eof() const { return m_done; }
@@ -62,6 +69,7 @@ private:
     bool m_done = false;                         // Flag indicating whether there is more data.
     bool m_useCompleteLines;                     // Flag indicating whether the buffer should only contain complete lines.
     std::string m_lastPartialLineInBuffer;       // Buffer for the partial string to preserve them between two sequential Refills.
+    size_t m_line;                               // Current line.
 };
 
 }}}

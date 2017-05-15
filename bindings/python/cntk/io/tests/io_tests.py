@@ -49,6 +49,18 @@ MBDATA_SPARSE = r'''0	|x 560:1	|y 1 0 0 0 0
 1	|x 424:1
 '''
 
+MBDATA_SPARSE1 = r'''0	|x 560:1
+0	|x 0:1
+0	|x 0:1
+1	|x 560:1
+1	|x 0:1
+1	|x 0:1
+1	|x 424:1
+'''
+
+MBDATA_SPARSE2 = r'''0	|y 1 0 0 0 0
+1	|y 0 1 0 0 0
+'''
 
 def create_temp_file(tmpdir):
     tmpfile = str(tmpdir/'mbtest.txt')
@@ -70,8 +82,8 @@ def create_config(tmpdir):
                 StreamDefs(features=StreamDef(field='S0', shape=1))))
 
 
-def _write_data(tmpdir, data):
-    tmpfile = str(tmpdir / 'mbdata.txt')
+def _write_data(tmpdir, data, filename='mbdata.txt'):
+    tmpfile = str(tmpdir / filename)
 
     with open(tmpfile, 'w') as f:
         f.write(data)
@@ -831,52 +843,63 @@ def test_usermbsource_training(tmpdir):
 
     assert trainer.total_number_of_samples_seen == 20
 
-
 def test_minibatch_defined_by_labels(tmpdir):
-    tmpfile = _write_data(tmpdir, MBDATA_SPARSE)
 
     input_dim = 1000
     num_output_classes = 5
 
+    def assert_data(mb_source):
+        features_si = mb_source.stream_info('features')
+        labels_si = mb_source.stream_info('labels')
+     
+        mb = mb_source.next_minibatch(2)
+     
+        features = mb[features_si]
+     
+        # 2 samples, max seq len 4, 1000 dim
+        assert features.shape == (2, 4, input_dim)
+        assert features.end_of_sweep
+        assert features.num_sequences == 2
+        assert features.num_samples == 7
+        assert features.is_sparse
+     
+        labels = mb[labels_si]
+        # 2 samples, max seq len 1, 5 dim
+        assert labels.shape == (2, 1, num_output_classes)
+        assert labels.end_of_sweep
+        assert labels.num_sequences == 2
+        assert labels.num_samples == 2
+        assert not labels.is_sparse
+     
+        label_data = labels.asarray()
+        assert np.allclose(label_data,
+                           np.asarray([
+                               [[1.,  0.,  0.,  0.,  0.]],
+                               [[0.,  1.,  0.,  0.,  0.]]
+                           ]))
+     
+        mb = mb_source.next_minibatch(3)
+        features = mb[features_si]
+        labels = mb[labels_si]
+     
+        assert features.num_samples == 10
+        assert labels.num_samples == 3
+
+    tmpfile = _write_data(tmpdir, MBDATA_SPARSE)
     mb_source = MinibatchSource(CTFDeserializer(tmpfile, StreamDefs(
         features=StreamDef(field='x', shape=input_dim, is_sparse=True),
         labels=StreamDef(field='y', shape=num_output_classes, is_sparse=False, defines_mb_size=True)
     )), randomize=False)
 
-    assert isinstance(mb_source, MinibatchSource)
+    assert_data(mb_source)
 
-    features_si = mb_source.stream_info('features')
-    labels_si = mb_source.stream_info('labels')
+    tmpfile1 = _write_data(tmpdir, MBDATA_SPARSE1, '1')
+    tmpfile2 = _write_data(tmpdir, MBDATA_SPARSE2, '2')
+    combined_mb_source = MinibatchSource([ CTFDeserializer(tmpfile1, StreamDefs(
+            features=StreamDef(field='x', shape=input_dim, is_sparse=True))),
+        CTFDeserializer(tmpfile2, StreamDefs(
+            labels=StreamDef(field='y', shape=num_output_classes, is_sparse=False, defines_mb_size=True)
+        ))], randomize=False)
 
-    mb = mb_source.next_minibatch(2)
+    assert_data(combined_mb_source)
 
-    features = mb[features_si]
-
-    # 2 samples, max seq len 4, 1000 dim
-    assert features.shape == (2, 4, input_dim)
-    assert features.end_of_sweep
-    assert features.num_sequences == 2
-    assert features.num_samples == 7
-    assert features.is_sparse
-
-    labels = mb[labels_si]
-    # 2 samples, max seq len 1, 5 dim
-    assert labels.shape == (2, 1, num_output_classes)
-    assert labels.end_of_sweep
-    assert labels.num_sequences == 2
-    assert labels.num_samples == 2
-    assert not labels.is_sparse
-
-    label_data = labels.asarray()
-    assert np.allclose(label_data,
-                       np.asarray([
-                           [[1.,  0.,  0.,  0.,  0.]],
-                           [[0.,  1.,  0.,  0.,  0.]]
-                       ]))
-
-    mb = mb_source.next_minibatch(3)
-    features = mb[features_si]
-    labels = mb[labels_si]
-
-    assert features.num_samples == 10
-    assert labels.num_samples == 3

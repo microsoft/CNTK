@@ -12,7 +12,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     using namespace std;
 
-    MemoryBuffer::MemoryBuffer(size_t maxSize, bool useCompleteLines) : m_maxSize(maxSize), m_useCompleteLines(useCompleteLines) {}
+    MemoryBuffer::MemoryBuffer(size_t maxSize, bool useCompleteLines) 
+        : m_maxSize(maxSize), m_useCompleteLines(useCompleteLines), m_line(0){}
 
     void MemoryBuffer::RefillFrom(FILE* file)
     {
@@ -30,6 +31,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_data.resize(bytesRead);
             if (!bytesRead)
                 m_done = true;
+            m_current = m_data.data();
         }
         else // Need to keep track of the last partial string.
         {
@@ -43,22 +45,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (bytesRead == (size_t)-1)
                 RuntimeError("Could not read from the input file.");
 
+            size_t readBufferSize = m_lastPartialLineInBuffer.size() + bytesRead;
+            m_data.resize(readBufferSize);
+            m_current = m_data.data();
+
             if (bytesRead == 0) // End of file reached.
             {
-                boost::trim(m_lastPartialLineInBuffer);
-                if (!m_lastPartialLineInBuffer.empty())
-                    memcpy(&m_data[0], m_lastPartialLineInBuffer.data(), m_lastPartialLineInBuffer.size());
-                else
-                {
+                if (m_data.empty())
                     m_done = true;
-                    m_data.clear();
-                }
-
                 m_lastPartialLineInBuffer.clear();
                 return;
             }
-
-            size_t readBufferSize = m_lastPartialLineInBuffer.size() + bytesRead;
 
             // Let's find the last LF.
             int lastLF = 0;
@@ -66,12 +63,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // Let's find the latest \n if exists.
                 for (lastLF = (int)readBufferSize - 1; lastLF >= 0; lastLF--)
                 {
-                    if (m_data[lastLF] == g_Row_Delimiter)
+                    if (m_data[lastLF] == g_rowDelimiter)
                         break;
                 }
 
+                // Could not find, seems not enough data, or end of file.
                 if (lastLF < 0)
-                    RuntimeError("Length of a sequence cannot exceed '%zu' bytes.", readBufferSize);
+                {
+                    m_lastPartialLineInBuffer.resize(readBufferSize);
+                    memcpy(&m_lastPartialLineInBuffer[0], m_data.data(), readBufferSize);
+                    m_data.clear();
+                    return;
+                }
             }
 
             // Let's cut the buffer at the last EOL and save partial string
@@ -85,8 +88,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 memcpy(&m_lastPartialLineInBuffer[0], m_data.data() + logicalBufferSize, lastPartialLineSize);
             m_data.resize(logicalBufferSize);
         }
-
-        m_current = m_data.data();
     }
 
     void MemoryBuffer::SkipBOMIfPresent()

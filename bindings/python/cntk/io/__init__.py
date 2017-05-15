@@ -504,7 +504,7 @@ def HTKFeatureDeserializer(streams):
         dimension = stream.dim
         scp_file = stream['scp']
         broadcast = stream['broadcast'] if 'broadcast' in stream else False
-        defines_mb_size = stream['defines_mb_size'] if 'defines_mb_size' in stream else False
+        defines_mb_size = stream.get('defines_mb_size', False)
         left_context, right_context = stream.context if 'context' in stream\
                                                      else (0, 0)
         htk_config = cntk_py.HTKFeatureConfiguration(stream_name, scp_file,

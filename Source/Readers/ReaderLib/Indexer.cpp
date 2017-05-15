@@ -30,7 +30,6 @@ Indexer::Indexer(FILE* file, bool primary, bool skipSequenceIds, char streamPref
 void Indexer::BuildFromLines()
 {
     m_hasSequenceIds = false;
-    size_t lines = 0;
     int64_t offset = m_buffer.GetFileOffset();
     while (!m_buffer.Eof())
     {
@@ -39,8 +38,7 @@ void Indexer::BuildFromLines()
         {
             auto sequenceOffset = offset;
             offset = m_buffer.GetFileOffset();
-            m_index.AddSequence(SequenceDescriptor{ lines, 1 }, sequenceOffset, offset);
-            ++lines;
+            m_index.AddSequence(SequenceDescriptor{ m_buffer.CurrentLine() - 1, 1 }, sequenceOffset, offset);
         }
         else
             m_buffer.RefillFrom(m_file);
@@ -50,7 +48,7 @@ void Indexer::BuildFromLines()
     {
         // There's a number of characters, not terminated by a newline,
         // add a sequence to the index, parser will have to deal with it.
-        m_index.AddSequence(SequenceDescriptor{ lines, 1 }, offset, m_fileSize);
+        m_index.AddSequence(SequenceDescriptor{ m_buffer.CurrentLine(), 1 }, offset, m_fileSize);
     }
 }
 
@@ -154,6 +152,12 @@ bool Indexer::SkipLineWithCheck()
 {
     auto currentLine = m_buffer.m_current;
     auto pos = m_buffer.MoveToNextLine();
+    // In this function we always expect the buffer to contain full lines only.
+    // The only exception is at the end of the file \n is missing. Let's check this situation.
+    if (!pos && currentLine != m_buffer.End() &&
+        filesize(m_file) == m_buffer.GetFileOffset() + m_buffer.Left())
+        pos = m_buffer.End();
+
     if (pos)
     {
         boost::string_ref s(currentLine, pos - currentLine);

@@ -225,7 +225,7 @@ private:
     void SkipLine();
 
     // Moves the buffer position to the beginning of the next line.
-    // Returns true if the current line container m_mainStream.
+    // Returns true if the current line containes m_mainStream.
     bool SkipLineWithCheck();
 
     // Tries to get numeric sequence id.
