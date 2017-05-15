@@ -445,6 +445,23 @@ class Memoize
         auto outValue = isFree ? nullptr : AllocateTensorInArena(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
         // execute it
         output.m_dataFields->m_value = move(f.ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue)));
+        // log
+        fprintf(stderr, "%S%S = %S(", f.Uid().c_str(), output.Shape().AsString().c_str(), f.OpName().c_str());
+        for (size_t i = 0; i < inputs.size() && i < 4; i++)
+        {
+            let& input = inputs[i];
+            let& fields = *input.m_dataFields;
+            if (fields.m_lazyIndex.first)
+            {
+                let& input1 = fields.m_lazyIndex.first->m_outputs[0];
+                fprintf(stderr, "%s%S%S[%d]", (i == 0) ? "" : ", ", input1.Uid().c_str(), input1.Shape().AsString().c_str(), (int)fields.m_lazyIndex.second);
+            }
+            else
+                fprintf(stderr, "%s%S%S", (i == 0) ? "" : ", ", input.Uid().c_str(), input.Shape().AsString().c_str());
+        }
+        if (inputs.size() > 4)
+            fprintf(stderr, ", +%d", (int)(inputs.size() - 4));
+        fprintf(stderr, ")\n");
         return output;
     }
 
@@ -584,12 +601,10 @@ class Memoize
                     // note: input is a regular Variable with regular ownwership rules (it does not come from inside here)
                 }
                 // and splice
-#if 0 // somehow fails with R*0, expecting a [25 x 5] but onyl being fed a single vector
                 if (allSame) // optimized case: all ops share the same operand: no need to batch them
                     // note: we assume strict broadcasting semantics here (if at least one input is actually batched)
                     m_batchedInputs[i] = spliceInputs[0];
                 else
-#endif
 #if 0 // this fails after 4 minibatches with an A/V
                 if (allConsecutiveSlices) // they are consecutive: can short-circuit as a slice view
                 {
@@ -632,6 +647,7 @@ class Memoize
                     auto additionalProperties = Dictionary(); // create additional arguments
                     additionalProperties[L"axis"/*PrimitiveFunction::AttributeNameAxis*/] = Axis((int)maxRank);
                     let spliceOp = Function::RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(spliceInputs), outputShape, move(additionalProperties));
+                    spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
                     // and execute it
                     let& output = MemoizeKnowableValueInArena(*spliceOp);
                     // and that's our input to the batched operation
@@ -655,11 +671,13 @@ class Memoize
                 // Batched inputs have been prepared in m_batchedInputs[].
                 let expectedOutputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
                 batchedOp = Function::RawPrimitiveFunction(f0.Op(), vector<Variable>(m_batchedInputs), expectedOutputShape, Dictionary(f0.Attributes()));
+                batchedOp->m_uid = L"*" + f0.Uid();
             }
             else
             {
                 // all inputs identical: compute it only once
                 batchedOp = Function::RawPrimitiveFunction(f0.Op(), vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), Dictionary(f0.Attributes()));
+                batchedOp->m_uid = L"." + f0.Uid();
                 // TODO: the following is a little more efficient, but creates a cycle, so we should exclude the lazy index for the first op
                 //batchedOp = f0.shared_from_this();
             }
