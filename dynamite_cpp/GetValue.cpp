@@ -412,17 +412,17 @@ class Memoize
     static const NDArrayViewPtr& LazilyIndexedValue(const Variable& v)
     {
         auto& fields = *v.m_dataFields;
-        if (!fields.m_value)
-        {
-            let& from = fields.m_lazyIndex.first->m_outputs[0].m_dataFields->m_value;
-            let index = fields.m_lazyIndex.second;
-            if (!from)
-                LogicError("variable unexpectedly has no value yet");
-            if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
-                fields.m_value = from;
-            else
-                fields.m_value = from->IndexLastAxis(index);
-        }
+        if (fields.m_value)
+            return fields.m_value;
+        if (!fields.m_lazyIndex.first)
+            LogicError("variable unexpectedly has no value yet");
+        // the Function does not own its output, it is a slice view into another
+        let& from = LazilyIndexedValue(fields.m_lazyIndex.first->m_outputs[0]);
+        let index = fields.m_lazyIndex.second;
+        if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
+            fields.m_value = from;
+        else
+            fields.m_value = from->IndexLastAxis(index);
         return fields.m_value;
     }
 
@@ -834,7 +834,7 @@ class Memoize
             TraverseConsumerTreeBackward(output);
         // perform the backprop operation
         // ...we really only want to push gradient into 'var'. Will that screw up the order?
-        BackpropToInputs(f);
+        BackpropToAllInputs(f);
         // mark as visited
         f->m_pendingInputs = -2;
     }
@@ -844,7 +844,7 @@ class Memoize
     vector<const NDArrayView*> m_outputValuesBuffer;
     vector<const NDArrayView*> m_outputGradientsBuffer;
     vector<const NDArrayView*> m_inputValuesBufferRaw;
-    void BackpropToInputs(Function* f)
+    void BackpropToAllInputs(Function* f)
     {
         let& outputs = f->m_outputs;
         let& inputs =  f->m_inputs;
