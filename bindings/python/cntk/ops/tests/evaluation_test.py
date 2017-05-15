@@ -72,7 +72,7 @@ def test_constant_eval():
     c_plus_1 = c + 1
     op = C.combine([c_plus_1, c])
     result = op.eval({})
-    assert np.array_equal(result[c_plus_1.output], [2.0])
+    assert np.array_equal(result[c_plus_1.output], 2.0)
     assert np.array_equal(result[c], 1.0)
 
 
