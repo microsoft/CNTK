@@ -1837,17 +1837,6 @@ namespace CNTK {
 
 %}
 
-
-//
-// Release the GIL before calling into C++
-//
-%exception {
-  Py_BEGIN_ALLOW_THREADS;
-  $action
-  Py_END_ALLOW_THREADS;
-}
-
-
 //
 // Setting up hash calculation so that __hash__ on Swig objects
 // are redirected to the std::hash computation of the C++ API
