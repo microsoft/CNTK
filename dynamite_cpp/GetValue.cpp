@@ -873,70 +873,39 @@ class Memoize
     }
 
     // backprop gradient into 'var' by pulling all of its consumers (recursively)
-    // This function assumes:
-    //  - m_pendingInputs != -2
-    //    BUGBUG: This is a bad one; what if users get a gradient and then continue to build on top?
+    // Further batching happens here.
     __declspec(noinline) void BackwardFromAllConsumers(const Variable& var)
     {
         let& fields = *var.m_dataFields;
         if (fields.m_visited)
             return;
 
-        // backprop into variable that has no consumers  --TODO: why can this happen??
         auto& c = fields.m_consumers.first;
+        // reached a leaf
         if (!c.first)
             return;
 
         fail_if(!fields.m_needsGradient, "backprop into variable that does not need gradient");
-        fail_if(!c.first, "backprop into variable that has no consumers");
 
         fields.m_visited = true;
 
-        // realize all gradients from above
-        auto BackwardFromAllOutputs = [this](const Function* f)
-        {
-            for (let& output : f->m_outputs)
-                BackwardFromAllConsumers(output);
-        };
-        BackwardFromAllOutputs(c.first);
+        // realize all consumers' outputs' gradients
+        for (let& output : c.first->m_outputs)
+            BackwardFromAllConsumers(output);
         for (auto& c : fields.m_consumers.second)
-            BackwardFromAllOutputs(c.first);
+            for (let& output : c.first->m_outputs)
+                BackwardFromAllConsumers(output);
+        // Now all consumers are ready to propagate into 'var'.
 
-        //// simple path: only one consumer
-        //if (fields.m_consumers.second.empty())
-        //{
-        //    // perform the backprop operation
-        //    BackpropTo(c.first, c.second);
-        //    // (the following test would require the rediect through lazy indexc)
-        //    //fail_if(c.first->m_inputs[c.second].m_dataFields != var.m_dataFields, "input is not the right variable??");
-        //    BackwardToOneInput(c.first, c.second);
-        //    // get all gradients incoming from consumer's consumers
-        //    for (let& output : f->m_outputs)
-        //        BackwardFromAllConsumers(output);
-        //    // perform the backprop operation
-        //    BackpropTo(f, c.second);
-        //}
-
-        // have all consumers to push gradients from them into var
-        // TODO: do we need the index? Answer is yes for batched backprop
+        // finally propagate this var's gradient into all of its inputs
         // TODO: additional optimization goes here (GatherBatch, weight updates)
         BackpropTo(c.first, c.second);
         for (auto& c : fields.m_consumers.second)
             BackpropTo(c.first, c.second);
     }
-    // second half of above function
-    // Backprop from a consumer recursively into its n-th input.
-    void BackwardToOneInput(Function* f, size_t index)
-    {
-        //// get all gradients incoming from consumer's consumers
-        //for (let& output : f->m_outputs)
-        //    BackwardFromAllConsumers(output);
-        // perform the backprop operation
-        BackpropTo(f, index);
-    }
 
-    // back-propagate all outputs' m_gradients to all inputs
-    // by pulling gradients from all m_consumers
+    // back-propagate all of f's outputs' m_gradients to one input
+    // This wraps the Function's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
     vector<const NDArrayView*> m_outputValuesBuffer;
     vector<const NDArrayView*> m_outputGradientsBuffer;
     vector<const NDArrayView*> m_inputValuesBufferRaw;
@@ -945,9 +914,7 @@ class Memoize
         let& inputs =  f->m_inputs;
         auto& input = inputs[index];
         auto& fields = *input.m_dataFields;
-        // BUGBUG: need to set up needsGradient flags based on what variables are selected
-        if (!fields.m_needsGradient)
-            return;
+        fail_if(!fields.m_needsGradient, "function unexpectedly does not need a gradient");
         // get the TensorViews for everything we may compute the gradient from
         let& outputs = f->m_outputs;
         m_outputValuesBuffer.clear();
@@ -971,7 +938,7 @@ class Memoize
             m_inputValuesBufferRaw.push_back(fields.m_value.get());
         }
         // compute gradients for the desired input
-        // get or create the desired gradient's TensorView
+        // get or create m_gradient as the desired gradient's TensorView (possibly redirecting through a slice view)
         let beta = LazilyCreateLazilyIndexedGradient(input);
         // backprop into the input
         CNTK::BackpropTo(m_outputGradientsBuffer, index, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferRaw, fields.m_gradient, beta);
