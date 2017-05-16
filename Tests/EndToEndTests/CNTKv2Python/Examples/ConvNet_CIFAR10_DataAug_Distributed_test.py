@@ -25,7 +25,12 @@ script_under_test = os.path.join(example_dir, "ConvNet_CIFAR10_DataAug_Distribut
 from distributed_common import mpiexec_test
 from prepare_test_data import prepare_CIFAR10_data
 
+base_path = prepare_CIFAR10_data()
+# change dir to locate data.zip correctly
+os.chdir(base_path)
+
 mpiexec_params = [ "-n", "2"]
+
 
 def test_cifar_convnet_distributed(device_id):
     # Create a path to TensorBoard log directory and make sure it does not exist.
@@ -37,7 +42,7 @@ def test_cifar_convnet_distributed(device_id):
     params = [ "-n", "2",
                "-m", "64",
                "-e", "3200",
-               "-datadir", prepare_CIFAR10_data(),
+               "-datadir", base_path,
                "-tensorboard_logdir", tb_logdir,
                "-q", "32",
                "-r",
@@ -55,7 +60,7 @@ def test_cifar_convnet_distributed_1bitsgd(device_id):
     params = [ "-n", "2",
                "-m", "64",
                "-e", "3200",
-               "-datadir", prepare_CIFAR10_data(),
+               "-datadir", base_path,
                "-q", "1",
                "-r",
                "-device", str(device_id) ]
@@ -65,7 +70,7 @@ def test_cifar_convnet_distributed_block_momentum(device_id):
     params = [ "-n", "2",
                "-m", "64",
                "-e", "3200",
-               "-datadir", prepare_CIFAR10_data(),
+               "-datadir", base_path,
                "-b", "1600",
                "-r",
                "-device", str(device_id) ]

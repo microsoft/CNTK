@@ -288,6 +288,9 @@ Tutorials/slots.wl
 bindings/python/tutorials/.ipynb_checkpoints
 Examples/Text/ATIS/Data
 Examples/Tutorials/ImageHandsOn/cifar-10-batches-py
+Examples/Video/DataSets/UCF11/action_youtube_naudio/
+Examples/Video/DataSets/UCF11/test_map.csv
+Examples/Video/DataSets/UCF11/train_map.csv
 Tutorials/zip
 
 # other
