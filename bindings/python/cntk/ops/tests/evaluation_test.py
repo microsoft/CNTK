@@ -85,6 +85,12 @@ def test_input_without_dynamic_axes():
     assert np.allclose(eval_result, [3.006, 2.992])
     assert np.allclose(grad_result, [.01, .01])
 
+    w = C.parameter(init=np.asarray([[0.5], [-1.5]], dtype=np.float32))
+    op = C.times(x, w) + 3.0
+    grad_result, eval_result = op.grad({x : np.asarray([.6, -.8], dtype=np.float32)}, outputs=[op], wrt=[w])
+    assert np.allclose(eval_result, [4.5])
+    assert np.allclose(grad_result, [[.6], [-.8]])
+
 
 def test_grad_after_eval():
     x = C.input_variable((C.FreeDimension, 2))
