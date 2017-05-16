@@ -129,7 +129,7 @@ private:
                 break;
             }
         }
-#define SUPRESS_MEMSHARING // #define this to disable memory sharing by always return true 
+// #define SUPRESS_MEMSHARING // #define this to disable memory sharing by always return true 
 // TODO: Make this a runtime option.
 #ifdef SUPRESS_MEMSHARING
         bRet = true; 
