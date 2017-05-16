@@ -122,13 +122,16 @@ namespace CNTK
         }
     }
 
-    inline Microsoft::MSR::CNTK::TensorShape AsTensorShape(const NDShape& viewShape)
+    // convert a viewShape into a V1-compatible TensorShape
+    // V1 code traditionally assumed that tensors are at least 1D, so whenever
+    // interacting with V1 code, use this function to pad the shape accordingly.
+    inline Microsoft::MSR::CNTK::TensorShape AsTensorShapeMin1D(const NDShape& viewShape)
     {
         const size_t maxNumAxesSupportedByTensorView = 12;
         if (viewShape.Rank() > maxNumAxesSupportedByTensorView)
             LogicError("The number (%d) of requested axes exceeds the currently supported limit (%d)", (int)viewShape.Rank(), (int)maxNumAxesSupportedByTensorView);
 
-        // TensorShape is required to be at least 1D
+        // In lots of V1 code, TensorShape is assumed to be at least 1D.
         size_t minRankSize = 0;
         Microsoft::MSR::CNTK::SmallVector<size_t> tensorViewShape(std::max<size_t>(minRankSize, viewShape.Rank()));
         for (size_t i = 0; i < tensorViewShape.size(); ++i)
@@ -147,7 +150,7 @@ namespace CNTK
 
     inline Microsoft::MSR::CNTK::TensorShape AsTensorShapeMin2D(const NDShape& viewShape)
     {
-        return AsTensorShapeMin2D(AsTensorShape(viewShape));
+        return AsTensorShapeMin2D(AsTensorShapeMin1D(viewShape));
     }
 
     inline std::pair<size_t, size_t> GetMatrixDimensions(const NDShape& viewShape)

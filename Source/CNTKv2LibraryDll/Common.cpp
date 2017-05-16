@@ -219,7 +219,7 @@ namespace CNTK
                     (var1.IsSparse() == var2.IsSparse()) &&
                     (var1.Name() == var2.Name()) &&
                     areDynamicAxesCompatible &&
-                    ((var1.Shape() == var2.Shape()) || (AsTensorShape(var1.Shape()) == AsTensorShape(var2.Shape()))));
+                    ((var1.Shape() == var2.Shape()) || (AsTensorShapeMin1D(var1.Shape()) == AsTensorShapeMin1D(var2.Shape()))));
         }
 
         bool AreEquivalent(const FunctionPtr& f1, const FunctionPtr& f2, std::unordered_set<std::wstring>& uids)

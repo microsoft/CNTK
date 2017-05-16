@@ -478,7 +478,7 @@ namespace CNTK
                                 RuntimeError("Function '%S': Slice operation with inconsistent attributes", AsString().c_str());
                             }
 
-                            auto outputTensorShape = AsTensorShape(m_inputs[0].Shape());
+                            auto outputTensorShape = AsTensorShapeMin1D(m_inputs[0].Shape()); // BUGBUG? why min 1D?
                             for (auto i = 0; i < axis.size(); i++)
                             {
                                 auto& ax = axis[i];
@@ -1207,7 +1207,8 @@ namespace CNTK
         else
             computeOutputShapeFunc = &Microsoft::MSR::CNTK::ConvolveGeometry::ComputeInputShape;
 
-        auto outputShape = AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape), AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPad, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutputDim));
+        // BUGBUG? Why -Min1D here?
+        auto outputShape = AsNDShape(computeOutputShapeFunc(AsTensorShapeMin1D(operandShape), AsTensorShapeMin1D(kernelShape), AsTensorShapeMin1D(outputMapCount), AsTensorShapeMin1D(strides), sharing, autoPad, AsTensorShapeMin1D(lowerPad), AsTensorShapeMin1D(upperPad), ceilOutputDim));
 
         // Any input dimensions that are free/inferred pass through as free/inferred
         for (size_t i = 0; i < operandShape.Rank(); ++i)

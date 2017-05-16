@@ -446,7 +446,7 @@ namespace CNTK
                 InvalidArgument("Parameter or Constant '%S' with unresolved shape %S found when compiling the Function graph.", variable.AsString().c_str(), variable.Shape().AsString().c_str());
 
             auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name(), useMangledNamesForComputationNodes);
-            computationNodePtr = builder.CreateLearnableParameter(internalNodeName, AsTensorShape(variable.Shape()));
+            computationNodePtr = builder.CreateLearnableParameter(internalNodeName, AsTensorShapeMin1D(variable.Shape()));
             network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
             if (!variable.NeedsGradient() || (inputsToExcludeGradientsFor.find(variable) != inputsToExcludeGradientsFor.end()))
                 computationNodePtr->SetLearningRateMultiplier(0.0);
@@ -500,9 +500,9 @@ namespace CNTK
                 network->AddNodeToNetAndAttachInputs(New<DynamicAxisNode<ElementType>>(network->GetDeviceId(), internalDynamicAxisName), {});
 
             if (IsSparseInput(variable))
-                computationNodePtr = builder.CreateSparseInputNode(internalNodeName, AsTensorShape(fullyDefinedArgumentVar.Shape()), internalDynamicAxisName);
+                computationNodePtr = builder.CreateSparseInputNode(internalNodeName, AsTensorShapeMin1D(fullyDefinedArgumentVar.Shape()), internalDynamicAxisName);
             else
-                computationNodePtr = builder.CreateInputNode(internalNodeName, AsTensorShape(fullyDefinedArgumentVar.Shape()), internalDynamicAxisName);
+                computationNodePtr = builder.CreateInputNode(internalNodeName, AsTensorShapeMin1D(fullyDefinedArgumentVar.Shape()), internalDynamicAxisName);
 
             if (variable.NeedsGradient() && (inputsToExcludeGradientsFor.find(variable) == inputsToExcludeGradientsFor.end()))
             {
@@ -757,13 +757,13 @@ namespace CNTK
                             replacementShape[i] = 0;
                     }
 
-                    computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(replacementShape), AsCNTKInternalAxisIdx(beginAxis), AsCNTKInternalAxisIdx(endAxis));
+                    computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShapeMin1D(replacementShape), AsCNTKInternalAxisIdx(beginAxis), AsCNTKInternalAxisIdx(endAxis));
                     break;
                 }
                 case PrimitiveOpType::ROIPooling:
                 {
                     auto roiOutputShape = functionConfig[PrimitiveFunction::AttributeNameROIOutputShape].Value<NDShape>();
-                    computationNodePtr = New<ROIPoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(roiOutputShape));
+                    computationNodePtr = New<ROIPoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShapeMin1D(roiOutputShape));
                     break;
                 }
                 case PrimitiveOpType::Pooling:
@@ -784,7 +784,7 @@ namespace CNTK
                     {
                         includePad = functionConfig[PrimitiveFunction::AttributeNameIncludePad].Value<bool>();
                     }
-                    computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutDim, includePad, ImageLayoutKind::CHW);
+                    computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShapeMin1D(poolingWindowsShape), AsTensorShapeMin1D(strides), autoPadding, AsTensorShapeMin1D(lowerPad), AsTensorShapeMin1D(upperPad), ceilOutDim, includePad, ImageLayoutKind::CHW);
                     break;
                 }
                 case PrimitiveOpType::Unpooling:
@@ -795,7 +795,7 @@ namespace CNTK
                     auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
                     auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
                     //We only get here after validation so it is safe to assume unpooling is max
-                    computationNodePtr = New<MaxUnpoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(unpoolingWindowShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
+                    computationNodePtr = New<MaxUnpoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShapeMin1D(unpoolingWindowShape), AsTensorShapeMin1D(strides), autoPadding, AsTensorShapeMin1D(lowerPad), AsTensorShapeMin1D(upperPad), ImageLayoutKind::CHW);
                     break;
                 }
                 case PrimitiveOpType::SumAll:
@@ -873,9 +873,9 @@ namespace CNTK
                         outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
                     auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
                     computationNodePtr = New<ConvolutionNode<ElementType>>(network->GetDeviceId(), internalNodeName,
-                        AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
-                        sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
-                        outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),
+                        AsTensorShapeMin1D(kernelShape), AsTensorShapeMin1D(outputMapCount), AsTensorShapeMin1D(strides),
+                        sharing, autoPadding, AsTensorShapeMin1D(lowerPad), AsTensorShapeMin1D(upperPad), transpose,
+                        outputShape.IsUnknown() ? TensorShape(0) : AsTensorShapeMin1D(outputShape),
                         ImageLayoutKind::CHW, maxTempMemSizeInSamples);
                     break;
                 }
@@ -928,9 +928,9 @@ namespace CNTK
 
                     size_t offset = primitiveFunction->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>();
                     if (op == PrimitiveOpType::PastValue)
-                        computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(inputOperandVar.Shape()), offset);
+                        computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShapeMin1D(inputOperandVar.Shape()), offset);
                     else
-                        computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(inputOperandVar.Shape()), offset);
+                        computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShapeMin1D(inputOperandVar.Shape()), offset);
 
                     break;
                 }
@@ -1331,8 +1331,8 @@ namespace CNTK
             {
                 auto newShape = freeDimensionArgumentMapping.second.Shape();
                 auto argumentComputationNode = m_variableToNodeMap[freeDimensionArgumentMapping.first];
-                if (AsTensorShape(newShape) != argumentComputationNode->GetSampleLayout())
-                    argumentComputationNode->SetDims(AsTensorShape(newShape), argumentComputationNode->HasMBLayout());
+                if (AsTensorShapeMin1D(newShape) != argumentComputationNode->GetSampleLayout())
+                    argumentComputationNode->SetDims(AsTensorShapeMin1D(newShape), argumentComputationNode->HasMBLayout());
             }
         }
         else
@@ -1583,7 +1583,7 @@ namespace CNTK
         if (varValue != nullptr)
         {
             // TODO: The shape of the specified output Value object must match the actual output shape
-            if ((varValue->Shape() != valueShape) && (AsTensorShape(varValue->Shape()) != AsTensorShape(valueShape)))
+            if ((varValue->Shape() != valueShape) && (AsTensorShapeMin1D(varValue->Shape()) != AsTensorShapeMin1D(valueShape)))
                 ::InvalidArgument("The shape %S of the specified Value object for Variable '%S' %s does not match the actual shape %S",
                                   varValue->Shape().AsString().c_str(), var.AsString().c_str(), getGradient ? "gradient" : "output", valueShape.AsString().c_str());
         }
