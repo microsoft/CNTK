@@ -16,7 +16,7 @@ using namespace Microsoft::MSR::CNTK;
 namespace CNTK
 {
     template <typename ElementType>
-    static TensorView<ElementType>* AllocateTensorView(const NDShape& viewShape,
+    static TensorView<ElementType>* AllocateTensorViewMin2D(const NDShape& viewShape,
                                                        const DeviceDescriptor& device,
                                                        void* dataBuffer,
                                                        size_t bufferSizeInBytes)
@@ -33,7 +33,7 @@ namespace CNTK
         return new TensorView<ElementType>(matrix, AsTensorShapeMin2D(viewShape));
     }
 
-    static void* AllocateTensorView(CNTK::DataType dataType,
+    static void* AllocateTensorViewMin2D(CNTK::DataType dataType,
                                     const NDShape& viewShape,
                                     const DeviceDescriptor& device,
                                     void* dataBuffer,
@@ -42,9 +42,9 @@ namespace CNTK
         switch (dataType)
         {
         case DataType::Float:
-            return AllocateTensorView<float>(viewShape, device, dataBuffer, bufferSizeInBytes);
+            return AllocateTensorViewMin2D<float>(viewShape, device, dataBuffer, bufferSizeInBytes);
         case DataType::Double:
-            return AllocateTensorView<double>(viewShape, device, dataBuffer, bufferSizeInBytes);
+            return AllocateTensorViewMin2D<double>(viewShape, device, dataBuffer, bufferSizeInBytes);
         default:
             LogicError("Unsupported DataType %s", DataTypeName(dataType));
             break;
@@ -52,7 +52,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    static TensorView<ElementType>* AllocateTensorView(const NDShape& viewShape,
+    static TensorView<ElementType>* AllocateTensorViewMin2D(const NDShape& viewShape,
                                                        CNTK::StorageFormat storageType,
                                                        const DeviceDescriptor& device,
                                                        size_t numNonZeroValues = 0)
@@ -67,7 +67,7 @@ namespace CNTK
         return new TensorView<ElementType>(matrix, AsTensorShapeMin2D(viewShape));
     }
 
-    static void* AllocateTensorView(CNTK::DataType dataType,
+    static void* AllocateTensorViewMin2D(CNTK::DataType dataType,
                                     CNTK::StorageFormat storageType,
                                     const NDShape& viewShape,
                                     const DeviceDescriptor& device,
@@ -76,9 +76,9 @@ namespace CNTK
         switch (dataType)
         {
         case DataType::Float:
-            return AllocateTensorView<float>(viewShape, storageType, device, numNonZeroValues);
+            return AllocateTensorViewMin2D<float>(viewShape, storageType, device, numNonZeroValues);
         case DataType::Double:
-            return AllocateTensorView<double>(viewShape, storageType, device, numNonZeroValues);
+            return AllocateTensorViewMin2D<double>(viewShape, storageType, device, numNonZeroValues);
         default:
             LogicError("Unsupported DataType %s", DataTypeName(dataType));
             break;
@@ -86,13 +86,13 @@ namespace CNTK
     }
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly/* = false*/)
-        : NDArrayView(dataType, device, StorageFormat::Dense, viewShape, readOnly, AllocateTensorView(dataType, viewShape, device, dataBuffer, bufferSizeInBytes))
+        : NDArrayView(dataType, device, StorageFormat::Dense, viewShape, readOnly, AllocateTensorViewMin2D(dataType, viewShape, device, dataBuffer, bufferSizeInBytes))
     {
     }
 
     template <typename ElementType>
     NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/)
-        : NDArrayView(AsDataType<ElementType>(), device, StorageFormat::SparseCSC, viewShape, false, AllocateTensorView<ElementType>(viewShape, StorageFormat::SparseCSC, device, numNonZeroValues))
+        : NDArrayView(AsDataType<ElementType>(), device, StorageFormat::SparseCSC, viewShape, false, AllocateTensorViewMin2D<ElementType>(viewShape, StorageFormat::SparseCSC, device, numNonZeroValues))
     {
         if ((colStarts == nullptr) || (rowIndices == nullptr) || (nonZeroValues == nullptr) || (numNonZeroValues == 0) || (numNonZeroValues > viewShape.TotalSize()))
             InvalidArgument("Invalid sparse CSC format data specified for construction of NDArrayView with shape '%S'; "
@@ -123,8 +123,18 @@ namespace CNTK
         });
     }
 
+    NDArrayView::NDArrayView(CNTK::DataType dataType, const DeviceDescriptor& device, CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, const MatrixBase& storageObject1)
+        : m_dataType(dataType), m_device(device), m_storageFormat(storageType), m_viewShape(viewShape), m_isReadOnly(readOnly)
+    {
+        const auto& storageObject = (const Microsoft::MSR::CNTK::MatrixBase&)storageObject1; // TODO: what is the correct way to resolve the namespace issue without having the full namespace dance in the lib header?
+        storageObject.GetDeviceId();
+        // ... CONTINUE HERE
+        //auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(storageObject.AsReference()), AsTensorShapeMin2D(node->GetSampleLayout()));
+        //NDArrayViewPtr value = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(storageObject.GetDeviceId()), AsStorageFormat(storageObject.GetFormat()), AsNDShape(node->GetSampleLayout()), false, tensorView);
+    }
+
     NDArrayView::NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device)
-        : NDArrayView(dataType, device, storageType, viewShape, false, AllocateTensorView(dataType, storageType, viewShape, device))
+        : NDArrayView(dataType, device, storageType, viewShape, false, AllocateTensorViewMin2D(dataType, storageType, viewShape, device))
     {}
 
     NDArrayView::~NDArrayView()
