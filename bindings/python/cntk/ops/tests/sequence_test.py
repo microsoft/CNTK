@@ -237,13 +237,13 @@ def test_sequence_unpack_backprop(device_id):
     param_grads_2, loss_result_2 = ce.grad({x_seq_input : [_to_csr(seq1_data), _to_csr(seq2_data)], label_input : label_data},
                                            wrt=ce.parameters, outputs=[ce], as_numpy=False)
 
-    assert np.array_equal(loss_result_1.asarray(), loss_result_2.asarray())
+    assert np.allclose(loss_result_1.asarray(), loss_result_2.asarray())
     
     for param in param_grads_1:
         if not param_grads_1[param].is_sparse:
             reference_grad_value = param_grads_1[param].asarray()
             grad_value = param_grads_2[param].asarray()
-            assert np.array_equal(reference_grad_value, grad_value)
+            assert np.allclose(reference_grad_value, grad_value)
 
 def test_to_sequence_error_for_operand_with_sequence_axis():
     x = C.sequence.input_variable(C.FreeDimension, 2)
