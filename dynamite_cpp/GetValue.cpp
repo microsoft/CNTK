@@ -473,7 +473,8 @@ class Memoize
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
         // logging
-#if 0
+#undef LOGGING
+#ifdef LOGGING
         fprintf(stderr, "%S%S = %S(", f.Uid().c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
         for (size_t i = 0; i < inputs.size() && i < 4; i++)
         {
@@ -657,7 +658,9 @@ class Memoize
                         additionalProperties[L"beginIndex"/*PrimitiveFunction::AttributeNameBeginIndex*/] = (int)begin;
                         additionalProperties[L"endIndex"  /*PrimitiveFunction::AttributeNameEndIndex*/  ] = (int)(begin + j);
                         let spliceOp = Function::RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape, move(additionalProperties));
+#ifdef LOGGING
                         spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
+#endif
                         // and execute it
                         let& output = MemoizeKnowableValueInArena(*spliceOp, /*isFree=*/true);
                         // and that's our input to the batched operation
@@ -678,7 +681,9 @@ class Memoize
                     auto additionalProperties = Dictionary(); // create additional arguments
                     additionalProperties[L"axis"/*PrimitiveFunction::AttributeNameAxis*/] = Axis((int)maxRank);
                     let spliceOp = Function::RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(spliceInputs), outputShape, move(additionalProperties));
+#ifdef LOGGING
                     spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
+#endif
                     // and execute it
                     let& output = MemoizeKnowableValueInArena(*spliceOp);
                     // and that's our input to the batched operation
@@ -702,13 +707,17 @@ class Memoize
                 // Batched inputs have been prepared in m_batchedInputs[].
                 let expectedOutputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
                 batchedOp = Function::RawPrimitiveFunction(f0.Op(), vector<Variable>(m_batchedInputs), expectedOutputShape, Dictionary(f0.Attributes()));
+#ifdef LOGGING
                 batchedOp->m_uid = L"*" + f0.Uid();
+#endif
             }
             else
             {
                 // all inputs identical: compute it only once
                 batchedOp = Function::RawPrimitiveFunction(f0.Op(), vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), Dictionary(f0.Attributes()));
+#ifdef LOGGING
                 batchedOp->m_uid = L"." + f0.Uid();
+#endif
                 // TODO: the following is a little more efficient, but creates a cycle, so we should exclude the lazy index for the first op
                 //batchedOp = f0.shared_from_this();
             }
@@ -886,7 +895,7 @@ class Memoize
         let axis = gatherBatchResultDims.size();
         gatherBatchResultDims.push_back(inputs.size());
         auto out = AllocateTensorInArena(gatherBatchResultDims, input0.GetDataType(), input0.Device());
-        return move(NDArrayView::GatherBatch(inputs, axis, move(out)));
+        return move(NDArrayView::GatherBatch(inputs, (int)axis, move(out)));
     }
 
     // backprop gradient into 'var' by pulling all of its consumers (recursively)
@@ -908,9 +917,7 @@ class Memoize
 place_item_ops         = [arg for arg in args if arg.op is Variable._op_place_item]
 transpose_dot_item_ops = [arg for arg in args if arg.op is cntk.NDArrayView.transpose_dot]
 reduce_sum_item_ops    = [arg for arg in args if arg.op is cntk.NDArrayView.reduce_sum]
-other_ops              = [arg for arg in args if arg.op is not Variable._op_place_item     and
-arg.op is not cntk.NDArrayView.reduce_sum and
-arg.op is not cntk.NDArrayView.transpose_dot] # all others
+other_ops              = rest
 */
         // all other
         return m_otherConsumers;
@@ -1053,6 +1060,9 @@ arg.op is not cntk.NDArrayView.transpose_dot] # all others
     // helper to verify that the tree is clean
     void AssertTreeStateGetValue(const Variable& v) const
     {
+#if 1
+        v;
+#else
         let& fields = *v.m_dataFields;
         if (fields.m_consumers.first.first || !fields.m_consumers.second.empty())
             LogicError("AssertTreeStateGetValue: m_consumers should be empty");
@@ -1064,6 +1074,7 @@ arg.op is not cntk.NDArrayView.transpose_dot] # all others
             for (let& input : owner->m_inputs)
                 AssertTreeStateGetValue(input);
         }
+#endif
     }
 
 public:

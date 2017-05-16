@@ -665,7 +665,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto trainer = CreateTrainer(nullptr, loss, loss/*metric*/, { learner });
 
     // force synchronized GPU operation so we can profile more meaningfully
-    DeviceDescriptor::EnableSynchronousGPUKernelExecution();
+    //DeviceDescriptor::EnableSynchronousGPUKernelExecution();
 
     const size_t minibatchSize = 200;
     for (size_t repeats = 0; true; repeats++)
@@ -751,7 +751,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             Backward(mbLoss, gradients);
             d_learner->Update(gradients, minibatchData[labelStreamInfo].numberOfSamples);
 #endif
-            loss1 = GetValue(mbLoss)->AsScalar<float>(); // BUGBUG: currently fails after backprop due to state control issue
+            loss1 = GetValue(mbLoss)->AsScalar<float>(); // note: this does the GPU sync
         }
         fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", loss1 / minibatchData[featureStreamInfo].numberOfSequences);
 #endif
@@ -770,7 +770,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
             //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
             //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            crit = trainer->PreviousMinibatchLossAverage();
+            crit = trainer->PreviousMinibatchLossAverage(); // note: this does the GPU sync
         }
         PrintTrainingProgress(trainer, repeats, /*outputFrequencyInMinibatches=*/ 1);
 #endif
