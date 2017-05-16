@@ -27,10 +27,11 @@ namespace CNTK
 // perform back propagation
 // Gradient must have been allocated to the correct shape already.
 // If beta == 0 then gradient can be uninitialized memory.
-static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t i,
-                        PrimitiveOpType primitiveOp, const Dictionary& attributes,
-                        const vector<const NDArrayView*>& outputValues, const vector<const NDArrayView*>& inputValues,
-                        const NDArrayViewPtr& gradient, double beta)
+// For now only defined for functions with 1 output.
+static void BackpropTo(const NDArrayView* outputGradient, size_t i,
+                       PrimitiveOpType primitiveOp, const Dictionary& attributes,
+                       const NDArrayView* outputValue, const vector<const NDArrayView*>& inputValues,
+                       const NDArrayViewPtr& gradient, double beta)
 {
 #if 0   // TODO: bring this back once we have gradient functions that do not support beta
     if (beta == 0) // TODO: limit this to those ops that do not support beta
@@ -41,7 +42,7 @@ static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t
 #endif
     auto op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // this gets set for 1-argument TensorView ops for execution after the switch()
     auto op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opNone; // and this for 2-arg ops; all others execute inside the switch()
-    const NDArrayView* arg1 = outputGradients[0];
+    const NDArrayView* arg1 = outputGradient;
     const NDArrayView* arg2 = nullptr;
     double alpha = 1;
     // NOTE: For now, this only implements the operators needed for the prototype
@@ -65,7 +66,7 @@ static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t
                                       { const_cast<NDArrayView*>(arg1)->shared_from_this() }, /*transB=*/false, alpha, 0, gradient, beta);
         break;
         // unary operations with simple TensorView implementation
-    case PrimitiveOpType::ReLU:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithLinearRectifierDerivativeFromOutput; arg2 = outputValues[0]; break;
+    case PrimitiveOpType::ReLU:           op2Args = Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithLinearRectifierDerivativeFromOutput; arg2 = outputValue; break;
         // no-op operations with simple TensorView implementation
         // NOTE: These do not need any data copy if there is only one consumer, which we won't know here. That case will be caught in the batched version.
     case PrimitiveOpType::NoOp:           op1Arg  = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy; break;
@@ -77,9 +78,9 @@ static void BackpropTo(const vector<const NDArrayView*>& outputGradients, size_t
             if (reductionOpName == L"Sum"/*PrimitiveFunction::InternalSumReductionOpName*/) // TODO: uncomment these symbols once we have access
                 op1Arg = Microsoft::MSR::CNTK::ElementWiseOperator::opCopy;
             else if (reductionOpName == L"LogSum"/*PrimitiveFunction::InternalLogSumReductionOpName*/)
-                NDArrayView::NumericOperation({ const_cast<NDArrayView*>(outputGradients[0])->shared_from_this(),
-                                                const_cast<NDArrayView*>(    inputValues[0])->shared_from_this(),
-                                                const_cast<NDArrayView*>(   outputValues[0])->shared_from_this() }, alpha,
+                NDArrayView::NumericOperation({ const_cast<NDArrayView*>(outputGradient )->shared_from_this(),
+                                                const_cast<NDArrayView*>( inputValues[0])->shared_from_this(),
+                                                const_cast<NDArrayView*>(outputValue    )->shared_from_this() }, alpha,
                                               Microsoft::MSR::CNTK::ElementWiseOperator::opElementwiseProductWithExpOfDiff,
                                               gradient, beta,
                                               Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
@@ -862,6 +863,8 @@ class Memoize
             // BUGBUG: we must not kill the gradient buffers passed by the user
             fields.m_gradient.reset();
             // record ourselves as a consumer of the input
+            // Remember that any input that is a lazyIndex has been redirected to its lazy source,
+            // i.e. it is the lazy source that will pull this gradient.
             if (!fields.m_consumers.first.first)
                 fields.m_consumers.first = make_pair(&f, i);
             else
@@ -877,8 +880,6 @@ class Memoize
     // The vectors for building the lists are class members so that we reuse the malloc.
     vector<pair<Function*, size_t>> m_placeItemConsumers;    // IndexLastAxis() op  --do we have those actually? Or already short-circuited?
     vector<pair<Function*, size_t>> m_matrixWeightConsumers;
-    vector<Variable> m_matrixDataGradients;
-    vector<Variable> m_matrixDataInput0s;
     vector<pair<Function*, size_t>> m_reduceSumConsumers;
     vector<pair<Function*, size_t>> m_otherConsumers;
     __declspec(noinline) vector<pair<Function*, size_t>>& DetermineBucket (const pair<Function*, size_t>& c)
@@ -900,6 +901,51 @@ arg.op is not cntk.NDArrayView.transpose_dot] # all others
         // all other
         return m_otherConsumers;
     };
+
+    // helper to batch an array of NDArrayViews of the same shape into a new axis
+    vector<size_t> gatherBatchResultDims;
+    NDArrayViewPtr GatherBatchInArena(const vector<NDArrayViewPtr>& inputs)
+    {
+        let& input0 = *inputs[0];
+        let& inputShape = input0.Shape().Dimensions();
+        gatherBatchResultDims.assign(inputShape.begin(), inputShape.end());
+        let axis = gatherBatchResultDims.size();
+        gatherBatchResultDims.push_back(inputs.size());
+        auto out = AllocateTensorInArena(gatherBatchResultDims, input0.GetDataType(), input0.Device());
+        return move(NDArrayView::GatherBatch(inputs, axis, move(out)));
+    }
+
+    // backprop into weight parameter of a Times op (inputs[0])
+    // This can be batched into a single matrix product.
+    vector<NDArrayViewPtr> m_matrixDataGradients;
+    vector<NDArrayViewPtr> m_matrixDataInput1s;
+    void BackpropToMatrixWeight(vector<pair<Function*, size_t>>& consumers)
+    {
+#if 1
+        for (auto& c : consumers)
+            BackpropTo(c.first, c.second);
+#else
+        let& f0 = *m_matrixWeightConsumers.front().first;
+        let& input0 = f0.m_inputs[0];
+        for (auto& c : m_matrixWeightConsumers)
+        {
+            fail_if(c.second != 0, "wrong input??");
+            m_matrixDataGradients.push_back(c.first->m_outputs[0].m_dataFields->m_gradient);
+            m_matrixDataInput1s  .push_back(c.first->m_inputs [1].m_dataFields->m_value   );
+        }
+
+        auto input1         = GatherBatchInArena(m_matrixDataInput1s); // TODO: we can further factor this and pass a lambda
+        auto outputGradient = GatherBatchInArena(m_matrixDataGradients);
+        let beta = LazilyCreateLazilyIndexedGradient(input0);
+        CNTK::BackpropTo(outputGradient.get(), /*index=*/0, f0.Op(), f0.m_attributes, /*outputValue=*/nullptr, { nullptr, input1.get() }, input0.m_dataFields->m_gradient, beta);
+
+        m_matrixDataInput1s.clear(); // move this into lambda
+        m_matrixDataGradients.clear();
+#endif
+    }
+
+
+
     __declspec(noinline) void AggregateGradientFromAllConsumers(const Variable& var)
     {
         let& fields = *var.m_dataFields;
@@ -928,16 +974,11 @@ arg.op is not cntk.NDArrayView.transpose_dot] # all others
         // create var's m_gradient (may be a slice view)
         // For Parameters, m_gradient may already exist; for all others, it must not.
         fail_if(var.Kind() != VariableKind::Parameter && fields.m_gradient, "non-Parameter variable unexpectedly already has a gradient"); // (sanity check; I am not sure actually, maybe too strict)
-        auto beta = LazilyCreateLazilyIndexedGradient(var);
-        // BUGBUG: This is not enough. Somehow we still have a nullptr in BackpropTo().
-        // I think it is a batched op's output that receives its gradient through
-        // a redirected original output. Those can be inconsistent.
-        // Can we eliminate them altogether?
 
         // fast path: only one consumer, nothing to batch
         if (fields.m_consumers.second.empty())
         {
-            BackpropTo(c.first, c.second, beta);
+            BackpropTo(c.first, c.second);
             return;
         }
 
@@ -949,34 +990,20 @@ arg.op is not cntk.NDArrayView.transpose_dot] # all others
             DetermineBucket(c).push_back(c);
 
         // matrix-weight bucket
-        for (auto& c : m_matrixWeightConsumers)
-            BackpropTo(c.first, c.second, beta);
-        //BackpropToMatrixWeight(m_matrixWeightConsumers);
+        BackpropToMatrixWeight(m_matrixWeightConsumers);
         m_matrixWeightConsumers.clear();
-        //void BackpropToMatrixWeight(m_matrixWeightConsumers);
-        //for (auto& c : m_matrixWeightConsumers)
-        //{
-        //    m_matrixDataGradients.push_back(c.first->m_outputs[0]);
-        //    m_matrixDataInput0s  .push_back(c.first->m_inputs[0]);
-        //}
-        //// backprop into the input
-        //CNTK::BackpropTo(m_outputGradientsBuffer, index, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferRaw, fields.m_gradient, beta);
-        //BackpropTo(c.first, c.second);
-        //m_matrixDataInput0s.clear();
-        //m_matrixDataGradients.clear();
 
         // others bucket
         for (auto& c : m_otherConsumers)
-            BackpropTo(c.first, c.second, beta);
+            BackpropTo(c.first, c.second);
         m_otherConsumers.clear();
     }
 
     // back-propagate all of f's outputs' m_gradients to one input
     // This wraps the Function's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
-    vector<const NDArrayView*> m_outputValuesBuffer;
-    vector<const NDArrayView*> m_outputGradientsBuffer;
+    // Note that each input that is lazy should redirect into a slice in its lazy source.
     vector<const NDArrayView*> m_inputValuesBufferRaw;
-    void BackpropTo(Function* f, size_t index, double& beta)
+    void BackpropTo(Function* f, size_t index)
     {
         let& inputs =  f->m_inputs;
         auto& input = inputs[index];
@@ -984,19 +1011,16 @@ arg.op is not cntk.NDArrayView.transpose_dot] # all others
         fail_if(!fields.m_needsGradient, "function unexpectedly does not need a gradient");
         // get the TensorViews for everything we may compute the gradient from
         let& outputs = f->m_outputs;
-        m_outputValuesBuffer.clear();
-        m_outputGradientsBuffer.clear();
-        for (let& output : outputs) // output values and gradients coming from consumer
-        {
-            let& fields = *output.m_dataFields;
+        fail_if(outputs.size() != 1, "only functions with 1 output are currently supported");
+        let& output = outputs[0];
+        let& outputFields = *output.m_dataFields;
 #ifndef NO_BATCHED_BACKPROP
-            fail_if(fields.m_lazyIndex.first, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
+        fail_if(outputFields.m_lazyIndex.first, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
 #endif
-            fail_if(!fields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
-            fail_if(!fields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
-            m_outputValuesBuffer   .push_back(fields.m_value.get());
-            m_outputGradientsBuffer.push_back(fields.m_gradient.get());
-        }
+        fail_if(!outputFields.m_value, "unexpectedly ran into a function that has no m_value yet??");
+        fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
+        let* outputValue    = outputFields.m_value   .get();
+        let* outputGradient = outputFields.m_gradient.get();
         m_inputValuesBufferRaw.clear(); // input values
         for (let& input1 : inputs)
         {
@@ -1005,13 +1029,11 @@ arg.op is not cntk.NDArrayView.transpose_dot] # all others
             m_inputValuesBufferRaw.push_back(fields.m_value.get());
         }
         // compute gradients for the desired input
-        // get or create m_gradient as the desired gradient's TensorView (possibly redirecting through a slice view)
-        //fail_if(!fields.m_gradient, "m_gradient should already be there");
-        if (!fields.m_gradient)
-            beta = LazilyCreateLazilyIndexedGradient(input);
+        // Get or create m_gradient as the desired gradient's TensorView.
+        // If the input is a lazyIndex, then the gradient is a view into the lazy source.
+        let beta = LazilyCreateLazilyIndexedGradient(input);
         // backprop into the input
-        CNTK::BackpropTo(m_outputGradientsBuffer, index, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferRaw, fields.m_gradient, beta);
-        beta = 1.0; // all further gradients for this variable must add to it
+        CNTK::BackpropTo(outputGradient, index, f->Op(), f->m_attributes, outputValue, m_inputValuesBufferRaw, fields.m_gradient, beta);
     }
 
     // helper to verify that the tree is clean
