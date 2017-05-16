@@ -873,8 +873,8 @@ class Memoize
     }
 
     // backprop gradient into 'var' by pulling all of its consumers (recursively)
-    // Further batching happens here.
-    __declspec(noinline) void BackwardFromAllConsumers(const Variable& var)
+    // This is the second function that does batching.
+    __declspec(noinline) void AggregateGradientFromAllConsumers(const Variable& var)
     {
         let& fields = *var.m_dataFields;
         if (fields.m_visited)
@@ -891,13 +891,21 @@ class Memoize
 
         // realize all consumers' outputs' gradients
         for (let& output : c.first->m_outputs)
-            BackwardFromAllConsumers(output);
+            AggregateGradientFromAllConsumers(output);
         for (auto& c : fields.m_consumers.second)
             for (let& output : c.first->m_outputs)
-                BackwardFromAllConsumers(output);
-        // Now all consumers are ready to propagate into 'var'.
+                AggregateGradientFromAllConsumers(output);
+        // Now all consumers are ready to propagate into var's m_gradient.
+        // The resulting gradient is the sum of all that's backpropped here,
+        // and this is the only place where a variable's gradient ever gets aggregated.
 
-        // finally propagate this var's gradient into all of its inputs
+        // fast path: only one consumer, nothing to batch
+        if (fields.m_consumers.second.empty())
+        {
+            BackpropTo(c.first, c.second);
+            return;
+        }
+
         // TODO: additional optimization goes here (GatherBatch, weight updates)
         BackpropTo(c.first, c.second);
         for (auto& c : fields.m_consumers.second)
@@ -1048,7 +1056,7 @@ public:
                 logic_error("Backward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
             if (!fields.m_needsGradient) // (we could also just leafve the gradient 0)
                 logic_error("Backward: cannot compute gradient for variable with m_needsGradient being False.");
-            BackwardFromAllConsumers(param);
+            AggregateGradientFromAllConsumers(param);
         }
         //fprintf(stderr, "Back-propagated through %d functions\n", (int)order.size());
         // implant the results into the map the user passed in
