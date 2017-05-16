@@ -496,27 +496,11 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Function, Clone);
 %rename (toString) CNTK::Function::AsString;
 #endif
 
-%ignore CNTK::Function::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
-%ignore CNTK::Function::Load(const char* buffer, size_t length, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 // Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
 %ignore CNTK::Function::Load(std::istream& inputStream, const DeviceDescriptor& computeDevice= DeviceDescriptor::UseDefaultDevice());
 
 %rename_and_make_private(CNTK::Function, Evaluate);
 %rename_and_make_private(CNTK::Function, Load);
-
-%extend CNTK::Function {
-    static FunctionPtr Load(const std::wstring& filepath,
-                            const CNTK::DeviceDescriptor& computeDevice = CNTK::DeviceDescriptor::UseDefaultDevice())
-    {
-        return CNTK::Function::Load(filepath, computeDevice);
-    }
-
-    static FunctionPtr Load(const char* modelBuffer, size_t length,
-                            const CNTK::DeviceDescriptor& computeDevice = CNTK::DeviceDescriptor::UseDefaultDevice())
-    {
-        return CNTK::Function::Load(modelBuffer, length, computeDevice);
-    }
-}
 
 %ignore CNTK::Function::RegisterUDFDeserializeCallback;
 %ignore CNTK::Function::GetUDFDeserializeCallback;
@@ -526,26 +510,26 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Function, Clone);
 
 #ifdef SWIGCSHARP
 // Customize type mapping for modelBuffer, used by Load
-%typemap(ctype) (char* modelBuffer) "char*"
-%typemap(imtype) (char* modelBuffer) "byte[]"
-%typemap(cstype) (char* modelBuffer) "byte[]"
+%typemap(ctype) (char* buffer) "char*"
+%typemap(imtype) (char* buffer) "byte[]"
+%typemap(cstype) (char* buffer) "byte[]"
 #endif  // SWIGCSHARP
 
 #ifdef SWIGJAVA
 // Customize type mapping for modelBuffer, used by Load
 // template taken from various.i
-%typemap(jni) (char* modelBuffer) "jbyteArray"
-%typemap(jtype) (char* modelBuffer) "byte[]"
-%typemap(jstype) (char* modelBuffer) "byte[]"
-%typemap(in) (char* modelBuffer) {
+%typemap(jni) (char* buffer) "jbyteArray"
+%typemap(jtype) (char* buffer) "byte[]"
+%typemap(jstype) (char* buffer) "byte[]"
+%typemap(in) (char* buffer) {
   $1 = (char *) JCALL2(GetByteArrayElements, jenv, $input, 0);
 }
-%typemap(argout) (char* modelBuffer) {
+%typemap(argout) (char* buffer) {
   JCALL3(ReleaseByteArrayElements, jenv, $input, (jbyte *) $1, 0);
 }
-%typemap(javain) (char* modelBuffer) "$javainput"
+%typemap(javain) (char* buffer) "$javainput"
 /* Prevent default freearg typemap from being used */
-%typemap(freearg) (char* modelBuffer) ""
+%typemap(freearg) (char* buffer) ""
 #endif  // SWIGJAVA
 
 // class Varaiable
