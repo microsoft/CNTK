@@ -123,15 +123,35 @@ namespace CNTK
         });
     }
 
-    NDArrayView::NDArrayView(CNTK::DataType dataType, const DeviceDescriptor& device, CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, const MatrixBase& storageObject1)
-        : m_dataType(dataType), m_device(device), m_storageFormat(storageType), m_viewShape(viewShape), m_isReadOnly(readOnly)
+    static void* AllocateTensorViewMin2D(CNTK::DataType dataType, const NDShape& viewShape, const Microsoft::MSR::CNTK::MatrixBasePtr& storageObject)
     {
-        const auto& storageObject = (const Microsoft::MSR::CNTK::MatrixBase&)storageObject1; // TODO: what is the correct way to resolve the namespace issue without having the full namespace dance in the lib header?
-        storageObject.GetDeviceId();
-        // ... CONTINUE HERE
-        //auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(storageObject.AsReference()), AsTensorShapeMin2D(node->GetSampleLayout()));
-        //NDArrayViewPtr value = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(storageObject.GetDeviceId()), AsStorageFormat(storageObject.GetFormat()), AsNDShape(node->GetSampleLayout()), false, tensorView);
+        switch (dataType)
+        {
+        case DataType::Float:
+            {
+                const auto* matrix = dynamic_cast<Matrix<float>*>(storageObject.get());
+                if (matrix)
+                    return new TensorView<float>(std::make_shared<Matrix<float>>(matrix->AsReference()), AsTensorShapeMin2D(viewShape));
+            }
+            break;
+        case DataType::Double:
+            {
+                const auto* matrix = dynamic_cast<Matrix<double>*>(storageObject.get());
+                if (matrix)
+                    return new TensorView<double>(std::make_shared<Matrix<double>>(matrix->AsReference()), AsTensorShapeMin2D(viewShape));
+            }
+            break;
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(dataType));
+            break;
+        }
+        LogicError("Storage Object is not of DataType %s", DataTypeName(dataType));
     }
+
+#define MP(storageObject1) ((const Microsoft::MSR::CNTK::MatrixBasePtr&)storageObject1) // TODO: figure out the namespace stuff
+    NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const class CNTK::MatrixBasePtr& storageObject)
+        : NDArrayView(dataType, AsDeviceDescriptor(MP(storageObject)->GetDeviceId()), AsStorageFormat(MP(storageObject)->GetFormat()), viewShape, readOnly, AllocateTensorViewMin2D(dataType, viewShape, MP(storageObject)))
+    {}
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device)
         : NDArrayView(dataType, device, storageType, viewShape, false, AllocateTensorViewMin2D(dataType, storageType, viewShape, device))
