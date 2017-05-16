@@ -73,10 +73,6 @@
 
 %typemap(javacode) CNTK::Axis %{
 
-    public boolean isOrdered() {
-        return _IsOrdered();
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -229,18 +225,6 @@
 %}
 
 %typemap(javacode) CNTK::NDShape %{
-
-    public boolean isUnknown() {
-        return _IsUnknown();
-    }
-
-    public boolean hasInferredDimension() {
-        return _HasInferredDimension();
-    }
-
-    public boolean hasFreeDimension() {
-        return _HasFreeDimension();
-    }
 
     public java.util.ArrayList<Long> getDimensions(){
         java.util.ArrayList<Long> ret = new java.util.ArrayList<Long>((int)getRank());

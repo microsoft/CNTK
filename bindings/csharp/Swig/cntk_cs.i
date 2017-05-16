@@ -13,7 +13,7 @@
     // Property Id.
     public int Id
     {
-        get { return (int)GetId(); }
+        get { return (int)_Id(); }
     }
 
     // Property Type.
@@ -25,7 +25,7 @@
     // Property CPUDevice.
     public static DeviceDescriptor CPUDevice
     {
-        get { return GetCPUDevice(); }
+        get { return _CPUDevice(); }
     }
 
     // Returns the GPUDevice with the specific deviceId.
@@ -106,37 +106,31 @@
     // Property Name.
     public string Name
     {
-        get 
-        {
-            return GetName();
-        }
+        get { return _Name(); }
     }
 
     // Property IsStatic.
     public bool IsStatic
     {
-        get 
-        {
-            return IsStaticAxis();
-        }
+        get { return IsStaticAxis(); }
     }
 
     // Property IsDynamic.
     public bool IsDynamic
     {
-        get 
-        {
-            return IsDynamicAxis();
-        }
+        get { return IsDynamicAxis(); }
     }
 
     // Property IsOrdered.
     public bool IsOrdered
     {
-        get 
-        {
-            return _IsOrdered();
-        }
+        get { return _IsOrdered(); }
+    }
+
+    // Returns index of this Axis.
+    public int StaticAxisIndex(bool checkStaticAxis = true)
+    {
+        return _StaticAxisIndex(checkStaticAxis);
     }
 
     // Value equality.
@@ -177,11 +171,11 @@
     {
         if (this.IsDynamicAxis())
         {
-            return this.GetName().GetHashCode();
+            return this.Name.GetHashCode();
         }
         else
         {
-            return this.GetStaticAxisIndex().GetHashCode();
+            return this.StaticAxisIndex(false).GetHashCode();
         }
     }
 %}
@@ -191,25 +185,19 @@
     // Property Name.
     public string Name
     {
-        get 
-        {
-            return GetName();
-        }
+        get { return _Name(); }
     }
 
     // Property Uid.
     public string Uid
     {
-        get 
-        {
-            return GetUid();
-        }
+        get { return _Uid(); }
     }
 
     // Property RootFunction.
     public Function RootFunction
     {
-        get { return GetRootFunction(); }
+        get { return _RootFunction(); }
     }
 
     // Property Outputs
@@ -228,13 +216,13 @@
     // Property Output.
     public Variable Output
     {
-        get { return GetOutput(); }
+        get { return _Output(); }
     }
 
     // Property OpName.
     public string OpName
     {
-        get { return GetOpName(); }
+        get { return _OpName(); }
     }
 
     // Property IsComposite.
@@ -385,19 +373,25 @@
     // Property Shape.
     public NDShape Shape
     {
-        get { return GetShape(); }
+        get { return _Shape(); }
     }
 
     // Property Name.
     public string Name
     {
-        get { return GetName(); }
+        get { return _Name(); }
+    }
+
+    // Property Uid.
+    public string Uid
+    {
+        get { return _Uid(); }
     }
 
     // Property Kind.
     public VariableKind Kind
     {
-        get { return GetKind(); }
+        get { return _Kind(); }
     }
 
     // Property DataType.
@@ -458,7 +452,7 @@
     // Property Owner.
     public Function Owner
     {
-        get { return GetOwner(); }
+        get { return _Owner(); }
     }
 
     // Property NeedsGradient.
@@ -529,7 +523,7 @@
     // Property Rank.
     public int Rank
     {
-        get { return (int)GetRank(); }
+        get { return (int)_Rank(); }
     }
 
     // Property Dimensions.
@@ -574,7 +568,7 @@
     // Property TotalSize.
     public int TotalSize
     {
-        get { return (int)GetTotalSize(); }
+        get { return (int)_TotalSize(); }
     }
 
     // Indexer operator
@@ -590,17 +584,17 @@
         {
             throw new System.ArgumentException("The paraemter beginAxisId or endAxisId should not be a negative value");
         }
-        return SubShape((uint)beginAxisId, (uint)endAxisId);
+        return _SubShape((uint)beginAxisId, (uint)endAxisId);
     }
 
     // Returns a subshape.
-    public NDShape SubShape(int beginAxisId)
+    public NDShape SubShape(int beginAxisId = 0)
     {
         if (beginAxisId < 0)
         {
             throw new System.ArgumentException("The paraemter beginAxisId should not be a negative value");
         }
-        return SubShape((uint)beginAxisId);
+        return _SubShape((uint)beginAxisId);
     }
 
     // Creates a new NDShape.
@@ -667,17 +661,17 @@
 
     // Property MaskedCount.
     public int MaskedCount {
-        get { return (int)GetMaskedCount(); }
+        get { return (int)_MaskedCount(); }
     }
 
     // Property Device.
     public DeviceDescriptor Device {
-        get { return GetDevice(); }
+        get { return _Device(); }
     }
 
     // Property Shape.
     public NDShape Shape {
-        get { return GetShape(); }
+        get { return _Shape(); }
     }
 
     // Invidates a section of a NDShape.
@@ -704,64 +698,61 @@
     // Property Device
     public DeviceDescriptor Device
     {
-        get
-        {
-            return GetDevice();
-        }
+        get { return _Device(); }
     }
 
     // Property DataType
     public DataType DataType
     {
-        get
-        {
-            return GetDataType();
-        }
+        get { return GetDataType(); }
     }
 
     // Property StorageFormat
     public StorageFormat StorgeFormat
     {
-        get
-        {
-            return GetStorageFormat();
-        }
+        get { return GetStorageFormat(); }
     }
 
     // Property Shape
     public NDShape Shape
     {
-        get
-        {
-            return GetShape();
-        }
+        get { return _Shape(); }
+    }
+
+    // Property IsValid
+    public bool IsValid
+    {
+        get { return _IsValid(); }
     }
 
     // Property IsSparse
     public bool IsSparse
     {
-        get
-        {
-            return _IsSparse();
-        }
+        get { return _IsSparse(); }
     }
 
     // Property IsReadOnly
     public bool IsReadOnly
     {
-        get
-        {
-            return _IsReadOnly();
-        }
+        get { return _IsReadOnly(); }
     }
 
     // Property MaskedCount
     public int MaskedCount
     {
-        get
-        {
-            return (int)_MaskedCount();
-        }
+        get { return (int)_MaskedCount(); }
+    }
+
+    // Property Data
+    public NDArrayView Data
+    {
+        get { return _Data(); }
+    }
+
+    // Property Mask
+    public NDMask Mask
+    {
+        get { return _Mask(); }
     }
 
     // Create Value object from dense input as batch data.
@@ -1309,55 +1300,37 @@
     // Property Device.
     public DeviceDescriptor Device
     {
-        get
-        {
-            return GetDevice();
-        }
+        get { return _Device(); }
     }
 
     // Property DataType.
     public DataType DataType
     {
-        get
-        {
-            return GetDataType();
-        }
+        get { return GetDataType(); }
     }
 
     // Property Shape.
     public NDShape Shape
     {
-        get
-        {
-            return GetShape();
-        }
+        get { return _Shape(); }
     }
 
     // Property StorageFormat.
     public StorageFormat StorageFormat
     {
-        get
-        {
-            return GetStorageFormat();
-        }
+        get { return GetStorageFormat(); }
     }
 
     // Property IsSparse.
     public bool IsSparse
     {
-        get
-        {
-            return _IsSparse();
-        }
+        get { return _IsSparse(); }
     }
 
     // Property IsReadOnly.
     public bool IsReadOnly
     {
-        get
-        {
-            return _IsReadOnly();
-        }
+        get { return _IsReadOnly(); }
     }
 
     // Returns a slice view.
