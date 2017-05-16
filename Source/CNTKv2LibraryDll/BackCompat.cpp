@@ -85,7 +85,7 @@ namespace CNTK
             Variable CreateParameterOrConstantFromNodeValue(const ComputationNodeBasePtr& node, bool isConstant)
             {
                 auto& matrix = node->As<ComputationNode<ElementType>>()->Value();
-                auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorViewShape(node->GetSampleLayout()));
+                auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorShapeMin2D(node->GetSampleLayout()));
                 NDArrayViewPtr value = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), AsNDShape(node->GetSampleLayout()), false, tensorView);
 
                 auto kind = isConstant ? VariableKind::Constant : VariableKind::Parameter;
@@ -351,7 +351,7 @@ namespace CNTK
                         auto oldConvolutionMapValue = convolutionMapVar.IsConstant() ? Constant(convolutionMapVar).Value() : Parameter(convolutionMapVar).Value();
                         auto oldConvolutionMapMatrix = oldConvolutionMapValue->GetMatrix<ElementType>();
 
-                        auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(oldConvolutionMapMatrix->AsReference()), AsTensorViewShape(actualConvolutionMapShape));
+                        auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(oldConvolutionMapMatrix->AsReference()), AsTensorShapeMin2D(actualConvolutionMapShape));
                         auto newConvolutionMapValue = MakeSharedObject<NDArrayView>(oldConvolutionMapValue->GetDataType(), oldConvolutionMapValue->Device(), oldConvolutionMapValue->GetStorageFormat(), actualConvolutionMapShape, oldConvolutionMapValue->IsReadOnly(), tensorView);
 
                         // Lets replace the convolutionMapVar with a new properly reshaped Parameter/Constant

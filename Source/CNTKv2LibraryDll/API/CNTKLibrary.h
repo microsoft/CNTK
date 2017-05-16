@@ -694,14 +694,14 @@ namespace CNTK
         CNTK_API ~NDArrayView();
 
         ///
-        /// Returns a writable pointer to the data buffer underlying 'this' view
+        /// Returns a writable device pointer to the data buffer underlying 'this' view
         /// Throws an exception if 'this' view is read-only
         /// 
         template <typename ElementType>
         CNTK_API ElementType* WritableDataBuffer();
 
         ///
-        /// Returns a read-only pointer to the data buffer underlying 'this' view
+        /// Returns a read-only device pointer to the data buffer underlying 'this' view
         /// 
         template <typename ElementType>
         CNTK_API const ElementType* DataBuffer() const;
@@ -741,7 +741,7 @@ namespace CNTK
 
         // TODO: The set methods should be offered in template from
         ///
-        /// Fill 'this' NDArrayView with the specified value. The underlying DataType of 'this' view should be DataType::Float.
+        /// Fill 'this' NDArrayView with the specified value. The underlying DataType of 'this' view should be either DataType::Float or DataType::Double.
         ///
         CNTK_API void SetValue(float value);
 

@@ -865,7 +865,7 @@ namespace CNTK
         // Reshuffle to data to unpack and uninterleave the CNTK form packed data
         auto unpackedTensorView = ComputationNode<ElementType>::Unpack(AsTensorShape(sampleShape), matrix, layout, /*batchMajor=*/ false, /*gapPadValue=*/ nullptr);
         auto dataShape = PackedValue::GetUnpackedShape(sampleShape, sampleDynamicAxes, layout);
-        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), dataShape, readOnly, new TensorView<ElementType>(unpackedTensorView, AsTensorViewShape(dataShape)));
+        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), dataShape, readOnly, new TensorView<ElementType>(unpackedTensorView, AsTensorShapeMin2D(dataShape)));
         return MakeSharedObject<Value>(data, mask);
     }
 

@@ -30,7 +30,7 @@ namespace CNTK
 
         auto matrixDims = GetMatrixDimensions(viewShape);
         std::shared_ptr<Matrix<ElementType>> matrix = std::make_shared<Matrix<ElementType>>(matrixDims.first, matrixDims.second, (ElementType*)dataBuffer, AsCNTKImplDeviceId(device), matrixFlagDontOwnBuffer);
-        return new TensorView<ElementType>(matrix, AsTensorViewShape(viewShape));
+        return new TensorView<ElementType>(matrix, AsTensorShapeMin2D(viewShape));
     }
 
     static void* AllocateTensorView(CNTK::DataType dataType,
@@ -64,7 +64,7 @@ namespace CNTK
                                                                                             IsSparseStorageFormat(storageType) ? MatrixType::SPARSE : MatrixType::DENSE,
                                                                                             AsCNTKImplMatrixFormat(storageType),
                                                                                             numNonZeroValues);
-        return new TensorView<ElementType>(matrix, AsTensorViewShape(viewShape));
+        return new TensorView<ElementType>(matrix, AsTensorShapeMin2D(viewShape));
     }
 
     static void* AllocateTensorView(CNTK::DataType dataType,
@@ -531,7 +531,7 @@ namespace CNTK
                 sliced.Reshape(flatBufferLength, 1);
                 slicedMatrixView = make_shared<Matrix<float>>(std::move(sliced));
             }
-            tensorView = new TensorView<float>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
+            tensorView = new TensorView<float>(slicedMatrixView, AsTensorShapeMin2D(sliceViewShape));
             break;
         }
         case DataType::Double:
@@ -560,7 +560,7 @@ namespace CNTK
             else
                 slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
 #endif
-            tensorView = new TensorView<double>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
+            tensorView = new TensorView<double>(slicedMatrixView, AsTensorShapeMin2D(sliceViewShape));
             break;
         }
         default:
@@ -618,7 +618,7 @@ namespace CNTK
                 sliced.Reshape(flatBufferLength, 1);
                 slicedMatrixView = make_shared<Matrix<float>>(std::move(sliced));
             }
-            tensorView = new TensorView<float>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
+            tensorView = new TensorView<float>(slicedMatrixView, AsTensorShapeMin2D(sliceViewShape));
             break;
         }
         case DataType::Double:
@@ -647,7 +647,7 @@ namespace CNTK
             else
                 slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
 #endif
-            tensorView = new TensorView<double>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
+            tensorView = new TensorView<double>(slicedMatrixView, AsTensorShapeMin2D(sliceViewShape));
             break;
         }
         default:
@@ -667,7 +667,7 @@ namespace CNTK
                             (int)newShape.TotalSize(), newShape.AsString().c_str());
         }
 
-        auto newTensorShape = AsTensorViewShape(newShape);
+        auto newTensorShape = AsTensorShapeMin2D(newShape);
         void* tensorView = nullptr;
         switch (m_dataType)
         {
@@ -745,7 +745,7 @@ namespace CNTK
     {
         auto matrixDims = GetMatrixDimensions(shape);
         auto randomNormalMatrix = std::make_shared<Matrix<ElementType>>(Matrix<ElementType>::RandomGaussian(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device), (ElementType)mean, (ElementType)stdDev, seed));
-        auto tensorView = new TensorView<ElementType>(randomNormalMatrix, AsTensorViewShape(shape));
+        auto tensorView = new TensorView<ElementType>(randomNormalMatrix, AsTensorShapeMin2D(shape));
 
         return MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
     }
@@ -755,7 +755,7 @@ namespace CNTK
     {
         auto matrixDims = GetMatrixDimensions(shape);
         auto randomUniformMatrix = std::make_shared<Matrix<ElementType>>(Matrix<ElementType>::RandomUniform(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device), (ElementType)rangeBegin, (ElementType)rangeEnd, seed));
-        auto tensorView = new TensorView<ElementType>(randomUniformMatrix, AsTensorViewShape(shape));
+        auto tensorView = new TensorView<ElementType>(randomUniformMatrix, AsTensorShapeMin2D(shape));
 
         return MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
     }

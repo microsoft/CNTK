@@ -137,15 +137,17 @@ namespace CNTK
         return tensorViewShape;
     }
 
-    inline Microsoft::MSR::CNTK::TensorShape AsTensorViewShape(const Microsoft::MSR::CNTK::TensorShape& viewShape)
+    // note: this is called in conjunction with NDArrayView, when constructing it with a TensorView pointer
+    // and a few other places, including AllocateTensorView() and GetValueObjectFromCNTKImplMatrixAndMBLayout()
+    inline Microsoft::MSR::CNTK::TensorShape AsTensorShapeMin2D(const Microsoft::MSR::CNTK::TensorShape& viewShape)
     {
         // For TensorView shapes we pad the TensorShape to be at least rank 2
         return viewShape.PadRank(std::max<size_t>(2, viewShape.GetRank()));
     }
 
-    inline Microsoft::MSR::CNTK::TensorShape AsTensorViewShape(const NDShape& viewShape)
+    inline Microsoft::MSR::CNTK::TensorShape AsTensorShapeMin2D(const NDShape& viewShape)
     {
-        return AsTensorViewShape(AsTensorShape(viewShape));
+        return AsTensorShapeMin2D(AsTensorShape(viewShape));
     }
 
     inline std::pair<size_t, size_t> GetMatrixDimensions(const NDShape& viewShape)
