@@ -18,6 +18,7 @@ import darknet.darknet19 as dn19
 from PARAMETERS import *
 
 
+
 def create_output_activation_layer(network, anchor_box_scales):
 
     n_gridcells_horizontal = int(par_image_width / par_downsample)
@@ -29,7 +30,7 @@ def create_output_activation_layer(network, anchor_box_scales):
     # reorder array! now 125*7*7
     # tp1 = ops.transpose(network, 0,2) # 7*7*125
     # tp2 = ops.transpose(tp1, 0, 1) # 7*7*125
-    tp = ops.transpose(network, (1,2,0))
+    tp = ops.transpose(network, (1,2,0), name="transposed")
     reshaped = ops.reshape(tp, (output_width, output_height))
     #shape is now 245 * 25
 
@@ -171,7 +172,7 @@ def create_yolov2_net():
 def predict_image(model, path, conf_threshold = 0.5, show=True):
     import matplotlib.pyplot as mp
     import cv2
-
+    import ipdb;ipdb.set_trace()
     cv_img = cv2.imread(path)
     resized = cv2.resize(cv_img, (par_image_width, par_image_height), interpolation=cv2.INTER_NEAREST)
     bgr_image = np.asarray(resized, dtype=np.float32)
@@ -184,7 +185,7 @@ def predict_image(model, path, conf_threshold = 0.5, show=True):
 
     box_list = []
 
-    for j in range(245):
+    for j in range(predictions.shape[0]):
         box = predictions[j]
         if (box[4] > conf_threshold):
             box_list.append(box)
@@ -242,81 +243,15 @@ def create_mb_source(img_height, img_width, img_channels, output_size, image_fil
 
 if __name__ == '__main__':
 
-    model = create_yolov2_net()
-    print("created model!")
-    #model = load_pretrained_resnet101_feature_extractor()
-    # plot
-    print("beep")
-    plot(model, filename=os.path.join(par_abs_path, "YOLOv2.pdf"))
-    print("buup")
 
-    image_input= input((par_num_channels, par_image_height, par_image_width))
-    output = model(image_input) # append model to image input
-    plot(output, filename=os.path.join(par_abs_path, "YOLOv2_in.pdf"))
-    """
-    # input for ground truth boxes
-    num_gtb = par_max_gtbs
-    gtb_input = input((num_gtb*5)) # 5 for  x,y,w,h,class
-
-    from ErrorFunction import get_error
-    mse = get_error(output, gtb_input, cntk_only=False)
-
-    plot(mse, filename=os.path.join(par_abs_path,"Trainnet.pdf"))
-
-
-    # trainig params
-    max_epochs = par_max_epochs
-    epoch_size = par_epoch_size
-    minibatch_size = par_minibatch_size
-
-    lr_schedule = learning_rate_schedule(par_lr_schedule, learners.UnitType.sample, epoch_size)
-    mm_schedule = learners.momentum_schedule([-minibatch_size / np.log(par_momentum)], epoch_size)
-
-    # Instantiate the trainer object to drive the model training
-    learner = learners.momentum_sgd(mse.parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=0.0005)
-    trainer = Trainer(None, (mse, mse), [learner])
-
-    image_file = os.path.join(par_abs_path, "..", "..", "DataSets", "Pascal", "mappings" , "trainval2007.txt")
-    roi_file = os.path.join(par_abs_path, "..", "..", "DataSets", "Pascal", "mappings" , "trainval2007_rois_center_rel.txt")
-
-    minibatch_source = create_mb_source(par_image_height, par_image_width, par_num_channels, (5 * num_gtb), image_file, roi_file)
-
-    # define mapping from reader streams to network inputs
-    input_map = {
-        image_input: minibatch_source["features"],
-        gtb_input: minibatch_source["label"]
-    }
-
-    progress_printer = ProgressPrinter(freq= int(epoch_size / 10), tag='Training', rank=Communicator.rank(), gen_heartbeat=True,
-                                       num_epochs=max_epochs)
-
-
-    for epoch in range(max_epochs):  # loop over epochs
-        print("---Start new epoch---")
-        sample_count = 2
-        while sample_count < epoch_size :#- minibatch_size:  # loop over minibatches in the epoch
-
-            # get next minibatch data
-            data = minibatch_source.next_minibatch(min(minibatch_size, epoch_size - sample_count),
-                                                   input_map=input_map)  # fetch minibatch.
-            gtbs = (data[gtb_input]).asarray()
-
-            trainer.train_minibatch({image_input: data[image_input].asarray(), gtb_input:gtbs}, device=gpu(0))  # update model with it
-            sample_count += data[image_input].num_samples  # count samples processed so far
-            progress_printer.update_with_trainer(trainer=trainer, with_metric=True)  # log progress
-            print(progress_printer.avg_metric_since_start())
-
-        progress_printer.epoch_summary(with_metric=True)
-
-    save_path = os.path.join(par_abs_path,  "outputdir")
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-    output.save_model(os.path.join(save_path, "YOLOv2.model"))
-    """
     # alternatively to training a model you can reload a pretrained!
     model = load_model(r".\outputdir\YOLOv2.model")
-    image_input = input((par_num_channels, par_image_height, par_image_width))
-    output = model(image_input)  # append model to image input
+    #image_input = input((par_num_channels, par_image_height, par_image_width))
+
+    plot(model, filename=os.path.join(par_abs_path, "YOLOv2.pdf"))
+
+    import ipdb;ipdb.set_trace()
+    output = model#(image_input)  # append model to image input
 
     #predict a few images
     names = ["000018.jpg","000118.jpg","001118.jpg","002118.jpg"]

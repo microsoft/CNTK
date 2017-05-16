@@ -35,6 +35,19 @@ class TrainFunction(UserFunction):
         self.anchorbox_scales  = anchorbox_scales
         self.num_gtbs_per_img = int(num_gtbs_per_img)
 
+        self.loggingArray=np.zeros((self.num_anchorboxes, self.grid_size_hor, self.grid_size_ver))
+        self.logCount = 1
+
+    def logHit(self,x,y,z):
+        self.loggingArray[z,x,y]+=1
+        if(self.logCount % 1000 == 0):
+            print("Logged hits of last 1000 samples")
+            print(self.loggingArray)
+            self.loggingArray = np.zeros(self.loggingArray.shape)
+            self.logCount=0
+        self.logCount+=1
+
+
     ######### @Overrides #########
     # @Override
     def forward(self, arguments, outputs=None, keep_for_backward=None, device=None, as_numpy=False):
@@ -139,6 +152,7 @@ class TrainFunction(UserFunction):
 
                 # if that ab exists: set goal and scale on x,y,w,h,obj
                 if (highest_iou_index is not None):
+                    #self.logHit(x,y,highest_iou_index)
                     vector_index = y * self.grid_size_hor * self.num_anchorboxes + x * self.num_anchorboxes + highest_iou_index
 
                     predicted_bb = eval_results[slice][vector_index][0:4]
@@ -162,7 +176,7 @@ class TrainFunction(UserFunction):
                             index = y * self.grid_size_ver * self.num_anchorboxes + x * self.num_anchorboxes + ab
                             if index != vector_index:
                                 array_scale[slice][index][4] = 0 # set obj of non relevant values --> 0
-
+        #import ipdb;ipdb.set_trace();
         return array_goal, array_scale
 
     def create_cls_outputs(self, gtb_inputs):
