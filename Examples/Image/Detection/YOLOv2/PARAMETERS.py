@@ -8,6 +8,7 @@ import os.path
 
 # Set to the DataSet you want to train
 par_dataset_name = "Pascal_VOC_2007"
+#par_dataset_name = "Logos158"
 
 
 par_trainset_label_file = "train_map.txt"
