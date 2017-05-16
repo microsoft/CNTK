@@ -745,13 +745,13 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             gradients[p] = nullptr; // TryGetGradient(p); // TODO: get the existing gradient matrix from the parameter
         double loss1;
         {
-            Microsoft::MSR::CNTK::ScopeTimer timer(3, "### CNTK Dynamite:  %.6f sec\n");
-            loss1 = GetValue(mbLoss)->AsScalar<float>();
+            Microsoft::MSR::CNTK::ScopeTimer timer(3, "/// ### CNTK Dynamite:  %.6f sec\n");
+            //loss1 = GetValue(mbLoss)->AsScalar<float>();
 #if 1       // model update with Dynamite
             Backward(mbLoss, gradients);
             d_learner->Update(gradients, minibatchData[labelStreamInfo].numberOfSamples);
 #endif
-            //loss1 = GetValue(mbLoss)->AsScalar<float>(); // BUGBUG: currently fails after backprop due to state control issue
+            loss1 = GetValue(mbLoss)->AsScalar<float>(); // BUGBUG: currently fails after backprop due to state control issue
         }
         fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", loss1 / minibatchData[featureStreamInfo].numberOfSequences);
 #endif
@@ -759,7 +759,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
         double crit;// = trainer->PreviousMinibatchLossAverage();
         {
-            Microsoft::MSR::CNTK::ScopeTimer timer(3, "### CNTK Static:    %.6f sec\n");
+            Microsoft::MSR::CNTK::ScopeTimer timer(3, "\\\\\\ ### CNTK Static:    %.6f sec\n");
             trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
             //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
             //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);

@@ -472,7 +472,7 @@ class Memoize
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
         // logging
-#if 1
+#if 0
         fprintf(stderr, "%S%S = %S(", f.Uid().c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
         for (size_t i = 0; i < inputs.size() && i < 4; i++)
         {
@@ -987,9 +987,12 @@ public:
     //     - Any newly created batched ops are referenced this way.
     NDArrayViewPtr GetValue(const Variable& v)
     {
+        auto& fields = *v.m_dataFields;
+        // if value already there then just return it
+        if (fields.m_value)
+            return fields.m_value;
         AssertTreeStateGetValue(v); // (sanity check)
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
-        auto& fields = *v.m_dataFields;
         if (!fields.m_value)
         {
             // prepare and schedule first set
