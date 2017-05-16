@@ -128,12 +128,12 @@ Sequences BlockRandomizer::GetNextSequences(size_t globalSampleCount, size_t loc
     {
         assert(globalSampleCount > numGlobalSamplesLoaded && localSampleCount > numLocalSamplesLoaded);
         bool atTheSweepBoundary = result.m_endOfSweep;
-        // in case when we continue filling up a minibatch that crosses a sweep boundary, 
+        // in case when we continue filling up a minibatch that crosses a sweep boundary,
         // make sure that it does not exceed the required number of samples. Set the atLeastOnceSequenceNeeded
         // flag to false.
         size_t numGlobalSamples = 0, numLocalSamples = 0;
-        std::tie(numGlobalSamples, numLocalSamples) = 
-            LoadSequenceData(globalSampleCount - numGlobalSamplesLoaded, 
+        std::tie(numGlobalSamples, numLocalSamples) =
+            LoadSequenceData(globalSampleCount - numGlobalSamplesLoaded,
                              localSampleCount - numLocalSamplesLoaded,
                              result, !atTheSweepBoundary);
 
@@ -145,7 +145,7 @@ Sequences BlockRandomizer::GetNextSequences(size_t globalSampleCount, size_t loc
         numGlobalSamplesLoaded += numGlobalSamples;
         numLocalSamplesLoaded += numLocalSamples;
 
-    } while (m_config.m_allowMinibatchesToCrossSweepBoundaries && 
+    } while (m_config.m_allowMinibatchesToCrossSweepBoundaries &&
              !result.m_endOfEpoch &&
              result.m_endOfSweep &&
              globalSampleCount > numGlobalSamplesLoaded &&
@@ -158,14 +158,14 @@ Sequences BlockRandomizer::GetNextSequences(size_t globalSampleCount, size_t loc
 
 std::pair<size_t, size_t> BlockRandomizer::LoadSequenceData(size_t globalSampleCount, size_t localSampleCount, Sequences& sequences, bool atLeastOneSequenceNeeded)
 {
-    ClosedOpenChunkInterval windowRange;    
+    ClosedOpenChunkInterval windowRange;
     m_sequenceBuffer.clear();
-    size_t numGlobalSamples = 0, numLocalSamples = 0; // actual number of samples to load (filled in from the sequence descriptions) 
+    size_t numGlobalSamples = 0, numLocalSamples = 0; // actual number of samples to load (filled in from the sequence descriptions)
     bool endOfSweep, endOfEpoch;
     std::tie(endOfSweep, endOfEpoch, numGlobalSamples, numLocalSamples) = GetNextSequenceDescriptions(globalSampleCount, localSampleCount, m_sequenceBuffer, windowRange, atLeastOneSequenceNeeded);
     sequences.m_endOfSweep |= endOfSweep;
     sequences.m_endOfEpoch |= endOfEpoch;
-    
+
     assert(atLeastOneSequenceNeeded || (numGlobalSamples <= globalSampleCount && numLocalSamples <= localSampleCount));
 
     if (numGlobalSamples == 0)
@@ -186,13 +186,13 @@ std::pair<size_t, size_t> BlockRandomizer::LoadSequenceData(size_t globalSampleC
     }
     else
     {
-        // sequence data is not empty, we're appending new items to exiting 
+        // sequence data is not empty, we're appending new items to exiting
         // sequence data vectors.
         offset = data.front().size();
         for (auto& sequenceDataVector : data)
         {
             // make sure that all streams contain the same number of sequences
-            assert(sequenceDataVector.size() == offset); 
+            assert(sequenceDataVector.size() == offset);
             sequenceDataVector.resize(offset + m_sequenceBuffer.size());
         }
     }
@@ -292,7 +292,7 @@ std::tuple<bool, bool, size_t, size_t> BlockRandomizer::GetNextSequenceDescripti
     // set "reachedEndOfSweep" to true if the minibatch is last in a sweep
     auto reachedEndOfSweep = (sweepPosition + actualNumberOfGlobalSamples >= m_sweepSizeInSamples);
     // set "reachedEndOfEpoch" to true if the current batch is last in an epoch.
-    auto reachedEndOfEpoch = (m_globalSamplePosition + actualNumberOfGlobalSamples >= epochEndPosition);
+    auto reachedEndOfEpoch = (m_globalSamplePosition + actualNumberOfGlobalSamples >= epochEndPosition || localSampleCount >= (epochEndPosition - m_globalSamplePosition));
 
     // Update the global sample position.
     m_globalSamplePosition += actualNumberOfGlobalSamples;
