@@ -925,6 +925,15 @@ arg.op is not cntk.NDArrayView.transpose_dot] # all others
         for (auto& c : consumers)
             BackpropTo(c.first, c.second);
 #else
+        // to do this right:
+        //  - split matrix by outputRank
+        //  - determine those axes for both inputs
+        //  - all additional 0 or more axes are map axes that must match pairwise
+        //  - we should reshape those to 1
+        //  - and concatenate both inputs along that axis
+        // This is too complex for now. Inputs are already batched irregularly
+        // (e.g. an input represents R*h(t) in a recurrence for multiple sequences that,
+        // have at least t steps, where we get multiple of those here, each of different size).
         let& f0 = *m_matrixWeightConsumers.front().first;
         let& input0 = f0.m_inputs[0];
         for (auto& c : m_matrixWeightConsumers)
@@ -934,10 +943,10 @@ arg.op is not cntk.NDArrayView.transpose_dot] # all others
             m_matrixDataInput1s  .push_back(c.first->m_inputs [1].m_dataFields->m_value   );
         }
 
-        auto input1         = GatherBatchInArena(m_matrixDataInput1s); // TODO: we can further factor this and pass a lambda
+        auto input1Value    = GatherBatchInArena(m_matrixDataInput1s); // TODO: we can further factor this and pass a lambda
         auto outputGradient = GatherBatchInArena(m_matrixDataGradients);
         let beta = LazilyCreateLazilyIndexedGradient(input0);
-        CNTK::BackpropTo(outputGradient.get(), /*index=*/0, f0.Op(), f0.m_attributes, /*outputValue=*/nullptr, { nullptr, input1.get() }, input0.m_dataFields->m_gradient, beta);
+        CNTK::BackpropTo(outputGradient.get(), /*index=*/0, f0.Op(), f0.m_attributes, /*outputValue=*/nullptr, { nullptr, input1Value.get() }, input0.m_dataFields->m_gradient, beta);
 
         m_matrixDataInput1s.clear(); // move this into lambda
         m_matrixDataGradients.clear();
@@ -990,8 +999,11 @@ arg.op is not cntk.NDArrayView.transpose_dot] # all others
             DetermineBucket(c).push_back(c);
 
         // matrix-weight bucket
-        BackpropToMatrixWeight(m_matrixWeightConsumers);
-        m_matrixWeightConsumers.clear();
+        if (!m_matrixWeightConsumers.empty())
+        {
+            BackpropToMatrixWeight(m_matrixWeightConsumers);
+            m_matrixWeightConsumers.clear();
+        }
 
         // others bucket
         for (auto& c : m_otherConsumers)
@@ -1012,15 +1024,15 @@ arg.op is not cntk.NDArrayView.transpose_dot] # all others
         // get the TensorViews for everything we may compute the gradient from
         let& outputs = f->m_outputs;
         fail_if(outputs.size() != 1, "only functions with 1 output are currently supported");
-        let& output = outputs[0];
-        let& outputFields = *output.m_dataFields;
+        let& outputFields = *outputs[0].m_dataFields;
 #ifndef NO_BATCHED_BACKPROP
         fail_if(outputFields.m_lazyIndex.first, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
 #endif
-        fail_if(!outputFields.m_value, "unexpectedly ran into a function that has no m_value yet??");
+        fail_if(!outputFields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
         fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
         let* outputValue    = outputFields.m_value   .get();
         let* outputGradient = outputFields.m_gradient.get();
+
         m_inputValuesBufferRaw.clear(); // input values
         for (let& input1 : inputs)
         {
@@ -1028,6 +1040,7 @@ arg.op is not cntk.NDArrayView.transpose_dot] # all others
             fail_if(!fields.m_value, "unexpectedly ran into a function that has no m_value yet??");
             m_inputValuesBufferRaw.push_back(fields.m_value.get());
         }
+
         // compute gradients for the desired input
         // Get or create m_gradient as the desired gradient's TensorView.
         // If the input is a lazyIndex, then the gradient is a view into the lazy source.
