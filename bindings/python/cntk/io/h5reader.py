@@ -8,7 +8,7 @@ from ..device import use_default_device
 
 #TODO: support sparse tensors
 class H5DataSource(UserMinibatchSource):
-    """
+    '''
     Data Source on HDF5 data. For more information on HDF5 format and the Python API: h5py, please see: http://docs.h5py.org/en/latest/index.html.
 
     Args:
@@ -30,9 +30,7 @@ class H5DataSource(UserMinibatchSource):
      ... 
      ...    vlen_seq = f.create_dataset("vlen_seq", 
      ...                 (100, ), 
-     ...                 h5py.special_dtype(vlen=np.dtype('f4'))
-     ...                 #or using:                
-     ...                 #h5py.special_dtype(vlen=np.float32)
+     ...                 h5py.special_dtype(vlen=np.float32))
      ...                               )
      ...    vlen_seq.attrs['is_seq'] = True
      ...    vlen_seq.attrs['shape'] = (3,)
@@ -54,15 +52,15 @@ class H5DataSource(UserMinibatchSource):
      ...         batch = ds.next_minibatch(batch_size)
      ...         v_fixed_seq = sequence.input_variable(4)
      ...         fixed_seq_op_result = (C.sequence.last(v_fixed_seq) * 1).eval({v_fixed_seq: batch[ds.stream_info_mapping['fixed_len_seq']]})
-     ...         print(fixed_seq_op_result)
+     ...         #print(fixed_seq_op_result)
      ...         v_vlen_seq = sequence.input_variable(3)
      ...         v_vlen_seq_op_result = (sequence.last(v_vlen_seq) * 1).eval({v_vlen_seq: batch[ds.stream_info_mapping['vlen_seq']]})
-     ...         print(v_vlen_seq_op_result)
+     ...         #print(v_vlen_seq_op_result)
      ...         v_label = C.input_variable(1)
      ...         v_label_op_result = (v_label * 1).eval({v_label: batch[ds.stream_info_mapping['label']]})
-     ...         print(v_label_op_result)
+     ...         #print(v_label_op_result)
      ...    f.close()
-     """
+    '''
     def __init__(self, datagroup, device = use_default_device()):
 
         self.device = device
@@ -71,12 +69,12 @@ class H5DataSource(UserMinibatchSource):
             # or storage_format = 'sparse' # to be implemented later
             storage_format = 'dense'
             dataset = datagroup[name]
-            is_seq = 'is_seq' in dataset.attrs and dataset.attrs['is_seq']
+            is_seq = self._is_seq(dataset)
 
             if is_seq:
                 # If variable length data, only 1d-array can be stored in H5:
                 # http://stackoverflow.com/questions/42658438/storing-multidimensional-variable-length-array-with-h5py
-                dshape = self.dataset_shape_(dataset)
+                dshape = self._dataset_shape(dataset)
                 dtype = np.dtype(dataset.attrs['dtype'])
             else:
                 dshape = dataset.shape[1:]
@@ -93,18 +91,24 @@ class H5DataSource(UserMinibatchSource):
 
         super(H5DataSource, self).__init__()
 
-    def dataset_shape_(self, dataset):
+    def _is_seq(self, dataset):
+        return 'is_seq' in dataset.attrs and dataset.attrs['is_seq']
+
+    def _dataset_shape(self, dataset):
         dshape = dataset.attrs['shape']
         if type(dshape) is not np.ndarray:
             dshape = np.array([dshape])
         dshape = dshape.tolist()
         return dshape
+    def _max_seq_len(self, idx):
+        mx_len = 0
+        for name in self.datagroup:
+            dataset = self.datagroup[name]
+            mx_len = max(mx_len, self._sample_count(dataset, idx))
+        return mx_len
 
-    def stream_infos(self):
-        return self.stream_info_mapping.values()
-
-    def sample_count_(self, dataset, data_idx):
-        is_seq = 'is_seq' in dataset.attrs and dataset.attrs['is_seq']
+    def _sample_count(self, dataset, data_idx):
+        is_seq = self._is_seq(dataset)
         if is_seq:
             elm_shape = dataset.attrs['shape']
             if type(elm_shape) is not np.ndarray:
@@ -116,26 +120,22 @@ class H5DataSource(UserMinibatchSource):
         else:
             return 1
 
-    def max_seq_len_(self, idx):
-        mx_len = 0
-        for name in self.datagroup:
-            strm_info = self.stream_info_mapping[name]
-            dataset = self.datagroup[name]
-            mx_len = max(mx_len, self.sample_count_(dataset, idx))
-        return mx_len
+
+    def stream_infos(self):
+        return self.stream_info_mapping.values()
 
     def next_minibatch(self, num_samples_in_batch, number_of_workers=1, worker_rank=0, device=None):
         # Note that in this example we do not yet make use of number_of_workers or
         # worker_rank, which will limit the minibatch source to single GPU / single node
         # scenarios.
-        # TODO: check self.num_samples > num_samples
+        # TODO: check self.num_samples > num_samples_in_batch
         mydevice = device if device else self.device
         start = self.next_idx
         end = start
         sample_count = 0
         num_seq = 0
         while sample_count < num_samples_in_batch:
-            max_seq_len = self.max_seq_len_(end)
+            max_seq_len = self._max_seq_len(end)
             sample_count = sample_count + max_seq_len
             num_seq = num_seq + 1
             end = (end + 1) % self.num_data_points

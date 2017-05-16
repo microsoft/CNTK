@@ -26,7 +26,7 @@ def test_text_format(tmpdir):
         vlen_seq.attrs['dtype'] = 'f4'  # float32
 
         label = f.create_dataset("label", (num_data_point, 1), dtype=np.float32)
-
+        label.attrs['is_seq'] = False
         # create facke data
         for i in range(num_data_point):
             fixed_len_seq[i] = np.ones((3, 4)) * i
