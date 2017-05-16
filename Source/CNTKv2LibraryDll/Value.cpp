@@ -162,7 +162,7 @@ namespace CNTK
 
             // Since scalar samples can be rank=1 with dim=1, we automatically pad the sequence data shape with a leading axis 
             // of dim=1 if the sequence data shape's leading axis's dimensionality is not 1
-            if ((fullyDefinedSampleShape.Rank() == 1) && (fullyDefinedSampleShape.TotalSize() == 1) && (currentSequenceDataShape.Rank() > 0) && (currentSequenceDataShape[0] != 1))
+            if ((fullyDefinedSampleShape.Rank() == 1) && !fullyDefinedSampleShape.HasUnboundDimension() && (fullyDefinedSampleShape.TotalSize() == 1) && (currentSequenceDataShape.Rank() > 0) && (currentSequenceDataShape[0] != 1))
                 currentSequenceDataShape = NDShape(1, 1).AppendShape(currentSequenceDataShape);
 
             if ((currentSequenceDataShape.Rank() < fullyDefinedSampleShape.Rank()) || (currentSequenceDataShape.Rank() > (fullyDefinedSampleShape.Rank() + 1)))
@@ -206,7 +206,7 @@ namespace CNTK
                 if (storageFormat != StorageFormat::SparseCSC)
                     LogicError("Value::Create currently only SparseCSC format sparse data is supported");
 
-                auto numColsPerSample = fullyDefinedSampleShape.SubShape(ShapeRowColSplitPoint(fullyDefinedSampleShape, isDataSparse)).TotalSize();
+                auto numColsPerSample = fullyDefinedSampleShape.SubShape(ShapeRowColSplitPoint(fullyDefinedSampleShape, isDataSparse, /*noDynamicAxes =*/ false)).TotalSize();
                 std::vector<SparseIndexType> colStarts;
                 std::vector<SparseIndexType> rowIndices;
                 std::vector<char> nonZeroValues;

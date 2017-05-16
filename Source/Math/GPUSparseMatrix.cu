@@ -1596,7 +1596,8 @@ void GPUSparseMatrix<ElemType>::Adam(
     ElemType adaWeight,
     ElemType adaMul,
     ElemType epsilon,
-    bool unitGainMomentum)
+    bool unitGainMomentum,
+    bool adamax)
 {
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
     {
@@ -1618,7 +1619,7 @@ void GPUSparseMatrix<ElemType>::Adam(
     _adam4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
         n, Data(), ColOrRow2BlockId(), GetNumRows(),
         c.Data(), c.Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainMomentum);
+        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainMomentum, adamax);
 }
 
 template <class ElemType>

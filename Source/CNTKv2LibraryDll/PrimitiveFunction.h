@@ -263,7 +263,7 @@ namespace CNTK
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
-            : Function(inputs, std::move(functionConfig), functionName, uid), m_op(op)
+            : Function(inputs, std::move(functionConfig), nullptr, functionName, uid), m_op(op)
         {}
 
     public:
@@ -354,7 +354,7 @@ namespace CNTK
 
             if (inferredAxisIndex != SIZE_MAX)
             {
-                if (!operandSubshapeToReshape.HasFreeOrInferredDimension())
+                if (!operandSubshapeToReshape.HasUnboundDimension())
                 {
                     size_t inputElementsCount = operandSubshapeToReshape.TotalSize();
                     inferredReplacementShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
@@ -367,7 +367,7 @@ namespace CNTK
             outputShape = outputShape.AppendShape(inferredReplacementShape);
             outputShape = outputShape.AppendShape(operandShape.SubShape(endAxisIdx));
 
-            if (!operandSubshapeToReshape.HasFreeOrInferredDimension() && (operandSubshapeToReshape.TotalSize() != inferredReplacementShape.TotalSize()))
+            if (!operandSubshapeToReshape.HasUnboundDimension() && (operandSubshapeToReshape.TotalSize() != inferredReplacementShape.TotalSize()))
             {
                 auto replacedSubShape = operandShape.SubShape(beginAxisIdx, endAxisIdx);
                 InvalidArgument("Reshape: Operand (sub-)dimensions '%S' incompatible with desired replacement (sub-)dimensions '%S'. Number of elements %s.",
@@ -424,7 +424,7 @@ namespace CNTK
                     // accumulate the spliced dimension
                     if (k == index)
                     {
-                        if (dim == NDShape::InferredDimension)
+                        if ((dim == NDShape::InferredDimension) || (outputDims[index] == NDShape::InferredDimension))
                             outputDims[index] = NDShape::InferredDimension;
                         else if (dim == NDShape::FreeDimension)
                             InvalidArgument("Splice: Illegal to splice along an axis (%d) for which any of the inputs has a free dimension.", (int)index);
@@ -449,7 +449,7 @@ namespace CNTK
         static bool UpdateOperandShapes(std::vector<std::pair<Variable, NDShape>>& newOperandShapes);
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
-        static NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool broadcastAllowed, bool inferInputDimensions)
+        static NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool inferInputDimensions)
         {
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
@@ -471,37 +471,45 @@ namespace CNTK
             {
                 if ((leftOperandShape[i] == NDShape::InferredDimension) && (rightOperandShape[i] == NDShape::InferredDimension))
                     outputDims[i] = NDShape::InferredDimension;
-                else if ((leftOperandShape[i] == NDShape::InferredDimension) || (leftOperandShape[i] == NDShape::FreeDimension) || (leftOperandShape[i] == 1))
+                else if (leftOperandShape[i] == NDShape::FreeDimension)
+                {
+                    if (rightOperandShape[i] == NDShape::InferredDimension)
+                        InvalidArgument("Binary elementwise operation %S: Right operand '%S' shape '%S' dimension cannot be inferred from a left operand '%S' shape '%S' free dimension.",
+                            PrimitiveOpTypeName(op).c_str(),
+                            rightOperand.AsString().c_str(),
+                            rightOperandShape.AsString().c_str(),
+                            leftOperand.AsString().c_str(),
+                            leftOperandShape.AsString().c_str());
+
+                    // Broadcast to a free-dimension, if the right operand axis's dimensionality is 1; otherwise the output axis dimensionality
+                    // is the known right operands axis's dimensionality 
+                    outputDims[i] = (rightOperandShape[i] == 1) ? NDShape::FreeDimension : rightOperandShape[i];
+                }
+                else if (rightOperandShape[i] == NDShape::FreeDimension)
+                {
+                    if (leftOperandShape[i] == NDShape::InferredDimension)
+                        InvalidArgument("Binary elementwise operation %S: Left operand '%S' shape '%S' dimension cannot be inferred from a right operand '%S' shape '%S' free dimension.",
+                            PrimitiveOpTypeName(op).c_str(),
+                            leftOperand.AsString().c_str(),
+                            leftOperandShape.AsString().c_str(),
+                            rightOperand.AsString().c_str(),
+                            rightOperandShape.AsString().c_str());
+
+                    // Broadcast to a free-dimension, if the left operand axis's dimensionality is 1; otherwise the output axis dimensionality
+                    // is the known left operands axis's dimensionality 
+                    outputDims[i] = (leftOperandShape[i] == 1) ? NDShape::FreeDimension : leftOperandShape[i];
+                }
+                else if ((leftOperandShape[i] == NDShape::InferredDimension) || (leftOperandShape[i] == 1))
                 {
                     outputDims[i] = rightOperandShape[i];
                     if (leftOperandShape[i] == NDShape::InferredDimension)
-                    {
-                        if (rightOperandShape[i] == NDShape::FreeDimension)
-                            InvalidArgument("Binary elementwise operation %S: Left operand '%S' shape '%S' dimension cannot be inferred from a right operand '%S' shape '%S' free dimension.",
-                                PrimitiveOpTypeName(op).c_str(),
-                                leftOperand.AsString().c_str(),
-                                leftOperandShape.AsString().c_str(),
-                                rightOperand.AsString().c_str(),
-                                rightOperandShape.AsString().c_str());
-
                         leftOperandShape[i] = rightOperandShape[i];
-                    }
                 }
-                else if ((rightOperandShape[i] == NDShape::InferredDimension) || (rightOperandShape[i] == NDShape::FreeDimension) || (rightOperandShape[i] == 1))
+                else if ((rightOperandShape[i] == NDShape::InferredDimension) || (rightOperandShape[i] == 1))
                 {
                     outputDims[i] = leftOperandShape[i];
                     if (rightOperandShape[i] == NDShape::InferredDimension)
-                    {
-                        if (leftOperandShape[i] == NDShape::FreeDimension)
-                            InvalidArgument("Binary elementwise operation %S: Right operand '%S' shape '%S' dimension cannot be inferred from a left operand '%S' shape '%S' free dimension.",
-                                PrimitiveOpTypeName(op).c_str(),
-                                rightOperand.AsString().c_str(),
-                                rightOperandShape.AsString().c_str(),
-                                leftOperand.AsString().c_str(),
-                                leftOperandShape.AsString().c_str());
-
                         rightOperandShape[i] = leftOperandShape[i];
-                    }
                 }
                 else
                 {
@@ -516,11 +524,7 @@ namespace CNTK
                     outputDims[i] = leftOperandShape[i];
                 }
             }
-
-            
-            UNUSED(broadcastAllowed);
-            // BUGBUG: if (broadcastAllowed) is missing here?
-
+                        
             // Broadcast in remaining axes
             for (size_t i = shapeWithSmallerNumAxes.Rank(); i < numOutputAxes; ++i)
                 outputDims[i] = shapeWithLargerNumAxes[i];
@@ -535,7 +539,7 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
-        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed, bool inferInputDimensions);
+        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool inferInputDimensions);
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
         static NDShape TimesOpOutputShape(Variable& leftOperand, Variable& rightOperand, size_t outputRank, int inferInputRankToMap, bool inferInputDimensions)
@@ -701,7 +705,7 @@ namespace CNTK
               
                 if (i < operands.size() - 1)
                 {
-                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasFreeOrInferredDimension())
+                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasUnboundDimension())
                     {
                         size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
                         paramShape[0] = total;
@@ -756,21 +760,7 @@ namespace CNTK
         static const size_t s_serializationVersion = 13;
     };
 
-    class UDFUtils
-    {
-    public:
-
-        static bool IsUDF(const FunctionPtr& f);
-
-        static bool IsUDF(const Dictionary& dict);
-
-        static Dictionary Serialize(const FunctionPtr& dictionary);
-
-        static FunctionPtr Deserialize(const Dictionary& dictionary,
-            const std::unordered_map<std::wstring, Variable>& uidToVariableMap,
-            const CNTK::DeviceDescriptor& device,
-            const Internal::UDFDeserializerPtr& deserializer);
-
-        static const size_t s_serializationVersion = 0;
-    };
+    std::vector<DictionaryValue> GetInputUids(const Function& f);
+    Dictionary SerializeCommonFunctionAttributes(const Function& f, size_t version, const std::wstring& functionType);
+    std::vector<Variable> GetInputVariables(const Dictionary& dict, const std::unordered_map<std::wstring, Variable>& uidToVariableMap, size_t currentSerializationVersion);
 }

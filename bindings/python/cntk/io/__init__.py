@@ -122,7 +122,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
 
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
-    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=False, frame_mode=False, truncation_length=0, randomize=None, randomization_window=None, sample_based_randomization_window=None, epoch_size=None)
+    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, randomization_seed=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=False, frame_mode=False, truncation_length=0, randomize=None, randomization_window=None, sample_based_randomization_window=None, epoch_size=None)
 
     Args:
         deserializers (a single deserializer or a `list`): deserializers to be used in the composite reader
@@ -145,6 +145,8 @@ class MinibatchSource(cntk_py.MinibatchSource):
           non-zero value enables randomization.
           `randomization_window_in_chunks` and `randomization_window_in_samples` are mutually exclusive,
           an exception will be raised if both have non-zero values.
+        randomization_seed (`int`, defaults to 0): initial randomization seed value (incremented every sweep when 
+            the input data is re-randomized).
         trace_level (an instance of :class:`cntk.logging.TraceLevel`): the output verbosity level, defaults to
           the current logging verbosity level given by :func:`~cntk.logging.get_trace_level`.
         multithreaded_deserializer (`bool`, defaults to `False`): specifies if the deserialization should be
@@ -170,6 +172,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         max_sweeps = INFINITELY_REPEAT,
         randomization_window_in_chunks = DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS,
         randomization_window_in_samples = 0,
+        randomization_seed=0,
         trace_level = TraceLevel.Warning,
         multithreaded_deserializer=False,
         frame_mode=False,
@@ -189,6 +192,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         config.max_sweeps = max_sweeps
         config.randomization_window_in_chunks = randomization_window_in_chunks
         config.randomization_window_in_samples = randomization_window_in_samples
+        config.randomization_seed = randomization_seed;
         config.is_multithreaded = multithreaded_deserializer
         config.is_frame_mode_enabled = frame_mode
         config.truncation_length = truncation_length
@@ -538,6 +542,34 @@ def HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = False):
             master_label_files = [master_label_files]
         return cntk_py.htk_mlf_deserializer(stream_name, label_mapping_file, dimension, master_label_files, phoneBoundaries)
 
+def _process_image_deserializer_args(filename, streams, deserializer):
+    image_stream_name = None
+
+    # Streams with the same name are not allowed, make sure the default is
+    # unique.
+    label_stream_name = '_ignore_labels_' + str(uuid.uuid1())
+    num_labels = 2
+    transforms = []
+    for key in streams:
+        s = streams[key]
+        alias = s.stream_alias
+        if alias == "image":
+            image_stream_name = key
+            transforms = s.transforms
+        elif alias == "label":
+            label_stream_name = key
+            num_labels = s.dim
+        else:
+            raise ValueError(
+                "{}: invalid field name '{}', allowed are "
+                "'image' and 'label'".format(deserializer, alias))
+    
+    if image_stream_name is None:
+        raise ValueError("{}: stream name ('image' or 'label') must be "
+            "specified".format(deserializer))
+    
+    return (filename, label_stream_name, num_labels, 
+        image_stream_name, transforms)
 
 def ImageDeserializer(filename, streams):
     '''
@@ -557,33 +589,29 @@ def ImageDeserializer(filename, streams):
     See also:
         :cntkwiki:`Image reader definition <BrainScript-Image-reader>`
     '''
-    image_stream_name = None
+    args = _process_image_deserializer_args(filename, streams, 
+        'ImageDeserializer')
+    return cntk_py.image_deserializer(*args)
 
-    # Streams with the same name are not allowed, make sure the default is
-    # unique.
-    label_stream_name = '_ignore_labels_' + str(uuid.uuid1())
-    num_labels = 2
-    transforms = []
-    for key in streams:
-        s = streams[key]
-        alias = s.stream_alias
-        if alias == "image":
-            image_stream_name = key
-            transforms = s.transforms
-        elif alias == "label":
-            label_stream_name = key
-            num_labels = s.dim
-        else:
-            raise ValueError(
-                "ImageDeserializer: invalid field name '{}', allowed are "
-                "'image' and 'label'".format(alias))
-    if image_stream_name is None:
-        raise ValueError(
-            "ImageDeserializer: stream name ('image' or 'label') must be "
-            "specified")
-    return cntk_py.image_deserializer(filename, label_stream_name, num_labels,
-                                      image_stream_name, transforms)
+def Base64ImageDeserializer(filename, streams):
+    '''
+    Configures the image reader that reads base64 encoded images and corresponding 
+    labels from a file of the form::
 
+        [sequenceId <tab>] <numerical label (0-based class id)> <tab> <base64 encoded image>
+
+    Similarly to the ImageDeserializer, the sequenceId prefix is optional and can be omitted.
+
+    Args:
+        filename (str): file name of the input file dataset that contains images 
+        and corresponding labels
+
+    See also:
+        :cntkwiki:`Base64ImageDeserializer options <BrainScript-and-Python---Understanding-and-Extending-Readers#base64imagedeserializer-options>`
+    '''
+    args = _process_image_deserializer_args(filename, streams, 
+        'Base64ImageDeserializer')
+    return cntk_py.base64_image_deserializer(*args)
 
 def CTFDeserializer(filename, streams):
     '''

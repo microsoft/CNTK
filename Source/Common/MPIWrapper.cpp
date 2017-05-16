@@ -459,8 +459,6 @@ MPIWrapperMpi::~MPIWrapperMpi()
     if (GetMathLibTraceLevel() > 0)
         fprintf(stderr, "~MPIWrapperMpi\n");
 
-    // Do not finalize in event of an exception since calling MPI_Finalize without
-    // all pending communications being finished results in a hang
     int rc = fflush(stderr);
     if (!std::uncaught_exception())
     {
@@ -472,8 +470,6 @@ MPIWrapperMpi::~MPIWrapperMpi()
             RuntimeError("MPIWrapperMpi: Failed to flush stderr, %d", errno);
 #endif
         }
-
-        Finalize();
     }
 }
 

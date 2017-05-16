@@ -213,7 +213,7 @@ public:
                          const double meanMomentum, const double varMomentum, bool unitGainMomentum = true);
 
     void AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
-        const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, bool unitGainMomentum = true);
+        const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, bool unitGainMomentum = true, bool adamax = false);
 
     void RmsPropUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double learningRate, const double momentum, ElemType RMS_GAMMA, bool unitGainMomentum = true);
 
@@ -293,6 +293,7 @@ public:
     void SetDiagonalValue(const Matrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
     void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
     void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle);
     void AddGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
     Matrix<ElemType>& AssignNoiseContrastiveEstimation(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias, Matrix<ElemType>& tmp);

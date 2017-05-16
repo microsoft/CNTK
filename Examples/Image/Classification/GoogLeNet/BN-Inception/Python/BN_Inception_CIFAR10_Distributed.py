@@ -71,8 +71,8 @@ def create_image_mb_source(map_file, mean_file, is_training, total_number_of_sam
 def create_bn_inception():
 
     # Input variables denoting the features and label data
-    feature_var = input((num_channels, image_height, image_width))
-    label_var = input((num_classes))
+    feature_var = input_variable((num_channels, image_height, image_width))
+    label_var = input_variable((num_classes))
 
     bn_time_const = 4096
     z = bn_inception_cifar_model(feature_var, num_classes, bn_time_const)
@@ -217,15 +217,14 @@ if __name__=='__main__':
     if not os.path.exists(mean_data):
         raise RuntimeError("Can not find the mean file. Please put the 'CIFAR-10_mean.xml' file in Data Directory or Config Directory.")
 
-    try:
-        bn_inception_train_and_eval(train_data, test_data, mean_data,
-                             epoch_size=args['epoch_size'],
-                             num_quantization_bits=args['quantized_bits'],
-                             max_epochs=args['num_epochs'],
-                             restore=not args['restart'],
-                             log_to_file=args['logdir'],
-                             num_mbs_per_log=100,
-                             gen_heartbeat=True,
-                             scale_up=bool(args['scale_up']))
-    finally:
-        cntk.distributed.Communicator.finalize()    
+    bn_inception_train_and_eval(train_data, test_data, mean_data,
+                         epoch_size=args['epoch_size'],
+                         num_quantization_bits=args['quantized_bits'],
+                         max_epochs=args['num_epochs'],
+                         restore=not args['restart'],
+                         log_to_file=args['logdir'],
+                         num_mbs_per_log=100,
+                         gen_heartbeat=True,
+                         scale_up=bool(args['scale_up']))
+    # Must call MPI finalize when process exit without exceptions
+    cntk.distributed.Communicator.finalize()    

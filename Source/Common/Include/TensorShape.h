@@ -377,6 +377,8 @@ public:
         InitAsNoSlice();
     }
 
+    inline static TensorShape Scalar(bool isV2Library) { return isV2Library ? TensorShape() : TensorShape(1); }
+
     // boilerplate
     bool operator==(const TensorShape& other) const { return m_dims == other.m_dims; }
     bool operator!=(const TensorShape& other) const { return !operator==(other); } // duh!

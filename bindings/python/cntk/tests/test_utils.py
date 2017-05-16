@@ -28,9 +28,9 @@ def precision(request):
 
 def _to_dense(val, is_sequence=False):
     if is_sequence:
-        x = C.sequence.input(val.shape[2:], is_sparse=True)
+        x = C.sequence.input_variable(val.shape[2:], is_sparse=True)
     else:
-        x = C.input(val.shape[1:], is_sparse=True)
+        x = C.input_variable(val.shape[1:], is_sparse=True)
 
     dense = C.times(x, C.constant(value=np.eye(val.shape[-1], dtype=np.float32)))
     return dense.eval({x : val}, device=val.device)
