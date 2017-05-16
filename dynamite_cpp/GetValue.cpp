@@ -875,6 +875,20 @@ class Memoize
         f.m_pendingInputs = 0; // used as a visited flag
     }
 
+    // helper to batch an array of NDArrayViews of the same shape into a new axis
+    // TODO: do this with a lambda so we can go straight into gatherBatchResultDims
+    vector<size_t> gatherBatchResultDims;
+    NDArrayViewPtr GatherBatchInArena(const vector<NDArrayViewPtr>& inputs)
+    {
+        let& input0 = *inputs[0];
+        let& inputShape = input0.Shape().Dimensions();
+        gatherBatchResultDims.assign(inputShape.begin(), inputShape.end());
+        let axis = gatherBatchResultDims.size();
+        gatherBatchResultDims.push_back(inputs.size());
+        auto out = AllocateTensorInArena(gatherBatchResultDims, input0.GetDataType(), input0.Device());
+        return move(NDArrayView::GatherBatch(inputs, axis, move(out)));
+    }
+
     // backprop gradient into 'var' by pulling all of its consumers (recursively)
     // This is the second function that does batching.
     // The vectors for building the lists are class members so that we reuse the malloc.
@@ -901,19 +915,6 @@ arg.op is not cntk.NDArrayView.transpose_dot] # all others
         // all other
         return m_otherConsumers;
     };
-
-    // helper to batch an array of NDArrayViews of the same shape into a new axis
-    vector<size_t> gatherBatchResultDims;
-    NDArrayViewPtr GatherBatchInArena(const vector<NDArrayViewPtr>& inputs)
-    {
-        let& input0 = *inputs[0];
-        let& inputShape = input0.Shape().Dimensions();
-        gatherBatchResultDims.assign(inputShape.begin(), inputShape.end());
-        let axis = gatherBatchResultDims.size();
-        gatherBatchResultDims.push_back(inputs.size());
-        auto out = AllocateTensorInArena(gatherBatchResultDims, input0.GetDataType(), input0.Device());
-        return move(NDArrayView::GatherBatch(inputs, axis, move(out)));
-    }
 
     // backprop into weight parameter of a Times op (inputs[0])
     // This can be batched into a single matrix product.
