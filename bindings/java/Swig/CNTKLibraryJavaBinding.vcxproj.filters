@@ -43,9 +43,12 @@
     <None Include="std_unordered_map.i">
       <Filter>Interface FIles</Filter>
     </None>
-    <None Include="..\JavaEvalTest\src\Main.java" />
     <None Include="generate-java-bindings.cmd" />
     <None Include="..\..\common\CNTKManagedCommon.i">
+      <Filter>Interface FIles</Filter>
+    </None>
+    <None Include="..\..\..\Tests\EndToEndTests\EvalClientTests\JavaEvalTest\src\Main.java" />
+    <None Include="..\..\common\CNTKWarnFilters.i">
       <Filter>Interface FIles</Filter>
     </None>
   </ItemGroup>

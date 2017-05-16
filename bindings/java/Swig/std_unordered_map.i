@@ -62,8 +62,6 @@ namespace std {
                 }
 
                 // create_iterator_begin(), get_next_key() and destroy_iterator work together to provide a collection of keys to C#
-                %apply void *VOID_INT_PTR { std::unordered_map< K, T>::iterator *create_iterator_begin }
-                %apply void *VOID_INT_PTR { std::unordered_map< K, T>::iterator *swigiterator }
 
                 std::unordered_map< K, T>::iterator *create_iterator_begin() {
                 return new std::unordered_map< K, T>::iterator($self->begin());
