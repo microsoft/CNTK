@@ -879,33 +879,58 @@ class Memoize
     __declspec(noinline) void BackwardFromAllConsumers(const Variable& var)
     {
         let& fields = *var.m_dataFields;
-        fail_if(!fields.m_needsGradient, "backprop into variable that does not need gradient");
         if (fields.m_visited)
             return;
+
+        // backprop into variable that has no consumers  --TODO: why can this happen??
+        auto& c = fields.m_consumers.first;
+        if (!c.first)
+            return;
+
+        fail_if(!fields.m_needsGradient, "backprop into variable that does not need gradient");
+        fail_if(!c.first, "backprop into variable that has no consumers");
+
         fields.m_visited = true;
+
+        // realize all gradients from above
+        auto BackwardFromAllOutputs = [this](const Function* f)
+        {
+            for (let& output : f->m_outputs)
+                BackwardFromAllConsumers(output);
+        };
+        BackwardFromAllOutputs(c.first);
+        for (auto& c : fields.m_consumers.second)
+            BackwardFromAllOutputs(c.first);
+
+        //// simple path: only one consumer
+        //if (fields.m_consumers.second.empty())
+        //{
+        //    // perform the backprop operation
+        //    BackpropTo(c.first, c.second);
+        //    // (the following test would require the rediect through lazy indexc)
+        //    //fail_if(c.first->m_inputs[c.second].m_dataFields != var.m_dataFields, "input is not the right variable??");
+        //    BackwardToOneInput(c.first, c.second);
+        //    // get all gradients incoming from consumer's consumers
+        //    for (let& output : f->m_outputs)
+        //        BackwardFromAllConsumers(output);
+        //    // perform the backprop operation
+        //    BackpropTo(f, c.second);
+        //}
+
         // have all consumers to push gradients from them into var
         // TODO: do we need the index? Answer is yes for batched backprop
         // TODO: additional optimization goes here (GatherBatch, weight updates)
-        auto& c = fields.m_consumers.first;
-        if (c.first)
-        {
-            // (the following test would require the rediect through lazy indexc)
-            //fail_if(c.first->m_inputs[c.second].m_dataFields != var.m_dataFields, "input is not the right variable??");
-            BackwardToOneInput(c.first, c.second);
-        }
+        BackpropTo(c.first, c.second);
         for (auto& c : fields.m_consumers.second)
-        {
-            //fail_if(c.first->m_inputs[c.second].m_dataFields != var.m_dataFields, "input is not the right variable??");
-            BackwardToOneInput(c.first, c.second);
-        }
+            BackpropTo(c.first, c.second);
     }
     // second half of above function
     // Backprop from a consumer recursively into its n-th input.
     void BackwardToOneInput(Function* f, size_t index)
     {
-        // get all gradients incoming from consumer's consumers
-        for (let& output : f->m_outputs)
-            BackwardFromAllConsumers(output);
+        //// get all gradients incoming from consumer's consumers
+        //for (let& output : f->m_outputs)
+        //    BackwardFromAllConsumers(output);
         // perform the backprop operation
         BackpropTo(f, index);
     }
