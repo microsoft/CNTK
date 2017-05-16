@@ -874,6 +874,32 @@ class Memoize
 
     // backprop gradient into 'var' by pulling all of its consumers (recursively)
     // This is the second function that does batching.
+    // The vectors for building the lists are class members so that we reuse the malloc.
+    vector<pair<Function*, size_t>> m_placeItemConsumers;    // IndexLastAxis() op  --do we have those actually? Or already short-circuited?
+    vector<pair<Function*, size_t>> m_matrixWeightConsumers;
+    vector<Variable> m_matrixDataGradients;
+    vector<Variable> m_matrixDataInput0s;
+    vector<pair<Function*, size_t>> m_reduceSumConsumers;
+    vector<pair<Function*, size_t>> m_otherConsumers;
+    __declspec(noinline) vector<pair<Function*, size_t>>& DetermineBucket (const pair<Function*, size_t>& c)
+    {
+        let* f = c.first;
+        let index = c.second;
+        fail_if(f->m_outputs.size() != 1, "for now only functions with a single output are supported"); // (needs some more plumbing to fix this)
+        // backprop into Times' matrix argument
+        if (f->Op() == PrimitiveOpType::Times && index == 0)
+            return m_matrixWeightConsumers;
+/*
+place_item_ops         = [arg for arg in args if arg.op is Variable._op_place_item]
+transpose_dot_item_ops = [arg for arg in args if arg.op is cntk.NDArrayView.transpose_dot]
+reduce_sum_item_ops    = [arg for arg in args if arg.op is cntk.NDArrayView.reduce_sum]
+other_ops              = [arg for arg in args if arg.op is not Variable._op_place_item     and
+arg.op is not cntk.NDArrayView.reduce_sum and
+arg.op is not cntk.NDArrayView.transpose_dot] # all others
+*/
+        // all other
+        return m_otherConsumers;
+    };
     __declspec(noinline) void AggregateGradientFromAllConsumers(const Variable& var)
     {
         let& fields = *var.m_dataFields;
@@ -899,17 +925,50 @@ class Memoize
         // The resulting gradient is the sum of all that's backpropped here,
         // and this is the only place where a variable's gradient ever gets aggregated.
 
+        // create var's m_gradient (may be a slice view)
+        // For Parameters, m_gradient may already exist; for all others, it must not.
+        fail_if(var.Kind() != VariableKind::Parameter && fields.m_gradient, "non-Parameter variable unexpectedly already has a gradient"); // (sanity check; I am not sure actually, maybe too strict)
+        auto beta = LazilyCreateLazilyIndexedGradient(var);
+        // BUGBUG: This is not enough. Somehow we still have a nullptr in BackpropTo().
+        // I think it is a batched op's output that receives its gradient through
+        // a redirected original output. Those can be inconsistent.
+        // Can we eliminate them altogether?
+
         // fast path: only one consumer, nothing to batch
         if (fields.m_consumers.second.empty())
         {
-            BackpropTo(c.first, c.second);
+            BackpropTo(c.first, c.second, beta);
             return;
         }
 
-        // TODO: additional optimization goes here (GatherBatch, weight updates)
-        BackpropTo(c.first, c.second);
+        // optimized path
+        // First sort all consumer gradients according to their operation.
+        fail_if(!m_otherConsumers.empty(), "consumer bucket lists unexpectedly not cleaned up");
+        DetermineBucket(c).push_back(c);
         for (auto& c : fields.m_consumers.second)
-            BackpropTo(c.first, c.second);
+            DetermineBucket(c).push_back(c);
+
+        // matrix-weight bucket
+        for (auto& c : m_matrixWeightConsumers)
+            BackpropTo(c.first, c.second, beta);
+        //BackpropToMatrixWeight(m_matrixWeightConsumers);
+        m_matrixWeightConsumers.clear();
+        //void BackpropToMatrixWeight(m_matrixWeightConsumers);
+        //for (auto& c : m_matrixWeightConsumers)
+        //{
+        //    m_matrixDataGradients.push_back(c.first->m_outputs[0]);
+        //    m_matrixDataInput0s  .push_back(c.first->m_inputs[0]);
+        //}
+        //// backprop into the input
+        //CNTK::BackpropTo(m_outputGradientsBuffer, index, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferRaw, fields.m_gradient, beta);
+        //BackpropTo(c.first, c.second);
+        //m_matrixDataInput0s.clear();
+        //m_matrixDataGradients.clear();
+
+        // others bucket
+        for (auto& c : m_otherConsumers)
+            BackpropTo(c.first, c.second, beta);
+        m_otherConsumers.clear();
     }
 
     // back-propagate all of f's outputs' m_gradients to one input
@@ -917,7 +976,7 @@ class Memoize
     vector<const NDArrayView*> m_outputValuesBuffer;
     vector<const NDArrayView*> m_outputGradientsBuffer;
     vector<const NDArrayView*> m_inputValuesBufferRaw;
-    void BackpropTo(Function* f, size_t index)
+    void BackpropTo(Function* f, size_t index, double& beta)
     {
         let& inputs =  f->m_inputs;
         auto& input = inputs[index];
@@ -947,9 +1006,12 @@ class Memoize
         }
         // compute gradients for the desired input
         // get or create m_gradient as the desired gradient's TensorView (possibly redirecting through a slice view)
-        let beta = LazilyCreateLazilyIndexedGradient(input);
+        //fail_if(!fields.m_gradient, "m_gradient should already be there");
+        if (!fields.m_gradient)
+            beta = LazilyCreateLazilyIndexedGradient(input);
         // backprop into the input
         CNTK::BackpropTo(m_outputGradientsBuffer, index, f->Op(), f->m_attributes, m_outputValuesBuffer, m_inputValuesBufferRaw, fields.m_gradient, beta);
+        beta = 1.0; // all further gradients for this variable must add to it
     }
 
     // helper to verify that the tree is clean
