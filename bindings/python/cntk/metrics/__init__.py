@@ -138,7 +138,7 @@ def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashIn
         tokensToIgnore: list of samples to ignore during edit distance evaluation (in both sequences)
         name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`~cntk.ops.functions.Function
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import edit_distance_error
     dtype = get_data_type(input_a, input_b)
