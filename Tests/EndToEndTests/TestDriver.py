@@ -257,6 +257,7 @@ class Test:
     # preparing environment for the test script
     os.environ["TEST_FLAVOR"] = flavor
     os.environ["TEST_DEVICE"] = device
+    os.environ["TEST_TAG"] = args.tag or ''
     os.environ["TEST_BUILD_LOCATION"] = args.build_location
     if windows:
       if args.build_sku == "cpu":
