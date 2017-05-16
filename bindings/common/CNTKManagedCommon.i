@@ -46,6 +46,14 @@
     %rename (_##method) namespace##::##method
 %enddef
 
+#ifdef SWIGCSHARP
+#define %make_private(x) %csmethodmodifiers x "private"
+%define %rename_and_make_private(namespace, method)
+  %csmethodmodifiers namespace##::##method "private";
+  %rename (_##method) namespace##::##method
+%enddef
+#endif
+
 %{
     #include "CNTKLibrary.h"
     #pragma warning(disable : 4100) //unreferenced formal parameter
@@ -70,6 +78,8 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::Variable)
 SWIG_STD_VECTOR_ENHANCED(CNTK::Axis)
 SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 #endif //SWIGCSHARP
+
+%typemap(csclassmodifiers) AxisVector "internal class"
 
 %template(SizeTVector) std::vector<size_t>;
 %template(DoubleVector) std::vector<double>;
@@ -491,6 +501,9 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Function, Clone);
 // Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
 %ignore CNTK::Function::Load(std::istream& inputStream, const DeviceDescriptor& computeDevice= DeviceDescriptor::UseDefaultDevice());
 
+%rename_and_make_private(CNTK::Function, Evaluate);
+%rename_and_make_private(CNTK::Function, Load);
+
 %extend CNTK::Function {
     static FunctionPtr Load(const std::wstring& filepath,
                             const CNTK::DeviceDescriptor& computeDevice = CNTK::DeviceDescriptor::UseDefaultDevice())
@@ -642,6 +655,18 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, IsValid);
 %rename (copyVariableValueToFloat) CNTK::Value::CopyVariableValueToFloat;
 %rename (copyVariableValueToDouble) CNTK::Value::CopyVariableValueToDouble;
 %rename (toString) CNTK::Value::AsString;
+#endif
+
+// TODO: make the following methods also private in Java, after CreateBatch/CreateSequence/... methods are implemented there.
+#ifdef SWIGCSHARP
+%make_private(CNTK::Value::CreateDenseFloat);
+%make_private(CNTK::Value::CreateDenseDouble);
+%make_private(CNTK::Value::CreateBatchFloat);
+%make_private(CNTK::Value::CreateBatchDouble);
+%make_private(CNTK::Value::CreateSequenceFloat);
+%make_private(CNTK::Value::CreateSequenceDouble);
+%make_private(CNTK::Value::CreateOneHotFloat);
+%make_private(CNTK::Value::CreateOneHotDouble);
 #endif
 
 %include "CNTKValueExtend.i"
