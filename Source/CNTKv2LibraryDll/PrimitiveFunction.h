@@ -758,7 +758,7 @@ namespace CNTK
         // Version 11: Add ToSequence, ToSequenceLike and UnpackSequence operators.
         // Version 12: Add Assign node.
         // Version 13: Add Gather op.
-        // Version 14: Add Sigmoid2
+        // Version 14: Add StableSigmoid
         static const size_t s_serializationVersion = 14;
     };
 
