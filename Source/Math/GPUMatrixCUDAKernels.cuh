@@ -140,6 +140,13 @@ struct GridDim
         assert(m_blocksPerGrid * m_threadsPerBlock >= N);
     }
 
+    static size_t GetCurrentDeviceId()
+    {
+        int deviceId;
+        cudaGetDevice(&deviceId);
+        return (size_t)deviceId;
+    }
+
     static const std::vector<cudaDeviceProp>& GetCachedDeviceProps()
     {
         std::call_once(s_cachedDevicePropsInitFlag, [=]{
@@ -153,18 +160,12 @@ struct GridDim
         return s_cachedDeviceProps;
     }
 
-    static size_t GetCurrentDeviceId()
-    {
-        int deviceId;
-        cudaGetDevice(&deviceId);
-        return (size_t)deviceId;
-    }
-
-
     // get device properties of current device
     static const cudaDeviceProp& GetDeviceProps()
     {
-        const auto& cachedDevicesProps = GetCachedDeviceProps();
+        //const auto& cachedDevicesProps = GetCachedDeviceProps();
+        // magic statics are safe in VS 2015
+        static std::vector<cudaDeviceProp> cachedDevicesProps = GetCachedDeviceProps();
         return cachedDevicesProps[GetCurrentDeviceId()];
     }
 
