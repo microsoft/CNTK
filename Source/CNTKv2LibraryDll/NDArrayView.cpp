@@ -502,14 +502,17 @@ namespace CNTK
     {
         size_t numInputs = inputs.size();
         const auto& input0 = *inputs[0];
-        auto dims = input0.Shape().Dimensions();
+        vector<size_t> dims;
+        dims.reserve(max((size_t)axis+1, dims.size()));
+        let& inputDims = input0.Shape().Dimensions();
+        dims.assign(inputDims.begin(), inputDims.end());
         if (axis < dims.size())
             LogicError("NDArrayView::GatherBatch: Currently only splicing in a new slowest-changing axis is supported.");
         if (axis >= dims.size())
             dims.resize(axis, 1); // pad if needed
         dims.push_back(numInputs);
         assert(dims[axis] = numInputs);
-        NDShape shape(dims);
+        NDShape shape(move(dims));
         // create new object or verify shape
         if (!out)
             out = MakeSharedObject<NDArrayView>(input0.GetDataType(), input0.GetStorageFormat(), shape, input0.Device());
