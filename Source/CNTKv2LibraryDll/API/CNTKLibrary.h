@@ -3222,12 +3222,60 @@ namespace CNTK
         ///
         FunctionPtr FindByName(const std::wstring& name, bool nestedSearchInsideBlockFunction = false)
         {
+            return FindByPredicate([&name](const FunctionPtr& function) {
+                        return name.compare(function->Name()) == 0;
+                   }, nestedSearchInsideBlockFunction);
+        }
+
+        ///
+        /// Find a list of functions with the given name in the Function graph underlying 'this' Function.
+        /// If nestedSearchInsideBlockFunction is true, all functions inside block functions are also searched for the given name.
+        ///
+        std::vector<FunctionPtr> FindAllWithName(const std::wstring& name, bool nestedSearchInsideBlockFunction = false)
+        {
+            return FindAllWithPredicate([&name](const FunctionPtr& function) {
+                        return name.compare(function->Name()) == 0;
+                   }, nestedSearchInsideBlockFunction);
+        }
+
+        ///
+        /// Find a function with the given uid in the Function graph underlying 'this' Function.
+        /// If more than one function with the same uid, an exception is thrown.
+        /// If nestedSearchInsideBlockFunction is true, all functions inside block functions are also searched for the given uid.
+        ///
+        FunctionPtr FindByUid(const std::wstring& uid, bool nestedSearchInsideBlockFunction = false)
+        {
+            return FindByPredicate([&uid](const FunctionPtr& function) {
+                        return uid.compare(function->Uid()) == 0;
+                   }, nestedSearchInsideBlockFunction);
+        }
+
+        ///
+        /// Find a list of functions with the given uid in the Function graph underlying 'this' Function.
+        /// If nestedSearchInsideBlockFunction is true, all functions inside block functions are also searched for the given uid.
+        ///
+        std::vector<FunctionPtr> FindAllWithUid(const std::wstring& uid, bool nestedSearchInsideBlockFunction = false)
+        {
+            return FindAllWithPredicate([&uid](const FunctionPtr& function) {
+                        return uid.compare(function->Uid()) == 0;
+                   }, nestedSearchInsideBlockFunction);
+        }
+
+    private:
+        ///
+        /// Find a function that satisfies the predicate in the Function graph underlying 'this' Function.
+        /// If more than one function satisfies the predicate, an exception is thrown.
+        /// If nestedSearchInsideBlockFunction is true, all functions inside block functions are also searched.
+        ///
+        template <typename FunctionType>
+        FunctionPtr FindByPredicate(const FunctionType& predicate, bool nestedSearchInsideBlockFunction = false)
+        {
             FunctionPtr  foundFunction = nullptr;
-            PreorderTraverseFunctions(RootFunction(), [&foundFunction, &name, this](const FunctionPtr& function) {
-                if (name.compare(function->Name()) == 0)
+            PreorderTraverseFunctions(RootFunction(), [&foundFunction, &predicate, this](const FunctionPtr& function) {
+                if (predicate(function))
                 {
                     if (foundFunction != nullptr)
-                        RuntimeError("FindByName: Multiple functions with the name '%S' are found in the Function graph underlying 'this' Function.", name.c_str());
+                        RuntimeError("FindByPredicate: Multiple functions with that satisfy the predicate were found in the Function graph underlying 'this' Function.");
                     else
                         foundFunction = function;
                 }
@@ -3237,19 +3285,22 @@ namespace CNTK
         }
 
         ///
-        /// Find a list of functions with the given name in the Function graph underlying 'this' Function.
-        /// If nestedSearchInsideBlockFunction is true, all functions inside block functions are also searched for the given name.
+        /// Find a list of functions that satisfy the predicate in the Function graph underlying 'this' Function.
+        /// If nestedSearchInsideBlockFunction is true, all functions inside block functions are also searched.
         ///
-        std::vector<FunctionPtr> FindAllWithName(const std::wstring& name, bool nestedSearchInsideBlockFunction = false)
+        template <typename FunctionType>
+        std::vector<FunctionPtr> FindAllWithPredicate(const FunctionType& predicate,
+                                                              bool nestedSearchInsideBlockFunction = false)
         {
             std::vector<FunctionPtr> foundFunctions;
-            PreorderTraverseFunctions(RootFunction(), [&foundFunctions, &name](const FunctionPtr& function) {
-                if (name.compare(function->Name()) == 0)
+            PreorderTraverseFunctions(RootFunction(), [&foundFunctions, &predicate](const FunctionPtr& function) {
+                if (predicate(function))
                    foundFunctions.push_back(function);
             }, nestedSearchInsideBlockFunction);
 
             return foundFunctions;
         }
+    public:
 
         /// Returns the dictionary of attributes of 'this' Function
         ///
