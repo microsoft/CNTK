@@ -164,6 +164,42 @@
         return _IsBlock();
     }
 
+    public java.util.List<Function> findAllWithName(String name, boolean nestedSearchInsideBlockFunction) {
+      FunctionPtrVector functions = _FindAllWithName(name, nestedSearchInsideBlockFunction);
+      java.util.ArrayList<Function> ret = new java.util.ArrayList<Function>();
+      for (int i = 0; i < functions.size(); ++i){
+            ret.add(functions.get(i));
+      }
+      return ret;
+    }
+
+    public java.util.List<Function> findAllWithName(String name) {
+      FunctionPtrVector functions = _FindAllWithName(name);
+      java.util.ArrayList<Function> ret = new java.util.ArrayList<Function>();
+      for (int i = 0; i < functions.size(); ++i){
+            ret.add(functions.get(i));
+      }
+      return ret;
+    }
+
+    public java.util.List<Function> findAllWithUid(String uid, boolean nestedSearchInsideBlockFunction) {
+      FunctionPtrVector functions = _FindAllWithUid(uid, nestedSearchInsideBlockFunction);
+      java.util.ArrayList<Function> ret = new java.util.ArrayList<Function>();
+      for (int i = 0; i < functions.size(); ++i){
+            ret.add(functions.get(i));
+      }
+      return ret;
+    }
+
+    public java.util.List<Function> findAllWithUid(String uid) {
+      FunctionPtrVector functions = _FindAllWithUid(uid);
+      java.util.ArrayList<Function> ret = new java.util.ArrayList<Function>();
+      for (int i = 0; i < functions.size(); ++i){
+            ret.add(functions.get(i));
+      }
+      return ret;
+    }
+
     public static Function combine(java.util.ArrayList<Variable> outputVariable) {
         VariableVector varVect = new VariableVector();
         for (int i = 0; i < outputVariable.size(); ++i)
