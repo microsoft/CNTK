@@ -123,22 +123,22 @@ namespace CNTK
         });
     }
 
-    static void* AllocateTensorViewMin2D(CNTK::DataType dataType, const NDShape& viewShape, const Microsoft::MSR::CNTK::MatrixBasePtr& storageObject)
+    static void* AllocateTensorViewMin2D(CNTK::DataType dataType, const NDShape& viewShape, const shared_ptr<MatrixBase>& sob)
     {
         switch (dataType)
         {
         case DataType::Float:
             {
-                const auto* matrix = dynamic_cast<Matrix<float>*>(storageObject.get());
+                auto matrix = dynamic_pointer_cast<Matrix<float>>(sob);
                 if (matrix)
-                    return new TensorView<float>(std::make_shared<Matrix<float>>(matrix->AsReference()), AsTensorShapeMin2D(viewShape));
+                    return new TensorView<float>(matrix, AsTensorShapeMin2D(viewShape));
             }
             break;
         case DataType::Double:
             {
-                const auto* matrix = dynamic_cast<Matrix<double>*>(storageObject.get());
+                auto matrix = dynamic_pointer_cast<Matrix<double>>(sob);
                 if (matrix)
-                    return new TensorView<double>(std::make_shared<Matrix<double>>(matrix->AsReference()), AsTensorShapeMin2D(viewShape));
+                    return new TensorView<double>(matrix, AsTensorShapeMin2D(viewShape));
             }
             break;
         default:
@@ -148,9 +148,8 @@ namespace CNTK
         LogicError("Storage Object is not of DataType %s", DataTypeName(dataType));
     }
 
-#define MP(storageObject1) ((const Microsoft::MSR::CNTK::MatrixBasePtr&)storageObject1) // TODO: figure out the namespace stuff
-    NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const class CNTK::MatrixBasePtr& storageObject)
-        : NDArrayView(dataType, AsDeviceDescriptor(MP(storageObject)->GetDeviceId()), AsStorageFormat(MP(storageObject)->GetFormat()), viewShape, readOnly, AllocateTensorViewMin2D(dataType, viewShape, MP(storageObject)))
+    NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const shared_ptr<MatrixBase>& sob)
+        : NDArrayView(dataType, AsDeviceDescriptor(sob->GetDeviceId()), AsStorageFormat(sob->GetFormat()), viewShape, readOnly, AllocateTensorViewMin2D(dataType, viewShape, sob))
     {}
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device)

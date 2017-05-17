@@ -85,8 +85,13 @@ namespace CNTK
             Variable CreateParameterOrConstantFromNodeValue(const ComputationNodeBasePtr& node, bool isConstant)
             {
                 auto& matrix = node->As<ComputationNode<ElementType>>()->Value();
+#if 1
+                NDArrayViewPtr value = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsNDShape(node->GetSampleLayout()), false,
+                                                                     std::make_shared<Matrix<ElementType>>(matrix.AsReference()));
+#else
                 auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorShapeMin2D(node->GetSampleLayout()));
                 NDArrayViewPtr value = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), AsNDShape(node->GetSampleLayout()), false, tensorView);
+#endif
 
                 auto kind = isConstant ? VariableKind::Constant : VariableKind::Parameter;
 
@@ -351,8 +356,13 @@ namespace CNTK
                         auto oldConvolutionMapValue = convolutionMapVar.IsConstant() ? Constant(convolutionMapVar).Value() : Parameter(convolutionMapVar).Value();
                         auto oldConvolutionMapMatrix = oldConvolutionMapValue->GetMatrix<ElementType>();
 
+#if 1
+                        auto newConvolutionMapValue = MakeSharedObject<NDArrayView>(oldConvolutionMapValue->GetDataType(), actualConvolutionMapShape, oldConvolutionMapValue->IsReadOnly(),
+                                                                                    std::make_shared<Matrix<ElementType>>(oldConvolutionMapMatrix->AsReference()));
+#else
                         auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(oldConvolutionMapMatrix->AsReference()), AsTensorShapeMin2D(actualConvolutionMapShape));
                         auto newConvolutionMapValue = MakeSharedObject<NDArrayView>(oldConvolutionMapValue->GetDataType(), oldConvolutionMapValue->Device(), oldConvolutionMapValue->GetStorageFormat(), actualConvolutionMapShape, oldConvolutionMapValue->IsReadOnly(), tensorView);
+#endif
 
                         // Lets replace the convolutionMapVar with a new properly reshaped Parameter/Constant
                         convolutionMapVar = convolutionMapVar.IsConstant() ? Variable(Constant(newConvolutionMapValue, convolutionMapVar.Name(), convolutionMapVar.Uid())) : Variable(Parameter(newConvolutionMapValue, convolutionMapVar.Name(), convolutionMapVar.Uid()));

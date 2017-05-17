@@ -123,6 +123,7 @@ namespace CNTK
     }
 
     // convert a viewShape into a V1-compatible TensorShape
+    // TODO: THIS NO LONGER PADS. Simplify.
     // V1 code traditionally assumed that tensors are at least 1D, so whenever
     // interacting with V1 code, use this function to pad the shape accordingly.
     inline Microsoft::MSR::CNTK::TensorShape AsTensorShapeMin1D(const NDShape& viewShape)
