@@ -17,7 +17,7 @@ namespace CNTK
 {
     // matrix from user-provided buffer, template version
     template <typename ElementType>
-    static std::shared_ptr<MatrixBase> CreateMatrix(const NDShape& viewShape,
+    static std::shared_ptr<MatrixBase> CreateStorageObject(const NDShape& viewShape,
                                                     const DeviceDescriptor& device,
                                                     void* dataBuffer,
                                                     size_t bufferSizeInBytes)
@@ -34,7 +34,7 @@ namespace CNTK
     }
 
     // matrix from user-provided buffer, dataType version
-    static std::shared_ptr<MatrixBase> CreateMatrix(CNTK::DataType dataType,
+    static std::shared_ptr<MatrixBase> CreateStorageObject(CNTK::DataType dataType,
                                                     const NDShape& viewShape,
                                                     const DeviceDescriptor& device,
                                                     void* dataBuffer,
@@ -43,9 +43,9 @@ namespace CNTK
         switch (dataType)
         {
         case DataType::Float:
-            return CreateMatrix<float>(viewShape, device, dataBuffer, bufferSizeInBytes);
+            return CreateStorageObject<float>(viewShape, device, dataBuffer, bufferSizeInBytes);
         case DataType::Double:
-            return CreateMatrix<double>(viewShape, device, dataBuffer, bufferSizeInBytes);
+            return CreateStorageObject<double>(viewShape, device, dataBuffer, bufferSizeInBytes);
         default:
             LogicError("Unsupported DataType %s", DataTypeName(dataType));
             break;
@@ -54,7 +54,7 @@ namespace CNTK
 
     // new matrix, template version
     template <typename ElementType>
-    static std::shared_ptr<MatrixBase> CreateMatrix(const NDShape& viewShape,
+    static std::shared_ptr<MatrixBase> CreateStorageObject(const NDShape& viewShape,
                                                     CNTK::StorageFormat storageType,
                                                     const DeviceDescriptor& device,
                                                     size_t numNonZeroValues = 0)
@@ -69,7 +69,7 @@ namespace CNTK
     }
 
     // new matrix, dataType version
-    static std::shared_ptr<MatrixBase> CreateMatrix(CNTK::DataType dataType,
+    static std::shared_ptr<MatrixBase> CreateStorageObject(CNTK::DataType dataType,
                                                     CNTK::StorageFormat storageType,
                                                     const NDShape& viewShape,
                                                     const DeviceDescriptor& device,
@@ -78,9 +78,9 @@ namespace CNTK
         switch (dataType)
         {
         case DataType::Float:
-            return CreateMatrix<float>(viewShape, storageType, device, numNonZeroValues);
+            return CreateStorageObject<float>(viewShape, storageType, device, numNonZeroValues);
         case DataType::Double:
-            return CreateMatrix<double>(viewShape, storageType, device, numNonZeroValues);
+            return CreateStorageObject<double>(viewShape, storageType, device, numNonZeroValues);
         default:
             LogicError("Unsupported DataType %s", DataTypeName(dataType));
             break;
@@ -92,7 +92,7 @@ namespace CNTK
     template <typename ElementType>
     static TensorView<ElementType>* AllocateTensorViewMin2D(const NDShape& viewShape, const DeviceDescriptor& device, void* dataBuffer, size_t bufferSizeInBytes)
     {
-        return new TensorView<ElementType>(CreateMatrix<ElementType>(viewShape, device, dataBuffer, bufferSizeInBytes), AsTensorShapeMin2D(viewShape));
+        return new TensorView<ElementType>(CreateStorageObject<ElementType>(viewShape, device, dataBuffer, bufferSizeInBytes), AsTensorShapeMin2D(viewShape));
     }
 
     // TensorView over provided dataBuffer, dataType version
@@ -110,7 +110,7 @@ namespace CNTK
     template <typename ElementType>
     static TensorView<ElementType>* AllocateTensorViewMin2D(const NDShape& viewShape, CNTK::StorageFormat storageType, const DeviceDescriptor& device, size_t numNonZeroValues = 0)
     {
-        return new TensorView<ElementType>(CreateMatrix<ElementType>(viewShape, storageType, device, numNonZeroValues), AsTensorShapeMin2D(viewShape));
+        return new TensorView<ElementType>(CreateStorageObject<ElementType>(viewShape, storageType, device, numNonZeroValues), AsTensorShapeMin2D(viewShape));
     }
 
     // TensorView over new matrix, dataType version
@@ -126,13 +126,13 @@ namespace CNTK
 #endif
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly/* = false*/)
-        : NDArrayView(dataType, viewShape, readOnly, CreateMatrix(dataType, viewShape, device, dataBuffer, bufferSizeInBytes))
+        : NDArrayView(dataType, viewShape, readOnly, CreateStorageObject(dataType, viewShape, device, dataBuffer, bufferSizeInBytes))
     {
     }
 
     template <typename ElementType>
     NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/)
-        : NDArrayView(AsDataType<ElementType>(), viewShape, false, CreateMatrix<ElementType>(viewShape, StorageFormat::SparseCSC, device, numNonZeroValues))
+        : NDArrayView(AsDataType<ElementType>(), viewShape, false, CreateStorageObject<ElementType>(viewShape, StorageFormat::SparseCSC, device, numNonZeroValues))
     {
         if ((colStarts == nullptr) || (rowIndices == nullptr) || (nonZeroValues == nullptr) || (numNonZeroValues == 0) || (numNonZeroValues > viewShape.TotalSize()))
             InvalidArgument("Invalid sparse CSC format data specified for construction of NDArrayView with shape '%S'; "
@@ -193,7 +193,7 @@ namespace CNTK
     {}
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device)
-        : NDArrayView(dataType, viewShape, false, CreateMatrix(dataType, storageType, viewShape, device))
+        : NDArrayView(dataType, viewShape, false, CreateStorageObject(dataType, storageType, viewShape, device))
     {}
 
     NDArrayView::~NDArrayView()
