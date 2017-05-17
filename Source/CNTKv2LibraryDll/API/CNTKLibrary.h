@@ -859,7 +859,7 @@ namespace CNTK
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
 
     private:
-        CNTK_API NDArrayView(::CNTK::DataType dataType, const DeviceDescriptor& device, ::CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
+        //CNTK_API NDArrayView(::CNTK::DataType dataType, const DeviceDescriptor& device, ::CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
         CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
 
         template <typename ElementType>

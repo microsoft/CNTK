@@ -106,6 +106,7 @@ namespace CNTK
         m_isReadOnly = readOnly;
     }
 
+#if 0
     // TODO: get rid of this version
     NDArrayView::NDArrayView(CNTK::DataType dataType, const DeviceDescriptor& device, CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView)
         : m_dataType(dataType), m_device(device), m_storageFormat(storageType), m_viewShape(viewShape), m_isReadOnly(readOnly)
@@ -125,6 +126,7 @@ namespace CNTK
             }
         });
     }
+#endif
 
     static void* AllocateTensorViewMin2D(CNTK::DataType dataType, const NDShape& viewShape, const shared_ptr<MatrixBase>& sob)
     {
@@ -153,7 +155,6 @@ namespace CNTK
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const shared_ptr<MatrixBase>& sob)
         : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())), m_viewShape(viewShape), m_isReadOnly(readOnly)
-        //: NDArrayView(dataType, AsDeviceDescriptor(sob->GetDeviceId()), AsStorageFormat(sob->GetFormat()), viewShape, readOnly, AllocateTensorViewMin2D(dataType, viewShape, sob))
     {
         void* tensorView = AllocateTensorViewMin2D(dataType, viewShape, sob);
         m_tensorView = std::shared_ptr<void>(tensorView, [this](void*) {
@@ -334,21 +335,24 @@ namespace CNTK
 
     NDArrayViewPtr NDArrayView::Alias(bool readOnly/* = false*/) const
     {
-        void* tensorView = nullptr;
+        shared_ptr<MatrixBase> matrix;
+        //void* tensorView = nullptr;
         switch (m_dataType)
         {
         case DataType::Float:
-            tensorView = new TensorView<float>(*(GetTensorView<float>()));
+            matrix = GetTensorView<float>()->GetSOBPtr();
+            //tensorView = new TensorView<float>(*(GetTensorView<float>()));
             break;
         case DataType::Double:
-            tensorView = new TensorView<double>(*(GetTensorView<double>()));
+            matrix = GetTensorView<double>()->GetSOBPtr();
+            //tensorView = new TensorView<double>(*(GetTensorView<double>()));
             break;
         default:
             LogicError("NDArrayView::Alias: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
         }
 
-        return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);
+        return MakeSharedObject<NDArrayView>(GetDataType(), /*Device(), GetStorageFormat(),*/ Shape(), IsReadOnly() || readOnly, matrix);// tensorView);
     }
 
     template <typename ElementType>
@@ -558,7 +562,8 @@ namespace CNTK
 
         auto flatBufferOffset = AsTensorShape(Shape()).Locate(startOffset);  // offset and length into underlying ElementType array...
         auto flatBufferLength = AsTensorShape(Shape()).Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
-        void* tensorView = nullptr;
+        shared_ptr<MatrixBase> matrix;
+        //void* tensorView = nullptr;
         // At this point, it is guaranteed that the slice is consecutive in memory. We distinguish two cases:
         // If the slice is expressable a column slice, we will use ColumnSlice(). This will work with sparse data.
         // If, on the other hand, it is a row slice in a single column (such as a single element), we will
@@ -581,7 +586,8 @@ namespace CNTK
                 sliced.Reshape(flatBufferLength, 1);
                 slicedMatrixView = make_shared<Matrix<float>>(std::move(sliced));
             }
-            tensorView = new TensorView<float>(slicedMatrixView, AsTensorShapeMin2D(sliceViewShape));
+            matrix = slicedMatrixView;
+            //tensorView = new TensorView<float>(slicedMatrixView, AsTensorShapeMin2D(sliceViewShape));
             break;
         }
         case DataType::Double:
@@ -610,7 +616,8 @@ namespace CNTK
             else
                 slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
 #endif
-            tensorView = new TensorView<double>(slicedMatrixView, AsTensorShapeMin2D(sliceViewShape));
+            matrix = slicedMatrixView;
+            //tensorView = new TensorView<double>(slicedMatrixView, AsTensorShapeMin2D(sliceViewShape));
             break;
         }
         default:
@@ -618,7 +625,7 @@ namespace CNTK
             break;
         }
 
-        return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), sliceViewShape, IsReadOnly() || readOnly, tensorView);
+        return MakeSharedObject<NDArrayView>(GetDataType(), /*Device(), GetStorageFormat(),*/ sliceViewShape, IsReadOnly() || readOnly, matrix);// tensorView);
     }
 
     NDArrayViewPtr NDArrayView::IndexLastAxis(size_t index, bool readOnly) const
@@ -645,7 +652,8 @@ namespace CNTK
 
         auto flatBufferOffset = AsTensorShape(Shape()).Locate(startOffset);  // offset and length into underlying ElementType array...
         auto flatBufferLength = AsTensorShape(Shape()).Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
-        void* tensorView = nullptr;
+        shared_ptr<MatrixBase> matrix;
+        //void* tensorView = nullptr;
         // At this point, it is guaranteed that the slice is consecutive in memory. We distinguish two cases:
         // If the slice is expressable a column slice, we will use ColumnSlice(). This will work with sparse data.
         // If, on the other hand, it is a row slice in a single column (such as a single element), we will
@@ -668,7 +676,8 @@ namespace CNTK
                 sliced.Reshape(flatBufferLength, 1);
                 slicedMatrixView = make_shared<Matrix<float>>(std::move(sliced));
             }
-            tensorView = new TensorView<float>(slicedMatrixView, AsTensorShapeMin2D(sliceViewShape));
+            matrix = slicedMatrixView;
+            //tensorView = new TensorView<float>(slicedMatrixView, AsTensorShapeMin2D(sliceViewShape));
             break;
         }
         case DataType::Double:
@@ -697,7 +706,8 @@ namespace CNTK
             else
                 slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
 #endif
-            tensorView = new TensorView<double>(slicedMatrixView, AsTensorShapeMin2D(sliceViewShape));
+            matrix = slicedMatrixView;
+            //tensorView = new TensorView<double>(slicedMatrixView, AsTensorShapeMin2D(sliceViewShape));
             break;
         }
         default:
@@ -705,7 +715,7 @@ namespace CNTK
             break;
         }
 
-        return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), sliceViewShape, IsReadOnly() || readOnly, tensorView);
+        return MakeSharedObject<NDArrayView>(GetDataType(), /*Device(), GetStorageFormat(),*/ sliceViewShape, IsReadOnly() || readOnly, matrix);// tensorView);
     }
 
     NDArrayViewPtr NDArrayView::AsShape(const NDShape& newShape) const
@@ -718,21 +728,24 @@ namespace CNTK
         }
 
         auto newTensorShape = AsTensorShapeMin2D(newShape);
-        void* tensorView = nullptr;
+        shared_ptr<MatrixBase> matrix;
+        //void* tensorView = nullptr;
         switch (m_dataType)
         {
         case DataType::Float:
-            tensorView = new TensorView<float>(*(GetTensorView<float>()), newTensorShape);
+            matrix = GetTensorView<float>()->GetSOBPtr();
+            //tensorView = new TensorView<float>(*(GetTensorView<float>()), newTensorShape);
             break;
         case DataType::Double:
-            tensorView = new TensorView<double>(*(GetTensorView<double>()), newTensorShape);
+            matrix = GetTensorView<double>()->GetSOBPtr();
+            //tensorView = new TensorView<double>(*(GetTensorView<double>()), newTensorShape);
             break;
         default:
             LogicError("NDArrayView::AsShape: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
         }
 
-        return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), newShape, IsReadOnly(), tensorView);
+        return MakeSharedObject<NDArrayView>(GetDataType(), /*Device(), GetStorageFormat(), */newShape, IsReadOnly(), matrix);// tensorView);
     }
 
     // TODO: This could actually be strided?
@@ -795,9 +808,9 @@ namespace CNTK
     {
         auto matrixDims = GetMatrixDimensions(shape);
         auto randomNormalMatrix = std::make_shared<Matrix<ElementType>>(Matrix<ElementType>::RandomGaussian(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device), (ElementType)mean, (ElementType)stdDev, seed));
-        auto tensorView = new TensorView<ElementType>(randomNormalMatrix, AsTensorShapeMin2D(shape));
+        //auto tensorView = new TensorView<ElementType>(randomNormalMatrix, AsTensorShapeMin2D(shape));
 
-        return MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
+        return MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), /*device, StorageFormat::Dense,*/ shape, false, randomNormalMatrix);// tensorView);
     }
 
     template <typename ElementType>
@@ -805,9 +818,9 @@ namespace CNTK
     {
         auto matrixDims = GetMatrixDimensions(shape);
         auto randomUniformMatrix = std::make_shared<Matrix<ElementType>>(Matrix<ElementType>::RandomUniform(matrixDims.first, matrixDims.second, AsCNTKImplDeviceId(device), (ElementType)rangeBegin, (ElementType)rangeEnd, seed));
-        auto tensorView = new TensorView<ElementType>(randomUniformMatrix, AsTensorShapeMin2D(shape));
+        //auto tensorView = new TensorView<ElementType>(randomUniformMatrix, AsTensorShapeMin2D(shape));
 
-        return MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
+        return MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), /*device, StorageFormat::Dense,*/ shape, false, randomUniformMatrix);// tensorView);
     }
 
     template <typename ElementType>

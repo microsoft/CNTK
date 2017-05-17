@@ -41,13 +41,14 @@ public:
         auto inputSampleLayout = InputRef(0).GetSampleLayout();
         auto inputDataTensorShape = inputSampleLayout;
         inputDataTensorShape.AppendInPlace(inputDataTensorShape.GetRank(), numSequences);
-        let& inputDataMatrix = InputRef(0).Value();
+        //let& inputDataMatrix = InputRef(0).Value();
         auto inputDataNDArrayView = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(),
-            ::CNTK::AsDeviceDescriptor(inputDataMatrix.GetDeviceId()),
-            ::CNTK::AsStorageFormat(inputDataMatrix.GetFormat()),
+            //::CNTK::AsDeviceDescriptor(inputDataMatrix.GetDeviceId()),
+            //::CNTK::AsStorageFormat(inputDataMatrix.GetFormat()),
             ::CNTK::AsNDShape(inputDataTensorShape),
             /*readOnly =*/ true,
-            new TensorView<ElemType>(InputRef(0).ValuePtr(), inputDataTensorShape));
+            //new TensorView<ElemType>(InputRef(0).ValuePtr(), inputDataTensorShape));
+            InputRef(0).ValuePtr());
 
         std::vector<size_t> sequenceLengths = GetSequenceLengths();
         auto inputDataValue = ::CNTK::MakeSharedObject<::CNTK::Value>(inputDataNDArrayView, ::CNTK::CreateMask(sequenceLengths));
@@ -363,13 +364,14 @@ public:
         auto gradientSampleLayout = GetSampleLayout();
         auto gradientDataTensorShape = gradientSampleLayout;
         gradientDataTensorShape.AppendInPlace(gradientDataTensorShape.GetRank(), numSequences);
-        let& gradientDataMatrix = Gradient();
+        //let& gradientDataMatrix = Gradient();
         auto gradientDataNDArrayView = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(),
-            ::CNTK::AsDeviceDescriptor(gradientDataMatrix.GetDeviceId()),
-            ::CNTK::AsStorageFormat(gradientDataMatrix.GetFormat()),
+            //::CNTK::AsDeviceDescriptor(gradientDataMatrix.GetDeviceId()),
+            //::CNTK::AsStorageFormat(gradientDataMatrix.GetFormat()),
             ::CNTK::AsNDShape(gradientDataTensorShape),
             /*readOnly =*/ true,
-            new TensorView<ElemType>(GradientPtr(), gradientDataTensorShape));
+            //new TensorView<ElemType>(GradientPtr(), gradientDataTensorShape));
+            (GradientPtr()));
 
         std::vector<size_t> sequenceLengths(numSequences);
         let& inMBLayout = InputRef(0).GetMBLayout();
