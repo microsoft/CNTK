@@ -15,11 +15,12 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    // matrix from user-provided buffer, template version
     template <typename ElementType>
-    static TensorView<ElementType>* AllocateTensorViewMin2D(const NDShape& viewShape,
-                                                       const DeviceDescriptor& device,
-                                                       void* dataBuffer,
-                                                       size_t bufferSizeInBytes)
+    static std::shared_ptr<MatrixBase> CreateMatrix(const NDShape& viewShape,
+                                                    const DeviceDescriptor& device,
+                                                    void* dataBuffer,
+                                                    size_t bufferSizeInBytes)
     {
         if (dataBuffer == nullptr)
             InvalidArgument("Cannot create a NDArrayView over a null data buffer.");
@@ -29,59 +30,100 @@ namespace CNTK
                             (int)bufferSizeInBytes, viewShape.AsString().c_str());
 
         auto matrixDims = GetMatrixDimensions(viewShape);
-        std::shared_ptr<Matrix<ElementType>> matrix = std::make_shared<Matrix<ElementType>>(matrixDims.first, matrixDims.second, (ElementType*)dataBuffer, AsCNTKImplDeviceId(device), matrixFlagDontOwnBuffer);
-        return new TensorView<ElementType>(matrix, AsTensorShapeMin2D(viewShape));
+        return std::make_shared<Matrix<ElementType>>(matrixDims.first, matrixDims.second, (ElementType*)dataBuffer, AsCNTKImplDeviceId(device), matrixFlagDontOwnBuffer);
     }
 
-    static void* AllocateTensorViewMin2D(CNTK::DataType dataType,
-                                    const NDShape& viewShape,
-                                    const DeviceDescriptor& device,
-                                    void* dataBuffer,
-                                    size_t bufferSizeInBytes)
+#if 0 // USE THSI SOON
+    // matrix from user-provided buffer, dataType version
+    static std::shared_ptr<MatrixBase> CreateMatrix(CNTK::DataType dataType,
+                                                    const NDShape& viewShape,
+                                                    const DeviceDescriptor& device,
+                                                    void* dataBuffer,
+                                                    size_t bufferSizeInBytes)
     {
         switch (dataType)
         {
         case DataType::Float:
-            return AllocateTensorViewMin2D<float>(viewShape, device, dataBuffer, bufferSizeInBytes);
+            return CreateMatrix<float>(viewShape, device, dataBuffer, bufferSizeInBytes);
         case DataType::Double:
-            return AllocateTensorViewMin2D<double>(viewShape, device, dataBuffer, bufferSizeInBytes);
+            return CreateMatrix<double>(viewShape, device, dataBuffer, bufferSizeInBytes);
         default:
             LogicError("Unsupported DataType %s", DataTypeName(dataType));
             break;
         }
     }
+#endif
 
+    // new matrix, template version
     template <typename ElementType>
-    static TensorView<ElementType>* AllocateTensorViewMin2D(const NDShape& viewShape,
-                                                       CNTK::StorageFormat storageType,
-                                                       const DeviceDescriptor& device,
-                                                       size_t numNonZeroValues = 0)
+    static std::shared_ptr<MatrixBase> CreateMatrix(const NDShape& viewShape,
+                                                    CNTK::StorageFormat storageType,
+                                                    const DeviceDescriptor& device,
+                                                    size_t numNonZeroValues = 0)
     {
         auto matrixDims = GetMatrixDimensions(viewShape);
-        std::shared_ptr<Matrix<ElementType>> matrix = std::make_shared<Matrix<ElementType>>(matrixDims.first,
-                                                                                            matrixDims.second,
-                                                                                            AsCNTKImplDeviceId(device),
-                                                                                            IsSparseStorageFormat(storageType) ? MatrixType::SPARSE : MatrixType::DENSE,
-                                                                                            AsCNTKImplMatrixFormat(storageType),
-                                                                                            numNonZeroValues);
-        return new TensorView<ElementType>(matrix, AsTensorShapeMin2D(viewShape));
+        return std::make_shared<Matrix<ElementType>>(matrixDims.first,
+                                                     matrixDims.second,
+                                                     AsCNTKImplDeviceId(device),
+                                                     IsSparseStorageFormat(storageType) ? MatrixType::SPARSE : MatrixType::DENSE,
+                                                     AsCNTKImplMatrixFormat(storageType),
+                                                     numNonZeroValues);
     }
 
-    static void* AllocateTensorViewMin2D(CNTK::DataType dataType,
-                                    CNTK::StorageFormat storageType,
-                                    const NDShape& viewShape,
-                                    const DeviceDescriptor& device,
-                                    size_t numNonZeroValues = 0)
+#if 0 // USE THESE SOON
+    // new matrix, dataType version
+    static std::shared_ptr<MatrixBase> CreateMatrix(CNTK::DataType dataType,
+                                                    CNTK::StorageFormat storageType,
+                                                    const NDShape& viewShape,
+                                                    const DeviceDescriptor& device,
+                                                    size_t numNonZeroValues = 0)
     {
         switch (dataType)
         {
         case DataType::Float:
-            return AllocateTensorViewMin2D<float>(viewShape, storageType, device, numNonZeroValues);
+            return CreateMatrix<float>(viewShape, storageType, device, numNonZeroValues);
         case DataType::Double:
-            return AllocateTensorViewMin2D<double>(viewShape, storageType, device, numNonZeroValues);
+            return CreateMatrix<double>(viewShape, storageType, device, numNonZeroValues);
         default:
             LogicError("Unsupported DataType %s", DataTypeName(dataType));
             break;
+        }
+    }
+#endif
+
+    // TensorView over provided dataBuffer, template version
+    template <typename ElementType>
+    static TensorView<ElementType>* AllocateTensorViewMin2D(const NDShape& viewShape, const DeviceDescriptor& device, void* dataBuffer, size_t bufferSizeInBytes)
+    {
+        return new TensorView<ElementType>(CreateMatrix<ElementType>(viewShape, device, dataBuffer, bufferSizeInBytes), AsTensorShapeMin2D(viewShape));
+    }
+
+    // TensorView over provided dataBuffer, dataType version
+    static void* AllocateTensorViewMin2D(CNTK::DataType dataType, const NDShape& viewShape, const DeviceDescriptor& device, void* dataBuffer, size_t bufferSizeInBytes)
+    {
+        switch (dataType)
+        {
+        case DataType::Float: return AllocateTensorViewMin2D<float>(viewShape, device, dataBuffer, bufferSizeInBytes);
+        case DataType::Double: return AllocateTensorViewMin2D<double>(viewShape, device, dataBuffer, bufferSizeInBytes);
+        default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
+        }
+    }
+
+    // TensorView over new matrix, template version
+    template <typename ElementType>
+    static TensorView<ElementType>* AllocateTensorViewMin2D(const NDShape& viewShape, CNTK::StorageFormat storageType, const DeviceDescriptor& device, size_t numNonZeroValues = 0)
+    {
+        return new TensorView<ElementType>(CreateMatrix<ElementType>(viewShape, storageType, device, numNonZeroValues), AsTensorShapeMin2D(viewShape));
+    }
+
+    // TensorView over new matrix, dataType version
+    static void* AllocateTensorViewMin2D(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device, size_t numNonZeroValues = 0)
+    {
+        switch (dataType)
+        {
+        case DataType::Float: return AllocateTensorViewMin2D<float>(viewShape, storageType, device, numNonZeroValues);
+        case DataType::Double: return AllocateTensorViewMin2D<double>(viewShape, storageType, device, numNonZeroValues);
+        default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
         }
     }
 
