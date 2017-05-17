@@ -58,8 +58,8 @@ def create_reader(map_file, mean_file, is_training):
     ]
     # deserializer
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
-        features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-        labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+        features=StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
+        labels=StreamDef(field='label', shape=num_classes))),   # and second as 'label'
         randomize=is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
 
 ########################

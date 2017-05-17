@@ -18,7 +18,10 @@ from cntk.debugging import *
 
 # default Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(abs_path)
 model_path = os.path.join(abs_path, "Models")
+
+from ConvNet_CIFAR10_DataAug import create_convnet_cifar10_model
 
 # model dimensions
 image_height = 32
@@ -47,15 +50,14 @@ def create_image_mb_source(map_file, mean_file, train, total_number_of_samples):
     # deserializer
     return C.io.MinibatchSource(
         C.io.ImageDeserializer(map_file, C.io.StreamDefs(
-            features = C.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-            labels   = C.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+            features=C.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
+            labels=C.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
         randomize=train,
         max_samples=total_number_of_samples,
-        multithreaded_deserializer = True)
+        multithreaded_deserializer=True)
 
 # Create the network.
 def create_conv_network():
-
     # Input variables denoting the features and label data
     feature_var = C.input_variable((num_channels, image_height, image_width))
     label_var = C.input_variable((num_classes))
@@ -63,19 +65,7 @@ def create_conv_network():
     # apply model to input
     scaled_input = C.element_times(C.constant(0.00390625), feature_var)
 
-    with C.layers.default_options(activation=C.relu, pad=True):
-        z = C.layers.Sequential([
-            C.layers.For(range(2), lambda : [
-                C.layers.Convolution2D((3,3), 64),
-                C.layers.Convolution2D((3,3), 64),
-                C.layers.MaxPooling((3,3), (2,2))
-            ]),
-            C.layers.For(range(2), lambda i: [
-                C.layers.Dense([256,128][i]),
-                C.layers.Dropout(0.5)
-            ]),
-            C.layers.Dense(num_classes, activation=None)
-        ])(scaled_input)
+    z = create_convnet_cifar10_model(num_classes)(scaled_input)
 
     # loss and metric
     ce = C.cross_entropy_with_softmax(z, label_var)
@@ -90,7 +80,6 @@ def create_conv_network():
         'pe' : pe,
         'output': z
     }
-
 
 # Create trainer
 def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up, progress_writers):
