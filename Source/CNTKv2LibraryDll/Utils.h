@@ -126,7 +126,7 @@ namespace CNTK
     // TODO: THIS NO LONGER PADS. Simplify.
     // V1 code traditionally assumed that tensors are at least 1D, so whenever
     // interacting with V1 code, use this function to pad the shape accordingly.
-    inline Microsoft::MSR::CNTK::TensorShape AsTensorShapeMin1D(const NDShape& viewShape)
+    inline Microsoft::MSR::CNTK::TensorShape AsTensorShape(const NDShape& viewShape)
     {
         const size_t maxNumAxesSupportedByTensorView = 12;
         if (viewShape.Rank() > maxNumAxesSupportedByTensorView)
@@ -151,7 +151,7 @@ namespace CNTK
 
     inline Microsoft::MSR::CNTK::TensorShape AsTensorShapeMin2D(const NDShape& viewShape)
     {
-        return AsTensorShapeMin2D(AsTensorShapeMin1D(viewShape));
+        return AsTensorShapeMin2D(AsTensorShape(viewShape));
     }
 
     inline std::pair<size_t, size_t> GetMatrixDimensions(const NDShape& viewShape)

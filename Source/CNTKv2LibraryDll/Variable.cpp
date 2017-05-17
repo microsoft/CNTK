@@ -175,7 +175,7 @@ namespace CNTK
             LogicError("Variable '%S' SetValue(): Can only be invoked on a Parameter variable.", AsString().c_str());
         else if (GetDataType() != value->GetDataType()) 
             LogicError("Variable '%S' SetValue(): 'source' and 'destination' have different data types.", AsString().c_str());
-        if (Shape() != value->Shape() && (AsTensorShapeMin1D(Shape()) != AsTensorShapeMin1D(value->Shape())))
+        if (Shape() != value->Shape() && (AsTensorShape(Shape()) != AsTensorShape(value->Shape())))
 #if 1       // for expedience we just bypass the check --TODO: check whether non-inferred dimensions match, then update the inferred ones
             m_dataFields->m_shape = value->Shape();
 #else
@@ -428,7 +428,7 @@ namespace CNTK
             auto kernelWidth = initConfig[KernelWidthAttributeName].Value<size_t>();
             auto kernelHeight = initConfig[KernelHeightAttributeName].Value<size_t>();
 
-            Microsoft::MSR::CNTK::LearnableParameter<ElementType>::InitBilinear(*valueMatrix, AsTensorShapeMin1D(shape), kernelWidth, kernelHeight, AsCNTKImplDeviceId(device));
+            Microsoft::MSR::CNTK::LearnableParameter<ElementType>::InitBilinear(*valueMatrix, AsTensorShape(shape), kernelWidth, kernelHeight, AsCNTKImplDeviceId(device));
         }
         else
         {
@@ -453,7 +453,7 @@ namespace CNTK
                     InvalidArgument("Sum of filter rank (%d) and output rank (%d) of the parameter initializer cannot exceed the Parameter shape '%S' rank (%d)", filterRank, outputRank, shape.AsString().c_str(), (int)shape.Rank());
             }
 
-            Microsoft::MSR::CNTK::LearnableParameter<ElementType>::InitRandom(*valueMatrix, AsTensorShapeMin1D(shape), initializerType, randomSeed, (ElementType)scale,
+            Microsoft::MSR::CNTK::LearnableParameter<ElementType>::InitRandom(*valueMatrix, AsTensorShape(shape), initializerType, randomSeed, (ElementType)scale,
                                                                               filterRank, outputRank, /*initOnCPUOnly=*/true,
                                                                               AsCNTKImplDeviceId(device));
         }

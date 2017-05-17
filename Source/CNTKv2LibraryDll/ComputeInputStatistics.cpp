@@ -43,7 +43,7 @@ namespace CNTK
                             currentStreamInfo.AsString().c_str());
 
             auto inputVariableShape = currentStreamInfo.m_sampleLayout;
-            auto inputTensorShape = AsTensorShapeMin1D(inputVariableShape);
+            auto inputTensorShape = AsTensorShape(inputVariableShape);
             totalSizePerSample += (inputVariableShape.TotalSize() * sizeof(float));
 
             ComputationNodePtr inputNode;

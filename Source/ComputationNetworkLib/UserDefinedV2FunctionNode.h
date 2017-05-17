@@ -87,7 +87,7 @@ public:
 
             if (output.Shape().HasFreeDimension())
             {
-                this->m_outputsShape[i] = ::CNTK::AsTensorShapeMin1D(inferredVarShape);
+                this->m_outputsShape[i] = ::CNTK::AsTensorShape(inferredVarShape);
                 if (i == 0)
                     SetDims(this->m_outputsShape[i], HasMBLayout());
             }
@@ -242,7 +242,7 @@ public:
                 }
             }
 
-            this->m_outputsShape[i] = ::CNTK::AsTensorShapeMin1D(outputNDShape);
+            this->m_outputsShape[i] = ::CNTK::AsTensorShape(outputNDShape);
 
             if (i == 0)
             {

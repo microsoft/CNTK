@@ -863,7 +863,7 @@ namespace CNTK
             mask = CreateMask(layout, AsDeviceDescriptor(matrix.GetDeviceId()));
 
         // Reshuffle to data to unpack and uninterleave the CNTK form packed data
-        auto unpackedTensorView = ComputationNode<ElementType>::Unpack(AsTensorShapeMin1D(sampleShape), matrix, layout, /*batchMajor=*/ false, /*gapPadValue=*/ nullptr);
+        auto unpackedTensorView = ComputationNode<ElementType>::Unpack(AsTensorShape(sampleShape), matrix, layout, /*batchMajor=*/ false, /*gapPadValue=*/ nullptr);
         auto dataShape = PackedValue::GetUnpackedShape(sampleShape, sampleDynamicAxes, layout);
 #if 1
         // TODO: does Unpack unpack into CPU?

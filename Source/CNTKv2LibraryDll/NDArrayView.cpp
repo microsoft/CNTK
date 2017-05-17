@@ -282,7 +282,7 @@ namespace CNTK
 
     void NDArrayView::CopyFrom(const NDArrayView& source)
     {
-        if ((source.Shape() != Shape()) && (AsTensorShapeMin1D(source.Shape()) != AsTensorShapeMin1D(Shape())))
+        if ((source.Shape() != Shape()) && (AsTensorShape(source.Shape()) != AsTensorShape(Shape())))
             InvalidArgument("NDArrayView::CopyFrom: The source view shape '%S' is not same as the shape '%S' of this NDArrayView.", 
                             source.Shape().AsString().c_str(), Shape().AsString().c_str());
 
@@ -535,8 +535,8 @@ namespace CNTK
             anyPrevAxisSliced = anyPrevAxisSliced || isCurrentAxisSliced;
         }
 
-        auto flatBufferOffset = AsTensorShapeMin1D(Shape()).Locate(startOffset);  // offset and length into underlying ElementType array...
-        auto flatBufferLength = AsTensorShapeMin1D(Shape()).Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
+        auto flatBufferOffset = AsTensorShape(Shape()).Locate(startOffset);  // offset and length into underlying ElementType array...
+        auto flatBufferLength = AsTensorShape(Shape()).Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
         void* tensorView = nullptr;
         // At this point, it is guaranteed that the slice is consecutive in memory. We distinguish two cases:
         // If the slice is expressable a column slice, we will use ColumnSlice(). This will work with sparse data.
@@ -622,8 +622,8 @@ namespace CNTK
         // beyond this point is code duplication from ViewSlice()
         // TODO: simplify further, we can get rid of the vector mallocs altogether
 
-        auto flatBufferOffset = AsTensorShapeMin1D(Shape()).Locate(startOffset);  // offset and length into underlying ElementType array...
-        auto flatBufferLength = AsTensorShapeMin1D(Shape()).Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
+        auto flatBufferOffset = AsTensorShape(Shape()).Locate(startOffset);  // offset and length into underlying ElementType array...
+        auto flatBufferLength = AsTensorShape(Shape()).Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
         void* tensorView = nullptr;
         // At this point, it is guaranteed that the slice is consecutive in memory. We distinguish two cases:
         // If the slice is expressable a column slice, we will use ColumnSlice(). This will work with sparse data.
