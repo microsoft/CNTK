@@ -191,6 +191,40 @@ def test_distributed_mb_source(tmpdir):
     data = mb4.next_minibatch(minibatch_size_in_samples=10, input_map=input_map, num_data_partitions=2, partition_index=1)
     assert(len(data) == 0) # Due to chunking we do not expect any data for rank 1
 
+def test_distributed_mb_source_again(tmpdir):
+    import random
+    from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
+
+    ctf_data = '''0  |S0 1   |S1 1
+0   |S0 2   |S1 2
+0   |S0 3
+1   |S0 4
+1   |S0 5   |S1 3
+1   |S0 6   |S1 4
+'''
+    ctf_file = str(tmpdir/'2seqtest.txt')
+    with open(ctf_file, 'w') as f:
+        f.write(ctf_data)
+
+    ctf = CTFDeserializer(ctf_file, StreamDefs(
+        features  = StreamDef(field='S0', shape=1),
+        labels    = StreamDef(field='S1', shape=1)
+        ))
+    
+    random.seed(1234)
+    mb_sources = []
+    for randomize in [True, False]:
+        mb_sources.append(MinibatchSource(ctf, randomize=randomize))
+        mb_sources.append(MinibatchSource(ctf, randomize=randomize,  max_sweeps=random.randint(1, 10)))
+        mb_sources.append(MinibatchSource(ctf, randomize=randomize, max_samples=random.randint(1, 30)))
+
+    for i in range(20):
+        for source in mb_sources:
+            data = source.next_minibatch(minibatch_size_in_samples=5, 
+                num_data_partitions=2, partition_index=i % 2)
+            features = source.streams['features']
+            assert(len(data) == 0 or data[features].num_samples == 3)
+
 
 def test_distributed(tmpdir, is_1bit_sgd):
     quantized=(True if is_1bit_sgd==1 else False)

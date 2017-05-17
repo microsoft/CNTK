@@ -196,6 +196,23 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
             arguments, op.outputs, None, device=device)
         return forward_output, None
 
+def _to_cntk_dict_value(py_value):
+    if isinstance(py_value, dict):
+        return DictionaryValueFromDict(_py_dict_to_cntk_dict(py_value))
+
+    if isinstance(py_value, list):
+        py_list = list(map(_to_cntk_dict_value, py_value))
+        return DictionaryValue(py_list)
+
+    if isinstance(py_value, np.ndarray):
+        py_value = NDArrayView.from_dense(py_value)
+        return DictionaryValueFromNDArrayView(py_value)
+    
+    if py_value is None:
+        return DictionaryValue()
+
+    return DictionaryValue(py_value)
+
 def _py_dict_to_cntk_dict(py_dict):
     '''
     Recursively converts a Python dictionary into a CNTK Dictionary 
@@ -208,23 +225,6 @@ def _py_dict_to_cntk_dict(py_dict):
         cntk_py.Dictionary:
         A :class:`~cntk.cntk_py.Dictionary` that has been converted from the input `dict`
     '''
-    def _to_cntk_dict_value(py_value):
-        if isinstance(py_value, dict):
-            return DictionaryValueFromDict(_py_dict_to_cntk_dict(py_value))
-    
-        if isinstance(py_value, list):
-            py_list = list(map(_to_cntk_dict_value, py_value))
-            return DictionaryValue(py_list)
-
-        if isinstance(py_value, np.ndarray):
-            py_value = NDArrayView.from_dense(py_value)
-            return DictionaryValueFromNDArrayView(py_value)
-        
-        if py_value is None:
-            return DictionaryValue()
-
-        return DictionaryValue(py_value)
-
     res = Dictionary()
     for k, v in py_dict.items():
         res[k] = _to_cntk_dict_value(v)

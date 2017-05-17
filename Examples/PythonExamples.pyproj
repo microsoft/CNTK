@@ -115,7 +115,7 @@
     <Compile Include="Image\Classification\ResNet\Python\run_Distributed.py" />
     <Compile Include="Image\Classification\ResNet\Python\TrainResNet_CIFAR10.py" />
     <Compile Include="Image\Detection\FastRCNN\A1_GenerateInputROIs.py" />
-    <Compile Include="Image\Detection\FastRCNN\A2_RunCntk.py" />
+    <Compile Include="Image\Detection\FastRCNN\A2_RunWithBSModel.py" />
     <Compile Include="Image\Detection\FastRCNN\A3_ParseAndEvaluateOutput.py" />
     <Compile Include="Image\Detection\FastRCNN\B1_VisualizeInputROIs.py" />
     <Compile Include="Image\Detection\FastRCNN\B2_EvaluateInputROIs.py" />
