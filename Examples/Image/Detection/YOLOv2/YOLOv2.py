@@ -19,7 +19,17 @@ from PARAMETERS import *
 
 
 
+
+
+
 def create_output_activation_layer(network, anchor_box_scales):
+    #network has shape (mb_size,)(numcls+5)*num_anchorbox, gridcell_height, gridcell_width
+    # network ~~ depth, height, width
+    if False:
+        from TrainUDFyolov2 import LambdaFunc
+        import ipdb
+        lfunc = LambdaFunc(network,when=lambda x: True, execute=lambda x: ipdb.set_trace(), name="print_shape")
+        network = user_function(lfunc)
 
     n_gridcells_horizontal = int(par_image_width / par_downsample)
     n_gridcells_vertical =  int(par_image_height / par_downsample)
@@ -31,6 +41,7 @@ def create_output_activation_layer(network, anchor_box_scales):
     # tp1 = ops.transpose(network, 0,2) # 7*7*125
     # tp2 = ops.transpose(tp1, 0, 1) # 7*7*125
     tp = ops.transpose(network, (1,2,0), name="transposed")
+    # tp.shape =(gc_height, gc_width, depth)
     reshaped = ops.reshape(tp, (output_width, output_height))
     #shape is now 245 * 25
 
@@ -142,7 +153,7 @@ def load_pretrained_resnet101_feature_extractor():
     #return combine([fe_output_layer.owner]).clone(CloneMethod.freeze, {first_conv: placeholder()})
     # return combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: placeholder()})
     ph = placeholder(shape=(par_num_channels, par_image_width, par_image_height),name="input_ph")
-    net = combine([fe_output_layer.owner]).clone(CloneMethod.freeze, {feature_layer: ph})
+    net = combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: ph})
 
     return net
     # make resnet a block if desired

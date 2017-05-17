@@ -23,8 +23,7 @@ def get_error(network, gtb_input, cntk_only=False):
         # err = TrainFunction2.make_wh_sqrt(output) - TrainFunction2.make_wh_sqrt(training_model.outputs[0])  # substrac "goal" --> error
         err = training_model.outputs[0] - network
         sq_err = err * err
-        sc_err = sq_err * training_model.outputs[
-            1]  # apply scales (lambda_coord, lambda_no_obj, zeros on not learned params)
+        sc_err = sq_err * training_model.outputs[1]  # apply scales (lambda_coord, lambda_no_obj, zeros on not learned params)
         mse = reduce_mean(sc_err, axis=Axis.all_static_axes(), name="MeanSquaredError")
         return mse
 

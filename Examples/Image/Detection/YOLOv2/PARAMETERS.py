@@ -13,7 +13,7 @@ par_dataset_name = "Pascal_VOC_2007"
 par_trainset_label_file = "train_map.txt"
 par_testset_label_file = "test_map.txt"
 par_abs_path = os.path.dirname(os.path.abspath(__file__))
-par_max_epochs = 30
+par_max_epochs = 100
 par_downsample = 32
 
 
@@ -41,9 +41,9 @@ elif(par_dataset_name == "ImageNet50k"):
     par_minibatch_size = 24
 
 elif(par_dataset_name == "Pascal_VOC_2007"):
-    par_minibatch_size = 128    # minibatch size
-    par_image_width = 416       # width the image is scaled to
-    par_image_height = 448      # height the image is scaled to
+    par_minibatch_size = 32    # minibatch size
+    par_image_width = 288       # width the image is scaled to
+    par_image_height = 224      # height the image is scaled to
     par_input_bias = 114        # average input value
     par_num_channels = 3        # nr of color-channels of the input
     par_num_classes = 20        # nr of classes displayed
@@ -65,13 +65,14 @@ elif(par_dataset_name == "Logos158"):
     par_train_data_file = 'logo_v5_img.txt'
     par_train_roi_file = 'logo_v5_gts.txt'
 
-
+# Priors from k-means
 par_anchorbox_scales = [[ 0.09635106,  0.14264049],
  [ 0.35856731,  0.73630027],
  [ 0.82745373,  0.84205688],
  [ 0.2346392,   0.37655989],
  [ 0.69155048,  0.44537981]]
 
+# Priors from other sources
 par_anchorbox_scales_old =[[1.08/13, 1.19/13], # priors [width, height] for the box predictions
                          [3.42/13, 4.41/13],
                          [6.63/13, 11.38/13],
