@@ -98,47 +98,29 @@
         return load(modelBuffer, (long)modelBuffer.length, computeDevice);
     }
 
-    // TODO: look at C# implementation and make it look more like that
-    private VariableVector argumentVector;
-    private VariableVector outputVector;
-    private VariableVector inputVector;
-    private FunctionPtrVector functionVector;
-    private java.util.ArrayList<Variable> argumentList;
-    private java.util.ArrayList<Variable> outputList;
-    private java.util.ArrayList<Variable> inputList;
-    private java.util.ArrayList<Function> functionList;
-
-    private UnorderedMapVariableValuePtr outMap = new UnorderedMapVariableValuePtr();
-
     public java.util.List<Variable> getInputs() {
-        if (inputVector == null) {
-            inputVector = _Inputs();
-            inputList = new java.util.ArrayList<Variable>((int)inputVector.size());
-            for (int i = 0; i < inputVector.size(); ++i){
-                inputList.add(inputVector.get(i));
-            }
+        VariableVector inputVector = _Inputs();
+        java.util.ArrayList<Variable> inputList = new java.util.ArrayList<Variable>((int)inputVector.size());
+        for (int i = 0; i < inputVector.size(); ++i){
+            inputList.add(inputVector.get(i));
         }
         return inputList;
     }
 
     public java.util.List<Variable> getOutputs() {
-        if (outputVector == null) {
-            outputVector = _Outputs();
-            outputList = new java.util.ArrayList<Variable>((int)outputVector.size());
-            for (int i = 0; i < outputVector.size(); ++i){
-                outputList.add(outputVector.get(i));
-            }
+        VariableVector outputVector = _Outputs();
+        java.util.ArrayList<Variable> outputList = new java.util.ArrayList<Variable>((int)outputVector.size());
+        for (int i = 0; i < outputVector.size(); ++i){
+            outputList.add(outputVector.get(i));
         }
         return outputList;
     }
 
     public java.util.List<Variable> getArguments() {
-        if (argumentVector == null) {
-            argumentVector = _Arguments();
-            argumentList = new java.util.ArrayList<Variable>((int)argumentVector.size());
-            for (int i = 0; i < argumentVector.size(); ++i){
-                argumentList.add(argumentVector.get(i));
-            }
+        VariableVector argumentVector = _Arguments();
+        java.util.ArrayList<Variable> argumentList = new java.util.ArrayList<Variable>((int)argumentVector.size());
+        for (int i = 0; i < argumentVector.size(); ++i){
+            argumentList.add(argumentVector.get(i));
         }
         return argumentList;
     }
@@ -146,12 +128,10 @@
 <<<<<<< 62ee41fc0da1ca59d46d4c83d46bac559c0bcf87
 =======
     public java.util.List<Function> findAllWithName(String x) {
-        if (functionVector == null) {
-            functionVector = _FindAllWithName(x);
-            functionList = new java.util.ArrayList<Function>((int)functionVector.size());
-            for (int i = 0; i < functionVector.size(); ++i){
-                functionList.add(functionVector.get(i));
-            }
+        FunctionPtrVector functionVector = _FindAllWithName(x);
+        java.util.ArrayList<Function> functionList = new java.util.ArrayList<Function>((int)functionVector.size());
+        for (int i = 0; i < functionVector.size(); ++i){
+            functionList.add(functionVector.get(i));
         }
         return functionList;
     }
