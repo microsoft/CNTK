@@ -112,4 +112,15 @@ def test_grad_after_eval():
     w_grad, t_val = t.grad({x : x_data}, wrt=[w], outputs=[t])
     assert np.allclose(t_val, np.asarray([[[1.2, 3.1], [0.8, 2.3]]], dtype=np.float32))
     assert np.array_equal(w_grad, np.asarray([[0.6, .6], [.8, .8]], dtype=np.float32))
-    
+
+
+def test_conv_crash_on_freedimension():
+    x = C.sequence.input((20, 20))
+    y = C.sequence.unpack(x, 0, no_mask_output=True)
+    z = C.reshape(y, (3, 20, 20))
+    kernel = C.parameter((4, 3, 3, 3))
+    t = C.convolution(kernel, z)
+    val = np.random.random((2, 3, 20, 20)).astype(np.float32)
+    result = t.eval({x: val})
+    assert result.shape == (2, 12, 20, 20)
+
