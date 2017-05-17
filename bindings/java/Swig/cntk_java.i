@@ -243,9 +243,10 @@
     }
 
     public java.util.ArrayList<Long> getDimensions(){
-        java.util.ArrayList<Long> ret = new java.util.ArrayList<Long>((int)getRank());
-        for (int i = 0; i < _Dimensions().size(); ++i ) {
-            ret.add((Long)_Dimensions().get(i));
+        SizeTVector dimensions = _Dimensions();
+        java.util.ArrayList<Long> ret = new java.util.ArrayList<Long>();
+        for (int i = 0; i < dimensions.size(); ++i ) {
+            ret.add((Long)dimensions.get(i));
         }
         return ret;
     }
