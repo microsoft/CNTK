@@ -106,7 +106,8 @@ namespace CNTK
         m_isReadOnly = readOnly;
     }
 
-    static void* AllocateTensorViewMin2D(CNTK::DataType dataType, const NDShape& viewShape, const shared_ptr<MatrixBase>& sob)
+    // ElementType-erasing version of TensorView(sob, shape), based on dataType
+    static void* NewTensorView(CNTK::DataType dataType, const shared_ptr<MatrixBase>& sob, const TensorShape& shape)
     {
         switch (dataType)
         {
@@ -114,14 +115,14 @@ namespace CNTK
             {
                 auto matrix = dynamic_pointer_cast<Matrix<float>>(sob);
                 if (matrix)
-                    return new TensorView<float>(matrix, AsTensorShapeMin2D(viewShape));
+                    return new TensorView<float>(matrix, shape);
             }
             break;
         case DataType::Double:
             {
                 auto matrix = dynamic_pointer_cast<Matrix<double>>(sob);
                 if (matrix)
-                    return new TensorView<double>(matrix, AsTensorShapeMin2D(viewShape));
+                    return new TensorView<double>(matrix, shape);
             }
             break;
         default:
@@ -134,7 +135,13 @@ namespace CNTK
     NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const shared_ptr<MatrixBase>& sob)
         : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())), m_viewShape(viewShape), m_isReadOnly(readOnly)
     {
-        void* tensorView = AllocateTensorViewMin2D(dataType, viewShape, sob);
+#undef LAZY_2D_PADDING // if defined then rank-2 padding of TensorShapes happens upon access, not upon creation
+#ifdef LAZY_2D_PADDING
+        const auto tensorShape = AsTensorShape(viewShape);
+#else
+        const auto tensorShape = AsTensorShapeMin2D(viewShape); // not lazy (old version): sdo it here and bake it into teh object
+#endif
+        void* tensorView = NewTensorView(dataType, sob, tensorShape);
         m_tensorViewPtr = std::shared_ptr<void>(tensorView, [this](void*) {
             switch (m_dataType)
             {
@@ -181,13 +188,13 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    /*static*/ std::shared_ptr<Matrix<ElementType>> NDArrayView::GetMatrixImpl(const TensorView<ElementType>* tensorView, size_t rowColSplitPoint)
+    /*static*/ std::shared_ptr<Matrix<ElementType>> NDArrayView::GetMatrixImpl(const TensorView<ElementType>& tensorView, size_t rowColSplitPoint)
     {
-        auto tensorShape = tensorView->GetShape();
+        auto tensorShape = tensorView.GetShape();
 
         // we should always reshape for rank-0, so that batch and sequence axis goes to columns
         if (tensorShape.GetRank() <= 1 && rowColSplitPoint != 0)
-            return tensorView->AsMatrix();
+            return tensorView.AsMatrix();
 
         size_t splitPoint = rowColSplitPoint;
         if (splitPoint == NDArrayView::AutoSelectRowColSplitPoint)
@@ -219,10 +226,10 @@ namespace CNTK
 
         tensorShape.FlattenTo2DInPlace(splitPoint, "NDArrayView::GetMatrix");
 
-        return tensorView->Reshaped(tensorShape).AsMatrix();
+        return tensorView.Reshaped(tensorShape).AsMatrix();
     }
 
-    // -ViewMin2D: use if you interop with V1 code that needs shapes of rank2 or higher
+    // -ViewMin2D: use if you interop with V1 code that needs shapes of rank 2 or higher
     // These versions are only ever called by GetMatrix() and, from outside, in Accumulator::Update(), which probably could do without.
     // If we get them out from Update(), then we can just inline them here.
     template <typename ElementType>
@@ -232,14 +239,15 @@ namespace CNTK
             LogicError("NDArrayView::GetTensorViewMin2D: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
 
         auto tensorView = static_pointer_cast<const TensorView<ElementType>>(m_tensorViewPtr);
+#ifdef LAZY_2D_PADDING
+        const auto& shape = tensorView->GetShape();
+        if (shape.size() < 2) // we must pad to at least 2D
+        {
+            auto paddedShape = AsTensorShapeMin2D(shape); // adds 1-dimensions if rank < 2
+            tensorView = make_shared<TensorView<ElementType>>(tensorView->Reshaped(paddedShape));
+        }
+#endif
         return tensorView;
-    }
-
-    template <typename ElementType>
-    std::shared_ptr<const Matrix<ElementType>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const
-    {
-        auto tensorView = GetTensorViewMin2D<ElementType>();
-        return GetMatrixImpl<ElementType>(tensorView.get(), rowColSplitPoint);
     }
 
     template <typename ElementType>
@@ -252,10 +260,15 @@ namespace CNTK
     }
 
     template <typename ElementType>
+    std::shared_ptr<const Matrix<ElementType>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const
+    {
+        return GetMatrixImpl<ElementType>(*GetTensorViewMin2D<ElementType>(), rowColSplitPoint);
+    }
+
+    template <typename ElementType>
     std::shared_ptr<Matrix<ElementType>> NDArrayView::GetWritableMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/)
     {
-        auto tensorView = GetWritableTensorViewMin2D<ElementType>();
-        return GetMatrixImpl<ElementType>(tensorView.get(), rowColSplitPoint);
+        return GetMatrixImpl<ElementType>(*GetWritableTensorViewMin2D<ElementType>(), rowColSplitPoint);
     }
 
     // -ViewPtr: use if you don't care about V1-compatible 2D-padded shape

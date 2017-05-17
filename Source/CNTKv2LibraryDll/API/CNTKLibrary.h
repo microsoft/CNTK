@@ -862,7 +862,7 @@ namespace CNTK
         CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
 
         template <typename ElementType>
-        static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>* tensorView, size_t rowColSplitPoint);
+        static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>& tensorView, size_t rowColSplitPoint);
 
         template <typename ElementType>
         std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint) const;

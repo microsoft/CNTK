@@ -142,7 +142,7 @@ namespace CNTK
     }
 
     // note: this is called in conjunction with NDArrayView, when constructing it with a TensorView pointer
-    // and a few other places, including AllocateTensorViewMin2D() and GetValueObjectFromCNTKImplMatrixAndMBLayout()
+    // and a few other places, including NDArrayView(..., matrixPtr) and GetValueObjectFromCNTKImplMatrixAndMBLayout()
     inline Microsoft::MSR::CNTK::TensorShape AsTensorShapeMin2D(const Microsoft::MSR::CNTK::TensorShape& viewShape)
     {
         // For TensorView shapes we pad the TensorShape to be at least rank 2
