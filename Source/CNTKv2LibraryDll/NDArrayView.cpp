@@ -307,6 +307,7 @@ namespace CNTK
     NDArrayViewPtr NDArrayView::DeepClone(const DeviceDescriptor& device, bool readOnly/* = false*/) const
     {
         NDArrayViewPtr newView = MakeSharedObject<NDArrayView>(this->GetDataType(), this->GetStorageFormat(), this->Shape(), device);
+        // TODO: for dense data, this can call TensorView, which will amount to a cudaMemcpy() while bypassing GetMatrix() complexity
         switch (m_dataType)
         {
         case DataType::Float:
@@ -341,6 +342,8 @@ namespace CNTK
         if (IsReadOnly())
             RuntimeError("NDArrayView::CopyFrom: Cannot modify contents of a readonly NDArrayView.");
 
+        // TODO: like DeepClone, for dense data, this can call TensorView, which will amount to a cudaMemcpy() while bypassing GetMatrix() complexity
+        //       Maybe we need a shared copy function. Maybe DeepClone can call CopyFrom()?
         switch (m_dataType)
         {
         case DataType::Float:
@@ -762,6 +765,7 @@ namespace CNTK
             InvalidArgument("DataBuffer/WritableDataBuffer methods not supported for sparse NDArrayiew objects.");
 
         // First make sure that the underlying matrix is on the right device
+        // TODO: Don't we just need the storage object?
         auto matrix = GetMatrix<ElementType>();
         matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
         return matrix->Data();
@@ -776,6 +780,7 @@ namespace CNTK
         {
         case DataType::Float:
         {
+            // TODO: Don't we just need the storage object?
             auto matrix = GetMatrix<float>();
             matrix->TransferFromDeviceToDevice(matrix->GetDeviceId(), AsCNTKImplDeviceId(device), /*isBeingMoved = */ true, /*emptyTransfer =*/ false, /*updatePreferredDevice =*/ true);
             matrix->CollapseDataLocation();
@@ -783,6 +788,7 @@ namespace CNTK
         }
         case DataType::Double:
         {
+            // TODO: Don't we just need the storage object?
             auto matrix = GetMatrix<double>();
             matrix->TransferFromDeviceToDevice(matrix->GetDeviceId(), AsCNTKImplDeviceId(device), /*isBeingMoved = */ true, /*emptyTransfer =*/ false, /*updatePreferredDevice =*/ true);
             matrix->CollapseDataLocation();

@@ -342,12 +342,16 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
     if (m_shape.GetRank() > 0 && m_shape.GetStrides()[0] != 1 && m_shape_0 != 1)
         InvalidArgument("AsMatrix: Flattened [%s] matrix is not dense (it has a stride).", string(m_shape).c_str());
 
+    let numRows = m_sob->GetNumRows();
+    let numCols = m_sob->GetNumCols();
+    let numElements = m_shape.GetNumElements();
+
     // create a Matrix view into the TensorView (which in turn is a view over a Matrix...)
     // The way to do this is to use a ColumnSlice.
     // express the TensorView's storage in m_sob's coordinates
-    let firstColumn = m_shape.GetOffset()      / m_sob->GetNumRows();
-    let numColumns  = m_shape.GetNumElements() / m_sob->GetNumRows();
-    if (firstColumn * m_sob->GetNumRows() != m_shape.GetOffset() || numColumns * m_sob->GetNumRows() != m_shape.GetNumElements())
+    let firstColumn = m_shape.GetOffset() / numRows;
+    let numColumns  = numElements         / numRows;
+    if (firstColumn * numRows != m_shape.GetOffset() || numColumns * numRows != numElements)
         InvalidArgument("AsMatrix: Flattened [%s] matrix has an offset or width that is not a multiple of the storage object's row dimension.", string(m_shape).c_str());
 
     // now reinterpret this slice according to the new tensor shape
@@ -359,8 +363,8 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
     //  - which in turn yields a [K x (J * S x*T)] matrix
     //    which gets reinterpreted back as a [K x J x S x T] tensor
     // In the special case of sparse matrices, this split cannot be done. E.g. in the above example, we could only multiply with a [K x I x J] tensor.
-    let needsSlicing = firstColumn != 0 || numColumns != m_sob->GetNumCols();
-    let needsReshaping = m_shape_0 != m_sob->GetNumRows() || m_shape_1 != numColumns;
+    let needsSlicing = firstColumn != 0 || numColumns != numCols;
+    let needsReshaping = m_shape_0 != numRows || m_shape_1 != numColumns;
 
     // Note: If an output matrix is a view and needs to move to a different device, we will fail later, since the current structure cannot support that.
     // As a consequence, some configurations will simply not work currently.
@@ -437,7 +441,7 @@ void TensorView<ElemType>::DoGatherBatchOf(const std::function<const TensorView&
     let input0AsMatrix = input0.AsMatrix();
     auto outputReshaped = Reshaped(TensorShape(input0AsMatrix->GetNumRows(), input0AsMatrix->GetNumCols() * numItems));
     auto outputAsMatrix = outputReshaped.AsMatrix();
-    outputAsMatrix->GatherBatch([&](size_t i)
+    outputAsMatrix->GatherBatch([&](size_t i) -> shared_ptr<Matrix<ElemType>> // TODO: why not just pass the storage object?
     {
         let& input = (i == 0) ? input0 : inputs(i); // (only call each one once, avoid assumptions on statefulness)
         if (input.m_shape != input0.m_shape)
