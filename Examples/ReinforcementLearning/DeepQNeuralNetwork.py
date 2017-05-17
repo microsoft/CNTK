@@ -39,18 +39,18 @@ class ReplayMemory(object):
 
     def __len__(self):
         """ Returns the number of items currently present in the memory
-        Returns: Int >= 0 
+        Returns: Int >= 0
         """
         return self._count
 
     def append(self, state, action, reward, done):
         """ Appends the specified transition to the memory.
-        
+
         Attributes:
             state (Tensor[sample_shape]): The state to append
             action (int): An integer representing the action done
             reward (float): An integer representing the reward received for doing this action
-            done (bool): A boolean specifying if this state is a terminal (episode has finished)        
+            done (bool): A boolean specifying if this state is a terminal (episode has finished)
         """
         assert state.shape == self._state_shape, \
             'Invalid state shape (required: %s, got: %s)' % (self._state_shape, state.shape)
@@ -67,10 +67,10 @@ class ReplayMemory(object):
         """ Generate size random integers mapping indices in the memory.
             The returned indices can be retrieved using #get_state().
             See the method #minibatch() if you want to retrieve samples directly.
-            
+
         Attributes:
             size (int): The minibatch size
-            
+
         Returns:
              Indexes of the sampled states ([int])
         """
@@ -95,12 +95,12 @@ class ReplayMemory(object):
 
     def minibatch(self, size):
         """ Generate a minibatch with the number of samples specified by the size parameter.
-        
+
         Attributes:
             size (int): Minibatch size
-            
+
         Returns:
-            tuple: Tensor[minibatch_size, input_shape...], [int], [float], [bool] 
+            tuple: Tensor[minibatch_size, input_shape...], [int], [float], [bool]
         """
         indexes = self.sample(size)
 
@@ -113,11 +113,13 @@ class ReplayMemory(object):
         return pre_states, actions, post_states, rewards, dones
 
     def get_state(self, index):
-        """ Return the specified state with the replay memory
-        
+        """
+        Return the specified state with the replay memory. A state consists of
+        the last `history_length` perceptions.
+
         Attributes:
             index (int): State's index
-            
+
         Returns:
             State at specified index (Tensor[history_length, input_shape...])
         """
@@ -131,7 +133,7 @@ class ReplayMemory(object):
         if index >= history_length:
             return self._states[(index - (history_length - 1)):index + 1, ...]
         else:
-            indexes = np.arange(index - self._history_length + 1, index + 1)
+            indexes = np.arange(index - history_length + 1, index + 1)
             return self._states.take(indexes, mode='wrap', axis=0)
 
 
@@ -147,15 +149,15 @@ class History(object):
     @property
     def value(self):
         """ Underlying buffer with N previous states stacked along first axis
-        
+
         Returns:
-            Tensor[shape]   
+            Tensor[shape]
         """
         return self._buffer
 
     def append(self, state):
         """ Append state to the history
-        
+
         Attributes:
             state (Tensor) : The state to append to the memory
         """
@@ -164,7 +166,7 @@ class History(object):
 
     def reset(self):
         """ Reset the memory. Underlying buffer set all indexes to 0
-         
+
         """
         self._buffer.fill(0)
 
@@ -172,26 +174,32 @@ class History(object):
 class LinearEpsilonAnnealingExplorer(object):
     """
     Exploration policy using Linear Epsilon Greedy
+
+    Attributes:
+        start (float): start value
+        end (float): end value
+        steps (int): number of steps between start and end
     """
 
     def __init__(self, start, end, steps):
-        self._steps = steps
         self._start = start
         self._stop = end
+        self._steps = steps
 
-        self._a = (end - start) / steps
+        self._step_size = (end - start) / steps
 
-    def __call__(self, nb_actions):
-        """ Select a random action
-        
-        Attributes:
-            nb_actions (int): Number of actions available        
+    def __call__(self, num_actions):
         """
-        return np.random.choice(nb_actions)
+        Select a random action out of `num_actions` possibilities.
+
+        Attributes:
+            num_actions (int): Number of actions available
+        """
+        return np.random.choice(num_actions)
 
     def _epsilon(self, step):
         """ Compute the epsilon parameter according to the specified step
-        
+
         Attributes:
             step (int)
         """
@@ -200,14 +208,14 @@ class LinearEpsilonAnnealingExplorer(object):
         elif step > self._steps:
             return self._stop
         else:
-            return self._a * step + self._start
+            return self._step_size * step + self._start
 
     def is_exploring(self, step):
         """ Commodity method indicating if the agent should explore
-        
+
         Attributes:
-            step (int) : Current step 
-        
+            step (int) : Current step
+
         Returns:
              bool : True if exploring, False otherwise
         """
@@ -227,7 +235,7 @@ def huber_loss(y, y_hat, delta):
         y (Tensor[-1, 1]): Target value
         y_hat(Tensor[-1, 1]): Estimated value
         delta (float): Outliers threshold
-    
+
     Returns:
         CNTK Graph Node
     """
@@ -244,7 +252,7 @@ def huber_loss(y, y_hat, delta):
 
 class DeepQAgent(object):
     """
-    Implementation of Deep Q Neural Network agent like in: 
+    Implementation of Deep Q Neural Network agent like in:
         Nature 518. "Human-level control through deep reinforcement learning" (Mnih & al. 2015)
     """
     def __init__(self, input_shape, nb_actions,
@@ -280,14 +288,11 @@ class DeepQAgent(object):
             ])
         self._action_value_net.update_signature(Tensor[input_shape])
 
-        # Return the indexes of the maximum expectation from the network
-        self._choose_action = argmax(self._action_value_net, name='q_values_argmax')
-
-        # Target model
-        # (used to compute target QValues in training, updated less frequently)
+        # Target model used to compute the target Q-values in training, updated
+        # less frequently for increased stability.
         self._target_net = self._action_value_net.clone(CloneMethod.freeze)
 
-        # # Function computing qvalues targets as part of the computation graph
+        # Function computing Q-values targets as part of the computation graph
         @Function
         @Signature(post_states=Tensor[input_shape], rewards=Tensor[()], terminals=Tensor[()])
         def compute_q_targets(post_states, rewards, terminals):
@@ -297,7 +302,7 @@ class DeepQAgent(object):
                 gamma * reduce_max(self._target_net(post_states), axis=0) + rewards,
             )
 
-        # Define the loss, using Huber Loss (More robust to outliers)
+        # Define the loss, using Huber Loss (more robust to outliers)
         @Function
         @Signature(pre_states=Tensor[input_shape], actions=Tensor[nb_actions],
                    post_states=Tensor[input_shape], rewards=Tensor[()], terminals=Tensor[()])
@@ -305,7 +310,7 @@ class DeepQAgent(object):
             # Compute the q_targets
             q_targets = compute_q_targets(post_states, rewards, terminals)
 
-            # actions is a sparse 1-hot encoding of the action done by the agent
+            # actions is a 1-hot encoding of the action done by the agent
             q_acted = reduce_sum(self._action_value_net(pre_states) * actions, axis=0)
 
             # Define training criterion as the Huber Loss function
@@ -325,10 +330,10 @@ class DeepQAgent(object):
     def act(self, state):
         """ This allows the agent to select the next action to perform in regard of the current state of the environment.
         It follows the terminology used in the Nature paper.
-         
+
         Attributes:
             state (Tensor[input_shape]): The current environment state
-            
+
         Returns: Int >= 0 : Next action to do
         """
         # Append the state to the short term memory (ie. History)
@@ -357,7 +362,7 @@ class DeepQAgent(object):
 
     def observe(self, old_state, action, reward, done):
         """ This allows the agent to observe the output of doing the action it selected through act() on the old_state
-        
+
         Attributes:
             old_state (Tensor[input_shape]): Previous environment state
             action (int): Action done by the agent
@@ -381,13 +386,13 @@ class DeepQAgent(object):
 
     def train(self):
         """ This allows the agent to train itself to better understand the environment dynamics.
-        The agent will compute the expected reward for the state(t+1) 
+        The agent will compute the expected reward for the state(t+1)
         and update the expected reward at step t according to this.
 
         The target expectation is computed through the Target Network, which is a more stable version
         of the Action Value Network for increasing training stability.
 
-        The Target Network is a frozen copy of the Action Value Network updated as regular intervals.        
+        The Target Network is a frozen copy of the Action Value Network updated as regular intervals.
         """
 
         agent_step = self._num_actions_taken
@@ -411,7 +416,7 @@ class DeepQAgent(object):
                     self._target_net = self._action_value_net.clone(CloneMethod.freeze)
 
     def _plot_metrics(self):
-        """Plot current buffers accumulated values to visualize agent learning 
+        """Plot current buffers accumulated values to visualize agent learning
         """
         if len(self._episode_q_means) > 0:
             mean_q = np.asscalar(np.mean(self._episode_q_means))
@@ -427,10 +432,10 @@ class DeepQAgent(object):
 def as_ale_input(environment):
     """Convert the Atari environment RGB output (210, 160, 3) to an ALE one (84, 84).
     We first convert the image to a gray scale image, and resize it.
-     
+
     Attributes:
         environment (Tensor[input_shape]): Environment to be converted
-    
+
     Returns:
          Tensor[84, 84] : Environment converted
     """
