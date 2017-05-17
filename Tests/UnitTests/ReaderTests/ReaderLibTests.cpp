@@ -1094,6 +1094,116 @@ BOOST_AUTO_TEST_CASE(CheckEpochBoundarySingleWorker)
     test(underTestNo);
 }
 
+
+// Make sure we do not cut the minibatches at the end of the epoch such that they
+// contain only a single sequence. For example, with an input data consisting of 3-sample
+// sequences, minibatch size set to 90 and the epoch size to 100, the source should return
+// two minibatches 90 and 12 samples in each and not three minibatches (as it used to) 
+// with 90, 9 and 3 samples. In other words, the maximum number of minibatches in an epoch
+// should be <= ceil(epoch size / expected minibatch size)
+BOOST_AUTO_TEST_CASE(CheckNoDegenerateMinibatches)
+{
+    struct Parameters 
+    {
+        size_t numSequences;
+        size_t sequenceLength;
+        size_t epochSize;
+        size_t minibatchSize;
+        size_t epochIndex;
+    };
+
+    vector<Parameters> params = { {50, 3, 100, 90, 0} };
+
+    std::mt19937 rng(77);
+    while (params.size() < 100) 
+    {
+        Parameters p;
+        p.numSequences = rng() % 100 + 1;
+        p.sequenceLength = rng() % 100 + 1;
+        p.minibatchSize = (rng() % 10) * p.sequenceLength + 1;
+        p.epochSize = (rng() % 20) * p.sequenceLength + 1;
+        p.epochIndex = rng() % 10;
+        params.push_back(p);
+    }
+
+
+    for (const auto& p : params)
+    {
+        vector<float> data(p.numSequences);
+        iota(data.begin(), data.end(), 0.0f);
+
+        auto mockDeserializer = make_shared<MockDeserializer>(1, p.numSequences, data, uint32_t(p.sequenceLength));
+
+        auto test = [&p](SequenceEnumeratorPtr underTest)
+        {
+            size_t epochSize = p.epochSize;
+
+
+            EpochConfiguration config;
+            config.m_numberOfWorkers = 1;
+            config.m_workerRank = 0;
+            config.m_minibatchSizeInSamples = p.minibatchSize;
+            config.m_totalEpochSizeInSamples = epochSize;
+            config.m_epochIndex = p.epochIndex;
+            config.m_allowMinibatchesToCrossSweepBoundaries = true;
+            underTest->StartEpoch(config);
+
+            // if max expected minibatch size must be a multiple of sequence size 
+            auto maxMBSize = (p.minibatchSize / p.sequenceLength) * p.sequenceLength;
+            if (maxMBSize == 0)
+                maxMBSize = p.sequenceLength;
+
+            Sequences s;
+            size_t numberOfSamples = 0;
+            size_t numberOfMinibatches = 0;
+            do
+            {
+                s = underTest->GetNextSequences(p.minibatchSize, p.minibatchSize);
+                if (!s.m_data.empty())
+                    for (const auto& seq : s.m_data.front())
+                        numberOfSamples += seq->m_numberOfSamples;
+
+                numberOfMinibatches++;
+            } while (!s.m_endOfEpoch);
+
+            
+            auto epochStart = p.epochIndex * epochSize;
+            auto epochEnd = epochStart + epochSize;
+            auto startingOffset = (size_t) ceil(epochStart * 1.0 / p.sequenceLength)* p.sequenceLength;
+            
+            if (startingOffset >= epochEnd)
+            {
+                BOOST_TEST((s.m_data.empty() && numberOfMinibatches == 1 && numberOfSamples == 0));
+                return;
+            }
+
+            auto actualEpochSize = epochEnd - startingOffset;
+            // make sure that the last minibatch contains more than a single sequence:
+            auto lastMBSize = actualEpochSize % maxMBSize;
+
+            auto numSequencesInTheLastMB = s.m_data[0].size();
+                
+            if (lastMBSize == 0) 
+                // epoch size is a multiple of maxMBSize => it's a multiple of sequence length
+                BOOST_TEST(((maxMBSize / p.sequenceLength) == numSequencesInTheLastMB));
+            else
+            {
+                // last sequence overlaps the epoch boundary. 
+                BOOST_TEST((ceil(lastMBSize*1.0 / p.sequenceLength) == numSequencesInTheLastMB));
+            }
+
+            BOOST_TEST((numberOfSamples <= epochSize || (numberOfSamples - epochSize) < p.sequenceLength));
+            BOOST_TEST((numberOfMinibatches <= ceil(epochSize* 1.0/ maxMBSize)));
+        };
+
+        auto underTestBlock = make_shared<BlockRandomizer>(0, size_t(-1), mockDeserializer, true);
+        auto underTestNo = make_shared<NoRandomizer>(mockDeserializer);
+
+        test(underTestBlock);
+        test(underTestNo);
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(PackerTests)
