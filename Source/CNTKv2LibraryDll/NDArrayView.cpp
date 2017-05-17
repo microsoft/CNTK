@@ -33,7 +33,6 @@ namespace CNTK
         return std::make_shared<Matrix<ElementType>>(matrixDims.first, matrixDims.second, (ElementType*)dataBuffer, AsCNTKImplDeviceId(device), matrixFlagDontOwnBuffer);
     }
 
-#if 0 // USE THSI SOON
     // matrix from user-provided buffer, dataType version
     static std::shared_ptr<MatrixBase> CreateMatrix(CNTK::DataType dataType,
                                                     const NDShape& viewShape,
@@ -52,7 +51,6 @@ namespace CNTK
             break;
         }
     }
-#endif
 
     // new matrix, template version
     template <typename ElementType>
@@ -70,7 +68,6 @@ namespace CNTK
                                                      numNonZeroValues);
     }
 
-#if 0 // USE THESE SOON
     // new matrix, dataType version
     static std::shared_ptr<MatrixBase> CreateMatrix(CNTK::DataType dataType,
                                                     CNTK::StorageFormat storageType,
@@ -89,8 +86,8 @@ namespace CNTK
             break;
         }
     }
-#endif
 
+#if 0
     // TensorView over provided dataBuffer, template version
     template <typename ElementType>
     static TensorView<ElementType>* AllocateTensorViewMin2D(const NDShape& viewShape, const DeviceDescriptor& device, void* dataBuffer, size_t bufferSizeInBytes)
@@ -126,15 +123,16 @@ namespace CNTK
         default: LogicError("Unsupported DataType %s", DataTypeName(dataType));
         }
     }
+#endif
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly/* = false*/)
-        : NDArrayView(dataType, device, StorageFormat::Dense, viewShape, readOnly, AllocateTensorViewMin2D(dataType, viewShape, device, dataBuffer, bufferSizeInBytes))
+        : NDArrayView(dataType, viewShape, readOnly, CreateMatrix(dataType, viewShape, device, dataBuffer, bufferSizeInBytes))
     {
     }
 
     template <typename ElementType>
     NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/)
-        : NDArrayView(AsDataType<ElementType>(), device, StorageFormat::SparseCSC, viewShape, false, AllocateTensorViewMin2D<ElementType>(viewShape, StorageFormat::SparseCSC, device, numNonZeroValues))
+        : NDArrayView(AsDataType<ElementType>(), viewShape, false, CreateMatrix<ElementType>(viewShape, StorageFormat::SparseCSC, device, numNonZeroValues))
     {
         if ((colStarts == nullptr) || (rowIndices == nullptr) || (nonZeroValues == nullptr) || (numNonZeroValues == 0) || (numNonZeroValues > viewShape.TotalSize()))
             InvalidArgument("Invalid sparse CSC format data specified for construction of NDArrayView with shape '%S'; "
@@ -195,7 +193,7 @@ namespace CNTK
     {}
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device)
-        : NDArrayView(dataType, device, storageType, viewShape, false, AllocateTensorViewMin2D(dataType, storageType, viewShape, device))
+        : NDArrayView(dataType, viewShape, false, CreateMatrix(dataType, storageType, viewShape, device))
     {}
 
     NDArrayView::~NDArrayView()
