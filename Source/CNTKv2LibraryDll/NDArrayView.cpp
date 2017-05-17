@@ -222,10 +222,31 @@ namespace CNTK
         return tensorView->Reshaped(tensorShape).AsMatrix();
     }
 
+    // -ViewMin2D: use if you interop with V1 code that needs shapes of rank2 or higher
+    // These versions are only ever called by GetMatrix() and, from outside, in Accumulator::Update(), which probably could do without.
+    // If we get them out from Update(), then we can just inline them here.
+    template <typename ElementType>
+    const TensorView<ElementType>* NDArrayView::GetTensorViewMin2D() const
+    {
+        if (AsDataType<ElementType>() != m_dataType)
+            LogicError("NDArrayView::GetTensorViewMin2D: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
+
+        return (const TensorView<ElementType>*)(m_tensorViewPtr.get());
+    }
+
     template <typename ElementType>
     std::shared_ptr<const Matrix<ElementType>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const
     {
         return GetMatrixImpl<ElementType>(GetTensorViewMin2D<ElementType>(), rowColSplitPoint);
+    }
+
+    template <typename ElementType>
+    TensorView<ElementType>* NDArrayView::GetWritableTensorViewMin2D()
+    {
+        if (IsReadOnly())
+            InvalidArgument("NDArrayView::GetWritableTensorViewMin2D: Cannot get a writable TensorView from a read-only NDArrayView.");
+
+        return const_cast<TensorView<ElementType>*>(GetTensorViewMin2D<ElementType>());
     }
 
     template <typename ElementType>
@@ -251,26 +272,6 @@ namespace CNTK
             InvalidArgument("NDArrayView::GetWritableTensorViewPtr: Cannot get a writable TensorView from a read-only NDArrayView.");
 
         return const_cast<TensorView<ElementType>*>(GetTensorViewPtr<ElementType>());
-    }
-
-    // -ViewMin2D: use if you interop with V1 code that needs shapes of rank2 or higher
-    // These versions are only ever called by GetMatrix() and, from outside, in Accumulator::Update(), which probably could do without.
-    template <typename ElementType>
-    const TensorView<ElementType>* NDArrayView::GetTensorViewMin2D() const
-    {
-        if (AsDataType<ElementType>() != m_dataType)
-            LogicError("NDArrayView::GetTensorViewMin2D: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
-
-        return (const TensorView<ElementType>*)(m_tensorViewPtr.get());
-    }
-
-    template <typename ElementType>
-    TensorView<ElementType>* NDArrayView::GetWritableTensorViewMin2D()
-    {
-        if (IsReadOnly())
-            InvalidArgument("NDArrayView::GetWritableTensorViewMin2D: Cannot get a writable TensorView from a read-only NDArrayView.");
-
-        return const_cast<TensorView<ElementType>*>(GetTensorViewMin2D<ElementType>());
     }
 
     shared_ptr<MatrixBase> NDArrayView::GetStorageObjectPtr() const
