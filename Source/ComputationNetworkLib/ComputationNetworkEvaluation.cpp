@@ -188,7 +188,12 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 
         // Extreme Tracing, part 2/4
         if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode() && node->NeedsGradient())
+        {
             DumpNode<float>(node, /*dumpGradient=*/true) || DumpNode<double>(node, true);
+            //fprintf(stderr, "Input Dump --> %d\n", (int)node->GetNumInputs());
+            //for (size_t i = 0; i < node->GetNumInputs(); ++i)
+            //    DumpNode<float>(node->Input(i), /*dumpGradient=*/true) || DumpNode<double>(node->Input(i), true);
+        }
     }
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) /*override*/
