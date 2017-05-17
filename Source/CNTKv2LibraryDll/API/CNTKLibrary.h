@@ -897,7 +897,7 @@ namespace CNTK
         NDShape m_viewShape;
         bool m_isReadOnly;
 
-        std::shared_ptr<void> m_tensorView; // Microsoft::MSR::CNTK::TensorView<ElemType>*
+        std::shared_ptr<void> m_tensorViewPtr; // Microsoft::MSR::CNTK::TensorView<ElemType>*
     };
 
     enum class MaskKind : char

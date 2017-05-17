@@ -1076,6 +1076,7 @@ namespace CNTK
         }
 
         // TODO: can we use the non-Min2D versions? The only difference is that shapes < rank 2 must have matchign rank.
+        //       Then the -Min2D versions would be entirely local to NDArrayView.
         if (delta->GetDataType() == DataType::Float)
             Data()->GetWritableTensorViewMin2D<float>()->AddCopyOf(*delta->Data()->GetTensorViewMin2D<float>());
         else

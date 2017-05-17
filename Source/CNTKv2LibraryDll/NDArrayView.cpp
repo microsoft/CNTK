@@ -135,7 +135,7 @@ namespace CNTK
         : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())), m_viewShape(viewShape), m_isReadOnly(readOnly)
     {
         void* tensorView = AllocateTensorViewMin2D(dataType, viewShape, sob);
-        m_tensorView = std::shared_ptr<void>(tensorView, [this](void*) {
+        m_tensorViewPtr = std::shared_ptr<void>(tensorView, [this](void*) {
             switch (m_dataType)
             {
             case DataType::Float:
@@ -241,7 +241,7 @@ namespace CNTK
         if (AsDataType<ElementType>() != m_dataType)
             LogicError("NDArrayView::GetTensorViewPtr: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
 
-        return (const TensorView<ElementType>*)(m_tensorView.get());
+        return (const TensorView<ElementType>*)(m_tensorViewPtr.get());
     }
 
     template <typename ElementType>
@@ -254,13 +254,14 @@ namespace CNTK
     }
 
     // -ViewMin2D: use if you interop with V1 code that needs shapes of rank2 or higher
+    // These versions are only ever called by GetMatrix() and, from outside, in Accumulator::Update(), which probably could do without.
     template <typename ElementType>
     const TensorView<ElementType>* NDArrayView::GetTensorViewMin2D() const
     {
         if (AsDataType<ElementType>() != m_dataType)
             LogicError("NDArrayView::GetTensorViewMin2D: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
 
-        return (const TensorView<ElementType>*)(m_tensorView.get());
+        return (const TensorView<ElementType>*)(m_tensorViewPtr.get());
     }
 
     template <typename ElementType>
@@ -501,7 +502,7 @@ namespace CNTK
                     LogicError("NDArrayView::GatherBatch: Input argument's DataType %s differs from first input's DataType %s.", DataTypeName(input.m_dataType), DataTypeName(input0.m_dataType));
                 if (input.Shape() != input0.Shape())
                     LogicError("NDArrayView::GatherBatch: Input argument's shape differs from first input's shape.");
-                return *input.GetTensorViewPtr<float>(); // TODO: should be tne -Native- version (which will soon cease to exist)
+                return *input.GetTensorViewPtr<float>(); // TODO: should be the -Native- version (which will soon cease to exist)
             });
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
@@ -512,7 +513,7 @@ namespace CNTK
                     LogicError("NDArrayView::GatherBatch: Input argument's DataType %s differs from first input's DataType %s.", DataTypeName(input.m_dataType), DataTypeName(input0.m_dataType));
                 if (input.Shape() != input0.Shape())
                     LogicError("NDArrayView::GatherBatch: Input argument's shape differs from first input's shape.");
-                return *input.GetTensorViewPtr<double>(); // TODO: should be tne -Native- version (which will soon cease to exist)
+                return *input.GetTensorViewPtr<double>(); // TODO: should be the -Native- version (which will soon cease to exist)
             });
             break;
         default:
