@@ -657,6 +657,9 @@ namespace CNTK
                 case PrimitiveOpType::Hardmax:
                     computationNodePtr = New<HardmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::StableSigmoid:
+                    computationNodePtr = New<StableSigmoidNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::TransposeAxes:
                 {
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
@@ -1317,6 +1320,11 @@ namespace CNTK
                                                                    const std::unordered_set<Variable>& inputsToExcludeGradientsFor,
                                                                    bool allocateNetworkMatrices)
     {
+        // Lets purge the current computation network and regenerate the network if the CompositeFunction
+        // was previously compiled just for evaluation and not for gradient backpropagation.
+        if ((m_computationNetwork != nullptr) && (m_currentBackpropRoots.empty() && !backpropRoots.empty()))
+            PurgeComputationNetwork();
+
         if (m_computationNetwork != nullptr)
         {
             // TODO: We should either invalidate and readapt the network if the backpropRoots change compared to what was specified when the network

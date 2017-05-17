@@ -1404,7 +1404,7 @@ class UserFunction(Function):
                 variables[k] = result
 
         if self.as_numpy:
-            for k,v in variables.items():
+            for k, v in variables.items():
                 if v is not None:
                     variables[k] = sanitize_batch(k, v, None, device)
 

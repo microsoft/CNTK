@@ -3295,11 +3295,6 @@ namespace CNTK
                                          const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
-        /// Prints the entire graph underlying this Function to stderr
-        ///
-        CNTK_API void PrintGraph() const;
-
-        ///
         /// Returns a string representation of this Function
         ///
         CNTK_API std::wstring AsString(bool doNotInferOutputs = true) const;

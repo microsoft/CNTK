@@ -338,6 +338,18 @@ namespace CNTK
             m_existingNetworkStorageReferences.clear();
         }
 
+        void PurgeComputationNetwork()
+        {
+            m_currentBackpropRoots.clear();
+            m_inputsExcludedFromGradientComputation.clear();
+            m_variableToNodeMap.clear();
+            m_currentOutputsToEvaluate.clear();
+            m_lastRecordedTimeStamps.clear();
+
+            m_networkMatricesAllocated = false;
+            m_computationNetwork = nullptr;
+        }
+
     private:
 
         // Set of all primitive functions in the graph underlying 'this' Function. Also keeps the primitive Function objects alive 
