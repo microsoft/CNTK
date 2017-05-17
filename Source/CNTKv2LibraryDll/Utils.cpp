@@ -1075,10 +1075,11 @@ namespace CNTK
             m_isUninitialized = false;
         }
 
+        // TODO: can we use the non-Min2D versions? The only difference is that shapes < rank 2 must have matchign rank.
         if (delta->GetDataType() == DataType::Float)
-            Data()->GetWritableTensorView<float>()->AddCopyOf(*delta->Data()->GetTensorView<float>());
+            Data()->GetWritableTensorViewMin2D<float>()->AddCopyOf(*delta->Data()->GetTensorViewMin2D<float>());
         else
-            Data()->GetWritableTensorView<double>()->AddCopyOf(*delta->Data()->GetTensorView<double>());
+            Data()->GetWritableTensorViewMin2D<double>()->AddCopyOf(*delta->Data()->GetTensorViewMin2D<double>());
 
         if (copied && m_numUpdates != 0)
             RuntimeError("Accumulation values are created when accumulated num updates not zero");

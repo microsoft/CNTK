@@ -871,10 +871,16 @@ namespace CNTK
         std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint);
 
         template <typename ElementType>
-        const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView() const;
+        const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorViewPtr() const;
 
         template <typename ElementType>
-        Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorView();
+        Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorViewPtr();
+
+        template <typename ElementType>
+        const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorViewMin2D() const;
+
+        template <typename ElementType>
+        Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorViewMin2D();
 
         template <typename ElementType>
         const Microsoft::MSR::CNTK::TensorView<ElementType> NativeTensorView() const;

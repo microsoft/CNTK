@@ -139,10 +139,10 @@ namespace CNTK
             switch (m_dataType)
             {
             case DataType::Float:
-                delete GetTensorView<float>();
+                delete GetTensorViewPtr<float>();
                 break;
             case DataType::Double:
-                delete GetTensorView<double>();
+                delete GetTensorViewPtr<double>();
                 break;
             default:
                 LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
@@ -225,31 +225,51 @@ namespace CNTK
     template <typename ElementType>
     std::shared_ptr<const Matrix<ElementType>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const
     {
-        return GetMatrixImpl<ElementType>(GetTensorView<ElementType>(), rowColSplitPoint);
+        return GetMatrixImpl<ElementType>(GetTensorViewMin2D<ElementType>(), rowColSplitPoint);
     }
 
     template <typename ElementType>
     std::shared_ptr<Matrix<ElementType>> NDArrayView::GetWritableMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/)
     {
-        return GetMatrixImpl<ElementType>(GetWritableTensorView<ElementType>(), rowColSplitPoint);
+        return GetMatrixImpl<ElementType>(GetWritableTensorViewMin2D<ElementType>(), rowColSplitPoint);
     }
 
+    // -ViewPtr: use if you don't care about V1-compatible 2D-padded shape
     template <typename ElementType>
-    const TensorView<ElementType>* NDArrayView::GetTensorView() const
+    const TensorView<ElementType>* NDArrayView::GetTensorViewPtr() const
     {
         if (AsDataType<ElementType>() != m_dataType)
-            LogicError("NDArrayView::GetTensorView: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
+            LogicError("NDArrayView::GetTensorViewPtr: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
 
         return (const TensorView<ElementType>*)(m_tensorView.get());
     }
 
     template <typename ElementType>
-    TensorView<ElementType>* NDArrayView::GetWritableTensorView()
+    TensorView<ElementType>* NDArrayView::GetWritableTensorViewPtr()
     {
         if (IsReadOnly())
-            InvalidArgument("NDArrayView::GetWritableTensorView: Cannot get a writable TensorView from a read-only NDArrayView.");
+            InvalidArgument("NDArrayView::GetWritableTensorViewPtr: Cannot get a writable TensorView from a read-only NDArrayView.");
 
-        return const_cast<TensorView<ElementType>*>(GetTensorView<ElementType>());
+        return const_cast<TensorView<ElementType>*>(GetTensorViewPtr<ElementType>());
+    }
+
+    // -ViewMin2D: use if you interop with V1 code that needs shapes of rank2 or higher
+    template <typename ElementType>
+    const TensorView<ElementType>* NDArrayView::GetTensorViewMin2D() const
+    {
+        if (AsDataType<ElementType>() != m_dataType)
+            LogicError("NDArrayView::GetTensorViewMin2D: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
+
+        return (const TensorView<ElementType>*)(m_tensorView.get());
+    }
+
+    template <typename ElementType>
+    TensorView<ElementType>* NDArrayView::GetWritableTensorViewMin2D()
+    {
+        if (IsReadOnly())
+            InvalidArgument("NDArrayView::GetWritableTensorViewMin2D: Cannot get a writable TensorView from a read-only NDArrayView.");
+
+        return const_cast<TensorView<ElementType>*>(GetTensorViewMin2D<ElementType>());
     }
 
     shared_ptr<MatrixBase> NDArrayView::GetStorageObjectPtr() const
@@ -258,9 +278,9 @@ namespace CNTK
         switch (m_dataType)
         {
         case DataType::Float:
-            return GetTensorView<float>()->GetSOBPtr();
+            return GetTensorViewPtr<float>()->GetSOBPtr();
         case DataType::Double:
-            return GetTensorView<double>()->GetSOBPtr();
+            return GetTensorViewPtr<double>()->GetSOBPtr();
         default:
             LogicError("NDArrayView::Alias: Unsupported DataType %s", DataTypeName(m_dataType));
         }
@@ -333,13 +353,13 @@ namespace CNTK
     template <typename ElementType>
     const TensorView<ElementType> NDArrayView::NativeTensorView() const
     {
-        return TensorView<ElementType>(*GetTensorView<ElementType>(), Microsoft::MSR::CNTK::TensorShape(m_viewShape.Dimensions()));
+        return TensorView<ElementType>(*GetTensorViewPtr<ElementType>(), Microsoft::MSR::CNTK::TensorShape(m_viewShape.Dimensions()));
     }
 
     template <typename ElementType>
     TensorView<ElementType> NDArrayView::WritableNativeTensorView()
     {
-        return TensorView<ElementType>(*GetWritableTensorView<ElementType>(), Microsoft::MSR::CNTK::TensorShape(m_viewShape.Dimensions()));
+        return TensorView<ElementType>(*GetWritableTensorViewPtr<ElementType>(), Microsoft::MSR::CNTK::TensorShape(m_viewShape.Dimensions()));
     }
 
     /*static*/ NDArrayViewPtr NDArrayView::NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int opInt, NDArrayViewPtr out, double beta, int reductionOpInt)
@@ -481,7 +501,7 @@ namespace CNTK
                     LogicError("NDArrayView::GatherBatch: Input argument's DataType %s differs from first input's DataType %s.", DataTypeName(input.m_dataType), DataTypeName(input0.m_dataType));
                 if (input.Shape() != input0.Shape())
                     LogicError("NDArrayView::GatherBatch: Input argument's shape differs from first input's shape.");
-                return *input.GetTensorView<float>();
+                return *input.GetTensorViewPtr<float>(); // TODO: should be tne -Native- version (which will soon cease to exist)
             });
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
@@ -492,7 +512,7 @@ namespace CNTK
                     LogicError("NDArrayView::GatherBatch: Input argument's DataType %s differs from first input's DataType %s.", DataTypeName(input.m_dataType), DataTypeName(input0.m_dataType));
                 if (input.Shape() != input0.Shape())
                     LogicError("NDArrayView::GatherBatch: Input argument's shape differs from first input's shape.");
-                return *input.GetTensorView<double>();
+                return *input.GetTensorViewPtr<double>(); // TODO: should be tne -Native- version (which will soon cease to exist)
             });
             break;
         default:
@@ -818,8 +838,8 @@ namespace CNTK
 
     template std::shared_ptr<Matrix<float>> NDArrayView::GetWritableMatrix<float>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
     template std::shared_ptr<Matrix<double>> NDArrayView::GetWritableMatrix<double>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
-    template TensorView<float>* NDArrayView::GetWritableTensorView<float>();
-    template TensorView<double>* NDArrayView::GetWritableTensorView<double>();
+    template TensorView<float>* NDArrayView::GetWritableTensorViewMin2D<float>();
+    template TensorView<double>* NDArrayView::GetWritableTensorViewMin2D<double>();
 
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
