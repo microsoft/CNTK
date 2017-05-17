@@ -877,10 +877,10 @@ namespace CNTK
         Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorViewPtr();
 
         template <typename ElementType>
-        const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorViewMin2D() const;
+        std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> GetTensorViewMin2D() const;
 
         template <typename ElementType>
-        Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorViewMin2D();
+        std::shared_ptr<Microsoft::MSR::CNTK::TensorView<ElementType>> GetWritableTensorViewMin2D();
 
         template <typename ElementType>
         const Microsoft::MSR::CNTK::TensorView<ElementType> NativeTensorView() const;

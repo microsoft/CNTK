@@ -226,33 +226,36 @@ namespace CNTK
     // These versions are only ever called by GetMatrix() and, from outside, in Accumulator::Update(), which probably could do without.
     // If we get them out from Update(), then we can just inline them here.
     template <typename ElementType>
-    const TensorView<ElementType>* NDArrayView::GetTensorViewMin2D() const
+    std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> NDArrayView::GetTensorViewMin2D() const
     {
         if (AsDataType<ElementType>() != m_dataType)
             LogicError("NDArrayView::GetTensorViewMin2D: The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
 
-        return (const TensorView<ElementType>*)(m_tensorViewPtr.get());
+        auto tensorView = static_pointer_cast<const TensorView<ElementType>>(m_tensorViewPtr);
+        return tensorView;
     }
 
     template <typename ElementType>
     std::shared_ptr<const Matrix<ElementType>> NDArrayView::GetMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/) const
     {
-        return GetMatrixImpl<ElementType>(GetTensorViewMin2D<ElementType>(), rowColSplitPoint);
+        auto tensorView = GetTensorViewMin2D<ElementType>();
+        return GetMatrixImpl<ElementType>(tensorView.get(), rowColSplitPoint);
     }
 
     template <typename ElementType>
-    TensorView<ElementType>* NDArrayView::GetWritableTensorViewMin2D()
+    std::shared_ptr<Microsoft::MSR::CNTK::TensorView<ElementType>> NDArrayView::GetWritableTensorViewMin2D()
     {
         if (IsReadOnly())
             InvalidArgument("NDArrayView::GetWritableTensorViewMin2D: Cannot get a writable TensorView from a read-only NDArrayView.");
 
-        return const_cast<TensorView<ElementType>*>(GetTensorViewMin2D<ElementType>());
+        return const_pointer_cast<TensorView<ElementType>>(GetTensorViewMin2D<ElementType>());
     }
 
     template <typename ElementType>
     std::shared_ptr<Matrix<ElementType>> NDArrayView::GetWritableMatrix(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/)
     {
-        return GetMatrixImpl<ElementType>(GetWritableTensorViewMin2D<ElementType>(), rowColSplitPoint);
+        auto tensorView = GetWritableTensorViewMin2D<ElementType>();
+        return GetMatrixImpl<ElementType>(tensorView.get(), rowColSplitPoint);
     }
 
     // -ViewPtr: use if you don't care about V1-compatible 2D-padded shape
@@ -840,8 +843,8 @@ namespace CNTK
 
     template std::shared_ptr<Matrix<float>> NDArrayView::GetWritableMatrix<float>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
     template std::shared_ptr<Matrix<double>> NDArrayView::GetWritableMatrix<double>(size_t rowColSplitPoint/* = AutoSelectRowColSplitPoint*/);
-    template TensorView<float>* NDArrayView::GetWritableTensorViewMin2D<float>();
-    template TensorView<double>* NDArrayView::GetWritableTensorViewMin2D<double>();
+    template std::shared_ptr<TensorView<float>> NDArrayView::GetWritableTensorViewMin2D<float>();
+    template std::shared_ptr<TensorView<double>> NDArrayView::GetWritableTensorViewMin2D<double>();
 
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
