@@ -9,10 +9,8 @@ import argparse
 import _cntk_py
 import cntk
 
-from cntk.logging import *
 from cntk.io import FULL_DATA_SWEEP
 from cntk import *
-from cntk import leaky_relu, reshape, softmax, param_relu, relu, user_function
 from cntk.logging import ProgressPrinter
 from cntk.train.distributed import Communicator
 

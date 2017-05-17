@@ -10,17 +10,34 @@ import matplotlib.pyplot as mp
 
 from cntk import *
 
+class ClassMap():
+    """Awaits format {<Identifier> <number> }"""
+    def __init__(self, cls_map_file):
+        strings = open(cls_map_file).read().split()
+        self.cls_map = {}
+        for i in range(int(len(strings)/2)):
+            self.cls_map[int(strings[2*i+1])] = strings[2*i]
+
+    def getClass(self,i):
+        return self.cls_map[i]
+
+
+CONF_THRESHOLD = 0.5
+LIMIT_TO_FIRST = None
+NMS_IOU_THRESHOLD = 0.7
+cls_map = ClassMap(r"..\..\DataSets\Pascal\class_map.txt")
+
 def draw_bb_on_image(image, bb_list):
     image_width = len(image[1])
-    image_height = len(image[0])
+    image_height = len(image)
 
-    box_list_len = len(bb_list)
+    box_list_len = min(len(bb_list), LIMIT_TO_FIRST) if LIMIT_TO_FIRST is not None else len(bb_list)
     for j in range(box_list_len):
         box = bb_list[j]
-        xmin = int(image_width * box[0] - image_width * box[2] / 2)
-        xmax = int(xmin + image_width * box[2])
-        ymin = int(image_height * box[1] - image_height * box[3] / 2)
-        ymax = int(ymin + image_height * box[3])
+        xmin = int(image_width * (box[0] -  box[2] / 2))
+        xmax = int(image_width * (box[0] +  box[2] / 2))
+        ymin = int(image_height * (box[1] - box[3] / 2))
+        ymax = int(image_height * (box[1] + box[3] / 2))
         if(xmax >= image_width or ymax >= image_height or xmin < 0 or ymin < 0):
             print("Box out of bounds: (" + str(xmin) +","+ str(ymin) +") ("+ str(xmax) +","+ str(ymax) +")")
             # print(box[5:])
@@ -30,13 +47,12 @@ def draw_bb_on_image(image, bb_list):
         ymin = 0 if ymin < 0 else ymin
 
         color = (255, 255 - int(j*255/box_list_len), int(j*255/box_list_len))
-
+        print((xmin, xmax, ymin, ymax, image_width, image_height))
         cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 1)
         # print(box[5:])
         detected_class = np.argmax(box[5:]) + 1
 
-
-        cv2.putText(image, str(detected_class), (xmin, ymax), cv2.FONT_HERSHEY_SIMPLEX, 1, color,1)
+        cv2.putText(image, cls_map.getClass(detected_class), (xmin, ymax), cv2.FONT_HERSHEY_SIMPLEX, 1, color,1)
 
     return image
 
@@ -68,13 +84,18 @@ def points_to_xywh(points):
     return xywh
 
 def do_nms(predictions):
-    indicies = py_cpu_nms(xywh_to_point(predictions), 0.7)
-    values = []
-    for i in range(len(indicies)):
-        values.append(predictions[indicies[i]])
+    if NMS_IOU_THRESHOLD is not None:
+        to_run = predictions[np.where(predictions[:,4]>CONF_THRESHOLD)]
 
-    return np.asarray(values, np.float32)
-    return points_to_xywh(np.asarray(values, np.float32))
+        indicies = py_cpu_nms(xywh_to_point(to_run), NMS_IOU_THRESHOLD)
+        values = []
+        for i in range(len(indicies)):
+            pred = predictions[indicies[i]]
+            values.append(pred)
+
+        return np.asarray(values, np.float32)
+
+    return predictions
 
 def predictions_for_image(cv_img, model, input_width, input_height):
     resized = cv2.resize(cv_img, (input_width, input_height), interpolation=cv2.INTER_NEAREST)
@@ -93,44 +114,34 @@ def load_image(img_path):
 def save_image(img, dir, name):
     cv2.imwrite(os.path.join(dir,name), img)
 
+if __name__ == "__main__":
 
+    model = load_model(os.path.join(".", "outputdir", "YOLOv2.model"))
+    data_input = logging.graph.find_by_name(model, "data")
+    img_width = data_input.shape[2]
+    img_height= data_input.shape[1]
 
-model = load_model(os.path.join(".", "outputdir", "YOLOv2.model"))
-data_input = logging.graph.find_by_name(model, "data")
-img_width = data_input.shape[2]
-img_height= data_input.shape[1]
+    data_path= r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\JPEGImages"
+    img_list = [18,118,1118,27,2118,4118,1,2,3,4,5,6,7,8,9,10]
+    # img_list = open(r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\ImageSets\Main\test.txt").read().split()
+    save_path = os.path.join(".", "outputdir", "results")
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
 
-data_path= r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Pascal\VOCdevkit\VOC2007\JPEGImages"
-img_list= [r"000018.jpg",
-           r"000118.jpg",
-           r"001118.jpg",
-           r"000027.jpg",
-           r"002118.jpg",
-           r"004118.jpg"
-           ]
-img_list = [18,118,1118,27,2118,4118]
-# img_list = open(r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Pascal\VOCdevkit\VOC2007\ImageSets\Main\test.txt").read().split()
-save_path = os.path.join(".", "outputdir", "results")
-if not os.path.exists(save_path):
-    os.mkdir(save_path)
+    for i in range(len(img_list)):
+        img_name =  "{:06}.jpg".format(img_list[i])
+        img = load_image(os.path.join(data_path, img_name))
 
-for i in range(len(img_list)):
-    #img = load_image(os.path.join(data_path , img_list[i]))
-    img_name =  "{:06}.jpg".format(img_list[i])
-    img = load_image(os.path.join(data_path, img_name))
+        preds = predictions_for_image(img, model, img_width, img_height)
+        preds_nms = do_nms(preds)
+        import ipdb;ipdb.set_trace()
+        color_image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    preds = predictions_for_image(img, model, img_width, img_height)
-    preds_nms = do_nms(preds)
+        draw_bb_on_image(color_image, preds_nms)
 
-    color_image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        if i<0:
+            plot_image(color_image)
 
-    draw_bb_on_image(color_image, preds_nms)
+        out_img = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
 
-    if i<5:
-        plot_image(color_image)
-
-    out_img = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
-
-    save_image(out_img, save_path, "bb_"+img_name)
-
-
+        save_image(out_img, save_path, "bb_"+img_name)
