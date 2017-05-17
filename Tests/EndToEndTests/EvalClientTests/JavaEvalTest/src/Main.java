@@ -30,6 +30,7 @@ public class Main {
         Function modelFunc = Function.load(new File(dataPath, "resnet20_cifar10_python.dnn").getAbsolutePath(), device);
         Variable outputVar = modelFunc.getOutputs().get(0);
         Variable inputVar = modelFunc.getArguments().get(0);
+        System.gc(); // Just for testing, to make sure elements in getOutput are not getting GC'd
 
         NDShape inputShape = inputVar.getShape();
         int imageWidth = inputShape.getDimensions().get(0).intValue();
