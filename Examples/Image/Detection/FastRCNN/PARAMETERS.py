@@ -6,9 +6,9 @@ from fastRCNN.pascal_voc import pascal_voc # as nmsPython
 print (datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
 dataset = "Grocery"
-# dataset = "pascalVoc"
-# dataset = "pascalVoc_aeroplanesOnly"
-# dataset = "CustomDataset"
+#dataset = "pascalVoc"
+#dataset = "pascalVoc_aeroplanesOnly"
+#dataset = "CustomDataset"
 
 ############################
 # default parameters
@@ -114,19 +114,20 @@ class PascalParameters(Parameters):
         self.cntk_max_epochs = 17
         self.cntk_momentum_time_constant = 20
 
-        self.pascalDataDir = os.path.join(rootDir, "../../DataSets/Pascal/")
+        self.pascalDataDir = os.path.join(self.rootDir, "..", "..", "DataSets", "Pascal")
+        self.imgDir = self.pascalDataDir
 
         # database
         self.imdbs = dict()
         for image_set, year in zip(["train", "test"], ["2007", "2007"]):
-            self.imdbs[image_set] = fastRCNN.pascal_voc(lutImageSet[image_set], year, self.classes, self.cntk_nrRois, cacheDir=self.cntkFilesDir, devkit_path=self.pascalDataDir)
-            print ("Number of {} images: {}".format(image_set, imdbs[image_set].num_images))
+            self.imdbs[image_set] = fastRCNN.pascal_voc(self.lutImageSet[image_set], year, self.classes, self.cntk_nrRois, cacheDir=self.cntkFilesDir, devkit_path=self.pascalDataDir)
+            print ("Number of {} images: {}".format(image_set, self.imdbs[image_set].num_images))
 
 def get_parameters_for_dataset(datasetName=dataset):
     if datasetName == "Grocery":
         parameters = GroceryParameters(datasetName)
     elif datasetName.startswith("pascalVoc"):
-        parameters = PascalVocParameters(datasetName)
+        parameters = PascalParameters(datasetName)
     elif dataset.Name == "CustomDataset":
         parameters = CustomDataset(datasetName)
     else:
