@@ -657,6 +657,9 @@ namespace CNTK
                 case PrimitiveOpType::Hardmax:
                     computationNodePtr = New<HardmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::StableSigmoid:
+                    computationNodePtr = New<StableSigmoidNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::TransposeAxes:
                 {
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))

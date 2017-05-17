@@ -109,10 +109,30 @@ DECL ElemType Sigmoid(ElemType z)
 #endif
 }
 
+// Numerically stable Sigmoid, we can't remove the old one due to Speech dependency.
+template <class ElemType>
+DECL ElemType StableSigmoid(ElemType z)
+{
+    ElemType q = exp_(-fabs_(z));
+    ElemType numer;
+    if (z > 0) // q = exp(-z)
+        numer = 1;
+    else // q = exp(z)
+        numer = q;
+    return numer / (1 + q);
+}
+
 template <class ElemType>
 DECL ElemType SigmoidDerivative(ElemType z)
 {
     ElemType v = Sigmoid(z);
+    return v * (1 - v);
+}
+
+template <class ElemType>
+DECL ElemType StableSigmoidDerivative(ElemType z)
+{
+    ElemType v = StableSigmoid(z);
     return v * (1 - v);
 }
 
@@ -231,6 +251,7 @@ DefUnaryOp(Cosine, cos_(a));
 DefUnaryOp(Sin, sin_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
 DefUnaryOp(ExponentialLinearUnit, a >= 0 ? a : (exp_(a)-1));
+DefUnaryOp(StableSigmoid, StableSigmoid(a));
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
@@ -287,7 +308,7 @@ DefBinaryOp(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, b >
 DefTernaryOp(Cond, a ? b : c);
 DefTernaryOp(CopyIfEqual, a == b ? c : 0); // CopyIfEqual(a,b)(c) -- if a==b copy c, otherwise 0; used for gradient of clip, min, max, etc.
 DefTernaryOp(Clip, c < a ? a : (c > b ? b : c)); // Clip(min,max)(data) => a=min, b=max, c=data
-DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
+DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * StableSigmoid(c - b));
 DefTernaryOp(ElementwiseProductWithExpOfDiff, a * exp_(b - c));
 DefTernaryOp(ElementwiseProductWithQuotient, a * b * OpReciprocal(c));
 DefTernaryOp(ElementwiseProductWithPowExponentDerivative, a * b * OpLog(c));

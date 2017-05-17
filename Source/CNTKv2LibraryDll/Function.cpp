@@ -962,7 +962,7 @@ namespace CNTK
 
     FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name)
     {
-        return UnaryOp(PrimitiveOpType::Sigmoid, operand, Dictionary(), name);
+        return UnaryOp(PrimitiveOpType::StableSigmoid, operand, Dictionary(), name);
     }
 
     FunctionPtr Tanh(const Variable& operand, const std::wstring& name)
