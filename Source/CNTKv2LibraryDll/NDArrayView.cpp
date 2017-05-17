@@ -135,7 +135,7 @@ namespace CNTK
     NDArrayView::NDArrayView(CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const shared_ptr<MatrixBase>& sob)
         : m_dataType(dataType), m_device(AsDeviceDescriptor(sob->GetDeviceId())), m_storageFormat(AsStorageFormat(sob->GetFormat())), m_viewShape(viewShape), m_isReadOnly(readOnly)
     {
-#undef LAZY_2D_PADDING // if defined then rank-2 padding of TensorShapes happens upon access, not upon creation
+#define LAZY_2D_PADDING // if defined then rank-2 padding of TensorShapes happens upon access, not upon creation
 #ifdef LAZY_2D_PADDING
         const auto tensorShape = AsTensorShape(viewShape);
 #else
@@ -368,16 +368,25 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(GetDataType(), Shape(), IsReadOnly() || readOnly, GetStorageObjectPtr());
     }
 
+    // TODO: one day, this just becomes GetTensorViewPtr
     template <typename ElementType>
-    const TensorView<ElementType> NDArrayView::NativeTensorView() const
+    std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> NDArrayView::NativeTensorView() const
     {
-        return TensorView<ElementType>(*GetTensorViewPtr<ElementType>(), Microsoft::MSR::CNTK::TensorShape(m_viewShape.Dimensions()));
+#ifndef LAZY_2D_PADDING
+        if (m_viewShape.Rank() < 2) // m_tensorViewPtr has the wrong shape if rank < 2
+            return make_shared<TensorView<ElementType>>(GetTensorViewPtr<ElementType>()->Reshaped(AsTensorShape(m_viewShape)));
+#endif
+        return static_pointer_cast<const TensorView<ElementType>>(m_tensorViewPtr);
     }
 
     template <typename ElementType>
-    TensorView<ElementType> NDArrayView::WritableNativeTensorView()
+    std::shared_ptr<Microsoft::MSR::CNTK::TensorView<ElementType>> NDArrayView::WritableNativeTensorView()
     {
-        return TensorView<ElementType>(*GetWritableTensorViewPtr<ElementType>(), Microsoft::MSR::CNTK::TensorShape(m_viewShape.Dimensions()));
+#ifndef LAZY_2D_PADDING
+        if (m_viewShape.Rank() < 2) // m_tensorViewPtr has the wrong shape if rank < 2
+            return make_shared<TensorView<ElementType>>(GetWritableTensorViewPtr<ElementType>()->Reshaped(AsTensorShape(m_viewShape)));
+#endif
+        return static_pointer_cast<TensorView<ElementType>>(m_tensorViewPtr);
     }
 
     /*static*/ NDArrayViewPtr NDArrayView::NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int opInt, NDArrayViewPtr out, double beta, int reductionOpInt)
@@ -410,13 +419,13 @@ namespace CNTK
             switch (inputs.size())
             {
             case 1:
-                out->WritableNativeTensorView<float>().DoUnaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
+                out->WritableNativeTensorView<float>()->DoUnaryOpOf((float)beta, *inputs[0]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
                 break;
             case 2:
-                out->WritableNativeTensorView<float>().DoBinaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), inputs[1]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
+                out->WritableNativeTensorView<float>()->DoBinaryOpOf((float)beta, *inputs[0]->NativeTensorView<float>(), *inputs[1]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
                 break;
             case 3:
-                out->WritableNativeTensorView<float>().DoTernaryOpOf((float)beta, inputs[0]->NativeTensorView<float>(), inputs[1]->NativeTensorView<float>(), inputs[2]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
+                out->WritableNativeTensorView<float>()->DoTernaryOpOf((float)beta, *inputs[0]->NativeTensorView<float>(), *inputs[1]->NativeTensorView<float>(), *inputs[2]->NativeTensorView<float>(), (float)alpha, op, reductionOp);
                 break;
             default:
                 LogicError("NDArrayView::NumericOperation: Invalid number of inputs: %d", (int)inputs.size());
@@ -426,13 +435,13 @@ namespace CNTK
             switch (inputs.size())
             {
             case 1:
-                out->WritableNativeTensorView<double>().DoUnaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
+                out->WritableNativeTensorView<double>()->DoUnaryOpOf((double)beta, *inputs[0]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
                 break;
             case 2:
-                out->WritableNativeTensorView<double>().DoBinaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), inputs[1]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
+                out->WritableNativeTensorView<double>()->DoBinaryOpOf((double)beta, *inputs[0]->NativeTensorView<double>(), *inputs[1]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
                 break;
             case 3:
-                out->WritableNativeTensorView<double>().DoTernaryOpOf((double)beta, inputs[0]->NativeTensorView<double>(), inputs[1]->NativeTensorView<double>(), inputs[2]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
+                out->WritableNativeTensorView<double>()->DoTernaryOpOf((double)beta, *inputs[0]->NativeTensorView<double>(), *inputs[1]->NativeTensorView<double>(), *inputs[2]->NativeTensorView<double>(), (double)alpha, op, reductionOp);
                 break;
             default:
                 LogicError("NDArrayView::NumericOperation: Invalid number of inputs: %d", (int)inputs.size());
@@ -477,10 +486,10 @@ namespace CNTK
         switch (out->m_dataType)
         {
         case DataType::Float:
-            out->WritableNativeTensorView<float>().DoMatrixProductOf((float)beta, transC, inputA->NativeTensorView<float>(), transA, inputB->NativeTensorView<float>(), transB, (float)alpha);
+            out->WritableNativeTensorView<float>()->DoMatrixProductOf((float)beta, transC, *inputA->NativeTensorView<float>(), transA, *inputB->NativeTensorView<float>(), transB, (float)alpha);
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
-            out->WritableNativeTensorView<double>().DoMatrixProductOf((double)beta, transC, inputA->NativeTensorView<double>(), transA, inputB->NativeTensorView<double>(), transB, (double)alpha);
+            out->WritableNativeTensorView<double>()->DoMatrixProductOf((double)beta, transC, *inputA->NativeTensorView<double>(), transA, *inputB->NativeTensorView<double>(), transB, (double)alpha);
             break;
         default:
             LogicError("NDArrayView::MatrixProduct: Unsupported DataType %s", DataTypeName(out->m_dataType));
@@ -512,7 +521,7 @@ namespace CNTK
         switch (out->m_dataType)
         {
         case DataType::Float:
-            out->WritableNativeTensorView<float>().DoGatherBatchOf([&](size_t i) -> const TensorView<float>&
+            out->WritableNativeTensorView<float>()->DoGatherBatchOf([&](size_t i) -> const TensorView<float>&
             {
                 const auto& input = *inputs[i];
                 if (input.m_dataType != input0.m_dataType)
@@ -523,7 +532,7 @@ namespace CNTK
             });
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
-            out->WritableNativeTensorView<double>().DoGatherBatchOf([&](size_t i) -> const TensorView<double>&
+            out->WritableNativeTensorView<double>()->DoGatherBatchOf([&](size_t i) -> const TensorView<double>&
             {
                 const auto& input = *inputs[i];
                 if (input.m_dataType != input0.m_dataType)
