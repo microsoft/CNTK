@@ -11,7 +11,7 @@ from __future__ import division, print_function
 import numpy as np
 import cntk as C
 
-from cntk.ops.tests.ops_test_utils import cntk_device, mem_used
+from cntk.ops.tests.ops_test_utils import cntk_device, mem_used, os_process
 from cntk.ops.functions import UserFunction
 from cntk import sigmoid
 
@@ -160,12 +160,13 @@ def mem_leak_check(nonlinearity, num_hidden_layers, device_id,
     MEM_INCREASE_FRACTION_TOLERANCE = 0.01
     # Set a maximum allowed memory increase. This is required because the
     # pytest process involves some memory fluctuations.
-    MEM_INCREASE_TOLERANCE = 1024*1024
+    MEM_INCREASE_TOLERANCE = 10*1024
 
     dev = cntk_device(device_id)
     i = 0
+    proc = os_process()
     while i < num_minibatches_to_train:
-        mem[i] = mem_used()
+        mem[i] = mem_used(proc)
 
         # Specify the input variables mapping in the model to actual minibatch
         # data for training.
@@ -214,11 +215,6 @@ def test_ext_user_sigmoid(device_id):
     assert np.allclose(exp_errors, act_errors)
 
 
-def test_mem_leak(device_id):
-    mem_leak_check(sigmoid, 4, device_id)
-    mem_leak_check(MySigmoid, 4, device_id)
-
-
 def measure_runtime(device_id):
     import timeit
     np.random.seed(0)
@@ -238,3 +234,8 @@ if __name__=='__main__':
     measure_runtime(-1)
     print("GPU")
     measure_runtime(0)
+
+    print("Run memory leakage tests")
+    mem_leak_check(sigmoid, 4, device_id)
+    mem_leak_check(MySigmoid, 4, device_id)
+

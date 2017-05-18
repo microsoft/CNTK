@@ -35,12 +35,17 @@ def cntk_device(device_id):
     else:
         return gpu(device_id)
 
+def os_process():
+    '''
+    Returns the process instance, which can be used e.g. to check the memory
+    usage.
+    '''
+    return psutil.Process(os.getpid())
 
-def mem_used():
+def mem_used(process):
     '''
     Return the non-swapped physical memory the Python process is using.
     '''
-    process = psutil.Process(os.getpid())
     return process.memory_info().rss
 
 
