@@ -5148,7 +5148,7 @@ namespace CNTK
         ///
         /// Specifies if the deserialization should be done on a single or multiple threads.
         ///
-        bool isMultithreaded { false };
+        bool isMultithreaded { true };
 
         ///
         /// Deserializers to be used in the composite reader.
