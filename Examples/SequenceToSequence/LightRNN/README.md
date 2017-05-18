@@ -58,7 +58,7 @@ The folder [LightRNN](LightRNN/) contains main structure of LightRNN.
         - `-vocabsize <int> (default: 10000)`, Vocabulary size.
         - `-batchsize <int> (default: 20)`, Minibatch size.
     - Other options
-        - `-epochs <table> (default: None)`, Number of epochs in every round
+        - `-epochs <list> (default: None)`, Number of epochs in every round
         - `-freq <int> (default: 100)`, Report status every this many iterations.
         - `-save <string> (default: model.dnn)`, Save the model to the file with this suffix.
 
@@ -77,10 +77,11 @@ __Train__
 This command will train a LightRNN model of 2 layers with 1000 hidden units and embedding dimension of 1000. The training procedure contains two rounds, with 12 epochs in the first round and 13 epochs in the second round. The word reallocation table will be optimized and updated after every round.
 
 ### [PTB/](PTB/)
-This folder contains the PTB dataset. We provide train data under [Data/](PTB/Data), a vocabulary file and a random table for word allocation under [Allocation/](PTB/Allocation).
+This folder contains an example of PTB dataset. You can use [download_data.py](PTB/Data/download_data.py) under [Data/](PTB/Data) to download the data. We provide a vocabulary file and a random table for word allocation under [Allocation/](PTB/Allocation).
 
 ### [Test/](Test/)
 Include a test program. Run this file as follow:
+
 `python test_train.py`
 
 ## Experiment

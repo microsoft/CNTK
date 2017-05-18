@@ -16,6 +16,7 @@
 #include <string>
 #include <ios>
 #include <ctime>
+#include <iomanip>
 
 #define loss first
 #define id second
@@ -153,7 +154,7 @@ extern "C" {
             sort(current_col.begin(), current_col.end());
             g_prob_table.push_back(InsertNode(current_row, current_col, i));
             if (i % freq == 0) {
-                std::cout << "Finish " << i << " / " << g_vocab_size << " Line\n";
+                std::cout << "\t\t\tFinish " << std::setw(8) << i << " / " << std::setw(8) << g_vocab_size << " Line\n";
             }
         }
         for (int i = 0; i < g_vocab_sqrt; i ++) {
