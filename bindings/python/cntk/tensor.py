@@ -6,6 +6,7 @@
 
 import warnings
 from scipy import sparse
+from cntk.default_options import *
 
 class TensorOpsMixin(object):
     '''
@@ -98,8 +99,10 @@ class TensorOpsMixin(object):
         r = self
         axis0 = 0
 
-        if (hasattr(self, 'dynamic_axes') and len(self.dynamic_axes) > 0):
-            axis0 = -len(self.dynamic_axes)
+        keras_mode_flag = True
+        if keras_mode_flag:
+            if (hasattr(self, 'dynamic_axes') and len(self.dynamic_axes) > 0):
+                axis0 = -get_default_override(None, axis_offset=default_override_or(len(self.dynamic_axes)))
 
         for axis, s in enumerate(arg):
             if s is Ellipsis: # ellipsis means index relative to end after this point
