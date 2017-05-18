@@ -13,7 +13,8 @@ from cntk.internal import map_if_possible, typemap, sanitize_var_map,\
                           sanitize_variables_or_functions,\
                           _value_as_sequence_or_array
 from cntk.internal.utils import get_python_function_arguments, \
-                                map_function_arguments, _py_dict_to_cntk_dict
+                                map_function_arguments, _py_dict_to_cntk_dict, \
+                                _to_cntk_dict_value
 from cntk.internal import _UDFDeserializeCallbackWrapper, _serialize
 from cntk.internal.sanitize import is_byte_buffer
 from ..variables import Record, Variable
@@ -500,6 +501,28 @@ class Function(cntk_py.Function):
         List of the attributes of the function
         '''
         return sanitize_Function_attributes(super(Function, self).attributes())
+
+    def set_attribute(self, name, value):
+        '''
+        Allows to change a function attribute.
+
+        Args:
+            name (string): one of 
+
+             * 'dropoutRate': modifies the dropout rate of a dropout function 
+               (can only be invoked on a function instance returned either from 
+               :func:`~cntk.ops.dropout` or :func:`find_by_name`).
+
+             * 'rngSeed': modifies the seed of a stateful function (can only be
+               invoked on  function instance returned from :func:`~cntk.ops.dropout`, 
+               :func:`~cntk.ops.random_sample`, 
+               :func:`~cntk.ops.random_sample_inclusion_frequency` or :func:`find_by_name`)
+
+            value (float in case of 'dropoutRate', int for 'rngSeed'): the new value
+             of the corresponding attribute.
+        '''
+        value = _to_cntk_dict_value(value)
+        return super(Function, self).set_attribute(name, value)
 
     @typemap
     def clone(self, method, substitutions=None):

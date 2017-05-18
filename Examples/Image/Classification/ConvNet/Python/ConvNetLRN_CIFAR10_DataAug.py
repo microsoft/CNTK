@@ -41,8 +41,8 @@ def create_reader(map_file, mean_file, is_training):
     ]
     # deserializer
     return C.io.MinibatchSource(C.io.ImageDeserializer(map_file, C.io.StreamDefs(
-        features = C.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-        labels   = C.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+        features=C.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
+        labels=C.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
         randomize=is_training)
 
 # Local Response Normalization layer. See Section 3.3 of the paper:

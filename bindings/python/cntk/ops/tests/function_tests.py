@@ -496,3 +496,37 @@ def test_outputs_passing():
     
     with pytest.raises(TypeError):
         b.eval({in1: [[1], [2]]}, outputs=[a.outputs])
+
+def test_set_dropout_rate_attribute():
+    from cntk import dropout, input; from math import pi;
+
+    dropout_node = dropout(input(1), dropout_rate=0.3)
+    key = 'dropoutRate'
+    
+    root = dropout_node.root_function
+    assert np.isclose(root.attributes[key], 0.3)
+    
+    root.set_attribute(key, 0.4)
+    assert np.isclose(root.attributes[key], 0.4)
+
+    dropout_node.set_attribute(key, 0.777)
+    assert np.isclose(root.attributes[key], 0.777)
+
+    dropout_node.set_attribute(key, pi)
+    assert np.isclose(root.attributes[key], pi)
+
+
+def test_set_rng_seed_attribute():
+    from cntk import random_sample, input;
+
+    random_sample_node = random_sample(input(1), 1, True, seed=123)
+    key = 'rngSeed'
+
+    root = random_sample_node.root_function
+    assert root.attributes[key] == 123
+    
+    root.set_attribute(key, 11530328594546889191)
+    assert root.attributes[key] == 11530328594546889191
+
+    random_sample_node.set_attribute(key, 2**31)
+    assert root.attributes[key] == 2**31
