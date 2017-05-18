@@ -145,8 +145,8 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
         # Fetch next test min batch.
         data = reader_test.next_minibatch(current_minibatch, input_map=input_map)
         # minibatch data to be trained with
-        metric_numer += trainer.test_minibatch(data) * current_minibatch
-        metric_denom += current_minibatch
+        metric_numer += trainer.test_minibatch(data) * data[label_var].num_samples
+        metric_denom += data[label_var].num_samples
         # Keep track of the number of samples processed so far.
         sample_count += data[label_var].num_samples
 
