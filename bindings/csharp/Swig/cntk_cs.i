@@ -461,6 +461,12 @@
         get { return _NeedsGradient(); }
     }
 
+    // Property CurrentValueTimeStamp
+    public int CurrentValueTimeStamp
+    {
+        get { return (int)_CurrentValueTimeStamp(); }
+    }
+
     // Value equality.
     public override bool Equals(System.Object obj)
     {

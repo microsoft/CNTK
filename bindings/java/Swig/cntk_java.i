@@ -44,10 +44,6 @@
         return ret;
     }
 
-    public void setExcludedDevices(DeviceDescriptorVector ddv) {
-        _SetExcludedDevices(ddv);
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

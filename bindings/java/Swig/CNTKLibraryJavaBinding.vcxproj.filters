@@ -13,7 +13,7 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Interface FIles">
+    <Filter Include="Interface Files">
       <UniqueIdentifier>{8132eaf4-2faa-4db3-8df9-e3811a5880b1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -35,26 +35,26 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\common\CNTKExceptionHandling.i">
-      <Filter>Interface FIles</Filter>
+      <Filter>Interface Files</Filter>
     </None>
     <None Include="..\..\common\CNTKValueExtend.i">
-      <Filter>Interface FIles</Filter>
+      <Filter>Interface Files</Filter>
     </None>
     <None Include="std_unordered_map.i">
-      <Filter>Interface FIles</Filter>
+      <Filter>Interface Files</Filter>
     </None>
     <None Include="generate-java-bindings.cmd" />
     <None Include="..\..\common\CNTKManagedCommon.i">
-      <Filter>Interface FIles</Filter>
+      <Filter>Interface Files</Filter>
     </None>
     <None Include="..\..\..\Tests\EndToEndTests\EvalClientTests\JavaEvalTest\src\Main.java" />
     <None Include="..\..\common\CNTKWarnFilters.i">
-      <Filter>Interface FIles</Filter>
+      <Filter>Interface Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="cntk_java.i">
-      <Filter>Interface FIles</Filter>
+      <Filter>Interface Files</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>
