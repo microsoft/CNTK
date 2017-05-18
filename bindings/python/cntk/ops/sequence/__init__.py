@@ -28,7 +28,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
         dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
-        sequence_axis (:class:`~cntk.Axis`): a dynamic axis (e.g., default_dynamic_axis())
+        sequence_axis (:class:`~cntk.axis.Axis`): a dynamic axis (e.g., default_dynamic_axis())
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -54,7 +54,7 @@ def input_variable(shape, dtype=default_override_or(np.float32), needs_gradient=
         dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
-        sequence_axis (:class:`~cntk.Axis`): a dynamic axis (e.g., default_dynamic_axis())
+        sequence_axis (:class:`~cntk.axis.Axis`): a dynamic axis (e.g., default_dynamic_axis())
         name (str, optional): the name of the Function instance in the network
 
     Returns:

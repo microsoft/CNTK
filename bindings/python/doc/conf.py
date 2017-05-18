@@ -68,6 +68,7 @@ linkcheck_anchors_ignore = [
   re_exact_match('22-block-momentum-sgd'),
   re_exact_match('converting-learning-rate-and-momentum-parameters-from-other-toolkits'),
   re_exact_match('for-python'),
+  re_exact_match('base64imagedeserializer-options'),
 ]
 
 source_prefix = 'https://github.com/Microsoft/CNTK/blob/'
