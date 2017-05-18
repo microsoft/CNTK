@@ -34,9 +34,6 @@
 
 // Java specific extention.
 %typemap(javacode) CNTK::DeviceDescriptor %{
-    public DeviceKind getType() {
-        return _Type();
-    }
 
     public java.util.List<DeviceDescriptor> getAllDevices() {
         DeviceDescriptorVector devices = _AllDevices();
@@ -67,7 +64,7 @@
 
     @Override
     public int hashCode() {
-        return _Type().hashCode();
+        return getType().hashCode();
     }
 %}
 
@@ -148,18 +145,6 @@
         return argumentList;
     }
 
-    public boolean isComposite() {
-        return _IsComposite();
-    }
-
-    public boolean isPrimitive() {
-        return _IsPrimitive();
-    }
-
-    public boolean isBlock() {
-        return _IsBlock();
-    }
-
     public static Function combine(java.util.ArrayList<Variable> outputVariable) {
         VariableVector varVect = new VariableVector();
         for (int i = 0; i < outputVariable.size(); ++i)
@@ -168,41 +153,9 @@
         }
         return CNTKLib.Combine(varVect);
     }
-
-    public Function clone(VariableVector x) {
-        return _Clone(x);
-    }
 %}
 
 %typemap(javacode) CNTK::Variable %{
-
-    public AxisVector getDynamicAxes() {
-        return _DynamicAxes();
-    }
-
-    public boolean isSparse() {
-        return _IsSparse();
-    }
-
-    public boolean isInput() {
-        return _IsInput();
-    }
-
-    public boolean isOutput() {
-        return _IsOutput();
-    }
-
-    public boolean isParameter() {
-        return _IsParameter();
-    }
-
-    public boolean isConstant() {
-        return _IsConstant();
-    }
-
-    public boolean isPlaceholder() {
-        return _IsPlaceholder();
-    }
 
     @Override
     public boolean equals(Object o) {
@@ -251,37 +204,6 @@
     @Override
     public int hashCode() {
         return _Dimensions().hashCode();
-    }
-%}
-
-%typemap(javacode) CNTK::NDMask %{
-
-    public void invalidateSection(SizeTVector sectionOffset, NDShape sectionShape) {
-        _InvalidateSection(sectionOffset, sectionShape);
-    }
-
-    public void markSequenceBegin(SizeTVector offset) {
-        _MarkSequenceBegin(offset);
-    }
-%}
-
-%typemap(javacode) CNTK::Value %{
-    public boolean isReadOnly() {
-        return _IsReadOnly();
-    }
-%}
-
-%typemap(javacode) CNTK::NDArrayView %{
-    public boolean isSparse() {
-        return _IsSparse();
-    }
-
-    public boolean isReadOnly() {
-        return _IsReadOnly();
-    }
-
-    public NDArrayView getSliceView(SizeTVector startOffset, SizeTVector extent) {
-        return _SliceView(startOffset, extent);
     }
 %}
 
