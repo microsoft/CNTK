@@ -27,17 +27,25 @@ Bundler::Bundler(
     bool cleanse)
     : DataDeserializerBase(true),
       m_deserializers(deserializers),
-      m_primaryDeserializer(primaryDeserializer)
+      m_primaryDeserializer(primaryDeserializer),
+      m_mbDefiningDeserializer(std::numeric_limits<size_t>::max())
 {
     m_verbosity = readerConfig(L"verbosity", 0);
 
     // Combines streams of underlying deserializers.
-    for (auto d : deserializers)
+    for (size_t j = 0; j < deserializers.size(); ++j)
     {
+        auto d = deserializers[j];
         for (auto i : d->GetStreamDescriptions())
         {
             StreamDescriptionPtr stream = std::make_shared<StreamDescription>(*i);
             stream->m_id = m_streams.size();
+            if (stream->m_definesMbSize)
+            {
+                if (m_mbDefiningDeserializer != std::numeric_limits<size_t>::max())
+                    RuntimeError("Only a single deserializer is allowed to define minibatch size, at least two found.");
+                m_mbDefiningDeserializer = j;
+            }
             m_streams.push_back(stream);
         }
     }
@@ -71,30 +79,14 @@ void Bundler::CreateChunkDescriptions()
     m_chunks.reserve(chunks.size());
 
     if (m_verbosity)
-        fprintf(stderr, "Bundler::CreateChunkDescriptions(): creating descriptions for %" PRIu64 " chunks\n", chunks.size());
-
-    // If there is not cleaning required simply build chunks based on the chunk descriptions of the primary deserializer.
-    if (!m_cleanse)
     {
-        for (const auto& c : chunks)
-        {
-            auto cd = std::make_shared<BundlerChunkDescription>();
-            cd->m_numberOfSamples = c->m_numberOfSamples;
-            cd->m_numberOfSequences = c->m_numberOfSequences;
-            cd->m_id = (ChunkIdType) m_chunks.size();
-            cd->m_original = c;
-            m_chunks.push_back(cd);
-        }
-
-        return;
-    }
-
-    if (m_verbosity)
+        fprintf(stderr, "Bundler::CreateChunkDescriptions(): creating descriptions for %" PRIu64 " chunks\n", chunks.size());
         fprintf(stderr, "Bundler::CreateChunkDescriptions(): starting to clean chunks\n");
+    }
 
     m_takePrimarySequenceLength = true;
 
-    // Otherwise build bundling chunks using underlying deserializers.
+    // Build bundling chunks using underlying deserializers.
     std::vector<SequenceDescription> sequenceDescriptions;
     sequenceDescriptions.reserve(chunks.front()->m_numberOfSequences);
     SequenceDescription s;
@@ -112,16 +104,29 @@ void Bundler::CreateChunkDescriptions()
             auto sequence = sequenceDescriptions[sequenceIndex];
             bool isValid = true;
             size_t sequenceSamples = sequence.m_numberOfSamples;
-            for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
-            {
-                isValid = m_deserializers[deserializerIndex]->GetSequenceDescription(sequenceDescriptions[sequenceIndex], s);
-                if (!isValid)
-                {
-                    invalid.insert(sequenceIndex);
-                    break;
-                }
 
-                sequenceSamples = std::max<size_t>(sequenceSamples, s.m_numberOfSamples);
+            if (m_mbDefiningDeserializer != std::numeric_limits<size_t>::max())
+            {
+                // Pick up the sequence from the main deserializer.
+                if (m_deserializers[m_mbDefiningDeserializer]->GetSequenceDescription(sequenceDescriptions[sequenceIndex], s))
+                    sequenceSamples = s.m_numberOfSamples;
+                else
+                    invalid.insert(sequenceIndex);
+            }
+            else
+            {
+                // Need to check the sequence length for all deserializers.
+                for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
+                {
+                    isValid = m_deserializers[deserializerIndex]->GetSequenceDescription(sequenceDescriptions[sequenceIndex], s);
+                    if (!isValid)
+                    {
+                        invalid.insert(sequenceIndex);
+                        break;
+                    }
+
+                    sequenceSamples = std::max<size_t>(sequenceSamples, s.m_numberOfSamples);
+                }
             }
 
             if (isValid)
@@ -186,24 +191,30 @@ void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDesc
         }
     }
     else // need to get the max sequence length from other deserializers.
-         // TODO: This will change when the sequence length will be exposed per stream.
     {
         result.reserve(sequences.size());
         SequenceDescription s;
         for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
         {
             if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
-            {
                 continue;
-            }
 
             auto sequence = sequences[sequenceIndex];
             uint32_t sequenceSamples = sequence.m_numberOfSamples;
-            for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
+            if (m_mbDefiningDeserializer != std::numeric_limits<size_t>::max())
             {
-                m_deserializers[deserializerIndex]->GetSequenceDescription(sequence, s);
-                sequenceSamples = std::max(sequenceSamples, s.m_numberOfSamples);
+                m_deserializers[m_mbDefiningDeserializer]->GetSequenceDescription(sequence, s);
+                sequenceSamples = s.m_numberOfSamples;
             }
+            else
+            {
+                for (size_t deserializerIndex = 1; deserializerIndex < m_deserializers.size(); ++deserializerIndex)
+                {
+                    m_deserializers[deserializerIndex]->GetSequenceDescription(sequence, s);
+                    sequenceSamples = std::max(sequenceSamples, s.m_numberOfSamples);
+                }
+            }
+
             sequence.m_numberOfSamples = sequenceSamples;
             sequence.m_indexInChunk = sequenceIndex;
             result.push_back(sequence);

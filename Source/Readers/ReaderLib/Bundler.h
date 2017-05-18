@@ -65,6 +65,9 @@ private:
 
     // General configuration
     int m_verbosity;
+
+    // Optional index of the deserializer whose stream defines the minibatch size.
+    size_t m_mbDefiningDeserializer;
 };
 
 }}}

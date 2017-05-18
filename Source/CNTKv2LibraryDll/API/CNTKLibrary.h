@@ -5163,20 +5163,21 @@ namespace CNTK
 
     struct StreamConfiguration
     {
-        StreamConfiguration(const std::wstring& streamName, size_t dim, bool isSparse = false, const std::wstring& streamAlias = L"")
-            : m_streamName(streamName), m_dim(dim), m_isSparse(isSparse), m_streamAlias(streamAlias)
+        StreamConfiguration(const std::wstring& streamName, size_t dim, bool isSparse = false, const std::wstring& streamAlias = L"", bool definesMbSize = false)
+            : m_streamName(streamName), m_dim(dim), m_isSparse(isSparse), m_streamAlias(streamAlias), m_definesMbSize(definesMbSize)
         {}
 
         std::wstring m_streamName;
         size_t m_dim;
         bool m_isSparse;
         std::wstring m_streamAlias;
+        bool m_definesMbSize;
     };
 
     struct HTKFeatureConfiguration
     {
-        HTKFeatureConfiguration(const std::wstring& streamName, const std::wstring& scp, size_t dim, size_t left, size_t right, bool broadcast)
-            : m_streamName(streamName), m_dim(dim), m_scp(scp), m_left(left), m_right(right), m_broadcast(broadcast)
+        HTKFeatureConfiguration(const std::wstring& streamName, const std::wstring& scp, size_t dim, size_t left, size_t right, bool broadcast, bool definesMbSize = false)
+            : m_streamName(streamName), m_dim(dim), m_scp(scp), m_left(left), m_right(right), m_broadcast(broadcast), m_definesMbSize(definesMbSize)
         {}
 
         std::wstring m_streamName;
@@ -5185,6 +5186,7 @@ namespace CNTK
         size_t m_left;
         size_t m_right;
         bool m_broadcast;
+        bool m_definesMbSize;
     };
 
     typedef Dictionary ImageTransform;
