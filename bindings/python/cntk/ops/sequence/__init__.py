@@ -421,10 +421,7 @@ def where(condition, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0, dtype=np.float32), (1,4,3,2))
         >>> z.eval({x:x0})
-        [array([[ 0.],
-                [ 0.],
-                [ 1.],
-                [ 1.]], dtype=float32)]
+        [array([ 0.,  0.,  1.,  1.], dtype=float32)]
         >>> y = C.sequence.where(z)
         >>> y.eval({x:x0})
         [array([ 2.,  3.], dtype=float32)]

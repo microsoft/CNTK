@@ -106,7 +106,7 @@ def ForwardDeclaration(name='forward_declaration'):
                  [ 2.,  3.],
                  [ 4.,  5.]]], dtype=float32)
      >>> length(x0)
-         array([[ 3.]], dtype=float32)
+         array([ 3.], dtype=float32)
 
     Returns:
         a placeholder variable with a method ``resolve_to()`` that resolves it to another variable

@@ -40,6 +40,10 @@ def test_sanitize_input(data, dtype):
     inp = sanitize_input(data, dtype)
     assert np.allclose(inp.value, data)
     assert inp.dtype == dtype
+    if not isinstance(data, np.ndarray):
+        assert inp.shape == np.asarray(data).shape
+    else:
+        assert inp.shape == data.shape
 
 def test_axes():
     axes = [C.Axis.default_batch_axis(), C.Axis.default_dynamic_axis()]
