@@ -100,6 +100,7 @@ namespace CNTK
         {PrimitiveOpType::UnpackSequence, L"UnpackSequenceOp"},
         {PrimitiveOpType::Assign, L"Assign" },
         {PrimitiveOpType::Gather, L"Gather"},
+        {PrimitiveOpType::StableSigmoid, L"StableSigmoid"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -449,7 +450,7 @@ namespace CNTK
         static bool UpdateOperandShapes(std::vector<std::pair<Variable, NDShape>>& newOperandShapes);
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
-        static NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool broadcastAllowed, bool inferInputDimensions)
+        static NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool inferInputDimensions)
         {
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
@@ -481,6 +482,8 @@ namespace CNTK
                             leftOperand.AsString().c_str(),
                             leftOperandShape.AsString().c_str());
 
+                    // Broadcast to a free-dimension, if the right operand axis's dimensionality is 1; otherwise the output axis dimensionality
+                    // is the known right operands axis's dimensionality 
                     outputDims[i] = (rightOperandShape[i] == 1) ? NDShape::FreeDimension : rightOperandShape[i];
                 }
                 else if (rightOperandShape[i] == NDShape::FreeDimension)
@@ -493,6 +496,8 @@ namespace CNTK
                             rightOperand.AsString().c_str(),
                             rightOperandShape.AsString().c_str());
 
+                    // Broadcast to a free-dimension, if the left operand axis's dimensionality is 1; otherwise the output axis dimensionality
+                    // is the known left operands axis's dimensionality 
                     outputDims[i] = (leftOperandShape[i] == 1) ? NDShape::FreeDimension : leftOperandShape[i];
                 }
                 else if ((leftOperandShape[i] == NDShape::InferredDimension) || (leftOperandShape[i] == 1))
@@ -521,9 +526,6 @@ namespace CNTK
                 }
             }
                         
-            UNUSED(broadcastAllowed);
-            // BUGBUG: if (broadcastAllowed) is missing here?
-
             // Broadcast in remaining axes
             for (size_t i = shapeWithSmallerNumAxes.Rank(); i < numOutputAxes; ++i)
                 outputDims[i] = shapeWithLargerNumAxes[i];
@@ -538,7 +540,7 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
-        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed, bool inferInputDimensions);
+        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool inferInputDimensions);
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
         static NDShape TimesOpOutputShape(Variable& leftOperand, Variable& rightOperand, size_t outputRank, int inferInputRankToMap, bool inferInputDimensions)
@@ -740,9 +742,12 @@ namespace CNTK
             return MakeSharedObject<PrimitiveFunction>(OpType(), clonedInputs, Dictionary(Attributes()), Name());
         }
 
+        void SetDropoutRate(double dropoutRate);
+
+        void SetRandomSeed(size_t seed);
+
     private:
         PrimitiveOpType m_op;
-
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
         // version 1: initial version.
@@ -756,7 +761,8 @@ namespace CNTK
         // Version 11: Add ToSequence, ToSequenceLike and UnpackSequence operators.
         // Version 12: Add Assign node.
         // Version 13: Add Gather op.
-        static const size_t s_serializationVersion = 13;
+        // Version 14: Add StableSigmoid
+        static const size_t s_serializationVersion = 14;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

@@ -1804,7 +1804,7 @@ namespace CNTK
         CNTK_API size_t CurrentValueTimeStamp() const;
 
     protected:
-#ifdef SWIG
+#ifdef SWIGPYTHON
     public:
 #endif
         Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name, const std::wstring& uid)
@@ -1816,7 +1816,7 @@ namespace CNTK
         CNTK_API void SetValue(const NDArrayViewPtr& value);
 
     private:
-#ifdef SWIG
+#ifdef SWIGPYTHON
     public:
 #endif
         Variable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes, const std::wstring& uid)
@@ -2009,6 +2009,7 @@ private:
     CNTK_API ParameterInitializer HeNormalInitializer(double scale = DefaultParamInitScale, int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
     CNTK_API ParameterInitializer BilinearInitializer(size_t kernelWidth, size_t kernelHeight);
     CNTK_API ParameterInitializer RandomInitializerWithRank(const ParameterInitializer& initializer, int outputRank, int filterRank);
+    CNTK_API ParameterInitializer TruncatedNormalInitializer(double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
 
     ///
     /// Denotes Parameter inputs of a Function.
@@ -3294,14 +3295,23 @@ namespace CNTK
                                          const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
-        /// Prints the entire graph underlying this Function to stderr
-        ///
-        CNTK_API void PrintGraph() const;
-
-        ///
         /// Returns a string representation of this Function
         ///
         CNTK_API std::wstring AsString(bool doNotInferOutputs = true) const;
+
+        /// 
+        /// Allows to change a function attribute. Currently supported:
+        ///
+        /// * 'dropoutRate' with the corresponding float or double value. Modifies the dropout rate 
+        /// of a dropout function (can only be invoked on a function instance returned from
+        /// the Dropout() method or a primitive dropout function returned from FindByName()).
+        ///
+        /// * 'rngSeed' with the corresponding int or size_t value. Modifies the seed of a stateful function, 
+        /// i.e., Dropout, RandomSample or RandomSampleInclusionFrequency (can only be invoked on a
+        /// function instance returned from the Dropout(), RandomSample(), RandomSampleInclusionFrequency() 
+        /// method or a corresponding primitive function returned from FindByName()).
+        ///
+        CNTK_API void SetAttribute(const std::wstring& name, const DictionaryValue& value);
 
         ///
         /// Maximum number of outputs that is currently supported.
@@ -3314,12 +3324,12 @@ namespace CNTK
         /// Registers a native user-defined Function that can be subsequently instantiated using the Function::NativeUserFunction method.
         ///
         // TODO: Do we need an Unregister to unload the module?
-        CNTK_API static void RegisterNativeUserFunction(const std::wstring& uniqueOpName, const std::wstring& moduleName, const std::wstring& factoryMethodName);
+        CNTK_API static void RegisterNativeUserFunction(const std::wstring& uniqueOpId, const std::wstring& moduleName, const std::wstring& factoryMethodName);
 
         ///
         /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
         ///
-        CNTK_API static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName = L"");
+        CNTK_API static FunctionPtr NativeUserFunction(const std::wstring& opId, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName = L"");
 
         ///
         /// Register a callback function to be invoked when deserializing a user-defined Function with the corresponding op name.
@@ -3451,8 +3461,9 @@ namespace CNTK
         std::wstring m_name;
         std::wstring m_uid;
         Dictionary m_attributes;
+        std::unordered_set<std::wstring> m_dirtyAttributes;
 
-#ifdef SWIG
+#ifdef SWIGPYTHON
     public:
         void SetNative(bool native) { m_native = native; }
 #endif
@@ -4265,7 +4276,7 @@ namespace CNTK
             : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, U, epochSize)
         { }
 
-#ifdef SWIG // for Python interop (adds indexer)
+#ifdef SWIGPYTHON // for Python interop (adds indexer)
         const T __getitem__(size_t count) const
         {
             return TrainingParameterSchedule<T>::operator[](count);
@@ -4324,7 +4335,7 @@ namespace CNTK
             ConvertToPerSampleValues();
         }
 
-#ifdef SWIG // for Python interop (adds indexer)
+#ifdef SWIGPYTHON // for Python interop (adds indexer)
         const double __getitem__(size_t count) const
         {
             return operator[](count);
@@ -5209,7 +5220,12 @@ namespace CNTK
     CNTK_API  Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms = {});
 
     /// 
-    /// Create an CTFDeserializer with the specified options
+    /// Create a Base64ImageDeserializer with the specified options
+    /// 
+    CNTK_API  Deserializer Base64ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms = {});
+
+    /// 
+    /// Create a CTFDeserializer with the specified options
     /// 
     CNTK_API  Deserializer CTFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams);
 

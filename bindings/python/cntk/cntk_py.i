@@ -43,50 +43,16 @@
 %rename(_next_minibatch) CNTK::SwigMinibatchSource::_GetNextMinibatch;
 %rename(universal_learner) CNTK::Internal::UniversalLearner;
 %rename(_register_udf_deserialize_callback) CNTK::Internal::RegisterUDFDeserializeCallbackWrapper;
-
+%rename(base64_image_deserializer) CNTK::Base64ImageDeserializer;
 %rename(_none) CNTK::DictionaryValue::Type::None;
 
-// Disabling warning about constructor shadowing, learner tests check this.
-%warnfilter(401, 509) CNTK::TrainingParameterPerUnitSchedule;
-%warnfilter(509) CNTK::MomentumAsTimeConstantSchedule;
-%warnfilter(509) CNTK::NDArrayView::NDArrayView;
-
-%warnfilter(315) CNTK::TrainingParameterPerSampleSchedule;
-
-// Disabling warning about movable constructor shadowing, io tests check this.
-%warnfilter(509) CNTK::DictionaryValue::DictionaryValue;
-%warnfilter(509) CNTK::Dictionary::Dictionary;
-
-// Disabling warning about Trainer shadowing, trainer tests check this.
-%warnfilter(509) TrainerImpl;
-
-// Returning an immutable string by reference.
-%warnfilter(473) CNTK::Function::OpName;
+%include "CNTKWarnFilters.i"
 
 // Operator overloading is not supported by Python.
 %rename(eq) operator==;
 %ignore CNTK::Variable::operator FunctionPtr;
 %ignore CNTK::AddConfigString;
 %ignore CNTK::GetCorrespondingOutputVariableFromClone;
-
-// Specialization of non-template function - hash,
-// TODO: it is not clear how to limit this only to hash, but we do not use partial specialization in other places.
-#pragma SWIG nowarn=-317
-
-// Disabling enable_shared_from_this - we never use this class to actually access the object.
-%warnfilter(401) CNTK::NDArrayView;
-%warnfilter(401) CNTK::NDMask;
-%warnfilter(401) CNTK::Function;
-%warnfilter(401) CNTK::Internal::UDFDeserializeCallbackWrapper;
-%warnfilter(401) CNTK::Trainer;
-%warnfilter(401) CNTK::Evaluator;
-%warnfilter(401) CNTK::Value;
-%warnfilter(401) CNTK::BackPropState;
-%warnfilter(401) CNTK::MinibatchSource;
-
-%warnfilter(401, 509) CNTK::MomentumAsTimeConstantSchedule;
-
-%warnfilter(340) CNTK::NoOp;
 
 // The following operators are not supported in Python.
 %ignore operator<<;
@@ -680,7 +646,7 @@ public:
 //
 // Exception handling
 //
-%include "CNTK_ExceptionHandling.i"
+%include "CNTKExceptionHandling.i"
 
 %feature("director:except") {
     if ($error != NULL) {
@@ -1826,12 +1792,16 @@ namespace CNTK {
     class UserBackPropState;
     typedef std::shared_ptr<UserBackPropState> UserBackPropStatePtr;
 
-    class UserBackPropState : public BackPropState {
+    class UserBackPropState : public BackPropState
+    {
+
+        template <typename T, typename ...CtorArgTypes>
+        friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
+
     public:
-        UserBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
-            : BackPropState(function, computeDevice), m_userData(userData)
+        static BackPropStatePtr Create(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
         {
-            Py_INCREF(m_userData);
+            return MakeSharedObject<UserBackPropState>(function, computeDevice, userData);
         }
 
         const PyObject* Data() const
@@ -1855,22 +1825,17 @@ namespace CNTK {
         }
 
     private:
+        UserBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
+            : BackPropState(function, computeDevice), m_userData(userData)
+        {
+            Py_INCREF(m_userData);
+        }
+
         const PyObject* m_userData;
     };
 }
 
 %}
-
-
-//
-// Release the GIL before calling into C++
-//
-%exception {
-  Py_BEGIN_ALLOW_THREADS;
-  $action
-  Py_END_ALLOW_THREADS;
-}
-
 
 //
 // Setting up hash calculation so that __hash__ on Swig objects

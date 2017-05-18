@@ -237,7 +237,6 @@ template<class ElemType>
 /*static*/ const std::wstring ComputationNodeBase::DefaultDynamicAxisName = L"*";
 /*static*/ const std::wstring ComputationNodeBase::DefaultNoSequenceAxisName = L"__noSequenceAxis";
 
-
 // -----------------------------------------------------------------------
 // subroutines for Validate() implementations
 // -----------------------------------------------------------------------

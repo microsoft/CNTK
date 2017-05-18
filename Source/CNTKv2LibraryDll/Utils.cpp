@@ -581,7 +581,7 @@ namespace CNTK
 
         if (valueShape.Rank() > (varShape.Rank() + numDynamicAxes))
         {
-            for (size_t i = 0; i < (maxAddionalValueAxes - numDynamicAxes); ++i)
+            for (size_t i = 0; i < (valueShape.Rank() - (varShape.Rank() + numDynamicAxes)); ++i)
             {
                 if (valueShape[varShape.Rank() + i] != 1)
                     InvalidArgument("Value rank (%d) should be larger than the Variable rank (%d) at most by number of dynamic axes (%d); Variable = '%S', Value shape = '%S'.",
@@ -638,16 +638,18 @@ namespace CNTK
             LogicError("The specified ElementType %s does not match the Value object's DataType %s for Variable '%S'",
                         typeid(ElementType).name(), DataTypeName(value->GetDataType()), var.AsString().c_str());
 
+        auto CreateLayoutWithUnitBatchSizeAndSequenceLength = []() {
+            auto layout = std::make_shared<MBLayout>();
+            layout->InitAsFrameMode(1);
+            return layout;
+        };
+
         auto packedValue = dynamic_cast<PackedValue*>(value.get());
         if (packedValue && packedValue->IsPacked())
         {
             auto packedMatrixAndLayout = packedValue->PackedData<ElementType>();
             if (!var.DynamicAxes().empty() && (packedMatrixAndLayout.second == nullptr))
-            {
-                auto layout = std::make_shared<MBLayout>();
-                layout->InitAsFrameMode(1);
-                packedMatrixAndLayout.second = layout;
-            }
+                packedMatrixAndLayout.second = CreateLayoutWithUnitBatchSizeAndSequenceLength();
 
             return packedMatrixAndLayout;
         }

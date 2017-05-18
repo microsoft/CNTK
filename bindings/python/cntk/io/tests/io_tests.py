@@ -6,10 +6,12 @@
 # ==============================================================================
 
 import numpy as np
+import cntk as C
 import pytest
 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDefs, StreamDef, \
-    ImageDeserializer, FULL_DATA_SWEEP, INFINITELY_REPEAT, \
+    ImageDeserializer, Base64ImageDeserializer, \
+    FULL_DATA_SWEEP, INFINITELY_REPEAT, \
     DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS, \
     sequence_to_cntk_text_format, UserMinibatchSource, StreamInformation, \
     MinibatchData
@@ -571,6 +573,66 @@ filename2	0
     assert isinstance(mb_source, MinibatchSource)
 
 
+def test_base64_image_deserializer(tmpdir):
+    import io, base64, uuid; from PIL import Image
+    images, b64_images = [], []
+
+    np.random.seed(1)
+    for i in range(10):
+        data = np.random.randint(0, 2**8, (5,7,3))
+        image = Image.fromarray(data.astype('uint8'), "RGB")
+        buf = io.BytesIO()
+        image.save(buf, format='PNG')
+        assert image.width == 7 and image.height == 5
+        b64_images.append(base64.b64encode(buf.getvalue()))
+        images.append(np.array(image))
+
+    image_data = str(tmpdir / 'mbdata1.txt')
+    seq_ids = []
+    uid = uuid.uuid1().int >> 64
+    with open(image_data, 'wb') as f:
+        for i,data in enumerate(b64_images):
+            seq_id = uid ^ i
+            seq_id = str(seq_id).encode('ascii')
+            seq_ids.append(seq_id)
+            line = seq_id + b'\t'
+            label = str(i).encode('ascii')
+            line += label + b'\t' + data + b'\n'
+            f.write(line)
+
+    ctf_data = str(tmpdir / 'mbdata2.txt')
+    with open(ctf_data, 'wb') as f:
+        for i, sid in enumerate(seq_ids):
+            line = sid + b'\t' + b'|index '+str(i).encode('ascii') + b'\n'
+            f.write(line)
+
+    transforms = [xforms.scale(width=7, height=5, channels=3)]
+    b64_deserializer = Base64ImageDeserializer(image_data, 
+        StreamDefs(
+            images=StreamDef(field='image', transforms=transforms),
+            labels=StreamDef(field='label', shape=10)))
+    
+    ctf_deserializer = CTFDeserializer(ctf_data, 
+        StreamDefs(index=StreamDef(field='index', shape=1)))
+
+    mb_source = MinibatchSource([ctf_deserializer, b64_deserializer])
+    assert isinstance(mb_source, MinibatchSource)
+
+    for j in range(100):
+        mb = mb_source.next_minibatch(10)
+    
+        index_stream = mb_source.streams['index']
+        index = mb[index_stream].asarray().flatten()
+        image_stream = mb_source.streams['images']
+
+        results = mb[image_stream].asarray()
+
+        for i in range(10):
+            # original images are RBG, openCV produces BGR images,
+            # reverse the last dimension of the original images
+            bgrImage = images[int(index[i])][:,:,::-1]
+            assert (bgrImage == results[i][0]).all()
+
 class MyDataSource(UserMinibatchSource):
     def __init__(self, f_dim, l_dim):
         self.f_dim, self.l_dim = f_dim, l_dim
@@ -742,10 +804,10 @@ def test_usermbsource_training(tmpdir):
 
     from cntk import sequence, parameter, plus, cross_entropy_with_softmax, \
             classification_error, learning_rate_schedule, sgd, Trainer, \
-            training_session, times, UnitType, input
+            training_session, times, UnitType
 
-    feature = sequence.input(shape=(input_dim,))
-    label = input(shape=(num_output_classes,))
+    feature = sequence.input_variable(shape=(input_dim,))
+    label = C.input_variable(shape=(num_output_classes,))
     p = parameter(shape=(input_dim,num_output_classes), init=10)
     z = times(sequence.reduce_sum(feature), p, name='z')
     ce = cross_entropy_with_softmax(z, label)

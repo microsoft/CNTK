@@ -1023,20 +1023,47 @@ template <class ElemType>
 void CPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
 {
     if (sigma <= 0)
-        InvalidArgument("SetUniformRandomValue: sigma must be a positive value.");
+        InvalidArgument("SetGaussianRandomValue: sigma must be a positive value.");
 
     if (IsEmpty())
-        LogicError("SetUniformRandomValue: Matrix is empty.");
+        LogicError("SetGaussianRandomValue: Matrix is empty.");
 
     auto& us = *this;
 
     std::mt19937_64 generator(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
     boost::random::normal_distribution<ElemType> r(mean, sigma);
 
-    // #pragma omp parallel for   // is it thread safe?
+    // #pragma omp parallel for is not thread safe. Also the results would not be deterministic
     foreach_coord (i, j, us)
     {
         us(i, j) = r(generator);
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+{
+    if (sigma <= 0)
+        InvalidArgument("SetTruncatedNormalRandomValue: sigma must be a positive value.");
+
+    if (IsEmpty())
+        LogicError("SetTruncatedNormalRandomValue: Matrix is empty.");
+
+    auto& us = *this;
+
+    std::mt19937_64 generator(seed == USE_TIME_BASED_SEED ? (unsigned long)time(NULL) : seed);
+    boost::random::normal_distribution<ElemType> r(mean, sigma);
+
+    const ElemType high = mean + 2 * sigma;
+    const ElemType low = mean - 2 * sigma;
+    // #pragma omp parallel for is not thread safe. Also the results would not be deterministic
+    foreach_coord(i, j, us)
+    {
+        ElemType tmp = 0;
+        do
+            tmp = r(generator);
+        while (tmp < low || tmp > high ); // Rejection sampling is fine here because the acceptance probability is about 0.9545 
+        us(i, j) = tmp;
     }
 }
 

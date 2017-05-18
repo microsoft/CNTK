@@ -3,6 +3,7 @@ from enum import Enum, unique
 import warnings
 import collections
 
+import cntk
 from cntk import cntk_py, Value
 from cntk.device import DeviceDescriptor, cpu
 from cntk.internal import map_if_possible, typemap, sanitize_var_map,\
@@ -12,7 +13,8 @@ from cntk.internal import map_if_possible, typemap, sanitize_var_map,\
                           sanitize_variables_or_functions,\
                           _value_as_sequence_or_array
 from cntk.internal.utils import get_python_function_arguments, \
-                                map_function_arguments, _py_dict_to_cntk_dict
+                                map_function_arguments, _py_dict_to_cntk_dict, \
+                                _to_cntk_dict_value
 from cntk.internal import _UDFDeserializeCallbackWrapper, _serialize
 from cntk.internal.sanitize import is_byte_buffer
 from ..variables import Record, Variable
@@ -125,13 +127,13 @@ class Function(cntk_py.Function):
         # An input is created if the parameter is annotated with a Tensor(...) type.
         # In this case, CNTK will immediately trigger type inference.
         # Unannotated parameters will yield placeholder_variables instead.
-        from .. import placeholder, input
+        from .. import placeholder
         def make_arg_variable(name, annotations):
             from ..variables import Variable
             var_type = annotations.get(name, None)
             var_type = Variable._Type._sanitize(var_type)
             if isinstance(var_type, Variable._Type):
-                return input(name=name, **var_type)
+                return cntk.input_variable(name=name, **var_type)
             else:
                 return placeholder(name=name)
 
@@ -304,13 +306,13 @@ class Function(cntk_py.Function):
         '''
         arg_map = self.argument_map(*arg_types, **kwarg_types) # map type specs to Function parameters
         def to_input(arg_type, name):
-            from cntk import input
+            #from cntk import input
             from ..variables import Variable
             if isinstance(arg_type, (int, tuple)): # just passed a shape
-                return input(shape=_as_tuple(arg_type), name=name)
+                return cntk.input_variable(shape=_as_tuple(arg_type), name=name)
             arg_type = Variable._Type._sanitize(arg_type)
             if isinstance(arg_type, Variable._Type): # full type given as Tensor[...] etc.
-                return input(name=name, **arg_type)
+                return cntk.input_variable(name=name, **arg_type)
             raise TypeError("update_signature() expects arguments of type int, tuple of int, or Type.Variable")
         # map the given types:
         #  - create an Input with the given Type or shape
@@ -334,8 +336,8 @@ class Function(cntk_py.Function):
             if isinstance(arg, cntk_py.Variable):
                 return arg
             else:
-                from cntk import input
-                return input(arg)
+                #from cntk import input
+                return cntk.input_variable(arg)
 
         args = [to_input(arg) for arg in arg_types]
         arg_map = dict(zip(placeholders, args))
@@ -500,6 +502,28 @@ class Function(cntk_py.Function):
         '''
         return sanitize_Function_attributes(super(Function, self).attributes())
 
+    def set_attribute(self, name, value):
+        '''
+        Allows to change a function attribute.
+
+        Args:
+            name (string): one of 
+
+             * 'dropoutRate': modifies the dropout rate of a dropout function 
+               (can only be invoked on a function instance returned either from 
+               :func:`~cntk.ops.dropout` or :func:`find_by_name`).
+
+             * 'rngSeed': modifies the seed of a stateful function (can only be
+               invoked on  function instance returned from :func:`~cntk.ops.dropout`, 
+               :func:`~cntk.ops.random_sample`, 
+               :func:`~cntk.ops.random_sample_inclusion_frequency` or :func:`find_by_name`)
+
+            value (float in case of 'dropoutRate', int for 'rngSeed'): the new value
+             of the corresponding attribute.
+        '''
+        value = _to_cntk_dict_value(value)
+        return super(Function, self).set_attribute(name, value)
+
     @typemap
     def clone(self, method, substitutions=None):
         '''
@@ -611,7 +635,7 @@ class Function(cntk_py.Function):
 
         Example:
             >>> # Example of passing dense data
-            >>> v = C.input(shape=(3,))
+            >>> v = C.input_variable(shape=(3,))
             >>> f = C.reciprocal(v)
             >>> _, fv = f.forward({v:[[1, 2, 4]]})
             >>> list(fv.values())[0]
@@ -620,7 +644,7 @@ class Function(cntk_py.Function):
         Example:
             >>> # Passing sparse values as one-hot with a vocabulary size of 5
             >>> vocab_size = 5
-            >>> v = C.sequence.input(shape=(vocab_size,), is_sparse=True)
+            >>> v = C.sequence.input_variable(shape=(vocab_size,), is_sparse=True)
             >>> f = C.times(v, np.eye(vocab_size))
             >>> # Passing a batch of two sequences:
             >>> # 1st sequence: word 1
@@ -636,7 +660,7 @@ class Function(cntk_py.Function):
             >>> # Doing the same, but with a CSR matrix from scipy.sparse
             >>> vocab_size = 5
             >>> from scipy.sparse import csr_matrix
-            >>> v = C.sequence.input(shape=(vocab_size,), is_sparse=True)
+            >>> v = C.sequence.input_variable(shape=(vocab_size,), is_sparse=True)
             >>> f = C.times(v, np.eye(vocab_size))
             >>> # Note that csr_matrix automatically uses a sparse representation underneath.
             >>> sparse_batch = [csr_matrix([[0,1,0,0,0]]), csr_matrix([[0,0,1,0,0], [0,0,0,0,1]])]
@@ -735,8 +759,8 @@ class Function(cntk_py.Function):
         state = super(Function, self)._forward(in_var_map, output_map, device,
                                                keep_for_backward)
         if as_numpy:
-            for k, val in output_map.items():
-                output_map[k] = _value_as_sequence_or_array(val, k)
+            for k, v in output_map.items():
+                output_map[k] = _value_as_sequence_or_array(v, k)
 
         return state, output_map
 
@@ -751,7 +775,7 @@ class Function(cntk_py.Function):
 
         Example:
             >>> # compute the value and the derivative of the sigmoid at 0
-            >>> v = C.input(shape=(1,), needs_gradient=True)
+            >>> v = C.input_variable(shape=(1,), needs_gradient=True)
             >>> f = C.sigmoid(v)
             >>> df, fv = f.forward({v:[[0]]}, [f.output], set([f.output]))
             >>> value = list(fv.values())[0]
@@ -781,11 +805,16 @@ class Function(cntk_py.Function):
         Returns:
             dict: mapping of ``variables`` to NumPy arrays
         '''
+        if state is None:
+            raise ValueError('You are attempting to backpropagate on a '
+                'minibatch for which the corresponding forward operation did not '
+                'keep any intermediate results, Please set keep_for_backward in '
+                'forward to the variables in root_gradients.keys()')
         device = state.device()
         root_gradients = sanitize_var_map(self.outputs, root_gradients,
                                           None, device)
 
-        var_gradients = dict((var, None) for var in variables)
+        var_gradients = {var: None for var in variables}
 
         self._backward(state, root_gradients, var_gradients)
 
@@ -802,7 +831,7 @@ class Function(cntk_py.Function):
         The Function must have a single output.
 
         Example:
-            >>> x = C.input(shape=(1,), needs_gradient=True)
+            >>> x = C.input_variable(shape=(1,), needs_gradient=True)
             >>> y = C.sqrt(x)
             >>> a = np.asarray([1,4,16],dtype=np.float32).reshape(3,1)
             >>> y.grad({x:a})
@@ -1043,8 +1072,8 @@ class Function(cntk_py.Function):
         :func:`find_by_name`.
 
         Example:
-            >>> a = C.input(shape=1, name='i')
-            >>> b = C.input(shape=1, name='i')
+            >>> a = C.input_variable(shape=1, name='i')
+            >>> b = C.input_variable(shape=1, name='i')
             >>> c = C.plus(a, b, name='c')
             >>> len(c.find_all_with_name('i'))
             2
@@ -1075,8 +1104,8 @@ class Function(cntk_py.Function):
         :func:`find_all_with_name`.
 
         Example:
-            >>> a = C.input(shape=1, name='a')
-            >>> b = C.input(shape=1, name='b')
+            >>> a = C.input_variable(shape=1, name='a')
+            >>> b = C.input_variable(shape=1, name='b')
             >>> c = C.plus(a, b, name='c')
             >>> print(c.find_by_name('b').name)
             b
@@ -1203,15 +1232,15 @@ class Function(cntk_py.Function):
         raise ValueError('Cannot load a model that is neither a file nor a byte buffer.')
 
 @typemap
-def register_native_user_function(op_name, module_name, factory_method_name):
+def register_native_user_function(op_id, module_name, factory_method_name):
     '''
     Registers a native user-defined Function that can be subsequently instantiated
     using the 'native_user_function' method.
 
     Args:
-        op_name (str): Name of the native user-defined Function to register.
-         This name must be unique and an error will be reported if it matches
-         the 'op_name' specified for a previously registered native user-defined Function.
+        op_id (str): Unique id of the native user-defined Function to register.
+         This id must be unique and an error will be reported if it matches
+         the 'op_id' specified for any other registered native user-defined Function.
         module_name (str): Name of the module containing the factory method for creating 
          instances of the native user-defined Function being registered. This is typically
          the name of a DLL/so which exports a factory method for creating instances of the
@@ -1220,17 +1249,17 @@ def register_native_user_function(op_name, module_name, factory_method_name):
          user-defined Function being registered. This method must be an exported method of the
          specified module.
     '''
-    return cntk_py.Function_register_native_user_function(op_name, module_name, factory_method_name)
+    return cntk_py.Function_register_native_user_function(op_id, module_name, factory_method_name)
 
 @typemap
-def native_user_function(op_name, operands, attributes=None, user_function_instance_name=''):
+def native_user_function(op_id, operands, attributes=None, user_function_instance_name=''):
     '''
     Creates an instance of a user-defined Function previously registered using the
     'register_native_user_function' method.
 
     Args:
-        op_name (str): Name of the native user-defined Function to instantiate.
-         This name must be the name that was used when registering the native user-function 
+        op_id (str): Id of the native user-defined Function to instantiate.
+         This must be the id that was used when registering the native user-function 
          with the 'register_native_user_function' method.
         operands (list): input operands of the new instance of the native user-defined Function.
         user_function_instance_name (str): Name of the instance of the created native 
@@ -1243,7 +1272,7 @@ def native_user_function(op_name, operands, attributes=None, user_function_insta
         attributes = {}
 
     attributes = _py_dict_to_cntk_dict(attributes)
-    return cntk_py.Function_native_user_function(op_name, operands, attributes, user_function_instance_name)
+    return cntk_py.Function_native_user_function(op_id, operands, attributes, user_function_instance_name)
 
 @typemap
 def load_model(model, device=None):
@@ -1280,7 +1309,7 @@ class UserFunction(Function):
 
         # Since the state will frequently not be used, we cache the None-state
         # to speed up.
-        self._none_state =  cntk_py.UserBackPropState(self, cpu(), None)
+        self._none_state =  cntk_py.UserBackPropState.create(self, cpu(), None)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
@@ -1289,7 +1318,7 @@ class UserFunction(Function):
 
     def _get_none_state(self, device=cpu()):
         if self._none_state.device() != device:
-            self._none_state =  cntk_py.UserBackPropState(self, device, None)
+            self._none_state = cntk_py.UserBackPropState.create(self, device, None)
 
         return self._none_state
 
@@ -1328,10 +1357,14 @@ class UserFunction(Function):
         else:
             state = self.forward(args, outputs, device, outputs_to_retain)
 
-        if state is None:
-            state = self._get_none_state(device)
-        elif not isinstance(state, cntk_py.BackPropState):
-            state = cntk_py.UserBackPropState(self, device, state)
+        if isinstance(state, cntk_py.BackPropState):
+            self._state_wrapped = False
+        else:
+            self._state_wrapped = True
+            if state is None:
+                state = self._get_none_state(device)
+            else:
+                state = cntk_py.UserBackPropState.create(self, device, state)
 
         if self.as_numpy:
             for k,v in outputs.items():
@@ -1373,12 +1406,11 @@ class UserFunction(Function):
                 if v.needs_gradient:
                     root_gradients[v] = _value_as_sequence_or_array(root_gradients[v], v)
 
-            state = cntk_py.UserBackPropState.data(state)
+        if not isinstance(state, cntk_py.BackPropState):
+            raise ValueError('state must be of type BackPropState')
 
-        else:
-            if not isinstance(state, cntk_py.BackPropState):
-                raise ValueError('if as_numpy=False, state must be of '
-                        'type BackPropState')
+        if self._state_wrapped:
+            state = cntk_py.UserBackPropState.data(state)
 
         map_if_possible(variables)
 
@@ -1395,7 +1427,7 @@ class UserFunction(Function):
                 variables[k] = result
 
         if self.as_numpy:
-            for k,v in variables.items():
+            for k, v in variables.items():
                 if v is not None:
                     variables[k] = sanitize_batch(k, v, None, device)
 
@@ -1416,6 +1448,11 @@ class UserFunction(Function):
         '''
         Creates a clone of this user-defined function.
 
+        It assumes that the constructor signature of the user's implementation
+        of the user function takes the inputs as individual arguments followed
+        by the operator name. If the signature is different, then this method
+        needs to be overriden. 
+
         Args:
             cloned_inputs: list of cloned inputs to the new user-defined
              Function clone to be created.
@@ -1423,7 +1460,7 @@ class UserFunction(Function):
         Returns:
             A cloned instance of this user-defined function.
         '''
-        raise NotImplementedError('clone has to be overwritten')
+        return self.__class__(*cloned_inputs, name=self.name)
 
     def _serialize_impl(self):
         dictionary = _serialize(self)

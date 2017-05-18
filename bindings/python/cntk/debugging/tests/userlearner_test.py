@@ -3,7 +3,7 @@ from __future__ import print_function
 import numpy as np
 
 import cntk as C
-from cntk import input, Axis, NDArrayView
+from cntk import Axis, NDArrayView
 from cntk.logging import ProgressPrinter
 from cntk.learners import UserLearner, sgd, learning_rate_schedule, UnitType
 from cntk.layers import Dense, Sequential
@@ -47,7 +47,7 @@ class MySgdFast(UserLearner):
         self.new_p = {}
         self.grad_input = {}
 
-        self.sample_count_input = input(shape=(), name='count')
+        self.sample_count_input = C.input_variable(shape=(), name='count')
 
         lr = lr_schedule[0]  # assuming constant learning rate
         eta = lr / self.sample_count_input
@@ -55,7 +55,7 @@ class MySgdFast(UserLearner):
         # we need one graph per parameter shape
         for param in parameters:
             p_shape = param.shape
-            self.grad_input[p_shape] = input(p_shape)
+            self.grad_input[p_shape] = C.input_variable(p_shape)
             self.new_p[p_shape] = param - eta * self.grad_input[p_shape]
 
     def update(self, gradient_values, training_sample_count, sweep_end):
@@ -83,8 +83,8 @@ def ffnet(optimizer, num_minibatches_to_train):
     hidden_dimension = 50
 
     # input variables denoting the features and label data
-    features = C.input((inputs), np.float32)
-    label = C.input((outputs), np.float32)
+    features = C.input_variable((inputs), np.float32)
+    label = C.input_variable((outputs), np.float32)
 
     # Instantiate the feedforward classification model
     my_model = Sequential([

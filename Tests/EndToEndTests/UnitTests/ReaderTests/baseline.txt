@@ -1745,6 +1745,9 @@ Test module "ReaderTests" has passed with:
     Test case "ReaderLibTests/CheckEpochBoundarySingleWorker" has passed with:
       4 assertions out of 4 passed
 
+    Test case "ReaderLibTests/CheckNoDegenerateMinibatches" has passed with:
+      592 assertions out of 592 passed
+
   Test suite "PackerTests" has passed with:
     8 test cases out of 8 passed
     5261971 assertions out of 5261971 passed

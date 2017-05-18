@@ -20,5 +20,5 @@ def test_seq_classification_error(device_id):
 
     evaluation_avg, loss_avg = train_sequence_classifier()
 
-    expected_avg = [0.51, 1.28]
+    expected_avg = [0.2, 0.576]
     assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)

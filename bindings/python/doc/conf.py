@@ -31,6 +31,10 @@ exclude_patterns = [
     'test',
 ]
 
+autodoc_mock_imports = [
+    'tensorflow',
+]
+
 needs_sphinx = '1.5'
 
 # TODO nitpick_ignore

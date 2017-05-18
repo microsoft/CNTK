@@ -47,19 +47,19 @@ Models pre-trained with CNTK scripts.
 ### Caffe-Converted
 Models converted from Caffe model zoo.
 #### ResNet50
-|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/ResNet50_ImageNet.model
+|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/ResNet50_ImageNet_Caffe.model
 |:---------|:---
 |Source Caffe model website | https://github.com/KaimingHe/deep-residual-networks
 |Single crop top 5 error | 7.75%
 
 #### ResNet101
-|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/ResNet101_ImageNet.model
+|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/ResNet101_ImageNet_Caffe.model
 |:---------|:---
 |Source Caffe model website | https://github.com/KaimingHe/deep-residual-networks
 |Single crop top 5 error | 7.12%
 
 #### ResNet152
-|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/ResNet152_ImageNet.model
+|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/ResNet152_ImageNet_Caffe.model
 |:---------|:---
 |Source Caffe model website | https://github.com/KaimingHe/deep-residual-networks
 |Single crop top 5 error | 6.71%

@@ -37,7 +37,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
 
     // We currently by default using numeric keys for ctf and image deserializers.
     bool useNumericSequenceKeys = ContainsDeserializer(config, L"CNTKTextFormatDeserializer") ||
-        ContainsDeserializer(config, L"ImageDeserializer");
+        ContainsDeserializer(config, L"ImageDeserializer") || ContainsDeserializer(config, L"Base64ImageDeserializer");
 
     useNumericSequenceKeys = config(L"useNumericSequenceKeys", useNumericSequenceKeys);
 
