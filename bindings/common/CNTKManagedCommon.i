@@ -414,12 +414,6 @@ IGNORE_FUNCTION CNTK::DeviceDescriptor::GetGPUProperties;
 // include common warning filters
 %include "CNTKWarnFilters.i"
 
-#ifdef SWIGCSHARP
-// define typemap for dataBuffer
-%apply float INPUT[]  { float *dataBuffer }
-%apply double INPUT[]  { double *dataBuffer }
-#endif
-
 %rename(AreEqual) operator==;
 %rename(AreNotEqual) operator!=;
 %ignore operator[];
@@ -708,6 +702,14 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
 
 %include "CNTKValueExtend.i"
 
+#ifdef SWIGJAVA
+// TODO: make Java binding deal with double*, float * and int * correctly.
+%ignore CNTK::Value::CreateSequenceFloat(const CNTK::NDShape& sampleShape, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
+%ignore CNTK::Value::CreateSequenceDouble(const CNTK::NDShape& sampleShape, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
+%ignore CNTK::Value::CreateSequenceFloat(size_t dimension, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
+%ignore CNTK::Value::CreateSequenceDouble(size_t dimension, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
+#endif
+
 // class NDArrayView
 %ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
 %ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, const void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device);
@@ -740,6 +742,12 @@ RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, GetStorageFormat);
 %rename (toString) CNTK::NDArrayView::AsString;
 #endif
 
+#ifdef SWIGCSHARP
+// define typemap for dataBuffer
+%apply float INPUT[]  { float *dataBuffer }
+%apply double INPUT[]  { double *dataBuffer }
+
+// TODO: make Java correctly deal with float*, double* and int *
 %extend CNTK::NDArrayView {
     NDArrayView(const NDShape& viewShape, float *dataBuffer, size_t numBufferElements, const DeviceDescriptor& device, bool readOnly = false)
     {
@@ -777,3 +785,4 @@ RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, GetStorageFormat);
         return new CNTK::NDArrayView(viewShape, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device, readOnly);
     }
 }
+#endif
