@@ -7,6 +7,7 @@
 from __future__ import print_function
 from builtins import input
 import os, sys, datetime
+import cv2
 import numpy as np
 import shutil, time
 import PARAMETERS
@@ -14,7 +15,7 @@ import PARAMETERS
 from cntk_helpers import makeDirectory, getFilesInDirectory, imread, imWidth, imHeight, imWidthHeight,\
                          getSelectiveSearchRois, imArrayWidthHeight, getGridRois, filterRois, imArrayWidth,\
                          imArrayHeight, getCntkInputPaths, getCntkRoiCoordsLine, getCntkRoiLabelsLine, roiTransformPadScaleParams,\
-                         roiTransformPadScale, cntkPadInputs
+                         roiTransformPadScale, cntkPadInputs, imresizeMaxDim
 
 ####################################
 # Parameters
