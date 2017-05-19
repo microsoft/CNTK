@@ -45,7 +45,7 @@ mb_size = p.cntk_mb_size
 max_epochs = p.cntk_max_epochs
 momentum_time_constant = p.cntk_momentum_time_constant
 
-# model specific variables (only AlexNet for now)
+# model specific variables
 base_model = "AlexNet"
 if base_model == "AlexNet":
     model_file = "../../../../../PretrainedModels/AlexNet.model"
@@ -54,6 +54,13 @@ if base_model == "AlexNet":
     pool_node_name = "pool3"
     last_hidden_node_name = "h2_d"
     roi_dim = 6
+elif base_model == "VGG16":
+    model_file = "../../../../../PretrainedModels/VGG16_ImageNet_Caffe.model"
+    feature_node_name = "data"
+    last_conv_node_name = "relu5_3"
+    pool_node_name = "pool5"
+    last_hidden_node_name = "drop7"
+    roi_dim = 7
 else:
     raise ValueError('unknown base model: %s' % base_model)
 ###############################################################

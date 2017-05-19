@@ -17,3 +17,8 @@ download_grocery_data()
 sys.path.append(os.path.join(base_folder, "..", "..", "PretrainedModels"))
 from models_util import download_model_by_name
 download_model_by_name("AlexNet")
+
+# Uncomment to download VGGNet
+# sys.path.append(os.path.join(base_folder, "..", "..", "PretrainedModels"))
+# from models_util import download_model_by_name
+# download_model_by_name("VGG16_ImageNet_Caffe")
