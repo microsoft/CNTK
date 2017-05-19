@@ -531,6 +531,7 @@ def test_set_rng_seed_attribute():
     random_sample_node.set_attribute(key, 2**31)
     assert root.attributes[key] == 2**31
 
+
 def test_clone_with_different_dynamic_axes():
     q_axis = C.Axis('q')
     a_axis = C.Axis('a')

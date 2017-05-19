@@ -1475,7 +1475,7 @@ namespace CNTK
                 if (*nodeLayout != *layout)
                     InvalidArgument("Different minibatch layouts detected (difference in sequence lengths or count or start flags) in data specified "
                                     "for the Function's arguments '%S' vs. '%S', though these arguments have the same dynamic axes '%S'",
-                                     variableValue.first.AsString().c_str(), layoutsPopulated.at(nodeLayout).AsString().c_str(), DynamicAxesAsString(variableValue.first.DynamicAxes()).c_str());
+                                     variableValue.first.AsString().c_str(), layoutsPopulated.at(nodeLayout).AsString().c_str(), DynamicAxesAsString(variableValue.first.DynamicAxes(), Internal::IsReversingTensorShapesInErrorMessagesEnabled()).c_str());
             }
         }
     }
