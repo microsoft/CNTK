@@ -1086,13 +1086,24 @@
                                DeviceDescriptor device,
                                bool readOnly = false)
     {
+        return Create(sampleShape, sequences, sequenceStartFlags, device, readOnly, /*createNewCopy = */ false);
+    }
+
+    // Create Value object from NDArrayViews with sequenceStartFlags
+    public static Value Create(NDShape sampleShape,
+                               System.Collections.Generic.IEnumerable<NDArrayView> sequences,
+                               System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
+                               DeviceDescriptor device,
+                               bool readOnly,
+                               bool createNewCopy)
+    {
         var seqVector = new NDArrayViewPtrVector();
         foreach (var element in sequences)
         {
             seqVector.Add(element);
         }
         var startFlags = Helper.AsBoolVector(sequenceStartFlags);
-        return Create(sampleShape, seqVector, startFlags, device, false);
+        return _Create(sampleShape, seqVector, startFlags, device, readOnly, createNewCopy);
     }
 
     //
