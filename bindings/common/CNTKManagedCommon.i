@@ -594,6 +594,7 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Variable, CurrentValueTimeStamp);
 MAKE_GETTER(CNTK::NDShape, Rank);
 MAKE_GETTER(CNTK::NDShape, TotalSize);
 RENAME_AND_MAKE_PRIVATE(CNTK::NDShape, Dimensions);
+RENAME_AND_MAKE_PRIVATE(CNTK::NDShape, DimensionSize);
 
 #ifdef SWIGCSHARP
 RENAME_AND_MAKE_PRIVATE(CNTK::NDShape, IsUnknown);
@@ -616,7 +617,7 @@ RENAME_AND_MAKE_PRIVATE(CNTK::NDShape, SubShape);
 #endif
 
 %extend CNTK::NDShape {
-    size_t _DimensionSize(size_t axisId)
+    size_t DimensionSize(size_t axisId)
     {
         return (*self)[axisId];
     }
