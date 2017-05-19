@@ -1380,7 +1380,6 @@ namespace CNTK
             // Lets update the composite Function graph's inputs with any inferred dimensions that 
             // were determined from the shapes of the supplied data
             auto networkArguments = Arguments();
-            bool anyInferredDimensionsFilled = false;
             for (auto argument : networkArguments)
             {
                 if (argument.Shape().HasInferredDimension())
@@ -1388,15 +1387,13 @@ namespace CNTK
                     auto fullyDefinedArgument = m_fullyDefinedArgumentsMap.at(argument);
                     for (size_t i = 0; i < argument.Shape().Rank(); ++i)
                         if (argument.Shape()[i] == NDShape::InferredDimension)
-                        {
                             argument.m_dataFields->m_shape[i] = fullyDefinedArgument.Shape()[i];
-                            anyInferredDimensionsFilled = true;
-                        }
                 }
             }
 
-            if (anyInferredDimensionsFilled)
-                ValidateOrUpdateOutputs();
+            // Run the final validation on the entire network once before constructing/compiling the
+            // internal computation network
+            ValidateOrUpdateOutputs();
 
             std::tie(m_computationNetwork, m_variableToNodeMap) = CreateComputationNetwork<ElementType>(this->shared_from_this(), device, outputs, m_fullyDefinedArgumentsMap, m_inputsExcludedFromGradientComputation, /*useMangledNamesForComputationNodes =*/ false);
 
