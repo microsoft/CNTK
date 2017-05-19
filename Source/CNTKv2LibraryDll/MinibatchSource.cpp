@@ -360,8 +360,15 @@ namespace CNTK
         Deserializer img;
         std::vector<DictionaryValue> actualTransforms;
         std::transform(transforms.begin(), transforms.end(), std::back_inserter(actualTransforms), [](ImageTransform t) { return static_cast<DictionaryValue>(t); });
+
+        // Add the transpose transform by default.
+        Dictionary transposeTransform;
+        transposeTransform[L"type"] = L"Transpose";
+        actualTransforms.push_back(DictionaryValue(transposeTransform));
+
         Dictionary labeldim;
         labeldim[L"labelDim"] = numLabels;
+
         Dictionary xforms;
         xforms[L"transforms"] = actualTransforms;
         Dictionary input;
@@ -508,26 +515,9 @@ namespace CNTK
                 };
 
                 auto deserializerTypeName = deserializerConfig[L"type"].Value<std::wstring>();
-                if (deserializerTypeName == L"ImageDeserializer")
+                if (deserializerTypeName == L"ImageDeserializer" || deserializerTypeName == L"Base64ImageDeserializer")
                 {
                     defaultMultithreaded = true;
-
-                    // Add a transpose transform since the image data in read in HWC (CWH in column major format) form while 
-                    // the CNTK convolution engive supports WHC (in column-major format)
-                    auto& inputStreamsConfig = deserializerConfig[L"input"].Value<Dictionary>();
-                    for (auto& inputStreamEntry : inputStreamsConfig)
-                    {
-                        auto& inputStreamConfig = inputStreamEntry.second.Value<Dictionary>();
-                        if (inputStreamConfig.Contains(L"transforms"))
-                        {
-                            auto& transforms = inputStreamConfig[L"transforms"].Value<std::vector<DictionaryValue>>();
-
-                            // Add the transpose transform
-                            Dictionary transposeTransform;
-                            transposeTransform[L"type"] = L"Transpose";
-                            transforms.push_back(DictionaryValue(transposeTransform));
-                        }
-                    }
                 }
 
                 if (deserializerTypeNameToModuleNameMap.find(deserializerTypeName) == deserializerTypeNameToModuleNameMap.end())
