@@ -492,6 +492,7 @@ MAKE_GETTER(CNTK::Function, CurrentVersion);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, Inputs);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, Outputs);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, Arguments);
+RENAME_AND_MAKE_PRIVATE(CNTK::Function, FindAllWithName);
 
 #ifdef SWIGCSHARP
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, IsComposite);
@@ -501,7 +502,6 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Function, Load);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, Clone);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, Evaluate);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, FindByName);
-RENAME_AND_MAKE_PRIVATE(CNTK::Function, FindAllWithName);
 #endif // SWIGCSHARP
 
 // Customize type mapping for modelBuffer, used by Load
