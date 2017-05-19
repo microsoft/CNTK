@@ -59,22 +59,6 @@ namespace std {
                 }
                 return false;
                 }
-
-                // create_iterator_begin(), get_next_key() and destroy_iterator work together to provide a collection of keys to C#
-
-                std::unordered_map< K, T>::iterator *create_iterator_begin() {
-                return new std::unordered_map< K, T>::iterator($self->begin());
-                }
-
-                const key_type& get_next_key(std::unordered_map< K, T>::iterator *swigiterator) {
-                std::unordered_map< K, T>::iterator iter = *swigiterator;
-                (*swigiterator)++;
-                return (*iter).first;
-                }
-
-                void destroy_iterator(std::unordered_map< K, T>::iterator *swigiterator) {
-                delete swigiterator;
-                }
             }
       };
 }

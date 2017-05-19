@@ -35,7 +35,7 @@
         {
             throw new System.ArgumentException("The paraemter deviceId should not be a negative value");
         }
-        return GPUDevice((uint)deviceId);
+        return _GPUDevice((uint)deviceId);
     }
 
     // Gets all devices.
@@ -112,13 +112,13 @@
     // Property IsStatic.
     public bool IsStatic
     {
-        get { return IsStaticAxis(); }
+        get { return _IsStaticAxis(); }
     }
 
     // Property IsDynamic.
     public bool IsDynamic
     {
-        get { return IsDynamicAxis(); }
+        get { return _IsDynamicAxis(); }
     }
 
     // Property IsOrdered.
@@ -169,7 +169,7 @@
     // Returns hash code value.
     public override int GetHashCode()
     {
-        if (this.IsDynamicAxis())
+        if (this._IsDynamicAxis())
         {
             return this.Name.GetHashCode();
         }
@@ -241,6 +241,12 @@
     public bool IsBlock
     {
         get { return _IsBlock(); }
+    }
+
+    // Property CurrentVersion
+    public int CurrentVersion
+    {
+        get { return (int)_CurrentVersion();}
     }
 
     // Property Arguments.
@@ -397,7 +403,7 @@
     // Property DataType.
     public DataType DataType
     {
-        get { return GetDataType(); }
+        get { return _GetDataType(); }
     }
 
     // Property DynamicAxes.
@@ -504,7 +510,7 @@
     public override int GetHashCode()
     {
         // Todo: the hash value in C++ is size_t, but only in in C#
-        return (int)GetHashValue();
+        return (int)_GetHashValue();
     }
 %}
 
@@ -710,13 +716,13 @@
     // Property DataType
     public DataType DataType
     {
-        get { return GetDataType(); }
+        get { return _GetDataType(); }
     }
 
     // Property StorageFormat
     public StorageFormat StorgeFormat
     {
-        get { return GetStorageFormat(); }
+        get { return _GetStorageFormat(); }
     }
 
     // Property Shape
@@ -767,12 +773,12 @@
         if (typeof(T).Equals(typeof(float)))
         {
             var inputVector = Helper.AsFloatVector(batch);
-            return Value.CreateBatchFloat(sampleShape, inputVector, device, readOnly);
+            return Value._CreateBatchFloat(sampleShape, inputVector, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
             var inputVector = Helper.AsDoubleVector(batch);
-            return Value.CreateBatchDouble(sampleShape, inputVector, device, readOnly);
+            return Value._CreateBatchDouble(sampleShape, inputVector, device, readOnly);
         }
         else
         {
@@ -799,12 +805,12 @@
         if (typeof(T).Equals(typeof(float)))
         {
             var inputVector = Helper.AsFloatVector(sequence);
-            return Value.CreateSequenceFloat(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
+            return Value._CreateSequenceFloat(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
             var inputVector = Helper.AsDoubleVector(sequence);
-            return Value.CreateSequenceDouble(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
+            return Value._CreateSequenceDouble(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
         }
         else
         {
@@ -848,7 +854,7 @@
                 // The seqVector is copied when adding to inputAsSequencesVector.
                 inputAsSequencesVector.Add(seqVector);
             }
-            return Value.CreateDenseFloat(sampleShape, inputAsSequencesVector, seqFlags, device, readOnly);
+            return Value._CreateDenseFloat(sampleShape, inputAsSequencesVector, seqFlags, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
@@ -858,7 +864,7 @@
                 var seqVector = Helper.AsDoubleVector(seq);
                 inputAsSequencesVector.Add(seqVector);
             }
-            return Value.CreateDenseDouble(sampleShape, inputAsSequencesVector, seqFlags, device, readOnly);
+            return Value._CreateDenseDouble(sampleShape, inputAsSequencesVector, seqFlags, device, readOnly);
         }
         else
         {
@@ -882,11 +888,11 @@
         }
         if (typeof(T).Equals(typeof(float)))
         {
-            return Value.CreateOneHotFloat(sampleShape, inputSeqVector, seqFlags, device, readOnly);
+            return Value._CreateOneHotFloat(sampleShape, inputSeqVector, seqFlags, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            return Value.CreateOneHotDouble(sampleShape, inputSeqVector, seqFlags, device, readOnly);
+            return Value._CreateOneHotDouble(sampleShape, inputSeqVector, seqFlags, device, readOnly);
         }
         else
         {
@@ -900,11 +906,11 @@
         var inputVector = Helper.AsSizeTVector(batch);
         if (typeof(T).Equals(typeof(float)))
         {
-            return Value.CreateBatchFloat((uint)dimension, inputVector, device, readOnly);
+            return Value._CreateBatchFloat((uint)dimension, inputVector, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            return Value.CreateBatchDouble((uint)dimension, inputVector, device, readOnly);
+            return Value._CreateBatchDouble((uint)dimension, inputVector, device, readOnly);
         }
         else
         {
@@ -931,11 +937,11 @@
         var inputVector = Helper.AsSizeTVector(sequence);
         if (typeof(T).Equals(typeof(float)))
         {
-            return Value.CreateSequenceFloat((uint)dimension, inputVector, sequenceStartFlag, device, readOnly);
+            return Value._CreateSequenceFloat((uint)dimension, inputVector, sequenceStartFlag, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            return Value.CreateSequenceDouble((uint)dimension, inputVector, sequenceStartFlag, device, readOnly);
+            return Value._CreateSequenceDouble((uint)dimension, inputVector, sequenceStartFlag, device, readOnly);
         }
         else
         {
@@ -978,11 +984,11 @@
         }
         if (typeof(T).Equals(typeof(float)))
         {
-            return Value.CreateOneHotFloat((uint)dimension, inputSeqVector, seqFlags, device, readOnly);
+            return Value._CreateOneHotFloat((uint)dimension, inputSeqVector, seqFlags, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            return Value.CreateOneHotDouble((uint)dimension, inputSeqVector, seqFlags, device, readOnly);
+            return Value._CreateOneHotDouble((uint)dimension, inputSeqVector, seqFlags, device, readOnly);
         }
         else
         {
@@ -1009,11 +1015,11 @@
 
         if (typeof(T).Equals(typeof(float)))
         {
-            return Value.CreateSequenceFloat(sampleShape, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as float[], numNonZeroValues, sequenceStartFlag, device, readOnly);
+            return Value._CreateSequenceFloat(sampleShape, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as float[], numNonZeroValues, sequenceStartFlag, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            return Value.CreateSequenceDouble(sampleShape, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as double[], numNonZeroValues, sequenceStartFlag, device, readOnly);
+            return Value._CreateSequenceDouble(sampleShape, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as double[], numNonZeroValues, sequenceStartFlag, device, readOnly);
         }
         else
         {
@@ -1049,11 +1055,11 @@
 
         if (typeof(T).Equals(typeof(float)))
         {
-            return Value.CreateSequenceFloat((uint)dimension, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as float[], numNonZeroValues, sequenceStartFlag, device, readOnly);
+            return Value._CreateSequenceFloat((uint)dimension, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as float[], numNonZeroValues, sequenceStartFlag, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            return Value.CreateSequenceDouble((uint)dimension, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as double[], numNonZeroValues, sequenceStartFlag, device, readOnly);
+            return Value._CreateSequenceDouble((uint)dimension, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as double[], numNonZeroValues, sequenceStartFlag, device, readOnly);
         }
         else
         {
@@ -1086,13 +1092,24 @@
                                DeviceDescriptor device,
                                bool readOnly = false)
     {
+        return Create(sampleShape, sequences, sequenceStartFlags, device, readOnly, /*createNewCopy = */ false);
+    }
+
+    // Create Value object from NDArrayViews with sequenceStartFlags
+    public static Value Create(NDShape sampleShape,
+                               System.Collections.Generic.IEnumerable<NDArrayView> sequences,
+                               System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
+                               DeviceDescriptor device,
+                               bool readOnly,
+                               bool createNewCopy)
+    {
         var seqVector = new NDArrayViewPtrVector();
         foreach (var element in sequences)
         {
             seqVector.Add(element);
         }
         var startFlags = Helper.AsBoolVector(sequenceStartFlags);
-        return Create(sampleShape, seqVector, startFlags, device, false);
+        return _Create(sampleShape, seqVector, startFlags, device, readOnly, createNewCopy);
     }
 
     //
@@ -1108,13 +1125,13 @@
         var sequences = new System.Collections.Generic.List<System.Collections.Generic.IList<T>>();
         if (typeof(T).Equals(typeof(float)))
         {
-            if (GetDataType() != DataType.Float)
+            if (_GetDataType() != DataType.Float)
             {
                 throw new System.ArgumentException("The value type does not match the list type.");
             }
 
             var seqVec = new FloatVectorVector();
-            CopyVariableValueToFloat(outputVariable, seqVec);
+            _CopyVariableValueToFloat(outputVariable, seqVec);
 
             foreach (var seq in seqVec)
             {
@@ -1127,13 +1144,13 @@
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            if (GetDataType() != DataType.Double)
+            if (_GetDataType() != DataType.Double)
             {
                 throw new System.ArgumentException("The value type does not match the list type.");
             }
 
             var seqVec = new DoubleVectorVector();
-            CopyVariableValueToDouble(outputVariable, seqVec);
+            _CopyVariableValueToDouble(outputVariable, seqVec);
             foreach (var seq in seqVec)
             {
                 var seqList = seq as System.Collections.Generic.IList<T>;
@@ -1161,7 +1178,7 @@
     {
         var sequences = new System.Collections.Generic.List<System.Collections.Generic.IList<int>>();
         var seqVec = new SizeTVectorVector();
-        CopyVariableValueTo(outputVariable, seqVec);
+        _CopyVariableValueTo(outputVariable, seqVec);
         foreach(var seq in seqVec)
         {
             var seqList = new System.Collections.Generic.List<int>(seq.Count);
@@ -1190,13 +1207,13 @@
         sequences.Clear();
         if (typeof(T).Equals(typeof(float)))
         {
-            if (GetDataType() != DataType.Float)
+            if (_GetDataType() != DataType.Float)
             {
                 throw new System.ArgumentException("The value type does not match the list type.");
             }
 
             var seqVec = new FloatVectorVector();
-            CopyVariableValueToFloat(outputVariable, seqVec);
+            _CopyVariableValueToFloat(outputVariable, seqVec);
 
             foreach (var seq in seqVec)
             {
@@ -1208,13 +1225,13 @@
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            if (GetDataType() != DataType.Double)
+            if (_GetDataType() != DataType.Double)
             {
                 throw new System.ArgumentException("The value type does not match the list type.");
             }
 
             var seqVec = new DoubleVectorVector();
-            CopyVariableValueToDouble(outputVariable, seqVec);
+            _CopyVariableValueToDouble(outputVariable, seqVec);
             foreach (var seq in seqVec)
             {
                 var seqList = seq as System.Collections.Generic.IList<T>;
@@ -1242,7 +1259,7 @@
     public void CopyVariableValueTo(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<int>> sequences)
     {
         var seqVec = new SizeTVectorVector();
-        CopyVariableValueTo(outputVariable, seqVec);
+        _CopyVariableValueTo(outputVariable, seqVec);
 
         sequences.Clear();
         foreach(var seq in seqVec)
@@ -1312,7 +1329,7 @@
     // Property DataType.
     public DataType DataType
     {
-        get { return GetDataType(); }
+        get { return _GetDataType(); }
     }
 
     // Property Shape.
@@ -1324,7 +1341,7 @@
     // Property StorageFormat.
     public StorageFormat StorageFormat
     {
-        get { return GetStorageFormat(); }
+        get { return _GetStorageFormat(); }
     }
 
     // Property IsSparse.
