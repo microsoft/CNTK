@@ -35,7 +35,7 @@
         {
             throw new System.ArgumentException("The paraemter deviceId should not be a negative value");
         }
-        return GPUDevice((uint)deviceId);
+        return _GPUDevice((uint)deviceId);
     }
 
     // Gets all devices.
@@ -112,13 +112,13 @@
     // Property IsStatic.
     public bool IsStatic
     {
-        get { return IsStaticAxis(); }
+        get { return _IsStaticAxis(); }
     }
 
     // Property IsDynamic.
     public bool IsDynamic
     {
-        get { return IsDynamicAxis(); }
+        get { return _IsDynamicAxis(); }
     }
 
     // Property IsOrdered.
@@ -169,7 +169,7 @@
     // Returns hash code value.
     public override int GetHashCode()
     {
-        if (this.IsDynamicAxis())
+        if (this._IsDynamicAxis())
         {
             return this.Name.GetHashCode();
         }
@@ -241,6 +241,12 @@
     public bool IsBlock
     {
         get { return _IsBlock(); }
+    }
+
+    // Property CurrentVersion
+    public int CurrentVersion
+    {
+        get { return (int)_CurrentVersion();}
     }
 
     // Property Arguments.
@@ -504,7 +510,7 @@
     public override int GetHashCode()
     {
         // Todo: the hash value in C++ is size_t, but only in in C#
-        return (int)GetHashValue();
+        return (int)_GetHashValue();
     }
 %}
 

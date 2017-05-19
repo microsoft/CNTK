@@ -435,6 +435,7 @@ RENAME_AND_MAKE_PRIVATE(CNTK::DeviceDescriptor, AllDevices);
 
 #ifdef SWIGCSHARP
 RENAME_AND_MAKE_PRIVATE(CNTK::DeviceDescriptor, SetExcludedDevices);
+RENAME_AND_MAKE_PRIVATE(CNTK::DeviceDescriptor, GPUDevice);
 #endif
 
 #ifdef SWIGJAVA
@@ -461,6 +462,8 @@ MAKE_GETTER(CNTK::Axis, Name);
 // It cannot be a property as it has a parameter.
 RENAME_AND_MAKE_PRIVATE(CNTK::Axis, StaticAxisIndex);
 RENAME_AND_MAKE_PRIVATE(CNTK::Axis, IsOrdered);
+RENAME_AND_MAKE_PRIVATE(CNTK::Axis, IsStaticAxis);
+RENAME_AND_MAKE_PRIVATE(CNTK::Axis, IsDynamicAxis);
 #endif
 
 #ifdef SWIGJAVA
@@ -555,6 +558,8 @@ MAKE_GETTER(CNTK::Variable, Uid);
 MAKE_GETTER(CNTK::Variable, Kind);
 MAKE_GETTER(CNTK::Variable, Owner);
 MAKE_GETTER(CNTK::Variable, DynamicAxes);
+
+RENAME_AND_MAKE_PRIVATE(CNTK::Variable, GetHashValue);
 
 #ifdef SWIGCSHARP
 RENAME_AND_MAKE_PRIVATE(CNTK::Variable, IsSparse);
