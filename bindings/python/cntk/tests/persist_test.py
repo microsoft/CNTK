@@ -104,3 +104,74 @@ def test_load_save_unique_input(tmpdir):
     loaded_node = C.Function.load(filename)
     loaded_result = loaded_node.eval(input1)
     assert np.allclose(loaded_result, expected)
+
+
+def test_large_model_serialization_float(tmpdir):
+    import os; 
+    from cntk.layers import Recurrence, LSTM, Dense
+
+    type_size = np.dtype(np.float32).itemsize
+    two_gb = 2**31
+    size = (2097152 + 4, 256, 512, 4096)
+    assert size[0] * size[1] * type_size > two_gb
+
+    device = C.device.cpu()
+    i = C.sequence.input(size[0])
+    w = C.Parameter((size[0], size[1]), init=C.uniform(3.0, seed=12345),
+        device=device)
+    e = C.times(i, w)
+                                    
+    h_fwd = Recurrence(LSTM(size[2]))(e)
+    h_bwd = Recurrence(LSTM(size[2]), go_backwards=True)(e)
+    h_last_fwd = C.sequence.last(h_fwd)
+    h_first_bwd = C.sequence.first(h_bwd)
+    t = C.splice(h_last_fwd, h_first_bwd)
+
+    z1 = Dense(size[2], activation=C.relu)(t)     
+    z = Dense(2, activation=None)(z1)  
+
+    filename = str(tmpdir / 'test_large_model_serialization_float.out')
+    z.save(filename)
+
+    assert os.path.getsize(filename) > two_gb
+
+    y = C.Function.load(filename, device=device)
+
+    assert (len(z.parameters) == len(y.parameters))
+
+    for param_pair in zip(z.parameters, y.parameters):
+        assert param_pair[0].shape == param_pair[1].shape
+        assert np.allclose(param_pair[0].value, param_pair[1].value)
+
+
+# TODO: once layers lib understands dtype parameter, 
+# this should be merge with the test above:
+# for dtype in [np.float32, np.float64]:
+#    ....
+def test_large_model_serialization_double(tmpdir):
+    import os; 
+
+    two_gb = 2**31
+    type_size = np.dtype(np.float64).itemsize
+    size = two_gb /  type_size + 10
+
+    assert size * type_size > two_gb
+
+    device = C.device.cpu()
+    i = C.sequence.input(size, dtype=np.float64)
+    w = C.Parameter((size,), dtype=np.float64, 
+        init=C.uniform(3.0, seed=12345), device=device)
+    z = C.times(i, w)
+
+    filename = str(tmpdir / 'test_large_model_serialization_double.out')
+    z.save(filename)
+
+    assert os.path.getsize(filename) > two_gb
+
+    y = C.Function.load(filename, device=device)
+
+    assert (len(z.parameters) == len(y.parameters))
+
+    for param_pair in zip(z.parameters, y.parameters):
+        assert param_pair[0].shape == param_pair[1].shape
+        assert np.allclose(param_pair[0].value, param_pair[1].value)
