@@ -39,5 +39,6 @@ Models converted from Caffe model zoo.
 
 |CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/AlexNet_ImageNet_Caffe.model
 |:---------|:---
+|Last updated | April, 28th, 2017
 |Source Caffe model website | https://github.com/BVLC/caffe/tree/master/models/bvlc_alexnet
 |Single crop top 5 error | 19.8%
