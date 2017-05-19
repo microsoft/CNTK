@@ -5,9 +5,9 @@
 # ==============================================================================
 
 import warnings
-from .. import cntk_py, Value
-from ..tensor import ArrayMixin
-from cntk.internal import typemap, sanitize_dtype_cntk
+from cntk import cntk_py, Value
+from cntk.tensor import ArrayMixin
+from cntk.internal import typemap, sanitize_dtype_cntk, is_string
 from cntk.device import use_default_device
 from cntk.logging import TraceLevel, get_trace_level
 from cntk.variables import Record
@@ -145,7 +145,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
           non-zero value enables randomization.
           `randomization_window_in_chunks` and `randomization_window_in_samples` are mutually exclusive,
           an exception will be raised if both have non-zero values.
-        randomization_seed (`int`, defaults to 0): initial randomization seed value (incremented every sweep when 
+        randomization_seed (`int`, defaults to 0): initial randomization seed value (incremented every sweep when
             the input data is re-randomized).
         trace_level (an instance of :class:`cntk.logging.TraceLevel`): the output verbosity level, defaults to
           the current logging verbosity level given by :func:`~cntk.logging.get_trace_level`.
@@ -472,8 +472,47 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
             mb_size_in_samples, number_of_workers, worker_rank, device):
         # mbsize_in_sequences is ignored
 
-        info_map.update(self.next_minibatch(mb_size_in_samples,
-            number_of_workers, worker_rank, device))
+        mb = self.next_minibatch(mb_size_in_samples, number_of_workers, worker_rank, device)
+        info_map.update(mb)
+
+    def _get_checkpoint_state(self):
+        state = self.get_checkpoint_state()
+        d = cntk_py.Dictionary()
+        for key, val in state.items():
+            if not is_string(key):
+                raise ValueError('the keys of the checkpoint dictionary must '
+                                 'be strings. You gave "%s" of type %s' %
+                                 (key, type(key)))
+            dv = cntk_py.DictionaryValue(val)
+            d.add(key, dv)
+
+        return d
+
+    def get_checkpoint_state(self):
+        '''
+        Returns a dictionary describing the current state of the minibatch
+        source.
+
+        Returns:
+            dictionary, that can be later used on :meth:`restore_from_checkpoint`.
+        '''
+        raise NotImplementedError('in order to use checkpointing on '
+            'UserMinibatchSource, you need to implement '
+            'get_checkpoint_state()')
+
+    def _restore_from_checkpoint(self, state):
+        self.restore_from_checkpoint(state)
+
+    def restore_from_checkpoint(self, state):
+        '''
+        Sets the state of the checkpoint.
+
+        Args:
+            state (dict): dictionary containing the state
+        '''
+        raise NotImplementedError('in order to use checkpointing on '
+            'UserMinibatchSource, you need to implement '
+            'restore_from_checkpoint(checkpoint)')
 
     def __getitem__(self, name):
         '''
@@ -566,12 +605,12 @@ def _process_image_deserializer_args(filename, streams, deserializer):
             raise ValueError(
                 "{}: invalid field name '{}', allowed are "
                 "'image' and 'label'".format(deserializer, alias))
-    
+
     if image_stream_name is None:
         raise ValueError("{}: stream name ('image' or 'label') must be "
             "specified".format(deserializer))
-    
-    return (filename, label_stream_name, num_labels, 
+
+    return (filename, label_stream_name, num_labels,
         image_stream_name, transforms)
 
 def ImageDeserializer(filename, streams):
@@ -592,13 +631,13 @@ def ImageDeserializer(filename, streams):
     See also:
         :cntkwiki:`Image reader definition <BrainScript-Image-reader>`
     '''
-    args = _process_image_deserializer_args(filename, streams, 
+    args = _process_image_deserializer_args(filename, streams,
         'ImageDeserializer')
     return cntk_py.image_deserializer(*args)
 
 def Base64ImageDeserializer(filename, streams):
     '''
-    Configures the image reader that reads base64 encoded images and corresponding 
+    Configures the image reader that reads base64 encoded images and corresponding
     labels from a file of the form::
 
         [sequenceId <tab>] <numerical label (0-based class id)> <tab> <base64 encoded image>
@@ -612,7 +651,7 @@ def Base64ImageDeserializer(filename, streams):
     See also:
         :cntkwiki:`Base64ImageDeserializer options <BrainScript-and-Python---Understanding-and-Extending-Readers#base64imagedeserializer-options>`
     '''
-    args = _process_image_deserializer_args(filename, streams, 
+    args = _process_image_deserializer_args(filename, streams,
         'Base64ImageDeserializer')
     return cntk_py.base64_image_deserializer(*args)
 
@@ -721,7 +760,7 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
     if broadcast is not None:
         config['broadcast'] = broadcast
     config['defines_mb_size'] = True if defines_mb_size else False
-      
+
     return Record(**config)
     # TODO: we should always use 'shape' unless it is always rank-1 or a single rank's dimension
     # TODO: dim should be inferred from the file, at least for dense

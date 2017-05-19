@@ -712,6 +712,7 @@ class MyDataSource(UserMinibatchSource):
         f_sample_count = 0
         l_sample_count = 0
 
+
         while max(f_sample_count, l_sample_count) < num_samples:
             if self.next_seq_idx == len(self.sequences):
                 sweep_end = True
@@ -735,15 +736,18 @@ class MyDataSource(UserMinibatchSource):
 
         f_data = Value.one_hot(batch=features, num_classes=self.f_dim)
         l_data = Value(batch=np.asarray(labels, dtype=np.float32))
-
         result = {
                 self.fsi: MinibatchData(f_data, num_seq, f_sample_count, sweep_end),
                 self.lsi: MinibatchData(l_data, num_seq, l_sample_count, sweep_end)
                 }
 
-
         return result
 
+    def get_checkpoint_state(self):
+        return {'test': 12}
+
+    def restore_from_checkpoint(self, state):
+        assert state == {'test': 12}
 
 def test_usermbsource(tmpdir):
     tmpfile = _write_data(tmpdir, MBDATA_SPARSE)
@@ -813,6 +817,8 @@ def test_usermbsource_training(tmpdir):
     num_output_classes = 5
 
     mbs = MyDataSource(input_dim, num_output_classes)
+    # Using this for testing the UserMinibatchSource checkpointing
+    mbs_cv = MyDataSource(input_dim, num_output_classes)
 
     from cntk import sequence, parameter, plus, cross_entropy_with_softmax, \
             classification_error, learning_rate_schedule, sgd, Trainer, \
@@ -837,7 +843,9 @@ def test_usermbsource_training(tmpdir):
     session = training_session(
         trainer=trainer, mb_source=mbs,
         model_inputs_to_streams=input_map,
-        mb_size=4, max_samples=20
+        mb_size=4, max_samples=20,
+        cv_config = C.CrossValidationConfig(source=mbs_cv, max_samples=10,
+            mb_size=2)
     )
     session.train()
 

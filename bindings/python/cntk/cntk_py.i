@@ -634,6 +634,7 @@ public:
 %feature("director") CNTK::SwigMinibatchSource;
 %feature("nodirector") CNTK::SwigMinibatchSource::StreamInfos();
 %feature("nodirector") CNTK::SwigMinibatchSource::GetNextMinibatch;//(size_t minibatchSizeInSamples, size_t minibatchSizeInSequences, size_t numberOfWorkers, size_t workerRank, const DeviceDescriptor&); 
+%feature("nodirector") CNTK::SwigMinibatchSource::GetCheckpointState;
 
 %{
     #include "CNTKLibrary.h"
@@ -1464,6 +1465,8 @@ namespace CNTK
             size_t workerRank,
             const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) { NOT_IMPLEMENTED }
 
+
+        virtual Dictionary SwigMinibatchSource::_GetCheckpointState() const { NOT_IMPLEMENTED }
     protected:
         // Making these protected to prevent them to be caught by Swig's
         // director support, because the "nodirector" feature has issues seperating
@@ -1564,6 +1567,11 @@ namespace CNTK
             Py_XDECREF(pyInfoMap);
             m_minibatchData.clear();
             return m_minibatchData;
+        }
+
+        Dictionary SwigMinibatchSource::GetCheckpointState() const
+        {
+            return _GetCheckpointState();
         }
     };
 }
