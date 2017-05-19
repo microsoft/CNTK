@@ -466,7 +466,7 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
         Returns:
             mapping of :class:`StreamInformation` to :class:`MinibatchData`
         '''
-        return NotImplementedError
+        raise NotImplementedError
 
     def _next_minibatch(self, info_map, mb_size_in_sequences,
             mb_size_in_samples, number_of_workers, worker_rank, device):
