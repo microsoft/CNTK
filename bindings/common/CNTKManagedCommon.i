@@ -564,6 +564,7 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Variable, IsParameter);
 RENAME_AND_MAKE_PRIVATE(CNTK::Variable, IsConstant);
 RENAME_AND_MAKE_PRIVATE(CNTK::Variable, IsPlaceholder);
 RENAME_AND_MAKE_PRIVATE(CNTK::Variable, NeedsGradient);
+RENAME_AND_MAKE_PRIVATE(CNTK::Variable, GetDataType);
 RENAME_AND_MAKE_PRIVATE(CNTK::Variable, CurrentValueTimeStamp);
 #endif
 
@@ -651,18 +652,20 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, IsValid);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, IsSparse);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, IsReadOnly);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, Alias);
-MAKE_PRIVATE(CNTK::Value::Create);
-MAKE_PRIVATE(CNTK::Value::CreateDenseFloat);
-MAKE_PRIVATE(CNTK::Value::CreateDenseDouble);
-MAKE_PRIVATE(CNTK::Value::CreateBatchFloat);
-MAKE_PRIVATE(CNTK::Value::CreateBatchDouble);
-MAKE_PRIVATE(CNTK::Value::CreateSequenceFloat);
-MAKE_PRIVATE(CNTK::Value::CreateSequenceDouble);
-MAKE_PRIVATE(CNTK::Value::CreateOneHotFloat);
-MAKE_PRIVATE(CNTK::Value::CreateOneHotDouble);
-MAKE_PRIVATE(CNTK::Value::CopyVariableValueTo);
-MAKE_PRIVATE(CNTK::Value::CopyVariableValueToFloat);
-MAKE_PRIVATE(CNTK::Value::CopyVariableValueToDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, Create);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, GetDataType);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, GetStorageFormat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateDenseFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateDenseDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateBatchFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateBatchDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateSequenceFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateSequenceDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateOneHotFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateOneHotDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueTo);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
 #endif // SWIGCSHARP
 
 #ifdef SWIGCSHARP
@@ -712,6 +715,8 @@ RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, IsSparse);
 RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, IsReadOnly);
 RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, Alias);
 RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, SliceView);
+RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, GetDataType);
+RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, GetStorageFormat);
 #endif
 
 #ifdef SWIGJAVA
