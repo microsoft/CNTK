@@ -230,7 +230,7 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
 
     step_function = _sanitize_function(step_function)
 
-    # get signature of cell
+    # get signature of step function
     #*prev_state_args, _ = step_function.signature  # Python 3
     prev_state_args = step_function.signature[0:-1]
 
@@ -394,7 +394,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
 
     step_function = _sanitize_function(step_function)
 
-    # get signature of cell
+    # get signature of step function
     #*prev_state_args, _ = step_function.signature  # Python 3
     prev_state_args = step_function.signature[0:-1]
 
@@ -519,7 +519,7 @@ def UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name
     Layer factory function to create a function that implements a recurrent generator.
     Starting with a seed state, the ``UnfoldFrom()`` layer
     repeatedly applies ``generator_function`` and emits the sequence of results.
-    It stops after a maximum number of steps, or earlier when `until_predicate` evaluates to True.
+    It stops after a maximum number of steps, or earlier when, if provided, `until_predicate` evaluates to True for the current output.
     The maximum number of steps is based on a second input from which only the dynamic-axis information is used.
     This is best explained in pseudo-code:
 
