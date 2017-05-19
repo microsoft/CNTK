@@ -9,7 +9,7 @@ import cntk as C
 from cntk import Axis, reshape, sigmoid, element_max, Function, Constant, greater, default_options, default_options_for, \
                  get_default_override, default_override_or
 from cntk.layers import BlockFunction, Convolution, Convolution1D, Convolution2D, Convolution3D, Dense, Embedding, Fold, For, \
-                        MaxPooling, MaxUnpooling, LSTM, GRU, RNNUnit, Sequential, Stabilizer, Dropout, Recurrence, \
+                        MaxPooling, MaxUnpooling, LSTM, GRU, RNNStep, Sequential, Stabilizer, Dropout, Recurrence, \
                         RecurrenceFrom, LayerNormalization, ConvolutionTranspose
 from cntk.layers.typing import Sequence, Signature, Tensor, SequenceOver
 
@@ -236,7 +236,7 @@ RECURRENT_BLOCK_DATA = [ # block_type, block_outputs_count, block_size, W_mult, 
                     [ 0.262537, 0.262537, 0.262537, 0.262537, 0.262537],
                     [ 0.276712, 0.276712, 0.276712, 0.276712, 0.276712],
                     [ 0.279545, 0.279545, 0.279545, 0.279545, 0.279545]]),
-                  (RNNUnit, 1, 5, 1, 1,
+                  (RNNStep, 1, 5, 1, 1,
                    [[ 0.645656, 0.645656, 0.645656, 0.645656, 0.645656],
                     [ 0.925727, 0.925727, 0.925727, 0.925727, 0.925727],
                     [ 0.986114, 0.986114, 0.986114, 0.986114, 0.986114],

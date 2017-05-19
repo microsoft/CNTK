@@ -64,7 +64,7 @@ def create_model_function():
         #  - bidirectional LSTM
         # which would be invoked as follows:
         #Recurrence(GRU(hidden_dim)),
-        #Recurrence(RNNUnit(hidden_dim, activation=relu)),
+        #Recurrence(RNNStep(hidden_dim, activation=relu)),
         #(Recurrence(LSTM(hidden_dim)), Recurrence(LSTM(hidden_dim), go_backwards=True)), splice,
         Stabilizer(),
         Label('hidden_representation'),
