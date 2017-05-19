@@ -383,6 +383,12 @@ IGNORE_CLASS CNTK::Internal::TensorBoardFileWriter;
 IGNORE_STRUCT CNTK::GPUProperties;
 IGNORE_FUNCTION CNTK::DeviceDescriptor::GetGPUProperties;
 
+#ifdef SWIGJAVA
+// TODO: make Java binding deal with wchar_t correctly.
+IGNORE_FUNCTION CNTK::DeviceKindName;
+IGNORE_FUNCTION CNTK::VariableKindName;
+#endif
+
 //use when the wrapped method returns an idiomatic type
 //for non-idiomatic types, such as the default collection wrappers use RENAME_AND_MAKE_PRIVATE below
 //and then write custom method in the language specific file
@@ -698,17 +704,15 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
 %rename (copyVariableValueToFloat) CNTK::Value::CopyVariableValueToFloat;
 %rename (copyVariableValueToDouble) CNTK::Value::CopyVariableValueToDouble;
 %rename (toString) CNTK::Value::AsString;
-#endif
 
-%include "CNTKValueExtend.i"
-
-#ifdef SWIGJAVA
 // TODO: make Java binding deal with double*, float * and int * correctly.
 %ignore CNTK::Value::CreateSequenceFloat(const CNTK::NDShape& sampleShape, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
 %ignore CNTK::Value::CreateSequenceDouble(const CNTK::NDShape& sampleShape, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
 %ignore CNTK::Value::CreateSequenceFloat(size_t dimension, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
 %ignore CNTK::Value::CreateSequenceDouble(size_t dimension, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
-#endif
+#endif // SWIGJAVA
+
+%include "CNTKValueExtend.i"
 
 // class NDArrayView
 %ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
