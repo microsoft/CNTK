@@ -703,7 +703,7 @@ class MyDataSource(UserMinibatchSource):
     def stream_infos(self):
         return [self.fsi, self.lsi]
 
-    def next_minibatch(self, num_samples, number_of_workers=1, worker_rank=0, device=None):
+    def next_minibatch(self, num_samples, number_of_workers, worker_rank, device=None):
         features = []
         labels = []
 
@@ -769,7 +769,7 @@ def test_usermbsource(tmpdir):
     u_features_si = u_mb_source['features']
     u_labels_si = u_mb_source['labels']
 
-    u_mb = u_mb_source.next_minibatch(2)
+    u_mb = u_mb_source.next_minibatch(2, 1, 0)
     u_features = u_mb[u_features_si]
     u_labels = u_mb[u_labels_si]
 
@@ -793,7 +793,7 @@ def test_usermbsource(tmpdir):
     n_features = n_mb[n_features_si]
     n_labels = n_mb[n_labels_si]
 
-    u_mb = u_mb_source.next_minibatch(10)
+    u_mb = u_mb_source.next_minibatch(10, 1, 0)
     u_features = u_mb[u_features_si]
     u_labels = u_mb[u_labels_si]
 

@@ -472,7 +472,8 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
             mb_size_in_samples, number_of_workers, worker_rank, device):
         # mbsize_in_sequences is ignored
 
-        info_map.update(self.next_minibatch(mb_size_in_samples, device))
+        info_map.update(self.next_minibatch(mb_size_in_samples,
+            number_of_workers, worker_rank, device))
 
     def __getitem__(self, name):
         '''
