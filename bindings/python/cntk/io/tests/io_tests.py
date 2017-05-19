@@ -145,7 +145,7 @@ def test_text_format(tmpdir):
 def check_default_config_keys(d):
         assert 5 <= len(d.keys())
         assert d['frameMode'] is False
-        assert d['multiThreadedDeserialization'] is False
+        assert d['multiThreadedDeserialization'] is True
         assert TraceLevel.Warning == d['traceLevel']
         assert 'randomize' in d.keys()
         assert 'deserializers' in d.keys()
@@ -237,7 +237,7 @@ def test_minibatch_source_config_other_properties(tmpdir):
     ctf = create_ctf_deserializer(tmpdir)
     config = MinibatchSourceConfig([ctf])
 
-    config.is_multithreaded = True
+    config.is_multithreaded = False
     config.trace_level = TraceLevel.Info.value
     config.is_frame_mode_enabled = True
 
@@ -245,9 +245,9 @@ def test_minibatch_source_config_other_properties(tmpdir):
     assert 8 == len(dictionary.keys())
     assert TraceLevel.Info == dictionary['traceLevel']
     assert dictionary['frameMode'] is True
-    assert dictionary['multiThreadedDeserialization'] is True
+    assert dictionary['multiThreadedDeserialization'] is False
 
-    config.is_multithreaded = False
+    config.is_multithreaded = True
     config.trace_level = 0
     config.truncation_length = 123
     with pytest.raises(Exception):
@@ -260,7 +260,7 @@ def test_minibatch_source_config_other_properties(tmpdir):
     assert 10 == len(dictionary.keys())
     assert 0 == dictionary['traceLevel']
     assert dictionary['frameMode'] is False
-    assert dictionary['multiThreadedDeserialization'] is False
+    assert dictionary['multiThreadedDeserialization'] is True
     assert dictionary['truncated'] is True
     assert 123 == dictionary['truncationLength']
 
