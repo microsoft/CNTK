@@ -19,12 +19,16 @@ from cntk.ops.tests.ops_test_utils import cntk_device
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "TransferLearning"))
+from _cntk_py import set_fixed_random_seed, force_deterministic_algorithms
 from TransferLearning_Extended import train_and_eval
 from prepare_test_data import prepare_animals_data
 
 TOLERANCE_ABSOLUTE = 1E-1
 
 def test_transfer_learning(device_id):
+    set_fixed_random_seed(1)
+    force_deterministic_algorithms()
+
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU') # due to batch normalization in ResNet_18
     try_set_default_device(cntk_device(device_id))
@@ -71,13 +75,17 @@ def test_transfer_learning(device_id):
         out_dict[output["image"]] = output
         exp_dict[expected_output["image"]] = expected_output
 
+    # debug output
     for k in out_dict:
         output = out_dict[k]
         expected_output = exp_dict[k]
 
-        # debug output
         print("output: {}".format(output))
         print("expect: {}".format(expected_output))
+
+    for k in out_dict:
+        output = out_dict[k]
+        expected_output = exp_dict[k]
 
         assert np.allclose(output["predictions"]["Sheep"], expected_output["predictions"]["Sheep"], atol=TOLERANCE_ABSOLUTE)
         assert np.allclose(output["predictions"]["Wolf"], expected_output["predictions"]["Wolf"], atol=TOLERANCE_ABSOLUTE)

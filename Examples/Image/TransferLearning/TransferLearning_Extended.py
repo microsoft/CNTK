@@ -54,6 +54,7 @@ def create_class_mapping_from_folder(root_folder):
     for _, directories, _ in os.walk(root_folder):
         for directory in directories:
             classes.append(directory)
+    classes.sort()
     return np.asarray(classes)
 
 def format_output_line(img_name, true_class, probs, class_mapping, top_n=3):
