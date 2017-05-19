@@ -62,7 +62,8 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
           be called with frequency which can implement custom cross validation logic,
           returns False if training should be stopped.
     '''
-    def __init__(self, source=None, mb_size=None, frequency=None, callback=None):
+    def __init__(self, source=None, mb_size=None, frequency=None,
+            callback=None, max_samples=None):
         self.callback = callback
 
         if source is None and callback is None:
@@ -86,8 +87,11 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
                              'it must be an output of minibatch_size_schedule() function'
                              % type(schedule))
 
+        if max_samples is None:
+            schedule = sys.maxsize
+
         super(CrossValidationConfig, self).__init__(
-            source, schedule, frequency)
+            source, schedule, frequency, max_samples)
 
 class TestConfig(cntk_py.TestConfig):
     '''
