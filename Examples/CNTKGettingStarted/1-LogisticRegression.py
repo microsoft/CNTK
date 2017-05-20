@@ -35,6 +35,9 @@ def generate_synthetic_data(N):
     Y = np.random.randint(size=N, low=0, high=num_classes)
     # data
     X = (np.random.randn(N, input_dim)+3) * (Y[:,None]+1)
+    # our model expects float32 features, and cross-entropy expects one-hot encoded labels
+    Y = cntk.Value.one_hot(Y, num_classes)
+    X = X.astype(np.float32)
     return X, Y
 X_train, Y_train = generate_synthetic_data(num_samples_to_train)
 X_test,  Y_test  = generate_synthetic_data(num_samples_to_test)
@@ -47,7 +50,6 @@ X_test,  Y_test  = generate_synthetic_data(num_samples_to_test)
 # A Dense layer implements the formula y = x @ W + b, where W and b
 # are learnable model parameters.
 model = cntk.layers.Dense(num_classes, activation=None)
-print(model.parameters)
 
 # Define the CNTK criterion function. A criterion function maps
 # (input vectors, labels) to a loss function and an optional additional
@@ -59,7 +61,9 @@ print(model.parameters)
 @Signature(cntk.layers.Tensor[input_dim], cntk.layers.SparseTensor[num_classes])
 def criterion(data, label_one_hot):
     z = model(data)  # apply model. Computes a non-normalized log probability for every output class.
-    return cntk.cross_entropy_with_softmax(z, label_one_hot)
+    loss   = cntk.cross_entropy_with_softmax(z, label_one_hot)
+    metric = cntk.classification_error(z, label_one_hot)
+    return loss, metric
 
 # Instantiate the trainer object to drive the model training
 learning_rate = 0.5
@@ -69,7 +73,7 @@ trainer = cntk.Trainer(None, criterion, [learner], progress_writers=[cntk.loggin
 # Initialize the parameters for the trainer
 minibatch_size = 25
 
-minibatch_source = cntk.io.MinibatchSourceFromData(data=X_train.astype(np.float32), labels=cntk.Value.one_hot(Y_train, num_classes))
+minibatch_source = cntk.io.MinibatchSourceFromData(data=X_train, labels=Y_train)
 model_inputs_to_streams = {criterion.arguments[0]: minibatch_source.streams.data, criterion.arguments[1]: minibatch_source.streams.labels}
 
 training_session = cntk.training_session(trainer, minibatch_source, minibatch_size,
