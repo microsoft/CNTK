@@ -91,7 +91,7 @@ def create_mb_source(img_height, img_width, img_channels, n_classes, n_rois, dat
         roiLabels = StreamDef(field=label_stream_name, shape=label_dim, is_sparse=False)))
 
     # define a composite reader
-    return MinibatchSource([image_source, roi_source, label_source], epoch_size=sys.maxsize, randomize=data_set == "train")
+    return MinibatchSource([image_source, roi_source, label_source], max_samples=sys.maxsize, randomize=data_set == "train")
 
 # Defines the Fast R-CNN network model for detecting objects in images
 def frcn_predictor(features, rois, n_classes, model_path):

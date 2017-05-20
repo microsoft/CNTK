@@ -112,17 +112,6 @@ def use_default_device():
     return cntk_py.DeviceDescriptor.use_default_device()
 
 
-def set_default_device(new_default_device):
-    '''
-    See :func:`try_set_default_device`
-    '''
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-                  'DeviceDescriptor.try_set_default_device() instead.',
-                  DeprecationWarning)
-    return try_set_default_device(new_default_device, False)
-
-
 def try_set_default_device(new_default_device, acquire_device_lock=False):
     '''
     Tries to set the specified device as the globally default, optionally

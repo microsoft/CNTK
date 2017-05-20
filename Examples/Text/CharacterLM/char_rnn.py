@@ -191,7 +191,7 @@ def train_lm(training_file, epochs, max_num_minibatches):
                 print(sample(z, ix_to_char, vocab_dim, char_to_ix))
 
         model_filename = "models/shakespeare_epoch%d.dnn" % (e+1)
-        z.save_model(model_filename)
+        z.save(model_filename)
         print("Saved model to '%s'" % model_filename)
 
 
