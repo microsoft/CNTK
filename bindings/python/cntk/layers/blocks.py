@@ -109,7 +109,7 @@ def ForwardDeclaration(name='forward_declaration'):
          array([ 3.], dtype=float32)
 
     Returns:
-        a placeholder variable with a method ``resolve_to()`` that resolves it to another variable
+        :class:`~cntk.variables.Variable`: a placeholder variable with a method ``resolve_to()`` that resolves it to another variable
     '''
     var_fwd = placeholder(name=name)
     def resolve_to(var):
@@ -147,15 +147,18 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
 
     This takes `enable_self_stabilization` as a flag that allows to disable itself. Useful if this is a global default.
 
-    Note: Some other layers (specifically, recurrent units like :func:`~cntk.layers.blocks.LSTM`) also have the option to
-    use the ``Stabilizer()`` layer internally. That is enabled by passing `enable_self_stabilization=True`
-    to those layers. In conjunction with those, the rule is that an explicit ``Stabilizer()`` must be
-    inserted by the user for the main data input, whereas the recurrent layer will own the stabilizer(s)
-    for the internal recurrent connection(s).
-    Note: Unlike the original paper, which proposed a linear or exponential scalar,
-    CNTK uses a sharpened Softplus: 1/steepness ln(1+e^{steepness*beta}).
-    The softplus behaves linear for weights around and above 1 (like the linear scalar) while guaranteeing
-    positiveness (like the exponentional variant) but is also more robust by avoiding exploding gradients.
+    Note:
+        Some other layers (specifically, recurrent units like :func:`~cntk.layers.blocks.LSTM`) also have the option to
+        use the ``Stabilizer()`` layer internally. That is enabled by passing `enable_self_stabilization=True`
+        to those layers. In conjunction with those, the rule is that an explicit ``Stabilizer()`` must be
+        inserted by the user for the main data input, whereas the recurrent layer will own the stabilizer(s)
+        for the internal recurrent connection(s).
+
+    Note:
+        Unlike the original paper, which proposed a linear or exponential scalar,
+        CNTK uses a sharpened Softplus: 1/steepness ln(1+e^{steepness*beta}).
+        The softplus behaves linear for weights around and above 1 (like the linear scalar) while guaranteeing
+        positiveness (like the exponentional variant) but is also more robust by avoiding exploding gradients.
 
     Example:
      >>> # recurrent model with self-stabilization
@@ -175,7 +178,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
         name (str, defaults to ''): the name of the Function instance in the network
 
     Returns:
-        cntk.ops.functions.Function:
+        :class:`~cntk.ops.functions.Function`:
         A function
     '''
 
@@ -383,7 +386,7 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
         name (str, defaults to ''): the name of the Function instance in the network
 
     Returns:
-        cntk.ops.functions.Function:
+        :class:`~cntk.ops.functions.Function`:
         A function ``(prev_h, prev_c, input) -> (h, c)`` that implements one step of a recurrent LSTM layer.
     '''
 
@@ -427,7 +430,7 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
         name (str, defaults to ''): the name of the Function instance in the network
 
     Returns:
-        cntk.ops.functions.Function:
+        :class:`~cntk.ops.functions.Function`:
         A function ``(prev_h, input) -> h`` where ``h = activation(input @ W + prev_h @ R + b)``
     '''
 
@@ -469,7 +472,7 @@ def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
         name (str, defaults to ''): the name of the Function instance in the network
 
     Returns:
-        cntk.ops.functions.Function:
+        :class:`~cntk.ops.functions.Function`:
         A function ``(prev_h, input) -> h`` that implements one step of a recurrent GRU layer.
     '''
 

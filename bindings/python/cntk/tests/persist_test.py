@@ -95,7 +95,7 @@ def test_load_save_unique_input(tmpdir):
 
     loaded_node = C.Function.load(filename)
 
-    # Test specifying the only value for an unique input
+    # Test specifying the only value for a unique input
     loaded_result = loaded_node.eval(input1)
     assert np.allclose(loaded_result, expected)
 

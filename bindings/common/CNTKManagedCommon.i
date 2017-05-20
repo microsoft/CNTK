@@ -383,6 +383,12 @@ IGNORE_CLASS CNTK::Internal::TensorBoardFileWriter;
 IGNORE_STRUCT CNTK::GPUProperties;
 IGNORE_FUNCTION CNTK::DeviceDescriptor::GetGPUProperties;
 
+#ifdef SWIGJAVA
+// TODO: make Java binding deal with wchar_t correctly.
+IGNORE_FUNCTION CNTK::DeviceKindName;
+IGNORE_FUNCTION CNTK::VariableKindName;
+#endif
+
 //use when the wrapped method returns an idiomatic type
 //for non-idiomatic types, such as the default collection wrappers use RENAME_AND_MAKE_PRIVATE below
 //and then write custom method in the language specific file
@@ -414,12 +420,6 @@ IGNORE_FUNCTION CNTK::DeviceDescriptor::GetGPUProperties;
 // include common warning filters
 %include "CNTKWarnFilters.i"
 
-#ifdef SWIGCSHARP
-// define typemap for dataBuffer
-%apply float INPUT[]  { float *dataBuffer }
-%apply double INPUT[]  { double *dataBuffer }
-#endif
-
 %rename(AreEqual) operator==;
 %rename(AreNotEqual) operator!=;
 %ignore operator[];
@@ -435,6 +435,7 @@ RENAME_AND_MAKE_PRIVATE(CNTK::DeviceDescriptor, AllDevices);
 
 #ifdef SWIGCSHARP
 RENAME_AND_MAKE_PRIVATE(CNTK::DeviceDescriptor, SetExcludedDevices);
+RENAME_AND_MAKE_PRIVATE(CNTK::DeviceDescriptor, GPUDevice);
 #endif
 
 #ifdef SWIGJAVA
@@ -461,6 +462,8 @@ MAKE_GETTER(CNTK::Axis, Name);
 // It cannot be a property as it has a parameter.
 RENAME_AND_MAKE_PRIVATE(CNTK::Axis, StaticAxisIndex);
 RENAME_AND_MAKE_PRIVATE(CNTK::Axis, IsOrdered);
+RENAME_AND_MAKE_PRIVATE(CNTK::Axis, IsStaticAxis);
+RENAME_AND_MAKE_PRIVATE(CNTK::Axis, IsDynamicAxis);
 #endif
 
 #ifdef SWIGJAVA
@@ -556,6 +559,8 @@ MAKE_GETTER(CNTK::Variable, Kind);
 MAKE_GETTER(CNTK::Variable, Owner);
 MAKE_GETTER(CNTK::Variable, DynamicAxes);
 
+RENAME_AND_MAKE_PRIVATE(CNTK::Variable, GetHashValue);
+
 #ifdef SWIGCSHARP
 RENAME_AND_MAKE_PRIVATE(CNTK::Variable, IsSparse);
 RENAME_AND_MAKE_PRIVATE(CNTK::Variable, IsInput);
@@ -564,6 +569,7 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Variable, IsParameter);
 RENAME_AND_MAKE_PRIVATE(CNTK::Variable, IsConstant);
 RENAME_AND_MAKE_PRIVATE(CNTK::Variable, IsPlaceholder);
 RENAME_AND_MAKE_PRIVATE(CNTK::Variable, NeedsGradient);
+RENAME_AND_MAKE_PRIVATE(CNTK::Variable, GetDataType);
 RENAME_AND_MAKE_PRIVATE(CNTK::Variable, CurrentValueTimeStamp);
 #endif
 
@@ -588,6 +594,7 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Variable, CurrentValueTimeStamp);
 MAKE_GETTER(CNTK::NDShape, Rank);
 MAKE_GETTER(CNTK::NDShape, TotalSize);
 RENAME_AND_MAKE_PRIVATE(CNTK::NDShape, Dimensions);
+RENAME_AND_MAKE_PRIVATE(CNTK::NDShape, DimensionSize);
 
 #ifdef SWIGCSHARP
 RENAME_AND_MAKE_PRIVATE(CNTK::NDShape, IsUnknown);
@@ -610,7 +617,7 @@ RENAME_AND_MAKE_PRIVATE(CNTK::NDShape, SubShape);
 #endif
 
 %extend CNTK::NDShape {
-    size_t _DimensionSize(size_t axisId)
+    size_t DimensionSize(size_t axisId)
     {
         return (*self)[axisId];
     }
@@ -651,18 +658,20 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, IsValid);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, IsSparse);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, IsReadOnly);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, Alias);
-MAKE_PRIVATE(CNTK::Value::Create);
-MAKE_PRIVATE(CNTK::Value::CreateDenseFloat);
-MAKE_PRIVATE(CNTK::Value::CreateDenseDouble);
-MAKE_PRIVATE(CNTK::Value::CreateBatchFloat);
-MAKE_PRIVATE(CNTK::Value::CreateBatchDouble);
-MAKE_PRIVATE(CNTK::Value::CreateSequenceFloat);
-MAKE_PRIVATE(CNTK::Value::CreateSequenceDouble);
-MAKE_PRIVATE(CNTK::Value::CreateOneHotFloat);
-MAKE_PRIVATE(CNTK::Value::CreateOneHotDouble);
-MAKE_PRIVATE(CNTK::Value::CopyVariableValueTo);
-MAKE_PRIVATE(CNTK::Value::CopyVariableValueToFloat);
-MAKE_PRIVATE(CNTK::Value::CopyVariableValueToDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, Create);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, GetDataType);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, GetStorageFormat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateDenseFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateDenseDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateBatchFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateBatchDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateSequenceFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateSequenceDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateOneHotFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateOneHotDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueTo);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
 #endif // SWIGCSHARP
 
 #ifdef SWIGCSHARP
@@ -695,7 +704,13 @@ MAKE_PRIVATE(CNTK::Value::CopyVariableValueToDouble);
 %rename (copyVariableValueToFloat) CNTK::Value::CopyVariableValueToFloat;
 %rename (copyVariableValueToDouble) CNTK::Value::CopyVariableValueToDouble;
 %rename (toString) CNTK::Value::AsString;
-#endif
+
+// TODO: make Java binding deal with double*, float * and int * correctly.
+%ignore CNTK::Value::CreateSequenceFloat(const CNTK::NDShape& sampleShape, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
+%ignore CNTK::Value::CreateSequenceDouble(const CNTK::NDShape& sampleShape, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
+%ignore CNTK::Value::CreateSequenceFloat(size_t dimension, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
+%ignore CNTK::Value::CreateSequenceDouble(size_t dimension, size_t sequenceLength, const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, bool sequenceStartFlag, const CNTK::DeviceDescriptor& device, bool readOnly = false);
+#endif // SWIGJAVA
 
 %include "CNTKValueExtend.i"
 
@@ -712,6 +727,8 @@ RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, IsSparse);
 RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, IsReadOnly);
 RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, Alias);
 RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, SliceView);
+RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, GetDataType);
+RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, GetStorageFormat);
 #endif
 
 #ifdef SWIGJAVA
@@ -729,6 +746,12 @@ RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, SliceView);
 %rename (toString) CNTK::NDArrayView::AsString;
 #endif
 
+#ifdef SWIGCSHARP
+// define typemap for dataBuffer
+%apply float INPUT[]  { float *dataBuffer }
+%apply double INPUT[]  { double *dataBuffer }
+
+// TODO: make Java correctly deal with float*, double* and int *
 %extend CNTK::NDArrayView {
     NDArrayView(const NDShape& viewShape, float *dataBuffer, size_t numBufferElements, const DeviceDescriptor& device, bool readOnly = false)
     {
@@ -766,3 +789,4 @@ RENAME_AND_MAKE_PRIVATE(CNTK::NDArrayView, SliceView);
         return new CNTK::NDArrayView(viewShape, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device, readOnly);
     }
 }
+#endif

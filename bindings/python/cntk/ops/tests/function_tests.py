@@ -530,3 +530,13 @@ def test_set_rng_seed_attribute():
 
     random_sample_node.set_attribute(key, 2**31)
     assert root.attributes[key] == 2**31
+
+
+def test_clone_with_different_dynamic_axes():
+    q_axis = C.Axis('q')
+    a_axis = C.Axis('a')
+    question_input = C.sequence.input(shape=10, is_sparse=True, sequence_axis=q_axis)
+    answer_input = C.sequence.input(shape=10, is_sparse=True, sequence_axis=a_axis)
+
+    rnn = C.layers.Recurrence(C.layers.LSTM(5))(question_input)
+    rnn_cloned = rnn.clone(C.CloneMethod.share, {question_input:answer_input})

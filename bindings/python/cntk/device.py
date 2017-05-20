@@ -31,7 +31,7 @@ class DeviceKind(Enum):
 
 class DeviceDescriptor(cntk_py.DeviceDescriptor):
     '''
-    Describes a device by an unique id and its type. If the device corresponds
+    Describes a device by a unique id and its type. If the device corresponds
     to a GPU its type is 1, otherwise, it is 0
     '''
 
@@ -40,7 +40,7 @@ class DeviceDescriptor(cntk_py.DeviceDescriptor):
         Returns id of device descriptor
 
         Returns:
-            `int`: id
+            int: id
         '''
         return super(DeviceDescriptor, self).id()
 
@@ -49,7 +49,7 @@ class DeviceDescriptor(cntk_py.DeviceDescriptor):
         Returns type of device descriptor. 1 if it is a GPU device or 0 if CPU.
 
         Returns:
-            `int`: type
+            int: type
         '''
         return super(DeviceDescriptor, self).type()
 

@@ -178,7 +178,7 @@
 
     @Override
     public int hashCode() {
-        return (int)GetHashValue();
+        return (int)_GetHashValue();
     }
 %}
 

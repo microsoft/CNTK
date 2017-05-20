@@ -19,8 +19,8 @@ def uniform(scale, seed=None):
 
     Returns:
         initializer for :class:`~cntk.variables.Parameter`
-        initialized to uniform distribution between `scale*[-1.0, 1.0]`
-        note this maps to the "uniform1" distribution in BrainScript.
+        initialized to uniform distribution between `scale*[-1.0, 1.0]`.
+        Note: this maps to the "uniform1" distribution in BrainScript.
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
