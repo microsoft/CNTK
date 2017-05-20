@@ -18,7 +18,7 @@
     <NvmlDll Condition="Exists('c:\local\bindrop\NVSMI\nvml.dll')">c:\local\bindrop\NVSMI\nvml.dll</NvmlDll>
 
     <HasOpenCv>false</HasOpenCv>
-    <HasOpenCv Condition="Exists('$(OPENCV_PATH)') Or Exists('$(OPENCV_PATH_V31)') Or Exists('$(OPENCV_PATH_V32)')">true</HasOpenCv>
+    <HasOpenCv Condition="Exists('$(OPENCV_PATH)') Or Exists('$(OPENCV_PATH_V31)')">true</HasOpenCv>
     
     <HasProtobuf>false</HasProtobuf>
     <HasProtobuf Condition="Exists('$(PROTOBUF_PATH)')">true</HasProtobuf>
@@ -68,30 +68,17 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="Exists('$(OPENCV_PATH)')">
-    <!--OpenCvPath>$(OPENCV_PATH)</OpenCvPath-->
-    <OpenCvPath>C:\local\opencv-3.2.0-vc14\build</OpenCvPath>
-    <!--OpenCvVersion>300</OpenCvVersion-->
-    <OpenCvVersion>320</OpenCvVersion>
+    <OpenCvPath>$(OPENCV_PATH)</OpenCvPath>
   </PropertyGroup>
 
   <PropertyGroup Condition="Exists('$(OPENCV_PATH_V31)')">
-    <!--OpenCvPath>$(OPENCV_PATH_V31)</OpenCvPath-->
-    <OpenCvPath>C:\local\opencv-3.2.0-vc14\build</OpenCvPath>
-    <!--OpenCvVersion>310</OpenCvVersion-->
-    <OpenCvVersion>320</OpenCvVersion>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="Exists('$(OPENCV_PATH_V32)')">
-    <!--OpenCvPath>$(OPENCV_PATH_V32)</OpenCvPath-->
-    <OpenCvPath>C:\local\opencv-3.2.0-vc14\build</OpenCvPath>
-    <OpenCvVersion>320</OpenCvVersion>
+    <OpenCvPath>$(OPENCV_PATH_V31)</OpenCvPath>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(HasOpenCv)">
     <OpenCvInclude>$(OpenCvPath)\include;</OpenCvInclude>
-    <OpenCvWorld Condition="$(ReleaseBuild)">opencv_world$(OpenCvVersion)</OpenCvWorld>
-    <OpenCvWorld Condition="$(DebugBuild)">opencv_world$(OpenCvVersion)d</OpenCvWorld>
-    <OpenCvLib>$(OpenCvWorld).lib</OpenCvLib>
+    <OpenCvWorld Condition="$(ReleaseBuild)">opencv_world*.dll</OpenCvWorld>
+    <OpenCvWorld Condition="$(DebugBuild)">opencv_world*d.dll</OpenCvWorld>
     <OpenCvLibPath>$(OpenCvPath)\x64\vc14\lib</OpenCvLibPath>
     <OpenCvBinPath>$(OpenCvPath)\x64\vc14\bin</OpenCvBinPath>
   </PropertyGroup>

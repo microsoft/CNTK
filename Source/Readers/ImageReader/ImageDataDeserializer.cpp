@@ -15,6 +15,14 @@
 #include "ImageTransformers.h"
 #include "ImageUtil.h"
 
+#ifdef NDEBUG
+#define OPENCV_LIB "opencv_world" CVAUX_STR(CV_VERSION_MAJOR) CVAUX_STR(CV_VERSION_MINOR) CVAUX_STR(CV_VERSION_REVISION) ".lib"
+#else
+#define OPENCV_LIB "opencv_world" CVAUX_STR(CV_VERSION_MAJOR) CVAUX_STR(CV_VERSION_MINOR) CVAUX_STR(CV_VERSION_REVISION) "d.lib"
+#endif
+#pragma comment(lib, OPENCV_LIB)
+#undef OPENCV_LIB
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // For image, chunks correspond to a single image.
