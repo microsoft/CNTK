@@ -606,7 +606,7 @@ def Base64ImageDeserializer(filename, streams):
 
     Args:
         filename (str): file name of the input file dataset that contains images 
-        and corresponding labels
+         and corresponding labels
 
     See also:
         :cntkwiki:`Base64ImageDeserializer options <BrainScript-and-Python---Understanding-and-Extending-Readers#base64imagedeserializer-options>`
