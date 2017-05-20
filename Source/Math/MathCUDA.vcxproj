@@ -90,7 +90,7 @@
       <FastMath>true</FastMath>
       <GPUDebugInfo>false</GPUDebugInfo>
       <GPUDebugInfo Condition="'$(CNTK_CUDA_DEVICE_DEBUGINFO)'=='1'">true</GPUDebugInfo>
-      <AdditionalOptions>-Xcudafe "--diag_suppress=field_without_dll_interface" -Xcompiler "/wd 4819" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-Xcudafe "--diag_suppress=field_without_dll_interface" -Xcompiler "/wd 4819"  --expt-relaxed-constexpr %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <PostBuildEvent>
       <Command>for %%l in ($(CudaDlls)) do if exist "$(CudaPath)\bin\%%l" xcopy /D /Y "$(CudaPath)\bin\%%l*" "$(OutputPath)"

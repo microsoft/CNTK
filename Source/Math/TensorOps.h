@@ -71,6 +71,25 @@ OverloadUnaryMathFns(log1p);
 // #pragma fast-math pop
 OverloadBinaryMathFns(pow);
 
+template<typename T>
+DECL T safepow_(T b, T e)        
+{                                    
+    static auto qnan = T(nan(""));
+    if (e == 0) 
+        return T(1);
+    if (b == 0)
+        return T(0);
+    else if (b > 0)
+        return pow_(b, e);
+    else 
+    {
+        int f = static_cast<int>(e);
+        if (e != f)
+            return qnan;
+        else
+            return pow_(fabs_(b), e) * (1 - 2 * (f & 1));
+    }
+}                                    
 
 #pragma pop_macro("OverloadBinaryMathFns")
 
@@ -269,7 +288,7 @@ DefBinaryOp(Difference, a - b);
 DefBinaryOp(ElementwiseProduct, a* b);
 DefBinaryOp(ElementwiseQuotient, ClippedQuotient(a, b));
 DefBinaryOp(LogSum, LogAdd(a, b));
-DefBinaryOp(Pow, pow_(a, b));
+DefBinaryOp(Pow, safepow_(a, b));
 DefBinaryOp(Max, a > b ? a : b);
 DefBinaryOp(Min, a < b ? a : b);
 DefBinaryOp(Equal, a == b);
@@ -311,7 +330,7 @@ DefTernaryOp(Clip, c < a ? a : (c > b ? b : c)); // Clip(min,max)(data) => a=min
 DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * StableSigmoid(c - b));
 DefTernaryOp(ElementwiseProductWithExpOfDiff, a * exp_(b - c));
 DefTernaryOp(ElementwiseProductWithQuotient, a * b * OpReciprocal(c));
-DefTernaryOp(ElementwiseProductWithPowExponentDerivative, a * b * OpLog(c));
+DefTernaryOp(ElementwiseProductWithPowExponentDerivative, c <= 0 ? 0 : a * b * log_(c)); // same behavior as other toolkits
 DefTernaryOp(ElementwiseProductWithPowBaseDerivative, a * c * OpPow(b, c - 1)); // Using the output of pow would be faster but it requires a quaternary op and users will likely only use pow in forward mode
 
 #pragma pop_macro("DefTernaryOp")
