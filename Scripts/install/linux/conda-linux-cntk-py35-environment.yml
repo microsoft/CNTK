@@ -21,7 +21,6 @@ dependencies:
 - six=1.10.0=py35_0
 - wheel=0.29.0=py35_0
 - pip:
-  - psutil==5.2.2
   - pytest==3.0.3
   - sphinx==1.5.4
   - sphinx-rtd-theme==0.2.4
