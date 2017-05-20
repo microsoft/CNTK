@@ -73,8 +73,7 @@ OverloadBinaryMathFns(pow);
 
 template<typename T>
 DECL T safepow_(T b, T e)        
-{                                    
-    static auto qnan = T(nan(""));
+{
     if (e == 0) 
         return T(1);
     if (b == 0)
@@ -85,7 +84,7 @@ DECL T safepow_(T b, T e)
     {
         int f = static_cast<int>(e);
         if (e != f)
-            return qnan;
+            return T(NAN);
         else
             return pow_(fabs_(b), e) * (1 - 2 * (f & 1));
     }
