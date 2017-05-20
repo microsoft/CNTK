@@ -126,7 +126,7 @@ class Function(cntk_py.Function):
         # helper to create a CNTK placeholder or input for a given name
         # An input is created if the parameter is annotated with a Tensor(...) type.
         # In this case, CNTK will immediately trigger type inference.
-        # Unannotated parameters will yield placeholder_variables instead.
+        # Unannotated parameters will yield placeholder variables instead.
         from .. import placeholder
         def make_arg_variable(name, annotations):
             from ..variables import Variable
@@ -1147,11 +1147,6 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).save(filename)
 
-    def save_model(self, filename): # legacy name
-        warnings.warn('This will be removed in future versions. Please use '
-                'save(...) instead', DeprecationWarning)
-        return self.save(filename)
-
     @typemap
     def restore(self, filename):
         '''
@@ -1164,11 +1159,6 @@ class Function(cntk_py.Function):
             `None`: this method only has the side-effect of loading the model parameters from the file
         '''
         return super(Function, self).restore(filename)
-
-    def restore_model(self, filename): # legacy name
-        warnings.warn('This will be removed in future versions. Please use '
-                'restore(...) instead', DeprecationWarning)
-        return self.restore(filename)
 
     @staticmethod
     def register_udf_deserialize_callback(op_name, callback):
@@ -1280,12 +1270,6 @@ def load_model(model, device=None):
     Alias for :func:`~cntk.ops.functions.Function.load`.
     '''
     return Function.load(model, device)
-
-@typemap
-def save_model(model, filename): # legacy name
-    warnings.warn('This will be removed in future versions. Please use '
-            'model.save(...) instead', DeprecationWarning)
-    return model.save(filename)
 
 class UserFunction(Function):
     '''

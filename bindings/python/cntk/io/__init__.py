@@ -65,18 +65,6 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         return super(MinibatchData, self).data()
 
     @property
-    def value(self):
-        '''
-        The value of the minibatch as a NumPy array.
-        '''
-        warnings.warn('the .value property is deprecated. Please use '
-                      '.asarray() or .as_sequences() to get the NumPy '
-                      'representations or .data to get the Value '
-                      'representation', RuntimeWarning)
-
-        return self.as_sequences()
-
-    @property
     def shape(self):
         '''
         The shape of the data in this minibatch as tuple.
@@ -122,7 +110,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
 
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
-    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, randomization_seed=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=False, frame_mode=False, truncation_length=0, randomize=None, randomization_window=None, sample_based_randomization_window=None, epoch_size=None)
+    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, randomization_seed=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=False, frame_mode=False, truncation_length=0, randomize=True)
 
     Args:
         deserializers (a single deserializer or a `list`): deserializers to be used in the composite reader
@@ -158,13 +146,8 @@ class MinibatchSource(cntk_py.MinibatchSource):
         truncation_length (`int`, defaults to `0`): truncation length in samples, non-zero value enables
           the truncation (only applicable for BPTT, cannot be used in frame mode, an exception will be raised
           if frame mode is enabled and the truncation length is non-zero).
-        randomize (`bool`, defaults to `None`): !DEPRECATED! please use randomization_window_in_chunks or
-          randomization_window_in_samples instead
-        randomization_window (int, defaults to `None`): !DEPRECATED! please use randomization_window_in_chunks or
-          randomization_window_in_samples instead
-        sample_based_randomization_window (`bool`, defaults to `None`): !DEPRECATED! please use
-          randomization_window_in_chunks or randomization_window_in_samples instead
-        epoch_size (`int`, defaults to `None`): !DEPRECATED! please use max_samples or max_sweeps instead
+        randomize (`bool`, defaults to `True`): Enables or disables randomization; use randomization_window_in_chunks or
+          randomization_window_in_samples to specify the randomization range
     '''
     def __init__(self,
         deserializers,
@@ -177,12 +160,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         multithreaded_deserializer=False,
         frame_mode=False,
         truncation_length=0,
-        # all parameters below are deprecated
-        randomize=None,
-        randomization_window=None,
-        sample_based_randomization_window=None,
-        epoch_size=None,
-        distributed_after=None):
+        randomize=True):
 
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [ deserializers ]
@@ -202,46 +180,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
         config.trace_level = trace_level
 
-        # the following deals with deprecated parameters.
-        # TODO: 'randomize=False' is the only legacy option that still makes sense
-        # (as a shortcut to randomization_window_in_chunks=0 and
-        # randomization_window_in_samples=0), maybe we should keep it?
-        if randomize is not None and randomize:
-            warnings.warn('"randomize" parameter is deprecated and will be removed '
-                'in future versions. Please specify "randomization_window_in_chunks" or '
-                '"randomization_window_in_samples" instead', DeprecationWarning)
-        elif randomize is None:
-            randomize = True # previously default value
-
-        if randomization_window is not None:
-             warnings.warn('"randomization_window" parameter is deprecated and will be removed '
-                'in future versions. Please specify "randomization_window_in_chunks" or '
-                '"randomization_window_in_samples" instead', DeprecationWarning)
-        else:
-            randomization_window = DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS # previously default value
-
-        if sample_based_randomization_window is not None:
-             warnings.warn('"sample_based_randomization_window" parameter is deprecated and will be removed '
-                'in future versions. Please specify "randomization_window_in_chunks" or '
-                '"randomization_window_in_samples" instead', DeprecationWarning)
-        else:
-            sample_based_randomization_window = False  # previously default value
-
-        if (randomize and sample_based_randomization_window):
-            config.randomization_window_in_samples = randomization_window
-            config.randomization_window_in_chunks = 0
-        elif (randomize and not sample_based_randomization_window):
-            config.randomization_window_in_chunks = randomization_window
-            config.randomization_window_in_samples = 0
-        elif not randomize:
+        if not randomize:
             config.randomization_window_in_chunks = 0
             config.randomization_window_in_samples = 0
-
-        if (epoch_size is not None):
-            warnings.warn('"epoch_size" parameter is deprecated and will be removed '
-                'in future versions. Please specify "max_samples" or '
-                '"max_sweeps" instead', DeprecationWarning)
-            config.max_samples = epoch_size
 
         source = cntk_py.create_composite_minibatch_source(config)
         # transplant into this class instance

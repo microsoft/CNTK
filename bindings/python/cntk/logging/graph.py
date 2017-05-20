@@ -344,20 +344,6 @@ def plot(root, filename=None):
     return model
 
 
-def output_function_graph(node, dot_file_path=None, png_file_path=None):
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-            'plot(...) instead', DeprecationWarning)
-
-    result = plot(node, dot_file_path)
-    if png_file_path:
-        result2 = plot(node, dot_file_path)
-        if not result:
-            result = result2
-
-    return result
-
-
 def get_node_outputs(node, depth=0):
     '''
     Walks through every node of the graph starting at ``node``

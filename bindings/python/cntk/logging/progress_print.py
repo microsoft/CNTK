@@ -9,7 +9,6 @@ import time
 
 from cntk import cntk_py
 
-
 def _warn_deprecated(message):
     from warnings import warn
     warn('DEPRECATED: ' + message, DeprecationWarning, stacklevel=2)
