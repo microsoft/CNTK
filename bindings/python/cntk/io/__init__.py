@@ -421,6 +421,10 @@ class StreamInformation(cntk_py.StreamInformation):
         self.m_element_type = sanitize_dtype_cntk(dtype)
         self.m_sample_layout = cntk_py.NDShape(shape)
 
+    @property
+    def name(self):
+        return self.m_name
+
 
 class UserMinibatchSource(cntk_py.SwigMinibatchSource):
     '''
@@ -484,6 +488,114 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
               :class:`StreamInformation` for
         '''
         return self.stream_info(name)
+
+class MinibatchSourceFromData(UserMinibatchSource):
+    '''
+    This wraps in-memory data as a CNTK MinibatchSource object (aka "reader"), used to feed the data into a TrainingSession.
+
+    Use this if your data is small enough to be loaded into RAM in its entirety, and
+    the data is already sufficiently randomized.
+
+    While CNTK allows user code to iterate through minibatches by itself and feed data minibatch
+    by minibatch through :func:`~cntk.trainer.Trainer.train_minibatch`, the standard way is to iterate
+    through data using a MinibatchSource object. For example, the high-level :class:`~cntk.training_session.training_session`
+    interface, which manages a full training including checkpointing and cross validation, operates on this level.
+
+    A MinibatchSource created as a `MinibatchSourceFromData` linearly iterates through the data provided by
+    the caller as numpy arrays or scipy.sparse.csr_matrix objects, without randomization.
+
+    Args:
+     kwargs: name-value pairs
+
+    Returns:
+     An implementation of a :class:`cntk.io.MinibatchSource` that will iterate through the data.
+    '''
+    def __init__(self, **kwargs):
+        from cntk import Variable
+        if not kwargs:
+            raise(ValueError('at least one stream must be specified, in the form name=data or name=(data, type)'))
+        self.data = dict()         # [name] -> numpy.array or scipy.sparse.csr_matrix
+        self.types = dict()        # [name] -> Variable._Type
+        self.is_sequence = dict()  # [name] -> bool
+
+        # get the data and types from the input, and form streams array
+        self.num_samples = -1  # total number of samples --must be the same for all args
+        import scipy
+        for name, arg in kwargs.items():
+            if isinstance(arg, tuple):
+                value, type = arg
+                type = Variable._Type._sanitize(type)
+                dynamic_axes = getattr(type, 'dynamic_axes', None)
+                is_sequence = dynamic_axes and len(dynamic_axes) > 1
+                if not isinstance(type, Variable._Type):
+                    raise ValueError('type must be a CNTK variable type, e.g. Tensor[13]')
+            else:
+                value = arg
+                is_sequence = False  # data without type cannot have a dynamic axis
+                type = Variable._Type(is_sparse=isinstance(value, scipy.sparse.csr_matrix)) # shape implanted below
+            if not isinstance(value[0] if isinstance(value, list) else value, (np.ndarray, scipy.sparse.csr_matrix, Value)):
+                raise TypeError('data must be a numpy.array or scipy.sparse.csr_matrix, or a list of those')
+            sample_shape = value.shape[2:] if is_sequence else value.shape[1:]
+            if not type.shape_is_known:
+                type = type.updated_with(shape=sample_shape); # implant the shape
+            elif type.shape != sample_shape:
+                ValueError("specified type's shape does not match the data's shape")
+            if self.num_samples == -1:
+                if len(value) == 0:
+                    raise(ValueError('data is empty'))
+                self.num_samples = len(value)
+            elif self.num_samples != len(value):
+                raise TypeError('all data items must have the same first dimension')
+            self.data[name] = value
+            self.types[name] = type
+            self.is_sequence[name] = is_sequence
+
+        self.cursor = 0   # current position
+
+        super(MinibatchSourceFromData, self).__init__()
+
+    def stream_infos(self):
+        return [StreamInformation(name, i, ['dense', 'sparse'][getattr(self.types[name], 'is_sparse', False)], 
+                                  self.data[name].dtype, self.types[name].shape)
+                for i, name in enumerate(self.data.keys())]
+
+    def next_minibatch(self, num_samples, number_of_workers=1, worker_rank=0, device=None):        
+        assert number_of_workers == 1  # TODO
+        # determine how many samples, starting from self.cursor, will fit into the requested minibatch size of num_samples
+        begin = self.cursor
+        end = self.cursor
+        assert begin < self.num_samples
+        actual_num_samples = { name: 0 for name in self.data.keys() }
+        while end < self.num_samples: 
+            new_num_samples = { name: actual_num_samples[name] + (len(value[end]) if self.is_sequence[name] else 1)
+                                for name, value in self.data.items() }
+            # return up to requested number of samples. but at least one even if longer
+            if actual_num_samples and max(new_num_samples.values()) > num_samples:
+                break
+            actual_num_samples = new_num_samples
+            end += 1
+
+        # the minibatch data to return
+        result = {}  # [stream_info] -> MinibatchData
+        at_end = (end == self.num_samples)
+        for si in self.streams.values():
+            arg = self.data[si.name]
+            if isinstance(arg, Value):  # if entire corpus is one big Value, then slice NDArrayView directly
+                data = arg.data
+                sub_shape = data.shape[1:]
+                extent = (end - begin,) + sub_shape
+                start_offset = (begin,) + tuple(0 for _ in sub_shape)
+                mb_data = data.slice_view(start_offset, extent, data.is_read_only)
+            else:
+                mb_data = arg[begin:end]
+            result[si] = MinibatchData(Value(mb_data), num_sequences=end - begin, num_samples=actual_num_samples[si.name], sweep_end=at_end)
+
+        # wrap around the cursor
+        self.cursor = 0 if at_end else end
+        #if at_end:
+        #    print()
+
+        return result
 
 
 def HTKFeatureDeserializer(streams):

@@ -274,6 +274,8 @@ def training_session(trainer,
         cv_config (:class:`~CrossValidationConfig`): cross validation configuration
         test_config (:class:`~TestConfig`): test configuration
 
+    Example:
+
     Returns:
         Instance of :class:`~TrainingSession`
     '''

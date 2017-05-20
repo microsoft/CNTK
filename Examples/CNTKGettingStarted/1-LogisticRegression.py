@@ -1,0 +1,79 @@
+# ==============================================================================
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+
+# This example shows how to train a very basic CNTK model for logistic regression.
+# The task is to classify a 2-dimensional vector as belong to one of two classes.
+# The data is artificially created. Each class' data follows a normal distribution.
+
+# Import the relevant components
+from __future__ import print_function
+import os
+import argparse
+import math
+import cntk
+#import scipy
+from cntk.layers import *
+from cntk.layers.typing import *
+
+# Define the task
+input_dim = 2    # classify 2-dimensional data
+num_classes = 2  # into one of two classes
+
+num_samples_to_train = 20000
+num_samples_to_test  = 20000
+
+# Generate our artificial data
+#  X[sample_size,input_dim] - our input data
+#  Y[sample_size]           - labels (0 or 1)
+sample_size = 32
+np.random.seed(0)
+def generate_synthetic_data(N):
+    # labels
+    Y = np.random.randint(size=N, low=0, high=num_classes)
+    # data
+    X = (np.random.randn(N, input_dim)+3) * (Y[:,None]+1)
+    return X, Y
+X_train, Y_train = generate_synthetic_data(num_samples_to_train)
+X_test,  Y_test  = generate_synthetic_data(num_samples_to_test)
+
+# Define the CNTK model. A model is defined as a function that maps
+# input data to some form of predictions, in our case 2-dimensional
+# input vectors to a 2-dimensional vector of scores.
+# This simple logistic-regression model just uses a linear transform,
+# which corresponds to a Dense layer without activation function.
+# A Dense layer implements the formula y = x @ W + b, where W and b
+# are learnable model parameters.
+model = cntk.layers.Dense(num_classes, activation=None)
+print(model.parameters)
+
+# Define the CNTK criterion function. A criterion function maps
+# (input vectors, labels) to a loss function and an optional additional
+# metric. The loss function is used to train the model parameters.
+# We use cross entropy as a loss function.
+# We use CNTK @Signature to declare the input types at this point.
+# The cross-entropy formula requires the labels to be in one-hot format.
+@cntk.Function
+@Signature(cntk.layers.Tensor[input_dim], cntk.layers.SparseTensor[num_classes])
+def criterion(data, label_one_hot):
+    z = model(data)  # apply model. Computes a non-normalized log probability for every output class.
+    return cntk.cross_entropy_with_softmax(z, label_one_hot)
+
+# Instantiate the trainer object to drive the model training
+learning_rate = 0.5
+learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(learning_rate, cntk.UnitType.minibatch))
+trainer = cntk.Trainer(None, criterion, [learner], progress_writers=[cntk.logging.ProgressPrinter()])
+
+# Initialize the parameters for the trainer
+minibatch_size = 25
+
+minibatch_source = cntk.io.MinibatchSourceFromData(data=X_train.astype(np.float32), labels=cntk.Value.one_hot(Y_train, num_classes))
+model_inputs_to_streams = {criterion.arguments[0]: minibatch_source.streams.data, criterion.arguments[1]: minibatch_source.streams.labels}
+
+training_session = cntk.training_session(trainer, minibatch_source, minibatch_size,
+                                      model_inputs_to_streams,
+                                      progress_frequency=minibatch_size * 50, max_samples=len(X_train))
+training_session.train()
+print(model.W.value)

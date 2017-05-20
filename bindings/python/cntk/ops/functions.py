@@ -1039,7 +1039,7 @@ class Function(cntk_py.Function):
          >>> d = C.layers.Dense(10) # Function constructed as a layer
          >>> print(d)
          Dense(x: Sequence[tensor]) -> Sequence[tensor]
-         >>> @C.Function   # construct a pritive Function through @Function
+         >>> @C.Function   # construct a primitive Function through @Function
          ... def g(x,y):
          ...     return x+y
          >>> print(g)
@@ -1053,7 +1053,7 @@ class Function(cntk_py.Function):
         f_name = self.name
         op_name = self.op_name
         if self.is_composite:
-            if self.root_function and all(i.uid == ri.uid for i, ri in zip(self.inputs, self.root_function.inputs)): #self.root_function.is_block:
+            if self.root_function and all(i.uid == ri.uid for i, ri in zip(self.inputs, self.root_function.inputs)):
                 op_name = self.root_function.op_name
             else:
                 op_name = 'Composite' # (real op_name is CompositeFunctionOpName)
