@@ -64,6 +64,7 @@ OverloadUnaryMathFns(log1p);
     }
 
 // Because we compile with fast math the following produces nan for negative numbers raised to integer power.
+// To avoid this we define safepow_ further below.
 // Is there an nvcc pragma to disable fast math temporarily? Something like 
 // #pragma fast-math push
 // #pragma fast-math off
@@ -72,21 +73,21 @@ OverloadUnaryMathFns(log1p);
 OverloadBinaryMathFns(pow);
 
 template<typename T>
-DECL T safepow_(T b, T e)        
+DECL T safepow_(T base, T exponent)        
 {
-    if (e == 0) 
+    if (exponent == 0) 
         return T(1);
-    if (b == 0)
+    if (base == 0)
         return T(0);
-    else if (b > 0)
-        return pow_(b, e);
+    else if (base > 0)
+        return pow_(base, exponent);
     else 
     {
-        int f = static_cast<int>(e);
-        if (e != f)
+        int exp_as_int = static_cast<int>(exponent);
+        if (exponent != exp_as_int)
             return T(NAN);
         else
-            return pow_(fabs_(b), e) * (1 - 2 * (f & 1));
+            return pow_(fabs_(base), exponent) * (1 - 2 * (exp_as_int & 1));
     }
 }                                    
 
