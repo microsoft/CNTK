@@ -158,8 +158,9 @@ def mem_leak_check(nonlinearity, num_hidden_layers, device_id,
     # Long-term this test needs to be run in a separate process over a longer
     # period of time.
     MEM_INCREASE_FRACTION_TOLERANCE = 0.01
-    # Set a maximum allowed memory increase. This is required because the
-    # pytest process involves some memory fluctuations.
+    # Set a maximum allowed memory increase. This tolerance should not be
+    # exceeded when run as a standalone process (simply run this file with the
+    # Python executable).
     MEM_INCREASE_TOLERANCE = 10*1024
 
     dev = cntk_device(device_id)
@@ -208,6 +209,7 @@ class MySigmoid(UserFunction):
         return [C.output_variable(self.inputs[0].shape, self.inputs[0].dtype,
             self.inputs[0].dynamic_axes)]
 
+
 def test_ext_user_sigmoid(device_id):
     exp_losses, exp_errors = train(sigmoid, 4, device_id)
     act_losses, act_errors = train(MySigmoid, 4, device_id)
@@ -230,12 +232,11 @@ def measure_runtime(device_id):
         print("%i\t%.2f\t%.2f"%(num_hidden_layers, min(timings_my_sigmoid), min(timings_sigmoid)))
 
 if __name__=='__main__':
-    print("CPU")
+    print("Measure runtime on CPU")
     measure_runtime(-1)
-    print("GPU")
+    print("Measure runtime on GPU")
     measure_runtime(0)
 
     print("Run memory leakage tests")
     mem_leak_check(sigmoid, 4, device_id)
     mem_leak_check(MySigmoid, 4, device_id)
-
