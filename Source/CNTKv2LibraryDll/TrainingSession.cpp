@@ -49,11 +49,11 @@ namespace CNTK
         const MinibatchSizeSchedule& crossValidationSchedule,
         size_t crossValidationFrequencyInSamples,
         size_t maxSamples
-		):
+        ):
         m_source(crossValidationSource),
         m_mbSize(crossValidationSchedule),
         m_frequency(crossValidationFrequencyInSamples),
-		m_maxSamples(maxSamples)
+        m_maxSamples(maxSamples)
     {
     }
 
@@ -247,7 +247,7 @@ namespace CNTK
             while (shouldCV)
             {
                 size_t samplesLeft = m_cv.m_maxSamples <= totalNumberOfSamples ? 0 : m_cv.m_maxSamples - totalNumberOfSamples;
-                GetCrossValidationMinibatch(minibatch, std::min(m_cv.m_mbSize[totalNumberOfSamples], samplesLeft), computeDevice);				
+                GetCrossValidationMinibatch(minibatch, std::min(m_cv.m_mbSize[totalNumberOfSamples], samplesLeft), computeDevice);                
 
                 // TODO: it may be slow to rely on TestMinibatch to return error each time, since it may require transfer
                 // of error from the GPU each time, accumulatedError can be allocated on GPU
@@ -257,7 +257,7 @@ namespace CNTK
                     accumulatedError += errorAndCount.first->AsScalar<double>();
                     totalNumberOfSamples += errorAndCount.second;
                     numberOfMinibatches++;
-                }				
+                }                
             }
 
             m_cv.m_source->RestoreFromCheckpoint(checkpoint);
