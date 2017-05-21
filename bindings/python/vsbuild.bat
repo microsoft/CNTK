@@ -21,6 +21,8 @@ set p_CNTK_PY_VERSIONS=%~6
 set p_CNTK_PY27_PATH=%~7
 set p_CNTK_PY34_PATH=%~8
 set p_CNTK_PY35_PATH=%~9
+shift
+set p_CNTK_PY36_PATH=%~9
 
 REM Construct p_CNTK_PY_VERSIONS if not explicitly defined
 REM (Note: to disable Python build completely, no CNTK_PYx_PATH variable must be defined)
@@ -29,11 +31,12 @@ if not defined p_CNTK_PY_VERSIONS (
   if defined p_CNTK_PY27_PATH set p_CNTK_PY_VERSIONS=!p_CNTK_PY_VERSIONS! 27
   if defined p_CNTK_PY34_PATH set p_CNTK_PY_VERSIONS=!p_CNTK_PY_VERSIONS! 34
   if defined p_CNTK_PY35_PATH set p_CNTK_PY_VERSIONS=!p_CNTK_PY_VERSIONS! 35
+  if defined p_CNTK_PY36_PATH set p_CNTK_PY_VERSIONS=!p_CNTK_PY_VERSIONS! 36
 )
 
 REM Validate p_CNTK_PY_VERSIONS contents.
 for %%p in (%p_CNTK_PY_VERSIONS%) do (
-  if not "%%~p" == "27" if not "%%~p" == "34" if not "%%~p" == "35" echo Build for unsupported Python version '%%~p' requested, stopping&exit /b 1
+  if not "%%~p" == "27" if not "%%~p" == "34" if not "%%~p" == "35" if not "%%~p" == "36" echo Build for unsupported Python version '%%~p' requested, stopping&exit /b 1
 )
 
 REM Validate p_CNTK_PY_VERSIONS contents.
@@ -50,11 +53,47 @@ if "%p_DebugBuild%" == "true" echo Currently no Python build for Debug configura
 
 call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall" amd64
 set CNTK_LIB_PATH=%p_OutDir%
+
 set DIST_DIR=%p_OutDir%\Python
 set PATH=%p_SWIG_PATH%;%PATH%
 set CNTK_COMPONENT_VERSION=%p_CNTK_COMPONENT_VERSION%
 set MSSdk=1
 set DISTUTILS_USE_SDK=1
+
+set CNTK_LIBRARIES=
+for %%D in (
+  Cntk.Composite-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.Core-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.Deserializers.Binary-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.Deserializers.HTK-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.Deserializers.Image-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.Deserializers.TextFormat-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.Math-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.PerformanceProfiler-%CNTK_COMPONENT_VERSION%.dll
+  libiomp5md.dll
+  mkl_cntk_p.dll
+  opencv_world310.dll
+  zip.dll
+  zlib.dll
+) do (
+  if defined CNTK_LIBRARIES (
+    set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\%%D
+  ) else (
+    set CNTK_LIBRARIES=%CNTK_LIB_PATH%\%%D
+  )
+)
+
+if /i %p_GpuBuild% equ true for %%D in (
+  cublas64_80.dll
+  cudart64_80.dll
+  cudnn64_5.dll
+  curand64_80.dll
+  cusparse64_80.dll
+  nvml.dll
+) do (
+  set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\%%D
+)
 
 REM Build everything in supplied order
 set oldPath=%PATH%

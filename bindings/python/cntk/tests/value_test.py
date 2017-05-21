@@ -9,13 +9,12 @@ import scipy.sparse as sparse
 import cntk as C
 
 csr = sparse.csr_matrix
+AA = np.asarray
 
-from ..core import *
-from cntk.tests.test_utils import *
-from cntk.ops.tests.ops_test_utils import compare_lists_of_np_arrays, cntk_device
-from cntk import *
+from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.internal import _value_as_sequence_or_array
-from cntk import asarray, asvalue
+from cntk import asvalue
+from cntk.tests.test_utils import _to_dense, _to_csr
 
 test_numbers = [4., 5, 6., 7., 8.]
 test_array = AA(test_numbers, dtype=np.float32)
@@ -24,11 +23,11 @@ def _dense_value_to_ndarray_test(data, num_of_dynamic_axes, expected_value_shape
     shape = (5,)
 
     if num_of_dynamic_axes == 2:
-        var = sequence.input(shape)
+        var = C.sequence.input_variable(shape)
     elif num_of_dynamic_axes == 1:
-        var = input(shape)
+        var = C.input_variable(shape)
     else:
-        var = input(shape, dynamic_axes=[])
+        var = C.input_variable(shape, dynamic_axes=[])
 
     # conversion array -> value
     val = asvalue(var, data)
@@ -48,11 +47,11 @@ def _sparse_value_to_csr_test(data, num_of_dynamic_axes, expected_value_shape, e
     shape = (3,)
 
     if num_of_dynamic_axes == 2:
-        var = sequence.input(shape, is_sparse=True)
+        var = C.sequence.input_variable(shape, is_sparse=True)
     elif num_of_dynamic_axes == 1:
-        var = input(shape, is_sparse=True)
+        var = C.input_variable(shape, is_sparse=True)
     else:
-        var = input(shape, is_sparse=True, dynamic_axes=[])
+        var = C.input_variable(shape, is_sparse=True, dynamic_axes=[])
 
     # conversion csr array -> value
     val = asvalue(var, data)
@@ -156,7 +155,7 @@ def test_sparse_failing_value_to_csr(data, num_of_dynamic_axes, expected_value_s
 def test_asarray_method():
     shape = (3,)
 
-    var = sequence.input(shape, is_sparse=True)
+    var = C.sequence.input_variable(shape, is_sparse=True)
 
     data = [csr([[1,0,2], [5,0,1]])]
     # conversion array -> value
@@ -165,27 +164,27 @@ def test_asarray_method():
     for a, d in zip(as_csr, data):
         assert (a==d).toarray().all()
 
-    var = C.input(shape, is_sparse=True)
+    var = C.input_variable(shape, is_sparse=True)
 
     data = csr([[1,0,2], [5,0,1]])
     # conversion array -> value
     val = asvalue(var, data)
     for v in [
             val, # Value
-            super(Value, val), # cntk_py.Value
+            super(C.Value, val), # cntk_py.Value
             val.data, # NDArrayView
-            super(NDArrayView, val.data), # cntk_py.NDArrayView
+            super(C.NDArrayView, val.data), # cntk_py.NDArrayView
             ]:
         as_csr = v.asarray()
         for a, d in zip(as_csr, data):
             assert (a==d).toarray().all()
 
 def test_value_properties():
-    ndav = NDArrayView((1, 2, 3), np.float32)
-    val = Value(batch=ndav)
+    ndav = C.NDArrayView((1, 2, 3), np.float32, device=C.cpu())
+    val = C.Value(batch=ndav)
 
     dev = val.device
-    assert isinstance(dev, DeviceDescriptor)
+    assert isinstance(dev, C.DeviceDescriptor)
     assert str(dev) == 'CPU'
 
     assert val.is_read_only == False
@@ -196,10 +195,10 @@ def test_value_properties():
 
 
 def test_ndarray_properties():
-    ndav = NDArrayView((2, 3), np.float32)
+    ndav = C.NDArrayView((2, 3), np.float32, device=C.cpu())
 
     dev = ndav.device
-    assert isinstance(dev, DeviceDescriptor)
+    assert isinstance(dev, C.DeviceDescriptor)
     assert str(dev) == 'CPU'
 
     assert ndav.is_read_only == False
@@ -209,31 +208,52 @@ def test_ndarray_properties():
     assert ndav.dtype == np.float32
 
 
-def _to_dense(val):
-    x = C.input(val.shape[1:], is_sparse=True)
-    dense = C.times(x, C.constant(value=np.eye(val.shape[-1], dtype=np.float32)))
-    return dense.eval({x : val}, device=val.device)
 
 def test_ndarrayview_from_csr(device_id):
     dev = cntk_device(device_id)
-    csr_data = csr(np.asarray([[0, 1, 1], [0, 1, 0], [1, 0, 0], [1, 0, 1]], dtype=np.float32))
-    ndarrayview = NDArrayView.from_csr(csr_data, shape=(2, 2, 3))
-    assert np.array_equal(_to_dense(ndarrayview), [[[0, 1, 1], [0, 1, 0]], [[1, 0, 0], [1, 0, 1]]])
-    
-    with pytest.raises(ValueError):
-        ndarrayview = NDArrayView.from_csr(csr_data, shape=(3, 2, 3))
+    data = [[[0, 1, 1], [0, 1, 0]], [[1, 0, 0], [1, 0, 1]]]
+    csr_data = _to_csr(data)
+    ndarrayview = C.NDArrayView.from_csr(csr_data, shape=(2, 2, 3))
+    assert np.array_equal(_to_dense(ndarrayview), data)
 
     with pytest.raises(ValueError):
-        ndarrayview = NDArrayView.from_csr(csr_data, shape=(2, 2, 4))
- 
+        ndarrayview = C.NDArrayView.from_csr(csr_data, shape=(3, 2, 3))
+
+    with pytest.raises(ValueError):
+        ndarrayview = C.NDArrayView.from_csr(csr_data, shape=(2, 2, 4))
+
 
 def test_2d_sparse_sequences_value(device_id):
     dev = cntk_device(device_id)
-    csr_seq1 = csr(np.asarray([[0, 1, 1], [0, 1, 0], [1, 0, 0], [1, 0, 1]], dtype=np.float32))
-    ndarrayview1 = NDArrayView.from_csr(csr_seq1, shape=(2, 2, 3), device=cpu())
-    csr_seq2 = csr(np.asarray([[0, 1, 1], [1, 1, 0]], dtype=np.float32))
-    ndarrayview2 = NDArrayView.from_csr(csr_seq2, shape=(1, 2, 3), device=cpu())
+    seq1_data = [[[0, 1, 1], [0, 1, 0]], [[1, 0, 0], [1, 0, 1]]]
+    csr_seq1 = _to_csr(seq1_data)
+    ndarrayview1 = C.NDArrayView.from_csr(csr_seq1, shape=(2, 2, 3), device=C.cpu())
+    seq2_data = [[0, 1, 1], [1, 1, 0]]
+    csr_seq2 = _to_csr(seq2_data)
+    ndarrayview2 = C.NDArrayView.from_csr(csr_seq2, shape=(1, 2, 3), device=C.cpu())
 
-    x = sequence.input((2, 3))
-    sequence_value = Value.create(x, [ndarrayview1, ndarrayview2], device=dev)
-    assert np.array_equal(_to_dense(sequence_value.data), [[[[0, 1, 1], [0, 1, 0]], [[1, 0, 0], [1, 0, 1]]], [[[0, 1, 1], [1, 1, 0]], [[0, 0, 0], [0, 0, 0]]]])
+    x = C.sequence.input_variable((2, 3))
+    sequence_value = C.Value.create(x, [ndarrayview1, ndarrayview2], device=dev)
+    assert np.array_equal(_to_dense(sequence_value.data), [seq1_data, [seq2_data, [[0, 0, 0], [0, 0, 0]]]])
+
+def test_as_shape_to_1d(device_id):
+    dev = cntk_device(device_id)
+    x = C.input_variable(1)
+    w_1d = C.parameter((1), device=dev)
+    assert np.array_equal(w_1d.value, [0])
+
+    op = x * 0.1
+    value = op.eval({x:np.asarray([[1]], dtype=np.float32)}, as_numpy=False, device=dev)
+    value = value.data.as_shape(value.data.shape[1:])
+    w_1d.value = value
+    assert np.array_equal(w_1d.value, np.asarray([0.1], dtype=np.float32))
+
+
+def test_is_valid(device_id):
+    a = C.input_variable((2,), needs_gradient=True)
+    b = a*a
+    a0 = np.array([1,2],dtype=np.float32)
+    g = b.grad({a:a0}, as_numpy=False)
+    g2 = b.grad({a:a0}, as_numpy=False)
+    assert (g.is_valid == False)
+    assert (g2.is_valid == True)

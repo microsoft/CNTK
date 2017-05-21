@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <numeric>
+#include <functional>
 
 namespace CNTK 
 {
@@ -63,6 +64,8 @@ namespace CNTK
         AdditionalLearningOptions m_additionalOptions;
 
         std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
+
+        mutable size_t m_noiseInjectionSeed;
 
         // The following four static protected methods expose private methods of NDArrayView class
         // (which declares LearnerBase as friend class), so that they are available to subclasses.
@@ -270,6 +273,8 @@ namespace CNTK
             const MomentumSchedule& momentumSchedule,
             bool unitGain,
             const MomentumSchedule& varianceMomentumSchedule,
+            double epsilon,
+            bool adamax,
             AdditionalLearningOptions additionalOptions);
 
     protected:
@@ -289,6 +294,8 @@ namespace CNTK
 
         mutable std::unordered_map<Parameter, double> m_smoothedCounts;
         MomentumSchedule m_varianceMomentumSchedule;
+        double m_epsilon;
+        bool m_adamax;
     };
 
     class LearnerRMSProp : public LearnerBase
@@ -309,6 +316,34 @@ namespace CNTK
         double m_max;
         double m_min;
         bool m_needAveMultiplier;
+
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+
+        template <typename ElementType>
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+    };
+
+
+    class LearnerUniversal : public LearnerBase
+    {
+        std::unordered_map<Parameter, std::pair<Variable, FunctionPtr> > m_updateFunctions;
+
+    public:
+        LearnerUniversal(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func);
+
+        LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr> >& updateFunctions);
+    
+    private:
+        void AllocateDummySmoothedGradients(const std::vector<Parameter>& parameters)
+        {
+            for (const auto& parameter : parameters)
+            {
+                m_smoothedGradientValues.emplace(parameter, AllocateNDArrayView(parameter, {}));
+            }
+        }
+
+
+    protected:
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
 

@@ -4,12 +4,17 @@
 # for full license information.
 # ==============================================================================
 
-from __future__ import division
+from __future__ import division, print_function
 import numpy as np
-from .. import *
-from cntk import parameter, input
+import cntk as C
+from cntk import parameter
 
 import pytest
+import sys
+
+from cntk.logging import ProgressPrinter
+from cntk.learners import sgd, learning_rate_schedule, UnitType, universal
+from cntk.layers import Dense, Sequential
 
 LR_SCHEDULE_PARAMS = [
         ((0.2, UnitType.sample), [0.2]),
@@ -36,24 +41,24 @@ def sweep_based_schedule_fails():
 
 def test_momentum_schedule():
     m = 2500
-    ms = momentum_as_time_constant_schedule([m])
+    ms = C.momentum_as_time_constant_schedule([m])
     assert ms[0] ==  np.exp(-1.0 / np.asarray(m))
 
-    ms = momentum_as_time_constant_schedule(m)
+    ms = C.momentum_as_time_constant_schedule(m)
     assert ms[0] ==  np.exp(-1.0 / np.asarray(m))
 
     mlist = [980, 520]
-    msl = momentum_as_time_constant_schedule(mlist)
+    msl = C.momentum_as_time_constant_schedule(mlist)
     expected = np.exp(-1.0 / np.asarray(mlist))
     assert all(mi == ei for mi,ei in zip(msl,expected))
 
 @pytest.mark.parametrize("params, expectation", MOMENTUM_SCHEDULE_PARAMS)
 def test_momentum_schedule_per_sample(params, expectation):
-    l = momentum_schedule(*params)
+    l = C.momentum_schedule(*params)
     assert [l[i] for i in range(len(expectation))] == expectation
 
 def test_learner_init():
-    i = input(shape=(1,), needs_gradient=True, name='a')
+    i = C.input_variable(shape=(1,), needs_gradient=True, name='a')
     w = parameter(shape=(1,))
 
     res = i * w
@@ -69,44 +74,54 @@ def test_learner_init():
     param = learner_parameter[0]
     assert isinstance(param, Parameter)
 
-    unit_gain_value = default_unit_gain_value()
+    unit_gain_value = C.default_unit_gain_value()
     assert unit_gain_value
 
-    momentum_time_constant = momentum_as_time_constant_schedule(1100)
+    momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
-    momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant)
-    momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
-    momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant, unit_gain=unit_gain_value)
+    C.momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant)
+    C.momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
+    C.momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant, unit_gain=unit_gain_value)
 
-    set_default_unit_gain_value(False)
-    unit_gain_value = default_unit_gain_value()
+    C.set_default_unit_gain_value(False)
+    unit_gain_value = C.default_unit_gain_value()
     assert not unit_gain_value
 
     lr_per_sample = learning_rate_schedule([0.1, 0.2], UnitType.sample)
-    nesterov(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
-    nesterov(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
-    nesterov(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
+    C.nesterov(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
+    C.nesterov(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
+    C.nesterov(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
 
     lr_per_sample = learning_rate_schedule([0.1]*3 +[0.2]*2 +[0.3], UnitType.sample)
-    adagrad(res.parameters, lr=lr_per_sample, need_ave_multiplier=True)
+    C.adagrad(res.parameters, lr=lr_per_sample, need_ave_multiplier=True)
 
-    set_default_unit_gain_value(True)
-    unit_gain_value = default_unit_gain_value()
+    C.set_default_unit_gain_value(True)
+    unit_gain_value = C.default_unit_gain_value()
     assert unit_gain_value
 
     lr_per_sample = learning_rate_schedule([(3,0.1), (2, 0.2), (1, 0.3)], UnitType.sample)
-    fsadagrad(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
-    fsadagrad(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
-    fsadagrad(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
+    C.fsadagrad(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
+    C.fsadagrad(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
+    C.fsadagrad(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
 
     gamma, inc, dec, max, min = [0.1]*5
     lr_per_sample = learning_rate_schedule([0.1, 0.2], UnitType.sample, 100)
-    rmsprop(res.parameters, lr_per_sample, gamma, inc, dec, max, min, True)
+    C.rmsprop(res.parameters, lr_per_sample, gamma, inc, dec, max, min, True)
 
-    adadelta(res.parameters, lr_per_sample)
+    C.set_default_use_mean_gradient_value(False)
+    use_mean_gradient_value = C.default_use_mean_gradient_value()
+    assert not use_mean_gradient_value
+
+    C.adadelta(res.parameters, lr_per_sample)
+    
+    C.set_default_use_mean_gradient_value(True)
+    use_mean_gradient_value = C.default_use_mean_gradient_value()
+    assert use_mean_gradient_value
+
+    C.adadelta(res.parameters, lr_per_sample)
 
 def test_learner_update():
-    i = input(shape=(1,), needs_gradient=True, name='a')
+    i = C.input_variable(shape=(1,), needs_gradient=True, name='a')
     w_init = 1
     w = parameter(shape=(1,), init=w_init)
     res = i * w
@@ -123,10 +138,40 @@ def test_learner_update():
     assert learner.learning_rate() == 0.4
 
 
-class TestProgressWriter(cntk_py.ProgressWriter):
+def test_noise_injection_with_checkpointing():
+    from cntk import initializer
+    shape = (100,100)
+    
+    w1 = parameter(shape=shape, init=initializer.glorot_uniform(seed=123))
+    w2 = parameter(shape=shape, init=initializer.glorot_uniform(seed=123))
+    w3 = parameter(shape=shape, init=initializer.glorot_uniform(seed=123))
+    
+    lr=learning_rate_schedule(0.5, UnitType.sample)
+    m=C.momentum_schedule(0.99)
+
+    learner1 = C.momentum_sgd([w1], lr, m, gaussian_noise_injection_std_dev=0.5)
+    learner2 = C.momentum_sgd([w2], lr, m, gaussian_noise_injection_std_dev=0.5)
+    learner3 = C.momentum_sgd([w3], lr, m, gaussian_noise_injection_std_dev=0.5)
+
+    assert np.allclose(w1.value, w2.value) and np.allclose(w1.value, w3.value)
+
+    for i in range(10):
+        checkpoint = learner1.create_checkpoint()
+
+        v =  np.float32(np.random.rand(100,100))
+    
+        learner1.update({w1: v}, 1)
+        learner2.update({w2: v}, 1)
+        assert not np.allclose(w1.value, w2.value)
+
+        learner3.restore_from_checkpoint(checkpoint)
+        learner3.update({w3: v}, 1)
+        assert np.allclose(w1.value, w3.value)
+
+class TestProgressWriter(C.cntk_py.ProgressWriter):
 
     def __init__(self):
-        super(TestProgressWriter, self).__init__(1, 0, 1, 0)
+        super(TestProgressWriter, self).__init__(1, 0, 1, 0, sys.maxsize, 0)
         self.log_output = []
         self.__disown__()
 
@@ -138,20 +183,20 @@ def test_learner_logging():
     from cntk.logging import ProgressPrinter
     from cntk import cross_entropy_with_softmax, classification_error
 
-    features = input(shape=(1,), needs_gradient=True, name='a')
+    features = C.input_variable(shape=(1,), needs_gradient=True, name='a')
     w_init = 1
     w = parameter(shape=(1,), init=w_init)
     z = features * w
-    labels = input(shape=(1,), name='b')
+    labels = C.input_variable(shape=(1,), name='b')
     ce = cross_entropy_with_softmax(z, labels)
     errs = classification_error(z, labels)
 
     writer = TestProgressWriter();
     lr_values = [0.3, 0.2, 0.1, 0]
     m_values = [0.6, 0.7, 0.8]
-    learner = momentum_sgd(z.parameters, 
+    learner = C.momentum_sgd(z.parameters,
                   learning_rate_schedule(lr_values, UnitType.sample, 1),
-                  momentum_schedule(m_values, 1))
+                  C.momentum_schedule(m_values, 1))
     trainer = Trainer(z, (ce, errs), [learner], writer)
 
     for i in range(10):
@@ -165,13 +210,13 @@ def test_learner_logging():
         assert (values[i] == writer.log_output[i])
 
 def test_training_parameter_schedule():
-    training_parameter_schedule(0.01, unit='minibatch')
-    training_parameter_schedule(0.01, unit='sample')
+    C.training_parameter_schedule(0.01, unit='minibatch')
+    C.training_parameter_schedule(0.01, unit='sample')
 
     with pytest.raises(ValueError):
-        training_parameter_schedule(0.01, unit='not_supported')
+        C.training_parameter_schedule(0.01, unit='not_supported')
     with pytest.raises(ValueError):
-        training_parameter_schedule(0.01, unit=5)
+        C.training_parameter_schedule(0.01, unit=5)
 
 def test_sweep_based_schedule(tmpdir, device_id):
     from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
@@ -200,8 +245,8 @@ def test_sweep_based_schedule(tmpdir, device_id):
         labels    = StreamDef(field='S1', shape=input_dim,  is_sparse=True)
     )), randomize=False)
 
-    in1 = sequence.input(shape=(input_dim,))
-    labels = sequence.input(shape=(input_dim,))
+    in1 = sequence.input_variable(shape=(input_dim,))
+    labels = sequence.input_variable(shape=(input_dim,))
     p = parameter(shape=(input_dim,), init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
@@ -235,3 +280,101 @@ def test_sweep_based_schedule(tmpdir, device_id):
     data = mbs.next_minibatch(30, input_map=input_map)
     trainer.train_minibatch(data, outputs=[z.output])
     assert learner.learning_rate() == 0.0
+
+
+def generate_random_data(sample_size, feature_dim, num_classes):
+     # Create synthetic data using NumPy.
+     Y = np.random.randint(size=(sample_size, 1), low=0, high=num_classes)
+
+     # Make sure that the data is separable
+     X = (np.random.randn(sample_size, feature_dim) + 3) * (Y + 1)
+     X = X.astype(np.float32)
+     # converting class 0 into the vector "1 0 0",
+     # class 1 into vector "0 1 0", ...
+     class_ind = [Y == class_number for class_number in range(num_classes)]
+     Y = np.asarray(np.hstack(class_ind), dtype=np.float32)
+     return X, Y
+
+
+def test_learner_empy_parameters_list():
+    lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
+    with pytest.raises(ValueError):
+        learner = C.sgd([], lr_per_sample)
+
+
+def ffnet(learner):
+    inputs = 3
+    outputs = 3
+    layers = 2
+    hidden_dimension = 3
+
+    # input variables denoting the features and label data
+    features = C.input_variable((inputs), np.float32)
+    label = C.input_variable((outputs), np.float32)
+
+    # Instantiate the feedforward classification model
+    my_model = Sequential ([
+                    Dense(hidden_dimension, activation=C.sigmoid, init=C.glorot_uniform(seed=98052)),
+                    Dense(outputs, init=C.glorot_uniform(seed=98052))])
+    z = my_model(features)
+
+    ce = C.cross_entropy_with_softmax(z, label)
+    pe = C.classification_error(z, label)
+
+    # Instantiate the trainer object to drive the model training
+    progress_printer = ProgressPrinter(0)
+    trainer = C.Trainer(z, (ce, pe), [learner(z.parameters)], [progress_printer])
+
+    # Get minibatches of training data and perform model training
+    minibatch_size = 25
+    num_minibatches_to_train = 100
+
+    aggregate_loss = 0.0
+    for i in range(num_minibatches_to_train):
+        train_features, labels = generate_random_data(minibatch_size, inputs, outputs)
+        # Specify the mapping of input variables in the model to actual minibatch data to be trained with
+        trainer.train_minibatch({features : train_features, label : labels})
+        sample_count = trainer.previous_minibatch_sample_count
+        aggregate_loss += trainer.previous_minibatch_loss_average * sample_count
+
+    last_avg_error = aggregate_loss / trainer.total_number_of_samples_seen
+
+    test_features, test_labels = generate_random_data(minibatch_size, inputs, outputs)
+    avg_error = trainer.test_minibatch({features : test_features, label : test_labels})
+    print(' error rate on an unseen minibatch: {}'.format(avg_error))
+    return last_avg_error, avg_error
+
+def test_sgd_with_noise():
+    # Runs a network where the number of parameters is odd
+    # in some layers. This tests that cuRand library will not
+    # complain about generating an odd number of random values
+    np.random.seed(98052)
+    learner = lambda params: sgd(params, lr=learning_rate_schedule(0.125, UnitType.minibatch), gaussian_noise_injection_std_dev=0.01)
+    ffnet(learner)
+    # We just verify that we did not crash
+    assert(True)
+
+def test_universal():
+    np.random.seed(98052)
+    builtin_sgd = lambda params: sgd(params, lr=learning_rate_schedule(0.125, UnitType.minibatch))
+    builtin_last_avg_error, builtin_avg_error = ffnet(builtin_sgd)
+    np.random.seed(98052)
+    my_sgd = lambda p, g: C.assign(p, p - 0.125/25 * g)
+    universal_sgd = lambda params: universal(my_sgd, params)
+    my_last_avg_error, my_avg_error = ffnet(universal_sgd)
+    assert np.allclose(my_last_avg_error, builtin_last_avg_error)
+    assert np.allclose(my_avg_error, builtin_avg_error)
+
+def test_0d_1d_parameter_set_value():
+    x = C.input_variable(2)
+    w_0d = C.parameter(())
+    op = x + w_0d
+    w_0d_grad = op.grad({x : np.asarray([1, 2], dtype=np.float32)}, wrt=[w_0d], as_numpy=False)
+    w_0d.value = w_0d_grad.data
+    assert w_0d.value == 2.
+
+    w_1d = C.parameter(shape=2)
+    op = x + w_1d
+    w_1d_grad = op.grad({x : np.asarray([1, 2], dtype=np.float32)}, wrt=[w_1d], as_numpy=False)
+    w_1d.value = w_1d_grad.data
+    assert np.array_equal(w_1d.value, [1., 1.])

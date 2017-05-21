@@ -136,17 +136,16 @@ if __name__ == '__main__':
     train_data = os.path.join(data_path, 'cmudict-0.7b.train-dev-20-21.ctf')
     test_data = os.path.join(data_path, 'cmudict-0.7b.test.ctf')
 
-    try:
-        sequence_to_sequence_translator(train_data, test_data,
-                                        epoch_size=args['epoch_size'],
-                                        num_quantization_bits=args['quantized_bits'],
-                                        block_size=args['block_samples'],
-                                        warm_up=args['distributed_after'],
-                                        minibatch_size= args['minibatch_size'],
-                                        max_epochs=args['epochs'],
-                                        randomize_data=args['randomize_data'],
-                                        log_to_file=args['logdir'],
-                                        num_mbs_per_log=10)
-
-    finally:
-        Communicator.finalize()
+    
+    sequence_to_sequence_translator(train_data, test_data,
+                                    epoch_size=args['epoch_size'],
+                                    num_quantization_bits=args['quantized_bits'],
+                                    block_size=args['block_samples'],
+                                    warm_up=args['distributed_after'],
+                                    minibatch_size= args['minibatch_size'],
+                                    max_epochs=args['epochs'],
+                                    randomize_data=args['randomize_data'],
+                                    log_to_file=args['logdir'],
+                                    num_mbs_per_log=10)
+    # Must call MPI finalize when process exit without exceptions
+    Communicator.finalize()

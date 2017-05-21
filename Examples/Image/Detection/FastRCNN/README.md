@@ -98,7 +98,7 @@ It shows that up to threashold `0.70`, we have `100%` recall on the ground truth
 
 Now you can start a full training of Fast R-CNN on the grocery data by running:
 
-`python A2_RunCntk.py`
+`python A2_RunWithBSModel.py`
 
 This python code will start training Fast R-CNN using the [fastrcnn.cntk](./fastrcnn.cntk) configuration file (in BrainScript).
 

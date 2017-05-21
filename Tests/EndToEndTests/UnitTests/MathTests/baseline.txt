@@ -1,7 +1,7 @@
 CPU info:
     CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
     Hardware threads: 24
-    Total Memory: 264172964 kB
+    Total Memory: 264106968 kB
 -------------------------------------------------------------------
 Running 155 test cases...
 ===== Tensor test 'elementwise addition'
@@ -170,7 +170,7 @@ testRnnForwardPropSRP:  0.003358 seconds
 TestOldRnnForwardPropSRP:  0.030918 seconds
 
 Test module "MathTests" has passed with:
-  155 test cases out of 155 passed
+  156 test cases out of 156 passed
   13210481 assertions out of 13210481 passed
 
   Test suite "BatchNormalizationSuite" has passed with:
@@ -294,8 +294,17 @@ Test module "MathTests" has passed with:
     Test case "CPUMatrixSuite/CPUMatrixAdam" has passed with:
       4 assertions out of 4 passed
 
+    Test case "CPUMatrixSuite/CPUMatrixAdamEpsilon" has passed with:
+      4 assertions out of 4 passed
+
     Test case "CPUMatrixSuite/CPUMatrixOneHot" has passed with:
       3 assertions out of 3 passed
+
+    Test case "CPUMatrixSuite/CPUMatrixGatherFromTarget" has passed with:
+      3 assertions out of 3 passed
+
+    Test case "CPUMatrixSuite/CPUMatrixScatterToIndices" has passed with:
+      1 assertions out of 1 passed
 
     Test case "CPUMatrixSuite/CPUSparseMatrixColumnSlice" has passed with:
       1 assertion out of 1 passed
@@ -462,8 +471,17 @@ Test module "MathTests" has passed with:
     Test case "GPUMatrixSuite/GPUMatrixAdam" has passed with:
       4 assertions out of 4 passed
 
+    Test case "GPUMatrixSuite/GPUMatrixAdamEpsilon" has passed with:
+      4 assertions out of 4 passed
+
     Test case "GPUMatrixSuite/GPUMatrixOneHot" has passed with:
       3 assertions out of 3 passed
+
+    Test case "GPUMatrixSuite/GPUMatrixGatherFromTarget" has passed with:
+      3 assertions out of 3 passed
+    
+	Test case "CPUMatrixSuite/CPUMatrixScatterToIndices" has passed with:
+      1 assertions out of 1 passed
 
     Test case "GPUMatrixSuite/GPUSparseMatrixConstructorsAndInitializers" has passed with:
       10 assertions out of 10 passed

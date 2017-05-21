@@ -2,6 +2,20 @@
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
+***2017-04-21.* CNTK 2.0 Release Candidate 2**  
+With Release Candidate 2 we reacted to customer feedback and improved/added features, functionality, and performance.
+
+Highlights:
+* New operators like `pow`, `sequence.reduce_max`, `sequence.softmax`.
+* New feature for Linux source builds (GPU Direct RDMA support in distributed gradients aggregation, NCCL support for Python in V2 gradients aggregation).
+* Support for Python 3.6 for source and binary installation; see [here](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine).
+* `UserMinibatchSource` to write custom minibatch sources; see [here](https://cntk.ai/pythondocs/extend.html#user-defined-minibatch-sources).
+* New C# APIs: `class NDArrayView` and methods, `SetMaxNumCPUThreads()`, `GetMaxNumCPUThreads()`, `SetTraceLevel()`, `GetTraceLevel()`
+* A new set of NuGet Packages is provided with this Release. 
+
+The [release notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_RC_2_Release_Notes) contain an overview. 
+Get the release from the [CNTK Releases Page](https://github.com/Microsoft/CNTK/releases).
+
 ***2017-03-31.* V 2.0 Release Candidate 1**  
 With Release Candidate 1 the Microsoft Cognitive Toolkit enters the final set of enhancements before release of the production version of CNTK v.2.0. 
 
@@ -40,23 +54,6 @@ Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/
 
 ***2017-02-28.* V 2.0 Beta 12 Release available at Docker Hub**  
 CNTK V 2.0 Beta 12 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
-See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
-
-***2017-02-23.* V 2.0 Beta 12 Release**  
-Highlights of this Release:
-* New and updated features: new activation functions, support of `Argmax` and `Argmin`, improved performance of `numpy` interop, new functionality of existing operators, and more.
-* [CNTK for CPU on Windows can now be installed via `pip install` on Anaconda 3](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine). Other configurations will be enabled soon.
-* HTK deserializers are now exposed in Python. All deserializers are exposed in C++.
-* The memory pool implementation of CNTK has been updated with a new global optimization algorithm. Hyper memory compression has been removed.
-* New features in C++ API.
-* [New Eval examples for RNN models](https://github.com/Microsoft/CNTK/blob/master/Examples/Evaluation/CNTKLibraryCSEvalCPUOnlyExamples/CNTKLibraryCSEvalExamples.cs).
-* New [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package) with CNTK V2 C++ Library.
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_12_Release_Notes).  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
-
-***2017-02-13.* V 2.0 Beta 11 Release available at Docker Hub**  
-CNTK V 2.0 Beta 11 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
 See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).

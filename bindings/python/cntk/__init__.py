@@ -3,7 +3,7 @@
 # for full license information.
 # ==============================================================================
 
-__version__ = '2.0rc1+'
+__version__ = '2.0rc2+'
 
 import numpy as np
 
@@ -28,8 +28,10 @@ from . import debugging
 from . import logging
 from . import io
 from . import layers
+from . import utils
 
 from .sample_installer import install_samples
 
 DATATYPE = np.float32
 InferredDimension = cntk_py.InferredDimension
+FreeDimension = cntk_py.FreeDimension

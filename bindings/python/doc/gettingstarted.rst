@@ -7,7 +7,7 @@ you can start using CNTK from Python right away (don't forget to ``activate`` yo
 
     >>> import cntk
     >>> cntk.__version__
-    '2.0rc1+'
+    '2.0rc2+'
     
     >>> cntk.minus([1, 2, 3], [4, 5, 6]).eval()
     array([-3., -3., -3.], dtype=float32)
@@ -17,8 +17,8 @@ pass for that node using its inputs, and returns the result of the forward pass.
 more common case) is as follows:
 
     >>> import numpy as np
-    >>> x = cntk.input(2)
-    >>> y = cntk.input(2)
+    >>> x = cntk.input_variable(2)
+    >>> y = cntk.input_variable(2)
     >>> x0 = np.asarray([[2., 1.]], dtype=np.float32)
     >>> y0 = np.asarray([[4., 6.]], dtype=np.float32)
     >>> cntk.squared_error(x, y).eval({x:x0, y:y0})
@@ -65,7 +65,7 @@ can be vastly improved. To explicitly set the device to GPU, set the target devi
     from cntk.device import set_default_device, gpu
     set_default_device(gpu(0))
 
-Now let's setup a network that will learn a classifier with fully connected layers using only the functions :func:`~cntk.layers.layers.Sequential`
+Now let's setup a network that will learn a classifier with fully connected layers using only the functions :func:`~cntk.layers.higher_order_layers.Sequential`
 and :func:`~cntk.layers.layers.Dense` from the Layers Library. Create a ``simplenet.py`` file with the following contents:
 
 .. literalinclude:: simplenet.py

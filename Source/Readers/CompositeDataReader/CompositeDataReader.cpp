@@ -37,10 +37,12 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
 
     // We currently by default using numeric keys for ctf and image deserializers.
     bool useNumericSequenceKeys = ContainsDeserializer(config, L"CNTKTextFormatDeserializer") ||
-        ContainsDeserializer(config, L"ImageDeserializer");
+        ContainsDeserializer(config, L"ImageDeserializer") || ContainsDeserializer(config, L"Base64ImageDeserializer");
 
     useNumericSequenceKeys = config(L"useNumericSequenceKeys", useNumericSequenceKeys);
-    m_corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
+
+    bool useHash = config(L"hashSequenceKeys", false);
+    m_corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys, useHash);
 
     // Identifying packing mode.
     bool frameMode = config(L"frameMode", false);
@@ -138,7 +140,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
 
         bool shouldPrefetch = true;
         m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch, 
-            multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow);
+            multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow, GetRandomSeed(config));
     }
     else
     {
@@ -217,6 +219,9 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
         readerConfig(L"deserializers", ConfigParameters::Array(argvector<ConfigValue>(vector<ConfigValue> {})));
 
     assert(m_deserializers.empty());
+
+    auto traceLevel = readerConfig.Find("traceLevel");
+
     bool primary = true;  // Currently, the first deserializer becomes primary - it drives chunking.
     for (size_t i = 0; i < deserializerConfigs.size(); ++i)
     {
@@ -224,6 +229,10 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
         ConfigParameters p = deserializerConfigs[i];
         p.Insert("frameMode", m_packingMode == PackingMode::sample ? "true" : "false");
         p.Insert("precision", m_precision);
+        if (!traceLevel.empty()) 
+        {
+            p.Insert("traceLevel", traceLevel);
+        }
 
         IDataDeserializerPtr d = CreateDeserializer(p, primary);
         primary = false;

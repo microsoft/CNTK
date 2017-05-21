@@ -373,7 +373,7 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
         return []
 
     # convert to one_hot
-    query = Value.one_hot([w], len(vdict))
+    query = Value.one_hot([w], len(vdict), sparse_output=True)
     pred = model_decoding(query)
     pred = pred[0] # first sequence (we only have one) -> [len, vocab size]
     if use_attention:

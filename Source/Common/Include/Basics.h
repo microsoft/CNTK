@@ -676,9 +676,9 @@ public:
     {
     }
     template <class STRING> // accepts char (UTF-8) and wide string
-    FARPROC Load(const STRING& plugin, const std::string& proc)
+    FARPROC Load(const STRING& plugin, const std::string& proc, bool isCNTKPlugin = true)
     {
-        return LoadInternal(msra::strfun::utf16(plugin), proc);
+        return LoadInternal(msra::strfun::utf16(plugin), proc, isCNTKPlugin);
     }
     ~Plugin()
     {
@@ -687,7 +687,7 @@ public:
     // ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
 
 private:
-    FARPROC LoadInternal(const std::wstring& plugin, const std::string& proc);
+    FARPROC LoadInternal(const std::wstring& plugin, const std::string& proc, bool isCNTKPlugin);
 };
 #else
 class Plugin
@@ -701,9 +701,9 @@ public:
     {
     }
     template <class STRING> // accepts char (UTF-8) and wide string
-    void *Load(const STRING& plugin, const std::string& proc)
+    void *Load(const STRING& plugin, const std::string& proc, bool isCNTKPlugin = true)
     {
-        return LoadInternal(msra::strfun::utf8(plugin), proc);
+        return LoadInternal(msra::strfun::utf8(plugin), proc, isCNTKPlugin);
     }
     ~Plugin()
     {
@@ -718,7 +718,7 @@ public:
     }
 
 private:
-    void *LoadInternal(const std::string& plugin, const std::string& proc);
+    void *LoadInternal(const std::string& plugin, const std::string& proc, bool isCNTKPlugin);
 };
 #endif
 

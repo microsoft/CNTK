@@ -195,6 +195,22 @@ private:
         shape = TensorShape(dims);
     }
 protected:
+    // infer reduction dimensions if m_convolution2D is true, for legacy NDL branch 
+    void InferConvolution2DReductionDims(const TensorShape& inputShape, size_t numChannels)
+    {
+        size_t kW = m_kernelShape[0];
+        size_t kH = m_kernelShape[1];
+        size_t sW = m_stride[0];
+        size_t sH = m_stride[1];
+        m_kernelShape = TensorShape(kW, kH, numChannels);
+        m_stride = TensorShape(sW, sH, numChannels);
+        size_t filterRank = 2; 
+        FixVectorShape(filterRank, inputShape.size(), m_autoPad, false);
+        FixTensorShape(filterRank, inputShape.size(), m_lowerPad, 0);
+        FixTensorShape(filterRank, inputShape.size(), m_upperPad, 0);
+        FixVectorShape(filterRank, inputShape.size(), m_sharing, true);
+    }
+
     // infer reduction dimensions if not given
     void InferReductionDims(const TensorShape& inputShape, const TensorShape& fromShape)
     {
@@ -270,6 +286,7 @@ protected:                                  \
     using Base::m_tempMatrixForward;        \
     using Base::m_tempMatrixBackward;       \
     using Base::m_convEng;                  \
+    using Base::InferConvolution2DReductionDims; \
     using Base::InferReductionDims;         \
 public:
 
@@ -439,13 +456,10 @@ public:
             auto inDims = ImageDimensions(GetInputSampleLayout(inputIdx), m_imageLayout);
             // inputShape is used in ConvolveGeometry which supports only CHW layout.
             inputShape = inDims.AsTensorShape(ImageLayoutKind::CHW);
+            InferConvolution2DReductionDims(inputShape, inDims.m_numChannels);
+
             size_t kW = m_kernelShape[0];
             size_t kH = m_kernelShape[1];
-            size_t sW = m_stride[0];
-            size_t sH = m_stride[1];
-            m_kernelShape = TensorShape(kW, kH, inDims.m_numChannels);
-            m_stride = TensorShape(sW, sH, inDims.m_numChannels);
-
             size_t mapCount = m_mapCount.GetNumElements();
             size_t weightCols = kW * kH * inDims.m_numChannels;
 

@@ -107,12 +107,36 @@ void TestAdamLearner(size_t numParameters, size_t numMinibatches, bool unitGainM
 }
 
 template <typename ElementType>
+void TestAdamaxLearner(size_t numParameters, size_t numMinibatches, bool unitGainMomentum, const DeviceDescriptor& device)
+{
+    NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
+    auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
+    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum, MomentumPerSampleSchedule(0.99), 1e-8, true);
+    TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+}
+
+template <typename ElementType>
 void TestRMSPropLearner(size_t numParameters, size_t numMinibatches, const DeviceDescriptor& device)
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
     auto learner = RMSPropLearner(parameters, LearningRatePerMinibatchSchedule({ { 3, 0.7 }, { 1, 0.2 } }), 0.01, 0.02, 0.03, 0.1, 0.001);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+}
+
+template <typename ElementType>
+void TestUniversalLearner(size_t numParameters, size_t numMinibatches, const DeviceDescriptor& device)
+{
+    NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
+    auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
+    ElementType lr = (ElementType) 0.06125;
+    ParameterUpdateFunctor mysgd = [lr](Parameter p, Variable g) -> FunctionPtr 
+    { 
+        return Assign(p, Minus(p , ElementTimes(Constant::Scalar(lr), g))); 
+    };
+    auto learner = UniversalLearner(parameters, mysgd);
+    TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+
 }
 
 void TestTrainingParametersSchedule()
@@ -251,13 +275,16 @@ void TestSweepBasedSchedule()
     DeviceDescriptor device = DeviceDescriptor::CPUDevice();
     auto schedule = LearningRatePerSampleSchedule({ 1, 2, 3, 4, 5 }, LearningRateSchedule::FullDataSweep);
 
-    auto learner1 = SGDLearner({}, schedule);
+    auto weights = Parameter({ 2 }, DataType::Float, 0, device);
+    auto learner1 = SGDLearner({ weights }, schedule);
     assert(1 == learner1->LearningRate());
 
     
     for (auto i : {2, 3, 4, 5 })
     {
-        std::unordered_map<Parameter, NDArrayViewPtr> gradients {};
+        std::vector<float> gradientValueVector(weights.Shape().TotalSize(), 0);
+        auto gradientValue = MakeSharedObject<NDArrayView>(weights.Shape(), gradientValueVector);
+        std::unordered_map<Parameter, NDArrayViewPtr> gradients{ { weights, gradientValue } };
         learner1->Update(gradients, 1, true);
         assert(i == learner1->LearningRate());
     }
@@ -410,6 +437,27 @@ BOOST_AUTO_TEST_CASE(CreateAndUpdateAdamLearner)
         {
             TestAdamLearner<float>(numParameters, numMinibatches, gain, device);
             TestAdamLearner<double>(numParameters, numMinibatches, gain, device);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CreateAndUpdateUniversalLearner)
+{
+    for (auto& device : devices)
+    {
+        TestUniversalLearner<float>(numParameters, numMinibatches, device);
+        TestUniversalLearner<double>(numParameters, numMinibatches, device);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CreateAndUpdateAdamaxLearner)
+{
+    for (auto& device : devices)
+    {
+        for (auto& gain : unitGain)
+        {
+            TestAdamaxLearner<float>(numParameters, numMinibatches, gain, device);
+            TestAdamaxLearner<double>(numParameters, numMinibatches, gain, device);
         }
     }
 }

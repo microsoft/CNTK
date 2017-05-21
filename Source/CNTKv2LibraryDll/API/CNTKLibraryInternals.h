@@ -58,6 +58,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     class ComputationNodeBase;
     typedef std::shared_ptr<ComputationNodeBase> ComputationNodeBasePtr;
+
+    struct GpuData;
 }}}
 
 // TODO: The following should be reconciled with the equivalent code in the CNTK implementation
@@ -141,6 +143,7 @@ namespace CNTK
     class BlockFunction;
     class Function;
     class Variable;
+    class Parameter;
     class Axis;
     class DeviceDescriptor;
     enum class PrimitiveOpType : unsigned int;
@@ -212,6 +215,13 @@ namespace CNTK
     class Accumulator;
     typedef std::shared_ptr<Accumulator> AccumulatorPtr;
 
+    class UserFunctionFactory;
+    typedef std::shared_ptr<UserFunctionFactory> UserFunctionFactoryPtr;
+
+    class PackedValue;
+    typedef std::shared_ptr<PackedValue> PackedValuePtr;
+    typedef std::weak_ptr<PackedValue> PackedValueWeakPtr;
+
     struct MinibatchSourceConfig;
 
     namespace Internal
@@ -220,7 +230,6 @@ namespace CNTK
         CNTK_API FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
         CNTK_API FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ScatterPacked(const Variable& operand, const Variable& packedIndex, const Variable& condition, const std::wstring& name = L"");
-        CNTK_API FunctionPtr ReconcileDynamicAxis(const Variable& operand, const Variable& layout, const std::wstring& name = L"");
         CNTK_API FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand);
         CNTK_API FunctionPtr Where(const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
         CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
@@ -229,7 +238,7 @@ namespace CNTK
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
         CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
-        CNTK_API FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name = L"");
+        CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, bool keepReducedDimensions, const std::wstring& name = L"");
         CNTK_API FunctionPtr CosineDistanceWithNegativeSamples(const Variable& leftOperand, const Variable& rightOperand, const Variable& shiftWindow, const Variable& numberOfNegativeSamples, const std::wstring& name = L"");
         CNTK_API FunctionPtr Convolution(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& autoPadding,
                                          bool transpose, const NDShape& outputShape, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
@@ -239,7 +248,7 @@ namespace CNTK
 
         CNTK_API size_t NewUniqueId();
 
-        CNTK_API size_t GenerateRandomSeed();
+        CNTK_API size_t GenerateRandomSeed(bool perWorkerLocalValue = false);
 
         // Internal hooks for testing and higher-level bindings
         // These should not be directly called by C++ API users
@@ -258,9 +267,6 @@ namespace CNTK
         CNTK_API void SetComputationNetworkTraceLevel(int traceLevel);
         int GetComputationNetworkTraceLevel();
 
-        CNTK_API void SetComputationNetworkTrackGapNans(bool enable);
-        bool GetComputationNetworkTrackGapNans();
-
         CNTK_API void SetGPUMemoryAllocationTraceLevel(int traceLevel);
 
         CNTK_API void SetMathLibTraceLevel(int traceLevel);
@@ -271,7 +277,11 @@ namespace CNTK
         CNTK_API void EnableSynchronousGPUKernelExecution();
         CNTK_API bool IsSynchronousGPUKernelExecutionEnabled();
 
-        CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
+        CNTK_API unsigned long GetRandomSeed();
+        CNTK_API void SetFixedRandomSeed(unsigned long value);
+        CNTK_API bool IsRandomSeedFixed();
+        // If SetFixedRandomSeed has been called before, this will clear the 'fixed' flag.
+        CNTK_API void ResetRandomSeed(unsigned long value = 0);
 
         CNTK_API void EnableForwardValuesSharing();
         CNTK_API void DisableForwardValuesSharing();
@@ -295,6 +305,23 @@ namespace CNTK
 
         // This is an internal API, needed for testing.
         CNTK_API Dictionary ToDictionary(const MinibatchSourceConfig& dict);
+
+#ifndef SWIG
+        /// Convenience constructor that should be used by foreign language bindings.
+        /// This is the Proper declaration understood by a real C++ compiler.
+        CNTK_API LearnerPtr UniversalLearner(const std::vector<::CNTK::Parameter>& parameters, const std::vector<std::pair<::CNTK::Variable, ::CNTK::FunctionPtr> >& updates);
+#else
+        /// Convenience constructor that should be used by foreign language bindings.
+        /// Workaround declaration for SWIG. 
+        /// This is for now necessary because it has been elusive to find an equivalent of 
+        /// %template() std::vector<std::pair<CNTK::Variable, std::shared_ptr<CNTK::Function>>>;
+        /// which will generate correct code (i.e. code that will accept a list of tuples in the foreign language)
+        /// when the proper declaration is processed by SWIG.
+        CNTK_API LearnerPtr UniversalLearner(const std::vector<CNTK::Parameter>& parameters, const std::vector<std::pair<CNTK::Variable, CNTK::FunctionPtr> >& updates);
+#endif
+
+        CNTK_API void PrintBuiltInfo();
+        CNTK_API void PrintGpuInfo(const std::vector<Microsoft::MSR::CNTK::GpuData>& gpusData);
 
         class VariableResolver;
 
@@ -363,6 +390,21 @@ namespace CNTK
             FILE* m_file;
             std::wstring m_fileName;
         };
+
+        // SWIG callback wrapper for the UDF deserialization.
+        class UDFDeserializeCallbackWrapper
+        {
+        public:
+            virtual FunctionPtr operator()(const std::vector<Variable>&, const std::wstring&, const Dictionary&) const = 0;
+            virtual ~UDFDeserializeCallbackWrapper() = default;
+        };
+
+        typedef std::shared_ptr<UDFDeserializeCallbackWrapper> UDFDeserializeCallbackWrapperPtr;
+        
+        CNTK_API void RegisterUDFDeserializeCallbackWrapper(UDFDeserializeCallbackWrapperPtr callbackPtr);
+
+
+        CNTK_API bool IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName);
     }
 
     // Forward-declare test fixtures, so that they can be used as friends.

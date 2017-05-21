@@ -27,10 +27,12 @@ master_doc = 'index'
 
 exclude_patterns = [
     '_build',
-    'cntk_py',
-    'tests',
-    '**/tests/*',
-    '*tests*'
+    'images',
+    'test',
+]
+
+autodoc_mock_imports = [
+    'tensorflow',
 ]
 
 needs_sphinx = '1.5'
@@ -66,14 +68,15 @@ linkcheck_anchors_ignore = [
   re_exact_match('22-block-momentum-sgd'),
   re_exact_match('converting-learning-rate-and-momentum-parameters-from-other-toolkits'),
   re_exact_match('for-python'),
+  re_exact_match('base64imagedeserializer-options'),
 ]
 
 source_prefix = 'https://github.com/Microsoft/CNTK/blob/'
 if module_is_unreleased():
-    # TODO temporary
-    source_prefix += 'v%s' % (cntk.__version__[:-1].replace("rc", ".rc"))
-else:
     source_prefix += 'master'
+else:
+    # TODO temporary
+    source_prefix += 'v%s' % (cntk.__version__.replace("rc", ".rc"))
 
 # sphinx.ext.extlinks options
 extlinks = {

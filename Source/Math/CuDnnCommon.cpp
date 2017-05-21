@@ -18,8 +18,27 @@ const float Consts<float>::Zero = 0;
 template <>
 const double Consts<double>::Zero = 0;
 
+CuDnnTensor::CuDnnTensor()
+    : m_tensor(nullptr)
+{
+}
+
 CuDnnTensor::CuDnnTensor(const TensorShape& src, cudnnDataType_t dataType)
     : m_tensor(nullptr)
+{
+    Set(src, dataType); 
+}
+
+CuDnnTensor::~CuDnnTensor()
+{
+    if (m_tensor != nullptr)
+    {
+        cudnnDestroyTensorDescriptor(m_tensor);
+        m_tensor = nullptr;
+    }
+}
+
+void CuDnnTensor::Set(const TensorShape& src, cudnnDataType_t dataType)
 {
     CUDNN_CALL(cudnnCreateTensorDescriptor(&m_tensor));
     // Set cuDNN tensor dimensions. cuDNN uses row-major format while TensorShape - column-major
@@ -37,15 +56,6 @@ CuDnnTensor::CuDnnTensor(const TensorShape& src, cudnnDataType_t dataType)
     dims[0] = 1;
     strides[0] = strides[1] * dims[1];
     CUDNN_CALL(cudnnSetTensorNdDescriptor(m_tensor, dataType, (int)dims.size(), dims.data(), strides.data()));
-}
-
-CuDnnTensor::~CuDnnTensor()
-{
-    if (m_tensor != nullptr)
-    {
-        cudnnDestroyTensorDescriptor(m_tensor);
-        m_tensor = nullptr;
-    }
 }
 
 void CuDnnTensor::UpdateBatchSize(size_t batchSize)
