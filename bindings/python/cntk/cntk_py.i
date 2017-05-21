@@ -1466,7 +1466,7 @@ namespace CNTK
             const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) { NOT_IMPLEMENTED }
 
 
-        virtual Dictionary SwigMinibatchSource::_GetCheckpointState() const { NOT_IMPLEMENTED }
+        virtual Dictionary _GetCheckpointState() const { NOT_IMPLEMENTED }
     protected:
         // Making these protected to prevent them to be caught by Swig's
         // director support, because the "nodirector" feature has issues seperating
@@ -1569,7 +1569,7 @@ namespace CNTK
             return m_minibatchData;
         }
 
-        Dictionary SwigMinibatchSource::GetCheckpointState() const
+        Dictionary GetCheckpointState() const
         {
             return _GetCheckpointState();
         }
