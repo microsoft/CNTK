@@ -9,7 +9,6 @@ Utils for operations unit tests
 """
 
 import os
-import psutil
 import numpy as np
 import cntk as C
 from cntk.tests.test_utils import *
@@ -35,12 +34,15 @@ def cntk_device(device_id):
     else:
         return gpu(device_id)
 
+
 def os_process():
     '''
     Returns the process instance, which can be used e.g. to check the memory
     usage.
     '''
+    import psutil
     return psutil.Process(os.getpid())
+
 
 def mem_used(process):
     '''
