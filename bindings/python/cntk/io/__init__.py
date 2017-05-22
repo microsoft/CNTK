@@ -520,7 +520,7 @@ class MinibatchSourceFromData(UserMinibatchSource):
 
         # get the data and types from the input, and form streams array
         self.num_samples = -1  # total number of samples --must be the same for all args
-        import scipy
+        from scipy import sparse
         for name, arg in kwargs.items():
             if isinstance(arg, tuple):
                 value, type = arg
@@ -532,8 +532,8 @@ class MinibatchSourceFromData(UserMinibatchSource):
             else:
                 value = arg
                 is_sequence = False  # data without type cannot have a dynamic axis
-                type = Variable._Type(is_sparse=isinstance(value, scipy.sparse.csr_matrix)) # shape implanted below
-            if not isinstance(value[0] if isinstance(value, list) else value, (np.ndarray, scipy.sparse.csr_matrix, Value)):
+                type = Variable._Type(is_sparse=isinstance(value, sparse.csr_matrix)) # shape implanted below
+            if not isinstance(value[0] if isinstance(value, list) else value, (np.ndarray, sparse.csr_matrix, Value)):
                 raise TypeError('data must be a numpy.array or scipy.sparse.csr_matrix, or a list of those')
             sample_shape = value.shape[2:] if is_sequence else value.shape[1:]
             if not type.shape_is_known:
@@ -541,10 +541,10 @@ class MinibatchSourceFromData(UserMinibatchSource):
             elif type.shape != sample_shape:
                 ValueError("specified type's shape does not match the data's shape")
             if self.num_samples == -1:
-                if len(value) == 0:
+                if value.shape[0] == 0:
                     raise(ValueError('data is empty'))
-                self.num_samples = len(value)
-            elif self.num_samples != len(value):
+                self.num_samples = value.shape[0]
+            elif self.num_samples != value.shape[0]:
                 raise TypeError('all data items must have the same first dimension')
             self.data[name] = value
             self.types[name] = type

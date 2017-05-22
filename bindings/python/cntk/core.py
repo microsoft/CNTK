@@ -257,6 +257,8 @@ class Value(cntk_py.Value):
 
         if isinstance(batch, np.ndarray):
             ndav = NDArrayView.from_dense(batch, device)
+        elif isinstance(batch, sparse.csr_matrix):
+            ndav = NDArrayView.from_csr(batch, device)
         else:
             ndav = batch
 

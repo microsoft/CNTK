@@ -14,7 +14,6 @@ import os
 import argparse
 import math
 import cntk
-#import scipy
 from cntk.layers import *
 from cntk.layers.typing import *
 
@@ -25,9 +24,9 @@ num_classes = 2  # into one of two classes
 num_samples_to_train = 20000
 num_samples_to_test  = 20000
 
-# Generate our artificial data
+# Generate our synthetic data
 #  X[sample_size,input_dim] - our input data
-#  Y[sample_size]           - labels (0 or 1)
+#  Y[sample_size]           - labels (0 or 1), in one-hot representation
 sample_size = 32
 np.random.seed(0)
 def generate_synthetic_data(N):
@@ -36,7 +35,8 @@ def generate_synthetic_data(N):
     # data
     X = (np.random.randn(N, input_dim)+3) * (Y[:,None]+1)
     # our model expects float32 features, and cross-entropy expects one-hot encoded labels
-    Y = cntk.Value.one_hot(Y, num_classes)
+    from scipy import sparse
+    Y = sparse.csr_matrix((np.ones(N,np.float32), (range(N), Y)), shape=(N, num_classes))
     X = X.astype(np.float32)
     return X, Y
 X_train, Y_train = generate_synthetic_data(num_samples_to_train)
@@ -76,8 +76,23 @@ minibatch_size = 25
 minibatch_source = cntk.io.MinibatchSourceFromData(data=X_train, labels=Y_train)
 model_inputs_to_streams = {criterion.arguments[0]: minibatch_source.streams.data, criterion.arguments[1]: minibatch_source.streams.labels}
 
-training_session = cntk.training_session(trainer, minibatch_source, minibatch_size,
-                                      model_inputs_to_streams,
-                                      progress_frequency=minibatch_size * 50, max_samples=len(X_train))
-training_session.train()
-print(model.W.value)
+cntk.training_session(trainer, minibatch_source, minibatch_size,
+                   model_inputs_to_streams,
+                   progress_frequency=minibatch_size * 50, max_samples=len(X_train),
+                   #test_config=cntk.TestConfig(source=cntk.io.MinibatchSourceFromData(data=X_test, labels=Y_test), mb_size=1000)
+                   # currently crashing, to be fixed once I get a response to my bug report
+                   ).train()
+
+# Checking prediction on one minibatch
+# For evaluation, we map the output of the network between 0-1 and convert them into probabilities
+# for the two classes. We use a softmax function to get the probabilities of each of the class.
+@cntk.Function
+@Signature(cntk.layers.Tensor[input_dim])
+def get_probability(data):
+    return cntk.softmax(model(data))
+
+X_check,  Y_check = generate_synthetic_data(25) # a small batch of 25 examples
+result = get_probability(X_check)
+
+print("Label    :", [label.argmax() for label in Y_check])
+print("Predicted:", [result[i,:].argmax() for i in range(len(result))])
