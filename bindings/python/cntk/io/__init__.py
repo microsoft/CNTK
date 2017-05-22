@@ -5,9 +5,9 @@
 # ==============================================================================
 
 import warnings
-from .. import cntk_py, Value
-from ..tensor import ArrayMixin
-from cntk.internal import typemap, sanitize_dtype_cntk
+from cntk import cntk_py, Value
+from cntk.tensor import ArrayMixin
+from cntk.internal import typemap, sanitize_dtype_cntk, is_string
 from cntk.device import use_default_device
 from cntk.logging import TraceLevel, get_trace_level
 from cntk.variables import Record
@@ -145,7 +145,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
           non-zero value enables randomization.
           `randomization_window_in_chunks` and `randomization_window_in_samples` are mutually exclusive,
           an exception will be raised if both have non-zero values.
-        randomization_seed (`int`, defaults to 0): initial randomization seed value (incremented every sweep when 
+        randomization_seed (`int`, defaults to 0): initial randomization seed value (incremented every sweep when
             the input data is re-randomized).
         trace_level (an instance of :class:`cntk.logging.TraceLevel`): the output verbosity level, defaults to
           the current logging verbosity level given by :func:`~cntk.logging.get_trace_level`.
@@ -466,13 +466,53 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
         Returns:
             mapping of :class:`StreamInformation` to :class:`MinibatchData`
         '''
-        return NotImplementedError
+        raise NotImplementedError
 
     def _next_minibatch(self, info_map, mb_size_in_sequences,
             mb_size_in_samples, number_of_workers, worker_rank, device):
         # mbsize_in_sequences is ignored
 
-        info_map.update(self.next_minibatch(mb_size_in_samples, device))
+        mb = self.next_minibatch(mb_size_in_samples, number_of_workers, worker_rank, device)
+        info_map.update(mb)
+
+    def _get_checkpoint_state(self):
+        state = self.get_checkpoint_state()
+        d = cntk_py.Dictionary()
+        for key, val in state.items():
+            if not is_string(key):
+                raise ValueError('the keys of the checkpoint dictionary must '
+                                 'be strings. You gave "%s" of type %s' %
+                                 (key, type(key)))
+            dv = cntk_py.DictionaryValue(val)
+            d.add(key, dv)
+
+        return d
+
+    def get_checkpoint_state(self):
+        '''
+        Returns a dictionary describing the current state of the minibatch
+        source.
+
+        Returns:
+            dictionary, that can be later used on :meth:`restore_from_checkpoint`.
+        '''
+        raise NotImplementedError('in order to use checkpointing on '
+            'UserMinibatchSource, you need to implement '
+            'get_checkpoint_state()')
+
+    def _restore_from_checkpoint(self, state):
+        self.restore_from_checkpoint(state)
+
+    def restore_from_checkpoint(self, state):
+        '''
+        Sets the state of the checkpoint.
+
+        Args:
+            state (dict): dictionary containing the state
+        '''
+        raise NotImplementedError('in order to use checkpointing on '
+            'UserMinibatchSource, you need to implement '
+            'restore_from_checkpoint(checkpoint)')
 
     def __getitem__(self, name):
         '''
@@ -504,11 +544,13 @@ def HTKFeatureDeserializer(streams):
         dimension = stream.dim
         scp_file = stream['scp']
         broadcast = stream['broadcast'] if 'broadcast' in stream else False
+        defines_mb_size = stream.get('defines_mb_size', False)
         left_context, right_context = stream.context if 'context' in stream\
                                                      else (0, 0)
         htk_config = cntk_py.HTKFeatureConfiguration(stream_name, scp_file,
                                                      dimension, left_context,
-                                                     right_context, broadcast)
+                                                     right_context, broadcast,
+                                                     defines_mb_size)
         feat.append(htk_config)
 
     if len(feat) == 0:
@@ -563,12 +605,12 @@ def _process_image_deserializer_args(filename, streams, deserializer):
             raise ValueError(
                 "{}: invalid field name '{}', allowed are "
                 "'image' and 'label'".format(deserializer, alias))
-    
+
     if image_stream_name is None:
         raise ValueError("{}: stream name ('image' or 'label') must be "
             "specified".format(deserializer))
-    
-    return (filename, label_stream_name, num_labels, 
+
+    return (filename, label_stream_name, num_labels,
         image_stream_name, transforms)
 
 def ImageDeserializer(filename, streams):
@@ -589,13 +631,13 @@ def ImageDeserializer(filename, streams):
     See also:
         :cntkwiki:`Image reader definition <BrainScript-Image-reader>`
     '''
-    args = _process_image_deserializer_args(filename, streams, 
+    args = _process_image_deserializer_args(filename, streams,
         'ImageDeserializer')
     return cntk_py.image_deserializer(*args)
 
 def Base64ImageDeserializer(filename, streams):
     '''
-    Configures the image reader that reads base64 encoded images and corresponding 
+    Configures the image reader that reads base64 encoded images and corresponding
     labels from a file of the form::
 
         [sequenceId <tab>] <numerical label (0-based class id)> <tab> <base64 encoded image>
@@ -604,12 +646,12 @@ def Base64ImageDeserializer(filename, streams):
 
     Args:
         filename (str): file name of the input file dataset that contains images 
-        and corresponding labels
+         and corresponding labels
 
     See also:
         :cntkwiki:`Base64ImageDeserializer options <BrainScript-and-Python---Understanding-and-Extending-Readers#base64imagedeserializer-options>`
     '''
-    args = _process_image_deserializer_args(filename, streams, 
+    args = _process_image_deserializer_args(filename, streams,
         'Base64ImageDeserializer')
     return cntk_py.base64_image_deserializer(*args)
 
@@ -626,6 +668,9 @@ def CTFDeserializer(filename, streams):
 
     Args:
         filename (str): file name containing the text input
+        streams: any dictionary-like object that contains a mapping from stream
+          names to :class:`StreamDef` objects. Each StreamDef object configures
+          an input stream.
 
     See also:
         :cntkwiki:`CNTKTextReader format <BrainScript-CNTKTextFormat-Reader>`
@@ -635,7 +680,7 @@ def CTFDeserializer(filename, streams):
             raise ValueError("CTFDeserializer: stream name for key %s must be "
                              "specified" % k)
     sc = [cntk_py.StreamConfiguration(
-        k, s.dim, s.is_sparse, s.stream_alias) for k, s in streams.items()]
+        k, s.dim, s.is_sparse, s.stream_alias, s['defines_mb_size']) for k, s in streams.items()]
     return cntk_py.ctf_deserializer(filename, sc)
 
 # TODO: this should be a private class; use StreamDef instead
@@ -654,16 +699,18 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
         is_sparse (bool, defaults to `False`): whether the provided data is
           sparse (`False` by default)
         stream_alias (str, defaults to ''): name of the stream in the file
+        defines_mb_size (`bool`, defaults to False): whether this stream defines
+          the minibatch size.
     '''
 
-    def __init__(self, name, dim, is_sparse=False, stream_alias=''):
+    def __init__(self, name, dim, is_sparse=False, stream_alias='', defines_mb_size = False):
         return super(StreamConfiguration, self).__init__(name, dim, is_sparse,
-                                                         stream_alias)
+                                                         stream_alias, defines_mb_size)
 
 # stream definition for use in StreamDefs
 # returns a record { stream_alias, is_sparse, optional shape, optional transforms, optional context, optional scp, optional mlf }
 def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
-              context=None, scp=None, mlf=None, broadcast=None):
+              context=None, scp=None, mlf=None, broadcast=None, defines_mb_size=False):
     '''
        Configuration of a stream for use with the builtin Deserializers.
        The meanings of some configuration keys have a mild dependency on the
@@ -695,6 +742,8 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
         broadcast (`bool`, defaults to `None`): whether the features in this
           stream should be broadcast to the whole sequence (useful in e.g.
           ivectors with HTK)
+        defines_mb_size (`bool`, defaults to False): whether this stream defines
+          the minibatch size.
     '''
     config = dict(stream_alias=field, is_sparse=is_sparse)
     if shape is not None:
@@ -710,6 +759,8 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
         config['is_sparse'] = True
     if broadcast is not None:
         config['broadcast'] = broadcast
+    config['defines_mb_size'] = True if defines_mb_size else False
+
     return Record(**config)
     # TODO: we should always use 'shape' unless it is always rank-1 or a single rank's dimension
     # TODO: dim should be inferred from the file, at least for dense

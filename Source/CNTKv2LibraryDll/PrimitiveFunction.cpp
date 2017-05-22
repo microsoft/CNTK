@@ -251,7 +251,7 @@ namespace CNTK
                         {
                             if (currentInputDynamicAxes != outputDynamicAxes)
                                 LogicError("Operation '%S': Operand '%S' has dynamic axes, that do not match the dynamic axes '%S' of the other operands.",
-                                            PrimitiveOpTypeName(op).c_str(), inputVar.AsString().c_str(), DynamicAxesAsString(outputDynamicAxes).c_str());
+                                            PrimitiveOpTypeName(op).c_str(), inputVar.AsString().c_str(), DynamicAxesAsString(outputDynamicAxes, Internal::IsReversingTensorShapesInErrorMessagesEnabled()).c_str());
                         }
                     }
                 }

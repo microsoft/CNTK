@@ -748,13 +748,18 @@ def minus(left, right, name=''):
 @typemap
 def pow(base, exponent, name=''):
     '''
-    The output of this operation is base raised to the power of exponent. It supports broadcasting.
+    Computes `base` raised to the power of `exponent`. It supports broadcasting.
+    This is well defined if `base` is non-negative or `exponent` is an integer.
+    Otherwise the result is NaN. The gradient with respect to the base is  well 
+    defined if the forward operation is well defined. The gradient with respect 
+    to the exponent is well defined if the base is non-negative, and it is set 
+    to 0 otherwise.
 
     Example:
-        >>> C.pow([1, 2, 3], [3, 2, 1]).eval()
-        array([ 1.,  4.,  3.], dtype=float32)
+        >>> C.pow([1, 2, -2], [3, -2, 3]).eval()
+        array([ 1.  ,  0.25, -8.  ], dtype=float32)
 
-        >>> C.pow([[0.5,2],[4,1]], -2).eval()
+        >>> C.pow([[0.5, 2],[4, 1]], -2).eval()
         array([[ 4.    ,  0.25  ],
                [ 0.0625,  1.    ]], dtype=float32)
 
@@ -2486,9 +2491,6 @@ def to_sequence(x, sequence_lengths=None, sequence_axis_name_prefix='toSequence_
     assumed to be of the same length; i.e. dimensionality of the most significant
     static axis
 
-    Example:
-        TBA.
-
     Args:
         x: the tensor (or its name) which is converted to a sequence
         sequence_lengths: Optional tensor operand representing the sequence lengths.
@@ -2499,6 +2501,9 @@ def to_sequence(x, sequence_lengths=None, sequence_axis_name_prefix='toSequence_
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
 
     from cntk.cntk_py import to_sequence
@@ -2518,9 +2523,6 @@ def to_sequence_like(x, dynamic_axes_like, name=''):
     static axis [0] as the sequence axis. The length of the sequences are
     obtained from the 'dynamic_axes_like' operand.
 
-    Example:
-        TBA.
-
     Args:
         x: the tensor (or its name) which is converted to a sequence
         dynamic_axes_like: Tensor operand used to obtain the lengths of
@@ -2530,6 +2532,9 @@ def to_sequence_like(x, dynamic_axes_like, name=''):
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
 
     from cntk.cntk_py import to_sequence_like

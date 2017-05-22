@@ -201,8 +201,8 @@ def test_unfold():
     def FU(x):
         return UF(Constant(1), x)
     r = FU(x)
-    exp = [[[ 2 ], [ 4 ], [ 8 ]],
-           [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]]]
+    exp = [[ 2. , 4. , 8.],
+	       [ 2. , 4. , 8. , 16. , 32. ]]
     assert_list_of_arrays_equal(r, exp, err_msg='Error in UnfoldFrom() forward')
 
     ####################################################
@@ -214,8 +214,8 @@ def test_unfold():
     def FU(x):
         return UF(Constant(1), x)
     r = FU(x)
-    exp = [[[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]],         # tests length_increase
-           [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ], [ 64 ]]] # tests early cut-off due to until_predicate
+    exp = [[ 2 , 4 , 8 , 16 , 32 ],         # tests length_increase
+           [ 2 , 4 , 8 , 16 , 32 , 64 ]] # tests early cut-off due to until_predicate
 
     assert_list_of_arrays_equal(r, exp, err_msg='Error in UnfoldFrom(..., until_predicate, length_increase, ...) forward')
 

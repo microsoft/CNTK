@@ -5,7 +5,7 @@
 // CNTKWarnFilters.i -- define warnfilters common for Python, C# and Java
 //
 
-//This file contains common warnfilters for Python, C# and Java
+// This file contains common warnfilters for Python, C# and Java
 
 // Disabling warning about constructor shadowing, learner tests check this.
 %warnfilter(401, 509) CNTK::TrainingParameterPerUnitSchedule;

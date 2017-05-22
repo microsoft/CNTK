@@ -57,15 +57,86 @@ def test_lstm_over_lstm_thought_vectors(device_id):
     
     loss_result = loss_result.as_sequences()
 
-    # TODO: The tolerance here is inordinately high due to the non-determinism in initialization 
-    # of parameters as the individual tests are not run in separate processes resulting in the
-    # addition or removal of tests to affect the random initialization of parameters in all other
-    # tests that do not explicitly specify the random seed. The tolerance should be lowered to 
-    # 0.01 after this issue in the test infrastructure has been fixed.
     absolute_tolerance = 0.02
     assert np.allclose(loss_result[0], [[0.63504], [0.673343], [0.698446]], atol=absolute_tolerance)
     assert np.allclose(loss_result[1], [[0.772344], [0.64295]], atol=absolute_tolerance)
 
+
+# This user-defined Function takes a batch of utterances thought-vectors and reshapes into a batch
+# of conversation sequences by reshaping the batch axis of the utternaces to batch of conversation sequences.
+class UtteranceBatchReshape(C.ops.functions.UserFunction):
+    def __init__(self, utterances, conversation_lengths, name='utterance_batch_reshape'):
+        super(UtteranceBatchReshape, self).__init__([utterances, conversation_lengths], as_numpy=False, name=name)
+        if len(utterances.dynamic_axes) != 1:
+            raise ValueError("UtteranceBatchReshape's 'utterances' argument must be a non-sequence (denotes the thought vectors derived from utterance sequences.")
+
+        if len(conversation_lengths.dynamic_axes) != 1:
+            raise ValueError("UtteranceBatchReshape's 'conversation_lengths' argument must have exactly one dynamic axis (denotes a batch of sequence lengths).")
+
+    def infer_outputs(self):
+        conversation_batch_axis = C.Axis.default_batch_axis()
+        return [C.output_variable((C.FreeDimension,) + self.inputs[0].shape, self.inputs[0].dtype, [conversation_batch_axis])]
+
+    def forward(self, arguments, device=None, outputs_to_retain=None):
+        num_utterances = arguments[0].shape()[0]
+        num_conversations = arguments[1].shape()[0]
+
+        if (num_utterances % num_conversations) != 0:
+            raise ValueError("Utterance count={} is not a multiple of specified number of conversations={}.".format(num_utterances, num_conversations))
+        
+        # TODO: Also verify that the max conversation length matches actual data
+        max_conversation_length = num_utterances / num_conversations
+        result = arguments[0].data().as_shape((num_conversations, max_conversation_length,) + self.arguments[0].shape)
+        return None, C.cntk_py.Value(result)
+
+    def backward(self, state, root_gradients, variables):
+        grad_array_view = root_gradients.data()
+        return grad_array_view.as_shape((grad_array_view.shape()[0] * grad_array_view.shape()[1],) + self.arguments[0].shape)
+
+def test_lstm_over_lstm_thought_vectors_2(device_id):
+    dev = cntk_device(device_id)
+    input_vocab_size=3
+    emb_dim = 2
+    hidden_dim = 2
+    num_labels = 2
+    utterances_input = C.sequence.input_variable((input_vocab_size), is_sparse=True, name='utterances')
+    conversation_lengths_input = C.input_variable((), name='conversation_sequence_lengths')
+    label_input = C.sequence.input_variable(num_labels, is_sparse=True, sequence_axis=C.Axis('label_sequence'), name='labels')
+    with C.default_options(initial_state=0.1):
+        model = C.layers.Embedding(emb_dim, name='embed')(utterances_input)
+        model = C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=False)(model)
+        model = C.sequence.last(model)
+        model = C.user_function(UtteranceBatchReshape(model, conversation_lengths_input))
+        model = C.to_sequence_like(model, label_input)
+        model = C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=False)(model)
+        model = C.layers.Dense(num_labels, name='classify')(model)
+
+    z = model
+    ce = C.cross_entropy_with_softmax(z, label_input)
+
+    sentinel_utt_data = C.NDArrayView.from_csr(_to_csr([[0, 0, 1]]), device=C.cpu())
+    c1_utt1_data = C.NDArrayView.from_csr(_to_csr([[0, 1, 1], [0, 1, 0], [1, 0, 0]]), device=C.cpu())
+    c1_utt2_data = C.NDArrayView.from_csr(_to_csr([[0, 1, 0], [0, 1, 1]]), device=C.cpu())
+    c1_utt3_data = C.NDArrayView.from_csr(_to_csr([[0, 1, 1], [0, 1, 0]]), device=C.cpu())
+    c2_utt1_data = C.NDArrayView.from_csr(_to_csr([[0, 1, 1]]), device=C.cpu())
+    c3_utt1_data = C.NDArrayView.from_csr(_to_csr([[0, 1, 0], [0, 1, 1], [1, 0, 0]]), device=C.cpu())
+    c3_utt2_data = C.NDArrayView.from_csr(_to_csr([[0, 1, 0]]), device=C.cpu())
+
+    all_utt_data = C.Value.create(C.sequence.input_variable((input_vocab_size), is_sparse=True), [c1_utt1_data, c1_utt2_data, c1_utt3_data, c2_utt1_data, sentinel_utt_data, sentinel_utt_data, c3_utt1_data, c3_utt2_data, sentinel_utt_data], device=C.cpu()).data
+    conversation_lengths_data = np.asarray([3, 1, 2], dtype=np.float32)
+    seq1_label_data = [[0, 1], [0, 1], [1, 0]]
+    seq2_label_data = [[1, 0]]
+    seq3_label_data = [[1, 0], [0, 1]]
+    label_data = [_to_csr(seq1_label_data), _to_csr(seq2_label_data), _to_csr(seq3_label_data)]
+    param_grads, loss_result = ce.grad({utterances_input : all_utt_data, label_input : label_data, conversation_lengths_input : conversation_lengths_data},
+                                       wrt=ce.parameters, outputs=[ce], as_numpy=False)
+    
+    loss_result = loss_result.as_sequences()
+
+    absolute_tolerance = 0.01
+    assert np.allclose(loss_result[0], [[0.6311], [0.657143], [0.715372]], atol=absolute_tolerance)
+    assert np.allclose(loss_result[1], [[0.769184]], atol=absolute_tolerance)
+    assert np.allclose(loss_result[2], [[0.752919], [0.651915]], atol=absolute_tolerance)
 
 def test_sequence_max():
   np.random.seed(0)

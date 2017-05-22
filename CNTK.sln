@@ -1128,7 +1128,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Python", "Python", "{58902B
 	ProjectSection(SolutionItems) = preProject
 		Examples\Image\Classification\ResNet\Python\README.md = Examples\Image\Classification\ResNet\Python\README.md
 		Examples\Image\Classification\ResNet\Python\resnet_models.py = Examples\Image\Classification\ResNet\Python\resnet_models.py
-		Examples\Image\Classification\ResNet\Python\run_Distributed.py = Examples\Image\Classification\ResNet\Python\run_Distributed.py
 		Examples\Image\Classification\ResNet\Python\TrainResNet_CIFAR10.py = Examples\Image\Classification\ResNet\Python\TrainResNet_CIFAR10.py
 		Examples\Image\Classification\ResNet\Python\TrainResNet_CIFAR10_Distributed.py = Examples\Image\Classification\ResNet\Python\TrainResNet_CIFAR10_Distributed.py
 	EndProjectSection

@@ -20,7 +20,7 @@ public class Main {
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
 
         DeviceDescriptor device = DeviceDescriptor.useDefaultDevice();
-        File dataPath = new File(args[1]);
+        File dataPath = new File(args[0]);
 
 
         // Load the model.
@@ -30,11 +30,12 @@ public class Main {
         Function modelFunc = Function.load(new File(dataPath, "resnet20_cifar10_python.dnn").getAbsolutePath(), device);
         Variable outputVar = modelFunc.getOutputs().get(0);
         Variable inputVar = modelFunc.getArguments().get(0);
+        System.gc(); // This is not needed for normal usage. It is here just for testing that elements in getOutputs are not getting GC'd.
 
         NDShape inputShape = inputVar.getShape();
-        int imageWidth = inputShape.getDimensions().get(0).intValue();
-        int imageHeight = inputShape.getDimensions().get(1).intValue();
-        int imageChannels = inputShape.getDimensions().get(2).intValue();
+        int imageWidth = (int)inputShape.getDimensions()[0];
+        int imageHeight = (int)inputShape.getDimensions()[1];
+        int imageChannels = (int)inputShape.getDimensions()[2];
         int imageSize = ((int) inputShape.getTotalSize());
 
         System.out.println("EvaluateSingleImage");

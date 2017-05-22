@@ -49,6 +49,18 @@ MBDATA_SPARSE = r'''0	|x 560:1	|y 1 0 0 0 0
 1	|x 424:1
 '''
 
+MBDATA_SPARSE1 = r'''0	|x 560:1
+0	|x 0:1
+0	|x 0:1
+1	|x 560:1
+1	|x 0:1
+1	|x 0:1
+1	|x 424:1
+'''
+
+MBDATA_SPARSE2 = r'''0	|y 1 0 0 0 0
+1	|y 0 1 0 0 0
+'''
 
 def create_temp_file(tmpdir):
     tmpfile = str(tmpdir/'mbtest.txt')
@@ -70,8 +82,8 @@ def create_config(tmpdir):
                 StreamDefs(features=StreamDef(field='S0', shape=1))))
 
 
-def _write_data(tmpdir, data):
-    tmpfile = str(tmpdir / 'mbdata.txt')
+def _write_data(tmpdir, data, filename='mbdata.txt'):
+    tmpfile = str(tmpdir / filename)
 
     with open(tmpfile, 'w') as f:
         f.write(data)
@@ -133,7 +145,7 @@ def test_text_format(tmpdir):
 def check_default_config_keys(d):
         assert 5 <= len(d.keys())
         assert d['frameMode'] is False
-        assert d['multiThreadedDeserialization'] is False
+        assert d['multiThreadedDeserialization'] is True
         assert TraceLevel.Warning == d['traceLevel']
         assert 'randomize' in d.keys()
         assert 'deserializers' in d.keys()
@@ -225,7 +237,7 @@ def test_minibatch_source_config_other_properties(tmpdir):
     ctf = create_ctf_deserializer(tmpdir)
     config = MinibatchSourceConfig([ctf])
 
-    config.is_multithreaded = True
+    config.is_multithreaded = False
     config.trace_level = TraceLevel.Info.value
     config.is_frame_mode_enabled = True
 
@@ -233,9 +245,9 @@ def test_minibatch_source_config_other_properties(tmpdir):
     assert 8 == len(dictionary.keys())
     assert TraceLevel.Info == dictionary['traceLevel']
     assert dictionary['frameMode'] is True
-    assert dictionary['multiThreadedDeserialization'] is True
+    assert dictionary['multiThreadedDeserialization'] is False
 
-    config.is_multithreaded = False
+    config.is_multithreaded = True
     config.trace_level = 0
     config.truncation_length = 123
     with pytest.raises(Exception):
@@ -248,7 +260,7 @@ def test_minibatch_source_config_other_properties(tmpdir):
     assert 10 == len(dictionary.keys())
     assert 0 == dictionary['traceLevel']
     assert dictionary['frameMode'] is False
-    assert dictionary['multiThreadedDeserialization'] is False
+    assert dictionary['multiThreadedDeserialization'] is True
     assert dictionary['truncated'] is True
     assert 123 == dictionary['truncationLength']
 
@@ -691,7 +703,7 @@ class MyDataSource(UserMinibatchSource):
     def stream_infos(self):
         return [self.fsi, self.lsi]
 
-    def next_minibatch(self, num_samples, number_of_workers=1, worker_rank=0, device=None):
+    def next_minibatch(self, num_samples, number_of_workers, worker_rank, device=None):
         features = []
         labels = []
 
@@ -699,6 +711,7 @@ class MyDataSource(UserMinibatchSource):
 
         f_sample_count = 0
         l_sample_count = 0
+
 
         while max(f_sample_count, l_sample_count) < num_samples:
             if self.next_seq_idx == len(self.sequences):
@@ -723,15 +736,18 @@ class MyDataSource(UserMinibatchSource):
 
         f_data = Value.one_hot(batch=features, num_classes=self.f_dim)
         l_data = Value(batch=np.asarray(labels, dtype=np.float32))
-
         result = {
                 self.fsi: MinibatchData(f_data, num_seq, f_sample_count, sweep_end),
                 self.lsi: MinibatchData(l_data, num_seq, l_sample_count, sweep_end)
                 }
 
-
         return result
 
+    def get_checkpoint_state(self):
+        return {'test': 12}
+
+    def restore_from_checkpoint(self, state):
+        assert state == {'test': 12}
 
 def test_usermbsource(tmpdir):
     tmpfile = _write_data(tmpdir, MBDATA_SPARSE)
@@ -757,7 +773,7 @@ def test_usermbsource(tmpdir):
     u_features_si = u_mb_source['features']
     u_labels_si = u_mb_source['labels']
 
-    u_mb = u_mb_source.next_minibatch(2)
+    u_mb = u_mb_source.next_minibatch(2, 1, 0)
     u_features = u_mb[u_features_si]
     u_labels = u_mb[u_labels_si]
 
@@ -781,7 +797,7 @@ def test_usermbsource(tmpdir):
     n_features = n_mb[n_features_si]
     n_labels = n_mb[n_labels_si]
 
-    u_mb = u_mb_source.next_minibatch(10)
+    u_mb = u_mb_source.next_minibatch(10, 1, 0)
     u_features = u_mb[u_features_si]
     u_labels = u_mb[u_labels_si]
 
@@ -801,6 +817,8 @@ def test_usermbsource_training(tmpdir):
     num_output_classes = 5
 
     mbs = MyDataSource(input_dim, num_output_classes)
+    # Using this for testing the UserMinibatchSource checkpointing
+    mbs_cv = MyDataSource(input_dim, num_output_classes)
 
     from cntk import sequence, parameter, plus, cross_entropy_with_softmax, \
             classification_error, learning_rate_schedule, sgd, Trainer, \
@@ -825,8 +843,71 @@ def test_usermbsource_training(tmpdir):
     session = training_session(
         trainer=trainer, mb_source=mbs,
         model_inputs_to_streams=input_map,
-        mb_size=4, max_samples=20
+        mb_size=4, max_samples=20,
+        cv_config = C.CrossValidationConfig(source=mbs_cv, max_samples=10,
+            mb_size=2)
     )
     session.train()
 
     assert trainer.total_number_of_samples_seen == 20
+
+def test_minibatch_defined_by_labels(tmpdir):
+
+    input_dim = 1000
+    num_output_classes = 5
+
+    def assert_data(mb_source):
+        features_si = mb_source.stream_info('features')
+        labels_si = mb_source.stream_info('labels')
+     
+        mb = mb_source.next_minibatch(2)
+     
+        features = mb[features_si]
+     
+        # 2 samples, max seq len 4, 1000 dim
+        assert features.shape == (2, 4, input_dim)
+        assert features.end_of_sweep
+        assert features.num_sequences == 2
+        assert features.num_samples == 7
+        assert features.is_sparse
+     
+        labels = mb[labels_si]
+        # 2 samples, max seq len 1, 5 dim
+        assert labels.shape == (2, 1, num_output_classes)
+        assert labels.end_of_sweep
+        assert labels.num_sequences == 2
+        assert labels.num_samples == 2
+        assert not labels.is_sparse
+     
+        label_data = labels.asarray()
+        assert np.allclose(label_data,
+                           np.asarray([
+                               [[1.,  0.,  0.,  0.,  0.]],
+                               [[0.,  1.,  0.,  0.,  0.]]
+                           ]))
+     
+        mb = mb_source.next_minibatch(3)
+        features = mb[features_si]
+        labels = mb[labels_si]
+     
+        assert features.num_samples == 10
+        assert labels.num_samples == 3
+
+    tmpfile = _write_data(tmpdir, MBDATA_SPARSE)
+    mb_source = MinibatchSource(CTFDeserializer(tmpfile, StreamDefs(
+        features=StreamDef(field='x', shape=input_dim, is_sparse=True),
+        labels=StreamDef(field='y', shape=num_output_classes, is_sparse=False, defines_mb_size=True)
+    )), randomize=False)
+
+    assert_data(mb_source)
+
+    tmpfile1 = _write_data(tmpdir, MBDATA_SPARSE1, '1')
+    tmpfile2 = _write_data(tmpdir, MBDATA_SPARSE2, '2')
+    combined_mb_source = MinibatchSource([ CTFDeserializer(tmpfile1, StreamDefs(
+            features=StreamDef(field='x', shape=input_dim, is_sparse=True))),
+        CTFDeserializer(tmpfile2, StreamDefs(
+            labels=StreamDef(field='y', shape=num_output_classes, is_sparse=False, defines_mb_size=True)
+        ))], randomize=False)
+
+    assert_data(combined_mb_source)
+
