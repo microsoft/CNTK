@@ -145,7 +145,7 @@ def test_text_format(tmpdir):
 def check_default_config_keys(d):
         assert 5 <= len(d.keys())
         assert d['frameMode'] is False
-        assert d['multiThreadedDeserialization'] is True
+        assert d['multiThreadedDeserialization'] is False
         assert TraceLevel.Warning == d['traceLevel']
         assert 'randomize' in d.keys()
         assert 'deserializers' in d.keys()
@@ -237,7 +237,7 @@ def test_minibatch_source_config_other_properties(tmpdir):
     ctf = create_ctf_deserializer(tmpdir)
     config = MinibatchSourceConfig([ctf])
 
-    config.is_multithreaded = False
+    config.is_multithreaded.set(True)
     config.trace_level = TraceLevel.Info.value
     config.is_frame_mode_enabled = True
 
@@ -245,9 +245,9 @@ def test_minibatch_source_config_other_properties(tmpdir):
     assert 8 == len(dictionary.keys())
     assert TraceLevel.Info == dictionary['traceLevel']
     assert dictionary['frameMode'] is True
-    assert dictionary['multiThreadedDeserialization'] is False
+    assert dictionary['multiThreadedDeserialization'] is True
 
-    config.is_multithreaded = True
+    config.is_multithreaded.set(False)
     config.trace_level = 0
     config.truncation_length = 123
     with pytest.raises(Exception):
@@ -260,12 +260,12 @@ def test_minibatch_source_config_other_properties(tmpdir):
     assert 10 == len(dictionary.keys())
     assert 0 == dictionary['traceLevel']
     assert dictionary['frameMode'] is False
-    assert dictionary['multiThreadedDeserialization'] is True
+    assert dictionary['multiThreadedDeserialization'] is False
     assert dictionary['truncated'] is True
     assert 123 == dictionary['truncationLength']
 
 
-def test_image():
+def test_image(tmpdir):
     map_file = "input.txt"
     mean_file = "mean.txt"
 
@@ -289,7 +289,10 @@ def test_image():
 
     config = to_dictionary(MinibatchSourceConfig([image], randomize=False))
 
+    # Multithreading should be on by default for the ImageDeserializer.
+    assert config['multiThreadedDeserialization'] is True
     assert len(config['deserializers']) == 1
+
     d = config['deserializers'][0]
     assert d['type'] == 'ImageDeserializer'
     assert d['file'] == map_file
@@ -319,8 +322,13 @@ def test_image():
     config = to_dictionary(MinibatchSourceConfig([image, image]))
     assert len(config['deserializers']) == 2
 
-    config = to_dictionary(MinibatchSourceConfig([image, image, image]))
+    ctf = create_ctf_deserializer(tmpdir)
+    config = to_dictionary(MinibatchSourceConfig([image, ctf, image]))
+    # Multithreading should still be enabled.
+    assert config['multiThreadedDeserialization'] is True
     assert len(config['deserializers']) == 3
+
+
 
     # TODO depends on ImageReader.dll
     '''

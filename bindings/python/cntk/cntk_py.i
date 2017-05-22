@@ -67,6 +67,8 @@
 
 %ignore CNTK::GetCheckedMode;
 
+%ignore CNTK::Internal::Optional::operator=;
+
 // renaming overloads for TrainMinibatch and TestMinibatch that take a map
 // of Variables and MinibatchData as their first parameter. If this is not done,
 // the overloads that are legal in C++ will be shadowed and ignored by SWIG.
@@ -547,6 +549,12 @@ public:
 };
 %}
 
+%extend CNTK::Internal::Optional {
+    void Set(T value) {
+        *($self) = value;
+    }
+}
+
 // extend constructor
 %extend CNTK::DictionaryValue {
     DictionaryValue(const SizeTWrapper& w)
@@ -554,7 +562,6 @@ public:
         return new DictionaryValue(w.value);
     }
 }
-
 
 %ignore CNTK::Dictionary::Keys;
 
@@ -1803,6 +1810,8 @@ namespace CNTK
 
 typedef CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample> MinibatchSizeSchedule;
 %template(minibatch_size_schedule) CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample>;
+
+%template(OptionalBool) CNTK::Internal::Optional<bool>;
 
 //
 // The following callback code is only for testing. Will have to be merged with

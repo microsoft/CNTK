@@ -490,9 +490,9 @@ namespace CNTK
             }
 
             augmentedConfiguration[L"frameMode"] = configuration.isFrameModeEnabled;
-            augmentedConfiguration[L"multiThreadedDeserialization"] = configuration.isMultithreaded;
             augmentedConfiguration[L"traceLevel"] = static_cast<size_t>(configuration.traceLevel);
 
+            bool defaultMultithreaded = false;
             // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
             // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
             // TODO: This should be done in the same manner for CNTK exe as well.
@@ -510,6 +510,8 @@ namespace CNTK
                 auto deserializerTypeName = deserializerConfig[L"type"].Value<std::wstring>();
                 if (deserializerTypeName == L"ImageDeserializer")
                 {
+                    defaultMultithreaded = true;
+
                     // Add a transpose transform since the image data in read in HWC (CWH in column major format) form while 
                     // the CNTK convolution engive supports WHC (in column-major format)
                     auto& inputStreamsConfig = deserializerConfig[L"input"].Value<Dictionary>();
@@ -534,6 +536,9 @@ namespace CNTK
                 deserializerConfig[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
                 deserializers.push_back(deserializerConfig);
             }
+
+            augmentedConfiguration[L"multiThreadedDeserialization"] = 
+                (configuration.isMultithreaded.IsInitialized()) ? configuration.isMultithreaded.Get() : defaultMultithreaded;
 
             augmentedConfiguration[L"deserializers"] = deserializers;
 

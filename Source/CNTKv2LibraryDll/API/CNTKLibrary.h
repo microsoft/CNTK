@@ -5190,9 +5190,11 @@ namespace CNTK
         bool isFrameModeEnabled { false };
 
         ///
-        /// Specifies if the deserialization should be done on a single or multiple threads.
+        /// Specifies if the deserialization should be done on a single or multiple threads. 
+        /// Defaults to 'auto' (multhithreading is disabled unless ImageDeserializer is present 
+        /// in the deserializers list). 'false' and 'true' faithfully turn the multithreading off/on.
         ///
-        bool isMultithreaded { true };
+        Internal::Optional<bool> isMultithreaded;
 
         ///
         /// Deserializers to be used in the composite reader.

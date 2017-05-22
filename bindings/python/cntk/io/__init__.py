@@ -110,7 +110,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
 
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
-    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, randomization_seed=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=False, frame_mode=False, truncation_length=0, randomize=True)
+    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, randomization_seed=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=None, frame_mode=False, truncation_length=0, randomize=True)
 
     Args:
         deserializers (a single deserializer or a `list`): deserializers to be used in the composite reader
@@ -137,8 +137,10 @@ class MinibatchSource(cntk_py.MinibatchSource):
             the input data is re-randomized).
         trace_level (an instance of :class:`cntk.logging.TraceLevel`): the output verbosity level, defaults to
           the current logging verbosity level given by :func:`~cntk.logging.get_trace_level`.
-        multithreaded_deserializer (`bool`, defaults to `False`): specifies if the deserialization should be
-          done on a single or multiple threads.
+        multithreaded_deserializer (`bool`): specifies if the deserialization should be
+          done on a single or multiple threads. Defaults to `None`, which is effectively "auto" (multhithreading 
+          is disabled unless ImageDeserializer is present in the deserializers list). `False` and `True` 
+          faithfully turn the multithreading off/on.
         frame_mode (`bool`, defaults to `False`): switches the frame mode on and off. If the frame mode
           is enabled the input data will be processed as individual frames ignoring all sequence information
           (this option cannot be used for BPTT, an exception will be raised if frame mode is enabled and the
@@ -157,7 +159,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         randomization_window_in_samples = 0,
         randomization_seed=0,
         trace_level = TraceLevel.Warning,
-        multithreaded_deserializer=False,
+        multithreaded_deserializer=None,
         frame_mode=False,
         truncation_length=0,
         randomize=True):
@@ -171,7 +173,10 @@ class MinibatchSource(cntk_py.MinibatchSource):
         config.randomization_window_in_chunks = randomization_window_in_chunks
         config.randomization_window_in_samples = randomization_window_in_samples
         config.randomization_seed = randomization_seed;
-        config.is_multithreaded = multithreaded_deserializer
+
+        if multithreaded_deserializer is not None:
+            config.is_multithreaded.set(multithreaded_deserializer)
+
         config.is_frame_mode_enabled = frame_mode
         config.truncation_length = truncation_length
 
