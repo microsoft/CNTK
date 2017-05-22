@@ -18,7 +18,7 @@
 
 %pragma(java) jniclasscode=%{
   static {
-    CNTK.init();
+    CNTKNativeUtils.loadAll();
   }
 %}
 
