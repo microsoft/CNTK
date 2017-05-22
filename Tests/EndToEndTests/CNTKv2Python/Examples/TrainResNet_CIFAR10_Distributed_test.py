@@ -18,13 +18,17 @@ sys.path.append(abs_path)
 from distributed_common import mpiexec_test
 from prepare_test_data import prepare_CIFAR10_data
 
+base_path = prepare_CIFAR10_data()
+# change dir to locate data.zip correctly
+os.chdir(base_path)
+
 script_under_test = os.path.join(example_dir, "TrainResNet_CIFAR10_Distributed.py")
 
 mpiexec_params = [ "-n", "2"]
 
 def test_cifar_resnet_distributed(device_id):
     params = [ "-e", "2",
-               "-datadir", prepare_CIFAR10_data(),
+               "-datadir", base_path,
                "-q", "32",
                "-es", "512",
                "-device", str(device_id) ]
@@ -32,7 +36,7 @@ def test_cifar_resnet_distributed(device_id):
 
 def test_cifar_resnet_distributed_1bitsgd(device_id):
     params = [ "-e", "2",
-               "-datadir", prepare_CIFAR10_data(),
+               "-datadir", base_path,
                "-q", "1",
                "-es", "512",
                "-device", str(device_id) ]
@@ -40,7 +44,7 @@ def test_cifar_resnet_distributed_1bitsgd(device_id):
 
 def test_cifar_resnet_distributed_block_momentum(device_id):
     params = [ "-e", "2",
-               "-datadir", prepare_CIFAR10_data(),
+               "-datadir", base_path,
                "-b", "3200",
                "-es", "512",
                "-device", str(device_id) ]

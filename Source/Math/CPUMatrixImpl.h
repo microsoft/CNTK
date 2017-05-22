@@ -1023,20 +1023,47 @@ template <class ElemType>
 void CPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
 {
     if (sigma <= 0)
-        InvalidArgument("SetUniformRandomValue: sigma must be a positive value.");
+        InvalidArgument("SetGaussianRandomValue: sigma must be a positive value.");
 
     if (IsEmpty())
-        LogicError("SetUniformRandomValue: Matrix is empty.");
+        LogicError("SetGaussianRandomValue: Matrix is empty.");
 
     auto& us = *this;
 
     std::mt19937_64 generator(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
     boost::random::normal_distribution<ElemType> r(mean, sigma);
 
-    // #pragma omp parallel for   // is it thread safe?
+    // #pragma omp parallel for is not thread safe. Also the results would not be deterministic
     foreach_coord (i, j, us)
     {
         us(i, j) = r(generator);
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+{
+    if (sigma <= 0)
+        InvalidArgument("SetTruncatedNormalRandomValue: sigma must be a positive value.");
+
+    if (IsEmpty())
+        LogicError("SetTruncatedNormalRandomValue: Matrix is empty.");
+
+    auto& us = *this;
+
+    std::mt19937_64 generator(seed == USE_TIME_BASED_SEED ? (unsigned long)time(NULL) : seed);
+    boost::random::normal_distribution<ElemType> r(mean, sigma);
+
+    const ElemType high = mean + 2 * sigma;
+    const ElemType low = mean - 2 * sigma;
+    // #pragma omp parallel for is not thread safe. Also the results would not be deterministic
+    foreach_coord(i, j, us)
+    {
+        ElemType tmp = 0;
+        do
+            tmp = r(generator);
+        while (tmp < low || tmp > high ); // Rejection sampling is fine here because the acceptance probability is about 0.9545 
+        us(i, j) = tmp;
     }
 }
 
@@ -1235,7 +1262,7 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
 
 template <class ElemType>
 void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum)
+    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
     auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
@@ -1259,9 +1286,16 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
     for (long i = 0; i < n; i++)
     {
         ElemType g = grad[i];
-        ElemType adaSqr = adaWeight * smoothAda[i] + (1.0f - adaWeight) * g * g;
-        smoothAda[i] = adaSqr;
-        ElemType ada = sqrt(adaSqr);
+        ElemType ada;
+        if (!adamax)
+        {
+            ElemType adaSqr = adaWeight * smoothAda[i] + (1.0f - adaWeight) * g * g;
+            smoothAda[i] = adaSqr;
+            ada = sqrt(adaSqr);
+        }
+        else
+            ada = smoothAda[i] = std::max(adaWeight * smoothAda[i], abs(g));
+
         ElemType w = adaMul * (ElemType)( 1.0 / (ada + epsilon));
         g = momentum * smoothMom[i] + unitGainFactor * g;
         smoothMom[i] = g;

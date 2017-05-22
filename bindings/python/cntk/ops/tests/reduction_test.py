@@ -110,25 +110,6 @@ def test_op_reduce_mean(input_data, axis, device_id, precision):
                    expected_forward, expected_backward, {'axis': axis})
 
 @pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
-def test_op_reduce_mean(input_data, axis, device_id, precision):
-    dt = PRECISION_TO_TYPE[precision]
-
-    data = AA(input_data, dtype=dt)
-
-    expected_forward = [np.mean(data, axis=(axis), keepdims=True)]
-
-    backward = np.ones_like(data) / data.shape[axis]
-
-    expected_backward = {
-        'arg': [backward]
-    }
-
-    from .. import reduce_mean
-    _test_unary_op(precision, device_id, reduce_mean, input_data,
-                   expected_forward, expected_backward, {'axis': axis})
-
-
-@pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
 def test_op_reduce_log_sum(input_data, axis, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
 
@@ -169,14 +150,9 @@ def test_op_reduce_prod(input_data, axis, device_id, precision):
                    
 @pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
 def test_op_reduce_all(input_data, axis, device_id, precision):
-    # FIXME: we'd like to do dt = PRECISION_TO_TYPE[precision]
-    # however there seems to be an issue with actual_forward below
-    # that gets computed correctly but by the time np.allclose executes
-    # it contains garbage values. The problem goes away if one uses 
-    # actual_forward  = np.copy(input_op.eval(binding))
-    dt = np.float32
+    dt = PRECISION_TO_TYPE[precision]
     data = AA(input_data, dtype=dt)
-    a = C.sequence.input(shape=data.shape,
+    a = C.sequence.input_variable(shape=data.shape,
                          dtype=sanitize_dtype_cntk(dt),
                          needs_gradient=True,
                          name='a')
@@ -213,13 +189,7 @@ def test_op_reduce_all(input_data, axis, device_id, precision):
 
 @pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
 def test_op_reduce_mean_all_constant(input_data, axis, device_id, precision):
-    # dt = PRECISION_TO_TYPE[precision]
-    # FIXME: we'd like to do dt = PRECISION_TO_TYPE[precision]
-    # however there seems to be an issue with actual_forward below
-    # that gets computed correctly but by the time np.allclose executes
-    # it contains garbage values. The problem goes away if one uses 
-    # actual_forward  = np.copy(input_op.eval())
-    dt = np.float32
+    dt = PRECISION_TO_TYPE[precision]
     value = AA(input_data, dtype=dt)
     from .. import reduce_mean
     from cntk import Axis, Constant
@@ -244,7 +214,7 @@ def test_op_reduce_over_batch_axis(input_data, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
 
     data = AA(input_data, dtype=dt)
-    a = C.input(shape=data.shape[1:],
+    a = C.input_variable(shape=data.shape[1:],
                 dtype=sanitize_dtype_cntk(dt),
                 needs_gradient=True,
                 name='a')

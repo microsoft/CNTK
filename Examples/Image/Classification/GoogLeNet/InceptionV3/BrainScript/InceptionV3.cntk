@@ -18,9 +18,10 @@ ImageNetDir = "$ConfigDir$"
 DataDir     = "$RootDir$"
 OutputDir   = "$RootDir$/Output"
 ModelDir    = "$OutputDir$/Model"
+
 stderr      = "$OutputDir$/InceptionV3"
 modelPath   = "$ModelDir$/InceptionV3"
-
+    
 ImageH    = 299
 ImageW    = 299
 ImageC    = 3
@@ -71,6 +72,7 @@ Train = {
         L2RegWeight = 0.0001
         numMBsToShowResult = 100
         dropoutRate = 0.2
+        useNAG = true
 
         autoAdjust = [
             autoAdjustLR = "adjustAfterEpoch"
@@ -97,8 +99,9 @@ Train = {
             file = "$DataDir$/train_map.txt"
             input = {
                 features = { transforms = (
-                    { type = "Crop"; cropType = "RandomSide"; sideRatio = 0.46666:0.875; jitterType = "uniRatio" } :
+                    { type = "Crop"; cropType = "RandomArea"; areaRatio = 0.05:1.0; aspectRatio=0.75:1.0; jitterType = "uniRatio" } :
                     { type = "Scale"; width = $ImageW$; height = $ImageH$; channels = $ImageC$; interpolations = "linear" } :
+                    { type = "Color" ; brightnessRadius = 0.125 ; contrastRadius = 0.5 ; saturationRadius = 0.5 } :
                     { type = "Transpose" }
                 )}
                 labels = { labelDim = $NumLabels$ }
@@ -120,7 +123,7 @@ Train = {
                 labels = { labelDim = $NumLabels$ }
             }
         })
-    }   
+    }
 }
 
 Eval = [

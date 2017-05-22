@@ -138,6 +138,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Negate;
                 else if (node->OperationName() == OperationNameOf(SigmoidNode))
                     opType = PrimitiveOpType::Sigmoid;
+                else if (node->OperationName() == OperationNameOf(StableSigmoidNode))
+                    opType = PrimitiveOpType::StableSigmoid;
                 else if (node->OperationName() == OperationNameOf(TanhNode))
                     opType = PrimitiveOpType::Tanh;
                 else if (node->OperationName() == OperationNameOf(CosineNode))
@@ -614,7 +616,7 @@ namespace CNTK
             auto networkInputs = compositeFunction->Inputs();
             for (const auto& input : networkInputs)
             {
-                if (input.Shape().HasFreeOrInferredDimension())
+                if (input.Shape().HasUnboundDimension())
                     InvalidArgument("Function '%S': Cannot save as legacy format, a model having inputs with free or inferred static axes.", compositeFunction->AsString().c_str());
             }
 

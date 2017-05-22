@@ -56,13 +56,16 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
     Args:
         source (:class:`~cntk.io.MinibatchSource`): minibatch source used for cross validation
         frequency (int): frequency in samples for cross validation
-          If ``sys.maxsize``, a single cross validation is performed at the end of training.
+          If None or ``sys.maxsize``, a single cross validation is performed at the end of training.
         schedule (:class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch schedule for cross validation
         callback (func (index, average_error, cv_num_samples, cv_num_minibatches)): Callback that will
           be called with frequency which can implement custom cross validation logic,
           returns False if training should be stopped.
+        max_samples (int, default None): number of samples to perform
+          cross-validation on. If None, all samples are taken.
     '''
-    def __init__(self, source=None, mb_size=None, frequency=None, callback=None):
+    def __init__(self, source=None, mb_size=None, frequency=None,
+            callback=None, max_samples=None):
         self.callback = callback
 
         if source is None and callback is None:
@@ -86,8 +89,11 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
                              'it must be an output of minibatch_size_schedule() function'
                              % type(schedule))
 
+        if max_samples is None:
+            max_samples = sys.maxsize
+
         super(CrossValidationConfig, self).__init__(
-            source, schedule, frequency)
+            source, schedule, frequency, max_samples)
 
 class TestConfig(cntk_py.TestConfig):
     '''

@@ -1803,7 +1803,7 @@ public:
         {
             for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
             {
-                if (!multiOutputNode->m_outputsIsValueSparse[i])
+                if (IsValueSharable() && !multiOutputNode->m_outputsIsValueSparse[i])
                     RequestMatrixFromPool(multiOutputNode->m_outputsValue[i], matrixPool, multiOutputNode->m_outputsShape[i].GetNumElements(), multiOutputNode->m_outputsMBLayout[i] != nullptr);
                 else
                     CreateMatrixIfNull(multiOutputNode->m_outputsValue[i]);
@@ -1863,7 +1863,7 @@ public:
 
                 for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
                 {
-                    if (!multiOutputNode->m_outputsIsValueSparse[i])
+                    if (IsValueSharable() && !multiOutputNode->m_outputsIsValueSparse[i])
                         ReleaseMatrixToPool(multiOutputNode->m_outputsValue[i], matrixPool);
                 }
             }

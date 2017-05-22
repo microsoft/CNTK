@@ -50,7 +50,8 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
                 true, /* shouldPrefetch */
                 false, /* multithreadedGetNextSequences */
                  0, /*maxNumberOfInvalidSequences */
-                configHelper.UseSampleBasedRandomizationWindow() /*sampleBasedRandomizationWindow */);
+                configHelper.UseSampleBasedRandomizationWindow() /*sampleBasedRandomizationWindow */,
+                GetRandomSeed(config) /*seedOffset*/);
         }
         else
         {

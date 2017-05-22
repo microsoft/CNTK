@@ -37,10 +37,12 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
 
     // We currently by default using numeric keys for ctf and image deserializers.
     bool useNumericSequenceKeys = ContainsDeserializer(config, L"CNTKTextFormatDeserializer") ||
-        ContainsDeserializer(config, L"ImageDeserializer");
+        ContainsDeserializer(config, L"ImageDeserializer") || ContainsDeserializer(config, L"Base64ImageDeserializer");
 
     useNumericSequenceKeys = config(L"useNumericSequenceKeys", useNumericSequenceKeys);
-    m_corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
+
+    bool useHash = config(L"hashSequenceKeys", false);
+    m_corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys, useHash);
 
     // Identifying packing mode.
     bool frameMode = config(L"frameMode", false);
@@ -138,7 +140,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
 
         bool shouldPrefetch = true;
         m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch, 
-            multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow);
+            multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow, GetRandomSeed(config));
     }
     else
     {
