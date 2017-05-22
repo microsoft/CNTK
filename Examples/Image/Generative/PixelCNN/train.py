@@ -95,8 +95,8 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
 
     # training config
     epoch_size              = 50000
-    init_minibatch_size     = 1 #100
-    minibatch_size          = 1 #12
+    init_minibatch_size     = 100
+    minibatch_size          = 12
     sampling_minibatch_size = 16
 
     # Set learning parameters
@@ -112,8 +112,8 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
                                momentum=ct.momentum_schedule(0.95), # Beta 1
                                unit_gain=False,
                                use_mean_gradient=True,
-                               variance_momentum=ct.momentum_schedule(0.9995), # Beta 2
-                               gradient_clipping_threshold_per_sample=0.0000001
+                               variance_momentum=ct.momentum_schedule(0.9995) # Beta 2
+                               #gradient_clipping_threshold_per_sample=0.0000001
                                )
     trainer = ct.Trainer(z, (ce, None), [learner], progress_writers)
 
@@ -132,7 +132,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
         training_loss = 0
 
         # first_run
-        if epoch == 0:
+        if epoch == -1:
             reader_state = reader_train.get_checkpoint_state()
             data = reader_train.next_minibatch(min(init_minibatch_size, epoch_size), input_map=input_map)
             z_init.eval({inputs_init:data[inputs].asarray()})
