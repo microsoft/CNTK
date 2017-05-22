@@ -28,10 +28,19 @@ def test_convert_optimized_rnnstack(num_layers, bidirectional, recurrent_op, dev
     dense1 = C.layers.Dense(hidden_dim)(cudnn_rnn1)
     cudnn_rnn2 = C.optimized_rnnstack(dense1, W2, hidden_dim, num_layers=num_layers, bidirectional=bidirectional, recurrent_op=recurrent_op)
     dense2 = C.layers.Dense(hidden_dim)(cudnn_rnn2)
-    cudnn_model = C.optimized_rnnstack(dense2, W2, hidden_dim, num_layers=num_layers, bidirectional=bidirectional, recurrent_op=recurrent_op) # test shared parameter W2
+    cudnn_rnn3 = C.optimized_rnnstack(dense2, W2, hidden_dim, num_layers=num_layers, bidirectional=bidirectional, recurrent_op=recurrent_op) # test shared parameter W2
+    
+    def blocked(d):
+        blocked_W = C.parameter((-1,d), init = C.glorot_uniform())
+        @C.layers.BlockFunction('', '')
+        def func(x):
+            return C.optimized_rnnstack(x, blocked_W, d, 1, recurrent_op='lstm')
+        return func
+    
+    cudnn_model = C.layers.Sequential([blocked(hidden_dim), blocked(2*hidden_dim), blocked(3*hidden_dim)])(cudnn_rnn3)
     cudnn_out = cudnn_model.eval({input_var:data})
 
-    model = C.utils.convert_optimized_rnnstack(cudnn_model)
+    model = C.misc.convert_optimized_rnnstack(cudnn_model)
 
     # make sure original cudnn model is intact
     cudnn_out2 = cudnn_model.eval({input_var:data})

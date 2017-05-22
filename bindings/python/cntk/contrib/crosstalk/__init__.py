@@ -16,6 +16,7 @@ Conv2DAttr = namedtuple('Conv2DAttr', 'filter_shape num_filters')
 Conv2DArgs = namedtuple('Conv2DArgs', 'W b')
 #Conv2D filter shape (num_filters, filter_w, filter_h)
 #Conv2D bias shape (num_filters)
+#note that Conv2D output is expected to be in NCHW format
 
 RnnAttr = namedtuple('RnnAttr', 'bidirectional op_type input_dim hidden_dim forget_bias')
 RnnArgs = namedtuple('RnnArgs', 'fw_W fw_H fw_b bw_W bw_H bw_b')
@@ -94,6 +95,8 @@ class Crosstalk(object):
         elif os.path.exists(self._get_filename(name)+'.pkl'):
             with open(self._get_filename(name)+'.pkl', 'rb') as pkl:
                 return pickle.load(pkl)
+        else:
+            raise Exception('file not found for name {}'.format(name))
 
     def assign(self, name, value=None, load=False, load_name=None):
         '''
