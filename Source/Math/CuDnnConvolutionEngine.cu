@@ -252,7 +252,15 @@ protected:
             }
             return cudnnGetConvolutionForwardAlgorithm(*m_cudnn, m_inT, *m_kernelT, *m_conv, m_outT, CUDNN_CONVOLUTION_FWD_NO_WORKSPACE, 0, &algo);
         };
-        FindBestAlgo(batchSize, m_fwdAlgo, finder, staticFinder, workspace);
+
+        auto memSizeCalc = [&, this](cudnnConvolutionFwdAlgo_t& algo, size_t& size) -> cudnnStatus_t
+        {
+            return cudnnGetConvolutionForwardWorkspaceSize(*m_cudnn, m_inT, *m_kernelT, *m_conv, m_outT, algo, &size);
+        };
+
+        UseFixedAlgo(batchSize, m_fwdAlgo, CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM, workspace, memSizeCalc);
+
+        // FindBestAlgo(batchSize, m_fwdAlgo, finder, staticFinder, workspace);
         // Perform forward convolution operation.
         CUDNN_CALL(cudnnConvolutionForward(*m_cudnn, &C::One, m_inT, ptr(in), *m_kernelT, ptr(kernel), *m_conv, m_fwdAlgo.selectedAlgo, ptr(workspace), workspace.BufferSize(), &C::Zero, m_outT, ptr(out)));
     }
@@ -299,7 +307,15 @@ protected:
             }
             return cudnnGetConvolutionBackwardDataAlgorithm(*m_cudnn, *m_kernelT, m_outT, *m_conv, m_inT, CUDNN_CONVOLUTION_BWD_DATA_NO_WORKSPACE, 0, &algo);
         };
-        FindBestAlgo(batchSize, m_backDataAlgo, finder, staticFinder, workspace);
+
+        auto memSizeCalc = [&, this](cudnnConvolutionBwdDataAlgo_t& algo, size_t& size) -> cudnnStatus_t
+        {
+            return cudnnGetConvolutionBackwardDataWorkspaceSize(*m_cudnn, *m_kernelT, m_outT, *m_conv, m_inT, algo, &size);
+        };
+
+        UseFixedAlgo(batchSize, m_backDataAlgo, CUDNN_CONVOLUTION_BWD_DATA_ALGO_1, workspace, memSizeCalc);
+
+        // FindBestAlgo(batchSize, m_backDataAlgo, finder, staticFinder, workspace);
         // Compute gradients with respect to the output tensor (data).
         CUDNN_CALL(cudnnConvolutionBackwardData(*m_cudnn, &C::One, *m_kernelT, ptr(kernel), m_outT, ptr(srcGrad), *m_conv, m_backDataAlgo.selectedAlgo, ptr(workspace), workspace.BufferSize(), accumulateGradient ? &C::One : &C::Zero, m_inT, ptr(grad)));
     }
@@ -346,7 +362,15 @@ protected:
             }
             return cudnnGetConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE, 0, &algo);
         };
-        FindBestAlgo(batchSize, m_backFiltAlgo, finder, staticFinder, workspace);
+
+        auto memSizeCalc = [&, this](cudnnConvolutionBwdFilterAlgo_t& algo, size_t& size) -> cudnnStatus_t
+        {
+            return cudnnGetConvolutionBackwardFilterWorkspaceSize(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, algo, &size);
+        };
+
+        UseFixedAlgo(batchSize, m_backFiltAlgo, CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1, workspace, memSizeCalc);
+
+        // FindBestAlgo(batchSize, m_backFiltAlgo, finder, staticFinder, workspace);
         // Compute gradients with respect to the output tensor (data).
         CUDNN_CALL(cudnnConvolutionBackwardFilter(*m_cudnn, &C::One, m_inT, ptr(in), m_outT, ptr(srcGrad), *m_conv, m_backFiltAlgo.selectedAlgo, ptr(workspace), workspace.BufferSize(), accumulateGradient ? &C::One : &C::Zero, *m_kernelT, ptr(kernelGrad)));
     }
@@ -387,6 +411,54 @@ private:
     using C = Consts<ElemType>;
 
     static const int MaxAlgoCount = 10;
+
+    template<typename TAlgoInfo, typename TAlgo, typename MemFunc>
+    void UseFixedAlgo(size_t batchSize, TAlgoInfo& algoInfo, TAlgo fixedAlgo, Mat& workspace, MemFunc memSizeCalc)
+    {
+        // TODO: judge algo
+
+        m_inT.UpdateBatchSize(batchSize);
+        m_outT.UpdateBatchSize(batchSize);
+
+        // if nothing change, continue run
+        if ((!algoInfo.NeedAutotuning(batchSize)) && (workspace.BufferSize() >= algoInfo.AlgoWorkspaceSize)
+            && (algoInfo.selectedAlgo == fixedAlgo))
+            return;
+
+        // at this case, memory not enough or batchsize change
+        if (algoInfo.autotuningState == AutotuningState::Running)
+        {
+            algoInfo.autotuningState = AutotuningState::PendingTuning;
+            if (batchSize > algoInfo.maxMBSizeSeen)
+            {
+                workspace.Resize(0, 0, 0, false);
+                algoInfo.AlgoWorkspaceSize = 0;
+                algoInfo.MBSizeForCurrentWorkspace = 0;
+                algoInfo.autotuningState = AutotuningState::Init;
+            }
+        }
+
+        if (algoInfo.autotuningState == AutotuningState::Init)
+        {
+            size_t needSize;
+            size_t curSize = workspace.BufferSize();
+            CUDNN_CALL(memSizeCalc(fixedAlgo, needSize));
+
+            algoInfo.AlgoWorkspaceSize = needSize;
+            if (needSize > 0 && curSize < needSize)
+                workspace.Resize((needSize + sizeof(ElemType) - 1) / sizeof(ElemType), 1, 0, false);
+
+            if (algoInfo.maxMBSizeSeen < batchSize)
+                algoInfo.maxMBSizeSeen = batchSize;
+        }
+
+        algoInfo.selectedAlgo = fixedAlgo;
+        algoInfo.maxAlgo = algoInfo.selectedAlgo;
+        algoInfo.MBSizeForCurrentAlgo = batchSize;
+        algoInfo.MBSizeForCurrentWorkspace = batchSize;
+        algoInfo.autotuningState = AutotuningState::Running;
+        return;
+    }
 
     template <typename TAlgo, typename TFinder, typename TStaticFinder>
     void FindBestAlgo(size_t batchSize, TAlgo& algo, TFinder finder, TStaticFinder staticFinder, Mat& workspace)
