@@ -5404,13 +5404,16 @@ namespace CNTK
         ///
         CNTK_API CrossValidationConfig(const MinibatchSourcePtr& crossValidationSource,
             const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(64),
-            size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max());
+            size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max(),
+            size_t maxSamples = std::numeric_limits<size_t>::max()
+            );
 
     private:
         friend class TrainingSession;
         const MinibatchSourcePtr m_source;
         const MinibatchSizeSchedule m_mbSize;
         const size_t m_frequency;
+        const size_t m_maxSamples;
     };
 
     ///
