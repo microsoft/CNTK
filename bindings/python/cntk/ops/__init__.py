@@ -2491,9 +2491,6 @@ def to_sequence(x, sequence_lengths=None, sequence_axis_name_prefix='toSequence_
     assumed to be of the same length; i.e. dimensionality of the most significant
     static axis
 
-    Example:
-        TBA.
-
     Args:
         x: the tensor (or its name) which is converted to a sequence
         sequence_lengths: Optional tensor operand representing the sequence lengths.
@@ -2504,6 +2501,9 @@ def to_sequence(x, sequence_lengths=None, sequence_axis_name_prefix='toSequence_
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
 
     from cntk.cntk_py import to_sequence
@@ -2523,9 +2523,6 @@ def to_sequence_like(x, dynamic_axes_like, name=''):
     static axis [0] as the sequence axis. The length of the sequences are
     obtained from the 'dynamic_axes_like' operand.
 
-    Example:
-        TBA.
-
     Args:
         x: the tensor (or its name) which is converted to a sequence
         dynamic_axes_like: Tensor operand used to obtain the lengths of
@@ -2535,6 +2532,9 @@ def to_sequence_like(x, dynamic_axes_like, name=''):
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
 
     from cntk.cntk_py import to_sequence_like
