@@ -5,6 +5,7 @@
 # ==============================================================================
 
 import os
+import sys
 from cntk.variables import Variable
 
 
@@ -23,18 +24,20 @@ def depth_first_search(root, visitor, depth=0):
     Returns:
         List of functions, for which ``visitor`` was ``True``
     '''
+    if depth == -1:
+        depth = sys.maxsize
+
     stack = [(root.root_function, depth)] # node
     accum = []         # final result (list of all unique nodes)
     visited = set()    # [node.uid]
-
+    
     while stack:
         node, depth = stack.pop(0)
         if node.uid in visited:
             continue
         from cntk import cntk_py
-        dive_into_blocks = 0 < depth or depth == -1
-        if isinstance(node, cntk_py.Function) and node.is_block and \
-                dive_into_blocks:
+        dive_into_blocks = 0 < depth
+        if isinstance(node, cntk_py.Function) and node.is_block and dive_into_blocks:
             composite = node.block_root
             # BlockFunction node
             mapping = node.block_arguments_mapping
