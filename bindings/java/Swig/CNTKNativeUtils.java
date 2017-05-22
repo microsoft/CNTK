@@ -118,7 +118,7 @@ public class CNTKNativeUtils {
     private static String[] getResourceLines(String resourceName) throws IOException{
         // Read resource file if it exists
         InputStream inStream = CNTKNativeUtils.class
-                .getResourceAsStream(resourcesPath + manifestName);
+                .getResourceAsStream(resourcesPath + resourceName);
         if (inStream == null) {
             throw new FileNotFoundException("Could not find native resources in jar. " +
                     "Make sure the CNTK jar containing the native libraries was added to the classpath.");
