@@ -110,7 +110,7 @@ def peek(model, epoch):
     # run a sequence through
     seq = 'BOS flights from new york to seattle EOS'  # example string
     w = [query_dict[w] for w in seq.split()]          # convert to word indices
-    z = model(Value.one_hot([w], vocab_size))               # run it through the model
+    z = model(Value.one_hot([w], vocab_size))         # run it through the model
     best = np.argmax(z,axis=2)                        # classify
     # show result
     print("Example Sentence After {} Epochs".format(epoch))
@@ -140,7 +140,7 @@ def train(reader, model, max_epochs):
     # iteration parameters  --needed here because learner schedule needs it
     epoch_size = 36000
     minibatch_size = 70
-    epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
+    #max_epochs = 0.03 # uncomment for faster testing
 
     # SGD parameters
     learner = fsadagrad(criterion.parameters,
@@ -155,29 +155,11 @@ def train(reader, model, max_epochs):
     #progress_writer = ProgressPrinter(tag='Training')
 
     peek(model, 0)                  # see how the model is doing
-    stats = criterion.train(reader,
-                            minibatch_size=minibatch_size, max_samples=max_epochs * epoch_size, parameter_learners=[learner],
-                            model_inputs_to_streams=criterion.argument_map(reader.streams.query, reader.streams.slot_labels),
+    stats = criterion.train(reader, streams=(reader.streams.query, reader.streams.slot_labels),
+                            minibatch_size=minibatch_size, max_epochs=max_epochs, epoch_size=epoch_size,
+                            parameter_learners=[learner],
                             cv_config=CrossValidationConfig(frequency=epoch_size, callback=lambda epoch, *more: peek(model, epoch+1) or True),
-                            progress_writers=[progress_writer], progress_frequency=epoch_size)
-
-    ## trainer
-    #trainer = Trainer(None, criterion, learner)
-    #
-    #t = 0
-    #for epoch in range(max_epochs):         # loop over epochs
-    #    peek(model, epoch)                  # log some interesting info
-    #    epoch_end = (epoch+1) * epoch_size
-    #    while t < epoch_end:                # loop over minibatches on the epoch
-    #        # BUGBUG: The change of minibatch_size parameter vv has no effect.
-    #        # TODO: change all examples to this pattern; then remove this comment
-    #        data = reader.next_minibatch(min(minibatch_size, epoch_end-t))     # fetch minibatch
-    #        #trainer.train_minibatch(data[reader.streams.query], data[labels])  # update model with it
-    #        trainer.train_minibatch({criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[labels]})  # update model with it
-    #        t += data[labels].num_samples                                      # count samples processed so far
-    #        progress_writer.update_with_trainer(trainer, with_metric=True)    # log progress
-    #    loss, metric, actual_samples = progress_writer.epoch_summary(with_metric=True)
-
+                            progress_writers=[progress_writer])
     return stats[0][-1], stats[1][-1] # return loss and metric from last epoch
 
 
@@ -185,46 +167,12 @@ def train(reader, model, max_epochs):
 # eval action          #
 ########################
 
-# helper function to create a dummy Trainer that one can call test_minibatch() on
-# TODO: replace by a proper such class once available
-def Evaluator(model, criterion):
-    from cntk import Trainer
-    from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
-    loss, metric = Trainer._get_loss_metric(criterion)
-    parameters = set(loss.parameters)
-    if model:
-        parameters |= set(model.parameters)
-    if metric:
-        parameters |= set(metric.parameters)
-    dummy_learner = momentum_sgd(tuple(parameters), 
-                                 lr = learning_rate_schedule(1, UnitType.minibatch),
-                                 momentum = momentum_as_time_constant_schedule(0))
-    return Trainer(model, (loss, metric), dummy_learner)
-
 def evaluate(reader, model):
     criterion = create_criterion_function(model)
     progress_writer = ProgressPrinter(tag='Evaluation')
     metric, _ = criterion.test(reader, minibatch_size=1000, progress_writers=[progress_writer],
                                model_inputs_to_streams=criterion.argument_map(reader.streams.query, reader.streams.slot_labels))
     return metric
-
-    # process minibatches and perform evaluation
-    evaluator = Evaluator(None, criterion)
-
-    #progress_writer = ProgressPrinter(freq=100, first=10, tag='Evaluation') # more detailed logging
-    while True:
-        minibatch_size = 1000
-        data = reader.next_minibatch(minibatch_size) # fetch minibatch
-        if not data:                                 # until we hit the end
-            break
-        #metric = evaluator.test_minibatch(query=data[reader.streams.query], labels=data[reader.streams.slot_labels])
-        # note: keyword syntax ^^ is optional; this is to demonstrate it
-        metric = evaluator.test_minibatch({criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[reader.streams.slot_labels]})
-        progress_writer.update(0, data[reader.streams.slot_labels].num_samples, metric) # log progress
-    loss, metric, actual_samples = progress_writer.epoch_summary(with_metric=True)
-
-    return loss, metric
-
 
 #############################
 # main function boilerplate #

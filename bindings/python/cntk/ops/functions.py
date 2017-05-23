@@ -1210,8 +1210,8 @@ class Function(cntk_py.Function):
             pass
 
     def train(self, minibatch_source,
-              minibatch_size=None, model_inputs_to_streams=None, parameter_learners=[],
-              progress_writers=None, progress_frequency=None, max_samples=None,
+              minibatch_size=None, streams=None, model_inputs_to_streams=None, parameter_learners=[],
+              progress_writers=None, progress_frequency=None, max_epochs=None, epoch_size=None, max_samples=None,
               checkpoint_config=None, cv_config=None, test_config=None):
         '''
         Trains a model, given by its criterion function, using the specified training parameters and configs.
@@ -1223,13 +1223,15 @@ class Function(cntk_py.Function):
         Args:
             minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for training
             minibatch_size (:class:`~cntk.cntk_py.minibatch_size_schedule` or int): minibatch size schedule for training
-            model_inputs_to_streams (dict): mapping between input variables and input streams
-            max_samples (int): maximum number of samples used for training
+            streams (tuple): the streams of the minibatch_source in argument order
+            model_inputs_to_streams (dict): alternative to `streams`, specifying the mapping as a map from input variables to streams
+            max_epochs (int): maximum number of samples used for training; requires `epoch_size`
+            max_samples (int): maximum number of samples used for training; mutually exclusive with `max_epochs`
             parameter_learners (list): list of learners from :mod:`cntk.learners`
             progress_writers (progress writer or list of them): optionally, list of
              progress writers from :mod:`cntk.logging` to automatically track training
              progress.
-            progress_frequency (int): frequency in samples for aggregated progress printing
+            progress_frequency (int): frequency in samples for aggregated progress printing. Defaults to `epoch_size` if given, or `None` otherwise
             checkpoint_config (:class:`CheckpointConfig`): checkpoint configuration
             cv_config (:class:`CrossValidationConfig`): cross validation configuration
             test_config (:class:`TestConfig`): test configuration
@@ -1247,6 +1249,20 @@ class Function(cntk_py.Function):
         if not progress_writers:
             progress_writers = []
         trainer = Trainer(None, self, parameter_learners, progress_writers=progress_writers + [collector])
+        # input map
+        if streams:
+            if model_inputs_to_streams:
+                raise ValueError("streams and model_inputs_to_streams are mutually exclusive.")
+            model_inputs_to_streams = self.argument_map(*streams)
+        # max_samples
+        if max_epochs is not None:
+            if max_samples is not None:
+                raise ValueError("max_epochs and max_samples are mutually exclusive.")
+            if epoch_size is None:
+                raise ValueError("max_epochs requires epoch_size to be specified as well.")
+            max_samples = int(max_epochs * epoch_size) # (we allow fractional epochs so our testing system can run abbreviated tests)
+            if progress_frequency is None: # if epoch size is given then default training summaries to it
+                progress_frequency = epoch_size
         # training session
         from ..train.training_session import training_session
         ts = training_session(trainer, minibatch_source, minibatch_size, model_inputs_to_streams=model_inputs_to_streams,
@@ -1255,7 +1271,7 @@ class Function(cntk_py.Function):
         ts.train()
         return collector.losses, collector.metrics, collector.num_samples
 
-    def test(self, minibatch_source, minibatch_size=None, model_inputs_to_streams=None, progress_writers=None):
+    def test(self, minibatch_source, minibatch_size=None, streams=None, model_inputs_to_streams=None, progress_writers=None):
         '''
         Measures the performance of a model, given by its criterion function, in the form of
         average metric value (or loss if model has only one output) on a set of data .
@@ -1265,6 +1281,7 @@ class Function(cntk_py.Function):
         Args:
             minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source for the test data
             minibatch_size (:class:`~cntk.cntk_py.minibatch_size_schedule` or int): minibatch size for evaluation
+            streams (tuple): the streams of the minibatch_source in argument order
             model_inputs_to_streams (dict): mapping between input variables and input streams
             progress_writers (progress writer or list of them): optionally, list of
              progress writers from :mod:`cntk.logging` to automatically track training
@@ -1275,6 +1292,11 @@ class Function(cntk_py.Function):
         '''
         if minibatch_size is None:
             raise ValueError("minibatch_size must not be None.")
+        # input map
+        if streams:
+            if model_inputs_to_streams:
+                raise ValueError("streams and model_inputs_to_streams are mutually exclusive.")
+            model_inputs_to_streams = self.argument_map(*streams)
         # wrap the data if needed
         from ..train.training_session import TrainingSession
         minibatch_source, model_inputs_to_streams = TrainingSession._sanitize_minibatch_source(minibatch_source, model_inputs_to_streams, self, infinitely_repeat=False)
