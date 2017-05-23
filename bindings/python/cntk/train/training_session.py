@@ -6,7 +6,7 @@
 import sys
 from .. import cntk_py
 from ..device import use_default_device
-from cntk.internal import sanitize_var_map, sanitize_function, typemap
+from cntk.internal import sanitize_var_map, sanitize_function, typemap, _as_tuple
 
 __doc__ = '''\
 A training session encapsulates a typical training loop and binds together a minibatch source that is used for training, a :class:`~cntk.train.trainer.Trainer` and an optional cross validation minibatch source. A training session takes care of consistent checkpointing and progress printing with specified frequencies.
@@ -110,6 +110,8 @@ class TestConfig(cntk_py.TestConfig):
                              'it must be an output of minibatch_size_schedule() function'
                              % type(schedule))
 
+        self._source_reference = source # keep a Python-side strong reference so that SWIG finds the correct type upon callback
+
         super(TestConfig, self).__init__(source, schedule)
 
 class TrainingSession(cntk_py.TrainingSession):
@@ -144,6 +146,22 @@ class TrainingSession(cntk_py.TrainingSession):
         if mb_source is None:
             raise ValueError("Training minibatch source must not be None.")
 
+        from ..io import MinibatchSource, UserMinibatchSource, MinibatchSourceFromData
+        if not isinstance(mb_source, (MinibatchSource, UserMinibatchSource)): # UserMinibatchSource derives from cntk_py.SwigMinibatchSource, not MinibatchSource, for director purposes
+            args = _as_tuple(mb_source) # the mb_source is a tuple of numpy or scipy arrays that we construct a source around
+            # args can also be a tuple of numpy/scipy arrays; we will construct on the fly
+            criterion = trainer.loss_function
+            params = criterion.arguments
+            if len(params) != len(args):
+                raise ValueError("To pass data directly in place of a minibatch source, pass a tuple of {} numpy or scipy arrays, in the order of the arguments of the criterion function. You passed {} value(s)."
+                                 .format(len(params), len(args)))
+            param_names = [param.name if param.name else "stream_" + str(i) for i, param in enumerate(params)] # (names are only used for debugging)
+            param_types = [param._type for param in params]
+            mb_source = MinibatchSourceFromData(**{name: (input, type) for name, input, type in zip(param_names, args, param_types)})
+            if model_inputs_to_streams is not None:
+                raise ValueError( "Mapping must not be provided when data is passed directly.")
+            model_inputs_to_streams = {param: mb_source.streams[name] for param, name in zip(params, param_names)}
+
         if model_inputs_to_streams is None or len(model_inputs_to_streams) == 0:
             raise ValueError(
                 "Mapping between input vars and streams should not be empty.")
@@ -166,6 +184,8 @@ class TrainingSession(cntk_py.TrainingSession):
         self.cv_callback = None
         if cv_config is not None:
             self.cv_callback = cv_config.callback
+
+        self._callback_references = (mb_source, checkpoint_config, test_config) # keep a strong reference inside this object so that SWIG finds it
 
         super(TrainingSession, self).__init__(trainer, mb_source, schedule,
             model_inputs_to_streams, max_samples,  

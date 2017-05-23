@@ -6,9 +6,9 @@
 
 import numpy as np
 import cntk as C
-from cntk import Axis, reshape, sigmoid, element_max, Function, Constant, greater, default_options, default_options_for, \
+from cntk import Axis, reshape, sigmoid, element_max, Function, BlockFunction, FunctionWithSignature, Constant, greater, default_options, default_options_for, \
                  get_default_override, default_override_or
-from cntk.layers import BlockFunction, Convolution, Convolution1D, Convolution2D, Convolution3D, Dense, Embedding, Fold, For, \
+from cntk.layers import Convolution, Convolution1D, Convolution2D, Convolution3D, Dense, Embedding, Fold, For, \
                         MaxPooling, MaxUnpooling, LSTM, GRU, RNNStep, Sequential, Stabilizer, Dropout, Recurrence, \
                         RecurrenceFrom, LayerNormalization, ConvolutionTranspose
 from cntk.layers.typing import Sequence, Signature, Tensor, SequenceOver
@@ -94,6 +94,17 @@ def test_Function():
     r = g([[[2, 1], [5, 2], [1, 3]]])
     e = [np.array([[2, 1], [5, 2], [1, 3]]) ** 2]
     assert_list_of_arrays_equal(r, e, err_msg='@Function test failed')
+
+    ####################################################
+    # Test 3: Function() with shapes and type; short-cut
+    ####################################################
+    @FunctionWithSignature(Tensor[3,2])
+    def g(x):
+        return x * x
+    assert g.shape == (3,2)
+    r = g([[[2, 1], [5, 2], [1, 3]]])
+    e = [np.array([[2, 1], [5, 2], [1, 3]]) ** 2]
+    assert_list_of_arrays_equal(r, e, err_msg='@FunctionWithSignature test failed')
 
 ####################################
 # . syntax for name lookup

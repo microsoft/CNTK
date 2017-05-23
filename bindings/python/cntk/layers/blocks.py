@@ -65,11 +65,7 @@ def _get_initial_state_or_default(initial_state):
     else:
         return initial_state # already in good shape: return as is
 
-def BlockFunction(op_name, name):
-    '''
-    Decorator for defining a @Function as a BlockFunction. Same as @Function, but wrap the content into an :func:`~cntk.ops.as_block`.
-    '''
-    return lambda f: Function(f, make_block=True, op_name=op_name, name=name)
+from cntk.ops.functions import BlockFunction # (deprecated)
 
 def _inject_name(f, name):
     '''

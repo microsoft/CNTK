@@ -1,5 +1,6 @@
 from os import path
 from enum import Enum, unique
+import sys
 import warnings
 import collections
 
@@ -1177,6 +1178,65 @@ class Function(cntk_py.Function):
         from cntk.logging import graph
         return graph.find_by_name(self, name, depth)
 
+    def train(self, minibatch_source,
+              minibatch_size=None, model_inputs_to_streams=None, parameter_learners=[],
+              progress_writers=None, progress_frequency=None, max_samples=None,
+              checkpoint_config=None, cv_config=None, test_config=None):
+        '''
+        Trains a model using the specified training parameters and configs.
+        Different aspects of training such as data sources, checkpointing, cross validation, progress printing
+        can be configured using the corresponding config classes.
+
+        This is a convenience wrapper around :class:`cntk.train.trainer.Trainer` :class:`cntk.train.trainer.TrainingSession`.
+
+        Args:
+            minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for training
+            minibatch_size (:class:`~cntk.cntk_py.minibatch_size_schedule` or int): minibatch size schedule for training
+            model_inputs_to_streams (dict): mapping between input variables and input streams
+            max_samples (int): maximum number of samples used for training
+            parameter_learners (list): list of learners from :mod:`cntk.learners`
+            progress_writers (progress writer or list of them): optionally, list of
+             progress writers from :mod:`cntk.logging` to automatically track training
+             progress.
+            progress_frequency (int): frequency in samples for aggregated progress printing
+            checkpoint_config (:class:`CheckpointConfig`): checkpoint configuration
+            cv_config (:class:`CrossValidationConfig`): cross validation configuration
+            test_config (:class:`TestConfig`): test configuration
+        '''
+        # use a progress tracker to capture the loss, metric, and count values
+        class Collector(cntk_py.ProgressWriter):
+            def __init__(self):
+                self.losses = []
+                self.metrics = []
+                self.num_samples = []
+                coll_freq = progress_writers[0].freq if progress_writers else progress_frequency // minibatch_size
+                super(Collector, self).__init__(coll_freq, 0, sys.maxsize, 0, sys.maxsize, 0)
+                self.__disown__() # TODO: what is this?
+            def on_write_training_update(self, samples, updates, aggregate_loss, aggregate_metric):
+                loss        = aggregate_loss[1]   - aggregate_loss[0]
+                metric      = aggregate_metric[1] - aggregate_metric[0]
+                num_samples = samples[1]          - samples[0]
+                self.losses     .append(loss   / (num_samples if num_samples != 0 else 1))
+                self.metrics    .append(metric / (num_samples if num_samples != 0 else 1))
+                self.num_samples.append(num_samples)
+            def on_write_test_update(self, *args, **kwargs):
+                pass
+            def on_write_training_summary(self, *args, **kwargs):
+                pass
+            def on_write_test_summary(self, *args, **kwargs):
+                pass
+            def write(self, *args, **kwargs):
+                pass
+        collector = Collector()
+        from ..train.trainer import Trainer
+        trainer = Trainer(None, self, parameter_learners, progress_writers=progress_writers + [collector])
+        from ..train.training_session import training_session
+        ts = training_session(trainer, minibatch_source, minibatch_size, model_inputs_to_streams=model_inputs_to_streams,
+                              progress_frequency=progress_frequency, max_samples=max_samples,
+                              checkpoint_config=checkpoint_config, cv_config=cv_config, test_config=test_config)
+        ts.train()
+        return collector.losses, collector.metrics, collector.num_samples
+
     @typemap
     def save(self, filename):
         '''
@@ -1276,6 +1336,50 @@ class Function(cntk_py.Function):
         raise ValueError('Cannot load a model that is neither a file nor a byte buffer.')
 
 @typemap
+def load_model(model, device=None):
+    '''
+    Alias for :func:`~cntk.ops.functions.Function.load`.
+    '''
+    return Function.load(model, device)
+
+@typemap
+def save_model(model, filename): # legacy name
+    warnings.warn('This will be removed in future versions. Please use '
+            'model.save(...) instead', DeprecationWarning)
+    return model.save(filename)
+
+def BlockFunction(op_name, name):
+    '''
+    Decorator for defining a @Function as a BlockFunction. Same as @Function, but wrap the content into an :func:`~cntk.ops.as_block`.
+    '''
+    return lambda f: Function(f, make_block=True, op_name=op_name, name=name)
+
+def FunctionWithSignature(*args, **kwargs):
+    '''
+    Decorator for defining a @Function with a given signature. Same as @Function followed by @Signature.
+
+    Example:
+      >>> @FunctionWithSignature(Tensor[13])
+      ... def f(x):
+      ...     return x * x
+      >>> print(f)
+      >>> # which is equivalent to this:
+      >>> from cntk.layers.typing import *
+      >>> @Function
+      ... @Signature(Tensor[13])
+      ... def f(x):
+      ...     return x * x
+      >>> print(f)
+
+    '''
+    def decorator(f):
+        from cntk.layers.typing import Signature
+        f = Signature(*args, **kwargs)(f)
+        f = Function(f)
+        return f
+    return decorator
+
+@typemap
 def register_native_user_function(op_id, module_name, factory_method_name):
     '''
     Registers a native user-defined Function that can be subsequently instantiated
@@ -1317,19 +1421,6 @@ def native_user_function(op_id, operands, attributes=None, user_function_instanc
 
     attributes = _py_dict_to_cntk_dict(attributes)
     return cntk_py.Function_native_user_function(op_id, operands, attributes, user_function_instance_name)
-
-@typemap
-def load_model(model, device=None):
-    '''
-    Alias for :func:`~cntk.ops.functions.Function.load`.
-    '''
-    return Function.load(model, device)
-
-@typemap
-def save_model(model, filename): # legacy name
-    warnings.warn('This will be removed in future versions. Please use '
-            'model.save(...) instead', DeprecationWarning)
-    return model.save(filename)
 
 class UserFunction(Function):
     '''

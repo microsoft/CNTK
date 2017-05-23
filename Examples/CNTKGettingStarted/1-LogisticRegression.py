@@ -10,19 +10,15 @@
 
 # Import the relevant components
 from __future__ import print_function
-import os
-import argparse
-import math
 import cntk
-from cntk.layers import *
-from cntk.layers.typing import *
+import numpy as np
 
 # Define the task
 input_dim = 2    # classify 2-dimensional data
 num_classes = 2  # into one of two classes
 
 num_samples_to_train = 20000
-num_samples_to_test  = 20000
+num_samples_to_test  = 1000
 
 # Generate our synthetic data
 #  X[sample_size,input_dim] - our input data
@@ -57,8 +53,7 @@ model = cntk.layers.Dense(num_classes, activation=None)
 # We use cross entropy as a loss function.
 # We use CNTK @Signature to declare the input types at this point.
 # The cross-entropy formula requires the labels to be in one-hot format.
-@cntk.Function
-@Signature(cntk.layers.Tensor[input_dim], cntk.layers.SparseTensor[num_classes])
+@cntk.FunctionWithSignature(cntk.layers.Tensor[input_dim], cntk.layers.SparseTensor[num_classes])
 def criterion(data, label_one_hot):
     z = model(data)  # apply model. Computes a non-normalized log probability for every output class.
     loss   = cntk.cross_entropy_with_softmax(z, label_one_hot)
@@ -68,26 +63,26 @@ def criterion(data, label_one_hot):
 # Instantiate the trainer object to drive the model training
 learning_rate = 0.5
 learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(learning_rate, cntk.UnitType.minibatch))
-trainer = cntk.Trainer(None, criterion, [learner], progress_writers=[cntk.logging.ProgressPrinter()])
 
 # Initialize the parameters for the trainer
 minibatch_size = 25
+training_progress_output_freq = 1250 // minibatch_size
 
-minibatch_source = cntk.io.MinibatchSourceFromData(data=X_train, labels=Y_train)
-model_inputs_to_streams = {criterion.arguments[0]: minibatch_source.streams.data, criterion.arguments[1]: minibatch_source.streams.labels}
+losses, metrics, num_samples = criterion.train((X_train, Y_train),
+                                               minibatch_size=minibatch_size, max_samples=len(X_train), parameter_learners=[learner],
+                                               progress_writers=[cntk.logging.ProgressPrinter(training_progress_output_freq)], progress_frequency=len(X_train),
+                                               #model_inputs_to_streams = {criterion.arguments[0]: train_source.streams.data, criterion.arguments[1]: train_source.streams.labels},
+                                               #test_config=cntk.TestConfig(source=test_source, mb_size=1000)
+                                               #test_config=cntk.TestConfig(source=cntk.io.MinibatchSourceFromData(data=X_test, label_one_hot=Y_test), mb_size=1000)
+                                               # currently crashing, to be fixed once I get a response to my bug report
+                                               )
 
-cntk.training_session(trainer, minibatch_source, minibatch_size,
-                   model_inputs_to_streams,
-                   progress_frequency=minibatch_size * 50, max_samples=len(X_train),
-                   #test_config=cntk.TestConfig(source=cntk.io.MinibatchSourceFromData(data=X_test, labels=Y_test), mb_size=1000)
-                   # currently crashing, to be fixed once I get a response to my bug report
-                   ).train()
+test_source=cntk.io.MinibatchSourceFromData(data=X_test, labels=Y_test)
 
 # Checking prediction on one minibatch
 # For evaluation, we map the output of the network between 0-1 and convert them into probabilities
 # for the two classes. We use a softmax function to get the probabilities of each of the class.
-@cntk.Function
-@Signature(cntk.layers.Tensor[input_dim])
+@cntk.FunctionWithSignature(cntk.layers.Tensor[input_dim])
 def get_probability(data):
     return cntk.softmax(model(data))
 
