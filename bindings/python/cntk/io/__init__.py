@@ -506,24 +506,68 @@ class MinibatchSourceFromData(UserMinibatchSource):
     the caller as numpy arrays or scipy.sparse.csr_matrix objects, without randomization.
 
     Example:
-     >>> X = np.arange(20).reshape(10,2).astype(np.float32) # 10 rows of 2 values
-     >>> s = cntk.io.MinibatchSourceFromData(dict(x=X), max_samples=len(X))
-     >>> mb = s.next_minibatch(5)
+     >>> N = 5
+     >>> X = np.arange(3*N).reshape(N,3).astype(np.float32) # 6 rows of 3 values
+     >>> s = C.io.MinibatchSourceFromData(dict(x=X), max_samples=len(X))
+     >>> mb = s.next_minibatch(3) # get a minibatch of 3
      >>> d = mb[s.streams['x']]
      >>> d.data.asarray()
-     array([[ 0.,  1.],
-            [ 2.,  3.],
-            [ 4.,  5.],
-            [ 6.,  7.],
-            [ 8.,  9.]], dtype=float32)
-     >>> mb = s.next_minibatch(5)
+     array([[ 0.,  1.,  2.],
+            [ 3.,  4.,  5.],
+            [ 6.,  7.,  8.]], dtype=float32)
+     >>> mb = s.next_minibatch(3) # note: only 2 left
      >>> d = mb[s.streams['x']]
      >>> d.data.asarray()
-     (array([[ 10.,  11.],
-            [ 12.,  13.],
-            [ 14.,  15.],
-            [ 16.,  17.],
-            [ 18.,  19.]], dtype=float32),)
+     array([[  9.,  10.,  11.],
+            [ 12.,  13.,  14.]], dtype=float32)
+     >>> mb = s.next_minibatch(3)
+     >>> mb
+     {}
+
+     >>> # example of a sparse input
+     >>> Y = np.array([i % 3 == 0 for i in range(N)], np.float32)
+     >>> import scipy.sparse
+     >>> Y = scipy.sparse.csr_matrix((np.ones(N,np.float32), (range(N), Y)), shape=(N, 2))
+     >>> s = C.io.MinibatchSourceFromData(dict(x=X, y=Y)) # also not setting max_samples -> will repeat
+     >>> mb = s.next_minibatch(3)
+     >>> d = mb[s.streams['y']]
+     >>> d.data.asarray().todense()
+     matrix([[ 0.,  1.],
+             [ 1.,  0.],
+             [ 1.,  0.]], dtype=float32)
+     >>> mb = s.next_minibatch(3) # at end only 2 sequences
+     >>> d = mb[s.streams['y']]
+     >>> d.data.asarray().todense()
+     matrix([[ 0.,  1.],
+             [ 1.,  0.]], dtype=float32)
+
+     >>> # if we do not set max_samples, then it will start over once the end is hit
+     >>> mb = s.next_minibatch(3)
+     >>> d = mb[s.streams['y']]
+     >>> d.data.asarray().todense()
+     matrix([[ 0.,  1.],
+             [ 1.,  0.],
+             [ 1.,  0.]], dtype=float32)
+
+     >>> # values can also be GPU-side CNTK Value objects (if everything fits into the GPU at once)
+     >>> s = C.io.MinibatchSourceFromData(dict(x=C.Value(X), y=C.Value(Y)))
+     >>> mb = s.next_minibatch(3)
+     >>> d = mb[s.streams['y']]
+     >>> d.data.asarray().todense()
+     matrix([[ 0.,  1.],
+             [ 1.,  0.],
+             [ 1.,  0.]], dtype=float32)
+
+     >>> # data can be sequences
+     >>> import cntk.layers.typing
+     >>> XX = [np.array([1,3,2], np.float32),np.array([4,1], np.float32)]  # 2 sequences
+     >>> YY = [scipy.sparse.csr_matrix(np.array([[0,1],[1,0],[1,0]], np.float32)), scipy.sparse.csr_matrix(np.array([[1,0],[1,0]], np.float32))]
+     >>> s = cntk.io.MinibatchSourceFromData(dict(xx=(XX, cntk.layers.typing.Sequence[cntk.layers.typing.tensor]), yy=(YY, cntk.layers.typing.Sequence[cntk.layers.typing.tensor])))
+     >>> mb = s.next_minibatch(3)
+     >>> mb[s.streams['xx']].data.asarray()
+     array([[ 1.,  3.,  2.]], dtype=float32)
+     >>> mb[s.streams['yy']].data.shape # getting sequences out is messy, so we only show the shape
+     (1, 3, 2)
 
     Args:
         data_streams: name-value pairs
@@ -546,6 +590,7 @@ class MinibatchSourceFromData(UserMinibatchSource):
         self._data = dict()         # [name] -> numpy.array or scipy.sparse.csr_matrix
         self._types = dict()        # [name] -> Variable._Type
         self._is_sequence = dict()  # [name] -> bool
+        self._vars = dict()         # [name] -> Variable
         self._max_samples = max_samples
 
         # get the data and types from the input, and form streams array
@@ -565,16 +610,25 @@ class MinibatchSourceFromData(UserMinibatchSource):
                 type = Variable._Type(is_sparse=isinstance(value, sparse.csr_matrix)) # shape implanted below
             if not isinstance(value[0] if isinstance(value, list) else value, (np.ndarray, sparse.csr_matrix, Value)):
                 raise TypeError('data must be a numpy.array or scipy.sparse.csr_matrix, or a list of those')
-            sample_shape = value.shape[2:] if is_sequence else value.shape[1:]
+            sample_shape = value[0].shape[1:] if is_sequence else value.shape[1:]
             if not type.shape_is_known:
-                type = type.updated_with(shape=sample_shape); # implant the shape
+                type = type.updated_with(shape=sample_shape) # implant the shape
             elif type.shape != sample_shape:
                 ValueError("specified type's shape does not match the data's shape")
+            try:
+                dtype = value.dtype # numpy array and Value
+            except:
+                dtype = value[0].dtype # for lists
+            try:
+                type.dtype
+            except:
+                type = type.updated_with(dtype=dtype) # implant the dtype
+            num_samples = MinibatchSourceFromData._get_len(value)
             if self._num_samples == -1:
-                if value.shape[0] == 0:
+                if num_samples == 0:
                     raise(ValueError('data is empty'))
-                self._num_samples = value.shape[0]
-            elif self._num_samples != value.shape[0]:
+                self._num_samples = num_samples
+            elif self._num_samples != num_samples:
                 raise TypeError('all data items must have the same first dimension')
             self._data[name] = value
             self._types[name] = type
@@ -585,9 +639,16 @@ class MinibatchSourceFromData(UserMinibatchSource):
 
         super(MinibatchSourceFromData, self).__init__()
 
+    @staticmethod
+    def _get_len(value): # helper to determine the length of the corpus
+        try:
+            return len(value) # if input is list
+        except:
+            return value.shape[0] # if input is csr_matrix
+
     def stream_infos(self):
         return [StreamInformation(name, i, ['dense', 'sparse'][getattr(self._types[name], 'is_sparse', False)], 
-                                  self._data[name].dtype, self._types[name].shape)
+                                  self._types[name].dtype, self._types[name].shape)
                 for i, name in enumerate(self._data.keys())]
 
     def next_minibatch(self, num_samples, number_of_workers=1, worker_rank=0, device=None):        
@@ -600,7 +661,7 @@ class MinibatchSourceFromData(UserMinibatchSource):
         assert begin < self._num_samples
         actual_num_samples = { name: 0 for name in self._data.keys() }
         while end < self._num_samples: 
-            new_num_samples = { name: actual_num_samples[name] + (len(value[end]) if self._is_sequence[name] else 1)
+            new_num_samples = { name: actual_num_samples[name] + (MinibatchSourceFromData._get_len(value[end]) if self._is_sequence[name] else 1)
                                 for name, value in self._data.items() }
             # return up to requested number of samples. but at least one even if longer
             # also stop if we hit the maximum requested number of samples
@@ -625,7 +686,14 @@ class MinibatchSourceFromData(UserMinibatchSource):
                 mb_data = data.slice_view(start_offset, extent, data.is_read_only)
             else:
                 mb_data = arg[begin:end]
-            result[si] = MinibatchData(Value(mb_data), num_sequences=end - begin, num_samples=actual_num_samples[si.name],
+            if isinstance(mb_data, list): # create a Value object
+                if si.name not in self._vars: # this case is more complex, we need a CNTK Variable
+                    from cntk import input_variable, device
+                    self._vars[si.name] = input_variable(**self._types[si.name])
+                value = Value.create(self._vars[si.name], mb_data)
+            else:
+                value = Value(mb_data)
+            result[si] = MinibatchData(value, num_sequences=end - begin, num_samples=actual_num_samples[si.name],
                                        sweep_end=at_end or (self._total_num_samples >= self._max_samples))
 
         # wrap around the cursor

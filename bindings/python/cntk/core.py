@@ -440,6 +440,7 @@ class Value(cntk_py.Value):
         # instances _as_best_data_type() until we have passed them to
         # Value_create() where it will be copied further.
         data = [Value._as_best_data_type(var, sample) for sample in data]
+        device = device or use_default_device()
         borrow = device.type() == DeviceKind.CPU
         list_of_ndavs = [NDArrayView.from_data(sample, device=cpu(),
                                                borrow=borrow)
@@ -450,7 +451,7 @@ class Value(cntk_py.Value):
             sanitize_shape(var.shape),
             list_of_ndavs,
             seq_starts or [],
-            device or use_default_device(),
+            device,
             read_only,
             True)  # always create a copy in Value
 
