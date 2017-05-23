@@ -11,9 +11,10 @@ import math
 from cntk.layers import *  # Layers library
 from cntk.layers.typing import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
+from cntk.train import CrossValidationConfig
 from cntk import Trainer, Value
 from cntk.learners import fsadagrad, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
-from cntk import splice, relu
+from cntk import splice, relu, FunctionOf
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
 from cntk.logging import *
@@ -81,10 +82,7 @@ def create_model_function():
 #  takes:   Function: features -> prediction
 #  returns: Function: (features, labels) -> (loss, metric)
 def create_criterion_function(model):
-    #@Function
-    #def criterion(query: Sequence[SparseTensor[vocab_size]], labels: Sequence[SparseTensor[num_labels]]):
-    @Function
-    @Signature(query = Sequence[SparseTensor[vocab_size]], labels = Sequence[SparseTensor[num_labels]])
+    @FunctionOf(query = Sequence[SparseTensor[vocab_size]], labels = Sequence[SparseTensor[num_labels]])
     def criterion(query, labels):
         z = model(query)
         ce   = cross_entropy_with_softmax(z, labels)
@@ -115,7 +113,7 @@ def peek(model, epoch):
     z = model(Value.one_hot([w], vocab_size))               # run it through the model
     best = np.argmax(z,axis=2)                        # classify
     # show result
-    print("Example Sentence After Epoch [{}]".format(epoch))
+    print("Example Sentence After {} Epochs".format(epoch))
     for query, slot_label in zip(seq.split(),[slots_wl[s] for s in best[0]]):
         print("\t{}\t{}".format(query, slot_label))
     #print(model.embed.E.value)
@@ -128,7 +126,6 @@ def train(reader, model, max_epochs):
 
     # declare the model's input dimension, so that the saved model is usable
     model.update_signature(Sequence[SparseTensor[vocab_size]])
-    #model.declare_args(vocab_size)
 
     # criterion: (model args, labels) -> (loss, metric)
     #   here  (query, slot_labels) -> (ce, errs)
@@ -143,7 +140,7 @@ def train(reader, model, max_epochs):
     # iteration parameters  --needed here because learner schedule needs it
     epoch_size = 36000
     minibatch_size = 70
-    #epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
+    epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
 
     # SGD parameters
     learner = fsadagrad(criterion.parameters,
@@ -152,29 +149,36 @@ def train(reader, model, max_epochs):
                         gradient_clipping_threshold_per_sample = 15,
                         gradient_clipping_with_truncation = True)
 
-    # trainer
-    trainer = Trainer(None, criterion, learner)
-
     # process minibatches and perform model training
     log_number_of_parameters(model) ; print()
-    progress_printer = ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging
-    #progress_printer = ProgressPrinter(tag='Training')
+    progress_writer = ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging
+    #progress_writer = ProgressPrinter(tag='Training')
 
-    t = 0
-    for epoch in range(max_epochs):         # loop over epochs
-        peek(model, epoch)                  # log some interesting info
-        epoch_end = (epoch+1) * epoch_size
-        while t < epoch_end:                # loop over minibatches on the epoch
-            # BUGBUG: The change of minibatch_size parameter vv has no effect.
-            # TODO: change all examples to this pattern; then remove this comment
-            data = reader.next_minibatch(min(minibatch_size, epoch_end-t))     # fetch minibatch
-            #trainer.train_minibatch(data[reader.streams.query], data[labels])  # update model with it
-            trainer.train_minibatch({criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[labels]})  # update model with it
-            t += data[labels].num_samples                                      # count samples processed so far
-            progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
-        loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
+    peek(model, 0)                  # see how the model is doing
+    stats = criterion.train(reader,
+                            minibatch_size=minibatch_size, max_samples=max_epochs * epoch_size, parameter_learners=[learner],
+                            model_inputs_to_streams=criterion.argument_map(reader.streams.query, reader.streams.slot_labels),
+                            cv_config=CrossValidationConfig(frequency=epoch_size, callback=lambda epoch, *more: peek(model, epoch+1) or True),
+                            progress_writers=[progress_writer], progress_frequency=epoch_size)
 
-    return loss, metric # return values from last epoch
+    ## trainer
+    #trainer = Trainer(None, criterion, learner)
+    #
+    #t = 0
+    #for epoch in range(max_epochs):         # loop over epochs
+    #    peek(model, epoch)                  # log some interesting info
+    #    epoch_end = (epoch+1) * epoch_size
+    #    while t < epoch_end:                # loop over minibatches on the epoch
+    #        # BUGBUG: The change of minibatch_size parameter vv has no effect.
+    #        # TODO: change all examples to this pattern; then remove this comment
+    #        data = reader.next_minibatch(min(minibatch_size, epoch_end-t))     # fetch minibatch
+    #        #trainer.train_minibatch(data[reader.streams.query], data[labels])  # update model with it
+    #        trainer.train_minibatch({criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[labels]})  # update model with it
+    #        t += data[labels].num_samples                                      # count samples processed so far
+    #        progress_writer.update_with_trainer(trainer, with_metric=True)    # log progress
+    #    loss, metric, actual_samples = progress_writer.epoch_summary(with_metric=True)
+
+    return stats[0][-1], stats[1][-1] # return loss and metric from last epoch
 
 
 ########################
@@ -199,12 +203,15 @@ def Evaluator(model, criterion):
 
 def evaluate(reader, model):
     criterion = create_criterion_function(model)
+    progress_writer = ProgressPrinter(tag='Evaluation')
+    metric, _ = criterion.test(reader, minibatch_size=1000, progress_writers=[progress_writer],
+                               model_inputs_to_streams=criterion.argument_map(reader.streams.query, reader.streams.slot_labels))
+    return metric
 
     # process minibatches and perform evaluation
     evaluator = Evaluator(None, criterion)
 
-    #progress_printer = ProgressPrinter(freq=100, first=10, tag='Evaluation') # more detailed logging
-    progress_printer = ProgressPrinter(tag='Evaluation')
+    #progress_writer = ProgressPrinter(freq=100, first=10, tag='Evaluation') # more detailed logging
     while True:
         minibatch_size = 1000
         data = reader.next_minibatch(minibatch_size) # fetch minibatch
@@ -213,8 +220,8 @@ def evaluate(reader, model):
         #metric = evaluator.test_minibatch(query=data[reader.streams.query], labels=data[reader.streams.slot_labels])
         # note: keyword syntax ^^ is optional; this is to demonstrate it
         metric = evaluator.test_minibatch({criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[reader.streams.slot_labels]})
-        progress_printer.update(0, data[reader.streams.slot_labels].num_samples, metric) # log progress
-    loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
+        progress_writer.update(0, data[reader.streams.slot_labels].num_samples, metric) # log progress
+    loss, metric, actual_samples = progress_writer.epoch_summary(with_metric=True)
 
     return loss, metric
 
