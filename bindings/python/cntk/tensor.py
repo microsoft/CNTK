@@ -98,6 +98,13 @@ class TensorOpsMixin(object):
         r = self
         axis0 = 0
 
+        from cntk.default_options import get_global_flag, get_default_override, default_override_or
+
+        keras_mode_flag = get_global_flag(align_axis=0)
+        if keras_mode_flag == 1:
+            if (hasattr(self, 'dynamic_axes') and len(self.dynamic_axes) > 0):
+                axis0 = -get_default_override(None, axis_offset=default_override_or(len(self.dynamic_axes)))
+
         for axis, s in enumerate(arg):
             if s is Ellipsis: # ellipsis means index relative to end after this point
                 axis0 = -len(arg)
@@ -113,7 +120,7 @@ class TensorOpsMixin(object):
                 # implement as a CNTK slice() operation
                 begin = s.start or 0
                 end   = s.stop  or 0
-                if begin != 0 or end != 0:
+                if (begin != 0 or end != 0) and (axis + axis0) >= 0:
                     r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end)
             elif isinstance(s, (tuple, list)):
                 # Select multiple elements from the same dimension. This is

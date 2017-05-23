@@ -94,3 +94,29 @@ def get_default_override(function_or_class, **kwargs):
                 return opts[key]  # look up the option override and return it if present in this scope
         opts = opts._outer # step out one scope and try again
     return value.value # no override found: use the default as passed in
+
+# In some case we couldn't use "with" expression, we need a global setting.
+# This is the global dictionary with key / value format
+_GlobalOptions = {}
+
+
+# set a global flag with the input initial value
+def set_global_flag(**kwargs):
+    global  _GlobalOptions
+    if len(kwargs) != 1:
+        raise TypeError("set_global_flag takes 1 keyword argument but %s were given" % len(kwargs))
+    key, value = next(iter(kwargs.items()))
+    # overwrite previous setting
+    _GlobalOptions[key] = value
+
+
+# get the global flag value, is not set yet, return the value user set in input
+def get_global_flag(**kwargs):
+    if len(kwargs) != 1:
+        raise TypeError("set_global_flag takes 1 keyword argument but %s were given" % len(kwargs))
+    key, value = next(iter(kwargs.items()))
+    if key in _GlobalOptions:
+        return _GlobalOptions[key]
+    else:
+        # return the default value user passed in
+        return value
