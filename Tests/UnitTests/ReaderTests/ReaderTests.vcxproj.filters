@@ -20,6 +20,12 @@
       <Filter>Linked Source</Filter>
     </ClCompile>
     <ClCompile Include="CNTKBinaryReaderTests.cpp" />
+    <ClCompile Include="..\..\..\Source\Readers\HTKDeserializers\MLFIndexer.cpp">
+      <Filter>Linked Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\Readers\HTKDeserializers\MLFUtils.cpp">
+      <Filter>Linked Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

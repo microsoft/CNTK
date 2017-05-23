@@ -5,6 +5,8 @@
 #include "stdafx.h"
 #include "Common/ReaderTestHelper.h"
 #include "CPUMatrix.h"
+#include "MLFUtils.h"
+#include "MLFIndexer.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -842,6 +844,23 @@ BOOST_AUTO_TEST_CASE(HTKIVectorBptt)
     };
     test({ L"frameMode=false", L"truncated=true" }, "Simple_Test");
     test({ L"frameMode=false", L"truncated=true, truncationLength=30", L"shouldExpand=true", L"hashSequenceKeys=true" }, "Simple_TestDeserializers");
+};
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_FIXTURE_TEST_SUITE(MLFDeserializerSuite, AN4ReaderFixture)
+
+BOOST_AUTO_TEST_CASE(ParsingStateAndFramesWithSmallBlocks)
+{
+    auto stateFile = testDataPath() + "/data/unittest.mlf";
+    auto f = shared_ptr<FILE>(fopen(stateFile.c_str(), "rb"), [](FILE* f) {  fclose(f); });
+    auto corpus = std::make_shared<CorpusDescriptor>(false);
+
+    MLFIndexer indexer(f.get(), false, 1024, 164);
+    indexer.Build(corpus);
+
+    auto& index = indexer.GetIndex();
+    BOOST_ASSERT(index.Chunks().size() == 1);
 };
 
 BOOST_AUTO_TEST_SUITE_END()
