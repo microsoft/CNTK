@@ -1183,7 +1183,7 @@ class Function(cntk_py.Function):
               progress_writers=None, progress_frequency=None, max_samples=None,
               checkpoint_config=None, cv_config=None, test_config=None):
         '''
-        Trains a model using the specified training parameters and configs.
+        Trains a model, given by its criterion function, using the specified training parameters and configs.
         Different aspects of training such as data sources, checkpointing, cross validation, progress printing
         can be configured using the corresponding config classes.
 
@@ -1202,7 +1202,13 @@ class Function(cntk_py.Function):
             checkpoint_config (:class:`CheckpointConfig`): checkpoint configuration
             cv_config (:class:`CrossValidationConfig`): cross validation configuration
             test_config (:class:`TestConfig`): test configuration
+
+        Returns:
+         (losses, metrics, num_samples): three lists representing average loss, average metric, and number of labels,
+          sampled at the frequency of the first of progress_writers (or, if none, the final aggregate)
         '''
+        if minibatch_size is None:
+            raise ValueError("minibatch_size must not be None.")
         # use a progress tracker to capture the loss, metric, and count values
         class Collector(cntk_py.ProgressWriter):
             def __init__(self):
@@ -1228,14 +1234,76 @@ class Function(cntk_py.Function):
             def write(self, *args, **kwargs):
                 pass
         collector = Collector()
+        # Trainer instance
         from ..train.trainer import Trainer
+        if not progress_writers:
+            progress_writers = []
         trainer = Trainer(None, self, parameter_learners, progress_writers=progress_writers + [collector])
+        # training session
         from ..train.training_session import training_session
         ts = training_session(trainer, minibatch_source, minibatch_size, model_inputs_to_streams=model_inputs_to_streams,
                               progress_frequency=progress_frequency, max_samples=max_samples,
                               checkpoint_config=checkpoint_config, cv_config=cv_config, test_config=test_config)
         ts.train()
         return collector.losses, collector.metrics, collector.num_samples
+
+    def test(self, minibatch_source, minibatch_size=None, model_inputs_to_streams=None, progress_writers=None):
+        '''
+        Measures the performance of a model, given by its criterion function, in the form of
+        average metric value (or loss if model has only one output) on a set of data .
+
+        This is a convenience wrapper around :class:`cntk.train.trainer.Evaluator`.
+
+        Args:
+            minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source for the test data
+            minibatch_size (:class:`~cntk.cntk_py.minibatch_size_schedule` or int): minibatch size for evaluation
+            model_inputs_to_streams (dict): mapping between input variables and input streams
+            progress_writers (progress writer or list of them): optionally, list of
+             progress writers from :mod:`cntk.logging` to automatically track training
+             progress.
+
+        Returns:
+         (loss, metric, num_samples): average loss, average metric, and number of labels
+        '''
+        if minibatch_size is None:
+            raise ValueError("minibatch_size must not be None.")
+        # wrap the data if needed
+        from ..train.training_session import TrainingSession
+        minibatch_source, model_inputs_to_streams = TrainingSession._sanitize_minibatch_source(minibatch_source, model_inputs_to_streams, self)
+        # use a progress tracker to capture the metric and count values
+        class Collector(cntk_py.ProgressWriter):
+            def __init__(self):
+                super(Collector, self).__init__(sys.maxsize, 0, sys.maxsize, 0, sys.maxsize, 0)
+                self.__disown__() # TODO: what is this?
+            def on_write_training_update(self, *args, **kwargs):
+                pass
+            def on_write_test_update(self, *args, **kwargs):
+                pass
+            def on_write_training_summary(self, *args, **kwargs):
+                pass
+            def on_write_test_summary(self, samples, updates, summaries, aggregate_metric, elapsed_milliseconds):
+                self.metric = aggregate_metric
+                self.num_samples = samples
+            def write(self, *args, **kwargs):
+                pass
+        collector = Collector()
+        # Evaluator instance
+        from ..eval.evaluator import Evaluator
+        outputs = self.outputs
+        output = outputs[0] if len(outputs) == 1 else outputs[1] # use metric if present, otherwise loss
+        if not progress_writers:
+            progress_writers = []
+        evaluator = Evaluator(output, progress_writers + [collector])
+        # evaluation loop
+        while True:
+            data = minibatch_source.next_minibatch(minibatch_size) # fetch minibatch
+            if not data:
+                break                                              # until we hit the end
+            evaluator.test_minibatch({ input: data[si] for input, si in model_inputs_to_streams.items()})
+            if any(data[si].sweep_end for si in model_inputs_to_streams.values()): # TODO: should not be necessary ince I figure out the protocol
+                break                                              # until we hit the end
+        evaluator.summarize_test_progress()
+        return collector.metric / (collector.num_samples if collector.num_samples != 0 else 1), collector.num_samples
 
     @typemap
     def save(self, filename):

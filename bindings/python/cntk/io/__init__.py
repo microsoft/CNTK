@@ -592,8 +592,7 @@ class MinibatchSourceFromData(UserMinibatchSource):
 
         # wrap around the cursor
         self.cursor = 0 if at_end else end
-        #if at_end:
-        #    print()
+        # BUGBUG? It seems some code tests for an empty returned dict. What is the correct protocol?
 
         return result
 

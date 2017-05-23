@@ -67,17 +67,13 @@ learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(learning_rate, 
 # Initialize the parameters for the trainer
 minibatch_size = 25
 training_progress_output_freq = 1250 // minibatch_size
+progress_writer = cntk.logging.ProgressPrinter(training_progress_output_freq)
 
 losses, metrics, num_samples = criterion.train((X_train, Y_train),
                                                minibatch_size=minibatch_size, max_samples=len(X_train), parameter_learners=[learner],
-                                               progress_writers=[cntk.logging.ProgressPrinter(training_progress_output_freq)], progress_frequency=len(X_train),
-                                               #model_inputs_to_streams = {criterion.arguments[0]: train_source.streams.data, criterion.arguments[1]: train_source.streams.labels},
-                                               #test_config=cntk.TestConfig(source=test_source, mb_size=1000)
-                                               #test_config=cntk.TestConfig(source=cntk.io.MinibatchSourceFromData(data=X_test, label_one_hot=Y_test), mb_size=1000)
-                                               # currently crashing, to be fixed once I get a response to my bug report
-                                               )
+                                               progress_writers=[progress_writer], progress_frequency=len(X_train))
 
-test_source=cntk.io.MinibatchSourceFromData(data=X_test, labels=Y_test)
+metric, num_samples = criterion.test((X_test, Y_test), minibatch_size=minibatch_size, progress_writers=[progress_writer])
 
 # Checking prediction on one minibatch
 # For evaluation, we map the output of the network between 0-1 and convert them into probabilities
