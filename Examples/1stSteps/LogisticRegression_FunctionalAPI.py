@@ -31,9 +31,8 @@ def generate_synthetic_data(N):
 X_train, Y_train = generate_synthetic_data(20000)
 X_test,  Y_test  = generate_synthetic_data(1000)
 
-# Define the CNTK model. A model is defined as a function that maps
-# input data to some form of predictions, in our case 2-dimensional
-# input vectors to a 2-dimensional vector of scores.
+# Define the CNTK model function. The model function maps input data to
+# predictions (here: 2-dimensional inputs --> 2 scores).
 # This simple logistic-regression model just uses a linear transform,
 # which corresponds to a Dense layer without activation function.
 # A Dense layer implements the formula y = activation(x @ W + b), where W and b

@@ -181,11 +181,11 @@ class TrainingSession(cntk_py.TrainingSession):
             test_config)
 
     @staticmethod
-    def _sanitize_minibatch_source(mb_source, model_inputs_to_streams, criterion):
+    def _sanitize_minibatch_source(mb_source, model_inputs_to_streams, criterion, infinitely_repeat=True):
         '''
         Helper to wrap numpy/scipy data into a minibatch source.
         '''
-        from ..io import MinibatchSource, UserMinibatchSource, MinibatchSourceFromData
+        from ..io import MinibatchSource, UserMinibatchSource, MinibatchSourceFromData, INFINITELY_REPEAT
         if not isinstance(mb_source, (MinibatchSource, UserMinibatchSource)): # UserMinibatchSource derives from cntk_py.SwigMinibatchSource, not MinibatchSource, for director purposes
             args = _as_tuple(mb_source) # the mb_source is a tuple of numpy or scipy arrays that we construct a source around
             # args can also be a tuple of numpy/scipy arrays; we will construct on the fly
@@ -195,7 +195,8 @@ class TrainingSession(cntk_py.TrainingSession):
                                  .format(len(params), len(args)))
             param_names = [param.name if param.name else "stream_" + str(i) for i, param in enumerate(params)] # (names are only used for debugging)
             param_types = [param._type for param in params]
-            mb_source = MinibatchSourceFromData(**{name: (input, type) for name, input, type in zip(param_names, args, param_types)})
+            max_samples = INFINITELY_REPEAT if infinitely_repeat else len(args[0]) # if not infinite then do one data pass
+            mb_source = MinibatchSourceFromData({name: (input, type) for name, input, type in zip(param_names, args, param_types)}, max_samples=max_samples)
             if model_inputs_to_streams is not None:
                 raise ValueError( "Mapping must not be provided when data is passed directly.")
             model_inputs_to_streams = {param: mb_source.streams[name] for param, name in zip(params, param_names)}

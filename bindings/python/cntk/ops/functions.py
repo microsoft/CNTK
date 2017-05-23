@@ -1277,7 +1277,7 @@ class Function(cntk_py.Function):
             raise ValueError("minibatch_size must not be None.")
         # wrap the data if needed
         from ..train.training_session import TrainingSession
-        minibatch_source, model_inputs_to_streams = TrainingSession._sanitize_minibatch_source(minibatch_source, model_inputs_to_streams, self)
+        minibatch_source, model_inputs_to_streams = TrainingSession._sanitize_minibatch_source(minibatch_source, model_inputs_to_streams, self, infinitely_repeat=False)
         # use a progress tracker to capture the metric and count values
         collector = Function._ProgressCollector()
         # Evaluator instance
@@ -1293,8 +1293,6 @@ class Function(cntk_py.Function):
             if not data:
                 break                                              # until we hit the end
             evaluator.test_minibatch({ input: data[si] for input, si in model_inputs_to_streams.items()})
-            if any(data[si].sweep_end for si in model_inputs_to_streams.values()): # TODO: should not be necessary ince I figure out the protocol
-                break                                              # until we hit the end
         evaluator.summarize_test_progress()
         return collector.test_metric / (collector.test_num_samples if collector.test_num_samples != 0 else 1), collector.test_num_samples
 

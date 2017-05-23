@@ -324,9 +324,10 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
         Returns:
             cntk.io.MinibatchData:
-            A mapping of :class:`StreamInformation` to :class:`MinibatchData` if
-            `input_map` was not specified. Otherwise, the returned value will
-            be a mapping of :class:`~cntk.variables.Variable` to class:`MinibatchData`.
+             A mapping of :class:`StreamInformation` to :class:`MinibatchData` if
+             `input_map` was not specified. Otherwise, the returned value will
+             be a mapping of :class:`~cntk.variables.Variable` to class:`MinibatchData`.
+             When the maximum number of epochs/samples is exhausted, the return value is an empty dict.
         '''
         if device is None:
             device = use_default_device()
@@ -504,24 +505,53 @@ class MinibatchSourceFromData(UserMinibatchSource):
     A MinibatchSource created as a `MinibatchSourceFromData` linearly iterates through the data provided by
     the caller as numpy arrays or scipy.sparse.csr_matrix objects, without randomization.
 
+    Example:
+     >>> X = np.arange(20).reshape(10,2).astype(np.float32) # 10 rows of 2 values
+     >>> s = cntk.io.MinibatchSourceFromData(dict(x=X), max_samples=len(X))
+     >>> mb = s.next_minibatch(5)
+     >>> d = mb[s.streams['x']]
+     >>> d.data.asarray()
+     array([[ 0.,  1.],
+            [ 2.,  3.],
+            [ 4.,  5.],
+            [ 6.,  7.],
+            [ 8.,  9.]], dtype=float32)
+     >>> mb = s.next_minibatch(5)
+     >>> d = mb[s.streams['x']]
+     >>> d.data.asarray()
+     (array([[ 10.,  11.],
+            [ 12.,  13.],
+            [ 14.,  15.],
+            [ 16.,  17.],
+            [ 18.,  19.]], dtype=float32),)
+
     Args:
-     kwargs: name-value pairs
+        data_streams: name-value pairs
+        max_samples (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of samples
+          the reader can produce. If inputs are sequences, and the different streams have different
+          lengths, then each sequence counts with the the maximum length.
+          After this number has been reached, the reader
+          returns empty minibatches on subsequent calls to :meth:`next_minibatch`.
+          **Important:**
+          Click :cntkwiki:`here <BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`
+          for a description of input and label samples.
 
     Returns:
      An implementation of a :class:`cntk.io.MinibatchSource` that will iterate through the data.
     '''
-    def __init__(self, **kwargs):
+    def __init__(self, data_streams, max_samples = INFINITELY_REPEAT):
         from cntk import Variable
-        if not kwargs:
+        if not data_streams:
             raise(ValueError('at least one stream must be specified, in the form name=data or name=(data, type)'))
-        self.data = dict()         # [name] -> numpy.array or scipy.sparse.csr_matrix
-        self.types = dict()        # [name] -> Variable._Type
-        self.is_sequence = dict()  # [name] -> bool
+        self._data = dict()         # [name] -> numpy.array or scipy.sparse.csr_matrix
+        self._types = dict()        # [name] -> Variable._Type
+        self._is_sequence = dict()  # [name] -> bool
+        self._max_samples = max_samples
 
         # get the data and types from the input, and form streams array
-        self.num_samples = -1  # total number of samples --must be the same for all args
+        self._num_samples = -1  # total number of samples --must be the same for all args
         from scipy import sparse
-        for name, arg in kwargs.items():
+        for name, arg in data_streams.items():
             if isinstance(arg, tuple):
                 value, type = arg
                 type = Variable._Type._sanitize(type)
@@ -540,46 +570,53 @@ class MinibatchSourceFromData(UserMinibatchSource):
                 type = type.updated_with(shape=sample_shape); # implant the shape
             elif type.shape != sample_shape:
                 ValueError("specified type's shape does not match the data's shape")
-            if self.num_samples == -1:
+            if self._num_samples == -1:
                 if value.shape[0] == 0:
                     raise(ValueError('data is empty'))
-                self.num_samples = value.shape[0]
-            elif self.num_samples != value.shape[0]:
+                self._num_samples = value.shape[0]
+            elif self._num_samples != value.shape[0]:
                 raise TypeError('all data items must have the same first dimension')
-            self.data[name] = value
-            self.types[name] = type
-            self.is_sequence[name] = is_sequence
+            self._data[name] = value
+            self._types[name] = type
+            self._is_sequence[name] = is_sequence
 
-        self.cursor = 0   # current position
+        self._cursor = 0            # current position
+        self._total_num_samples = 0 # total count; once the limit is reached, we stop returning data
 
         super(MinibatchSourceFromData, self).__init__()
 
     def stream_infos(self):
-        return [StreamInformation(name, i, ['dense', 'sparse'][getattr(self.types[name], 'is_sparse', False)], 
-                                  self.data[name].dtype, self.types[name].shape)
-                for i, name in enumerate(self.data.keys())]
+        return [StreamInformation(name, i, ['dense', 'sparse'][getattr(self._types[name], 'is_sparse', False)], 
+                                  self._data[name].dtype, self._types[name].shape)
+                for i, name in enumerate(self._data.keys())]
 
     def next_minibatch(self, num_samples, number_of_workers=1, worker_rank=0, device=None):        
+        if self._total_num_samples >= self._max_samples:
+            return {}
         assert number_of_workers == 1  # TODO
-        # determine how many samples, starting from self.cursor, will fit into the requested minibatch size of num_samples
-        begin = self.cursor
-        end = self.cursor
-        assert begin < self.num_samples
-        actual_num_samples = { name: 0 for name in self.data.keys() }
-        while end < self.num_samples: 
-            new_num_samples = { name: actual_num_samples[name] + (len(value[end]) if self.is_sequence[name] else 1)
-                                for name, value in self.data.items() }
+        # determine how many samples, starting from self._cursor, will fit into the requested minibatch size of num_samples
+        begin = self._cursor
+        end = self._cursor
+        assert begin < self._num_samples
+        actual_num_samples = { name: 0 for name in self._data.keys() }
+        while end < self._num_samples: 
+            new_num_samples = { name: actual_num_samples[name] + (len(value[end]) if self._is_sequence[name] else 1)
+                                for name, value in self._data.items() }
             # return up to requested number of samples. but at least one even if longer
-            if actual_num_samples and max(new_num_samples.values()) > num_samples:
+            # also stop if we hit the maximum requested number of samples
+            max_num_samples = max(new_num_samples.values())
+            if actual_num_samples and (max_num_samples > num_samples or self._total_num_samples + max_num_samples > self._max_samples):
                 break
             actual_num_samples = new_num_samples
             end += 1
 
+        self._total_num_samples += max(actual_num_samples.values())
+
         # the minibatch data to return
         result = {}  # [stream_info] -> MinibatchData
-        at_end = (end == self.num_samples)
+        at_end = (end == self._num_samples)
         for si in self.streams.values():
-            arg = self.data[si.name]
+            arg = self._data[si.name]
             if isinstance(arg, Value):  # if entire corpus is one big Value, then slice NDArrayView directly
                 data = arg.data
                 sub_shape = data.shape[1:]
@@ -588,11 +625,11 @@ class MinibatchSourceFromData(UserMinibatchSource):
                 mb_data = data.slice_view(start_offset, extent, data.is_read_only)
             else:
                 mb_data = arg[begin:end]
-            result[si] = MinibatchData(Value(mb_data), num_sequences=end - begin, num_samples=actual_num_samples[si.name], sweep_end=at_end)
+            result[si] = MinibatchData(Value(mb_data), num_sequences=end - begin, num_samples=actual_num_samples[si.name],
+                                       sweep_end=at_end or (self._total_num_samples >= self._max_samples))
 
         # wrap around the cursor
-        self.cursor = 0 if at_end else end
-        # BUGBUG? It seems some code tests for an empty returned dict. What is the correct protocol?
+        self._cursor = 0 if at_end else end
 
         return result
 
