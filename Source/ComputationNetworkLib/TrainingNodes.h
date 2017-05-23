@@ -2108,13 +2108,40 @@ private:
 template class LogisticNode<float>;
 template class LogisticNode<double>;
 
+
+
+// Non-temlate base class for the DropoutNode containing the getter/setter for the dropout rate.
+class DropoutNodeBase 
+{
+public:
+    void SetDropoutRate(double value) 
+    {
+        if (value < 0 || value >= 1)
+            LogicError("DropoutRate must be >= 0 and < 1.");
+        m_dropoutRate = value;
+    }
+
+    bool IsEnabled() const
+    {
+        return m_dropoutRate > 0;
+    }
+
+    double GetDropoutRate() const 
+    {
+        return m_dropoutRate;
+    }
+
+protected:
+    virtual ~DropoutNodeBase() = default;
+    double m_dropoutRate {0};
+};
+
 // -----------------------------------------------------------------------
 // DropoutNode (input) -- perform drop-out
 // Output is scaled such that no post-scaling is necessary.
 // -----------------------------------------------------------------------
-
 template <class ElemType>
-class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>, public RngUser
+class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>, public DropoutNodeBase, public RngUser
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -2126,8 +2153,7 @@ class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>, publi
 public:
     DeclareConstructorFromConfigWithNumInputs(DropoutNode);
     DropoutNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name),
-        m_dropoutRate(0)
+        : Base(deviceId, name)
     {
         SetRngState(CreateUniqId());
     }
@@ -2140,7 +2166,7 @@ public:
         Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-        if (m_dropoutRate > 0)
+        if (IsEnabled())
             sliceInput0Grad.AddElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
         else
             sliceInput0Grad += sliceOutputGrad;
@@ -2153,7 +2179,7 @@ public:
     {
         Base::UpdateFunctionMBSize();
         // resize temporaries to their proper size
-        if (m_dropoutRate > 0)
+        if (IsEnabled())
             m_maskOfDropout->Resize(Input(0)->Value());
     }
 
@@ -2162,7 +2188,7 @@ public:
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        if (Environment().IsInferring() || m_dropoutRate <= 0)
+        if (Environment().IsInferring() || !IsEnabled())
         {
             sliceOutputValue.SetValue(sliceInput0Value);
         }
@@ -2170,7 +2196,7 @@ public:
         {
             // determine drop-out mask for this minibatch
             auto sliceMask = DataFor(*m_maskOfDropout, fr);
-            sliceMask.SetUniformRandomMask((ElemType)m_dropoutRate, (ElemType)(1.0 / (1.0 - m_dropoutRate)) /*pre-scaled*/, GetRNGHandle());
+            sliceMask.SetUniformRandomMask((ElemType)GetDropoutRate(), (ElemType)(1.0 / (1.0 - GetDropoutRate())) /*pre-scaled*/, GetRNGHandle());
             // apply dropout mask
             sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
             UpdateRngOffset(GetRngOffset() + sliceMask.GetNumElements());
@@ -2180,14 +2206,6 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         ValidateUnaryMap(isFinalValidationPass);
-    }
-
-    // special methods for this node type which ComputationNetwork knows about and calls to pass parameters
-    void SetDropoutRate(const double val)
-    {
-        if (val < 0 || val >= 1)
-            LogicError("DropoutRate must be >= 0 and < 1.");
-        m_dropoutRate = val;
     }
 
     RNGHandle& GetRNGHandle()
@@ -2201,7 +2219,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeP);
-            node->m_dropoutRate = m_dropoutRate;
+            node->SetDropoutRate(GetDropoutRate());
             node->SetRngState(GetRngSeed(), GetRngOffset());
             node->m_maskOfDropout = m_maskOfDropout;
         }
@@ -2220,10 +2238,7 @@ public:
         ReleaseMatrixToPool(m_maskOfDropout, matrixPool);
     }
 
-    double GetDropoutRate() const { return m_dropoutRate; }
-
 private:
-    double m_dropoutRate;
     shared_ptr<Matrix<ElemType>> m_maskOfDropout;
 };
 

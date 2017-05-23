@@ -376,7 +376,7 @@ def train(model, m_params, learner, train_data, max_epochs=1, save_model_flag=Fa
         if save_model_flag:
           # save the model every epoch
           model_filename = os.path.join('model', "model_%s_%02d_%03d.dnn" % (model_name, epoch, check_point_id))
-          model.save_model(model_filename)
+          model.save(model_filename)
           logger.log("Saved model to '%s'" % model_filename)
         chk_samples = 0
         chk_loss = 0
@@ -390,6 +390,6 @@ def train(model, m_params, learner, train_data, max_epochs=1, save_model_flag=Fa
   if save_model_flag:
     # save the model every epoch
     model_filename = os.path.join('model', "model_%s_final.dnn" % (model_name))
-    model.save_model(model_filename)
+    model.save(model_filename)
     logger.log("Saved model to '%s'" % model_filename)
   return (epoch_loss/epoch_samples, epoch_acc/epoch_samples, eval_acc)

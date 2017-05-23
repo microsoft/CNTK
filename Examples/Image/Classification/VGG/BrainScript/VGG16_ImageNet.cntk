@@ -13,7 +13,7 @@ deviceId = "Auto"
 
 command = Train:Test
 
-parallelTrain = "true"
+parallelTrain = false
 traceLevel = 1
 numMBsToShowResult = 500
 
@@ -25,7 +25,7 @@ ImageW    = 224
 ImageC    = 3
 NumLabels = 1000
 
-parallelTrain = true
+parallelTrain = false
 
 ################################
 Train = {

@@ -376,6 +376,7 @@ namespace CNTK
             Dictionary stream;
             stream[L"dim"] = s.m_dim;
             stream[L"format"] = s.m_isSparse ? L"sparse" : L"dense";
+            stream[L"definesMBSize"] = s.m_definesMbSize;
             if (!s.m_streamAlias.empty())
                 stream[L"alias"] = s.m_streamAlias;
             input[key] = stream;
@@ -394,6 +395,7 @@ namespace CNTK
             Dictionary stream;
             std::vector<DictionaryValue> ctxWindow = { DictionaryValue(s.m_left), DictionaryValue(s.m_right) };
             stream.Add(L"scpFile", s.m_scp, L"dim", s.m_dim, L"contextWindow", ctxWindow, L"expandToUtterance", s.m_broadcast);
+            stream[L"definesMBSize"] = s.m_definesMbSize;
             input[key] = stream;
         }
         htk.Add(L"type", L"HTKFeatureDeserializer", L"input", input);

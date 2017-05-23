@@ -18,9 +18,9 @@ model_path = os.path.join(abs_path, "Models")
 # Define the reader for both training and evaluation action.
 def create_reader(path, is_training, input_dim, label_dim):
     return C.io.MinibatchSource(C.io.CTFDeserializer(path, C.io.StreamDefs(
-        features  = C.io.StreamDef(field='features', shape=input_dim),
-        labels    = C.io.StreamDef(field='labels',   shape=label_dim)
-    )), randomize=is_training, max_sweeps = C.io.INFINITELY_REPEAT if is_training else 1)
+        features=C.io.StreamDef(field='features', shape=input_dim),
+        labels=C.io.StreamDef(field='labels',   shape=label_dim)
+    )), randomize=is_training, max_sweeps=C.io.INFINITELY_REPEAT if is_training else 1)
 
 
 # Creates and trains a feedforward classification model for MNIST images
@@ -84,8 +84,6 @@ def convnet_mnist(debug_output=False, epoch_size=6000, minibatch_size=64, max_ep
         trainer.summarize_training_progress()
         z.save(os.path.join(model_path, "ConvNet_MNIST_{}.dnn".format(epoch)))
     
-    trainer.print_statistics()
-
     # Load test data
     reader_test = create_reader(os.path.join(data_path, 'Test-28x28_cntk_text.txt'), False, input_dim, num_output_classes)
 

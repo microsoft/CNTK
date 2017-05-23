@@ -56,11 +56,11 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
     # deserializer
     return MinibatchSource(
         ImageDeserializer(map_file, StreamDefs(
-            features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-            labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
-        randomize = is_training,
+            features=StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
+            labels=StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+        randomize=is_training,
         max_samples=total_number_of_samples,
-        multithreaded_deserializer = True)
+        multithreaded_deserializer=True)
 
 # Local Response Normalization layer. See Section 3.3 of the paper:
 # https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf

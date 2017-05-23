@@ -38,13 +38,18 @@ public:
 
 private:
     // Gets next sequences not exceeding localSampleCount for this worker and globalSampleCount across workers.
-    void GetNextSequenceDescriptions(size_t globalSampleCount, size_t localSampleCount, std::vector<SequenceDescription>& result);
+    void GetNextSequenceDescriptions(size_t globalSampleCount, size_t localSampleCount, Sequences& result);
 
     // Get chunk index for the sample offset from the beginning of the sweep.
     ChunkIdType GetChunkIndexOf(size_t samplePosition);
 
     // Moves the cursor to the sequence possibly updating the chunk.
     void MoveToNextSequence();
+
+    inline size_t GetEndOfEpochPosition() 
+    {
+        return m_config.m_totalEpochSizeInSamples * (m_config.m_epochIndex + 1);
+    }
 
     IDataDeserializerPtr m_deserializer;
 

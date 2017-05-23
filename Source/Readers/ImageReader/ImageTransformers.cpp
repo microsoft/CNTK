@@ -403,7 +403,7 @@ void ScaleTransformer::Apply(uint8_t, cv::Mat &mat)
             size_t bottom = m_imgHeight - top - mat.rows;
             size_t left = wdiff;
             size_t right = m_imgWidth - left - mat.cols;
-            cv::copyMakeBorder(mat, mat, (int)top, (int)bottom, (int)left, (int)right, m_borderType, m_padValue);
+            cv::copyMakeBorder(mat, mat, (int)top, (int)bottom, (int)left, (int)right, m_borderType, cv::Scalar(m_padValue, m_padValue, m_padValue));
         }
     }
 }

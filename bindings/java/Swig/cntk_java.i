@@ -10,6 +10,10 @@
 #undef UNUSED
 %}
 
+%{
+    #pragma warning(disable : 4267) //warning C4267: 'initializing': conversion from 'size_t' to 'jsize', possible loss of data
+%}
+
 %include "CNTKManagedCommon.i"
 
 %pragma(java) jniclasscode=%{
@@ -30,8 +34,9 @@
 
 // Java specific extention.
 %typemap(javacode) CNTK::DeviceDescriptor %{
+
     public java.util.List<DeviceDescriptor> getAllDevices() {
-        DeviceDescriptorVector devices = GetAllDevices();
+        DeviceDescriptorVector devices = _AllDevices();
         java.util.ArrayList<DeviceDescriptor> ret = new java.util.ArrayList<DeviceDescriptor>((int)devices.size());
         for (int i = 0; i < devices.size(); ++i){
             ret.add(devices.get(i));
@@ -45,83 +50,103 @@
         if (o == null) return false;
         DeviceDescriptor p = (DeviceDescriptor)o;
         if (p == null) return false;
-        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public boolean equals(DeviceDescriptor p) {
         if (p == null) return false;
-        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     @Override
     public int hashCode() {
-        return GetDeviceType().hashCode();
+        return getType().hashCode();
     }
 %}
 
 %typemap(javacode) CNTK::Axis %{
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null) return false;
         Axis p = (Axis)o;
         if (p == null) return false;
-        return CNTKLib.AreEqualAxis(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public boolean equals(Axis p) {
         if (p == null) return false;
-        return CNTKLib.AreEqualAxis(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     @Override
     public int hashCode() {
-        if (this.IsDynamicAxis()) {
-            return GetName().hashCode();
+        if (this.isDynamicAxis()) {
+            return getName().hashCode();
         } else {
-            return this.StaticAxisIndex();
+            return this.getStaticAxisIndex();
         }
     }
 %}
 
 
 %typemap(javacode) CNTK::Function %{
-    public static Function Load(byte[] modelBuffer, DeviceDescriptor computeDevice)
-    {
-        return Load(modelBuffer, (long)modelBuffer.length, computeDevice);
+    private FunctionPtrVector ref;
+    public void addReference(FunctionPtrVector fpv) {
+        ref = fpv;
     }
 
-    // TODO: look at C# implementation and make it look more like that
-    private VariableVector argumentVector;
-    private VariableVector outputVector;
-    private java.util.ArrayList<Variable> argumentList;
-    private java.util.ArrayList<Variable> outputList;
+    public static Function load(byte[] modelBuffer, DeviceDescriptor computeDevice)
+    {
+        return load(modelBuffer, (long)modelBuffer.length, computeDevice);
+    }
 
-    private UnorderedMapVariableValuePtr outMap = new UnorderedMapVariableValuePtr();
+    public java.util.List<Variable> getInputs() {
+        VariableVector inputVector = _Inputs();
+        java.util.ArrayList<Variable> inputList = new java.util.ArrayList<Variable>((int)inputVector.size());
+        for (int i = 0; i < inputVector.size(); ++i){
+            Variable var = inputVector.get(i);
+            var.addReference(inputVector);
+            inputList.add(var);
+        }
+        return inputList;
+    }
 
     public java.util.List<Variable> getOutputs() {
-        if (outputVector == null) {
-            outputVector = GetOutputs();
-            outputList = new java.util.ArrayList<Variable>((int)outputVector.size());
-            for (int i = 0; i < outputVector.size(); ++i){
-                outputList.add(outputVector.get(i));
-            }
+        VariableVector outputVector = _Outputs();
+        java.util.ArrayList<Variable> outputList = new java.util.ArrayList<Variable>((int)outputVector.size());
+        for (int i = 0; i < outputVector.size(); ++i){
+            Variable var = outputVector.get(i);
+            var.addReference(outputVector);
+            outputList.add(var);
         }
         return outputList;
     }
 
     public java.util.List<Variable> getArguments() {
-        if (argumentVector == null) {
-            argumentVector = GetArguments();
-            argumentList = new java.util.ArrayList<Variable>((int)argumentVector.size());
-            for (int i = 0; i < argumentVector.size(); ++i){
-                argumentList.add(argumentVector.get(i));
-            }
+        VariableVector argumentVector = _Arguments();
+        java.util.ArrayList<Variable> argumentList = new java.util.ArrayList<Variable>((int)argumentVector.size());
+        for (int i = 0; i < argumentVector.size(); ++i){
+            Variable var = argumentVector.get(i);
+            var.addReference(argumentVector);
+            argumentList.add(var);
         }
         return argumentList;
     }
 
-    public static Function Combine(java.util.ArrayList<Variable> outputVariable) {
+    public java.util.List<Function> findAllWithName(String x) {
+        FunctionPtrVector functionVector = _FindAllWithName(x);
+        java.util.ArrayList<Function> functionList = new java.util.ArrayList<Function>((int)functionVector.size());
+        for (int i = 0; i < functionVector.size(); ++i){
+            Function func = functionVector.get(i);
+            func.addReference(functionVector);
+            functionList.add(func);
+        }
+        return functionList;
+    }
+
+    public static Function combine(java.util.ArrayList<Variable> outputVariable) {
         VariableVector varVect = new VariableVector();
         for (int i = 0; i < outputVariable.size(); ++i)
         {
@@ -132,31 +157,38 @@
 %}
 
 %typemap(javacode) CNTK::Variable %{
+    private VariableVector ref;
+    public void addReference(VariableVector vv) {
+        ref = vv;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null) return false;
         Variable p = (Variable)o;
         if (p == null) return false;
-        return CNTKLib.AreEqualVariable(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public boolean equals(Variable p) {
         if (p == null) return false;
-        return CNTKLib.AreEqualVariable(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     @Override
     public int hashCode() {
-        return (int)GetHashValue();
+        return (int)_GetHashValue();
     }
 %}
 
 %typemap(javacode) CNTK::NDShape %{
-    public java.util.ArrayList<Long> getDimensions(){
-        java.util.ArrayList<Long> ret = new java.util.ArrayList<Long>((int)GetRank());
-        for (int i = 0; i < GetDimensions().size(); ++i ) {
-            ret.add((Long)GetDimensions().get(i));
+
+    public long[] getDimensions(){
+        SizeTVector dimensionVector = _Dimensions();
+        long[] ret = new long[(int)getRank()];
+        for (int i = 0; i < dimensionVector.size(); ++i ) {
+            ret[i] = dimensionVector.get(i);
         }
         return ret;
     }
@@ -167,27 +199,18 @@
         if (o == null) return false;
         NDShape p = (NDShape)o;
         if (p == null) return false;
-        return CNTKLib.AreEqualShape(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     public boolean equals(NDShape p) {
         if (p == null) return false;
-        return CNTKLib.AreEqualShape(this, p);
+        return CNTKLib.AreEqual(this, p);
     }
 
     @Override
     public int hashCode() {
-        return GetDimensions().hashCode();
+        return _Dimensions().hashCode();
     }
-%}
-
-%typemap(javacode) CNTK::NDMask %{
-%}
-
-%typemap(javacode) CNTK::Value %{
-%}
-
-%typemap(javacode) CNTK::NDArrayView %{
 %}
 
 %include "CNTKLibraryInternals.h"

@@ -329,7 +329,7 @@ public:
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
 
-    virtual bool ImplementsGradientOverwriteOptimization() const override { return m_convEng->ImplementsGradientOverwriteOptimization(); }
+    virtual bool ImplementsGradientOverwriteOptimization() const override { return m_convEng && m_convEng->ImplementsGradientOverwriteOptimization(); }
 
 public:
     void Save(File& fstream) const override

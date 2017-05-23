@@ -11,7 +11,11 @@ from .internal import typemap, sanitize_precision, sanitize_value, \
 class Record(dict):
     '''
     Easy construction of a record (=immutable singleton class) from keyword arguments.
-    e.g. r = Record(x = 13, y = 42) ; x = r.x
+
+    Example:
+        >>> r = Record(x = 13, y = 42)
+        >>> r.x
+            13
 
     Args:
         kwargs: keyword arguments to turn into the record members
@@ -33,7 +37,14 @@ class Record(dict):
     def updated_with(self, **kwargs):
         '''
         Create a new Record from an existing one with members modified or added.
-        e.g. r = Record(x = 13) ; print(r.x) ; r2 = r.updated_with(x = 42) ; print(r2.x)
+
+        Example:
+            >>> r = Record(x = 13)
+            >>> r.x
+                13
+            >>> r2 = r.updated_with(x = 42)
+            >>> r2.x
+                42
 
         Args:
             kwargs: keyword arguments to turn into the record members

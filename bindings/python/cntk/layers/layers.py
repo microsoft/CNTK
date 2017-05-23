@@ -700,7 +700,7 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
      filter_shape (`int` or tuple of `int`\ s): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
      num_filters (int): number of filters (output feature-map depth), or ``()`` to denote scalar output items (output shape will have no depth axis).
      activation (:class:`~cntk.ops.functions.Function`, optional): optional function to apply at the end, e.g. `relu`
-     init (scalar or NumPy array or :mod:`cntk.initializer`, default :func:`~cntk.initializer.glorot_uniform`): initial value of weights `W`
+     init (scalar or :mod:`cntk.initializer`, default :func:`~cntk.initializer.glorot_uniform`): initial value of weights `W`
      pad (`bool` or tuple of `bool`\ s, default `False`): if `False`, then the filter will be shifted over the "valid"
       area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
       the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero.

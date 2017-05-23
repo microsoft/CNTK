@@ -55,6 +55,7 @@ def test_eval_not_all_outputs():
     result = func.eval({y : y_data}, [minus_func])
     assert np.array_equal(result, np.asarray([[1.]]))
 
+
 def test_grad_custimized_root():
     x = C.input_variable(shape=(1,), needs_gradient=True)
     y = C.sqrt(x)
@@ -65,11 +66,64 @@ def test_grad_custimized_root():
     expect_grad = np.asarray([[0.5],[0.25],[0.125]], dtype=np.float32)
     assert np.array_equal(grads, expect_grad)
 
+
 def test_constant_eval():
     c = C.Constant(value=1)
     c_plus_1 = c + 1
     op = C.combine([c_plus_1, c])
     result = op.eval({})
-    assert np.array_equal(result[c_plus_1.output], [2.0])
+    assert np.array_equal(result[c_plus_1.output], 2.0)
     assert np.array_equal(result[c], 1.0)
 
+
+def test_input_without_dynamic_axes():
+    x = C.input_variable(shape=(2,), dynamic_axes=[], needs_gradient=True, name='x')
+    assert len(x.dynamic_axes) == 0
+
+    op = x * .01 + 3.0
+    grad_result, eval_result = op.grad({x : np.asarray([.6, -.8], dtype=np.float32)}, outputs=[op], wrt=[x])
+    assert np.allclose(eval_result, [3.006, 2.992])
+    assert np.allclose(grad_result, [.01, .01])
+
+    w = C.parameter(init=np.asarray([[0.5], [-1.5]], dtype=np.float32))
+    op = C.times(x, w) + 3.0
+    grad_result, eval_result = op.grad({x : np.asarray([.6, -.8], dtype=np.float32)}, outputs=[op], wrt=[w])
+    assert np.allclose(eval_result, [4.5])
+    assert np.allclose(grad_result, [[.6], [-.8]])
+
+
+def test_grad_after_eval():
+    x = C.input_variable((C.FreeDimension, 2))
+    w = C.parameter(init=np.asarray([[2, 5], [1, 3]], dtype=np.float32))
+    t = C.times(x, w)
+
+    x_data = np.asarray([[0.5, 0.2]], np.float32)
+    t_val = t.eval({x : x_data})
+    assert np.array_equal(t_val, np.asarray([[[1.2, 3.1]]], dtype=np.float32))
+
+    w_grad, t_val = t.grad({x : x_data}, wrt=[w], outputs=[t])
+    assert np.array_equal(t_val, np.asarray([[[1.2, 3.1]]], dtype=np.float32))
+    assert np.array_equal(w_grad, np.asarray([[0.5, .5], [.2, .2]], dtype=np.float32))
+
+    x_data = np.asarray([[0.5, 0.2], [0.1, .6]], np.float32)
+    t_val = t.eval({x : x_data})
+    assert np.allclose(t_val, np.asarray([[[1.2, 3.1], [0.8, 2.3]]], dtype=np.float32))
+
+    w_grad, t_val = t.grad({x : x_data}, wrt=[w], outputs=[t])
+    assert np.allclose(t_val, np.asarray([[[1.2, 3.1], [0.8, 2.3]]], dtype=np.float32))
+    assert np.array_equal(w_grad, np.asarray([[0.6, .6], [.8, .8]], dtype=np.float32))
+    
+
+def test_validation_before_eval():
+    w = C.parameter((4,C.InferredDimension))
+    v = C.parameter((C.InferredDimension,5))
+    wv = C.times(w,v)
+
+    p = C.input((4,1))
+    wp = C.times(w,p)
+
+    q = C.input((1,5))
+    qv = C.times(q,v)
+
+    with pytest.raises(ValueError):
+        wv.eval()

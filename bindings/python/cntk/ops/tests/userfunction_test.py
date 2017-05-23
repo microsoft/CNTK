@@ -646,3 +646,34 @@ def test_override_serialize(tmpdir):
     op_reloaded = Function.load(filepath, device=dev)
 
     assert result1 == op_reloaded.eval({}, device=dev)
+
+
+class MyArgumentPreservingPlus(UserFunction):
+    def __init__(self, arg1, arg2, name='f1'):
+        super(MyArgumentPreservingPlus, self).__init__([arg1, arg2], as_numpy=False, name=name)
+        self.compute_func = C.input_variable(1) + C.input_variable(1)
+
+    def infer_outputs(self):
+        return [C.output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+
+    def forward(self, arguments, device=None, outputs_to_retain=None):
+        result = self.compute_func.eval({self.compute_func.arguments[0] : arguments[0], self.compute_func.arguments[1] : arguments[1]}, as_numpy=False)
+        self.backprop_state = arguments
+        return self.backprop_state, result
+
+    def backward(self, state, root_gradients, variables):
+        assert state == self.backprop_state
+        variables[self.inputs[0]] = root_gradients
+
+def test_udf_input_values_no_sharing():
+    i = C.input_variable(1, needs_gradient=True, name='i_var')
+    m = C.user_function(MyArgumentPreservingPlus(i + 1, i + 2))
+    
+    w = C.parameter(shape=(1,), init=1)
+    m = m + w
+    m2 = C.splice(m, m, axis=0)
+    m3 = C.splice(m2, m2, axis=0)
+    m4 = C.splice(m3, m3, axis=0)
+
+    grad_value, result = m4.grad({i : np.asarray([2], dtype=np.float32)}, outputs=[m4], wrt=[w, i])
+    assert np.array_equal(result, [[8,  8,  8,  8,  8,  8,  8,  8]])

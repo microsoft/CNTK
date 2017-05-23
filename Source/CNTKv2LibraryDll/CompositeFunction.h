@@ -260,6 +260,9 @@ namespace CNTK
         // Copy the internal state from the network into the function graph.
         void UpdateInternalState() const;
 
+        // Copy all new values for 'dirty' attributes from functions into corresponding network nodes.
+        void ApplyAttributeUpdates();
+
         // Generate a dictionary representing the internal (local) state of the function graph.
         Dictionary GetInternalState() const;
 
@@ -344,6 +347,18 @@ namespace CNTK
             }
 
             m_existingNetworkStorageReferences.clear();
+        }
+
+        void PurgeComputationNetwork()
+        {
+            m_currentBackpropRoots.clear();
+            m_inputsExcludedFromGradientComputation.clear();
+            m_variableToNodeMap.clear();
+            m_currentOutputsToEvaluate.clear();
+            m_lastRecordedTimeStamps.clear();
+
+            m_networkMatricesAllocated = false;
+            m_computationNetwork = nullptr;
         }
 
     private:

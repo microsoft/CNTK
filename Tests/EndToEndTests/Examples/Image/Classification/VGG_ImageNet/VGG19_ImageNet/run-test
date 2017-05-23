@@ -1,0 +1,8 @@
+#!/bin/bash
+
+. $TEST_DIR/../run-test-common
+
+# increase stack limit 
+ulimit -s 65536
+
+cntkrun VGG19_ImageNet.cntk "forceDeterministicAlgorithms=true traceLevel=0 stderr=- Train=[SGD=[epochSize=4,minibatchSize=1,maxEpochs=2,numMBsToShowResult=1,learningRatesPerMB=0.01]] Test=[minibatchSize=1]"

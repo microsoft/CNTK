@@ -46,7 +46,7 @@ def tf_baseline_conv2d():
 
     ci.watch(cstk.Conv2DArgs(W=crtf.find_trainable('char_filter_bank'), b=crtf.find_trainable('char_filter_biases')), 'conv2d', var_type=cstk.Conv2DAttr,
                attr=cstk.Conv2DAttr(filter_shape=(filter_width, char_emb_dim,), num_filters=num_filters))
-    ci.watch(char_conv, 'conv2d_out', var_type=crtf.VariableType)
+    ci.watch(char_conv, 'conv2d_out', var_type=crtf.VariableType) # note the output is transposed to NCHW
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())

@@ -389,7 +389,7 @@ def test_block_with_unused_outputs():
 
     eval_root = C.combine([block.outputs[0]])
     result = eval_root.eval({input_var1 : np.asarray([3], dtype=np.float32), input_var2 : np.asarray([-3], dtype=np.float32)})
-    assert np.array_equal(result, [[ 4.]])
+    assert np.array_equal(result, [ 4.])
 
 def test_constant_data_type_mismatch():
     a = C.constant(np.triu(np.ones(5)), shape=(5,5))
@@ -496,3 +496,47 @@ def test_outputs_passing():
     
     with pytest.raises(TypeError):
         b.eval({in1: [[1], [2]]}, outputs=[a.outputs])
+
+def test_set_dropout_rate_attribute():
+    from cntk import dropout, input; from math import pi;
+
+    dropout_node = dropout(input(1), dropout_rate=0.3)
+    key = 'dropoutRate'
+    
+    root = dropout_node.root_function
+    assert np.isclose(root.attributes[key], 0.3)
+    
+    root.set_attribute(key, 0.4)
+    assert np.isclose(root.attributes[key], 0.4)
+
+    dropout_node.set_attribute(key, 0.777)
+    assert np.isclose(root.attributes[key], 0.777)
+
+    dropout_node.set_attribute(key, pi)
+    assert np.isclose(root.attributes[key], pi)
+
+
+def test_set_rng_seed_attribute():
+    from cntk import random_sample, input;
+
+    random_sample_node = random_sample(input(1), 1, True, seed=123)
+    key = 'rngSeed'
+
+    root = random_sample_node.root_function
+    assert root.attributes[key] == 123
+    
+    root.set_attribute(key, 11530328594546889191)
+    assert root.attributes[key] == 11530328594546889191
+
+    random_sample_node.set_attribute(key, 2**31)
+    assert root.attributes[key] == 2**31
+
+
+def test_clone_with_different_dynamic_axes():
+    q_axis = C.Axis('q')
+    a_axis = C.Axis('a')
+    question_input = C.sequence.input(shape=10, is_sparse=True, sequence_axis=q_axis)
+    answer_input = C.sequence.input(shape=10, is_sparse=True, sequence_axis=a_axis)
+
+    rnn = C.layers.Recurrence(C.layers.LSTM(5))(question_input)
+    rnn_cloned = rnn.clone(C.CloneMethod.share, {question_input:answer_input})

@@ -19,23 +19,24 @@ public class Main {
     public static void main(String[] args) throws IOException {
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
 
-        DeviceDescriptor device = DeviceDescriptor.UseDefaultDevice();
-        File dataPath = new File(args[1]);
+        DeviceDescriptor device = DeviceDescriptor.useDefaultDevice();
+        File dataPath = new File(args[0]);
 
 
         // Load the model.
         // The model resnet20_cifar10_python.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
         // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
         // Renaming the output model might be necessary
-        Function modelFunc = Function.Load(new File(dataPath, "resnet20_cifar10_python.dnn").getAbsolutePath(), device);
+        Function modelFunc = Function.load(new File(dataPath, "resnet20_cifar10_python.dnn").getAbsolutePath(), device);
         Variable outputVar = modelFunc.getOutputs().get(0);
         Variable inputVar = modelFunc.getArguments().get(0);
+        System.gc(); // This is not needed for normal usage. It is here just for testing that elements in getOutputs are not getting GC'd.
 
-        NDShape inputShape = inputVar.GetShape();
-        int imageWidth = inputShape.getDimensions().get(0).intValue();
-        int imageHeight = inputShape.getDimensions().get(1).intValue();
-        int imageChannels = inputShape.getDimensions().get(2).intValue();
-        int imageSize = ((int) inputShape.GetTotalSize());
+        NDShape inputShape = inputVar.getShape();
+        int imageWidth = (int)inputShape.getDimensions()[0];
+        int imageHeight = (int)inputShape.getDimensions()[1];
+        int imageChannels = (int)inputShape.getDimensions()[2];
+        int imageSize = ((int) inputShape.getTotalSize());
 
         System.out.println("EvaluateSingleImage");
 
@@ -74,21 +75,21 @@ public class Main {
         FloatVectorVector floatVecVec = new FloatVectorVector();
         floatVecVec.add(floatVec);
         // Create input data map
-        Value inputVal = Value.CreateDenseFloat(inputShape, floatVecVec, device);
+        Value inputVal = Value.createDenseFloat(inputShape, floatVecVec, device);
         UnorderedMapVariableValuePtr inputDataMap = new UnorderedMapVariableValuePtr();
-        inputDataMap.Add(inputVar, inputVal);
+        inputDataMap.add(inputVar, inputVal);
 
         // Create output data map. Using null as Value to indicate using system allocated memory.
         // Alternatively, create a Value object and add it to the data map.
         UnorderedMapVariableValuePtr outputDataMap = new UnorderedMapVariableValuePtr();
-        outputDataMap.Add(outputVar, null);
+        outputDataMap.add(outputVar, null);
 
         // Start evaluation on the device
-        modelFunc.Evaluate(inputDataMap, outputDataMap, device);
+        modelFunc.evaluate(inputDataMap, outputDataMap, device);
 
-        // Get evaluate result as dense output
+        // get evaluate result as dense output
         FloatVectorVector outputBuffer = new FloatVectorVector();
-        outputDataMap.getitem(outputVar).CopyVariableValueToFloat(outputVar, outputBuffer);
+        outputDataMap.getitem(outputVar).copyVariableValueToFloat(outputVar, outputBuffer);
 
 
         float[] expectedResults = {
