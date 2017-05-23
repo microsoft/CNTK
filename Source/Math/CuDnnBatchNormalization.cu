@@ -103,19 +103,11 @@ private:
         if (inOutT.GetRank() > 2)
             return inOutT;
 
-        if (inOutT.GetRank() == 1)
-        {
-            SmallVector<size_t> v(3, 1);
-            v[2] = inOutT[0];
-            return TensorShape(v);
-        }
-        else
-        {
-            SmallVector<size_t> v(std::max(inOutT.GetRank(), (size_t)3), 1);
-            for (size_t i = 0; i < inOutT.GetRank(); i++)
-                v[i] = inOutT[i];
-            return TensorShape(v);
-        }
+        SmallVector<size_t> v(std::max(inOutT.GetRank(), (size_t)3), 1);
+        for (size_t i = 3 - inOutT.GetRank(), j = 0; i < 3; i++, j++)
+            v[i] = inOutT[j];
+
+        return TensorShape(v);
     }
 
     static TensorShape GetScaleBiasTensor(const TensorShape& inOutT, bool spatial)
