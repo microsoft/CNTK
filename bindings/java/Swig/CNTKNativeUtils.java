@@ -13,8 +13,9 @@ import java.util.ArrayList;
  * <ul>
  *     <li>By name: If a particular native library is needed, it will extract it to a temp folder
  *     (along with its dependencies) and load it from there.</li>
- *     <li>All libraries: all libraries will be extracted to a temp folder and extracted in the
- *     order specified in the manifest </li>
+ *     <li>All libraries: all libraries will be extracted to a temp folder and the libraries in the
+ *     load manifest are loaded in the order provided, or loaded in the order specified in the
+ *     native manifest if no load manifest is provided. </li>
  * </ul>
  *
  * <p>The jar with the CNTK native libraries must contain a file name 'NATIVE_MANIFEST' that lists
@@ -25,6 +26,7 @@ import java.util.ArrayList;
 public class CNTKNativeUtils {
 
     private static final String manifestName = "NATIVE_MANIFEST";
+    private static final String loadManifestName = "NATIVE_LOAD_MANIFEST";
     private static String resourcesPath = getResourcesPath();
     private static String[] nativeList = new String[0];
     private static Boolean extractionDone = false;
@@ -44,16 +46,29 @@ public class CNTKNativeUtils {
      * named 'NATIVE_MANIFEST'.
      *
      * <p>The NATIVE_MANIFEST contains what libraries to be extracted (one per line, full name)
-     * and the order in which they should be loaded. </p>
+     * and the order in which they should be loaded. Alternatively, if only specific top-level
+     * libraries should be loaded, they can be specified in the NATIVE_LOAD_MANIFEST file in order.</p>
      * */
     public static void loadAll(){
         try{
             extractNativeLibraries();
-            for (String libName: nativeList){
-                System.load(tempDir.getAbsolutePath() + File.separator + libName);
+            try{
+                // First try to find the NATIVE_LOAD_MANIFEST and load the libraries there
+                String[] loadList = getResourceLines(loadManifestName);
+                for (String libName: loadList){
+                    System.load(tempDir.getAbsolutePath() + File.separator + libName);
+                }
+            }
+            catch (IOException ee){
+                // If loading the NATIVE_LOAD_MANIFEST failed, try loading the libraries
+                // in the order provided by the NATIVE_MANIFEST
+                for (String libName: nativeList){
+                    System.load(tempDir.getAbsolutePath() + File.separator + libName);
+                }
             }
         }
         catch (Exception e){
+            // If nothing worked, throw exception
             throw new UnsatisfiedLinkError(String.format("Could not load all CNTK libraries because " +
                     "we encountered the following error: %s", e.getMessage()));
         }
