@@ -410,7 +410,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
     emulating_output_depth = num_filters == ()
     emulating_input_depth  = reduction_rank == 0
     # 1D convolution is not supported by cudnn, so we also add a fake dimension.
-    emulating_1D = len(filter_shape) < 2
+    emulating_1D = False   # len(filter_shape) < 2 # TODO: 1D no longer needs emulation. Remove all related code once it passes Jenkins.
 
     actual_output_channels_shape = num_filters                if not emulating_output_depth else (1,)
     actual_reduction_shape       = _INFERRED * reduction_rank if not emulating_input_depth  else _INFERRED  # TODO: C++ suport for 1D
