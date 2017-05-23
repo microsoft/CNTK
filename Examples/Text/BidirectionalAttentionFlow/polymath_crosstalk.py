@@ -4,8 +4,8 @@ from helpers import *
 import pickle
 import importlib
 import os
-import crosstalk
-import crosstalk_cntk as crct
+from cntk.contrib.crosstalk import crosstalk
+from cntk.contrib.crosstalk import crosstalk_cntk as crct
 _ci = crct.instance
 
 class PolyMath:

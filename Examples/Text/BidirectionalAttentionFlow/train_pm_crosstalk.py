@@ -206,8 +206,8 @@ def validate_model(test_data, model, polymath):
     begin_label = argument_by_name(root, 'ab')
     end_label   = argument_by_name(root, 'ae')
 
-    begin_prediction = C.sequence.input(1, sequence_axis=begin_label.dynamic_axes[1], needs_gradient=True)
-    end_prediction = C.sequence.input(1, sequence_axis=end_label.dynamic_axes[1], needs_gradient=True)
+    begin_prediction = C.sequence.input_variable(1, sequence_axis=begin_label.dynamic_axes[1], needs_gradient=True)
+    end_prediction = C.sequence.input_variable(1, sequence_axis=end_label.dynamic_axes[1], needs_gradient=True)
     
     best_span_score = symbolic_best_span(begin_prediction, end_prediction)
     predicted_span = C.layers.Recurrence(C.plus)(begin_prediction - C.sequence.past_value(end_prediction))
@@ -293,8 +293,8 @@ def test(test_data, model_path, model_file, config_file):
     begin_logits = model.outputs[0]
     end_logits   = model.outputs[1]
     loss         = C.as_composite(model.outputs[2].owner)
-    begin_prediction = C.sequence.input(1, sequence_axis=begin_logits.dynamic_axes[1], needs_gradient=True)
-    end_prediction = C.sequence.input(1, sequence_axis=end_logits.dynamic_axes[1], needs_gradient=True)    
+    begin_prediction = C.sequence.input_variable(1, sequence_axis=begin_logits.dynamic_axes[1], needs_gradient=True)
+    end_prediction = C.sequence.input_variable(1, sequence_axis=end_logits.dynamic_axes[1], needs_gradient=True)    
     best_span_score = symbolic_best_span(begin_prediction, end_prediction)
     predicted_span = C.layers.Recurrence(C.plus)(begin_prediction - C.sequence.past_value(end_prediction))
 
@@ -306,7 +306,7 @@ def test(test_data, model_path, model_file, config_file):
     misc = {'rawctx':[], 'ctoken':[], 'answer':[]}
     tsv_reader = create_tsv_reader(loss, test_data, polymath, batch_size, is_test=True, misc=misc)
 
-    import crosstalk_cntk as crct
+    from cntk.contrib.crosstalk import crosstalk_cntk as crct
     ci = crct.instance
     ci.set_workdir('crosstalk')
     
