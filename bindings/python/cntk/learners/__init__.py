@@ -12,6 +12,9 @@ from .. import cntk_py, NDArrayView, asarray
 from cntk.internal import typemap
 from ..internal.swig_helper import map_if_possible
 
+import math 
+import numpy as np
+from cntk.learners import UserLearner
 
 @unique
 class UnitType(Enum):
@@ -52,7 +55,7 @@ the following learning algorithms:
 | MomentumSGD            |
 +------------------------+
 | Nesterov               |
-+------------------------+
++------------------------+ 
 | RMSProp                |
 +------------------------+
 | SGD                    |
@@ -145,6 +148,28 @@ class Learner(cntk_py.Learner):
 
         return super(Learner, self)._update(var_nd_map, training_sample_count)
 
+    
+    
+class Sgd_rll(UserLearner):
+    def __init__(self, parameters, lr_schedule,alpha):
+        super(Sgd_rll, self).__init__(parameters, lr_schedule)
+        self.count=0
+        self.alpha= alpha
+        self.B=[]
+    def update(self, gradient_values, training_sample_count, sweep_end):
+        eta = self.learning_rate()/math.exp(self.count/400)*100
+
+        if(self.count==0):
+            for p, g in gradient_values.items():
+                P=p.value
+                self.B.append((np.zeros(P.shape)))
+        self.count=self.count+1
+        layer_now=0
+        for p, g in gradient_values.items():
+            p.value = p.value - eta* (self.alpha*g.to_ndarray()+(1-self.alpha)*self.B[layer_now])
+            self.B[layer_now]=(self.alpha*g.to_ndarray()+(1-self.alpha)*self.B[layer_now])
+            layer_now=layer_now+1
+        return True
     @property
     @typemap
     def parameters(self):
