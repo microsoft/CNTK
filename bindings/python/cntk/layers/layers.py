@@ -11,13 +11,13 @@ e.g. a fully connected layer with non-linearity.
 
 from __future__ import division
 import numpy as np
-from ..ops.functions import Function
+from ..ops.functions import Function, BlockFunction
 from ..variables import Parameter, Record, Constant
 import cntk as C
 from ..ops import times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, reduce_mean, sqrt
 from cntk.internal import _as_tuple
 from cntk.cntk_py import sentinel_value_for_auto_select_random_seed as SentinelValueForAutoSelectRandomSeed
-from .blocks import _initializer_for, _INFERRED, identity, BlockFunction, UntestedBranchError  # helpers
+from .blocks import _initializer_for, _INFERRED, identity, UntestedBranchError  # helpers
 from cntk.default_options import is_default_override, get_default_override, default_override_or
 
 

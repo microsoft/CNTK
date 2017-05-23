@@ -1178,6 +1178,37 @@ class Function(cntk_py.Function):
         from cntk.logging import graph
         return graph.find_by_name(self, name, depth)
 
+    class _ProgressCollector(cntk_py.ProgressWriter):
+        '''
+        Internal helper for tracking loss and metric values for train() and test().
+        '''
+        # TODO: If this is of general interest, consider to move it to progress_print.py
+        def __init__(self, progress_writers=None):
+            self.losses = []
+            self.metrics = []
+            self.num_samples = []
+            coll_freq = progress_writers[0].freq if (progress_writers and progress_writers[0]) else sys.maxsize
+            super(Function._ProgressCollector, self).__init__(coll_freq, 0, sys.maxsize, 0, sys.maxsize, 0)
+            self.__disown__() # TODO: what is this?
+        def on_write_training_update(self, samples, updates, aggregate_loss, aggregate_metric):
+            loss        = aggregate_loss[1]   - aggregate_loss[0]
+            metric      = aggregate_metric[1] - aggregate_metric[0]
+            num_samples = samples[1]          - samples[0]
+            self.losses     .append(loss   / (num_samples if num_samples != 0 else 1))
+            self.metrics    .append(metric / (num_samples if num_samples != 0 else 1))
+            self.num_samples.append(num_samples)
+        def on_write_test_update(self, *args, **kwargs):
+            pass
+        def on_write_training_summary(self, samples, updates, summaries, aggregate_loss, aggregate_metric, elapsed_milliseconds):
+            if len(self.losses) == 0:
+                self.on_write_training_update((0, samples), None, (0, aggregate_loss), (0, aggregate_metric))
+            pass
+        def on_write_test_summary(self, samples, updates, summaries, aggregate_metric, elapsed_milliseconds):
+            self.test_metric = aggregate_metric
+            self.test_num_samples = samples
+        def write(self, *args, **kwargs):
+            pass
+
     def train(self, minibatch_source,
               minibatch_size=None, model_inputs_to_streams=None, parameter_learners=[],
               progress_writers=None, progress_frequency=None, max_samples=None,
@@ -1210,30 +1241,7 @@ class Function(cntk_py.Function):
         if minibatch_size is None:
             raise ValueError("minibatch_size must not be None.")
         # use a progress tracker to capture the loss, metric, and count values
-        class Collector(cntk_py.ProgressWriter):
-            def __init__(self):
-                self.losses = []
-                self.metrics = []
-                self.num_samples = []
-                coll_freq = progress_writers[0].freq if progress_writers else progress_frequency // minibatch_size
-                super(Collector, self).__init__(coll_freq, 0, sys.maxsize, 0, sys.maxsize, 0)
-                self.__disown__() # TODO: what is this?
-            def on_write_training_update(self, samples, updates, aggregate_loss, aggregate_metric):
-                loss        = aggregate_loss[1]   - aggregate_loss[0]
-                metric      = aggregate_metric[1] - aggregate_metric[0]
-                num_samples = samples[1]          - samples[0]
-                self.losses     .append(loss   / (num_samples if num_samples != 0 else 1))
-                self.metrics    .append(metric / (num_samples if num_samples != 0 else 1))
-                self.num_samples.append(num_samples)
-            def on_write_test_update(self, *args, **kwargs):
-                pass
-            def on_write_training_summary(self, *args, **kwargs):
-                pass
-            def on_write_test_summary(self, *args, **kwargs):
-                pass
-            def write(self, *args, **kwargs):
-                pass
-        collector = Collector()
+        collector = Function._ProgressCollector(progress_writers)
         # Trainer instance
         from ..train.trainer import Trainer
         if not progress_writers:
@@ -1271,22 +1279,7 @@ class Function(cntk_py.Function):
         from ..train.training_session import TrainingSession
         minibatch_source, model_inputs_to_streams = TrainingSession._sanitize_minibatch_source(minibatch_source, model_inputs_to_streams, self)
         # use a progress tracker to capture the metric and count values
-        class Collector(cntk_py.ProgressWriter):
-            def __init__(self):
-                super(Collector, self).__init__(sys.maxsize, 0, sys.maxsize, 0, sys.maxsize, 0)
-                self.__disown__() # TODO: what is this?
-            def on_write_training_update(self, *args, **kwargs):
-                pass
-            def on_write_test_update(self, *args, **kwargs):
-                pass
-            def on_write_training_summary(self, *args, **kwargs):
-                pass
-            def on_write_test_summary(self, samples, updates, summaries, aggregate_metric, elapsed_milliseconds):
-                self.metric = aggregate_metric
-                self.num_samples = samples
-            def write(self, *args, **kwargs):
-                pass
-        collector = Collector()
+        collector = Function._ProgressCollector()
         # Evaluator instance
         from ..eval.evaluator import Evaluator
         outputs = self.outputs
@@ -1303,7 +1296,7 @@ class Function(cntk_py.Function):
             if any(data[si].sweep_end for si in model_inputs_to_streams.values()): # TODO: should not be necessary ince I figure out the protocol
                 break                                              # until we hit the end
         evaluator.summarize_test_progress()
-        return collector.metric / (collector.num_samples if collector.num_samples != 0 else 1), collector.num_samples
+        return collector.test_metric / (collector.test_num_samples if collector.test_num_samples != 0 else 1), collector.test_num_samples
 
     @typemap
     def save(self, filename):
@@ -1422,12 +1415,12 @@ def BlockFunction(op_name, name):
     '''
     return lambda f: Function(f, make_block=True, op_name=op_name, name=name)
 
-def FunctionWithSignature(*args, **kwargs):
+def FunctionOf(*args, **kwargs):
     '''
     Decorator for defining a @Function with a given signature. Same as @Function followed by @Signature.
 
     Example:
-      >>> @FunctionWithSignature(Tensor[13])
+      >>> @FunctionOf(Tensor[13])
       ... def f(x):
       ...     return x * x
       >>> print(f)

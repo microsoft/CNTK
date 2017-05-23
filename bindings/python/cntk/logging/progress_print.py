@@ -42,7 +42,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         rank (`int` or `None`, default `None`): set this to distributed.rank if you are using distributed
           parallelism -- each rank's log will go to separate file.
         gen_heartbeat (`bool`, default `False`): If True output a progress message every 10 seconds or so to stdout.
-        num_epochs (`int`, default 300): The total number of epochs to be trained.  Used for some metadata.
+        num_epochs (`int`, default None): The total number of epochs to be trained.  Used for some metadata.
           This parameter is optional.
         test_freq (`int` or `None`, default `None`): similar to ``freq``, but applies to printing intermediate
           test results.
@@ -54,7 +54,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
           worker synchronization info.
     '''
 
-    def __init__(self, freq=None, first=0, tag='', log_to_file=None, rank=None, gen_heartbeat=False, num_epochs=300,
+    def __init__(self, freq=None, first=0, tag='', log_to_file=None, rank=None, gen_heartbeat=False, num_epochs=None,
                  test_freq=None, test_first=0, metric_is_pct=True, distributed_freq=None, distributed_first=0):
         '''
         Constructor.
@@ -112,8 +112,8 @@ class ProgressPrinter(cntk_py.ProgressWriter):
             with open(self.logfilename, "w") as logfile:
                 logfile.write(self.logfilename + "\n")
 
-            self.___logprint('CNTKCommandTrainInfo: train : ' + str(num_epochs))
-            self.___logprint('CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : ' + str(num_epochs))
+            self.___logprint('CNTKCommandTrainInfo: train : ' + str(num_epochs if num_epochs is not None else 300))
+            self.___logprint('CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : ' + str(num_epochs if num_epochs is not None else 300))
             self.___logprint('CNTKCommandTrainBegin: train')
 
         if freq == 0:
@@ -399,17 +399,18 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         speed = _avg(samples, elapsed_seconds)
         avg_loss = _avg(aggregate_loss, samples)
 
+        of_epochs = " of " + str(self.num_epochs) if self.num_epochs is not None else ''
         if aggregate_metric is not None:
             avg_metric = _avg(aggregate_metric, samples)
             if self.metric_is_pct:
-                fmt_str = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.2f}% * {} {:0.3f}s ({:5.1f} samples/s);"
+                fmt_str = "Finished Epoch[{}{}]: {}loss = {:0.6f} * {}, metric = {:0.2f}% * {} {:0.3f}s ({:5.1f} samples/s);"
             else:
-                fmt_str = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s);"
-            msg = fmt_str.format(summaries, self.num_epochs, self.tag, avg_loss, samples, avg_metric * self.metric_multiplier,
+                fmt_str = "Finished Epoch[{}{}]: {}loss = {:0.6f} * {}, metric = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s);"
+            msg = fmt_str.format(summaries, of_epochs, self.tag, avg_loss, samples, avg_metric * self.metric_multiplier,
                     samples, elapsed_seconds, speed)
         else:
-            msg = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s);".format(
-                summaries, self.num_epochs, self.tag, avg_loss, samples, elapsed_seconds, speed)
+            msg = "Finished Epoch[{}{}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s);".format(
+                summaries, of_epochs, self.tag, avg_loss, samples, elapsed_seconds, speed)
 
         self.___logprint(msg)
 
