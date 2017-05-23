@@ -1183,12 +1183,14 @@ class Function(cntk_py.Function):
         Internal helper for tracking loss and metric values for train() and test().
         '''
         # TODO: If this is of general interest, consider to move it to progress_print.py
-        def __init__(self, progress_writers=None):
+        def __init__(self, progress_writers=None, summary_period=None):
             self.losses = []
             self.metrics = []
             self.num_samples = []
-            coll_freq = progress_writers[0].freq if (progress_writers and progress_writers[0]) else sys.maxsize
-            super(Function._ProgressCollector, self).__init__(coll_freq, 0, sys.maxsize, 0, sys.maxsize, 0)
+            coll_period = progress_writers[0].freq if (progress_writers and progress_writers[0]) else \
+                          summary_period if summary_period is not None else \
+                          sys.maxsize
+            super(Function._ProgressCollector, self).__init__(coll_period, 0, sys.maxsize, 0, sys.maxsize, 0)
             self.__disown__() # TODO: what is this?
         def on_write_training_update(self, samples, updates, aggregate_loss, aggregate_metric):
             loss        = aggregate_loss[1]   - aggregate_loss[0]
@@ -1236,14 +1238,44 @@ class Function(cntk_py.Function):
             cv_config (:class:`CrossValidationConfig`): cross validation configuration
             test_config (:class:`TestConfig`): test configuration
 
+        Example:
+         >>> # a simple logistic-regression model
+         >>> N = 250
+         >>> np.random.seed(0)
+         >>> Y = np.random.randint(size=N, low=0, high=2)  # labels
+         >>> X = (np.random.randn(N, 2)+3) * (Y[:,None]+1)   # data
+         >>> # Our model expects float32 features, and cross-entropy expects one-hot encoded labels.
+         >>> import scipy.sparse
+         >>> Y = scipy.sparse.csr_matrix((np.ones(N,np.float32), (range(N), Y)), shape=(N, 2))
+         >>> X = X.astype(np.float32)
+         >>> model = cntk.layers.Dense(2, activation=None) # model function
+         >>> import cntk.layers
+         >>> @cntk.FunctionOf(cntk.layers.Tensor[2], cntk.layers.SparseTensor[2]) # criterion function
+         ... def criterion(data, label_one_hot):
+         ...     z = model(data)  # apply model. Computes a non-normalized log probability for every output class.
+         ...     return cntk.cross_entropy_with_softmax(z, label_one_hot)
+         >>> learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(0.1, cntk.UnitType.minibatch))
+         >>> stats = criterion.train((X, Y), minibatch_size=25, max_epochs=2, epoch_size=125, parameter_learners=[learner])
+         >>> print("%.2f" % stats[0][-1])
+         0.76
+
         Returns:
          (losses, metrics, num_samples): three lists representing average loss, average metric, and number of labels,
           sampled at the frequency of the first of progress_writers (or, if none, the final aggregate)
         '''
         if minibatch_size is None:
             raise ValueError("minibatch_size must not be None.")
+        # max_samples
+        if max_epochs is not None:
+            if max_samples is not None:
+                raise ValueError("max_epochs and max_samples are mutually exclusive.")
+            if epoch_size is None:
+                raise ValueError("max_epochs requires epoch_size to be specified as well.")
+            max_samples = int(max_epochs * epoch_size) # (we allow fractional epochs so our testing system can run abbreviated tests)
+            if progress_frequency is None: # if epoch size is given then default training summaries to it
+                progress_frequency = epoch_size
         # use a progress tracker to capture the loss, metric, and count values
-        collector = Function._ProgressCollector(progress_writers)
+        collector = Function._ProgressCollector(progress_writers, progress_frequency // minibatch_size if progress_frequency is not None else None)
         # Trainer instance
         from ..train.trainer import Trainer
         if not progress_writers:
@@ -1254,15 +1286,6 @@ class Function(cntk_py.Function):
             if model_inputs_to_streams:
                 raise ValueError("streams and model_inputs_to_streams are mutually exclusive.")
             model_inputs_to_streams = self.argument_map(*streams)
-        # max_samples
-        if max_epochs is not None:
-            if max_samples is not None:
-                raise ValueError("max_epochs and max_samples are mutually exclusive.")
-            if epoch_size is None:
-                raise ValueError("max_epochs requires epoch_size to be specified as well.")
-            max_samples = int(max_epochs * epoch_size) # (we allow fractional epochs so our testing system can run abbreviated tests)
-            if progress_frequency is None: # if epoch size is given then default training summaries to it
-                progress_frequency = epoch_size
         # training session
         from ..train.training_session import training_session
         ts = training_session(trainer, minibatch_source, minibatch_size, model_inputs_to_streams=model_inputs_to_streams,
@@ -1440,17 +1463,19 @@ def FunctionOf(*args, **kwargs):
     Decorator for defining a @Function with a given signature. Same as @Function followed by @Signature.
 
     Example:
-      >>> @FunctionOf(Tensor[13])
-      ... def f(x):
-      ...     return x * x
-      >>> print(f)
-      >>> # which is equivalent to this:
-      >>> from cntk.layers.typing import *
-      >>> @Function
-      ... @Signature(Tensor[13])
-      ... def f(x):
-      ...     return x * x
-      >>> print(f)
+     >>> from cntk.layers.typing import *
+     >>> @FunctionOf(Tensor[13])
+     ... def f(x):
+     ...     return x * x
+     >>> print(f)
+     ElementTimes(x: Tensor[13]) -> Tensor[13]
+     >>> # which is equivalent to this:
+     >>> @Function
+     ... @Signature(Tensor[13])
+     ... def f(x):
+     ...     return x * x
+     >>> print(f)
+     ElementTimes(x: Tensor[13]) -> Tensor[13]
 
     '''
     def decorator(f):
