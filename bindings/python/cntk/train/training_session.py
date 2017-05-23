@@ -19,8 +19,8 @@ class CheckpointConfig(cntk_py.CheckpointConfig):
         filename (str): checkpoint file name.
         frequency (int): checkpoint frequency in samples. If 0, no checkpointing takes place. 
           If ``sys.maxsize``, a single checkpoint is taken at the end of the training.
-        preserve_all (bool): saves all checkpoints, using ``filename`` as prefix and checkpoint index as a suffix.
         restore (bool): flag, indicating whether to restore from available checkpoint before the start of the training
+        preserve_all (bool): saves all checkpoints, using ``filename`` as prefix and checkpoint index as a suffix.
     '''
     def __init__(self, filename, frequency=None,
                  restore=True, preserve_all=False):
@@ -30,8 +30,8 @@ class CheckpointConfig(cntk_py.CheckpointConfig):
             filename (str): checkpoint file name.
             frequency (int): checkpoint frequency in samples. If 0, no checkpointing takes place. 
               If ``sys.maxsize``, a single checkpoint is taken at the end of the training.
-            preserve_all (bool): saves all checkpoints, using ``filename`` as prefix and checkpoint index as a suffix.
             restore (bool): flag, indicating whether to restore from available checkpoint before the start of the training
+            preserve_all (bool): saves all checkpoints, using ``filename`` as prefix and checkpoint index as a suffix.
 
         Returns:
             Reconfigured self.
@@ -55,17 +55,19 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
 
     Args:
         source (:class:`~cntk.io.MinibatchSource`): minibatch source used for cross validation
+        mb_size(:class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch schedule for cross validation
         frequency (int): frequency in samples for cross validation
           If None or ``sys.maxsize``, a single cross validation is performed at the end of training.
-        schedule (:class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch schedule for cross validation
         callback (func (index, average_error, cv_num_samples, cv_num_minibatches)): Callback that will
           be called with frequency which can implement custom cross validation logic,
           returns False if training should be stopped.
         max_samples (int, default None): number of samples to perform
           cross-validation on. If None, all samples are taken.
+        model_inputs_to_streams (dict, default None): mapping between input variables and input streams.
+          If None, the mapping provided to the training session constructor is used.
     '''
     def __init__(self, source=None, mb_size=None, frequency=None,
-            callback=None, max_samples=None):
+            callback=None, max_samples=None, model_inputs_to_streams=None):
         self.callback = callback
 
         if source is None and callback is None:
@@ -92,8 +94,12 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
         if max_samples is None:
             max_samples = sys.maxsize
 
-        super(CrossValidationConfig, self).__init__(
-            source, schedule, frequency, max_samples)
+        if model_inputs_to_streams is not None:
+            super(CrossValidationConfig, self).__init__(
+                source, schedule, frequency, max_samples, model_inputs_to_streams)
+        else:
+            super(CrossValidationConfig, self).__init__(
+                source, schedule, frequency, max_samples)
 
 class TestConfig(cntk_py.TestConfig):
     '''
@@ -101,9 +107,11 @@ class TestConfig(cntk_py.TestConfig):
 
     Args:
         source (:class:`~cntk.io.MinibatchSource`): minibatch source used for testing
-        schedule (:class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch schedule for testing
+        mb_size(:class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch schedule for testing
+        model_inputs_to_streams (dict): mapping between input variables and input streams
+          If None, the mapping provided to the training session constructor is used.
     '''
-    def __init__(self, source, mb_size=None):
+    def __init__(self, source, mb_size=None, model_inputs_to_streams=None):
         schedule = mb_size
         if isinstance(mb_size, int):
             schedule = minibatch_size_schedule(mb_size)
@@ -116,7 +124,10 @@ class TestConfig(cntk_py.TestConfig):
                              'it must be an output of minibatch_size_schedule() function'
                              % type(schedule))
 
-        super(TestConfig, self).__init__(source, schedule)
+        if model_inputs_to_streams is not None:
+            super(TestConfig, self).__init__(source, schedule, model_inputs_to_streams)
+        else:
+            super(TestConfig, self).__init__(source, schedule)
 
 class TrainingSession(cntk_py.TrainingSession):
     '''
