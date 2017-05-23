@@ -492,3 +492,13 @@ def test_op_sequence_reduce_sum(device_id, precision):
     assert np.array_equal(res[0], np.asarray([2.]))
     assert np.array_equal(res[1], np.asarray([5.]))
     assert np.array_equal(res[2], np.asarray([9.]))
+
+def test_sequence_unpack_with_convolution(device_id, precision): 
+    x = C.sequence.input((20, 20))
+    y = C.sequence.unpack(x, 0, no_mask_output=True)
+    z = C.reshape(y, (3, 20, 20))
+    kernel = C.constant(1.0, (4, 3, 3, 3))
+    t = C.convolution(kernel, z, auto_padding=[False, True, True])
+    val = np.random.random((2, 3, 20, 20)).astype(np.float32)
+    result = t.eval({x: val})
+    assert np.array_equal(result.shape, (2, 4, 20, 20))
