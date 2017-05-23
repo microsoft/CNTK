@@ -62,29 +62,27 @@ progress_writer = cntk.logging.ProgressPrinter(freq=1250 // minibatch_size) # he
 trainer = cntk.Trainer(None, criterion, [learner], [progress_writer])
 
 # Train!
-for i in range(len(X_train) // minibatch_size): # loop over minibatches
-    x = X_train[i*minibatch_size:(i+1)*minibatch_size] # get one minibatch worth of data
-    y = Y_train[i*minibatch_size:(i+1)*minibatch_size]
-    trainer.train_minibatch({criterion.arguments[0]: x, criterion.arguments[1]: y})  # update model from one minibatch
+for i in range(0,len(X_train),minibatch_size): # loop over minibatches
+    x = X_train[i:i+minibatch_size] # get one minibatch worth of data
+    y = Y_train[i:i+minibatch_size]
+    trainer.train_minibatch({data: x, label_one_hot: y})  # update model from one minibatch
 trainer.summarize_training_progress()
 
 # Test error rate on the test set.
 evaluator = cntk.Evaluator(metric, [progress_writer])
-for i in range(len(X_test) // minibatch_size): # loop over minibatches
-    x = X_test[i*minibatch_size:(i+1)*minibatch_size] # get one minibatch worth of data
-    y = Y_test[i*minibatch_size:(i+1)*minibatch_size]
-    evaluator.test_minibatch({metric.arguments[0]: x, metric.arguments[1]: y})  # update model from one minibatch
+for i in range(0,len(X_test),minibatch_size): # loop over minibatches
+    x = X_test[i:i+minibatch_size] # get one minibatch worth of data
+    y = Y_test[i:i+minibatch_size]
+    evaluator.test_minibatch({data: x, label_one_hot: y})  # update model from one minibatch
 evaluator.summarize_test_progress()
 
 # Inspect predictions on one minibatch, for illustration.
 # For evaluation, we map the output of the network between 0-1 and convert them into probabilities
 # for the two classes. We use a softmax function to get the probabilities of each of the class.
-@cntk.FunctionOf(cntk.layers.Tensor[input_dim])
-def get_probability(data):
-    return cntk.softmax(model(data))
+get_probability = cntk.softmax(model)
 
 X_check, Y_check = generate_synthetic_data(25) # a small batch of 25 examples
-result = get_probability.eval({get_probability.arguments[0]: X_check})
+result = get_probability.eval(X_check)
 
 print("Label    :", [label.argmax() for label in Y_check])
 print("Predicted:", [result[i,:].argmax() for i in range(len(result))])
