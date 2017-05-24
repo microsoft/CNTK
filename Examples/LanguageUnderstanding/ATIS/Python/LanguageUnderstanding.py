@@ -17,7 +17,7 @@ from cntk.learners import fsadagrad, learning_rate_schedule, momentum_as_time_co
 from cntk import splice, relu, FunctionOf
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
-from cntk.logging import *
+from cntk.logging import ProgressPrinter, TrainingSummaryProgressCallback, log_number_of_parameters
 
 ########################
 # variables and stuff  #
@@ -137,29 +137,37 @@ def train(reader, model, max_epochs):
     #from cntk.logging.graph import plot
     #plot(criterion, filename=data_dir + "/model.pdf")
 
-    # iteration parameters  --needed here because learner schedule needs it
+    # iteration parameters
+    # Epoch size in CNTK refers to not entire data sweeps, but rather number of samples
+    # between checkpointing and/or summarizing training progress.
     epoch_size = 36000
     minibatch_size = 70
-    #max_epochs = 0.03 # uncomment for faster testing
 
     # SGD parameters
     learner = fsadagrad(criterion.parameters,
-                        lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
-                        momentum   = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
+                        lr = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
+                        momentum = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
                         gradient_clipping_threshold_per_sample = 15,
                         gradient_clipping_with_truncation = True)
 
-    # process minibatches and perform model training
+    # logging
+    # We provide a progress_printer that logs loss and metric, as well as a callback
+    # for additional logging after every epoch ("training summary"),  in which we run
+    # an example through our model, to peek into how it improves.
     log_number_of_parameters(model) ; print()
-    progress_writer = ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging
-    #progress_writer = ProgressPrinter(tag='Training')
+    progress_printer = ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging
+    #progress_printer = ProgressPrinter(tag='Training')
+    progress_callback = TrainingSummaryProgressCallback(epoch_size, lambda epoch, *unused_args: peek(model, epoch+1))
 
     peek(model, 0)                  # see how the model is doing
+    # train() will loop through the training data provided by 'reader', minibatch by minibatch,
+    # and update the model. The progress_printer is used to print loss and metric periodically.
+    # The progress_callback is another progress tracker we use to call into our peek() function,
+    # which illustrates how the model becomes better with each epoch.
     stats = criterion.train(reader, streams=(reader.streams.query, reader.streams.slot_labels),
                             minibatch_size=minibatch_size, max_epochs=max_epochs, epoch_size=epoch_size,
                             parameter_learners=[learner],
-                            cv_config=CrossValidationConfig(frequency=epoch_size, callback=lambda epoch, *more: peek(model, epoch+1) or True),
-                            progress_writers=[progress_writer])
+                            progress_writers=[progress_printer, progress_callback])
     return stats[0][-1], stats[1][-1] # return loss and metric from last epoch
 
 
@@ -169,9 +177,14 @@ def train(reader, model, max_epochs):
 
 def evaluate(reader, model):
     criterion = create_criterion_function(model)
-    progress_writer = ProgressPrinter(tag='Evaluation')
-    metric, _ = criterion.test(reader, minibatch_size=1000, progress_writers=[progress_writer],
-                               model_inputs_to_streams=criterion.argument_map(reader.streams.query, reader.streams.slot_labels))
+    progress_printer = ProgressPrinter(tag='Evaluation')
+    # test() will loop through the data provided by the reader and accumulate the metirc value
+    # of the criterion function. At the end, progress_printer will be used to show the average value.
+    # test() returns the average metric and the total number of labels measured, which we ignore
+    # (denoted by assigning it to _).
+    metric, _ = criterion.test(reader, streams=(reader.streams.query, reader.streams.slot_labels),
+                               minibatch_size=1000, progress_writers=[progress_printer])
+                               
     return metric
 
 #############################

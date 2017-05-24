@@ -517,6 +517,38 @@ class TensorBoardProgressWriter(cntk_py.ProgressWriter):
             self.write_value('summary/test_avg_metric', avg_metric, self.summaries)
 
 
+class TrainingSummaryProgressCallback(cntk_py.ProgressWriter):
+    '''
+    Helper to pass a callback function to be called after each training epoch
+    to :class:`~cntk.train.Trainer`,
+    :class:`~cntk.eval.Evaluator`, and :class:`~cntk.training_session.TrainingSession`,
+    as well a :func:`cntk.Function.train`, :func:`cntk.Function.test`.
+
+    This allows the user to add additional logging after each training epoch.
+
+    Args:
+     epoch_size (int): periodically call the callback after processing this many samples
+     callback (function): function(epoch_index, epoch_loss, epoch_metric, epoch_samples)
+    '''
+    def __init__(self, epoch_size, callback):
+        self._epoch_size = epoch_size
+        self._callback = callback
+        super(TrainingSummaryProgressCallback, self).__init__(sys.maxsize, 0, epoch_size, 0, sys.maxsize, 0)
+        self.__disown__() # TODO: what is this?
+    def on_write_training_update(self, samples, updates, aggregate_loss, aggregate_metric):
+        pass
+    def on_write_test_update(self, *args, **kwargs):
+        pass
+    def on_write_training_summary(self, samples, updates, summaries, aggregate_loss, aggregate_metric, elapsed_milliseconds):
+        self._callback(summaries-1, aggregate_loss, aggregate_metric, samples)
+        pass
+    def on_write_test_summary(self, samples, updates, summaries, aggregate_metric, elapsed_milliseconds):
+        pass
+    def write(self, *args, **kwargs):
+        pass
+
+
+
 # print the total number of parameters to log
 def log_number_of_parameters(model, trace_level=0):
     parameters = model.parameters

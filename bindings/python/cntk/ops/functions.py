@@ -1224,7 +1224,7 @@ class Function(cntk_py.Function):
 
         Args:
             minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for training
-            minibatch_size (:class:`~cntk.cntk_py.minibatch_size_schedule` or int): minibatch size schedule for training
+            minibatch_size (int or :class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch size (or schedule) for training
             streams (tuple): the streams of the minibatch_source in argument order
             model_inputs_to_streams (dict): alternative to `streams`, specifying the mapping as a map from input variables to streams
             max_epochs (int): maximum number of samples used for training; requires `epoch_size`
@@ -1265,6 +1265,11 @@ class Function(cntk_py.Function):
         '''
         if minibatch_size is None:
             raise ValueError("minibatch_size must not be None.")
+        elif isinstance(minibatch_size, int): # convert to a schedule
+            from ..train.training_session import minibatch_size_schedule
+            minibatch_size = minibatch_size_schedule(minibatch_size)
+        elif not isinstance(schedule, cntk_py.minibatch_size_schedule):
+            raise ValueError('minibatch_size must be an int or the result an call to the minibatch_size_schedule() function')
         # max_samples
         if max_epochs is not None:
             if max_samples is not None:
@@ -1275,7 +1280,7 @@ class Function(cntk_py.Function):
             if progress_frequency is None: # if epoch size is given then default training summaries to it
                 progress_frequency = epoch_size
         # use a progress tracker to capture the loss, metric, and count values
-        collector = Function._ProgressCollector(progress_writers, progress_frequency // minibatch_size if progress_frequency is not None else None)
+        collector = Function._ProgressCollector(progress_writers, progress_frequency // minibatch_size[0] if progress_frequency is not None else None)
         # Trainer instance
         from ..train.trainer import Trainer
         if not progress_writers:
