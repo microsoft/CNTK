@@ -102,9 +102,11 @@ private:
         // even for non-spatial inputs so expand the tensor if needed.
         if (inOutT.GetRank() > 2)
             return inOutT;
+
         SmallVector<size_t> v(std::max(inOutT.GetRank(), (size_t)3), 1);
-        for (size_t i = 0; i < inOutT.GetRank(); i++)
-            v[i] = inOutT[i];
+        for (size_t i = 3 - inOutT.GetRank(), j = 0; i < 3; i++, j++)
+            v[i] = inOutT[j];
+
         return TensorShape(v);
     }
 
