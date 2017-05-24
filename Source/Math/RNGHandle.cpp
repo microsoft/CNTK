@@ -5,7 +5,6 @@
 // RNGHandle.cpp : full implementation of all matrix functions on the CPU side
 //
 
-#include "Constants.h"
 #include "stdafx.h"
 #include "RNGHandle.h"
 #include "CPURNGHandle.h"

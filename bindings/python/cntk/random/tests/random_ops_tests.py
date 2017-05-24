@@ -120,6 +120,22 @@ def test_two_times_n_vs_one_time_2n(arg0, arg1, device_id, precision):
         assert np.allclose(c, np.concatenate([a,b]))
 
 
+@pytest.mark.parametrize("arg0, arg1", DIST_PARAMS)
+def test_normal_pair(arg0, arg1, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    from cntk import random as cr
+
+    N = 100000
+    B = 10.0 / np.sqrt(N)
+    input_op = cr.normal((N,), dt, arg0, arg1, seed=98052)
+    a = input_op.eval(device=dev)
+    b = input_op.eval(device=dev)
+    value = a - b
+    assert np.abs(np.mean(value)) < B
+    assert np.abs(np.var(value) - 2*arg1*arg1) < np.sqrt(2)*arg1*B
+
 def test_placeholder(device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
