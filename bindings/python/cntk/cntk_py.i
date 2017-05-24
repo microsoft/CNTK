@@ -117,6 +117,7 @@
 %template() std::pair<size_t, size_t>;
 %template() std::pair<size_t, int>;
 %template() std::pair<float, float>;
+%template() std::pair<int, int>;
 %template() std::vector<std::pair<size_t, double>>;
 %template() std::vector<std::pair<size_t, size_t>>;
 %template() std::vector<std::pair<CNTK::Variable, CNTK::Variable>>;

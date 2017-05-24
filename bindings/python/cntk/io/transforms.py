@@ -5,7 +5,7 @@
 # ==============================================================================
 
 from .. import cntk_py
-from cntk.internal import sanitize_range
+from cntk.internal import sanitize_2d_number, sanitize_range
 
 def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect_ratio=1.0, jitter_type='none'):
     '''
@@ -25,7 +25,7 @@ def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect
         crop_size (`int`, default 0): crop size in pixels. Ignored if set to 0.
           When crop_size is non-zero, for example, crop_size=256, it means a cropping
           window of size 256x256 pixels will be taken. If one want to crop with
-          non-square shapes, specify crop_size=256:224 will crop 256x224 (width x height)
+          non-square shapes, specify crop_size=(256,224) will crop 256x224 (width x height)
           pixels. `When crop_size is specified, side_ratio, area_ratio and aspect_ratio
           will be ignored.`
         side_ratio (`float`, default 0.0): It specifies the ratio of final image
@@ -59,6 +59,7 @@ def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect
     Returns:
         A dictionary-like object describing the crop transform
     '''
+    crop_size = sanitize_2d_number(crop_size)
     side_ratio = sanitize_range(side_ratio)
     area_ratio = sanitize_range(area_ratio)
     aspect_ratio = sanitize_range(aspect_ratio)

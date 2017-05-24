@@ -341,7 +341,7 @@ def test_image_with_crop_range():
 
     transforms = [
         xforms.crop(crop_type='randomside', 
-                    side_ratio=(0.2, 0.5), area_ratio=(0.0, 0.75), aspect_ratio=(0.3, 0.8),
+                    crop_size=(512,424), side_ratio=(0.2, 0.5), area_ratio=(0.1, 0.75), aspect_ratio=(0.3, 0.8),
                     jitter_type='uniratio')
         ]
     defs = StreamDefs(f=StreamDef(field='image', transforms=transforms),
@@ -364,9 +364,10 @@ def test_image_with_crop_range():
     t0,  _ = f['transforms']
     assert t0['type'] == 'Crop'
     assert t0['cropType'] == 'randomside'
+    assert t0['cropSize'] == '512:424'
     assert t0['sideRatio'] == '0.2:0.5'
     assert t0['aspectRatio'] == '0.3:0.8'
-    assert t0['areaRatio'] == '0:0.75'
+    assert t0['areaRatio'] == '0.1:0.75'
     assert t0['jitterType'] == 'uniratio'
 
     config = to_dictionary(MinibatchSourceConfig([image, image]))
