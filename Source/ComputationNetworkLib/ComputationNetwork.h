@@ -532,10 +532,8 @@ public:
     // -----------------------------------------------------------------------
 
     // TODO: Why are all these static, but then take a network as the first argument? --> make them class members
-    template <class ElemType>
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
 
-    template <class ElemType>
     static void SetIRngUserSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);
     
     template <class ElemType>
@@ -775,6 +773,17 @@ public:
     std::list<ComputationNodeBasePtr> GetNodesWithType(const wstring typeName, const ComputationNodeBasePtr& rootNode = nullptr) const
     {
         std::function<bool(const ComputationNodeBasePtr&)> predicate = [typeName](const ComputationNodeBasePtr& node) { return node->OperationName() == typeName; };
+        return GetNodesWhere(predicate, rootNode);
+    }
+
+    template <typename T>
+    std::list<ComputationNodeBasePtr> GetNodesWithType(const ComputationNodeBasePtr& rootNode = nullptr) const
+    {
+        std::function<bool(const ComputationNodeBasePtr&)> predicate = [](const ComputationNodeBasePtr& node) 
+        { 
+            return (dynamic_cast<T*>(node.get()) != nullptr); 
+        };
+
         return GetNodesWhere(predicate, rootNode);
     }
 

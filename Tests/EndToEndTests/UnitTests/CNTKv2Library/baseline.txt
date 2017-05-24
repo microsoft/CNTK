@@ -343,7 +343,7 @@ Test module "V2LibraryTests" has passed with:
     Test case "BlockSuite/ChangingParameterValuesInGPU" has passed
 
   Test suite "LearnerSuite" has passed with:
-    10 test cases out of 10 passed
+    13 test cases out of 13 passed
 
     Test case "LearnerSuite/DefaultUnitGainGetterAndSetter" has passed
 
@@ -364,6 +364,10 @@ Test module "V2LibraryTests" has passed with:
     Test case "LearnerSuite/CreateAndUpdateFSAdaGradLearner" has passed
 
     Test case "LearnerSuite/CreateAndUpdateAdamLearner" has passed
+
+    Test case "LearnerSuite/CreateAndUpdateAdamaxLearner" has passed
+
+    Test case "LearnerSuite/CreateAndUpdateUniversalLearner" has passed
 
     Test case "LearnerSuite/TestResettingLearningRate" has passed
 
@@ -442,9 +446,9 @@ Test module "V2LibraryTests" has passed with:
 
     Test case "SerializationSuite/CheckpointingWithStatefulNodesAndExplicitSeedsOnGPU" has passed
 
-  Test suite "FeedForwardSuite" has passed with:
-    6 test cases out of 6 passed
-    8 assertions out of 8 passed
+  Test suite "FunctionSuite" has passed with:
+    19 test cases out of 19 passed
+    32 assertions out of 32 passed
 
     Test case "FeedForwardSuite/FFTimesAndPlusInCPU" has passed with:
       1 assertion out of 1 passed
@@ -498,6 +502,12 @@ Test module "V2LibraryTests" has passed with:
     Test case "FunctionSuite/FunctionOutputs" has passed
 
     Test case "FunctionSuite/TimesIndirectSparseGradType" has passed
+
+    Test case "FunctionSuite/TestSettingDropoutRate" has passed with:
+      16 assertions out of 16 passed
+
+    Test case "FunctionSuite/TestSettingRandomSeed" has passed with:
+      4 assertions out of 4 passed
 
   Test suite "NDArrayViewSuite" has passed with:
     4 test cases out of 4 passed

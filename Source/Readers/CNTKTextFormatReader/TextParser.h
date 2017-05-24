@@ -98,6 +98,7 @@ private:
     // into sequence data in a proper format.
     struct StreamInfo;
     std::vector<StreamInfo> m_streamInfos;
+    std::vector<StreamDescriptor> m_streamDescriptors;
 
     size_t m_maxAliasLength;
     std::map<std::string, size_t> m_aliasToIdMap;

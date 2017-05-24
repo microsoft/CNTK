@@ -97,6 +97,7 @@
     <None Include="cntk\ops\tests\assign_test.py" />
     <None Include="cntk\ops\tests\block_test.py" />
     <None Include="cntk\ops\tests\combine_test.py" />
+    <None Include="cntk\ops\tests\sequence_test.py" />
     <None Include="cntk\ops\tests\sparse_test.py" />
     <None Include="cntk\ops\tests\stop_gradient_test.py" />
     <None Include="cntk\ops\tests\userfunction_complex_test.py" />

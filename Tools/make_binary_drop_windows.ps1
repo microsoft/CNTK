@@ -66,6 +66,7 @@ Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items
 Remove-Item $baseDropPath\cntk\CommandEval.exe -Force -ErrorAction SilentlyContinue
 Remove-Item $baseDropPath\cntk\Microsoft.VisualStudio.QualityTools.UnitTestFramework.*
+Remove-Item $baseDropPath\cntk\java\Main.class
 
 # Make Include folder
 New-Item -Path $baseIncludePath -ItemType directory

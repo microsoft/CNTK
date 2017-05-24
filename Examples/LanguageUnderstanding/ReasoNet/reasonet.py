@@ -4,6 +4,7 @@ ReasoNet model in CNTK
 @author penhe@microsoft.com
 """
 import sys
+import cntk as C
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 import cntk.ops as ops
 from cntk.layers.blocks import _INFERRED, Parameter
@@ -126,9 +127,9 @@ def create_model(params):
   # Query and Doc/Context/Paragraph inputs to the model
   query_seq_axis = Axis('sourceAxis')
   context_seq_axis = Axis('contextAxis')
-  query_sequence = sequence.input(shape=(params.vocab_dim), is_sparse=True, sequence_axis=query_seq_axis, name='query')
-  context_sequence = sequence.input(shape=(params.vocab_dim), is_sparse=True, sequence_axis=context_seq_axis, name='context')
-  entity_ids_mask = sequence.input(shape=(1,), is_sparse=False, sequence_axis=context_seq_axis, name='entity_ids_mask')
+  query_sequence = sequence.input_variable(shape=(params.vocab_dim), is_sparse=True, sequence_axis=query_seq_axis, name='query')
+  context_sequence = sequence.input_variable(shape=(params.vocab_dim), is_sparse=True, sequence_axis=context_seq_axis, name='context')
+  entity_ids_mask = sequence.input_variable(shape=(1,), is_sparse=False, sequence_axis=context_seq_axis, name='entity_ids_mask')
   # embedding
   if params.embedding_init is None:
     embedding_init = create_random_matrix(params.vocab_dim, params.embedding_dim)
@@ -219,7 +220,7 @@ def predict(model, params):
   entities_all = sequence.gather(entity_condition, entity_condition, name='entities_all')
   # The generated dynamic axis has the same length as the input enity id sequence, 
   # so we asign it as the entity id's dynamic axis.
-  entity_ids = input(shape=(params.entity_dim), is_sparse=True, 
+  entity_ids = C.input_variable(shape=(params.entity_dim), is_sparse=True,
                               dynamic_axes=entities_all.dynamic_axes, name='entity_ids')
   wordvocab_dim = params.vocab_dim
   answers = sequence.scatter(sequence.gather(model.outputs[-1], entity_condition), entities_all, name='Final_Ans')
@@ -240,10 +241,10 @@ def loss(model, params):
   entities_all = sequence.gather(entity_condition, entity_condition, name='entities_all')
   # The generated dynamic axis has the same length as the input enity id sequence, 
   # so we asign it as the entity id's dynamic axis.
-  entity_ids = input(shape=(params.entity_dim), is_sparse=True, 
+  entity_ids = C.input_variable(shape=(params.entity_dim), is_sparse=True,
                               dynamic_axes=entities_all.dynamic_axes, name='entity_ids')
   wordvocab_dim = params.vocab_dim
-  labels_raw = input(shape=(1,), is_sparse=False, dynamic_axes=context.dynamic_axes, 
+  labels_raw = C.input_variable(shape=(1,), is_sparse=False, dynamic_axes=context.dynamic_axes,
                               name='labels')
   answers = sequence.scatter(sequence.gather(model.outputs[-1], entity_condition), entities_all, name='Final_Ans')
   labels = sequence.scatter(sequence.gather(labels_raw, entity_condition), entities_all, name='EntityLabels')
@@ -375,7 +376,7 @@ def train(model, m_params, learner, train_data, max_epochs=1, save_model_flag=Fa
         if save_model_flag:
           # save the model every epoch
           model_filename = os.path.join('model', "model_%s_%02d_%03d.dnn" % (model_name, epoch, check_point_id))
-          model.save_model(model_filename)
+          model.save(model_filename)
           logger.log("Saved model to '%s'" % model_filename)
         chk_samples = 0
         chk_loss = 0
@@ -389,6 +390,6 @@ def train(model, m_params, learner, train_data, max_epochs=1, save_model_flag=Fa
   if save_model_flag:
     # save the model every epoch
     model_filename = os.path.join('model', "model_%s_final.dnn" % (model_name))
-    model.save_model(model_filename)
+    model.save(model_filename)
     logger.log("Saved model to '%s'" % model_filename)
   return (epoch_loss/epoch_samples, epoch_acc/epoch_samples, eval_acc)

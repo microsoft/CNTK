@@ -14,6 +14,7 @@
 #include "SequencePacker.h"
 #include "CudaMemoryProvider.h"
 #include "HeapMemoryProvider.h"
+#include "MemoryBuffer.h"
 
 #pragma warning(push)
 // disable warning about possible mod 0 operation in uniform_int_distribution
@@ -101,7 +102,7 @@ public:
                 i,
                 m_sequenceLength,
                 (ChunkIdType) (i / m_numSequencesPerChunk),
-                KeyType(0, i)
+                KeyType(0, static_cast<uint32_t>(i))
             });
         }
 
@@ -157,7 +158,7 @@ public:
                 i,
                 m_sequenceLength,
                 chunkId,
-                { 0, i }
+                { 0, static_cast<uint32_t>(i) }
             });
         }
     }
@@ -1019,7 +1020,7 @@ BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
     fwrite("4\n", sizeof(char), 2, test);
     fclose(test);
 
-    CorpusDescriptor corpus(L"test.tmp", true);
+    CorpusDescriptor corpus(L"test.tmp", true, false);
     BOOST_CHECK_EQUAL(false, corpus.IsIncluded("0"));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded("1"));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded("2"));
@@ -1028,6 +1029,24 @@ BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
     BOOST_CHECK_EQUAL(false, corpus.IsIncluded("5"));
 
     remove("test.tmp");
+}
+
+BOOST_AUTO_TEST_CASE(LiteralCorpusDescriptorWithHash)
+{
+    CorpusDescriptor corpus(false, true);
+
+    // The constants are offline calculated hash values according to CorpusDescriptor::Hash.
+    BOOST_CHECK_EQUAL(corpus.KeyToId("100"), 193358996);
+    BOOST_CHECK_EQUAL(corpus.KeyToId("not"), 193419184);
+}
+
+BOOST_AUTO_TEST_CASE(NumericCorpusDescriptorWithHash)
+{
+    BOOST_REQUIRE_EXCEPTION(
+        CorpusDescriptor corpus(true, true),
+        runtime_error,
+        [](const runtime_error& e)
+        { return string("Hashing should not be used with numeric sequence keys.") == e.what(); });
 }
 
 BOOST_AUTO_TEST_CASE(CheckEpochBoundarySingleWorker)
@@ -1074,6 +1093,427 @@ BOOST_AUTO_TEST_CASE(CheckEpochBoundarySingleWorker)
 
     test(underTestBlock);
     test(underTestNo);
+}
+
+// Make sure we do not cut the minibatches at the end of the epoch such that they
+// contain only a single sequence. For example, with an input data consisting of 3-sample
+// sequences, minibatch size set to 90 and the epoch size to 100, the source should return
+// two minibatches 90 and 12 samples in each and not three minibatches (as it used to) 
+// with 90, 9 and 3 samples. In other words, the maximum number of minibatches in an epoch
+// should be <= ceil(epoch size / expected minibatch size)
+BOOST_AUTO_TEST_CASE(CheckNoDegenerateMinibatches)
+{
+    struct Parameters
+    {
+        size_t numSequences;
+        size_t sequenceLength;
+        size_t epochSize;
+        size_t minibatchSize;
+        size_t epochIndex;
+    };
+
+    vector<Parameters> params = { {50, 3, 100, 90, 0} };
+
+    std::mt19937 rng(77);
+    while (params.size() < 100)
+    {
+        Parameters p;
+        p.numSequences = rng() % 100 + 1;
+        p.sequenceLength = rng() % 100 + 1;
+        p.minibatchSize = (rng() % 10) * p.sequenceLength + 1;
+        p.epochSize = (rng() % 20) * p.sequenceLength + 1;
+        p.epochIndex = rng() % 10;
+        params.push_back(p);
+    }
+
+
+    for (const auto& p : params)
+    {
+        vector<float> data(p.numSequences);
+        iota(data.begin(), data.end(), 0.0f);
+
+        auto mockDeserializer = make_shared<MockDeserializer>(1, p.numSequences, data, uint32_t(p.sequenceLength));
+
+        auto test = [&p](SequenceEnumeratorPtr underTest)
+        {
+            size_t epochSize = p.epochSize;
+
+
+            EpochConfiguration config;
+            config.m_numberOfWorkers = 1;
+            config.m_workerRank = 0;
+            config.m_minibatchSizeInSamples = p.minibatchSize;
+            config.m_totalEpochSizeInSamples = epochSize;
+            config.m_epochIndex = p.epochIndex;
+            config.m_allowMinibatchesToCrossSweepBoundaries = true;
+            underTest->StartEpoch(config);
+
+            // if max expected minibatch size must be a multiple of sequence size 
+            auto maxMBSize = (p.minibatchSize / p.sequenceLength) * p.sequenceLength;
+            if (maxMBSize == 0)
+                maxMBSize = p.sequenceLength;
+
+            Sequences s;
+            size_t numberOfSamples = 0;
+            size_t numberOfMinibatches = 0;
+            do
+            {
+                s = underTest->GetNextSequences(p.minibatchSize, p.minibatchSize);
+                if (!s.m_data.empty())
+                    for (const auto& seq : s.m_data.front())
+                        numberOfSamples += seq->m_numberOfSamples;
+
+                numberOfMinibatches++;
+            } while (!s.m_endOfEpoch);
+
+
+            auto epochStart = p.epochIndex * epochSize;
+            auto epochEnd = epochStart + epochSize;
+            auto startingOffset = (size_t)ceil(epochStart * 1.0 / p.sequenceLength)* p.sequenceLength;
+
+            if (startingOffset >= epochEnd)
+            {
+                BOOST_TEST((s.m_data.empty() && numberOfMinibatches == 1 && numberOfSamples == 0));
+                return;
+            }
+
+            auto actualEpochSize = epochEnd - startingOffset;
+            // make sure that the last minibatch contains more than a single sequence:
+            auto lastMBSize = actualEpochSize % maxMBSize;
+
+            auto numSequencesInTheLastMB = s.m_data[0].size();
+
+            if (lastMBSize == 0)
+                // epoch size is a multiple of maxMBSize => it's a multiple of sequence length
+                BOOST_TEST(((maxMBSize / p.sequenceLength) == numSequencesInTheLastMB));
+            else
+            {
+                // last sequence overlaps the epoch boundary. 
+                BOOST_TEST((ceil(lastMBSize*1.0 / p.sequenceLength) == numSequencesInTheLastMB));
+            }
+
+            BOOST_TEST((numberOfSamples <= epochSize || (numberOfSamples - epochSize) < p.sequenceLength));
+            BOOST_TEST((numberOfMinibatches <= ceil(epochSize* 1.0 / maxMBSize)));
+        };
+
+        auto underTestBlock = make_shared<BlockRandomizer>(0, size_t(-1), mockDeserializer, true);
+        auto underTestNo = make_shared<NoRandomizer>(mockDeserializer);
+
+        test(underTestBlock);
+        test(underTestNo);
+    }
+}
+
+const std::string g_MemBufferTextData =
+    "0\t|a 1 1\t|b 1 1\n"    // 16 characters
+    "0\t|a 2 2\t|b 2 2\n"    // 16 
+    "0\t|a 3 3\t|b 3 3\n"    // 16
+    "0\t|a 4 4\n"            // 9
+    "0\t|a 5 5\n"            // 9
+    "1\t|b 6 6\t |a 6 6 6\n" // 19
+    "1\t|b 7 7\t |a 7 7 7\n" // 19
+    "1\t|b 8 8 8 8 8\n"      // 15
+    "1\t|b 9\n"              // 7
+    "1\t|b 10 10 10 10 10\n";// 20
+
+BOOST_AUTO_TEST_CASE(MemoryBufferWithoutCompleteLines)
+{
+    FILE* test = fopen("test.tmp", "w+b");
+    fwrite(g_MemBufferTextData.c_str(), 1, g_MemBufferTextData.size(), test);
+    fclose(test);
+
+    test = fopen("test.tmp", "r");
+    BOOST_CHECK_EQUAL(filesize(test), 146);
+
+    MemoryBuffer mb(25);
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(0, mb.GetFileOffset());
+
+    auto p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '0');
+    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(25, mb.GetFileOffset());
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(25, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '0');
+    BOOST_CHECK_EQUAL(32, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '0');
+    BOOST_CHECK_EQUAL(48, mb.GetFileOffset());
+    BOOST_CHECK_EQUAL(mb.Eof(), false);
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(50, mb.GetFileOffset());
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(50, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '0');
+    BOOST_CHECK_EQUAL(57, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '1');
+    BOOST_CHECK_EQUAL(66, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(75, mb.GetFileOffset());
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(75, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '1');
+    BOOST_CHECK_EQUAL(85, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(100, mb.GetFileOffset());
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(100, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '1');
+    BOOST_CHECK_EQUAL(104, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '1');
+    BOOST_CHECK_EQUAL(119, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(125, mb.GetFileOffset());
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(125, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '1');
+    BOOST_CHECK_EQUAL(126, mb.GetFileOffset());
+    BOOST_CHECK_EQUAL(mb.Eof(), false);
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == mb.End(), true);
+    BOOST_CHECK_EQUAL(mb.Eof(), false);
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(146, mb.GetFileOffset());
+    BOOST_CHECK_EQUAL(mb.Eof(), true);
+    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
+
+    remove("test.tmp");
+}
+
+BOOST_AUTO_TEST_CASE(MemoryBufferWithCompleteLines)
+{
+    FILE* test = fopen("test.tmp", "w+b");
+    fwrite(g_MemBufferTextData.c_str(), 1, g_MemBufferTextData.size(), test);
+    fclose(test);
+
+    test = fopen("test.tmp", "r");
+    BOOST_CHECK_EQUAL(filesize(test), 146);
+
+    MemoryBuffer mb(25, true);
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(0, mb.GetFileOffset());
+
+    auto p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '0');
+    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '0');
+    BOOST_CHECK_EQUAL(32, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(32, mb.GetFileOffset());
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(32, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '0');
+    BOOST_CHECK_EQUAL(48, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == mb.End(), true);
+    BOOST_CHECK_EQUAL(57, mb.GetFileOffset());
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(57, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '1');
+    BOOST_CHECK_EQUAL(66, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(66, mb.GetFileOffset());
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(66, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '1');
+    BOOST_CHECK_EQUAL(85, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(85, mb.GetFileOffset());
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(85, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '1');
+    BOOST_CHECK_EQUAL(104, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(104, mb.GetFileOffset());
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(104, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '1');
+    BOOST_CHECK_EQUAL(119, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '1');
+    BOOST_CHECK_EQUAL(126, mb.GetFileOffset());
+    BOOST_CHECK_EQUAL(mb.Eof(), false);
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(126, mb.GetFileOffset());
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(126, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == mb.End(), true);
+    BOOST_CHECK_EQUAL(mb.Eof(), false);
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(146, mb.GetFileOffset());
+    BOOST_CHECK_EQUAL(mb.Eof(), true);
+    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
+
+    remove("test.tmp");
+}
+
+const std::string g_MemBufferTextData1 =
+    "0\t|a 1 1\t|b 1 1\n"  // 16 characters
+    "1\t|b 10 10 10 10 10";// 19
+
+BOOST_AUTO_TEST_CASE(MemoryBufferWithoutLastCR)
+{
+    FILE* test = fopen("test.tmp", "w+b");
+    fwrite(g_MemBufferTextData1.c_str(), 1, g_MemBufferTextData1.size(), test);
+    fclose(test);
+
+    test = fopen("test.tmp", "r");
+    BOOST_CHECK_EQUAL(filesize(test), 35);
+
+    MemoryBuffer mb(25);
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(0, mb.GetFileOffset());
+
+    auto p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '1');
+    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(25, mb.GetFileOffset());
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(25, mb.GetFileOffset());
+    BOOST_CHECK_EQUAL(mb.Eof(), false);
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(35, mb.GetFileOffset());
+    BOOST_CHECK_EQUAL(mb.Eof(), false);
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(mb.Eof(), true);
+    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
+
+    remove("test.tmp");
+}
+
+BOOST_AUTO_TEST_CASE(MemoryBufferFullLineWithoutLastCR)
+{
+    FILE* test = fopen("test.tmp", "w+b");
+    fwrite(g_MemBufferTextData1.c_str(), 1, g_MemBufferTextData1.size(), test);
+    fclose(test);
+
+    test = fopen("test.tmp", "r");
+    BOOST_CHECK_EQUAL(filesize(test), 35);
+
+    MemoryBuffer mb(25, true);
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(0, mb.GetFileOffset());
+
+    auto p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(*p, '1');
+    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
+    BOOST_CHECK_EQUAL(mb.Eof(), false);
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
+    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
+    BOOST_CHECK_EQUAL(mb.Eof(), false);
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
+    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
+    BOOST_CHECK_EQUAL(mb.Eof(), false);
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(mb.End() != mb.Start(), true);
+    BOOST_CHECK_EQUAL(16, mb.GetFileOffset());
+    BOOST_CHECK_EQUAL(mb.Eof(), false);
+
+    p = mb.MoveToNextLine();
+    BOOST_CHECK_EQUAL(p == nullptr, true);
+    BOOST_CHECK_EQUAL(35, mb.GetFileOffset());
+    BOOST_CHECK_EQUAL(mb.Eof(), false);
+
+    mb.RefillFrom(test);
+    BOOST_CHECK_EQUAL(mb.End() == mb.Start(), true);
+    BOOST_CHECK_EQUAL(mb.Eof(), true);
+
+    remove("test.tmp");
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -1633,7 +2073,6 @@ BOOST_AUTO_TEST_CASE(SequencePackerSmallChunksWithSequences)
         CheckPackerOnDataSet(packer, noRandomizer, deserializer, 3, sweepNumberOfSamples * 2 / 3, 2, sweepNumberOfSamples, 31, false);
     }
 }
-
 
 BOOST_AUTO_TEST_SUITE_END()
 

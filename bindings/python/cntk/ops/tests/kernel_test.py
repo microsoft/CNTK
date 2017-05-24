@@ -56,7 +56,7 @@ def test_op_convolution_without_padding(convolution_map, convolution_input, use_
     if use_input_shape_with_inferred_dimension:
         conv_input_shape = tuple(-1 for x in conv_input_shape)
 
-    a = C.input(shape=conv_input_shape,
+    a = C.input_variable(shape=conv_input_shape,
                 dtype=sanitize_dtype_cntk(precision),
                 needs_gradient=True,
                 name='a')
@@ -96,7 +96,7 @@ def test_asym_convolution(input_size, conv_size, result, device_id, precision):
     x = np.arange(total_size, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = C.input(shape=input_operand.shape[1:],
+    a = C.input_variable(shape=input_operand.shape[1:],
                 dtype=sanitize_dtype_cntk(precision),
                 needs_gradient=False,
                 name='a')
@@ -155,7 +155,7 @@ def test_op_pooling_geometry(input_size, pooling_window, strides, padding, resul
     if use_input_shape_with_inferred_dimension:
         pool_input_shape = tuple(-1 for x in pool_input_shape)
 
-    a = C.input(shape=pool_input_shape,
+    a = C.input_variable(shape=pool_input_shape,
                 dtype=sanitize_dtype_cntk(precision),
                 needs_gradient=False,
                 name='a')
@@ -192,7 +192,7 @@ def test_op_avg_pooling(input_size, pooling_window, strides, result, device_id, 
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = C.sequence.input(shape=input_operand.shape[2:],
+    a = C.sequence.input_variable(shape=input_operand.shape[2:],
                          dtype=sanitize_dtype_cntk(precision),
                          needs_gradient=True,
                          name='a')
@@ -254,7 +254,7 @@ def test_op_max_pooling(input_size, pooling_window, strides, autopad, result, de
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = C.sequence.input(shape=input_operand.shape[2:],
+    a = C.sequence.input_variable(shape=input_operand.shape[2:],
                          dtype=sanitize_dtype_cntk(precision),
                          needs_gradient=True,
                          name='a')
@@ -291,7 +291,7 @@ def test_op_max_unpooling(input_size, pooling_window, strides, autopad, result, 
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = C.sequence.input(shape=input_operand.shape[2:],
+    a = C.sequence.input_variable(shape=input_operand.shape[2:],
                          dtype=sanitize_dtype_cntk(precision),
                          needs_gradient=True,
                          name='a')
@@ -347,7 +347,7 @@ def test_op_pooling_ceil(input_size, pooling_window, strides, result, device_id,
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = C.input(shape=input_operand.shape[1:], dtype=sanitize_dtype_cntk(precision), needs_gradient=True, name='a')
+    a = C.input_variable(shape=input_operand.shape[1:], dtype=sanitize_dtype_cntk(precision), needs_gradient=True, name='a')
 
     result_array = np.asarray(result, dtype=dt)
     max_elements = result_array.reshape(result_array.size).tolist()
@@ -386,7 +386,7 @@ def test_op_average_pooling_include_pad(input_size, pooling_window, strides, res
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = C.input(shape=input_operand.shape[1:], dtype=sanitize_dtype_cntk(precision), needs_gradient=True, name='a')
+    a = C.input_variable(shape=input_operand.shape[1:], dtype=sanitize_dtype_cntk(precision), needs_gradient=True, name='a')
 
     backward = (1 / np.prod(pooling_window)) * np.ones_like(input_operand)
 
@@ -438,12 +438,12 @@ def test_op_roipooling(input_map, input_rois, expected_fwd, expected_bkwd, devic
     exp_bkwd_value.shape = (1,) + exp_bkwd_value.shape
 
     # I == define cntk input variables
-    a = C.input(shape=conv_input.shape,
+    a = C.input_variable(shape=conv_input.shape,
                 dtype=sanitize_dtype_cntk(precision),
                 needs_gradient=True,
                 name='a')
 
-    b = C.input(shape=roi_input.shape,
+    b = C.input_variable(shape=roi_input.shape,
                 dtype=sanitize_dtype_cntk(precision),
                 needs_gradient=False,
                 name='b')
@@ -482,7 +482,7 @@ def test_convolution_transpose(input_size, conv_size, result, device_id, precisi
     x = np.arange(total_size, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = C.input(shape=input_operand.shape[1:],
+    a = C.input_variable(shape=input_operand.shape[1:],
                 dtype=sanitize_dtype_cntk(precision),
                 needs_gradient=False,
                 name='a')
@@ -522,7 +522,7 @@ def test_convolution_transpose_with_output(input_size, conv_size, result, device
     x = np.arange(total_size, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = C.input(shape=input_operand.shape[1:],
+    a = C.input_variable(shape=input_operand.shape[1:],
                 dtype=sanitize_dtype_cntk(precision),
                 needs_gradient=False,
                 name='a')
@@ -543,13 +543,13 @@ def test_convolution_transpose_with_output(input_size, conv_size, result, device
 
 
 def test_conv_incorrect_shapes():
-    input = C.input(())    
+    input = C.input_variable(())    
     with pytest.raises(ValueError):
         h = C.layers.Convolution(filter_shape=(5,5), num_filters=8, strides=(1,1), pad=True)(input)
     with pytest.raises(ValueError):
         h = C.layers.MaxPooling(filter_shape=(2,2), strides=(2,2))(input)
 
-    input = C.input(28)    
+    input = C.input_variable(28)    
     with pytest.raises(ValueError):
         h = C.layers.Convolution(filter_shape=(5,5), num_filters=8, strides=(1,1), pad=True)(input)
     with pytest.raises(ValueError):

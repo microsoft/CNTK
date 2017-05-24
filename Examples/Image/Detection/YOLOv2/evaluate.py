@@ -21,11 +21,13 @@ class ClassMap():
     def getClass(self,i):
         return self.cls_map[i]
 
-
-CONF_THRESHOLD = 0.5
 LIMIT_TO_FIRST = None
 NMS_IOU_THRESHOLD = 0.7
 cls_map = ClassMap(r"..\..\DataSets\Pascal\class_map.txt")
+DATA_SET = "Grocery"
+CONF_THRESHOLD = 0.05
+cls_map = ClassMap(r"..\..\DataSets\Pascal\class_map.txt") if DATA_SET == "Pascal_VOC_2007"\
+    else ClassMap(r"..\..\DataSets\Grocery\Class_map.txt")
 
 def draw_bb_on_image(image, bb_list):
     image_width = len(image[1])
@@ -88,12 +90,7 @@ def do_nms(predictions):
         to_run = predictions[np.where(predictions[:,4]>CONF_THRESHOLD)]
 
         indicies = py_cpu_nms(xywh_to_point(to_run), NMS_IOU_THRESHOLD)
-        values = []
-        for i in range(len(indicies)):
-            pred = predictions[indicies[i]]
-            values.append(pred)
-
-        return np.asarray(values, np.float32)
+        return to_run[indicies]
 
     return predictions
 
@@ -121,27 +118,61 @@ if __name__ == "__main__":
     img_width = data_input.shape[2]
     img_height= data_input.shape[1]
 
-    data_path= r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\JPEGImages"
-    img_list = [18,118,1118,27,2118,4118,1,2,3,4,5,6,7,8,9,10]
-    # img_list = open(r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\ImageSets\Main\test.txt").read().split()
-    save_path = os.path.join(".", "outputdir", "results")
-    if not os.path.exists(save_path):
-        os.mkdir(save_path)
+    if DATA_SET == "Pascal_VOC_2007":
+        data_path= r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\JPEGImages"
+        img_list = [18,118,1118,27,2118,4118,1,2,3,4,5,6,7,8,9,10]
+        # img_list = open(r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\ImageSets\Main\test.txt").read().split()
+        save_path = os.path.join(".", "outputdir", "results", "pvoc2007")
+        if not os.path.exists(save_path):
+            os.mkdir(save_path)
 
-    for i in range(len(img_list)):
-        img_name =  "{:06}.jpg".format(img_list[i])
-        img = load_image(os.path.join(data_path, img_name))
+        for i in range(len(img_list)):
+            img_name =  "{:06}.jpg".format(img_list[i])
+            img = load_image(os.path.join(data_path, img_name))
 
-        preds = predictions_for_image(img, model, img_width, img_height)
-        preds_nms = do_nms(preds)
-        import ipdb;ipdb.set_trace()
-        color_image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            preds = predictions_for_image(img, model, img_width, img_height)
+            preds_nms = do_nms(preds)
+            #import ipdb;ipdb.set_trace()
+            color_image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-        draw_bb_on_image(color_image, preds_nms)
+            draw_bb_on_image(color_image, preds_nms)
 
-        if i<0:
-            plot_image(color_image)
+            if i<0:
+                plot_image(color_image)
 
-        out_img = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
+            out_img = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
 
-        save_image(out_img, save_path, "bb_"+img_name)
+            save_image(out_img, save_path, "bb_"+img_name)
+
+    elif DATA_SET == "Grocery":
+        data_path = r"..\..\DataSets\Grocery"
+        img_list = ["positive\WIN_20160803_11_29_07_Pro",
+                    "positive\WIN_20160803_11_30_07_Pro" ,
+                    "testImages\WIN_20160803_11_28_42_Pro",
+                    "testImages\WIN_20160803_11_42_36_Pro",
+                    "testImages\WIN_20160803_11_46_03_Pro",
+                    "testImages\WIN_20160803_11_48_26_Pro",
+                    "testImages\WIN_20160803_12_37_07_Pro"]
+        # img_list = open(r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\ImageSets\Main\test.txt").read().split()
+        save_path = os.path.join(".", "outputdir", "results", "grocery")
+        if not os.path.exists(save_path):
+            os.mkdir(save_path)
+
+        bla = 0
+        for i in range(len(img_list)):
+            img_name = img_list[i] + ".jpg"
+            img = load_image(os.path.join(data_path, img_name))
+
+            preds = predictions_for_image(img, model, img_width, img_height)
+            preds_nms = do_nms(preds)
+            # import ipdb;ipdb.set_trace()
+            color_image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+            draw_bb_on_image(color_image, preds_nms)
+
+            if i < 0:
+                plot_image(color_image)
+
+            out_img = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
+            bla+=1
+            save_image(out_img, save_path, "bb_" + str(bla)+".jpg")

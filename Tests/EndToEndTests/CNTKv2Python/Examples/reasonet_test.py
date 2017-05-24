@@ -27,7 +27,7 @@ def test_reasonet(device_id, is_1bit_sgd):
     pytest.skip('test doesn\'t support 1bit sgd')
 
   import ReasoNet.reasonet as rsn
-  device.set_default_device(cntk_device(device_id))
+  device.try_set_default_device(cntk_device(device_id))
   data_path = os.path.join(module_path, "Data/fast_test.txt")
   eval_path = os.path.join(module_path, "Data/fast_test.txt")
   vocab_dim = 101100
