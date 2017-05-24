@@ -126,7 +126,7 @@ def sanitize_2d_number(x):
     Convert ``x`` to a tuple.
 
     Args:
-        x: a scalar number or a tuple of length 2 contains the 2D values.
+        x: a scalar number or a tuple of length 2 that contains the 2D values.
 
     Returns:
         A tuple of length two.
@@ -145,7 +145,7 @@ def sanitize_range(x):
     second element.
 
     Args:
-        x: a scalar number or a tuple of length 2 contains the range values.
+        x: a scalar number or a tuple of length 2 that contains the range values.
 
     Returns:
         A tuple of length two where the first element is less than or equal to the 
