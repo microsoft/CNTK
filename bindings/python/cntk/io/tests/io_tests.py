@@ -527,7 +527,7 @@ def test_random_seed(tmpdir):
 
     assert not (data[0] == data[1]).all()
     assert (data[0] == data[2]).all()
-    # after the first sweep (= 4 samples), the first reader is seeded 
+    # after the first sweep (= 4 samples), the first reader is seeded
     # with 1, and should produce results identical to the last reader.
     assert (data[0][4:] == data[3][:-4]).all()
 
@@ -668,12 +668,12 @@ def test_base64_image_deserializer(tmpdir):
             f.write(line)
 
     transforms = [xforms.scale(width=7, height=5, channels=3)]
-    b64_deserializer = Base64ImageDeserializer(image_data, 
+    b64_deserializer = Base64ImageDeserializer(image_data,
         StreamDefs(
             images=StreamDef(field='image', transforms=transforms),
             labels=StreamDef(field='label', shape=10)))
-    
-    ctf_deserializer = CTFDeserializer(ctf_data, 
+
+    ctf_deserializer = CTFDeserializer(ctf_data,
         StreamDefs(index=StreamDef(field='index', shape=1)))
 
     mb_source = MinibatchSource([ctf_deserializer, b64_deserializer])
@@ -681,7 +681,7 @@ def test_base64_image_deserializer(tmpdir):
 
     for j in range(100):
         mb = mb_source.next_minibatch(10)
-    
+
         index_stream = mb_source.streams['index']
         index = mb[index_stream].asarray().flatten()
         image_stream = mb_source.streams['images']
@@ -792,11 +792,19 @@ class MyDataSource(UserMinibatchSource):
 
         return result
 
+
+class MyDataSourceWithCheckpoint(MyDataSource):
+    def __init__(self, f_dim, l_dim):
+        super(MyDataSourceWithCheckpoint, self).__init__(f_dim, l_dim)
+        self._restore_from_checkpoint_calls = 0
+
     def get_checkpoint_state(self):
         return {'test': 12}
 
     def restore_from_checkpoint(self, state):
+        self._restore_from_checkpoint_calls += 1
         assert state == {'test': 12}
+
 
 def test_usermbsource(tmpdir):
     tmpfile = _write_data(tmpdir, MBDATA_SPARSE)
@@ -861,13 +869,19 @@ def test_usermbsource(tmpdir):
     assert u_features.num_sequences == n_features.num_sequences
 
 
-def test_usermbsource_training(tmpdir):
+@pytest.mark.parametrize("with_checkpoint_impl", [True, False])
+def test_usermbsource_training(tmpdir, with_checkpoint_impl):
     input_dim = 1000
     num_output_classes = 5
 
     mbs = MyDataSource(input_dim, num_output_classes)
     # Using this for testing the UserMinibatchSource checkpointing
-    mbs_cv = MyDataSource(input_dim, num_output_classes)
+    if with_checkpoint_impl:
+        MBS_CV_CLASS = MyDataSourceWithCheckpoint
+    else:
+        MBS_CV_CLASS = MyDataSource
+
+    mbs_cv = MBS_CV_CLASS(input_dim, num_output_classes)
 
     from cntk import sequence, parameter, plus, cross_entropy_with_softmax, \
             classification_error, learning_rate_schedule, sgd, Trainer, \
@@ -875,7 +889,7 @@ def test_usermbsource_training(tmpdir):
 
     feature = sequence.input_variable(shape=(input_dim,))
     label = C.input_variable(shape=(num_output_classes,))
-    p = parameter(shape=(input_dim,num_output_classes), init=10)
+    p = parameter(shape=(input_dim, num_output_classes), init=10)
     z = times(sequence.reduce_sum(feature), p, name='z')
     ce = cross_entropy_with_softmax(z, label)
     errs = classification_error(z, label)
@@ -899,6 +913,9 @@ def test_usermbsource_training(tmpdir):
     session.train()
 
     assert trainer.total_number_of_samples_seen == 20
+    if with_checkpoint_impl:
+        assert mbs_cv._restore_from_checkpoint_calls == 1
+
 
 def test_minibatch_defined_by_labels(tmpdir):
 
@@ -908,18 +925,18 @@ def test_minibatch_defined_by_labels(tmpdir):
     def assert_data(mb_source):
         features_si = mb_source.stream_info('features')
         labels_si = mb_source.stream_info('labels')
-     
+
         mb = mb_source.next_minibatch(2)
-     
+
         features = mb[features_si]
-     
+
         # 2 samples, max seq len 4, 1000 dim
         assert features.shape == (2, 4, input_dim)
         assert features.end_of_sweep
         assert features.num_sequences == 2
         assert features.num_samples == 7
         assert features.is_sparse
-     
+
         labels = mb[labels_si]
         # 2 samples, max seq len 1, 5 dim
         assert labels.shape == (2, 1, num_output_classes)
@@ -927,18 +944,18 @@ def test_minibatch_defined_by_labels(tmpdir):
         assert labels.num_sequences == 2
         assert labels.num_samples == 2
         assert not labels.is_sparse
-     
+
         label_data = labels.asarray()
         assert np.allclose(label_data,
                            np.asarray([
                                [[1.,  0.,  0.,  0.,  0.]],
                                [[0.,  1.,  0.,  0.,  0.]]
                            ]))
-     
+
         mb = mb_source.next_minibatch(3)
         features = mb[features_si]
         labels = mb[labels_si]
-     
+
         assert features.num_samples == 10
         assert labels.num_samples == 3
 
@@ -959,4 +976,3 @@ def test_minibatch_defined_by_labels(tmpdir):
         ))], randomize=False)
 
     assert_data(combined_mb_source)
-
