@@ -100,23 +100,17 @@ def get_default_override(function_or_class, **kwargs):
 _GlobalOptions = {}
 
 
-# set a global flag with the input initial value
-def set_global_flag(**kwargs):
+# set a global option with the input initial value
+def set_global_option(key, value):
     global  _GlobalOptions
-    if len(kwargs) != 1:
-        raise TypeError("set_global_flag takes 1 keyword argument but %s were given" % len(kwargs))
-    key, value = next(iter(kwargs.items()))
     # overwrite previous setting
     _GlobalOptions[key] = value
 
 
-# get the global flag value, is not set yet, return the value user set in input
-def get_global_flag(**kwargs):
-    if len(kwargs) != 1:
-        raise TypeError("set_global_flag takes 1 keyword argument but %s were given" % len(kwargs))
-    key, value = next(iter(kwargs.items()))
+# get the global option value, is not set yet, return the value user set in input
+def get_global_option(key, default_value):
     if key in _GlobalOptions:
         return _GlobalOptions[key]
     else:
         # return the default value user passed in
-        return value
+        return default_value
