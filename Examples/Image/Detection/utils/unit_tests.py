@@ -6,7 +6,8 @@ sys.path.append(os.path.join(abs_path, ".."))
 import pytest
 import numpy as np
 import cntk
-from cntk import input as input_variable, user_function
+from cntk import user_function
+from cntk.ops import input_variable
 from rpn.proposal_layer import ProposalLayer as CntkProposalLayer
 from rpn.proposal_target_layer import ProposalTargetLayer as CntkProposalTargetLayer
 from rpn.anchor_target_layer import AnchorTargetLayer as CntkAnchorTargetLayer
@@ -27,7 +28,6 @@ def test_proposal_layer():
     # Create CNTK layer and call forward
     cls_prob_var = input_variable(cls_prob_shape_cntk)
     rpn_bbox_var = input_variable(rpn_bbox_shape)
-    #im_info_var = input_variable((3))
 
     cntk_layer = user_function(CntkProposalLayer(cls_prob_var, rpn_bbox_var, cntk.constant(im_info, (3,))))
     state, cntk_output = cntk_layer.forward({cls_prob_var: [cls_prob], rpn_bbox_var: [rpn_bbox_pred]})
