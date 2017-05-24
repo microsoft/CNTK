@@ -7,7 +7,6 @@
 from __future__ import print_function
 import os, sys
 import numpy as np
-import shutil
 from cntk import DeviceDescriptor
 
 from cntk import placeholder
@@ -19,7 +18,6 @@ from cntk.cntk_py import reset_random_seed
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "1stSteps"))
-sys.path.append("../1stSteps")
 
 def test_1st_steps_functional():
     reset_random_seed(0)
@@ -45,6 +43,6 @@ def test_1st_steps_graph():
     assert np.allclose(metric, 0.0625, atol=1e-5)
 
 if __name__=='__main__':
-    # run them directly so that this can be run without pyteset
+    # run them directly so that this can be run without pytest
     test_1st_steps_functional()
     test_1st_steps_graph()
