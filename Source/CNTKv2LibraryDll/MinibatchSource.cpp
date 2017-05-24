@@ -35,6 +35,13 @@ namespace CNTK
         return GetNextMinibatch(minibatchSizeInSequences, minibatchSizeInSamples, 1, 0, device);
     }
 
+    std::wstring pair_to_colon_formatted(const pair<float, float>& pair)
+    {
+        std::wostringstream str;
+        str << pair.first << L":" << pair.second;
+        return str.str();
+    }
+
     MinibatchSourceConfig::MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, bool randomize/* = true*/) 
         : deserializers(deserializers)
     {
@@ -290,16 +297,17 @@ namespace CNTK
     }
 
     /* static */ ImageTransform ReaderCrop(const wchar_t* cropType,
-            int cropSize, float sideRatio, float areaRatio,
-            float aspectRatio, const wchar_t* jitterType)
+            int cropSize, std::pair<float, float> sideRatio, std::pair<float, float> areaRatio,
+            std::pair<float, float> aspectRatio, const wchar_t* jitterType)
     {
         ImageTransform crop;
+
         crop.Add(L"type", L"Crop",
             L"cropType", cropType,
             L"cropSize", cropSize,
-            L"sideRatio", sideRatio,
-            L"areaRatio", areaRatio,
-            L"aspectRatio", aspectRatio,
+            L"sideRatio", pair_to_colon_formatted(sideRatio),
+            L"areaRatio", pair_to_colon_formatted(areaRatio),
+            L"aspectRatio", pair_to_colon_formatted(aspectRatio),
             L"jitterType", jitterType);
         return crop;
     }

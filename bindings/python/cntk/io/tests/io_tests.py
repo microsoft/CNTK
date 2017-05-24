@@ -305,8 +305,9 @@ def test_image():
     assert t1['type'] == 'Scale'
     assert t2['type'] == 'Mean'
     assert t0['cropType'] == 'randomside'
-    assert t0['sideRatio'] == 0.5
-    assert t0['aspectRatio'] == 1.0
+    assert t0['sideRatio'] == '0.5:0.5'
+    assert t0['aspectRatio'] == '1:1'
+    assert t0['areaRatio'] == '0:0'
     assert t0['jitterType'] == 'uniratio'
     assert t1['width'] == image_width
     assert t1['height'] == image_height
@@ -327,6 +328,52 @@ def test_image():
     assert set(sis.keys()) == { feature_name, label_name }
     '''
 
+def test_image_with_crop_range():
+    map_file = "input.txt"
+
+    feature_name = "f"
+    image_width = 100
+    image_height = 200
+    num_channels = 3
+
+    label_name = "l"
+    num_classes = 7
+
+    transforms = [
+        xforms.crop(crop_type='randomside', 
+                    side_ratio=(0.2, 0.5), area_ratio=(0.0, 0.75), aspect_ratio=(0.3, 0.8),
+                    jitter_type='uniratio')
+        ]
+    defs = StreamDefs(f=StreamDef(field='image', transforms=transforms),
+                      l=StreamDef(field='label', shape=num_classes))
+    image = ImageDeserializer(map_file, defs)
+
+    config = to_dictionary(MinibatchSourceConfig([image], randomize=False))
+
+    assert len(config['deserializers']) == 1
+    d = config['deserializers'][0]
+    assert d['type'] == 'ImageDeserializer'
+    assert d['file'] == map_file
+    assert set(d['input'].keys()) == {label_name, feature_name}
+
+    l = d['input'][label_name]
+    assert l['labelDim'] == num_classes
+
+    f = d['input'][feature_name]
+    assert set(f.keys()) == {'transforms'}
+    t0,  _ = f['transforms']
+    assert t0['type'] == 'Crop'
+    assert t0['cropType'] == 'randomside'
+    assert t0['sideRatio'] == '0.2:0.5'
+    assert t0['aspectRatio'] == '0.3:0.8'
+    assert t0['areaRatio'] == '0:0.75'
+    assert t0['jitterType'] == 'uniratio'
+
+    config = to_dictionary(MinibatchSourceConfig([image, image]))
+    assert len(config['deserializers']) == 2
+
+    config = to_dictionary(MinibatchSourceConfig([image, image, image]))
+    assert len(config['deserializers']) == 3
 
 def test_full_sweep_minibatch(tmpdir):
     tmpfile = _write_data(tmpdir, MBDATA_DENSE_1)

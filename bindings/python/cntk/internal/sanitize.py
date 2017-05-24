@@ -121,6 +121,27 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
 
     return constant(value=arg)
 
+def sanitize_range(x):
+    '''
+    Convert ``x`` to a tuple such as the first element is less than or equal to the 
+    second element.
+
+    Args:
+        x: a scalar number or a tuple of length 2 contains the range values.
+
+    Returns:
+        A tuple of length two where the first element is less than or equal to the 
+        second element.
+    '''
+    if isinstance(x, numbers.Number):
+        return (x,x)
+    elif (isinstance(x, tuple) and (len(x) == 2) and 
+          isinstance(x[0], numbers.Number) and isinstance(x[1], numbers.Number) and 
+          (x[0] <= x[1])):
+        return x
+
+    raise ValueError('Input argument must be a number or a tuple of 2 numbers such as the first number is smaller than or equal to the second number.')
+
 @typemap
 def sanitize_batch(var, batch, seq_starts=None, device=None):
     '''
