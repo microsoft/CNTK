@@ -10,6 +10,7 @@
 #include "BlockFunction.h"
 #include "Utils.h"
 #include "UserFunctionFactory.h"
+#include "TrainingNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -998,6 +999,12 @@ namespace CNTK
         }
     }
 
+    FunctionPtr NullaryOp(PrimitiveOpType op, Dictionary&& opConfig, const std::wstring& name)
+    {
+        std::vector<Variable> operands{};
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
+    }
+
     FunctionPtr UnaryOp(PrimitiveOpType op, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
     {
         std::vector<Variable> operands = { operand };
@@ -1175,6 +1182,89 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
 
         return UnaryOp(PrimitiveOpType::Dropout, operand, std::move(additionalProperties), name);
+    } 
+
+    Dictionary CreateRandomVariableAttributes(const wstring& rvtype, unsigned long seed) 
+    {
+        auto additionalProperties = Dictionary();
+
+        if (seed == SentinelValueForAutoSelectRandomSeed)
+            seed = Internal::GenerateRandomSeed(true);
+        additionalProperties.Add(
+            PrimitiveFunction::AttributeNameRandomVariableType, rvtype,
+            PrimitiveFunction::AttributeNameRngSeed, size_t(seed),
+            PrimitiveFunction::AttributeNameRngOffset, size_t(0));
+        return additionalProperties;
+    }
+
+    Dictionary CreateRandomVariableAttributes(const wstring& rvtype, unsigned long seed, const NDShape& shape, DataType dataType)
+    {
+        auto additionalProperties = CreateRandomVariableAttributes(rvtype, seed);
+        additionalProperties.Add(
+            PrimitiveFunction::AttributeNameNewShape, shape,
+            PrimitiveFunction::AttributeNameNewDataType, static_cast<int>(dataType));
+        return additionalProperties;
+    }
+
+    inline void addArgsToDictionary(Dictionary& dictionary, double arg0, double arg1)
+    {
+        dictionary.Add(PrimitiveFunction::AttributeNameRandomVariableArg0, arg0, PrimitiveFunction::AttributeNameRandomVariableArg1, arg1);
+    }
+
+    FunctionPtr UniformRandomVariable(const NDShape& shape, DataType dataType, double low, double high, unsigned long seed, const std::wstring& name)
+    {
+        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeUniform, seed, shape, dataType);
+        addArgsToDictionary(additionalProperties, low, high);
+        return NullaryOp(PrimitiveOpType::RandomVariable, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr UniformRandomVariable(const Variable& operand, double low, double high, unsigned long seed, const std::wstring& name)
+    {
+        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeUniform, seed);
+        addArgsToDictionary(additionalProperties, low, high);
+        return UnaryOp(PrimitiveOpType::RandomVariable, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr NormalRandomVariable(const NDShape& shape, DataType dataType, double mean, double scale, unsigned long seed, const std::wstring& name)
+    {
+        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeNormal, seed, shape, dataType);
+        addArgsToDictionary(additionalProperties, mean, scale);
+        return NullaryOp(PrimitiveOpType::RandomVariable, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr NormalRandomVariable(const Variable& operand, double mean, double scale, unsigned long seed, const std::wstring& name)
+    {
+        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeNormal, seed);
+        addArgsToDictionary(additionalProperties, mean, scale);
+        return UnaryOp(PrimitiveOpType::RandomVariable, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr GumbelRandomVariable(const NDShape& shape, DataType dataType, double loc, double scale, unsigned long seed, const std::wstring& name)
+    {
+        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeGumbel, seed, shape, dataType);
+        addArgsToDictionary(additionalProperties, loc, scale);
+        return NullaryOp(PrimitiveOpType::RandomVariable, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr GumbelRandomVariable(const Variable& operand, double loc, double scale, unsigned long seed, const std::wstring& name)
+    {
+        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeGumbel, seed);
+        addArgsToDictionary(additionalProperties, loc, scale);
+        return UnaryOp(PrimitiveOpType::RandomVariable, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr BernoulliRandomVariable(const NDShape& shape, DataType dataType, double mean, unsigned long seed, const std::wstring& name)
+    {
+        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeBernoulli, seed, shape, dataType);
+        additionalProperties.Add(PrimitiveFunction::AttributeNameRandomVariableArg0, mean);
+        return NullaryOp(PrimitiveOpType::RandomVariable, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr BernoulliRandomVariable(const Variable& operand, double mean, unsigned long seed, const std::wstring& name)
+    {
+        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeBernoulli, seed);
+        additionalProperties.Add(PrimitiveFunction::AttributeNameRandomVariableArg0, mean);
+        return UnaryOp(PrimitiveOpType::RandomVariable, operand, std::move(additionalProperties), name);
     }
 
     FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name)
@@ -1284,8 +1374,13 @@ namespace CNTK
 
     FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name)
     {
-        std::vector<Variable> operands = { prediction, targets };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Logistic, operands, Dictionary(), name), name);
+        auto predictionPlaceholder = PlaceholderVariable(L"prediction");
+        auto labelPlaceholder = PlaceholderVariable(L"targets");
+        Constant one_plus_eps = Constant::Scalar(1.0f+1e-6f);
+        Constant one = Constant::Scalar(1.0f);
+        Constant eps = Constant::Scalar(1e-6f);
+        FunctionPtr compositeBinaryCrossEntropy = Negate(Plus(ElementTimes(labelPlaceholder,Log(eps + predictionPlaceholder)), ElementTimes(Minus(one, labelPlaceholder), Log(Minus(one_plus_eps, predictionPlaceholder)))));
+        return AsBlock(std::move(compositeBinaryCrossEntropy), { { predictionPlaceholder, prediction },{ labelPlaceholder, targets } }, L"BinaryCrossEntropy", name);
     }
 
     FunctionPtr WeightedBinaryCrossEntropy(const Variable& prediction, const Variable& targets, const Variable& weights, const std::wstring& name)

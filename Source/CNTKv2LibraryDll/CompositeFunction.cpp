@@ -407,6 +407,7 @@ namespace CNTK
         }
     }
 
+
     // Recursively create a sub-network of ComputationNode instances corresponding to the graph of Functions 
     // underlying the specified 'variable' and return the ComputationNode instance that corresponds to the 
     // top level 'variable'
@@ -750,6 +751,38 @@ namespace CNTK
                     auto dropoutRate = functionConfig[PrimitiveFunction::AttributeNameDropoutRate].Value<double>();
                     computationNodePtr = New<DropoutNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     computationNodePtr->As<DropoutNode<ElementType>>()->SetDropoutRate(dropoutRate);
+                    break;
+                }
+                case PrimitiveOpType::RandomVariable:
+                {
+                    auto seed = functionConfig[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
+                    auto offset = functionConfig[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
+                    auto rvtype = functionConfig[PrimitiveFunction::AttributeNameRandomVariableType].Value<std::wstring>();
+
+                    std::vector<double> randomVariableArgs{};
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameRandomVariableArg0))
+                        randomVariableArgs.push_back(functionConfig[PrimitiveFunction::AttributeNameRandomVariableArg0].Value<double>());
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameRandomVariableArg1))
+                        randomVariableArgs.push_back(functionConfig[PrimitiveFunction::AttributeNameRandomVariableArg1].Value<double>());
+
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameNewShape))
+                    {
+                        auto shape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
+                        computationNodePtr = New<RandomVariableNode<ElementType>>(network->GetDeviceId(), internalNodeName, rvtype, randomVariableArgs, AsTensorShape(shape));
+                    }
+                    else
+                    {
+                        /* Probably not necessary
+                        std::wstring internalDynamicAxisName = L"";
+                        if (!dynamicAxes.empty())
+                        {
+                            // Construct the dynamic axis name to be used internally
+                            internalDynamicAxisName = InternalDynamicAxisNameFromDynamicAxes(dynamicAxes);
+                        }
+                        */
+                        computationNodePtr = New<RandomVariableNode<ElementType>>(network->GetDeviceId(), internalNodeName, rvtype, randomVariableArgs);
+                    }
+                    computationNodePtr->As<RandomVariableNode<ElementType>>()->SetRngState(seed, offset);
                     break;
                 }
                 case PrimitiveOpType::Reshape:
@@ -1847,14 +1880,7 @@ namespace CNTK
         }
 
         GetNetworkOutputs(outputs);
-
         // TODO: How to deal with the specified 'computeDevice'
-        Variable evalTimeStampVariable;
-        if (requiredArgumentValues.empty())
-            evalTimeStampVariable = Inputs()[0];
-        else
-            evalTimeStampVariable = requiredArgumentValues.begin()->first;
-
         BackPropStatePtr backpropStatePtr;
         if (outputsToRetainBackwardStateFor.size() > 0)
             backpropStatePtr = MakeSharedObject<CNTKBackPropState>(this->shared_from_this(), computeDevice, GetCurrentBackpropRootsTimeStamps());

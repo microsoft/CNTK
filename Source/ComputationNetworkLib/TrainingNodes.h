@@ -23,6 +23,12 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// Names of random variable types
+static const wstring RandomVariableTypeUniform = L"uniform";
+static const wstring RandomVariableTypeNormal = L"normal";
+static const wstring RandomVariableTypeGumbel = L"gumbel";
+static const wstring RandomVariableTypeBernoulli = L"bernoulli";
+
 // -----------------------------------------------------------------------
 // SquareErrorNode (left, right)
 // = SumElements ((left - right) .* (left - right))
@@ -1230,6 +1236,93 @@ protected:
     uint64_t m_rngSeed = 0;
     uint64_t m_rngOffset = 0;
     std::shared_ptr<RNGHandle> m_RNGHandle;
+};
+
+
+// -----------------------------------------------------------------------
+// RandomVariableNode (/*no input*/)
+// a random variable
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class RandomVariableNode : public ComputationNode<ElemType>, public RngUser
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"RandomVariable"; }
+
+    enum RandomVariableType : unsigned int
+    {
+        Uniform,
+        Normal,
+        Gumbel,
+        Bernoulli
+    };
+
+    RandomVariableType getRandomVariableType(const std::wstring rvType)
+    {
+        if (rvType == RandomVariableTypeUniform)
+            return RandomVariableType::Uniform;
+        else if (rvType == RandomVariableTypeNormal)
+            return RandomVariableType::Normal;
+        else if (rvType == RandomVariableTypeGumbel)
+            return RandomVariableType::Gumbel;
+        else if (rvType == RandomVariableTypeBernoulli)
+            return RandomVariableType::Bernoulli;
+        else
+            InvalidArgument("getRandomVariableType: Unknown random variable type '%ls'", rvType.c_str());
+    }
+
+public:
+    RandomVariableNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+        SetRngState(CreateUniqId());
+    }
+
+    RandomVariableNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& rvType, const std::vector<double>& args)
+        : Base(deviceId, name), m_type(getRandomVariableType(rvType)) /*, m_shape(TensorShape())*/
+    {
+        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) {return static_cast<ElemType>(d); });
+    }
+
+    RandomVariableNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& rvType, const std::vector<double>& args, const TensorShape& sampleLayout)
+        : Base(deviceId, name), m_type(getRandomVariableType(rvType)), m_shape(sampleLayout)
+    {
+        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) {return static_cast<ElemType>(d); });
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual void UpdateFunctionMBSize() override
+    {
+        if (GetNumInputs() == 0)
+            Value().Resize(m_shape[0], m_shape.GetNumElements()/m_shape[0]);
+    }
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override;
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override;
+    virtual bool /*ComputationNodeBase::*/ IsOutOfDateWrtInputs() const override;
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        auto numInputs = GetNumInputs();
+        if (numInputs == 0)
+        {
+            LinkToMBLayout(nullptr); //review is there a better way?
+            SetDims(m_shape, /*HasMbLayout=*/ false);
+        }
+        else if (numInputs == 1)
+            ValidateUnaryMap(isFinalValidationPass);
+        else
+            LogicError("%ls %ls RandomVariableNode::Validate: Operation must either have 0 or 1 inputs", NodeName().c_str(), OperationName().c_str());
+    }
+
+    RNGHandle& GetRNGHandle()
+    {
+        return RngUser::GetRNGHandle(ValuePtr()->GetDeviceId());
+    }
+private:
+    RandomVariableType m_type;
+    std::vector<ElemType> m_args;
+    TensorShape m_shape;
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------

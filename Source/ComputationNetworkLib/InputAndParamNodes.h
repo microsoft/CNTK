@@ -9,6 +9,7 @@
 #include "ScriptableObjects.h"
 #include "TensorShape.h"
 #include "Matrix.h"
+#include "TrainingNodes.h"
 
 #include <string>
 
@@ -469,6 +470,7 @@ public:
 
 template class SparseInputValue<float>;
 template class SparseInputValue<double>;
+
 
 // -----------------------------------------------------------------------
 // EnvironmentInput (propertyName) -- read out environment properties

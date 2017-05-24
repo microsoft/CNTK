@@ -8,6 +8,46 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template <class ElemType>
+/*virtual*/ void RandomVariableNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
+{
+    auto&& result = ValueFor(fr);
+    switch (m_type)
+    {
+    case RandomVariableType::Uniform:
+        result.SetUniformRandomValue(GetRNGHandle(), m_args[0], m_args[1]);
+        UpdateRngOffset(GetRngOffset() + result.GetNumElements());
+        break;
+    case RandomVariableType::Normal:
+        result.SetGaussianRandomValue(GetRNGHandle(), m_args[0], m_args[1]);
+        UpdateRngOffset(GetRngOffset() + asMultipleOf(result.GetNumElements(), 2));
+        break;
+    case RandomVariableType::Gumbel:
+        result.SetGumbelRandomValue(GetRNGHandle(), m_args[0], m_args[1]);
+        UpdateRngOffset(GetRngOffset() + result.GetNumElements());
+        break;
+    case RandomVariableType::Bernoulli:
+        result.SetUniformRandomMask(ElemType(1 - m_args[0]), ElemType(1), GetRNGHandle());
+        UpdateRngOffset(GetRngOffset() + result.GetNumElements());
+        break;
+    default:
+        RuntimeError("RandomVariableNode::ForwardProp: Unkown random variable type code %d", m_type);
+    }
+}
+
+
+template <class ElemType>
+/*virtual*/ void RandomVariableNode<ElemType>::BackpropTo(const size_t /*inputIndex*/, const FrameRange&) /*override*/
+{
+    LogicError("%ls %ls operation is a random variable and cannot BackpropTo() it.", NodeName().c_str(), OperationName().c_str());
+}
+
+template <class ElemType>
+/*virtual*/ bool RandomVariableNode<ElemType>::IsOutOfDateWrtInputs() const /*override*/ { return true; }
+
+template class RandomVariableNode<float>;
+template class RandomVariableNode<double>;
+
 template<class ElemType>
 void RandomSampleNodeBase<ElemType>::Validate(bool isFinalValidationPass)
 {

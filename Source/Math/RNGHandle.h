@@ -2,12 +2,13 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// CPUMatrix.cpp : full implementation of all matrix functions on the CPU side
+// RNGHandle.h: An abstraction around a random number generator
 //
 
 #pragma once
 
 #include "CommonMatrix.h"
+#include "File.h"
 #include <memory>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -33,5 +34,6 @@ private:
 
     DEVICEID_TYPE m_deviceId;
 };
+
 
 }}}

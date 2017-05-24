@@ -1691,6 +1691,19 @@ __global__ void _truncated_normal_transform(
     a[id] = normcdfinv(a[id] * (high - low) + low) * sigma + mean;
 }
 
+template <typename T>
+__global__ void _gumbelFromUniform(
+    T* a,
+    const CUDA_LONG N,
+    const T loc,
+    const T scale)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    a[id] = loc - scale * log_(T(1e-40) - log1p_(-a[id])); //in case a[id] == 0 the outer log won't be a log(0)
+}
+
 template <class ElemType>
 __global__ void _setMaskAndScale(
     ElemType* a,
