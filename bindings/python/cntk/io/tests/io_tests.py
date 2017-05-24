@@ -305,6 +305,7 @@ def test_image():
     assert t1['type'] == 'Scale'
     assert t2['type'] == 'Mean'
     assert t0['cropType'] == 'randomside'
+    assert t0['cropSize'] == '0:0'
     assert t0['sideRatio'] == '0.5:0.5'
     assert t0['aspectRatio'] == '1:1'
     assert t0['areaRatio'] == '0:0'

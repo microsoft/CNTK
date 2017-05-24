@@ -94,8 +94,6 @@ def test_assign_timestamp_bump(input_data, device_id, precision):
     data = AA(input_data, dtype=dt)
 
     x = C.parameter(shape=data.shape, dtype=dt)
-    print(x.shape)
-    print(data.shape)
     y = x + 1
     z = C.assign(x, y)
 
