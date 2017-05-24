@@ -8,16 +8,9 @@ from __future__ import print_function
 import os
 import argparse
 import math
+import cntk
 from cntk.layers import *  # Layers library
 from cntk.layers.typing import *
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
-from cntk.train import CrossValidationConfig
-from cntk import Trainer, Value
-from cntk.learners import fsadagrad, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
-from cntk import splice, relu, FunctionOf
-from cntk.losses import cross_entropy_with_softmax
-from cntk.metrics import classification_error
-from cntk.logging import ProgressPrinter, TrainingSummaryProgressCallback, log_number_of_parameters
 
 ########################
 # variables and stuff  #
@@ -39,11 +32,11 @@ hidden_dim = 300
 ########################
 
 def create_reader(path, is_training):
-    return MinibatchSource(CTFDeserializer(path, StreamDefs(
-        query         = StreamDef(field='S0', shape=vocab_size,  is_sparse=True),
-        intent_labels = StreamDef(field='S1', shape=num_intents, is_sparse=True),  # (used for intent classification variant)
-        slot_labels   = StreamDef(field='S2', shape=num_labels,  is_sparse=True)
-    )), randomize=is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
+    return cntk.io.MinibatchSource(cntk.io.CTFDeserializer(path, cntk.io.StreamDefs(
+        query         = cntk.io.StreamDef(field='S0', shape=vocab_size,  is_sparse=True),
+        intent_labels = cntk.io.StreamDef(field='S1', shape=num_intents, is_sparse=True),  # (used for intent classification variant)
+        slot_labels   = cntk.io.StreamDef(field='S2', shape=num_labels,  is_sparse=True)
+    )), randomize=is_training, max_sweeps = cntk.io.INFINITELY_REPEAT if is_training else 1)
 
 ########################
 # define the model     #
@@ -65,8 +58,8 @@ def create_model_function():
         #  - bidirectional LSTM
         # which would be invoked as follows:
         #Recurrence(GRU(hidden_dim)),
-        #Recurrence(RNNStep(hidden_dim, activation=relu)),
-        #(Recurrence(LSTM(hidden_dim)), Recurrence(LSTM(hidden_dim), go_backwards=True)), splice,
+        #Recurrence(RNNStep(hidden_dim, activation=cntk.relu)),
+        #(Recurrence(LSTM(hidden_dim)), Recurrence(LSTM(hidden_dim), go_backwards=True)), cntk.splice,
         Stabilizer(),
         Label('hidden_representation'),
         Dense(num_labels, name='out_projection')
@@ -82,11 +75,11 @@ def create_model_function():
 #  takes:   Function: features -> prediction
 #  returns: Function: (features, labels) -> (loss, metric)
 def create_criterion_function(model):
-    @FunctionOf(query = Sequence[SparseTensor[vocab_size]], labels = Sequence[SparseTensor[num_labels]])
+    @cntk.FunctionOf(query = Sequence[SparseTensor[vocab_size]], labels = Sequence[SparseTensor[num_labels]])
     def criterion(query, labels):
         z = model(query)
-        ce   = cross_entropy_with_softmax(z, labels)
-        errs = classification_error      (z, labels)
+        ce = cntk.losses.cross_entropy_with_softmax(z, labels)
+        errs = cntk.metrics.classification_error(z, labels)
         return (ce, errs)
     return criterion
 
@@ -110,7 +103,7 @@ def peek(model, epoch):
     # run a sequence through
     seq = 'BOS flights from new york to seattle EOS'  # example string
     w = [query_dict[w] for w in seq.split()]          # convert to word indices
-    z = model(Value.one_hot([w], vocab_size))         # run it through the model
+    z = model(cntk.Value.one_hot([w], vocab_size))    # run it through the model
     best = np.argmax(z,axis=2)                        # classify
     # show result
     print("Example Sentence After {} Epochs".format(epoch))
@@ -144,9 +137,9 @@ def train(reader, model, max_epochs):
     minibatch_size = 70
 
     # SGD parameters
-    learner = fsadagrad(criterion.parameters,
-                        lr = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
-                        momentum = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
+    learner = cntk.learners.fsadagrad(criterion.parameters,
+                        lr = cntk.learners.learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], cntk.learners.UnitType.sample, epoch_size),
+                        momentum = cntk.learners.momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
                         gradient_clipping_threshold_per_sample = 15,
                         gradient_clipping_with_truncation = True)
 
@@ -154,10 +147,10 @@ def train(reader, model, max_epochs):
     # We provide a progress_printer that logs loss and metric, as well as a callback
     # for additional logging after every epoch ("training summary"),  in which we run
     # an example through our model, to peek into how it improves.
-    log_number_of_parameters(model) ; print()
-    progress_printer = ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging
-    #progress_printer = ProgressPrinter(tag='Training')
-    progress_callback = TrainingSummaryProgressCallback(epoch_size, lambda epoch, *unused_args: peek(model, epoch+1))
+    cntk.logging.log_number_of_parameters(model) ; print()
+    progress_printer = cntk.logging.ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging
+    #progress_printer = cntk.logging.ProgressPrinter(tag='Training')
+    progress_callback = cntk.logging.TrainingSummaryProgressCallback(epoch_size, lambda epoch, *unused_args: peek(model, epoch+1))
 
     peek(model, 0)                  # see how the model is doing
     # train() will loop through the training data provided by 'reader', minibatch by minibatch,
@@ -177,7 +170,7 @@ def train(reader, model, max_epochs):
 
 def evaluate(reader, model):
     criterion = create_criterion_function(model)
-    progress_printer = ProgressPrinter(tag='Evaluation')
+    progress_printer = cntk.logging.ProgressPrinter(tag='Evaluation')
     # test() will loop through the data provided by the reader and accumulate the metirc value
     # of the criterion function. At the end, progress_printer will be used to show the average value.
     # test() returns the average metric and the total number of labels measured, which we ignore
