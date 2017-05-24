@@ -7,8 +7,6 @@
 
 import numpy as np
 
-# compute example and gt width ctr, width and height
-# and returns optimal target deltas
 def bbox_transform(ex_rois, gt_rois):
     ex_widths = ex_rois[:, 2] - ex_rois[:, 0] + 1.0
     ex_heights = ex_rois[:, 3] - ex_rois[:, 1] + 1.0
@@ -29,19 +27,8 @@ def bbox_transform(ex_rois, gt_rois):
         (targets_dx, targets_dy, targets_dw, targets_dh)).transpose()
     return targets
 
-# gets
-# - boxes (n, 4) as [x_low, y_low, x_high, y_high]
-# - deltas (n, 4) as [dx, dy, dw, dh]
-# returns
-# - pred_boxes (n, 4) as [x_low, y_low, x_high, y_high]
-# where
-# pred_ctr_x = dx * widths + ctr_x
-# --> pred_x_low = pred_ctr_x - 0.5 * pred_w
-# and
-# pred_w = np.exp(dw) * widths
 def bbox_transform_inv(boxes, deltas):
     if boxes.shape[0] == 0:
-        import pdb; pdb.set_trace()
         return np.zeros((0, deltas.shape[1]), dtype=deltas.dtype)
 
     boxes = boxes.astype(deltas.dtype, copy=False)
@@ -51,11 +38,10 @@ def bbox_transform_inv(boxes, deltas):
     ctr_x = boxes[:, 0] + 0.5 * widths
     ctr_y = boxes[:, 1] + 0.5 * heights
 
-    # avoid overflow in exp
-    dx = np.clip(deltas[:, 0::4], None, 10)
-    dy = np.clip(deltas[:, 1::4], None, 10)
-    dw = np.clip(deltas[:, 2::4], None, 10)
-    dh = np.clip(deltas[:, 3::4], None, 10)
+    dx = deltas[:, 0::4]
+    dy = deltas[:, 1::4]
+    dw = deltas[:, 2::4]
+    dh = deltas[:, 3::4]
 
     pred_ctr_x = dx * widths[:, np.newaxis] + ctr_x[:, np.newaxis]
     pred_ctr_y = dy * heights[:, np.newaxis] + ctr_y[:, np.newaxis]
@@ -74,27 +60,17 @@ def bbox_transform_inv(boxes, deltas):
 
     return pred_boxes
 
-def clip_boxes(boxes, im_info):
-    '''
+def clip_boxes(boxes, im_shape):
+    """
     Clip boxes to image boundaries.
-    :param boxes: boxes
-    :param im_info: (pad_width, pad_height, scaled_image_width, scaled_image_height, orig_img_width, orig_img_height)
-                    e.g.(1000, 1000, 1000, 600, 500, 300) for an original image of 600x300 that is scaled and padded to 1000x1000
-    '''
+    """
 
-    im_info.shape = (6)
-    padded_wh = im_info[0:2]
-    scaled_wh = im_info[2:4]
-    xy_offset = (padded_wh - scaled_wh) / 2
-    xy_min = xy_offset
-    xy_max = xy_offset + scaled_wh
-
-    # x_min <= x1 <= x_max
-    boxes[:, 0::4] = np.maximum(np.minimum(boxes[:, 0::4], xy_max[0] - 1), xy_min[0])
-    # y_min <= y1 <= y_max
-    boxes[:, 1::4] = np.maximum(np.minimum(boxes[:, 1::4], xy_max[1] - 1), xy_min[1])
-    # x_min <= x2 <= x_max
-    boxes[:, 2::4] = np.maximum(np.minimum(boxes[:, 2::4], xy_max[0] - 1), xy_min[0])
-    # y_min <= y2 <= y_max
-    boxes[:, 3::4] = np.maximum(np.minimum(boxes[:, 3::4], xy_max[1] - 1), xy_min[1])
+    # x1 >= 0
+    boxes[:, 0::4] = np.maximum(np.minimum(boxes[:, 0::4], im_shape[1] - 1), 0)
+    # y1 >= 0
+    boxes[:, 1::4] = np.maximum(np.minimum(boxes[:, 1::4], im_shape[0] - 1), 0)
+    # x2 < im_shape[1]
+    boxes[:, 2::4] = np.maximum(np.minimum(boxes[:, 2::4], im_shape[1] - 1), 0)
+    # y2 < im_shape[0]
+    boxes[:, 3::4] = np.maximum(np.minimum(boxes[:, 3::4], im_shape[0] - 1), 0)
     return boxes

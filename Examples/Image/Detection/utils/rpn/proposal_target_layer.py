@@ -41,21 +41,10 @@ class ProposalTargetLayer(UserFunction):
     def infer_outputs(self):
         # sampled rois (0, x1, y1, x2, y2)
         # for CNTK the proposal shape is [4 x roisPerImage], and mirrored in Python
-        rois_shape = (cfg["TRAIN"].RPN_POST_NMS_TOP_N, 4)
-        #rois_shape = (FreeDimension, 4)
-
-        # labels
-        # for CNTK the labels shape is [1 x roisPerImage], and mirrored in Python
-        labels_shape = (cfg["TRAIN"].RPN_POST_NMS_TOP_N, self._num_classes)
-        #labels_shape = (FreeDimension, self._num_classes)
-
-        # bbox_targets
-        bbox_targets_shape = (cfg["TRAIN"].RPN_POST_NMS_TOP_N, self._num_classes * 4)
-        #bbox_targets_shape = (FreeDimension, self._num_classes * 4)
-
-        # bbox_inside_weights
-        bbox_inside_weights_shape = (cfg["TRAIN"].RPN_POST_NMS_TOP_N, self._num_classes * 4)
-        #bbox_inside_weights_shape = (FreeDimension, self._num_classes * 4)
+        rois_shape = (FreeDimension, 4)
+        labels_shape = (FreeDimension, self._num_classes)
+        bbox_targets_shape = (FreeDimension, self._num_classes * 4)
+        bbox_inside_weights_shape = (FreeDimension, self._num_classes * 4)
 
         return [output_variable(rois_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
                                 name="rpn_target_rois_raw", needs_gradient=False),
@@ -156,7 +145,6 @@ class ProposalTargetLayer(UserFunction):
         # bbox_inside_weights
         bbox_inside_weights.shape = (1,) + bbox_inside_weights.shape # batch axis
         outputs[self.outputs[3]] = np.ascontiguousarray(bbox_inside_weights)
-
 
     def backward(self, state, root_gradients, variables):
         """This layer does not propagate gradients."""
