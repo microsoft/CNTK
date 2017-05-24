@@ -27,7 +27,7 @@ class AnchorTargetLayer(UserFunction):
     labels and bounding-box regression targets.
     '''
 
-    def __init__(self, arg1, arg2, arg3, name='AnchorTargetLayer', param_str=None, deterministic=False):
+    def __init__(self, arg1, arg2, arg3, name='AnchorTargetLayer', param_str=None, cfm_shape=None, deterministic=False):
         super(AnchorTargetLayer, self).__init__([arg1, arg2, arg3], name=name)
         self.param_str_ = param_str if param_str is not None else "'feat_stride': 16\n'scales':\n - 8 \n - 16 \n - 32"
 
@@ -37,6 +37,7 @@ class AnchorTargetLayer(UserFunction):
         self._anchors = generate_anchors(scales=np.array(anchor_scales))
         self._num_anchors = self._anchors.shape[0]
         self._feat_stride = layer_params['feat_stride']
+        self._cfm_shape = cfm_shape
         self._determininistic_mode = deterministic
 
         if DEBUG:
@@ -58,7 +59,11 @@ class AnchorTargetLayer(UserFunction):
         self._allowed_border = False # layer_params.get('allowed_border', 0)
 
     def infer_outputs(self):
-        height, width = self.inputs[0].shape[-2:]
+        # This is a necessary work around since anfter cloning the cloned inputs are just place holders without the proper shape
+        if self._cfm_shape is None:
+            self._cfm_shape = self.inputs[0].shape
+        height, width = self._cfm_shape[-2:]
+
         if DEBUG:
             print('AnchorTargetLayer: height', height, 'width', width)
 
@@ -94,7 +99,7 @@ class AnchorTargetLayer(UserFunction):
         # GT boxes (x1, y1, x2, y2, label)
         gt_boxes = bottom[1][0,:]
         # im_info
-        im_info = bottom[2]
+        im_info = bottom[2][0]
 
         # remove zero padded ground truth boxes
         keep = np.where(
@@ -105,8 +110,11 @@ class AnchorTargetLayer(UserFunction):
 
         if DEBUG:
             print ('')
+            # im_info = (pad_width, pad_height, scaled_image_width, scaled_image_height, orig_img_width, orig_img_height)
+            # e.g.(1000, 1000, 1000, 600, 500, 300) for an original image of 600x300 that is scaled and padded to 1000x1000
             print ('im_size: ({}, {})'.format(im_info[0], im_info[1]))
-            print ('scale: {}'.format(im_info[2]))
+            print ('scaled im_size: ({}, {})'.format(im_info[2], im_info[3]))
+            print ('original im_size: ({}, {})'.format(im_info[4], im_info[5]))
             print ('height, width: ({}, {})'.format(height, width))
             print ('rpn: gt_boxes.shape', gt_boxes.shape)
             #print ('rpn: gt_boxes', gt_boxes)
@@ -129,11 +137,17 @@ class AnchorTargetLayer(UserFunction):
         total_anchors = int(K * A)
 
         # only keep anchors inside the image
+        padded_wh = im_info[0:2]
+        scaled_wh = im_info[2:4]
+        xy_offset = (padded_wh - scaled_wh) / 2
+        xy_min = xy_offset
+        xy_max = xy_offset + scaled_wh
+
         inds_inside = np.where(
-            (all_anchors[:, 0] >= -self._allowed_border) &
-            (all_anchors[:, 1] >= -self._allowed_border) &
-            (all_anchors[:, 2] < im_info[1] + self._allowed_border) &  # width
-            (all_anchors[:, 3] < im_info[0] + self._allowed_border)    # height
+            (all_anchors[:, 0] >= xy_min[0] - self._allowed_border) &
+            (all_anchors[:, 1] >= xy_min[1] - self._allowed_border) &
+            (all_anchors[:, 2] < xy_max[0] + self._allowed_border) &  # width
+            (all_anchors[:, 3] < xy_max[1] + self._allowed_border)    # height
         )[0]
 
         if DEBUG:
@@ -144,6 +158,7 @@ class AnchorTargetLayer(UserFunction):
         anchors = all_anchors[inds_inside, :]
         if DEBUG:
             print ('anchors.shape', anchors.shape)
+            print('gt_boxes.shape', gt_boxes.shape)
 
         # label: 1 is positive, 0 is negative, -1 is dont care
         labels = np.empty((len(inds_inside), ), dtype=np.float32)
@@ -250,7 +265,7 @@ class AnchorTargetLayer(UserFunction):
         pass
 
     def clone(self, cloned_inputs):
-        return AnchorTargetLayer(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2], param_str=self.param_str_)
+        return AnchorTargetLayer(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2], param_str=self.param_str_, cfm_shape=self._cfm_shape)
 
     def serialize(self):
         internal_state = {}

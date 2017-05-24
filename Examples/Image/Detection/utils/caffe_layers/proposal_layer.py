@@ -10,8 +10,8 @@ import numpy as np
 import yaml
 from utils.default_config import cfg
 from utils.rpn.generate_anchors import generate_anchors
-from utils.rpn.bbox_transform import bbox_transform_inv, clip_boxes
-from utils.rpn.nms_wrapper import nms
+from utils.caffe_layers.bbox_transform import bbox_transform_inv, clip_boxes
+from utils.nms.nms_wrapper import nms
 
 DEBUG = False
 
@@ -32,7 +32,7 @@ class ProposalLayer: #(caffe.Layer):
         anchor_scales = layer_params.get('scales', (8, 16, 32))
         self._anchors = generate_anchors(scales=np.array(anchor_scales))
         self._num_anchors = self._anchors.shape[0]
-        self.phase = "TRAIN"
+        self.phase = "TEST"
 
         #if DEBUG:
             #print 'feat_stride: {}'.format(self._feat_stride)

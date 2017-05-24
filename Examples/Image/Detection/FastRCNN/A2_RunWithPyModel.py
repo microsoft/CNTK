@@ -96,7 +96,6 @@ def create_mb_source(img_height, img_width, img_channels, n_classes, n_rois, dat
 # Defines the Fast R-CNN network model for detecting objects in images
 def frcn_predictor(features, rois, n_classes, model_path):
     # Load the pretrained classification net and find nodes
-
     loaded_model = load_model(model_path)
     feature_node = find_by_name(loaded_model, feature_node_name)
     conv_node    = find_by_name(loaded_model, last_conv_node_name)

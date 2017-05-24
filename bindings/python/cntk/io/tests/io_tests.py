@@ -20,7 +20,6 @@ from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.logging import TraceLevel
 import cntk.io.transforms as xforms
 from cntk.cntk_py import to_dictionary, MinibatchSourceConfig
-from cntk.core import Value
 
 AA = np.asarray
 

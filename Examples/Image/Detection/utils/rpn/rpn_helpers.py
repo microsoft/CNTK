@@ -15,9 +15,13 @@ from utils.rpn.cntk_ignore_label import IgnoreLabel
 from utils.rpn.proposal_layer import ProposalLayer
 from utils.rpn.proposal_target_layer import ProposalTargetLayer
 from utils.rpn.cntk_smoothL1_loss import SmoothL1Loss
+try:
+    from config import cfg
+except ImportError:
+    from utils.default_config import cfg
 
 def create_rpn(conv_out, scaled_gt_boxes, im_info, add_loss_functions=True,
-               proposal_layer_param_string=None):
+               proposal_layer_param_string=None, conv_bias_init=0.1):
     '''
     Creates a region proposal network for object detection as proposed in the "Faster R-CNN" paper:
         Shaoqing Ren and Kaiming He and Ross Girshick and Jian Sun:
@@ -29,7 +33,9 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, add_loss_functions=True,
     Args:
         conv_out:        The convolutional feature map, i.e. the output of the conv layers from the pretrained classification network
         scaled_gt_boxes: The ground truth boxes as (x1, y1, x2, y2, label). Coordinates are absolute pixels wrt. the input image.
-        im_info:         (image_widht, image_height, image_scale) as CNTK variable or constant
+        im_info:         A CNTK variable or constant containing
+                         (pad_width, pad_height, scaled_image_width, scaled_image_height, orig_img_width, orig_img_height)
+                         e.g. (1000, 1000, 1000, 600, 500, 300) for an original image of 600x300 that is scaled and padded to 1000x1000
         add_loss_functions: If set to True rpn_losses will be returned, otherwise None is returned for the losses
         proposal_layer_param_string: A yaml parameter string that is passed to the proposal layer.
 
@@ -41,11 +47,11 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, add_loss_functions=True,
     # RPN network
     # init = 'normal', initValueScale = 0.01, initBias = 0.1
     rpn_conv_3x3 = Convolution((3, 3), 256, activation=relu, pad=True, strides=1,
-                                init = normal(scale=0.01), init_bias=0.1)(conv_out)
+                                init = normal(scale=0.01), init_bias=conv_bias_init)(conv_out)
     rpn_cls_score = Convolution((1, 1), 18, activation=None, name="rpn_cls_score",
-                                init = normal(scale=0.01), init_bias=0.1)(rpn_conv_3x3)  # 2(bg/fg)  * 9(anchors)
+                                init = normal(scale=0.01), init_bias=conv_bias_init)(rpn_conv_3x3)  # 2(bg/fg)  * 9(anchors)
     rpn_bbox_pred = Convolution((1, 1), 36, activation=None, name="rpn_bbox_pred",
-                                init = normal(scale=0.01), init_bias=0.1)(rpn_conv_3x3)  # 4(coords) * 9(anchors)
+                                init = normal(scale=0.01), init_bias=conv_bias_init)(rpn_conv_3x3)  # 4(coords) * 9(anchors)
 
     # apply softmax to get (bg, fg) probabilities and reshape predictions back to grid of (18, H, W)
     num_predictions = int(np.prod(rpn_cls_score.shape) / 2)
@@ -106,6 +112,7 @@ def create_proposal_target_layer(rpn_rois, scaled_gt_boxes, num_classes):
 
     ptl_param_string = "'num_classes': {}".format(num_classes)
     ptl = user_function(ProposalTargetLayer(rpn_rois, scaled_gt_boxes, param_str=ptl_param_string))
+
     rois = alias(ptl.outputs[0], name='rpn_target_rois')
     label_targets = alias(ptl.outputs[1], name='label_targets')
     bbox_targets = alias(ptl.outputs[2], name='bbox_targets')
