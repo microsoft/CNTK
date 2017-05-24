@@ -126,7 +126,7 @@ def create_detector(output_depth = (5+par_num_classes)*par_num_anchorboxes, batc
         Convolution2D((3, 3), num_filters=par_dense_size, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
         BatchNormalization(),
         Convolution2D((3, 3), num_filters=par_dense_size, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
-        #BatchNormalization(),
+        #BatchNormalization(), #C-impl says no!
 
         Convolution2D((1, 1), num_filters=output_depth),
     ], "YOLOv2_Detector")
@@ -142,6 +142,19 @@ def load_pretrained_darknet_feature_extractor():
     fe_output_layer = find_by_name(loaded_model, "featureExtractor_output")
 
     return combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: placeholder()})
+
+def load_pretrained_resnet18_feature_extractor():
+    loaded_model = load_model(os.path.join(par_abs_path, "..", "..", "PretrainedModels", "ResNet18_ImageNet_CNTK.model"))
+
+
+    feature_layer = find_by_name(loaded_model, "features")
+    fe_output_layer = find_by_name(loaded_model, "z.x.x.r")
+    ph = placeholder(shape=(par_num_channels, par_image_width, par_image_height), name="input_ph")
+    net = combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: ph})
+
+    #plot(net, "ResNet18_s.pdf")
+
+    return net
 
 
 def load_pretrained_resnet101_feature_extractor():
@@ -164,11 +177,13 @@ def create_untrained_darknet19_fe():
     return dn19.create_feature_extractor(32)
 
 
-def create_feature_extractor(use_model = "pre_ResNet101_ImageNet"):
+def create_feature_extractor(use_model = "pre_ResNet18_ImageNet"):
     if(use_model == "pre_Darknet_Cifar"):
         fe = load_pretrained_darknet_feature_extractor()
     elif(use_model == "pre_ResNet101_ImageNet"):
         fe = load_pretrained_resnet101_feature_extractor()
+    elif(use_model == "pre_ResNet18_ImageNet"):
+        fe = load_pretrained_resnet18_feature_extractor()
     return fe
 
 
