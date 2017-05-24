@@ -15,11 +15,14 @@ from cntk.internal.utils import *
 from cntk.logging import *
 from cntk.ops import splice
 from cntk.cntk_py import reset_random_seed
+from cntk.device import try_set_default_device
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "1stSteps"))
 
-def test_1st_steps_functional():
+def test_1st_steps_functional(device_id):
+    from cntk.ops.tests.ops_test_utils import cntk_device
+    try_set_default_device(cntk_device(device_id))
     reset_random_seed(0)
     from LogisticRegression_FunctionalAPI import losses, metrics, metric, num_samples
     # these are the final values from the log output
@@ -28,7 +31,9 @@ def test_1st_steps_functional():
     assert np.allclose(metric,      0.0811,   atol=1e-4)
     assert num_samples == 1024
 
-def test_1st_steps_graph():
+def test_1st_steps_graph(device_id):
+    from cntk.ops.tests.ops_test_utils import cntk_device
+    try_set_default_device(cntk_device(device_id))
     reset_random_seed(0)
     from LogisticRegression_GraphAPI import trainer, evaluator, X_test, Y_test, data, label_one_hot
     print(trainer.previous_minibatch_loss_average)
@@ -44,5 +49,5 @@ def test_1st_steps_graph():
 
 if __name__=='__main__':
     # run them directly so that this can be run without pytest
-    test_1st_steps_functional()
-    test_1st_steps_graph()
+    test_1st_steps_functional(0)
+    test_1st_steps_graph(0)
