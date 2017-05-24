@@ -3,11 +3,11 @@ Getting started
 You can optionally try the `tutorials <https://notebooks.azure.com/cntk/libraries/tutorials>`__ with pre-installed CNTK running in Azure Notebook hosted environment (for free) if you have not installed the toolkit in your own machine.
 
 If you have installed CNTK on your machine, after going through the :cntkwiki:`installation steps <Setup-CNTK-on-your-machine>`,
-you can start using CNTK from Python right away (don't forget to ``activate`` your Python environment):
+you can start using CNTK from Python right away (don't forget to ``activate`` your Python environment if you did not install CNTK into your root environment):
 
     >>> import cntk
     >>> cntk.__version__
-    '2.0rc2+'
+    '2.0rc3+'
     
     >>> cntk.minus([1, 2, 3], [4, 5, 6]).eval()
     array([-3., -3., -3.], dtype=float32)

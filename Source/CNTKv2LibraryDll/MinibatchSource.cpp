@@ -35,6 +35,14 @@ namespace CNTK
         return GetNextMinibatch(minibatchSizeInSequences, minibatchSizeInSamples, 1, 0, device);
     }
 
+    template<typename DataType>
+    std::wstring pair_to_colon_format(const pair<DataType, DataType>& pair)
+    {
+        std::wostringstream str;
+        str << pair.first << L":" << pair.second;
+        return str.str();
+    }
+
     MinibatchSourceConfig::MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, bool randomize/* = true*/) 
         : deserializers(deserializers)
     {
@@ -290,16 +298,24 @@ namespace CNTK
     }
 
     /* static */ ImageTransform ReaderCrop(const wchar_t* cropType,
-            int cropSize, float sideRatio, float areaRatio,
-            float aspectRatio, const wchar_t* jitterType)
+            std::pair<int, int> cropSize, std::pair<float, float> sideRatio, std::pair<float, float> areaRatio,
+            std::pair<float, float> aspectRatio, const wchar_t* jitterType)
     {
         ImageTransform crop;
+
+        if (sideRatio.first > sideRatio.second)
+            RuntimeError("For sideRatio values: the first number must be smaller than or equal to the second number.");
+        if (areaRatio.first > areaRatio.second)
+            RuntimeError("For areaRatio values: the first number must be smaller than or equal to the second number.");
+        if (aspectRatio.first > aspectRatio.second)
+            RuntimeError("For aspectRatio values: the first number must be smaller than or equal to the second number.");
+
         crop.Add(L"type", L"Crop",
             L"cropType", cropType,
-            L"cropSize", cropSize,
-            L"sideRatio", sideRatio,
-            L"areaRatio", areaRatio,
-            L"aspectRatio", aspectRatio,
+            L"cropSize", pair_to_colon_format(cropSize),
+            L"sideRatio", pair_to_colon_format(sideRatio),
+            L"areaRatio", pair_to_colon_format(areaRatio),
+            L"aspectRatio", pair_to_colon_format(aspectRatio),
             L"jitterType", jitterType);
         return crop;
     }
