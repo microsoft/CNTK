@@ -1,0 +1,1704 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU X5680 @ 3.33GHz
+    Hardware threads: 12
+    Total Memory: 33537232 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/d/GitHub/CNTK/x64/release/cntk.exe configFile=D:\GitHub\CNTK\Examples\Image\Classification\ResNet\BrainScript/ResNet20_CIFAR10.cntk currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10 RunDir=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10 ConfigDir=D:\GitHub\CNTK\Examples\Image\Classification\ResNet\BrainScript OutputDir=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true stderr=- TrainConvNet=[SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=8,learningRatesPerMB=1.28]]
+CNTK 2.0rc2+ (HEAD fbb53d, May  8 2017 10:15:58) on CHAZHANG at 2017/05/09 15:33:53
+
+D:\GitHub\CNTK\x64\release\cntk.exe  configFile=D:\GitHub\CNTK\Examples\Image\Classification\ResNet\BrainScript/ResNet20_CIFAR10.cntk  currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10  RunDir=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu  DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10  ConfigDir=D:\GitHub\CNTK\Examples\Image\Classification\ResNet\BrainScript  OutputDir=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  stderr=-  TrainConvNet=[SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=8,learningRatesPerMB=1.28]]
+Changed current directory to D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
+05/09/2017 15:33:53: Redirecting stderr to file -_TrainConvNet_Eval.log
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: May  8 2017 10:09:53
+		Last modified date: Mon May  8 09:12:53 2017
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: yes
+		With ASGD: yes
+		Math lib: mkl
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+		CUB_PATH: C:\src\cub-1.4.1
+		CUDNN_PATH: C:\local\cudnn-8.0-v5.1\cuda
+		Build Branch: master
+		Build SHA1: 190dc1b3042d62c20aeba5bd336bbeaa8a6466ca
+		Built by chazhang on CHAZHANG
+		Build Path: D:\GitHub\CNTK\Source\CNTKv2LibraryDll\
+		MPI distribution: Microsoft MPI
+		MPI version: 7.0.12437.6
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+GPU info:
+
+		Device[0]: cores = 2688; computeCapability = 3.5; type = "GeForce GTX TITAN"; total memory = 6144 MB; free memory = 5648 MB
+-------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: ResNet20_CIFAR10.cntk:command=TrainConvNet:Eval
+configparameters: ResNet20_CIFAR10.cntk:configDir=D:\GitHub\CNTK\Examples\Image\Classification\ResNet\BrainScript
+configparameters: ResNet20_CIFAR10.cntk:currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
+configparameters: ResNet20_CIFAR10.cntk:dataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
+configparameters: ResNet20_CIFAR10.cntk:deviceId=0
+configparameters: ResNet20_CIFAR10.cntk:Eval={
+    action = "eval"
+evalNodeNames = errs:top5Errs  
+    minibatchSize = 128
+    reader = {
+        verbosity = 0 ; randomize = false
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/test_map.txt"
+            input = {
+                features = { transforms = (
+                   { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                   { type = "Mean"; meanFile = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/CIFAR-10_mean.xml" } : 
+                   { type = "Transpose" }
+                )}
+                labels = { labelDim = 10 }
+            }
+        })
+    }
+}
+
+configparameters: ResNet20_CIFAR10.cntk:forceDeterministicAlgorithms=true
+configparameters: ResNet20_CIFAR10.cntk:modelPath=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/Models/ResNet20_CIFAR10_DataAug
+configparameters: ResNet20_CIFAR10.cntk:outputDir=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu
+configparameters: ResNet20_CIFAR10.cntk:precision=float
+configparameters: ResNet20_CIFAR10.cntk:rootDir=../../..
+configparameters: ResNet20_CIFAR10.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu
+configparameters: ResNet20_CIFAR10.cntk:stderr=-
+configparameters: ResNet20_CIFAR10.cntk:timestamping=true
+configparameters: ResNet20_CIFAR10.cntk:traceLevel=1
+configparameters: ResNet20_CIFAR10.cntk:TrainConvNet={
+    action = "train"
+    BrainScriptNetworkBuilder = {
+        include "D:\GitHub\CNTK\Examples\Image\Classification\ResNet\BrainScript/Macros.bs"
+        imageShape = 32:32:3
+        labelDim = 10
+        featScale = 1/256
+        Normalize{f} = x => f .* x
+        cMap = 16:32:64
+        bnTimeConst = 4096
+        numLayers = 3
+        model = Sequential (
+            Normalize {featScale} :
+            ConvBNReLULayer {cMap[0], (3:3), (1:1), bnTimeConst} :
+            ResNetBasicStack {numLayers, cMap[0], bnTimeConst} :
+            ResNetBasicInc {cMap[1], (2:2), bnTimeConst} :
+            ResNetBasicStack {numLayers-1, cMap[1], bnTimeConst} :
+            ResNetBasicInc {cMap[2], (2:2), bnTimeConst} :
+            ResNetBasicStack {numLayers-1, cMap[2], bnTimeConst} :
+            AveragePoolingLayer {(8: 8), stride = 1} :
+            LinearLayer {labelDim}
+        )
+        features = Input {imageShape}
+        labels   = Input {labelDim}
+        z = model (features)
+        ce       = CrossEntropyWithSoftmax     (labels, z)
+        errs     = ClassificationError         (labels, z)
+top5Errs = ClassificationError         (labels, z, topN=5)  
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+evaluationNodes = (errs)  
+        outputNodes     = (z)
+    }
+    SGD = {
+        epochSize = 0
+        minibatchSize = 128
+        learningRatesPerMB = 1.0*80:0.1*40:0.01
+        momentumPerMB = 0.9
+        maxEpochs = 160
+        L2RegWeight = 0.0001
+        numMBsToShowResult = 100
+    }
+    reader = {
+        verbosity = 0 ; randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/train_map.txt"
+            input = {
+                features = { transforms = (
+                    { type = "Crop" ; cropType = "RandomSide" ; sideRatio = 0.8 ; jitterType = "UniRatio" } :
+                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                    { type = "Mean" ; meanFile = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/CIFAR-10_mean.xml" } : 
+                    { type = "Transpose" }
+                )}
+                labels = { labelDim = 10 }
+            }
+        })
+    }
+} [SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=8,learningRatesPerMB=1.28]]
+
+05/09/2017 15:33:53: Commands: TrainConvNet Eval
+05/09/2017 15:33:53: precision = "float"
+05/09/2017 15:33:53: WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.
+
+05/09/2017 15:33:53: ##############################################################################
+05/09/2017 15:33:53: #                                                                            #
+05/09/2017 15:33:53: # TrainConvNet command (train action)                                        #
+05/09/2017 15:33:53: #                                                                            #
+05/09/2017 15:33:53: ##############################################################################
+
+05/09/2017 15:33:53: 
+Creating virgin network.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[10 x 0] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 64] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 64] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 64] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 64] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 64] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 64] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 32] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 32] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 32] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 32] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 32] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 32] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 16] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 16] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 16] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 16] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 16] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 16] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 3 x 0 x 16] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[1 x 1 x 0 x 32] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[1 x 1 x 0 x 64] as heNormal later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[0 x 1] as fromValue later when dimensions are fully known.
+
+Post-processing network...
+
+4 roots:
+	ce = CrossEntropyWithSoftmax()
+	errs = ClassificationError()
+	top5Errs = ClassificationError()
+	z = Plus()
+
+Validating network. 209 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> model.arrayOfFunctions[8].W = LearnableParameter() :  -> [10 x 0]
+Validating --> z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 64]
+Validating --> z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 64]
+Validating --> z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 64]
+Validating --> z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 64]
+Validating --> _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 64]
+Validating --> _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 64]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 32]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 32]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 32]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 32]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 32]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 32]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 16]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 16]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 16]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 16]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 16]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 16]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 0 x 16]
+Validating --> _z.x.x.x.x.x.x.x.x = LearnableParameter() :  -> [1]
+Validating --> features = InputValue() :  -> [32 x 32 x 3 x *]
+Validating --> z.x.x.x.x.x.x.x.x = ElementTimes (_z.x.x.x.x.x.x.x.x, features) : [1], [32 x 32 x 3 x *] -> [32 x 32 x 3 x *]
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 3 x 16].
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 3 x 16] <- heNormal(seed=20, init dims=[144 x 27], range=0.272166(0.272166*1.000000), onCPU=true.
+)Validating --> z.x.x.x.x.x.x.x._.x.c = Convolution (model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.x.x.x.x) : [3 x 3 x 3 x 16], [32 x 32 x 3 x *] -> [32 x 32 x 16 x *]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Validating --> z.x.x.x.x.x.x.x._ = BatchNormalization (z.x.x.x.x.x.x.x._.x.c, model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale, model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias, model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean, model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.x = RectifiedLinear (z.x.x.x.x.x.x.x._) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 16 x 16].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 16 x 16] <- heNormal(seed=19, init dims=[144 x 144], range=0.117851(0.117851*1.000000), onCPU=true.
+)Validating --> z.x.x.x.x.x.x.x.x.b.x._.x.c = Convolution (z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.x.x.x) : [3 x 3 x 16 x 16], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Validating --> z.x.x.x.x.x.x.x.x.b.x._ = BatchNormalization (z.x.x.x.x.x.x.x.x.b.x._.x.c, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.x.x.b.x = RectifiedLinear (z.x.x.x.x.x.x.x.x.b.x._) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 16 x 16].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 16 x 16] <- heNormal(seed=18, init dims=[144 x 144], range=0.117851(0.117851*1.000000), onCPU=true.
+)Validating --> z.x.x.x.x.x.x.x.x.b.x.c = Convolution (z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.x.x.x.x.x.x.b.x) : [3 x 3 x 16 x 16], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Validating --> z.x.x.x.x.x.x.x.x.b = BatchNormalization (z.x.x.x.x.x.x.x.x.b.x.c, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.x.x.p = Plus (z.x.x.x.x.x.x.x.x.b, z.x.x.x.x.x.x.x) : [32 x 32 x 16 x *], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.x.x.r = RectifiedLinear (z.x.x.x.x.x.x.x.x.p) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 16 x 16].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 16 x 16] <- heNormal(seed=17, init dims=[144 x 144], range=0.117851(0.117851*1.000000), onCPU=true.
+)Validating --> z.x.x.x.x.x.x.x.b.x._.x.c = Convolution (z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.x.x.x.x.r) : [3 x 3 x 16 x 16], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Validating --> z.x.x.x.x.x.x.x.b.x._ = BatchNormalization (z.x.x.x.x.x.x.x.b.x._.x.c, z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.x.b.x = RectifiedLinear (z.x.x.x.x.x.x.x.b.x._) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 16 x 16].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 16 x 16] <- heNormal(seed=16, init dims=[144 x 144], range=0.117851(0.117851*1.000000), onCPU=true.
+)Validating --> z.x.x.x.x.x.x.x.b.x.c = Convolution (z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.x.x.x.x.x.b.x) : [3 x 3 x 16 x 16], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Validating --> z.x.x.x.x.x.x.x.b = BatchNormalization (z.x.x.x.x.x.x.x.b.x.c, z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.x.p = Plus (z.x.x.x.x.x.x.x.b, z.x.x.x.x.x.x.x.x.r) : [32 x 32 x 16 x *], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.x.r = RectifiedLinear (z.x.x.x.x.x.x.x.p) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 16 x 16].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 16 x 16] <- heNormal(seed=15, init dims=[144 x 144], range=0.117851(0.117851*1.000000), onCPU=true.
+)Validating --> z.x.x.x.x.x.x.b.x._.x.c = Convolution (z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.x.x.x.r) : [3 x 3 x 16 x 16], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Validating --> z.x.x.x.x.x.x.b.x._ = BatchNormalization (z.x.x.x.x.x.x.b.x._.x.c, z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.b.x = RectifiedLinear (z.x.x.x.x.x.x.b.x._) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 16 x 16].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 16 x 16] <- heNormal(seed=14, init dims=[144 x 144], range=0.117851(0.117851*1.000000), onCPU=true.
+)Validating --> z.x.x.x.x.x.x.b.x.c = Convolution (z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.x.x.x.x.b.x) : [3 x 3 x 16 x 16], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 1.000000.
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [16 x 1].
+Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[16 x 1] <- 0.000000.
+Validating --> z.x.x.x.x.x.x.b = BatchNormalization (z.x.x.x.x.x.x.b.x.c, z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.p = Plus (z.x.x.x.x.x.x.b, z.x.x.x.x.x.x.x.r) : [32 x 32 x 16 x *], [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Validating --> z.x.x.x.x.x.x.r = RectifiedLinear (z.x.x.x.x.x.x.p) : [32 x 32 x 16 x *] -> [32 x 32 x 16 x *]
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 16 x 32].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 16 x 32] <- heNormal(seed=13, init dims=[288 x 144], range=0.117851(0.117851*1.000000), onCPU=true.
+)Validating --> _z.x.x.x.x.x.b.x._.x.c = Convolution (_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.x.x.r) : [3 x 3 x 16 x 32], [32 x 32 x 16 x *] -> [16 x 16 x 32 x *]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Validating --> _z.x.x.x.x.x.b.x._ = BatchNormalization (_z.x.x.x.x.x.b.x._.x.c, _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *]
+Validating --> _z.x.x.x.x.x.b.x = RectifiedLinear (_z.x.x.x.x.x.b.x._) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 32 x 32].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 32 x 32] <- heNormal(seed=12, init dims=[288 x 288], range=0.083333(0.083333*1.000000), onCPU=true.
+)Validating --> _z.x.x.x.x.x.b.x.c = Convolution (_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, _z.x.x.x.x.x.b.x) : [3 x 3 x 32 x 32], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Validating --> _z.x.x.x.x.x.b = BatchNormalization (_z.x.x.x.x.x.b.x.c, _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *]
+Validating --> z.x.x.x.x.x.s.arrayOfFunctions[0].W = LearnableParameter() :  -> [1 x 1 x 0 x 32]
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 16 x 32].
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[1 x 1 x 16 x 32] <- heNormal(seed=21, init dims=[32 x 16], range=0.353553(0.353553*1.000000), onCPU=true.
+)Validating --> z.x.x.x.x.x.s.x.c = Convolution (z.x.x.x.x.x.s.arrayOfFunctions[0].W, z.x.x.x.x.x.x.r) : [1 x 1 x 16 x 32], [32 x 32 x 16 x *] -> [16 x 16 x 32 x *]
+Validating --> z.x.x.x.x.x.s.arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.s.arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.s.arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.s.arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.s.arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Validating --> z.x.x.x.x.x.s = BatchNormalization (z.x.x.x.x.x.s.x.c, z.x.x.x.x.x.s.arrayOfFunctions[1].scale, z.x.x.x.x.x.s.arrayOfFunctions[1].bias, z.x.x.x.x.x.s.arrayOfFunctions[1].runMean, z.x.x.x.x.x.s.arrayOfFunctions[1].runVariance, z.x.x.x.x.x.s.arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *]
+Validating --> _z.x.x.x.x.x.p = Plus (_z.x.x.x.x.x.b, z.x.x.x.x.x.s) : [16 x 16 x 32 x *], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> _z.x.x.x.x.x.r = RectifiedLinear (_z.x.x.x.x.x.p) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 32 x 32].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 32 x 32] <- heNormal(seed=11, init dims=[288 x 288], range=0.083333(0.083333*1.000000), onCPU=true.
+)Validating --> z.x.x.x.x.x.b.x._.x.c = Convolution (z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, _z.x.x.x.x.x.r) : [3 x 3 x 32 x 32], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Validating --> z.x.x.x.x.x.b.x._ = BatchNormalization (z.x.x.x.x.x.b.x._.x.c, z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *]
+Validating --> z.x.x.x.x.x.b.x = RectifiedLinear (z.x.x.x.x.x.b.x._) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 32 x 32].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 32 x 32] <- heNormal(seed=10, init dims=[288 x 288], range=0.083333(0.083333*1.000000), onCPU=true.
+)Validating --> z.x.x.x.x.x.b.x.c = Convolution (z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.x.x.x.b.x) : [3 x 3 x 32 x 32], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Validating --> z.x.x.x.x.x.b = BatchNormalization (z.x.x.x.x.x.b.x.c, z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *]
+Validating --> z.x.x.x.x.x.p = Plus (z.x.x.x.x.x.b, _z.x.x.x.x.x.r) : [16 x 16 x 32 x *], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> z.x.x.x.x.x.r = RectifiedLinear (z.x.x.x.x.x.p) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 32 x 32].
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 32 x 32] <- heNormal(seed=9, init dims=[288 x 288], range=0.083333(0.083333*1.000000), onCPU=true.
+)Validating --> z.x.x.x.x.b.x._.x.c = Convolution (z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.x.r) : [3 x 3 x 32 x 32], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Validating --> z.x.x.x.x.b.x._ = BatchNormalization (z.x.x.x.x.b.x._.x.c, z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *]
+Validating --> z.x.x.x.x.b.x = RectifiedLinear (z.x.x.x.x.b.x._) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 32 x 32].
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 32 x 32] <- heNormal(seed=8, init dims=[288 x 288], range=0.083333(0.083333*1.000000), onCPU=true.
+)Validating --> z.x.x.x.x.b.x.c = Convolution (z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.x.x.b.x) : [3 x 3 x 32 x 32], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 1.000000.
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [32 x 1].
+Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[32 x 1] <- 0.000000.
+Validating --> z.x.x.x.x.b = BatchNormalization (z.x.x.x.x.b.x.c, z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *]
+Validating --> z.x.x.x.x.p = Plus (z.x.x.x.x.b, z.x.x.x.x.x.r) : [16 x 16 x 32 x *], [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Validating --> z.x.x.x.x.r = RectifiedLinear (z.x.x.x.x.p) : [16 x 16 x 32 x *] -> [16 x 16 x 32 x *]
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 32 x 64].
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 32 x 64] <- heNormal(seed=7, init dims=[576 x 288], range=0.083333(0.083333*1.000000), onCPU=true.
+)Validating --> _z.x.x.x.b.x._.x.c = Convolution (_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.r) : [3 x 3 x 32 x 64], [16 x 16 x 32 x *] -> [8 x 8 x 64 x *]
+Validating --> _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Validating --> _z.x.x.x.b.x._ = BatchNormalization (_z.x.x.x.b.x._.x.c, _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *]
+Validating --> _z.x.x.x.b.x = RectifiedLinear (_z.x.x.x.b.x._) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 64].
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 64 x 64] <- heNormal(seed=6, init dims=[576 x 576], range=0.058926(0.058926*1.000000), onCPU=true.
+)Validating --> _z.x.x.x.b.x.c = Convolution (_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, _z.x.x.x.b.x) : [3 x 3 x 64 x 64], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Validating --> _z.x.x.x.b = BatchNormalization (_z.x.x.x.b.x.c, _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *]
+Validating --> z.x.x.x.s.arrayOfFunctions[0].W = LearnableParameter() :  -> [1 x 1 x 0 x 64]
+Node 'z.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [1 x 1 x 32 x 64].
+Node 'z.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[1 x 1 x 32 x 64] <- heNormal(seed=22, init dims=[64 x 32], range=0.250000(0.250000*1.000000), onCPU=true.
+)Validating --> z.x.x.x.s.x.c = Convolution (z.x.x.x.s.arrayOfFunctions[0].W, z.x.x.x.x.r) : [1 x 1 x 32 x 64], [16 x 16 x 32 x *] -> [8 x 8 x 64 x *]
+Validating --> z.x.x.x.s.arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.s.arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.s.arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.s.arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.s.arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node 'z.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'z.x.x.x.s.arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.x.s.arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'z.x.x.x.s.arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.x.s.arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Validating --> z.x.x.x.s = BatchNormalization (z.x.x.x.s.x.c, z.x.x.x.s.arrayOfFunctions[1].scale, z.x.x.x.s.arrayOfFunctions[1].bias, z.x.x.x.s.arrayOfFunctions[1].runMean, z.x.x.x.s.arrayOfFunctions[1].runVariance, z.x.x.x.s.arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *]
+Validating --> _z.x.x.x.p = Plus (_z.x.x.x.b, z.x.x.x.s) : [8 x 8 x 64 x *], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> _z.x.x.x.r = RectifiedLinear (_z.x.x.x.p) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 64].
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 64 x 64] <- heNormal(seed=5, init dims=[576 x 576], range=0.058926(0.058926*1.000000), onCPU=true.
+)Validating --> z.x.x.x.b.x._.x.c = Convolution (z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, _z.x.x.x.r) : [3 x 3 x 64 x 64], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Validating --> z.x.x.x.b.x._ = BatchNormalization (z.x.x.x.b.x._.x.c, z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *]
+Validating --> z.x.x.x.b.x = RectifiedLinear (z.x.x.x.b.x._) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 64].
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 64 x 64] <- heNormal(seed=4, init dims=[576 x 576], range=0.058926(0.058926*1.000000), onCPU=true.
+)Validating --> z.x.x.x.b.x.c = Convolution (z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.x.b.x) : [3 x 3 x 64 x 64], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Validating --> z.x.x.x.b = BatchNormalization (z.x.x.x.b.x.c, z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *]
+Validating --> z.x.x.x.p = Plus (z.x.x.x.b, _z.x.x.x.r) : [8 x 8 x 64 x *], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> z.x.x.x.r = RectifiedLinear (z.x.x.x.p) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 64].
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 64 x 64] <- heNormal(seed=3, init dims=[576 x 576], range=0.058926(0.058926*1.000000), onCPU=true.
+)Validating --> z.x.x.b.x._.x.c = Convolution (z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.r) : [3 x 3 x 64 x 64], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Validating --> z.x.x.b.x._ = BatchNormalization (z.x.x.b.x._.x.c, z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *]
+Validating --> z.x.x.b.x = RectifiedLinear (z.x.x.b.x._) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 3 x 64 x 64].
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[3 x 3 x 64 x 64] <- heNormal(seed=2, init dims=[576 x 576], range=0.058926(0.058926*1.000000), onCPU=true.
+)Validating --> z.x.x.b.x.c = Convolution (z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.b.x) : [3 x 3 x 64 x 64], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [0 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 1.000000.
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 1].
+Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
+Validating --> z.x.x.b = BatchNormalization (z.x.x.b.x.c, z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *]
+Validating --> z.x.x.p = Plus (z.x.x.b, z.x.x.x.r) : [8 x 8 x 64 x *], [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> z.x.x.r = RectifiedLinear (z.x.x.p) : [8 x 8 x 64 x *] -> [8 x 8 x 64 x *]
+Validating --> z.x = Pooling (z.x.x.r) : [8 x 8 x 64 x *] -> [1 x 1 x 64 x *]
+Node 'model.arrayOfFunctions[8].W' (LearnableParameter operation) operation: Tensor shape was inferred as [10 x 1 x 1 x 64].
+Node 'model.arrayOfFunctions[8].W' (LearnableParameter operation): Initializing Parameter[10 x 1 x 1 x 64] <- glorotUniform(seed=1, init dims=[10 x 64], range=0.284747(0.284747*1.000000), onCPU=true.
+)Validating --> z.PlusArgs[0] = Times (model.arrayOfFunctions[8].W, z.x) : [10 x 1 x 1 x 64], [1 x 1 x 64 x *] -> [10 x *]
+Validating --> model.arrayOfFunctions[8].b = LearnableParameter() :  -> [10]
+Validating --> z = Plus (z.PlusArgs[0], model.arrayOfFunctions[8].b) : [10 x *], [10] -> [10 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, z) : [10 x *], [10 x *] -> [1]
+Validating --> errs = ClassificationError (labels, z) : [10 x *], [10 x *] -> [1]
+Validating --> inputs.inputs[2] = LearnableParameter() :  -> [1 x 1]
+Validating --> top5Errs = ClassificationError (labels, z, inputs.inputs[2]) : [10 x *], [10 x *], [1 x 1] -> [1]
+
+Validating network. 77 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+z.x.x.x.x.x.x.x._.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 16, Kernel: 3 x 3 x 3, Map: 16, Stride: 1 x 1 x 3, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 16, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 16, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 16, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 16, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 16, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 16, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+_z.x.x.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 3 x 3 x 16, Map: 32, Stride: 2 x 2 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+_z.x.x.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 32, Stride: 1 x 1 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.s.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 1 x 1 x 16, Map: 32, Stride: 2 x 2 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 32, Stride: 1 x 1 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 32, Stride: 1 x 1 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 32, Stride: 1 x 1 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 32, Stride: 1 x 1 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+_z.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 3 x 3 x 32, Map: 64, Stride: 2 x 2 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+_z.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.s.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 1 x 1 x 32, Map: 64, Stride: 2 x 2 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 1 x 1 x 64, Kernel: 8 x 8 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+
+
+
+Post-processing network complete.
+
+05/09/2017 15:33:55: 
+Model has 209 nodes. Using GPU 0.
+
+05/09/2017 15:33:55: Training criterion:   ce = CrossEntropyWithSoftmax
+05/09/2017 15:33:55: Evaluation criterion: errs = ClassificationError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 348 matrices, 185 are shared as 43, and 163 are not shared.
+
+Here are the ones that share memory:
+	{ z : [10 x *] (gradient)
+	  z.PlusArgs[0] : [10 x *]
+	  z.x : [1 x 1 x 64 x *] (gradient)
+	  z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient) }
+	{ _z.x.x.x.x.x.b.x : [16 x 16 x 32 x *] (gradient)
+	  _z.x.x.x.x.x.p : [16 x 16 x 32 x *]
+	  z.x.x.x.b.x._ : [8 x 8 x 64 x *]
+	  z.x.x.x.b.x.c : [8 x 8 x 64 x *]
+	  z.x.x.x.x.b.x.c : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.p : [16 x 16 x 32 x *]
+	  z.x.x.x.x.p : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.p : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.x.x : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *] (gradient) }
+	{ z.x.x.x.b : [8 x 8 x 64 x *]
+	  z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient)
+	  z.x.x.x.r : [8 x 8 x 64 x *] }
+	{ _z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *]
+	  z.x.x.x.x.b.x._ : [16 x 16 x 32 x *]
+	  z.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.b.x.c : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.p : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 16 x 32] (gradient) }
+	{ _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient)
+	  z.x.x.b.x._.x.c : [8 x 8 x 64 x *]
+	  z.x.x.x.p : [8 x 8 x 64 x *] }
+	{ z.PlusArgs[0] : [10 x *] (gradient)
+	  z.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 32 x 64] (gradient) }
+	{ z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient)
+	  z.x.x.b.x._ : [8 x 8 x 64 x *]
+	  z.x.x.b.x.c : [8 x 8 x 64 x *] }
+	{ _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 64] (gradient)
+	  z.x.x.b.x : [8 x 8 x 64 x *] }
+	{ _z.x.x.x.b : [8 x 8 x 64 x *]
+	  _z.x.x.x.b.x._ : [8 x 8 x 64 x *]
+	  _z.x.x.x.b.x._ : [8 x 8 x 64 x *] (gradient)
+	  _z.x.x.x.b.x.c : [8 x 8 x 64 x *] (gradient)
+	  _z.x.x.x.p : [8 x 8 x 64 x *] (gradient)
+	  z.x : [1 x 1 x 64 x *]
+	  z.x.x.b.x._ : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.b.x.c : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.p : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.b.x._ : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.b.x.c : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.p : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.s.x.c : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1] (gradient) }
+	{ _z.x.x.x.r : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.b : [8 x 8 x 64 x *]
+	  z.x.x.r : [8 x 8 x 64 x *]
+	  z.x.x.x.r : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.s : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient) }
+	{ _z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *]
+	  _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1] (gradient) }
+	{ _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1] (gradient)
+	  _z.x.x.x.b.x.c : [8 x 8 x 64 x *] }
+	{ _z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.s.x.c : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1] (gradient) }
+	{ _z.x.x.x.b : [8 x 8 x 64 x *] (gradient)
+	  _z.x.x.x.b.x : [8 x 8 x 64 x *] (gradient)
+	  _z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *] (gradient)
+	  z : [10 x *]
+	  z.x.x.b : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.b.x : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.b.x._.x.c : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.p : [8 x 8 x 64 x *]
+	  z.x.x.r : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.b : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.b.x : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *] (gradient)
+	  z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient) }
+	{ _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1] (gradient)
+	  z.x.x.x.s.x.c : [8 x 8 x 64 x *] }
+	{ z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64] (gradient)
+	  z.x.x.x.b.x : [8 x 8 x 64 x *] }
+	{ _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1] (gradient)
+	  _z.x.x.x.b.x : [8 x 8 x 64 x *] }
+	{ _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient)
+	  z.x.x.x.x.b : [16 x 16 x 32 x *]
+	  z.x.x.x.x.b : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.b.x._ : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.r : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.b : [16 x 16 x 32 x *] }
+	{ z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.s.x.c : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient) }
+	{ z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient)
+	  z.x.x.x.x.b.x : [16 x 16 x 32 x *] }
+	{ _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1] (gradient)
+	  _z.x.x.x.x.x.b.x : [16 x 16 x 32 x *] }
+	{ _z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1] (gradient) }
+	{ _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 32] (gradient)
+	  z.x.x.x.x.x.b.x : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.s : [16 x 16 x 32 x *] (gradient) }
+	{ _z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *] (gradient)
+	  _z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1] (gradient) }
+	{ _z.x.x.x.x.x.p : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.b : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.r : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient) }
+	{ z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient)
+	  z.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] }
+	{ _z.x.x.x.r : [8 x 8 x 64 x *]
+	  z.x.x.x.s : [8 x 8 x 64 x *]
+	  z.x.x.x.x.x.b.x : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.r : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.s : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.s.arrayOfFunctions[1].scale : [32 x 1] (gradient) }
+	{ z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1] (gradient)
+	  z.x.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *] }
+	{ model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1] (gradient)
+	  z.x.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *] }
+	{ _z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *]
+	  z.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.p : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.p : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient) }
+	{ z.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1] (gradient) }
+	{ _z.x.x.x.x.x.r : [16 x 16 x 32 x *]
+	  model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1] (gradient)
+	  z.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.r : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *] (gradient) }
+	{ _z.x.x.x.x.x.b : [16 x 16 x 32 x *] (gradient)
+	  _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1] (gradient)
+	  _z.x.x.x.x.x.r : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *] }
+	{ z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient)
+	  z.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *] }
+	{ z.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x._ : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *] (gradient) }
+	{ z.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x._.x.c : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *] (gradient) }
+	{ z.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1] (gradient) }
+	{ _z.x.x.x.p : [8 x 8 x 64 x *]
+	  _z.x.x.x.x.x.b : [16 x 16 x 32 x *]
+	  z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *]
+	  z.x.x.x.x.b.x : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.r : [16 x 16 x 32 x *] (gradient)
+	  z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32] (gradient)
+	  z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *] (gradient) }
+	{ model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 3 x 16] (gradient)
+	  z.x.x.x.x.x.x.x : [32 x 32 x 16 x *] }
+	{ z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1] (gradient)
+	  z.x.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *] }
+	{ z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1] (gradient)
+	  z.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *] }
+	{ z.x.x.x.x.x.x.b : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.b : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.r : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x._ : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *] (gradient)
+	  z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16] (gradient)
+	  z.x.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *]
+	  z.x.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *] }
+	{ z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1] (gradient)
+	  z.x.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *] }
+
+Here are the ones that don't share memory:
+	{top5Errs : [1]}
+	{labels : [10 x *]}
+	{model.arrayOfFunctions[8].W : [10 x 1 x 1 x 64]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 64]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].scale : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].runMean : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 16 x 32]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 32]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{features : [32 x 32 x 3 x *]}
+	{_z.x.x.x.x.x.x.x.x : [1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 3 x 16]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.s.arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.x.s.arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.s.arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.x.s.arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 32 x 64]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
+	{model.arrayOfFunctions[8].b : [10]}
+	{z.x.x.x.s.arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{inputs.inputs[2] : [1 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{errs : [1]}
+	{ce : [1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1] (gradient)}
+	{model.arrayOfFunctions[8].b : [10] (gradient)}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1] (gradient)}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1] (gradient)}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1] (gradient)}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1] (gradient)}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1] (gradient)}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1] (gradient)}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1] (gradient)}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].bias : [32 x 1] (gradient)}
+	{z.x.x.x.s.arrayOfFunctions[1].bias : [64 x 1] (gradient)}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1] (gradient)}
+	{ce : [1] (gradient)}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1] (gradient)}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
+	{z.x.x.x.s.arrayOfFunctions[1].scale : [64 x 1] (gradient)}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1] (gradient)}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1] (gradient)}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1] (gradient)}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1] (gradient)}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1] (gradient)}
+	{model.arrayOfFunctions[8].W : [10 x 1 x 1 x 64] (gradient)}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1] (gradient)}
+	{z.x.x.x.x.x.x.x.x : [32 x 32 x 3 x *]}
+	{z.x.x.x.x.x.x.x._.x.c : [32 x 32 x 16 x *]}
+
+
+05/09/2017 15:33:55: Training 272474 parameters in 65 out of 65 parameter tensors and 139 nodes with gradient:
+
+05/09/2017 15:33:55: 	Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 64]
+05/09/2017 15:33:55: 	Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node '_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
+05/09/2017 15:33:55: 	Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node '_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 32]
+05/09/2017 15:33:55: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
+05/09/2017 15:33:55: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node '_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 3 x 16]
+05/09/2017 15:33:55: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+05/09/2017 15:33:55: 	Node 'model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+05/09/2017 15:33:55: 	Node 'model.arrayOfFunctions[8].W' (LearnableParameter operation) : [10 x 1 x 1 x 64]
+05/09/2017 15:33:55: 	Node 'model.arrayOfFunctions[8].b' (LearnableParameter operation) : [10]
+05/09/2017 15:33:55: 	Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
+05/09/2017 15:33:55: 	Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
+05/09/2017 15:33:55: 	Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 64 x 64]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation) : [1 x 1 x 32 x 64]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation) : [64 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 32 x 32]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.s.arrayOfFunctions[0].W' (LearnableParameter operation) : [1 x 1 x 16 x 32]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].bias' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.s.arrayOfFunctions[1].scale' (LearnableParameter operation) : [32 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W' (LearnableParameter operation) : [3 x 3 x 16 x 16]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias' (LearnableParameter operation) : [16 x 1]
+05/09/2017 15:33:55: 	Node 'z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale' (LearnableParameter operation) : [16 x 1]
+
+05/09/2017 15:33:55: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+05/09/2017 15:33:55: Starting Epoch 1: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 1214.9 samples
+
+05/09/2017 15:33:55: Starting minibatch loop.
+05/09/2017 15:33:58:  Epoch[ 1 of 3]-Minibatch[   1-   8, 50.00%]: ce = 2.32579994 * 1024; errs = 84.766% * 1024; time = 2.8681s; samplesPerSecond = 357.0
+05/09/2017 15:33:59:  Epoch[ 1 of 3]-Minibatch[   9-  16, 100.00%]: ce = 2.15781784 * 1024; errs = 75.684% * 1024; time = 0.7752s; samplesPerSecond = 1321.0
+05/09/2017 15:33:59: Finished Epoch[ 1 of 3]: [Training] ce = 2.24180889 * 2048; errs = 80.225% * 2048; totalSamplesSeen = 2048; learningRatePerSample = 0.0099999998; epochTime=3.65022s
+05/09/2017 15:33:59: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/Models/ResNet20_CIFAR10_DataAug.1'
+
+05/09/2017 15:33:59: Starting Epoch 2: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 1214.9 samples
+
+05/09/2017 15:33:59: Starting minibatch loop.
+05/09/2017 15:34:00:  Epoch[ 2 of 3]-Minibatch[   1-   8, 50.00%]: ce = 2.10416532 * 1024; errs = 79.395% * 1024; time = 0.8114s; samplesPerSecond = 1262.0
+05/09/2017 15:34:01:  Epoch[ 2 of 3]-Minibatch[   9-  16, 100.00%]: ce = 2.06084943 * 1024; errs = 74.121% * 1024; time = 0.7764s; samplesPerSecond = 1318.9
+05/09/2017 15:34:01: Finished Epoch[ 2 of 3]: [Training] ce = 2.08250737 * 2048; errs = 76.758% * 2048; totalSamplesSeen = 4096; learningRatePerSample = 0.0099999998; epochTime=1.59023s
+05/09/2017 15:34:01: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/Models/ResNet20_CIFAR10_DataAug.2'
+
+05/09/2017 15:34:01: Starting Epoch 3: learning rate per sample = 0.010000  effective momentum = 0.900000  momentum as time constant = 1214.9 samples
+
+05/09/2017 15:34:01: Starting minibatch loop.
+05/09/2017 15:34:02:  Epoch[ 3 of 3]-Minibatch[   1-   8, 50.00%]: ce = 1.91900182 * 1024; errs = 70.117% * 1024; time = 0.8091s; samplesPerSecond = 1265.7
+05/09/2017 15:34:02:  Epoch[ 3 of 3]-Minibatch[   9-  16, 100.00%]: ce = 1.80923724 * 1024; errs = 67.285% * 1024; time = 0.7747s; samplesPerSecond = 1321.8
+05/09/2017 15:34:02: Finished Epoch[ 3 of 3]: [Training] ce = 1.86411953 * 2048; errs = 68.701% * 2048; totalSamplesSeen = 6144; learningRatePerSample = 0.0099999998; epochTime=1.58629s
+05/09/2017 15:34:02: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170509073351.56159\Examples\Image\Classification\ResNet_CIFAR_ResNet20_CIFAR10@release_gpu/Models/ResNet20_CIFAR10_DataAug'
+
+05/09/2017 15:34:02: Action "train" complete.
+
+
+05/09/2017 15:34:02: ##############################################################################
+05/09/2017 15:34:02: #                                                                            #
+05/09/2017 15:34:02: # Eval command (eval action)                                                 #
+05/09/2017 15:34:02: #                                                                            #
+05/09/2017 15:34:02: ##############################################################################
+
+
+Post-processing network...
+
+3 roots:
+	ce = CrossEntropyWithSoftmax()
+	errs = ClassificationError()
+	top5Errs = ClassificationError()
+
+Validating network. 209 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *1]
+Validating --> model.arrayOfFunctions[8].W = LearnableParameter() :  -> [10 x 1 x 1 x 64]
+Validating --> z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 64 x 64]
+Validating --> z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 64 x 64]
+Validating --> z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 64 x 64]
+Validating --> z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 64 x 64]
+Validating --> _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 64 x 64]
+Validating --> _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 32 x 64]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 32 x 32]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 32 x 32]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 32 x 32]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 32 x 32]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 32 x 32]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 16 x 32]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 16 x 16]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 16 x 16]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 16 x 16]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 16 x 16]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 16 x 16]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 16 x 16]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W = LearnableParameter() :  -> [3 x 3 x 3 x 16]
+Validating --> _z.x.x.x.x.x.x.x.x = LearnableParameter() :  -> [1]
+Validating --> features = InputValue() :  -> [32 x 32 x 3 x *1]
+Validating --> z.x.x.x.x.x.x.x.x = ElementTimes (_z.x.x.x.x.x.x.x.x, features) : [1], [32 x 32 x 3 x *1] -> [32 x 32 x 3 x *1]
+Validating --> z.x.x.x.x.x.x.x._.x.c = Convolution (model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.x.x.x.x) : [3 x 3 x 3 x 16], [32 x 32 x 3 x *1] -> [32 x 32 x 16 x *1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [16 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [16 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [16 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [16 x 1]
+Validating --> model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.x.x.x.x._ = BatchNormalization (z.x.x.x.x.x.x.x._.x.c, model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale, model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias, model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean, model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *1], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x = RectifiedLinear (z.x.x.x.x.x.x.x._) : [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.x.b.x._.x.c = Convolution (z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.x.x.x) : [3 x 3 x 16 x 16], [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.x.x.x.x.x.b.x._ = BatchNormalization (z.x.x.x.x.x.x.x.x.b.x._.x.c, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *1], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.x.b.x = RectifiedLinear (z.x.x.x.x.x.x.x.x.b.x._) : [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.x.b.x.c = Convolution (z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.x.x.x.x.x.x.b.x) : [3 x 3 x 16 x 16], [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.x.x.x.x.x.b = BatchNormalization (z.x.x.x.x.x.x.x.x.b.x.c, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *1], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.x.p = Plus (z.x.x.x.x.x.x.x.x.b, z.x.x.x.x.x.x.x) : [32 x 32 x 16 x *1], [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.x.r = RectifiedLinear (z.x.x.x.x.x.x.x.x.p) : [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.b.x._.x.c = Convolution (z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.x.x.x.x.r) : [3 x 3 x 16 x 16], [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.x.x.x.x.b.x._ = BatchNormalization (z.x.x.x.x.x.x.x.b.x._.x.c, z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *1], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.b.x = RectifiedLinear (z.x.x.x.x.x.x.x.b.x._) : [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.b.x.c = Convolution (z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.x.x.x.x.x.b.x) : [3 x 3 x 16 x 16], [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.x.x.x.x.b = BatchNormalization (z.x.x.x.x.x.x.x.b.x.c, z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *1], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.p = Plus (z.x.x.x.x.x.x.x.b, z.x.x.x.x.x.x.x.x.r) : [32 x 32 x 16 x *1], [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.x.r = RectifiedLinear (z.x.x.x.x.x.x.x.p) : [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.b.x._.x.c = Convolution (z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.x.x.x.r) : [3 x 3 x 16 x 16], [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.x.x.x.b.x._ = BatchNormalization (z.x.x.x.x.x.x.b.x._.x.c, z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *1], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.b.x = RectifiedLinear (z.x.x.x.x.x.x.b.x._) : [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.b.x.c = Convolution (z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.x.x.x.x.b.x) : [3 x 3 x 16 x 16], [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [16 x 1]
+Validating --> z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.x.x.x.b = BatchNormalization (z.x.x.x.x.x.x.b.x.c, z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [32 x 32 x 16 x *1], [16 x 1], [16 x 1], [16 x 1], [16 x 1], [1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.p = Plus (z.x.x.x.x.x.x.b, z.x.x.x.x.x.x.x.r) : [32 x 32 x 16 x *1], [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> z.x.x.x.x.x.x.r = RectifiedLinear (z.x.x.x.x.x.x.p) : [32 x 32 x 16 x *1] -> [32 x 32 x 16 x *1]
+Validating --> _z.x.x.x.x.x.b.x._.x.c = Convolution (_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.x.x.r) : [3 x 3 x 16 x 32], [32 x 32 x 16 x *1] -> [16 x 16 x 32 x *1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [32 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [32 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [32 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [32 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> _z.x.x.x.x.x.b.x._ = BatchNormalization (_z.x.x.x.x.x.b.x._.x.c, _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, _z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *1], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *1]
+Validating --> _z.x.x.x.x.x.b.x = RectifiedLinear (_z.x.x.x.x.x.b.x._) : [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> _z.x.x.x.x.x.b.x.c = Convolution (_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, _z.x.x.x.x.x.b.x) : [3 x 3 x 32 x 32], [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [32 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [32 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [32 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [32 x 1]
+Validating --> _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> _z.x.x.x.x.x.b = BatchNormalization (_z.x.x.x.x.x.b.x.c, _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, _z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *1], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.x.s.arrayOfFunctions[0].W = LearnableParameter() :  -> [1 x 1 x 16 x 32]
+Validating --> z.x.x.x.x.x.s.x.c = Convolution (z.x.x.x.x.x.s.arrayOfFunctions[0].W, z.x.x.x.x.x.x.r) : [1 x 1 x 16 x 32], [32 x 32 x 16 x *1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.x.s.arrayOfFunctions[1].scale = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.x.s.arrayOfFunctions[1].bias = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.x.s.arrayOfFunctions[1].runMean = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.x.s.arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.x.s.arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.x.x.s = BatchNormalization (z.x.x.x.x.x.s.x.c, z.x.x.x.x.x.s.arrayOfFunctions[1].scale, z.x.x.x.x.x.s.arrayOfFunctions[1].bias, z.x.x.x.x.x.s.arrayOfFunctions[1].runMean, z.x.x.x.x.x.s.arrayOfFunctions[1].runVariance, z.x.x.x.x.x.s.arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *1], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *1]
+Validating --> _z.x.x.x.x.x.p = Plus (_z.x.x.x.x.x.b, z.x.x.x.x.x.s) : [16 x 16 x 32 x *1], [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> _z.x.x.x.x.x.r = RectifiedLinear (_z.x.x.x.x.x.p) : [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.x.b.x._.x.c = Convolution (z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, _z.x.x.x.x.x.r) : [3 x 3 x 32 x 32], [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.x.x.b.x._ = BatchNormalization (z.x.x.x.x.x.b.x._.x.c, z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *1], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.x.b.x = RectifiedLinear (z.x.x.x.x.x.b.x._) : [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.x.b.x.c = Convolution (z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.x.x.x.b.x) : [3 x 3 x 32 x 32], [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.x.x.b = BatchNormalization (z.x.x.x.x.x.b.x.c, z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *1], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.x.p = Plus (z.x.x.x.x.x.b, _z.x.x.x.x.x.r) : [16 x 16 x 32 x *1], [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.x.r = RectifiedLinear (z.x.x.x.x.x.p) : [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.b.x._.x.c = Convolution (z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.x.r) : [3 x 3 x 32 x 32], [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.x.b.x._ = BatchNormalization (z.x.x.x.x.b.x._.x.c, z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *1], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.b.x = RectifiedLinear (z.x.x.x.x.b.x._) : [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.b.x.c = Convolution (z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.x.x.b.x) : [3 x 3 x 32 x 32], [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [32 x 1]
+Validating --> z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.x.b = BatchNormalization (z.x.x.x.x.b.x.c, z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [16 x 16 x 32 x *1], [32 x 1], [32 x 1], [32 x 1], [32 x 1], [1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.p = Plus (z.x.x.x.x.b, z.x.x.x.x.x.r) : [16 x 16 x 32 x *1], [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> z.x.x.x.x.r = RectifiedLinear (z.x.x.x.x.p) : [16 x 16 x 32 x *1] -> [16 x 16 x 32 x *1]
+Validating --> _z.x.x.x.b.x._.x.c = Convolution (_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.x.r) : [3 x 3 x 32 x 64], [16 x 16 x 32 x *1] -> [8 x 8 x 64 x *1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [64 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [64 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [64 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [64 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> _z.x.x.x.b.x._ = BatchNormalization (_z.x.x.x.b.x._.x.c, _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, _z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *1], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *1]
+Validating --> _z.x.x.x.b.x = RectifiedLinear (_z.x.x.x.b.x._) : [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> _z.x.x.x.b.x.c = Convolution (_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, _z.x.x.x.b.x) : [3 x 3 x 64 x 64], [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [64 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [64 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [64 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [64 x 1]
+Validating --> _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> _z.x.x.x.b = BatchNormalization (_z.x.x.x.b.x.c, _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, _z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *1], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.x.s.arrayOfFunctions[0].W = LearnableParameter() :  -> [1 x 1 x 32 x 64]
+Validating --> z.x.x.x.s.x.c = Convolution (z.x.x.x.s.arrayOfFunctions[0].W, z.x.x.x.x.r) : [1 x 1 x 32 x 64], [16 x 16 x 32 x *1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.x.s.arrayOfFunctions[1].scale = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.x.s.arrayOfFunctions[1].bias = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.x.s.arrayOfFunctions[1].runMean = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.x.s.arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.x.s.arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.s = BatchNormalization (z.x.x.x.s.x.c, z.x.x.x.s.arrayOfFunctions[1].scale, z.x.x.x.s.arrayOfFunctions[1].bias, z.x.x.x.s.arrayOfFunctions[1].runMean, z.x.x.x.s.arrayOfFunctions[1].runVariance, z.x.x.x.s.arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *1], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *1]
+Validating --> _z.x.x.x.p = Plus (_z.x.x.x.b, z.x.x.x.s) : [8 x 8 x 64 x *1], [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> _z.x.x.x.r = RectifiedLinear (_z.x.x.x.p) : [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.x.b.x._.x.c = Convolution (z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, _z.x.x.x.r) : [3 x 3 x 64 x 64], [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.b.x._ = BatchNormalization (z.x.x.x.b.x._.x.c, z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *1], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.x.b.x = RectifiedLinear (z.x.x.x.b.x._) : [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.x.b.x.c = Convolution (z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.x.b.x) : [3 x 3 x 64 x 64], [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.b = BatchNormalization (z.x.x.x.b.x.c, z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *1], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.x.p = Plus (z.x.x.x.b, _z.x.x.x.r) : [8 x 8 x 64 x *1], [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.x.r = RectifiedLinear (z.x.x.x.p) : [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.b.x._.x.c = Convolution (z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W, z.x.x.x.r) : [3 x 3 x 64 x 64], [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.b.x._ = BatchNormalization (z.x.x.b.x._.x.c, z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale, z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias, z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean, z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance, z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *1], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.b.x = RectifiedLinear (z.x.x.b.x._) : [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.b.x.c = Convolution (z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W, z.x.x.b.x) : [3 x 3 x 64 x 64], [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance = LearnableParameter() :  -> [64 x 1]
+Validating --> z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount = LearnableParameter() :  -> [1]
+Validating --> z.x.x.b = BatchNormalization (z.x.x.b.x.c, z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale, z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias, z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean, z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance, z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount) : [8 x 8 x 64 x *1], [64 x 1], [64 x 1], [64 x 1], [64 x 1], [1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.p = Plus (z.x.x.b, z.x.x.x.r) : [8 x 8 x 64 x *1], [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> z.x.x.r = RectifiedLinear (z.x.x.p) : [8 x 8 x 64 x *1] -> [8 x 8 x 64 x *1]
+Validating --> z.x = Pooling (z.x.x.r) : [8 x 8 x 64 x *1] -> [1 x 1 x 64 x *1]
+Validating --> z.PlusArgs[0] = Times (model.arrayOfFunctions[8].W, z.x) : [10 x 1 x 1 x 64], [1 x 1 x 64 x *1] -> [10 x *1]
+Validating --> model.arrayOfFunctions[8].b = LearnableParameter() :  -> [10]
+Validating --> z = Plus (z.PlusArgs[0], model.arrayOfFunctions[8].b) : [10 x *1], [10] -> [10 x *1]
+Validating --> ce = CrossEntropyWithSoftmax (labels, z) : [10 x *1], [10 x *1] -> [1]
+Validating --> errs = ClassificationError (labels, z) : [10 x *1], [10 x *1] -> [1]
+Validating --> inputs.inputs[2] = LearnableParameter() :  -> [1 x 1]
+Validating --> top5Errs = ClassificationError (labels, z, inputs.inputs[2]) : [10 x *1], [10 x *1], [1 x 1] -> [1]
+
+Validating network. 77 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+z.x.x.x.x.x.x.x._.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 16, Kernel: 3 x 3 x 3, Map: 16, Stride: 1 x 1 x 3, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 16, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 16, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 16, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 16, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 16, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 16, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+_z.x.x.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 3 x 3 x 16, Map: 32, Stride: 2 x 2 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+_z.x.x.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 32, Stride: 1 x 1 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.s.x.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 1 x 1 x 16, Map: 32, Stride: 2 x 2 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 32, Stride: 1 x 1 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 32, Stride: 1 x 1 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 32, Stride: 1 x 1 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 32, Stride: 1 x 1 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+_z.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 3 x 3 x 32, Map: 64, Stride: 2 x 2 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+_z.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.s.x.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 1 x 1 x 32, Map: 64, Stride: 2 x 2 x 32, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.b.x._.x.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x.x.b.x.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 64, Stride: 1 x 1 x 64, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+Using cuDNN batch normalization engine.
+z.x: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 1 x 1 x 64, Kernel: 8 x 8 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+
+
+
+Post-processing network complete.
+
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 209 matrices, 74 are shared as 4, and 135 are not shared.
+
+Here are the ones that share memory:
+	{ _z.x.x.x.x.x.b : [16 x 16 x 32 x *1]
+	  _z.x.x.x.x.x.r : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.b : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x._.x.c : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *1] }
+	{ _z.x.x.x.b.x._ : [8 x 8 x 64 x *1]
+	  _z.x.x.x.b.x.c : [8 x 8 x 64 x *1]
+	  _z.x.x.x.p : [8 x 8 x 64 x *1]
+	  z.x.x.b.x._ : [8 x 8 x 64 x *1]
+	  z.x.x.b.x.c : [8 x 8 x 64 x *1]
+	  z.x.x.p : [8 x 8 x 64 x *1]
+	  z.x.x.x.b.x._ : [8 x 8 x 64 x *1]
+	  z.x.x.x.b.x.c : [8 x 8 x 64 x *1]
+	  z.x.x.x.p : [8 x 8 x 64 x *1]
+	  z.x.x.x.s.x.c : [8 x 8 x 64 x *1]
+	  z.x.x.x.x.b.x._ : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.b.x.c : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.b.x : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.x.b : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.r : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x._ : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.b.x._ : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.b.x.c : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.x.p : [32 x 32 x 16 x *1] }
+	{ _z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *1]
+	  _z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *1]
+	  z : [10 x *1]
+	  z.x : [1 x 1 x 64 x *1]
+	  z.x.x.b : [8 x 8 x 64 x *1]
+	  z.x.x.b.x : [8 x 8 x 64 x *1]
+	  z.x.x.b.x._.x.c : [8 x 8 x 64 x *1]
+	  z.x.x.x.b : [8 x 8 x 64 x *1]
+	  z.x.x.x.b.x : [8 x 8 x 64 x *1]
+	  z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *1]
+	  z.x.x.x.s : [8 x 8 x 64 x *1]
+	  z.x.x.x.x.r : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.b : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.b.x._ : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.r : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.s : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.p : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.b.x : [32 x 32 x 16 x *1] }
+	{ _z.x.x.x.b : [8 x 8 x 64 x *1]
+	  _z.x.x.x.b.x : [8 x 8 x 64 x *1]
+	  _z.x.x.x.b.x._.x.c : [8 x 8 x 64 x *1]
+	  _z.x.x.x.r : [8 x 8 x 64 x *1]
+	  _z.x.x.x.x.x.b.x : [16 x 16 x 32 x *1]
+	  _z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *1]
+	  _z.x.x.x.x.x.p : [16 x 16 x 32 x *1]
+	  z.PlusArgs[0] : [10 x *1]
+	  z.x.x.r : [8 x 8 x 64 x *1]
+	  z.x.x.x.r : [8 x 8 x 64 x *1]
+	  z.x.x.x.x.b.x : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.p : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.b.x._.x.c : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.b.x.c : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.p : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.s.x.c : [16 x 16 x 32 x *1]
+	  z.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.b.x._.x.c : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.r : [32 x 32 x 16 x *1]
+	  z.x.x.x.x.x.x.x.x : [32 x 32 x 3 x *1]
+	  z.x.x.x.x.x.x.x.x.b : [32 x 32 x 16 x *1] }
+
+Here are the ones that don't share memory:
+	{ce : [1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{top5Errs : [1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{errs : [1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 64]}
+	{_z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 32]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
+	{_z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
+	{_z.x.x.x.x.x.x.x.x : [1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
+	{_z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
+	{features : [32 x 32 x 3 x *1]}
+	{inputs.inputs[2] : [1 x 1]}
+	{model.arrayOfFunctions[8].b : [10]}
+	{labels : [10 x *1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 3 x 16]}
+	{model.arrayOfFunctions[8].W : [10 x 1 x 1 x 64]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{model.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{z.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 64 x 64]}
+	{z.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.x.s.arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.s.arrayOfFunctions[1].runMean : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 32 x 64]}
+	{z.x.x.x.s.arrayOfFunctions[1].bias : [64 x 1]}
+	{z.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.s.arrayOfFunctions[1].runVariance : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.s.arrayOfFunctions[1].scale : [64 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 32 x 32]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[0].W : [1 x 1 x 16 x 32]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].bias : [32 x 1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].scale : [32 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].runMean : [32 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].bias : [16 x 1]}
+	{z.x.x.x.x.x.s.arrayOfFunctions[1].runVariance : [32 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runVariance : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].runMean : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[0].W : [3 x 3 x 16 x 16]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].runCount : [1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[0].arrayOfFunctions[0].arrayOfFunctions[1].scale : [16 x 1]}
+	{z.x.x.x.x.x.x.b.arrayOfFunctions[1].arrayOfFunctions[1].bias : [16 x 1]}
+
+05/09/2017 15:34:05: Minibatch[1-79]: errs = 86.140% * 10000; top5Errs = 37.470% * 10000
+05/09/2017 15:34:05: Final Results: Minibatch[1-79]: errs = 86.140% * 10000; top5Errs = 37.470% * 10000
+
+05/09/2017 15:34:05: Action "eval" complete.
+
+05/09/2017 15:34:05: __COMPLETED__

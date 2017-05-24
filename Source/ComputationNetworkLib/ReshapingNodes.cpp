@@ -435,7 +435,7 @@ template <class ElemType>
     // we map scalars to scalars
     if (isFinalValidationPass && Input(0)->GetSampleLayout().GetNumElements() != 1)
         InvalidArgument("%ls %ls operation can only operate on scalar input.", NodeName().c_str(), OperationName().c_str());
-    SetDims(Environment().IsV2Library() ? TensorShape() : TensorShape(1), true);
+    SetDims(TensorShape::Scalar(Environment().IsV2Library()), true);
 }
 
 template class WhereNode<float>;

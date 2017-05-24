@@ -1,6 +1,7 @@
 dataDir: ../../../Data
 tags:
      - nightly-l (build_sku == 'gpu') and (device == 'gpu')
+     - weekly-l (build_sku == 'gpu') and (device == 'gpu')
 
 testCases:
   CNTK Run must be completed:

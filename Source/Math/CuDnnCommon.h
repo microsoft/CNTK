@@ -18,9 +18,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class CuDnnTensor final
 {
 public:
+    CuDnnTensor();
     CuDnnTensor(const TensorShape& src, cudnnDataType_t dataType);
     ~CuDnnTensor();
 
+    void Set(const TensorShape& src, cudnnDataType_t dataType); 
     void UpdateBatchSize(size_t batchSize);
 
     operator cudnnTensorDescriptor_t() const { return m_tensor; }

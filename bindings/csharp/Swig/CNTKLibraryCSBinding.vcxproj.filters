@@ -13,9 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="cntk_cs.i" />
+    <Filter Include="InterfaceFiles">
+      <UniqueIdentifier>{65512252-99b8-4b2c-ae95-65f0fad700b9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cntk_cs_wrap.cxx">
@@ -34,7 +34,25 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\common\CNTKValueExtend.i" />
-    <None Include="..\..\common\CNTK_ExceptionHandling.i" />
+    <None Include="..\..\common\CNTKExceptionHandling.i">
+      <Filter>InterfaceFiles</Filter>
+    </None>
+    <None Include="..\..\common\CNTKValueExtend.i">
+      <Filter>InterfaceFiles</Filter>
+    </None>
+    <None Include="std_unordered_map.i">
+      <Filter>InterfaceFiles</Filter>
+    </None>
+    <None Include="..\..\common\CNTKManagedCommon.i">
+      <Filter>InterfaceFiles</Filter>
+    </None>
+    <None Include="..\..\common\CNTKWarnFilters.i">
+      <Filter>InterfaceFiles</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="cntk_cs.i">
+      <Filter>InterfaceFiles</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+. $TEST_DIR/../run-test-common
+
+# LRN uses 3D convolution, which doesn't support deterministic algorithm for backward data prop
+cntkrun ConvNetLRN_CIFAR10_DataAug.cntk "forceDeterministicAlgorithms=false stderr=- TrainConvNet=[SGD=[epochSize=4096,maxEpochs=3,numMBsToShowResult=16]]"

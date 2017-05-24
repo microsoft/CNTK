@@ -151,7 +151,7 @@ namespace CNTK
     inline std::pair<size_t, size_t> GetMatrixDimensions(const NDShape& viewShape)
     {
         // Ensure none of the shape dimensions are unknown
-        if (viewShape.HasFreeOrInferredDimension())
+        if (viewShape.HasUnboundDimension())
             InvalidArgument("Cannot create an NDArrayView using a view shape '%S' that has unknown dimensions for any of its axes.", viewShape.AsString().c_str());
 
         size_t matrixRowSize = (viewShape.Rank() > 0) ? viewShape[0] : 1;
@@ -597,9 +597,9 @@ namespace CNTK
 
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes);
 
-    inline size_t ShapeRowColSplitPoint(const NDShape& varShape, bool isSparse)
+    inline size_t ShapeRowColSplitPoint(const NDShape& varShape, bool isSparse, bool noDynamicAxes)
     {
-        if (isSparse)
+        if (isSparse || noDynamicAxes)
             return std::min<size_t>(varShape.Rank(), 1);
         else
             return varShape.Rank();
@@ -607,7 +607,7 @@ namespace CNTK
 
     inline size_t VariableRowColSplitPoint(const Variable& var)
     {
-        return ShapeRowColSplitPoint(var.Shape(), var.IsSparse());
+        return ShapeRowColSplitPoint(var.Shape(), var.IsSparse(), var.DynamicAxes().empty());
     }
 
     bool IsPackedValue(const ValuePtr& value);

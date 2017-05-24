@@ -143,6 +143,7 @@ namespace CNTK
     class BlockFunction;
     class Function;
     class Variable;
+    class Parameter;
     class Axis;
     class DeviceDescriptor;
     enum class PrimitiveOpType : unsigned int;
@@ -305,6 +306,20 @@ namespace CNTK
         // This is an internal API, needed for testing.
         CNTK_API Dictionary ToDictionary(const MinibatchSourceConfig& dict);
 
+#ifndef SWIG
+        /// Convenience constructor that should be used by foreign language bindings.
+        /// This is the Proper declaration understood by a real C++ compiler.
+        CNTK_API LearnerPtr UniversalLearner(const std::vector<::CNTK::Parameter>& parameters, const std::vector<std::pair<::CNTK::Variable, ::CNTK::FunctionPtr> >& updates);
+#else
+        /// Convenience constructor that should be used by foreign language bindings.
+        /// Workaround declaration for SWIG. 
+        /// This is for now necessary because it has been elusive to find an equivalent of 
+        /// %template() std::vector<std::pair<CNTK::Variable, std::shared_ptr<CNTK::Function>>>;
+        /// which will generate correct code (i.e. code that will accept a list of tuples in the foreign language)
+        /// when the proper declaration is processed by SWIG.
+        CNTK_API LearnerPtr UniversalLearner(const std::vector<CNTK::Parameter>& parameters, const std::vector<std::pair<CNTK::Variable, CNTK::FunctionPtr> >& updates);
+#endif
+
         CNTK_API void PrintBuiltInfo();
         CNTK_API void PrintGpuInfo(const std::vector<Microsoft::MSR::CNTK::GpuData>& gpusData);
 
@@ -376,22 +391,20 @@ namespace CNTK
             std::wstring m_fileName;
         };
 
-        ///
-        /// Defines an interface of a deserializer for user defined functions,
-        /// that needs to be provided to Function::Load to inflate user defined functions in the model.
-        /// Subclasses need to implement the single deserialize method.
-        ///
-        class UDFDeserializer : public std::enable_shared_from_this<UDFDeserializer>
+        // SWIG callback wrapper for the UDF deserialization.
+        class UDFDeserializeCallbackWrapper
         {
         public:
-            ///
-            /// Reconstructs a user defined function given its inputs, name and a dictionary containing its state.
-            ///
-            virtual FunctionPtr Deserialize(const std::vector<Variable>& inputs, const std::wstring& name, const Dictionary& dictionary) const = 0;
-            virtual ~UDFDeserializer() = default;
+            virtual FunctionPtr operator()(const std::vector<Variable>&, const std::wstring&, const Dictionary&) const = 0;
+            virtual ~UDFDeserializeCallbackWrapper() = default;
         };
 
-        typedef std::shared_ptr<UDFDeserializer> UDFDeserializerPtr;
+        typedef std::shared_ptr<UDFDeserializeCallbackWrapper> UDFDeserializeCallbackWrapperPtr;
+        
+        CNTK_API void RegisterUDFDeserializeCallbackWrapper(UDFDeserializeCallbackWrapperPtr callbackPtr);
+
+
+        CNTK_API bool IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName);
     }
 
     // Forward-declare test fixtures, so that they can be used as friends.
