@@ -5,43 +5,31 @@ sys.path.append(os.path.join(abs_path, ".."))
 
 import pytest
 import numpy as np
+import cntk
 from cntk import input as input_variable, user_function
 from rpn.proposal_layer import ProposalLayer as CntkProposalLayer
 from rpn.proposal_target_layer import ProposalTargetLayer as CntkProposalTargetLayer
 from rpn.anchor_target_layer import AnchorTargetLayer as CntkAnchorTargetLayer
-from caffe_layers.proposal_layer_caffe import ProposalLayer as CaffeProposalLayer
-from caffe_layers.proposal_target_layer_caffe import ProposalTargetLayer as CaffeProposalTargetLayer
-from caffe_layers.anchor_target_layer_caffe import AnchorTargetLayer as CaffeAnchorTargetLayer
+from caffe_layers.proposal_layer import ProposalLayer as CaffeProposalLayer
+from caffe_layers.proposal_target_layer import ProposalTargetLayer as CaffeProposalTargetLayer
+from caffe_layers.anchor_target_layer import AnchorTargetLayer as CaffeAnchorTargetLayer
 
 def test_proposal_layer():
-    cls_prob_shape_cntk = (2,9,61,61)
+    cls_prob_shape_cntk = (18,61,61)
     cls_prob_shape_caffe = (18,61,61)
     rpn_bbox_shape = (36, 61, 61)
     im_info = [1000, 1000, 1]
-    test_specific_values = False
 
     # Create input tensors with values
-    if test_specific_values:
-        bg_probs = [0.2, 0.05, 0.05, 0.0, 0.0, 0.1, 0.1, 0.0, 0.5]
-        fg_probs = np.ones(9) - bg_probs
-        cls_prob = np.zeros((61, 61, 9, 2))
-        cls_prob[:, :, :, 0] = bg_probs
-        cls_prob[:, :, :, 1] = fg_probs
-        cls_prob = np.ascontiguousarray(cls_prob.transpose(3, 2, 1, 0)).astype(np.float32)
-
-        bbox_pred = [0.2, -0.1, 0.3, -0.4] * 9
-        rpn_bbox_pred = np.zeros((61, 61, 36))
-        rpn_bbox_pred[:, :, :] = bbox_pred
-        rpn_bbox_pred = np.ascontiguousarray(rpn_bbox_pred.transpose(2, 1, 0)).astype(np.float32)
-    else:
-        cls_prob =  np.random.random_sample(cls_prob_shape_cntk).astype(np.float32)
-        rpn_bbox_pred = np.random.random_sample(rpn_bbox_shape).astype(np.float32)
+    cls_prob =  np.random.random_sample(cls_prob_shape_cntk).astype(np.float32)
+    rpn_bbox_pred = np.random.random_sample(rpn_bbox_shape).astype(np.float32)
 
     # Create CNTK layer and call forward
     cls_prob_var = input_variable(cls_prob_shape_cntk)
     rpn_bbox_var = input_variable(rpn_bbox_shape)
+    #im_info_var = input_variable((3))
 
-    cntk_layer = user_function(CntkProposalLayer(cls_prob_var, rpn_bbox_var, im_info=im_info))
+    cntk_layer = user_function(CntkProposalLayer(cls_prob_var, rpn_bbox_var, cntk.constant(im_info, (3,))))
     state, cntk_output = cntk_layer.forward({cls_prob_var: [cls_prob], rpn_bbox_var: [rpn_bbox_pred]})
     cntk_proposals = cntk_output[next(iter(cntk_output))][0]
 
@@ -87,13 +75,13 @@ def test_proposal_target_layer():
     all_rois_var = input_variable(all_rois_shape_cntk)
     gt_boxes_var = input_variable(gt_boxes_shape_cntk)
 
-    cntk_layer = user_function(CntkProposalTargetLayer(all_rois_var, gt_boxes_var, num_classes=17, im_info=im_info, deterministic=True))
+    cntk_layer = user_function(CntkProposalTargetLayer(all_rois_var, gt_boxes_var, param_str="'num_classes': 17", deterministic=True))
     state, cntk_output = cntk_layer.forward({all_rois_var: [all_rois], gt_boxes_var: [gt_boxes]})
 
-    roi_key = [k for k in cntk_output if 'ptl_roi' in str(k)][0]
-    labels_key = [k for k in cntk_output if 'ptl_labels' in str(k)][0]
-    bbox_key = [k for k in cntk_output if 'ptl_bbox' in str(k)][0]
-    bbox_w_key = [k for k in cntk_output if 'ptl_bbox_w' in str(k)][0]
+    roi_key = [k for k in cntk_output if 'rpn_target_rois_raw' in str(k)][0]
+    labels_key = [k for k in cntk_output if 'label_targets_raw' in str(k)][0]
+    bbox_key = [k for k in cntk_output if 'bbox_targets_raw' in str(k)][0]
+    bbox_w_key = [k for k in cntk_output if 'bbox_inside_w_raw' in str(k)][0]
 
     cntk_rois = cntk_output[roi_key][0]
     cntk_labels_one_hot = cntk_output[labels_key][0]
@@ -158,7 +146,7 @@ def test_anchor_target_layer():
     rpn_cls_score_var = input_variable(rpn_cls_score_shape_cntk)
     gt_boxes_var = input_variable(gt_boxes_shape_cntk)
 
-    cntk_layer = user_function(CntkAnchorTargetLayer(rpn_cls_score_var, gt_boxes_var, im_info=im_info, deterministic=True))
+    cntk_layer = user_function(CntkAnchorTargetLayer(rpn_cls_score_var, gt_boxes_var, cntk.constant(im_info, (3,)), deterministic=True))
     state, cntk_output = cntk_layer.forward({rpn_cls_score_var: [rpn_cls_score_dummy], gt_boxes_var: [gt_boxes]})
 
     obj_key = [k for k in cntk_output if 'objectness_target' in str(k)][0]

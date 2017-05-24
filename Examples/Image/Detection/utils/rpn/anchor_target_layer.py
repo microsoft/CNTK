@@ -1,9 +1,8 @@
-# --------------------------------------------------------
-# Faster R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick and Sean Bell
-# --------------------------------------------------------
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
 
 import os
 from cntk import output_variable
@@ -12,18 +11,23 @@ import yaml
 import numpy as np
 import numpy.random as npr
 from utils.rpn.generate_anchors import generate_anchors
-from utils.fast_rcnn.bbox_transform import bbox_transform
-from utils.bbox.cython_bbox import bbox_overlaps
+from utils.rpn.bbox_transform import bbox_transform
+from utils.cython_modules.cython_bbox import bbox_overlaps
+
+try:
+    from config import cfg
+except ImportError:
+    from utils.default_config import cfg
 
 DEBUG = False
 
 class AnchorTargetLayer(UserFunction):
-    """
+    '''
     Assign anchors to ground-truth targets. Produces anchor classification
     labels and bounding-box regression targets.
-    """
+    '''
 
-    def __init__(self, arg1, arg2, arg3, name='AnchorTargetLayer', param_str=None, cfg=None, deterministic=False):
+    def __init__(self, arg1, arg2, arg3, name='AnchorTargetLayer', param_str=None, deterministic=False):
         super(AnchorTargetLayer, self).__init__([arg1, arg2, arg3], name=name)
         self.param_str_ = param_str if param_str is not None else "'feat_stride': 16\n'scales':\n - 8 \n - 16 \n - 32"
 
@@ -33,15 +37,7 @@ class AnchorTargetLayer(UserFunction):
         self._anchors = generate_anchors(scales=np.array(anchor_scales))
         self._num_anchors = self._anchors.shape[0]
         self._feat_stride = layer_params['feat_stride']
-        self._cfg = cfg
         self._determininistic_mode = deterministic
-
-        self._EPS = 1e-14 if cfg is None else cfg.EPS
-        self._TRAIN_RPN_CLOBBER_POSITIVES = False if cfg is None else cfg["TRAIN"].RPN_CLOBBER_POSITIVES
-        self._TRAIN_RPN_POSITIVE_OVERLAP = 0.7 if cfg is None else cfg["TRAIN"].RPN_POSITIVE_OVERLAP
-        self._TRAIN_RPN_NEGATIVE_OVERLAP = 0.3 if cfg is None else cfg["TRAIN"].RPN_NEGATIVE_OVERLAP
-        self._TRAIN_RPN_FG_FRACTION = 0.5 if cfg is None else cfg["TRAIN"].RPN_FG_FRACTION
-        self._TRAIN_RPN_BATCHSIZE = 256 if cfg is None else cfg["TRAIN"].RPN_BATCHSIZE
 
         if DEBUG:
             print ('anchors:')
@@ -51,7 +47,7 @@ class AnchorTargetLayer(UserFunction):
                 self._anchors[:, 2::4] - self._anchors[:, 0::4],
                 self._anchors[:, 3::4] - self._anchors[:, 1::4],
             )))
-            self._counts = self._EPS
+            self._counts = cfg.EPS
             self._sums = np.zeros((1, 4))
             self._squared_sums = np.zeros((1, 4))
             self._fg_sum = 0
@@ -165,22 +161,22 @@ class AnchorTargetLayer(UserFunction):
                                    np.arange(overlaps.shape[1])]
         gt_argmax_overlaps = np.where(overlaps == gt_max_overlaps)[0]
 
-        if not self._TRAIN_RPN_CLOBBER_POSITIVES:
+        if not cfg["TRAIN"].RPN_CLOBBER_POSITIVES:
             # assign bg labels first so that positive labels can clobber them
-            labels[max_overlaps < self._TRAIN_RPN_NEGATIVE_OVERLAP] = 0
+            labels[max_overlaps < cfg["TRAIN"].RPN_NEGATIVE_OVERLAP] = 0
 
         # fg label: for each gt, anchor with highest overlap
         labels[gt_argmax_overlaps] = 1
 
         # fg label: above threshold IOU
-        labels[max_overlaps >= self._TRAIN_RPN_POSITIVE_OVERLAP] = 1
+        labels[max_overlaps >= cfg["TRAIN"].RPN_POSITIVE_OVERLAP] = 1
 
-        if self._TRAIN_RPN_CLOBBER_POSITIVES:
+        if cfg["TRAIN"].RPN_CLOBBER_POSITIVES:
             # assign bg labels last so that negative labels can clobber positives
-            labels[max_overlaps < self._TRAIN_RPN_NEGATIVE_OVERLAP] = 0
+            labels[max_overlaps < cfg["TRAIN"].RPN_NEGATIVE_OVERLAP] = 0
 
         # subsample positive labels if we have too many
-        num_fg = int(self._TRAIN_RPN_FG_FRACTION * self._TRAIN_RPN_BATCHSIZE)
+        num_fg = int(cfg["TRAIN"].RPN_FG_FRACTION * cfg["TRAIN"].RPN_BATCHSIZE)
         fg_inds = np.where(labels == 1)[0]
         if len(fg_inds) > num_fg:
             if self._determininistic_mode:
@@ -190,7 +186,7 @@ class AnchorTargetLayer(UserFunction):
             labels[disable_inds] = -1
 
         # subsample negative labels if we have too many
-        num_bg = self._TRAIN_RPN_BATCHSIZE - np.sum(labels == 1)
+        num_bg = cfg["TRAIN"].RPN_BATCHSIZE - np.sum(labels == 1)
         bg_inds = np.where(labels == 0)[0]
         if len(bg_inds) > num_bg:
             if self._determininistic_mode:
@@ -254,12 +250,11 @@ class AnchorTargetLayer(UserFunction):
         pass
 
     def clone(self, cloned_inputs):
-        return AnchorTargetLayer(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2], cfg=self._cfg, param_str=self.param_str_)
+        return AnchorTargetLayer(cloned_inputs[0], cloned_inputs[1], cloned_inputs[2], param_str=self.param_str_)
 
     def serialize(self):
         internal_state = {}
         internal_state['param_str'] = self.param_str_
-        # TODO: store cfg values in state
         return internal_state
 
     @staticmethod
@@ -269,8 +264,7 @@ class AnchorTargetLayer(UserFunction):
 
 
 def _unmap(data, count, inds, fill=0):
-    """ Unmap a subset of item (data) back to the original set of items (of
-    size count) """
+    """ Unmap a subset of item (data) back to the original set of items (of size count) """
     if len(data.shape) == 1:
         ret = np.empty((count, ), dtype=np.float32)
         ret.fill(fill)

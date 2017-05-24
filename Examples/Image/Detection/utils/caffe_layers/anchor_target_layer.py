@@ -8,12 +8,12 @@
 import os
 #import caffe
 import yaml
-from utils.fast_rcnn.default_config import cfg
 import numpy as np
 import numpy.random as npr
+from utils.default_config import cfg
 from utils.rpn.generate_anchors import generate_anchors
-from utils.bbox.cython_bbox import bbox_overlaps
-from utils.fast_rcnn.bbox_transform import bbox_transform
+from utils.rpn.bbox_transform import bbox_transform
+from utils.cython_modules.cython_bbox import bbox_overlaps
 
 DEBUG = False
 

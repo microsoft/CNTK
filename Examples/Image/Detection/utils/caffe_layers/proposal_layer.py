@@ -8,10 +8,10 @@
 #import caffe
 import numpy as np
 import yaml
-from fast_rcnn.default_config import cfg
-from rpn.generate_anchors import generate_anchors
-from fast_rcnn.bbox_transform import bbox_transform_inv, clip_boxes
-from fast_rcnn.nms_wrapper import nms
+from utils.default_config import cfg
+from utils.rpn.generate_anchors import generate_anchors
+from utils.rpn.bbox_transform import bbox_transform_inv, clip_boxes
+from utils.rpn.nms_wrapper import nms
 
 DEBUG = False
 

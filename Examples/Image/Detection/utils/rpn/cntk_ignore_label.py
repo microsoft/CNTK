@@ -1,6 +1,8 @@
-# --------------------------------------------------------
-# Copyright (c) 2017 Microsoft
-# --------------------------------------------------------
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
 
 from cntk import output_variable
 from cntk.ops.functions import UserFunction
@@ -10,9 +12,9 @@ import scipy as sp
 DEBUG = False
 
 class IgnoreLabel(UserFunction):
-    """
+    '''
     Sets entries to zero in target and prediction for the label to ignore
-    """
+    '''
 
     def __init__(self, arg1, arg2, name='IgnoreLabel', ignore_label=None):
         super(IgnoreLabel, self).__init__([arg1, arg2], name=name)

@@ -1,41 +1,38 @@
-# --------------------------------------------------------
-# Faster R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick and Sean Bell
-# --------------------------------------------------------
+# Copyright (c) Microsoft. All rights reserved.
 
-from cntk import output_variable, one_hot, times
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+
+from cntk import output_variable, FreeDimension
 from cntk.ops.functions import UserFunction
 import yaml
 import numpy as np
 import numpy.random as npr
-from utils.fast_rcnn.bbox_transform import bbox_transform
-from utils.bbox.cython_bbox import bbox_overlaps
+from utils.rpn.bbox_transform import bbox_transform
+from utils.cython_modules.cython_bbox import bbox_overlaps
+
+try:
+    from config import cfg
+except ImportError:
+    from utils.default_config import cfg
 
 DEBUG = False
 
 class ProposalTargetLayer(UserFunction):
-    """
+    '''
     Assign object detection proposals to ground-truth targets. Produces proposal
     classification labels and bounding-box regression targets.
-    """
+    '''
     
-    def __init__(self, arg1, arg2, name='ProposalTargetLayer', param_str=None, cfg=None, deterministic=False):
+    def __init__(self, arg1, arg2, name='ProposalTargetLayer', param_str=None, deterministic=False):
         super(ProposalTargetLayer, self).__init__([arg1, arg2], name=name)
         self.param_str_ = param_str if param_str is not None else "'num_classes': 2"
 
         # parse the layer parameter string, which must be valid YAML
         layer_params = yaml.load(self.param_str_)
         self._num_classes = layer_params['num_classes']
-        self._cfg = cfg
         self._determininistic_mode = deterministic
-
-        self._TRAIN_RPN_POST_NMS_TOP_N = 2000 if cfg is None else cfg["TRAIN"].RPN_POST_NMS_TOP_N
-        self._TRAIN_FG_FRACTION = 0.25 if cfg is None else cfg["TRAIN"].FG_FRACTION
-        self._TRAIN_FG_THRESH = 0.5 if cfg is None else cfg["TRAIN"].FG_THRESH
-        self._TRAIN_BG_THRESH_HI = 0.5 if cfg is None else cfg["TRAIN"].BG_THRESH_HI
-        self._TRAIN_BG_THRESH_LO = 0.1 if cfg is None else cfg["TRAIN"].BG_THRESH_LO
 
         self._count = 0
         self._fg_num = 0
@@ -44,26 +41,30 @@ class ProposalTargetLayer(UserFunction):
     def infer_outputs(self):
         # sampled rois (0, x1, y1, x2, y2)
         # for CNTK the proposal shape is [4 x roisPerImage], and mirrored in Python
-        rois_shape = (self._TRAIN_RPN_POST_NMS_TOP_N, 4)
+        rois_shape = (cfg["TRAIN"].RPN_POST_NMS_TOP_N, 4)
+        #rois_shape = (FreeDimension, 4)
 
         # labels
         # for CNTK the labels shape is [1 x roisPerImage], and mirrored in Python
-        labels_shape = (self._TRAIN_RPN_POST_NMS_TOP_N, self._num_classes)
+        labels_shape = (cfg["TRAIN"].RPN_POST_NMS_TOP_N, self._num_classes)
+        #labels_shape = (FreeDimension, self._num_classes)
 
         # bbox_targets
-        bbox_targets_shape = (self._TRAIN_RPN_POST_NMS_TOP_N, self._num_classes * 4)
+        bbox_targets_shape = (cfg["TRAIN"].RPN_POST_NMS_TOP_N, self._num_classes * 4)
+        #bbox_targets_shape = (FreeDimension, self._num_classes * 4)
 
         # bbox_inside_weights
-        bbox_inside_weights_shape = (self._TRAIN_RPN_POST_NMS_TOP_N, self._num_classes * 4)
+        bbox_inside_weights_shape = (cfg["TRAIN"].RPN_POST_NMS_TOP_N, self._num_classes * 4)
+        #bbox_inside_weights_shape = (FreeDimension, self._num_classes * 4)
 
         return [output_variable(rois_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
-                                name="ptl_rois", needs_gradient=False),
+                                name="rpn_target_rois_raw", needs_gradient=False),
                 output_variable(labels_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
-                                name="ptl_labels", needs_gradient=False),
+                                name="label_targets_raw", needs_gradient=False),
                 output_variable(bbox_targets_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
-                                name="ptl_bbox", needs_gradient=False),
+                                name="bbox_targets_raw", needs_gradient=False),
                 output_variable(bbox_inside_weights_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes,
-                                name="ptl_bbox_w", needs_gradient=False)]
+                                name="bbox_inside_w_raw", needs_gradient=False)]
 
     def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
         bottom = arguments
@@ -96,15 +97,14 @@ class ProposalTargetLayer(UserFunction):
         assert np.all(all_rois[:, 0] == 0), \
                 'Only single item batches are supported'
 
-        rois_per_image = self._TRAIN_RPN_POST_NMS_TOP_N
-        fg_rois_per_image = np.round(self._TRAIN_FG_FRACTION * rois_per_image).astype(int)
+        rois_per_image = cfg["TRAIN"].RPN_POST_NMS_TOP_N
+        fg_rois_per_image = np.round(cfg["TRAIN"].FG_FRACTION * rois_per_image).astype(int)
 
         # Sample rois with classification labels and bounding box regression
         # targets
         labels, rois, bbox_targets, bbox_inside_weights = _sample_rois(
             all_rois, gt_boxes, fg_rois_per_image,
             rois_per_image, self._num_classes,
-            self._TRAIN_FG_THRESH, self._TRAIN_BG_THRESH_HI, self._TRAIN_BG_THRESH_LO,
             deterministic=self._determininistic_mode)
 
         if DEBUG:
@@ -163,12 +163,11 @@ class ProposalTargetLayer(UserFunction):
         pass
 
     def clone(self, cloned_inputs):
-        return ProposalTargetLayer(cloned_inputs[0], cloned_inputs[1], cfg=self._cfg, param_str=self.param_str_)
+        return ProposalTargetLayer(cloned_inputs[0], cloned_inputs[1], param_str=self.param_str_)
 
     def serialize(self):
         internal_state = {}
         internal_state['param_str'] = self.param_str_
-        # TODO: store cfg values in state
         return internal_state
 
     @staticmethod
@@ -213,8 +212,7 @@ def _compute_targets(ex_rois, gt_rois, labels):
 
     return np.hstack((labels[:, np.newaxis], targets)).astype(np.float32, copy=False)
 
-def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_classes,
-                 TRAIN_FG_THRESH, TRAIN_BG_THRESH_HI, TRAIN_BG_THRESH_LO, deterministic=False):
+def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_classes, deterministic=False):
     """Generate a random sample of RoIs comprising foreground and background
     examples.
     """
@@ -227,7 +225,7 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     labels = gt_boxes[gt_assignment, 4]
 
     # Select foreground RoIs as those with >= FG_THRESH overlap
-    fg_inds = np.where(max_overlaps >= TRAIN_FG_THRESH)[0]
+    fg_inds = np.where(max_overlaps >= cfg["TRAIN"].FG_THRESH)[0]
     # Guard against the case when an image has fewer than fg_rois_per_image
     # foreground RoIs
     fg_rois_per_this_image = min(fg_rois_per_image, fg_inds.size)
@@ -240,8 +238,8 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
             fg_inds = npr.choice(fg_inds, size=fg_rois_per_this_image, replace=False)
             
     # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
-    bg_inds = np.where((max_overlaps < TRAIN_BG_THRESH_HI) &
-                       (max_overlaps >= TRAIN_BG_THRESH_LO))[0]
+    bg_inds = np.where((max_overlaps < cfg["TRAIN"].BG_THRESH_HI) &
+                       (max_overlaps >= cfg["TRAIN"].BG_THRESH_LO))[0]
     # Compute number of background RoIs to take from this image (guarding
     # against there being fewer than desired)
     bg_rois_per_this_image = rois_per_image - fg_rois_per_this_image

@@ -16,7 +16,7 @@ from utils.rpn.proposal_layer import ProposalLayer
 from utils.rpn.proposal_target_layer import ProposalTargetLayer
 from utils.rpn.cntk_smoothL1_loss import SmoothL1Loss
 
-def create_rpn(conv_out, scaled_gt_boxes, im_info, cfg=None, add_loss_functions=True,
+def create_rpn(conv_out, scaled_gt_boxes, im_info, add_loss_functions=True,
                proposal_layer_param_string=None):
     '''
     Creates a region proposal network for object detection as proposed in the "Faster R-CNN" paper:
@@ -26,12 +26,16 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, cfg=None, add_loss_functions=
     Outputs object detection proposals by applying estimated bounding-box
     transformations to a set of regular boxes (called "anchors").
 
-    :param conv_out:        The convolutional feature map, i.e. the output of the conv layers from the pretrained classification network
-    :param scaled_gt_boxes: The ground truth boxes as (x1, y1, x2, y2, label). Coordinates are absolute pixels wrt. the input image.
-    :param im_info:         (image_widht, image_height, image_scale) as CNTK variable or constant
-    :param cfg:             An optional configuration. See utils/fast_rcnn/default_config.py as an example.
-    :return:                rpn_rois - the proposed ROIs
-                            rpn_losses - the losses (SmoothL1 loss for bbox regression plus cross entropy for objectness)
+    Args:
+        conv_out:        The convolutional feature map, i.e. the output of the conv layers from the pretrained classification network
+        scaled_gt_boxes: The ground truth boxes as (x1, y1, x2, y2, label). Coordinates are absolute pixels wrt. the input image.
+        im_info:         (image_widht, image_height, image_scale) as CNTK variable or constant
+        add_loss_functions: If set to True rpn_losses will be returned, otherwise None is returned for the losses
+        proposal_layer_param_string: A yaml parameter string that is passed to the proposal layer.
+
+    Returns:
+        rpn_rois - the proposed ROIs
+        rpn_losses - the losses (SmoothL1 loss for bbox regression plus cross entropy for objectness)
     '''
 
     # RPN network
@@ -50,14 +54,14 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, cfg=None, add_loss_functions=
     rpn_cls_prob_reshape = reshape(rpn_cls_prob, rpn_cls_score.shape)
 
     # proposal layer
-    rpn_rois_raw = user_function(ProposalLayer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, cfg=cfg, param_str=proposal_layer_param_string))
+    rpn_rois_raw = user_function(ProposalLayer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, param_str=proposal_layer_param_string))
     rpn_rois = alias(rpn_rois_raw, name='rpn_rois')
 
     rpn_losses = None
     if(add_loss_functions):
         # RPN targets
         # Comment: rpn_cls_score is only passed   vvv   to get width and height of the conv feature map ...
-        atl = user_function(AnchorTargetLayer(rpn_cls_score, scaled_gt_boxes, im_info, cfg=cfg, param_str=proposal_layer_param_string))
+        atl = user_function(AnchorTargetLayer(rpn_cls_score, scaled_gt_boxes, im_info, param_str=proposal_layer_param_string))
         rpn_labels = atl.outputs[0]
         rpn_bbox_targets = atl.outputs[1]
         rpn_bbox_inside_weights = atl.outputs[2]
@@ -78,7 +82,7 @@ def create_rpn(conv_out, scaled_gt_boxes, im_info, cfg=None, add_loss_functions=
 
     return rpn_rois, rpn_losses
 
-def create_proposal_target_layer(rpn_rois, scaled_gt_boxes, num_classes, cfg=None):
+def create_proposal_target_layer(rpn_rois, scaled_gt_boxes, num_classes):
     '''
     Creates a proposal target layer that is used for training an object detection network as proposed in the "Faster R-CNN" paper:
         Shaoqing Ren and Kaiming He and Ross Girshick and Jian Sun:
@@ -88,18 +92,20 @@ def create_proposal_target_layer(rpn_rois, scaled_gt_boxes, num_classes, cfg=Non
     Produces proposal classification labels and bounding-box regression targets.
     It also adds gt_boxes to candidates and samples fg and bg rois for training.
 
-    :param rpn_rois:        The proposed ROIs, e.g. from a region proposal network
-    :param scaled_gt_boxes: The ground truth boxes as (x1, y1, x2, y2, label). Coordinates are absolute pixels wrt. the input image.
-    :param num_classes:     The number of classes in the data set
-    :param cfg:             An optional configuration. See utils/fast_rcnn/default_config.py as an example.
-    :return:                rpn_target_rois - a set of rois containing the ground truth and a number of sampled fg and bg ROIs
-                            label_targets - the target labels for the rois
-                            bbox_targets - the regression coefficient targets for the rois
-                            bbox_inside_weights - the weights for the regression loss
+    Args:
+        rpn_rois:        The proposed ROIs, e.g. from a region proposal network
+        scaled_gt_boxes: The ground truth boxes as (x1, y1, x2, y2, label). Coordinates are absolute pixels wrt. the input image.
+        num_classes:     The number of classes in the data set
+
+    Returns:
+        rpn_target_rois - a set of rois containing the ground truth and a number of sampled fg and bg ROIs
+        label_targets - the target labels for the rois
+        bbox_targets - the regression coefficient targets for the rois
+        bbox_inside_weights - the weights for the regression loss
     '''
 
     ptl_param_string = "'num_classes': {}".format(num_classes)
-    ptl = user_function(ProposalTargetLayer(rpn_rois, scaled_gt_boxes, cfg=cfg, param_str=ptl_param_string))
+    ptl = user_function(ProposalTargetLayer(rpn_rois, scaled_gt_boxes, param_str=ptl_param_string))
     rois = alias(ptl.outputs[0], name='rpn_target_rois')
     label_targets = alias(ptl.outputs[1], name='label_targets')
     bbox_targets = alias(ptl.outputs[2], name='bbox_targets')
