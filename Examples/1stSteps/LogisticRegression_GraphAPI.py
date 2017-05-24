@@ -29,7 +29,7 @@ def generate_synthetic_data(N):
     X = X.astype(np.float32)
     return X, Y
 X_train, Y_train = generate_synthetic_data(20000)
-X_test,  Y_test  = generate_synthetic_data(1000)
+X_test,  Y_test  = generate_synthetic_data(1024)
 
 # Define the CNTK model function. The model function maps input data to
 # predictions (here: 2-dimensional inputs --> 2 scores).
@@ -53,12 +53,12 @@ learning_rate = 0.1
 learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(learning_rate, cntk.UnitType.minibatch))
 
 # Trainer.
-minibatch_size = 25
-progress_writer = cntk.logging.ProgressPrinter(freq=1250 // minibatch_size) # helper for logging progress
+minibatch_size = 32
+progress_writer = cntk.logging.ProgressPrinter(50) # helper for logging progress; log every 50 minibatches
 trainer = cntk.Trainer(None, criterion, [learner], [progress_writer])
 
 # Train!
-for i in range(0,len(X_train),minibatch_size): # loop over minibatches
+for i in range(0, len(X_train), minibatch_size): # loop over minibatches
     x = X_train[i:i+minibatch_size] # get one minibatch worth of data
     y = Y_train[i:i+minibatch_size]
     trainer.train_minibatch({data: x, label_one_hot: y})  # update model from one minibatch
@@ -66,7 +66,7 @@ trainer.summarize_training_progress()
 
 # Test error rate on the test set.
 evaluator = cntk.Evaluator(metric, [progress_writer])
-for i in range(0,len(X_test),minibatch_size): # loop over minibatches
+for i in range(0, len(X_test), minibatch_size): # loop over minibatches
     x = X_test[i:i+minibatch_size] # get one minibatch worth of data
     y = Y_test[i:i+minibatch_size]
     evaluator.test_minibatch({data: x, label_one_hot: y})  # test one minibatch

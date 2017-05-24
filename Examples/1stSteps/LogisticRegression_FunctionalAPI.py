@@ -29,7 +29,7 @@ def generate_synthetic_data(N):
     X = X.astype(np.float32)
     return X, Y
 X_train, Y_train = generate_synthetic_data(20000)
-X_test,  Y_test  = generate_synthetic_data(1000)
+X_test,  Y_test  = generate_synthetic_data(1024)
 
 # Define the CNTK model function. The model function maps input data to
 # predictions (here: 2-dimensional inputs --> 2 scores).
@@ -57,16 +57,13 @@ learning_rate = 0.1
 learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(learning_rate, cntk.UnitType.minibatch))
 
 # Trainer configuration parameters.
-minibatch_size = 25
-progress_writer = cntk.logging.ProgressPrinter(freq=1250 // minibatch_size) # helper for logging progress
+progress_writer = cntk.logging.ProgressPrinter(50) # helper for logging progress; log every 50 minibatches
 
 # Train!
-losses, metrics, num_samples = criterion.train((X_train, Y_train),
-                                               minibatch_size=minibatch_size, max_samples=len(X_train), parameter_learners=[learner],
-                                               progress_writers=[progress_writer], progress_frequency=len(X_train))
+losses, metrics, num_samples = criterion.train((X_train, Y_train), parameter_learners=[learner], progress_writers=[progress_writer])
 
 # Test error rate on the test set.
-metric, num_samples = criterion.test((X_test, Y_test), minibatch_size=minibatch_size, progress_writers=[progress_writer])
+metric, num_samples = criterion.test((X_test, Y_test), progress_writers=[progress_writer])
 
 # Inspect predictions on one minibatch, for illustration.
 # For evaluation, we map the output of the network between 0-1 and convert them into probabilities

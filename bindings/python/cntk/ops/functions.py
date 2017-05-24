@@ -1212,7 +1212,7 @@ class Function(cntk_py.Function):
             pass
 
     def train(self, minibatch_source,
-              minibatch_size=None, streams=None, model_inputs_to_streams=None, parameter_learners=[],
+              minibatch_size=32, streams=None, model_inputs_to_streams=None, parameter_learners=[],
               progress_writers=None, progress_frequency=None, max_epochs=None, epoch_size=None, max_samples=None,
               checkpoint_config=None, cv_config=None, test_config=None):
         '''
@@ -1220,19 +1220,52 @@ class Function(cntk_py.Function):
         Different aspects of training such as data sources, checkpointing, cross validation, progress printing
         can be configured using the corresponding config classes.
 
+        The input data can be specified as a data reader (:class:`~cntk.io.MinibatchSource`)
+        for large corpora; or directly as numpy/scipy arrays if the data is so small that it
+        is feasible to keep it all in RAM.
+
+        Data is processed in minibatches. The minibatch size defaults to 32, which is a choice that commonly works well.
+        However, for maximum efficiency, we recommend to experiment with minibatch sizes
+        and choose the largest that converges well and does not exceed the GPU RAM.
+        This is particularly important for distributed training, where
+        often, the minibatch size can be increased throughout the training, which reduces data bandwidth
+        and thus speeds up parallel training.
+
+        If input data is given through a data reader (as opposed to directly as a numpy/scipy array),
+        the user must also specify the epoch size. This is because data readers are used for
+        large corpora, and the traditional definition of epoch size as number of samples in the corpus
+        is not very relevant. Instead, CNTK really means the number of samples
+        between summary actions, such as printing training progress, adjusting the learning rate, and/or checkpointing the model.
+
+        A number of callback mechanisms can optionally be specified. `progress_writers` specifies a list of
+        objects with callbacks for progress logging.
+        `test_config` allows to specify a test set that is evaluated at regular intervals during the training.
+        `checkpoint_config` configures
+        the checkpointing mechanism, which keeps copies of models at regular intervals and allows
+        to seamlessly restart from a last checkpoint.
+        `cv_config` configures data and frequency of evaluating a cross-validation data set,
+        and a callback that can be used to adjust learning hyper parameters or to denote to stop training.
+
         This is a convenience wrapper around :class:`cntk.train.trainer.Trainer` :class:`cntk.train.trainer.TrainingSession`.
 
         Args:
-            minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for training
-            minibatch_size (int or :class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch size (or schedule) for training
-            streams (tuple): the streams of the minibatch_source in argument order
-            model_inputs_to_streams (dict): alternative to `streams`, specifying the mapping as a map from input variables to streams
-            max_epochs (int): maximum number of samples used for training; requires `epoch_size`
-            max_samples (int): maximum number of samples used for training; mutually exclusive with `max_epochs`
+            self: the criterion function of a model to be trained. This is either a single-valued function (the loss)
+             or a tuple-valued function (loss and metric).
+            minibatch_source (:class:`~cntk.io.MinibatchSource` or tuple of numpy/scripy arrays):
+             data source used for training. For large data, use a MinibatchSource. For small data, pass a tuple of numpy/scipy arrays.
+             The number of streams/arrays must match the number of arguments of `self`.
+            streams (tuple): (only if minibatch_source is a data reader) the streams of the minibatch_source in argument order.
+             Not to be given if minibatch_source is specified as numpy/scipy arrays rather than a data reader.
+            minibatch_size (int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): minibatch size (or schedule) for training
+            epoch_size (int): in CNTK, epoch size means the number of samples between outputting summary information and/or checkpointing.
+             This must be specified unless the user directly passes numpy/scipy arrays for the `minibatch_source`.
+            max_epochs (int, defaults to 1): maximum number of samples used for training; requires `epoch_size`
             parameter_learners (list): list of learners from :mod:`cntk.learners`
             progress_writers (progress writer or list of them): optionally, list of
              progress writers from :mod:`cntk.logging` to automatically track training
              progress.
+            model_inputs_to_streams (dict): alternative to `streams`, specifying the mapping as a map from input variables to streams
+            max_samples (int): maximum number of samples used for training; mutually exclusive with `max_epochs`
             progress_frequency (int): frequency in samples for aggregated progress printing. Defaults to `epoch_size` if given, or `None` otherwise
             checkpoint_config (:class:`CheckpointConfig`): checkpoint configuration
             cv_config (:class:`CrossValidationConfig`): cross validation configuration
@@ -1271,15 +1304,26 @@ class Function(cntk_py.Function):
         elif not isinstance(schedule, cntk_py.minibatch_size_schedule):
             raise ValueError('minibatch_size must be an int or the result an call to the minibatch_size_schedule() function')
         # max_samples
-        if max_epochs is not None:
-            if max_samples is not None:
-                raise ValueError("max_epochs and max_samples are mutually exclusive.")
+        # Can be either directly specified as max_samples or indirectly as (max_epochs, epoch_size).
+        if max_samples is None:
+            # derive from (max_epochs, epoch_size)
             if epoch_size is None:
-                raise ValueError("max_epochs requires epoch_size to be specified as well.")
+                from ..io import MinibatchSource, UserMinibatchSource
+                if isinstance(minibatch_source, (MinibatchSource, UserMinibatchSource)): # UserMinibatchSource derives from cntk_py.SwigMinibatchSource, not MinibatchSource, for director purposes
+                    raise ValueError("epoch_size must be specified, unless max_samples is given or input is given as numpy/scipy arrays.")
+                first_input = _as_tuple(minibatch_source)[0]
+                try:
+                    epoch_size = len(first_input)
+                except:
+                    epoch_size = first_input.shape[0] # if input is csr_matrix
+            if max_epochs is None:
+                max_epochs = 1 # default to 1 epoch
             max_samples = int(max_epochs * epoch_size) # (we allow fractional epochs so our testing system can run abbreviated tests)
-            if progress_frequency is None: # if epoch size is given then default training summaries to it
-                progress_frequency = epoch_size
+        elif max_epochs is not None:
+            raise ValueError("max_epochs and max_samples are mutually exclusive.")
         # use a progress tracker to capture the loss, metric, and count values
+        if progress_frequency is None and epoch_size is not None: # if epoch size is given then default training summary frequency to it
+            progress_frequency = epoch_size
         collector = Function._ProgressCollector(progress_writers, progress_frequency // minibatch_size[0] if progress_frequency is not None else None)
         # Trainer instance
         from ..train.trainer import Trainer
@@ -1299,7 +1343,7 @@ class Function(cntk_py.Function):
         ts.train()
         return collector.losses, collector.metrics, collector.num_samples
 
-    def test(self, minibatch_source, minibatch_size=None, streams=None, model_inputs_to_streams=None, progress_writers=None):
+    def test(self, minibatch_source, minibatch_size=32, streams=None, model_inputs_to_streams=None, progress_writers=None):
         '''
         Measures the performance of a model, given by its criterion function, in the form of
         average metric value (or loss if model has only one output) on a set of data .

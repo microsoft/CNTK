@@ -504,6 +504,8 @@ class MinibatchSourceFromData(UserMinibatchSource):
 
     A MinibatchSource created as a `MinibatchSourceFromData` linearly iterates through the data provided by
     the caller as numpy arrays or scipy.sparse.csr_matrix objects, without randomization.
+    The data is not copied, so if you want to modify the data while being read through a `MinibatchSourceFromData`,
+    please pass a copy.
 
     Example:
      >>> N = 5
