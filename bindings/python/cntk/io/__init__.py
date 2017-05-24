@@ -445,9 +445,6 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
         '''
         return {}
 
-    def _restore_from_checkpoint(self, state):
-        self.restore_from_checkpoint(state)
-
     def restore_from_checkpoint(self, state):
         '''
         Sets the state of the checkpoint.
