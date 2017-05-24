@@ -52,6 +52,8 @@ class SmoothL1Loss(UserFunction):
         # diff * root_gradients , if -1 < diff < 1
         # root_gradients        , else
 
+        if DEBUG:
+            print("SmoothL1 backward")
         # A gradient is only required for predictions, not for targets
         if self.inputs[0] in variables:
             diff = state
