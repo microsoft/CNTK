@@ -69,7 +69,7 @@ evaluator = cntk.Evaluator(metric, [progress_writer])
 for i in range(0,len(X_test),minibatch_size): # loop over minibatches
     x = X_test[i:i+minibatch_size] # get one minibatch worth of data
     y = Y_test[i:i+minibatch_size]
-    evaluator.test_minibatch({data: x, label_one_hot: y})  # update model from one minibatch
+    evaluator.test_minibatch({data: x, label_one_hot: y})  # test one minibatch
 evaluator.summarize_test_progress()
 
 # Inspect predictions on one minibatch, for illustration.

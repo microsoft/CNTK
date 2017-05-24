@@ -10,8 +10,6 @@ import numpy as np
 import shutil
 from cntk import DeviceDescriptor
 
-TOLERANCE_ABSOLUTE = 1E-1  # TODO: Once set_fixed_random_seed(1) is honored, this must be tightened a lot.
-
 from cntk import placeholder
 from cntk.layers import *
 from cntk.internal.utils import *
@@ -37,7 +35,7 @@ def test_1st_steps_graph():
     i = 0
     x = X_test[i:i+25] # get one minibatch worth of data
     y = Y_test[i:i+25]
-    metric = evaluator.test_minibatch({data: x, label_one_hot: y})  # update model from one minibatch
+    metric = evaluator.test_minibatch({data: x, label_one_hot: y})
     print(metric)
     assert np.allclose(metric, 0.08, atol=1e-5)
 
