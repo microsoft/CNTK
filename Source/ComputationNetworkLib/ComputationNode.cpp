@@ -660,6 +660,8 @@ template <class ElemType>
 template<class ElemType>
 void ComputationNode<ElemType>::PrintForwardBackwardTime()
 {
+    if (GetInputs().size() == 0) return;
+
     fprintf(stderr, "%-20S forward avg %07fs, backward avg %07fs (count = %d, %d)\n",
         m_nodeName.c_str(),
         m_forwardTime.count() / m_forwardCount,
