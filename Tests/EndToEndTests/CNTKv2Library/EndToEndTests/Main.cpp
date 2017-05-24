@@ -113,12 +113,12 @@ void TestCenter(const DeviceDescriptor& device, bool useConstantInputsOnly)
 {
     size_t num_minibatch = 2;
     NDShape leftInputShape(1);
-    leftInputShape[0] = 1;
+    leftInputShape[0] = 3;
 
     NDShape rightInputShape(1);
     rightInputShape[0] = 2;
 
-    std::vector<ElementType> leftInputData = { 0.0f, 2.0f };
+    std::vector<ElementType> leftInputData = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f };
 
     auto leftInputValueShape = leftInputShape.AppendShape({ 1, num_minibatch });
     auto leftInputValue = MakeSharedObject<NDArrayView>(leftInputValueShape, leftInputData, true);
@@ -139,7 +139,7 @@ void TestCenter(const DeviceDescriptor& device, bool useConstantInputsOnly)
     }
     else
     {
-        leftInputVar = InputVariable(leftInputShape, AsDataType<ElementType>(), true, L"leftInput");
+        leftInputVar = InputVariable(leftInputShape, AsDataType<ElementType>(), false, L"leftInput");
         rightInputVar = InputVariable(rightInputShape, AsDataType<ElementType>(), true, L"rightInput");
     }
 

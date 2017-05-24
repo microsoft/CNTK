@@ -39,54 +39,68 @@ public:
         m_centroids = make_shared<Matrix<ElemType>>(Matrix<ElemType>::Zeros(dimEmbedding, numClasses, deviceId));
     }
 
-    /*
+    
     virtual void UpdateFunctionMBSize() override
     {
-        m_leftMinusRight->Resize(Input(0)->Value()); //Incorrect resizing, shoudln't matter though
+        m_leftMinusRight->Resize(Input(1)->Value());
     }
-    */
+    
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-
         if (inputIndex == 1)
         {
             FrameRange fr(InputRef(0).GetMBLayout());
-            auto gradient = InputRef(inputIndex).GradientFor(fr);
+            auto gradient = InputRef(1).GradientFor(fr);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(2.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient);
-            m_leftMinusRight->Print("m_leftMinusRight");
             Matrix<ElemType>::Scale(m_alpha, *m_leftMinusRight);
-            m_leftMinusRight->Print("m_leftMinusRight_scaled");
-            InputRef(0).ValueFor(fr).Print("InputRef0");
-            m_centroids->ScatterToIndices(*m_leftMinusRight, InputRef(0).MaskedValueFor(fr), m_centroids->GetNumRows());
+            m_centroids->ScatterToIndices(*m_leftMinusRight, *m_labels, m_centroids->GetNumRows());
+
+#if DUMPOUTPUT
+            m_leftMinusRight->Print("m_leftMinusRight");
             m_centroids->Print("m_centroids");
+#endif
         }
+        
+        else
+        {
+            LogicError("%ls operation doesn't expect gradient on left operand", OperationName().c_str());
+        }
+        
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         FrameRange fr(InputRef(0).GetMBLayout());
 
-        auto labelVal = InputRef(0).MaskedValueFor(fr);
-        labelVal.Print("Labels (Input 0)");
-        InputRef(1).ValueFor(fr).Print("Features (Input 1");
-        m_centroids->Print("m_centroids");
-
-        m_centroids_batch->Resize(m_centroids->GetNumRows(), labelVal.GetNumCols());
-        m_centroids_batch->GatherFromTarget(labelVal, *m_centroids, m_centroids->GetNumRows());
-        m_centroids_batch->Print("Centroids Batch");
+        auto labelOneHot = InputRef(0).MaskedValueFor(fr);
+        labelOneHot.VectorMax(*m_labels, *m_values, true /*isColWise*/);
+        m_centroids_batch->Resize(m_centroids->GetNumRows(), m_labels->GetNumCols());
+        m_centroids_batch->GatherFromTarget(*m_labels, *m_centroids, m_centroids->GetNumRows());
         m_leftMinusRight->AssignDifferenceOf(InputRef(1).ValueFor(fr), *m_centroids_batch);
         ElemType v = m_leftMinusRight->FrobeniusNorm(); // v = sqrt( sum{ (I0[i] - I1[i])^2 } )
         Value().VerifySize(1, 1);
         Value().SetValue(v * v);  // Value = sum{ (I0[i] - I1[i])^2 }
+
+
+#if DUMPOUTPUT
+        m_labels->Print("m_labels");
+        m_centroids->Print("m_centroids");
+        m_centroids_batch->Print("m_centroids_batch");
+        m_leftMinusRight->Print("m_leftMinusRight");
+        InputRef(1).ValueFor(fr).Print("Feature Vector");
+#endif
 #if NANCHECK
         Value().HasNan("CenterLoss");
 #endif
     }
 
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        ValidateBinaryReduce(isFinalValidationPass);
+        //ValidateBinaryReduce(isFinalValidationPass);
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -98,6 +112,8 @@ public:
             node->m_leftMinusRight->SetValue(*m_leftMinusRight);
             node->m_centroids->SetValue(*m_centroids);
             node->m_centroids_batch->SetValue(*m_centroids_batch);
+            node->m_labels->SetValue(*m_labels);
+            node->m_values->SetValue(*m_values);
         }
     }
 
@@ -108,6 +124,8 @@ public:
         RequestMatrixFromPool(m_leftMinusRight, matrixPool);
         RequestMatrixFromPool(m_centroids, matrixPool);
         RequestMatrixFromPool(m_centroids_batch, matrixPool);
+        RequestMatrixFromPool(m_labels, matrixPool);
+        RequestMatrixFromPool(m_values, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -117,12 +135,16 @@ public:
         ReleaseMatrixToPool(m_leftMinusRight, matrixPool);
         ReleaseMatrixToPool(m_centroids, matrixPool);
         ReleaseMatrixToPool(m_centroids_batch, matrixPool);
+        ReleaseMatrixToPool(m_labels, matrixPool);
+        ReleaseMatrixToPool(m_values, matrixPool);
     }
 
 private:
     shared_ptr<Matrix<ElemType>> m_leftMinusRight;
     shared_ptr<Matrix<ElemType>> m_centroids;
     shared_ptr<Matrix<ElemType>> m_centroids_batch;
+    shared_ptr<Matrix<ElemType>> m_labels;
+    shared_ptr<Matrix<ElemType>> m_values;
     ElemType m_alpha;
 
 };

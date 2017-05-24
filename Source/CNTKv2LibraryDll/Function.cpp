@@ -1266,6 +1266,7 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeCenterLossAlpha] = alpha;
         additionalProperties[PrimitiveFunction::AttributeCenterLossDimEmbedding] = dimEmbedding;
         additionalProperties[PrimitiveFunction::AttributeCenterLossNumClasses] = numClasses;
+
         return BinaryOp(PrimitiveOpType::CenterLoss, labels, features, std::move(additionalProperties), name);
     }
 

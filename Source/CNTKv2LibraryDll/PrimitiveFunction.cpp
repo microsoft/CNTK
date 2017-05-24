@@ -746,12 +746,17 @@ namespace CNTK
                             m_attributes[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
                             break;
                         }
+                        case PrimitiveOpType::CenterLoss:
+                        {
+                            assert(m_inputs.size() == 2);
+                            outputShape = NDShape{};
+                            break;
+                        }
                         case PrimitiveOpType::CrossEntropyWithSoftmax:
                         case PrimitiveOpType::Logistic:
                         case PrimitiveOpType::LambdaRank:
                         case PrimitiveOpType::CosDistance:
                         case PrimitiveOpType::SquaredError:
-                        case PrimitiveOpType::CenterLoss:
                         case PrimitiveOpType::EditDistanceError:
                         case PrimitiveOpType::ClassificationError:
                         case PrimitiveOpType::NDCG:
