@@ -246,7 +246,7 @@ if __name__=='__main__':
 
     # save and load (as an illustration)
     path = model_path + "/model.cmf"
-    model.save_model(path)
+    model.save(path)
     model = Function.load(path)
 
     # test

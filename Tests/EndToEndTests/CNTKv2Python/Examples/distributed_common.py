@@ -22,10 +22,7 @@ sys.path.append(example_dir)
 TOLERANCE_ABSOLUTE = 2E-1
 TIMEOUT_SECONDS = 300
 
-def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error, match_exactly=True, per_minibatch_tolerance=TOLERANCE_ABSOLUTE, error_tolerance=TOLERANCE_ABSOLUTE):
-    if cntk_device(device_id).type() != DeviceKind_GPU:
-       pytest.skip('test only runs on GPU')
-
+def mpiexec_execute(script, mpiexec_params, params):
     cmd = ["mpiexec"] + mpiexec_params + ["python", script] + params
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     if sys.version_info[0] < 3:
@@ -37,6 +34,12 @@ def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error,
             os.kill(p.pid, signal.CTRL_C_EVENT)
             raise RuntimeError('Timeout in mpiexec, possibly hang')
     str_out = out.decode(sys.getdefaultencoding())
+    return str_out
+
+def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error, match_exactly=True, per_minibatch_tolerance=TOLERANCE_ABSOLUTE, error_tolerance=TOLERANCE_ABSOLUTE):
+    if cntk_device(device_id).type() != DeviceKind_GPU:
+       pytest.skip('test only runs on GPU')
+    str_out = mpiexec_execute(script, mpiexec_params, params)
     results = re.findall("Finished Evaluation \[.+?\]: Minibatch\[.+?\]: metric = (.+?)%", str_out)
 
     assert len(results) == 2

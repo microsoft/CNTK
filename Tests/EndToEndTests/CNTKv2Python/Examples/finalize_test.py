@@ -14,23 +14,14 @@ import re
 import pytest
 from cntk.train.distributed import Communicator, mpi_communicator
 
-mpiexec_params = [ "-n", "2"]
-TIMEOUT_SECONDS = 30
+abs_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(abs_path)
+
+from distributed_common import mpiexec_execute
 
 def test_finalize_with_exception_no_hang():
-    # Starting main function below
-    cmd = ["mpiexec"] + mpiexec_params + ["python", __file__]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    if sys.version_info[0] < 3:
-        out = p.communicate()[0]
-    else:
-        try:
-            out = p.communicate(timeout=TIMEOUT_SECONDS)[0]  # in case we have a hang
-        except subprocess.TimeoutExpired:
-            os.kill(p.pid, signal.CTRL_C_EVENT)
-            raise RuntimeError('Timeout in mpiexec, possibly hang')
+    str_out = mpiexec_execute(__file__, ["-n", "2"], [])
 
-    str_out = out.decode(sys.getdefaultencoding())
     results = re.findall("Completed with exception.", str_out)
     assert len(results) == 1
 

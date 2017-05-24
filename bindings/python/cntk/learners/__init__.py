@@ -38,25 +38,14 @@ Learner tunes a set of parameters during the training process. One can use
 different learners for different sets of parameters. Currently, CNTK supports
 the following learning algorithms:
 
-+------------------------+
-| Learning algorithms    |
-+========================+
-| AdaDelta               |
-+------------------------+
-| AdaGrad                |
-+------------------------+
-| FSAdaGrad              |
-+------------------------+
-| Adam                   |
-+------------------------+
-| MomentumSGD            |
-+------------------------+
-| Nesterov               |
-+------------------------+
-| RMSProp                |
-+------------------------+
-| SGD                    |
-+------------------------+
+- AdaDelta
+- AdaGrad
+- FSAdaGrad
+- Adam
+- MomentumSGD
+- Nesterov
+- RMSProp
+- SGD
 '''
 
 
