@@ -1531,7 +1531,7 @@ namespace CNTK
             void* m_ptr;
         } m_data;
 
-         static const size_t s_version = 1;
+         static const size_t s_version;
     };
 
     ///
@@ -1615,7 +1615,7 @@ namespace CNTK
 
     private:
         std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
-        static const size_t s_version = 1;
+        static const size_t s_version;
     };
 
     ///
