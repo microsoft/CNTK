@@ -111,7 +111,7 @@ class TestConfig(cntk_py.TestConfig):
         model_inputs_to_streams (dict): mapping between input variables and input streams
           If None, the mapping provided to the training session constructor is used.
     '''
-    def __init__(self, minibatch_source, minibatch_size=32, model_inputs_to_streams=None):
+    def __init__(self, minibatch_source, criterion, minibatch_size=32, model_inputs_to_streams=None):
         schedule = minibatch_size
         if isinstance(minibatch_size, int):
             schedule = minibatch_size_schedule(minibatch_size)
@@ -123,13 +123,12 @@ class TestConfig(cntk_py.TestConfig):
 
         minibatch_source, model_inputs_to_streams = TrainingSession._sanitize_minibatch_source(minibatch_source, model_inputs_to_streams, criterion, infinitely_repeat=False)
 
-        # test is this is needed
-        #self._source_reference = minibatch_source # keep a Python-side strong reference so that SWIG finds the correct type upon callback
+        self._source_reference = minibatch_source # keep a Python-side strong reference so that SWIG finds the correct type upon callback (otherwise Python will crash)
 
         if model_inputs_to_streams is not None:
-            super(TestConfig, self).__init__(source, schedule, model_inputs_to_streams)
+            super(TestConfig, self).__init__(minibatch_source, schedule, model_inputs_to_streams)
         else:
-            super(TestConfig, self).__init__(source, schedule)
+            super(TestConfig, self).__init__(minibatch_source, schedule)
 
 class TrainingSession(cntk_py.TrainingSession):
     '''

@@ -79,8 +79,8 @@ learner = C.learners.adam(model.parameters, lr_schedule, mm_schedule)
 
 # Trainer callbacks.
 progress_writer = C.logging.ProgressPrinter(50) # helper for logging progress; log every 50 minibatches
-checkpoint_config = C.CheckpointConfig(model_path + ".ckp", epoch_size, restore=True)
-test_config = C.TestConfig((X_test, Y_test), None, criterion) # TODO: clumsy interface
+checkpoint_config = C.CheckpointConfig(model_path, epoch_size, restore=False)
+test_config = C.TestConfig((X_test, Y_test), criterion) # TODO: clumsy interface
 
 # Train and test
 progress = criterion.train((X_train, Y_train), minibatch_size=64, max_epochs=2, parameter_learners=[learner],
