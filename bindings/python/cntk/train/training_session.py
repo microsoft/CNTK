@@ -54,52 +54,59 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
     A cross validation configuration for the training session.
 
     Args:
-        source (:class:`~cntk.io.MinibatchSource`): minibatch source used for cross validation
-        mb_size(:class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch schedule for cross validation
+        minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for cross validation
         frequency (int): frequency in samples for cross validation
           If None or ``sys.maxsize``, a single cross validation is performed at the end of training.
+        minibatch_size(int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): minibatch schedule for cross validation
         callback (func (index, average_error, cv_num_samples, cv_num_minibatches)): Callback that will
           be called with frequency which can implement custom cross validation logic,
           returns False if training should be stopped.
         max_samples (int, default None): number of samples to perform
           cross-validation on. If None, all samples are taken.
-        model_inputs_to_streams (dict, default None): mapping between input variables and input streams.
+        model_inputs_to_streams (dict): mapping between input variables and input streams
           If None, the mapping provided to the training session constructor is used.
+          Don't specify this if `minibatch_source` is a tuple of numpy/scipy arrays.
+        criterion (:class:`~cntk.Function`): criterion function.
+          Must be specified if `minibatch_source` is a tuple of numpy/scipy arrays.
     '''
-    def __init__(self, source=None, mb_size=None, frequency=None,
-            callback=None, max_samples=None, model_inputs_to_streams=None):
+    def __init__(self, minibatch_source=None, frequency=None, minibatch_size=32,
+            callback=None, max_samples=None, model_inputs_to_streams=None, criterion=None):
         self.callback = callback
 
-        if source is None and callback is None:
+        if minibatch_source is None and callback is None:
             if frequency is not None and frequency != 0:
-                raise ValueError("Either source of callback should be specified.")
+                raise ValueError("Either minibatch_source of callback should be specified.")
             else:
                 frequency = 0
 
         if frequency is None:
             frequency = sys.maxsize
 
-        schedule = mb_size
-        if isinstance(mb_size, int):
-            schedule = minibatch_size_schedule(mb_size)
+        schedule = minibatch_size
+        if isinstance(minibatch_size, int):
+            schedule = minibatch_size_schedule(minibatch_size)
 
         if schedule is None:
             schedule = minibatch_size_schedule(1)
 
         if not isinstance(schedule, cntk_py.minibatch_size_schedule):
-            raise ValueError('mb_size of type (%s) not supported. '
+            raise ValueError('minibatch_size of type (%s) not supported. '
                              'it must be an output of minibatch_size_schedule() function'
                              % type(schedule))
 
         if max_samples is None:
             max_samples = sys.maxsize
 
+        minibatch_source, model_inputs_to_streams = TrainingSession._sanitize_minibatch_source(minibatch_source, model_inputs_to_streams, criterion, infinitely_repeat=False)
+
+        self._source_reference = minibatch_source # keep a Python-side strong reference so that SWIG finds the correct type upon callback (otherwise Python will crash)
+
         if model_inputs_to_streams is not None:
             super(CrossValidationConfig, self).__init__(
-                source, schedule, frequency, max_samples, model_inputs_to_streams)
+                minibatch_source, schedule, frequency, max_samples, model_inputs_to_streams)
         else:
             super(CrossValidationConfig, self).__init__(
-                source, schedule, frequency, max_samples)
+                minibatch_source, schedule, frequency, max_samples)
 
 class TestConfig(cntk_py.TestConfig):
     '''
@@ -110,8 +117,11 @@ class TestConfig(cntk_py.TestConfig):
         minibatch_size(:class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): minibatch schedule for testing
         model_inputs_to_streams (dict): mapping between input variables and input streams
           If None, the mapping provided to the training session constructor is used.
+          Don't specify this if `minibatch_source` is a tuple of numpy/scipy arrays.
+        criterion (:class:`~cntk.Function`): criterion function.
+          Must be specified if `minibatch_source` is a tuple of numpy/scipy arrays.
     '''
-    def __init__(self, minibatch_source, criterion, minibatch_size=32, model_inputs_to_streams=None):
+    def __init__(self, minibatch_source, minibatch_size=32, model_inputs_to_streams=None, criterion=None):
         schedule = minibatch_size
         if isinstance(minibatch_size, int):
             schedule = minibatch_size_schedule(minibatch_size)
@@ -197,13 +207,13 @@ class TrainingSession(cntk_py.TrainingSession):
             test_config)
 
     @staticmethod
-    def _sanitize_minibatch_source(mb_source, model_inputs_to_streams, criterion, infinitely_repeat=True):
+    def _sanitize_minibatch_source(minibatch_source, model_inputs_to_streams, criterion, infinitely_repeat=True):
         '''
         Helper to wrap numpy/scipy data into a minibatch source.
         '''
         from ..io import MinibatchSource, UserMinibatchSource, MinibatchSourceFromData, INFINITELY_REPEAT
-        if not isinstance(mb_source, (MinibatchSource, UserMinibatchSource)): # UserMinibatchSource derives from cntk_py.SwigMinibatchSource, not MinibatchSource, for director purposes
-            args = _as_tuple(mb_source) # the mb_source is a tuple of numpy or scipy arrays that we construct a source around
+        if minibatch_source and not isinstance(minibatch_source, (MinibatchSource, UserMinibatchSource)): # UserMinibatchSource derives from cntk_py.SwigMinibatchSource, not MinibatchSource, for director purposes
+            args = _as_tuple(minibatch_source) # the minibatch_source is a tuple of numpy or scipy arrays that we construct a source around
             # args can also be a tuple of numpy/scipy arrays; we will construct on the fly
             params = criterion.arguments
             if len(params) != len(args):
@@ -212,11 +222,11 @@ class TrainingSession(cntk_py.TrainingSession):
             param_names = [param.name if param.name else "stream_" + str(i) for i, param in enumerate(params)] # (names are only used for debugging)
             param_types = [param._type for param in params]
             max_samples = INFINITELY_REPEAT if infinitely_repeat else len(args[0]) # if not infinite then do one data pass
-            mb_source = MinibatchSourceFromData({name: (input, type) for name, input, type in zip(param_names, args, param_types)}, max_samples=max_samples)
+            minibatch_source = MinibatchSourceFromData({name: (input, type) for name, input, type in zip(param_names, args, param_types)}, max_samples=max_samples)
             if model_inputs_to_streams is not None:
                 raise ValueError( "Mapping must not be provided when data is passed directly.")
-            model_inputs_to_streams = {param: mb_source.streams[name] for param, name in zip(params, param_names)}
-        return mb_source, model_inputs_to_streams
+            model_inputs_to_streams = {param: minibatch_source.streams[name] for param, name in zip(params, param_names)}
+        return minibatch_source, model_inputs_to_streams
 
     @typemap
     def train(self, device=None):
@@ -328,7 +338,7 @@ def training_session(trainer,
        cv_config = CrossValidationConfig(source=None)
 
     if test_config is None:
-       test_config = TestConfig(source=None)
+       test_config = TestConfig(minibatch_source=None)
 
     return TrainingSession(trainer, mb_source, mb_size, model_inputs_to_streams, max_samples,
                            progress_frequency, checkpoint_config, cv_config, test_config)
