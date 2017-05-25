@@ -1213,8 +1213,7 @@ class Function(cntk_py.Function):
 
     def train(self, minibatch_source,
               minibatch_size=32, streams=None, model_inputs_to_streams=None, parameter_learners=[],
-              progress_writers=None, progress_frequency=None, max_epochs=None, epoch_size=None, max_samples=None,
-              checkpoint_config=None, cv_config=None, test_config=None):
+              callbacks=[], progress_frequency=None, max_epochs=None, epoch_size=None, max_samples=None):
         '''
         Trains a model, given by its criterion function, using the specified training parameters and configs.
         Different aspects of training such as data sources, checkpointing, cross validation, progress printing
@@ -1243,14 +1242,14 @@ class Function(cntk_py.Function):
         summaries. `updates` is a similar list with the more fine-grained minibatch updates.
         If a `TestConfig` was specified, then `test_summaries` is a list of epoch test metrics and samples.
 
-        A number of callback mechanisms can optionally be specified. `progress_writers` specifies a list of
-        objects with callbacks for progress logging.
-        `test_config` allows to specify a test set that is evaluated at regular intervals during the training.
-        `checkpoint_config` configures
-        the checkpointing mechanism, which keeps copies of models at regular intervals and allows
-        to seamlessly restart from a last checkpoint.
-        `cv_config` configures data and frequency of evaluating a cross-validation data set,
-        and a callback that can be used to adjust learning hyper parameters or to denote to stop training.
+        A number of callback mechanisms can optionally be specified as a list as `callbacks`.
+        CNTK has a fixed set of callback types, and only those types are allowed in the `callbacks` list:
+        An object of type :class:`~cntk.cntk_py.ProgressWriter` from :mod:`cntk.logging` is used for progress logging;
+        a :class:`~cntk.training_session.CheckpointConfig` configures the checkpointing mechanism, which
+        keeps copies of models at regular intervals and allows to seamlessly restart from a last checkpoint;
+        a :class:`~cntk.training_session.TestConfig` allows to specify a test set that is evaluated at regular intervals during the training;
+        and a :class:`~cntk.training_session.CrossValidationConfig` specifies a user callback that can be used to adjust learning
+        hyper-parameters or to denote to stop training, optionally based on a separate cross-validation data set.
 
         This is a convenience wrapper around :class:`cntk.train.trainer.Trainer` :class:`cntk.train.trainer.TrainingSession`.
 
@@ -1267,15 +1266,15 @@ class Function(cntk_py.Function):
              This must be specified unless the user directly passes numpy/scipy arrays for the `minibatch_source`.
             max_epochs (int, defaults to 1): maximum number of samples used for training; requires `epoch_size`
             parameter_learners (list): list of learners from :mod:`cntk.learners`
-            progress_writers (progress writer or list of them): optionally, list of
-             progress writers from :mod:`cntk.logging` to automatically track training
-             progress.
+            callbacks (list): list of callback objects, which can be of type
+             :class:`~cntk.cntk_py.ProgressWriter` from :mod:`cntk.logging` (for logging),
+             :class:`~cntk.training_session.CheckpointConfig` (for check-pointing),
+             :class:`~cntk.training_session.TestConfig` (for repeated evaluating on a test set), and
+             :class:`~cntk.training_session.CrossValidationConfig` (for cross-validation based training control).
+             Except for progress writers, at most one of each is allowed.
             model_inputs_to_streams (dict): alternative to `streams`, specifying the mapping as a map from input variables to streams
             max_samples (int): maximum number of samples used for training; mutually exclusive with `max_epochs`
             progress_frequency (int): frequency in samples for aggregated progress printing. Defaults to `epoch_size` if given, or `None` otherwise
-            checkpoint_config (:class:`CheckpointConfig`): checkpoint configuration
-            cv_config (:class:`CrossValidationConfig`): cross validation configuration
-            test_config (:class:`TestConfig`): test configuration
 
         Example:
          >>> # a simple logistic-regression model
@@ -1327,32 +1326,50 @@ class Function(cntk_py.Function):
             max_samples = int(max_epochs * epoch_size) # (we allow fractional epochs so our testing system can run abbreviated tests)
         elif max_epochs is not None:
             raise ValueError("max_epochs and max_samples are mutually exclusive.")
+        # parse callbacks list into the 4 different parameters that training_session expects
+        from ..train.training_session import training_session, CheckpointConfig, CrossValidationConfig, TestConfig
+        from ..cntk_py import ProgressWriter
+        configs = Record(progress_writers=[], checkpoint_configs=[None], cv_configs=[None], test_configs=[None])
+        types_to_configs = {
+            ProgressWriter:        configs.progress_writers,
+            CheckpointConfig:      configs.checkpoint_configs,
+            CrossValidationConfig: configs.cv_configs,
+            TestConfig:            configs.test_configs
+        }
+        for cb in callbacks: # separate the callbacks list into one of 4 separate types
+            for type, config in types_to_configs.items():
+                if isinstance(cb, type):
+                    if isinstance(cb, cntk.cntk_py.ProgressWriter): # multiple progress writers are allowed
+                        config.append(cb)
+                    elif not config[0]:
+                        ValueError('only one callback of type ' + str(type) + ' is permitted')
+                    else:
+                        config[0] = cb
+            else:
+                ValueError('callbacks list can only contain objects of type ProgressWriter, CheckpointConfig, CrossValidationConfig, and TestConfig.')
         # use a progress tracker to capture the loss, metric, and count values
         if progress_frequency is None and epoch_size is not None: # if epoch size is given then default training summary frequency to it
             progress_frequency = epoch_size
-        collector = Function._ProgressCollector(progress_writers, progress_frequency // minibatch_size[0] if progress_frequency is not None else None)
+        collector = Function._ProgressCollector(configs.progress_writers, progress_frequency // minibatch_size[0] if progress_frequency is not None else None)
         # Trainer instance
         from ..train.trainer import Trainer
-        if not progress_writers:
-            progress_writers = []
-        trainer = Trainer(None, self, parameter_learners, progress_writers=progress_writers + [collector])
+        trainer = Trainer(None, self, parameter_learners, progress_writers=configs.progress_writers + [collector])
         # input map
         if streams:
             if model_inputs_to_streams:
                 raise ValueError("streams and model_inputs_to_streams are mutually exclusive.")
             model_inputs_to_streams = self.argument_map(*streams)
         # training session
-        from ..train.training_session import training_session
         ts = training_session(trainer, minibatch_source, minibatch_size, model_inputs_to_streams=model_inputs_to_streams,
                               progress_frequency=progress_frequency, max_samples=max_samples,
-                              checkpoint_config=checkpoint_config, cv_config=cv_config, test_config=test_config)
+                              checkpoint_config=configs.checkpoint_configs[0], cv_config=configs.cv_configs[0], test_config=configs.test_configs[0])
         ts.train()
         res = Record(updates=collector.training_updates, epoch_summaries=collector.training_summaries)
-        if test_config:
+        if configs.test_configs[0]:
             res = res.updated_with(test_summaries=collector.test_summaries)
         return res
 
-    def test(self, minibatch_source, minibatch_size=32, streams=None, model_inputs_to_streams=None, progress_writers=None):
+    def test(self, minibatch_source, minibatch_size=32, streams=None, model_inputs_to_streams=None, callbacks=None):
         '''
         Measures the performance of a model, given by its criterion function, in the form of
         average metric value (or loss if model has only one output) on a set of data.
@@ -1364,7 +1381,7 @@ class Function(cntk_py.Function):
             minibatch_size (:class:`~cntk.cntk_py.minibatch_size_schedule` or int): minibatch size for evaluation
             streams (tuple): the streams of the minibatch_source in argument order
             model_inputs_to_streams (dict): mapping between input variables and input streams
-            progress_writers (progress writer or list of them): optionally, list of
+            callbacks (progress writer or list of them): optionally, list of
              progress writers from :mod:`cntk.logging` to automatically track training
              progress.
 
@@ -1387,8 +1404,11 @@ class Function(cntk_py.Function):
         from ..eval.evaluator import Evaluator
         outputs = self.outputs
         output = outputs[0] if len(outputs) == 1 else outputs[1] # use metric if present, otherwise loss
-        if not progress_writers:
-            progress_writers = []
+        # callbacks. Only ProgressWriter is allowed in test()
+        from ..cntk_py import ProgressWriter
+        if callbacks and any(not isinstance(cb, ProgressWriter) for cb in callbacks):
+            ValueError('callbacks list must only contain objects of type ProgressWriter')
+        progress_writers = callbacks or []
         evaluator = Evaluator(output, progress_writers + [collector])
         # evaluation loop
         while True:

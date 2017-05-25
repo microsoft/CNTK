@@ -60,11 +60,11 @@ learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(learning_rate, 
 progress_writer = cntk.logging.ProgressPrinter(50) # helper for logging progress; log every 50 minibatches
 
 # Train!
-progress = criterion.train((X_train, Y_train), parameter_learners=[learner], progress_writers=[progress_writer])
+progress = criterion.train((X_train, Y_train), parameter_learners=[learner], callbacks=[progress_writer])
 final_loss, final_metric, final_samples = (progress.epoch_summaries[-1].loss, progress.epoch_summaries[-1].metric, progress.epoch_summaries[-1].samples)
 
 # Test error rate on the test set.
-test_metric = criterion.test((X_test, Y_test), progress_writers=[progress_writer]).metric
+test_metric = criterion.test((X_test, Y_test), callbacks=[progress_writer]).metric
 
 # Inspect predictions on one minibatch, for illustration.
 # For evaluation, we map the output of the network between 0-1 and convert them into probabilities

@@ -4,9 +4,12 @@
 # for full license information.
 # ==============================================================================
 
-# This example shows how to train a very basic CNTK model for logistic regression.
-# The task is to classify a 2-dimensional vector as belong to one of two classes.
-# The data is artificially created. Each class' data follows a normal distribution.
+# This example show how to train a model, showcasing a range of training options: 
+#  - checkpointing
+#  - testing after each minibatch
+#  - cross-validation based learning-rate control and early stopping in user code
+#  - distributed training using the BlockMomentum method and MPI
+# This is shown along the task of recognizing handwritten digits on the MNIST corpus.
 
 from __future__ import print_function
 import os
@@ -36,23 +39,18 @@ def fetch_mnist():
 X_train, Y_train, X_test, Y_test = fetch_mnist()
 
 # Define the CNTK model function. The model function maps input data to
-# predictions (here: 2-dimensional inputs --> 2 scores).
-# This simple logistic-regression model just uses a linear transform,
-# which corresponds to a Dense layer without activation function.
-# A Dense layer implements the formula y = activation(x @ W + b), where W and b
-# are learnable model parameters.
-model = C.layers.Dense(num_classes, activation=None)
-
+# predictions (here: (28,28)-dimensional inputs --> 10 scores).
+# This specific model uses convolution, max pooling, and dropout.
 with C.layers.default_options(activation=C.ops.relu, pad=False):
     model = C.layers.Sequential([
-        C.layers.Convolution2D((5,5), 32, reduction_rank=0, pad=True),
-        C.layers.MaxPooling((3,3), (2,2)),
-        C.layers.Convolution2D((3,3), 48),
-        C.layers.MaxPooling((3,3), (2,2)),
-        C.layers.Convolution2D((3,3), 64),
+        C.layers.Convolution2D((5,5), num_filters=32, reduction_rank=0, pad=True),
+        C.layers.MaxPooling((3,3), strides=(2,2)),
+        C.layers.Convolution2D((3,3), num_filters=48),
+        C.layers.MaxPooling((3,3), strides=(2,2)),
+        C.layers.Convolution2D((3,3), num_filters=64),
         C.layers.Dense(96),
-        C.layers.Dropout(0.5),
-        C.layers.Dense(num_classes, activation=None) # final softmax is added in criterion
+        C.layers.Dropout(dropout_rate=0.5),
+        C.layers.Dense(num_classes, activation=None) # no activation in final layer (softmax is done in criterion)
     ])
 
 # Define the CNTK criterion function. A criterion function maps
@@ -82,11 +80,11 @@ learner = C.learners.adam(model.parameters, lr_schedule, mm_schedule)
 progress_writer = C.logging.ProgressPrinter(50) # helper for logging progress; log every 50 minibatches
 
 # Train!
-progress = criterion.train((X_train, Y_train), minibatch_size=64, max_epochs=2, parameter_learners=[learner], progress_writers=[progress_writer])
+progress = criterion.train((X_train, Y_train), minibatch_size=64, max_epochs=2, parameter_learners=[learner], callbacks=[progress_writer])
 final_loss, final_metric, final_samples = (progress.epoch_summaries[-1].loss, progress.epoch_summaries[-1].metric, progress.epoch_summaries[-1].samples)
 
 # Test error rate on the test set.
-test_metric = criterion.test((X_test, Y_test), progress_writers=[progress_writer]).metric
+test_metric = criterion.test((X_test, Y_test), callbacks=[progress_writer]).metric
 
 # Inspect predictions on one minibatch, for illustration.
 # For evaluation, we map the output of the network between 0-1 and convert them into probabilities

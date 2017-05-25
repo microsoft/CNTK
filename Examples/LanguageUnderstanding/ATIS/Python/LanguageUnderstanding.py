@@ -160,7 +160,7 @@ def train(reader, model, max_epochs):
     progress = criterion.train(reader, streams=(reader.streams.query, reader.streams.slot_labels),
                                minibatch_size=minibatch_size, max_epochs=max_epochs, epoch_size=epoch_size,
                                parameter_learners=[learner],
-                               progress_writers=[progress_printer, progress_callback])
+                               callbacks=[progress_printer, progress_callback])
     return progress.epoch_summaries[-1].loss, progress.epoch_summaries[-1].metric # return loss and metric from last epoch
 
 
@@ -175,7 +175,7 @@ def evaluate(reader, model):
     # of the criterion function. At the end, progress_printer will be used to show the average value.
     # test() returns an object that contains the average metric.
     metric = criterion.test(reader, streams=(reader.streams.query, reader.streams.slot_labels),
-                            minibatch_size=1000, progress_writers=[progress_printer]).metric
+                            minibatch_size=1000, callbacks=[progress_printer]).metric
                                
     return metric
 
