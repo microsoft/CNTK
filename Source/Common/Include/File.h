@@ -37,6 +37,7 @@ enum FileOptions
     fileOptionsWrite = 16,                                      // open in write mode
     fileOptionsSequential = 32,                                 // optimize for sequential reads (allocates big buffer)
     fileOptionsReadWrite = fileOptionsRead | fileOptionsWrite,  // read/write mode
+    fileOptionsAppend = 128,                                    // open in append mode
 };
 
 // markers used for text files
