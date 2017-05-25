@@ -120,7 +120,7 @@ class TensorOpsMixin(object):
                 # implement as a CNTK slice() operation
                 begin = s.start or 0
                 end   = s.stop  or 0
-                if (begin != 0 or end != 0) and (axis + axis0) >= 0:
+                if begin != 0 or end != 0:
                     r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end)
             elif isinstance(s, (tuple, list)):
                 # Select multiple elements from the same dimension. This is
