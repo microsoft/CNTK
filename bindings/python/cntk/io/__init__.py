@@ -490,6 +490,26 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
         '''
         return self.stream_info(name)
 
+    def get_checkpoint_state(self):
+        '''
+        Gets the checkpoint state of the MinibatchSource.
+
+        Returns:
+            cntk.cntk_py.Dictionary:
+            A :class:`~cntk.cntk_py.Dictionary` that has the checkpoint state
+            of the MinibatchSource
+        '''
+        raise NotImplementedError
+
+    def restore_from_checkpoint(self, checkpoint):
+        '''
+        Restores the MinibatchSource state from the specified checkpoint.
+
+        Args:
+            checkpoint (:class:`~cntk.cntk_py.Dictionary`): checkpoint to restore from
+        '''
+        raise NotImplementedError
+
 class MinibatchSourceFromData(UserMinibatchSource):
     '''
     This wraps in-memory data as a CNTK MinibatchSource object (aka "reader"), used to feed the data into a TrainingSession.
@@ -702,6 +722,27 @@ class MinibatchSourceFromData(UserMinibatchSource):
         self._cursor = 0 if at_end else end
 
         return result
+
+    def get_checkpoint_state(self):
+        '''
+        Gets the checkpoint state of the MinibatchSource.
+
+        Returns:
+            cntk.cntk_py.Dictionary:
+            A :class:`~cntk.cntk_py.Dictionary` that has the checkpoint state
+            of the MinibatchSource
+        '''
+        return dict(cursor=self._cursor, total_num_samples=self._total_num_samples)
+
+    def restore_from_checkpoint(self, checkpoint):
+        '''
+        Restores the MinibatchSource state from the specified checkpoint.
+
+        Args:
+            checkpoint (:class:`~cntk.cntk_py.Dictionary`): checkpoint to restore from
+        '''
+        self._cursor = checkpoint['cursor']
+        self._total_num_samples = checkpoint['total_num_samples']
 
 
 def HTKFeatureDeserializer(streams):

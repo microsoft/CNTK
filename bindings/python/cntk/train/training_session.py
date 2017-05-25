@@ -17,25 +17,13 @@ class CheckpointConfig(cntk_py.CheckpointConfig):
 
     Args:
         filename (str): checkpoint file name.
-        frequency (int): checkpoint frequency in samples. If 0, no checkpointing takes place. 
+        frequency (int): checkpointing period (number samples between checkpoints). If `None`, no checkpointing takes place. 
           If ``sys.maxsize``, a single checkpoint is taken at the end of the training.
-        preserve_all (bool): saves all checkpoints, using ``filename`` as prefix and checkpoint index as a suffix.
         restore (bool): flag, indicating whether to restore from available checkpoint before the start of the training
+        preserve_all (bool): saves all checkpoints, using ``filename`` as prefix and checkpoint index as a suffix.
     '''
     def __init__(self, filename, frequency=None,
                  restore=True, preserve_all=False):
-        '''Sets configuration of checkpointing behavior.
-
-        Args:
-            filename (str): checkpoint file name.
-            frequency (int): checkpoint frequency in samples. If 0, no checkpointing takes place. 
-              If ``sys.maxsize``, a single checkpoint is taken at the end of the training.
-            preserve_all (bool): saves all checkpoints, using ``filename`` as prefix and checkpoint index as a suffix.
-            restore (bool): flag, indicating whether to restore from available checkpoint before the start of the training
-
-        Returns:
-            Reconfigured self.
-        '''
         if filename is None:
             if frequency is not None and frequency != 0:
                 raise ValueError(

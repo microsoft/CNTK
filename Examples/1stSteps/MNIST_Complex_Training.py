@@ -21,6 +21,7 @@ import scipy.sparse
 # Define the task.
 input_shape = (28, 28)  # MNIST digits are 28 x 28
 num_classes = 10        # classify as one of 10 digits
+model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Models/mnist.cmf")
 
 # Fetch the MNIST data from mldata.
 def fetch_mnist():
@@ -78,11 +79,12 @@ learner = C.learners.adam(model.parameters, lr_schedule, mm_schedule)
 
 # Trainer callbacks.
 progress_writer = C.logging.ProgressPrinter(50) # helper for logging progress; log every 50 minibatches
+checkpoint_config = C.CheckpointConfig(model_path + ".ckp", epoch_size, restore=True)
 test_config = C.TestConfig((X_test, Y_test), None, criterion) # TODO: clumsy interface
 
 # Train and test
 progress = criterion.train((X_train, Y_train), minibatch_size=64, max_epochs=2, parameter_learners=[learner],
-                           callbacks=[progress_writer, test_config])
+                           callbacks=[progress_writer, checkpoint_config, test_config])
 final_loss, final_metric, final_samples, test_metric = (progress.epoch_summaries[-1].loss, progress.epoch_summaries[-1].metric, progress.epoch_summaries[-1].samples, progress.test_summary.metric)
 
 # Test error rate on the test set.
