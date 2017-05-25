@@ -1240,14 +1240,15 @@ class Function(cntk_py.Function):
         contains the progression of epoch loss (`.loss`) and metric (`.metric`) values and the corresponding
         number of labels (`.samples`) that they were averaged over. This is the same value that a progress printer would print as epoch
         summaries. `updates` is a similar list with the more fine-grained minibatch updates.
-        If a `TestConfig` was specified, then `test_summaries` is a list of epoch test metrics and samples.
+        If a `TestConfig` was specified, then `test_summary` is the metric and sample count on the specified test set
+        for the final model.
 
         A number of callback mechanisms can optionally be specified as a list as `callbacks`.
         CNTK has a fixed set of callback types, and only those types are allowed in the `callbacks` list:
         An object of type :class:`~cntk.cntk_py.ProgressWriter` from :mod:`cntk.logging` is used for progress logging;
         a :class:`~cntk.training_session.CheckpointConfig` configures the checkpointing mechanism, which
         keeps copies of models at regular intervals and allows to seamlessly restart from a last checkpoint;
-        a :class:`~cntk.training_session.TestConfig` allows to specify a test set that is evaluated at regular intervals during the training;
+        a :class:`~cntk.training_session.TestConfig` allows to specify a test set that is evaluated at the end of the training;
         and a :class:`~cntk.training_session.CrossValidationConfig` specifies a user callback that can be used to adjust learning
         hyper-parameters or to denote to stop training, optionally based on a separate cross-validation data set.
 
@@ -1269,7 +1270,7 @@ class Function(cntk_py.Function):
             callbacks (list): list of callback objects, which can be of type
              :class:`~cntk.cntk_py.ProgressWriter` from :mod:`cntk.logging` (for logging),
              :class:`~cntk.training_session.CheckpointConfig` (for check-pointing),
-             :class:`~cntk.training_session.TestConfig` (for repeated evaluating on a test set), and
+             :class:`~cntk.training_session.TestConfig` (for automatic final evaluation on a test set), and
              :class:`~cntk.training_session.CrossValidationConfig` (for cross-validation based training control).
              Except for progress writers, at most one of each is allowed.
             model_inputs_to_streams (dict): alternative to `streams`, specifying the mapping as a map from input variables to streams
@@ -1299,7 +1300,8 @@ class Function(cntk_py.Function):
 
         Returns:
          progress: an object with progress.epoch_summaries and progress.updates being the progressions of av loss, av metric, and number of labels
-          for epochs and updates (groups of minibatches), respectively.
+          for epochs and updates (groups of minibatches), respectively. If a `TestConfig` was given, then progress.test_summary
+          includes the result (.metric and .samples)
         '''
         if minibatch_size is None:
             raise ValueError("minibatch_size must not be None.")
@@ -1341,7 +1343,7 @@ class Function(cntk_py.Function):
                 if isinstance(cb, type):
                     if isinstance(cb, cntk.cntk_py.ProgressWriter): # multiple progress writers are allowed
                         config.append(cb)
-                    elif not config[0]:
+                    elif config[0]:
                         ValueError('only one callback of type ' + str(type) + ' is permitted')
                     else:
                         config[0] = cb
@@ -1366,7 +1368,7 @@ class Function(cntk_py.Function):
         ts.train()
         res = Record(updates=collector.training_updates, epoch_summaries=collector.training_summaries)
         if configs.test_configs[0]:
-            res = res.updated_with(test_summaries=collector.test_summaries)
+            res = res.updated_with(test_summary=collector.test_summaries[-1])
         return res
 
     def test(self, minibatch_source, minibatch_size=32, streams=None, model_inputs_to_streams=None, callbacks=None):
@@ -1386,7 +1388,7 @@ class Function(cntk_py.Function):
              progress.
 
         Returns:
-         stats: object with stats.metric being the average metric, and stats.samples the number of labels in the test set
+         test_summary: object with test_summary.metric being the average metric, and test_summary.samples the number of labels in the test set
         '''
         if minibatch_size is None:
             raise ValueError("minibatch_size must not be None.")

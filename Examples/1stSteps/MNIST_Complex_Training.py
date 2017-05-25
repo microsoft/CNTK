@@ -76,15 +76,17 @@ mm_schedule      = C.learners.momentum_as_time_constant_schedule(mm_time_constan
 # Instantiate the trainer object to drive the model training
 learner = C.learners.adam(model.parameters, lr_schedule, mm_schedule)
 
-# Trainer configuration parameters.
+# Trainer callbacks.
 progress_writer = C.logging.ProgressPrinter(50) # helper for logging progress; log every 50 minibatches
+test_config = C.TestConfig((X_test, Y_test), None, criterion) # TODO: clumsy interface
 
-# Train!
-progress = criterion.train((X_train, Y_train), minibatch_size=64, max_epochs=2, parameter_learners=[learner], callbacks=[progress_writer])
-final_loss, final_metric, final_samples = (progress.epoch_summaries[-1].loss, progress.epoch_summaries[-1].metric, progress.epoch_summaries[-1].samples)
+# Train and test
+progress = criterion.train((X_train, Y_train), minibatch_size=64, max_epochs=2, parameter_learners=[learner],
+                           callbacks=[progress_writer, test_config])
+final_loss, final_metric, final_samples, test_metric = (progress.epoch_summaries[-1].loss, progress.epoch_summaries[-1].metric, progress.epoch_summaries[-1].samples, progress.test_summary.metric)
 
 # Test error rate on the test set.
-test_metric = criterion.test((X_test, Y_test), callbacks=[progress_writer]).metric
+#test_metric = criterion.test((X_test, Y_test), callbacks=[progress_writer]).metric
 
 # Inspect predictions on one minibatch, for illustration.
 # For evaluation, we map the output of the network between 0-1 and convert them into probabilities

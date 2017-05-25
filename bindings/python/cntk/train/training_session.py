@@ -94,25 +94,24 @@ class TestConfig(cntk_py.TestConfig):
     A test configuration for the training session.
 
     Args:
-        source (:class:`~cntk.io.MinibatchSource`): minibatch source used for testing
-        schedule (:class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch schedule for testing
+        minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for testing
+        minibatch_size (int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): minibatch size (schedule) for testing
     '''
-    def __init__(self, source, mb_size=None):
-        schedule = mb_size
-        if isinstance(mb_size, int):
-            schedule = minibatch_size_schedule(mb_size)
-
-        if schedule is None:
-            schedule = minibatch_size_schedule(1)
+    def __init__(self, minibatch_source, model_inputs_to_streams, criterion, minibatch_size=32):
+        schedule = minibatch_size
+        if isinstance(minibatch_size, int):
+            schedule = minibatch_size_schedule(minibatch_size)
 
         if not isinstance(schedule, cntk_py.minibatch_size_schedule):
-            raise ValueError('mb_size of type (%s) not supported. '
-                             'it must be an output of minibatch_size_schedule() function'
+            raise ValueError('minibatch_size of type (%s) not supported. '
+                             'it must be an int or the result of the minibatch_size_schedule() function'
                              % type(schedule))
 
-        self._source_reference = source # keep a Python-side strong reference so that SWIG finds the correct type upon callback
+        minibatch_source, model_inputs_to_streams = TrainingSession._sanitize_minibatch_source(minibatch_source, model_inputs_to_streams, criterion, infinitely_repeat=False)
 
-        super(TestConfig, self).__init__(source, schedule)
+        self._source_reference = minibatch_source # keep a Python-side strong reference so that SWIG finds the correct type upon callback
+
+        super(TestConfig, self).__init__(minibatch_source, schedule)
 
 class TrainingSession(cntk_py.TrainingSession):
     '''
