@@ -662,7 +662,9 @@ public:
     bool NeedsGradient() const { return m_needsGradient; }
 
     void MarkNeedsDynamicValidation() { m_needsDynamicValidation = true; }
-    virtual bool NeedsDynamicValidation() const { return m_needsDynamicValidation; }
+    bool NeedsDynamicValidation() const { return m_needsDynamicValidation; }
+
+    virtual bool ForceDynamicValidation() const { return false; }
 
     void SetLearningRateMultiplier(float f) 
     { 
