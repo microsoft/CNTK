@@ -533,7 +533,7 @@ class TrainingSummaryProgressCallback(cntk_py.ProgressWriter):
         self._epoch_size = epoch_size
         self._callback = callback
         super(TrainingSummaryProgressCallback, self).__init__(sys.maxsize, 0, epoch_size, 0, sys.maxsize, 0)
-        self.__disown__() # TODO: what is this?
+        self.__disown__()
     def on_write_training_update(self, samples, updates, aggregate_loss, aggregate_metric):
         pass
     def on_write_test_update(self, *args, **kwargs):
