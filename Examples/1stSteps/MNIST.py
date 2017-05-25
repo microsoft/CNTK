@@ -9,27 +9,46 @@
 # The data is artificially created. Each class' data follows a normal distribution.
 
 from __future__ import print_function
+import os
 import cntk
 import numpy as np
+from sklearn import datasets, utils
 import scipy.sparse
 
 # Define the task.
-input_dim = 2    # classify 2-dimensional data
-num_classes = 2  # into one of two classes
+input_dim = (28, 28)  # MNIST digits are 28 x 28
+num_classes = 10      # classify as one of 10 digits
 
-# This example uses synthetic data, which we generate in the following.
-#  X[corpus_size,input_dim] - our input data
-#  Y[corpus_size]           - labels (0 or 1), in one-hot representation
-np.random.seed(0)
-def generate_synthetic_data(N):
-    Y = np.random.randint(size=N, low=0, high=num_classes)  # labels
-    X = (np.random.randn(N, input_dim)+3) * (Y[:,None]+1)   # data
+def fetch_mnist():
+    mnist = datasets.fetch_mldata("MNIST original")
+    X, Y = mnist.data / 255., mnist.target
+    X_train, X_test = X[:60000].reshape((-1,28,28)), X[60000:].reshape((-1,28,28))
+    Y_train, Y_test = Y[:60000].astype(int), Y[60000:].astype(int)
+    # Shuffle the training data.
+    np.random.seed(0) # always use the same reordering, for reproducability
+    X_train, Y_train = utils.shuffle(X_train, Y_train)
     # Our model expects float32 features, and cross-entropy expects one-hot encoded labels.
-    Y = scipy.sparse.csr_matrix((np.ones(N,np.float32), (range(N), Y)), shape=(N, num_classes))
-    X = X.astype(np.float32)
-    return X, Y
-X_train, Y_train = generate_synthetic_data(20000)
-X_test,  Y_test  = generate_synthetic_data(1024)
+    Y_train, Y_test = (scipy.sparse.csr_matrix((np.ones(len(Y),np.float32), (range(len(Y)), Y)), shape=(len(Y), 10)) for Y in (Y_train, Y_test))
+    X_train, X_test = (X.astype(np.float32) for X in (X_train, X_test))
+    return X_train, Y_train, X_test, Y_test
+
+X_train, Y_train, X_test, Y_test = fetch_mnist()
+
+#import requests
+#import gzip
+#
+#mnist_path = os.path.dirname(os.path.abspath(__file__)) + '/mnist'
+#
+## Download the files if not present yet.
+#if not os.path.isfile(mnist_path)    or True:
+#    data_arrays = {} # this code is strictly for the 4 MNIST files from Yann Lecun's web site
+#    for name in ('train-images', 'train-labels', 't10k-images', 't10k-labels'):
+#        is_image = name[-6:] == 'images'
+#        open(mnist_path + ".tmp.gz", 'wb').write(requests.get('http://yann.lecun.com/exdb/mnist/' + name + '-idx' + "13"[is_image] + '-ubyte.gz').content)
+#        data = gzip.GzipFile(mnist_path + ".tmp.gz", 'rb').read()[(8,16)[is_image]:]
+#        os.remove(mnist_path + ".tmp.gz")
+#        data_arrays[name.replace('-', '_')] = np.fromstring(data, dtype=np.uint8).reshape(((-1),(-1,28,28))[is_image]).astype((int, np.float32)[is_image])
+#    np.savez_compressed(mnist_path, **data_arrays)
 
 # Define the CNTK model function. The model function maps input data to
 # predictions (here: 2-dimensional inputs --> 2 scores).
@@ -72,8 +91,26 @@ metric, num_samples = criterion.test((X_test, Y_test), progress_writers=[progres
 def get_probability(data):
     return cntk.softmax(model(data))
 
-X_check, Y_check = generate_synthetic_data(25) # a small batch of 25 examples
+X_check, Y_check = X_test[0:10000:400], Y_test[0:10000:400] # a small subsample of 25 examples
 result = get_probability(X_check)
 
-print("Label    :", [label.todense().argmax() for label in Y_check])
+print("Label    :", [label.argmax() for label in Y_check])
 print("Predicted:", [result[i,:].argmax() for i in range(len(result))])
+
+
+
+
+#def fetch_mnist():
+#    mnist = datasets.fetch_mldata("MNIST original")
+#    X, Y = mnist.data / 255., mnist.target
+#    X_train, X_test = X[:60000].reshape((-1,28,28)), X[60000:].reshape((-1,28,28))
+#    Y_train, Y_test = Y[:60000].astype(int), Y[60000:].astype(int)
+#    # shuffle the training data
+#    np.random.seed(0) # always use the same reordering, for reproducability
+#    X_train, Y_train = utils.shuffle(X_train, Y_train)
+#    # 
+#    Y_train, Y_test = (scipy.sparse.csr_matrix((np.ones(len(Y),np.float32), (range(len(Y)), Y)), shape=(len(Y), 10)) for Y in (Y_train, Y_test))
+#    X_train, X_test = (X.astype(np.float32) for X in (X_train, X_test))
+#    return X_train, Y_train, X_test, Y_test
+#
+#X_train, Y_train, X_test, Y_test = fetch_mnist()

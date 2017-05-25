@@ -80,5 +80,5 @@ get_probability = cntk.softmax(model)
 X_check, Y_check = generate_synthetic_data(25) # a small batch of 25 examples
 result = get_probability.eval(X_check)
 
-print("Label    :", [label.argmax() for label in Y_check])
+print("Label    :", [label.todense().argmax() for label in Y_check])
 print("Predicted:", [result[i,:].argmax() for i in range(len(result))])
