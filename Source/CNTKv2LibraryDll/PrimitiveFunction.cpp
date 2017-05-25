@@ -101,9 +101,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceAxisNamePrefix = L"sequenceAxis";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackPaddingValue = L"sequenceUnpackPaddingValue";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput = L"sequenceUnpackSuppressMaskOutput";
-    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomVariableType = L"randomVariableType";
-    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomVariableArg0 = L"randomVariableArg0";
-    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomVariableArg1 = L"randomVariableArg1";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionType = L"randomDistributionType";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionArgs = L"randomDistributionArgs";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -178,7 +177,7 @@ namespace CNTK
             (op == PrimitiveOpType::Logistic) ||
             (op == PrimitiveOpType::LambdaRank) ||
             (op == PrimitiveOpType::NDCG) || 
-            (op == PrimitiveOpType::RandomVariable && inputs.empty()))
+            (op == PrimitiveOpType::RandomDistribution && inputs.empty()))
         {
             outputDynamicAxes = std::vector<Axis>({});
         }
@@ -328,7 +327,7 @@ namespace CNTK
                     {
                         switch (m_op)
                         {
-                        case PrimitiveOpType::RandomVariable:
+                        case PrimitiveOpType::RandomDistribution:
                         {
                             assert(m_inputs.size() == 0 || m_inputs.size() == 1);
                             if (m_inputs.size() == 1)
@@ -337,10 +336,10 @@ namespace CNTK
                             {
                                 outputShape = m_attributes[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
                                 if (outputShape.HasUnboundDimension()) //review: is unbound right or should this be Free or Inferred?
-                                    InvalidArgument("RandomVariable: Output shape '%ls' must not have an unbound dimension.", outputShape.AsString().c_str());
+                                    InvalidArgument("RandomDistribution: Output shape '%ls' must not have an unbound dimension.", outputShape.AsString().c_str());
                                 auto dataType = static_cast<DataType>(m_attributes[PrimitiveFunction::AttributeNameNewDataType].Value<int>());
                                 if (dataType != DataType::Float && dataType != DataType::Double)
-                                    InvalidArgument("RandomVariable: data type must be one of float, double.");
+                                    InvalidArgument("RandomDistribution: data type must be one of float, double.");
                                 outputDataType = dataType;
                             }
                             break;

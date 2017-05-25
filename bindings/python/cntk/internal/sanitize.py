@@ -553,6 +553,15 @@ def sanitize_permutation(perm):
         raise ValueError('duplicate item in permutation')
     return [n-i-1 for i in reversed(positive_perm)]
 
+def sanitize_random_args(shape, dtype):
+    from cntk.default_options import get_default_override
+    shape = sanitize_shape(shape)
+    dtype = get_default_override(None, dtype=dtype)
+    if dtype is None:
+        dtype = np.float32
+    dtype = sanitize_dtype_cntk(dtype)
+    return shape, dtype
+
 # Workaround for Python 2.7 not having functools.lru_cache
 def memoize(func):
     class memodict(dict):

@@ -9,44 +9,44 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-/*virtual*/ void RandomVariableNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
+/*virtual*/ void RandomDistributionNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
 {
     auto&& result = ValueFor(fr);
     switch (m_type)
     {
-    case RandomVariableType::Uniform:
+    case RandomDistributionType::Uniform:
         result.SetUniformRandomValue(GetRNGHandle(), m_args[0], m_args[1]);
         UpdateRngOffset(GetRngOffset() + result.GetNumElements());
         break;
-    case RandomVariableType::Normal:
+    case RandomDistributionType::Normal:
         result.SetGaussianRandomValue(GetRNGHandle(), m_args[0], m_args[1]);
-        UpdateRngOffset(GetRngOffset() + asMultipleOf(result.GetNumElements(), 2));
+        UpdateRngOffset(GetRngOffset() + AsMultipleOf(result.GetNumElements(), 2));
         break;
-    case RandomVariableType::Gumbel:
+    case RandomDistributionType::Gumbel:
         result.SetGumbelRandomValue(GetRNGHandle(), m_args[0], m_args[1]);
         UpdateRngOffset(GetRngOffset() + result.GetNumElements());
         break;
-    case RandomVariableType::Bernoulli:
+    case RandomDistributionType::Bernoulli:
         result.SetUniformRandomMask(ElemType(1 - m_args[0]), ElemType(1), GetRNGHandle());
         UpdateRngOffset(GetRngOffset() + result.GetNumElements());
         break;
     default:
-        RuntimeError("RandomVariableNode::ForwardProp: Unkown random variable type code %d", m_type);
+        RuntimeError("RandomDistributionNode::ForwardProp: Unkown random variable type code %d", m_type);
     }
 }
 
 
 template <class ElemType>
-/*virtual*/ void RandomVariableNode<ElemType>::BackpropTo(const size_t /*inputIndex*/, const FrameRange&) /*override*/
+/*virtual*/ void RandomDistributionNode<ElemType>::BackpropTo(const size_t /*inputIndex*/, const FrameRange&) /*override*/
 {
-    LogicError("%ls %ls operation is a random variable and cannot BackpropTo() it.", NodeName().c_str(), OperationName().c_str());
+    /* Do nothing. The proper fix is for this Node to have it say it does not need gradient. */
 }
 
 template <class ElemType>
-/*virtual*/ bool RandomVariableNode<ElemType>::IsOutOfDateWrtInputs() const /*override*/ { return true; }
+/*virtual*/ bool RandomDistributionNode<ElemType>::IsOutOfDateWrtInputs() const /*override*/ { return true; }
 
-template class RandomVariableNode<float>;
-template class RandomVariableNode<double>;
+template class RandomDistributionNode<float>;
+template class RandomDistributionNode<double>;
 
 template<class ElemType>
 void RandomSampleNodeBase<ElemType>::Validate(bool isFinalValidationPass)

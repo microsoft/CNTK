@@ -24,7 +24,6 @@
 #undef ANAMEFORLIB
 #endif
 
-
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 #pragma warning(disable : 4239) // nonstandard extension; triggered by this pattern: "auto& second = transposeB ? b.m_GPUMatrix->Transpose() : *b.m_GPUMatrix;"
 #pragma warning(disable : 4702) // unreachable code; triggered for unknown reasons

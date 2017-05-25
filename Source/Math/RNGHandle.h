@@ -8,7 +8,6 @@
 #pragma once
 
 #include "CommonMatrix.h"
-#include "File.h"
 #include <memory>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -34,6 +33,5 @@ private:
 
     DEVICEID_TYPE m_deviceId;
 };
-
 
 }}}

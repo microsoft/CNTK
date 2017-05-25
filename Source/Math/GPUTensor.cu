@@ -831,7 +831,6 @@ __global__ void _launchTensorOpWithReduction(ElemType beta, FixedArray<ElemType*
                                                                  regularOpStrideDivmod, reducingOpDimDivmod);
 }
 
-
 // helper function to provide a reduction buffer
 template <class ElemType>
 static shared_ptr<ElemType> AllocateReductionBuffer(size_t N)

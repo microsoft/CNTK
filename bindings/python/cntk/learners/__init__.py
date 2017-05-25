@@ -603,7 +603,7 @@ def adadelta(parameters, lr=learning_rate_schedule(1, UnitType.sample), rho=0.95
         the :class:`~cntk.train.trainer.Trainer`
 
     See also:
-        [1]  Matthew D. Zeiler1, `ADADELTA: AN ADAPTIVE LEARNING RATE METHOD
+        [1]  Matthew D. Zeiler, `ADADELTA: An Adaptive Learning Rate Method
         <https://arxiv.org/pdf/1212.5701.pdf>`_.
     '''
     gaussian_noise_injection_std_dev = \

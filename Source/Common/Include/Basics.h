@@ -153,7 +153,7 @@ static inline void Warning(const string& message)
 
 
 // Computes the smallest multiple of k greater or equal to n
-inline size_t asMultipleOf(size_t n, size_t k) { return n + n % k; }
+inline size_t AsMultipleOf(size_t n, size_t k) { return n + (k - n % k) % k; }
 
 }}}
 

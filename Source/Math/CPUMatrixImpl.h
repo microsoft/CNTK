@@ -117,7 +117,7 @@ static ElemType* NewArray(size_t n)
     // number gaussians on the GPU is not supported so we must always 
     // generate an even number. So since we wouldn't know how to update the tally
     // we are making this allocate one more element in the worst case.
-    ElemType* p = new ElemType[asMultipleOf(n, 2)]();
+    ElemType* p = new ElemType[AsMultipleOf(n, 2)]();
 #if 0 // _DEBUG
         ElemType nan = Matrix<ElemType>::MakeNan(__LINE__);
         for (size_t i = 0; i < n; i++)
@@ -1053,7 +1053,7 @@ void CPUMatrix<ElemType>::SetGaussianRandomValue(RNGHandle& rngHandle, const Ele
         LogicError("rngHandle must be a CPURNGHandle.");
 
     boost::random::normal_distribution<ElemType> r(mean, stdev);
-    auto n = asMultipleOf(GetNumElements(), 2);
+    auto n = AsMultipleOf(GetNumElements(), 2);
     std::generate(Data(), Data() + n, [&cpuRNGHandle, &r]() {return r(cpuRNGHandle->Generator()); });
 }
 

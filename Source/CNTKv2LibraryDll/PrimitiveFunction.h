@@ -101,7 +101,7 @@ namespace CNTK
         {PrimitiveOpType::Assign, L"Assign" },
         {PrimitiveOpType::Gather, L"Gather"},
         {PrimitiveOpType::StableSigmoid, L"StableSigmoid"},
-        {PrimitiveOpType::RandomVariable, L"RandomVariable"},
+        {PrimitiveOpType::RandomDistribution, L"RandomDistribution"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -263,9 +263,8 @@ namespace CNTK
         static const std::wstring AttributeNameSequenceAxisNamePrefix;
         static const std::wstring AttributeNameSequenceUnpackPaddingValue;
         static const std::wstring AttributeNameSequenceUnpackSuppressMaskOutput;
-        static const std::wstring AttributeNameRandomVariableType;
-        static const std::wstring AttributeNameRandomVariableArg0;
-        static const std::wstring AttributeNameRandomVariableArg1;
+        static const std::wstring AttributeNameRandomDistributionType;
+        static const std::wstring AttributeNameRandomDistributionArgs;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
@@ -312,7 +311,7 @@ namespace CNTK
             return (OpType() == PrimitiveOpType::Dropout) ||
                    (OpType() == PrimitiveOpType::RandomSample) ||
                    (OpType() == PrimitiveOpType::RandomSampleInclusionFrequency) ||
-                   (OpType() == PrimitiveOpType::RandomVariable);
+                   (OpType() == PrimitiveOpType::RandomDistribution);
         }
 
         Dictionary GetState() const;
@@ -768,7 +767,8 @@ namespace CNTK
         // Version 12: Add Assign node.
         // Version 13: Add Gather op.
         // Version 14: Add StableSigmoid
-        static const size_t s_serializationVersion = 14;
+        // Version 15: Add RandomDistribution
+        static const size_t s_serializationVersion = 15;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

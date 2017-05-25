@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// RNGHandle.cpp : full implementation of all matrix functions on the CPU side
+// RNGHandle.cpp : an abstraction around a random number generator
 //
 
 #include "stdafx.h"
@@ -23,6 +23,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return std::make_shared<GPURNGHandle>(deviceId, seed, offset);
     }
 }
-
 
 }}}

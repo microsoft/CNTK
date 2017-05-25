@@ -1691,17 +1691,17 @@ __global__ void _truncated_normal_transform(
     a[id] = normcdfinv(a[id] * (high - low) + low) * sigma + mean;
 }
 
-template <typename T>
+template <class ElemType>
 __global__ void _gumbelFromUniform(
-    T* a,
+    ElemType* a,
     const CUDA_LONG N,
-    const T loc,
-    const T scale)
+    const ElemType loc,
+    const ElemType scale)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    a[id] = loc - scale * log_(T(1e-40) - log1p_(-a[id])); //in case a[id] == 0 the outer log won't be a log(0)
+    a[id] = loc - scale * log_(ElemType(1e-40) - log_(a[id])); //a[id] is uniform in (0,1] exactly opposite from every other rng implementation  
 }
 
 template <class ElemType>

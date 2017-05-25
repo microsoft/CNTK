@@ -1184,87 +1184,91 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Dropout, operand, std::move(additionalProperties), name);
     } 
 
-    Dictionary CreateRandomVariableAttributes(const wstring& rvtype, unsigned long seed) 
+    Dictionary CreateRandomDistributionAttributes(const wstring& type, const std::vector<double>& args, unsigned long seed) 
     {
         auto additionalProperties = Dictionary();
 
         if (seed == SentinelValueForAutoSelectRandomSeed)
             seed = Internal::GenerateRandomSeed(true);
         additionalProperties.Add(
-            PrimitiveFunction::AttributeNameRandomVariableType, rvtype,
+            PrimitiveFunction::AttributeNameRandomDistributionType, type,
+            PrimitiveFunction::AttributeNameRandomDistributionArgs, AsDictionaryValueVector(args),
             PrimitiveFunction::AttributeNameRngSeed, size_t(seed),
             PrimitiveFunction::AttributeNameRngOffset, size_t(0));
         return additionalProperties;
     }
 
-    Dictionary CreateRandomVariableAttributes(const wstring& rvtype, unsigned long seed, const NDShape& shape, DataType dataType)
+    Dictionary CreateRandomDistributionAttributes(const wstring& type, const std::vector<double>& args, unsigned long seed, const NDShape& shape, DataType dataType)
     {
-        auto additionalProperties = CreateRandomVariableAttributes(rvtype, seed);
+        auto additionalProperties = CreateRandomDistributionAttributes(type, args, seed);
         additionalProperties.Add(
             PrimitiveFunction::AttributeNameNewShape, shape,
             PrimitiveFunction::AttributeNameNewDataType, static_cast<int>(dataType));
         return additionalProperties;
     }
 
-    inline void addArgsToDictionary(Dictionary& dictionary, double arg0, double arg1)
+    FunctionPtr UniformRandom(const NDShape& shape, DataType dataType, double low, double high, unsigned long seed, const std::wstring& name)
     {
-        dictionary.Add(PrimitiveFunction::AttributeNameRandomVariableArg0, arg0, PrimitiveFunction::AttributeNameRandomVariableArg1, arg1);
+        if (low >= high)
+            LogicError("UniformRandom: low end of the range (%g) must be < high end of the range (%g)", low, high);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeUniform, { low, high }, seed, shape, dataType);
+        return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
     }
 
-    FunctionPtr UniformRandomVariable(const NDShape& shape, DataType dataType, double low, double high, unsigned long seed, const std::wstring& name)
+    FunctionPtr UniformRandom(const Variable& operand, double low, double high, unsigned long seed, const std::wstring& name)
     {
-        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeUniform, seed, shape, dataType);
-        addArgsToDictionary(additionalProperties, low, high);
-        return NullaryOp(PrimitiveOpType::RandomVariable, std::move(additionalProperties), name);
+        if (low >= high)
+            LogicError("UniformRandom: low end of the range (%g) must be < high end of the range (%g)", low, high);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeUniform, { low, high }, seed);
+        return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr UniformRandomVariable(const Variable& operand, double low, double high, unsigned long seed, const std::wstring& name)
+    FunctionPtr NormalRandom(const NDShape& shape, DataType dataType, double mean, double stdev, unsigned long seed, const std::wstring& name)
     {
-        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeUniform, seed);
-        addArgsToDictionary(additionalProperties, low, high);
-        return UnaryOp(PrimitiveOpType::RandomVariable, operand, std::move(additionalProperties), name);
+        if (stdev < 0)
+            LogicError("NormalRandom: standard deviation (%g) must be non-negative", stdev);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeNormal, { mean, stdev }, seed, shape, dataType);
+        return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
     }
 
-    FunctionPtr NormalRandomVariable(const NDShape& shape, DataType dataType, double mean, double scale, unsigned long seed, const std::wstring& name)
+    FunctionPtr NormalRandom(const Variable& operand, double mean, double stdev, unsigned long seed, const std::wstring& name)
     {
-        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeNormal, seed, shape, dataType);
-        addArgsToDictionary(additionalProperties, mean, scale);
-        return NullaryOp(PrimitiveOpType::RandomVariable, std::move(additionalProperties), name);
+        if (stdev < 0)
+            LogicError("NormalRandom: standard deviation (%g) must be non-negative", stdev);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeNormal, { mean, stdev }, seed);
+        return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr NormalRandomVariable(const Variable& operand, double mean, double scale, unsigned long seed, const std::wstring& name)
+    FunctionPtr GumbelRandom(const NDShape& shape, DataType dataType, double loc, double scale, unsigned long seed, const std::wstring& name)
     {
-        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeNormal, seed);
-        addArgsToDictionary(additionalProperties, mean, scale);
-        return UnaryOp(PrimitiveOpType::RandomVariable, operand, std::move(additionalProperties), name);
+        if (scale < 0)
+            LogicError("GumbelRandom: scale (%g) must be non-negative", scale);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeGumbel, { loc, scale }, seed, shape, dataType);
+        return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
     }
 
-    FunctionPtr GumbelRandomVariable(const NDShape& shape, DataType dataType, double loc, double scale, unsigned long seed, const std::wstring& name)
+    FunctionPtr GumbelRandom(const Variable& operand, double loc, double scale, unsigned long seed, const std::wstring& name)
     {
-        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeGumbel, seed, shape, dataType);
-        addArgsToDictionary(additionalProperties, loc, scale);
-        return NullaryOp(PrimitiveOpType::RandomVariable, std::move(additionalProperties), name);
+        if (scale < 0)
+            LogicError("GumbelRandom: scale (%g) must be non-negative", scale);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeGumbel, { loc, scale }, seed);
+        return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr GumbelRandomVariable(const Variable& operand, double loc, double scale, unsigned long seed, const std::wstring& name)
+    FunctionPtr BernoulliRandom(const NDShape& shape, DataType dataType, double mean, unsigned long seed, const std::wstring& name)
     {
-        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeGumbel, seed);
-        addArgsToDictionary(additionalProperties, loc, scale);
-        return UnaryOp(PrimitiveOpType::RandomVariable, operand, std::move(additionalProperties), name);
+        if (mean < 0 || mean > 1)
+            LogicError("BernoulliRandom: mean (%g) must be between 0 and 1", mean);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeBernoulli, { mean }, seed, shape, dataType);
+        return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
     }
 
-    FunctionPtr BernoulliRandomVariable(const NDShape& shape, DataType dataType, double mean, unsigned long seed, const std::wstring& name)
+    FunctionPtr BernoulliRandom(const Variable& operand, double mean, unsigned long seed, const std::wstring& name)
     {
-        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeBernoulli, seed, shape, dataType);
-        additionalProperties.Add(PrimitiveFunction::AttributeNameRandomVariableArg0, mean);
-        return NullaryOp(PrimitiveOpType::RandomVariable, std::move(additionalProperties), name);
-    }
-
-    FunctionPtr BernoulliRandomVariable(const Variable& operand, double mean, unsigned long seed, const std::wstring& name)
-    {
-        Dictionary additionalProperties = CreateRandomVariableAttributes(Microsoft::MSR::CNTK::RandomVariableTypeBernoulli, seed);
-        additionalProperties.Add(PrimitiveFunction::AttributeNameRandomVariableArg0, mean);
-        return UnaryOp(PrimitiveOpType::RandomVariable, operand, std::move(additionalProperties), name);
+        if (mean < 0 || mean > 1)
+            LogicError("BernoulliRandom: mean (%g) must be between 0 and 1", mean);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeBernoulli, { mean }, seed);
+        return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }
 
     FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name)
@@ -1376,10 +1380,10 @@ namespace CNTK
     {
         auto predictionPlaceholder = PlaceholderVariable(L"prediction");
         auto labelPlaceholder = PlaceholderVariable(L"targets");
-        Constant one_plus_eps = Constant::Scalar(1.0f+1e-6f);
+        Constant onePlusEps = Constant::Scalar(1.0f+1e-6f);
         Constant one = Constant::Scalar(1.0f);
         Constant eps = Constant::Scalar(1e-6f);
-        FunctionPtr compositeBinaryCrossEntropy = Negate(Plus(ElementTimes(labelPlaceholder,Log(eps + predictionPlaceholder)), ElementTimes(Minus(one, labelPlaceholder), Log(Minus(one_plus_eps, predictionPlaceholder)))));
+        auto compositeBinaryCrossEntropy = Negate(Plus(ElementTimes(labelPlaceholder,Log(eps + predictionPlaceholder)), ElementTimes(Minus(one, labelPlaceholder), Log(Minus(onePlusEps, predictionPlaceholder)))));
         return AsBlock(std::move(compositeBinaryCrossEntropy), { { predictionPlaceholder, prediction },{ labelPlaceholder, targets } }, L"BinaryCrossEntropy", name);
     }
 

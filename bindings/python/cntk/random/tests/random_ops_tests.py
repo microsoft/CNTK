@@ -11,6 +11,7 @@ from __future__ import division
 import numpy as np
 import pytest
 import cntk as C
+import cntk.random as cr
 from cntk.tests.test_utils import precision, PRECISION_TO_TYPE
 from cntk.ops.tests.ops_test_utils import cntk_device
 
@@ -28,8 +29,6 @@ DIST_PARAMS = [
 def test_randomlike_moments(arg0, arg1, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
-
-    from cntk import random as cr
 
     x = C.input_variable(1, dtype=dt)
     N = 100000 
@@ -63,8 +62,6 @@ def test_random_moments(arg0, arg1, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
 
-    from cntk import random as cr
-
     N = 100000
     B = 10.0 / np.sqrt(N) # about 1.5 larger than the largest value ever observed
     eg = np.euler_gamma
@@ -89,12 +86,11 @@ def test_random_moments(arg0, arg1, device_id, precision):
         assert np.abs(np.mean(value) - fmean(arg0, arg1)) < B
         assert np.abs(np.var(value) - fvar(arg0, arg1)) < B * fvar(arg0, arg1)
 
+
 @pytest.mark.parametrize("arg0, arg1", DIST_PARAMS)
 def test_two_times_n_vs_one_time_2n(arg0, arg1, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
-
-    from cntk import random as cr
 
     N = 256
     x1 = np.zeros((N, 1), dtype=dt)
@@ -125,8 +121,6 @@ def test_normal_pair(arg0, arg1, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
 
-    from cntk import random as cr
-
     N = 100000
     B = 10.0 / np.sqrt(N)
     input_op = cr.normal((N,), dt, arg0, arg1, seed=98052)
@@ -136,11 +130,45 @@ def test_normal_pair(arg0, arg1, device_id, precision):
     assert np.abs(np.mean(value)) < B
     assert np.abs(np.var(value) - 2*arg1*arg1) < np.sqrt(2)*arg1*B
 
+@pytest.mark.parametrize("arg0, arg1", DIST_PARAMS)
+def test_normal_diff_along_sequence(arg0, arg1, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    N = 100000
+    B = 10.0 / np.sqrt(N)
+    x  = C.sequence.input_variable(1, dtype=dt)
+    x0 = np.zeros((2,N,1), dtype=dt)
+    input_op = cr.normal_like(x, arg0, arg1, seed=98052)
+    a = input_op.eval({x:x0}, device=dev)
+    value = a[0] - a[1]
+    assert np.abs(np.mean(value)) < B
+    assert np.abs(np.var(value) - 2*arg1*arg1) < np.sqrt(2)*arg1*B
+
+@pytest.mark.parametrize("arg0, arg1", DIST_PARAMS)
+def test_normal_diff_along_batch(arg0, arg1, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    N = 1000
+    B = 10.0 / np.sqrt(N)
+    x  = C.sequence.input_variable(1, dtype=dt)
+    x0 = np.zeros((N,2,1), dtype=dt)
+    z = cr.normal_like(x, arg0, arg1, seed=98052)
+    diff = C.sequence.first(z)-C.sequence.last(z)
+    mean = C.reduce_mean(diff, axis=C.Axis.all_axes())
+    var  = C.reduce_mean(diff*diff, axis=C.Axis.all_axes())
+    expr = C.combine([mean, var])
+    values = expr.eval({x:x0}, device=dev)
+    assert np.abs(values[mean.output]) < B
+    assert np.abs(values[var.output] - 2*arg1*arg1) < np.sqrt(2)*arg1*B
+
+
 def test_placeholder(device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
 
-    from cntk import random as cr
+    import cntk.random as cr
     p = C.placeholder()
     u = cr.uniform_like(p)
     x = C.sequence.input_variable((4,5))

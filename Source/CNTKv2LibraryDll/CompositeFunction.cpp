@@ -753,36 +753,24 @@ namespace CNTK
                     computationNodePtr->As<DropoutNode<ElementType>>()->SetDropoutRate(dropoutRate);
                     break;
                 }
-                case PrimitiveOpType::RandomVariable:
+                case PrimitiveOpType::RandomDistribution:
                 {
                     auto seed = functionConfig[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
                     auto offset = functionConfig[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
-                    auto rvtype = functionConfig[PrimitiveFunction::AttributeNameRandomVariableType].Value<std::wstring>();
+                    auto rvtype = functionConfig[PrimitiveFunction::AttributeNameRandomDistributionType].Value<std::wstring>();
 
-                    std::vector<double> randomVariableArgs{};
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameRandomVariableArg0))
-                        randomVariableArgs.push_back(functionConfig[PrimitiveFunction::AttributeNameRandomVariableArg0].Value<double>());
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameRandomVariableArg1))
-                        randomVariableArgs.push_back(functionConfig[PrimitiveFunction::AttributeNameRandomVariableArg1].Value<double>());
+                    std::vector<double> randomDistributionArgs;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameRandomDistributionArgs))
+                        randomDistributionArgs = AsVector<double>(functionConfig[PrimitiveFunction::AttributeNameRandomDistributionArgs].Value<std::vector<DictionaryValue>>());
 
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameNewShape))
                     {
                         auto shape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
-                        computationNodePtr = New<RandomVariableNode<ElementType>>(network->GetDeviceId(), internalNodeName, rvtype, randomVariableArgs, AsTensorShape(shape));
+                        computationNodePtr = New<RandomDistributionNode<ElementType>>(network->GetDeviceId(), internalNodeName, rvtype, randomDistributionArgs, AsTensorShape(shape));
                     }
                     else
-                    {
-                        /* Probably not necessary
-                        std::wstring internalDynamicAxisName = L"";
-                        if (!dynamicAxes.empty())
-                        {
-                            // Construct the dynamic axis name to be used internally
-                            internalDynamicAxisName = InternalDynamicAxisNameFromDynamicAxes(dynamicAxes);
-                        }
-                        */
-                        computationNodePtr = New<RandomVariableNode<ElementType>>(network->GetDeviceId(), internalNodeName, rvtype, randomVariableArgs);
-                    }
-                    computationNodePtr->As<RandomVariableNode<ElementType>>()->SetRngState(seed, offset);
+                        computationNodePtr = New<RandomDistributionNode<ElementType>>(network->GetDeviceId(), internalNodeName, rvtype, randomDistributionArgs);
+                    computationNodePtr->As<RandomDistributionNode<ElementType>>()->SetRngState(seed, offset);
                     break;
                 }
                 case PrimitiveOpType::Reshape:
