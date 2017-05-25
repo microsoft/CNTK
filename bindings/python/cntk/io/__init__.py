@@ -5,9 +5,9 @@
 # ==============================================================================
 
 import warnings
-from .. import cntk_py, Value
-from ..tensor import ArrayMixin
-from cntk.internal import typemap, sanitize_dtype_cntk
+from cntk import cntk_py, Value
+from cntk.tensor import ArrayMixin
+from cntk.internal import typemap, sanitize_dtype_cntk, is_string
 from cntk.device import use_default_device
 from cntk.logging import TraceLevel, get_trace_level
 from cntk.variables import Record
@@ -65,18 +65,6 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         return super(MinibatchData, self).data()
 
     @property
-    def value(self):
-        '''
-        The value of the minibatch as a NumPy array.
-        '''
-        warnings.warn('the .value property is deprecated. Please use '
-                      '.asarray() or .as_sequences() to get the NumPy '
-                      'representations or .data to get the Value '
-                      'representation', RuntimeWarning)
-
-        return self.as_sequences()
-
-    @property
     def shape(self):
         '''
         The shape of the data in this minibatch as tuple.
@@ -122,7 +110,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
 
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
-    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, randomization_seed=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=False, frame_mode=False, truncation_length=0, randomize=None, randomization_window=None, sample_based_randomization_window=None, epoch_size=None)
+    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, randomization_seed=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=False, frame_mode=False, truncation_length=0, randomize=True)
 
     Args:
         deserializers (a single deserializer or a `list`): deserializers to be used in the composite reader
@@ -145,7 +133,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
           non-zero value enables randomization.
           `randomization_window_in_chunks` and `randomization_window_in_samples` are mutually exclusive,
           an exception will be raised if both have non-zero values.
-        randomization_seed (`int`, defaults to 0): initial randomization seed value (incremented every sweep when 
+        randomization_seed (`int`, defaults to 0): initial randomization seed value (incremented every sweep when
             the input data is re-randomized).
         trace_level (an instance of :class:`cntk.logging.TraceLevel`): the output verbosity level, defaults to
           the current logging verbosity level given by :func:`~cntk.logging.get_trace_level`.
@@ -158,13 +146,8 @@ class MinibatchSource(cntk_py.MinibatchSource):
         truncation_length (`int`, defaults to `0`): truncation length in samples, non-zero value enables
           the truncation (only applicable for BPTT, cannot be used in frame mode, an exception will be raised
           if frame mode is enabled and the truncation length is non-zero).
-        randomize (`bool`, defaults to `None`): !DEPRECATED! please use randomization_window_in_chunks or
-          randomization_window_in_samples instead
-        randomization_window (int, defaults to `None`): !DEPRECATED! please use randomization_window_in_chunks or
-          randomization_window_in_samples instead
-        sample_based_randomization_window (`bool`, defaults to `None`): !DEPRECATED! please use
-          randomization_window_in_chunks or randomization_window_in_samples instead
-        epoch_size (`int`, defaults to `None`): !DEPRECATED! please use max_samples or max_sweeps instead
+        randomize (`bool`, defaults to `True`): Enables or disables randomization; use randomization_window_in_chunks or
+          randomization_window_in_samples to specify the randomization range
     '''
     def __init__(self,
         deserializers,
@@ -177,12 +160,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         multithreaded_deserializer=False,
         frame_mode=False,
         truncation_length=0,
-        # all parameters below are deprecated
-        randomize=None,
-        randomization_window=None,
-        sample_based_randomization_window=None,
-        epoch_size=None,
-        distributed_after=None):
+        randomize=True):
 
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [ deserializers ]
@@ -202,46 +180,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
         config.trace_level = trace_level
 
-        # the following deals with deprecated parameters.
-        # TODO: 'randomize=False' is the only legacy option that still makes sense
-        # (as a shortcut to randomization_window_in_chunks=0 and
-        # randomization_window_in_samples=0), maybe we should keep it?
-        if randomize is not None and randomize:
-            warnings.warn('"randomize" parameter is deprecated and will be removed '
-                'in future versions. Please specify "randomization_window_in_chunks" or '
-                '"randomization_window_in_samples" instead', DeprecationWarning)
-        elif randomize is None:
-            randomize = True # previously default value
-
-        if randomization_window is not None:
-             warnings.warn('"randomization_window" parameter is deprecated and will be removed '
-                'in future versions. Please specify "randomization_window_in_chunks" or '
-                '"randomization_window_in_samples" instead', DeprecationWarning)
-        else:
-            randomization_window = DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS # previously default value
-
-        if sample_based_randomization_window is not None:
-             warnings.warn('"sample_based_randomization_window" parameter is deprecated and will be removed '
-                'in future versions. Please specify "randomization_window_in_chunks" or '
-                '"randomization_window_in_samples" instead', DeprecationWarning)
-        else:
-            sample_based_randomization_window = False  # previously default value
-
-        if (randomize and sample_based_randomization_window):
-            config.randomization_window_in_samples = randomization_window
-            config.randomization_window_in_chunks = 0
-        elif (randomize and not sample_based_randomization_window):
-            config.randomization_window_in_chunks = randomization_window
-            config.randomization_window_in_samples = 0
-        elif not randomize:
+        if not randomize:
             config.randomization_window_in_chunks = 0
             config.randomization_window_in_samples = 0
-
-        if (epoch_size is not None):
-            warnings.warn('"epoch_size" parameter is deprecated and will be removed '
-                'in future versions. Please specify "max_samples" or '
-                '"max_sweeps" instead', DeprecationWarning)
-            config.max_samples = epoch_size
 
         source = cntk_py.create_composite_minibatch_source(config)
         # transplant into this class instance
@@ -471,13 +412,53 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
         Returns:
             mapping of :class:`StreamInformation` to :class:`MinibatchData`
         '''
-        return NotImplementedError
+        raise NotImplementedError
 
     def _next_minibatch(self, info_map, mb_size_in_sequences,
             mb_size_in_samples, number_of_workers, worker_rank, device):
         # mbsize_in_sequences is ignored
 
-        info_map.update(self.next_minibatch(num_samples=mb_size_in_samples, device=device))
+        mb = self.next_minibatch(mb_size_in_samples, number_of_workers, worker_rank, device)
+        info_map.update(mb)
+
+    def _get_checkpoint_state(self):
+        state = self.get_checkpoint_state()
+        d = cntk_py.Dictionary()
+        for key, val in state.items():
+            if not is_string(key):
+                raise ValueError('the keys of the checkpoint dictionary must '
+                                 'be strings. You gave "%s" of type %s' %
+                                 (key, type(key)))
+            dv = cntk_py.DictionaryValue(val)
+            d.add(key, dv)
+
+        return d
+
+    def get_checkpoint_state(self):
+        '''
+        Returns a dictionary describing the current state of the minibatch
+        source.
+
+        Returns:
+            dictionary, that can be later used on :meth:`restore_from_checkpoint`.
+        '''
+        raise NotImplementedError('in order to use checkpointing on '
+            'UserMinibatchSource, you need to implement '
+            'get_checkpoint_state()')
+
+    def _restore_from_checkpoint(self, state):
+        self.restore_from_checkpoint(state)
+
+    def restore_from_checkpoint(self, state):
+        '''
+        Sets the state of the checkpoint.
+
+        Args:
+            state (dict): dictionary containing the state
+        '''
+        raise NotImplementedError('in order to use checkpointing on '
+            'UserMinibatchSource, you need to implement '
+            'restore_from_checkpoint(checkpoint)')
 
     def __getitem__(self, name):
         '''
@@ -489,26 +470,6 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
               :class:`StreamInformation` for
         '''
         return self.stream_info(name)
-
-    def get_checkpoint_state(self):
-        '''
-        Gets the checkpoint state of the MinibatchSource.
-
-        Returns:
-            cntk.cntk_py.Dictionary:
-            A :class:`~cntk.cntk_py.Dictionary` that has the checkpoint state
-            of the MinibatchSource
-        '''
-        raise NotImplementedError
-
-    def restore_from_checkpoint(self, checkpoint):
-        '''
-        Restores the MinibatchSource state from the specified checkpoint.
-
-        Args:
-            checkpoint (:class:`~cntk.cntk_py.Dictionary`): checkpoint to restore from
-        '''
-        raise NotImplementedError
 
 class MinibatchSourceFromData(UserMinibatchSource):
     '''
@@ -824,12 +785,12 @@ def _process_image_deserializer_args(filename, streams, deserializer):
             raise ValueError(
                 "{}: invalid field name '{}', allowed are "
                 "'image' and 'label'".format(deserializer, alias))
-    
+
     if image_stream_name is None:
         raise ValueError("{}: stream name ('image' or 'label') must be "
             "specified".format(deserializer))
-    
-    return (filename, label_stream_name, num_labels, 
+
+    return (filename, label_stream_name, num_labels,
         image_stream_name, transforms)
 
 def ImageDeserializer(filename, streams):
@@ -850,13 +811,13 @@ def ImageDeserializer(filename, streams):
     See also:
         :cntkwiki:`Image reader definition <BrainScript-Image-reader>`
     '''
-    args = _process_image_deserializer_args(filename, streams, 
+    args = _process_image_deserializer_args(filename, streams,
         'ImageDeserializer')
     return cntk_py.image_deserializer(*args)
 
 def Base64ImageDeserializer(filename, streams):
     '''
-    Configures the image reader that reads base64 encoded images and corresponding 
+    Configures the image reader that reads base64 encoded images and corresponding
     labels from a file of the form::
 
         [sequenceId <tab>] <numerical label (0-based class id)> <tab> <base64 encoded image>
@@ -865,12 +826,12 @@ def Base64ImageDeserializer(filename, streams):
 
     Args:
         filename (str): file name of the input file dataset that contains images 
-        and corresponding labels
+         and corresponding labels
 
     See also:
         :cntkwiki:`Base64ImageDeserializer options <BrainScript-and-Python---Understanding-and-Extending-Readers#base64imagedeserializer-options>`
     '''
-    args = _process_image_deserializer_args(filename, streams, 
+    args = _process_image_deserializer_args(filename, streams,
         'Base64ImageDeserializer')
     return cntk_py.base64_image_deserializer(*args)
 
@@ -979,7 +940,7 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
     if broadcast is not None:
         config['broadcast'] = broadcast
     config['defines_mb_size'] = True if defines_mb_size else False
-      
+
     return Record(**config)
     # TODO: we should always use 'shape' unless it is always rank-1 or a single rank's dimension
     # TODO: dim should be inferred from the file, at least for dense

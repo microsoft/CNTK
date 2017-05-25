@@ -116,6 +116,8 @@
 %template() std::pair<size_t, double>;
 %template() std::pair<size_t, size_t>;
 %template() std::pair<size_t, int>;
+%template() std::pair<float, float>;
+%template() std::pair<int, int>;
 %template() std::vector<std::pair<size_t, double>>;
 %template() std::vector<std::pair<size_t, size_t>>;
 %template() std::vector<std::pair<CNTK::Variable, CNTK::Variable>>;
@@ -634,6 +636,7 @@ public:
 %feature("director") CNTK::SwigMinibatchSource;
 %feature("nodirector") CNTK::SwigMinibatchSource::StreamInfos();
 %feature("nodirector") CNTK::SwigMinibatchSource::GetNextMinibatch;//(size_t minibatchSizeInSamples, size_t minibatchSizeInSequences, size_t numberOfWorkers, size_t workerRank, const DeviceDescriptor&); 
+%feature("nodirector") CNTK::SwigMinibatchSource::GetCheckpointState;
 
 %{
     #include "CNTKLibrary.h"
@@ -1464,6 +1467,8 @@ namespace CNTK
             size_t workerRank,
             const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) { NOT_IMPLEMENTED }
 
+
+        virtual Dictionary _GetCheckpointState() const { NOT_IMPLEMENTED }
     protected:
         // Making these protected to prevent them to be caught by Swig's
         // director support, because the "nodirector" feature has issues seperating
@@ -1479,7 +1484,7 @@ namespace CNTK
                 PyObject *pylist = PyList_New(0);
 
                 // Necassary due to SWIG convention, it seems the reference is stolen by the function,
-                // though I could not find any explicit confirmation of this.
+                // though I could not find any explicit confirmation for this.
                 Py_INCREF(pylist);
                 // Actually calling the python side.
                 StreamInfos(pylist);
@@ -1487,16 +1492,16 @@ namespace CNTK
                 PyObject *item = nullptr;
                 PyObject *iterator = PyObject_GetIter(pylist);
                 if (!iterator)
-                    SWIG_Error(SWIG_ValueError, "cannot convert list element to CNTK::StreamInformation");
+                    SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::StreamInformation");
 
                 while ((item = PyIter_Next(iterator)))
                 {
                     StreamInformation* var = nullptr;
                     int res = SWIG_ConvertPtr(item, (void**)&var, SWIGTYPE_p_CNTK__StreamInformation,  SWIG_POINTER_IMPLICIT_CONV);
                     if (!SWIG_IsOK(res))
-                        SWIG_Error(SWIG_ArgError(res), "cannot convert list element to CNTK::StreamInformation");
+                        SWIG_exception_fail(SWIG_ArgError(res), "cannot convert list element to CNTK::StreamInformation");
                     if (!var)
-                        SWIG_Error(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::StreamInformation");
+                        SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::StreamInformation");
 
                     m_streamInfos.insert(*var);
                     Py_DECREF(item);
@@ -1504,6 +1509,14 @@ namespace CNTK
 
                 Py_DECREF(iterator);
                 Py_DECREF(pylist);
+
+                return m_streamInfos;
+
+            fail:
+                Py_XDECREF(iterator);
+                Py_XDECREF(pylist);
+                m_streamInfos.clear();
+                return m_streamInfos;
             });
 
             return m_streamInfos;
@@ -1535,22 +1548,32 @@ namespace CNTK
                 StreamInformation* stream = nullptr;
                 int res = SWIG_ConvertPtr(key, (void**)&stream, SWIGTYPE_p_CNTK__StreamInformation,  0);
                 if (!SWIG_IsOK(res))
-                    SWIG_Error(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInformation");
+                    SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInformation");
                 if (!stream)
-                    SWIG_Error(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInformation");
+                    SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInformation");
 
                 CNTK::MinibatchData *data = nullptr;
                 res = SWIG_ConvertPtr(value, (void**)&data, SWIGTYPE_p_CNTK__MinibatchData,  0);
                 if (!SWIG_IsOK(res))
-                    SWIG_Error(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::MinibatchData");
+                    SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::MinibatchData");
                 if (!data)
-                    SWIG_Error(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::MinibatchData");
+                    SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::MinibatchData");
 
                 m_minibatchData.insert(std::make_pair(*stream, *data));
             }
 
             Py_DECREF(pyInfoMap);
             return m_minibatchData;
+
+        fail:
+            Py_XDECREF(pyInfoMap);
+            m_minibatchData.clear();
+            return m_minibatchData;
+        }
+
+        Dictionary GetCheckpointState() const
+        {
+            return _GetCheckpointState();
         }
     };
 }

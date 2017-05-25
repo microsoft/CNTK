@@ -28,7 +28,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
         dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
-        sequence_axis (:class:`~cntk.Axis`): a dynamic axis (e.g., default_dynamic_axis())
+        sequence_axis (:class:`~cntk.axis.Axis`): a dynamic axis (e.g., default_dynamic_axis())
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -54,7 +54,7 @@ def input_variable(shape, dtype=default_override_or(np.float32), needs_gradient=
         dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
-        sequence_axis (:class:`~cntk.Axis`): a dynamic axis (e.g., default_dynamic_axis())
+        sequence_axis (:class:`~cntk.axis.Axis`): a dynamic axis (e.g., default_dynamic_axis())
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -77,9 +77,6 @@ def unpack(x, padding_value, no_mask_output=False, name=''):
     viz. the unpacked non-sequence data and a mask denoting the gaps in the unpacked output
     due to differences across lengths of the sequences in the operand.
 
-    Example:
-        TBA.
-
     Args:
         x: the sequence tensor (or its name) which is unpacked
         padding_value (np.float32 or np.float64): The value to pad gaps in the unpacked tensor with.
@@ -89,6 +86,9 @@ def unpack(x, padding_value, no_mask_output=False, name=''):
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
 
     from cntk.cntk_py import unpack
@@ -333,8 +333,6 @@ def slice(seq, begin_index, end_index, name=''):
     '''
     Slice the input sequence.
 
-    Examples:
-        TBA
     Args:
         seq: sequence input tensor
         begin_index (`int`): the index along sequence axis where the slicing starts
@@ -346,6 +344,9 @@ def slice(seq, begin_index, end_index, name=''):
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
     from cntk.cntk_py import sequence_slice
     seq = sanitize_input(seq, get_data_type(seq))

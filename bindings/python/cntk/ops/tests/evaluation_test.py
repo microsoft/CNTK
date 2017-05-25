@@ -113,3 +113,17 @@ def test_grad_after_eval():
     assert np.allclose(t_val, np.asarray([[[1.2, 3.1], [0.8, 2.3]]], dtype=np.float32))
     assert np.array_equal(w_grad, np.asarray([[0.6, .6], [.8, .8]], dtype=np.float32))
     
+
+def test_validation_before_eval():
+    w = C.parameter((4,C.InferredDimension))
+    v = C.parameter((C.InferredDimension,5))
+    wv = C.times(w,v)
+
+    p = C.input((4,1))
+    wp = C.times(w,p)
+
+    q = C.input((1,5))
+    qv = C.times(q,v)
+
+    with pytest.raises(ValueError):
+        wv.eval()

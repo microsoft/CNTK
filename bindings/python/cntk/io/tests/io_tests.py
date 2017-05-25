@@ -145,7 +145,7 @@ def test_text_format(tmpdir):
 def check_default_config_keys(d):
         assert 5 <= len(d.keys())
         assert d['frameMode'] is False
-        assert d['multiThreadedDeserialization'] is False
+        assert d['multiThreadedDeserialization'] is True
         assert TraceLevel.Warning == d['traceLevel']
         assert 'randomize' in d.keys()
         assert 'deserializers' in d.keys()
@@ -237,7 +237,7 @@ def test_minibatch_source_config_other_properties(tmpdir):
     ctf = create_ctf_deserializer(tmpdir)
     config = MinibatchSourceConfig([ctf])
 
-    config.is_multithreaded = True
+    config.is_multithreaded = False
     config.trace_level = TraceLevel.Info.value
     config.is_frame_mode_enabled = True
 
@@ -245,9 +245,9 @@ def test_minibatch_source_config_other_properties(tmpdir):
     assert 8 == len(dictionary.keys())
     assert TraceLevel.Info == dictionary['traceLevel']
     assert dictionary['frameMode'] is True
-    assert dictionary['multiThreadedDeserialization'] is True
+    assert dictionary['multiThreadedDeserialization'] is False
 
-    config.is_multithreaded = False
+    config.is_multithreaded = True
     config.trace_level = 0
     config.truncation_length = 123
     with pytest.raises(Exception):
@@ -260,7 +260,7 @@ def test_minibatch_source_config_other_properties(tmpdir):
     assert 10 == len(dictionary.keys())
     assert 0 == dictionary['traceLevel']
     assert dictionary['frameMode'] is False
-    assert dictionary['multiThreadedDeserialization'] is False
+    assert dictionary['multiThreadedDeserialization'] is True
     assert dictionary['truncated'] is True
     assert 123 == dictionary['truncationLength']
 
@@ -305,8 +305,10 @@ def test_image():
     assert t1['type'] == 'Scale'
     assert t2['type'] == 'Mean'
     assert t0['cropType'] == 'randomside'
-    assert t0['sideRatio'] == 0.5
-    assert t0['aspectRatio'] == 1.0
+    assert t0['cropSize'] == '0:0'
+    assert t0['sideRatio'] == '0.5:0.5'
+    assert t0['aspectRatio'] == '1:1'
+    assert t0['areaRatio'] == '0:0'
     assert t0['jitterType'] == 'uniratio'
     assert t1['width'] == image_width
     assert t1['height'] == image_height
@@ -327,6 +329,53 @@ def test_image():
     assert set(sis.keys()) == { feature_name, label_name }
     '''
 
+def test_image_with_crop_range():
+    map_file = "input.txt"
+
+    feature_name = "f"
+    image_width = 100
+    image_height = 200
+    num_channels = 3
+
+    label_name = "l"
+    num_classes = 7
+
+    transforms = [
+        xforms.crop(crop_type='randomside', 
+                    crop_size=(512,424), side_ratio=(0.2, 0.5), area_ratio=(0.1, 0.75), aspect_ratio=(0.3, 0.8),
+                    jitter_type='uniratio')
+        ]
+    defs = StreamDefs(f=StreamDef(field='image', transforms=transforms),
+                      l=StreamDef(field='label', shape=num_classes))
+    image = ImageDeserializer(map_file, defs)
+
+    config = to_dictionary(MinibatchSourceConfig([image], randomize=False))
+
+    assert len(config['deserializers']) == 1
+    d = config['deserializers'][0]
+    assert d['type'] == 'ImageDeserializer'
+    assert d['file'] == map_file
+    assert set(d['input'].keys()) == {label_name, feature_name}
+
+    l = d['input'][label_name]
+    assert l['labelDim'] == num_classes
+
+    f = d['input'][feature_name]
+    assert set(f.keys()) == {'transforms'}
+    t0,  _ = f['transforms']
+    assert t0['type'] == 'Crop'
+    assert t0['cropType'] == 'randomside'
+    assert t0['cropSize'] == '512:424'
+    assert t0['sideRatio'] == '0.2:0.5'
+    assert t0['aspectRatio'] == '0.3:0.8'
+    assert t0['areaRatio'] == '0.1:0.75'
+    assert t0['jitterType'] == 'uniratio'
+
+    config = to_dictionary(MinibatchSourceConfig([image, image]))
+    assert len(config['deserializers']) == 2
+
+    config = to_dictionary(MinibatchSourceConfig([image, image, image]))
+    assert len(config['deserializers']) == 3
 
 def test_full_sweep_minibatch(tmpdir):
     tmpfile = _write_data(tmpdir, MBDATA_DENSE_1)
@@ -703,7 +752,7 @@ class MyDataSource(UserMinibatchSource):
     def stream_infos(self):
         return [self.fsi, self.lsi]
 
-    def next_minibatch(self, num_samples, number_of_workers=1, worker_rank=0, device=None):
+    def next_minibatch(self, num_samples, number_of_workers, worker_rank, device=None):
         features = []
         labels = []
 
@@ -711,6 +760,7 @@ class MyDataSource(UserMinibatchSource):
 
         f_sample_count = 0
         l_sample_count = 0
+
 
         while max(f_sample_count, l_sample_count) < num_samples:
             if self.next_seq_idx == len(self.sequences):
@@ -735,15 +785,18 @@ class MyDataSource(UserMinibatchSource):
 
         f_data = Value.one_hot(batch=features, num_classes=self.f_dim)
         l_data = Value(batch=np.asarray(labels, dtype=np.float32))
-
         result = {
                 self.fsi: MinibatchData(f_data, num_seq, f_sample_count, sweep_end),
                 self.lsi: MinibatchData(l_data, num_seq, l_sample_count, sweep_end)
                 }
 
-
         return result
 
+    def get_checkpoint_state(self):
+        return {'test': 12}
+
+    def restore_from_checkpoint(self, state):
+        assert state == {'test': 12}
 
 def test_usermbsource(tmpdir):
     tmpfile = _write_data(tmpdir, MBDATA_SPARSE)
@@ -769,7 +822,7 @@ def test_usermbsource(tmpdir):
     u_features_si = u_mb_source['features']
     u_labels_si = u_mb_source['labels']
 
-    u_mb = u_mb_source.next_minibatch(2)
+    u_mb = u_mb_source.next_minibatch(2, 1, 0)
     u_features = u_mb[u_features_si]
     u_labels = u_mb[u_labels_si]
 
@@ -793,7 +846,7 @@ def test_usermbsource(tmpdir):
     n_features = n_mb[n_features_si]
     n_labels = n_mb[n_labels_si]
 
-    u_mb = u_mb_source.next_minibatch(10)
+    u_mb = u_mb_source.next_minibatch(10, 1, 0)
     u_features = u_mb[u_features_si]
     u_labels = u_mb[u_labels_si]
 
@@ -813,6 +866,8 @@ def test_usermbsource_training(tmpdir):
     num_output_classes = 5
 
     mbs = MyDataSource(input_dim, num_output_classes)
+    # Using this for testing the UserMinibatchSource checkpointing
+    mbs_cv = MyDataSource(input_dim, num_output_classes)
 
     from cntk import sequence, parameter, plus, cross_entropy_with_softmax, \
             classification_error, learning_rate_schedule, sgd, Trainer, \
@@ -837,7 +892,9 @@ def test_usermbsource_training(tmpdir):
     session = training_session(
         trainer=trainer, mb_source=mbs,
         model_inputs_to_streams=input_map,
-        mb_size=4, max_samples=20
+        mb_size=4, max_samples=20,
+        cv_config = C.CrossValidationConfig(source=mbs_cv, max_samples=10,
+            mb_size=2)
     )
     session.train()
 

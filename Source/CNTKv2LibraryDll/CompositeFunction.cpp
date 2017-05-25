@@ -1380,7 +1380,6 @@ namespace CNTK
             // Lets update the composite Function graph's inputs with any inferred dimensions that 
             // were determined from the shapes of the supplied data
             auto networkArguments = Arguments();
-            bool anyInferredDimensionsFilled = false;
             for (auto argument : networkArguments)
             {
                 if (argument.Shape().HasInferredDimension())
@@ -1388,15 +1387,13 @@ namespace CNTK
                     auto fullyDefinedArgument = m_fullyDefinedArgumentsMap.at(argument);
                     for (size_t i = 0; i < argument.Shape().Rank(); ++i)
                         if (argument.Shape()[i] == NDShape::InferredDimension)
-                        {
                             argument.m_dataFields->m_shape[i] = fullyDefinedArgument.Shape()[i];
-                            anyInferredDimensionsFilled = true;
-                        }
                 }
             }
 
-            if (anyInferredDimensionsFilled)
-                ValidateOrUpdateOutputs();
+            // Run the final validation on the entire network once before constructing/compiling the
+            // internal computation network
+            ValidateOrUpdateOutputs();
 
             std::tie(m_computationNetwork, m_variableToNodeMap) = CreateComputationNetwork<ElementType>(this->shared_from_this(), device, outputs, m_fullyDefinedArgumentsMap, m_inputsExcludedFromGradientComputation, /*useMangledNamesForComputationNodes =*/ false);
 
@@ -1478,7 +1475,7 @@ namespace CNTK
                 if (*nodeLayout != *layout)
                     InvalidArgument("Different minibatch layouts detected (difference in sequence lengths or count or start flags) in data specified "
                                     "for the Function's arguments '%S' vs. '%S', though these arguments have the same dynamic axes '%S'",
-                                     variableValue.first.AsString().c_str(), layoutsPopulated.at(nodeLayout).AsString().c_str(), DynamicAxesAsString(variableValue.first.DynamicAxes()).c_str());
+                                     variableValue.first.AsString().c_str(), layoutsPopulated.at(nodeLayout).AsString().c_str(), DynamicAxesAsString(variableValue.first.DynamicAxes(), Internal::IsReversingTensorShapesInErrorMessagesEnabled()).c_str());
             }
         }
     }

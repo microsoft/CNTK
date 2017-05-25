@@ -18,7 +18,7 @@
 
 %pragma(java) jniclasscode=%{
   static {
-    String libName = "Cntk.Core.JavaBinding-2.0rc2";
+    String libName = "Cntk.Core.JavaBinding-2.0rc3";
     try {
        System.loadLibrary(libName);
     } catch (UnsatisfiedLinkError e) {
@@ -178,7 +178,7 @@
 
     @Override
     public int hashCode() {
-        return (int)GetHashValue();
+        return (int)_GetHashValue();
     }
 %}
 

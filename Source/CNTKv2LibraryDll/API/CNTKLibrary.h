@@ -1531,7 +1531,7 @@ namespace CNTK
             void* m_ptr;
         } m_data;
 
-         static const size_t s_version = 1;
+         static const size_t s_version;
     };
 
     ///
@@ -1615,7 +1615,7 @@ namespace CNTK
 
     private:
         std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
-        static const size_t s_version = 1;
+        static const size_t s_version;
     };
 
     ///
@@ -5148,7 +5148,7 @@ namespace CNTK
         ///
         /// Specifies if the deserialization should be done on a single or multiple threads.
         ///
-        bool isMultithreaded { false };
+        bool isMultithreaded { true };
 
         ///
         /// Deserializers to be used in the composite reader.
@@ -5195,8 +5195,11 @@ namespace CNTK
     /// Create a crop transform with the specified options to be used with a reader
     /// 
     CNTK_API ImageTransform ReaderCrop(const wchar_t* cropType = L"center",
-        int cropSize = 0, float sideRatio = 0.0f, float areaRatio = 0.0f,
-        float aspectRatio = 1.0f, const wchar_t* jitterType = L"none");
+        std::pair<int, int> cropSize = std::make_pair(0, 0),
+        std::pair<float, float> sideRatio = std::make_pair(0.0f, 0.0f),
+        std::pair<float, float> areaRatio = std::make_pair(0.0f, 0.0f), 
+        std::pair<float, float> aspectRatio = std::make_pair(1.0f, 1.0f), 
+        const wchar_t* jitterType = L"none");
 
     /// 
     /// Create a scale transform with the specified options to be used with a reader
@@ -5404,13 +5407,17 @@ namespace CNTK
         ///
         CNTK_API CrossValidationConfig(const MinibatchSourcePtr& crossValidationSource,
             const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(64),
-            size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max());
+            size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max(),
+            size_t maxSamples = std::numeric_limits<size_t>::max(),
+            const std::unordered_map<Variable, StreamInformation>& inputVarToStream = {});
 
     private:
         friend class TrainingSession;
         const MinibatchSourcePtr m_source;
         const MinibatchSizeSchedule m_mbSize;
         const size_t m_frequency;
+        const size_t m_maxSamples;
+        const std::unordered_map<Variable, StreamInformation> m_varToStream;
     };
 
     ///
@@ -5451,12 +5458,14 @@ namespace CNTK
         /// schedule : a minibatch size schedule
         ///
         CNTK_API TestConfig(const MinibatchSourcePtr& source,
-            const MinibatchSizeSchedule& schedule = MinibatchSizeSchedule(64));
+            const MinibatchSizeSchedule& schedule = MinibatchSizeSchedule(64),
+            const std::unordered_map<Variable, StreamInformation>& inputVarToStream = {});
 
     private:
         friend class TrainingSession;
         const MinibatchSourcePtr m_source;
         const MinibatchSizeSchedule m_mbSize;
+        const std::unordered_map<Variable, StreamInformation> m_varToStream;
     };
 
     ///
@@ -5562,7 +5571,10 @@ namespace CNTK
         TrainingSession(const TrainingSession&) = delete; TrainingSession& operator=(const TrainingSession&) = delete; TrainingSession& operator=(TrainingSession&&) = delete; TrainingSession(TrainingSession&&) = delete;
 
         // Auxilary functions.
-        void GetNextMinibatch(const MinibatchSourcePtr& source, std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, size_t workerRank, size_t numberOfWorkers, const DeviceDescriptor& computeDevice);
+        void GetNextMinibatch(const MinibatchSourcePtr& source,
+            std::unordered_map<Variable, ValuePtr>& minibatch,
+            const std::unordered_map<Variable, StreamInformation>& inputVarToStream,
+            size_t maxMbSize, size_t workerRank, size_t numberOfWorkers, const DeviceDescriptor& computeDevice);
         void GetTrainingMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice);
         void GetCrossValidationMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice);
 

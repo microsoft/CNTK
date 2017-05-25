@@ -267,11 +267,11 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     :math:`[3 \\times W \\times H]`, i.e. a :math:`[W \\times H]`-sized structure, where each entry (pixel) consists of a 3-tuple.
 
     `convolution_transpose` convolves the input ``operand`` with a :math:`n+2` rank tensor of (typically learnable) filters called
-    ``convolution_map`` of shape :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
-    The first dimension, :math:`O`, is the nunber of convolution filters (i.e. the number of
-    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input.
+    ``convolution_map`` of shape :math:`[I \\times O \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
+    The first dimension, :math:`I`, must match the number of channels in the input. The second dimension, :math:`O`, is the number of convolution filters (i.e. the number of
+    channels in the output).
     The last n dimensions are the spatial extent of the filter. I.e. for each output position, a vector of
-    dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
+    dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`I \\times O \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
 
 
     Example:
@@ -286,7 +286,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
                   [ -6.,   5.,   6.,  16.]]]], dtype=float32)
 
     Args:
-        convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
+        convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[I \\times O \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
          where :math:`[m_1 \\times m_2 \\times \\ldots \\times m_n]` must be the kernel dimensions (spatial extent of the filter).
         operand: convolution input. A tensor with dimensions :math:`[I \\times M_1 \\times M_2 \\times \\ldots \\times M_n]`.
         strides (tuple, optional): stride dimensions. If strides[i] > 1 then only pixel positions that are multiples of strides[i] are computed.
@@ -748,13 +748,18 @@ def minus(left, right, name=''):
 @typemap
 def pow(base, exponent, name=''):
     '''
-    The output of this operation is base raised to the power of exponent. It supports broadcasting.
+    Computes `base` raised to the power of `exponent`. It supports broadcasting.
+    This is well defined if `base` is non-negative or `exponent` is an integer.
+    Otherwise the result is NaN. The gradient with respect to the base is  well 
+    defined if the forward operation is well defined. The gradient with respect 
+    to the exponent is well defined if the base is non-negative, and it is set 
+    to 0 otherwise.
 
     Example:
-        >>> C.pow([1, 2, 3], [3, 2, 1]).eval()
-        array([ 1.,  4.,  3.], dtype=float32)
+        >>> C.pow([1, 2, -2], [3, -2, 3]).eval()
+        array([ 1.  ,  0.25, -8.  ], dtype=float32)
 
-        >>> C.pow([[0.5,2],[4,1]], -2).eval()
+        >>> C.pow([[0.5, 2],[4, 1]], -2).eval()
         array([[ 4.    ,  0.25  ],
                [ 0.0625,  1.    ]], dtype=float32)
 
@@ -1675,144 +1680,6 @@ def element_select(flag, value_if_true, value_if_false, name=''):
     return element_select(flag, value_if_true, value_if_false, name)
 
 
-##########################################################################
-# recurrent ops
-# TODO: do these belong into .sequence?
-##########################################################################
-
-@typemap
-def future_value(x, initial_state=None, time_step=1, name=''):
-    '''
-    DEPRECATED.
-
-    This function returns the future value w.r.t. ``x``. It is most often used when
-    creating RNNs. The resulting tensor has the same shape as the input but is
-    the next logical sample. The ``time_step`` parameter is the number of steps
-    to look into the future and is 1 by default. If there is no future value (i.e.
-    the current sample is the last one in the tensor) then the ``initial_state``
-    value is returned.
-
-    The initial state can be a constant (scalar or tensor), a learnable tensor
-    or input data (which has a batch dimension, as needed for sequence-to-sequence models).
-
-    Example:
-        >>> x = C.sequence.input_variable(shape=(3,2))
-        >>> # Create one sequence with 4 tensors of shape (3, 2)
-        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
-        >>> y = C.future_value(x) # using initial state of 0 by default
-        >>> y.eval({x:x0})
-        [array([[[  6.,   7.],
-                 [  8.,   9.],
-                 [ 10.,  11.]],
-        <BLANKLINE>
-                [[ 12.,  13.],
-                 [ 14.,  15.],
-                 [ 16.,  17.]],
-        <BLANKLINE>
-                [[ 18.,  19.],
-                 [ 20.,  21.],
-                 [ 22.,  23.]],
-        <BLANKLINE>
-                [[  0.,   0.],
-                 [  0.,   0.],
-                 [  0.,   0.]]], dtype=float32)]
-
-    Args:
-        x: the tensor (or its name) from which the future value is obtained.
-        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
-        time_step (int): the number of time steps to look into the future (default 1)
-        name (str, optional): the name of the Function instance in the network
-    Returns:
-        :class:`~cntk.ops.functions.Function`
-    '''
-
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-            'sequence.future_value() instead.', DeprecationWarning)
-
-    return sequence.future_value(x, initial_state, time_step, name)
-
-
-@typemap
-def past_value(x, initial_state=None, time_step=1, name=''):
-    '''
-    DEPRECATED.
-
-    This function returns the past value w.r.t. ``x``. It is most often used when
-    creating RNNs. The resulting tensor has the same shape as the input but is
-    the previous logical sample. The ``time_step`` parameter is the number of steps
-    to look into the past and is 1 by default. If there is no past value (i.e.
-    the current sample is the first one in the tensor)  then the ``initial_state``
-    value is returned.
-
-    The initial state can be a constant (scalar or tensor), a learnable tensor
-    or input data (which has a batch dimension, as needed for sequence-to-sequence models).
-
-    Example:
-        >>> x = C.sequence.input_variable(shape=(3,2))
-        >>> # Create one sequence with 4 tensors of shape (3, 2)
-        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
-        >>> # this demonstrates how past_value shifts the sequence by one, padding with initial_state
-        >>> y = C.past_value(x) # initial_state is 0 by default
-        >>> y.eval({x:x0})
-        [array([[[  0.,   0.],
-                 [  0.,   0.],
-                 [  0.,   0.]],
-        <BLANKLINE>
-                [[  0.,   1.],
-                 [  2.,   3.],
-                 [  4.,   5.]],
-        <BLANKLINE>
-                [[  6.,   7.],
-                 [  8.,   9.],
-                 [ 10.,  11.]],
-        <BLANKLINE>
-                [[ 12.,  13.],
-                 [ 14.,  15.],
-                 [ 16.,  17.]]], dtype=float32)]
-
-        >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
-        >>> s = C.input_variable(shape=(3,2))  # not a sequence, e.g. a final encoder hidden state
-        >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,1,3,2))
-        >>> s0
-        array([[[[ 0. ,  0.5],
-                 [ 1. ,  1.5],
-                 [ 2. ,  2.5]]]], dtype=float32)
-        >>> y = C.past_value(x, initial_state=s)
-        >>> y.eval({x:x0, s:s0}) # same as the previous example except for the first time step
-        [array([[[  0. ,   0.5],
-                 [  1. ,   1.5],
-                 [  2. ,   2.5]],
-        <BLANKLINE>
-                [[  0. ,   1. ],
-                 [  2. ,   3. ],
-                 [  4. ,   5. ]],
-        <BLANKLINE>
-                [[  6. ,   7. ],
-                 [  8. ,   9. ],
-                 [ 10. ,  11. ]],
-        <BLANKLINE>
-                [[ 12. ,  13. ],
-                 [ 14. ,  15. ],
-                 [ 16. ,  17. ]]], dtype=float32)]
-
-    Args:
-        x: the tensor (or its name) from which the past value is obtained
-        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
-        time_step (int): the number of time steps to look into the past (default 1)
-        name (str, optional): the name of the Function instance in the network
-
-    Returns:
-        :class:`~cntk.ops.functions.Function`
-    '''
-
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-            'sequence.past_value() instead.', DeprecationWarning)
-
-    return sequence.past_value(x, initial_state, time_step, name)
-
-
 # TODO: does this belong into .sequence?
 @typemap
 def optimized_rnnstack(operand, weights, hidden_size, num_layers,
@@ -2486,9 +2353,6 @@ def to_sequence(x, sequence_lengths=None, sequence_axis_name_prefix='toSequence_
     assumed to be of the same length; i.e. dimensionality of the most significant
     static axis
 
-    Example:
-        TBA.
-
     Args:
         x: the tensor (or its name) which is converted to a sequence
         sequence_lengths: Optional tensor operand representing the sequence lengths.
@@ -2499,6 +2363,9 @@ def to_sequence(x, sequence_lengths=None, sequence_axis_name_prefix='toSequence_
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
 
     from cntk.cntk_py import to_sequence
@@ -2518,9 +2385,6 @@ def to_sequence_like(x, dynamic_axes_like, name=''):
     static axis [0] as the sequence axis. The length of the sequences are
     obtained from the 'dynamic_axes_like' operand.
 
-    Example:
-        TBA.
-
     Args:
         x: the tensor (or its name) which is converted to a sequence
         dynamic_axes_like: Tensor operand used to obtain the lengths of
@@ -2530,6 +2394,9 @@ def to_sequence_like(x, dynamic_axes_like, name=''):
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
 
     from cntk.cntk_py import to_sequence_like
@@ -2818,27 +2685,6 @@ def placeholder(shape=None, dynamic_axes=None, name=''):
 
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, name, dynamic_axes)
-
-@typemap
-def placeholder_variable(shape=None, dynamic_axes=None, name=''):
-    '''
-    DEPRECATED.
-
-    It creates a placeholder variable for recurrence networks, when the network's dynamic axes
-    are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
-
-    Args:
-        shape (tuple or int): the shape of the variable tensor
-        dynamic_axes (list): the list of dynamic axes that the actual variable uses
-        name (str, optional): the name of the placeholder variable in the network
-
-    Returns:
-        :class:`~cntk.variables.Variable`
-    '''
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-            'placeholder() instead.', DeprecationWarning)
-    return placeholder(shape, dynamic_axes, name)
 
 @typemap
 def parameter(shape=None, init=None, dtype=None, device=None, name=''):

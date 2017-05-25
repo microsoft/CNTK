@@ -20,7 +20,7 @@ public class Main {
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
 
         DeviceDescriptor device = DeviceDescriptor.useDefaultDevice();
-        File dataPath = new File(args[1]);
+        File dataPath = new File(args[0]);
 
 
         // Load the model.

@@ -226,7 +226,7 @@ def train_lm():
 
         # after each epoch save the model
         model_filename = "models/lm_epoch%d.dnn" % epoch_count
-        z.save_model(model_filename)
+        z.save(model_filename)
         print("Saved model to '%s'" % model_filename)
 
 
