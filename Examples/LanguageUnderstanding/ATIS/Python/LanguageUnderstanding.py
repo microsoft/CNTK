@@ -157,11 +157,11 @@ def train(reader, model, max_epochs):
     # and update the model. The progress_printer is used to print loss and metric periodically.
     # The progress_callback is another progress tracker we use to call into our peek() function,
     # which illustrates how the model becomes better with each epoch.
-    stats = criterion.train(reader, streams=(reader.streams.query, reader.streams.slot_labels),
-                            minibatch_size=minibatch_size, max_epochs=max_epochs, epoch_size=epoch_size,
-                            parameter_learners=[learner],
-                            progress_writers=[progress_printer, progress_callback])
-    return stats[0][-1], stats[1][-1] # return loss and metric from last epoch
+    progress = criterion.train(reader, streams=(reader.streams.query, reader.streams.slot_labels),
+                               minibatch_size=minibatch_size, max_epochs=max_epochs, epoch_size=epoch_size,
+                               parameter_learners=[learner],
+                               progress_writers=[progress_printer, progress_callback])
+    return progress.epoch_summaries[-1].loss, progress.epoch_summaries[-1].metric # return loss and metric from last epoch
 
 
 ########################
@@ -173,10 +173,9 @@ def evaluate(reader, model):
     progress_printer = cntk.logging.ProgressPrinter(tag='Evaluation')
     # test() will loop through the data provided by the reader and accumulate the metirc value
     # of the criterion function. At the end, progress_printer will be used to show the average value.
-    # test() returns the average metric and the total number of labels measured, which we ignore
-    # (denoted by assigning it to _).
-    metric, _ = criterion.test(reader, streams=(reader.streams.query, reader.streams.slot_labels),
-                               minibatch_size=1000, progress_writers=[progress_printer])
+    # test() returns an object that contains the average metric.
+    metric = criterion.test(reader, streams=(reader.streams.query, reader.streams.slot_labels),
+                            minibatch_size=1000, progress_writers=[progress_printer]).metric
                                
     return metric
 

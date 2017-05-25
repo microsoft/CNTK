@@ -1184,30 +1184,30 @@ class Function(cntk_py.Function):
         '''
         # TODO: If this is of general interest, consider to move it to progress_print.py
         def __init__(self, progress_writers=None, summary_period=None):
-            self.losses = []
-            self.metrics = []
-            self.num_samples = []
+            self.training_updates = []
+            self.training_summaries = []
+            self.test_summaries = []
             coll_period = progress_writers[0].freq if (progress_writers and progress_writers[0]) else \
                           summary_period if summary_period is not None else \
                           sys.maxsize
             super(Function._ProgressCollector, self).__init__(coll_period, 0, sys.maxsize, 0, sys.maxsize, 0)
-            self.__disown__() # TODO: what is this?
+            self.__disown__()
         def on_write_training_update(self, samples, updates, aggregate_loss, aggregate_metric):
-            loss        = aggregate_loss[1]   - aggregate_loss[0]
-            metric      = aggregate_metric[1] - aggregate_metric[0]
-            num_samples = samples[1]          - samples[0]
-            self.losses     .append(loss   / (num_samples if num_samples != 0 else 1))
-            self.metrics    .append(metric / (num_samples if num_samples != 0 else 1))
-            self.num_samples.append(num_samples)
+            aggregate_loss        = aggregate_loss[1]   - aggregate_loss[0]
+            aggregate_metric      = aggregate_metric[1] - aggregate_metric[0]
+            samples = samples[1]          - samples[0]
+            aggregate_loss   /= (samples if samples != 0 else 1)
+            aggregate_metric /= (samples if samples != 0 else 1)
+            self.training_updates.append(Record(loss=aggregate_loss, metric=aggregate_metric, samples=samples))
         def on_write_test_update(self, *args, **kwargs):
             pass
         def on_write_training_summary(self, samples, updates, summaries, aggregate_loss, aggregate_metric, elapsed_milliseconds):
-            if len(self.losses) == 0:
-                self.on_write_training_update((0, samples), None, (0, aggregate_loss), (0, aggregate_metric))
-            pass
+            aggregate_loss   /= (samples if samples != 0 else 1)
+            aggregate_metric /= (samples if samples != 0 else 1)
+            self.training_summaries.append(Record(loss=aggregate_loss, metric=aggregate_metric, samples=samples))
         def on_write_test_summary(self, samples, updates, summaries, aggregate_metric, elapsed_milliseconds):
-            self.test_metric = aggregate_metric
-            self.test_num_samples = samples
+            aggregate_metric /= (samples if samples != 0 else 1)
+            self.test_summaries.append(Record(metric=aggregate_metric, samples=samples))
         def write(self, *args, **kwargs):
             pass
 
@@ -1236,6 +1236,12 @@ class Function(cntk_py.Function):
         large corpora, and the traditional definition of epoch size as number of samples in the corpus
         is not very relevant. Instead, CNTK really means the number of samples
         between summary actions, such as printing training progress, adjusting the learning rate, and/or checkpointing the model.
+
+        The function returns an object that contains these members: `epoch_summaries` is a list that
+        contains the progression of epoch loss (`.loss`) and metric (`.metric`) values and the corresponding
+        number of labels (`.samples`) that they were averaged over. This is the same value that a progress printer would print as epoch
+        summaries. `updates` is a similar list with the more fine-grained minibatch updates.
+        If a `TestConfig` was specified, then `test_summaries` is a list of epoch test metrics and samples.
 
         A number of callback mechanisms can optionally be specified. `progress_writers` specifies a list of
         objects with callbacks for progress logging.
@@ -1288,13 +1294,13 @@ class Function(cntk_py.Function):
          ...     z = model(data)  # apply model. Computes a non-normalized log probability for every output class.
          ...     return cntk.cross_entropy_with_softmax(z, label_one_hot)
          >>> learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(0.1, cntk.UnitType.minibatch))
-         >>> stats = criterion.train((X, Y), minibatch_size=25, max_epochs=2, epoch_size=125, parameter_learners=[learner])
-         >>> print("%.2f" % stats[0][-1])
+         >>> progress = criterion.train((X, Y), minibatch_size=25, max_epochs=2, epoch_size=125, parameter_learners=[learner])
+         >>> print("%.2f" % progress.epoch_summaries[-1].loss) # get the final epoch's loss value
          0.76
 
         Returns:
-         (losses, metrics, num_samples): three lists representing average loss, average metric, and number of labels,
-          sampled at the frequency of the first of progress_writers (or, if none, the final aggregate)
+         progress: an object with progress.epoch_summaries and progress.updates being the progressions of av loss, av metric, and number of labels
+          for epochs and updates (groups of minibatches), respectively.
         '''
         if minibatch_size is None:
             raise ValueError("minibatch_size must not be None.")
@@ -1341,12 +1347,15 @@ class Function(cntk_py.Function):
                               progress_frequency=progress_frequency, max_samples=max_samples,
                               checkpoint_config=checkpoint_config, cv_config=cv_config, test_config=test_config)
         ts.train()
-        return collector.losses, collector.metrics, collector.num_samples
+        res = Record(updates=collector.training_updates, epoch_summaries=collector.training_summaries)
+        if test_config:
+            res = res.updated_with(test_summaries=collector.test_summaries)
+        return res
 
     def test(self, minibatch_source, minibatch_size=32, streams=None, model_inputs_to_streams=None, progress_writers=None):
         '''
         Measures the performance of a model, given by its criterion function, in the form of
-        average metric value (or loss if model has only one output) on a set of data .
+        average metric value (or loss if model has only one output) on a set of data.
 
         This is a convenience wrapper around :class:`cntk.train.trainer.Evaluator`.
 
@@ -1360,7 +1369,7 @@ class Function(cntk_py.Function):
              progress.
 
         Returns:
-         (loss, metric, num_samples): average loss, average metric, and number of labels
+         stats: object with stats.metric being the average metric, and stats.samples the number of labels in the test set
         '''
         if minibatch_size is None:
             raise ValueError("minibatch_size must not be None.")
@@ -1388,7 +1397,7 @@ class Function(cntk_py.Function):
                 break                                              # until we hit the end
             evaluator.test_minibatch({ input: data[si] for input, si in model_inputs_to_streams.items()})
         evaluator.summarize_test_progress()
-        return collector.test_metric / (collector.test_num_samples if collector.test_num_samples != 0 else 1), collector.test_num_samples
+        return collector.test_summaries[-1]
 
     @typemap
     def save(self, filename):

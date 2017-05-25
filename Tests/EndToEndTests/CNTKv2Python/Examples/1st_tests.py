@@ -24,19 +24,19 @@ def test_1st_steps_functional(device_id):
     from cntk.ops.tests.ops_test_utils import cntk_device
     try_set_default_device(cntk_device(device_id))
     reset_random_seed(0)
-    from LogisticRegression_FunctionalAPI import losses, metrics, metric, num_samples
+    from LogisticRegression_FunctionalAPI import final_loss, final_metric, final_samples, test_metric
     # these are the final values from the log output
-    assert np.allclose(losses[-1],  0.243953, atol=1e-5)
-    assert np.allclose(metrics[-1], 0.0831,   atol=1e-4)
-    assert np.allclose(metric,      0.0811,   atol=1e-4)
-    assert num_samples == 1024
+    assert np.allclose(final_loss,   0.344399, atol=1e-5)
+    assert np.allclose(final_metric, 0.1258,   atol=1e-4)
+    assert np.allclose(test_metric,  0.0811,   atol=1e-4)
+    assert final_samples == 20000
 
 def test_1st_steps_graph(device_id):
     from cntk.ops.tests.ops_test_utils import cntk_device
     try_set_default_device(cntk_device(device_id))
     reset_random_seed(0)
     from LogisticRegression_GraphAPI import trainer, evaluator, X_test, Y_test, data, label_one_hot
-    print(trainer.previous_minibatch_loss_average)
+    #print(trainer.previous_minibatch_loss_average)
     assert np.allclose(trainer.previous_minibatch_loss_average, 0.1233455091714859, atol=1e-5)
     assert trainer.previous_minibatch_sample_count == 32
     # evaluator does not have a way to correctly get the aggregate, so we run one more MB on it
@@ -44,7 +44,7 @@ def test_1st_steps_graph(device_id):
     x = X_test[i:i+32] # get one minibatch worth of data
     y = Y_test[i:i+32]
     metric = evaluator.test_minibatch({data: x, label_one_hot: y})
-    print(metric)
+    #print(metric)
     assert np.allclose(metric, 0.0625, atol=1e-5)
 
 if __name__=='__main__':
