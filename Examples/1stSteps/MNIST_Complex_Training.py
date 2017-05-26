@@ -46,9 +46,9 @@ X_train, X_cv, X_test = (X.astype(np.float32) for X in (X_train, X_cv, X_test))
 with C.layers.default_options(activation=C.ops.relu, pad=False):
     model = C.layers.Sequential([
         C.layers.Convolution2D((5,5), num_filters=32, reduction_rank=0, pad=True), # reduction_rank=0 for B&W images
-        C.layers.MaxPooling((3,3), strides=(2,2)),
+        C.layers.MaxPooling((2,2), strides=(2,2)),
         C.layers.Convolution2D((3,3), num_filters=48),
-        C.layers.MaxPooling((3,3), strides=(2,2)),
+        C.layers.MaxPooling((2,2), strides=(2,2)),
         C.layers.Convolution2D((3,3), num_filters=64),
         C.layers.Dense(96),
         C.layers.Dropout(dropout_rate=0.5),
@@ -104,7 +104,7 @@ def adjust_lr_callback(index, average_error, cv_num_samples, cv_num_minibatches)
     global prev_metric
     if (prev_metric - average_error) / prev_metric < 0.05: # relative gain must reduce metric by at least 5% rel
         learner.reset_learning_rate(C.learning_rate_schedule(learner.learning_rate() / 2, C.learners.UnitType.sample))
-        if learner.learning_rate() < lr_per_sample / (2**7-0.1): # we are done after the 4-th LR cut
+        if learner.learning_rate() < lr_per_sample / (2**7-0.1): # we are done after the 6-th LR cut
             print("Learning rate {} too small. Training complete.".format(learner.learning_rate()))
             return False # means we are done
         print("Improvement of metric from {:.3f} to {:.3f} insufficient. Halving learning rate to {}.".format(prev_metric, average_error, learner.learning_rate()))
@@ -131,7 +131,7 @@ learner = C.train.distributed.data_parallel_distributed_learner(learner)
 # For this MNIST model, larger minibatch sizes make it faster, because the
 # model is too small to utilize a full GPU. Hence data-parallel training cannot
 # be expected to lead to speed-ups.
-minibatch_size_schedule = C.minibatch_size_schedule([256]*6 + [512]*8 + [1024]*10 + [2048]*8 + [4096], epoch_size=epoch_size)
+minibatch_size_schedule = C.minibatch_size_schedule([256]*6 + [512]*9 + [1024]*7 + [2048]*8 + [4096], epoch_size=epoch_size)
 
 # Train and test, with checkpointing and learning-rate adjustment.
 progress = criterion.train((X_train, Y_train), minibatch_size=minibatch_size_schedule,
