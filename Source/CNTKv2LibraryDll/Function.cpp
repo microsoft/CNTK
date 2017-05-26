@@ -1259,13 +1259,14 @@ namespace CNTK
         return AsBlock(std::move(squaredErrorComposite), { { predictionPlaceholder, prediction }, { targetPlaceholder, targets } }, L"SquaredError", name);
     }
 
-    FunctionPtr CenterLoss(const Variable& features, const Variable& labels, double alpha, size_t dimEmbedding, size_t numClasses, const std::wstring& name)
+    FunctionPtr CenterLoss(const Variable& features, const Variable& labels, double alpha, size_t dimEmbedding, size_t numClasses, bool normalize, const std::wstring& name)
     {
 
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeCenterLossAlpha] = alpha;
         additionalProperties[PrimitiveFunction::AttributeCenterLossDimEmbedding] = dimEmbedding;
         additionalProperties[PrimitiveFunction::AttributeCenterLossNumClasses] = numClasses;
+        additionalProperties[PrimitiveFunction::AttributeCenterLossNormalize] = normalize;
 
         return BinaryOp(PrimitiveOpType::CenterLoss, labels, features, std::move(additionalProperties), name);
     }

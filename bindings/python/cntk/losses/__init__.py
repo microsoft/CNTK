@@ -204,9 +204,9 @@ def squared_error(output, target, name=''):
     return squared_error(output, target, name)
 
 @typemap
-def center_loss(features, labels, alpha, dimEmbedding, numClasses, name=''):
+def center_loss(features, labels, alpha, dimEmbedding, numClasses, normalize, name=''):
     from cntk.cntk_py import center_loss
-    return center_loss(features, labels, alpha, dimEmbedding, numClasses, name)
+    return center_loss(features, labels, alpha, dimEmbedding, numClasses, normalize, name)
 
 @typemap
 def lambda_rank(output, gain, group, name=''):

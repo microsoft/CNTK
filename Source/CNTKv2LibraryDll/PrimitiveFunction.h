@@ -264,6 +264,7 @@ namespace CNTK
         static const std::wstring AttributeCenterLossAlpha;
         static const std::wstring AttributeCenterLossDimEmbedding;
         static const std::wstring AttributeCenterLossNumClasses;
+        static const std::wstring AttributeCenterLossNormalize;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)

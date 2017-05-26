@@ -102,6 +102,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeCenterLossAlpha = L"centerLossAlpha";
     /*static*/ const std::wstring PrimitiveFunction::AttributeCenterLossDimEmbedding = L"centerLossDimEmbedding";
     /*static*/ const std::wstring PrimitiveFunction::AttributeCenterLossNumClasses = L"centerLossNumClasses";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeCenterLossNormalize = L"centerLossNormalize";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {

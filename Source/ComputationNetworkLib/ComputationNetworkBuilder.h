@@ -182,7 +182,7 @@ public:
     ComputationNodePtr Softmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Sqrt(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr SquareError(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
-    ComputationNodePtr CenterLoss(const ComputationNodePtr a, const ComputationNodePtr b, double alpha, size_t dimEmbedding, size_t numClasses, const std::wstring nodeName = L"");
+    ComputationNodePtr CenterLoss(const ComputationNodePtr a, const ComputationNodePtr b, double alpha, size_t dimEmbedding, size_t numClasses, bool normalize, const std::wstring nodeName = L"");
     ComputationNodePtr Sum(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Tanh(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Times(const ComputationNodePtr a, const ComputationNodePtr b, size_t outputRank = 1, const std::wstring nodeName = L"");

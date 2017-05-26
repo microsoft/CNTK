@@ -459,9 +459,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Squar
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CenterLoss(const ComputationNodePtr a, const ComputationNodePtr b, double alpha, size_t dimEmbedding, size_t numClasses,  const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CenterLoss(const ComputationNodePtr a, const ComputationNodePtr b, double alpha, size_t dimEmbedding, size_t numClasses, bool normalize, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<CenterLossNode<ElemType>>(net.GetDeviceId(), nodeName, (ElemType)alpha, dimEmbedding, numClasses), { a, b });
+    return net.AddNodeToNetAndAttachInputs(New<CenterLossNode<ElemType>>(net.GetDeviceId(), nodeName, (ElemType)alpha, dimEmbedding, numClasses, normalize), { a, b });
 }
 
 

@@ -33,10 +33,11 @@ class CenterLossNode : public ComputationNodeNonLooping /*ComputationNode*/<Elem
 
 public:
     DeclareConstructorFromConfigWithNumInputs(CenterLossNode);
-    CenterLossNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType alpha=0.0, size_t dimEmbedding=0, size_t numClasses=0)
-        : Base(deviceId, name), m_alpha(alpha)
+    CenterLossNode(DEVICEID_TYPE deviceId, const wstring& name, ElemType alpha=0.0, size_t dimEmbedding=0, size_t numClasses=0, bool normalize=true)
+        : Base(deviceId, name), m_alpha(alpha), m_normalize(normalize)
     {
         m_centroids = make_shared<Matrix<ElemType>>(Matrix<ElemType>::Zeros(dimEmbedding, numClasses, deviceId));
+        //m_centroids = make_shared<Matrix<ElemType>>(deviceId);
     }
 
     
@@ -56,10 +57,21 @@ public:
             Matrix<ElemType>::Scale(m_alpha, *m_leftMinusRight);
             m_centroids->ScatterToIndices(*m_leftMinusRight, *m_labels, m_centroids->GetNumRows());
 
+
+
 #if DUMPOUTPUT
             m_leftMinusRight->Print("m_leftMinusRight");
             m_centroids->Print("m_centroids");
 #endif
+            
+            if (m_normalize)
+            {
+                m_leftMinusRight->AssignVectorNorm2Of(*m_centroids, /*isColumnWise*/true);
+                m_centroids->RowElementDivideBy(*m_leftMinusRight);
+#if DUMPOUTPUT
+                m_centroids->Print("m_centroids");
+#endif
+            }
         }
         
         else
@@ -100,7 +112,7 @@ public:
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        //ValidateBinaryReduce(isFinalValidationPass);
+        Base::Validate(isFinalValidationPass);
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -146,6 +158,7 @@ private:
     shared_ptr<Matrix<ElemType>> m_labels;
     shared_ptr<Matrix<ElemType>> m_values;
     ElemType m_alpha;
+    bool m_normalize;
 
 };
 

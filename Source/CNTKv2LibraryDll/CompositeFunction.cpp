@@ -896,7 +896,8 @@ namespace CNTK
                     auto alpha = functionConfig[PrimitiveFunction::AttributeCenterLossAlpha].Value<double>();
                     auto dimEmbedding = functionConfig[PrimitiveFunction::AttributeCenterLossDimEmbedding].Value<size_t>();
                     auto numClasses = functionConfig[PrimitiveFunction::AttributeCenterLossNumClasses].Value<size_t>();
-                    computationNodePtr = New<CenterLossNode<ElementType>>(network->GetDeviceId(), internalNodeName, (ElementType)alpha, dimEmbedding, numClasses);
+                    auto normalize = functionConfig[PrimitiveFunction::AttributeCenterLossNormalize].Value<bool>();
+                    computationNodePtr = New<CenterLossNode<ElementType>>(network->GetDeviceId(), internalNodeName, (ElementType)alpha, dimEmbedding, numClasses, normalize);
                     break;
                 }
                 case PrimitiveOpType::CrossEntropyWithSoftmax:

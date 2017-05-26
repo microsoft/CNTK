@@ -108,6 +108,7 @@ void TestTensorPlus(size_t numAxesLeftOperand, size_t numAxesRightOperand, const
     FloatingPointVectorCompare(largerInputGradients, expectedLargerInputGradientValues, "TestTimesAndPlus: Backward prop results do not match expected results");
 }
 
+/*
 template <typename ElementType>
 void TestCenter(const DeviceDescriptor& device, bool useConstantInputsOnly)
 {
@@ -171,10 +172,10 @@ void TestCenter(const DeviceDescriptor& device, bool useConstantInputsOnly)
     std::unordered_map<Variable, ValuePtr> gradients = { { leftInputVar, leftInputGradientValue }, { rightInputVar, rightInputGradientValue } };
     plusFunc->Backward(backPropState, { { plusFunc->Output(), rootGradientValue } }, gradients);
 }
-
+*/
 int main()
 {
-    TestCenter<float>(DeviceDescriptor::CPUDevice(), false);
+    //TestCenter<float>(DeviceDescriptor::CPUDevice(), false);
 
     NDShape leftShape(1);
     leftShape[0] = 2;
