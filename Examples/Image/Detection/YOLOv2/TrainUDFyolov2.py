@@ -92,9 +92,13 @@ class TrainFunction(UserFunction):
     # @Override
     def forward(self, arguments, outputs=None, keep_for_backward=None, device=None, as_numpy=False):
         targets, scales = self.create_outputs_like_cyolo(arguments[0], arguments[1])
-        #import ipdb;ipdb.set_trace()
-        outputs[self.outputs[0]] = np.ascontiguousarray(targets, np.float32)
-        outputs[self.outputs[1]] = np.ascontiguousarray(scales, np.float32)
+
+        if not isinstance(targets, list):
+            targets = np.ascontiguousarray(targets, np.float32)
+            scales = np.ascontiguousarray(scales, np.float32)
+
+        outputs[self.outputs[0]] = targets
+        outputs[self.outputs[1]] = scales
 
         if False:
             self.check_values(arguments[0], outputs[self.outputs[0]], outputs[self.outputs[1]])
@@ -170,6 +174,15 @@ class TrainFunction(UserFunction):
 
     ####### user functions ##########
     def create_outputs_like_cyolo(self, eval_results, gtb_inputs):
+
+        if isinstance(eval_results, list): # Apply on sequence
+            goal = []
+            scale = []
+            for res, gtb in zip(eval_results, gtb_inputs):
+                g, s = self.create_outputs_like_cyolo(res, gtb)
+                goal.append(g)
+                scale.append(s)
+            return goal, scale
 
 
         target = np.zeros(eval_results.shape)

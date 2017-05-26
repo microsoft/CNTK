@@ -152,7 +152,7 @@ if __name__ == '__main__':
     output = None
 
     ####################################################################################################################
-    model = yolo2.create_yolov2_net()
+    model = yolo2.create_yolov2_net(par)
 
     image_input = input((par_num_channels, par_image_height, par_image_width), name="data")
     output = model(image_input)  # append model to image input
