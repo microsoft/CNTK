@@ -227,5 +227,5 @@ if __name__=='__main__':
                             profiling=args['profile'],
                             tensorboard_logdir=args['tensorboard_logdir'])
     # Must call MPI finalize when process exit without exceptions
-    cntk.train.distributed.Communicator.finalize()
+    C.train.distributed.Communicator.finalize()
 

@@ -7,6 +7,7 @@
 from .swig_helper import typemap, map_if_possible
 from .sanitize import *
 from .sanitize import _as_tuple
+import cntk
 
 def _value_as_sequence(val, var):
     '''
@@ -55,6 +56,8 @@ class _UDFDeserializeCallbackWrapper(cntk_py.UDFDeserializeCallbackWrapper):
             factory = eval(eval_str.format(cls, deserialize_method))
 
         if factory:
+            for i in range(len(inputs)):
+                inputs[i].__class__ = cntk.Variable
             return factory(list(inputs), name, state)
 
         raise ValueError("Cannot deserialize user function '{}.{}'. "
