@@ -1405,6 +1405,13 @@ namespace CNTK
             auto functionConstants = Constants();
             for (auto constant : functionConstants)
                 m_lastRecordedTimeStamps.insert({ constant, constant.CurrentValueTimeStamp() });
+
+            // Collect parameters and constants being assigned to
+            PreorderTraverseFunctions(RootFunction(), [this](const FunctionPtr& function) {
+                auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
+                if (primitiveFunction && (primitiveFunction->OpType() == PrimitiveOpType::Assign))
+                    m_assignRefs.insert(primitiveFunction->Inputs()[0]);
+            }, /*nestedSearchInsideBlockFunction =*/ true);
         }
 
         if (!m_networkMatricesAllocated && allocateNetworkMatrices)
@@ -1838,7 +1845,11 @@ namespace CNTK
 
         // Call PostForwardAndBackProp after ForwardProp only in evaluation mode.
         if (outputsToRetainBackwardStateFor.empty())
+        {
             m_computationNetwork->PostForwardAndBackProp(outputsToEvaluate);
+            for (auto assignRef : m_assignRefs)
+                assignRef.IsParameter() ? Parameter(assignRef).RecordValueUpdate() : Constant(assignRef).RecordValueUpdate();
+        }
         else
         {
             m_currentOutputsToEvaluate.clear();
@@ -1904,6 +1915,8 @@ namespace CNTK
         if (m_currentOutputsToEvaluate.size() > 0)
         {
             m_computationNetwork->PostForwardAndBackProp(m_currentOutputsToEvaluate);
+            for (auto assignRef : m_assignRefs)
+                assignRef.IsParameter() ? Parameter(assignRef).RecordValueUpdate() : Constant(assignRef).RecordValueUpdate();
             m_currentOutputsToEvaluate.clear();
         }
 
