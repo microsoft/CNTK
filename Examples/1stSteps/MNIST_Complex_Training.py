@@ -24,27 +24,27 @@ num_classes = 10        # classify as one of 10 digits
 model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Models/mnist.cmf")
 
 # Fetch the MNIST data from mldata.
-def fetch_mnist():
-    mnist = datasets.fetch_mldata("MNIST original")
-    X, Y = mnist.data / 255., mnist.target
-    X_train, X_test = X[:60000].reshape((-1,28,28)), X[60000:].reshape((-1,28,28))
-    Y_train, Y_test = Y[:60000].astype(int), Y[60000:].astype(int)
-    # Shuffle the training data.
-    np.random.seed(0) # always use the same reordering, for reproducability
-    X_train, Y_train = utils.shuffle(X_train, Y_train)
-    # Our model expects float32 features, and cross-entropy expects one-hot encoded labels.
-    Y_train, Y_test = (scipy.sparse.csr_matrix((np.ones(len(Y),np.float32), (range(len(Y)), Y)), shape=(len(Y), 10)) for Y in (Y_train, Y_test))
-    X_train, X_test = (X.astype(np.float32) for X in (X_train, X_test))
-    return X_train, Y_train, X_test, Y_test
+mnist = datasets.fetch_mldata("MNIST original")
+X, Y = mnist.data / 255., mnist.target
+X_train, X_test = X[:60000].reshape((-1,28,28)), X[60000:].reshape((-1,28,28))
+Y_train, Y_test = Y[:60000].astype(int), Y[60000:].astype(int)
+# Shuffle the training data.
+np.random.seed(0) # always use the same reordering, for reproducability
+X_train, Y_train = utils.shuffle(X_train, Y_train)
+# Further split off a cross-validation set
+X_train, X_cv = X_train[:54000], X_train[54000:]
+Y_train, Y_cv = Y_train[:54000], Y_train[54000:]
 
-X_train, Y_train, X_test, Y_test = fetch_mnist()
+# Our model expects float32 features, and cross-entropy expects one-hot encoded labels.
+Y_train, Y_cv, Y_test = (scipy.sparse.csr_matrix((np.ones(len(Y),np.float32), (range(len(Y)), Y)), shape=(len(Y), 10)) for Y in (Y_train, Y_cv, Y_test))
+X_train, X_cv, X_test = (X.astype(np.float32) for X in (X_train, X_cv, X_test))
 
 # Define the CNTK model function. The model function maps input data to
 # predictions (here: (28,28)-dimensional inputs --> 10 scores).
 # This specific model uses convolution, max pooling, and dropout.
 with C.layers.default_options(activation=C.ops.relu, pad=False):
     model = C.layers.Sequential([
-        C.layers.Convolution2D((5,5), num_filters=32, reduction_rank=0, pad=True),
+        C.layers.Convolution2D((5,5), num_filters=32, reduction_rank=0, pad=True), # reduction_rank=0 for B&W images
         C.layers.MaxPooling((3,3), strides=(2,2)),
         C.layers.Convolution2D((3,3), num_filters=48),
         C.layers.MaxPooling((3,3), strides=(2,2)),
@@ -68,27 +68,48 @@ def criterion(data, label_one_hot):
     return loss, metric
 
 # Learner object. The learner implements the update algorithm, in this case momentum SGD.
-epoch_size = 60000
-lr_per_sample    = [0.001]*10 + [0.0005]*10 + [0.0001]
-lr_schedule      = C.learning_rate_schedule(lr_per_sample, C.learners.UnitType.sample, epoch_size)
-mm_time_constant = [0]*5 + [1024]
+epoch_size = len(X_train)
+lr_per_sample    = 0.001
+lr_schedule      = C.learning_rate_schedule(lr_per_sample, C.learners.UnitType.sample)
+mm_time_constant = [0]*5 + [1024] # 5 epochs without momentum, then switch it on
 mm_schedule      = C.learners.momentum_as_time_constant_schedule(mm_time_constant, epoch_size)
 
-# Instantiate the trainer object to drive the model training
-learner = C.learners.adam(model.parameters, lr_schedule, mm_schedule)
+# Instantiate the trainer object to drive the model training.
+learner = C.learners.momentum_sgd(model.parameters, lr_schedule, mm_schedule)
 
-# Trainer callbacks.
-progress_writer = C.logging.ProgressPrinter(50) # helper for logging progress; log every 50 minibatches
-checkpoint_config = C.CheckpointConfig(model_path, epoch_size, restore=False)
-test_config = C.TestConfig((X_test, Y_test), criterion) # TODO: clumsy interface
+# Configure trainer callbacks.
+# Callback fro progress logging
+progress_writer = C.logging.ProgressPrinter(200) # helper for logging progress; log every 200 minibatches
 
-# Train and test
-progress = criterion.train((X_train, Y_train), minibatch_size=64, max_epochs=2, parameter_learners=[learner],
-                           callbacks=[progress_writer, checkpoint_config, test_config])
+# Callback for checkpointing. This will save a model every 'epoch_size' samples.
+# Change 'restore' to True to have training start from a prior checkpoint file if available.
+checkpoint_callback_config = C.CheckpointConfig(model_path, epoch_size, restore=False)
+
+# Callback for cross-validation based training control.
+# The following implements a simple callback that halves the learning rate if the
+# metric has not improved by at least 5% relative. The cross-validation callback
+# gets configured to call this every 3*epoch_size samples, i.e. only every 3rd epoch.
+prev_metric = 1 # at very beginning, error rate is 100%
+def adjust_lr_callback(index, average_error, cv_num_samples, cv_num_minibatches):
+    global prev_metric
+    if (prev_metric - average_error) / prev_metric < 0.05: # relative gain must reduce metric by at least 5% rel
+        learner.reset_learning_rate(C.learning_rate_schedule(learner.learning_rate / 2, C.learners.UnitType.sample))
+        if learner.learning_rate < lr_per_sample / 32.1: # we are done after the 4-th LR cut
+            print("Learning rate {} too small. Training complete.".format(learner.learning_rate))
+            return False # means we are done
+        print("Improvement of metric from {:.3f} to {:.3f} not large enough. Halving learning rate, now {}".format(prev_metric, average_error, learner.learning_rate))
+    prev_metric = average_error
+    return True # means continue
+cv_callback_config = C.CrossValidationConfig((X_cv, Y_cv), 3*epoch_size, minibatch_size=256,
+                                             callback=adjust_lr_callback, criterion=criterion)
+
+# Callback for testing the final model.
+test_callback_config = C.TestConfig((X_test, Y_test), criterion=criterion)
+
+# Train and test.
+progress = criterion.train((X_train, Y_train), minibatch_size=64, max_epochs=40, parameter_learners=[learner],
+                           callbacks=[progress_writer, checkpoint_callback_config, cv_callback_config, test_callback_config])
 final_loss, final_metric, final_samples, test_metric = (progress.epoch_summaries[-1].loss, progress.epoch_summaries[-1].metric, progress.epoch_summaries[-1].samples, progress.test_summary.metric)
-
-# Test error rate on the test set.
-#test_metric = criterion.test((X_test, Y_test), callbacks=[progress_writer]).metric
 
 # Inspect predictions on one minibatch, for illustration.
 # For evaluation, we map the output of the network between 0-1 and convert them into probabilities
