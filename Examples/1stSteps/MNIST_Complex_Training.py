@@ -104,7 +104,7 @@ def adjust_lr_callback(index, average_error, cv_num_samples, cv_num_minibatches)
     global prev_metric
     if (prev_metric - average_error) / prev_metric < 0.05: # relative gain must reduce metric by at least 5% rel
         learner.reset_learning_rate(C.learning_rate_schedule(learner.learning_rate() / 2, C.learners.UnitType.sample))
-        if learner.learning_rate() < lr_per_sample / 127.9: # we are done after the 4-th LR cut
+        if learner.learning_rate() < lr_per_sample / (2**7-0.1): # we are done after the 4-th LR cut
             print("Learning rate {} too small. Training complete.".format(learner.learning_rate()))
             return False # means we are done
         print("Improvement of metric from {:.3f} to {:.3f} insufficient. Halving learning rate to {}.".format(prev_metric, average_error, learner.learning_rate()))
