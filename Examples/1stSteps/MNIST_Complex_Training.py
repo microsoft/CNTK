@@ -105,7 +105,7 @@ def adjust_lr_callback(index, average_error, cv_num_samples, cv_num_minibatches)
         if learner.learning_rate() < lr_per_sample / 31.9: # we are done after the 4-th LR cut
             print("Learning rate {} too small. Training complete.".format(learner.learning_rate()))
             return False # means we are done
-        print("Improvement of metric from {:.3f} to {:.3f} not large enough. Halving learning rate, now {}".format(prev_metric, average_error, learner.learning_rate()))
+        print("Improvement of metric from {:.3f} to {:.3f} insufficient. Halving learning rate to {}.".format(prev_metric, average_error, learner.learning_rate()))
     prev_metric = average_error
     return True # means continue
 cv_callback_config = C.CrossValidationConfig((X_cv, Y_cv), 3*epoch_size, minibatch_size=256,
