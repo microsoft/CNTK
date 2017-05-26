@@ -215,16 +215,20 @@ class TrainingSession(cntk_py.TrainingSession):
         if minibatch_source and not isinstance(minibatch_source, (MinibatchSource, UserMinibatchSource)): # UserMinibatchSource derives from cntk_py.SwigMinibatchSource, not MinibatchSource, for director purposes
             args = _as_tuple(minibatch_source) # the minibatch_source is a tuple of numpy or scipy arrays that we construct a source around
             # args can also be a tuple of numpy/scipy arrays; we will construct on the fly
+            if criterion is None:
+                raise ValueError("when passing data directly in place of a minibatch source, criterion must be given")
             params = criterion.arguments
             if len(params) != len(args):
-                raise ValueError("To pass data directly in place of a minibatch source, pass a tuple of {} numpy or scipy arrays, in the order of the arguments of the criterion function. You passed {} value(s)."
+                raise ValueError("to pass data directly in place of a minibatch source, pass a tuple of {} numpy or scipy arrays, in the order of the arguments of the criterion function. You passed {} value(s)"
                                  .format(len(params), len(args)))
-            param_names = [param.name if param.name else "stream_" + str(i) for i, param in enumerate(params)] # (names are only used for debugging)
+            param_names = [param.name if param.name else "stream_%s" %  i for i, param in enumerate(params)] # names are for debugging...
+            if len(params) != len(set(param_names)): # ...and for stream names and thus must be unique. If multiple inputs have the same names...
+                param_names = ["stream_%s" % i for i, _ in enumerate(params)] # ...we fall back to generic names
             param_types = [param._type for param in params]
             max_samples = INFINITELY_REPEAT if infinitely_repeat else len(args[0]) # if not infinite then do one data pass
             minibatch_source = MinibatchSourceFromData({name: (input, type) for name, input, type in zip(param_names, args, param_types)}, max_samples=max_samples)
             if model_inputs_to_streams is not None:
-                raise ValueError( "Mapping must not be provided when data is passed directly.")
+                raise ValueError( "mapping must not be provided when data is passed directly")
             model_inputs_to_streams = {param: minibatch_source.streams[name] for param, name in zip(params, param_names)}
         return minibatch_source, model_inputs_to_streams
 
