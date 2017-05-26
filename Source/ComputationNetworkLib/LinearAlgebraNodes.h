@@ -126,6 +126,11 @@ public:
             inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
         }
     }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return true;
+    }
 };
 
 template class LogPlusNode<float>;
@@ -1186,9 +1191,20 @@ class TransposeDimensionsNode : public ComputationNode /*ComputationNode*/<ElemT
 
 public:
     TransposeDimensionsNode(DEVICEID_TYPE deviceId, const wstring& name, int axis1 = 1, int axis2 = 2)
-        : Base(deviceId, name), m_axis1(axis1), m_axis2(axis2)
+        : Base(deviceId, name), m_axis1(axis1), m_axis2(axis2), m_perm({})
     {
     }
+
+    TransposeDimensionsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::vector<int>& perm)
+        : Base(deviceId, name), m_axis1(0), m_axis2(0), m_perm({})
+    {
+        if (!std::all_of(perm.begin(), perm.end(), [](int p) {return p >= 1; }))
+            InvalidArgument("%ls %ls operation: _internal_ indices for axes must be >= 1.", NodeName().c_str(), OperationName().c_str());
+
+        // undo the annoying +1
+        std::transform(perm.begin(), perm.end(), std::back_inserter(m_perm), [](const int& p) { return (size_t)(p - 1); });
+    }
+
     TransposeDimensionsNode(const ScriptableObjects::IConfigRecordPtr configp)
         : TransposeDimensionsNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"axis1"), configp->Get(L"axis2"))
     {
@@ -1199,13 +1215,29 @@ public:
     {
         Base::Save(fstream);
         fstream << m_axis1 << m_axis2;
+        if (m_axis1 == 0 && m_axis2 == 0)
+        {
+            fstream << m_perm.size();
+            for (const auto p : m_perm)
+                fstream << p;
+        }
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        if (modelVersion >= CNTK_MODEL_VERSION_3)
+        if (modelVersion >= CNTK_MODEL_VERSION_3) 
+        {
             fstream >> m_axis1 >> m_axis2;
+            if (modelVersion >= CNTK_MODEL_VERSION_25 && m_axis1 == 0 && m_axis2 == 0)
+            {
+                size_t size = 0;
+                fstream >> size;
+                m_perm.resize(size);
+                for (size_t i = 0; i < size; ++i) 
+                    fstream >> m_perm[i];
+            }
+        }
         else
             m_axis1 = 1, m_axis2 = 2; // default
     }
@@ -1217,10 +1249,16 @@ private:
     // compute the transposed tensor shape (in-place)
     void TransposeShape(TensorShape& shape) const
     {
-        assert(m_axis1 > 0 && m_axis2 > 0);
-        size_t i = m_axis1 - 1;
-        size_t j = m_axis2 - 1;
-        shape.SwapDimsInPlace(i, j);
+        if (m_axis1 > 0 && m_axis2 > 0)
+        {
+            size_t i = m_axis1 - 1;
+            size_t j = m_axis2 - 1;
+            shape.SwapDimsInPlace(i, j);
+        }
+        else /* if (m_axis1 == 0 && m_axis2 == 0) */
+        {
+            shape.PermuteDimsInPlace(m_perm);
+        }
     }
 
     // get the transposed input shape
@@ -1230,6 +1268,17 @@ private:
         auto shape = InputRef(0).GetTensorSliceFor(rank, fr);
         TransposeShape(shape);
         return shape;
+    }
+
+    // verify that the argument is a valid permutation 
+    // We pass by value because the function mutates perm
+    static bool IsPermutation(std::vector<size_t> perm)
+    {
+        std::sort(perm.begin(), perm.end());
+        for (auto i = 0; i < perm.size(); ++i)
+            if (i != perm[i])
+                return false;
+        return true;
     }
 
 public:
@@ -1260,19 +1309,38 @@ public:
 
         // input shape
         auto shape = Input(0)->GetSampleLayout();
-        // validate indices
-        if (m_axis1 < 1 || m_axis2 < 1)
-            InvalidArgument("%ls %ls operation: Indices to transpose must be >= 1.", NodeName().c_str(), OperationName().c_str());
-        size_t i = m_axis1 - 1;
-        size_t j = m_axis2 - 1;
-        if (i >= shape.GetRank() && j >= shape.GetRank())
-            InvalidArgument("%ls %ls operation: At least one index must refer to an existing index.", NodeName().c_str(), OperationName().c_str());
-        // pad
-        // Permutation is allowed to create new dimensions, specifically to be able to transpose a [N] column vector into a [1 x N] row vector.
-        // One can also use SplitDimensions() for this, but this seems a natural thing to do.
-        size_t maxij = std::max(i, j);
-        if (maxij >= shape.GetRank())
-            shape.PadRankInPlace(maxij + 1);
+        
+        if (m_perm.size() == 0 && shape.GetRank() > 0)
+        {   
+            // we are swapping two axes
+            // validate indices
+            if (m_axis1 < 1 || m_axis2 < 1)
+                InvalidArgument("%ls %ls operation: Indices to transpose must be >= 1.", NodeName().c_str(), OperationName().c_str());
+            size_t i = m_axis1 - 1;
+            size_t j = m_axis2 - 1;
+            if (i >= shape.GetRank() && j >= shape.GetRank())
+                InvalidArgument("%ls %ls operation: At least one index must refer to an existing index.", NodeName().c_str(), OperationName().c_str());
+            // pad
+            // Permutation is allowed to create new dimensions, specifically to be able to transpose a [N] column vector into a [1 x N] row vector.
+            // One can also use SplitDimensions() for this, but this seems a natural thing to do.
+            size_t maxij = std::max(i, j);
+            if (maxij >= shape.GetRank())
+                shape.PadRankInPlace(maxij + 1);
+        }
+        else
+        {
+            //we are transposing a tensor using a permutation
+            if (m_axis1 != 0 || m_axis2 != 0)
+                InvalidArgument("%ls %ls operation: Cannot transpose via permutation and axes indices != 0", NodeName().c_str(), OperationName().c_str());
+
+            //verify shapes are matching
+            if (m_perm.size() != shape.GetRank())
+                InvalidArgument("%ls %ls operation: Specified permutation doesn't match operand", NodeName().c_str(), OperationName().c_str());
+
+            //verify it is a permutation
+            if (!TransposeDimensionsNode::IsPermutation(m_perm))
+                InvalidArgument("%ls %ls operation: Specified permutation is not a permutation of (0, 1, ..., rank - 1)", NodeName().c_str(), OperationName().c_str());
+        }
         // apply the permutation
         TransposeShape(shape);
         // drop the strides, since output is dense (swapped strides will be used with the input in ForwardProp())
@@ -1281,6 +1349,7 @@ public:
 
 private:
     int m_axis1, m_axis2; // the two dimensions (axes, 1-based) to swap
+    std::vector<size_t>  m_perm; // permutation to use for transposition
 };
 
 template class TransposeDimensionsNode<float>;
@@ -1356,7 +1425,7 @@ public:
 
         // TODO: We could do something more interesting with tensors.
         //       E.g. apply a cos distance of a whole set of data with a single reference.
-        SetDims(TensorShape(1), Input(1)->HasMBLayout());
+        SetDims(TensorShape::Scalar(Environment().IsV2Library()), Input(1)->HasMBLayout());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

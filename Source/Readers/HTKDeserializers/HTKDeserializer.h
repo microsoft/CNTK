@@ -42,7 +42,7 @@ private:
     class HTKChunk;
 
     // Initialization functions.
-    void InitializeChunkDescriptions(const std::vector<std::string>& paths);
+    void InitializeChunkDescriptions(ConfigHelper& config);
     void InitializeStreams(const std::wstring& featureName);
     void InitializeFeatureInformation();
     void InitializeAugmentationWindow(const std::pair<size_t, size_t>& augmentationWindow);
@@ -67,15 +67,12 @@ private:
     // General configuration
     int m_verbosity;
 
-    // Total number of frames.
-    size_t m_totalNumberOfFrames = 0;
-
     // Flag that indicates whether a single speech frames should be exposed as a sequence.
     bool m_frameMode;
 
     // Used to correlate a sequence key with the sequence inside the chunk when deserializer is running not in primary mode.
-    // Key -> <chunkid, offset inside chunk>
-    std::map<size_t, std::pair<size_t, size_t>> m_keyToChunkLocation;
+    // <key, chunkid, offset inside chunk>, sorted by key to be able to retrieve by binary search.
+    std::vector<std::tuple<size_t, ChunkIdType, uint32_t>> m_keyToChunkLocation;
 
     // Auxiliary data for checking against the data in the feature file.
     unsigned int m_samplePeriod = 0;

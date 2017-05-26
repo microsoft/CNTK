@@ -532,10 +532,8 @@ public:
     // -----------------------------------------------------------------------
 
     // TODO: Why are all these static, but then take a network as the first argument? --> make them class members
-    template <class ElemType>
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
 
-    template <class ElemType>
     static void SetIRngUserSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);
     
     template <class ElemType>
@@ -778,6 +776,17 @@ public:
         return GetNodesWhere(predicate, rootNode);
     }
 
+    template <typename T>
+    std::list<ComputationNodeBasePtr> GetNodesWithType(const ComputationNodeBasePtr& rootNode = nullptr) const
+    {
+        std::function<bool(const ComputationNodeBasePtr&)> predicate = [](const ComputationNodeBasePtr& node) 
+        { 
+            return (dynamic_cast<T*>(node.get()) != nullptr); 
+        };
+
+        return GetNodesWhere(predicate, rootNode);
+    }
+
     // Get the eval nodes with names
     // if evalNodeNames are not specified, return all the default evalnodes and training criterion nodes.
     std::vector<ComputationNodeBasePtr> GetEvalNodesWithName(const std::vector<wstring> evalNodeNames)
@@ -951,6 +960,12 @@ public:
         m_environment->trackGapNans = enable;
     }
     bool GetTrackGapNaNs() const { return m_environment->trackGapNans; }
+
+    void SetIsV2Library(bool enable)
+    {
+        m_environment->isV2Library = enable;
+    }
+    bool GetIsV2Library() const { return m_environment->isV2Library; }
 
     void SetTraceLevel(int traceLevel)
     {

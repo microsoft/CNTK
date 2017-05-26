@@ -2,7 +2,7 @@ Getting started
 ===============
 You can optionally try the `tutorials <https://notebooks.azure.com/cntk/libraries/tutorials>`__ with pre-installed CNTK running in Azure Notebook hosted environment (for free) if you have not installed the toolkit in your own machine.
 
-If you have installed CNTK on your machine, after going through the :cntkwiki:`installation steps <CNTK-Binary-Download-and-Configuration>`,
+If you have installed CNTK on your machine, after going through the :cntkwiki:`installation steps <Setup-CNTK-on-your-machine>`,
 you can start using CNTK from Python right away (don't forget to ``activate`` your Python environment):
 
     >>> import cntk
@@ -17,8 +17,8 @@ pass for that node using its inputs, and returns the result of the forward pass.
 more common case) is as follows:
 
     >>> import numpy as np
-    >>> x = cntk.input(2)
-    >>> y = cntk.input(2)
+    >>> x = cntk.input_variable(2)
+    >>> y = cntk.input_variable(2)
     >>> x0 = np.asarray([[2., 1.]], dtype=np.float32)
     >>> y0 = np.asarray([[4., 6.]], dtype=np.float32)
     >>> cntk.squared_error(x, y).eval({x:x0, y:y0})
@@ -62,8 +62,8 @@ First basic use
 The first step in training or running a network in CNTK is to decide which device it should be run on. If you have access to a GPU, training time 
 can be vastly improved. To explicitly set the device to GPU, set the target device as follows::
 
-    from cntk.device import set_default_device, gpu
-    set_default_device(gpu(0))
+    from cntk.device import try_set_default_device, gpu
+    try_set_default_device(gpu(0))
 
 Now let's setup a network that will learn a classifier with fully connected layers using only the functions :func:`~cntk.layers.higher_order_layers.Sequential`
 and :func:`~cntk.layers.layers.Dense` from the Layers Library. Create a ``simplenet.py`` file with the following contents:

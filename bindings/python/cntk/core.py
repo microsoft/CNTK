@@ -467,7 +467,7 @@ class Value(cntk_py.Value):
         Example:
             >>> num_classes = 6
             >>> sparse_indices = [[1,C.Value.ONE_HOT_SKIP,5],[4]]
-            >>> i0 = C.sequence.input(shape=num_classes, is_sparse=True)
+            >>> i0 = C.sequence.input_variable(shape=num_classes, is_sparse=True)
             >>> z = C.times(i0, np.eye(num_classes))
             >>> value = C.Value.one_hot(sparse_indices, num_classes)
             >>> z.eval({i0: value})
@@ -479,7 +479,7 @@ class Value(cntk_py.Value):
             >>> num_classes = 6
             >>> sample_shape = (2, num_classes)
             >>> sparse_indices = [[1,5,3,2],[4,1]]
-            >>> i0 = C.sequence.input(shape=sample_shape, is_sparse=True)
+            >>> i0 = C.sequence.input_variable(shape=sample_shape, is_sparse=True)
             >>> z = C.times(i0, np.eye(num_classes))
             >>> value = C.Value.one_hot(sparse_indices, sample_shape)
             >>> z.eval({i0: value})
@@ -597,6 +597,13 @@ class Value(cntk_py.Value):
         Whether the data is read-only
         '''
         return super(Value, self).is_read_only()
+    
+    @property
+    def is_valid(self):
+        '''
+        Whether the value is valid or has been invalidated by another forward and/or backward pass
+        '''
+        return super(Value, self).is_valid()
 
     @property
     def dtype(self):

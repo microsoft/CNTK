@@ -45,7 +45,8 @@ CNTKTextFormatReader::CNTKTextFormatReader(const ConfigParameters& config)
                                                                 /*shouldPrefetch =*/ true,
                                                                 /*multithreadedGetNextSequences =*/ false,
                                                                 /*maxNumberOfInvalidSequences =*/ 0,
-                                                                /*sampleBasedRandomizationWindow =*/ configHelper.UseSampleBasedRandomizationWindow());
+                                                                /*sampleBasedRandomizationWindow =*/ configHelper.UseSampleBasedRandomizationWindow(),
+                                                                /*seedOffset =*/ GetRandomSeed(config));
         }
         else
         {

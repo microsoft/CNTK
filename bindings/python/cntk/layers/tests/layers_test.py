@@ -5,7 +5,8 @@
 # ==============================================================================
 
 import numpy as np
-from cntk import Axis, input, reshape, sigmoid, element_max, Function, Constant, greater, default_options, default_options_for, \
+import cntk as C
+from cntk import Axis, reshape, sigmoid, element_max, Function, Constant, greater, default_options, default_options_for, \
                  get_default_override, default_override_or
 from cntk.layers import BlockFunction, Convolution, Convolution1D, Convolution2D, Convolution3D, Dense, Embedding, Fold, For, \
                         MaxPooling, MaxUnpooling, LSTM, GRU, RNNUnit, Sequential, Stabilizer, Dropout, Recurrence, \
@@ -200,8 +201,8 @@ def test_unfold():
     def FU(x):
         return UF(Constant(1), x)
     r = FU(x)
-    exp = [[[ 2 ], [ 4 ], [ 8 ]],
-           [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]]]
+    exp = [[ 2. , 4. , 8.],
+	       [ 2. , 4. , 8. , 16. , 32. ]]
     assert_list_of_arrays_equal(r, exp, err_msg='Error in UnfoldFrom() forward')
 
     ####################################################
@@ -213,8 +214,8 @@ def test_unfold():
     def FU(x):
         return UF(Constant(1), x)
     r = FU(x)
-    exp = [[[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]],         # tests length_increase
-           [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ], [ 64 ]]] # tests early cut-off due to until_predicate
+    exp = [[ 2 , 4 , 8 , 16 , 32 ],         # tests length_increase
+           [ 2 , 4 , 8 , 16 , 32 , 64 ]] # tests early cut-off due to until_predicate
 
     assert_list_of_arrays_equal(r, exp, err_msg='Error in UnfoldFrom(..., until_predicate, length_increase, ...) forward')
 
@@ -248,7 +249,7 @@ def test_recurrent_block(block_type, block_outputs_count, block_size, W_mult, H_
 
     sequenceAxis = Axis('sequenceAxis')
 
-    y = input(input_shape, dynamic_axes=[Axis.default_batch_axis(), sequenceAxis])
+    y = C.input_variable(input_shape, dynamic_axes=[Axis.default_batch_axis(), sequenceAxis])
     data = np.reshape(np.arange(0,16, dtype=np.float32), (1,4,4))
 
     rnn_block = block_type(block_size, init=0.1)
@@ -270,7 +271,7 @@ def test_recurrent_block(block_type, block_outputs_count, block_size, W_mult, H_
 ####################################
 
 def test_layers_dense(device_id):
-    y = input(2)
+    y = C.input_variable(2)
     dat = np.array([[-1., 1.]], dtype=np.float32)
 
     ####################################################
@@ -320,7 +321,7 @@ def test_layers_dense(device_id):
 ########################################
 def test_layers_embedding():
     embDim = 3
-    y = input(2)
+    y = C.input_variable(2)
 
     # embedding base case
     e = Embedding(shape=embDim, name='foo')
@@ -390,7 +391,7 @@ def test_layers_convolution_shape():
     # p: number of zero padding
     # s: strides
     inC, inH, inW = 2, 6, 7
-    y = input((inC, inH, inW))
+    y = C.input_variable((inC, inH, inW))
     in_filter_shape = (3, 2)
     out_num_filters = 4
 
@@ -480,9 +481,6 @@ def test_layers_convolution_shape():
         "Error in convolution with stride > 1 and padding")
 
 def test_layers_convolution_value():
-    from cntk.cntk_py import reset_random_seed
-    reset_random_seed(0)
-
     # Common parameters
     inC, inH, inW = 3, 10, 10
     in_filter_shape = (3, 3)
@@ -492,7 +490,7 @@ def test_layers_convolution_value():
     ##########################################################
     # Test convolutional layer for correctness (p=False s = 1)
     ##########################################################
-    y = input((inC, inH, inW))
+    y = C.input_variable((inC, inH, inW))
     zeropad = False
     in_strides = 1
 
@@ -506,7 +504,7 @@ def test_layers_convolution_value():
     # Extract the W weight matrix
     expected_res = np.sum(model.foo.W.value)
 
-    np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=7, \
+    np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=5, \
         err_msg="Error in convolution computation with stride = 1 and zeropad = False")
 
     ##########################################################
@@ -545,20 +543,20 @@ def test_layers_convolution_value():
     expected_res = np.sum(model.foo.W.value)
 
     # Compare the center of the res with the sum of the weights
-    np.testing.assert_array_almost_equal(res[0][0][1][1], expected_res, decimal=7, \
+    np.testing.assert_array_almost_equal(res[0][0][1][1], expected_res, decimal=6, \
         err_msg="Error in convolution computation with stride = 1 and zeropad = True")
 
     ##########################################################
     # Test convolutional layer for second invocation/parameter sharing
     ##########################################################
-    y1 = input((inC, inH, inW))
+    y1 = C.input_variable((inC, inH, inW))
     res = model(y1).eval({y1: dat}) # this re-clones 'model'
 
     # Extract the W weight matrix
     expected_res = np.sum(model.foo.W.value)
 
     # Compare the center of the res with the sum of the weights
-    np.testing.assert_array_almost_equal(res[0][0][1][1], expected_res, decimal=7, \
+    np.testing.assert_array_almost_equal(res[0][0][1][1], expected_res, decimal=6, \
         err_msg="Error in convolution computation with stride = 1 and zeropad = True, second invocation")
 
     ##########################################################
@@ -581,12 +579,33 @@ def test_layers_convolution_value():
     np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=5,
         err_msg="Error in convolution computation with stride = 2 and zeropad = True")
 
+def test_convolution_consistency_in_different_evals():
+    inC, inH, inW = 1,4,4
+
+    y = C.input_variable((inC,inH, inW))
+
+    cMap = 1
+
+    dat = np.arange(0,16, dtype=np.float32).reshape(1,1,4,4)
+
+    conv = Convolution((2,2), cMap, pad=False, activation=None, name='foo' )(y)
+
+    first_eval_result = conv(dat)
+
+    np.testing.assert_array_almost_equal(conv(dat), first_eval_result, decimal=5,
+        err_msg="Error in convolution consistency, different results for two runs")
+
+def test_failing_convolution():
+    with pytest.raises(ValueError):
+        conv = Convolution((3,3), 1)
+        conv.update_signature(5)
+
 ##########################################################
 # Test convolutional 3D layer for correctness (p=False s = 1)
 ##########################################################
 def test_layers_convolution_3d():
     inC, inH, inW, inD = 1, 3, 3, 3
-    y = input((inC,inH, inW, inD))
+    y = C.input_variable((inC,inH, inW, inD))
     dat = np.ones([1, inC, inH, inW, inD], dtype = np.float32)
 
     model = Convolution3D((3, 3, 3),
@@ -612,7 +631,7 @@ def test_layers_convolution_3d():
 ##########################################################
 def test_layers_convolution_2d():
     inC, inH, inW = 1, 3, 3
-    y = input((inC,inH, inW))
+    y = C.input_variable((inC,inH, inW))
 
     dat = np.ones([1, inC, inH, inW], dtype = np.float32)
 
@@ -632,6 +651,32 @@ def test_layers_convolution_2d():
 
     np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=5, \
         err_msg="Error in convolution2D computation with stride = 1 and zeropad = True")
+
+##########################################################
+# Test convolutional 1D layer for correctness (p=False s = 1)
+##########################################################
+def test_layers_convolution_1d():
+    inC, inW = 1, 3
+    y = C.input_variable((inC, inW))
+
+    dat = np.ones([1, inC, inW], dtype = np.float32)
+
+    model = Convolution1D((3, ),
+                          num_filters=1,
+                          activation=None,
+                          pad=False,
+                          strides=1, name='foo')
+    # shape should be
+    model_shape = model(y).foo.shape
+    np.testing.assert_array_equal(model_shape, (1, 1), \
+        "Error in convolution1D with stride = 1 and padding")
+
+    res = model(y).eval({y: dat})
+
+    expected_res = np.sum(model.foo.W.value)
+
+    np.testing.assert_array_almost_equal(res[0][0][0], expected_res, decimal=5, \
+        err_msg="Error in convolution1D computation with stride = 1 and zeropad = True")
 
 ####################################
 # sequential convolution without reduction dimension
@@ -654,7 +699,7 @@ def test_sequential_convolution_without_reduction_dim():
 
     # these cases failed before
     emb_dim = 10
-    x = input(**Sequence[Tensor[20]])
+    x = C.input_variable(**Sequence[Tensor[20]])
     m = Embedding(emb_dim)(x)
     m = Convolution(filter_shape=3, sequential=True)(m)
 
@@ -685,61 +730,138 @@ def test_1D_convolution_without_reduction_dim():
         Convolution1D((2,3))
 
 ##########################################################
-# Test Deconvolution layer for correctness
+# Test Convolution Transpose layer for correctness
 ##########################################################
-# TESTTODO: Add the test for deconvolution once current bug with lower/upper pad is fixed
-def test_layers_deconvolution():
-    pass
+def test_layers_convolution_transpose():
+    import pytest
+
+    inC, inH, inW = 1, 3, 3
+    in_filter_shape = (3, 3)
+    out_num_filters = 1
+    dat = np.ones([1, inC, inH, inW], dtype = np.float32)
+
+    y = C.input_variable((inC, inH, inW))
+
+    ##########################################################
+    # Test convolutional layer for correctness (p=False s = 1)
+    ##########################################################
+
+    zeropad = False
+    in_strides = 1
+
+    model = ConvolutionTranspose(in_filter_shape,
+                        num_filters=out_num_filters,
+                        activation=None,
+                        pad=zeropad,
+                        strides=in_strides, name='foo')
+    res = model(y).eval({y: dat})
+
+    # Extract the W weight matrix
+    expected_res = np.sum(model.W.value)
+
+    np.testing.assert_array_almost_equal(res[0][0][2][2], expected_res, decimal=6, \
+        err_msg="Error in convolution transpose computation with stride = 1 and zeropad = False")
+
+    ##########################################################
+    # Test convolutional transpose layer for correctness (p=False s = 2)
+    ##########################################################
+    zeropad = False
+    in_strides = 2
+
+    model = ConvolutionTranspose(in_filter_shape,
+                        num_filters=out_num_filters,
+                        activation=None,
+                        pad=zeropad,
+                        strides=in_strides, name='foo')
+    res = model(y).eval({y: dat})
+
+    # Extract the W weight matrix
+    expected_res = model.W.value[0][0][:2,:2]
+
+    np.testing.assert_array_almost_equal(res[0][0][:2,:2], expected_res, decimal=6, \
+        err_msg="Error in convolution transpose computation with stride = 2 and zeropad = False")
+
+    ##########################################################
+    # Test convolutional transpose layer for correctness (p=True s = 1)
+    ##########################################################
+    zeropad = True
+    in_strides = 1
+
+    model = ConvolutionTranspose(in_filter_shape,
+                        num_filters=out_num_filters,
+                        activation=None,
+                        pad=zeropad,
+                        strides=in_strides, name='foo')
+    res = model(y).eval({y: dat})
+
+    expected_res = np.sum(model.W.value)
+
+    np.testing.assert_array_almost_equal(res[0][0][1][1], expected_res, decimal=6, \
+        err_msg="Error in convolution transpose computation with stride = 1 and zeropad = True")
+
+    ##########################################################
+    # Test convolutional transpose layer for correctness (p=True s = 2)
+    ##########################################################
+    zeropad = True
+    in_strides = 2
+
+    model = ConvolutionTranspose(in_filter_shape,
+                        num_filters=out_num_filters,
+                        activation=None,
+                        pad=zeropad,
+                        strides=in_strides, name='foo')
+    res = model(y).eval({y: dat})
+
+    expected_res = model.W.value[0][0][1][1]
+
+    np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=6,
+        err_msg="Error in convolution transpose computation with stride = 1 and zeropad = True")
+
+def test_failing_convolution_transpose():
+    with pytest.raises(ValueError):
+        conv = ConvolutionTranspose((3,3), 1)
+        conv.update_signature(5)
 
 ##########################################################
 # Test Conv/Pooling/Unpooling/Deconvolution and layer for correctness
 ##########################################################
-# TESTTODO: Add the test for deconvolution once current bug with lower/upper pad is fixed
 def test_layers_conv_pool_unpool_deconv():
-    pass
-#    inC, inH, inW = 1,4,4
-#
-#    y = input((inC,inH, inW))
-#
-#    cMap =1
-#
-#
-#    conv = Convolution((2,2), cMap, pad=True, activation=None, name='foo' )(y)
-#
-#    pool = MaxPooling((2,2), (2,2), name='bar')(conv)
-#
-#    unpool = MaxUnpooling ((4,4), (4,4), name ='baz')(pool, conv)
-#
-#    z = Deconvolution((2,2), inC, cMap,
-#                                  lower_pad=(0,2,2),
-#                                  upper_pad=(0,2,2),
-#                                  bias=False,
-#                                  init=glorot_uniform(0.001))(unpool,
-#                                  name='faz')
-#
-#
-#    print(z.faz.shape)
-#
-#    dat = np.arange(0,16, dtype=np.float32).reshape(1,1,4,4)
-#    maxpool   = MaxPooling(filter_shape=(2,2), strides=(2,2), name='bar')
-#    print(maxpool(y).shape)
-#
-#
-#    res = maxpool(y).eval({y: dat})
-#    print(res)
-#
-#    maxunpool = MaxUnpooling(filter_shape=(2,2),
-#                             strides=(2,2),
-#                             name='foo')((maxpool),(y))
-#
-#    # Add a few asserts (1 for value and other for shape once this is running)
+    inC, inH, inW = 1,4,4
+
+    y = C.input_variable((inC,inH, inW))
+
+    cMap = 1
+
+    zero_pad = True
+    conv_init = 1
+    filter_shape = (2,2)
+    pooling_strides = (2,2)
+
+    dat = np.arange(0,16, dtype=np.float32).reshape(1,1,4,4)
+
+    conv = Convolution(filter_shape, cMap, pad=zero_pad, init=conv_init,activation=None)(y)
+
+    pool = MaxPooling(filter_shape, pooling_strides)(conv)
+
+    unpool = MaxUnpooling(filter_shape, pooling_strides)(pool, conv)
+
+    z = ConvolutionTranspose(filter_shape, cMap, init=conv_init, pad=zero_pad)(unpool)
+
+    assert z.shape == y.shape
+
+    res = z(dat)
+
+    expected_res = np.asarray([[30, 64, 34], [76, 160, 84], [46, 96, 50]], np.float32)
+
+    np.testing.assert_array_almost_equal(res[0][0][1:,1:], expected_res, decimal=6,
+        err_msg="Wrong values in conv/pooling/unpooling/conv_transposed")
 
 ##########################################################
 # Test for dropout
 ##########################################################
 def test_layers_dropout():
     dat = np.array([[1., 1., 1., 1.]], dtype=np.float32)
-    y = input(4)
+    y = C.input_variable(4)
     p = Dense(1, activation=None, name='foo')(y)
     z = Dropout(0.75, name='bar')(p)
 
@@ -764,7 +886,7 @@ def test_layers_dropout():
 # Test for Stabilizer
 ##########################################################
 def test_layers_stabilizer():
-    y = input(4)
+    y = C.input_variable(4)
     p = Stabilizer()(y)
 
     dat = np.array([[1.0,2.0,3.0,4.0]], dtype=np.float32)
@@ -778,7 +900,7 @@ def test_layers_stabilizer():
 # Test for LayerNormalization
 ##########################################################
 def test_layers_layer_normalization():
-    y = input(4)
+    y = C.input_variable(4)
     p = LayerNormalization(name='foo')(y)
 
     dat = np.array([[1.0,2.0,3.0,4.0]], dtype=np.float32)
@@ -799,7 +921,7 @@ def test_layers_layer_normalization():
 def test_layers_batch_normalization():
     pass
 #    dat = np.array([[1.0,0.5,1.0,0.5]], dtype=np.float32)
-#    y = input(4)
+#    y = C.input_variable(4)
 #    p = BatchNormalization(init_scale=2
 #                                     normalization_time_constant=0,
 #                                     name ='foo')(y)

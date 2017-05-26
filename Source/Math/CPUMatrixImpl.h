@@ -675,19 +675,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     // Scatter may add more than one source column to the same target, so we must pre-scale with beta, and then just keep adding.
     Scale(beta, us); // if beta is 0, then this will be a memset()
 
-    // race-condition consideration: If idx[] references the same target column multiple times, this can have a race condition,
-    // and hence cannot use parallelism.
-//#pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
-    foreach_column(jIn, a)
-    {
-        auto jOutF = idx(0, jIn);           // this is the column we copy/add into
-        if (std::isnan(jOutF) || jOutF < 0) // negative index means gap
-            continue;
-        size_t jOut = (size_t)jOutF;
-        if (jOut >= GetNumCols())
-            InvalidArgument("DoGatherColumnsOf: Map out of bounds.");
-        ScaleAndAddColumn(/*beta=*/(ElemType)1, &us(0, jOut), &a(0, jIn), us.GetNumRows(), alpha);
-    }
+    ScatterValues(idx.Data(), a.Data(), us.Data(), alpha, idx.GetNumCols(), a.GetNumRows(), GetNumCols(), idx.GetNumRows());
 
     return *this;
 }
@@ -1035,20 +1023,47 @@ template <class ElemType>
 void CPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
 {
     if (sigma <= 0)
-        InvalidArgument("SetUniformRandomValue: sigma must be a positive value.");
+        InvalidArgument("SetGaussianRandomValue: sigma must be a positive value.");
 
     if (IsEmpty())
-        LogicError("SetUniformRandomValue: Matrix is empty.");
+        LogicError("SetGaussianRandomValue: Matrix is empty.");
 
     auto& us = *this;
 
     std::mt19937_64 generator(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
     boost::random::normal_distribution<ElemType> r(mean, sigma);
 
-    // #pragma omp parallel for   // is it thread safe?
+    // #pragma omp parallel for is not thread safe. Also the results would not be deterministic
     foreach_coord (i, j, us)
     {
         us(i, j) = r(generator);
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+{
+    if (sigma <= 0)
+        InvalidArgument("SetTruncatedNormalRandomValue: sigma must be a positive value.");
+
+    if (IsEmpty())
+        LogicError("SetTruncatedNormalRandomValue: Matrix is empty.");
+
+    auto& us = *this;
+
+    std::mt19937_64 generator(seed == USE_TIME_BASED_SEED ? (unsigned long)time(NULL) : seed);
+    boost::random::normal_distribution<ElemType> r(mean, sigma);
+
+    const ElemType high = mean + 2 * sigma;
+    const ElemType low = mean - 2 * sigma;
+    // #pragma omp parallel for is not thread safe. Also the results would not be deterministic
+    foreach_coord(i, j, us)
+    {
+        ElemType tmp = 0;
+        do
+            tmp = r(generator);
+        while (tmp < low || tmp > high ); // Rejection sampling is fine here because the acceptance probability is about 0.9545 
+        us(i, j) = tmp;
     }
 }
 
@@ -1247,7 +1262,7 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
 
 template <class ElemType>
 void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-    ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
     auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
@@ -1271,10 +1286,17 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
     for (long i = 0; i < n; i++)
     {
         ElemType g = grad[i];
-        ElemType adaSqr = adaWeight * smoothAda[i] + (1.0f - adaWeight) * g * g;
-        smoothAda[i] = adaSqr;
-        ElemType ada = sqrt(adaSqr);
-        ElemType w = adaMul * (ElemType)( 1.0 / (ada + 1e-8));
+        ElemType ada;
+        if (!adamax)
+        {
+            ElemType adaSqr = adaWeight * smoothAda[i] + (1.0f - adaWeight) * g * g;
+            smoothAda[i] = adaSqr;
+            ada = sqrt(adaSqr);
+        }
+        else
+            ada = smoothAda[i] = std::max(adaWeight * smoothAda[i], abs(g));
+
+        ElemType w = adaMul * (ElemType)( 1.0 / (ada + epsilon));
         g = momentum * smoothMom[i] + unitGainFactor * g;
         smoothMom[i] = g;
         val[i] -= g * w * learnRatePerSample;
@@ -2943,7 +2965,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>
 
     if (axis >= shape.size())
         LogicError("AssignOneHot: axis is not correct");
-    
     size_t item_size = 1;
     for (size_t i = 0; i < shape.size() && i < axis; i++)
         item_size *= shape[i];
@@ -2954,7 +2975,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>
     auto nCols = a.GetNumCols();
     auto nRows = num_class * a.GetNumRows();
     us.RequireSize(nRows, nCols);
-    
     ElemType* bufPtr = Data();
     ElemType* aBufPtr = a.Data();
     memset(bufPtr, 0, sizeof(ElemType) * nRows *nCols);
@@ -2968,6 +2988,47 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>
             bufPtr[block_id * num_class * item_size + item_id + item_size * (size_t)aBufPtr[i]] = 1;
         }
     }
+
+    return *this;
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::GatherFromTarget(const CPUMatrix<ElemType>& indices, const CPUMatrix<ElemType>& target, size_t row_elements)
+{
+    if (indices.IsEmpty() || target.IsEmpty())
+        LogicError("GatherFromTarget: input matrix is empty.");
+
+    if (row_elements == 0)
+        LogicError("GatherFromTarget: target matrix at least need 1 dim.");
+
+    auto nCols = indices.GetNumCols();
+    auto nRows = indices.GetNumRows() * row_elements;
+    this->RequireSize(nRows, nCols);
+
+    ElemType* indicesBufPtr = indices.Data();
+    ElemType* targetBufPtr = target.Data();
+    ElemType* buffer = Data();
+
+#pragma omp parallel for
+    for (int i = 0; i < indices.GetNumElements(); i++)
+    {
+        memcpy(buffer + i * row_elements, targetBufPtr + ((size_t)indicesBufPtr[i] * row_elements), sizeof(ElemType) * row_elements);
+    }
+
+    return *this;
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements)
+{
+    if (indices.IsEmpty() || values.IsEmpty())
+        LogicError("ScatterToIndices: input matrix is empty.");
+
+    ElemType* indicesBufPtr = indices.Data();
+    ElemType* valueBufPtr = values.Data();
+    ElemType* buffer = Data();
+    
+    ScatterValues(indicesBufPtr, valueBufPtr, buffer, (ElemType)1, indices.GetNumElements(), row_elements, this->GetNumCols());
 
     return *this;
 }
@@ -5955,7 +6016,7 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
     }
 };
 
-// Calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// Calculate alpha in forward-backward calculation. equation (6), (7) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
 // prob (input): the posterior output from the network
 // alpha (output): alpha for forward-backward calculation. 
@@ -6083,7 +6144,7 @@ void _assignAlphaScore(
     }
 }
 
-// Calculate beta in forward-backward calculation, equation (10), (11) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// Calculate beta in forward-backward calculation, equation (10), (11) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // See _assignAlphaScore for the explanation of parameters
 template<class ElemType>
 void _assignBetaScore(
@@ -6178,7 +6239,7 @@ void _assignBetaScore(
     }
 }
 
-// Calculate CTC score. equation (8) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// Calculate CTC score. equation (8) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 template<class ElemType>
 void _assignTotalScore(ElemType *betaScore,
     std::vector<ElemType>& totalScore,
@@ -6200,7 +6261,7 @@ void _assignTotalScore(ElemType *betaScore,
     }
 }
 
-// Calculate derivative, equation (15) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// Calculate derivative, equation (15) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // See _assignAlphaScore for the explanation of parameters
 template<class ElemType>
 void _assignCTCScore(
@@ -6255,7 +6316,7 @@ void _assignCTCScore(
 template<class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
     const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
-    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const std::vector<size_t>& uttToChanInd, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
+    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, CPUMatrix<ElemType> & totalScore, const std::vector<size_t>& uttToChanInd, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
     const std::vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
 {
     // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
@@ -6286,9 +6347,10 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
         _assignCTCScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttToChanInd,
             uttBeginFrame, uttPhoneNum, uttFrameNum, numParallelSequences, maxPhoneNum, totalPhoneNum);
 
+        totalScore(0, 0) = 0.0;
         for (size_t utt = 0; utt < uttNum; utt++)
         {
-            totalScore += scores[utt];
+            totalScore(0,0) -= scores[utt];
         }
 
         return *this;
@@ -7169,6 +7231,37 @@ void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseO
                 break;
             default:
                 LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)regularOpDims.size());
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step)
+{
+    if (!indices || !value || !data)
+        LogicError("ScatterValues: input data is null.");
+
+#pragma omp parallel
+    {
+        int ithread = omp_get_thread_num();
+        int nthread = omp_get_num_threads();
+        for (auto i = 0; i < num_indices; i++)
+        {
+            auto col_r = indices[i * indices_step];
+            if (std::isnan(col_r) || col_r < 0)
+                continue;
+            auto col = (size_t)col_r;
+            //ignore the elements that is not partitioned into this thread
+            if (col % nthread != ithread)
+                continue;
+            
+            if (col >= cols)
+                InvalidArgument("ScatterValues: Indices map out of bounds. %ld >= %ld", (long int)col, (long int)cols);
+
+            auto index = col * rows;
+            auto offset = i * rows;
+            for (auto j = 0; j < rows; j++)
+                data[index + j] = data[index + j] + alpha * value[offset + j];
         }
     }
 }

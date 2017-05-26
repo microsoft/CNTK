@@ -5,11 +5,14 @@ command = TrainNetwork:BNStatistics:Eval
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = "." ; configDir = "$RootDir$" ; dataDir = "$RootDir$" ;
-outputDir = "$rootDir$/Output" ;
+rootDir = "."
+configDir = "$RootDir$"
+dataDir = "$RootDir$"
+outputDir = "$RootDir$/Output"
+modelDir = "$OutputDir$/Models"
 
-meanDir = "$rootDir$/../../../DataSets/ImageNet"
-modelPath = "$outputDir$/Models/ResNet_50"
+meanDir = "$dataDir$"
+modelPath = "$modelDir$/ResNet_50"
 stderr = "$outputDir$/ResNet_50_BS_out"
 
 parallelTrain = true
@@ -25,11 +28,11 @@ TrainNetwork = {
 
         cMap        = 64:128:256:512:1024:2048  
         numLayers   = 2:3:5:2
-        bnTimeConst = 0
+        bnTimeConst = 4096
 
         # stride in BottleneckInc
-        stride1x1 = (2:2)
-        stride3x3 = (1:1)
+        stride1x1 = (1:1)
+        stride3x3 = (2:2)
 
         model = Sequential(
             # conv1 and max pooling
@@ -88,7 +91,7 @@ TrainNetwork = {
         gradUpdateType = "None"
         L2RegWeight = 0.0001
         dropoutRate = 0
-        numMBsToShowResult = 500
+        numMBsToShowResult = 100
 
         disableRegInBatchNormalization = true
 
@@ -113,6 +116,10 @@ TrainNetwork = {
             cropType = "RandomSide"
             jitterType = "UniRatio"
             sideRatio = 0.46666:0.875
+            aspectRatioRadius = 0.8:1.0
+            brightnessRadius = 0.2
+            contrastRadius = 0.2
+            saturationRadius = 0.4
             hflip = true
             meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }

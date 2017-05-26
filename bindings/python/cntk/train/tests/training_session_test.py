@@ -5,23 +5,16 @@
 # ==============================================================================
 
 import os
-import math
-import re
-import numpy as np
+
 from os import listdir
-from shutil import copyfile
 from os.path import isfile, join
-from cntk import Function
-from cntk import times, sequence, as_block, element_select
+from cntk import sequence, parameter, plus, reduce_sum, cntk_py
 from cntk.ops.tests.ops_test_utils import cntk_device
-from ..trainer import *
-from ..training_session import *
-from cntk.learners import *
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
-from cntk import parameter, input, times, plus, reduce_sum, Axis, cntk_py
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, FULL_DATA_SWEEP, INFINITELY_REPEAT
-import pytest
+import cntk as C
+import sys
 
 input_dim = 69
 
@@ -53,32 +46,60 @@ ctf_data = '''\
 10	|S0 61:1 |# A	|S1 32:1 |# ~AH
 '''
 
+ctf_data2 = '''\
+0	|S4 3:1 |# <s>	|S5 3:1 |# <s>
+0	|S4 4:1 |# A	|S5 32:1 |# ~AH
+0	|S4 5:1 |# B	|S5 36:1 |# ~B
+0	|S4 4:1 |# A	|S5 31:1 |# ~AE
+0	|S4 7:1 |# D	|S5 38:1 |# ~D
+0	|S4 12:1 |# I	|S5 47:1 |# ~IY
+0	|S4 1:1 |# </s>	|S5 1:1 |# </s>
+2	|S4 60:1 |# <s>	|S5 3:1 |# <s>
+2	|S4 61:1 |# A	|S5 32:1 |# ~AH
+3	|S4 60:1 |# <s>	|S5 3:1 |# <s>
+3	|S4 61:1 |# A	|S5 32:1 |# ~AH
+4	|S4 60:1 |# <s>	|S5 3:1 |# <s>
+4	|S4 61:1 |# A	|S5 32:1 |# ~AH
+5	|S4 60:1 |# <s>	|S5 3:1 |# <s>
+5	|S4 61:1 |# A	|S5 32:1 |# ~AH
+6	|S4 60:1 |# <s>	|S5 3:1 |# <s>
+6	|S4 61:1 |# A	|S5 32:1 |# ~AH
+7	|S4 60:1 |# <s>	|S5 3:1 |# <s>
+7	|S4 61:1 |# A	|S5 32:1 |# ~AH
+8	|S4 60:1 |# <s>	|S5 3:1 |# <s>
+8	|S4 61:1 |# A	|S5 32:1 |# ~AH
+9	|S4 60:1 |# <s>	|S5 3:1 |# <s>
+9	|S4 61:1 |# A	|S5 32:1 |# ~AH
+10	|S4 60:1 |# <s>	|S5 3:1 |# <s>
+10	|S4 61:1 |# A	|S5 32:1 |# ~AH
+'''
 
-def mb_source(tmpdir, fileprefix, max_samples=FULL_DATA_SWEEP):
+
+def mb_source(tmpdir, fileprefix, max_samples=FULL_DATA_SWEEP, ctf=ctf_data, streams = ['S0', 'S1']):
     ctf_file = str(tmpdir / (fileprefix + '2seqtest.txt'))
     with open(ctf_file, 'w') as f:
-        f.write(ctf_data)
+        f.write(ctf)
 
     mbs = MinibatchSource(CTFDeserializer(ctf_file, StreamDefs(
-        features=StreamDef(field='S0', shape=input_dim, is_sparse=True),
-        labels=StreamDef(field='S1', shape=input_dim, is_sparse=True)
+        features=StreamDef(field=streams[0], shape=input_dim, is_sparse=True),
+        labels=StreamDef(field=streams[1], shape=input_dim, is_sparse=True)
     )),
         randomize=False, max_samples=max_samples)
     return mbs
 
 
 def create_sample_model(device, writer=None):
-    in1 = sequence.input(shape=(input_dim,))
-    labels = sequence.input(shape=(input_dim,))
+    in1 = sequence.input_variable(shape=(input_dim,))
+    labels = sequence.input_variable(shape=(input_dim,))
     p = parameter(shape=(input_dim,), init=10, device=device)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
     errs = classification_error(z, labels)
 
-    lr_per_sample = learning_rate_schedule(
-        [0.3, 0.2, 0.1, 0.0], UnitType.sample)
-    learner = sgd(z.parameters, lr_per_sample)
-    trainer = Trainer(z, (ce, errs), [learner], writer)
+    lr_per_sample = C.learning_rate_schedule(
+        [0.3, 0.2, 0.1, 0.0], C.UnitType.sample)
+    learner = C.sgd(z.parameters, lr_per_sample)
+    trainer = C.Trainer(z, (ce, errs), [learner], writer)
     return (trainer, in1, labels)
 
 
@@ -118,7 +139,7 @@ def test_session_sanity_check(tmpdir, device_id):
         label: mbs.streams.labels
     }
 
-    training_session(
+    C.training_session(
         trainer=t, mb_source=mbs,
         model_inputs_to_streams=input_map,
         mb_size=4
@@ -135,7 +156,7 @@ def test_session_max_samples(tmpdir, device_id):
         label: mbs.streams.labels
     }
 
-    training_session(
+    C.training_session(
         trainer=t, mb_source=mbs,
         model_inputs_to_streams=input_map,
         mb_size=4, max_samples=20
@@ -156,11 +177,11 @@ def test_session_cross_validation_at_end(tmpdir, device_id):
         label: mbs.streams.labels
     }
 
-    training_session(
+    C.training_session(
         trainer=t, mb_source=mbs, 
         mb_size=4, model_inputs_to_streams=input_map,
         max_samples=20,
-        cv_config = CrossValidationConfig(source=mbs1)
+        cv_config = C.CrossValidationConfig(source=mbs1)
     ).train(device)
 
     assert(t.total_number_of_samples_seen == 21)
@@ -179,11 +200,11 @@ def test_session_cross_validation_3_times(tmpdir, device_id):
         label: mbs.streams.labels
     }
 
-    training_session(
+    C.training_session(
         trainer=t, mb_source=mbs, 
         mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60,
-        cv_config = CrossValidationConfig(source=mbs1, frequency=20, mb_size=2),
+        cv_config = C.CrossValidationConfig(source=mbs1, frequency=20, mb_size=2),
     ).train(device)
 
     assert(t.total_number_of_samples_seen == 61)
@@ -204,13 +225,13 @@ def test_session_cross_validation_3_times_checkpoints_2_save_all(tmpdir, device_
 
     test_dir = str(tmpdir)
 
-    training_session(
+    C.training_session(
         trainer=t, mb_source=mbs,
         mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60,
-        checkpoint_config = CheckpointConfig(frequency=35, preserve_all=True,
+        checkpoint_config = C.CheckpointConfig(frequency=35, preserve_all=True,
                                              filename=str(tmpdir / "checkpoint_save_all")),
-        cv_config = CrossValidationConfig(source=mbs1, frequency=20)
+        cv_config = C.CrossValidationConfig(source=mbs1, frequency=20)
     ).train(device)
 
     candidates = [f for f in listdir(test_dir) if isfile(
@@ -241,9 +262,9 @@ def test_session_progress_print(tmpdir, device_id):
 
     test_dir = str(tmpdir)
 
-    training_session(
+    C.training_session(
         trainer=t, mb_source=mbs, 
-        mb_size=minibatch_size_schedule(4),
+        mb_size=C.minibatch_size_schedule(4),
         model_inputs_to_streams=input_map, max_samples=60,
         progress_frequency=10
     ).train(device)
@@ -264,10 +285,10 @@ def test_session_restart_from_end_checkpoint(tmpdir, device_id):
 
     test_dir = str(tmpdir)
 
-    training_session(trainer=t, mb_source=mbs,
+    C.training_session(trainer=t, mb_source=mbs,
         mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60, progress_frequency=20,
-        checkpoint_config = CheckpointConfig(frequency=20,
+        checkpoint_config = C.CheckpointConfig(frequency=20,
                                              filename=str(tmpdir / "restart_from_checkpoint"))
     ).train(device)
 
@@ -285,10 +306,10 @@ def test_session_restart_from_end_checkpoint(tmpdir, device_id):
 
     # restoring from a particular checkpoint should not cause any training
     mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
-    training_session(trainer=t, mb_source=mbs,
+    C.training_session(trainer=t, mb_source=mbs,
         mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60, progress_frequency=20,
-        checkpoint_config = CheckpointConfig(frequency=35, restore=True,
+        checkpoint_config = C.CheckpointConfig(frequency=35, restore=True,
                                              filename=str(tmpdir / "restart_from_checkpoint"))
     ).train(device)
 
@@ -310,10 +331,10 @@ def test_session_restart_from_checkpoint_preserve_all(tmpdir, device_id):
 
     test_dir = str(tmpdir)
 
-    training_session(trainer=t, mb_source=mbs,
+    C.training_session(trainer=t, mb_source=mbs,
         mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60, progress_frequency = 20,
-        checkpoint_config = CheckpointConfig(frequency=20, preserve_all=True,
+        checkpoint_config = C.CheckpointConfig(frequency=20, preserve_all=True,
                                              filename=str(tmpdir / "restart_from_checkpoint"))
     ).train(device)
 
@@ -344,11 +365,11 @@ def test_session_restart_from_checkpoint_preserve_all(tmpdir, device_id):
 
     # restoring from a particular checkpoint and again save everything from the 3 epoch
     mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
-    training_session(
+    C.training_session(
         trainer=t, mb_source=mbs,
         mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60, progress_frequency=20,
-        checkpoint_config = CheckpointConfig(frequency=20, restore=True, preserve_all= True,
+        checkpoint_config = C.CheckpointConfig(frequency=20, restore=True, preserve_all= True,
                                              filename=str(tmpdir / "restart_from_checkpoint"))
     ).train(device)
 
@@ -382,11 +403,11 @@ def test_session_restart_from_checkpoint_preserve_all(tmpdir, device_id):
 
     # restoring from a particular checkpoint and again save everything from the 3 epoch
     mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
-    training_session(
+    C.training_session(
         trainer=t, mb_source=mbs,
         mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60, progress_frequency=20,
-        checkpoint_config = CheckpointConfig(frequency=20, restore=True, preserve_all= True,
+        checkpoint_config = C.CheckpointConfig(frequency=20, restore=True, preserve_all= True,
                                              filename=str(tmpdir / "restart_from_checkpoint"))
     ).train(device)
 
@@ -423,10 +444,10 @@ def test_session_cv_callback_3_times(tmpdir, device_id):
         counter[0] += 1
         return True
 
-    training_session(
+    C.training_session(
         trainer=t, mb_source=mbs, mb_size=4,
         model_inputs_to_streams=input_map, max_samples=60,
-        cv_config = CrossValidationConfig(frequency=20, callback=cv_callback)
+        cv_config = C.CrossValidationConfig(frequency=20, callback=cv_callback)
     ).train(device)
     assert counter == [3]
 
@@ -457,10 +478,10 @@ def test_session_cv_callback_with_cross_validation_3_times(tmpdir, device_id):
         cv_mbs.current_position = initial_position
         return True
 
-    training_session(
+    C.training_session(
         trainer=t, mb_source=mbs, mb_size=4,
         model_inputs_to_streams=input_map, max_samples=60,
-        cv_config = CrossValidationConfig(frequency=20, callback=cv_callback)
+        cv_config = C.CrossValidationConfig(frequency=20, callback=cv_callback)
     ).train(device)
 
     assert(t.total_number_of_samples_seen == 61)
@@ -485,11 +506,11 @@ def test_session_cv_callback_early_exit(tmpdir, device_id):
         counter[0] += 1
         return counter[0] < 1
 
-    training_session(
+    C.training_session(
         trainer=t, mb_source=mbs, mb_size=4,
         model_inputs_to_streams=input_map,
         max_samples=60,
-        cv_config = CrossValidationConfig(frequency=20, callback=cv_callback)
+        cv_config = C.CrossValidationConfig(frequency=20, callback=cv_callback)
     ).train(device)
     assert counter == [1]
 
@@ -506,13 +527,41 @@ def test_session_with_test(tmpdir, device_id):
         label: mbs.streams.labels
     }
 
-    training_session(
+    C.training_session(
         trainer=t, mb_source=mbs, 
         mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60,
-        test_config = TestConfig(source=mbs1, mb_size=2),
+        test_config = C.TestConfig(source=mbs1, mb_size=2),
     ).train(device)
 
     assert(t.total_number_of_samples_seen == 61)
     assert(writer.test_summary_counter == 1)
 
+
+def test_session_with_test_own_inputs(tmpdir, device_id):
+    device = cntk_device(device_id)
+    writer = MockProgressWriter(expected_test_summary=[[92, 25]])
+    t, feature, label = create_sample_model(device, writer)
+
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
+    mbs1 = mb_source(tmpdir, "test", ctf=ctf_data2, streams=['S4', 'S5'])
+
+    input_map = {
+        feature: mbs.streams.features,
+        label: mbs.streams.labels
+    }
+
+    input_map1 = {
+        feature: mbs1.streams.features,
+        label: mbs1.streams.labels
+    }
+
+    C.training_session(
+        trainer=t, mb_source=mbs, 
+        mb_size=4, model_inputs_to_streams=input_map,
+        max_samples=60,
+        test_config = C.TestConfig(source=mbs1, mb_size=2, model_inputs_to_streams = input_map1),
+    ).train(device)
+
+    assert(t.total_number_of_samples_seen == 61)
+    assert(writer.test_summary_counter == 1)

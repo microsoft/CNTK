@@ -1,3 +1,9 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+
 from __future__ import print_function
 from builtins import str
 import pdb, sys, os, time
@@ -6,6 +12,10 @@ import selectivesearch
 from easydict import EasyDict
 from fastRCNN.nms import nms as nmsPython
 from builtins import range
+
+import cv2, copy, textwrap
+from PIL import Image, ImageFont, ImageDraw
+from PIL.ExifTags import TAGS
 
 available_font = "arial.ttf"
 try:
@@ -230,7 +240,7 @@ def parseCntkOutput(cntkImgsListPath, cntkOutputPath, outParsedDir, cntkNrRois, 
 
             # save
             data = np.array(data, np.float32)
-            outPath = outParsedDir + str(imgIndex) + ".dat"
+            outPath = os.path.join(outParsedDir, str(imgIndex) + ".dat")
             if saveCompressed:
                 np.savez_compressed(outPath, data)
             else:
@@ -435,7 +445,10 @@ def visualizeResults(imgPath, roiLabels, roiScores, roiRelCoords, padWidth, padH
                 drawRectangles(imgDebug, [rect], color=color, thickness=thickness)
             elif iter == 2 and label > 0:
                 if not nmsKeepIndices or (roiIndex in nmsKeepIndices):
-                    font = ImageFont.truetype("arial.ttf", 18)
+                    try:
+                        font = ImageFont.truetype(available_font, 18)
+                    except:
+                        font = ImageFont.load_default()
                     text = classes[label]
                     if roiScores:
                         text += "(" + str(round(score, 2)) + ")"
@@ -555,10 +568,6 @@ def im_detect(net, im, boxes, feature_scale=None, bboxIndices=None, boReturnClas
 #    slotName      = e.g. "movie" in: play <movie> terminator </movie>
 #    slot          = e.g. "<movie> terminator </movie>" in: play <movie> terminator </movie>
 
-import cv2, copy, textwrap
-from PIL import Image, ImageFont, ImageDraw
-from PIL.ExifTags import TAGS
-
 def makeDirectory(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -617,7 +626,7 @@ def deleteAllFilesInDirectory(directory, fileEndswithString, boPromptUser = Fals
             exit()
     for filename in getFilesInDirectory(directory):
         if fileEndswithString == None or filename.lower().endswith(fileEndswithString):
-            deleteFile(directory + "/" + filename)
+            deleteFile(os.path.join(directory, filename))
 
 def removeLineEndCharacters(line):
     if line.endswith(b'\r\n'):
@@ -755,12 +764,20 @@ def ptClip(pt, maxWidth, maxHeight):
     pt[1] = min(pt[1], maxHeight)
     return pt
 
-def drawText(img, pt, text, textWidth=None, color = (255,255,255), colorBackground = None, font = ImageFont.truetype("arial.ttf", 16)):
+def drawText(img, pt, text, textWidth=None, color = (255,255,255), colorBackground = None, font = None):
+    # loading default value in function call so the script won't cause errors in system where 
+    # "arial.ttf" cannot be found
+    if font == None:
+        font = ImageFont.truetype("arial.ttf", 16)
     pilImg = imconvertCv2Pil(img)
     pilImg = pilDrawText(pilImg,  pt, text, textWidth, color, colorBackground, font)
     return imconvertPil2Cv(pilImg)
 
-def pilDrawText(pilImg, pt, text, textWidth=None, color = (255,255,255), colorBackground = None, font = ImageFont.truetype("arial.ttf", 16)):
+def pilDrawText(pilImg, pt, text, textWidth=None, color = (255,255,255), colorBackground = None, font = None):
+    # loading default value in function call so the script won't cause errors in system where 
+    # "arial.ttf" cannot be found
+    if font == None:
+        font = ImageFont.truetype("arial.ttf", 16)
     textY = pt[1]
     draw = ImageDraw.Draw(pilImg)
     if textWidth == None:

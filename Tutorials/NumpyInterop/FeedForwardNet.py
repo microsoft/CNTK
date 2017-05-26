@@ -5,19 +5,18 @@
 # ==============================================================================
 
 import numpy as np
-import sys
-import os
 from cntk.device import cpu, try_set_default_device
 from cntk import Trainer
 from cntk.layers import Dense, Sequential, For
 from cntk.learners import sgd, learning_rate_schedule, UnitType
-from cntk.ops import input, sigmoid
+from cntk.ops import input_variable, sigmoid
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
 from cntk.logging import ProgressPrinter
 
 # make sure we get always the same "randomness"
 np.random.seed(0)
+
 
 def generate_random_data(sample_size, feature_dim, num_classes):
     # Create synthetic data using NumPy.
@@ -34,6 +33,7 @@ def generate_random_data(sample_size, feature_dim, num_classes):
 
 # Creates and trains a feedforward classification model
 
+
 def ffnet():
     input_dim = 2
     num_output_classes = 2
@@ -41,8 +41,8 @@ def ffnet():
     hidden_layers_dim = 50
 
     # Input variables denoting the features and label data
-    feature = input((input_dim), np.float32)
-    label = input((num_output_classes), np.float32)
+    feature = input_variable((input_dim), np.float32)
+    label = input_variable((num_output_classes), np.float32)
 
     netout = Sequential([For(range(num_hidden_layers), lambda i: Dense(hidden_layers_dim, activation=sigmoid)),
                          Dense(num_output_classes)])(feature)
@@ -50,7 +50,7 @@ def ffnet():
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
 
-    lr_per_minibatch=learning_rate_schedule(0.5, UnitType.minibatch)
+    lr_per_minibatch = learning_rate_schedule(0.5, UnitType.minibatch)
     # Instantiate the trainer object to drive the model training
     learner = sgd(netout.parameters, lr=lr_per_minibatch)
     progress_printer = ProgressPrinter(128)

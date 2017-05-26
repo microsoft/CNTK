@@ -66,7 +66,7 @@ def test_op_plus_sequences(device_id, precision):
     expected_backward = [AA([[2., 2.], [2., 2.]], dtype=dt_precision), AA([[2., 2.]], dtype=dt_precision)]
 
     from .. import plus, sequence
-    x = sequence.input(shape=(2,), needs_gradient=True)
+    x = sequence.input_variable(shape=(2,), needs_gradient=True)
     z = x + x
     state, actual_forward = z.forward({x : operand}, [z.output], {z.output}, cntk_device(device_id))
     actual_backward = z.backward(state, {z.output : root_gradient}, [x])
@@ -82,8 +82,8 @@ def test_op_plus_gradient_accumulation(device_id, precision):
 
     value = AA([[1]], dtype=dt_precision)
 
-    from cntk import times_transpose, Axis, input
-    a = input(shape=(1,), dtype=dt_precision, needs_gradient=True, name='a')
+    from cntk import times_transpose, Axis
+    a = C.input_variable(shape=(1,), dtype=dt_precision, needs_gradient=True, name='a')
 
     input_op = a + a
 
@@ -127,12 +127,12 @@ def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, p
                    for sample in right_batch]
     right_shape = right_value[0][0].shape
 
-    a = sequence.input(shape=left_shape,
+    a = sequence.input_variable(shape=left_shape,
                        dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
                        needs_gradient=True,
                        name='a')
 
-    b = sequence.input(shape=right_shape,
+    b = sequence.input_variable(shape=right_shape,
                        dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
                        needs_gradient=True,
                        name='b')
@@ -147,10 +147,6 @@ def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, p
                     forward_input, expected_forward,
                     expected_backward,
                     device_id, precision)
-
-# -- minus operation tests --
-# TODO: enable once the function is exposed
-
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_minus(left_operand, right_operand, device_id, precision):
@@ -169,9 +165,6 @@ def test_op_minus(left_operand, right_operand, device_id, precision):
     _test_binary_op(precision, device_id, '-',
                     left_operand, right_operand,
                     expected_forward, expected_backward)
-
-# -- element times tests --
-
 
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_element_times(left_operand, right_operand, device_id, precision):
@@ -192,7 +185,6 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
                     expected_forward, expected_backward)
 
 
-# -- element divide tests --
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_element_divide(left_operand, right_operand, device_id, precision):
     expected_forward = AA([left_operand]) / AA([right_operand])
@@ -320,7 +312,7 @@ def test_op_times_sparse_grad(device_id, precision):
     seq = [i for i in range(dim)]
     identity = np.identity(dim, dtype=dt_precision)
     input_data = Value.one_hot([seq]*num_sequences, dim, dtype=dt_precision)
-    input_var  = sequence.input(shape=(dim), is_sparse=True, needs_gradient=False, dtype=dt_precision)
+    input_var  = sequence.input_variable(shape=(dim), is_sparse=True, needs_gradient=False, dtype=dt_precision)
     e = parameter(shape = (dim, dim), init = identity, dtype=dt_precision)
     z = reshape(times_transpose(e, times(input_var, e)), dim)
     e_grad = z.grad({input_var : input_data}, [e])
@@ -335,9 +327,9 @@ def test_op_times_reduce_sequence_axis(device_id, precision):
     dim = 10
     seq = [[0,1,2], [3], [4,5,6,7,8,9]]
     right_data = Value.one_hot(seq, dim, dtype=dt_precision)
-    right_var = sequence.input(shape=(dim), is_sparse=True, dtype=dt_precision)
+    right_var = sequence.input_variable(shape=(dim), is_sparse=True, dtype=dt_precision)
     left_data = [AA([1,1,1],dtype=dt_precision), AA([1],dtype=dt_precision), AA([1,1,1,1,1,1],dtype=dt_precision)]
-    left_var = sequence.input(shape=(1), dtype=dt_precision)
+    left_var = sequence.input_variable(shape=(1), dtype=dt_precision)
 
     func = times(left_var, right_var, infer_input_rank_to_map=TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK)
     func2 = sequence.reduce_sum(times(left_var, right_var))
@@ -357,7 +349,7 @@ def test_op_times_reduce_sequence_axis(device_id, precision):
 def test_per_dim_mean_var_norm():
     mean = np.asarray([2.], dtype=np.float32)
     inv_stddev = np.asarray([0.5], dtype=np.float32)
-    x = C.input((1,))
+    x = C.input_variable((1,))
     func = C.per_dim_mean_variance_normalize(x, mean, inv_stddev)
     result = func.eval({x : np.asarray([[3.], [1.]], dtype=np.float32)})
     assert np.array_equal(result, [[.5], [-.5]])

@@ -5,18 +5,20 @@
 # ==============================================================================
 
 import numpy as np
+import cntk as C
 
-from cntk.ops import input, abs, square, sqrt, cos
+from cntk.ops import abs, square, sqrt, cos
 from cntk.layers import For, Dense, SequentialClique, ResNetBlock, Sequential
 
 import pytest
 
 @pytest.mark.parametrize("layers_count, dense_units", [(4,5), (6,9), (7, 10)])
 def test_for_constructor_layer(layers_count, dense_units):
-    x = input(4)
+    x = C.input_variable(4)
 
-    network = For(range(layers_count), lambda i: Dense(dense_units))
+    network = For(range(layers_count), lambda i: Dense(dense_units), name="my_for")
 
+    assert network.name == "my_for"
     expected_num_of_parameters = 2 * layers_count
     assert len(network.parameters) == expected_num_of_parameters
 
@@ -42,10 +44,11 @@ INPUT_DATA = [[2, 8],[4, 7, 9], [5, 6, 10]]
 
 @pytest.mark.parametrize("input_data", INPUT_DATA)
 def test_sequential_clique_with_functions(input_data):
-    x = input(len(input_data))
+    x = C.input_variable(len(input_data))
 
-    seq_clique = SequentialClique([abs, sqrt, square])(x)
+    seq_clique = SequentialClique([abs, sqrt, square], name="my_clique")(x)
 
+    assert seq_clique.name == "my_clique"
     assert seq_clique.shape == x.shape
 
     np_data = np.asarray(input_data, np.float32)
@@ -61,7 +64,7 @@ def test_sequential_clique_with_functions(input_data):
 
 @pytest.mark.parametrize("input_elements, expected", [(5,360.0), (7,1344.0)])
 def test_sequential_clique_with_layers(input_elements, expected):
-    x = input(input_elements)
+    x = C.input_variable(input_elements)
     np_data = np.arange(input_elements, dtype=np.float32)
 
     unit_dense = Dense(input_elements, activation=None, init=1)
@@ -77,7 +80,7 @@ def test_sequential_clique_with_layers(input_elements, expected):
 
 @pytest.mark.parametrize("input_data", INPUT_DATA)
 def test_sequential_constructor(input_data):
-    x = input(len(input_data))
+    x = C.input_variable(len(input_data))
     np_data = np.asarray(input_data, np.float32)
 
     seq_layers = Sequential([abs, sqrt, square, cos])(x)
@@ -92,7 +95,7 @@ def test_sequential_constructor(input_data):
 
 @pytest.mark.parametrize("input_data", [[3, 5],[9, 25, 13]])
 def test_resnet_block(input_data):
-    x = input(len(input_data))
+    x = C.input_variable(len(input_data))
 
     res_net = ResNetBlock(square)(x)
 

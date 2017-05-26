@@ -97,7 +97,7 @@ public:
                    ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
 
     void Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-              ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+              ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax=false);
 
     ElemType RmsProp(CPUMatrix<ElemType>& gradients,
                      ElemType RMS_GAMMA,
@@ -155,6 +155,7 @@ public:
     void SetDiagonalValue(const CPUMatrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
     void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
     void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle);
     void AddGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
 
@@ -232,7 +233,7 @@ public:
     // sequence training
     CPUMatrix<ElemType>& DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType& threshhold);
     CPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha);
-    CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const vector<size_t>& uttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
+    CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, CPUMatrix<ElemType>& totalScore, const vector<size_t>& uttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
     CPUMatrix<ElemType>& InplaceSqrt();
     CPUMatrix<ElemType>& AssignSqrtOf(const CPUMatrix<ElemType>& a);
 
@@ -268,6 +269,8 @@ public:
     CPUMatrix<ElemType>& AssignSumOfElements(const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
+    CPUMatrix<ElemType>& GatherFromTarget(const CPUMatrix<ElemType>& indices, const CPUMatrix<ElemType>& target, size_t row_elements);
+    CPUMatrix<ElemType>& ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements);
 
     bool IsEqualTo(const CPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
@@ -544,6 +547,8 @@ protected:
 
 private:
     void Clear();
+
+    void ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step = 1);
 };
 
 typedef CPUMatrix<float> CPUSingleMatrix;

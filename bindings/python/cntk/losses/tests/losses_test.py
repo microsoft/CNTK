@@ -12,10 +12,9 @@ the forward and the backward pass
 from __future__ import division
 import numpy as np
 import pytest
+import cntk as C
 from cntk.ops.tests.ops_test_utils import _test_binary_op, AA, precision, PRECISION_TO_TYPE,\
         unittest_helper
-
-from cntk import input
 
 TARGET_OUT_PAIRS = [
     # (target_vector, output_vector)
@@ -152,9 +151,9 @@ def test_lambda_rank(grad, value, output, gain, device_id, precision):
 
     from cntk.losses import lambda_rank
 
-    g = input((1,))
-    s = input((1,), needs_gradient=True)
-    n = input((1,))
+    g = C.input_variable((1,))
+    s = C.input_variable((1,), needs_gradient=True)
+    n = C.input_variable((1,))
     f = lambda_rank(s, n, g)
 
     actual_grad, actual_value = f.grad({s:score, n:gain, g:group}, [s], [f.output])

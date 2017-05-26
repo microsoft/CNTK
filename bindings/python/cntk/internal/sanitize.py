@@ -6,6 +6,7 @@
 import numbers
 import collections
 import numpy as np
+import cntk as C
 
 from .. import cntk_py
 from ..axis import Axis
@@ -17,6 +18,15 @@ def is_string(s):
     Tests whether ``s`` is a string in a way that works on Python 2 and 3.
     '''
     return isinstance(s, ("".__class__, u"".__class__))
+
+def is_byte_buffer(s):
+    '''
+    Tests whether ``s`` is a byte buffer (not a string) in a way that
+    works on Python 2 and 3.
+    '''
+    return (isinstance(s, bytearray) or
+        (isinstance(s, type(b'')) and not isinstance(b'', str)))
+
 
 def _as_tuple(x):
     '''
@@ -65,12 +75,12 @@ def sanitize_shape(shape):
 def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """sanitize_input(arg, fallback_dtype=np.float32, reshape=None)
     Convert to :class:`~cntk.variables.Variable` so that it can be passed
-    as Variable to the CNTK operators. 
+    as Variable to the CNTK operators.
 
       * If ``arg`` is a NumPy array and its type is neither `np.float32` nor
         `np.float64`, it sets it to `np.float32`.
       * If ``arg`` is an op, it is assumed that it has only one output, which
-        will be returned. 
+        will be returned.
 
     Args:
         arg (number, NumPy array, :class:`~cntk.variables.Variable`, or :class:`~cntk.ops.functions.Function`): input
@@ -96,7 +106,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
         return arg
 
     if isinstance(arg, Variable._Type):
-        raise ValueError("Input is a type object (" + str(arg) + "). Did you mean to pass 'input(" + str(arg) + ")'?")
+        raise ValueError("Input is a type object (" + str(arg) + "). Did you mean to pass 'input_variable(**" + str(arg) + ")'?")
 
     # maybe a Python list that we can interpret as a NumPy array?
     if isinstance(arg, list) and not arg:
@@ -105,9 +115,6 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     if not isinstance(arg, np.ndarray) or arg.dtype != fallback_dtype:
         # TODO: check whether Values can be ingested directly
         arg = asarray(arg, fallback_dtype)
-
-        if arg.shape == ():
-            arg.shape = (1,)
 
     if reshape:
         arg = np.reshape(arg, reshape)
@@ -198,7 +205,7 @@ def sanitize_value(shape, value, dtype, device):
 
 def sanitize_function(arg):
     '''
-    Tries to retrieve a Function from the argument or throws an exception if
+    Tries to retrieve a Function from the argument or raises a TypeError if
     that's not possible.
     '''
     from cntk.ops import combine
@@ -213,6 +220,36 @@ def sanitize_function(arg):
                         str(type(arg)))
 
     return arg
+
+
+def sanitize_variable_or_function(arg):
+    '''
+    Tries to retrieve a Variable or Function from the argument or raises a
+    TypeError if that's not possible.
+    '''
+    if isinstance(arg, (cntk_py.Variable, cntk_py.Function)):
+        return arg
+    else:
+        raise TypeError("expected an instance of Variable or single-output "
+                        "Function, but got '%s' instead" % str(type(arg)))
+
+
+def sanitize_variables_or_functions(arg):
+    '''
+    Tries to retrieve a list of Variables or Functions from the argument or
+    throws an exception if that's not possible. If `arg` is not an iterable, it
+    tries to return a list of a single item of the Variable or Function, or
+    raises a TypeError, if that's possible.
+    '''
+    if isinstance(arg, collections.Iterable):
+        try:
+            return [sanitize_variable_or_function(o) for o in arg]
+        except TypeError:
+            raise TypeError("expected list of Variables or single-output "
+                            "Functions, but got [%s] instead" %
+                            ', '.join(str(type(o)) for o in arg))
+    else:
+        return [sanitize_variable_or_function(arg)]
 
 
 def sanitize_var_map(op_arguments, arguments, precision=None,
@@ -427,7 +464,7 @@ def sanitize_axis(axis):
     else:
         return axis
 
-def sanitize_axis_list(axes): 
+def sanitize_axis_list(axes):
     '''
     Sanitizes a list of axes.
 
@@ -443,7 +480,7 @@ def sanitize_axis_list(axes):
     if not type(axes) in (list, tuple):
         axes = [axes]
     retAxes = []
-    for ax in axes: 
+    for ax in axes:
         retAxes.append(sanitize_axis(ax))
     return retAxes
 
@@ -471,12 +508,12 @@ def _sanitize_common_conv_args(strides, auto_padding):
     auto_padding = list(reversed(auto_padding))
 
     return strides, auto_padding
-    
+
 def sanitize_pooling_args(pooling_window_shape, strides, auto_padding):
     pooling_window_shape = sanitize_shape(pooling_window_shape)
     strides, auto_padding = _sanitize_common_conv_args(strides, auto_padding)
     return pooling_window_shape, strides, auto_padding
-    
+
 def sanitize_convolution_args(strides, sharing, auto_padding):
     strides, auto_padding = _sanitize_common_conv_args(strides, auto_padding)
 
@@ -497,6 +534,26 @@ def sanitize_Function_attributes(attributes):
 
     return attributes
 
+def sanitize_permutation(perm):
+    # Find the permutation such that when it is applied to the reverse
+    # of an input gives the reverse of perm applied to the input
+    # Example:
+    # input is [a, b, c, d], perm is [3, 0, 2, 1], perm of input is [d, a, c, b]
+    # we are looking for [2, 1, 3, 0] because when we apply it to [d, c, b, a]
+    # the result is [b, c, a, d] which is the revese of [d, a, c, b]
+
+    n = len(perm)
+    # first make sure the range of each element is valid
+    if not all(-n <= i < n for i in perm):
+        raise ValueError('invalid permutation element: elements must be from {-len(perm), ..., len(perm)-1}')
+    # next take care of negative indices
+    positive_perm = [perm[i] if perm[i]>=0 else n+perm[i] for i in range(n)]
+    # check for duplicates
+    if n != len(set(positive_perm)):
+        raise ValueError('duplicate item in permutation')
+    return [n-i-1 for i in reversed(positive_perm)]
+
+# Workaround for Python 2.7 not having functools.lru_cache
 def memoize(func):
     class memodict(dict):
         def __init__(self, f):
@@ -510,12 +567,10 @@ def memoize(func):
 
 @memoize
 def _sparse_to_dense_network_cache(input_shape, is_sequence, device):
-    from cntk.ops import times, input, sequence
-
     if is_sequence:
-        temp_input = sequence.input(input_shape, is_sparse=True)
+        temp_input = C.sequence.input_variable(input_shape, is_sparse=True)
     else:
-        temp_input = input(input_shape, is_sparse=True)
+        temp_input = C.input_variable(input_shape, is_sparse=True)
 
     eye_shape = input_shape[-1]
-    return times(temp_input, np.eye(eye_shape))
+    return C.times(temp_input, np.eye(eye_shape))

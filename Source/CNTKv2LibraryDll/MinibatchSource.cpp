@@ -337,7 +337,9 @@ namespace CNTK
         return color;
     }
 
-    Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    Deserializer BuildImageDeserializer(const std::wstring deserializer,
+        const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels,
+        const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms) 
     {
         Deserializer img;
         std::vector<DictionaryValue> actualTransforms;
@@ -348,8 +350,20 @@ namespace CNTK
         xforms[L"transforms"] = actualTransforms;
         Dictionary input;
         input.Add(imageStreamName.c_str(), xforms, labelStreamName.c_str(), labeldim);
-        img.Add(L"type", L"ImageDeserializer", L"file", fileName, L"input", input);
+        img.Add(L"type", deserializer, L"file", fileName, L"input", input);
         return img;
+    }
+
+    Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, 
+        const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    {
+        return BuildImageDeserializer(L"ImageDeserializer", fileName, labelStreamName, numLabels, imageStreamName, transforms);
+    }
+
+    Deserializer Base64ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, 
+        const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    {
+        return BuildImageDeserializer(L"Base64ImageDeserializer", fileName, labelStreamName, numLabels, imageStreamName, transforms);
     }
 
     Deserializer CTFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams)
@@ -362,6 +376,7 @@ namespace CNTK
             Dictionary stream;
             stream[L"dim"] = s.m_dim;
             stream[L"format"] = s.m_isSparse ? L"sparse" : L"dense";
+            stream[L"definesMBSize"] = s.m_definesMbSize;
             if (!s.m_streamAlias.empty())
                 stream[L"alias"] = s.m_streamAlias;
             input[key] = stream;
@@ -380,13 +395,14 @@ namespace CNTK
             Dictionary stream;
             std::vector<DictionaryValue> ctxWindow = { DictionaryValue(s.m_left), DictionaryValue(s.m_right) };
             stream.Add(L"scpFile", s.m_scp, L"dim", s.m_dim, L"contextWindow", ctxWindow, L"expandToUtterance", s.m_broadcast);
+            stream[L"definesMBSize"] = s.m_definesMbSize;
             input[key] = stream;
         }
         htk.Add(L"type", L"HTKFeatureDeserializer", L"input", input);
         return htk;
     }
 
-    Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles)
+    Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries)
     {
         Deserializer htk;
         Dictionary stream;
@@ -400,6 +416,10 @@ namespace CNTK
             labels[L"mlfFile"] = actualFiles[0];
         else
             LogicError("HTKMLFDeserializer: No mlf files were specified");
+        if (phoneBoundaries)
+            labels[L"phoneBoundaries"] = L"true";
+        else
+            labels[L"phoneBoundaries"] = L"false";
         stream[streamName] = labels;
         htk.Add(L"type", L"HTKMLFDeserializer", L"input", stream);
         return htk;
@@ -433,12 +453,14 @@ namespace CNTK
                 augmentedConfiguration[L"randomize"] = true;
                 augmentedConfiguration[L"randomizationWindow"] = configuration.randomizationWindowInSamples;
                 augmentedConfiguration[L"sampleBasedRandomizationWindow"] = true;
+                augmentedConfiguration[L"randomizationSeed"] = configuration.randomizationSeed;
             }
             else if (configuration.randomizationWindowInChunks != 0) 
             {
                 augmentedConfiguration[L"randomize"] = true;
                 augmentedConfiguration[L"randomizationWindow"] = configuration.randomizationWindowInChunks;
                 augmentedConfiguration[L"sampleBasedRandomizationWindow"] = false;
+                augmentedConfiguration[L"randomizationSeed"] = configuration.randomizationSeed;
             }
             else 
             {
@@ -464,6 +486,7 @@ namespace CNTK
                 static const std::unordered_map<std::wstring, std::wstring> deserializerTypeNameToModuleNameMap = {
                     { L"CNTKTextFormatDeserializer", L"CNTKTextFormatReader" },
                     { L"ImageDeserializer",          L"ImageReader" },
+                    { L"Base64ImageDeserializer",    L"ImageReader" },
                     { L"HTKFeatureDeserializer",     L"HTKDeserializers" },
                     { L"HTKMLFDeserializer",         L"HTKDeserializers" },
                 };

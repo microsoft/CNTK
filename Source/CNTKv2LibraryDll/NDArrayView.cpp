@@ -503,6 +503,14 @@ namespace CNTK
         return scalar;
     }
 
+    std::wstring NDArrayView::AsString() const
+    {
+        wstringstream wss;
+        std::wstring device = DeviceKindName(m_device.Type());
+        wss << L"NDArrayView(" << m_viewShape.AsString() << L", " << device << L")";
+        return wss.str();
+    }
+
     // Explicit template instantiations
     template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<float>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
     template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<double>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);

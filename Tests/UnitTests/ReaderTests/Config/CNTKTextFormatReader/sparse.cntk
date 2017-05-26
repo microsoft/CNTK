@@ -1,5 +1,6 @@
 # deviceId = -1 for CPU, >= 0 for GPU devices
 deviceId = -1
+defMbSize=false
 
 1x1 = [
     precision = "float"
@@ -13,6 +14,7 @@ deviceId = -1
 
         input = [
              features = [
+                definesMbSize=$defMBSize$
                 alias = "F0"
                 dim = 10000
                 format = "sparse"
@@ -32,6 +34,7 @@ deviceId = -1
 
         input = [
              features = [
+                definesMbSize=$defMBSize$
                 alias = "F0"
                 dim = 1000
                 format = "sparse"
@@ -51,6 +54,7 @@ deviceId = -1
 
         input = [
              features = [
+                definesMbSize=$defMBSize$
                 alias = "F0"
                 dim = 100
                 format = "sparse"
@@ -70,6 +74,7 @@ deviceId = -1
 
         input = [
              features = [
+                definesMbSize=$defMBSize$
                 alias = "F0"
                 dim = 100
                 format = "sparse"
@@ -90,6 +95,7 @@ deviceId = -1
 
         input = [
              features1 = [
+                definesMbSize=$defMBSize$
                 alias = "F0"
                 dim = 2
                 format = "sparse"
@@ -123,6 +129,7 @@ deviceId = -1
 
         input = [
              features1 = [
+                definesMbSize=$defMBSize$
                 alias = "F0"
                 dim = 2
                 format = "sparse"
