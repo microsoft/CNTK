@@ -156,7 +156,6 @@ class Learner(cntk_py.Learner):
         _verify_learning_rate_type(learning_rate)
         return super(Learner, self).reset_learning_rate(learning_rate)
 
-    @property
     def learning_rate(self):
         '''
         Current learning rate schedule.

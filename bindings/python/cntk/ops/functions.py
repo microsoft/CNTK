@@ -1366,7 +1366,7 @@ class Function(cntk_py.Function):
                               progress_frequency=progress_frequency, max_samples=max_samples,
                               checkpoint_config=configs.checkpoint_configs[0], cv_config=configs.cv_configs[0], test_config=configs.test_configs[0])
         ts.train()
-        res = Record(updates=collector.training_updates, epoch_summaries=collector.training_summaries) if len(collector.training_summaries > 0) else \
+        res = Record(updates=collector.training_updates, epoch_summaries=collector.training_summaries) if len(collector.training_summaries) > 0 else \
               Record(updates=[Record(loss=0, metric=0, samples=0)], epoch_summaries=[Record(loss=0, metric=0, samples=0)])
         if configs.test_configs[0]:
             res = res.updated_with(test_summary=collector.test_summaries[-1])

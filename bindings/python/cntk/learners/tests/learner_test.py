@@ -64,10 +64,10 @@ def test_learner_init():
     res = i * w
 
     learner = sgd(res.parameters, lr=learning_rate_schedule(0.1, UnitType.sample))
-    assert learner.learning_rate == 0.1
+    assert learner.learning_rate() == 0.1
     
     learner.reset_learning_rate(learning_rate_schedule([1,2,3], UnitType.minibatch));
-    assert learner.learning_rate == 1.0
+    assert learner.learning_rate() == 1.0
 
     learner_parameter = learner.parameters
     from cntk.variables import Parameter
@@ -127,15 +127,15 @@ def test_learner_update():
     res = i * w
 
     learner = sgd(res.parameters, lr=learning_rate_schedule([0.1]*50 + [0.2]*50, UnitType.sample, 1))
-    assert learner.learning_rate == 0.1
+    assert learner.learning_rate() == 0.1
     x = learner.update({w: np.asarray([[2.]], dtype=np.float32)}, 100)
-    assert learner.learning_rate == 0.2
+    assert learner.learning_rate() == 0.2
     assert w.value < w_init
 
     learner.reset_learning_rate(learning_rate_schedule([0.3]*50 + [0.4]*50, UnitType.sample, 1));
-    assert learner.learning_rate == 0.3
+    assert learner.learning_rate() == 0.3
     x = learner.update({w: np.asarray([[2.]], dtype=np.float32)}, 100)
-    assert learner.learning_rate == 0.4
+    assert learner.learning_rate() == 0.4
 
 
 def test_noise_injection_with_checkpointing():
@@ -264,22 +264,22 @@ def test_sweep_based_schedule(tmpdir, device_id):
     # fetch minibatch (first sequence)
     data = mbs.next_minibatch(1, input_map=input_map) 
     trainer.train_minibatch(data)
-    assert learner.learning_rate == 0.3
+    assert learner.learning_rate() == 0.3
 
     # fetch minibatch (second sequence, sweep ends at this point)
     data = mbs.next_minibatch(1, input_map=input_map)
     trainer.train_minibatch(data)
-    assert learner.learning_rate == 0.2
+    assert learner.learning_rate() == 0.2
 
     # fetch minibatch (both sequences -- entire sweep in one go)
     data = mbs.next_minibatch(9, input_map=input_map)
     trainer.train_minibatch(data)
-    assert learner.learning_rate == 0.1
+    assert learner.learning_rate() == 0.1
 
     # fetch minibatch (multiple sweeps)
     data = mbs.next_minibatch(30, input_map=input_map)
     trainer.train_minibatch(data, outputs=[z.output])
-    assert learner.learning_rate == 0.0
+    assert learner.learning_rate() == 0.0
 
 
 def generate_random_data(sample_size, feature_dim, num_classes):
