@@ -885,6 +885,74 @@ namespace CNTK
             out.insert({ o, nullptr });
         update->Forward(m_empty, out, parameter.Value()->Device());
     }
+    
+    LearnerBatchUniversal::LearnerBatchUniversal(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc)
+        : LearnerBase(parameters, LearningRateSchedule(1.0, CNTK::LearningRateSchedule::UnitType::Sample), AdditionalLearningOptions(), /*allocateSmoothGradients*/ false)
+    {
+        if (parameters.size() != gradients.size())
+            LogicError("Number of parameters (%zd) does not match number of gradients (%zd)", parameters.size(), gradients.size());
+
+        for (size_t i = 0; i < parameters.size(); ++i)
+        {
+            auto&& param = parameters[i];
+            auto&& grad = gradients[i];
+            auto&& inputs = updateFunc->Inputs();
+            if (std::find(inputs.begin(), inputs.end(), param) == inputs.end())
+                LogicError("Update function does not contain the parameter %ls in its computation", param.AsString().c_str());
+            if (std::find(inputs.begin(), inputs.end(), grad) == inputs.end())
+                fprintf(stderr, "WARNING: Update function does not contain the gradient for parameter %ls in its computation\n", param.AsString().c_str());
+            m_parameter_gradient_map.insert({parameters[i], gradients[i]});
+        }
+        AllocateDummySmoothedGradients(parameters);
+        m_update_func = updateFunc;
+    }
+
+    bool LearnerBatchUniversal::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd)
+    {
+        ReportTrainingParameterValue(m_learningRateSchedule, L"Learning rate");
+
+        if (LearningRate(trainingSampleCount) == 0.0)
+        {
+            return false;
+        }
+
+        // make sure trainingSampleCount is a valid value
+        if (trainingSampleCount == 0)
+            InvalidArgument("Learner::Update() cannot perform an update with an empty minibatch.");
+
+        static const std::unordered_map<Variable, ValuePtr> m_empty = {};
+        
+        for (const auto& parameter : Parameters())
+        {
+            const auto& gradientValue = gradientValues.at(parameter);
+            auto it = m_parameter_gradient_map.find(parameter);
+            if (it == m_parameter_gradient_map.end())
+                LogicError("Parameter %ls does not found in universal learner's list", parameter.AsString().c_str());
+            auto grad = Constant(it->second);
+            grad.SetValue(gradientValue);
+        }
+
+        FunctionPtr update = m_update_func;
+        std::unordered_map<Variable, ValuePtr> out;
+        for (const auto& o : update->Outputs())
+            out.insert({o, nullptr});
+
+        update->Forward(m_empty, out, m_parameters.front().Value()->Device());
+
+        m_sampleCount += trainingSampleCount;
+        m_minibatchCount++;
+        if (sweepEnd)
+        {
+            m_sweepCount++;
+        }
+
+        return true;
+    }
+
+    void LearnerBatchUniversal::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+    {
+        LogicError("Shouldn't trigger here.");
+    }
 
     LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func)
     {
@@ -896,4 +964,8 @@ namespace CNTK
         return MakeSharedObject<LearnerUniversal>(parameters, updates);
     }
 
+    LearnerPtr BatchUniversalLearner(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc)
+    {
+        return MakeSharedObject<LearnerBatchUniversal>(parameters, gradients, updateFunc);
+    }
 }
