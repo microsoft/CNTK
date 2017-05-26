@@ -1049,6 +1049,9 @@ public:
     {
         auto& refValue = InputRef(0).Value();
         refValue.AssignValuesOf(*m_result);
+
+        // We update Input(0) so bump the timestamp for the new data.
+        Input(0)->BumpEvalTimeStamp();
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
