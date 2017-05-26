@@ -126,16 +126,16 @@ def test_depth_first_search(depth):
 @pytest.mark.parametrize("depth,prefix_count", [
     (0, {
             "Input('image'":1,
-            "blocked_dense(":1,
+            "blocked_dense:":1,
             "Dense(":1,
             "MaxPooling(":1,
             "Convolution(":1,
-            "Parameter('W'":2,
-            "Parameter('b'":2,
+            "Parameter('W'":3,
+            "Parameter('b'":3,
             }),
      (1, {
             "Input('image'":1,
-            "blocked_dense(":1,
+            "blocked_dense:":1,
             "Dense(":2,
             "MaxPooling(":1,
             "Convolution(":1,
@@ -144,30 +144,29 @@ def test_depth_first_search(depth):
             }),
      (2, {
             "Input('image'":1,
-            "blocked_dense(":1,
+            "blocked_dense:":1,
             "Dense(":2,
             "MaxPooling(":1,
             "Convolution(":1,
             "Parameter('W'":3,
             "Parameter('b'":3,
             # in addition to depth=1...
-            "Plus(":1,
-            "Times(":1,
+            "Plus(":2,
+            "Times(":2,
             }),
      (-1, {
             "Input('image'":1,
-            "blocked_dense(":1,
+            "blocked_dense:":1,
             "Dense(":2,
             "MaxPooling(":1,
-            "Convolution(":1,
+            "Convolution(":2,
             "Parameter('W'":3,
             "Parameter('b'":3,
             "Times(":2,
             # in addition to depth=2...
             "Plus(":3,
-            "ReLU"(1,
-            "Pooling(Tensor": 1,
-            "Convolution(Tensor": 1,
+            "ReLU(":1,
+            "Pooling(Tensor":1,
             }),
      ])
 def test_depth_first_search_blocks(depth, prefix_count):
