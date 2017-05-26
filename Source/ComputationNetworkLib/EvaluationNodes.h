@@ -796,7 +796,7 @@ public:
         auto& dims = GetSampleLayout().GetDims();
         vector<size_t> shape;
         shape.assign(dims.begin(), dims.end());
-        
+
         if (m_offset < 0)
         {
             CalculateAxisOffset();
@@ -814,6 +814,7 @@ public:
     virtual bool OutputUsedInComputingInputNodesGradients() const override {
         return false;
     }
+
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override {
         return false;
     }
@@ -823,7 +824,6 @@ public:
         Base::Validate(isFinalValidationPass);
 
         Base::m_isValueSparse = m_sparse;
-
         if (m_offset < 0)
         {
             CalculateAxisOffset();
@@ -843,13 +843,12 @@ public:
         }
 
         auto sampleLayout = TensorShape(dims);
-
         m_pMBLayout = Input(0)->GetMBLayout();
+
         SetDims(sampleLayout, HasMBLayout());
     }
 
 protected:
-
     void CalculateAxisOffset()
     {
         if (m_offset < 0)

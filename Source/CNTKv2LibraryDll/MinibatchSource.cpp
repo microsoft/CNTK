@@ -35,6 +35,14 @@ namespace CNTK
         return GetNextMinibatch(minibatchSizeInSequences, minibatchSizeInSamples, 1, 0, device);
     }
 
+    template<typename DataType>
+    std::wstring pair_to_colon_format(const pair<DataType, DataType>& pair)
+    {
+        std::wostringstream str;
+        str << pair.first << L":" << pair.second;
+        return str.str();
+    }
+
     MinibatchSourceConfig::MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, bool randomize/* = true*/) 
         : deserializers(deserializers)
     {
@@ -290,16 +298,24 @@ namespace CNTK
     }
 
     /* static */ ImageTransform ReaderCrop(const wchar_t* cropType,
-            int cropSize, float sideRatio, float areaRatio,
-            float aspectRatio, const wchar_t* jitterType)
+            std::pair<int, int> cropSize, std::pair<float, float> sideRatio, std::pair<float, float> areaRatio,
+            std::pair<float, float> aspectRatio, const wchar_t* jitterType)
     {
         ImageTransform crop;
+
+        if (sideRatio.first > sideRatio.second)
+            RuntimeError("For sideRatio values: the first number must be smaller than or equal to the second number.");
+        if (areaRatio.first > areaRatio.second)
+            RuntimeError("For areaRatio values: the first number must be smaller than or equal to the second number.");
+        if (aspectRatio.first > aspectRatio.second)
+            RuntimeError("For aspectRatio values: the first number must be smaller than or equal to the second number.");
+
         crop.Add(L"type", L"Crop",
             L"cropType", cropType,
-            L"cropSize", cropSize,
-            L"sideRatio", sideRatio,
-            L"areaRatio", areaRatio,
-            L"aspectRatio", aspectRatio,
+            L"cropSize", pair_to_colon_format(cropSize),
+            L"sideRatio", pair_to_colon_format(sideRatio),
+            L"areaRatio", pair_to_colon_format(areaRatio),
+            L"aspectRatio", pair_to_colon_format(aspectRatio),
             L"jitterType", jitterType);
         return crop;
     }
@@ -337,7 +353,9 @@ namespace CNTK
         return color;
     }
 
-    Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    Deserializer BuildImageDeserializer(const std::wstring deserializer,
+        const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels,
+        const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms) 
     {
         Deserializer img;
         std::vector<DictionaryValue> actualTransforms;
@@ -348,8 +366,20 @@ namespace CNTK
         xforms[L"transforms"] = actualTransforms;
         Dictionary input;
         input.Add(imageStreamName.c_str(), xforms, labelStreamName.c_str(), labeldim);
-        img.Add(L"type", L"ImageDeserializer", L"file", fileName, L"input", input);
+        img.Add(L"type", deserializer, L"file", fileName, L"input", input);
         return img;
+    }
+
+    Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, 
+        const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    {
+        return BuildImageDeserializer(L"ImageDeserializer", fileName, labelStreamName, numLabels, imageStreamName, transforms);
+    }
+
+    Deserializer Base64ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, 
+        const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    {
+        return BuildImageDeserializer(L"Base64ImageDeserializer", fileName, labelStreamName, numLabels, imageStreamName, transforms);
     }
 
     Deserializer CTFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams)
@@ -362,6 +392,7 @@ namespace CNTK
             Dictionary stream;
             stream[L"dim"] = s.m_dim;
             stream[L"format"] = s.m_isSparse ? L"sparse" : L"dense";
+            stream[L"definesMBSize"] = s.m_definesMbSize;
             if (!s.m_streamAlias.empty())
                 stream[L"alias"] = s.m_streamAlias;
             input[key] = stream;
@@ -380,6 +411,7 @@ namespace CNTK
             Dictionary stream;
             std::vector<DictionaryValue> ctxWindow = { DictionaryValue(s.m_left), DictionaryValue(s.m_right) };
             stream.Add(L"scpFile", s.m_scp, L"dim", s.m_dim, L"contextWindow", ctxWindow, L"expandToUtterance", s.m_broadcast);
+            stream[L"definesMBSize"] = s.m_definesMbSize;
             input[key] = stream;
         }
         htk.Add(L"type", L"HTKFeatureDeserializer", L"input", input);
@@ -437,12 +469,14 @@ namespace CNTK
                 augmentedConfiguration[L"randomize"] = true;
                 augmentedConfiguration[L"randomizationWindow"] = configuration.randomizationWindowInSamples;
                 augmentedConfiguration[L"sampleBasedRandomizationWindow"] = true;
+                augmentedConfiguration[L"randomizationSeed"] = configuration.randomizationSeed;
             }
             else if (configuration.randomizationWindowInChunks != 0) 
             {
                 augmentedConfiguration[L"randomize"] = true;
                 augmentedConfiguration[L"randomizationWindow"] = configuration.randomizationWindowInChunks;
                 augmentedConfiguration[L"sampleBasedRandomizationWindow"] = false;
+                augmentedConfiguration[L"randomizationSeed"] = configuration.randomizationSeed;
             }
             else 
             {
@@ -468,6 +502,7 @@ namespace CNTK
                 static const std::unordered_map<std::wstring, std::wstring> deserializerTypeNameToModuleNameMap = {
                     { L"CNTKTextFormatDeserializer", L"CNTKTextFormatReader" },
                     { L"ImageDeserializer",          L"ImageReader" },
+                    { L"Base64ImageDeserializer",    L"ImageReader" },
                     { L"HTKFeatureDeserializer",     L"HTKDeserializers" },
                     { L"HTKMLFDeserializer",         L"HTKDeserializers" },
                 };

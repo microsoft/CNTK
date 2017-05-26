@@ -1308,22 +1308,21 @@ void GPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemTy
     PrepareDevice();
     CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
 
-    cudaEvent_t done = nullptr;
-    CUDA_CALL(cudaEventCreate(&done)); // TODO: why not condition on do_sync, so that we can use SyncGuard?
-    if (sizeof(ElemType) == sizeof(float))
-        CURAND_CALL(curandGenerateUniform(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(Data()), GetNumElements()));
-    else
-        CURAND_CALL(curandGenerateUniformDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(Data()), GetNumElements()));
-    CUDA_CALL(cudaEventRecord(done));
-    CUDA_CALL(cudaEventSynchronize(done));
-    // CURAND_CALL(curandDestroyGenerator(gen));
-    CUDA_CALL(cudaEventDestroy(done));
+    {   //scope ensures syncGuard's destructor is called at the right place
+        SyncGuard syncGuard;
+        if (sizeof(ElemType) == sizeof(float))
+            CURAND_CALL(curandGenerateUniform(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(Data()), GetNumElements()));
+        else
+            CURAND_CALL(curandGenerateUniformDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(Data()), GetNumElements()));
+    }
 
     size_t N = GetNumElements();
     size_t blocksPerGrid = (size_t) ceil(N / (double) GridDim::maxThreadsPerBlock);
 
-    SyncGuard syncGuard;
-    _rescaleToRange<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), N, low, high);
+    {   //scope ensures syncGuard's destructor is called at the right place
+        SyncGuard syncGuard;
+        _rescaleToRange<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (Data(), N, low, high);
+    }
 }
 
 template <class ElemType>
@@ -1342,6 +1341,31 @@ void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
     else
         CURAND_CALL(curandGenerateNormalDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(Data()), n, (double) mean, (double) sigma));
     // CURAND_CALL(curandDestroyGenerator(gen));
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+{
+    // We use the method described in https://en.wikipedia.org/wiki/Truncated_normal_distribution
+    // i.e. generate uniform, scale it to the right range, pass it through the inverse cdf, scale by sigma, and add the mean 
+    PrepareDevice();
+    CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
+
+    {   //scope ensures syncGuard's destructor is called at the right place
+        SyncGuard syncGuard;
+        if (sizeof(ElemType) == sizeof(float))
+            CURAND_CALL(curandGenerateUniform(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<float*>(Data()), GetNumElements()));
+        else
+            CURAND_CALL(curandGenerateUniformDouble(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<double*>(Data()), GetNumElements()));
+    }
+
+    size_t N = GetNumElements();
+    size_t blocksPerGrid = (size_t)ceil(N / (double)GridDim::maxThreadsPerBlock);
+
+    {   //scope ensures syncGuard's destructor is called at the right place
+        SyncGuard syncGuard;
+        _truncated_normal_transform<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (Data(), N, mean, sigma);
+    }
 }
 
 //maskRate: percentage of values masked out (similar to dropout rate)
@@ -1444,7 +1468,9 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
     ElemType momentum,
     ElemType adaWeight,
     ElemType adaMul,
-    bool unitGainMomentum)
+    ElemType epsilon,
+    bool unitGainMomentum,
+    bool adamax)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
@@ -1459,7 +1485,7 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _adam<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, unitGainMomentum);
+        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainMomentum, adamax);
 }
 
 template <class ElemType>
@@ -4276,7 +4302,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(con
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
 {
-    if(a.IsEmpty())
+    if (a.IsEmpty())
         LogicError("AssignOneHot: Matrix a is empty.");
 
     if (axis >= shape.size())
@@ -4292,15 +4318,58 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>
     auto nRows = num_class * a.GetNumRows();
     this->RequireSize(nRows, nCols);
     this->PrepareDevice();
-    
+
     CUDA_CALL(cudaMemset(Data(), 0, nCols * nRows * sizeof(ElemType)));
 
 
     CUDA_LONG N = (CUDA_LONG)a.GetNumElements();
     int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
-    _assignOneHot<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.Data(), Data(), num_class, item_size, N);
-    
+    _assignOneHot<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (a.Data(), Data(), num_class, item_size, N);
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::GatherFromTarget(const GPUMatrix<ElemType>& indices, const GPUMatrix<ElemType>& target, size_t row_elements)
+{
+    if (indices.IsEmpty() || target.IsEmpty())
+        LogicError("GatherFromTarget: input matrix is empty.");
+
+    if (row_elements == 0)
+        LogicError("GatherFromTarget: target matrix at least need 1 dim.");
+
+    auto nCols = indices.GetNumCols();
+    auto nRows = indices.GetNumRows() * row_elements;
+    this->RequireSize(nRows, nCols);
+    this->PrepareDevice();
+
+    ElemType* indicesBufPtr = indices.Data();
+    ElemType* targetBufPtr = target.Data();
+    ElemType* buffer = Data();
+
+    size_t num_indices = indices.GetNumElements();
+    CUDA_LONG N = (CUDA_LONG)num_indices * row_elements;
+    int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
+    _gatherFromTarget<ElemType> <<<blocksPerGrid, GridDim::maxThreadsPerBlock >>> (indicesBufPtr, targetBufPtr, buffer, row_elements, num_indices, N);
+
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::ScatterToIndices(const GPUMatrix<ElemType>& values, const GPUMatrix<ElemType>& indices, size_t row_elements)
+{
+    if (indices.IsEmpty() || values.IsEmpty())
+        LogicError("ScatterToIndices: input matrix is empty.");
+
+    ElemType* indicesBufPtr = indices.Data();
+    ElemType* valueBufPtr = values.Data();
+    ElemType* buffer = Data();
+
+    size_t num_indices = indices.GetNumElements();
+    CUDA_LONG N = (CUDA_LONG)num_indices * row_elements;
+    int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
+    _scatterToIndices<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (indicesBufPtr, valueBufPtr, buffer, row_elements, num_indices, N);
+
     return *this;
 }
 

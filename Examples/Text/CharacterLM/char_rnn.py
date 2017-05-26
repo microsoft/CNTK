@@ -10,7 +10,7 @@ import os
 import sys
 from cntk import Trainer, Axis
 from cntk.learners import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
-from cntk.ops import input, sequence
+from cntk.ops import sequence
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
 from cntk.ops.functions import load_model
@@ -132,8 +132,8 @@ def create_model(output_dim):
 # Model inputs
 def create_inputs(vocab_dim):
     input_seq_axis = Axis('inputAxis')
-    input_sequence = sequence.input(shape=vocab_dim, sequence_axis=input_seq_axis)
-    label_sequence = sequence.input(shape=vocab_dim, sequence_axis=input_seq_axis)
+    input_sequence = sequence.input_variable(shape=vocab_dim, sequence_axis=input_seq_axis)
+    label_sequence = sequence.input_variable(shape=vocab_dim, sequence_axis=input_seq_axis)
     
     return input_sequence, label_sequence
 
@@ -191,7 +191,7 @@ def train_lm(training_file, epochs, max_num_minibatches):
                 print(sample(z, ix_to_char, vocab_dim, char_to_ix))
 
         model_filename = "models/shakespeare_epoch%d.dnn" % (e+1)
-        z.save_model(model_filename)
+        z.save(model_filename)
         print("Saved model to '%s'" % model_filename)
 
 

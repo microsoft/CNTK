@@ -40,7 +40,7 @@
         "name":  "Image auto encoder",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#07_deconvolution",
         "description":  "A simple image auto encoder using deconvolution and unpooling.",
-        "language":  ["BrainScript, Python"],
+        "language":  ["BrainScript", "Python"],
         "type":  ["Recipe"],
 	"dateadded": "4/14/2017"
     },
@@ -124,6 +124,15 @@
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"],
 	"dateadded": "4/24/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "MNIST Convolutional Neural Network (CNN) OCR",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103D_MNIST_ConvolutionalNeuralNetwork.ipynb",
+        "description":  "Recognize hand written digits (OCR) with MNIST data using CNN.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "5/1/2017"
     },
     {
         "category": ["Image"],
@@ -238,7 +247,7 @@
         "name":  "VGG",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/VGG",
         "description":  "Deep CNN from University of Oxford. This was the winning model for the ILSVRC2014 localization task.",
-        "language":  ["Python", "BrainScript"],
+        "language":  ["BrainScript"],
         "type":  ["Recipe"],
 	"dateadded": "4/14/2017"
     },
@@ -475,5 +484,14 @@
         "language":  ["Python"],
         "type":  ["Recipe"],
 	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Reinforcement Learning"],
+        "name": "Deep Q Neural Network",
+        "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning",
+        "description": "Train an agent to play Atari Games using Reinforcement Learning",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dataadded": "05/05/2017"
     }
 ]

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. $TEST_DIR/../run-test-common
+
+cntkrun ConvNet_CIFAR10_DataAug.cntk "forceDeterministicAlgorithms=true stderr=- TrainConvNet=[SGD=[epochSize=4096,maxEpochs=3,numMBsToShowResult=16]]"

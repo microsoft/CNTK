@@ -107,12 +107,36 @@ void TestAdamLearner(size_t numParameters, size_t numMinibatches, bool unitGainM
 }
 
 template <typename ElementType>
+void TestAdamaxLearner(size_t numParameters, size_t numMinibatches, bool unitGainMomentum, const DeviceDescriptor& device)
+{
+    NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
+    auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
+    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum, MomentumPerSampleSchedule(0.99), 1e-8, true);
+    TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+}
+
+template <typename ElementType>
 void TestRMSPropLearner(size_t numParameters, size_t numMinibatches, const DeviceDescriptor& device)
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
     auto learner = RMSPropLearner(parameters, LearningRatePerMinibatchSchedule({ { 3, 0.7 }, { 1, 0.2 } }), 0.01, 0.02, 0.03, 0.1, 0.001);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+}
+
+template <typename ElementType>
+void TestUniversalLearner(size_t numParameters, size_t numMinibatches, const DeviceDescriptor& device)
+{
+    NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
+    auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
+    ElementType lr = (ElementType) 0.06125;
+    ParameterUpdateFunctor mysgd = [lr](Parameter p, Variable g) -> FunctionPtr 
+    { 
+        return Assign(p, Minus(p , ElementTimes(Constant::Scalar(lr), g))); 
+    };
+    auto learner = UniversalLearner(parameters, mysgd);
+    TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+
 }
 
 void TestTrainingParametersSchedule()
@@ -413,6 +437,27 @@ BOOST_AUTO_TEST_CASE(CreateAndUpdateAdamLearner)
         {
             TestAdamLearner<float>(numParameters, numMinibatches, gain, device);
             TestAdamLearner<double>(numParameters, numMinibatches, gain, device);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CreateAndUpdateUniversalLearner)
+{
+    for (auto& device : devices)
+    {
+        TestUniversalLearner<float>(numParameters, numMinibatches, device);
+        TestUniversalLearner<double>(numParameters, numMinibatches, device);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CreateAndUpdateAdamaxLearner)
+{
+    for (auto& device : devices)
+    {
+        for (auto& gain : unitGain)
+        {
+            TestAdamaxLearner<float>(numParameters, numMinibatches, gain, device);
+            TestAdamaxLearner<double>(numParameters, numMinibatches, gain, device);
         }
     }
 }

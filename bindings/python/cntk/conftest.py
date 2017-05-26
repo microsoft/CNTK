@@ -9,6 +9,8 @@ import pytest
 
 _DEFAULT_DEVICE_ID = -1
 
+# ignore crosstalk/crosstalk_tensorflow.py to make tensorflow optional
+collect_ignore = ["contrib/crosstalk/crosstalk_tensorflow.py"]
 
 def pytest_addoption(parser):
     parser.addoption("--deviceid", action="append", default=[_DEFAULT_DEVICE_ID],

@@ -6,6 +6,7 @@
 
 from __future__ import print_function
 import numpy as np
+import cntk as C
 import os
 from PIL import Image
 from cntk.device import try_set_default_device, gpu
@@ -16,7 +17,7 @@ from cntk.io import MinibatchSource, ImageDeserializer, StreamDefs, StreamDef
 import cntk.io.transforms as xforms
 from cntk.layers import Dense
 from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_schedule
-from cntk.ops import input, combine, softmax
+from cntk.ops import combine, softmax
 from cntk.ops.functions import CloneMethod
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
@@ -98,8 +99,8 @@ def train_model(base_model_file, feature_node_name, last_hidden_node_name,
 
     # Create the minibatch source and input variables
     minibatch_source = create_mb_source(train_map_file, image_width, image_height, num_channels, num_classes)
-    image_input = input((num_channels, image_height, image_width))
-    label_input = input(num_classes)
+    image_input = C.input_variable((num_channels, image_height, image_width))
+    label_input = C.input_variable(num_classes)
 
     # Define mapping from reader streams to network inputs
     input_map = {
@@ -192,7 +193,7 @@ def eval_test_images(loaded_model, output_file, test_map_file, image_width, imag
                 if pred_count >= num_images:
                     break
 
-    print ("{0} of {1} prediction were correct {2}.".format(correct_count, pred_count, (float(correct_count) / pred_count)))
+    print ("{0} out of {1} predictions were correct {2}.".format(correct_count, pred_count, (float(correct_count) / pred_count)))
 
 
 if __name__ == '__main__':

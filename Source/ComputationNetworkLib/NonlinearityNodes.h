@@ -119,6 +119,7 @@ public:
 // Sqrt (input)
 // Reciprocal (input)
 // ExponentialLinearUnitDerivative (input)
+// StableSigmoidNode (input)
 // These are all implemented by single-opcode functions and can thus be declared by a macro.
 // -----------------------------------------------------------------------
 
@@ -158,6 +159,7 @@ DeclareUnaryElementWiseWithOpCodeNode(Sin,                   Sin,               
 DeclareUnaryElementWiseWithOpCodeNode(Sqrt,                  Sqrt,                  ElementwiseProductWithSqrtDerivative,                            binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Tanh,                  Tanh,                  ElementwiseProductWithTanhDerivativeFromOutput,                  binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(ExponentialLinearUnit, ExponentialLinearUnit, ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(StableSigmoid,         StableSigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,               binaryWithOutputGradient);
 
 #pragma pop_macro("DeclareUnaryElementWiseWithOpCodeNode")
 

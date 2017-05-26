@@ -31,7 +31,7 @@ class VideoReader(object):
     stacked numpy arrays.
     Similar to http://vlg.cs.dartmouth.edu/c3d/c3d_video.pdf
     '''
-    def __init__(self, map_file, label_count, is_training):
+    def __init__(self, map_file, label_count, is_training, limit_epoch_size=sys.maxsize):
         '''
         Load video file paths and their corresponding labels.
         '''
@@ -46,10 +46,12 @@ class VideoReader(object):
         self.targets         = []
         self.batch_start     = 0
 
+        map_file_dir = os.path.dirname(map_file)
+
         with open(map_file) as csv_file:
             data = csv.reader(csv_file)
             for row in data:
-                self.video_files.append(row[0])
+                self.video_files.append(os.path.join(map_file_dir, row[0]))
                 target = [0.0] * self.label_count
                 target[int(row[1])] = 1.0
                 self.targets.append(target)
@@ -57,9 +59,10 @@ class VideoReader(object):
         self.indices = np.arange(len(self.video_files))
         if self.is_training:
             np.random.shuffle(self.indices)
+        self.epoch_size = min(len(self.video_files), limit_epoch_size)
 
     def size(self):
-        return len(self.video_files)
+        return self.epoch_size
             
     def has_more(self):
         if self.batch_start < self.size():
@@ -158,8 +161,8 @@ def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
     num_output_classes = train_reader.label_count
 
     # Input variables denoting the features and label data
-    input_var = C.input((num_channels, sequence_length, image_height, image_width), np.float32)
-    label_var = C.input(num_output_classes, np.float32)
+    input_var = C.input_variable((num_channels, sequence_length, image_height, image_width), np.float32)
+    label_var = C.input_variable(num_output_classes, np.float32)
 
     # Instantiate simple 3D Convolution network inspired by VGG network 
     # and http://vlg.cs.dartmouth.edu/c3d/c3d_video.pdf
@@ -184,12 +187,12 @@ def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
     pe = C.classification_error(z, label_var)
 
     # training config
-    epoch_size     = 1322                  # for now we manually specify epoch size
-    minibatch_size = 4
+    train_epoch_size     = train_reader.size()
+    train_minibatch_size = 2
 
     # Set learning parameters
     lr_per_sample          = [0.01]*10+[0.001]*10+[0.0001]
-    lr_schedule            = C.learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, unit=C.UnitType.sample)
+    lr_schedule            = C.learning_rate_schedule(lr_per_sample, epoch_size=train_epoch_size, unit=C.UnitType.sample)
     momentum_time_constant = 4096
     mm_schedule            = C.momentum_as_time_constant_schedule([momentum_time_constant])
 
@@ -205,14 +208,14 @@ def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
         train_reader.reset()
 
         while train_reader.has_more():
-            videos, labels, current_minibatch = train_reader.next_minibatch(minibatch_size)
+            videos, labels, current_minibatch = train_reader.next_minibatch(train_minibatch_size)
             trainer.train_minibatch({input_var : videos, label_var : labels})
 
         trainer.summarize_training_progress()
-    
+
     # Test data for trained model
-    epoch_size     = 332
-    minibatch_size = 2
+    epoch_size     = test_reader.size()
+    test_minibatch_size = 2
 
     # process minibatches and evaluate the model
     metric_numer    = 0
@@ -221,7 +224,7 @@ def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
 
     test_reader.reset()    
     while test_reader.has_more():
-        videos, labels, current_minibatch = test_reader.next_minibatch(minibatch_size)
+        videos, labels, current_minibatch = test_reader.next_minibatch(test_minibatch_size)
         # minibatch data to be trained with
         metric_numer += trainer.test_minibatch({input_var : videos, label_var : labels}) * current_minibatch
         metric_denom += current_minibatch
@@ -240,4 +243,3 @@ if __name__=='__main__':
     test_reader  = VideoReader(os.path.join(data_path, 'test_map.csv'), num_output_classes, False)
         
     conv3d_ucf11(train_reader, test_reader)
-

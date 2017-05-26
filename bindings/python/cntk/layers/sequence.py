@@ -25,7 +25,7 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
         >>> from cntk.layers import Sequential
         >>> from cntk.layers.typing import Tensor, Sequence
-        >>> x = C.input(**Sequence[Tensor[2]])
+        >>> x = C.input_variable(**Sequence[Tensor[2]])
         >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
         >>> x0
         array([[[ 0.,  1.],
@@ -87,7 +87,7 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), 
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
         >>> from cntk.layers import Sequential
         >>> from cntk.layers.typing import Tensor, Sequence
-        >>> x = C.input(**Sequence[Tensor[2]])
+        >>> x = C.input_variable(**Sequence[Tensor[2]])
         >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
         >>> x0
         array([[[ 0.,  1.],
@@ -186,8 +186,8 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
      >>> from cntk.layers.typing import *
 
      >>> # a plain sequence-to-sequence model in training (where label length is known)
-     >>> en = C.input(**SequenceOver[Axis('m')][SparseTensor[20000]])  # English input sentence
-     >>> fr = C.input(**SequenceOver[Axis('n')][SparseTensor[30000]])  # French target sentence
+     >>> en = C.input_variable(**SequenceOver[Axis('m')][SparseTensor[20000]])  # English input sentence
+     >>> fr = C.input_variable(**SequenceOver[Axis('n')][SparseTensor[30000]])  # French target sentence
 
      >>> embed = Embedding(300)
      >>> encoder = Recurrence(LSTM(500), return_full_state=True)
@@ -328,7 +328,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
      ('defaultBatchAxis', 'defaultDynamicAxis')
 
      >>> # cumulative sum over inputs
-     >>> x = C.input(**Sequence[Tensor[2]])
+     >>> x = C.input_variable(**Sequence[Tensor[2]])
      >>> x0 = np.array([[   3,    2],
      ...                [  13,   42],
      ...                [-100, +100]])
@@ -426,7 +426,7 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
      ...                                    Dense(1, activation=sigmoid) ])
 
      >>> # element-wise max-pooling over an input sequence
-     >>> x = C.input(**Sequence[Tensor[2]])
+     >>> x = C.input_variable(**Sequence[Tensor[2]])
      >>> x0 = np.array([[ 1, 2 ],
      ...                [ 6, 3 ],
      ...                [ 4, 2 ],

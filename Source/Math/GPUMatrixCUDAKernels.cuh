@@ -1677,6 +1677,21 @@ __global__ void _rescaleToRange(
 }
 
 template <class ElemType>
+__global__ void _truncated_normal_transform(
+    ElemType* a,
+    const CUDA_LONG N,
+    const ElemType mean,
+    const ElemType sigma)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    const ElemType high = (ElemType)0.97724986805182079; // normcdf(2);
+    const ElemType low = (ElemType)0.022750131948179195; // normcdf(-2);
+    a[id] = normcdfinv(a[id] * (high - low) + low) * sigma + mean;
+}
+
+template <class ElemType>
 __global__ void _setMaskAndScale(
     ElemType* a,
     const CUDA_LONG N,
@@ -5190,7 +5205,7 @@ __global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LON
 
 template <class ElemType>
 __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
 {
     const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -5198,16 +5213,33 @@ __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemT
     for (; idx < size; idx += stride)
     {
         ElemType g = grad[idx];
-        ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
-        smoothAda[idx] = adaSqr;
         ElemType w;
-        if (sizeof(ElemType) == sizeof(double))
+        if (!adamax)
         {
-            w = adaMul * rsqrt(adaSqr + 1e-8);
+            ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+            smoothAda[idx] = adaSqr;
+            if (sizeof(ElemType) == sizeof(double))
+            {
+                w = adaMul * 1.0 / (sqrt(adaSqr) + epsilon);
+            }
+            else
+            {
+                w = adaMul * 1.0f / (sqrtf(adaSqr) + epsilon);
+            }
         }
         else
         {
-            w = adaMul * rsqrtf(adaSqr + 1e-8);
+            ElemType gAbs;
+            if (sizeof(ElemType) == sizeof(double))
+            {
+                gAbs = fabs(g);
+            }
+            else
+            {
+                gAbs = fabsf(g);
+            }
+            smoothAda[idx] = max(adaWeight * smoothAda[idx], gAbs);
+            w = adaMul / smoothAda[idx];
         }
 
         g = mom * smoothMom[idx] + unitGainFactor * g;
@@ -5221,7 +5253,7 @@ template <class ElemType>
 __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
     ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
 {
     const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -5229,16 +5261,34 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     for (; idx < size; idx += stride)
     {
         ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
-        ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
-        smoothAda[idx] = adaSqr;
         ElemType w;
-        if (sizeof(ElemType) == sizeof(double))
+        if (!adamax)
         {
-            w = adaMul * rsqrt(adaSqr + 1e-8);
+            ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+            smoothAda[idx] = adaSqr;
+
+            if (sizeof(ElemType) == sizeof(double))
+            {
+                w = adaMul * 1.0 / (sqrt(adaSqr) + epsilon);
+            }
+            else
+            {
+                w = adaMul * 1.0f / (sqrtf(adaSqr) + epsilon);
+            }
         }
         else
         {
-            w = adaMul * rsqrtf(adaSqr + 1e-8);
+            ElemType gAbs;
+            if (sizeof(ElemType) == sizeof(double))
+            {
+                gAbs = fabs(g);
+            }
+            else
+            {
+                gAbs = fabsf(g);
+            }
+            smoothAda[idx] = max(adaWeight * smoothAda[idx], gAbs);
+            w = adaMul / smoothAda[idx];
         }
 
         g = mom * smoothMom[idx] + unitGainFactor * g;
@@ -5610,6 +5660,43 @@ __global__ void _assignOneHot(ElemType *indices,
         }
     }
 }
+
+template<class ElemType>
+__global__ void _gatherFromTarget(ElemType *indices,
+                                  ElemType *target,
+                                  ElemType *buffer,
+                                  size_t num_row_elements,
+                                  size_t num_indices,
+                                  CUDA_LONG num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < num_elements)
+    {
+        size_t indices_index = index / num_row_elements;
+        size_t offset = index % num_row_elements;
+        buffer[index] = target[(size_t)indices[indices_index] * num_row_elements + offset];
+    }
+}
+
+template<class ElemType>
+__global__ void _scatterToIndices(ElemType *indices,
+                                  ElemType *value,
+                                  ElemType *buffer,
+                                  size_t num_row_elements,
+                                  size_t num_indices,
+                                  CUDA_LONG num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < num_elements)
+    {
+        size_t indices_index = index / num_row_elements;
+        size_t offset = index % num_row_elements;
+        //We resort to nondeterministic behavior (floating point addition is not associative). 
+        //Note that the CPU parallel algorithm will have poor performance on the GPU because of thread divergence
+        atomicAdd(&buffer[(size_t)indices[indices_index] * num_row_elements + offset], value[index]);
+    }
+}
+
 
 template<class ElemType>
 __global__ void _assignOneHotAsSparse(ElemType *indices,
