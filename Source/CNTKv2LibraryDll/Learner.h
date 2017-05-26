@@ -326,42 +326,18 @@ namespace CNTK
 
     class LearnerUniversal : public LearnerBase
     {
-        std::unordered_map<Parameter, std::pair<Variable, FunctionPtr> > m_updateFunctions;
+        std::unordered_map<Parameter, Variable> m_parameter_gradient_map;
+        FunctionPtr m_update_func;
 
     public:
         LearnerUniversal(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func);
 
         LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr> >& updateFunctions);
+
+        LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
     
-    private:
-        void AllocateDummySmoothedGradients(const std::vector<Parameter>& parameters)
-        {
-            for (const auto& parameter : parameters)
-            {
-                m_smoothedGradientValues.emplace(parameter, AllocateNDArrayView(parameter, {}));
-            }
-        }
-
-
-    protected:
-
-        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
-
-        template <typename ElementType>
-        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
-    };
-
-    class LearnerBatchUniversal : public LearnerBase
-    {
-        std::unordered_map<Parameter, Variable> m_parameter_gradient_map;
-        FunctionPtr m_update_func;
-
-    public:
-
-        LearnerBatchUniversal(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
-
         virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override;
-    
+
     private:
         void AllocateDummySmoothedGradients(const std::vector<Parameter>& parameters)
         {
@@ -371,8 +347,11 @@ namespace CNTK
             }
         }
 
-    protected:
-        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        void ValidateInput(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
 
+
+    protected:
+
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
     };
 }
