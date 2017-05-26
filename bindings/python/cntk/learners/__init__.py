@@ -857,7 +857,7 @@ def universal(update_func, parameters):
     Creates a learner which uses a CNTK function to update the parameters.
 
     Args:
-        update_func: function that takes a parameter and a gradient as arguments and
+        update_func: function that takes parameters and gradients as arguments and
          returns a :class:`~cntk.ops.functions.Function` that performs the
          desired updates. The returned function updates the parameters by
          means of containing :func:`~cntk.ops.assign` operations.
@@ -871,10 +871,13 @@ def universal(update_func, parameters):
         the :class:`~cntk.train.trainer.Trainer`
 
     Examples:
-        >>> def my_adagrad(p,g):
-        ...     accumulator = C.constant(0, shape=p.shape, dtype=p.dtype, name='accum')
-        ...     accum_new = C.assign(accumulator, g * g)
-        ...     return C.assign(p, p - 0.01 * g / C.sqrt(accum_new + 1e-6))
+        >>> def my_adagrad(parameters, gradients):
+        ...     accumulators = [C.constant(0, shape=p.shape, dtype=p.dtype, name='accum') for p in parameters]
+        ...     update_funcs = []
+        ...     for p, g, a in zip(parameters, gradients, accumulators):
+        ...         accum_new = C.assign(a, g * g)
+        ...         update_funcs.append(C.assign(p, p - 0.01 * g / C.sqrt(accum_new + 1e-6)))
+        ...     return C.combine(update_funcs)
         ...
         >>> x = C.input_variable((10,))
         >>> y = C.input_variable((2,))
@@ -889,13 +892,13 @@ def universal(update_func, parameters):
     from .. import constant
     args, _ = utils.get_python_function_arguments(update_func)
     if len(args) != 2:
-        raise ValueError('update_func must be a function that accepts two arguments (parameter, gradient)')
-    updates = []
+        raise ValueError('update_func must be a function that accepts two arguments (parameters, gradients)')
+    gradients = []
     for p in parameters:
         if any(dim<0 for dim in p.shape):
             raise ValueError('parameter %s has inferred dimensions. Please create the learner after all parameter shapes have been determined'%str(p))
-        g = constant(0, shape=p.shape, dtype=p.dtype, name='grad')
-        result = update_func(p, g)
-        updates.append((g, result))
+        gradients.append(constant(0, shape=p.shape, dtype=p.dtype, name='grad'))
 
-    return cntk_py.universal_learner(parameters, updates)
+    result = update_func(parameters, gradients)
+
+    return cntk_py.universal_learner(parameters, gradients, result)

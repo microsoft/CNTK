@@ -962,7 +962,7 @@ namespace CNTK
         return MakeSharedObject<LearnerUniversal>(parameters, updates);
     }
 
-    LearnerPtr BatchUniversalLearner(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc)
+    LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc)
     {
         return MakeSharedObject<LearnerUniversal>(parameters, gradients, updateFunc);
     }

@@ -309,7 +309,7 @@ namespace CNTK
 #ifndef SWIG
         /// Convenience constructor that should be used by foreign language bindings.
         /// This is the Proper declaration understood by a real C++ compiler.
-        CNTK_API LearnerPtr UniversalLearner(const std::vector<::CNTK::Parameter>& parameters, const std::vector<std::pair<::CNTK::Variable, ::CNTK::FunctionPtr> >& updates);
+        LearnerPtr UniversalLearner(const std::vector<::CNTK::Parameter>& parameters, const std::vector<std::pair<::CNTK::Variable, ::CNTK::FunctionPtr> >& updates);
 #else
         /// Convenience constructor that should be used by foreign language bindings.
         /// Workaround declaration for SWIG. 
@@ -317,7 +317,7 @@ namespace CNTK
         /// %template() std::vector<std::pair<CNTK::Variable, std::shared_ptr<CNTK::Function>>>;
         /// which will generate correct code (i.e. code that will accept a list of tuples in the foreign language)
         /// when the proper declaration is processed by SWIG.
-        CNTK_API LearnerPtr UniversalLearner(const std::vector<CNTK::Parameter>& parameters, const std::vector<std::pair<CNTK::Variable, CNTK::FunctionPtr> >& updates);
+        LearnerPtr UniversalLearner(const std::vector<CNTK::Parameter>& parameters, const std::vector<std::pair<CNTK::Variable, CNTK::FunctionPtr> >& updates);
 #endif
 
         CNTK_API void PrintBuiltInfo();

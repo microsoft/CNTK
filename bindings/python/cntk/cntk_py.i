@@ -41,7 +41,6 @@
 %rename(htk_mlf_deserializer) CNTK::HTKMLFDeserializer;
 %rename(_stream_infos) CNTK::SwigMinibatchSource::StreamInfos(PyObject*);
 %rename(_next_minibatch) CNTK::SwigMinibatchSource::_GetNextMinibatch;
-%rename(universal_learner) CNTK::Internal::UniversalLearner;
 %rename(_register_udf_deserialize_callback) CNTK::Internal::RegisterUDFDeserializeCallbackWrapper;
 %rename(base64_image_deserializer) CNTK::Base64ImageDeserializer;
 %rename(_none) CNTK::DictionaryValue::Type::None;
@@ -143,8 +142,7 @@
 %ignore CNTK::Internal::GetComputationNetworkTraceLevel;
 %ignore CNTK::Internal::TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
 %ignore CNTK::Internal::Convolution; 
-// These aren't exported from C++ but the corresponding internal versions are
-%ignore CNTK::UniversalLearner;
+%ignore CNTK::Internal::UniversalLearner;
 
 %ignore CNTK::Function::RegisterUDFDeserializeCallback;
 %ignore CNTK::Function::GetUDFDeserializeCallback;
