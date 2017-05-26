@@ -133,7 +133,11 @@ def load_pretrained_darknet_feature_extractor():
     return combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: placeholder()})
 
 def load_pretrained_resnet18_feature_extractor(par):
-    loaded_model = load_model(os.path.join(par.par_abs_path, "..", "..", "PretrainedModels", "ResNet18_ImageNet_CNTK.model"))
+    model_fn = os.path.normpath(os.path.join(par.par_abs_path, "..", "..",
+        "PretrainedModels", "ResNet18_ImageNet_CNTK.model"))
+    if not os.path.exists(model_fn):
+        raise ValueError('Model %s does not exist'%model_fn)
+    loaded_model = load_model(model_fn)
 
 
     feature_layer = find_by_name(loaded_model, "features")
@@ -238,8 +242,14 @@ def predict_image(model, path, par, conf_threshold = 0.5, show=True):
         mp.show()
     return image
 
-def create_mb_source(img_height, img_width, img_channels, output_size, image_file, roi_file, randomize = False, multithreaded_deserializer=False, max_samples=io.INFINITELY_REPEAT, max_epochs = io.INFINITELY_REPEAT):
+def create_mb_source(img_height, img_width, img_channels, output_size, image_file, roi_file, is_training = False, multithreaded_deserializer=False, max_samples=io.INFINITELY_REPEAT, max_epochs = io.INFINITELY_REPEAT):
     transforms = []
+
+    if is_training:
+        transforms += [
+            xforms.crop(crop_type='randomside', side_ratio=0.8, jitter_type='uniratio') # train uses jitter
+        ]
+   
     transforms += [
         xforms.scale(width=img_width, height=img_height, channels=img_channels, interpolations='linear',
                      scale_mode='fill'),
@@ -251,7 +261,7 @@ def create_mb_source(img_height, img_width, img_channels, output_size, image_fil
     # read rois and labels
     roi_source = CTFDeserializer(roi_file, StreamDefs(label=StreamDef(field='rois', shape=output_size)))
 
-    rc = MinibatchSource([image_source, roi_source], randomize=randomize, trace_level=TraceLevel.Error, multithreaded_deserializer=multithreaded_deserializer, max_samples=max_samples)#, max_epochs=max_epochs)
+    rc = MinibatchSource([image_source, roi_source], randomize=is_training, trace_level=TraceLevel.Error, multithreaded_deserializer=multithreaded_deserializer, max_samples=max_samples)#, max_epochs=max_epochs)
     return rc
 
 

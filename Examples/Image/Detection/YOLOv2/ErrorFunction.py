@@ -21,9 +21,9 @@ def get_error(network, gtb_input, cntk_only=False):
         training_model = user_function(ud_tf)
 
         # err = TrainFunction2.make_wh_sqrt(output) - TrainFunction2.make_wh_sqrt(training_model.outputs[0])  # substrac "goal" --> error
-        err = training_model.outputs[0] - network
+        err = alias(training_model.outputs[0], 'TrainFunction_0') - network
         sq_err = err * err
-        sc_err = sq_err * training_model.outputs[1]  # apply scales (lambda_coord, lambda_no_obj, zeros on not learned params)
+        sc_err = sq_err * alias(training_model.outputs[1], 'TrainFunction_1')  # apply scales (lambda_coord, lambda_no_obj, zeros on not learned params)
         mse = reduce_mean(sc_err, axis=Axis.all_static_axes(), name="MeanSquaredError")
         return mse
 

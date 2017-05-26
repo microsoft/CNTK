@@ -17,13 +17,17 @@ from cntk.train.distributed import Communicator
 import YOLOv2 as yolo2
 from TrainUDFyolov2 import *
 from PARAMETERS import *
+import PARAMETERS as par
 
 
 # Create a minibatch source.
 def create_image_mb_source(image_file, gtb_file, is_training, total_number_of_samples):
 
     return yolo2.create_mb_source(par_image_height, par_image_width, par_num_channels, (5 * par_max_gtbs), image_file,
-                                        gtb_file, multithreaded_deserializer=True, randomize=is_training, max_samples=total_number_of_samples)
+                                        gtb_file,
+                                        multithreaded_deserializer=True, 
+                                        is_training=is_training, 
+                                        max_samples=total_number_of_samples)
 
 
 # Create trainer
@@ -51,12 +55,21 @@ def create_trainer(to_train, epoch_size, minibatch_size, num_quantization_bits, 
 
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore):
+def train_and_test(network, trainer, train_source, test_source, minibatch_size,
+        epoch_size, model_path, restore):
 
     input_map = {
         network['feature']: train_source["features"],
         network['gtb_in']: train_source["label"]
     }
+
+    model_name = "checkpoint"
+
+    test_config = TestConfig(source=test_source, mb_size=minibatch_size) if test_source else None
+    checkpoint_config = CheckpointConfig(filename=os.path.join(model_path, model_name), 
+                                           frequency=5000,
+                                           preserve_all=True,
+                                           restore=restore) if model_path else None
 
     # Train all minibatches
     training_session(
@@ -64,15 +77,18 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         model_inputs_to_streams=input_map,
         mb_size=minibatch_size,
         progress_frequency=epoch_size,
-        checkpoint_config=None, # CheckpointConfig(filename=os.path.join(model_path, model_name), restore=restore),
-        test_config=TestConfig(source=test_source, mb_size=minibatch_size)
+        checkpoint_config=checkpoint_config,
+        test_config=test_config
     ).train()
 
 
 # Train and evaluate the network.
-def yolov2_train_and_eval(network, image_file, gtb_file, num_quantization_bits=32, block_size=3200, warm_up=0,
-                           minibatch_size=64, epoch_size=5000, max_epochs=1,
-                           restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=True):
+def yolov2_train_and_eval(network, 
+                          train_image_file, train_gtb_file,
+                          test_image_file, test_gtb_file,
+                          num_quantization_bits=32, block_size=3200, warm_up=0,
+                          minibatch_size=64, epoch_size=5000, max_epochs=1,
+                          restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=True):
     _cntk_py.set_computation_network_trace_level(0)
 
     progress_printer = ProgressPrinter(
@@ -81,13 +97,18 @@ def yolov2_train_and_eval(network, image_file, gtb_file, num_quantization_bits=3
         log_to_file=log_to_file,
         rank=Communicator.rank(),
         gen_heartbeat=gen_heartbeat,
-        num_epochs=max_epochs)
+        num_epochs=max_epochs,
+        test_freq=1)
 
 
     trainer = create_trainer(network, epoch_size, minibatch_size, num_quantization_bits, progress_printer, block_size, warm_up)
-    train_source = create_image_mb_source(image_file, gtb_file, True, total_number_of_samples=max_epochs * epoch_size)
-    test_source = create_image_mb_source(image_file, gtb_file, False, total_number_of_samples=FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore)
+    train_source = create_image_mb_source(train_image_file, train_gtb_file, True, total_number_of_samples=max_epochs * epoch_size)
+    if test_image_file or test_gtb_file:
+        test_source = create_image_mb_source(test_image_file, test_gtb_file, False, total_number_of_samples=FULL_DATA_SWEEP)
+    else:
+        test_source = None
+    train_and_test(network, trainer, train_source, test_source, minibatch_size,
+            epoch_size, model_path, restore)
 
     return network['output']
 
@@ -99,9 +120,13 @@ if __name__ == '__main__':
     data_path = os.path.join(par_abs_path, "..", "..", "DataSets","Pascal", "mappings")
     parser.add_argument('-datadir', '--datadir', help='Data directory where the ImageNet dataset is located',required=False, default=data_path)
     
-    parser.add_argument('-images', '--images', help='File containing the images in ImageReader format',
+    parser.add_argument('-trainimages', '--trainimages', help='File containing the images in ImageReader format',
                         required=False, default=None)
-    parser.add_argument('-gts', '--gts', help='File containing the bounding boxes and labels in CTF format',
+    parser.add_argument('-traingts', '--traingts', help='File containing the bounding boxes and labels in CTF format',
+                        required=False, default=None)
+    parser.add_argument('-testimages', '--testimages', help='File containing the images in ImageReader format',
+                        required=False, default=None)
+    parser.add_argument('-testgts', '--testgts', help='File containing the bounding boxes and labels in CTF format',
                         required=False, default=None)
     parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False,
                         default=None)
@@ -129,8 +154,10 @@ if __name__ == '__main__':
     if args['outputdir'] is not None:
         output_dir = args['outputdir']
         model_path = args['outputdir'] + "/models"
-    if args['logdir'] is not None:
-        log_dir = args['logdir']
+    else:
+        model_path = None
+
+    log_dir = args['logdir']
     if args['devices'] is not None:
         # Setting one worker on GPU and one worker on CPU. Otherwise memory consumption is too high for a single GPU.
         dev = [int(d) for d in args['devices'].split(',')][Communicator.rank()]
@@ -142,14 +169,17 @@ if __name__ == '__main__':
         cntk.device.try_set_default_device(dev)
 
     data_path = args['datadir']
-    image_file = args['images']
-    gt_file = args['gts']
-    if image_file is None or gt_file is None:
+
+    train_image_file = args['trainimages']
+    train_gt_file = args['traingts']
+    if train_image_file is None or train_gt_file is None:
         if not os.path.isdir(data_path):
             raise RuntimeError("Directory %s does not exist" % data_path)
-        image_file = os.path.join(data_path, par_train_data_file)
-        gt_file = os.path.join(data_path, par_train_roi_file)
-    output = None
+        train_image_file = os.path.join(data_path, par_train_data_file)
+        train_gt_file = os.path.join(data_path, par_train_roi_file)
+
+    test_image_file = args['testimages']
+    test_gt_file = args['testgts']
 
     ####################################################################################################################
     model = yolo2.create_yolov2_net(par)
@@ -176,13 +206,14 @@ if __name__ == '__main__':
     ####################################################################################################################
 
     try:
-        logdir = args['logdir']
         nr_of_epoch = args['num_epochs']
 
-        output = yolov2_train_and_eval(network, image_file, gt_file,
+        output = yolov2_train_and_eval(network, 
+                                       train_image_file, train_gt_file,
+                                       test_image_file, test_gt_file,
                                        max_epochs=nr_of_epoch,
                                        restore=not args['restart'],
-                                       log_to_file=logdir,
+                                       log_to_file=log_dir,
                                        num_mbs_per_log=50,
                                        num_quantization_bits=args['quantized_bits'],
                                        block_size=args['block_samples'],
