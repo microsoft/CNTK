@@ -272,6 +272,7 @@ IGNORE_FUNCTION CNTK::RMSPropLearner;
 IGNORE_FUNCTION CNTK::AdaDeltaLearner;
 IGNORE_FUNCTION CNTK::UniversalLearner;
 IGNORE_FUNCTION CNTK::Internal::UniversalLearner;
+IGNORE_FUNCTION CNTK::BatchUniversalLearner;
 
 IGNORE_CLASS CNTK::DistributedLearner;
 
