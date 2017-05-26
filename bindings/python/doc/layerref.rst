@@ -696,9 +696,8 @@ variable-length input sequences. The initial value(s) of the hidden
 state variable(s) are 0 unless specified by ``initial_state``.
 A recurrence layer's operation can be best described by pseudo-code
 (but note that the real implementation is more complicated since it
-handles automatic minibatching even if not all sequences are of the same length):
+handles automatic minibatching even if not all sequences are of the same length)::
 
-    '''
     # pseudo-code for y = Recurrence(step_function)(x)
     #  x: input sequence of tensors along the dynamic axis
     #  y: resulting sequence of outputs along the same dynamic axis
@@ -707,7 +706,6 @@ handles automatic minibatching even if not all sequences are of the same length)
     for x_n in x:       # pseudo-code for looping over all steps of input sequence along its dynamic axis
         s = step_function(s, x_n)  # pass previous state and new data to step_function -> new state
         y.append(s)
-    '''
 
 The ``step_function`` must be a CNTK Function that takes the previous state
 and a new input, and outputs a new state.

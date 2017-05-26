@@ -93,7 +93,9 @@ progress_writer = C.logging.ProgressPrinter()
 # Change 'restore' to True to have training start from a prior checkpoint file if available.
 checkpoint_callback_config = C.CheckpointConfig(model_path, epoch_size, restore=False)
 
-# Callback for cross-validation based learning-rate adjustment and early stopping.
+# Callback for cross-validation.
+# The cross-validation callback mechanism allows you to implement your own
+# learning-rate control and early stopping.
 # The following implements a simple callback that halves the learning rate if the
 # metric has not improved by at least 5% relative. The cross-validation callback
 # gets configured to call this every 3*epoch_size samples, i.e. only every 3rd epoch.
@@ -102,7 +104,7 @@ def adjust_lr_callback(index, average_error, cv_num_samples, cv_num_minibatches)
     global prev_metric
     if (prev_metric - average_error) / prev_metric < 0.05: # relative gain must reduce metric by at least 5% rel
         learner.reset_learning_rate(C.learning_rate_schedule(learner.learning_rate() / 2, C.learners.UnitType.sample))
-        if learner.learning_rate() < lr_per_sample / 31.9: # we are done after the 4-th LR cut
+        if learner.learning_rate() < lr_per_sample / 127.9: # we are done after the 4-th LR cut
             print("Learning rate {} too small. Training complete.".format(learner.learning_rate()))
             return False # means we are done
         print("Improvement of metric from {:.3f} to {:.3f} insufficient. Halving learning rate to {}.".format(prev_metric, average_error, learner.learning_rate()))

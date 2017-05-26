@@ -174,9 +174,8 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
     rather than, like `Recurrence()`, as an initialization parameter to the factory function.
     This form is meant for use in sequence-to-sequence scenarios.
     This documentation only covers this case; for additional information on parameters, see :func:`~cntk.layers.sequence.Recurrence`.
-    In pseudo-code:
+    In pseudo-code::
 
-      """
       # pseudo-code for y = RecurrenceFrom(step_function)(s,x)
       #  x: input sequence of tensors along the dynamic axis
       #  s: initial state for the recurrence (computed from input data elsewhew)
@@ -185,7 +184,6 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
       for x_n in x:       # pseudo-code for looping over all steps of input sequence along its dynamic axis
           s = step_function(s, x_n)  # pass previous state and new data to step_function -> new state
           y.append(s)
-      """
 
     The layer function returned by this factory function accepts the initial state as data argument(s).
     The initial state can be non-sequential data, as one would have for a plain sequence-to-sequence model,
@@ -294,9 +292,8 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     This factory function creates a function that runs a step function recurrently over an input sequence,
     where in each step, Recurrence() will pass to the step function a data input as well as the output of the
     previous step.
-    The following pseudo-code repesents what happens when you call a `Recurrence()` layer:
+    The following pseudo-code repesents what happens when you call a `Recurrence()` layer::
 
-      """
       # pseudo-code for y = Recurrence(step_function)(x)
       #  x: input sequence of tensors along the dynamic axis
       #  y: resulting sequence of outputs along the same dynamic axis
@@ -305,7 +302,6 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
       for x_n in x:       # pseudo-code for looping over all steps of input sequence along its dynamic axis
           s = step_function(s, x_n)  # pass previous state and new data to step_function -> new state
           y.append(s)
-      """
 
     The common step functions are :func:`~cntk.layers.blocks.LSTM`, :func:`~cntk.layers.blocks.GRU`, and :func:`~cntk.layers.blocks.RNNStep`,
     but the step function can be any :class:`~cntk.ops.functions.Function` or Python function.
@@ -429,9 +425,8 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
     Layer factory function to create a function that runs a step function recurrently over an input sequence,
     and returns the final state.
     This is often used for embeddings of sequences, e.g. in a sequence-to-sequence model.
-    Pseudo-code:
+    Pseudo-code::
 
-      """
       # pseudo-code for h = Fold(step_function)(x)
       #  x: input sequence of tensors along the dynamic axis
       #  h: resulting final step-function output tensor that no longer has a dynamic axis
@@ -439,7 +434,6 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
       for x_n in x:       # pseudo-code for looping over all steps of input sequence along its dynamic axis
           h = step_function(h, x_n)  # pass previous state and new data to step_function -> new state
       # now h is the result of the final invocation of the step function
-      """
 
     ``Fold()`` is the same as :func:`~cntk.layers.sequence.Recurrence` except that only the final state is returned
     (whereas ``Recurrence()`` returns the entire state sequence).
@@ -527,9 +521,8 @@ def UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name
     repeatedly applies ``generator_function`` and emits the sequence of results.
     It stops after a maximum number of steps, or earlier when, if provided, `until_predicate` evaluates to True for the current output.
     The maximum number of steps is based on a second input from which only the dynamic-axis information is used.
-    This is best explained in pseudo-code:
+    This is best explained in pseudo-code::
 
-      """
       # pseudo-code for y = UnfoldFrom(generator_function, until_predicate)(s,axis_like)
       #  s:         initial state for the recurrence (computed from input data elsewhew),
       #  axis_like: any input with a dynamic axis, unfold will happen along the same dynamic axis,
@@ -541,7 +534,6 @@ def UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name
           if until_predicate(s):
               break
       # now y is the output of repeatedly applying generator_function()
-      """
 
     A typical application is the decoder of a sequence-to-sequence model,
     the generator function ``f`` accepts a two-valued state, with the first
