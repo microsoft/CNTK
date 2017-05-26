@@ -96,7 +96,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         self.__disown__()
 
         # print out data about CNTK build
-        cntk_py.print_built_info()
+        #cntk_py.print_built_info()
 
         self.logfilename = None
         if self.log_to_file is not None:

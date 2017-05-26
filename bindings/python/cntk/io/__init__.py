@@ -637,7 +637,6 @@ class MinibatchSourceFromData(UserMinibatchSource):
     def next_minibatch(self, num_samples, number_of_workers=1, worker_rank=0, device=None):        
         if self._total_num_samples >= self._max_samples:
             return {}
-        assert number_of_workers == 1  # TODO
         # determine how many samples, starting from self._cursor, will fit into the requested minibatch size of num_samples
         begin = self._cursor
         end = self._cursor
@@ -666,9 +665,15 @@ class MinibatchSourceFromData(UserMinibatchSource):
                 sub_shape = data.shape[1:]
                 extent = (end - begin,) + sub_shape
                 start_offset = (begin,) + tuple(0 for _ in sub_shape)
+                if number_of_workers != 1: # slice_view presently does not support strides
+                    raise ValueError('distributed reading from Value objects is not supported')
                 mb_data = data.slice_view(start_offset, extent, data.is_read_only)
             else:
-                mb_data = arg[begin:end]
+                # in case of distributed reading, we sub-slice the minibatch
+                #print('rank/worker', worker_rank, number_of_workers, 'reading', slice(begin+worker_rank, end+worker_rank, number_of_workers))
+                mb_data = arg[begin+worker_rank:end+worker_rank:number_of_workers]
+                if number_of_workers != 1:
+                    mb_data = mb_data.copy() # un-stride it, to avoid performance warning
             if isinstance(mb_data, list): # create a Value object
                 if si.name not in self._vars: # this case is more complex, we need a CNTK Variable
                     from cntk import input_variable, device

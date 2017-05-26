@@ -8,7 +8,7 @@
 #  - checkpointing
 #  - testing after each minibatch
 #  - cross-validation based learning-rate control and early stopping in user code
-#  - distributed training using the BlockMomentum method and MPI
+#  - data-parallel distributed training using MPI
 # This is shown along the task of recognizing handwritten digits on the MNIST corpus.
 
 from __future__ import print_function
@@ -41,7 +41,8 @@ X_train, X_cv, X_test = (X.astype(np.float32) for X in (X_train, X_cv, X_test))
 
 # Define the CNTK model function. The model function maps input data to
 # predictions (here: (28,28)-dimensional inputs --> 10 scores).
-# This specific model uses convolution, max pooling, and dropout.
+# This specific model uses convolution, max pooling, and dropout in a
+# typical configuration.
 with C.layers.default_options(activation=C.ops.relu, pad=False):
     model = C.layers.Sequential([
         C.layers.Convolution2D((5,5), num_filters=32, reduction_rank=0, pad=True), # reduction_rank=0 for B&W images
@@ -68,6 +69,10 @@ def criterion(data, label_one_hot):
     return loss, metric
 
 # Learner object. The learner implements the update algorithm, in this case momentum SGD.
+# Because this script supports data-parallel training, the learning rate is specified
+# "per sample" (UnitType.sample), the value is already pre-divided by the minibatch size.
+# This allows data-parallel training to slice the data into subsets and also to increase
+# the minibatch size where possible, while maintaining the same contribution per sample gradient.
 epoch_size = len(X_train)
 lr_per_sample    = 0.001
 lr_schedule      = C.learning_rate_schedule(lr_per_sample, C.learners.UnitType.sample)
@@ -77,27 +82,30 @@ mm_schedule      = C.learners.momentum_as_time_constant_schedule(mm_time_constan
 # Instantiate the trainer object to drive the model training.
 learner = C.learners.momentum_sgd(model.parameters, lr_schedule, mm_schedule)
 
-# Configure trainer callbacks.
-# Callback fro progress logging
-progress_writer = C.logging.ProgressPrinter(200) # helper for logging progress; log every 200 minibatches
+# Configure trainer callbacks. This is the main point that this sample illustrates.
+# Trainer callbacks are the mechanism via which logging, check-pointing, learning-rate
+# adjustment, early stopping, and final testing are configured.
+
+# Callback for progress logging loss and metric at the end of each epoch.
+progress_writer = C.logging.ProgressPrinter()
 
 # Callback for checkpointing. This will save a model every 'epoch_size' samples.
 # Change 'restore' to True to have training start from a prior checkpoint file if available.
 checkpoint_callback_config = C.CheckpointConfig(model_path, epoch_size, restore=False)
 
-# Callback for cross-validation based training control.
+# Callback for cross-validation based learning-rate adjustment and early stopping.
 # The following implements a simple callback that halves the learning rate if the
 # metric has not improved by at least 5% relative. The cross-validation callback
 # gets configured to call this every 3*epoch_size samples, i.e. only every 3rd epoch.
-prev_metric = 1 # at very beginning, error rate is 100%
+prev_metric = 1 # metric from previous call to the callback. At very beginning, error rate is 100%.
 def adjust_lr_callback(index, average_error, cv_num_samples, cv_num_minibatches):
     global prev_metric
     if (prev_metric - average_error) / prev_metric < 0.05: # relative gain must reduce metric by at least 5% rel
-        learner.reset_learning_rate(C.learning_rate_schedule(learner.learning_rate / 2, C.learners.UnitType.sample))
-        if learner.learning_rate < lr_per_sample / 32.1: # we are done after the 4-th LR cut
-            print("Learning rate {} too small. Training complete.".format(learner.learning_rate))
+        learner.reset_learning_rate(C.learning_rate_schedule(learner.learning_rate() / 2, C.learners.UnitType.sample))
+        if learner.learning_rate() < lr_per_sample / 31.9: # we are done after the 4-th LR cut
+            print("Learning rate {} too small. Training complete.".format(learner.learning_rate()))
             return False # means we are done
-        print("Improvement of metric from {:.3f} to {:.3f} not large enough. Halving learning rate, now {}".format(prev_metric, average_error, learner.learning_rate))
+        print("Improvement of metric from {:.3f} to {:.3f} not large enough. Halving learning rate, now {}".format(prev_metric, average_error, learner.learning_rate()))
     prev_metric = average_error
     return True # means continue
 cv_callback_config = C.CrossValidationConfig((X_cv, Y_cv), 3*epoch_size, minibatch_size=256,
@@ -106,10 +114,33 @@ cv_callback_config = C.CrossValidationConfig((X_cv, Y_cv), 3*epoch_size, minibat
 # Callback for testing the final model.
 test_callback_config = C.TestConfig((X_test, Y_test), criterion=criterion)
 
-# Train and test.
-progress = criterion.train((X_train, Y_train), minibatch_size=64, max_epochs=40, parameter_learners=[learner],
+# Configure distributed training.
+# For this, we wrap the learner in a distributed_learner object.
+# This specific example implements the BlockMomentum method. The Python script must be run
+# using mpiexec in order to have effect. For example, under Windows, the command is:
+#   mpiexec -n 4 -lines python -u MNIST_Complex_Training.py
+learner = C.train.distributed.data_parallel_distributed_learner(learner)
+
+# For distributed training, we must maximize the minibatch size, as to minimize
+# communication cost and GPU underutilization. Hence, we use a "schedule"
+# that increases the minibatch size after a few epochs. By specifying the learning rate
+# as UnitType.sample, the contribution per sample maintains the same scale without
+# having to fix up the learning rate.
+# For this MNIST model, larger minibatch sizes make it faster, because the
+# model is too small to utilize a full GPU. Hence data-parallel training cannot
+# be expected to lead to speed-ups.
+minibatch_size_schedule = C.minibatch_size_schedule([256]*6 + [512]*8 + [1024]*10 + [2048]*8 + [4096], epoch_size=epoch_size)
+
+# Train and test, with checkpointing and learning-rate adjustment.
+progress = criterion.train((X_train, Y_train), minibatch_size=minibatch_size_schedule,
+                           max_epochs=50, parameter_learners=[learner],
                            callbacks=[progress_writer, checkpoint_callback_config, cv_callback_config, test_callback_config])
-final_loss, final_metric, final_samples, test_metric = (progress.epoch_summaries[-1].loss, progress.epoch_summaries[-1].metric, progress.epoch_summaries[-1].samples, progress.test_summary.metric)
+
+# Get progress statistics.
+final_loss    = progress.epoch_summaries[-1].loss
+final_metric  = progress.epoch_summaries[-1].metric
+final_samples = progress.epoch_summaries[-1].samples
+test_metric   = progress.test_summary.metric
 
 # Inspect predictions on one minibatch, for illustration.
 # For evaluation, we map the output of the network between 0-1 and convert them into probabilities
@@ -123,3 +154,6 @@ result = get_probability(X_check)
 
 print("Label    :", [label.argmax() for label in Y_check])
 print("Predicted:", [result[i,:].argmax() for i in range(len(result))])
+
+# Must call MPI finalize when process exit without exceptions
+C.train.distributed.Communicator.finalize()

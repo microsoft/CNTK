@@ -335,10 +335,10 @@ def training_session(trainer,
         checkpoint_config = CheckpointConfig(filename=None)
 
     if cv_config is None:
-       cv_config = CrossValidationConfig(source=None)
+       cv_config = CrossValidationConfig(None)
 
     if test_config is None:
-       test_config = TestConfig(minibatch_source=None)
+       test_config = TestConfig(None)
 
     return TrainingSession(trainer, mb_source, mb_size, model_inputs_to_streams, max_samples,
                            progress_frequency, checkpoint_config, cv_config, test_config)

@@ -1308,7 +1308,7 @@ class Function(cntk_py.Function):
         elif isinstance(minibatch_size, int): # convert to a schedule
             from ..train.training_session import minibatch_size_schedule
             minibatch_size = minibatch_size_schedule(minibatch_size)
-        elif not isinstance(schedule, cntk_py.minibatch_size_schedule):
+        elif not isinstance(minibatch_size, cntk_py.minibatch_size_schedule):
             raise ValueError('minibatch_size must be an int or the result an call to the minibatch_size_schedule() function')
         # max_samples
         # Can be either directly specified as max_samples or indirectly as (max_epochs, epoch_size).
