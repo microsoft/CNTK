@@ -88,7 +88,7 @@ public:
 protected:
     wstring m_matrixName;
     int m_deviceID;
-    ElemType* m_values;
+    std::shared_ptr<ElemType> m_values;
     size_t m_maxNumRows;
     size_t m_maxNumCols;
 
@@ -148,8 +148,8 @@ public:
     virtual void SetMaxRows(size_t maxRows) override;
 
 protected:
-    int32_t* m_rowIndices;
-    int32_t* m_colIndices;
+    std::shared_ptr<int32_t> m_rowIndices;
+    std::shared_ptr<int32_t> m_colIndices;
     size_t m_nnz;
     size_t m_maxNNz;
 };
@@ -253,7 +253,7 @@ public:
     virtual void Destroy();
 
     LibSVMBinaryReader()
-        : DSSMLabels(nullptr), DSSMCols(0)
+        : m_dssmLabels(nullptr), DSSMCols(0)
     {
         m_pMBLayout = make_shared<MBLayout>();
         m_pMBLayout->SetUniqueAxisName(L"LibSVMReader");
@@ -312,7 +312,7 @@ private:
 
     unsigned long m_randomize; // randomization range
 
-    ElemType* DSSMLabels;
+    std::shared_ptr<ElemType> m_dssmLabels;
     size_t DSSMCols;
 
     size_t m_mbSize; // size of minibatch requested

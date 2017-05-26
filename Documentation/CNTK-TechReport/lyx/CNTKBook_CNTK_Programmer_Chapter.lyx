@@ -2510,7 +2510,7 @@ void DoTrain(const ConfigParameters& config)
 
 \begin_layout Plain Layout
 
-    int traceLevel = configSGD("traceLevel", "0");
+    int traceLevel = configSGD("traceLevel", 0);
 \end_layout
 
 \begin_layout Plain Layout

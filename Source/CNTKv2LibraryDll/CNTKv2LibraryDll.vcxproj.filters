@@ -1,0 +1,92 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="NDArrayView.cpp" />
+    <ClCompile Include="Value.cpp" />
+    <ClCompile Include="Common.cpp" />
+    <ClCompile Include="Function.cpp" />
+    <ClCompile Include="Variable.cpp" />
+    <ClCompile Include="Utils.cpp" />
+    <ClCompile Include="NDMask.cpp" />
+    <ClCompile Include="Learner.cpp" />
+    <ClCompile Include="BackCompat.cpp" />
+    <ClCompile Include="Trainer.cpp" />
+    <ClCompile Include="MinibatchSource.cpp" />
+    <ClCompile Include="ComputeInputStatistics.cpp" />
+    <ClCompile Include="Serialization.cpp" />
+    <ClCompile Include="proto\CNTK.pb.cc.VS_wrapper.cpp">
+      <Filter>proto</Filter>
+    </ClCompile>
+    <ClCompile Include="DistributedCommunicator.cpp" />
+    <ClCompile Include="CompositeFunction.cpp" />
+    <ClCompile Include="PrimitiveFunction.cpp" />
+    <ClCompile Include="DistributedLearnerBase.cpp" />
+    <ClCompile Include="DataParallelDistributedLearner.cpp" />
+    <ClCompile Include="TrainingSession.cpp" />
+    <ClCompile Include="tensorboard\TensorBoardUtils.cpp">
+      <Filter>tensorboard</Filter>
+    </ClCompile>
+    <ClCompile Include="tensorboard\TensorBoardFileWriter.cpp">
+      <Filter>tensorboard</Filter>
+    </ClCompile>
+    <ClCompile Include="tensorboard\tensorboard.pb.cc.VS_wrapper.cpp">
+      <Filter>tensorboard</Filter>
+    </ClCompile>
+    <ClCompile Include="ProgressWriter.cpp" />
+    <ClCompile Include="Evaluator.cpp" />
+    <ClCompile Include="UserDefinedFunction.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="API\CNTKLibrary.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils.h" />
+    <ClInclude Include="API\CNTKLibraryInternals.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="Learner.h" />
+    <ClInclude Include="MinibatchSource.h" />
+    <ClInclude Include="API\CNTKLibraryExperimental.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="Serialization.h" />
+    <ClInclude Include="Value.h" />
+    <ClInclude Include="PrimitiveOpType.h" />
+    <ClInclude Include="DistributedCommunicator.h" />
+    <ClInclude Include="BackCompat.h" />
+    <ClInclude Include="CompositeFunction.h" />
+    <ClInclude Include="PrimitiveFunction.h" />
+    <ClInclude Include="DistributedLearnerBase.h" />
+    <ClInclude Include="DataParallelDistributedLearner.h" />
+    <ClInclude Include="tensorboard\TensorBoardUtils.h">
+      <Filter>tensorboard</Filter>
+    </ClInclude>
+    <ClInclude Include="BlockFunction.h" />
+    <ClInclude Include="Variable.h" />
+    <ClInclude Include="UserFunctionFactory.h" />
+    <ClInclude Include="UserDefinedFunction.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="API">
+      <UniqueIdentifier>{ea62180a-fb06-4f33-b472-243fab69be01}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto">
+      <UniqueIdentifier>{1a93e221-b14c-476a-a53d-c931030acd6e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tensorboard">
+      <UniqueIdentifier>{4242f3a9-0e06-4bf5-b2c2-85b292fe0b43}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Proto Include="proto\CNTK.proto">
+      <Filter>proto</Filter>
+    </Proto>
+    <Proto Include="tensorboard\tensorboard.proto">
+      <Filter>tensorboard</Filter>
+    </Proto>
+  </ItemGroup>
+</Project>

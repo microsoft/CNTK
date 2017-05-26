@@ -54,7 +54,7 @@ private:
         size_t firstframe = 0;
         foreach_index (k, numframes)
         {
-            const wstring &outfile = outpaths[k];
+            const std::wstring &outfile = outpaths[k];
             unsigned int sampperiod = sampperiods[k];
             size_t n = numframes[k];
             msra::files::make_intermediate_dirs(outfile);
@@ -183,7 +183,7 @@ private:
         size_t firstframe = 0;
         foreach_index (k, numframes)
         {
-            const wstring &outfile = outpaths[index][k];
+            const std::wstring &outfile = outpaths[index][k];
             unsigned int sampperiod = sampperiods[index][k];
             size_t n = numframes[k];
             msra::files::make_intermediate_dirs(outfile);

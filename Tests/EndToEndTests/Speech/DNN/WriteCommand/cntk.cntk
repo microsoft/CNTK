@@ -14,7 +14,7 @@ speechTrain = [
     SimpleNetworkBuilder = [
         layerSizes = 363:512:512:132
         trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ErrorPrediction"
+        evalCriterion = "ClassificationError"
         layerTypes = "Sigmoid"
         applyMeanVarNorm = true
         initValueScale = 1.0
@@ -48,6 +48,8 @@ speechTrain = [
         miniBatchMode = "partial"
         randomize = "auto"
         verbosity = 0
+        useMersenneTwisterRand=true
+
         features = [
             dim = 363
             type = "real"

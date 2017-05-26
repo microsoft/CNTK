@@ -863,38 +863,27 @@ The dimension reduced matrix consisting of the maximum value within each pooling
 
 This function is often associated with Convolution() operations.
 
-### Delay
+### PastValue, FutureValue
 
-Delay node used in recurrent networks, allows creation of a loop in the convolutional network that will repeat a specified number of times.
+PastValue and FutureValue nodes are used in recurrent networks, allow creation of a loop in the convolutional network that will repeat a specified number of times. PastValue retrieves the value of a node several steps away in the past, while FutureValue retrieves the value of a node from future.
 
-`Delay(rows, [cols], delayNode, delayTime=1, needGradient=true, defaultHiddenActivity=0.1)`
+`PastValue(rows, [cols], node, timeStep=1, defaultHiddenActivity=0.1)`
+`FutureValue(rows, [cols], node, timeStep=1, defaultHiddenActivity=0.1)`
 
 #### Parameters
 
-`cvweight` – convolution weight matrix, it has the dimensions of \[outputChannels, kernelWidth \* kernelHeight \* inputChannels\]
+`rows` – number of rows in the node
 
-`kernelWidth` – width of the kernel
+`cols` – number of cols in the node. This value is often ommit since the length of a sequence varies
 
-`kernelHeight` – height of the kernel
+`timeStep` – \[default = 1\] number of time steps toward the past and future
 
-`outputChannels` – number of output channels
-
-`horizontalSubsample` – subsamples in the horizontal direction
-
-`verticalSubsample` – subsamples in the vertical direction
-
-#### Optional Parameters
-
-`delayTime` – \[default = 1\] the amount of delay that will be introduced (number of times the loop will happen)
-
-`needGradient` – \[default = true\] does the gradient need to be computed for this node
-
-`defaultHiddenActivity` – \[default = 0.1\] the numerical amount for the defaultHiddenActivity
+`defaultHiddenActivity` – \[default = 0.1\] default value to use when passing the sequence bounday or when the value is missing.
 
 #### Returns
 
-The results of the completed Delay loop
+Either the past or future value of a node
 
 #### Notes
 
-This node is used in recurrent networks, where a delay is introduced to examine values from a previous time, such as the prior value (t-1). This has the affect of creating a loop in the computational network that will repeat delayTime number of iterations.
+This node is used in recurrent networks, where a past value is introduced to examine values from a previous time, such as the prior value (t-1). This has the affect of creating a loop in the computational network.

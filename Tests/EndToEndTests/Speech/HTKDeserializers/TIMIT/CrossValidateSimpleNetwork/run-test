@@ -1,0 +1,21 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+OriginalTestDir=../../../../Examples/Speech/TIMIT/CrossValidateSimpleNetwork
+
+# Note: can directly use run-timit-test-common since it lives at the same level
+# in the directory hierarchy.
+. $TEST_DIR/$OriginalTestDir/../run-timit-test-common
+
+(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
+if [ $? != 0 ]; then
+  echo Error: Baselines must match original test. Copy from $OriginalTestDir.
+  exit 1
+fi
+
+# Train:
+cntkrun TIMIT_TrainSimpleNetwork.cntk "TIMIT_TrainSimple=[reader=[readerType=HTKDeserializers]] $CntkArguments" || exit $?
+
+# Validate:
+cntkrun TIMIT_CrossValidateSimpleNetwork.cntk "TIMIT_CVSimple=[reader=[readerType=HTKDeserializers]] TIMIT_CVSimple=[reader=[readMethod=None]] TIMIT_CVSimple=[reader=[features=[scpFile=\$ScpDir\$/TIMIT.dev.scp.fbank.fullpath.rnn]]] $CntkArguments" || exit $?

@@ -13,33 +13,27 @@
 #include <memory>
 #include <msclr\marshal_cppstd.h>
 
-#include "ExceptionWithCallStack.h"
+#include "CNTKException.h"
+#include "EvalCommon.h"
 #include "Eval.h"
 
 #using <System.dll>
 #using <System.Collections.dll>
+#using <System.Drawing.dll>
 
 using namespace std;
 using namespace System;
 using namespace System::Collections::Generic;
 using namespace System::Collections;
+using namespace System::Drawing;
+using namespace System::Drawing::Imaging;
 using namespace Microsoft::MSR::CNTK;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Extensibility { namespace Managed {
 
-ref class CNTKException;
-
 // Used for retrieving the model appropriate for the element type (float / double)
 template<typename ElemType>
 using GetEvalProc = void(*)(IEvaluateModel<ElemType>**);
-
-/// Enumeration for the types of nodes
-public enum class NodeGroup
-{
-    nodeInput,  // an input node
-    nodeOutput, // an output node
-    nodeSpecified
-};
 
 /// Managed wrapper for the native evaluation model
 template<typename ElemType>
@@ -52,21 +46,10 @@ public:
     /// <param name="funcName">Factory function name for retrieving the native model from the dll.</param>
     IEvaluateModelManaged(String^ funcName)
     {
-        pin_ptr<const WCHAR> dllname = PtrToStringChars("evaldll.dll");
-        auto hModule = LoadLibrary(dllname);
-        if (hModule == nullptr)
-        {
-            throw gcnew CNTKException(System::String::Format("Cannot find library: {0}", gcnew String(dllname)));
-        }
-
         try
         {
-            msclr::interop::marshal_context context;
-            const std::string func = context.marshal_as<std::string>(funcName);
-            auto procAddress = GetProcAddress(hModule, func.c_str());
-            auto getEvalProc = (GetEvalProc<ElemType>)procAddress;
             pin_ptr <IEvaluateModel<ElemType>*> p_eval = &m_eval;
-            getEvalProc(p_eval);
+            GetEval<ElemType>(p_eval);
         }
         catch (const exception& ex)
         {
@@ -163,8 +146,8 @@ public:
     }
 
     /// <summary>Evaluates the model using a single forward feed pass and retrieves the output layer data</summary>
-    /// <param name="outputKey"></param>
-    /// <param name="outputSize"></param>
+    /// <param name="outputKey">The output layer name</param>
+    /// <param name="outputSize">The dimension size of the output layer</param>
     /// <returns>Results for specified layer</returns>
     __declspec(deprecated) List<ElemType>^ Evaluate(String^ outputKey, int outputSize)
     {
@@ -173,13 +156,8 @@ public:
             throw gcnew ObjectDisposedException("Object has been disposed.");
         }
 
-        std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
-
-
         try
         {
-            std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
-
             List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
             for (int i = 0; i < outputSize; i++)
             {
@@ -189,40 +167,7 @@ public:
             Dictionary<String^, List<ElemType>^>^ outputMap = gcnew Dictionary<String^, List<ElemType>^>();
             outputMap->Add(outputKey, outputs);
 
-            for each (auto item in outputMap)
-            {
-                pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
-                shared_ptr<std::vector<ElemType>> ptr = CopyList(item.Value);
-                sharedOutputVectors.push_back(ptr);
-                stdOutputs.insert(MapEntry(key, ptr.get()));
-            }
-
-            try
-            {
-                m_eval->Evaluate(stdOutputs);
-            }
-            catch (const exception& ex)
-            {
-                throw GetCustomException(ex);
-            }
-
-            auto enumerator = outputMap->Keys->GetEnumerator();
-            for (auto& map_item : stdOutputs)
-            {
-                // Retrieve the layer key
-                enumerator.MoveNext();
-                String^ key = enumerator.Current;
-
-                std::vector<ElemType> &refVec = *(map_item.second);
-                int index = 0;
-
-                // Copy output to CLI structure
-                for (auto& vec : refVec)
-                {
-                    outputMap[key][index++] = vec;
-                }
-            }
-
+            Evaluate(outputMap);
             return outputMap[outputKey];
         }
         catch (Exception^)
@@ -232,8 +177,7 @@ public:
     }
 
     /// <summary>Evaluates the model using a single forward feed pass and retrieves the output layer data</summary>
-    /// <param name="outputKey"></param>
-    /// <param name="outputSize"></param>
+    /// <param name="outputKey">The output layer name</param>
     /// <returns>Results for specified layer</returns>
     List<ElemType>^ Evaluate(String^ outputKey)
     {
@@ -242,12 +186,9 @@ public:
             throw gcnew ObjectDisposedException("Object has been disposed.");
         }
 
-        std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
-
         try
         {
-            std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
-            int outputSize = GetNodeDimensions(NodeGroup::nodeOutput)[outputKey];
+            int outputSize = GetNodeDimensions(NodeGroup::Output)[outputKey];
 
             List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
             for (int i = 0; i < outputSize; i++)
@@ -258,40 +199,7 @@ public:
             Dictionary<String^, List<ElemType>^>^ outputMap = gcnew Dictionary<String^, List<ElemType>^>();
             outputMap->Add(outputKey, outputs);
 
-            for each (auto item in outputMap)
-            {
-                pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
-                shared_ptr<std::vector<ElemType>> ptr = CopyList(item.Value);
-                sharedOutputVectors.push_back(ptr);
-                stdOutputs.insert(MapEntry(key, ptr.get()));
-            }
-
-            try
-            {
-                m_eval->Evaluate(stdOutputs);
-            }
-            catch (const exception& ex)
-            {
-                throw GetCustomException(ex);
-            }
-
-            auto enumerator = outputMap->Keys->GetEnumerator();
-            for (auto& map_item : stdOutputs)
-            {
-                // Retrieve the layer key
-                enumerator.MoveNext();
-                String^ key = enumerator.Current;
-
-                std::vector<ElemType> &refVec = *(map_item.second);
-                int index = 0;
-
-                // Copy output to CLI structure
-                for (auto& vec : refVec)
-                {
-                    outputMap[key][index++] = vec;
-                }
-            }
-
+            Evaluate(outputMap);
             return outputMap[outputKey];
         }
         catch (Exception^)
@@ -301,8 +209,8 @@ public:
     }
 
     /// <summary>Evaluates the model against input data and retrieves the output layer data</summary>
-    /// <param name="inputs"></param>
-    /// <param name="outputs"></param>
+    /// <param name="inputs">The input nodes and their values</param>
+    /// <param name="outputs">The output nodes and their values</param>
     void Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, Dictionary<String^, List<ElemType>^>^ outputs)
     {
         if (m_eval == nullptr)
@@ -343,22 +251,7 @@ public:
                 throw GetCustomException(ex);
             }
 
-            auto enumerator = outputs->Keys->GetEnumerator();
-            for (auto& map_item : stdOutputs)
-            {
-                // Retrieve the layer key
-                enumerator.MoveNext();
-                String^ key = enumerator.Current;
-
-                std::vector<ElemType> &refVec = *(map_item.second);
-                int index = 0;
-
-                // Copy output to CLI structure
-                for (auto& vec : refVec)
-                {
-                    outputs[key][index++] = vec;
-                }
-            }
+            CopyOutput(outputs, stdOutputs);
         }
         catch (Exception^)
         {
@@ -367,9 +260,9 @@ public:
     }
 
     /// <summary>Evaluates the model against input data and retrieves the output layer data</summary>
-    /// <param name="inputs"></param>
-    /// <param name="outputKey"></param>
-    /// <param name="outputSize"></param>
+    /// <param name="inputs">The input nodes and their values</param>
+    /// <param name="outputKey">The output layer name</param>
+    /// <param name="outputSize">The dimension size of the output layer</param>
     /// <returns>Results for specified layer</returns>
     __declspec(deprecated) List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey, int outputSize)
     {
@@ -383,17 +276,145 @@ public:
         outputMap->Add(outputKey, outputs);
 
         Evaluate(inputs, outputMap);
-
         return outputMap[outputKey];
     }
 
+    /// <summary>Evaluates the model against the given bitmap input, and retrieves the output layer data.
+    /// The image is expected to be in RGB format, and must already be re-sized to match the network size.
+    /// The feature vector that is generated will contain 3 channels.</summary>
+    /// <param name="image">The image to work with.</param>
+    /// <param name="outputKey">The name of the output node to retrieve.</param>
+    /// <returns>Results for specified layer</returns>
+    List<ElemType>^ EvaluateRgbImage(Bitmap^ image, String^ outputKey)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+        bool hasAlphaChannel;
+        if (image->PixelFormat == PixelFormat::Format24bppRgb)
+        {
+            hasAlphaChannel = false;
+        }
+        else if (image->PixelFormat == PixelFormat::Format32bppArgb)
+        {
+            hasAlphaChannel = true;
+        }
+        else
+        {
+            throw gcnew ArgumentException("Pixel format of input bitmap is not recognized, must be one of { Format24bppRgb, Format32bppArgb}.", "image");
+        }
+        int imageWidth = image->Width;
+        int imageHeight = image->Height;
+        // The total number of pixels in one channel of the image.
+        int channelStride = imageWidth * imageHeight;
+        // The number of color channels that will be fed into the network.
+        int numChannels = 3;
+        // The total number of pixels in all channels of the image.
+        int numPixels = channelStride * numChannels;
+        // A dictionary that contains the dimensions of each output node.
+        auto outDims = GetNodeDimensions(NodeGroup::Output);
+        // The dimensions of the requested output node.
+        int outputSize;
+        if (!outDims->TryGetValue(outputKey, outputSize))
+        {
+            auto message = String::Format("The specified output key '{0}' is not an output node of the network", outputKey);
+            throw gcnew ArgumentException(message, "outputKey");
+        }
+        // A dictionary that contains the names of input nodes, and their dimensionality.
+        auto inDims = GetNodeDimensions(NodeGroup::Input);
+        if (inDims->Count != 1)
+        {
+            throw gcnew InvalidOperationException("The loaded network must contain exactly 1 input node.");
+        }
+        // Read out the single element in the dictionary. The key is the input node name,
+        // value is the dimensionality.
+        auto enumerator = inDims->GetEnumerator();
+        enumerator.MoveNext();
+        String^ inputNodeName = enumerator.Current.Key;
+        int inputSize = enumerator.Current.Value;
+        // #pixels * #channels in the image must match the input dimension of the network.
+        if (inputSize != numPixels)
+        {
+            auto message = String::Format("Input image has invalid size. Expected an image with Width * Height = {0}, but got Width = {1}, Height = {2}",
+                inputSize / numChannels, imageWidth, imageHeight);
+            throw gcnew ArgumentException(message, "image");
+        }
+        // Get the native bitmap structure that is underlying the Bitmap object:
+        // Need to lock the whole image into memory.
+        auto rect = gcnew System::Drawing::Rectangle(0, 0, imageWidth, imageHeight);
+        auto bitmap = image->LockBits(*rect, ImageLockMode::ReadOnly, image->PixelFormat);
+        // The byte array that contains the bitmap.
+        auto bytes = reinterpret_cast<byte*>(bitmap->Scan0.ToPointer());
+        // The offset to go from one scanline of the image to the next one.
+        int bitmapStride = bitmap->Stride;
+        // The feature vector that will be fed into the network.
+        auto featureVector = new std::vector<ElemType>(numPixels);
+        int index;
+        // Copy from the Bitmap byte array to the arrangement that CNTK expects:
+        // First comes the R plane, then G, then B.
+        for (int c = 0; c < 3; c++)
+        {
+            for (int h = 0; h < imageHeight; h++)
+            {
+                for (int w = 0; w < imageWidth; w++)
+                {
+                    // In the input image, each pixel is represented
+                    // by R, G, B, [A] bytes
+                    if (hasAlphaChannel)
+                    {
+                        index = h * bitmapStride + w * 4 + c;
+                    }
+                    else
+                    {
+                        index = h * bitmapStride + w * 3 + c;
+                    }
+                    (*featureVector)[channelStride * c + imageWidth * h + w] = (ElemType)(bytes[index]);
+                }
+            }
+        }
+        image->UnlockBits(bitmap);
+
+        std::map<std::wstring, std::vector<ElemType>*> stdInputs;
+        std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
+        // The CLI structure that will be returned to the caller.
+        auto outputList = gcnew List<ElemType>(outputSize);
+        std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
+        pin_ptr<const WCHAR> inputKey = PtrToStringChars(inputNodeName);
+        shared_ptr<std::vector<ElemType>> f2(featureVector);
+        stdInputs.insert(MapEntry(inputKey, f2.get()));
+
+        pin_ptr<const WCHAR> key = PtrToStringChars(outputKey);
+        // Do we have to initialize the output nodes?
+        shared_ptr<std::vector<ElemType>> ptr(new std::vector<ElemType>(outputSize));
+        sharedOutputVectors.push_back(ptr);
+        stdOutputs.insert(MapEntry(key, ptr.get()));
+        try
+        {
+            m_eval->Evaluate(stdInputs, stdOutputs);
+        }
+        catch (const exception& ex)
+        {
+            throw GetCustomException(ex);
+        }
+
+        auto &refVec = *stdOutputs[key];
+        for (auto& vec : refVec)
+        {
+            // List has been pre-allocated to the right size,
+            // so this should be fast.
+            outputList->Add(vec);
+        }
+        return outputList;
+    }
+
     /// <summary>Evaluates the model against input data and retrieves the desired output layer data</summary>
-    /// <param name="inputs"></param>
-    /// <param name="outputKey"></param>
+    /// <param name="inputs">The input nodes and their values</param>
+    /// <param name="outputKey">The output layer name</param>
     /// <returns>Results for requested layer</returns>
     List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey)
     {
-        auto outDims = GetNodeDimensions(NodeGroup::nodeOutput);
+        auto outDims = GetNodeDimensions(NodeGroup::Output);
         int outputSize = outDims[outputKey];
 
         List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
@@ -406,7 +427,6 @@ public:
         outputMap->Add(outputKey, outputs);
 
         Evaluate(inputs, outputMap);
-
         return outputMap[outputKey];
     }
 
@@ -484,6 +504,58 @@ private:
         return lower;
     }
 
+    /// <summary>Evaluates the model using a single forward feed pass without input and retrieves the output layer data</summary>
+    /// <param name="outputs">The output nodes and output buffers</param>
+    /// <returns>none</returns>
+    void Evaluate(Dictionary<String^, List<ElemType>^>^ outputs)
+    {
+        std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
+        std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
+
+        for each (auto item in outputs)
+        {
+            pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
+            shared_ptr<std::vector<ElemType>> ptr = CopyList(item.Value);
+            sharedOutputVectors.push_back(ptr);
+            stdOutputs.insert(MapEntry(key, ptr.get()));
+        }
+
+        try
+        {
+            m_eval->Evaluate(stdOutputs);
+        }
+        catch (const exception& ex)
+        {
+            throw GetCustomException(ex);
+        }
+
+        CopyOutput(outputs, stdOutputs);
+    }
+
+    /// <summary>Copy output data to the output buffer</summary>
+    /// <param name="outputs">The output nodes and output buffers</param>
+    /// <param name="outputData">The output data</param>
+    /// <returns>none</returns>
+    void CopyOutput(Dictionary<String^, List<ElemType>^>^ outputs, std::map<std::wstring, std::vector<ElemType>*>& outputData)
+    {
+        for each (auto item in outputs)
+        {
+            pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
+            std::vector<ElemType> *pVec = outputData[key];
+            if (pVec == nullptr)
+            {
+                throw gcnew NullReferenceException("No output value available.");
+            }
+
+            int index = 0;
+            // Copy output to CLI structure
+            for (auto& vec : *pVec)
+            {
+                outputs[item.Key][index++] = vec;
+            }
+        }
+    }
+
     /// <summary> Throws a CLR exception based on a native exception</summary>
     /// <param name="ex">The native exception to throw as a CLR exception</param>
     /// <returns>A CLR exception</returns>
@@ -555,61 +627,6 @@ public:
     }
 };
 
-public ref class CNTKException : Exception
-{
-public:
-    CNTKException() : Exception()
-    {}
-
-    CNTKException(String^ message) : Exception(message)
-    {}
-
-    CNTKException(String^ message, String^ callstack) : Exception(message), NativeCallStack(callstack)
-    {}
-
-    const String^ NativeCallStack;
-};
-
-public ref class CNTKRuntimeException : CNTKException
-{
-public:
-    CNTKRuntimeException() : CNTKException()
-    {}
-
-    CNTKRuntimeException(String^ message, String^ callstack) : CNTKException(message, callstack)
-    {}
-};
-
-public ref class CNTKLogicErrorException : CNTKException
-{
-public:
-    CNTKLogicErrorException() : CNTKException()
-    {}
-
-    CNTKLogicErrorException(String^ message, String^ callstack) : CNTKException(message, callstack)
-    {}
-};
-
-public ref class CNTKInvalidArgumentException : CNTKException
-{
-public:
-    CNTKInvalidArgumentException() : CNTKException()
-    {}
-
-    CNTKInvalidArgumentException(String^ message, String^ callstack) : CNTKException(message, callstack)
-    {}
-};
-
-public ref class CNTKBadAllocException : CNTKException
-{
-public:
-    CNTKBadAllocException() : CNTKException()
-    {}
-
-    CNTKBadAllocException(String^ message) : CNTKException(message)
-    {}
-};
-
 // This method tricks the compiler into emitting the methods of the classes
 // Refer to https://msdn.microsoft.com/en-us/library/ms177213.aspx for an
 // explanation to this behavior
@@ -623,22 +640,24 @@ void emit()
     f.Evaluate(nullptr, nullDictF);
     f.Evaluate(nullptr, "");
     f.Evaluate("");
+    f.EvaluateRgbImage(nullptr, "");
     f.CreateNetwork("");
     f.CreateNetwork("", 0);
     f.CreateNetwork("", nullptr);
     f.CreateNetwork("", 0, nullptr);
-    f.GetNodeDimensions(NodeGroup::nodeSpecified);
+    f.GetNodeDimensions(NodeGroup::Specified);
 
     IEvaluateModelManagedD d;
     d.Init("");
     d.Evaluate(nullptr, nullDictD);
     d.Evaluate(nullptr, "");
     d.Evaluate("");
+    d.EvaluateRgbImage(nullptr, "");
     d.CreateNetwork("");
     d.CreateNetwork("", 0);
     d.CreateNetwork("", nullptr);
     d.CreateNetwork("", 0,nullptr);
-    d.GetNodeDimensions(NodeGroup::nodeSpecified);
+    d.GetNodeDimensions(NodeGroup::Specified);
 
     // Deprecated code, hush warnings locally only
 #pragma warning(push)

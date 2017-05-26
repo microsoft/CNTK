@@ -70,14 +70,14 @@ void Eval<ElemType>::GetEvalClass(const std::string& config)
     }
     // create a variable of each type just to call the proper templated version
     ElemType elemType = ElemType();
-    GetEvalProc getEvalProc = (GetEvalProc) Plugin::Load(module, GetEvalName(elemType));
+    GetEvalProc getEvalProc = (GetEvalProc) m_plugin->Load(module, GetEvalName(elemType));
     getEvalProc(&m_eval);
 }
 
 // Eval Constructor
 // options - [in] string  of options (i.e. "-windowsize:11 -addenergy") data reader specific
 template <class ElemType>
-Eval<ElemType>::Eval(const std::string& config)
+Eval<ElemType>::Eval(const std::string& config) : m_plugin(make_shared<Plugin>())
 {
     GetEvalClass(config);
     m_eval->Init(config);

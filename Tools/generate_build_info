@@ -1,11 +1,17 @@
 #!/bin/bash
-
+#
+# Copyright (c) Microsoft. All rights reserved.
+#
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+#
 # Description: this script is used to generated buildinfo.h in Source/CNTK
 # which will contain the following infomation to be displayed at runtime:
 #   BUILDTYPE       (release/debug)
 #   BUILDTYPE       (GPU/CPU-only)
 #   WITH_1BITSGD    (whether 1bit-SGD support was enabled)
-#   MATHLIB         (MKL/ACML)
+#   MATHLIB         (MKL)
 #   CUDA_PATH       (if exists, i.e., for GPU builds)
 #   CUB_PATH        (if exists, i.e., for GPU builds)
 #   CUDNN_PATH      (if exists, i.e., only for GPU builds)
@@ -14,6 +20,8 @@
 #   BUILDER         (user under which the build was done)
 #   BUILDMACHINE    (build machine)
 #   BUILDPATH       (build path)
+#   MPI_NAME        (mpi distribution)
+#   MPI_VERSION     (mpi version)
 
 usage ()
 {
@@ -24,7 +32,7 @@ usage ()
     echo "This script assumes git can be used"
     echo "This script assumes Config.make has been made"
     echo "-------------------------------------------------------------------"
-    if [ ! -z "$1" ] ; then 
+    if [ ! -z "$1" ] ; then
         echo "ERROR message: $1"
     fi
     exit 1
@@ -49,10 +57,12 @@ makebuildinfo()
     local CUDA_PATH=$6
     local CUB_PATH=$7
     local WITH_1BITSGD=$8
-    local BUILDER=$9
-    local BUILDMACHINE=${10}
-    local BUILDPATH=${11}
-
+    local WITH_ASGD=$9
+    local BUILDER=$10
+    local BUILDMACHINE=${11}
+    local BUILDPATH=${12}
+    local MPI_NAME=${13}
+    local MPI_VERSION=${14}
     (
         printf "#ifndef _BUILDINFO_H\n"
         printf "#define _BUILDINFO_H\n"
@@ -60,75 +70,100 @@ makebuildinfo()
         printf "#define _MATHLIB_ \"%s\"\n" "$MATHLIB"
         printf "#define _BUILDSHA1_ \"%s\"\n" "$GIT_COMMIT"
         printf "#define _BUILDBRANCH_ \"%s\"\n" "$GIT_BRANCH"
-        if [ -z "$CUDA_PATH" ]; then 
+        if [ -z "$CUDA_PATH" ]; then
             printf "#define _BUILDTARGET_ \"CPU-only\"\n"
         else
             printf "#define _BUILDTARGET_ \"GPU\"\n"
             printf "#define _CUDA_PATH_ \"%s\"\n" "$CUDA_PATH"
         fi
-        if [ ! -z "$CUB_PATH" ]; then 
+        if [ ! -z "$CUB_PATH" ]; then
             printf "#define _CUB_PATH_ \"%s\"\n"  "$CUB_PATH"
         fi
-        if [ ! -z "$CUDNN_PATH" ]; then 
+        if [ ! -z "$CUDNN_PATH" ]; then
             printf "#define _CUDNN_PATH_ \"%s\"\n"  $CUDNN_PATH
         fi
         printf "#define _BUILDTYPE_ \"%s\"\n" "$BUILDTYPE"
-        if [ ! -z "$WITH_1BITSGD" ]; then 
+        if [ ! -z "$WITH_1BITSGD" ]; then
             printf "#define _WITH_1BITSGD_ \"yes\"\n"
         else
             printf "#define _WITH_1BITSGD_ \"no\"\n"
         fi
+        if [ ! -z "$WITH_ASGD" ]; then 
+            printf "#define _WITH_ASGD_ \"yes\"\n"
+        else
+            printf "#define _WITH_ASGD_ \"no\"\n"
+        fi
         printf "#define _BUILDER_ \"%s\"\n"  "$BUILDER"
         printf "#define _BUILDMACHINE_ \"%s\"\n"  "$BUILDMACHINE"
         printf "#define _BUILDPATH_ \"%s\"\n"  "$BUILDPATH"
+        printf "#define _MPI_NAME_ \"%s\"\n"  "$MPI_NAME"
+        printf "#define _MPI_VERSION_ \"%s\"\n"  "$MPI_VERSION"
         printf "#endif\n"
     ) > "$target"
 }
 
 #//////////////////////////////////////////////////////#
 #               main function                          #
-#//////////////////////////////////////////////////////#        
-if [ $# -ne 1 ]; then 
-    usage 
+#//////////////////////////////////////////////////////#
+if [ $# -ne 1 ]; then
+    usage
 fi
 
 config=$1
 
-# 1. check whether we have git and what is the sha-1 value 
+# Check whether we have git and what is the SHA-1 value
 if Has_Git; then has_git=1; else has_git=0; usage "git does not exist"; fi
 GIT_STATUS=' (modified)'
 git diff --quiet && git diff --cached --quiet && GIT_STATUS=''
 GIT_COMMIT=`git rev-parse HEAD`$GIT_STATUS
 GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
 
-# 2. looking into Config.make
-if [ ! -e $config ] ; then 
+# Looking into Config.make
+if [ ! -e $config ] ; then
     usage "Config.make not exists"
 fi
 source $config
 
-# 3. whether we have CUDA_PATH 
-if [ -z "${CUDA_PATH+x}" ]; then 
+# Whether we have CUDA_PATH
+if [ -z "${CUDA_PATH+x}" ]; then
     CUDAPATH=""
 else
     CUDAPATH=$CUDA_PATH
 fi
 
-# 4. whether we have CUB_PATH
-if [ -z "${CUB_PATH+x}" ]; then 
+# Whether we have CUB_PATH
+if [ -z "${CUB_PATH+x}" ]; then
     CUBPATH=""
 else
     CUBPATH=$CUB_PATH
 fi
 
-# 5. Build machine info
+# Identify MKL variant being used
+if [ "$MATHLIB" = "mkl" -a "$MKL_THREADING" = "sequential" ]; then
+    MATHLIB=mkl-sequential
+fi
+
+# MPI info
+MPI_NAME=Unknown
+MPI_VERSION=Unknown
+if hash ${MPI_PATH}/bin/mpirun 2>/dev/null; then
+    if [ -e ${MPI_PATH}/bin/ompi_info ]; then
+        MPI_NAME="Open MPI"
+        MPI_VERSION=`${MPI_PATH}/bin/ompi_info --parsable | grep ident | cut -f 2 -d ":"`
+    elif [ -e ${MPI_PATH}/bin/mpirun_rsh ]; then
+        MPI_NAME=`${MPI_PATH}/bin/mpiname`
+        MPI_VERSION=`${MPI_PATH}/bin/mpiname -v`
+    fi
+fi
+
+# Build machine info
 BUILDER=$USER
 BUILDMACHINE=`hostname`
 BUILDPATH=`pwd`
 
-# 6. make buildinfo.h (only update if changed)
+# Make buildinfo.h (only update if changed)
 target=Source/CNTK/buildinfo.h
-if [ ! -d Source ] ; then 
+if [ ! -d Source ] ; then
     usage
 fi
 
@@ -141,8 +176,11 @@ makebuildinfo \
     "$CUDAPATH" \
     "$CUBPATH" \
     "$CNTK_ENABLE_1BitSGD" \
+    "$CNTK_ENABLE_ASGD" \
     "$BUILDER" \
     "$BUILDMACHINE" \
-    "$BUILDPATH"
+    "$BUILDPATH" \
+    "$MPI_NAME" \
+    "$MPI_VERSION"
 
 cmp -s "$target\$\$" "$target" || mv "$target\$\$" "$target"

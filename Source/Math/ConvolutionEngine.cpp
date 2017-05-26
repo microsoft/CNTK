@@ -30,7 +30,7 @@ void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& kernel, Mat&
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace)
+void ConvolutionEngine<ElemType>::BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == grad.GetNumRows());
@@ -45,11 +45,11 @@ void ConvolutionEngine<ElemType>::BackwardData(const Mat& srcGrad, const Mat& ke
 
     EnsureCompatible();
     EnsureConvolutionInitialized();
-    BackwardDataCore(srcGrad, kernel, grad, workspace);
+    BackwardDataCore(srcGrad, kernel, grad, accumulateGradient, workspace);
 }
 
 template <class ElemType>
-void ConvolutionEngine<ElemType>::BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernel, bool allowReuse, Mat& workspace)
+void ConvolutionEngine<ElemType>::BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernel, bool accumulateGradient, bool allowReuse, Mat& workspace)
 {
     const auto& g = *m_geometry;
     assert(g.InputShape().GetNumElements() == in.GetNumRows());
@@ -64,7 +64,7 @@ void ConvolutionEngine<ElemType>::BackwardKernel(const Mat& srcGrad, const Mat& 
 
     EnsureCompatible();
     EnsureConvolutionInitialized();
-    BackwardKernelCore(srcGrad, in, kernel, allowReuse, workspace);
+    BackwardKernelCore(srcGrad, in, kernel, accumulateGradient, allowReuse, workspace);
 }
 
 template <class ElemType>
@@ -107,6 +107,26 @@ void ConvolutionEngine<ElemType>::BackwardPooling(const Mat& out, const Mat& src
     BackwardPoolingCore(out, srcGrad, in, grad);
 }
 
+template <class ElemType>
+void ConvolutionEngine<ElemType>::MaxUnpooling(const Mat& out, const Mat& poolIn, Mat& in)
+{
+    const auto& g = *m_geometry;
+    assert(g.InputShape().GetNumElements() == in.GetNumRows());
+    assert(g.InputShape().GetNumElements() == poolIn.GetNumRows());
+    assert(g.OutputShape().GetNumElements() == out.GetNumRows());
+    size_t batchSize = in.GetNumCols();
+    assert(batchSize == out.GetNumCols());
+    assert(batchSize == poolIn.GetNumCols());
+#ifdef NDEBUG
+    UNUSED(g);
+    UNUSED(batchSize);
+#endif
+
+    EnsureCompatible();
+    EnsurePoolingInitialized();
+    MaxUnpoolingCore(out, poolIn, in);
+}
+
 //------------------------------------------------------------------
 // Reference convolution engine implementation.
 // This engine supports arbitrary convolution geometry but does not provide efficient implementation.
@@ -121,8 +141,8 @@ public:
     using typename Base::Mat;
 
 public:
-    ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind), 
+    ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad), 
         m_mpRowCol(geometry->MpRowCol().size(), 1, const_cast<int*>(geometry->MpRowCol().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
     {
     }
@@ -133,6 +153,7 @@ protected:
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
     using Base::m_poolKind;
+    using Base::m_poolIncludePad;
 
     void EnsureCompatible() override
     {
@@ -159,12 +180,12 @@ protected:
         in.ConvolutionForward(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, out);
     }
 
-    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& /*workspace*/) override
+    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool /*accumulateGradient*/, Mat& /*workspace*/) override
     {
         srcGrad.ConvolutionBackwardData(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, grad);
     }
 
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*allowReuse*/, Mat& /*workspace*/) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool /*allowReuse*/, Mat& /*workspace*/) override
     {
         srcGrad.ConvolutionBackwardKernel(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
     }
@@ -189,7 +210,7 @@ protected:
         }
         else if (m_poolKind == PoolKind::Average)
         {
-            in.AveragePoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out);
+            in.AveragePoolingForward(m_mpRowCol, *m_mpRowIndices, *m_indices, out, m_poolIncludePad);
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
@@ -204,10 +225,15 @@ protected:
         }
         else if (m_poolKind == PoolKind::Average)
         {
-            srcGrad.AveragePoolingBackward(m_mpRowCol, *m_mpRowIndices, *m_indices, grad);
+            srcGrad.AveragePoolingBackward(m_mpRowCol, *m_mpRowIndices, *m_indices, grad, m_poolIncludePad);
         }
         else
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
+    }
+
+    void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) override
+    {
+        out.MaxUnpooling(m_mpRowCol, *m_mpRowIndices, *m_indices, poolIn, in);
     }
 
 protected:
@@ -240,8 +266,8 @@ public:
     using typename Base::Mat;
 
 public:
-    LegacyConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind), 
+    LegacyConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad), 
         m_inT(m_geometry->InputShape(), ImageLayoutKind::CHW), m_outT(m_geometry->OutputShape(), ImageLayoutKind::CHW),
         m_kernelT(m_geometry->KernelShape(), ImageLayoutKind::CHW), m_strideT(m_geometry->Stride(), ImageLayoutKind::CHW)
     {
@@ -254,6 +280,7 @@ protected:
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
     using Base::m_poolKind;
+    using Base::m_poolIncludePad;
 
     void EnsureCompatible() override
     {
@@ -347,7 +374,7 @@ protected:
         assert(batchSize == out.GetNumCols());
     }
 
-    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace) override
+    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool /*accumulateGradient*/, Mat& workspace) override
     {
         size_t batchSize = srcGrad.GetNumCols();
         size_t packedInputRows = m_kernelT.w() * m_kernelT.h() * m_kernelT.c();
@@ -387,7 +414,7 @@ protected:
         assert(batchSize == srcGrad.GetNumCols());
     }
 
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool allowReuse, Mat& workspace) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool allowReuse, Mat& workspace) override
     {
         size_t batchSize = in.GetNumCols();
         size_t packedInputRows = m_kernelT.w() * m_kernelT.h() * m_kernelT.c();
@@ -500,6 +527,15 @@ protected:
             InvalidArgument("Pooling type %d is not supported.", (int)m_poolKind);
     }
 
+    void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) override
+    {
+        UNUSED(out);
+        UNUSED(poolIn);
+        UNUSED(in);
+        // Not implemented but potentially can make a fallback to reference engine.
+        LogicError("MaxUnpooling is not implemented for legacy engine.");
+    }
+
 private:
     ImageDimensions m_inT;
     ImageDimensions m_outT;
@@ -526,8 +562,8 @@ public:
     using typename Base::Mat;
 
 public:
-    GemmConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind)
+    GemmConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad)
     {
     }
 
@@ -540,6 +576,7 @@ protected:
     using Base::m_deviceId;
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
+    using Base::m_poolIncludePad;
 
     using Base::m_mpRowCol;
     using Base::m_mpRowIwht;
@@ -606,7 +643,7 @@ protected:
 
             // cudnn layout uses row-major kernel weight matrix.
             auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
-            kern.Reshape(kernel.GetNumCols(), kernel.GetNumRows());
+            kern.Reshape(unrollCols, kernel.GetNumElements()/unrollCols);
 
             // Perform matrix multiplication of unrolled inputs with weights.
             // If there is just one sample in the sub-batch then compute result directly to the output matrix.
@@ -644,7 +681,7 @@ protected:
     //    [KXY x NWH]^T * [KXY x C] -> [NWH x C]
     // 4. Reshape and transpose outputs (grad): [NWH x C] -> [N x WHC]^T -> [WHC x N]
     //    In case minibatch size == 1 this step is not required and step 3 writes results directly to output (grad).
-    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace) override
+    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool /*accumulateGradient*/, Mat& workspace) override
     {
         size_t batchSize = srcGrad.GetNumCols();
         size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
@@ -678,8 +715,9 @@ protected:
         workspace.Resize(1, kernCols + unrollRows * (unrollCols + (subBatchSize > 1 ? mapInCount : 0)));
 
         auto kern = kernel.ColumnSlice(0, kernel.GetNumCols());
+        size_t kernTCols = kernT.GetNumElements(); 
         // cudnn layout uses row-major kernel weight matrix.
-        kern.Reshape(kernel.GetNumCols(), kernel.GetNumRows());
+        kern.Reshape(kernTCols, kernCols/kernTCols);
         // Now transpose and reshape to [KXY x C].
         auto kernTran = workspace.ColumnSlice(0, kernCols);
         // Reshape to transpose shape, AssignTransposeOf requires that.
@@ -687,7 +725,7 @@ protected:
         kernTran.AssignTransposeOf(kern);
         kern = kernTran.ColumnSlice(0, kernTran.GetNumCols());
         // Reshape to final shape.
-        kern.Reshape(kernel.GetNumElements() / mapInCount, mapInCount);
+        kern.Reshape(unrollCols, mapInCount);
 
         for (size_t start = 0; start < batchSize; start += subBatchSize)
         {
@@ -736,7 +774,7 @@ protected:
     // 2. Unrolling convolution input (in) into a matrix of [NW'H' x WHC] layout.
     // 3. Performing matrix multiplication of unrolled input with transposed output:
     //    [NW'H' x WHC]^T * [NW'H' x K] -> [WHC x K] - kernel gradients.
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*allowReuse*/, Mat& workspace) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool /*allowReuse*/, Mat& workspace) override
     {
         size_t batchSize = srcGrad.GetNumCols();
         size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
@@ -799,7 +837,7 @@ protected:
 
             // cudnn layout uses row-major kernel weight matrix.
             auto kernGrad = kernelGrad.ColumnSlice(0, kernelGrad.GetNumCols());
-            kernGrad.Reshape(kernelGrad.GetNumCols(), kernelGrad.GetNumRows());
+            kernGrad.Reshape(unrollRows, kernGrad.GetNumElements() / unrollRows); 
             // 3. Multiply.
             Mat::MultiplyAndAdd(unrolledInputSlice, true, srcGradSlice, false, kernGrad);
         }
@@ -816,8 +854,11 @@ public:
 template <class ElemType>
 std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
                                                                                  ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
-                                                                                 ConvolutionEngineKind enabledEngines)
+                                                                                 ConvolutionEngineKind enabledEngines, std::wstring logPrefix, bool forceDeterministicAlgorithms, bool poolIncludePad)
 {
+    if (!logPrefix.empty())
+        logPrefix += L": ";
+
     auto isEnabled = [=](ConvolutionEngineKind eng) { return ((int)enabledEngines & (int)eng) != 0; };
     // Note: in some cases do not throw exception even if parameters do not match as Create
     // can be called from places like MEL with default parameters and never be used. 
@@ -828,29 +869,38 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     {
         if (!isEnabled(ConvolutionEngineKind::Legacy))
             RuntimeError("Trying to use Legacy convolution engine when it's disabled.");
-        // REVIEW alexeyk: should honor m_traceLevel here.
-        fprintf(stderr, "\nUsing legacy convolution engine for geometry: %s.\n", engStr.c_str());
-        return std::make_unique<LegacyConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
+
+        if (GetMathLibTraceLevel() > 0)
+            fprintf(stderr, "%lsusing legacy convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
+
+        return std::make_unique<LegacyConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
     }
 
     // Check if we can use cuDNN engine. Do not need to validate tensors as ConvolveGeometry has already done that.
     if (isEnabled(ConvolutionEngineKind::CuDnn) &&
         CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId, geometry, poolKind))
     {
-        fprintf(stderr, "\nUsing cuDNN convolution engine for geometry: %s.\n", engStr.c_str());
-        return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
+        if (GetMathLibTraceLevel() > 0)
+            fprintf(stderr, "%lsusing cuDNN convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
+
+        return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, forceDeterministicAlgorithms, poolIncludePad);
     }
 
     if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
     {
-        fprintf(stderr, "\nUsing GEMM convolution engine for geometry: %s.\n", engStr.c_str());
-        return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
+        if (GetMathLibTraceLevel() > 0)
+            fprintf(stderr, "%lsusing GEMM convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
+
+        return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
     }
 
     if (!isEnabled(ConvolutionEngineKind::Reference))
         RuntimeError("Reference convolution is disabled and no other engine supports such configuratin (or disabled).");
-    fprintf(stderr, "\nUsing reference convolution engine for geometry: %s.\n", engStr.c_str());
-    return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind);
+
+    if (GetMathLibTraceLevel() > 0)
+        fprintf(stderr, "%lsusing reference convolution engine for geometry, could be VERY SLOW: %s.\n", logPrefix.c_str(), engStr.c_str());
+
+    return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
 }
 
 template class ConvolutionEngine<float>;

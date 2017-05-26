@@ -401,8 +401,8 @@ public:
             // found another opening brace, push it on the stack
             else
             {
-                const auto braceFound = openBraces.find(brace);  // index of brace
-                braceStack.push_back(closingBraces[braceFound]); // closing symbol for current
+                const auto braceFound2 = openBraces.find(brace);  // index of brace
+                braceStack.push_back(closingBraces[braceFound2]); // closing symbol for current
             }
         }
         // hit end before everything was closed: error
@@ -498,9 +498,9 @@ public:
                     // check for custom separator character
                     // If the opening brace is immediately followed by any of the customSeparators,
                     // change m_separator (inside seps) to that character.
-                    // The parser lets you change the default separator to something else. For example the default separator for an array is usually the ‘:’ (I think)
+                    // The parser lets you change the default separator to something else. For example the default separator for an array is usually the ':' (I think)
                     // (12:45:23:46)
-                    // However if you are using strings, and one of those strings contains a ‘:’, you might want to change the separator to something else:
+                    // However if you are using strings, and one of those strings contains a ':', you might want to change the separator to something else:
                     // (;this;is;a;path:;c:\mydir\stuff)
                     //
                     // This will fail for
@@ -558,13 +558,13 @@ public:
                 // now look for contained braces before the next break
                 if (tokenEnd != npos)
                 {
-                    const auto braceEndFound = FindBraces(stringParse, tokenEnd);
+                    const auto braceEndFound2 = FindBraces(stringParse, tokenEnd);
 
                     // found an embedded brace, extend token to the end of the braces
-                    if (braceEndFound != npos)
+                    if (braceEndFound2 != npos)
                     {
                         // token includes the closing brace
-                        tokenEnd = braceEndFound + 1;
+                        tokenEnd = braceEndFound2 + 1;
                     }
                 }
 
@@ -988,11 +988,10 @@ public:
         return defaultValue;
     }
 
-    ConfigValue Find(const std::string& name,
-                     const char* defaultvalue = NULL) const
+    // Look up a variable through the nested hierarchy. If not found, return false, and 'result'is untouched.
+    bool TryFind(const std::string& name, ConfigValue& result, const char* defaultvalue = NULL) const
     {
         auto iter = find(name);
-        ConfigValue result;
 
         // if we aren't found, or they want the default value
         // TODO: What the hell is this?
@@ -1002,12 +1001,14 @@ public:
             if (iter == end() && m_parent != NULL)
             {
                 result = m_parent->Find(name, defaultvalue);
+                return true;
             }
             else if (defaultvalue != NULL)
             {
                 // no parent, so use default value
                 std::string fullName = m_configName + ":" + name;
                 result = ConfigValue(defaultvalue, fullName, this);
+                return true;
             }
         }
         else
@@ -1016,8 +1017,17 @@ public:
             rhs = this->ResolveVariables(rhs);
             std::string fullName = m_configName + ":" + name;
             result = ConfigValue(rhs, fullName, this);
+            return true;
         }
-        return result;
+        return false; // not found
+    }
+
+    // Look up a variable using TryFind() above. If not found, return empty string.
+    ConfigValue Find(const std::string& name, const char* defaultvalue = NULL) const
+    {
+            ConfigValue result;
+            TryFind(name, result, defaultvalue); // (if returns false, we return an empty ConfigValue)
+            return result;
     }
 
     // ResolveVariablesInSingleLine - In this method we replace all substrings of 'configLine' of the form "$varName$"
@@ -1037,10 +1047,7 @@ public:
     {
         // ensure that this method was called on a single line (eg, no newline characters exist in 'configLine').
         if (configLine.find_first_of("\n") != std::string::npos)
-        {
-            LogicError(
-                "\"ResolveVariablesInSingleLine\" shouldn't be called with a string containing a newline character");
-        }
+            LogicError("ResolveVariablesInSingleLine() should not be called with a string containing a newline character");
 
         std::string newConfigLine = StripComments(configLine);
         std::size_t start = newConfigLine.find_first_of(openBraceVar);
@@ -1073,27 +1080,25 @@ public:
             // in nested dictionaries, this is not working.
             if (varName.empty())
             {
-                RuntimeError("$$ is not allowed.  Parsing of string failed: %s:%s",
+                RuntimeError("$$ is not allowed. Parsing of string failed: %s:%s",
                              m_configName.c_str(),
                              newConfigLine.c_str());
             }
 
             // Note that this call to "Find" can trigger further substitutions of the form $varName2$ -> varValue2,
             // thus making this search process recursive.
-            std::string varValue = this->Find(varName);
-
-            if (varValue.empty())
+            ConfigValue varConfigValue;
+            const bool foundValue = this->TryFind(varName, varConfigValue);
+            if (!foundValue)
             {
-                RuntimeError("No variable found with the name %s.  Parsing of string failed: %s:%s",
+                RuntimeError("No variable found with the name %s. Parsing of string failed: %s:%s",
                              varName.c_str(), m_configName.c_str(),
                              newConfigLine.c_str());
             }
 
+            std::string varValue = varConfigValue;
             if (varValue.find_first_of("\n") != std::string::npos)
-            {
-                LogicError(
-                    "Newline character cannot be contained in the value of a variable which is resolved using $varName$ feature");
-            }
+                LogicError("Newline characters are not allowed in the value of a variable which is resolved using $varName$ feature");
 
             // Replace $varName$ with 'varValue'.  Then continue the search for
             // other variables in 'newConfigLine' string, starting at the point

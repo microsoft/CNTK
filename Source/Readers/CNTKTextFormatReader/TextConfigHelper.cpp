@@ -10,6 +10,8 @@
 #include "TextConfigHelper.h"
 #include "DataReader.h"
 #include "StringUtil.h"
+#include "ReaderConstants.h"
+#include "ReaderUtil.h"
 
 using std::string;
 using std::wstring;
@@ -53,10 +55,10 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     map<string, wstring> aliasToInputMap;
     for (const pair<string, ConfigParameters>& section : input)
     {
-        ConfigParameters input = section.second;
+        ConfigParameters input2 = section.second;
         wstring name = msra::strfun::utf16(section.first);
 
-        if (!input.ExistsCurrent(L"dim") || !input.ExistsCurrent(L"format"))
+        if (!input2.ExistsCurrent(L"dim") || !input2.ExistsCurrent(L"format"))
         {
             RuntimeError("Input section for input '%ls' does not specify all the required parameters, "
                 "\"dim\" and \"format\".", name.c_str());
@@ -65,8 +67,9 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         StreamDescriptor stream;
         stream.m_id = id++;
         stream.m_name = name;
-        stream.m_sampleDimension = input(L"dim");
-        string type = input(L"format");
+        stream.m_sampleDimension = input2(L"dim");
+        stream.m_definesMbSize = input2(L"definesMBSize", false);
+        string type = input2(L"format");
 
         if (AreEqualIgnoreCase(type, "dense"))
         {
@@ -88,9 +91,9 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         }
 
         // alias is optional
-        if (input.ExistsCurrent(L"alias"))
+        if (input2.ExistsCurrent(L"alias"))
         {
-            stream.m_alias = input(L"alias");
+            stream.m_alias = input2(L"alias");
             if (stream.m_alias.empty())
             {
                 RuntimeError("Alias value for input '%ls' is empty.", name.c_str());
@@ -116,39 +119,19 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     }
 
     m_filepath = msra::strfun::utf16(config(L"file"));
-
-    wstring randomizeString = config(L"randomize", wstring());
-    if (!_wcsicmp(randomizeString.c_str(), L"none")) // TODO: don't support case-insensitive option strings in the new reader
-    {
-        // "none" is only accepted to be backwards-compatible (DoWriteOutput() in EvalActions.cpp
-        // inserts this magic constant into the reader config to prevent it from shuffling the input).
-        // In user-defined configurations, 'randomize' should be a boolean.
-        m_randomizationWindow = randomizeNone;
-    }
-    else
-    {
-        bool randomize = config(L"randomize", true);
-
-        if (!randomize)
-        {
-            m_randomizationWindow = randomizeNone;
-        }
-        else if (config.Exists(L"randomizationWindow"))
-        {
-            m_randomizationWindow = config(L"randomizationWindow");
-        }
-        else
-        {
-            m_randomizationWindow = randomizeAuto;
-        }
-    }
-
     m_skipSequenceIds = config(L"skipSequenceIds", false);
     m_maxErrors = config(L"maxErrors", 0);
     m_traceLevel = config(L"traceLevel", 1);
-    m_chunkSizeBytes = config(L"chunkSizeInBytes", 32 * 1024 * 1024); // 32 MB by default
+    m_chunkSizeBytes = config(L"chunkSizeInBytes", g_32MB); // 32 MB by default
     m_keepDataInMemory = config(L"keepDataInMemory", false);
     m_frameMode = config(L"frameMode", false);
+
+    m_randomizationWindow = GetRandomizationWindowFromConfig(config);
+    m_sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", false);
+    if (!m_sampleBasedRandomizationWindow && m_randomizationWindow == randomizeAuto) 
+    {
+        m_randomizationWindow = g_4GB / m_chunkSizeBytes; // ~ 4 GB (on disk) worth of chunks
+    }
 }
 
 }}}

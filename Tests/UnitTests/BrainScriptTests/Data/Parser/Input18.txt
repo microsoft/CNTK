@@ -1,0 +1,3 @@
+do = Print(val) 
+dict = [ outY = Input(13) ] ; val = new NDLComputationNetwork [ outZ = dict.outY 
+]

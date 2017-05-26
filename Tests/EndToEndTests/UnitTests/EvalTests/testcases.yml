@@ -1,0 +1,22 @@
+dataDir: .
+
+tags:  
+  - bvt-i (build_sku != '1bitsgd') and ((build_sku == 'cpu') or (device == 'gpu'))
+  - nightly-i (build_sku != '1bitsgd') and ((build_sku == 'cpu') or (device == 'gpu'))
+  - weekly-i (build_sku != '1bitsgd') and ((build_sku == 'cpu') or (device == 'gpu'))
+
+testCases:
+  Test cases pass:
+    patterns:
+      - "Test case"
+      - "has passed with"
+
+  Test suites pass:
+    patterns:
+      - "Test suite"
+      - "has passed with"
+
+  Test module passed:
+    patterns:
+      - "Test module"
+      - "has passed with"

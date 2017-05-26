@@ -1,0 +1,28 @@
+ []
+ dict =
+  []
+   outY =
+    (
+     Input
+     ()
+      13
+
+
+
+ do =
+  (
+   Print
+   ()
+    val
+
+
+ val =
+  new NDLComputationNetwork
+   []
+    outZ =
+     . outY
+      dict
+
+
+
+

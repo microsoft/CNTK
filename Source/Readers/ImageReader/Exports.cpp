@@ -14,6 +14,7 @@
 #include "ImageDataDeserializer.h"
 #include "ImageTransformers.h"
 #include "CorpusDescriptor.h"
+#include "Base64ImageDeserializer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -21,7 +22,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 auto factory = [](const ConfigParameters& parameters) -> ReaderPtr
 {
-    return std::make_shared<ImageReader>(std::make_shared<HeapMemoryProvider>(), parameters);
+    return std::make_shared<ImageReader>(parameters);
 };
 
 extern "C" DATAREADER_API void GetReaderF(IDataReader** preader)
@@ -34,12 +35,16 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
     *preader = new ReaderShim<double>(factory);
 }
 
+//TODO: Names of transforms and deserializers should be case insensitive.
+
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
 // A factory method for creating image deserializers.
-extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool)
+extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool primary)
 {
-    if (type == L"ImageDataDeserializer")
-        *deserializer = new ImageDataDeserializer(corpus, deserializerConfig);
+    if (type == L"ImageDeserializer")
+        *deserializer = new ImageDataDeserializer(corpus, deserializerConfig, primary);
+    else if (type == L"Base64ImageDeserializer")
+        *deserializer = new Base64ImageDeserializer(corpus, deserializerConfig, primary);
     else
         // Unknown type.
         return false;
@@ -63,6 +68,8 @@ extern "C" DATAREADER_API bool CreateTransformer(Transformer** transformer, cons
         *transformer = new MeanTransformer(config);
     else if (type == L"Transpose")
         *transformer = new TransposeTransformer(config);
+    else if (type == L"Cast")
+        *transformer = new CastTransformer(config);
     else
         // Unknown type.
         return false;

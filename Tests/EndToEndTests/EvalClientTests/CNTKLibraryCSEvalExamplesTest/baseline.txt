@@ -1,0 +1,147 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2620 0 @ 2.00GHz
+    Hardware threads: 24
+    Total Memory: 201250396 kB
+-------------------------------------------------------------------
+++ python -c 'import sys; print(sys.version_info[0])'
++ PythonVer=$'2\r'
++ '[' $'2\r' == 3 ']'
++ [[ c:\Data\CNTKTestData == '' ]]
++ [[ ! -d c:\Data\CNTKTestData ]]
++ '[' Windows_NT == Windows_NT ']'
+++ cygpath -au 'c:\Data\CNTKTestData'
++ TestDataSourceDir=/cygdrive/c/Data/CNTKTestData
++ '[' cpu == cpu ']'
++ export CUDA_VISIBLE_DEVICES=-1
++ CUDA_VISIBLE_DEVICES=-1
++ python train_models_for_evaluation.py -d cpu
+the output_dir is C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Tests\EndToEndTests\EvalClientTests\CNTKLibraryCSEvalExamplesTest.
+the test_device is cpu.
+Training 721479 parameters in 6 parameter tensors.
+
+the  current_work_dir is C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Tests\EndToEndTests\EvalClientTests\CNTKLibraryCSEvalExamplesTest
+the model dir is C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Tests\EndToEndTests\EvalClientTests\CNTKLibraryCSEvalExamplesTest
+ Minibatch[   1-   1]: loss = 4.857260 * 67, metric = 100.0% * 67;
+ Minibatch[   2-   2]: loss = 4.835443 * 63, metric = 60.3% * 63;
+ Minibatch[   3-   3]: loss = 4.798551 * 68, metric = 36.8% * 68;
+ Minibatch[   4-   4]: loss = 4.751775 * 70, metric = 35.7% * 70;
+ Minibatch[   5-   5]: loss = 4.678326 * 65, metric = 30.8% * 65;
+ Minibatch[   6-   6]: loss = 4.557597 * 62, metric = 27.4% * 62;
+ Minibatch[   7-   7]: loss = 4.439564 * 58, metric = 31.0% * 58;
+ Minibatch[   8-   8]: loss = 4.231087 * 70, metric = 28.6% * 70;
+ Minibatch[   9-   9]: loss = 4.000700 * 59, metric = 33.9% * 59;
+ Minibatch[  10-  10]: loss = 3.475156 * 64, metric = 28.1% * 64;
+ Minibatch[  11- 100]: loss = 1.457498 * 5654, metric = 27.8% * 5654;
+ Minibatch[ 101- 200]: loss = 0.840829 * 6329, metric = 17.8% * 6329;
+ Minibatch[ 201- 300]: loss = 0.656662 * 6259, metric = 14.5% * 6259;
+ Minibatch[ 301- 400]: loss = 0.525372 * 6229, metric = 11.7% * 6229;
+ Minibatch[ 401- 500]: loss = 0.466354 * 6289, metric = 10.3% * 6289;
+Finished Epoch[1 of 1]: [Training] loss = 0.790053 * 36007, metric = 15.6% * 36007 58.379s (616.8 samples per second);
+train cifar_resnet only on GPU device. Use pre-trained models.
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Feb 19 2017 10:36:35
+		Last modified date: Sun Feb 19 08:12:34 2017
+		Build type: Release
+		Build target: CPU-only
+		With 1bit-SGD: no
+		With ASGD: yes
+		Math lib: mkl
+		Build Branch: HEAD
+		Build SHA1: 52e94dc946c9978b4552472975dfbb7b86f6de76
+		Built by svcphil on LIANA-09-w
+		Build Path: C:\jenkins\workspace\CNTK-Build-Windows\Source\CNTKv2LibraryDll\
+		MPI distribution: Microsoft MPI
+		MPI version: 7.0.12437.6
+-------------------------------------------------------------------
++ '[' cpu == cpu ']'
++ echo Use pre-trained resnet_20_cifar_10 model in 'c:\Data\CNTKTestData' for tests on CPU device.
+Use pre-trained resnet_20_cifar_10 model in c:\Data\CNTKTestData for tests on CPU device.
++ cp /cygdrive/c/Data/CNTKTestData/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn resnet20.dnn
++ mv data/train/00000.png data/train/00001.png data/train/00002.png data/train/00003.png data/train/00004.png data/train/00005.png .
++ mv atis_0.dnn atis.dnn
++ cp /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-SlaveTest/Tests/EndToEndTests/../../Examples/LanguageUnderstanding/ATIS/BrainScript/query.wl .
++ cp /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-SlaveTest/Tests/EndToEndTests/../../Examples/LanguageUnderstanding/ATIS/BrainScript/slots.wl .
++ '[' Windows_NT == Windows_NT ']'
++ /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-SlaveTest/x64/release_CpuOnly/CNTKLibraryCSEvalExamplesTest.exe
+======== Evaluate model on CPU using CPUOnly build ========
+
+===== Evaluate single image =====
+The number of sequences in the batch: 1
+Sequence 0 contains 1 samples.
+    sample 0: 3.671572,10.78319,1.988011,5.738439,-14.31294,8.391854,-3.66395,-4.814901,-6.400898,1.237086.
+
+===== Evaluate batch of images =====
+The number of sequences in the batch: 3
+Sequence 0 contains 1 samples.
+    sample 0: 3.671571,10.78319,1.988011,5.738439,-14.31294,8.391855,-3.663951,-4.814902,-6.400897,1.237085.
+Sequence 1 contains 1 samples.
+    sample 0: 4.303904,13.21089,-0.8425701,4.726829,-15.50982,8.401516,-6.299431,-5.432626,-6.179281,3.591689.
+Sequence 2 contains 1 samples.
+    sample 0: 3.015126,13.67295,-0.9818162,4.864452,-17.13536,9.498628,-7.311455,-5.238921,-5.336009,3.496726.
+
+===== Evaluate single sequence using one-hot vector =====
+            BOS ---- O
+              i ---- O
+          would ---- O
+           like ---- O
+             to ---- O
+           find ---- O
+              a ---- O
+         flight ---- O
+           from ---- O
+      charlotte ---- B-fromloc.city_name
+             to ---- O
+            las ---- B-toloc.city_name
+          vegas ---- I-toloc.city_name
+           that ---- O
+          makes ---- O
+              a ---- O
+           stop ---- O
+             in ---- O
+            st. ---- B-stoploc.city_name
+          louis ---- B-arrive_time.time_relative
+            EOS ---- O
+
+
+===== Evaluate batch of sequences with variable length using one-hot vector =====
+The number of sequences in the batch: 2
+Sequence 0: 
+            BOS ---- O
+              i ---- O
+          would ---- O
+           like ---- O
+             to ---- O
+           find ---- O
+              a ---- O
+         flight ---- O
+           from ---- O
+      charlotte ---- B-fromloc.city_name
+             to ---- O
+            las ---- B-toloc.city_name
+          vegas ---- I-toloc.city_name
+           that ---- O
+          makes ---- O
+              a ---- O
+           stop ---- O
+             in ---- O
+            st. ---- B-stoploc.city_name
+          louis ---- B-arrive_time.time_relative
+            EOS ---- O
+
+Sequence 1: 
+            BOS ---- O
+        flights ---- O
+           from ---- O
+            new ---- B-fromloc.city_name
+           york ---- I-fromloc.city_name
+             to ---- O
+        seattle ---- B-toloc.city_name
+            EOS ---- O
+
+======== Evaluation completes. ========
++ ExitCode=0
++ '[' cpu == cpu ']'
++ unset CUDA_VISIBLE_DEVICES
++ exit 0

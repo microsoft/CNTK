@@ -1,0 +1,49 @@
+rootDir = ".."
+configDir = "$rootDir$/Config"
+precision = "float"
+
+BrainScriptNetworkBuilder = {
+    include "$configDir$/Macros.bs"
+
+    imageShape = 32:32:3
+    labelDim = 2
+
+    featScale = 1/256
+    Normalize{f} = x => f .* x
+
+    cMap = 16:32
+    bnTimeConst = 4096
+    numLayers = 2
+
+    model = Sequential (
+        Normalize {featScale} :
+
+        ConvBNReLULayer {cMap[0], (3:3), (1:1), bnTimeConst} :
+        ResNetBasicStack {numLayers, cMap[0], bnTimeConst} :
+
+        ResNetBasicInc {cMap[1], (2:2), bnTimeConst} :
+        ResNetBasicStack {numLayers-1, cMap[1], bnTimeConst} :
+  
+        # avg pooling
+        AveragePoolingLayer {(8: 8), stride = 1} :
+        LinearLayer {labelDim}
+    )
+
+    # inputs
+    features = Input {imageShape}
+    labels   = Input {labelDim}
+
+    # apply model to features
+    z = model (features)
+
+    # connect to system
+    ce       = CrossEntropyWithSoftmax     (labels, z)
+    errs     = ClassificationError         (labels, z)
+    top5Errs = ClassificationError         (labels, z, topN=5)  # only used in Eval action
+
+    featureNodes    = (features)
+    labelNodes      = (labels)
+    criterionNodes  = (ce)
+    evaluationNodes = (errs)  # top5Errs only used in Eval
+    outputNodes     = (z)
+}

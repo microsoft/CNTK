@@ -50,14 +50,14 @@ public:
     //               going to use those HTK format lattices.
     virtual bool getbatch(const size_t globalts,
                           const size_t framesrequested, msra::dbn::matrix &feat, std::vector<size_t> &uids,
-                          std::vector<std::pair<wstring, size_t>> &utteranceinfo,
+                          std::vector<std::pair<std::wstring, size_t>> &utteranceinfo,
                           std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
-                          std::vector<shared_ptr<const latticesource::latticepair>> &lattices) = 0;
+                          std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices) = 0;
     virtual bool getbatch(const size_t globalts,
                           const size_t framesrequested, std::vector<msra::dbn::matrix> &feat, std::vector<std::vector<size_t>> &uids,
-                          std::vector<std::pair<wstring, size_t>> &utteranceinfo,
+                          std::vector<std::pair<std::wstring, size_t>> &utteranceinfo,
                           std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
-                          std::vector<shared_ptr<const latticesource::latticepair>> &lattices) = 0;
+                          std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices) = 0;
     virtual size_t totalframes() const = 0;
 
     virtual double gettimegetbatch() = 0;                         // used to report runtime
@@ -88,9 +88,9 @@ class minibatchiterator
 
     std::vector<msra::dbn::matrix> featbuf;                                                      // buffer for holding curernt minibatch's frames
     std::vector<std::vector<size_t>> uids;                                                       // buffer for storing current minibatch's frame-level label sequence
-    std::vector<std::pair<wstring, size_t>> utteranceinfo;                                       // buffer for current minibatch's utterance ID information.
+    std::vector<std::pair<std::wstring, size_t>> utteranceinfo;                                       // buffer for current minibatch's utterance ID information.
     std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> transcripts; // buffer for storing current minibatch's word-level label sequences (if available and used; empty otherwise)
-    std::vector<shared_ptr<const latticesource::latticepair>> lattices;                          // lattices of the utterances in current minibatch (empty in frame mode)
+    std::vector<std::shared_ptr<const latticesource::latticepair>> lattices;                          // lattices of the utterances in current minibatch (empty in frame mode)
 
     size_t mbstartframe;   // current start frame into generalized time line (used for frame-wise mode and for diagnostic messages)
     size_t actualmbframes; // actual number of frames in current minibatch
@@ -117,7 +117,7 @@ private:
         }
         // process one mini-batch (accumulation and update)
         assert(requestedmbframes > 0);
-        const size_t requestedframes = min(requestedmbframes, epochendframe - mbstartframe); // (< mbsize at end)
+        const size_t requestedframes = std::min(requestedmbframes, epochendframe - mbstartframe); // (< mbsize at end)
         assert(requestedframes > 0);
         source.getbatch(mbstartframe, requestedframes, featbuf, uids, utteranceinfo, transcripts, lattices);
         timegetbatch = source.gettimegetbatch();
@@ -294,14 +294,14 @@ public:
         return uids[i];
     }
 
-    std::vector<std::pair<wstring, size_t>> getutteranceinfo()
+    std::vector<std::pair<std::wstring, size_t>> getutteranceinfo()
     {
         checkhasdata();
         return utteranceinfo;
     }
 
     // return a lattice for an utterance (caller should first get total through currentmblattices())
-    shared_ptr<const msra::dbn::latticepair> lattice(size_t uttindex) const
+    std::shared_ptr<const msra::dbn::latticepair> lattice(size_t uttindex) const
     {
         return lattices[uttindex];
     } // lattices making up the current

@@ -106,13 +106,13 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
                 assert(node->m_numNonDelayedParentsInLoop == 0); // (in PurgeStateForFormingRecurrentLoops())
         }
         for (let& node : nestedNodes)
-            {
+        {
             for (auto& input : node->GetInputs())
-                {
+            {
                 if (input->m_loopId == node->m_loopId && GetRecurrenceSteppingDirection(node) == 0/*not a Delay node*/)
                     input->m_numNonDelayedParentsInLoop++; // cound #parents of 'input' that are not delay nodes
-                }
             }
+        }
 
         // re-traverse the graph for all nestedNodes, starting with the first
         // Then update m_nestedNodes with the re-traversed order.
@@ -149,8 +149,8 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
         else
 #endif
         {
-            for (const auto& rootNode : m_allRoots)
-                GatherLoopNodesR(rootNode, visited, recurrentNodes, noRecurrentNodes);
+            for (const auto& rootNode2 : m_allRoots)
+                GatherLoopNodesR(rootNode2, visited, recurrentNodes, noRecurrentNodes);
         }
 
         auto reorderedNodes = nodes;
@@ -166,17 +166,20 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
     // --- END reorder process   --TODO: eliminate this process
 
     // log the loops
-    for (auto& iter : m_allSEQNodes)
+    if (TraceLevel() > 0)
     {
-        fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int) iter->m_loopId, iter->NodeName().c_str(), (int) iter->m_nestedNodes.size());
-        size_t n = 0;
-        for (auto itr = iter->m_nestedNodes.begin(); itr != iter->m_nestedNodes.end(); itr++)
+        for (auto& iter : m_allSEQNodes)
         {
-            if (n++ % 3 == 0)
-                fprintf(stderr, "\n");
-            fprintf(stderr, "\t%ls", (*itr)->NodeName().c_str());
+            fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int)iter->m_loopId, iter->NodeName().c_str(), (int)iter->m_nestedNodes.size());
+            size_t n = 0;
+            for (auto itr = iter->m_nestedNodes.begin(); itr != iter->m_nestedNodes.end(); itr++)
+            {
+                if (n++ % 3 == 0)
+                    fprintf(stderr, "\n");
+                fprintf(stderr, "\t%ls", (*itr)->NodeName().c_str());
+            }
+            fprintf(stderr, "\n");
         }
-        fprintf(stderr, "\n");
     }
 
 #if 0
@@ -215,9 +218,9 @@ void ComputationNetwork::DetermineSCCs(const ComputationNodeBasePtr& rootNode)
     }
 #endif
     // traverse all root nodes (as if they were all children of a master root)
-    for (auto& rootNode : m_allRoots)
-        if (!rootNode->m_visited)
-            DetermineSCCsR(rootNode, sccStack, index, loopId);
+    for (auto& rootNode2 : m_allRoots)
+        if (!rootNode2->m_visited)
+            DetermineSCCsR(rootNode2, sccStack, index, loopId);
 }
 
 // (recursive part of DetermineSCCs())
@@ -328,21 +331,21 @@ void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
 #if 1
                 if (loopId != m_allSEQNodes.size())
                     LogicError("DetermineSCCsR: %ls %ls operation has inconsistent loopId (%d) vs. m_allSEQNodes.size() (%d)", cur->NodeName().c_str(), cur->OperationName().c_str(), (int)loopId, (int)m_allSEQNodes.size());
-                SEQTraversalFlowControlNode rInfo(m_allSEQNodes.size(), cur);
+                SEQTraversalFlowControlNode rInfo2(m_allSEQNodes.size(), cur);
 #else
                 assert(loopId == m_allSEQNodes.size()); // BUGBUG: Only true if all loops are shared among roots. Fix: use m_allSEQNodes.size() instead
-                SEQTraversalFlowControlNode rInfo(loopId, cur);
+                SEQTraversalFlowControlNode rInfo2(loopId, cur);
 #endif
                 // TODO: can we prove that 'cur' == nestedNodes.front()? If so, we won't need to store it separately.
-                rInfo.m_nestedNodes = move(nestedNodes); // TODO: make these two part of the constructor
-                for (auto node : rInfo.m_nestedNodes)
+                rInfo2.m_nestedNodes = move(nestedNodes); // TODO: make these two part of the constructor
+                for (auto node : rInfo2.m_nestedNodes)
                 {
                     node->m_isPartOfLoop = true; // this is the only flag in ComputationNode that escapes FormRecurrentLoops()!
                     // TODO: ^^ We should instead remember a pointer to our loop sentinel
-                    node->m_loopId = rInfo.m_loopId; // Note: m_loopId is only used inside this source file, and only for reordering
+                    node->m_loopId = rInfo2.m_loopId; // Note: m_loopId is only used inside this source file, and only for reordering
                 }
-                rInfo.m_steppingDirection = DetermineLoopDirection(rInfo.m_nestedNodes);
-                m_allSEQNodes.push_back(make_shared<SEQTraversalFlowControlNode>(move(rInfo)));
+                rInfo2.m_steppingDirection = DetermineLoopDirection(rInfo2.m_nestedNodes);
+                m_allSEQNodes.push_back(make_shared<SEQTraversalFlowControlNode>(move(rInfo2)));
                 loopId++; // and count it  TODO: may be removed
             }
         }

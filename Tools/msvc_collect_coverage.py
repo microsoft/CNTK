@@ -28,7 +28,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Collects coverage for the executable or directory with test executables")
     parser.add_argument('--test', help='Path to the executable or directory that has to be analyzed', required=True)
     parser.add_argument('--outputdir', help='Output directory for coverage results', required=True)
-    parser.add_argument('--tooldir', help='Tool directory for CodeCoverage tool', required=False, default=r'c:\Program Files (x86)\Microsoft Visual Studio 12.0\Team Tools\Dynamic Code Coverage Tools\amd64')
+    parser.add_argument('--tooldir', help='Tool directory for CodeCoverage tool', required=False, default=r'c:\Program Files (x86)\Microsoft Visual Studio 14.0\Team Tools\Dynamic Code Coverage Tools\amd64')
     parser.add_argument('--config', help='Configuration for CodeCoverage tool', required=False, default="")   
 
     args = parser.parse_args()

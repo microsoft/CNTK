@@ -11,18 +11,19 @@
 #include "DataDeserializer.h"
 #include "ChunkRandomizer.h"
 #include <deque>
+#include <random>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // Randomized sequence description.
 struct RandomizedSequenceDescription
 {
-    // Sequence id.
-    size_t m_id;
-    // Number of samples in sequence.
-    uint32_t m_numberOfSamples;
+    // Sequence index in original chunk.
+    size_t m_indexInOriginalChunk;
     // Randomized chunk this sequence belongs to.
     const RandomizedChunk* m_chunk;
+    // Number of samples in sequence.
+    uint32_t m_numberOfSamples;
 };
 
 // Class that given randomized chunks, randomizes sequence descriptions in a window of chunks.
@@ -44,19 +45,12 @@ public:
     // If the offset points in the middle of last sequence, the end of the sweep is returned.
     size_t Seek(size_t sweepSampleOffset, size_t sweep);
 
-    // Gets the next randomized sequence descriptions not exceeding the sample count.
-    std::vector<RandomizedSequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);
-
-    // Gets the current randomized chunk window.
-    const std::deque<RandomizedChunk>& GetChunkWindow(size_t& randomizedIndex) const
-    {
-        assert(m_chunkWindow.size() >= m_randomizationCursor - m_chunkWindowBegin);
-        randomizedIndex = m_randomizationCursor - m_chunkWindowBegin;
-        return m_chunkWindow;
-    }
-
-    // Release chunks from the chunk window that are not needed anymore.
-    void ReleaseChunks();
+    // Repeatedly invokes provided callback passing to it sequence descriptors from the randomized
+    // timeline until the callback returns false. On each successful invocation, it advances the
+    // current position (cursor) in the timeline.
+    void GetNextSequenceDescriptions(
+        const std::function<bool(const RandomizedSequenceDescription&)>& callback,
+        ClosedOpenChunkInterval& requiredChunks);
 
 private:
     DISABLE_COPY_AND_MOVE(SequenceRandomizer);
@@ -64,14 +58,14 @@ private:
     // Randomize one more chunk if needed after the chunk cursor has been incremented.
     void RandomizeNextChunkIfNeeded();
 
-    // Checks if the randomized sequence is valid for a target position using its chunk randomization window.
-    bool IsValidForPosition(size_t targetPosition, const RandomizedSequenceDescription& seqDesc) const;
+    // Checks if the randomized sequence is valid for a target chunk.
+    bool IsValidForPosition(ChunkIdType chunkIndex, const RandomizedSequenceDescription& seqDesc) const;
 
     // Gets randomized chunk index using a sequence position in the sweep.
-    ChunkIdType GetChunkIndexForSequencePosition(size_t sequencePosition) const;
+    ChunkIdType GetChunkIndexForSequencePosition(size_t sequenceSweepPosition) const;
 
-    // Gets randomized sequence by the sequence id.
-    RandomizedSequenceDescription& GetRandomizedSequenceDescriptionBySequenceId(size_t sequenceId);
+    // Gets randomized sequence by sequence position in sweep and its randomized chunk index.
+    RandomizedSequenceDescription& GetRandomizedSequenceDescriptionByPosition(ChunkIdType chunkIndex, size_t sequenceSweepPosition);
 
     // Add randomizes sequences for the chunk with a given index.
     void AddRandomizedSequencesForChunk(ChunkIdType chunkIndex);
@@ -79,7 +73,8 @@ private:
     // Move the chunk cursor to the next chunk, randomizing more sequences if necessary.
     void MoveChunkCursor();
 
-private:
+    // Release chunks from the chunk window that are not needed anymore.
+    void ReleaseChunks();
 
     IDataDeserializerPtr m_deserializer;
 
@@ -126,10 +121,6 @@ private:
     //
     //
 
-    // A rolling windows of randomized chunks.
-    // Which chunk to load is decided by the BlockRandomizer (i.e. decimation based on chunk).
-    std::deque<RandomizedChunk> m_chunkWindow;
-
     // A rolling window of randomized sequences for the chunks.
     // Contains randomized sequences from m_chunkWindow chunks.
     std::deque<std::vector<RandomizedSequenceDescription>> m_sequenceWindow;
@@ -164,6 +155,8 @@ private:
 
     // General configuration
     int m_verbosity;
+
+    std::mt19937_64 m_rng;
 };
 
 typedef std::shared_ptr<SequenceRandomizer> SequenceRandomizerPtr;

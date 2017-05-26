@@ -1,0 +1,9 @@
+future
+Pillow
+xmltodict
+wheel
+matplotlib
+EasyDict
+numpy
+scikit-learn
+scipy

@@ -1,8 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|x64">
+      <Configuration>Release_NoOpt</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
@@ -29,18 +33,14 @@
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
-    <UseIntelMKL>No</UseIntelMKL>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
-    <UseIntelMKL>No</UseIntelMKL>
-    <UseIntelIPP>false</UseIntelIPP>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
@@ -49,23 +49,22 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <!-- TODO intentional for all? -->
-    <LinkIncremental>false</LinkIncremental>
-    <TargetName>Math</TargetName>
+    <TargetName>Cntk.Math-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ACML_PATH)\include;$(SolutionDir)Source\Common\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MathIncludePath);$(BOOST_INCLUDE_PATH);$(SolutionDir)Source\Common\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(ACML_PATH)\lib;$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MathLibraryPath);$(OutDir)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>USE_ACML; NO_SYNC; WIN32; _DEBUG; _WINDOWS; _USRDLL; MATH_EXPORTS; %(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)";$(MathDefine); NO_SYNC; WIN32; _DEBUG; _WINDOWS; _USRDLL; MATH_EXPORTS; %(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>Disabled</Optimization>
@@ -77,17 +76,17 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libacml_mp_dll.lib;Common.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>libacml_mp_dll.dll; $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
+      <AdditionalDependencies>$(MathLinkLibrary);Cntk.Common-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>$(MathDelayLoad); $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" "$(OutputPath)"</Command>
-      <Message>Copying ACML DLLs</Message>
+      <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"</Command>
+      <Message>Copying $(MathLibraryName) DLLs</Message>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_20,sm_20;compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;</CodeGeneration>
+      <CodeGeneration>compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;</CodeGeneration>
       <CudaRuntime>None</CudaRuntime>
       <NvccCompilation>compile</NvccCompilation>
       <GenerateLineInfo>true</GenerateLineInfo>
@@ -100,10 +99,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>USE_ACML; NO_SYNC; WIN32; NDEBUG; _WINDOWS; _USRDLL; MATH_EXPORTS; %(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)";$(MathDefine); NO_SYNC; WIN32; NDEBUG; _WINDOWS; _USRDLL; MATH_EXPORTS; %(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
@@ -111,26 +107,24 @@
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/d2Zi+ /bigobj %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libacml_mp_dll.lib;Common.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(MathLinkLibrary);Cntk.Common-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>$(MathDelayLoad); $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
       <Profile>true</Profile>
-      <DelayLoadDLLs>libacml_mp_dll.dll; $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(ACML_PATH)\lib\*.dll" "$(OutputPath)"</Command>
-      <Message>Copying ACML DLLs</Message>
+      <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"</Command>
+      <Message>Copying $(MathLibraryName) DLLs</Message>
     </PostBuildEvent>
     <CudaCompile>
       <FastMath>true</FastMath>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_20,sm_20;compute_30,sm_30;compute_35,sm_35</CodeGeneration>
+      <CodeGeneration>compute_30,sm_30;compute_35,sm_35</CodeGeneration>
       <GPUDebugInfo>true</GPUDebugInfo>
       <GenerateLineInfo>true</GenerateLineInfo>
       <HostDebugInfo>true</HostDebugInfo>
@@ -145,6 +139,7 @@
   <ItemDefinitionGroup Condition="$(GpuBuild)">
     <ClCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaInclude)</AdditionalIncludeDirectories>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/d2Zi+ /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
@@ -152,10 +147,11 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
-      <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)";CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">/d2Zi+ /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
-      <DelayLoadDLLs>libacml_mp_dll.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>$(MathDelayLoad)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -163,15 +159,24 @@
     <ClInclude Include="..\Common\Include\File.h" />
     <ClInclude Include="..\Common\Include\fileutil.h" />
     <ClInclude Include="BatchNormalizationEngine.h" />
+    <ClInclude Include="BlockHandlerAVX.h" />
+    <ClInclude Include="BlockHandlerSSE.h" />
+    <ClInclude Include="BlockMultiplier.h" />
+    <ClInclude Include="BlockMultiplierMatrixUtil.h" />
+    <ClInclude Include="BlockMultiplierPlatform.h" />
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="ConvolutionEngine.h" />
     <ClInclude Include="ConvolveGeometry.h" />
     <ClInclude Include="CPUMatrix.h" />
     <ClInclude Include="CPURNGHandle.h" />
+    <ClInclude Include="DataTransferer.h" />
     <ClInclude Include="MatrixQuantizerImpl.h" />
     <ClInclude Include="RNGHandle.h" />
+    <ClInclude Include="RNNCommon.h" />
     <ClInclude Include="TensorOps.h" />
     <ClInclude Include="TensorView.h" />
+    <ClInclude Include="Quantizers.h" />
+    <ClInclude Include="QuantizedOperations.h" />
     <None Include="GPUWatcher.cu" />
     <None Include="GPUWatcher.h">
       <FileType>CppHeader</FileType>
@@ -189,19 +194,24 @@
     <ClInclude Include="QuantizedMatrix.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="CPUMatrixImpl.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BatchNormalizationEngine.cpp" />
+    <ClCompile Include="BlockHandlerAVX.cpp" />
+    <ClCompile Include="BlockHandlerSSE.cpp" />
     <ClCompile Include="ConvolutionEngine.cpp" />
+    <ClCompile Include="CPUMatrixDouble.cpp" />
+    <ClCompile Include="CPUMatrixFloat.cpp" />
     <ClCompile Include="CPURNGHandle.cpp" />
     <ClCompile Include="CPUSparseMatrix.cpp" />
     <ClCompile Include="CUDAPageLockedMemAllocator.cpp" />
+    <ClCompile Include="DataTransferer.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeader>
       </PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="CPUMatrix.cpp" />
     <ClCompile Include="MatrixQuantizerCPU.cpp" />
     <ClCompile Include="MatrixQuantizerImpl.cpp" />
     <ClCompile Include="NoGPU.cpp" />
@@ -218,4 +228,9 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
+  <Target Name="CheckDependencies">
+    <Error Condition="'$(MathLibrary)' == 'MKL' And '$(CNTK_MKL_PATH)' == ''" Text="CNTK custom MKL location not specified, see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#mkl for instructions." />
+    <Error Condition="'$(MathLibrary)' == 'MKL' And !Exists('$(CNTKCustomMKLPath)')" Text="CNTK custom MKL version $(CNTKCustomMKLVersion) not found. See https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#mkl for instructions." />
+    <Error Condition="!$(HasBoost)" Text="The Boost library is required to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
+  </Target>
 </Project>

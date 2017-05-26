@@ -1,0 +1,117 @@
+RootDir = .
+precision = "float"
+
+MapFile="testMustSubstituteThis"
+SecondMapFile="testMustSubstituteThis"
+Deserializer="ImageDeserializer"
+
+ImageAndImageReaderSimple_Test = [
+
+# Parameter values for the reader
+reader = [
+        verbosity = 0
+        randomize = true
+
+        deserializers = (
+            [
+                type = "$Deserializer$" ; module = "ImageReader"
+                file = "$MapFile$"
+
+                input = [
+                    features1 = [
+                        transforms = (
+                            [ type = "Crop"  ; cropType = "Center" ; sideRatio = 1.0 ; jitterType = "UniRatio" ]:
+                            [ type = "Scale" ; width = 4 ; height = 8 ; channels = 3 ; interpolations = "linear" ]:
+                            [ type = "Mean" ]:
+                            [ type = "Transpose" ]
+                        )
+                    ]
+
+                    labels1 = [ labelDim = 4 ]
+                ]
+            ]:[
+                type = "$Deserializer$"
+                module = "ImageReader"
+                file = "$SecondMapFile$"
+
+                input = [
+                    features2 = [
+                        transforms = (
+                            [ type = "Scale" ; width = 4 ; height = 8 ; channels = 3 ; interpolations = "linear" ]:
+                            [ type = "Mean" ]:
+                            [ type = "Transpose" ]
+                        )
+                    ]
+
+                    labels2 = [ labelDim = 4 ]
+                ]
+            ]
+        )
+    ]
+]
+
+3DotsExpansionTest = {
+    reader = {
+        deserializers = ({
+            type = "ImageDeserializer"
+            module = "ImageReader"
+            file = "$MapFile$"
+
+            input = {
+                features = { transforms = () }
+                labels = { labelDim = 4 }               
+            }
+        })
+    }
+}
+
+SimpleZip = {
+    # Parameter values for the reader
+    reader = {
+        randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$MapFile$"
+
+            input = {
+                features = {
+                    transforms (
+                        { type = "Crop" ; cropType = "center"; sideRatio=1.0 ; jitterType="UniRatio" } :
+                        { type = "Scale" ; width = 4 ; height = 8 ; channels = 3 ; interpolations = "linear" } :
+                        { type = "Transpose" }
+                    )
+                }
+                lables = { labelDim = 4 }
+            }
+        })
+    }
+}
+
+TwoStreamsSameName= {
+    reader = {
+        deserializers = ({
+            type = "ImageDeserializer" ;  module = "ImageReader"
+            file = "$MapFile$"
+
+            input = { 
+                feature = {
+                    transforms (
+                        { type = "Transpose" }
+                    )
+                } 
+                labels1 = { labelDim = 4 } 
+            }
+        }:{
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$MapFile$"
+
+            input = { 
+                feature = {
+                    transforms (
+                        { type = "Transpose" }
+                    )
+                } 
+                labels2 = { labelDim = 4 } }
+        })
+    }
+}

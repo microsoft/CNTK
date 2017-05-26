@@ -11,9 +11,11 @@
 #include "Basics.h"
 #define FORMAT_SPECIALIZE // to get the specialized version of the format routines
 #include "File.h"
+#include "Config.h"
 #include <string>
 #include <stdint.h>
 #include <locale>
+#include <unordered_map>
 #ifdef _WIN32
 #define NOMINMAX
 #include "Windows.h"
@@ -25,6 +27,9 @@
 #include <unistd.h>
 #include <linux/limits.h> // for PATH_MAX
 #endif
+
+#define PCLOSE_ERROR -1
+#define WRITE_BUFFER_SIZE (1024 * 1024)
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -151,7 +156,7 @@ void File::Init(const wchar_t* filename, int fileOptions)
 #ifdef _WIN32
     // Win32 accepts forward slashes, but it seems that PathRemoveFileSpec() does not
     // TODO:
-    // "PathCchCanonicalize does the / to \ conversion as a part of the canonicalization, it’s
+    // "PathCchCanonicalize does the / to \ conversion as a part of the canonicalization, it's
     // probably a good idea to do that anyway since I suspect that the '..' characters might
     // confuse the other PathCch functions" [Larry Osterman]
     // "Consider GetFullPathName both for canonicalization and last element finding." [Jay Krell]
@@ -174,13 +179,13 @@ void File::Init(const wchar_t* filename, int fileOptions)
         FreeLibrary(hinstLib);
     }
     else // on Windows 7-, use older PathRemoveFileSpec() instead
-        hr = PathRemoveFileSpec(&path[0]);
+        hr = PathRemoveFileSpec(&path[0]) ? S_OK : S_FALSE;
 
-                if (hr == S_OK) // done
-                    path.resize(wcslen(&path[0]));
-                else if (hr == S_FALSE) // nothing to remove: use .
-                    path = L".";
-        else
+    if (hr == S_OK) // done
+        path.resize(wcslen(&path[0]));
+    else if (hr == S_FALSE) // nothing to remove: use .
+        path = L".";
+    else
         RuntimeError("DirectoryPathOf: Path(Cch)RemoveFileSpec() unexpectedly failed with 0x%08x.", (unsigned int)hr);
 #else
     auto pos = path.find_last_of(L"/");
@@ -255,16 +260,22 @@ bool File::IsTextBased()
 // Note: this does not check for errors when the File corresponds to pipe stream. In this case, use Flush() before closing a file you are writing.
 File::~File(void)
 {
+    int rc = 0;
     if (m_pcloseNeeded)
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()     
-        _pclose(m_file);
+        rc = _pclose(m_file);
+        if ((rc == PCLOSE_ERROR) && !std::uncaught_exception())
+        {
+            RuntimeError("File: failed to close file at %S", m_filename.c_str());
+        }
     }
     else if (m_file != stdin && m_file != stdout && m_file != stderr)
     {
-        int rc = fclose(m_file);
-        if ((rc != 0) && !std::uncaught_exception())
+        rc = fclose(m_file);
+        if ((rc != FCLOSE_SUCCESS) && !std::uncaught_exception())
+        {
             RuntimeError("File: failed to close file at %S", m_filename.c_str());
+        }
     }
 }
 
@@ -642,6 +653,12 @@ int File::EndOfLineOrEOF(bool skip)
         return false;
 }
 
+// Buffer write stream
+int File::Setvbuf()
+{
+    return setvbuf(this->m_file, NULL, _IOFBF, WRITE_BUFFER_SIZE);
+}
+
 // Get a marker from the file
 // some are ignored others are expecting characters
 // must use GetMarker methods for those that require parameters
@@ -947,5 +964,69 @@ template vector<double> File::LoadMatrixFromTextFile<double>(const std::wstring&
 
 template vector<float>  File::LoadMatrixFromStringLiteral<float> (const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 template vector<double> File::LoadMatrixFromStringLiteral<double>(const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
+
+#ifndef CNTK_COMPONENT_VERSION
+#error CNTK_COMPONENT_VERSION must be set
+#endif
+
+extern std::unordered_map<std::wstring, std::wstring> g_deprecatedReaderWriterNameMap;
+
+#ifdef _WIN32
+
+FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc, bool isCNTKPlugin)
+{
+    m_dllName = plugin;
+
+    if (isCNTKPlugin)
+    {
+        // map legacy names to new naming scheme
+        auto entry = g_deprecatedReaderWriterNameMap.find(m_dllName);
+        if (entry != g_deprecatedReaderWriterNameMap.end())
+            m_dllName = entry->second;
+
+        m_dllName += L"-" + msra::strfun::utf16(std::string(CNTK_COMPONENT_VERSION));
+    }
+
+    m_dllName += L".dll";
+    m_hModule = LoadLibrary(m_dllName.c_str());
+    if (m_hModule == NULL)
+        RuntimeError("Plugin not found: '%ls'", m_dllName.c_str());
+    // create a variable of each type just to call the proper templated version
+    FARPROC entryPoint = GetProcAddress(m_hModule, proc.c_str());
+    if (entryPoint == nullptr)
+        RuntimeError("Symbol '%s' not found in plugin '%ls'", proc.c_str(), m_dllName.c_str());
+    return entryPoint;
+}
+
+#else
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
+void* Plugin::LoadInternal(const std::string& plugin, const std::string& proc, bool isCNTKPlugin)
+{
+    string soName = plugin;
+    wstring soNameW = msra::strfun::utf16(plugin);
+
+    if (isCNTKPlugin)
+    {
+        // map legacy names to new naming scheme
+        auto entry = g_deprecatedReaderWriterNameMap.find(soNameW);
+        if (entry != g_deprecatedReaderWriterNameMap.end())
+            soName = msra::strfun::utf8(entry->second);
+
+        soName += "-" + std::string(TOSTRING(CNTK_COMPONENT_VERSION));
+    }
+
+    soName += ".so";
+    void* handle = dlopen(soName.c_str(), RTLD_LAZY);
+    if (handle == NULL)
+        RuntimeError("Plugin not found: '%s' (error: %s)", soName.c_str(), dlerror());
+    void* entryPoint = dlsym(handle, proc.c_str());
+    if (entryPoint == nullptr)
+        RuntimeError("Symbol '%s' not found in plugin '%s'", proc.c_str(), soName.c_str());
+    return entryPoint;
+}
+#endif
 
 }}}

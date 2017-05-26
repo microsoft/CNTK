@@ -12,7 +12,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 This project is based on or incorporates material from the projects listed below (Third Party IP). The original copyright notice and the license under which Microsoft received such Third Party IP, are set forth below. Such licenses and notices are provided for informational purposes only. Where permitted, Microsoft licenses the Third Party IP to you under the licensing terms for the Microsoft product. Microsoft reserves all other rights not expressly granted under this agreement, whether by implication, estoppel or otherwise.
 
-### a. BOOST C++ LIBRARIES
+### a. INTEL (R) MATH KERNEL LIBRARY (INTEL (R) MKL)
+
+CNTK distribution contains Redistributable components of Intel (r) Math Kernel Library (Intel (r) MKL)
+
+### b. BOOST C++ LIBRARIES
 
 Copyright Beman Dawes, David Abrahams, 1998-2005.  
 Copyright Rene Rivera 2004-2007.
@@ -27,7 +31,7 @@ The copyright notices in the Software and this entire statement, including the a
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-### b. ATIS DATASETS
+### c. ATIS DATASETS
 
 CNTK distribution contains a subset of ATIS Datasets:
 
@@ -39,23 +43,23 @@ Dahl, Deborah, et al. ATIS3 Test Data LDC95S26. Web Download. Philadelphia: Ling
 
 Dahl, Deborah, et al. ATIS3 Training Data LDC94S19. Web Download. Philadelphia: Linguistic Data Consortium, 1994.
 
-### c. TIMIT ACOUSTIC-PHONETIC CONTINUOUS SPEECH CORPUS
+### d. TIMIT ACOUSTIC-PHONETIC CONTINUOUS SPEECH CORPUS
 
 CNTK distribution contains a subset of TIMIT Acoustic-Phonetic Continuous Speech Corpus:
 
 Garofolo, John, et al. TIMIT Acoustic-Phonetic Continuous Speech Corpus LDC93S1. Web Download. Philadelphia: Linguistic Data Consortium, 1993.
 
-### d. THE PENN TREEBANK PROJECT
+### e. THE PENN TREEBANK PROJECT
 
 CNTK distribution contains a subset of the data of The Penn Treebank Project:
 
 Marcus, Mitchell, Beatrice Santorini, and Mary Ann Marcinkiewicz. Treebank-2 LDC95T7. Web Download. Philadelphia: Linguistic Data Consortium, 1995.
 
-### e. THE CMU AUDIO DATABASES
+### f. THE CMU AUDIO DATABASES
 
 CNTK distribution contains a subset of the CMU Audio Databases
 Copyright (c) 1991-2005 Carnegie Mellon University.  All rights reserved.
 
-### f. THE MNIST DATABASE OF HANDWRITTEN DIGITS
+### g. THE MNIST DATABASE OF HANDWRITTEN DIGITS
 
 CNTK distribution contains a subset of the MNIST Database of Handwritten Digits

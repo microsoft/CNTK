@@ -1,0 +1,10 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+ConfigDir=$TEST_DIR/
+
+[[ -d $TEST_DATA_DIR && -f $TEST_DATA_DIR/Train-28x28_cntk_text.txt && -f $TEST_DATA_DIR/Test-28x28_cntk_text.txt ]] || {
+    echo Error: cannot find data. Please see Examples/Image/DataSets/MNIST/README.md for instructions to get it.
+    exit 1
+}

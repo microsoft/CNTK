@@ -52,8 +52,8 @@ public:
             ondevice no(deviceid);                          // switch to desired CUDA card
             cuda_ptr<elemtype> pnew = malloc<elemtype>(sz); // allocate memory inside CUDA device (or throw)
             capacity = sz;                                  // if succeeded then: remember
-            cuda_ptr<elemtype> p = this->reset(pnew, sz);   //  and swap the pointers and update n
-            free(p);                                        //  then release the old one
+            cuda_ptr<elemtype> p2 = this->reset(pnew, sz);  //  and swap the pointers and update n
+            free(p2);                                       //  then release the old one
         }
         else // not growing: keep same allocation
             this->reset(this->get(), sz);
@@ -62,22 +62,22 @@ public:
     {
         return vectorref<elemtype>::size();
     }
-    void assign(const elemtype *p, size_t nelem, bool synchronize)
+    void assign(const elemtype *p2, size_t nelem, bool synchronize)
     {
         allocate(nelem);       // assign will resize the target appropriately
         ondevice no(deviceid); // switch to desired CUDA card
         if (nelem > 0)
-            memcpy(this->get(), 0, p, nelem);
+            memcpy(this->get(), 0, p2, nelem);
         if (synchronize)
             join();
     }
-    void fetch(elemtype *p, size_t nelem, bool synchronize) const
+    void fetch(elemtype *p2, size_t nelem, bool synchronize) const
     {
         if (nelem != size()) // fetch() cannot resize the target; caller must do that
             LogicError("fetch: vector size mismatch");
         ondevice no(deviceid); // switch to desired CUDA card
         if (nelem > 0)
-            memcpy(p, this->get(), 0, nelem);
+            memcpy(p2, this->get(), 0, nelem);
         if (synchronize)
             join();
     };

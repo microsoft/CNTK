@@ -5,7 +5,7 @@
 // helpful macros
 // TODO: the file's name is too general to be included from outside; MathHelpers.h?
 
-//#pragma once
+#pragma once
 
 // iterators
 #undef foreach_row

@@ -1,0 +1,90 @@
+RootDir = .
+ModelDir = "models"
+
+precision = "float"
+
+modelPath = "$ModelDir$/ImageReaderSimple_Model.dnn"
+
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+outputNodeNames = "Dummy"
+traceLevel = 1
+frameMode = false
+
+SameShapeEmptyTransforms_Test = [
+reader = [
+        verbosity = 0
+        randomize = true
+
+        deserializers = (
+            [
+                type = "ImageDeserializer"
+                module = "ImageReader"
+                file = "$RootDir$/ImageReaderSimple_map.txt"
+
+                input = [
+                    features = [
+                        transforms = ()
+                    ]
+
+                    labels = [
+                        labelDim = 4
+                    ]
+                ]
+            ]
+        )
+    ]
+]
+
+DifferentShapeEmptyTransforms_Test = [
+reader = [
+        verbosity = 0
+        randomize = true
+
+        deserializers = (
+            [
+                type = "ImageDeserializer"
+                module = "ImageReader"
+                file = "$RootDir$/ImageReaderVaryingShape_map.txt"
+
+                input = [
+                    features = [
+                        transforms = ()
+                    ]
+
+                    labels = [
+                        labelDim = 4
+                    ]
+                ]
+            ]
+        )
+    ]
+]
+
+NoScaleTransforms_Test = [
+reader = [
+        verbosity = 0
+        randomize = true
+
+        deserializers = (
+            [
+                type = "ImageDeserializer"
+                module = "ImageReader"
+                file = "$RootDir$/ImageReaderVaryingShape_map.txt"
+                input = [
+                    features = [
+                        transforms = (
+                            [
+                                type = "Mean"
+                            ]:[
+                                type = "Transpose"
+                            ]
+                        )
+                    ]
+                    labels = [ labelDim = 10 ]
+                ]
+            ]
+        )
+    ]
+]

@@ -37,6 +37,7 @@ struct TextLocation // position in the text. Lightweight value struct that we ca
 
     // helpers for pretty-printing errors: Show source-code line with ...^ under it to mark up the point of error
     static void PrintIssue(const vector<TextLocation>& locations, const wchar_t* errorKind, const wchar_t* kind, const wchar_t* what);
+    static std::wstring CreateIssueMessage(const vector<TextLocation>& locations, const wchar_t* errorKind, const wchar_t* kind, const wchar_t* what);
     static void Trace(TextLocation, const wchar_t* traceKind, const wchar_t* op, const wchar_t* exprPath);
 
     // construction
@@ -77,8 +78,12 @@ public:
     }                                        // where the error happened
     virtual const wchar_t* kind() const = 0; // e.g. "warning" or "error"
 
+    wstring GetError(const std::wstring& linePrefix) const override
+    {
+        return TextLocation::CreateIssueMessage(locations, linePrefix.c_str(), kind(), msra::strfun::utf16(what()).c_str());
+    }
     // pretty-print this as an error message
-    void /*ScriptingException::*/ PrintError(const std::wstring& linePrefix) const
+    void /*ScriptingException::*/ PrintError(const std::wstring& linePrefix) const override
     {
         TextLocation::PrintIssue(locations, linePrefix.c_str(), kind(), msra::strfun::utf16(what()).c_str());
     }
@@ -129,7 +134,7 @@ struct Expression
         args.push_back(arg2);
     }
     // diagnostics helper: print the content
-    void Dump(int indent = 0) const;
+    void DumpToStream(wstringstream & treeStream, int indent = 0);
 };
 typedef Expression::ExpressionPtr ExpressionPtr; // circumvent some circular definition problem
 

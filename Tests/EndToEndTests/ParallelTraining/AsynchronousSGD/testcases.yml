@@ -1,0 +1,33 @@
+dataDir: .
+
+tags:
+     - bvt-p (build_sku == 'gpu') and (device == 'gpu') and ((os == 'linux') or (flavor == 'release'))
+     - nightly-p (build_sku == 'gpu') and (device == 'gpu')
+     - weekly-p (build_sku == 'gpu') and (device == 'gpu')
+
+testCases:
+  Must train epochs in exactly same order and parameters for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+
+  Epochs must be finished with expected results for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - CE = {{float,tolerance=2}}
+      - Err = {{float,tolerance=2}}
+
+  Per-minibatch training results must match for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
+      - " * {{integer}}; "
+      - CE = {{float,tolerance=2}}
+      - Err = {{float,tolerance=2}}
+
+  DataParallelASGD training parameters must match for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Starting minibatch loop

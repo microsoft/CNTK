@@ -53,7 +53,7 @@ private:
         size_t firstframe = 0;
         foreach_index (k, numframes)
         {
-            const wstring &outfile = outpaths[k];
+            const std::wstring &outfile = outpaths[k];
             unsigned int sampperiod = sampperiods[k];
             size_t n = numframes[k];
             msra::files::make_intermediate_dirs(outfile);
@@ -87,7 +87,7 @@ public:
 
     // append data to chunk
     template <class MATRIX>
-    void addfile(const MATRIX &feat, const string &featkind, unsigned int sampperiod, const std::wstring &outpath)
+    void addfile(const MATRIX &feat, const std::string &featkind, unsigned int sampperiod, const std::wstring &outpath)
     {
         // append to frames; also expand neighbor frames
         if (feat.cols() < 2)
@@ -182,7 +182,7 @@ private:
         size_t firstframe = 0;
         foreach_index (k, numframes)
         {
-            const wstring &outfile = outpaths[index][k];
+            const std::wstring &outfile = outpaths[index][k];
             unsigned int sampperiod = sampperiods[index][k];
             size_t n = numframes[k];
             msra::files::make_intermediate_dirs(outfile);
@@ -230,7 +230,7 @@ public:
 
     // append data to chunk
     template <class MATRIX>
-    void addfile(const MATRIX &feat, const string &featkind, unsigned int sampperiod, const std::wstring &outpath, size_t index)
+    void addfile(const MATRIX &feat, const std::string &featkind, unsigned int sampperiod, const std::wstring &outpath, size_t index)
     {
         // append to frames; also expand neighbor frames
         if (feat.cols() < 2)
@@ -348,7 +348,7 @@ public:
 
     // append data to chunk
     template <class MATRIX>
-    void AddFile(const MATRIX &feat, const string & /*featkind*/, unsigned int sampPeriod, size_t index)
+    void AddFile(const MATRIX &feat, const std::string & /*featkind*/, unsigned int sampPeriod, size_t index)
     {
         // append to frames; also expand neighbor frames
         if (feat.cols() < 2)

@@ -12,6 +12,7 @@
 #include "LinearAlgebraNodes.h"
 #include "RecurrentNodes.h"
 #include "ConvolutionalNodes.h"
+#include "RNNNodes.h"
 #include "NonlinearityNodes.h"
 #include "ReshapingNodes.h"
 #include "InputAndParamNodes.h"
@@ -113,12 +114,12 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
         if (!isImage)
         {
             if (parameter.size() < 1)
-                RuntimeError("%ls should have 1 or more parameters (tensor dimensions, e.g. [vecdim] or [rows, cols]) plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
+                RuntimeError("%ls should have 1 or more parameters (tensor dimensions, e.g. [vecdim] or [rows, cols]) plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue|fromFile|heNormal|bilinear], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
         }
         else
         {
             if (parameter.size() < 3)
-                RuntimeError("%ls should have 3 or more parameters [imageWidth, imageHeight, imageChannels] plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
+                RuntimeError("%ls should have 3 or more parameters [imageWidth, imageHeight, imageChannels] plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue|fromFile|heNormal|bilinear], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
         }
 
         if (pass == ndlPassInitial)
@@ -149,11 +150,18 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             int forcedRandomSeed = node->GetOptionalParameter("randomSeed", "-1" /*disabled*/);
 
             if (EqualCI(initString, L"fixedValue"))
-                nodePtr->Value().SetValue(value);
+                m_net->InitLearnableParameters(nodePtr, L"fixedValue", value);
             else if (EqualCI(initString, L"uniform"))
-                m_net->InitLearnableParameters(nodePtr, true, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, initValueScale, initOnCPUOnly);
+                m_net->InitLearnableParameters(nodePtr, L"uniform",  initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);
             else if (EqualCI(initString, L"gaussian"))
-                m_net->InitLearnableParameters(nodePtr, false, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long) forcedRandomSeed, initValueScale, initOnCPUOnly);
+                m_net->InitLearnableParameters(nodePtr, L"gaussian", initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);
+            else if (EqualCI(initString, L"bilinear"))
+            {
+                const size_t kernelWidth = node->GetOptionalParameter("kernelWidth", "0");
+                const size_t kernelHeight = node->GetOptionalParameter("kernelHeight", "0");
+                assert(kernelWidth > 0 && kernelHeight > 0);
+                m_net->InitLearnableParametersWithBilinearFill<ElemType>(nodePtr, kernelWidth, kernelHeight);
+            }
             else if (EqualCI(initString, L"fromFile"))
             {
                 std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
@@ -166,8 +174,10 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                     RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
                 dynamic_pointer_cast<LearnableParameter<ElemType>>(nodePtr)->InitFromFile(msra::strfun::utf16(initFromFilePath));
             }
+            else if (EqualCI(initString, L"heNormal"))
+                m_net->InitLearnableParameters(nodePtr, L"heNormal", initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);
             else
-                RuntimeError("'init' must be one of the values of [ uniform | gaussian | fixedValue ]");
+                RuntimeError("'init' must be one of the values of [ uniform | gaussian | fixedValue | fromFile | heNormal | bilinear]");
         }
     }
     else if (cnNodeType == L"Constant")
@@ -186,7 +196,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
         else if (pass == ndlPassFinal || nodePtr->Value().GetNumElements() != 0)
         {
             ElemType val = parameter[0]->GetScalar();
-            nodePtr->Value().SetValue(val);
+            m_net->InitLearnableParameters(nodePtr, L"fixedValue", val);
         }
     }
     else if (cnNodeType == L"RowSlice") // Note: This now maps onto SliceNode which specifies the end differently.
@@ -261,6 +271,16 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr = builder.LegacyReshape(NULL, num_rows, ImageDimensions::AsTensorShape(img_width, img_height, img_channels, imageLayoutKind), name);
         }
     }
+    else if (cnNodeType == OperationNameOf(ReconcileDynamicAxisNode))
+    {
+        nodeParamCount = 2;
+        nodeParamStart = 0;
+
+        if (pass == ndlPassInitial)
+        {
+            nodePtr = builder.ReconcileDynamicAxis(NULL, NULL, name);
+        }
+    }
     else if (cnNodeType == OperationNameOf(PastValueNode) ||
              cnNodeType == OperationNameOf(FutureValueNode))
     {
@@ -292,24 +312,33 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 nodePtr = builder.FutureValue(NULL, defaultHiddenActivity, rows, timeStep, name);
         }
     }
-    else if (cnNodeType == OperationNameOf(ConvolutionNode) || cnNodeType == OperationNameOf(PoolingNode))
+    else if (cnNodeType == OperationNameOf(ConvolutionNode) ||
+             cnNodeType == OperationNameOf(PoolingNode) ||
+             cnNodeType == OperationNameOf(MaxUnpoolingNode))
     {
-        if (parameter.size() != 3 && parameter.size() != 7)
+        if (parameter.size() != 2 && parameter.size() != 3 && parameter.size() != 7)
         {
             if (cnNodeType == OperationNameOf(ConvolutionNode))
             {
                 RuntimeError("%ls: unexpected parameter count. %ls supports 2 modes: \n"
-                             "1. 2D convolution which takes 7 fixed parameters [weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] \n"
+                             "1. 2D convolution which takes 7 fixed parameters [weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample] \n"
                              "and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"HWC\"|\"cudnn\"]. \n"
                              "2. ND convolution which takes 3 fixed parameters [weightNodeName, inputValueNodeName, kernelShape] and \n"
-                             "9 optional parameters [mapCount = [1|yourvalue], stride = [1|yourvalue], sharing = [true|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"cudnn\"|\"HWC\"]. \n"
+                             "10 optional parameters [mapCount = [0|yourvalue], stride = [1|yourvalue], sharing = [true|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], bool transpose = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue], imageLayout = \"cudnn\"|\"HWC\"]. \n"
                              "For ND convolution, parameters kernelShape, mapCount, stride, sharing, autoPadding, lowerPad, upperPad can be arrays, e.g. kernelShape={5, 5, 3}",
                              cnNodeType.c_str(), cnNodeType.c_str());
             }
-            else
+            else if (cnNodeType == OperationNameOf(PoolingNode))
             {
                 RuntimeError("%ls: unexpected parameter count. %ls 3 fixed parameters [inputValueNodeName, poolKind, kernelShape] and \n"
-                             "5 optional parameters stride = [1|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], imageLayout = \"cudnn\"|\"HWC\"]. \n"
+                             "5 optional parameters stride = [1|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], imageLayout = \"cudnn\"]. \n"
+                             "Parameters kernelShape, stride, autoPadding, lowerPad, upperPad can be arrays, e.g. kernelShape={5, 5, 3}",
+                             cnNodeType.c_str(), cnNodeType.c_str());
+            }
+            else if (cnNodeType == OperationNameOf(MaxUnpoolingNode))
+            {
+                RuntimeError("%ls: unexpected parameter count. %ls 3 fixed parameters [inputValueNodeName, mask, kernelShape] and \n"
+                             "5 optional parameters stride = [1|yourvalue], autoPadding = [true|yourvalue], lowerPad = [0|yourvalue], upperPad = [0|yourvalue], imageLayout = \"cudnn\"]. \n"
                              "Parameters kernelShape, stride, autoPadding, lowerPad, upperPad can be arrays, e.g. kernelShape={5, 5, 3}",
                              cnNodeType.c_str(), cnNodeType.c_str());
             }
@@ -317,11 +346,13 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
 
         // setup the parameter position of children so we can hook them up later
         nodeParamStart = 0;
-        nodeParamCount = cnNodeType == OperationNameOf(ConvolutionNode) ? 2 : 1;
+        nodeParamCount = (cnNodeType == OperationNameOf(ConvolutionNode) || cnNodeType == OperationNameOf(MaxUnpoolingNode))
+                         ? 2
+                         : 1;
 
         if (pass == ndlPassInitial)
         {
-            if (parameter.size() == 3)
+            if (parameter.size() == 2 || parameter.size() == 3)
             {
                 auto reqParams = node->GetParameters(false);
                 auto optParams = node->GetParameters(true);
@@ -369,7 +400,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 };
 
                 auto kernelShape = paramGetter(reqParams.size() - 1);
-                auto mapCount = paramResolver("mapCount", 1);
+                auto mapCount = paramResolver("mapCount", 0);
                 auto stride = paramResolver("stride", 1);
                 auto sharing = boolParamResolver("sharing", true);
                 auto autoPad = boolParamResolver("autoPadding", true);
@@ -378,21 +409,20 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 ImageLayoutKind imageLayout = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
                 size_t maxTempMemSizeInSamples = node->GetOptionalParameter("maxTempMemSizeInSamples", "0");
 
-                auto pool = PoolKind::None;
-                if (cnNodeType == OperationNameOf(PoolingNode))
+                if (cnNodeType == OperationNameOf(MaxUnpoolingNode))
+                    nodePtr = builder.MaxUnpooling(NULL, NULL, kernelShape, stride, autoPad, lowerPad, upperPad, imageLayout, name);
+                else if (cnNodeType == OperationNameOf(PoolingNode))
                 {
                     auto parm = node->GetParentScript()->ParseVariable(reqParams[1]->GetValue(), false);
-                    pool = PoolKindFrom(wstring(parm->GetValue()));
-                }
-
-                if (pool == PoolKind::None)
-                {
-                    nodePtr = builder.Convolution(NULL, NULL, kernelShape, mapCount, stride, sharing, 
-                                                  autoPad, lowerPad, upperPad, imageLayout, maxTempMemSizeInSamples, name);
+                    auto pool = PoolKindFrom(wstring(parm->GetValue()));
+                    nodePtr = builder.Pooling(NULL, pool, kernelShape, stride, autoPad, lowerPad, upperPad, false, false, imageLayout, name);
                 }
                 else
                 {
-                    nodePtr = builder.Pooling(NULL, pool, kernelShape, stride, autoPad, lowerPad, upperPad, imageLayout, name);
+                    bool transpose = node->GetOptionalParameter("transpose", "false");
+                    auto outputShape = paramResolver("outputShape", 0); 
+                    nodePtr = builder.Convolution(NULL, NULL, kernelShape, mapCount, stride, sharing, 
+                                                  autoPad, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, name);
                 }
 
             }
@@ -481,16 +511,16 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
     }
     else if (cnNodeType == OperationNameOf(BatchNormalizationNode))
     {
-        if (parameter.size() != 5)
-            RuntimeError("%ls should have 5 fixed parameters[inputValueNodeName, scale, bias, runMean, runInvStdDev].", cnNodeType.c_str());
+        if (parameter.size() < 5)
+            RuntimeError("%ls should have 5 fixed parameters[inputValueNodeName, scale, bias, runMean, runVariance].", cnNodeType.c_str());
 
         // setup the parameter position of children so we can hook them up later
-        nodeParamCount = 5;
+        nodeParamCount = 6;
         nodeParamStart = 0;
 
         if (pass == ndlPassInitial)
         {
-            int id = 5; // skip inputValueNode, scale and bias, runMean, runInvStdDev.
+            int id = 5; // skip inputValueNode, scale and bias, runMean, runVariance.
             // evaluate only scalar parameters
             vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
 
@@ -509,7 +539,71 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 InvalidArgument("Unsupported batch normalization engine, choose either \"cntk\"(default) or \"cudnn\".");
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
 
-            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
+            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
+
+            if (parameter.size() == 5) 
+            {
+                // Patch up NDL network config by creating and injecting an additional input parameter for
+                // BatchNormalizationNode
+                ComputationNodePtr runSampleCount = builder.CreateLearnableParameter(name + L".run_sample_count", TensorShape(1));
+                runSampleCount->SetLearningRateMultiplier(0);
+                m_net->InitLearnableParameters(runSampleCount, L"fixedValue", 0);
+
+                NDLNode<ElemType>* runCountNode = new NDLNode<ElemType>("runCount", ConfigValue("0"), node->GetParentScript(), ndlTypeConstant);
+
+                runCountNode->SetEvalValue(runSampleCount.get());
+
+                node->InsertParam(runCountNode);
+            }
+        }
+    }
+    else if (cnNodeType == OperationNameOf(CropNode))
+    {
+        // We expect 2 or 4 inputs.
+        if (parameter.size() != 2 && parameter.size() != 4)
+        {
+            RuntimeError("%ls accepts inputs: [input1, input2, offsetX, offsetY] or \
+                                              [input1, input2] or \
+                                              [input1, input2, eqNode1, eqNode2].", cnNodeType.c_str());
+        }
+
+        if (pass == ndlPassInitial)
+        {
+            // In initial phase we just need to create node.
+            if (parameter.size() == 4)
+            {
+                // Here we need to determine if 3rd and 4th parameters are offsets or equivalence nodes.
+                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                // TODO: Is there a better way to discriminate?
+                if (((NDLNode<ElemType>*) params[2])->GetType() == NDLType::ndlTypeConstant)
+                {
+                    // We have offsets given, take offsets from evaluated parameters.
+                    size_t offsetX = ((NDLNode<ElemType>*) params[2])->GetScalar();
+                    size_t offsetY = ((NDLNode<ElemType>*) params[3])->GetScalar();
+
+                    // Create crop node with offsets but without inputs (will be attached later in resolve phase).
+                    nodePtr = builder.Crop(nullptr, nullptr, offsetX, offsetY, name);
+                }
+                else
+                {
+                    // We have 4 node inputs (2 crop inputs and 2 equivalence node inputs).
+                    nodePtr = builder.Crop(nullptr, nullptr, nullptr, nullptr, name);
+                }
+            }
+            else
+            {
+                // Just two inputs, must be node inputs which will be attached in the resolve phase below.
+                nodePtr = builder.Crop(nullptr, nullptr, name);
+            }
+            // Done processing in this phase.
+            nodeParamStart = 0;
+            nodeParamCount = 0;
+        }
+        else
+        {
+            // In non-initial phase we just process node inputs below, here we just set inputs of interest.
+            nodeParamStart = 0;
+            nodeParamCount = nodePtr->GetNumInputs();
         }
     }
     else
@@ -551,6 +645,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             vector<ComputationNodeBasePtr> inputNodes;
             for (let& in : inputs)
                 inputNodes.push_back(ComputationNode<ElemType>::FromVoidPtr(in));
+
             nodePtr->AttachInputs(inputNodes);
 #else       // TODO: delete this
             switch (inputs.size())

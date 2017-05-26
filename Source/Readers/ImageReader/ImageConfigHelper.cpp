@@ -126,9 +126,14 @@ CropType ImageConfigHelper::ParseCropType(const std::string &src)
         return CropType::Center;
     }
 
-    if (AreEqualIgnoreCase(src, "random"))
+    if (AreEqualIgnoreCase(src, "randomside"))
     {
-        return CropType::Random;
+        return CropType::RandomSide;
+    }
+
+    if (AreEqualIgnoreCase(src, "randomarea"))
+    {
+        return CropType::RandomArea; 
     }
 
     if (AreEqualIgnoreCase(src, "multiview10"))

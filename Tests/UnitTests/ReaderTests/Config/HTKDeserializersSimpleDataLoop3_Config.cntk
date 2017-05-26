@@ -1,0 +1,24 @@
+RootDir = .
+DataDir = $RootDir$
+
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+frameMode = false
+precision = "float"
+
+Simple_Test = [
+    action = "write"
+
+    reader = [
+        readerType = "HTKDeserializers"
+        readMethod = "none"
+        verbosity = 0
+
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "$DataDir$/glob_0000.scp"
+        ]
+    ]
+]

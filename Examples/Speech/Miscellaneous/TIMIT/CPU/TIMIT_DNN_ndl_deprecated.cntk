@@ -1,0 +1,99 @@
+# Note: This sample uses the deprecated NdlNetworkBuilder.
+#       An updated version using BrainScript is coming soon.
+#       Please find updated samples on Github, https://github.com/Microsoft/CNTK/tree/master/Examples /...
+#
+stderr= # your log file
+command=speechTrainNDL
+
+
+precision=float
+
+#######################################
+#  TRAINING CONFIG (NDL, Fixed LR) #
+#######################################
+speechTrainNDL=[
+    action=train
+
+    modelPath= # where you want put your model
+    # deviceId=-1 for CPU, >=0 for GPU devices 
+    deviceId=-1
+
+    traceLevel=1
+
+    NDLNetworkBuilder=[
+        networkDescription=..\..\..\..\ExampleSetups\ASR\TIMIT\config\simpleDNN_2layers.ndl
+    ]
+
+    SGD=[
+        epochSize=1123915
+        minibatchSize=128
+        learningRatesPerMB=0.1:1.0
+        momentumPerMB=0:0.9
+        dropoutRate=0.0
+        maxEpochs=3
+
+        #settings for Auto Adjust Learning Rate
+        AutoAdjust=[
+            # auto learning rate adjustment
+            #autoAdjustLR=SearchBeforeEpoch
+            reduceLearnRateIfImproveLessThan=0
+            loadBestModel=true
+            increaseLearnRateIfImproveMoreThan=1000000000
+            learnRateDecreaseFactor=0.5
+            learnRateIncreaseFactor=1.382
+            autoAdjustLR=AdjustAfterEpoch
+            #numMiniBatch4LRSearch=500
+            #numPrevLearnRates=5
+            #numBestSearchEpoch=1
+        ]
+
+        #gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+
+    ]
+       
+    # Parameter values for the reader
+    reader=[
+      # reader to use
+      readerType=HTKMLFReader
+#      readMethod=blockRandomize
+      readMethod=rollingWindow
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+		dim=1845
+	     	scpFile= #training file list
+      ]
+
+      labels=[
+	mlfFile= # your mlf label file        
+    #labelMappingFile=<statelist path goes here>
+        labelDim=183
+	labelType=Category
+      ]
+    ]
+
+    cvReader=[
+      # reader to use
+      readerType=HTKMLFReader
+#      readMethod=blockRandomize
+      readMethod=rollingWindow
+      miniBatchMode=Partial
+      randomize=Auto
+      verbosity=1   
+      features=[
+		dim=1845
+	     	scpFile=      
+      ]
+
+      labels=[
+	    mlfFile= # your mlf label file
+        #labelMappingFile=<statelist path goes here>
+        labelDim=183
+    	labelType=Category
+      ]
+    ]
+
+]
+

@@ -121,7 +121,7 @@ public:
     bool IsEOF();
     bool IsWhiteSpace(bool skip = false);
     int EndOfLineOrEOF(bool skip = false);
-
+    int Setvbuf();
 
     // TryGetText - for text value, try and get a particular type
     // returns - true if value returned, otherwise false, can't parse

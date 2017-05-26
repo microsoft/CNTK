@@ -7,83 +7,36 @@
 #include <algorithm>
 #include <unordered_map>
 #include <random>
+#include <boost/random/bernoulli_distribution.hpp>
+#include <boost/random/normal_distribution.hpp>
 #include "ImageTransformers.h"
 #include "Config.h"
 #include "ConcStack.h"
 #include "StringUtil.h"
-#include "ElementTypeUtils.h"
+#include "SequenceData.h"
+#include "ImageUtil.h"
+#include "ImageDeserializerBase.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK 
 {
 
-struct ImageSequenceData : DenseSequenceData
-{
-    cv::Mat m_image;
-    // In case we do not copy data - we have to preserve the original sequence.
-    SequenceDataPtr m_original;
-};
-
-ImageTransformerBase::ImageTransformerBase(const ConfigParameters& readerConfig) : m_imageElementType(0)
-{
-    m_seed = readerConfig(L"seed", 0u);
-}
-
-// The method describes how input stream is transformed to the output stream. Called once per applied stream.
-// Currently for image transformations we only support dense streams of type double or float.
-StreamDescription ImageTransformerBase::Transform(const StreamDescription& inputStream)
-{
-    m_inputStream = inputStream;
-    m_outputStream = m_inputStream;
-
-    if (m_inputStream.m_storageType != StorageType::dense)
-    {
-        LogicError("ImageTransformerBase supports only dense input streams.");
-    }
-
-    if (m_inputStream.m_elementType == ElementType::tdouble)
-    {
-        m_imageElementType = CV_64F;
-    }
-    else if (m_inputStream.m_elementType == ElementType::tfloat)
-    {
-        m_imageElementType = CV_32F;
-    }
-    else
-    {
-        RuntimeError("Unsupported type");
-    }
-
-    return m_outputStream;
-}
-
 // Transforms a single sequence as open cv dense image. Called once per sequence.
 SequenceDataPtr ImageTransformerBase::Transform(SequenceDataPtr sequence)
 {
-    auto inputSequence = static_cast<const DenseSequenceData&>(*sequence);
-
-    ImageDimensions dimensions(*inputSequence.m_sampleLayout, HWC);
-    int columns = static_cast<int>(dimensions.m_width);
-    int rows = static_cast<int>(dimensions.m_height);
-    int channels = static_cast<int>(dimensions.m_numChannels);
+    auto inputSequence = dynamic_cast<ImageSequenceData*>(sequence.get());
+    if (inputSequence == nullptr)
+        RuntimeError("Unexpected sequence provided");
 
     auto result = std::make_shared<ImageSequenceData>();
-    int type = CV_MAKETYPE(m_imageElementType, channels);
-    cv::Mat buffer = cv::Mat(rows, columns, type, inputSequence.m_data);
-    Apply(sequence->m_id, buffer);
-    if (!buffer.isContinuous())
-    {
-        buffer = buffer.clone();
-    }
-    else
-    {
-        result->m_original = sequence;
-    }
-    assert(buffer.isContinuous());
-    result->m_image = buffer;
-    result->m_data = buffer.ptr();
-    result->m_numberOfSamples = inputSequence.m_numberOfSamples;
+    Apply(inputSequence->m_copyIndex, inputSequence->m_image);
 
-    ImageDimensions outputDimensions(buffer.cols, buffer.rows, buffer.channels());
+    result->m_image = inputSequence->m_image;
+    result->m_numberOfSamples = inputSequence->m_numberOfSamples;
+    result->m_elementType = GetElementTypeFromOpenCVType(inputSequence->m_image.depth());
+    result->m_copyIndex = inputSequence->m_copyIndex;
+    result->m_key = inputSequence->m_key;
+
+    ImageDimensions outputDimensions(inputSequence->m_image.cols, inputSequence->m_image.rows, inputSequence->m_image.channels());
     result->m_sampleLayout = std::make_shared<TensorShape>(outputDimensions.AsTensorShape(HWC));
     return result;
 }
@@ -91,72 +44,105 @@ SequenceDataPtr ImageTransformerBase::Transform(SequenceDataPtr sequence)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
-    floatargvector cropRatio = config(L"cropRatio", "1.0");
-    m_cropRatioMin = cropRatio[0];
-    m_cropRatioMax = cropRatio[1];
-
-    if (!(0 < m_cropRatioMin && m_cropRatioMin <= 1.0) ||
-        !(0 < m_cropRatioMax && m_cropRatioMax <= 1.0) ||
-        m_cropRatioMin > m_cropRatioMax)
+    intargvector cropSize = config(L"cropSize", "0"); 
+    m_cropWidth = cropSize[0]; 
+    m_cropHeight = cropSize[1]; 
+    if (m_cropWidth < 0 || m_cropHeight < 0)
     {
-        RuntimeError("Invalid cropRatio value, must be > 0 and <= 1. cropMin must "
-                     "<= cropMax");
+        RuntimeError("Invalid cropSize value, must be >= 0"); 
+    }
+
+    m_useSideRatio = true;
+    floatargvector sideRatio = config(L"sideRatio", "0.0");
+    m_sideRatioMin = sideRatio[0];
+    m_sideRatioMax = sideRatio[1];
+    if (m_sideRatioMin == 0.0 && m_sideRatioMax == 0.0) // taking default value means not specified 
+    {
+        m_useSideRatio = false;
+    }
+    else if (!(m_sideRatioMin > 0 && m_sideRatioMax <= 1.0) ||
+        m_sideRatioMin > m_sideRatioMax)
+    {
+        RuntimeError("Invalid sideRatio value, must be > 0 and <= 1. sideMin must <= sideMax");
+    }
+
+    m_useAreaRatio = true; 
+    floatargvector areaRatio = config(L"areaRatio", "0.0");
+    m_areaRatioMin = areaRatio[0];
+    m_areaRatioMax = areaRatio[1];
+    if (m_areaRatioMin == 0.0 && m_areaRatioMax == 0.0) // taking default value means not specified 
+    {
+        m_useAreaRatio = false;
+    }
+    else if (!(m_areaRatioMin > 0 && m_areaRatioMax <= 1.0) ||
+        m_areaRatioMin > m_areaRatioMax)
+    {
+        RuntimeError("Invalid areaRatio value, must be > 0 and <= 1. areaMin must <= areaMax");
+    }
+
+    if (m_useSideRatio && m_useAreaRatio)
+        RuntimeError("sideRatio and areaRatio cannot be specified simultaneously"); 
+
+    floatargvector aspectRatio = config(L"aspectRatio", "1.0");
+    m_aspectRatioMin = aspectRatio[0];
+    m_aspectRatioMax = aspectRatio[1];
+    if (!(m_aspectRatioMin > 0 && m_aspectRatioMax <= 1.0) ||  
+        m_aspectRatioMin > m_aspectRatioMax)
+    {
+        RuntimeError("Invalid aspectRatio value, must be > 0 and <= 1. aspectMin must <= aspectMax");
     }
 
     m_jitterType = ParseJitterType(config(L"jitterType", ""));
-
     m_cropType = ImageConfigHelper::ParseCropType(config(L"cropType", ""));
 
     if (!config.ExistsCurrent(L"hflip"))
     {
-        m_hFlip = m_cropType == CropType::Random;
+        m_hFlip = (m_cropType == CropType::RandomSide || m_cropType == CropType::RandomArea);
     }
     else
     {
         m_hFlip = config(L"hflip");
     }
 
-    m_aspectRatioRadius = config(L"aspectRatioRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
+    // for MultiView10 we need to set m_hflip = false, otherwise we might not get 5 unflipped image (see CropTransformer::Apply below)
+    if (m_cropType == CropType::MultiView10)
+    {
+        m_hFlip = false;
+    }
 }
 
 void CropTransformer::StartEpoch(const EpochConfiguration &config)
 {
-    m_curAspectRatioRadius = m_aspectRatioRadius[config.m_epochIndex];
-    if (!(0 <= m_curAspectRatioRadius && m_curAspectRatioRadius <= 1.0))
-        InvalidArgument("aspectRatioRadius must be >= 0.0 and <= 1.0");
     ImageTransformerBase::StartEpoch(config);
 }
 
-void CropTransformer::Apply(size_t id, cv::Mat &mat)
+void CropTransformer::Apply(uint8_t copyId, cv::Mat &mat)
 {
     auto seed = GetSeed();
-    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
+    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); }); 
+    int viewIndex = m_cropType == CropType::MultiView10 ? (int)(copyId % ImageDeserializerBase::NumMultiViewCopies) : 0;
 
-    double ratio = 1;
-    switch (m_jitterType)
+    switch (m_cropType)
     {
-    case RatioJitterType::None:
-        ratio = m_cropRatioMin;
+    case CropType::Center: 
+        mat = mat(GetCropRectCenter(mat.rows, mat.cols, *rng));
+        break; 
+    case CropType::RandomSide: 
+        mat = mat(GetCropRectRandomSide(mat.rows, mat.cols, *rng)); 
+        break; 
+    case CropType::RandomArea: 
+        mat = mat(GetCropRectRandomArea(mat.rows, mat.cols, *rng));
         break;
-    case RatioJitterType::UniRatio:
-        if (m_cropRatioMin == m_cropRatioMax)
-        {
-            ratio = m_cropRatioMin;
-        }
-        else
-        {
-            ratio = UniRealT(m_cropRatioMin, m_cropRatioMax)(*rng);
-            assert(m_cropRatioMin <= ratio && ratio < m_cropRatioMax);
-        }
-        break;
-    default:
-        RuntimeError("Jitter type currently not implemented.");
+    case CropType::MultiView10: 
+        mat = mat(GetCropRectMultiView10(viewIndex, mat.rows, mat.cols, *rng));
+        break; 
+    default: 
+        RuntimeError("Invalid crop type."); 
+        break; 
     }
 
-    int viewIndex = m_cropType == CropType::MultiView10 ? (int)(id % 10) : 0;
-
-    mat = mat(GetCropRect(m_cropType, viewIndex, mat.rows, mat.cols, ratio, *rng));
-    if ((m_hFlip && std::bernoulli_distribution()(*rng)) ||
+    // for MultiView10 m_hFlip is false, hence the first 5 will be unflipped, the later 5 will be flipped
+    if ((m_hFlip && boost::random::bernoulli_distribution<>()(*rng)) ||
         viewIndex >= 5)
     {
         cv::flip(mat, mat, 1);
@@ -178,170 +164,248 @@ CropTransformer::ParseJitterType(const std::string &src)
         return RatioJitterType::UniRatio;
     }
 
-    if (AreEqualIgnoreCase(src, "unilength"))
-    {
-        return RatioJitterType::UniLength;
-    }
-
-    if (AreEqualIgnoreCase(src, "uniarea"))
-    {
-        return RatioJitterType::UniArea;
-    }
-
     RuntimeError("Invalid jitter type: %s.", src.c_str());
 }
 
-cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, int ccol,
-                                          double cropRatio, std::mt19937 &rng)
+double CropTransformer::ApplyRatioJitter(const double minVal, const double maxVal, std::mt19937 &rng)
+{
+    assert(minVal > 0 && minVal <= maxVal);     // ratio should always be > 0
+    switch (m_jitterType)
+    {
+    case RatioJitterType::None: 
+        return minVal; 
+    case RatioJitterType::UniRatio: 
+        if (minVal == maxVal)
+            return minVal;
+        else
+            return UniRealT(minVal, maxVal)(rng); 
+    default: 
+        RuntimeError("Jitter type currently not implemented.");
+    }
+    return -1;
+}
+
+cv::Rect CropTransformer::GetCropRectCenter(int crow, int ccol, std::mt19937 &rng) 
 {
     assert(crow > 0);
-    assert(ccol > 0);
-    assert(0 < cropRatio && cropRatio <= 1.0);
+    assert(ccol > 0); 
+    assert(!(m_useSideRatio && m_useAreaRatio));    // cannot be applied simultaneously 
 
-    // Get square crop size that preserves aspect ratio.
-    int cropSize = (int)(std::min(crow, ccol) * cropRatio);
-    int cropSizeX = cropSize;
-    int cropSizeY = cropSize;
-    // Change aspect ratio, if this option is enabled.
-    if (m_curAspectRatioRadius > 0)
+    int cropSizeX=ccol, cropSizeY=crow; 
+    if (m_cropWidth > 0 && m_cropHeight > 0)    // crop sizes are specified with meaningful values 
     {
-        double factor = 1.0 + UniRealT(-m_curAspectRatioRadius, m_curAspectRatioRadius)(rng);
-        double area = cropSize * cropSize;
-        double newArea = area * factor;
-        if (std::bernoulli_distribution()(rng))
-        {
-            cropSizeX = (int)std::sqrt(newArea);
-            cropSizeY = (int)(area / cropSizeX);
-        }
-        else
-        {
-            cropSizeY = (int)std::sqrt(newArea);
-            cropSizeX = (int)(area / cropSizeY);
-        }
-        // This clamping should be ok if jittering ratio is not too big.
-        cropSizeX = std::min(cropSizeX, ccol);
-        cropSizeY = std::min(cropSizeY, crow);
+        cropSizeX = min(ccol, m_cropWidth);
+        cropSizeY = min(crow, m_cropHeight);
+        int xOff = (ccol - cropSizeX) / 2;
+        int yOff = (crow - cropSizeY) / 2;
+        return cv::Rect(xOff, yOff, cropSizeX, cropSizeY);
     }
-
-    int xOff = -1;
-    int yOff = -1;
-    switch (type)
+    
+    bool bFound = false;
+    int nAttempt = 0;
+    while (!bFound && nAttempt < 10)
     {
-    case CropType::Center:
-        assert(viewIndex == 0);
+        if (m_useSideRatio)
+        {
+            double sideRatio = ApplyRatioJitter(m_sideRatioMin, m_sideRatioMax, rng);
+            assert(sideRatio >= m_sideRatioMin && sideRatio <= m_sideRatioMax);
+            cropSizeX = cropSizeY = (int)std::round(std::min(crow, ccol) * sideRatio);      // we always crop square shape unless aspectRatio is not 1.0
+        }
+        else if (m_useAreaRatio)
+        {
+            double areaRatio = ApplyRatioJitter(m_areaRatioMin, m_areaRatioMax, rng); 
+            assert(areaRatio >= m_areaRatioMin && areaRatio <= m_areaRatioMax);
+            cropSizeX = cropSizeY = (int)std::round(std::sqrt(crow * ccol * areaRatio));    // we always crop square shape unless aspectRatio is not 1.0
+        }
+
+        double aspectRatio = ApplyRatioJitter(m_aspectRatioMin, m_aspectRatioMax, rng);
+        assert(aspectRatio >= m_aspectRatioMin && aspectRatio <= m_aspectRatioMax);
+        if (aspectRatio != 1.0)
+        {
+            double area = cropSizeX * cropSizeY;
+            if (boost::random::bernoulli_distribution<>()(rng))
+            {
+                cropSizeX = (int)std::sqrt(area * aspectRatio);
+                cropSizeY = (int)std::sqrt(area / aspectRatio);
+            }
+            else
+            {
+                cropSizeY = (int)std::sqrt(area * aspectRatio);
+                cropSizeX = (int)std::sqrt(area / aspectRatio);
+            }
+        }
+        if (cropSizeX <= ccol && cropSizeY <= crow)
+        {
+            bFound = true;
+            break;
+        }
+        nAttempt++;
+    }
+    if (bFound)
+    {
+        int xOff = (ccol - cropSizeX) / 2;
+        int yOff = (crow - cropSizeY) / 2;
+        return cv::Rect(xOff, yOff, cropSizeX, cropSizeY);
+    }
+    else
+    {   // fall back to return the whole image 
+        return cv::Rect(0, 0, ccol, crow); 
+    }
+}
+
+cv::Rect CropTransformer::GetCropRectRandomSide(int crow, int ccol, std::mt19937 &rng)
+{
+    assert(m_useSideRatio); 
+    cv::Rect rc = GetCropRectCenter(crow, ccol, rng); 
+
+    int xOff = UniIntT(0, ccol - rc.width)(rng);
+    int yOff = UniIntT(0, crow - rc.height)(rng); 
+    return cv::Rect(xOff, yOff, rc.width, rc.height); 
+}
+
+cv::Rect CropTransformer::GetCropRectRandomArea(int crow, int ccol, std::mt19937 &rng)
+{
+    assert(m_useAreaRatio); 
+    cv::Rect rc = GetCropRectCenter(crow, ccol, rng);
+
+    int xOff = UniIntT(0, ccol - rc.width)(rng);
+    int yOff = UniIntT(0, crow - rc.height)(rng);
+    return cv::Rect(xOff, yOff, rc.width, rc.height);
+}
+
+cv::Rect CropTransformer::GetCropRectMultiView10(int viewIndex, int crow, int ccol, std::mt19937 &rng)
+{
+    assert(viewIndex >= 0); 
+    cv::Rect rc = GetCropRectCenter(crow, ccol, rng); 
+    viewIndex = viewIndex % 10; 
+
+    // 0 - 4: 4 corners + center crop. 5 - 9: same, but with a flip in CropTransformer::Apply(). 
+    int isubView = viewIndex % 5;
+    int xOff=-1, yOff=-1, cropSizeX = rc.width, cropSizeY = rc.height; 
+    switch (isubView)
+    {
+    case 0: // top-left
+        xOff = 0;
+        yOff = 0;
+        break;
+    case 1: // top-right
+        xOff = ccol - cropSizeX;
+        yOff = 0;
+        break;
+    case 2: // bottom-left
+        xOff = 0;
+        yOff = crow - cropSizeY;
+        break;
+    case 3: // bottom-right
+        xOff = ccol - cropSizeX;
+        yOff = crow - cropSizeY;
+        break;
+    case 4: // center
         xOff = (ccol - cropSizeX) / 2;
         yOff = (crow - cropSizeY) / 2;
         break;
-    case CropType::Random:
-        assert(viewIndex == 0);
-        xOff = UniIntT(0, ccol - cropSizeX)(rng);
-        yOff = UniIntT(0, crow - cropSizeY)(rng);
-        break;
-    case CropType::MultiView10:
-    {
-        assert(0 <= viewIndex && viewIndex < 10);
-        // 0 - 4: 4 corners + center crop. 5 - 9: same, but with a flip.
-        int isubView = viewIndex % 5;
-        switch (isubView)
-        {
-            // top-left
-        case 0:
-            xOff = 0;
-            yOff = 0;
-            break;
-            // top-right
-        case 1:
-            xOff = ccol - cropSizeX;
-            yOff = 0;
-            break;
-            // bottom-left
-        case 2:
-            xOff = 0;
-            yOff = crow - cropSizeY;
-            break;
-            // bottom-right
-        case 3:
-            xOff = ccol - cropSizeX;
-            yOff = crow - cropSizeY;
-            break;
-            // center
-        case 4:
-            xOff = (ccol - cropSizeX) / 2;
-            yOff = (crow - cropSizeY) / 2;
-            break;
-        }
-        break;
-    }
-    default:
-        assert(false);
+    default: // should never happen 
+        assert(false); 
     }
 
-    assert(0 <= xOff && xOff <= ccol - cropSizeX);
-    assert(0 <= yOff && yOff <= crow - cropSizeY);
+    assert(xOff >= 0 && xOff <= ccol - cropSizeX);
+    assert(yOff >= 0 && yOff <= crow - cropSizeY);
     return cv::Rect(xOff, yOff, cropSizeX, cropSizeY);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+// scaleMode = "fill" (default) - warp the image to the given target size
+// scaleMode = "crop" - resize the image's shorter side to the given target size and crops the overlap
+// scaleMode = "pad"  - resize the image's larger side to the given target size, center it and pad the rest
 ScaleTransformer::ScaleTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
-    m_interpMap.emplace("nearest", cv::INTER_NEAREST);
-    m_interpMap.emplace("linear", cv::INTER_LINEAR);
-    m_interpMap.emplace("cubic", cv::INTER_CUBIC);
-    m_interpMap.emplace("lanczos", cv::INTER_LANCZOS4);
-
-    m_imgWidth = config(L"width");
-    m_imgHeight = config(L"height");
+    m_imgWidth    = config(L"width");
+    m_imgHeight   = config(L"height");
     m_imgChannels = config(L"channels");
 
     size_t cfeat = m_imgWidth * m_imgHeight * m_imgChannels;
-    if (cfeat == 0 || cfeat > std::numeric_limits<size_t>().max() / 2)
+    if (cfeat == 0 || cfeat > SIZE_MAX / 2)
         RuntimeError("Invalid image dimensions.");
 
-    m_interp.clear();
-    std::stringstream ss{config(L"interpolations", "")};
-    for (std::string token = ""; std::getline(ss, token, ':');)
-    {
-        // Explicit cast required for GCC.
-        std::transform(token.begin(), token.end(), token.begin(),
-                       (int (*) (int)) std::tolower);
-        StrToIntMapT::const_iterator res = m_interpMap.find(token);
-        if (res != m_interpMap.end())
-            m_interp.push_back((*res).second);
-    }
+    string scaleMode = config(L"scaleMode", "fill");
+    if      (scaleMode == "crop") m_scaleMode = ScaleMode::Crop;
+    else if (scaleMode == "pad")  m_scaleMode = ScaleMode::Pad;
+    else if (scaleMode == "fill") m_scaleMode = ScaleMode::Fill;
+    else RuntimeError("Invalid scaleMode value, must be fill, crop or pad (all lower case)");
 
-    if (m_interp.size() == 0)
-        m_interp.push_back(cv::INTER_LINEAR);
+    // the pad value used for the 'pad' mode. if set to -1 then the border will be replicated.
+    m_padValue = config(L"padValue", -1);
+    if (m_padValue >= 0)       m_borderType = cv::BORDER_CONSTANT;
+    else if (m_padValue == -1) m_borderType = cv::BORDER_REPLICATE;
+    else RuntimeError("Invalid padValue value, must be -1 (replicates border) or >= 0 (constant)");
+
+    // for old config options use case-insensitve comparison ...
+    string interpolation = config(L"interpolations", "linear");
+    if (AreEqualIgnoreCase(interpolation, "nearest"))      m_interp = cv::INTER_NEAREST;
+    else if (AreEqualIgnoreCase(interpolation, "cubic"))   m_interp = cv::INTER_CUBIC;
+    else if (AreEqualIgnoreCase(interpolation, "lanczos")) m_interp = cv::INTER_LANCZOS4;
+    else if (AreEqualIgnoreCase(interpolation, "linear"))  m_interp = cv::INTER_LINEAR;
+    else RuntimeError("Invalid interpolations value, must be nearest, cubic, lanczos or linear");
 }
 
 // The method describes how input stream is transformed to the output stream. Called once per applied stream.
 // Scale transformer transforms the stream so that all samples are of the same size.
 StreamDescription ScaleTransformer::Transform(const StreamDescription& inputStream)
 {
-    ImageTransformerBase::Transform(inputStream);
+    TransformBase::Transform(inputStream);
     m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(ImageDimensions(m_imgWidth, m_imgHeight, m_imgChannels).AsTensorShape(HWC));
     return m_outputStream;
 }
 
-void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
+void ScaleTransformer::Apply(uint8_t, cv::Mat &mat)
 {
-    UNUSED(id);
-
-    // If matrix has not been converted to the right type, do it now as rescaling
-    // requires floating point type.
-    if (mat.type() != CV_MAKETYPE(m_imageElementType, m_imgChannels))
-    {
-        mat.convertTo(mat, m_imageElementType);
+    if (m_scaleMode == ScaleMode::Fill)
+    { // warp the image to the given target size
+        cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp);
     }
+    else
+    {
+        int height = mat.rows;
+        int width = mat.cols;
 
-    auto seed = GetSeed();
-    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
+        // which dimension is our scaled one?
+        bool scaleW;
+        if (m_scaleMode == ScaleMode::Crop)
+            scaleW = width < height; // in "crop" mode we resize the smaller side
+        else
+            scaleW = width > height; // else we resize the larger side
 
-    auto index = UniIntT(0, static_cast<int>(m_interp.size()) - 1)(*rng);
-    assert(m_interp.size() > 0);
-    cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp[index]);
+        size_t targetW, targetH;
+        if (scaleW)
+        {
+            targetW = (size_t)m_imgWidth;
+            targetH = (size_t)round(height * m_imgWidth / (double)width);
+        }
+        else
+        {
+            targetH = (size_t)m_imgHeight;
+            targetW = (size_t)round(width * m_imgHeight / (double)height);
+        }
 
-    m_rngs.push(std::move(rng));
+        cv::resize(mat, mat, cv::Size((int)targetW, (int)targetH), 0, 0, m_interp);
+
+        if (m_scaleMode == ScaleMode::Crop)
+        { // crop the overlap
+            size_t xOff = max((size_t)0, (targetW - m_imgWidth) / 2);
+            size_t yOff = max((size_t)0, (targetH - m_imgHeight) / 2);
+            mat = mat(cv::Rect((int)xOff, (int)yOff, (int)m_imgWidth, (int)m_imgHeight));
+        }
+        else
+        { // ScaleMode::PAD --> center it and pad the rest
+            size_t hdiff = max((size_t)0, (m_imgHeight - mat.rows) / 2);
+            size_t wdiff = max((size_t)0, (m_imgWidth - mat.cols) / 2);
+
+            size_t top = hdiff;
+            size_t bottom = m_imgHeight - top - mat.rows;
+            size_t left = wdiff;
+            size_t right = m_imgWidth - left - mat.cols;
+            cv::copyMakeBorder(mat, mat, (int)top, (int)bottom, (int)left, (int)right, m_borderType, cv::Scalar(m_padValue, m_padValue, m_padValue));
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -354,8 +418,6 @@ MeanTransformer::MeanTransformer(const ConfigParameters& config) : ImageTransfor
     else
     {
         cv::FileStorage fs;
-        // REVIEW alexeyk: this sort of defeats the purpose of using wstring at
-        // all...  [fseide] no, only OpenCV has this problem.
         fs.open(msra::strfun::utf8(meanFile).c_str(), cv::FileStorage::READ);
         if (!fs.isOpened())
             RuntimeError("Could not open file: %ls", meanFile.c_str());
@@ -374,90 +436,143 @@ MeanTransformer::MeanTransformer(const ConfigParameters& config) : ImageTransfor
     }
 }
 
-void MeanTransformer::Apply(size_t id, cv::Mat &mat)
+void MeanTransformer::Apply(uint8_t, cv::Mat &mat)
 {
-    UNUSED(id);
     assert(m_meanImg.size() == cv::Size(0, 0) ||
            (m_meanImg.size() == mat.size() &&
            m_meanImg.channels() == mat.channels()));
 
-    // REVIEW alexeyk: check type conversion (float/double).
+    if (m_meanImg.size() == cv::Size(0, 0))
+        return;     // nothing to do 
+
     if (m_meanImg.size() == mat.size())
     {
+        // If matrix has not been converted to the right type, do it now as maen requires floating point type.
+        ConvertToFloatingPointIfRequired(mat);
         mat = mat - m_meanImg;
     }
+    else
+    {
+        fprintf(stderr, "WARNING: Mean file does not match the size of the input image, will be ignored.\n"
+            "Please remove mean transformation from the config.\n");
+    }
 }
+
+TransposeTransformer::TransposeTransformer(const ConfigParameters& config) : TransformBase(config),
+    m_floatTransform(this), m_doubleTransform(this)
+{}
 
 // The method describes how input stream is transformed to the output stream. Called once per applied stream.
 // Transpose transformer expects the dense input stream with samples as HWC and outputs CHW.
 StreamDescription TransposeTransformer::Transform(const StreamDescription& inputStream)
 {
-    m_inputStream = inputStream;
-    if (m_inputStream.m_storageType != StorageType::dense)
-    {
-        LogicError("Transpose transformer supports only dense streams.");
-    }
+    m_outputStream = TransformBase::Transform(inputStream);
 
     // Changing from NHWC to NCHW
-    ImageDimensions dimensions(*m_inputStream.m_sampleLayout, HWC);
-    m_outputStream = m_inputStream;
-    m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
+    m_outputStream.m_elementType = m_precision;
+    if (m_inputStream.m_sampleLayout != nullptr)
+    {
+        ImageDimensions dimensions(*m_inputStream.m_sampleLayout, HWC);
+        m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
+    }
+
     return m_outputStream;
 }
 
 // Transformation of the sequence.
 SequenceDataPtr TransposeTransformer::Transform(SequenceDataPtr sequence)
 {
-    if (m_inputStream.m_elementType == ElementType::tdouble)
-    {
-        return TypedTransform<double>(sequence);
-    }
+    auto inputSequence = dynamic_cast<ImageSequenceData*>(sequence.get());
+    if (inputSequence == nullptr)
+        RuntimeError("Currently Transpose transform only works with images.");
 
-    if (m_inputStream.m_elementType == ElementType::tfloat)
-    {
-        return TypedTransform<float>(sequence);
-    }
+    ElementType elementType = m_inputStream.m_elementType != ElementType::tvariant ?
+        m_inputStream.m_elementType :
+        sequence->m_elementType;
 
-    RuntimeError("Unsupported type");
+    switch (elementType)
+    {
+    case ElementType::tdouble:
+        if (m_precision == ElementType::tfloat)
+            return m_floatTransform.Apply<double>(inputSequence);
+        if (m_precision == ElementType::tdouble)
+            return m_doubleTransform.Apply<double>(inputSequence);
+    case ElementType::tfloat:
+        if (m_precision == ElementType::tdouble)
+            return m_doubleTransform.Apply<float>(inputSequence);
+        if (m_precision == ElementType::tfloat)
+            return m_floatTransform.Apply<float>(inputSequence);
+    case ElementType::tuchar:
+        if (m_precision == ElementType::tdouble)
+            return m_doubleTransform.Apply<unsigned char>(inputSequence);
+        if (m_precision == ElementType::tfloat)
+            return m_floatTransform.Apply<unsigned char>(inputSequence);
+    default:
+        RuntimeError("Unsupported type. Please apply a cast transform with 'double' or 'float' precision.");
+    }
+    return nullptr; // Make compiler happy
 }
 
-// The class represents a sequence that owns an internal data buffer.
-// Passed from the TransposeTransformer.
-// TODO: Transposition potentially could be done in place (alexeyk: performance might be much worse than of out-of-place transpose).
-struct DenseSequenceWithBuffer : DenseSequenceData
+template <class TElementTo>
+template<class TElementFrom>
+SequenceDataPtr TransposeTransformer::TypedTranspose<TElementTo>::Apply(ImageSequenceData* inputSequence)
 {
-    std::vector<char> m_buffer;
-};
+    TensorShapePtr shape = m_parent->m_inputStream.m_sampleLayout;
+    if (shape == nullptr) // Taking the shape from the sequence.
+        shape = inputSequence->m_sampleLayout;
 
-template <class TElemType>
-SequenceDataPtr TransposeTransformer::TypedTransform(SequenceDataPtr sequence)
-{
-    auto inputSequence = static_cast<DenseSequenceData&>(*sequence);
-    assert(inputSequence.m_numberOfSamples == 1);
+    if (!shape)
+        RuntimeError("Unknown shape of the sample in stream '%ls'.", m_parent->m_inputStream.m_name.c_str());
 
-    size_t count = m_inputStream.m_sampleLayout->GetNumElements() * GetSizeByType(m_inputStream.m_elementType);
+    assert(inputSequence->m_numberOfSamples == 1);
 
-    auto result = std::make_shared<DenseSequenceWithBuffer>();
-    result->m_buffer.resize(count);
+    size_t count = shape->GetNumElements();
+    auto result = std::make_shared<DenseSequenceWithBuffer<TElementTo>>(m_memBuffers, count);
+    result->m_key = inputSequence->m_key;
 
-    ImageDimensions dimensions(*m_inputStream.m_sampleLayout, ImageLayoutKind::HWC);
+    ImageDimensions dimensions(*shape, ImageLayoutKind::HWC);
     size_t rowCount = dimensions.m_height * dimensions.m_width;
     size_t channelCount = dimensions.m_numChannels;
 
-    auto src = reinterpret_cast<TElemType*>(inputSequence.m_data);
-    auto dst = reinterpret_cast<TElemType*>(result->m_buffer.data());
+    auto dst = result->GetBuffer();
 
-    for (size_t irow = 0; irow < rowCount; irow++)
+    if (channelCount == 3) // Unrolling for BGR, the most common case.
     {
-        for (size_t icol = 0; icol < channelCount; icol++)
+        size_t nRows = inputSequence->m_image.rows;
+        size_t nCols = inputSequence->m_image.cols;
+
+        TElementTo* b = dst;
+        TElementTo* g = dst + rowCount;
+        TElementTo* r = dst + 2 * rowCount;
+
+        for (size_t i = 0; i < nRows; ++i)
         {
-            dst[icol * rowCount + irow] = src[irow * channelCount + icol];
+            auto* x = inputSequence->m_image.ptr<TElementFrom>((int)i);
+            for (size_t j = 0; j < nCols; ++j)
+            {
+                auto row = j * 3;
+                *b++ = static_cast<TElementTo>(x[row]);
+                *g++ = static_cast<TElementTo>(x[row + 1]);
+                *r++ = static_cast<TElementTo>(x[row + 2]);
+            }
+        }
+    }
+    else
+    {
+        auto src = reinterpret_cast<const TElementFrom*>(inputSequence->GetDataBuffer());
+        for (size_t irow = 0; irow < rowCount; irow++)
+        {
+            for (size_t icol = 0; icol < channelCount; icol++)
+            {
+                dst[icol * rowCount + irow] = static_cast<TElementTo>(src[irow * channelCount + icol]);
+            }
         }
     }
 
-    result->m_sampleLayout = m_outputStream.m_sampleLayout;
-    result->m_data = result->m_buffer.data();
-    result->m_numberOfSamples = inputSequence.m_numberOfSamples;
+    result->m_sampleLayout = m_parent->m_outputStream.m_sampleLayout != nullptr ?
+        m_parent->m_outputStream.m_sampleLayout :
+        std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
+    result->m_numberOfSamples = inputSequence->m_numberOfSamples;
     return result;
 }
 
@@ -465,7 +580,7 @@ SequenceDataPtr TransposeTransformer::TypedTransform(SequenceDataPtr sequence)
 
 IntensityTransformer::IntensityTransformer(const ConfigParameters &config) : ImageTransformerBase(config)
 {
-    m_stdDev = config(L"intensityStdDev", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
+    m_stdDev = config(L"intensityStdDev", "0.0");
     std::wstring intFile = config(L"intensityFile", L"");
     if (intFile.empty())
     {
@@ -490,16 +605,18 @@ IntensityTransformer::IntensityTransformer(const ConfigParameters &config) : Ima
 
 void IntensityTransformer::StartEpoch(const EpochConfiguration &config)
 {
-    m_curStdDev = m_stdDev[config.m_epochIndex];
     ImageTransformerBase::StartEpoch(config);
 }
 
-void IntensityTransformer::Apply(size_t id, cv::Mat &mat)
+void IntensityTransformer::Apply(uint8_t, cv::Mat &mat)
 {
-    UNUSED(id);
-
-    if (m_eigVal.empty() || m_eigVec.empty() || m_curStdDev == 0)
+    if (m_eigVal.empty() || m_eigVec.empty() || m_stdDev == 0.0)
         return;
+
+    // Have to convert to float.
+    int type = m_precision == ElementType::tfloat ? CV_32F : CV_64F;
+    if (mat.type() != type)
+        mat.convertTo(mat, type);
 
     if (mat.type() == CV_64FC(mat.channels()))
         Apply<double>(mat);
@@ -516,7 +633,7 @@ void IntensityTransformer::Apply(cv::Mat &mat)
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); } );
 
     // Using single precision as EigVal and EigVec matrices are single precision.
-    std::normal_distribution<float> d(0, (float)m_curStdDev);
+    boost::random::normal_distribution<float> d(0, (float)m_stdDev);
     cv::Mat alphas(1, 3, CV_32FC1);
     assert(m_eigVal.rows == 1 && m_eigVec.cols == 3);
     alphas.at<float>(0) = d(*rng) * m_eigVal.at<float>(0);
@@ -546,34 +663,31 @@ void IntensityTransformer::Apply(cv::Mat &mat)
 
 ColorTransformer::ColorTransformer(const ConfigParameters &config) : ImageTransformerBase(config)
 {
-    m_brightnessRadius = config(L"brightnessRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
-    m_contrastRadius = config(L"contrastRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
-    m_saturationRadius = config(L"saturationRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
+    m_brightnessRadius = config(L"brightnessRadius", "0.0"); 
+    if (m_brightnessRadius < 0 || m_brightnessRadius > 1.0) 
+        InvalidArgument("brightnessRadius must be >= 0.0 and <= 1.0"); 
+    
+    m_contrastRadius = config(L"contrastRadius", "0.0");
+    if (m_contrastRadius < 0 || m_contrastRadius > 1.0) 
+        InvalidArgument("contrastRadius must be >= 0.0 and <= 1.0");
+
+    m_saturationRadius = config(L"saturationRadius", "0.0");
+    if (m_saturationRadius < 0 || m_saturationRadius > 1.0)
+        InvalidArgument("saturationRadius must be >= 0.0 and <= 1.0");
 }
 
 void ColorTransformer::StartEpoch(const EpochConfiguration &config)
 {
-    m_curBrightnessRadius = m_brightnessRadius[config.m_epochIndex];
-    if (!(0 <= m_curBrightnessRadius && m_curBrightnessRadius <= 1.0))
-        InvalidArgument("brightnessRadius must be >= 0.0 and <= 1.0");
-
-    m_curContrastRadius = m_contrastRadius[config.m_epochIndex];
-    if (!(0 <= m_curContrastRadius && m_curContrastRadius <= 1.0))
-        InvalidArgument("contrastRadius must be >= 0.0 and <= 1.0");
-
-    m_curSaturationRadius = m_saturationRadius[config.m_epochIndex];
-    if (!(0 <= m_curSaturationRadius && m_curSaturationRadius <= 1.0))
-        InvalidArgument("saturationRadius must be >= 0.0 and <= 1.0");
-
     ImageTransformerBase::StartEpoch(config);
 }
 
-void ColorTransformer::Apply(size_t id, cv::Mat &mat)
+void ColorTransformer::Apply(uint8_t, cv::Mat &mat)
 {
-    UNUSED(id);
-
-    if (m_curBrightnessRadius == 0 && m_curContrastRadius == 0 && m_curSaturationRadius == 0)
+    if (m_brightnessRadius == 0.0 && m_contrastRadius == 0.0 && m_saturationRadius == 0.0)
         return;
+
+    // Have to convert to float
+    ConvertToFloatingPointIfRequired(mat);
 
     if (mat.type() == CV_64FC(mat.channels()))
         Apply<double>(mat);
@@ -589,15 +703,15 @@ void ColorTransformer::Apply(cv::Mat &mat)
     auto seed = GetSeed();
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
 
-    if (m_curBrightnessRadius > 0 || m_curContrastRadius > 0)
+    if (m_brightnessRadius > 0 || m_contrastRadius > 0)
     {
         // To change brightness and/or contrast the following standard transformation is used:
         // Xij = alpha * Xij + beta, where
         // alpha is a contrast adjustment and beta - brightness adjustment.
         ElemType beta = 0;
-        if (m_curBrightnessRadius > 0)
+        if (m_brightnessRadius > 0)
         {
-            UniRealT d(-m_curBrightnessRadius, m_curBrightnessRadius);
+            UniRealT d(-m_brightnessRadius, m_brightnessRadius);
             // Compute mean value of the image.
             cv::Scalar imgMean = cv::sum(cv::sum(mat));
             // Compute beta as a fraction of the mean.
@@ -605,9 +719,9 @@ void ColorTransformer::Apply(cv::Mat &mat)
         }
 
         ElemType alpha = 1;
-        if (m_curContrastRadius > 0)
+        if (m_contrastRadius > 0)
         {
-            UniRealT d(-m_curContrastRadius, m_curContrastRadius);
+            UniRealT d(-m_contrastRadius, m_contrastRadius);
             alpha = (ElemType)(1 + d(*rng));
         }
 
@@ -621,9 +735,9 @@ void ColorTransformer::Apply(cv::Mat &mat)
         }
     }
 
-    if (m_curSaturationRadius > 0 && mat.channels() == 3)
+    if (m_saturationRadius > 0 && mat.channels() == 3)
     {
-        UniRealT d(-m_curSaturationRadius, m_curSaturationRadius);
+        UniRealT d(-m_saturationRadius, m_saturationRadius);
         double ratio = 1.0 + d(*rng);
         assert(0 <= ratio && ratio <= 2);
 
@@ -646,6 +760,84 @@ void ColorTransformer::Apply(cv::Mat &mat)
     }
 
     m_rngs.push(std::move(rng));
+}
+
+CastTransformer::CastTransformer(const ConfigParameters& config) : TransformBase(config), m_floatTransform(this), m_doubleTransform(this)
+{
+}
+
+StreamDescription CastTransformer::Transform(const StreamDescription& inputStream)
+{
+    m_outputStream = TransformBase::Transform(inputStream);
+    m_outputStream.m_elementType = m_precision;
+    return m_outputStream;
+}
+
+SequenceDataPtr CastTransformer::Transform(SequenceDataPtr sequence)
+{
+    if (m_inputStream.m_elementType == m_precision || sequence->m_elementType == m_precision)
+    {
+        // No need to do anything, exit.
+        return sequence;
+    }
+
+    SequenceDataPtr result;
+    ElementType inputType = m_inputStream.m_elementType != ElementType::tvariant
+        ? m_inputStream.m_elementType 
+        : sequence->m_elementType;
+
+    switch (m_precision)
+    {
+    case ElementType::tdouble:
+        if (inputType == ElementType::tfloat)
+            result = m_doubleTransform.Apply<float>(sequence);
+        else if (inputType == ElementType::tuchar)
+            result = m_doubleTransform.Apply<unsigned char>(sequence);
+        else
+            RuntimeError("Unsupported type. Please apply a cast transform with 'double' or 'float' precision.");
+        break;
+    case ElementType::tfloat:
+        if (inputType == ElementType::tdouble)
+            result = m_floatTransform.Apply<double>(sequence);
+        if (inputType == ElementType::tuchar)
+            result = m_floatTransform.Apply<unsigned char>(sequence);
+        else
+            RuntimeError("Unsupported type. Please apply a cast transform with 'double' or 'float' precision.");
+        break;
+    default:
+        RuntimeError("Unsupported type. Please apply a cast transform with 'double' or 'float' precision.");
+    }
+    result->m_elementType = m_precision;
+    return result;
+}
+
+template <class TElementTo>
+template<class TElementFrom>
+SequenceDataPtr CastTransformer::TypedCast<TElementTo>::Apply(SequenceDataPtr sequence)
+{
+    TensorShapePtr shape = m_parent->m_inputStream.m_sampleLayout;
+    if (!shape) // Taking the shape from the sequence.
+        shape = sequence->m_sampleLayout;
+
+    if (!shape)
+        RuntimeError("Unknown shape of the sample in stream '%ls'.", m_parent->m_inputStream.m_name.c_str());
+
+    auto& inputSequence = static_cast<DenseSequenceData&>(*sequence);
+    size_t count = shape->GetNumElements() * sequence->m_numberOfSamples;
+    auto result = std::make_shared<DenseSequenceWithBuffer<TElementTo>>(m_memBuffers, count);
+    result->m_key = sequence->m_key;
+
+    auto src = reinterpret_cast<const TElementFrom*>(inputSequence.GetDataBuffer());
+    auto dst = result->GetBuffer();
+
+    for (size_t i = 0; i < count; i++)
+    {
+        dst[i] = static_cast<TElementTo>(src[i]);
+    }
+
+    result->m_sampleLayout = shape;
+    result->m_numberOfSamples = inputSequence.m_numberOfSamples;
+    return result;
 }
 
 }}}

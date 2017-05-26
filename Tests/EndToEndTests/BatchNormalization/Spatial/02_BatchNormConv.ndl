@@ -1,0 +1,68 @@
+load=ndlMnistMacros
+run=DNN
+
+ndlMnistMacros = [
+    ImageW = 32
+    ImageH = 32
+    ImageC = 3
+    LabelDim = 10
+
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = $imageLayout$)
+    featOffs = Const(128)
+    featScaled = Minus(features, featOffs)
+    labels = Input(LabelDim, tag = label)
+    
+    conv1WScale = 0.0043
+    conv1BValue = 0
+    conv2WScale = 1.414
+    conv2BValue = 0
+    conv3WScale = 1.414
+    conv3BValue = 0
+    
+    scValue = 1
+    
+    # Batch normalization time constant.
+    bnTimeConst = 0
+  
+    fc1WScale = 12
+    fc1BValue = 0
+    fc2WScale = 1.5
+    fc2BValue = 0
+]
+
+DNN=[
+    # conv1
+    kW1 = 5
+    kH1 = 5
+    cMap1 = 3
+    hStride1 = 1
+    vStride1 = 1
+
+    # weight[cMap1, kW1 * kH1 * ImageC]
+    W = LearnableParameter(cMap1, 75, init = Gaussian, initValueScale = conv1WScale, initOnCPUOnly=true)
+    c = Convolution(W, featScaled, kW1, kH1, cMap1, hStride1, vStride1, zeroPadding = true, imageLayout = $imageLayout$)
+
+    b = LearnableParameter(cMap1, 1, init = fixedValue, value = conv1BValue)
+    sc = LearnableParameter(cMap1, 1, init = fixedValue, value = scValue)
+    m = LearnableParameter(cMap1, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
+    v = LearnableParameter(cMap1, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
+    
+    y = BatchNormalization(c, sc, b, m, v, spatial = true, normalizationTimeConstant = bnTimeConst, imageLayout = $imageLayout$, engine=$batchNormalizationEngine$)
+    conv1 = RectifiedLinear(y)
+
+    # pool1
+    pool1W = 3
+    pool1H = 3
+    pool1hStride = 2
+    pool1vStride = 2
+    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout = $imageLayout$)
+
+    hiddenDim = 64
+    h1 = DNNImageReLULayer(15, 15, cMap1, hiddenDim, pool1, fc1WScale, fc1BValue)
+    ol = DNNLastLayer(hiddenDim, labelDim, h1, fc2WScale, fc2BValue)
+    
+    CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
+    Err = ErrorPrediction(labels, ol, tag = Eval)
+    OutputNodes = ol
+]
+

@@ -1,0 +1,11 @@
+# test of interaction of Double and Booleans with ComputationNode
+# Nope. Only tests the parser. TODO: Need test of constructed network (validation output).
+a = Constant(13)
+b = Constant(42)
+c = 5
+do = a + 13
+   + if a == b
+     then 1
+     else if c == 5 && a == 13
+          then 4
+          else 5

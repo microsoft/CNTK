@@ -47,18 +47,22 @@ public:
 
     void Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace);
 
-    void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace);
+    void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace);
 
-    void BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool allowReuse, Mat& workspace);
+    void BackwardKernel(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool allowReuse, Mat& workspace);
 
     void ForwardPooling(const Mat& in, Mat& out);
 
     void BackwardPooling(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad);
 
+    void MaxUnpooling(const Mat& out, const Mat& poolIn, Mat& in);
+
     std::shared_ptr<const ConvolveGeometry> Geometry() const { return m_geometry; }
 
-    static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
-                                                               size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None, ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All);
+    static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, 
+                                                               ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None,
+                                                               ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All,
+                                                               std::wstring logPrefix = L"", bool forceDeterministicAlgorithms = false, bool poolIncludePad = false);
 
     DISABLE_COPY_AND_MOVE(ConvolutionEngine);
 
@@ -68,9 +72,11 @@ public:
         m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
     }
 
+    virtual bool ImplementsGradientOverwriteOptimization() const { return false; }
+
 protected:
-    ConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
-        : m_geometry(geometry), m_deviceId(deviceId), m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_poolKind(poolKind)
+    ConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad = false)
+        : m_geometry(geometry), m_deviceId(deviceId), m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_poolKind(poolKind), m_poolIncludePad(poolIncludePad)
     {
         assert(m_geometry != nullptr);
     }
@@ -81,9 +87,9 @@ protected:
 
     virtual void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) = 0;
 
-    virtual void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace) = 0;
+    virtual void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace) = 0;
 
-    virtual void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool allowReuse, Mat& workspace) = 0;
+    virtual void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool allowReuse, Mat& workspace) = 0;
 
     virtual void EnsurePoolingInitialized() = 0;
 
@@ -91,12 +97,15 @@ protected:
 
     virtual void BackwardPoolingCore(const Mat& out, const Mat& srcGrad, const Mat& in, Mat& grad) = 0;
 
+    virtual void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) = 0;
+
 protected:
     ConvolveGeometryPtr m_geometry;
     DEVICEID_TYPE m_deviceId;
     ImageLayoutKind m_imageLayout;
     size_t m_maxTempMemSizeInSamples;
     PoolKind m_poolKind;
+    bool m_poolIncludePad;
 };
 
 #pragma warning(pop)

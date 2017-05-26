@@ -14,6 +14,19 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+static const wchar_t* ConstantInitializerTypeName =         L"constant";
+static const wchar_t* UniformBSInitializerTypeName =        L"uniform";     // for legacy reason, "uniform" is taken in BrainScript to represent uniform distribution [-0.05, 0.05]
+static const wchar_t* UniformInitializerTypeName =          L"uniform1";
+static const wchar_t* GaussianInitializerTypeName =         L"gaussian";    // legacy for BrainScript normal distribution pre-scaled by sqrt(0.04 / fanin)
+static const wchar_t* NormalInitializerTypeName =           L"normal";
+static const wchar_t* XavierInitializerTypeName =           L"xavier";
+static const wchar_t* GlorotUniformInitializerTypeName =    L"glorotUniform";
+static const wchar_t* GlorotNormalInitializerTypeName =     L"glorotNormal";
+static const wchar_t* HeUniformInitializerTypeName =        L"heUniform";
+static const wchar_t* HeNormalInitializerTypeName =         L"heNormal";
+static const wchar_t* BilinearInitializerTypeName =         L"bilinear";
+static const wchar_t* TruncNormalInitializerTypeName =      L"TruncNormal";
+
 // -----------------------------------------------------------------------
 // LearnableParameter (/*no input*/)
 // represents weight matrices and biases
@@ -21,7 +34,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
+class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>, public IFreezable, public TransformerNode
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"LearnableParameter"; }
@@ -29,68 +42,91 @@ class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
     void InitShape(const TensorShape& shape);
 
 public:
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+    // this constructor is always run (all other constructors call this one)
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name) :
+        Base(deviceId, name)
     {
         SetLearningRateMultiplier(1.0f); // enable normal learning by default
         MarkValueNonSharable();
+        m_initString = L"fromValue"; // default init is with 0; typically overwritten
+        m_initValue = 0;
+        m_regMultiplier = 1.0f; // enable reg in update by default
     }
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape)
-        : Base(deviceId, name)
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape) :
+        LearnableParameter(deviceId, name)
     {
-        SetLearningRateMultiplier(1.0f);
-        MarkValueNonSharable();
         InitShape(shape);
+        LazyInitParameters();
     }
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, size_t cols)
-        : LearnableParameter(deviceId, name, TensorShape(rows, cols))
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, size_t cols) :
+        LearnableParameter(deviceId, name, TensorShape(rows, cols))
     {
     }
     LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp);
 
-    // initialize with random numbers
-    // if 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing)
-    void InitRandom(const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly);
+    // initialize after plain constructor; for use by NDL
+    void PostInitParameters(const std::wstring& initString, // "uniform"|"gaussian"|"fixedValue"
+                            ElemType initValue,             //  scale   | scale    | value
+                            unsigned long randomSeed = 0,
+                            bool initOnCPUOnly = false);
+
+    // Initialize with bilinear interpolation coefficients (useful for deconvolution layer).
+    void InitBilinear(size_t kernelWidth, size_t kernelHeight)
+    {
+        InitBilinear(Value(), GetSampleLayout(), kernelWidth, kernelHeight, m_deviceId);
+    }
 
     // initialize by reading a matrix from a text file
     void InitFromFile(const std::wstring& initFromFilePath);
 
+public:
+    // initialize with random numbers
+    // If 'initOnCPUOnly' then always init on CPU, making initialization consistent across both (for testing).
+    static std::tuple<size_t, size_t, ElemType> InitRandom(Matrix<ElemType>& valueMatrix,
+                                                           const TensorShape& sampleShape,
+                                                           const std::wstring& type,
+                                                           const unsigned long randomSeed,
+                                                           const ElemType initValueScale,
+                                                           const size_t initFilterRank,
+                                                           const int initOutputRank,
+                                                           const bool initOnCPUOnly,
+                                                           DEVICEID_TYPE deviceId);
+
+    static void InitBilinear(Matrix<ElemType>& valueMatrix, const TensorShape& sampleShape, size_t kernelWidth, size_t kernelHeight, DEVICEID_TYPE deviceId);
+
+private:
+    void InitRandom(const std::wstring& type, const unsigned long randomSeed, const ElemType initValueScale, const size_t initFilterRank, const int initOutputRank, const bool initOnCPUOnly)
+    {
+        size_t fanOut, fanIn;
+        ElemType range;
+        std::tie(fanOut, fanIn, range) = InitRandom(Value(), GetSampleLayout(), type, randomSeed, initValueScale, initFilterRank, initOutputRank, initOnCPUOnly, m_deviceId);
+        if (fanOut == 0) // Shape not yet initialized
+            return;
+
+        bool log = GetEnvironmentPtr() && Environment().traceLevel > 0; // note: this will not log before node is part of network
+        if (log)
+        {
+            fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f(%f*%f), onCPU=%s.\n)",
+                    NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(),
+                    (int)randomSeed, (int)fanOut, (int)fanIn, range, range/initValueScale, initValueScale, initOnCPUOnly ? "true" : "false");
+        }
+    }
+
     // helper to initialize from a matrix read from a text file or a string literal
     void InitFromArray(const std::vector<ElemType>& array, size_t numRows, size_t numCols);
 
+    // deferred initialization
+    void LazyInitParameters();
+
+public:
     // reload parameters from file
     // This is called from MEL.
-    // TODO: Move this error check there, since this is called only from one place.
-    void ReviseFromFile(const std::wstring& reviseFromFilePath)
-    {
-#if 1
-        try
-        {
-            InitFromFile(reviseFromFilePath);
-        }
-        catch(const std::exception & e)
-        {
-            RuntimeError("ReviseFromFile: Failed to reload %ls %ls operation from file %ls: %s", NodeName().c_str(), OperationName().c_str(), reviseFromFilePath.c_str(), e.what());
-        }
-#else
-        size_t numRows, numCols;
-        auto array = File::LoadMatrixFromTextFile<ElemType>(reviseFromFilePath, numRows, numCols);
-        size_t nRows, nCols;
-        DetermineDataSize(nRows, nCols); // BUGBUG: private
-
-        if (numRows != nRows || numCols != nCols)
-        {
-            RuntimeError("Error in ReviseFromFile for node %ls using file %ls:  original size (%d x %d) vs current size (%d x %d)",
-                         m_nodeName.c_str(), reviseFromFilePath.c_str(), (int) nRows, (int) nCols, (int) numRows, (int) numCols);
-        }
-
-        Value().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
-        VerifyDataSize(Value());      // sanity check
-#endif
-    }
+    void ReviseFromFile(const std::wstring& reviseFromFilePath);
 
     virtual void Save(File& fstream) const override;
     virtual void Load(File& fstream, size_t modelVersion) override;
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
 
     // computation functions don't do anything for parameter nodes
     virtual void UpdateFunctionMBSize() override;
@@ -106,6 +142,41 @@ public:
     void InferInputDimsFrom(const TensorShape& otherShape);
 
     virtual void DumpNodeInfo(const bool printValues, const bool printMetadata, File& fstream) const override;
+
+    // called from CloneFunction(..., parameters="constant")
+    virtual void FreezeParameters() override; // from IFreezable
+
+    // Setting the reg multiplier for a learnable node, effecting L1Reg and L2Reg both.
+    void SetRegMultiplier(float regMultiplier)
+    {
+        m_regMultiplier = regMultiplier;
+    }
+    // called from SGD UpdateWeights, to adjust the reg for each node
+    float GetRegMultiplier() const { return m_regMultiplier; }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t /*index*/) override
+    {
+        RuntimeError("LearnableParameter should not be asked for input transforms, since it has no inputs.");
+    }
+
+    // Has no inputs, hence does not support transforms on any input.
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        RuntimeError("LearnableParameter should not be asked for input transforms, since it has no inputs.");
+    }
+
+private:
+    // init parameters for deferred initialization (which happens in Validate())
+    std::wstring m_initString; // if non-empty then deferred initialization is needed. Gets cleared upon completion of deferred init.
+    unsigned long m_randomSeed;
+    ElemType m_initValueScale;
+    size_t m_initFilterRank;
+    int m_initOutputRank;
+    bool m_initOnCPUOnly;
+    ElemType m_initValue;
+
+    // flags related to gradient update
+    float m_regMultiplier; // The multiplier to adjust the L1Reg and L2Reg for Learnable node
 };
 
 // -----------------------------------------------------------------------
@@ -162,16 +233,17 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, pu
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembers;
 
-    void Init(const TensorShape& sampleLayout, bool isSparse, const std::wstring axisName)
+    void Init(const TensorShape& sampleLayout, bool isSparse, const std::wstring axisName, float learningRateMultiplier = 0)
     {
         m_isSparse = isSparse;
+        Base::m_isValueSparse = isSparse;
         MarkValueNonSharable();
         if (isSparse)
             ConvertToSparseMatrix();
 
         SetDims(sampleLayout, HasMBLayout()); // also called when reloading a file. Then we have an MBLayout, otherwise not yet
         UpdateFunctionValuesSize();           // we must allocate the matrix so that the readers get objects with valid row dimensions (some readers expect that)
-        SetLearningRateMultiplier(0);
+        SetLearningRateMultiplier(learningRateMultiplier);
         m_dynamicAxisNodeName = axisName;
     }
 
@@ -225,9 +297,9 @@ protected:
             Init(ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))), isSparse, axisName);
     }
 
+public:
     virtual const std::wstring GetRequestedDynamicAxis() const { return m_dynamicAxisNodeName; }
 
-public:
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
@@ -239,6 +311,8 @@ public:
         unsigned int nrAxes = 1;
         fstream << nrAxes;
         fstream << m_dynamicAxisNodeName;
+
+        fstream << m_learningRateMultiplier;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -268,7 +342,12 @@ public:
         }
         else
             m_dynamicAxisNodeName = L""; // Use default
-        Init(sampleLayout, m_isSparse, m_dynamicAxisNodeName);
+
+        float learningRateMultiplier = 0;
+        if (modelVersion >= CNTK_MODEL_VERSION_10)
+            fstream >> learningRateMultiplier;
+
+        Init(sampleLayout, m_isSparse, m_dynamicAxisNodeName, learningRateMultiplier);
     }
 
     // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.
@@ -318,7 +397,7 @@ private:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class InputValue : public InputValueBase<ElemType>
+class InputValue : public InputValueBase<ElemType>, public IdentityTransformerNode
 {
     typedef InputValueBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"InputValue"; }
@@ -502,17 +581,17 @@ public:
         if (inputIndex == 0) // left derivative (embedding matrix)
         {
             // This is a reduction operation, hence we need to mask out gaps.
-            Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(t);
+            Matrix<ElemType> sliceInput1Value = InputRef(1).MaskedValueFor(t);
             Matrix<ElemType> sliceOutputGrad = MaskedGradientFor(t);
 
-            BackpropToLeft(sliceInput1Value, Input(0)->GradientAsMatrix(), sliceOutputGrad);
+            BackpropToLeft(sliceInput1Value, InputRef(0).GradientAsMatrix(), sliceOutputGrad);
         }
         else if (inputIndex == 1) // right derivative (input)
         {
-            Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(t);
+            Matrix<ElemType> sliceInput1Grad = InputRef(1).GradientFor(t);
             Matrix<ElemType> sliceOutputGrad = GradientFor(t);
 
-            BackpropToRight(Input(0)->ValueAsMatrix(), sliceInput1Grad, sliceOutputGrad);
+            BackpropToRight(InputRef(0).ValueAsMatrix(), sliceInput1Grad, sliceOutputGrad);
         }
     }
 
@@ -550,8 +629,8 @@ public:
     {
         // input0 is the weight (each column is an embedding of one word), input 1 contains m_nbrLooked words in each column (sample)
         Matrix<ElemType> functionValues =           ValueFor(t);
-        const Matrix<ElemType>&  input0 = Input(0)->ValueAsMatrix();
-        Matrix<ElemType>         input1 = Input(1)->ValueFor(t);
+        const Matrix<ElemType>&  input0 = InputRef(0).ValueAsMatrix();
+        Matrix<ElemType>         input1 = InputRef(1).ValueFor(t);
 
         size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
         size_t cols0 = input0.GetNumCols();

@@ -1,2 +1,2 @@
 1|features 1.0
-1|features 2.0|features 3.0
+1|features 2.0

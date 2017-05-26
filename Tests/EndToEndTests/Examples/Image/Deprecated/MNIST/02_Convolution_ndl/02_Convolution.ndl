@@ -1,0 +1,70 @@
+# macros to include
+load = ndlMnistMacros
+
+# the actual NDL that defines the network
+run = DNN
+
+ndlMnistMacros = [
+    imageW = 28
+    imageH = 28
+    labelDim = 10
+
+    features = ImageInput(imageW, imageH, 1, imageLayout=$imageLayout$)
+    featScale = Constant(0.00390625)
+    featScaled = Scale(featScale, features)
+    labels = InputValue(labelDim)
+]
+
+DNN=[
+    # conv1
+    kW1 = 5
+    kH1 = 5
+    cMap1 = 16
+    hStride1 = 1
+    vStride1 = 1
+    # weight[cMap1, kW1 * kH1 * inputChannels]
+    # Conv2DReLULayer is defined in Macros.ndl
+    conv1 = Conv2DReLULayer(featScaled, cMap1, 25, kW1, kH1, hStride1, vStride1, 10, 1)
+    
+    # pool1
+    pool1W = 2
+    pool1H = 2
+    pool1hStride = 2
+    pool1vStride = 2
+    # MaxPooling is a standard NDL node.
+    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout=$imageLayout$)
+    
+    # conv2
+    kW2 = 5
+    kH2 = 5
+    cMap2 = 32
+    hStride2 = 1
+    vStride2 = 1
+    # weight[cMap2, kW2 * kH2 * cMap1]
+    # ConvNDReLULayer is defined in Macros.ndl
+    conv2 = ConvNDReLULayer(pool1, kW2, kH2, cMap1, 400, cMap2, hStride2, vStride2, 10, 1)
+ 
+    # pool2
+    pool2W = 2
+    pool2H = 2
+    pool2hStride = 2
+    pool2vStride = 2
+    # MaxNDPooling is defined in Macros.ndl
+    pool2 = MaxNDPooling(conv2, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout=$imageLayout$)
+    
+    h1Dim = 128
+    # DNNImageSigmoidLayer and DNNLayer are defined in Macros.ndl
+    h1 = DNNImageSigmoidLayer(7, 7, cMap2, h1Dim, pool2, 1)
+    ol = DNNLayer(h1Dim, labelDim, h1, 1)
+    
+    ce = CrossEntropyWithSoftmax(labels, ol)
+    errs = ClassificationError(labels, ol)
+
+    # Special Nodes
+    FeatureNodes = (features)
+    LabelNodes = (labels)
+    CriterionNodes = (ce)
+    EvalNodes = (errs)
+    OutputNodes = (ol)
+]
+

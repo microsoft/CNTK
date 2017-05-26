@@ -21,10 +21,7 @@ class CNTKTextFormatReaderTestRunner;
 template <class ElemType>
 class TextParser : public DataDeserializerBase {
 public:
-    explicit TextParser(const TextConfigHelper& helper);
-
-    TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper);
-
+    TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper, bool pimary);
     ~TextParser();
 
     // Retrieves a chunk of data.
@@ -39,40 +36,48 @@ public:
     bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
 
 private:
+    TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams, bool primary = true);
+
     // Builds an index of the input data.
     void Initialize();
 
-    // A buffer to keep data for all samples in a (variable length) sequence
-    // from a single input stream.
-    struct InputStreamBuffer
-    {
-        virtual ~InputStreamBuffer() { };
-
-        uint32_t m_numberOfSamples = 0;
-        std::vector<ElemType> m_buffer;
-    };
-
-    struct DenseInputStreamBuffer : InputStreamBuffer
+    struct DenseInputStreamBuffer : DenseSequenceData
     {
         // capacity = expected number of samples * sample size
         DenseInputStreamBuffer(size_t capacity)
         {
-            InputStreamBuffer::m_buffer.reserve(capacity);
+            m_buffer.reserve(capacity);
         }
+
+        const void* GetDataBuffer() override
+        {
+            return m_buffer.data();
+        }
+
+        std::vector<ElemType> m_buffer;
     };
 
     // In case of sparse input, we also need a vector of
     // indices (one index for each input value) and a vector
     // of NNZ counts (one for each sample).
-    struct SparseInputStreamBuffer : InputStreamBuffer
+    struct SparseInputStreamBuffer : SparseSequenceData
     {
-        IndexType m_totalNnzCount = 0;
-        std::vector<IndexType> m_indices;
-        std::vector<IndexType> m_nnzCounts;
+        SparseInputStreamBuffer()
+        {
+            m_totalNnzCount = 0;
+        }
+
+        const void* GetDataBuffer() override
+        {
+            return m_buffer.data();
+        }
+
+        std::vector<IndexType> m_indicesBuffer;
+        std::vector<ElemType> m_buffer;
     };
 
-    // A sequence buffer is a vector that contains an input buffer for each input stream.
-    typedef std::vector<std::unique_ptr<InputStreamBuffer>> SequenceBuffer;
+    // A sequence buffer is a vector that contains sequence data for each input stream.
+    typedef std::vector<SequenceDataPtr> SequenceBuffer;
 
     // A chunk of input data in the text format.
     class TextDataChunk;
@@ -93,14 +98,15 @@ private:
     // into sequence data in a proper format.
     struct StreamInfo;
     std::vector<StreamInfo> m_streamInfos;
+    std::vector<StreamDescriptor> m_streamDescriptors;
 
     size_t m_maxAliasLength;
     std::map<std::string, size_t> m_aliasToIdMap;
 
     std::unique_ptr<Indexer> m_indexer;
 
-    int64_t m_fileOffsetStart;
-    int64_t m_fileOffsetEnd;
+    size_t m_fileOffsetStart;
+    size_t m_fileOffsetEnd;
 
     // TODO: not DRY (same in the Indexer), needs refactoring
     unique_ptr<char[]> m_buffer;
@@ -116,7 +122,7 @@ private:
     unsigned int m_numAllowedErrors;
     bool m_skipSequenceIds;
     unsigned int m_numRetries; // specifies the number of times an unsuccessful
-    // file operation should be repeated (default value is 5).
+                               // file operation should be repeated (default value is 5).
 
     // Corpus descriptor.
     CorpusDescriptorPtr m_corpus;
@@ -168,13 +174,15 @@ private:
     // Returns true if the trace level is greater or equal to 'Warning'
     bool inline ShouldWarn() { m_hadWarnings = true; return m_traceLevel >= Warning; }
 
-    // Given a descriptor, retrieves the data for the corresponding sequence from the file.
-    SequenceBuffer LoadSequence(const SequenceDescriptor& descriptor);
+    // Given a descriptor and the file offset of the containing chunk,
+    // retrieves the data for the corresponding sequence from the file.
+    SequenceBuffer LoadSequence(const SequenceDescriptor& descriptor, size_t chunkOffset);
 
     // Given a descriptor, retrieves the data for the corresponding chunk from the file.
     void LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor);
 
-    TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams);
+    // Fills some metadata members to be conformant to the exposed SequenceData interface.
+    void FillSequenceMetadata(SequenceBuffer& sequenceBuffer, const KeyType& sequenceKey);
 
     void SetTraceLevel(unsigned int traceLevel);
 
@@ -187,8 +195,6 @@ private:
     void SetNumRetries(unsigned int numRetries);
 
     friend class CNTKTextFormatReaderTestRunner<ElemType>;
-
-    const std::string& GetSequenceKey(const SequenceDescriptor& s) const;
 
     DISABLE_COPY_AND_MOVE(TextParser);
 };

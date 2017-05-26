@@ -1,9 +1,9 @@
 dataDir: ../../Data
 tags:
-     # running on every BVT job in 'L' (LSTM) leg in Debug-GPU and Release-CPU configurations:
-     - bvt-l  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
-     # running unconditionally on every Nightly job in 'L' leg
-     - nightly-l (build_sku == 'gpu')
+     - bvt-l (build_sku == 'gpu') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
+     # Note: Windows-Debug-CPU runs for too long (~ 2 hours depending on machine)
+     - nightly-l (build_sku == 'gpu') and ((flavor == 'release') or (os == 'linux') or (device == 'gpu'))
+     - weekly-l (build_sku == 'gpu') and ((flavor == 'release') or (os == 'linux') or (device == 'gpu'))
 
 testCases:
   CNTK Run must be completed:
@@ -28,5 +28,12 @@ testCases:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
       - ce = {{float,tolerance=.1%}}
-      - err = {{float,tolerance=.1%}}
+      - err = {{float,tolerance=.46%}}
 
+# notes on accuracy:
+#  - per-MB err tolerance was raised to 0.46% from 0.1% due to different momentum spec (time const),
+#    which causes a MBs 41-50, which only consist of 238 samples, to deviate more.
+#    The different momentum spec changes momentum from 0.9 to a reported 0.899991.
+#    It was verified that changing it back brings it back in range.
+#  - per-MB ce tolerance was raised to 0.13% from 0.1% for the same reason
+# Once baselines are recreated, these should both be changed back to 0.1%.

@@ -1,0 +1,18 @@
+dataDir: .
+
+tags:
+  - bvt-p (build_sku == 'cpu') or (build_sku == '1bitsgd')
+  - nightly-p (build_sku == 'cpu') or (build_sku == '1bitsgd')
+  - weekly-p (build_sku == 'cpu') or (build_sku == '1bitsgd')
+
+testCases:
+  Test cases pass:
+    patterns:
+      - "Test case"
+      - "passed with"
+
+  Test suites pass:
+    patterns:
+      - "Test suite"
+      - "passed with"
+

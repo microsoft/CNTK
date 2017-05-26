@@ -28,15 +28,15 @@ train = [
         ]
 
         DNNSigmoidLayer(inDim, outDim, x, parmScale) = [        // Sigmoid non-linearity
-            W = ParameterTensor((outDim : inDim), init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
-            b = ParameterTensor( outDim,          init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
+            W = ParameterTensor((outDim : 0/*inDim, gets inferred*/), init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
+            b = ParameterTensor( outDim,                              init="uniform", initValueScale=parmScale, initOnCPUOnly=true) 
             z = W * x + b
             out = Sigmoid(z)
         ]
 
         DNNLayer(inDim, outDim, x, parmScale) = [               // no non-linearity, as input for SoftMax
-            W = Parameter(outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
-            b = Parameter(outDim, 1,     init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
+            W = Parameter(outDim, 0/*inDim, gets inferred*/, init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
+            b = Parameter(outDim, 1,                         init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
             out = W * x + b
         ]
 
@@ -82,12 +82,12 @@ train = [
         pool2 = AveragePooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout="cudnn")
 
         h1Dim = 128
-        h1 = DNNSigmoidLayer((4 : 4 : cMap2/*cudnn: CHW*/), h1Dim, pool2, 1).out
+        h1 = DNNSigmoidLayer(4 * 4 * cMap2, h1Dim, FlattenDimensions (pool2, 1, 3), 1).out
         # Note: 'CHW' and 'HWC' refer to row-major representations, while CNTK uses column-major, so must specify the values in reverse order
         ol = DNNLayer(h1Dim, labelDim, h1, 1).out
 
         ce = CrossEntropyWithSoftmax(labels, ol, tag="criterion")
-        err = ErrorPrediction(labels, ol, tag="evaluation")
+        err = ClassificationError(labels, ol, tag="evaluation")
     ]
 
     SGD = [

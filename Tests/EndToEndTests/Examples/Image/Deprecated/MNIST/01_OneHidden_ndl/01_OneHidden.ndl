@@ -1,0 +1,34 @@
+# macros to include
+load = ndlMnistMacros
+
+# the actual NDL that defines the network
+run = DNN
+
+ndlMnistMacros = [
+    featDim = 784
+    labelDim = 10
+
+    features = InputValue(featDim)
+    featScale = Constant(0.00390625)
+    featScaled = Scale(featScale, features)
+    labels = InputValue(labelDim)
+]
+
+DNN = [
+    hiddenDim = 200
+
+    # DNNSigmoidLayer and DNNLayer are defined in Macros.ndl
+    h1 = DNNSigmoidLayer(featDim, hiddenDim, featScaled, 1)
+    ol = DNNLayer(hiddenDim, labelDim, h1, 1)
+
+    ce = CrossEntropyWithSoftmax(labels, ol)
+    errs = ClassificationError(labels, ol)
+    top5Errs = ClassificationError(labels, ol, Const(5), tag="eval")  # only used in testing
+
+    # Special Nodes
+    FeatureNodes = (features)
+    LabelNodes = (labels)
+    CriterionNodes = (ce)
+    EvalNodes = (errs)
+    OutputNodes = (ol)
+]

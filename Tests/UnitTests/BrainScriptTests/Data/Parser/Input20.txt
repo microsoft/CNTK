@@ -1,0 +1,4 @@
+a=1
+a1_=13;b=2 // cmt
+do = (print
+:train:eval) ; x = array[1..13] (i=>1+i*print.message==13*42) ; print = new PrintAction [ message = 'Hello World' ]

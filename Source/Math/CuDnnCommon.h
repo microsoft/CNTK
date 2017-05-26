@@ -8,6 +8,9 @@
 #include "Basics.h"
 #include "TensorShape.h"
 #include <cudnn.h>
+#if CUDNN_MAJOR < 5
+#error CNTK requires the NVIDIA cuDNN library 5.0 or higher to build, cf. https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#cudnn or https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#cudnn for installation instructions.
+#endif
 #include <memory>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -15,9 +18,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class CuDnnTensor final
 {
 public:
+    CuDnnTensor();
     CuDnnTensor(const TensorShape& src, cudnnDataType_t dataType);
     ~CuDnnTensor();
 
+    void Set(const TensorShape& src, cudnnDataType_t dataType); 
     void UpdateBatchSize(size_t batchSize);
 
     operator cudnnTensorDescriptor_t() const { return m_tensor; }

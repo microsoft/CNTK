@@ -32,7 +32,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
     // time step of the sequence, have not yet received a gradient from a parent
     // and thus may not have had their gradient matrices allocated.
 #if 1 // keep enabled once this works
-#if 1 // log the cases where this is needed
+#if 0 // log the cases where this is needed
     if (m_needsGradient && !m_gradientInitialized)
     {
         static size_t c = 0;
@@ -83,9 +83,184 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
     }
 }
 
+template<class ElemType>
+/*static*/ TensorView<ElemType> ComputationNode<ElemType>::Unpack(const TensorShape& sampleShape,
+                                                                  const Matrix<ElemType>& packedData,
+                                                                  const MBLayoutPtr& layout,
+                                                                  const std::shared_ptr<Matrix<ElemType>>& unpackedDataStorage,
+                                                                  const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage,
+                                                                  const std::shared_ptr<Matrix<char>>& tempMaskStorage,
+                                                                  bool batchMajor,
+                                                                  const ElemType* gapPadValue)
+{
+    size_t maxNumTimeSteps = 1;
+    size_t numSequences = 1;
+    TensorShape unpackedShape = sampleShape;
+    if (layout != nullptr)
+    {
+        maxNumTimeSteps = layout->GetNumTimeSteps();
+        numSequences = layout->GetNumSequences();
+        size_t i = unpackedShape.GetRank();
+        unpackedShape = unpackedShape.AppendInPlace(i++, batchMajor ? numSequences : maxNumTimeSteps);
+        unpackedShape = unpackedShape.AppendInPlace(i++, batchMajor ? maxNumTimeSteps : numSequences);
+    }
+
+    std::shared_ptr<Matrix<ElemType>> unpackedData;
+    if ((maxNumTimeSteps == 1) || (numSequences == 1) || (batchMajor && (layout->GetNumParallelSequences() == layout->GetNumSequences())))
+    {
+        unpackedData = std::make_shared<Matrix<ElemType>>(packedData.AsReference());
+        if (gapPadValue && layout && layout->HasGaps())
+            MaskMissingColumnsTo<ElemType>(*unpackedData, layout, FrameRange(layout), *gapPadValue);
+    }
+    else
+    {
+        unpackedData = unpackedDataStorage;
+        if (!unpackedData)
+            unpackedData = std::make_shared<Matrix<ElemType>>(packedData.GetNumRows(), maxNumTimeSteps * numSequences, packedData.GetDeviceId(), packedData.GetMatrixType(), packedData.GetFormat());
+        else
+        {
+            unpackedData->SwitchToMatrixType(packedData.GetMatrixType(), packedData.GetFormat(), /*keepValues=*/false);
+            unpackedData->Resize(packedData.GetNumRows(), maxNumTimeSteps * numSequences);
+        }
+
+        size_t i = 0;
+        auto& layoutSequences = layout->GetAllSequences();
+        int numLayoutSequences = (int)layoutSequences.size();
+        std::vector<ElemType> scatterIndicesVector(layout->GetNumCols(), -1);
+        std::vector<char> columnsValidityMask;
+        if (gapPadValue)
+            columnsValidityMask.resize(numSequences * maxNumTimeSteps, 1);
+        for (int layoutSequenceIdx = 0; layoutSequenceIdx < numLayoutSequences; ++layoutSequenceIdx)
+        {
+            auto sequenceInfo = layoutSequences[layoutSequenceIdx];
+            if (sequenceInfo.seqId != GAP_SEQUENCE_ID)
+            {
+                size_t targetParallelStreamIdx = sequenceInfo.s;
+                auto currentSequenceBeginIdx = std::max<ptrdiff_t>(0, sequenceInfo.tBegin);
+                auto currentSequenceEndIdx = std::min(maxNumTimeSteps, sequenceInfo.tEnd);
+                size_t currentSequenceLength = (currentSequenceEndIdx - currentSequenceBeginIdx);
+
+                for (size_t j = 0; j < maxNumTimeSteps; ++j)
+                {
+                    auto targetIdx = (batchMajor ? ((j * numSequences) + i) : ((i * maxNumTimeSteps) + j));
+                    if (j < currentSequenceLength)
+                        scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx] = (ElemType)targetIdx;
+                    else
+                    {
+                        if (gapPadValue)
+                            columnsValidityMask[targetIdx] = 0;
+                    }
+                }
+
+                i++;
+            }
+        }
+
+        auto scatterIdxMatrix = tempIndicesStorage;
+        if (!scatterIdxMatrix)
+            scatterIdxMatrix = std::make_shared<Matrix<ElemType>>(1, layout->GetNumCols(), scatterIndicesVector.data(), packedData.GetDeviceId());
+        else
+            scatterIdxMatrix->SetValue(1, layout->GetNumCols(), packedData.GetDeviceId(), scatterIndicesVector.data());
+
+        // DoScatterColumnsOf for sparse matrices requires the output to be pre-fileed with 0s
+        if (gapPadValue && (*gapPadValue == 0) && (unpackedData->GetMatrixType() == MatrixType::SPARSE))
+            unpackedData->SetValue(*gapPadValue);
+
+        unpackedData->DoScatterColumnsOf(0, *scatterIdxMatrix, packedData, 1);
+
+        // DoScatterColumnsOf fills the target with 0 before scattering if passed beta == 0. 
+        // This we need to mask only if the gapPadValue != 0
+        if (gapPadValue && (*gapPadValue != 0))
+        {
+            auto columnsValidityMaskMatrix = tempMaskStorage;
+            if (!columnsValidityMaskMatrix)
+                columnsValidityMaskMatrix = std::make_shared<Matrix<char>>(1, columnsValidityMask.size(), columnsValidityMask.data(), packedData.GetDeviceId());
+            else
+                columnsValidityMaskMatrix->SetValue(1, columnsValidityMask.size(), packedData.GetDeviceId(), columnsValidityMask.data());
+
+            unpackedData->MaskColumnsValue(*columnsValidityMaskMatrix, *gapPadValue, unpackedData->GetNumCols() / columnsValidityMaskMatrix->GetNumCols());
+        }
+    }
+
+    return TensorView<ElemType>(unpackedData, unpackedShape);
+}
+
+template<class ElemType>
+/*static*/ void ComputationNode<ElemType>::BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
+                                                             const MBLayoutPtr& inputLayout,
+                                                             ElemType beta,
+                                                             Matrix<ElemType>& broadcastTo,
+                                                             const FrameRange& targetFrameRange,
+                                                             const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage)
+{
+    auto targetLayout = targetFrameRange.m_pMBLayout;
+    
+    // Generate the gather indices
+    std::vector<ElemType> gatherIndicesVector(broadcastTo.GetNumCols(), -1);
+    auto& layoutSequences = targetLayout->GetAllSequences();
+    int numLayoutSequences = (int)layoutSequences.size();
+
+    // 2-way thread parallelism is sufficient for the memory bound
+    // operation of just setting the values of an array.
+    const unsigned NUM_THREADS = 2;
+    UNUSED(NUM_THREADS); // in case OMP is turned off.
+#pragma omp parallel for num_threads(NUM_THREADS)
+    for (int layoutSequenceIdx = 0; layoutSequenceIdx < numLayoutSequences; ++layoutSequenceIdx)
+    {
+        auto sequenceInfo = layoutSequences[layoutSequenceIdx];
+
+        if ((sequenceInfo.seqId != GAP_SEQUENCE_ID) && 
+            (targetFrameRange.IsAllFrames() || ((sequenceInfo.tBegin <= (ptrdiff_t)(targetFrameRange.timeIdxInSeq + targetFrameRange.m_timeOffset)) && (sequenceInfo.tEnd > (targetFrameRange.timeIdxInSeq + targetFrameRange.m_timeOffset)))))
+        {
+            auto srcSequenceInfo = inputLayout->FindSequence(sequenceInfo.seqId);
+            auto gatherFromIndex = inputLayout->GetColumnIndex(srcSequenceInfo, 0);
+            std::vector<size_t> currentSequenceColumnIndices;
+            if (targetFrameRange.IsAllFrames())
+                currentSequenceColumnIndices = targetLayout->GetColumnIndices(sequenceInfo);
+            else
+                currentSequenceColumnIndices.push_back(sequenceInfo.s);
+
+            for (auto i : currentSequenceColumnIndices)
+                gatherIndicesVector[i] = (ElemType)gatherFromIndex;
+        }
+    }
+
+    auto gatherIdxMatrix = tempIndicesStorage;
+    if (!gatherIdxMatrix)
+        gatherIdxMatrix = std::make_shared<Matrix<ElemType>>(1, broadcastTo.GetNumCols(), gatherIndicesVector.data(), broadcastTo.GetDeviceId());
+    else
+        gatherIdxMatrix->SetValue(1, broadcastTo.GetNumCols(), broadcastTo.GetDeviceId(), gatherIndicesVector.data());
+
+    broadcastTo.DoGatherColumnsOf(beta, *gatherIdxMatrix, dataToBroadcast, 1);
+}
+
+/*static*/ const std::wstring ComputationNodeBase::DefaultDynamicAxisName = L"*";
+/*static*/ const std::wstring ComputationNodeBase::DefaultNoSequenceAxisName = L"__noSequenceAxis";
+
 // -----------------------------------------------------------------------
 // subroutines for Validate() implementations
 // -----------------------------------------------------------------------
+
+// compare two MBLayouts, and alert if they are different
+void ComputationNodeBase::ValidateMBLayout(const ComputationNodeBasePtr which, const ComputationNodeBasePtr vsWhich) const
+{
+    if (!which->HasMBLayout() || !vsWhich->HasMBLayout() || which->GetMBLayout() == vsWhich->GetMBLayout())
+        return;
+    // MBLayouts are inconsistent
+#if 0
+    // can't have that
+    RuntimeError("%ls: Dynamic axes mismatch between %ls and %ls. If this is by design, use ReconcileDynamicAxis().",
+                 NodeDescription().c_str(), which->NodeDescription().c_str(), vsWhich->NodeDescription());
+#else
+    // We will let this slip with a reminder, assuming that this will be caught at runtime.
+    // By allowing this, users will not need ReconcileDynamicAxis() for reductions over a sequence like BS.Sequences.Last().
+    if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
+    {
+        fprintf(stderr, "WARNING: %ls: Dynamic axes mismatch between %ls and %ls. If they are incompatible, this will fail later.\n",
+                NodeDescription().c_str(), which->NodeDescription().c_str(), vsWhich->NodeDescription().c_str());
+    }
+#endif
+}
 
 // helper function to infer the MBLayout for this node from inputs, for the *standard case*
 // the standard case is:
@@ -95,21 +270,20 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 //  - if there are more than one different layouts involved, this function will fail
 void ComputationNodeBase::InferMBLayoutFromInputsForStandardCase(bool isFinalValidationPass)
 {
-    MBLayoutPtr pMBLayout; // start with NULL layout
-    for (auto child : m_inputs)
+    ComputationNodeBasePtr firstInputWithMBLayout;
+    for (auto input : m_inputs)
     {
-        if (!child) // node not set yet (DelayedValueNodeBase seems to allow this)--BUGBUG: Then this function won't operate correctly.
+        if (!input) // node not set yet (DelayedValueNodeBase seems to allow this)--BUGBUG: Then this function won't operate correctly.
             ;
-        else if (!child->m_pMBLayout) // NULL layout (typical for parameter nodes)
+        else if (!input->m_pMBLayout) // NULL layout (typical for parameter nodes)
             ;
-        else if (!pMBLayout) // first non-NULL layout: just copy it
-            pMBLayout = child->m_pMBLayout;
-        else if (pMBLayout != child->m_pMBLayout && isFinalValidationPass) // got a layout--compare whether it is the same
-            RuntimeError("%ls: InferMBLayoutFromInputsForStandardCase: Expected minibatch layouts to be the same between all children. Child '%ls' (%ls) uses a different layout than previously checked children and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.",
-                         NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
+        else if (!firstInputWithMBLayout) // first input with layout: remember this child
+            firstInputWithMBLayout = input;
+        else if (isFinalValidationPass) // got a layout--compare whether it is the same
+            ValidateMBLayout(firstInputWithMBLayout, input);
     }
     // all are consistent: install it
-    LinkToMBLayout(pMBLayout);
+    LinkToMBLayout(firstInputWithMBLayout ? firstInputWithMBLayout->m_pMBLayout : nullptr);
 }
 
 // single input that maps its input element-wise (e.g. Sigmoid)
@@ -132,11 +306,8 @@ void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool all
 
     ValidateInferBinaryInputDims();
 
-    if (isFinalValidationPass &&
-        Input(0)->GetMBLayout() != Input(1)->GetMBLayout() && Input(0)->HasMBLayout() && Input(1)->HasMBLayout())
-    {
-        LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
-    }
+    if (isFinalValidationPass)
+        ValidateMBLayout(Input(0), Input(1));
 
     // result has tensor shape with dimensions being the max over both
     let shape0 = GetInputSampleLayout(0);
@@ -176,10 +347,9 @@ void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allow
 
     // check minibatch layout consistency for all possible pairs (n choose 2)
     if (isFinalValidationPass)
-        for (size_t i = 0; i < numInputs; i++)        
-            for (size_t j = i+1; j < numInputs; j++)            
-                if (Input(i)->GetMBLayout() != Input(j)->GetMBLayout() && Input(i)->HasMBLayout() && Input(j)->HasMBLayout())
-                    LogicError("%ls: Minibatch layouts are not the same between arguments and might get out of sync during runtime. If this is by design, use ReconcileDynamicAxis() to forward layouts between nodes.", NodeDescription().c_str());
+        for (size_t i = 0; i < numInputs; i++)
+            for (size_t j = i + 1; j < numInputs; j++)
+                ValidateMBLayout(Input(i), Input(j));
 
     // result has tensor shape with dimensions being the max over all inputs
     let shape0 = GetInputSampleLayout(0);
@@ -242,12 +412,12 @@ void ComputationNodeBase::ValidateNaryZip(bool isFinalValidationPass, bool allow
 }
 
 // unary reduce-to-(1,1) operation, e.g. MatrixL1RegNode
-void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass)
+void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass, bool keepDimensions)
 {
     assert(m_inputs.size() == 1);
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
-    SetDims(TensorShape(1), false);
+    SetDims(keepDimensions ? m_inputs[0]->GetSampleLayout() : (TensorShape::Scalar(Environment().IsV2Library())), false);
 }
 
 // binary reduce-to-(1,1) operation, e.g. CrossEntropyWithSoftmaxNode
@@ -275,7 +445,7 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
             LogicError("%ls: Expected MBLayout in Input 1.", NodeDescription().c_str());
         // Shape of the MBLayouts is checked at runtime.
     }
-    SetDims(TensorShape(1), false);
+    SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
 }
 
 // helper function for validation
@@ -376,7 +546,7 @@ TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange
 
     // determine the slice dimensions described by the FrameRange
     // Note: These are dimensions without strides.
-    auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), fr, GetMBLayout());
+    let slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), fr, GetMBLayout());
 
     // narrow the tensor
     // Note: Strides are honored correctly.
@@ -466,6 +636,98 @@ const std::string ComputationNodeBase::ShapeDescription() const
 }
 
 template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::BeginForwardProp()
+{
+    Base::BeginForwardProp();
+
+    if (NeedsDynamicValidation())
+        Validate(/*isFinalValidationPass =*/ true);
+
+    // update the actual m_value allocation
+    if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
+        UpdateFunctionValuesSize();
+
+    // give nodes a chance to update their internal state that may also have to match MB size
+    UpdateFunctionMBSize();
+
+    // and make sure dimensions are what we expect
+    VerifyDataSize(Value());
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::EndForwardProp()
+{
+    Base::EndForwardProp();
+
+    if (HasEnvironmentPtr() && Environment().trackGapNans)
+    {
+        MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+        if (Value().HasNan("EndForwardProp"))
+            LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
+
+        InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
+    }
+
+    // tracing
+    Trace();
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::BeginBackprop()
+{
+    Base::BeginBackprop();
+
+    if (NeedsGradient())
+    {
+        // Verify that the shapes of the output/input Value matrices that the gradient backprop for this node needs
+        // are intact and have not been erroneously reshaped due to incorrect memory sharing
+        auto VerifyValueShape = [](const ComputationNode<ElemType>& node) {
+            size_t rows, cols;
+            node.DetermineDataSize(rows, cols);
+
+            auto& valueMatrix = node.Value();
+            if ((valueMatrix.GetNumRows() != rows) || (valueMatrix.GetNumCols() != cols))
+            {
+                LogicError("%ls %ls operation found to have incorrect Value() matrix shape %lu x %lu during backprop; expected shape is %lu x %lu. "
+                    "This may be due to incorrect memory sharing.",
+                    node.NodeName().c_str(), node.OperationName().c_str(), valueMatrix.GetNumRows(), valueMatrix.GetNumCols(), rows, cols);
+            }
+        };
+
+        if (IsOutputNeededDuringBackprop())
+            VerifyValueShape(*this);
+
+        for (size_t i = 0; i < m_inputs.size(); i++)
+        {
+            if (InputUsedInComputingInputNodesGradients(i))
+                VerifyValueShape(InputRef(i));
+        }
+    }
+}
+
+template <class ElemType>
+/*virtual*/ void ComputationNode<ElemType>::EndBackprop()
+{
+    Base::EndBackprop();
+
+    if (HasEnvironmentPtr() && Environment().trackGapNans)
+    {
+        for (size_t i = 0; i < m_inputs.size(); i++)
+        {
+            ComputationNodePtr child = Input(i);
+            if (child->m_needsGradient)
+            {
+                child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+                if (child->Gradient().HasNan("EndBackprop"))
+                {
+                    LogicError("%ls %ls operation unexpectedly produced NaN gradients.", child->NodeName().c_str(), child->OperationName().c_str());
+                }
+            }
+        }
+    }
+}
+
+template <class ElemType>
 /*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, const bool printMetadata, File& fstream) const
 {
     if (printMetadata)
@@ -490,13 +752,16 @@ template <class ElemType>
 // 'transpose' means print one row per sample (non-transposed is one column per sample).
 // 'isSparse' will print all non-zero values as one row (non-transposed, which makes sense for one-hot) or column (transposed).
 template <class ElemType>
-void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const FrameRange& fr,
+void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
+                                                             const FrameRange& fr,
                                                              size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, bool isSparse,
                                                              const vector<string>& labelMapping, const string& sequenceSeparator, 
                                                              const string& sequencePrologue, const string& sequenceEpilogue,
                                                              const string& elementSeparator, const string& sampleSeparator,
                                                              string valueFormatString,
-                                                             bool outputGradient) const
+                                                             bool outputGradient,
+                                                             bool onlyShowAbsSumForDense,
+                                                             std::function<std::string(size_t)> getKeyById) const
 {
     // get minibatch matrix -> matData, matRows, matStride
     const Matrix<ElemType>& outputValues = outputGradient ? Gradient() : Value();
@@ -511,8 +776,8 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
     if (!pMBLayout) // no MBLayout: We are printing aggregates (or LearnableParameters?)
     {
         pMBLayout = make_shared<MBLayout>();
-        pMBLayout->InitAsFrameMode(1); // treat this as if we have one single sample
-        // TODO: This can be done more efficiently, if ever needed.
+        pMBLayout->Init(1, outputValues.GetNumCols()); // treat this as if we have one single sequence consisting of the columns
+        pMBLayout->AddSequence(0, 0, 0, outputValues.GetNumCols());
     }
     let& sequences = pMBLayout->GetAllSequences();
     let  width     = pMBLayout->GetNumTimeSteps();
@@ -528,6 +793,8 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
     bool sampleSeparatorHasShape  = sampleSeparator.find("%x")  != sampleSeparator.npos;
     bool sequencePrologueHasSeqId = sequencePrologue.find("%d") != sequencePrologue.npos;
     bool sampleSeparatorHasSeqId  = sampleSeparator.find("%d")  != sampleSeparator.npos;
+    bool sequencePrologueHasSeqKey = sequencePrologue.find("%k") != sequencePrologue.npos;
+    bool sampleSeparatorHasSeqKey = sampleSeparator.find("%k") != sampleSeparator.npos;
 
     for (size_t s = 0; s < sequences.size(); s++)
     {
@@ -577,8 +844,17 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
                 sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%d", sh);
         }
 
+        if (getKeyById)
+        {
+            if (sequencePrologueHasSeqKey)
+                seqProl = msra::strfun::ReplaceAll<std::string>(seqProl, "%k", getKeyById(seqInfo.seqId));
+            if (sampleSeparatorHasSeqKey)
+                sampleSep = msra::strfun::ReplaceAll<std::string>(sampleSep, "%k", getKeyById(seqInfo.seqId));
+        }
+
         if (s > 0)
             fprintfOrDie(f, "%s", sequenceSeparator.c_str());
+
         fprintfOrDie(f, "%s", seqProl.c_str());
 
         // output it according to our format specification
@@ -678,34 +954,54 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
         }
         else
         {
-            for (size_t j = 0; j < jend; j++) // loop over output rows     --BUGBUG: row index is 'i'!! Rename these!!
+            if (onlyShowAbsSumForDense)
             {
-                if (j > 0)
-                    fprintfOrDie(f, "%s", sampleSep.c_str());
-                if (j == jstop && jstop < jend - 1) // if jstop == jend-1 we may as well just print the value instead of '...'
+                // the concise version to make matrix comparision easier
+                double absSum = 0;
+                
+                #pragma omp parallel for reduction(+:absSum)
+                for (int i = 0; i < (int)iend; i++) // loop over output rows
                 {
-                    fprintfOrDie(f, "...+%d", (int)(jend - jstop)); // 'nuff said
-                    break;
-                }
-                // inject sample tensor index if we are printing row-wise and it's a tensor
-                if (!transpose && sampleLayout.size() > 1 && !isCategoryLabel) // each row is a different sample dimension
-                {
-                    for (size_t k = 0; k < sampleLayout.size(); k++)
-                        fprintfOrDie(f, "%c%d", k == 0 ? '[' : ',', (int)((j / sampleLayout.GetStrides()[k])) % sampleLayout[k]);
-                    fprintfOrDie(f, "]\t");
-                }
-                // print a row of values
-                for (size_t i = 0; i < iend; i++) // loop over elements
-                {
-                    if (i > 0)
-                        fprintfOrDie(f, "%s", elementSeparator.c_str());
-                    if (i == istop && istop < iend - 1)
+                    double absSumLocal = 0;
+                    for (size_t j = 0; j < jend; j++) // loop over elements
                     {
-                        fprintfOrDie(f, "...+%d", (int)(iend - istop));
+                        absSumLocal += abs(seqData[i * istride + j * jstride]);
+                    }
+                    absSum += absSumLocal;
+                }
+                fprintfOrDie(f, "absSum: %f", absSum);
+            }
+            else
+            {
+                for (size_t j = 0; j < jend; j++) // loop over output rows     --BUGBUG: row index is 'i'!! Rename these!!
+                {
+                    if (j > 0)
+                        fprintfOrDie(f, "%s", sampleSep.c_str());
+                    if (j == jstop && jstop < jend - 1) // if jstop == jend-1 we may as well just print the value instead of '...'
+                    {
+                        fprintfOrDie(f, "...+%d", (int)(jend - jstop)); // 'nuff said
                         break;
                     }
-                    double dval = seqData[i * istride + j * jstride];
-                    print(dval);
+                    // inject sample tensor index if we are printing row-wise and it's a tensor
+                    if (!transpose && sampleLayout.size() > 1 && !isCategoryLabel) // each row is a different sample dimension
+                    {
+                        for (size_t k = 0; k < sampleLayout.size(); k++)
+                            fprintfOrDie(f, "%c%d", k == 0 ? '[' : ',', (int)((j / sampleLayout.GetStrides()[k])) % sampleLayout[k]);
+                        fprintfOrDie(f, "]\t");
+                    }
+                    // print a row of values
+                    for (size_t i = 0; i < iend; i++) // loop over elements
+                    {
+                        if (i > 0)
+                            fprintfOrDie(f, "%s", elementSeparator.c_str());
+                        if (i == istop && istop < iend - 1)
+                        {
+                            fprintfOrDie(f, "...+%d", (int)(iend - istop));
+                            break;
+                        }
+                        double dval = seqData[i * istride + j * jstride];
+                        print(dval);
+                    }
                 }
             }
         }

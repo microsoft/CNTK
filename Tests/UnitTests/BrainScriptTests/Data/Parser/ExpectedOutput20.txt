@@ -1,0 +1,46 @@
+ []
+ a =
+  1
+ a1_ =
+  13
+ b =
+  2
+ do =
+  :
+   print
+   train
+   eval
+
+ print =
+  new PrintAction
+   []
+    message =
+     'Hello World'
+
+
+ x =
+  array 
+   1
+   13
+   =>
+    ()
+     i
+
+    ==
+     +
+      1
+      *
+       i
+       . message
+        print
+
+
+
+     *
+      13
+      42
+
+
+
+
+

@@ -1,0 +1,87 @@
+# Parameters can be overwritten on the command line
+# for example: cntk configFile=myConfigFile RootDir=../.. 
+# For running from Visual Studio add
+# currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
+
+command = trainNetwork:testNetwork
+
+precision = "float"; traceLevel = 1 ; deviceId = "auto"
+
+rootDir = ".." ; dataDir = "$rootDir$/DataSets/MNIST" ;
+outputDir = "./Output" ;
+
+modelPath = "$outputDir$/Models/05_OneConvRegr"
+#stderr = "$outputDir$/05_OneConvRegr_bs_out"
+
+# TRAINING CONFIG
+trainNetwork = {
+    action = "train"
+    
+    BrainScriptNetworkBuilder = {
+        imageShape = 28:28:1                        # image dimensions, 1 channel only
+        labelDim = 10                               # number of distinct labels
+        featScale = 1/256
+        Scale{f} = x => Constant(f) .* x
+        
+        model = Sequential (
+            Scale {featScale} :
+            ConvolutionalLayer {16, (5:5), pad = true} : ReLU : 
+            MaxPoolingLayer    {(2:2), stride=(2:2)} :
+            DenseLayer {64} : ReLU : 
+            LinearLayer {labelDim}
+        )
+        
+        # inputs
+        features = Input {imageShape}
+        labels = Input {labelDim}
+
+        # apply model to features
+        z = model (features)
+
+        # loss and error computation
+        diff = labels - z
+        sqerr = ReduceSum (diff.*diff, axis=1)
+        rmse =  Sqrt (sqerr / labelDim)
+
+        # declare special nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (rmse)
+        evaluationNodes = (rmse)
+        outputNodes     = (z)
+    }
+
+    SGD = {
+        epochSize = 0
+        minibatchSize = 64
+        maxEpochs = 15
+        learningRatesPerSample = 0.001*5:0.0005
+        momentumAsTimeConstant = 1024
+        numMBsToShowResult = 500
+    }
+
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        # See ../README.md for details on getting the data (Train-28x28_cntk_text.txt).
+        file = "$DataDir$/Train-28x28_cntk_text.txt"
+        input = {
+            features   = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }   
+}
+
+# TEST CONFIG
+testNetwork = {
+    action = "test"
+    minibatchSize = 1024    # reduce this if you run out of memory
+
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}

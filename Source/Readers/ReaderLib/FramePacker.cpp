@@ -11,7 +11,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-
 MBLayoutPtr FramePacker::CreateMBLayout(const StreamBatch& batch)
 {
     auto violation = find_if(batch.begin(), batch.end(), [](const SequenceDataPtr& s){ return s->m_numberOfSamples > 1; });
@@ -26,4 +25,4 @@ MBLayoutPtr FramePacker::CreateMBLayout(const StreamBatch& batch)
     return pMBLayout;
 }
 
-} } }
+}}}

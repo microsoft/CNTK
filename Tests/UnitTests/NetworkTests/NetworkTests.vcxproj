@@ -1,8 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|x64">
+      <Configuration>Release_NoOpt</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
@@ -26,13 +30,9 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
-  <PropertyGroup>
-    <HasBoost>false</HasBoost>
-    <HasBoost Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">true</HasBoost>
-  </PropertyGroup>
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
@@ -47,7 +47,6 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(OutDir)\UnitTests\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -57,15 +56,17 @@
       <PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <UseFullPaths>true</UseFullPaths>
       <OpenMPSupport>true</OpenMPSupport>
-      <AdditionalIncludeDirectories>$(MSMPI_INC);$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\ActionsLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\CNTK\BrainScript;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSMPI_INC);$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\ActionsLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\CNTK\BrainScript;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>math.lib;common.lib;actionslib.lib;computationnetworklib.lib;sequencetraininglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Cntk.Core-$(CntkComponentVersion).lib;Cntk.Math-$(CntkComponentVersion).lib;Cntk.Common-$(CntkComponentVersion).lib;Cntk.Actions-$(CntkComponentVersion).lib;Cntk.ComputationNetwork-$(CntkComponentVersion).lib;Cntk.SequenceTrainingLib-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir)..;$(BOOST_LIB_PATH);$(NvmlLibPath)</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>math.dll;msmpi.dll</DelayLoadDLLs>
+      <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir);$(BOOST_LIB_PATH);$(NvmlLibPath)</AdditionalLibraryDirectories>
+      <DelayLoadDLLs>Cntk.Math-$(CntkComponentVersion).dll;msmpi.dll</DelayLoadDLLs>
+      <StackReserveSize>100000000</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
@@ -95,49 +96,50 @@
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>%(DelayLoadDLLs);nvml.dll;$(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
-    <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)\..\CNTKTextFormatReader.dll" "$(TargetDir)"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)\..\CNTKTextFormatReader.dll" "$(TargetDir)"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Common\NetworkTestHelper.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="TestHelpers.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp" />
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.cpp" />
-    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptTest.cpp" />
+    <ClCompile Include="AccumulatorNodeTests.cpp" />
+    <ClCompile Include="BatchNormalizationTests.cpp" />
+    <ClCompile Include="CropNodeTests.cpp" />
+    <ClCompile Include="EditDistanceTests.cpp" />
     <ClCompile Include="OperatorEvaluation.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="TestHelpers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Config\Network_Operator_Plus.cntk" />
     <Text Include="Control\Network_Operator_Plus_Control.txt" />
     <Text Include="Data\Network_Operator_Plus_Data.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Config\BatchNorm_BS_Builder.cntk" />
+    <None Include="Config\BatchNorm_BS_Model.cntk" />
+    <None Include="Config\BatchNorm_NDL_Builder_BN5.cntk" />
+    <None Include="Config\BatchNorm_NDL_Builder_BN6.cntk" />
+    <None Include="Config\BatchNorm_NDL_Model.cntk" />
+    <None Include="Config\Macros.bs" />
+    <None Include="Models\01_OneHidden.dnn" />
+    <None Include="Models\ResNet20_CIFAR10_DataAug.dnn" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="Build" Condition="$(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasBoost)" Text="NetworkTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
-  </Target>
-  <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
-    <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;" />
-    </ItemGroup>
-    <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
-      <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
-    </Copy>
+    <Error Condition="!$(HasBoost)" Text="NetworkTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
 </Project>

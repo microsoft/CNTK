@@ -89,13 +89,23 @@ public:
 template <typename ElemType>
 class CNTKEvalExtended : public CNTKEvalBase<ElemType>, public IEvaluateModelExtended<ElemType>
 {
+public:
+    CNTKEvalExtended() : CNTKEvalBase<ElemType>(), 
+        m_started(false){}
+
     virtual VariableSchema GetOutputSchema() const override;
 
-    virtual void StartForwardEvaluation(std::vector<wstring> outputs) override;
+    virtual void StartForwardEvaluation(const std::vector<wstring>& outputs) override;
 
     virtual VariableSchema GetInputSchema() const override;
 
-    virtual void ForwardPass(const Variables<ElemType>& inputs, Variables<ElemType>& output) override;
+    virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output) override;
+
+    virtual void ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& output, bool resetRNN) override;
+
+    virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output) override;
+
+    virtual void ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& output, bool resetRNN) override;
 
     virtual void Destroy() override;
 
@@ -108,11 +118,18 @@ class CNTKEvalExtended : public CNTKEvalBase<ElemType>, public IEvaluateModelExt
     {
         CNTKEvalBase<ElemType>::Init(config);
     }
+
 private:
     static VariableLayout ToVariableLayout(const ComputationNodeBasePtr n);
     std::vector<ComputationNodeBasePtr> m_outputNodes;
     std::shared_ptr<ScopedNetworkOperationMode> m_scopedNetworkOperationMode;
     std::vector<ComputationNodeBasePtr> m_inputNodes;
     StreamMinibatchInputs m_inputMatrices;
+    bool m_started;
+
+    template<template<typename> class ValueContainer> 
+    void ForwardPassT(const std::vector < ValueBuffer<ElemType, ValueContainer> >& inputs,
+                      std::vector < ValueBuffer<ElemType, ValueContainer> >& outputs, bool resetRNN);
+
 };
 } } }

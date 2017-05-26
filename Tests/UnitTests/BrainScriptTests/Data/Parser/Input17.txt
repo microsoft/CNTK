@@ -1,0 +1,54 @@
+do = Print(val)                                                                                                           
+val = new NDLComputationNetwork [                                                                                         
+   hiddenDim = 512                                                                                                        
+   numHiddenLayers = 2                                                                                                    
+   T = 3                                  // total context window                                                         
+                                                                                                                          
+   // data sources                                                                                                        
+   featDim = 40 ; labelDim = 9000                                                                                         
+   myFeatures = Input(featDim) ; myLabels = Input(labelDim)                                                               
+                                                                                                                          
+   // split the augmented input vector into individual frame vectors                                                      
+   subframes[t:0..T - 1] = RowSlice(t * featDim, featDim, myFeatures)                                                     
+                                                                                                                          
+   // hidden layers                                                                                                       
+   layers[layer:1..numHiddenLayers] = [     // each layer stores a dict that stores its hidden fwd and bwd state vectors  
+       // model parameters                                                                                                
+       W_fwd = Parameter(hiddenDim, featDim)                                              // Parameter(outdim, indim)     
+       W_bwd = if layer > 1 then Parameter(hiddenDim, hiddenDim) else Fail('no W_bwd')    // input-to-hidden              
+       H_fwd = Parameter(hiddenDim, hiddenDim)                                            // hidden-to-hidden             
+       H_bwd = Parameter(hiddenDim, hiddenDim)                                                                            
+       b = Parameter(hiddenDim, 1)                                                        // bias                         
+       // shared part of activations (input connections and bias)                                                         
+       z_shared[t:0..T-1] = (if layer > 1                                                                                 
+                             then W_fwd * layers[layer - 1].h_fwd[t] + W_bwd * layers[layer - 1].h_bwd[t]                 
+                             else W_fwd * subframes[t]                                                                    
+                            ) + b                                                                                         
+       // recurrent part and non-linearity                                                                                
+       step(H, h, dt, t) = Sigmoid(if (t + dt >= 0 && t + dt < T)                                                         
+                                   then z_shared[t] + H * h[t + dt]                                                       
+                                   else z_shared[t])                                                                      
+       h_fwd[t:0..T-1] = step(H_fwd, h_fwd, -1, t)                                                                        
+       h_bwd[t:0..T-1] = step(H_bwd, h_bwd,  1, t)                                                                        
+   ]                                                                                                                      
+   // output layer --linear only at this point; Softmax is applied later                                                  
+   outLayer = [                                                                                                           
+       // model parameters                                                                                                
+       W_fwd = Parameter(labelDim, hiddenDim)                                                                             
+       W_bwd = Parameter(labelDim, hiddenDim)                                                                             
+       b = Parameter(labelDim, 1)                                                                                         
+       //  output                                                                                                         
+       topHiddenLayer = layers[numHiddenLayers]                                                                           
+       centerT = Floor(T/2)                                                                                               
+       z = W_fwd * topHiddenLayer.h_fwd[centerT] + W_bwd * topHiddenLayer.h_bwd[centerT] + b                              
+   ]                                                                                                                      
+   outZ = outLayer.z     // we only want this one & don't care about the rest of this dictionary                          
+                                                                                                                          
+   // define criterion nodes                                                                                              
+   CE = CrossEntropyWithSoftmax(myLabels, outZ)                                                                           
+   Err = ErrorPrediction(myLabels, outZ)                                                                                  
+                                                                                                                          
+   // define output node for decoding                                                                                     
+   logPrior = LogPrior(myLabels)                                                                                          
+   ScaledLogLikelihood = outZ - logPrior   // before: Minus(CE.BFF.FF.P,logPrior,tag=Output)                              
+]

@@ -30,9 +30,9 @@ Grayscale_Test = [
             height=4
             channels=1
             cropType=Center
-            cropRatio=1.0
+            sideRatio=1.0
             jitterType=UniRatio
-            interpolations=Linear
+            interpolations=linear
         ]
         labels=[
             labelDim=4

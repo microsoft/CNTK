@@ -12,7 +12,7 @@ speechTrain = [
     SimpleNetworkBuilder = [
         layerSizes = 363:512:512:132
         trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ErrorPrediction"
+        evalCriterion = "ClassificationError"
         layerTypes = "Sigmoid"
         initValueScale = 1.0
         applyMeanVarNorm = true
@@ -41,7 +41,7 @@ speechTrain = [
              then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
              else Fail('unknown trainingCriterion ' + trainingCriterion)
         Err = if evalCriterion == 'Err' then
-              ErrorPrediction(labels, outZ, tag='evaluation')
+              ClassificationError(labels, outZ, tag='evaluation')
               else Fail('unknown evalCriterion ' + evalCriterion)
         logPrior = LogPrior(labels)
         // TODO: how to add a tag to an infix operation?
@@ -74,6 +74,7 @@ speechTrain = [
         miniBatchMode = "partial"
         randomize = "auto"
         verbosity = 0
+        useMersenneTwisterRand=true
 
         features = [
             dim = 363

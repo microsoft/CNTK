@@ -1,0 +1,12 @@
+#!/bin/bash
+
+. $TEST_DIR/../run-test-common
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun RegrSimple_CIFAR10.cntk "[command=TrainConvNet:Test] forceDeterministicAlgorithms=true stderr=-"
+ExitCode=$?
+
+# Delete the test data if copied
+[[ "$Copied" -eq "1" ]] && rm -rf "$DataDir"
+
+exit $ExitCode

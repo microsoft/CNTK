@@ -12,6 +12,7 @@
 #include "TensorShape.h"
 #include "MatrixPool.h"
 #include "ComputationEnvironment.h"
+#include "Globals.h"
 
 #include <unordered_set>
 #include <map>
@@ -32,14 +33,30 @@
 #define CNTK_MODEL_VERSION_1 1
 #define CNTK_MODEL_VERSION_2 2
 #define CNTK_MODEL_VERSION_3 3
-#define CNTK_MODEL_VERSION_4 4 // PastValue
-#define CNTK_MODEL_VERSION_5 5 // ND convolution and pooling
-#define CNTK_MODEL_VERSION_6 6 // Batch norm blending
-#define CNTK_MODEL_VERSION_7 7 // ElemType tag in model file
-#define CNTK_MODEL_VERSION_8 8 // DynamicAxis for inputs
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_8
+#define CNTK_MODEL_VERSION_4 4   // PastValue
+#define CNTK_MODEL_VERSION_5 5   // ND convolution and pooling
+#define CNTK_MODEL_VERSION_6 6   // batch-norm blending
+#define CNTK_MODEL_VERSION_7 7   // ElemType tag in model file
+#define CNTK_MODEL_VERSION_8 8   // DynamicAxis for inputs
+#define CNTK_MODEL_VERSION_9 9   // transpose flag in ConvolutionNode to support deconvolution
+#define CNTK_MODEL_VERSION_10 10 // learning-rate multiplier for input nodes
+#define CNTK_MODEL_VERSION_11 11 // dynamic axis name for where nodes
+#define CNTK_MODEL_VERSION_12 12 // Times() m_inputRank to support parameter-rank inference
+#define CNTK_MODEL_VERSION_13 13 // batch norm: switch running inverse std deviation -> variance, MB count -> samplesSeen; CuDNN v5
+#define CNTK_MODEL_VERSION_14 14 // axis parameter in OptimizedRNNStackNode
+#define CNTK_MODEL_VERSION_15 15 // add new nodes: LambdaRankNode and NDCG1Eval
+#define CNTK_MODEL_VERSION_16 16 // save/load rng state for Dropout and RandomSample nodes.
+#define CNTK_MODEL_VERSION_17 17 // use 8 bytes for rng seeds on both platforms
+#define CNTK_MODEL_VERSION_18 18 // reserving 18 for dilated convolution, write out one more TensorShape 
+#define CNTK_MODEL_VERSION_19 19 // batch norm: flag whether running mean count is 0
+#define CNTK_MODEL_VERSION_20 20 // adding output shape to convolution node
+#define CNTK_MODEL_VERSION_21 21 // pooling: add a ceilOutDim to decide whether ceil or floor while computing the output size
+#define CNTK_MODEL_VERSION_22 22 // Slice and pad accepts multiple axes 
+#define CNTK_MODEL_VERSION_23 23 // pooling: add include pad func for average pooling
+#define CNTK_MODEL_VERSION_24 24 // ReduceElements: add keepDimensions
+#define CNTK_MODEL_VERSION_25 25 // transpose: allow specifying a permutation
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_25
 
-extern bool g_shareNodeValueMatrices;
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
@@ -79,6 +96,10 @@ struct /*interface*/ IComputationNode
     virtual void BeginForwardProp() = 0;             // called beforefirst iteration step of ForwardProp()
     virtual void ForwardProp(const FrameRange&) = 0; // forward prop for one minibatch
     virtual void EndForwardProp() = 0;               // called after last iteration step of ForwardProp()
+
+    virtual void PostForwardAndBackProp() {} // Optional: Post forward and backprop prop for one minibatch, this will be called in a second 
+                                             //           looping on the graph, after the backward pass finish. Or after forward pass in inference
+                                             //           mode.
 
     virtual void BeginBackprop() = 0;                                        // called before first iteration step of ComputeGradient()
     virtual void BackpropTo(const size_t inputIndex, const FrameRange&) = 0; // backprop gradient into one of the inputs
@@ -145,7 +166,7 @@ struct ComputationNetworkOwnedNodeState
     friend class ComputationNetwork;
 
     ComputationNetworkOwnedNodeState()
-        : m_needsGradient(false), m_valueSharable(true)
+        : m_needsGradient(false), m_needsDynamicValidation(false), m_valueSharable(true), m_parentOverwritesGradient(false)
     {
         PurgeStateForFormingRecurrentLoops();
         m_isPartOfLoop = false;
@@ -155,15 +176,20 @@ struct ComputationNetworkOwnedNodeState
     {
         other.m_isPartOfLoop                  = m_isPartOfLoop;
         other.m_needsGradient                 = m_needsGradient;
+        other.m_needsDynamicValidation        = m_needsDynamicValidation;
         other.m_valueSharable                 = m_valueSharable;
         other.m_traceNodeValueReal            = m_traceNodeValueReal;
         other.m_traceNodeValueAsCategoryLabel = m_traceNodeValueAsCategoryLabel;
         other.m_traceNodeValueSparse          = m_traceNodeValueSparse;
         other.m_traceNodeValueUpToDim         = m_traceNodeValueUpToDim;
         other.m_traceNodeValueUpToT           = m_traceNodeValueUpToT;
+        other.m_parentOverwritesGradient = m_parentOverwritesGradient;
     }
 
     bool IsPartOfLoop() const { return m_isPartOfLoop; }
+
+    void MarkParentOverwritesGradient() { m_parentOverwritesGradient = true; }
+    bool ParentOverwritesGradient() const { return m_parentOverwritesGradient; }
 
     virtual void MarkValueNonSharable() { m_valueSharable = false; }
     virtual void MarkValueSharable() { m_valueSharable = true; }
@@ -179,12 +205,18 @@ struct ComputationNetworkOwnedNodeState
     size_t m_traceNodeValueUpToT = 8;   // 8 time steps fit comfortably into a normal-sized console
     void EnableNodeTracing(bool asReal, bool asCategoryLabel, bool asSparse) { m_traceNodeValueReal = asReal; m_traceNodeValueAsCategoryLabel = asCategoryLabel; m_traceNodeValueSparse = asSparse; }
 
+    virtual bool ImplementsGradientOverwriteOptimization() const { return false; }
+
 protected:                // TODO: should be fully encapsulated here
     bool m_needsGradient; // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
+    bool m_needsDynamicValidation;
 
     bool m_valueSharable; // a flag is needed for memory share.
-                          // If it is false (e.g., learnableParameters/InputValue and those nodes are solely induced by learnableParameters),
+                          // If it is false (e.g., LearnableParameters/InputValue and those nodes are solely induced by LearnableParameters),
                           // it will never be released to memory pool
+
+    bool m_parentOverwritesGradient; // flag indicating whether the parent of this node overwrites the gradient of this node instead of accumulating to it
+
 private:
     bool m_isPartOfLoop; // true if this loop is part of a recurrent loop
 
@@ -234,7 +266,7 @@ public:
     {
         m_evalTimeStamp = 0;
     }
-    int64_t GetEvalTimeStamp() const
+    uint64_t GetEvalTimeStamp() const
     {
         return m_evalTimeStamp;
     }
@@ -247,18 +279,17 @@ public:
 
     bool IsOlderThan(const TimeStamp& other) const
     {
-        // the difference is taken to take into account numeric overflow (which really should never happen for a 64-bit integer... but hey, it's free!)
-        return GetEvalTimeStamp() - other.GetEvalTimeStamp() < 0;
+        return GetEvalTimeStamp() < other.GetEvalTimeStamp();
     }
 
-    int64_t CreateUniqId() const
+    uint64_t CreateUniqId() const
     {
-        return atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
+        return ++s_timeStampCounter;
     }
 
 private:
     static atomic_ullong s_timeStampCounter;
-    int64_t m_evalTimeStamp; // this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
+    uint64_t m_evalTimeStamp; // this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
 };
 
 // =======================================================================
@@ -285,9 +316,12 @@ public:
 
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
         m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0),
-        m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
+        m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name), m_isValueSparse(false)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
+        // we store a unique numeric number for every node that is constructed, as a debugging aid
+        static size_t uniqueNumericId = 0;
+        m_uniqueNumericId = uniqueNumericId++;
     }
     virtual ~ComputationNodeBase()
     {
@@ -312,6 +346,15 @@ public:
             ComputationNetworkOwnedNodeState::CopyTo(*node);
             TimeStamp::CopyTo(*node);
         }
+
+        if (flags & CopyNodeFlags::copyNodeAll)
+        {
+            for (auto tag : this->GetTags())
+            {
+                node->SetTag(tag);
+            }
+        }
+
         node->ClearConfigMemberCache();
     }
 
@@ -346,7 +389,7 @@ public:
             RpcStringFreeW((RPC_WSTR*) &szUuid);
         }
 #else
-        int64_t id = CreateUniqId();
+        uint64_t id = CreateUniqId();
         std::wstring base = L"AutoName";
         std::wstringstream sstm;
         sstm << base.c_str() << id;
@@ -428,7 +471,18 @@ private:
     {
         if (HasMBLayout())
             LogicError("%ls: Minibatch data cannot be interpreted as a single 2D tensor.", NodeDescription().c_str());
-        else if (m_sampleLayout.GetRank() < 1 || m_sampleLayout.GetRank() > 2) // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
+
+        bool notFlattenableTo2D = false;
+        for (size_t i = 2; i < m_sampleLayout.GetRank(); ++i)
+        {
+            if (!m_sampleLayout.CanFlatten(i))
+            {
+                notFlattenableTo2D = true;
+                break;
+            }
+        }
+
+        if (m_sampleLayout.GetRank() < 1 || ((m_sampleLayout.GetRank() > 2) && notFlattenableTo2D)) // note: scalars are not stored as tensors of rank 0, but rather as 1-dim vectors. TODO: clean this up some day
             LogicError("%ls: Sample [%s] is not a column vector or matrix (1D or 2D tensor).", NodeDescription().c_str(), string(m_sampleLayout).c_str());
     }
 public:
@@ -440,7 +494,11 @@ public:
     size_t GetAsMatrixNumCols() const
     {
         CheckTensorIsMatrix();
-        return m_sampleLayout.GetRank() > 1 ? m_sampleLayout[1] : 1; // a column vector is also a Matrix
+        auto flattenedLayout = m_sampleLayout;
+        if (flattenedLayout.GetRank() > 2)
+            flattenedLayout.FlattenTo2DInPlace(1, "GetAsMatrixNumCols()");
+
+        return flattenedLayout.GetRank() > 1 ? flattenedLayout[1] : 1; // a column vector is also a Matrix
     }
 
     // setting/updating the dimensions of the node
@@ -573,8 +631,8 @@ public:
             else // a whole vector
             {
                 ScriptableObjects::ConfigArrayPtr inputsArray = *inputsArg;
-                const auto range = inputsArray->GetIndexRange();
-                for (int i = range.first; i <= range.second; i++) // pull them. This will resolve all of them.
+                const auto range = inputsArray->GetIndexBeginEnd();
+                for (int i = range.first; i < range.second; i++) // pull them. This will resolve all of them.
                     inputs.push_back(inputsArray->At(i, [](const wstring&) { LogicError("GetInputs: out of bounds index while iterating??"); }));
             }
         }
@@ -604,10 +662,13 @@ public:
 
     bool NeedsGradient() const { return m_needsGradient; }
 
+    void MarkNeedsDynamicValidation() { m_needsDynamicValidation = true; }
+    virtual bool NeedsDynamicValidation() const { return m_needsDynamicValidation; }
+
     void SetLearningRateMultiplier(float f) 
     { 
         if (f < 0)
-            InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are tring to set it to %f.", NodeDescription().c_str(), f);
+            InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are trying to set it to %f.", NodeDescription().c_str(), f);
         m_learningRateMultiplier = f; 
     }
     float GetLearningRateMultiplier() const { return m_learningRateMultiplier; }
@@ -622,8 +683,12 @@ public:
             LogicError("Environment: No environment has been set.");
         return *m_environment;
     }
+
+    bool HasEnvironmentPtr() const { return m_environment.get() != nullptr; }
     ComputationEnvironmentPtr GetEnvironmentPtr() const { return m_environment; }
     void SetEnvironment(ComputationEnvironmentPtr environment) { m_environment = environment; }
+
+    virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const = 0; // to be defined by <ElemType> version
 
     // -----------------------------------------------------------------------
     // validation
@@ -645,22 +710,30 @@ public:
                 if (child->GetSampleMatrixNumRows() == 0)
                     RuntimeError("%ls: input %ls %ls has 0 elements.", NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
         }
+
+        // By default the only case when the Value of a node is sparse 
+        // is when the node has a single input with sparse Value
+        if ((GetNumInputs() == 1) && m_inputs[0]->IsValueSparse())
+            m_isValueSparse = true;
     }
 
 protected:
 
     // helper functions for common cases
     void ValidateUnaryMap(bool isFinalValidationPass);
-    void ValidateUnaryReduce(bool isFinalValidationPass);
+    void ValidateUnaryReduce(bool isFinalValidationPass, bool keepDimensions = false);
     void ValidateInferBinaryInputDims();
     void ValidateInferNaryInputDims(size_t numInputs);    
     void ValidateBinaryZip(bool isFinalValidationPass, bool allowBroadcast);
     void ValidateBinaryReduce(bool isFinalValidationPass);    
     void ValidateNaryZip(bool isFinalValidationPass, bool allowBroadcast, size_t numInputs);
+    void ValidateMBLayout(const ComputationNodeBasePtr which, const ComputationNodeBasePtr vsWhich) const;
     void InferMBLayoutFromInputsForStandardCase(bool isFinalValidationPass);
     virtual void ValidateInferInputDimsFrom(const TensorShape&) = 0;    // (implemented by ComputationNode<ElemType>)
 
 public:
+
+    virtual void OnEpochStart() {}
 
     // -----------------------------------------------------------------------
     // forward prop, backprop
@@ -736,7 +809,10 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const { return true; }
 
     void SetOutputNeededDuringBackprop(bool f) { m_outputNeededDuringBackprop = f; }
-    bool IsOutputNeededDuringBackprop() const { return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop; }
+    bool IsOutputNeededDuringBackprop() const 
+    { 
+        return !Globals::ShouldEnableShareNodeValueMatrices() || m_outputNeededDuringBackprop; 
+    }
 
     // -----------------------------------------------------------------------
     // helpers for network traversal
@@ -762,6 +838,9 @@ public:
     {
         return EnumerateNodes(std::vector<ComputationNodeBasePtr>{shared_from_this()});
     }
+
+    static const std::wstring DefaultDynamicAxisName;
+    static const std::wstring DefaultNoSequenceAxisName;
 
 private:
     // Recursive part of EnumerateNodes().
@@ -832,6 +911,10 @@ public:
     // Helper that returns [a x b x c], including dynamic axes.
     const std::string ShapeDescription() const;
 
+    bool IsValueSparse() const { return m_isValueSparse; }
+
+    // debugging helper
+    size_t m_uniqueNumericId; // (a unique handle for debugging)
 protected:
 
     // -----------------------------------------------------------------------
@@ -844,6 +927,8 @@ protected:
 
     // inputs
     std::vector<ComputationNodeBasePtr> m_inputs;
+
+    bool m_isValueSparse;
 
     // dimensions and layout
     // Data is stored as a Matrix object, but often it is interpreted as a tensor.
@@ -881,11 +966,250 @@ struct NumInputs : public INumInputs // e.g. derive from NumInputs<2>
 };
 
 // =======================================================================
+// AxisTransform -- Defines transformation along one axis. Currently, just
+// scale and translation are supported.
+// =======================================================================
+
+struct AxisTransform
+{
+public:
+    bool operator==(const AxisTransform& other) const
+    {
+        return (scale == other.scale) && (translate == other.translate);
+    }
+
+    bool operator!=(const AxisTransform& other) const
+    {
+        return !operator==(other);
+    }
+
+    // Scale along the axis (by default identity transform -> 1 scale).
+    double scale = 1.0;
+    // Translation along the axis (by default identity transform -> 0 translate).
+    double translate = 0.0;
+};
+
+// =======================================================================
+// SpaceTransform -- Combines several axis transforms into space transform.
+// =======================================================================
+
+struct SpaceTransform
+{
+public:
+    SpaceTransform() {}
+
+    // Returns all axis transforms.
+    std::vector<AxisTransform>* GetTransform()
+    {
+        return &m_axisTransforms;
+    }
+
+    bool operator==(const SpaceTransform& other) const
+    {
+        CheckCompatibility(other);
+        for (size_t i = 0; i < m_axisTransforms.size(); i++)
+        {
+            if (m_axisTransforms[i] != other.m_axisTransforms[i])
+                return false;
+        }
+        return true;
+    }
+
+    bool operator!=(const SpaceTransform& other) const
+    {
+        return !operator==(other);
+    }
+
+    // Returns identity transform with given number of dimensions.
+    static SpaceTransform Identity(int dimensions)
+    {
+        SpaceTransform result;
+        result.m_axisTransforms.resize(dimensions);
+        return result;
+    }
+
+    // Returns composition of this transform with given one (without modifying this one).
+    SpaceTransform Compose(const SpaceTransform& other) const
+    {
+        CheckCompatibility(other);
+        SpaceTransform result = SpaceTransform::Identity(m_axisTransforms.size());
+        for (size_t ia = 0; ia < m_axisTransforms.size(); ia++)
+        {
+            result.m_axisTransforms[ia].scale     = m_axisTransforms[ia].scale * other.m_axisTransforms[ia].scale;
+            result.m_axisTransforms[ia].translate = m_axisTransforms[ia].scale * other.m_axisTransforms[ia].translate + m_axisTransforms[ia].translate;
+        }
+        return result;
+    }
+
+    // Returns inverse of this transform without modifying it.
+    SpaceTransform Inverse() const
+    {
+        SpaceTransform result = SpaceTransform::Identity(m_axisTransforms.size());
+        for (size_t ia = 0; ia < m_axisTransforms.size(); ia++)
+        {
+            result.m_axisTransforms[ia].scale = 1 / m_axisTransforms[ia].scale;
+            result.m_axisTransforms[ia].translate = -m_axisTransforms[ia].translate / m_axisTransforms[ia].scale;
+        }
+        return result;
+    }
+
+    // Check if this transform is compatible with given one.
+    void CheckCompatibility(const SpaceTransform& other) const
+    {
+        // Transforms are compatible if they have same number of axis transforms.
+        if (m_axisTransforms.size() != other.m_axisTransforms.size())
+        {
+            RuntimeError("Incompatible space transforms.");
+        }
+    }
+
+    std::vector<AxisTransform> m_axisTransforms;
+};
+
+// =======================================================================
+// TransformerNode -- Base class for all nodes that implement input-output
+// transformation. Using individual node transformations one can calculate cumulative
+// transformation between two nodes and establish spatial matching of its inputs or
+// outputs. Node needs to provide its type and template argument (we use recurring
+// template pattern to access number of inputs of the derived object).
+// Note: This interface assumes that node also inherits from NumInputs<> class.
+// =======================================================================
+
+struct TransformerNode
+{
+public:
+    TransformerNode() {}
+
+    virtual ~TransformerNode() {}
+
+    // Derived class needs to return if it supports transform computation between input at given index and output.
+    virtual bool SupportsTransformOnInput(size_t index) = 0;
+
+    // Derived class needs to compute transforms for all axes for all supported input-output paths (
+    // (see SupportsTransformOnInput above) on this call.
+    virtual void ComputeTransforms() = 0;
+
+    // Derived classes need to inform us regarding number of inputs they have using this call before first
+    // GetTransformForInput call.
+    void SetNumberOfInputs(size_t inputsCount)
+    {
+        // Allocate appropriate number of transforms. Here transforms will be set to identity, node needs to compute
+        // them during ComputeTransforms.
+        m_transforms.resize(inputsCount);
+    }
+
+    // Handles transform accessing for all derive classes. Derived objects still need to
+    // implement rest of ITransformerNode interface.
+    const SpaceTransform& GetTransformForInput(size_t inputIndex)
+    {
+        if (m_transforms.empty())
+            LogicError("No transforms present on GetTransformForInput call. Maybe SetNumberOfInputs has not been called?");
+
+        // Check that we are within range.
+        if (inputIndex >= m_transforms.size())
+            RuntimeError("Invalid transform index in TransformerNode.");
+
+        // Verify that derived object supports transform on given input.
+        if (!SupportsTransformOnInput(inputIndex))
+            RuntimeError("Space transform requested on unsupported input");
+
+        // All good, ask derived object to compute transforms.
+        ComputeTransforms();
+        // Return transform for requested input.
+        return m_transforms[inputIndex];
+    }
+
+protected:
+    // Transforms for all node inputs.
+    std::vector<SpaceTransform> m_transforms;
+};
+
+// =======================================================================
+// IdentityTransformerNode -- Helper class for nodes that have identity
+// transform for all inputs.
+// =======================================================================
+
+struct IdentityTransformerNode : public TransformerNode
+{
+private:
+    using TransformerNode::m_transforms;
+
+    // Set all transforms to identity.
+    virtual void ComputeTransforms() override
+    {
+        if (m_transforms[0].m_axisTransforms.empty())
+        {
+            for (size_t it = 0; it < m_transforms.size(); it++)
+            {
+                m_transforms[it].m_axisTransforms.resize(2);
+            }
+        }
+    }
+
+    // Support transforms for all inputs.
+    virtual bool SupportsTransformOnInput(size_t /*index*/) override { return true; }
+};
+
+// =======================================================================
+// IdentityTransformerNodeOnOneInput -- Helper class for nodes that support
+// identity transform for one input (defined with template argument).
+// =======================================================================
+
+template <size_t supportedInputIndex>
+struct IdentityTransformerNodeOnOneInput : public TransformerNode
+{
+private:
+    using TransformerNode::m_transforms;
+
+    virtual void ComputeTransforms() override
+    {
+        if (m_transforms[supportedInputIndex].m_axisTransforms.empty())
+        {
+            // m_axisTransforms defaults to identity.
+            m_transforms[supportedInputIndex].m_axisTransforms.resize(2);
+        }
+    }
+
+    // Support transforms just one input.
+    virtual bool SupportsTransformOnInput(size_t inputIndex) override
+    {
+        return (inputIndex == supportedInputIndex);
+    }
+};
+
+// =======================================================================
 // Nodes that can take a dynamic axis need to implement this.
 // =======================================================================
 struct ITakesDynamicAxis
 {
     virtual const std::wstring GetRequestedDynamicAxis() const = 0;
+};
+
+// =======================================================================
+// Nodes that have multiple outputs must derive from this.
+// =======================================================================
+template <typename ElemType>
+struct MultiOutputNode
+{
+public:
+    MultiOutputNode(size_t numOutputs)
+        : m_numOutputs(numOutputs)
+    {
+        m_outputsShape.resize(m_numOutputs);
+        m_outputsHasNewMBLayout.resize(m_numOutputs);
+        m_outputsMBLayout.resize(m_numOutputs);
+        m_outputsIsValueSparse.resize(m_numOutputs, false);
+        m_outputsValue.resize(m_numOutputs);
+        m_outputsGradient.resize(m_numOutputs);
+    }
+
+    size_t m_numOutputs;
+    std::vector<TensorShape> m_outputsShape;
+    std::vector<bool> m_outputsHasNewMBLayout;
+    std::vector<std::shared_ptr<MBLayout>> m_outputsMBLayout;
+    std::vector<bool> m_outputsIsValueSparse;
+    std::vector<std::shared_ptr<Matrix<ElemType>>> m_outputsValue;
+    std::vector<std::shared_ptr<Matrix<ElemType>>> m_outputsGradient;
 };
 
 // =======================================================================
@@ -969,17 +1293,17 @@ public:
     // creation from configuration
     // Nodes with NumInputs<> should say DeclareConstructorFromConfigWithNumInputs(ClassName), and nodes without DeclareConstructorFromConfig(ClassName).
     // The macro will forward to the regular constructor of the node (which may do more than just calling the base constructor), and then attach the inputs from config.
-#define DeclareConstructorFromConfigWithNumInputs(C)                   \
-    C(const ScriptableObjects::IConfigRecordPtr configp)               \
-        : C(configp->Get(L"deviceId"), L"<placeholder>")               \
-    {                                                                  \
-        AttachInputsFromConfig(configp, this->GetExpectedNumInputs()); \
+#define DeclareConstructorFromConfigWithNumInputs(C)                     \
+    C(const Microsoft::MSR::ScriptableObjects::IConfigRecordPtr configp) \
+        : C(configp->Get(L"deviceId"), L"<placeholder>")                 \
+    {                                                                    \
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());   \
     }
-#define DeclareConstructorFromConfig(C)                            \
-    C(const ScriptableObjects::IConfigRecordPtr configp)           \
-        : C(configp->Get(L"deviceId"), L"<placeholder>")           \
-    {                                                              \
-        AttachInputsFromConfig(configp);                           \
+#define DeclareConstructorFromConfig(C)                                  \
+    C(const Microsoft::MSR::ScriptableObjects::IConfigRecordPtr configp) \
+        : C(configp->Get(L"deviceId"), L"<placeholder>")                 \
+    {                                                                    \
+        AttachInputsFromConfig(configp);                                 \
     }
 
     // helper to load m_value from a stream
@@ -1029,6 +1353,13 @@ public:
                 m_inputs[i] = DownCast(inputs[i]); // (DownCast() checks the type; the assignment then downcasts it again)
             else
                 m_inputs[i] = nullptr; // during network creation, nullptrs are possible
+
+        // If this object implements also TransformerNode interface we need to notify it about number of inputs.
+        if (Is<TransformerNode>())
+        {
+            auto transformerNode = As<TransformerNode>();
+            transformerNode->SetNumberOfInputs(m_inputs.size());
+        }
     }
 
 protected:
@@ -1045,9 +1376,9 @@ protected:
                 auto* val = configp->Find(L"inputs");
                 if (!val) // if there is no 'inputs' then get the first item of this config record for a Fail() function
                 {
-                    auto members = configp->GetMemberIds();
-                    if (members.size() > 0)
-                        val = configp->Find(members.front());
+                    auto members2 = configp->GetMemberIds();
+                    if (members2.size() > 0)
+                        val = configp->Find(members2.front());
                 }
                 if (val)
                     val->Fail(msra::strfun::wstrprintf(L"Expected %d inputs, but %d were given.", (int) expectedNumInputs, (int) inputs.size()));
@@ -1072,6 +1403,13 @@ protected:
         if (inputIndex >= m_inputs.size())
             LogicError("Inputs: inputIndex %d is out of range for %ls %ls operation.", (int) inputIndex, NodeName().c_str(), OperationName().c_str());
         return DownCast(m_inputs[inputIndex]);
+    }
+
+    // Fast downcast without runtime type check of dynamic_pointer_cast.
+    // Meant to be used in Forward and BackPropTo, assuming that Validate() has already used Input() which validated the correct types.
+    inline ComputationNode<ElemType>& InputRef(const size_t inputIndex) const
+    {
+        return static_cast<ComputationNode<ElemType>&>(*m_inputs[inputIndex].get());
     }
 
     void /*ComputationNodeBase::*/ SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode) override
@@ -1130,14 +1468,40 @@ public:
     // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
     void InvalidateMissingValueColumns(const FrameRange& fr) override final
     {
-        // fprintf(stderr, "invalidating %ls %ls m_value column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
-        MaskMissingColumnsTo(*m_value, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
+        if (m_value->GetMatrixType() != SPARSE) // Sparse matrices can only be masked with 0s
+            MaskMissingColumnsTo(*m_value, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
     }
     void InvalidateMissingGradientColumns(const FrameRange& fr) override final
     {
-        // fprintf(stderr, "invalidating %ls %ls m_gradient column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
-        MaskMissingColumnsTo(*m_gradient, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
+        if (m_gradient->GetMatrixType() != SPARSE) // Sparse matrices can only be masked with 0s
+            MaskMissingColumnsTo(*m_gradient, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
     }
+
+    static TensorView<ElemType> Unpack(const TensorShape& sampleShape,
+                                       const Matrix<ElemType>& packedData,                                       
+                                       const MBLayoutPtr& layout,
+                                       const std::shared_ptr<Matrix<ElemType>>& unpackedDataStorage,
+                                       const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage,
+                                       const std::shared_ptr<Matrix<char>>& tempMaskStorage,
+                                       bool batchMajor,
+                                       const ElemType* gapPadValue);
+
+    static TensorView<ElemType> Unpack(const TensorShape& sampleShape,
+                                       const Matrix<ElemType>& packedData,
+                                       const MBLayoutPtr& layout,
+                                       bool batchMajor,
+                                       const ElemType* gapPadValue)
+    {
+        auto nullSharedPtr = std::shared_ptr<Matrix<ElemType>>(nullptr);
+        return Unpack(sampleShape, packedData, layout, nullSharedPtr, nullSharedPtr, std::shared_ptr<Matrix<char>>(nullptr), batchMajor, gapPadValue);
+    }
+
+    static void BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
+                                  const MBLayoutPtr& inputLayout,
+                                  ElemType beta,
+                                  Matrix<ElemType>& broadcastTo,
+                                  const FrameRange& targetFrameRange,
+                                  const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage);
 
     // -----------------------------------------------------------------------
     // accessors for value and gradient
@@ -1147,18 +1511,24 @@ public:
     Matrix<ElemType>&       Value()       { return *m_value; }
 
     MatrixBasePtr ValuePtr() const override final { return m_value; }    // readers want this as a shared_ptr straight
+    std::shared_ptr<Matrix<ElemType>>& ValuePtrRef() { return m_value; }
+
     // Note: We cannot return a const& since returning m_value as a MatrixBasePtr is a type cast that generates a temporary. Interesting.
 
     const Matrix<ElemType>& Gradient() const { return *m_gradient; }
     Matrix<ElemType>&       Gradient()       { return *m_gradient; }
 
     MatrixBasePtr GradientPtr() const { return m_gradient; }
+    std::shared_ptr<Matrix<ElemType>>& GradientPtrRef() { return m_gradient; }
     // TODO: This is only used for testing whether a gradient has been allocated. Maybe reduce to bool HasGradient()?
+
+    MatrixType GetPreferredGradientMatrixType() { return m_preferredGradientMatrixType; }
+    void SetPreferredGradientMatrixType(MatrixType requestType) { m_preferredGradientMatrixType = requestType; }
 
 private:
 
     template<class E>
-    void RethrowAs(const std::exception & e, const std::string & what)
+    void RethrowAs(const std::exception & e, const std::string & what) const
     {
         const auto * pe = dynamic_cast<const ExceptionWithCallStack<E> *>(&e);
         if (pe)
@@ -1170,7 +1540,7 @@ private:
     // rethrow an exception with added node-name information
     // Use this for exceptions we may get e.g. from the Matrix library, such as VerifySize().
     __declspec_noreturn
-    void Rethrow(const std::exception & e)
+    void Rethrow(const std::exception & e) const
     {
         string what = msra::strfun::strprintf("%ls: %s", NodeDescription().c_str(), e.what());
         RethrowAs<std::runtime_error>   (e, what);
@@ -1242,7 +1612,7 @@ public:
         return GradientFor(fr);
     }
     // tensor version of the above functions
-    TensorView<ElemType> DataTensorFor(const MatrixBasePtr& data, size_t rank, const FrameRange& fr)
+    TensorView<ElemType> DataTensorFor(const MatrixBasePtr& data, size_t rank, const FrameRange& fr) const
     {
         try
         {
@@ -1274,24 +1644,41 @@ public:
     {
     }
 
-private:
+protected:
 
     // determine the size that we should set our Matrix storage to
     void DetermineDataSize(size_t& rows, size_t& cols) const
     {
-        if (HasMBLayout())
-        {
-            rows = GetSampleMatrixNumRows();
-            cols = GetSampleMatrixNumCols();
-        }
-        else
+        if (m_isValueSparse && HasMBLayout())
         {
             const auto& shape = GetSampleLayout();
             size_t rank = shape.GetRank();
-            rows = rank > 0 ? shape[0] : 0;
-            cols = rank > 0 ?        1 : 0;
+            rows = rank > 0 ? shape[0] : 1;
+
+            // TODO: TensorShape should have a method to 
+            // easily compute size of subshapes
+            cols = 1;
             for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
                 cols *= shape[k];
+
+            cols *= GetMBLayout()->GetNumCols();
+        }
+        else
+        {
+            if (HasMBLayout())
+            {
+                rows = GetSampleMatrixNumRows();
+                cols = GetSampleMatrixNumCols();
+            }
+            else
+            {
+                const auto& shape = GetSampleLayout();
+                size_t rank = shape.GetRank();
+                rows = rank > 0 ? shape[0] : 1;
+                cols = 1;
+                for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
+                    cols *= shape[k];
+            }
         }
     }
 
@@ -1311,8 +1698,8 @@ protected:
         DetermineDataSize(rows, cols);
         try
         {
-        m.VerifySize(rows, cols);
-    }
+            m.VerifySize(rows, cols);
+        }
         catch (const std::exception& e)
         {
             Rethrow(e);
@@ -1335,66 +1722,13 @@ public:
     // This is where we
     //  - update the node dimension based on actual MB size
     //  - (re-)allocate the m_value matrix, which may be shared across nodes and thus have changed dimensions
-    virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
-    {
-        Base::BeginForwardProp();
+    virtual void /*IComputationNode::*/ BeginForwardProp() override; // called before first iteration step of ForwardProp()
 
-        // update the actual m_value allocation
-        if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
-            UpdateFunctionValuesSize();
+    virtual void /*IComputationNode::*/ EndForwardProp() override;
 
-        // give nodes a chance to update their internal state that may also have to match MB size
-        UpdateFunctionMBSize();
+    virtual void /*IComputationNode::*/BeginBackprop() override;
 
-        // and make sure dimensions are what we expect
-        VerifyDataSize(Value());
-    }
-
-    // NaN checks
-    virtual void /*IComputationNode::*/ EndForwardProp() override
-    {
-        Base::EndForwardProp();
-#ifdef _DEBUG
-#ifdef TRACK_GAP_NANS
-        MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-        if (Value().HasNan("EndForwardProp"))
-            LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
-#endif
-#if 0   // use this to track values of all nodes
-        MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-        Value().Print(msra::strfun::utf8(NodeName()), 0, min(Value().GetNumRows()-1, 4), 0, min(Value().GetNumCols()-1, 4));
-#endif
-        InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
-#endif
-        // tracing
-        Trace();
-    }
-
-#if 0   // (keep it around in case we need to add stuff in the future)
-        virtual void /*IComputationNode::*/BeginBackprop() override
-        {
-            Base::BeginBackprop();
-        }
-#endif
-
-#ifdef _DEBUG
-    virtual void /*IComputationNode::*/ EndBackprop() override
-    {
-        Base::EndBackprop();
-#ifdef TRACK_GAP_NANS
-        for (size_t i = 0; i < m_inputs.size(); i++)
-        {
-            ComputationNodePtr child = Input(i);
-            if (child->m_needsGradient)
-            {
-                child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-                if (child->Gradient().HasNan("EndBackprop"))
-                    LogicError("%ls %ls operation unexpectedly produced NaN gradients.", child->NodeName().c_str(), child->OperationName().c_str());
-            }
-        }
-#endif
-    }
-#endif
+    virtual void /*IComputationNode::*/ EndBackprop() override;
 
     // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
     // TODO: move to -Base (or -Network?)
@@ -1417,7 +1751,24 @@ public:
     void ResetGradient(ElemType val)
     {
         UpdateDataSize(Gradient());
-        Gradient().SetValue(val);
+
+        // No need to zero initialize the gradient if the node's parent is going to overwrite it anyways
+        if ((val != 0) || !ParentOverwritesGradient())
+            Gradient().SetValue(val);
+
+        m_gradientInitialized = true;
+    }
+
+    // Assign the given matrix's value to this node's gradient. The matrix sizes must match.
+    void AssignGradient(const Matrix<ElemType>& val)
+    {
+        UpdateDataSize(Gradient());
+
+        // The specified value matrix's dimensions must match the gradient matrix dimensions
+        if ((val.GetNumRows() != Gradient().GetNumRows()) || (val.GetNumCols() != Gradient().GetNumCols()))
+            LogicError("%ls %ls operation: The value matrix specified for ResetGradient() does not match the dimensions of the gradient matrix.", NodeName().c_str(), OperationName().c_str());
+
+        Gradient().AssignValuesOf(val);
 
         m_gradientInitialized = true;
     }
@@ -1426,30 +1777,45 @@ public:
     // memory sharing
     // -----------------------------------------------------------------------
 
-    //this function is for displaying memeory sharing information
-    //TODO: customize this function for all nodes that uses temp internal matrices.
-    virtual std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> GetMatrixInfo()
+    // helper function for formatting memory sharing information
+    // TODO: customize this function for all nodes that uses temp internal matrices.
+    virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const override
     {
-        std::set<std::pair<const Matrix<ElemType>*, const std::wstring>> matrixInfo;
-        matrixInfo.insert(make_pair(&Value(),    NodeName() + L" Value"    + msra::strfun::utf16(ShapeDescription())));
-        matrixInfo.insert(make_pair(&Gradient(), NodeName() + L" Gradient" + msra::strfun::utf16(ShapeDescription())));
+        std::set<std::pair<const MatrixBase*, std::wstring>> matrixInfo;
+        matrixInfo.insert    (make_pair(ValuePtr().get(),    NodeName() + L" : " + msra::strfun::utf16(ShapeDescription())));
+        if (GradientPtr())
+            matrixInfo.insert(make_pair(GradientPtr().get(), NodeName() + L" : " + msra::strfun::utf16(ShapeDescription()) + L" (gradient)"));
         return matrixInfo;
     }
 
     // request matrices needed to do node function value evaluation
+    // for memory pool utilization optimizaiton, the requested pointer is not immediately useable until the entire network has gone through all requests 
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
-        if (IsValueSharable())
-            RequestMatrixFromPool(m_value, matrixPool);
+        size_t matrixSize = m_sampleLayout.GetNumElements();
+        if (IsValueSharable() && !m_isValueSparse)
+            RequestMatrixFromPool(m_value, matrixPool, matrixSize, HasMBLayout());
         else
             CreateMatrixIfNull(m_value);
+
+        auto multiOutputNode = dynamic_cast<MultiOutputNode<ElemType>*>(this);
+        if (multiOutputNode)
+        {
+            for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+            {
+                if (IsValueSharable() && !multiOutputNode->m_outputsIsValueSparse[i])
+                    RequestMatrixFromPool(multiOutputNode->m_outputsValue[i], matrixPool, multiOutputNode->m_outputsShape[i].GetNumElements(), multiOutputNode->m_outputsMBLayout[i] != nullptr);
+                else
+                    CreateMatrixIfNull(multiOutputNode->m_outputsValue[i]);
+            }
+        }
     }
 
     // release temp matrices that are only used by forward computation
     // don't release matrices that need to be used in the gradient computation
     virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
     {
-        if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE) && IsValueSharable())
+        if (!IsOutputNeededDuringBackprop() && !m_isValueSparse && IsValueSharable())
             ReleaseMatrixToPool(m_value, matrixPool);
     }
 
@@ -1465,7 +1831,15 @@ public:
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
-        RequestMatrixFromPool(m_gradient, matrixPool);
+        size_t matrixSize = m_sampleLayout.GetNumElements();
+        RequestMatrixFromPool(m_gradient, matrixPool, matrixSize, HasMBLayout());
+
+        auto multiOutputNode = dynamic_cast<MultiOutputNode<ElemType>*>(this);
+        if (multiOutputNode)
+        {
+            for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+                RequestMatrixFromPool(multiOutputNode->m_outputsGradient[i], matrixPool, multiOutputNode->m_outputsShape[i].GetNumElements(), multiOutputNode->m_outputsMBLayout[i] != nullptr);
+        }
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1478,8 +1852,21 @@ public:
 
             // Release the Value matrix only if the output value is needed during backprop
             // since in the case it isn't used, we release it during forward prop itself
-            if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE && IsValueSharable())
+            if (IsOutputNeededDuringBackprop() && !m_isValueSparse && IsValueSharable())
                 ReleaseMatrixToPool(m_value, matrixPool);
+
+            auto multiOutputNode = dynamic_cast<MultiOutputNode<ElemType>*>(this);
+            if (multiOutputNode)
+            {
+                for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+                    ReleaseMatrixToPool(multiOutputNode->m_outputsGradient[i], matrixPool);
+
+                for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+                {
+                    if (IsValueSharable() && !multiOutputNode->m_outputsIsValueSparse[i])
+                        ReleaseMatrixToPool(multiOutputNode->m_outputsValue[i], matrixPool);
+                }
+            }
         }
     }
 
@@ -1510,18 +1897,22 @@ protected:
             matrixPtr = make_shared<Matrix<ElemType>>(m_deviceId);
     }
 
-    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
+    // matrixSize is per sample size, if unknown or hard to estimate, set matrixSize = 0
+    // if the matrix's size will scale with minibatch size, set mbScale = true 
+    // if workspace flag is true, the memory request will be treated specially. We assume workspace memory will share their own pointers 
+    // this is currently a workaround for workspace memory for convolutions
+    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false)
     {
         if (matrixPtr == nullptr)
         {
-            matrixPtr = matrixPool.Request<ElemType>(m_deviceId);
+            matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale, isWorkSpace);
         }
     }
 
     void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
     {
         assert(matrixPtr != nullptr);
-        matrixPool.Release<ElemType>(matrixPtr);
+        matrixPool.RequestRelease<ElemType>(&matrixPtr);
     }
 
 public:
@@ -1536,7 +1927,8 @@ public:
                                       const std::vector<std::string>& labelMapping, const std::string& sequenceSeparator, 
                                       const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator,
                                       const std::string& sampleSeparator, std::string valueFormatString,
-                                      bool outputGradient = false) const;
+                                      bool outputGradient = false, bool onlyShowAbsSumForDense = false,
+                                      std::function<std::string(size_t)> getKeyById = std::function<std::string(size_t)>()) const;
 
     // simple helper to log the content of a minibatch
     void DebugLogMinibatch(bool outputGradient = false) const
@@ -1707,6 +2099,8 @@ protected:
     shared_ptr<Matrix<ElemType>> m_value, m_gradient;
 
     static std::map<size_t, std::map<size_t, shared_ptr<Matrix<ElemType>>>> s_constOnes;
+
+    MatrixType m_preferredGradientMatrixType = UNDETERMINED;
 };
 
 // convenience wrapper for ComputationNode::New()
@@ -1832,6 +2226,7 @@ public:
     virtual bool RequiresPreCompute() const override { return false; } // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual std::string FormatOperationPrototype(const std::string& extraArgs) const override { return ""; }
     virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override {}
+    virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const override { NOT_IMPLEMENTED; }
 
 protected: public:                                     // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of SEQTraversalFlowControlNode
     std::vector<ComputationNodeBasePtr> m_nestedNodes; // nodes tucked away in this node, in evaluation order
@@ -1846,35 +2241,19 @@ protected: public:                                     // needed in ComputationN
 // To resolve, call AttachInputs()
 // TODO: This is a bit indirect. Can it be done more nicely?
 struct ILateAttachingNode { virtual void LateAttachInputs() = 0; };
-template <class N>
-class LateAttachingNode : public N, public ILateAttachingNode
-{
-    typedef typename N::OurElemType ElemType;
-    function<void(ComputationNode<ElemType>*)> attachInputs;
-
-public:
-    // constructor
-    template <class... _Types>
-    LateAttachingNode(DEVICEID_TYPE deviceId, const wstring& name, const function<void(ComputationNode<ElemType>*)>& attachInputs, _Types&&... _Args)
-        : attachInputs(attachInputs), N(deviceId, name, forward<_Types>(_Args)...)
-    {
-    }
-    // the one member that does the work
-    void /*ILateAttachingNode::*/ LateAttachInputs()
-    {
-        attachInputs(dynamic_cast<N*>(this));
-        attachInputs = [](ComputationNode<ElemType>*)
-        {
-            LogicError("LateAttachingNode::AttachInputs: must only be called once");
-        };
-    }
-};
 
 // =======================================================================
 // IRecurrentNode -- interface implemented by ComputationNodes that can be recurrent
 // =======================================================================
 
 struct IRecurrentNode { virtual int GetRecurrenceSteppingDirection() const = 0; };
+
+// =======================================================================
+// IFreezable -- nodes that have parameters that can be frozen
+// e.g. if a trained model is to be used as a fixed feature extractor for another
+// =======================================================================
+
+struct IFreezable { virtual void FreezeParameters() { } };
 
 // =======================================================================
 // PreComputedNodeBase -- interface implemented by ComputationNodes that precompute
@@ -1923,6 +2302,7 @@ protected:                                                                      
     using Base::GetAsMatrixNumCols;                                                                                                                      \
     using Base::GetAsMatrixNumRows;                                                                                                                      \
     using Base::GetDeviceId;                                                                                                                             \
+    using Base::GetEnvironmentPtr;                                                                                                                       \
     using Base::GetInputSampleLayout;                                                                                                                    \
     using Base::GetInputsFromConfig;                                                                                                                     \
     using Base::GetMBLayout;                                                                                                                             \
@@ -1943,6 +2323,7 @@ protected:                                                                      
     using Base::HasMBLayout;                                                                                                                             \
     using Base::InferMBLayoutFromInputsForStandardCase;                                                                                                  \
     using Base::Input;                                                                                                                                   \
+    using Base::InputRef;                                                                                                                                \
     using Base::InputUsedInComputingInputNodesGradients;                                                                                                 \
     using Base::InvalidateMissingGradientColumns;                                                                                                        \
     using Base::InvalidateMissingValueColumns;                                                                                                           \
@@ -2065,7 +2446,7 @@ public:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class BinaryElementWiseNode : public ComputationNode<ElemType>, public NumInputs<2>
+class BinaryElementWiseNode : public ComputationNode<ElemType>, public NumInputs<2>, public IdentityTransformerNode
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembers;

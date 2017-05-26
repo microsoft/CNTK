@@ -61,6 +61,30 @@ cudaStream_t MATH_API GetStream();
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+class DataTransferer;
+
+// -----------------------------------------------------------------------
+// SyncGuard -- synchronize around CUDA calls
+// -----------------------------------------------------------------------
+
+class SyncGuard
+{
+private:
+    static bool s_isSyncEnabled;
+
+    bool m_forceSync;
+#ifndef CPUONLY
+    cudaEvent_t m_done;
+#endif
+
+public:
+    static MATH_API void EnableSync();
+    static MATH_API bool IsSyncEnabled();
+
+    SyncGuard(bool forceSync = false);
+    ~SyncGuard();
+};
+
 // -----------------------------------------------------------------------
 // DeviceBoundNumber -- This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
 // -----------------------------------------------------------------------
@@ -97,6 +121,8 @@ public:
 // -----------------------------------------------------------------------
 
 void PrepareDevice(DEVICEID_TYPE deviceId);
+
+template<class ElemType> class CuDnnRNNExecutor;
 
 template <class ElemType>
 class MATH_API GPUMatrix : public BaseMatrix<ElemType>
@@ -146,6 +172,7 @@ private:
 #pragma warning(push)
 #pragma warning(disable : 4251)
     mutable std::unique_ptr<conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>> m_workspace;
+    mutable std::shared_ptr<CuDnnRNNExecutor<ElemType>> m_rnnExecutor; // for cudnn5 RNN
 #pragma warning(pop)
 
 private:
@@ -198,8 +225,22 @@ public:
     }
 
     ElemType Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
-    void FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul);
-    ElemType RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
+
+    void FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+                   ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+
+    void Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+              ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax=false);
+
+    ElemType RmsProp(GPUMatrix<ElemType>& gradients, 
+                     ElemType RMS_GAMMA, 
+                     ElemType RMS_WGT_INC, 
+                     ElemType RMS_WGT_MAX, 
+                     ElemType RMS_WGT_DEC, 
+                     ElemType RMS_WGT_MIN, 
+                     const bool needAveMultiplier);
+
+    void AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
 
     void Reshape(const size_t numRows, const size_t numCols);
 
@@ -207,18 +248,14 @@ public:
     // multiple views, RequireSize will first check to see if Resize is required. If it is not, then it short-circuits and is a noop. Otherwise, RequireSize
     // will call Resize, which may fail if the matrix has multiple views.
     void RequireSize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
+    void RequireSize(const GPUMatrix<ElemType>& like, bool growOnly = true) { RequireSize(like.GetNumRows(), like.GetNumCols(), growOnly); }
+
     // Resize first checks to ensure that the caller has the authority to call Resize (i.e., it checks to ensure the underlying data is owned by only this matrix), and then
     // actually resizes the underlying matrix, doing any allocation as required.
     void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
 
-    ElemType& operator()(const size_t /*row*/, const size_t /*col*/)
-    {
-        LogicError("GPUMatrix doesn't support this");
-    }
-    const ElemType& operator()(const size_t /*row*/, const size_t /*col*/) const
-    {
-        LogicError("GPUMatrix doesn't support this");
-    }
+    ElemType&       operator()(const size_t /*row*/, const size_t /*col*/)       { LogicError("GPUMatrix doesn't support operator(,) on the CPU."); }
+    const ElemType& operator()(const size_t /*row*/, const size_t /*col*/) const { LogicError("GPUMatrix doesn't support operator(,) on the CPU."); }
     ElemType Get00Element() const;
 
     void SetValue(const ElemType v);
@@ -226,19 +263,24 @@ public:
     void SetColumn(const ElemType* colPointer, size_t colInd);
     void SetColumn(const GPUMatrix<ElemType>& valMat, size_t colInd);
 
-    void MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val);
+    void MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry);
 
     //void SetValue(const CPUMatrix<ElemType>& deepCopyFrom);
     void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
-    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags = matrixFlagNormal);
+    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags = matrixFlagNormal, DataTransferer* transferer = nullptr);
 
     void SetDiagonalValue(const ElemType v);
     void SetDiagonalValue(const GPUMatrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
     void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED); 
     void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle);
+
+    GPUMatrix<ElemType>& AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
+    GPUMatrix<ElemType>& GatherFromTarget(const GPUMatrix<ElemType>& indices, const GPUMatrix<ElemType>& target, size_t row_elements);
+    GPUMatrix<ElemType>& ScatterToIndices(const GPUMatrix<ElemType>& values, const GPUMatrix<ElemType>& indices, size_t row_elements);
 
     GPUMatrix<ElemType> Transpose() const;
     GPUMatrix<ElemType>& AssignTransposeOf(const GPUMatrix<ElemType>& a);
@@ -315,6 +357,10 @@ public:
     GPUMatrix<ElemType>& DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType& threshhold);
     GPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha);
 
+    GPUMatrix<ElemType>& AssignCTCScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
+        const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBoundary, GPUMatrix<ElemType> & totalScore, const vector<size_t>& uttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum,
+        const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
+
     GPUMatrix<ElemType>& InplaceSqrt();
     GPUMatrix<ElemType>& AssignSqrtOf(const GPUMatrix<ElemType>& a);
 
@@ -347,7 +393,7 @@ public:
     ElemType SumOfElements() const;    // sum of all elements
     GPUMatrix<ElemType>& AssignSumOfElements(const GPUMatrix<ElemType>& a);
 
-    ElemType Max() const;
+    ElemType AbsoluteMax() const;
     bool IsEqualTo(const GPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
     static void VectorSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c, const bool isColWise);
@@ -445,15 +491,30 @@ public:
     void MaxPoolingBackward(const GPUMatrix<ElemType>& out, const GPUMatrix<ElemType>& in,
                             const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices,
                             GPUMatrix<ElemType>& grad) const;
+    void MaxUnpooling(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, const GPUMatrix<ElemType>& poolInput, GPUMatrix<ElemType>& input) const;
+
+    void ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                           const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, 
+                           GPUMatrix<ElemType>& argmax) const;
+
+    void ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                            const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, 
+                            GPUMatrix<ElemType>& argmax) const;
 
     void AveragePoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const;
     void AveragePoolingBackward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& grad) const;
 
-    void BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor,
-                                   GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runInvStdDev, GPUMatrix<ElemType>& out, double epsilon,
+    void BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
+                                   GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runVariance, GPUMatrix<ElemType>& out, double epsilon,
                                    GPUMatrix<ElemType>& saveMean, GPUMatrix<ElemType>& saveInvStdDev) const;
-    void BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& saveMean, const GPUMatrix<ElemType>& saveInvStdDev,
+    void BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, double blendFactor,
+                                    const GPUMatrix<ElemType>& saveMean, const GPUMatrix<ElemType>& saveInvStdDev,
                                     GPUMatrix<ElemType>& scaleGrad, GPUMatrix<ElemType>& biasGrad) const;
+
+    // RNN support functions
+    void RNNForward(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const struct RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void RNNBackwardData(const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& paramW, GPUMatrix<ElemType>& outputDX, const struct RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
+    void RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw, const struct RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
 
 public:
     // static BLAS functions
@@ -462,6 +523,8 @@ public:
     static void Multiply(const GPUMatrix<ElemType>& a, const bool transposeA, const GPUMatrix<ElemType>& b, const bool transposeB, GPUMatrix<ElemType>& c);
     static void Multiply(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
     static void Multiply1x1AndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, ElemType beta, GPUMatrix<ElemType>& c);
+
+    static void ColumnwiseScaleAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& v, ElemType beta, GPUMatrix<ElemType>& c);
 
     static void ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c);
     static void ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
@@ -498,6 +561,11 @@ public:
                   const std::array<size_t, 4>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+
+    void TensorArgOp(const GPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
+                     const std::array<size_t, 2>& offsets,
+                     const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                     const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
 
     static void CreateCurandObject(unsigned long seed, const char* caller);
     static void ResetCurandObject(unsigned long seed, const char* caller);
@@ -591,7 +659,7 @@ typedef GPUMatrix<float> GPUSingleMatrix;
 template <typename ERRTYPE>
 const char* CudaErrString(ERRTYPE x); // actual error function is defined inside .cu files
 template <typename ERRTYPE>
-static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libName, ERRTYPE successCode)
+static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libName, ERRTYPE successCode, const char* msg="")
 {
     if (retCode != successCode)
     {
@@ -606,7 +674,7 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 #endif
             int currentCudaDevice;
             cudaGetDevice(&currentCudaDevice);
-            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, CudaErrString(retCode), currentCudaDevice, hostname ? hostname : "?", exprString);
+            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s%s", libName, (int)retCode, CudaErrString(retCode), currentCudaDevice, hostname ? hostname : "?", exprString, msg);
         }
         catch (const std::exception& e) // catch, log, and rethrow since CUDA code sometimes hangs in destruction, so we'd never get to see the error
         {
@@ -621,52 +689,6 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 #define CUSPARSE_CALL(expr) (CudaCall((expr), #expr, "CUSPARSE", CUSPARSE_STATUS_SUCCESS))
 #define CURAND_CALL(expr)   (CudaCall((expr), #expr, "CURAND",   CURAND_STATUS_SUCCESS))
 #define CUDNN_CALL(expr)    (CudaCall((expr), #expr, "cuDNN",    CUDNN_STATUS_SUCCESS))
-
-// -----------------------------------------------------------------------
-// SyncGuard -- synchronize around CUDA calls
-// -----------------------------------------------------------------------
-
-class SyncGuard
-{
-    static bool DoSync()
-    {
-#ifdef NO_SYNC // this strange way of writing it allows modifying this variable at runtime in the debugger
-        static bool do_sync = false;
-#else
-        static bool do_sync = true;
-#endif
-        return do_sync;
-    }
-    cudaEvent_t m_done;
-public:
-    SyncGuard()
-    {
-        m_done = nullptr;
-        if (DoSync())
-        {
-            CUDA_CALL(cudaGetLastError());
-            CUDA_CALL(cudaEventCreate(&m_done));
-        }
-    }
-    ~SyncGuard()
-    {
-        if (DoSync())
-        {
-            // The regular use of this destructor is to synchronize the GPU, but also
-            // to check for errors. So this destructor is where CUDA errors would be thrown.
-            // If this destructor runs during stack unwinding, then a different error has
-            // already happened that should be reported; so we only clean up the resource.
-            if (std::uncaught_exception())
-                cudaEventDestroy(m_done);
-            else
-            {
-                // failures in a prior launch might be reported here
-                CUDA_CALL(cudaEventRecord(m_done));
-                CUDA_CALL(cudaEventSynchronize(m_done));
-                CUDA_CALL(cudaEventDestroy(m_done));
-            }
-        }
-    }
-};
+#define CUDNN_CALL2(expr,m) (CudaCall((expr), #expr, "cuDNN",    CUDNN_STATUS_SUCCESS, m))
 
 #endif // CPUONLY

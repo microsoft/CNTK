@@ -10,9 +10,14 @@
 #include "Basics.h"
 #include "Matrix.h"
 #include "TensorShape.h"
+#include "Quantizers.h"
 
 #pragma warning(push)
 #pragma warning(disable : 4251) // needs to have dll-interface to be used by clients of... caused by TensorView::m_shape which is only private. We use the same compiler everywhere.
+
+namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
+    template <class ElemType> struct TensorTest;
+}}}}
 
 // This class is exported from the Math.dll.
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -42,6 +47,10 @@ public:
     // copy constructor
     TensorView(const TensorView<ElemType>& other)
         : m_sob(other.m_sob), m_shape(other.m_shape)
+    {
+    }
+    // dummy constructor; this is an invalid object
+    TensorView()
     {
     }
 
@@ -126,6 +135,11 @@ public:
     void DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
 
     // -------------------------------------------------------------------
+    // arg based operations
+    // -------------------------------------------------------------------
+    void DoArgReductionOpOf(const TensorView& a, ElementWiseOperator reductionOp);
+
+    // -------------------------------------------------------------------
     // matrix product -- GEMM for flattened tensors
     // Result goes into 'this', and can optionally be added to the existing value.
     // [I x J x K x L] * [K x L x M x N] -> [I x J x M x N] reducing over (K,L)
@@ -135,21 +149,23 @@ public:
     // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
     // -------------------------------------------------------------------
 
-    void DoMatrixProductOf    (ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha);
-    void AssignMatrixProductOf(               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(0,    transC, a, transA, b, transB, alpha); }
-    void AddMatrixProductOf   (               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
+    void DoMatrixProductOf(ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier = nullptr);
+    void AssignMatrixProductOf(           bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier = nullptr) { DoMatrixProductOf(0, transC, a, transA, b, transB, alpha, pQuantizedMultiplier); }
+    void AddMatrixProductOf   (           bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
 
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
+    const TensorShape& GetShape() const { return m_shape; }
 
-private:
     // -------------------------------------------------------------------
     // accessors
     // -------------------------------------------------------------------
 
+    const shared_ptr<Matrix<ElemType>>& GetSOBPtr() const { return m_sob; }
     const Matrix<ElemType>& GetSOB() const { return *m_sob; }
     Matrix<ElemType>&       GetSOB()       { return *m_sob; }
-    const TensorShape& GetShape() const { return m_shape; }
+    friend Test::TensorTest<ElemType>;
 
+private:
     // -------------------------------------------------------------------
     // sob members
     // -------------------------------------------------------------------

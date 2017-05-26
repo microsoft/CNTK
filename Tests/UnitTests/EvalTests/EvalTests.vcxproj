@@ -1,8 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|x64">
+      <Configuration>Release_NoOpt</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
@@ -29,30 +33,18 @@
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
-  <Choose>
-    <When Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">
-      <PropertyGroup>
-        <HasBoost>true</HasBoost>
-      </PropertyGroup>
-    </When>
-    <Otherwise>
-      <PropertyGroup>
-        <HasBoost>false</HasBoost>
-      </PropertyGroup>
-    </Otherwise>
-  </Choose>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Condition="$(GpuBuild)" Label="ExtensionSettings">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).props" />
@@ -63,14 +55,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <LinkIncremental>$(DebugBuild)</LinkIncremental>
-    <OutDir>$(OutDir)\UnitTests\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);$(SolutionDir)Source\Common\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Math</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(OutDir)..;$(BOOST_LIB_PATH)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);$(BOOST_LIB_PATH)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Cntk.Eval-$(CntkComponentVersion).lib; %(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
@@ -86,11 +79,10 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_20,sm_20;compute_30,sm_30;%(CodeGeneration)</CodeGeneration>
+      <CodeGeneration>compute_30,sm_30;%(CodeGeneration)</CodeGeneration>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
@@ -112,7 +104,6 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(GpuBuild)">
@@ -151,20 +142,6 @@
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).targets" />
   </ImportGroup>
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasBoost)" Text="EvalTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
-  </Target>
-  <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
-    <PropertyGroup>
-      <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_4.dll')">$(OutDir)..\cudnn64_4.dll</CuDnnDll>
-    </PropertyGroup>
-    <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\Math.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\svml_dispmd.dll;" />
-    </ItemGroup>
-    <ItemGroup Condition="$(GpuBuild)">
-      <UnitTestDependencies Include="$(OutDir)CNTK.Core.BS;$(OutDir)..\evaldll.dll;$(OutDir)..\cuda*.dll;$(OutDir)..\svml_dispmd.dll;$(CuDnnDll);$(UnitTestDependencies)" />
-    </ItemGroup>
-    <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
-      <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
-    </Copy>
+    <Error Condition="!$(HasBoost)" Text="EvalTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
 </Project>

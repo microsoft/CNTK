@@ -1,0 +1,187 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="ParserTests.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp">
+      <Filter>From Brainscript</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.cpp">
+      <Filter>From Brainscript</Filter>
+    </ClCompile>
+    <ClCompile Include="ComputationNetworkTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.h">
+      <Filter>From Brainscript</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.h">
+      <Filter>From Brainscript</Filter>
+    </ClInclude>
+    <ClInclude Include="BrainScriptTestsHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="From Brainscript">
+      <UniqueIdentifier>{0fa7cb60-4399-439c-bdd5-643406ad0d67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{b127786d-567b-463f-b86b-3cb520214717}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data\ComputationNetwork">
+      <UniqueIdentifier>{6aebccde-fe89-4a12-b8a9-e9ebf4ab2ac2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data\Parser">
+      <UniqueIdentifier>{b37843f7-0cc7-477a-985d-339de6527761}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Data\ComputationNetwork\01_OneHidden.dnn">
+      <Filter>Data\ComputationNetwork</Filter>
+    </None>
+    <None Include="Data\ComputationNetwork\LR_reg.dnn">
+      <Filter>Data\ComputationNetwork</Filter>
+    </None>
+    <None Include="Data\ComputationNetwork\MC.dnn">
+      <Filter>Data\ComputationNetwork</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Data\ComputationNetwork\01_OneHidden.dnn_Expected.txt">
+      <Filter>Data\ComputationNetwork</Filter>
+    </Text>
+    <Text Include="Data\ComputationNetwork\LR_reg.dnn_Expected.txt">
+      <Filter>Data\ComputationNetwork</Filter>
+    </Text>
+    <Text Include="Data\ComputationNetwork\MC.dnn_Expected.txt">
+      <Filter>Data\ComputationNetwork</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput1.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput2.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput3.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput4.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput5.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput6.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput7.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput8.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput9.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput10.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput11.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput12.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput13.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput14.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput15.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput16.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput17.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput18.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput19.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput20.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input1.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input2.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input3.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input4.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input5.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input6.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input7.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input8.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input9.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input10.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input11.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input12.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input13.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input14.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input15.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input16.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input17.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input18.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input19.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input20.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\Input21.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+    <Text Include="Data\Parser\ExpectedOutput21.txt">
+      <Filter>Data\Parser</Filter>
+    </Text>
+  </ItemGroup>
+</Project>

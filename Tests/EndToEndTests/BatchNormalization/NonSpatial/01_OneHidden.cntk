@@ -1,0 +1,77 @@
+# Synthetic test for non-spatial batch normalization, (almost) in isolation of
+# other nodes (in particular Convolution). This is not a general example and/or
+# documenting best practices. The network was based on MNIST/01_OneHidden.
+
+rootDir = ".."
+
+configDir = "$rootDir$/Config"
+dataDir   = "$rootDir$/Data"
+outputDir = "$rootDir$/Output"
+modelDir  = "$outputDir$/Models"
+
+deviceId = 0
+
+command = train:test
+
+precision = "float"
+modelPath = "$modelDir$/01_OneHidden"
+
+numMBsToShowResult = 500
+traceLevel = 1
+
+batchNormalizationEngine = "testMustOverrideBatchNormalizationEngine"
+
+train = [
+    action = "train"
+
+    NDLNetworkBuilder = [
+        initOnCPUOnly = true
+        networkDescription = "$ConfigDir$/01_OneHidden.ndl"
+    ]
+
+    SGD = [
+        epochSize = 60000
+        minibatchSize = 32
+        learningRatesPerSample = 0.003125
+        momentumAsTimeConstant = 0
+        maxEpochs = 3
+    ]
+
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # See ../README.md for details on getting the data (Train-28x28_cntk_text.txt).
+        file = "$DataDir$/Train-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]   
+]
+
+test = [
+    action = "test"
+    minibatchSize = 1024    # reduce this if you run out of memory
+
+    evalNodeNames = ce:errs:top5Errs
+
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]
+]

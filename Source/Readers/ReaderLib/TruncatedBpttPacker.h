@@ -21,17 +21,23 @@ class TruncatedBPTTPacker : public PackerBase
 {
 public:
     TruncatedBPTTPacker(
-        MemoryProviderPtr memoryProvider,
         SequenceEnumeratorPtr sequenceEnumerator,
-        const std::vector<StreamDescriptionPtr>& streams);
+        const std::vector<StreamDescriptionPtr>& streams,
+        size_t numberOfBuffers = 2,
+        CorpusDescriptorPtr corpus = nullptr);
 
     virtual Minibatch ReadMinibatch() override;
 
-    virtual void StartEpoch(const EpochConfiguration& config) override;
+    virtual void SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) override;
 
 private:
+    // Iterates over all (m_parallelNumberOfSequences) slots,
+    // pulling in and filling out those slots with new sequence data,
+    // for which AvailableNumberOfSamples (= current size in samples) < m_truncationSize.
+    void FillOutAvailableSlots();
+
     // Reads sequences to slot with the specified index.
-    // Number of slots = m_parallelNumberOfSequences
+    // Number of slots = m_parallelNumberOfSequences.
     void ReadSequencesToSlot(size_t slotIndex);
 
     // Packs a slot into the data buffer.
@@ -39,7 +45,9 @@ private:
     // For each new input, sequence id is reset to 0, and incremented each time
     // a sequence is added to the layout. This allows layouts corresponding to different
     // inputs to have consistent sequence ids.
-    void PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId);
+    // Returns a boolean indicating if a packed data contains a sequence 
+    // (i.e., sequence tail) that was read last in a data sweep.
+    bool PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId, std::vector<size_t>& idToKey);
 
     virtual MBLayoutPtr CreateMBLayout(const StreamBatch& batch)
     {
@@ -50,9 +58,6 @@ private:
     // Parallel number of sequences to pack.
     // Calculated based on the truncation size and minibatch size in samples.
     size_t m_numParallelSequences;
-
-    // Truncation size in samples.
-    size_t m_truncationSize;
 
     // Sequence buffer per stream.
     // Each sequence buffer contains m_parallelNumberOfSequences slots

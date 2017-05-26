@@ -609,6 +609,11 @@ public:
     {
         NOT_IMPLEMENTED;
     };
+
+    size_t GetCurrentSamplePosition() override
+    {
+        return m_mbStartSample;
+    }
 };
 
 template <class ElemType>

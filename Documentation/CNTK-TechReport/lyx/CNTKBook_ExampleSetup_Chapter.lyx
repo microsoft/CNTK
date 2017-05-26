@@ -290,7 +290,7 @@ cntkSpeech.dnn"
 
 \begin_layout Plain Layout
 
-    evalCriterion="ErrorPrediction"
+    evalCriterion="ClassificationError"
 \end_layout
 
 \begin_layout Plain Layout
@@ -1610,7 +1610,7 @@ CE1=CrossEntropyWithSoftmax(labels,BFF1.FF.P,tag="evaluation")
 
 \begin_layout Plain Layout
 
-FER1 = ErrorPrediction(labels,BFF1.FF.P,tag="evaluation")
+FER1 = ClassificationError(labels,BFF1.FF.P,tag="evaluation")
 \end_layout
 
 \begin_layout Plain Layout
@@ -1634,7 +1634,7 @@ CE2=CrossEntropyWithSoftmax(regions,BFF2.FF.P,tag="evaluation")
 
 \begin_layout Plain Layout
 
-FER2 = ErrorPrediction(regions,BFF2.FF.P,tag="evaluation")
+FER2 = ClassificationError(regions,BFF2.FF.P,tag="evaluation")
 \end_layout
 
 \begin_layout Plain Layout

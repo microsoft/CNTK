@@ -42,7 +42,7 @@ private:
     std::vector<IDataDeserializerPtr> m_deserializers;
 
     // Driving deserializer that defines chunks.
-    IDataDeserializerPtr m_driver;
+    IDataDeserializerPtr m_primaryDeserializer;
 
     // Chunk descriptions.
     std::vector<BundlerChunkDescriptionPtr> m_chunks;
@@ -59,8 +59,15 @@ private:
     // (i.e. often in speech)
     bool m_takePrimarySequenceLength;
 
+    // A table of loaded chunks to make sure we do not load same chunk twice.
+    // Inner vector is the table of chunk id into weak pointer, the outer vector has an element per deserializer.
+    std::vector<std::vector<std::weak_ptr<Chunk>>> m_weakChunkTable;
+
     // General configuration
     int m_verbosity;
+
+    // Optional index of the deserializer whose stream defines the minibatch size.
+    size_t m_mbDefiningDeserializer;
 };
 
 }}}

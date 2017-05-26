@@ -1,0 +1,90 @@
+deviceId = "$DeviceId$"
+precision = "float"
+parallelTrain = true
+framemode = true
+traceLevel = 1
+modelPath = "$RunDir$/models/cntkSpeech.dnn"
+
+command = SpeechTrain
+
+SpeechTrain = {
+    action = "train"
+
+    BrainScriptNetworkBuilder = {
+        layerSizes = 363:512:512:132
+        trainingCriterion = 'CE'
+        evalCriterion = 'Err'
+
+        applyMeanVarNorm = true
+
+        L = Length(layerSizes)-1    // number of model layers
+        features = Input { layerSizes[0] } // 1, tag='feature' 
+        labels = Input { layerSizes[L] } // 1, tag='label' 
+
+        featNorm = if applyMeanVarNorm
+                   then MeanVarNorm(features)
+                   else features
+
+        layers[layer:1..L-1] = if layer > 1
+                               then SBFF(layers[layer-1].Eh, layerSizes[layer], layerSizes[layer-1])
+                               else SBFF(featNorm, layerSizes[layer], layerSizes[layer-1])
+        outLayer = BFF(layers[L-1].Eh, layerSizes[L], layerSizes[L-1])
+        outZ = outLayer.z        // + PastValue(layerSizes[L], 1, outLayer.z)
+        CE = if trainingCriterion == 'CE'
+             then CrossEntropyWithSoftmax(labels, outZ, tag='criterion')
+             else Fail('unknown trainingCriterion ' + trainingCriterion)
+        Err = if evalCriterion == 'Err' then
+              ClassificationError(labels, outZ, tag='evaluation')
+              else Fail('unknown evalCriterion ' + evalCriterion)
+        logPrior = LogPrior(labels)
+        // TODO: how to add a tag to an infix operation?
+        ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
+    }
+
+    SGD = {
+        epochSize = 20480
+        minibatchSize = 64:256:1024
+        learningRatesPerMB = 1.0:0.5:0.1
+        numMBsToShowResult = 1
+        momentumPerMB = 0.9:0.656119
+        dropoutRate = 0.0
+        maxEpochs = 5
+        keepCheckPointFiles = true
+        clippingThresholdPerSample = 1#INF
+
+        ParallelTrain = {
+            parallelizationMethod = "BlockMomentumSGD"
+            distributedMBReading = true
+            syncPerfStats=1
+            BlockMomentumSGD = {
+                blockSizePerWorker=2048
+                resetSGDMomentum=true
+                useNesterovMomentum=true
+            }
+        }
+
+        AutoAdjust = {
+            reduceLearnRateIfImproveLessThan = 0
+            loadBestModel = true
+            increaseLearnRateIfImproveMoreThan = 1000000000
+            learnRateDecreaseFactor = 0.5
+            learnRateIncreaseFactor = 1.382
+            
+            autoAdjustLR = "searchBeforeEpoch"
+            numMiniBatch4LRSearch = 20
+            numPrevLearnRates = 3            
+        }
+    }
+    reader = {
+        verbosity = 0 ; randomize = true
+        deserializers = ({
+            type = "HTKFeatureDeserializer"
+            module = "HTKDeserializers"                
+            input = { features = { dim = 363 ; scpFile = "glob_0000.scp" } }
+        }:{
+            type = "HTKMLFDeserializer"
+            module = "HTKDeserializers"
+            input = { labels = { mlfFile = "$DataDir$/glob_0000.mlf" ; labelMappingFile = "$DataDir$/state.list" ; labelDim = 132 } }
+        })
+    }
+}

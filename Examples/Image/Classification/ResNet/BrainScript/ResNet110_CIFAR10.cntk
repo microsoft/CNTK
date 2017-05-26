@@ -1,0 +1,119 @@
+# ResNet110 applied on CIFAR-10 dataset, with data augmentation (translation and flipping).
+
+command = TrainConvNet:Eval
+
+precision = "float"; traceLevel = 1 ; deviceId = "auto"
+
+rootDir = "../../.." ; configDir = "./" ; dataDir = "$rootDir$/DataSets/CIFAR-10" ;
+outputDir = "./Output" ;
+
+modelPath = "$outputDir$/Models/ResNet110_CIFAR10_DataAug"
+#stderr = "$outputDir$/ResNet110_CIFAR10_DataAug_bs_out"
+
+TrainConvNet = {
+    action = "train"
+
+    BrainScriptNetworkBuilder = {
+        include "$configDir$/Macros.bs"
+	
+        imageShape = 32:32:3
+        labelDim = 10
+
+        featScale = 1/256
+        Normalize{f} = x => f .* x
+
+        cMap = 16:32:64
+        bnTimeConst = 4096
+        numLayers = 18
+		
+        model = Sequential (
+            Normalize {featScale} :
+
+            ConvBNReLULayer {cMap[0], (3:3), (1:1), bnTimeConst} :
+            ResNetBasicStack {numLayers, cMap[0], bnTimeConst} :
+
+            ResNetBasicInc {cMap[1], (2:2), bnTimeConst} :
+            ResNetBasicStack {numLayers-1, cMap[1], bnTimeConst} :
+		
+            ResNetBasicInc {cMap[2], (2:2), bnTimeConst} :
+            ResNetBasicStack {numLayers-1, cMap[2], bnTimeConst} :
+			
+            # avg pooling
+            AveragePoolingLayer {(8: 8), stride = 1} :
+            LinearLayer {labelDim}
+        )
+
+        # inputs
+        features = Input {imageShape}
+        labels   = Input {labelDim}
+
+        # apply model to features
+        z = model (features)
+
+        # connect to system
+        ce       = CrossEntropyWithSoftmax     (labels, z)
+        errs     = ClassificationError         (labels, z)
+        top5Errs = ClassificationError         (labels, z, topN=5)  # only used in Eval action
+
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)  # top5Errs only used in Eval
+        outputNodes     = (z)
+    }
+
+    SGD = {
+        epochSize = 0
+        minibatchSize = 128
+
+        # Note that learning rates are 10x more than in the paper due to a different 
+        # momentum update rule in CNTK: v{t + 1} = lr*(1 - momentum)*g{t + 1} + momentum*v{t} 
+        learningRatesPerMB = 0.1*1:1.0*80:0.1*40:0.01
+        momentumPerMB = 0.9
+        maxEpochs = 160
+        L2RegWeight = 0.0001
+
+        numMBsToShowResult = 100
+    }
+
+    reader = {
+        verbosity = 0 ; randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$dataDir$/train_map.txt"
+            input = {
+                features = { transforms = (
+                    { type = "Crop" ; cropType = "RandomSide" ; sideRatio = 0.8 ; jitterType = "UniRatio" } :
+                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                    { type = "Mean" ; meanFile = "$dataDir$/CIFAR-10_mean.xml" } : 
+                    { type = "Transpose" }
+                )}
+                labels = { labelDim = 10 }
+            }
+        })
+    }
+}
+
+# Eval action
+Eval = {
+    action = "eval"
+    evalNodeNames = errs:top5Errs  # also test top-5 error rate
+    # Set minibatch size for testing.
+    minibatchSize = 128
+
+    reader = {
+        verbosity = 0 ; randomize = false
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$dataDir$/test_map.txt"
+            input = {
+                features = { transforms = (
+                   { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
+                   { type = "Mean"; meanFile = "$dataDir$/CIFAR-10_mean.xml" } : 
+                   { type = "Transpose" }
+                )}
+                labels = { labelDim = 10 }
+            }
+        })
+    }
+}

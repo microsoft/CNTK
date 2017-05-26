@@ -762,10 +762,10 @@ public:
         // next try the globals, this includes macros and global constants
         if (!localOnly)
         {
-            auto found = s_global.FindSymbol(name);
-            if (found != NULL)
+            auto found2 = s_global.FindSymbol(name);
+            if (found2 != NULL)
             {
-                NDLNode<ElemType>* node = found;
+                NDLNode<ElemType>* node = found2;
                 if (node->GetType() == ndlTypeMacro)
                 {
                     // if we are calling a macro we need to keep track of formal parameters,

@@ -1,0 +1,50 @@
+dataDir: .
+
+tags: 
+  # Only for Windows CPU
+  - bvt-l (build_sku == 'cpu') and (os == 'windows') and (flavor == 'release')
+  - nightly-l (build_sku == 'cpu') and (os == 'windows') and (flavor == 'release')
+  - weekly-l (build_sku == 'cpu') and (os == 'windows') and (flavor == 'release')
+
+testCases:
+  Test case SingleLayer:
+    patterns:
+      - EvaluateModelSingleLayer
+      
+  Test case MultipleLayers:
+    patterns:
+      - EvaluateModelMultipleLayers
+
+  Test case ExtendedNetworkSingleLayerNoInput:
+    patterns:
+      - EvaluateExtendedNetworkSingleLayerNoInput
+     
+  Test case MultipleModels:
+    patterns:
+      - EvaluateMultipleModels
+  
+  Test case ImageInputUsingFeatureVector:
+    patterns:
+      - EvaluateImageInputUsingFeatureVector
+      
+  Test result ImageInputUsingFeatureVector:
+    patterns:
+      - EvaluateImageInputUsingFeatureVector
+      - Outcome = {{integer}}
+      
+  Test case ImageInputUsingImageApi:
+    patterns:
+      - EvaluateImageInputUsingImageApi
+      
+  Test result ImageInputUsingImageApi:
+    patterns:
+      - EvaluateImageInputUsingImageApi
+      - Outcome = {{integer}}
+      
+  Test case CompareImageApiResults:
+    patterns:
+      - Both image API calls returned the same output vector
+      
+  Test run must be completed:
+    patterns:
+      - Evaluation Complete

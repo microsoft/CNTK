@@ -5,7 +5,7 @@
 
 #pragma once
 #include <opencv2/core/mat.hpp>
-#include "DataDeserializerBase.h"
+#include "ImageDeserializerBase.h"
 #include "Config.h"
 #include "ByteReader.h"
 #include <unordered_map>
@@ -18,12 +18,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // All sequences consist only of a single sample (image/label).
 // For features it uses dense storage format with different layout (dimensions) per sequence.
 // For labels it uses the csc sparse storage format.
-class ImageDataDeserializer : public DataDeserializerBase
+class ImageDataDeserializer : public ImageDeserializerBase
 {
 public:
     // A new constructor to support new compositional configuration,
     // that allows composition of deserializers and transforms on inputs.
-    ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config);
+    ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
 
     // TODO: This constructor should be deprecated in the future. Compositional config should be used instead.
     explicit ImageDataDeserializer(const ConfigParameters& config);
@@ -49,37 +49,25 @@ private:
     {
         std::string m_path;
         size_t m_classId;
+        uint8_t m_copyId;
     };
 
     class ImageChunk;
 
-    // A helper class for generation of type specific labels (currently float/double only).
-    class LabelGenerator;
-    typedef std::shared_ptr<LabelGenerator> LabelGeneratorPtr;
-    LabelGeneratorPtr m_labelGenerator;
-
     // Sequence descriptions for all input data.
     std::vector<ImageSequenceDescription> m_imageSequences;
 
-    // Mapping of logical sequence key into sequence description.
-    std::map<size_t, size_t> m_keyToSequence;
-
-    // Element type of the feature/label stream (currently float/double only).
-    ElementType m_featureElementType;
-
-    // whether images shall be loaded in grayscale 
-    bool m_grayscale;
-
     // Not using nocase_compare here as it's not correct on Linux.
     using PathReaderMap = std::unordered_map<std::string, std::shared_ptr<ByteReader>>;
-    void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders);
+    using ReaderSequenceMap = std::map<std::string, std::map<std::string, std::vector<size_t>>>;
+    void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders, ReaderSequenceMap& readerSequences, const std::string& expandDirectory);
     cv::Mat ReadImage(size_t seqId, const std::string& path, bool grayscale);
 
     // REVIEW alexeyk: can potentially use vector instead of map. Need to handle default reader and resizing though.
     using SeqReaderMap = std::unordered_map<size_t, std::shared_ptr<ByteReader>>;
     SeqReaderMap m_readers;
 
-    FileByteReader m_defaultReader;
+    std::unique_ptr<FileByteReader> m_defaultReader;
 };
 
 }}}

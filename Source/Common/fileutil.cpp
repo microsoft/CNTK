@@ -16,6 +16,7 @@
 #endif
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
 #include "Basics.h"
+#include "basetypes.h" //for attemp()
 #include "fileutil.h"
 #include "ProgressTracing.h"
 
@@ -24,6 +25,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <glob.h>
+#include <dirent.h>
+#include <sys/sendfile.h>
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -51,11 +54,18 @@
 #endif
 
 #define __out_z_cap(x) // a fake SAL annotation; this may come in handy some day if we try static code analysis, so I don't want to delete it
+#define FINDCLOSE_ERROR 0
 
 #include <errno.h>
 
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
+
+// All sizes are in bytes
+const int BUF_SIZE = 1000000;                       // Default buffer size 
+const int LARGE_BUF_SIZE = 10 * BUF_SIZE;           // Used by fopenOrDie
+const DWORD READ_SIZE_LIMIT = 15 * 1024 * 1024;     // Used by freadOrDie
+const DWORD WRITE_SIZE_LIMIT = 16 * 1024 * 1024;    // Used by fwriteOrDie
 
 // ----------------------------------------------------------------------------
 // some mappings for non-Windows builds
@@ -96,7 +106,11 @@ const wchar_t* GetScanFormatString(unsigned int)
 {
     return L" %u";
 }
-//template <>    const wchar_t* GetScanFormatString(unsigned long) {return L" %lu";}
+template <>
+const wchar_t* GetScanFormatString(unsigned long) 
+{
+    return L" %lu";
+}
 template <>
 const wchar_t* GetScanFormatString(float)
 {
@@ -108,7 +122,7 @@ const wchar_t* GetScanFormatString(double)
     return L" %lg";
 }
 template <>
-const wchar_t* GetScanFormatString(size_t)
+const wchar_t* GetScanFormatString(unsigned long long)
 {
     return L" %llu";
 }
@@ -153,7 +167,13 @@ const wchar_t* GetFormatString(unsigned int)
 {
     return L" %u";
 }
-//template <>    const wchar_t* GetFormatString(unsigned long) {return L" %lu";}
+
+template <>
+const wchar_t* GetFormatString(unsigned long)
+{
+    return L" %lu";
+}
+
 template <>
 const wchar_t* GetFormatString(float)
 {
@@ -165,7 +185,7 @@ const wchar_t* GetFormatString(double)
     return L" %.17g";
 }
 template <>
-const wchar_t* GetFormatString(size_t)
+const wchar_t* GetFormatString(unsigned long long)
 {
     return L" %llu";
 }
@@ -239,8 +259,9 @@ FILE* fopenOrDie(const string& pathname, const char* mode)
         RuntimeError("error opening file '%s': %s", pathname.c_str(), strerror(errno));
     }
     if (strchr(mode, 'S'))
-    {                                       // if optimized for sequential access then use large buffer
-        setvbuf(f, NULL, _IOFBF, 10000000); // OK if it fails
+    {
+        // If optimized for sequential access, then use large buffer. OK if it fails
+        setvbuf(f, NULL, _IOFBF, LARGE_BUF_SIZE);
     }
     return f;
 }
@@ -253,8 +274,9 @@ FILE* fopenOrDie(const wstring& pathname, const wchar_t* mode)
         RuntimeError("error opening file '%ls': %s", pathname.c_str(), strerror(errno));
     }
     if (strchr(mode, 'S'))
-    {                                       // if optimized for sequential access then use large buffer
-        setvbuf(f, NULL, _IOFBF, 10000000); // OK if it fails
+    {
+        // If optimized for sequential access, then use large buffer. OK if it fails
+        setvbuf(f, NULL, _IOFBF, LARGE_BUF_SIZE);
     }
     return f;
 }
@@ -287,10 +309,12 @@ void fsetmode(FILE* f, char type)
 
 void freadOrDie(void* ptr, size_t size, size_t count, FILE* f)
 {
+    size_t limit = max(READ_SIZE_LIMIT / size, (size_t)1);  // Normalize by size, as fread() expects units, not bytes
+
     // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
     while (count > 0)
     {
-        size_t chunkn = min(count, (size_t) 15 * 1024 * 1024); // BUGBUG: I surely meant this limit to be bytes, not units of 'size'...
+        size_t chunkn = min(count, limit);
         size_t n = fread(ptr, size, chunkn, f);
         if (n != chunkn)
             RuntimeError("error reading from file: %s", strerror(errno));
@@ -305,9 +329,9 @@ void freadOrDie(void* ptr, size_t size, size_t count, const HANDLE f)
     // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
     while (count > 0)
     {
-        size_t chunkn = min(count * size, (size_t) 15 * 1024 * 1024);
+        DWORD chunkn = min((DWORD)(count * size), READ_SIZE_LIMIT);
         DWORD n;
-        ReadFile(f, ptr, (DWORD) chunkn, &n, NULL);
+        ReadFile(f, ptr, chunkn, &n, NULL);
         if (n != chunkn)
             RuntimeError("error number for reading from file: %s", GetLastError());
         count -= (size_t)(n / size);
@@ -329,10 +353,9 @@ void fwriteOrDie(const void* ptr, size_t size, size_t count, FILE* f)
     while (totalBytes > 0)
     {
         size_t wantWrite = totalBytes;
-#define LIMIT (16 * 1024 * 1024) // limit to 16 MB at a time
-        if (wantWrite > LIMIT)
+        if (wantWrite > WRITE_SIZE_LIMIT)
         {
-            wantWrite = LIMIT;
+            wantWrite = WRITE_SIZE_LIMIT;
         }
         size_t n = fwrite((const void*) p1, 1, wantWrite, f);
         if (n != wantWrite)
@@ -355,10 +378,9 @@ void fwriteOrDie(const void* ptr, size_t size, size_t count, const HANDLE f)
     while (totalBytes > 0)
     {
         DWORD wantWrite = totalBytes;
-#define LIMIT (16 * 1024 * 1024) // limit to 16 MB at a time
-        if (wantWrite > LIMIT)
+        if (wantWrite > WRITE_SIZE_LIMIT)
         {
-            wantWrite = LIMIT;
+            wantWrite = WRITE_SIZE_LIMIT;
         }
         DWORD byteWritten = 0;
         if (WriteFile(f, (const void*) p1, wantWrite, &byteWritten, NULL) == false)
@@ -537,7 +559,7 @@ uint64_t fgetpos(FILE* f)
 void fsetpos(FILE* f, uint64_t reqpos)
 {
 #ifdef _MSC_VER // standard does not allow to cast between fpos_t and integer numbers, and indeed it does not work on Linux (but on Windows and GCC)
-#ifdef _MSC_VER // special hack for VS CRT
+#if (_MSC_VER <= 1800) // Note: this does not trigger if loaded in vs2013 mode in vs2015!
     // Visual Studio's ::fsetpos() flushes the read buffer. This conflicts with a situation where
     // we generally read linearly but skip a few bytes or KB occasionally, as is
     // the case in speech recognition tools. This requires a number of optimizations.
@@ -560,6 +582,34 @@ void fsetpos(FILE* f, uint64_t reqpos)
         if (curpos != fgetpos(f) || curpos + f->_cnt != cureob)
             break; // oops
     }
+#else
+    // special hack for VS CRT (for VS2015)
+    // Visual Studio's ::fsetpos() flushes the read buffer. This conflicts with a situation where
+    // we generally read linearly but skip a few bytes or KB occasionally, as is
+    // the case in speech recognition tools. This requires a number of optimizations.
+#define MAX_FREAD_SKIP 65536
+
+    // forward seeks up to 64KiB are simulated
+    // through a dummy read instead of fsetpos to
+    // the new position.
+    uint64_t curpos = fgetpos(f);
+    size_t n = min((size_t)reqpos - (size_t)curpos, (size_t)MAX_FREAD_SKIP);
+
+    // TODO: if we only skip a limited number of bytes, fread() them
+    //       instead of fsetpos() to the new position since the vs2015
+    //       libraries might drop the internal buffer and thus have to re-read
+    //       from the new position, somthing that costs performance.
+    if (n < MAX_FREAD_SKIP)
+    {
+        // in case we  stay in the internal buffer, no fileio is needed for this operation.
+        char buf[MAX_FREAD_SKIP];
+        fread(buf, sizeof(buf[0]), n, f); // (this may fail, but really shouldn't)
+
+        // if we made it then do not call fsetpos()
+        if (reqpos == fgetpos(f))
+            return;
+    }
+#undef MAX_FREAD_SKIP
 #endif // end special hack for VS CRT
 
     // actually perform the seek
@@ -629,6 +679,34 @@ void renameOrDie(const std::wstring& from, const std::wstring& to)
 #else
     renameOrDie(wtocharpath(from.c_str()).c_str(), wtocharpath(to.c_str()).c_str());
 #endif
+}
+
+// ----------------------------------------------------------------------------
+// copyOrDie(): copy file with error handling.
+// ----------------------------------------------------------------------------
+
+void copyOrDie(const string& from, const string& to)
+{
+    // Call wide string implementation.
+    copyOrDie(s2ws(from), s2ws(to));
+}
+
+void copyOrDie(const wstring& from, const wstring& to)
+{
+    const wstring tempTo = to + L".tmp";
+#ifdef _WIN32
+    const BOOL succeeded = CopyFile(from.c_str(), tempTo.c_str(), FALSE);
+    if (!succeeded)
+        RuntimeError("error copying file '%ls' to '%ls': %d", from.c_str(), tempTo.c_str(), GetLastError());
+#else
+    FILE* fromFile = fopenOrDie(from, L"rb");
+    FILE* tempToFile = fopenOrDie(tempTo, L"wb");
+    const size_t fromFileSize = filesize(fromFile);
+    sendfile(fileno(tempToFile), fileno(fromFile), 0, fromFileSize);
+    fcloseOrDie(fromFile);
+    fcloseOrDie(tempToFile);
+#endif
+    renameOrDie(tempTo, to);
 }
 
 // ----------------------------------------------------------------------------
@@ -815,28 +893,28 @@ CHAR* fgetline(FILE* f, CHAR* buf, int size)
 // STL string version
 std::string fgetline(FILE* f)
 {
-    vector<char> buf(1000000);
+    vector<char> buf(BUF_SIZE);
     return fgetline(f, &buf[0], (int) buf.size());
 }
 
 // STL string version
 std::wstring fgetlinew(FILE* f)
 {
-    vector<wchar_t> buf(1000000);
+    vector<wchar_t> buf(BUF_SIZE);
     return fgetline(f, &buf[0], (int) buf.size());
 }
 
 // STL string version avoiding most memory allocations
 void fgetline(FILE* f, std::string& s, std::vector<char>& buf)
 {
-    buf.resize(1000000); // enough? // KIT: increased to 1M to be safe
+    buf.resize(BUF_SIZE);
     const char* p = fgetline(f, &buf[0], (int) buf.size());
     s.assign(p);
 }
 
 void fgetline(FILE* f, std::wstring& s, std::vector<wchar_t>& buf)
 {
-    buf.resize(1000000); // enough? // KIT: increased to 1M to be safe
+    buf.resize(BUF_SIZE);
     const wchar_t* p = fgetline(f, &buf[0], (int) buf.size());
     s.assign(p);
 }
@@ -844,7 +922,6 @@ void fgetline(FILE* f, std::wstring& s, std::vector<wchar_t>& buf)
 // char buffer version
 void fgetline(FILE* f, std::vector<char>& buf)
 {
-    const int BUF_SIZE = 1000000; // enough? // KIT: increased to 1M to be safe
     buf.resize(BUF_SIZE);
     fgetline(f, &buf[0], (int) buf.size());
     buf.resize(strnlen(&buf[0], BUF_SIZE) + 1); // SECURITY NOTE: string use has been reviewed
@@ -852,7 +929,6 @@ void fgetline(FILE* f, std::vector<char>& buf)
 
 void fgetline(FILE* f, std::vector<wchar_t>& buf)
 {
-    const int BUF_SIZE = 1000000; // enough? // KIT: increased to 1M to be safe
     buf.resize(BUF_SIZE);
     fgetline(f, &buf[0], (int) buf.size());
     buf.resize(wcsnlen(&buf[0], BUF_SIZE) + 1); // SECURITY NOTE: string use has been reviewed
@@ -1632,6 +1708,11 @@ static size_t fgetfilechars(const std::wstring& path, vector<char>& buffer)
     return len;
 }
 
+static void fgetfilechars(const std::wstring& path, vector<char>& buffer, size_t& len)
+{
+    len = fgetfilechars(path, buffer);
+}
+
 template <class LINES>
 static void strtoklines(char* s, LINES& lines)
 {
@@ -1639,10 +1720,14 @@ static void strtoklines(char* s, LINES& lines)
         lines.push_back(p);
 }
 
-void msra::files::fgetfilelines(const std::wstring& path, vector<char>& buffer, std::vector<std::string>& lines)
+void msra::files::fgetfilelines(const std::wstring& path, vector<char>& buffer, std::vector<std::string>& lines, int numberOfTries)
 {
-    // load it into RAM in one huge chunk
-    const size_t len = fgetfilechars(path, buffer);
+    size_t len = 0;
+    msra::util::attempt(numberOfTries, [&]() // (can be reading from network)
+    {
+        // load it into RAM in one huge chunk
+        fgetfilechars(path, buffer, len);
+    });
 
     // parse into lines
     lines.resize(0);
@@ -1651,11 +1736,15 @@ void msra::files::fgetfilelines(const std::wstring& path, vector<char>& buffer, 
 }
 
 // same as above but returning const char* (avoiding the memory allocation)
-vector<char*> msra::files::fgetfilelines(const wstring& path, vector<char>& buffer)
+vector<char*> msra::files::fgetfilelines(const wstring& path, vector<char>& buffer, int numberOfTries)
 {
-    // load it into RAM in one huge chunk
-    const size_t len = fgetfilechars(path, buffer);
-
+    size_t len = 0;
+    msra::util::attempt(numberOfTries, [&]() // (can be reading from network)
+    {
+        // load it into RAM in one huge chunk
+        fgetfilechars(path, buffer, len);
+    });
+    
     // parse into lines
     vector<char*> lines;
     lines.reserve(len / 20);
@@ -1692,9 +1781,14 @@ public:
     }
     ~auto_find_handle()
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()
         if (h != INVALID_HANDLE_VALUE)
-            ::FindClose(h);
+        {
+            int rc = ::FindClose(h);
+            if ((rc == FINDCLOSE_ERROR) && !std::uncaught_exception())
+            {
+                RuntimeError("Release: Failed to close handle: %d", ::GetLastError());
+            }
+        }
     }
     operator HANDLE() const
     {
@@ -1888,6 +1982,54 @@ void msra::files::make_intermediate_dirs(const wstring& filepath)
             subpath += L"/";
         subpath += p;
     }
+}
+
+std::vector<std::wstring> msra::files::get_all_files_from_directory(const std::wstring& directory)
+{
+    std::vector<std::wstring> result;
+#ifdef _WIN32
+    WIN32_FIND_DATA ffd = {};
+    HANDLE hFind = FindFirstFile((directory + L"/*").c_str(), &ffd);
+    if (INVALID_HANDLE_VALUE == hFind)
+        RuntimeError("Cannot get information about directory '%ls'.", directory.c_str());
+
+    do
+    {
+        if (!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+        {
+            result.push_back(ffd.cFileName);
+        }
+    } while (FindNextFile(hFind, &ffd) != 0);
+
+    auto dwError = GetLastError();
+    FindClose(hFind);
+
+    if (dwError != ERROR_NO_MORE_FILES)
+        RuntimeError("Error iterating directory '%ls'", directory.c_str());
+#else
+    std::string d = msra::strfun::utf8(directory);
+    auto dirp = opendir(d.c_str());
+    dirent *dp = nullptr;
+    struct stat st = {};
+    while ((dp = readdir(dirp)) != NULL)
+    {
+        const std::string fileName = dp->d_name;
+        const std::string fullFileName = d + "/" + fileName;
+
+        if (fileName == "." || fileName == "..")
+            continue;
+
+        if (stat(fullFileName.c_str(), &st) == -1)
+            continue;
+
+        if ((st.st_mode & S_IFDIR) != 0)
+            continue;
+
+        result.push_back(msra::strfun::utf16(fileName));
+    }
+    closedir(dirp);
+#endif
+    return result;
 }
 
 // ----------------------------------------------------------------------------

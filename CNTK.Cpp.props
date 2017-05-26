@@ -1,44 +1,108 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(SolutionDir)\CNTK.Common.props" />
   <PropertyGroup>
-    <!-- Note: SolutionDir / RepoRootPath are the same in current setup -->
-    <RepoRootPath>$(MSBuildThisFileDirectory)</RepoRootPath>
-    <RelativeProjectPath>$(MSBuildProjectDirectory.Substring($(MSBuildThisFileDirectory.Length)))</RelativeProjectPath>
-
-    <OutDir>$(RepoRootPath)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(RepoRootPath)$(Platform)\.build\$(Configuration)\$(RelativeProjectPath)\</IntDir>
-
-    <DebugBuild>false</DebugBuild>
-    <DebugBuild Condition="$(Configuration.StartsWith('Debug'))">true</DebugBuild>
-
-    <ReleaseBuild>false</ReleaseBuild>
-    <ReleaseBuild Condition="!$(DebugBuild)">true</ReleaseBuild>
-
-    <GpuBuild>true</GpuBuild>
-    <GpuBuild Condition="$(Configuration.EndsWith('_CpuOnly'))">false</GpuBuild>
-
-    <CpuOnlyBuild>true</CpuOnlyBuild>
-    <CpuOnlyBuild Condition="$(GpuBuild)">false</CpuOnlyBuild>
-
-    <NvmlInclude>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</NvmlInclude>
-    <NvmlLibPath>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
-
-    <CudaVersion/>
+    <CudaVersion />
+    <CudaVersion Condition="Exists('$(CUDA_PATH_V8_0)') And '$(CudaVersion)' == ''">8.0</CudaVersion>
     <CudaVersion Condition="Exists('$(CUDA_PATH_V7_5)') And '$(CudaVersion)' == ''">7.5</CudaVersion>
-    <CudaVersion Condition="Exists('$(CUDA_PATH_V7_0)') And '$(CudaVersion)' == ''">7.0</CudaVersion>
 
+    <NvmlInclude />
+    <NvmlInclude Condition="'$(CudaVersion)' == '7.5'">"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</NvmlInclude>
+    <NvmlInclude Condition="'$(CudaVersion)' == '8.0'" />
+
+    <NvmlLibPath />
+    <NvmlLibPath Condition="'$(CudaVersion)' == '7.5'">"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
+    <NvmlLibPath Condition="'$(CudaVersion)' == '8.0'" />
+
+    <NvmlDll>%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml.dll</NvmlDll>
+    <NvmlDll Condition="Exists('c:\local\bindrop\NVSMI\nvml.dll')">c:\local\bindrop\NVSMI\nvml.dll</NvmlDll>
+
+    <HasOpenCv>false</HasOpenCv>
+    <HasOpenCv Condition="Exists('$(OPENCV_PATH)') Or Exists('$(OPENCV_PATH_V31)')">true</HasOpenCv>
+    
+    <HasProtobuf>false</HasProtobuf>
+    <HasProtobuf Condition="Exists('$(PROTOBUF_PATH)')">true</HasProtobuf>
+
+    <HasBoost>false</HasBoost>
+    <HasBoost Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">true</HasBoost>
+
+    <UseZip>false</UseZip>
+    <UseZip Condition="Exists('$(ZLIB_PATH)')">true</UseZip>
+
+    <HasMultiverso>false</HasMultiverso>
+    <HasMultiverso Condition="Exists('$(SolutionDir)\Source\Multiverso\include\multiverso')">true</HasMultiverso>
+
+    <!-- If an executable links Cntk.Reader-$(CntkComponentVersion).lib, it has dependency on Cntk.Common.dll, Cntk.Math.dll and Cntk.PerformanceProfiler.dll -->
+    <ReaderLibs>Cntk.Reader-$(CntkComponentVersion).lib;Cntk.Common-$(CntkComponentVersion).lib;Cntk.Math-$(CntkComponentVersion).lib;Cntk.PerformanceProfiler-$(CntkComponentVersion).lib</ReaderLibs>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <MathLibrary>MKL</MathLibrary>
+    <CNTKCustomMKLVersion>3</CNTKCustomMKLVersion>
+    <CNTKCustomMKLPath>$(CNTK_MKL_PATH)\$(CNTKCustomMKLVersion)</CNTKCustomMKLPath>
+    <MathIncludePath>$(CNTKCustomMKLPath)\include</MathIncludePath>
+    <MathDefine>USE_MKL</MathDefine>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(CNTK_MKL_SEQUENTIAL)' != '1'">
+    <MathLibraryName>CNTK custom MKL Parallel (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
+    <MathLibraryPath>$(CNTKCustomMKLPath)\x64\parallel</MathLibraryPath>
+    <MathLinkLibrary>mkl_cntk_p.lib</MathLinkLibrary>
+    <MathDelayLoad>mkl_cntk_p.dll</MathDelayLoad>
+    <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
+    <UnitTestDlls>$(OutDir)mkl_cntk_p.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(CNTK_MKL_SEQUENTIAL)' == '1'">
+    <MathLibraryName>CNTK custom MKL Sequential (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
+    <MathLibraryPath>$(CNTKCustomMKLPath)\x64\sequential</MathLibraryPath>
+    <MathLinkLibrary>mkl_cntk_s.lib</MathLinkLibrary>
+    <MathDelayLoad>mkl_cntk_s.dll</MathDelayLoad>
+    <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
+    <UnitTestDlls>$(OutDir)mkl_cntk_s.dll;</UnitTestDlls>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(UseZip)">
+    <ZipInclude>$(ZLIB_PATH)\include;$(ZLIB_PATH)\lib\libzip\include;</ZipInclude>
+    <ZipDefine>USE_ZIP</ZipDefine>
+    <ZipLibPath>$(ZLIB_PATH)\lib;</ZipLibPath>
+    <ZipLibs>zlib.lib;zip.lib;</ZipLibs>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="Exists('$(OPENCV_PATH)')">
+    <OpenCvPath>$(OPENCV_PATH)</OpenCvPath>
+    <OpenCvVersion>300</OpenCvVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="Exists('$(OPENCV_PATH_V31)')">
+    <OpenCvPath>$(OPENCV_PATH_V31)</OpenCvPath>
+    <OpenCvVersion>310</OpenCvVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(HasOpenCv)">
+    <OpenCvInclude>$(OpenCvPath)\include;</OpenCvInclude>
+    <OpenCvWorld Condition="$(ReleaseBuild)">opencv_world$(OpenCvVersion)</OpenCvWorld>
+    <OpenCvWorld Condition="$(DebugBuild)">opencv_world$(OpenCvVersion)d</OpenCvWorld>
+    <OpenCvLib>$(OpenCvWorld).lib</OpenCvLib>
+    <OpenCvLibPath>$(OpenCvPath)\x64\vc14\lib</OpenCvLibPath>
+    <OpenCvBinPath>$(OpenCvPath)\x64\vc14\bin</OpenCvBinPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(HasProtobuf)">
+    <ProtobufInclude>$(PROTOBUF_PATH)\include;</ProtobufInclude>
+    <ProtobufLibPath>$(PROTOBUF_PATH)\lib;</ProtobufLibPath>
+    <ProtobufLib Condition="$(ReleaseBuild)">libprotobuf.lib</ProtobufLib>
+    <ProtobufLib Condition="$(DebugBuild)">libprotobufd.lib</ProtobufLib>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(CudaVersion)' == '8.0'">
+    <CudaPath>$(CUDA_PATH_V8_0)</CudaPath>
+    <CudaRuntimeDll>cudart64_80.dll</CudaRuntimeDll>
+    <CudaDlls>cublas64_80.dll;cusparse64_80.dll;curand64_80.dll;$(CudaRuntimeDll)</CudaDlls>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(CudaVersion)' == '7.5'">
     <CudaPath>$(CUDA_PATH_V7_5)</CudaPath>
     <CudaRuntimeDll>cudart64_75.dll</CudaRuntimeDll>
     <CudaDlls>cublas64_75.dll;cusparse64_75.dll;curand64_75.dll;$(CudaRuntimeDll)</CudaDlls>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(CudaVersion)' == '7.0'">
-    <CudaPath>$(CUDA_PATH_V7_0)</CudaPath>
-    <CudaRuntimeDll>cudart64_70.dll</CudaRuntimeDll>
-    <CudaDlls>cublas64_70.dll;cusparse64_70.dll;curand64_70.dll;$(CudaRuntimeDll)</CudaDlls>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -51,11 +115,17 @@
 
   <PropertyGroup Condition="'$(ConfigurationType)' == 'StaticLibrary'">
     <UseDebugLibraries>$(DebugBuild)</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>$(ReleaseBuild)</WholeProgramOptimization>
     <LinkIncremental>$(DebugBuild)</LinkIncremental>
   </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)";HAS_MPI=1</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
 
   <ItemDefinitionGroup Condition="'$(ConfigurationType)' == 'StaticLibrary'">
     <ClCompile>
@@ -80,7 +150,7 @@
     </Link>
   </ItemDefinitionGroup>
 
-  <ItemDefinitionGroup Condition="'$(ConfigurationType)' == 'StaticLibrary' And $(ReleaseBuild)">
+  <ItemDefinitionGroup Condition="$(ReleaseBuild) And !$(NoOptBuild)">
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -94,5 +164,24 @@
       <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="$(NoOptBuild)">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <OptimizeReferences>false</OptimizeReferences>
+      <Profile>false</Profile>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <PropertyGroup Condition="$(NoOptBuild)" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
 
 </Project>

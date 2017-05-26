@@ -1,0 +1,53 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+set -x
+
+# This test case is to test CSEvalClient works with the same setup of users. 
+# For that purpose, the test needs to create some models and data in the Examples directories as expected by CSEvalClient.
+# These files are removed by Jenkins during workspace cleanup.
+
+# The eval test uses some pretrained models which are not part of the CNTK repository itself
+# We use the dataset from an external location specified using an environment variable
+if [[ -z "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" || ! -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+  echo This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location.
+  exit 1
+fi
+
+if [ "$OS" == "Windows_NT" ]; then
+
+  # Copy pretrained models and data
+  TestDataDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`
+  ImageDir=$TEST_ROOT_DIR/../../Examples/Image
+  MnistDir=$ImageDir/DataSets/MNIST
+  DataDir=$MnistDir
+  ConfigDir=$MnistDir/../../GettingStarted
+  OutputDir=$ConfigDir/Output
+  ResnetModelDir=$ImageDir/Classification/ResNet
+
+  cp $TestDataDir/Image/MNIST/v0/Train-28x28_cntk_text.txt $DataDir || exit $?
+  cp $TestDataDir/Image/MNIST/v0/Test-28x28_cntk_text.txt $DataDir || exit $?
+  cp $TestDataDir/PreTrainedModels/ResNet/v0/ResNet_18.model $ResnetModelDir || exit $?
+
+  # Train model for evaluation
+  [ -d $OutputDir ] || mkdir $OutputDir || exit $?
+  [ -d $OutputDir/Models ] && rm -rf $OutputDir/Models
+  DeleteModelsAfterTest=0
+  [ -f $ConfigDir/01_OneHidden.cntk ] || exit 1
+  [ -f $ConfigDir/02_OneConv.cntk ] || exit 1
+  cntkrun 01_OneHidden.cntk "stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit $?
+  cntkrun 02_OneConv.cntk "stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit $?
+
+  # Run the evaluation test
+  cd $TEST_BIN_DIR
+  ./CSEvalClientTest.exe || exit $?
+
+  # Check whether any exceptions encountered
+  grep -i "Inner Exception" $TEST_RUN_DIR/output.txt && exit $?
+  exit 0
+
+else
+  echo CSEvalClientTest can only run on Windows.
+  exit 1
+fi

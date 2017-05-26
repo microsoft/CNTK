@@ -1,0 +1,129 @@
+# Note: This sample uses the deprecated NdlNetworkBuilder.
+#       An updated version using BrainScript is coming soon.
+#       Please find updated samples on Github, https://github.com/Microsoft/CNTK/tree/master/Examples /...
+#
+# Parameters can be overwritten on the command line
+# for example: cntk configFile=myConfigFile RootDir=../.. 
+# For running from Visual Studio add
+# currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
+rootDir = ".."
+
+configDir = "$rootDir$/01_OneHidden_ndl"
+dataDir   = "$rootDir$/Data"
+outputDir = "$rootDir$/Output"
+modelDir  = "$outputDir$/Models"
+
+deviceId = 0
+# override the above as follows when running on CPU:
+# deviceId = -1
+
+command = train:test
+
+precision = "float"
+modelPath = "$modelDir$/01_OneHidden"
+
+stderr = "$outputDir$/01_OneHidden_ndl_out"
+traceLevel = 1
+numMBsToShowResult = 500
+
+#######################################
+#  TRAINING CONFIG                    #
+#######################################
+
+train = [
+    action = "train"
+
+    # BrainScript version as described in Tutorial II.
+    # This is currently disabled. To run this, please remove the "_disabled" from "BrainScriptNetworkBuilder_disabled"
+    # and comment out the NDLNetworkBuilder below.
+    BrainScriptNetworkBuilder_disabled = [
+
+        # macros to include
+        include "Shared.bs"
+
+        featDim = 28 * 28                           # number of pixels
+        labelDim = 10                               # number of distinct labels
+
+        features = Input (featDim)
+        featScaled = Constant (1.0 / 256.0) .* features
+        labels = Input (labelDim)
+
+        hiddenDim = 200
+
+        # DNNSigmoidLayer and DNNLayer are defined in Shared.bs
+        h1 = DNNSigmoidLayer (featDim,  hiddenDim, featScaled, 1)
+        z  = DNNLayer        (hiddenDim, labelDim, h1,         1)
+
+        ce   = CrossEntropyWithSoftmax (labels, z)
+        errs = ClassificationError         (labels, z)
+
+        # set top5Errs as an evaluation node to compute the top-5 error rate
+        # This is not marked tag="evaluation" since expensive during training.
+        # We explicitly select it as an output node in the "test" command.
+        top5Errs = ClassificationError (labels, z, topN=5)
+
+        # declare special nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    ]
+
+    # deprecated NDL version
+    NDLNetworkBuilder = [
+        imageLayout = "cudnn"
+        initOnCPUOnly = true
+        ndlMacros = "$configDir$/../Macros.ndl"
+        networkDescription = "$ConfigDir$/01_OneHidden.ndl"
+    ]
+
+    SGD = [
+        epochSize = 60000
+        minibatchSize = 32
+        learningRatesPerSample = 0.003125
+        momentumAsTimeConstant = 0
+        maxEpochs = 30
+    ]
+
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Train-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]   
+]
+
+#######################################
+#  TEST CONFIG                        #
+#######################################
+
+test = [
+    action = "test"
+    minibatchSize = 1024    # reduce this if you run out of memory
+
+    evalNodeNames = ce:errs:top5Errs
+
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]
+]

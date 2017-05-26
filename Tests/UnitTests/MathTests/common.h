@@ -15,14 +15,6 @@ struct Err
     static const T Rel;
     static const T Abs;
 };
-template <>
-const float Err<float>::Rel = 1e-5f;
-template <>
-const double Err<double>::Rel = 1e-5f;
-template <>
-const float Err<float>::Abs = 1.192092896e-07f;
-template <>
-const double Err<double>::Abs = 2.2204460492503131e-016;
 
 bool AreEqual(float a, float b, float maxRelError, float maxAbsError);
 bool AreEqual(double a, double b, double maxRelError, double maxAbsError);

@@ -1,0 +1,1 @@
+do = Print("new StringFunction [ what = 'Format' ; how = '.2' ; arg = '13 > 42' ]")

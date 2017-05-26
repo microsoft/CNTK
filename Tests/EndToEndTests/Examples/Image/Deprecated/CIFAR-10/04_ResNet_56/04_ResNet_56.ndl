@@ -1,0 +1,112 @@
+load=LocalMacros
+run=DNN
+
+LocalMacros = [
+    ImageW = 32
+    ImageH = 32
+    ImageC = 3
+    LabelDim = 10
+
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = $imageLayout$)
+    labels = Input(LabelDim, tag = label)
+    
+    convWScale = 7.07
+    convBValue = 0
+    
+    fc1WScale = 0.4
+    fc1BValue = 0
+    
+    scValue = 1
+    
+    # Batch normalization time constant.
+    bnTimeConst = 4096
+    
+    kW = 3
+    kH = 3
+    
+    hStride1 = 1
+    vStride1 = 1
+]
+
+DNN=[
+    conv1WScale = 0.26
+    cMap1 = 16
+    conv1 = ConvBNReLULayer(features, cMap1, 27, kW, kH, hStride1, vStride1, conv1WScale, convBValue, scValue, bnTimeConst)
+
+    rn1_1 = ResNetNode2(conv1,  cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_2 = ResNetNode2(rn1_1,  cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_3 = ResNetNode2(rn1_2,  cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_4 = ResNetNode2(rn1_3,  cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_5 = ResNetNode2(rn1_4,  cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_6 = ResNetNode2(rn1_5,  cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_7 = ResNetNode2(rn1_6,  cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_8 = ResNetNode2(rn1_7,  cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_9 = ResNetNode2(rn1_8,  cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_10= ResNetNode2(rn1_9,  cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_11= ResNetNode2(rn1_10, cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_12= ResNetNode2(rn1_11, cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_13= ResNetNode2(rn1_12, cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_14= ResNetNode2(rn1_13, cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_15= ResNetNode2(rn1_14, cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_16= ResNetNode2(rn1_15, cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_17= ResNetNode2(rn1_16, cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn1_18= ResNetNode2(rn1_17, cMap1, 144, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+
+    cMap2 = 32
+    rn2_1_Wproj = Parameter(cMap2, cMap1, init = fromFile, initFromFilePath = "$Proj16to32Filename$", learningRateMultiplier = 0)
+    rn2_1 = ResNetNode2Inc(rn1_18, cMap2, 144, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst, rn2_1_Wproj)
+    #rn2_1 = ResNetNode2Inc2(rn1_18, cMap1, cMap2, 144, 288, kW, kH, convWScale, 3.5, convBValue, scValue, bnTimeConst)
+    rn2_2 = ResNetNode2(rn2_1, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_3 = ResNetNode2(rn2_2, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_4 = ResNetNode2(rn2_3, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_5 = ResNetNode2(rn2_4, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_6 = ResNetNode2(rn2_5, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_7 = ResNetNode2(rn2_6, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_8 = ResNetNode2(rn2_7, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_9 = ResNetNode2(rn2_8, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_10= ResNetNode2(rn2_9, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_11= ResNetNode2(rn2_10, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_12= ResNetNode2(rn2_11, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_13= ResNetNode2(rn2_12, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_14= ResNetNode2(rn2_13, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_15= ResNetNode2(rn2_14, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_16= ResNetNode2(rn2_15, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_17= ResNetNode2(rn2_16, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn2_18= ResNetNode2(rn2_17, cMap2, 288, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+
+    cMap3 = 64
+    rn3_1_Wproj = Parameter(cMap3, cMap2, init = fromFile, initFromFilePath = "$Proj32to64Filename$", learningRateMultiplier = 0)
+    rn3_1 = ResNetNode2Inc(rn2_18, cMap3, 288, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst, rn3_1_Wproj)
+    #rn3_1 = ResNetNode2Inc2(rn2_18, cMap2, cMap3, 288, 576, kW, kH, convWScale, 3.5, convBValue, scValue, bnTimeConst)
+    rn3_2 = ResNetNode2(rn3_1, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_3 = ResNetNode2(rn3_2, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_4 = ResNetNode2(rn3_3, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_5 = ResNetNode2(rn3_4, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_6 = ResNetNode2(rn3_5, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_7 = ResNetNode2(rn3_6, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_8 = ResNetNode2(rn3_7, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_9 = ResNetNode2(rn3_8, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_10= ResNetNode2(rn3_9, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_11= ResNetNode2(rn3_10, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_12= ResNetNode2(rn3_11, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_13= ResNetNode2(rn3_12, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_14= ResNetNode2(rn3_13, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_15= ResNetNode2(rn3_14, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_16= ResNetNode2(rn3_15, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_17= ResNetNode2(rn3_16, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+    rn3_18= ResNetNode2(rn3_17, cMap3, 576, kW, kH, convWScale, convBValue, scValue, bnTimeConst)
+                
+    # Global average pooling
+    poolW = 8
+    poolH = 8
+    poolhStride = 1
+    poolvStride = 1
+    pool = AveragePooling(rn3_18, poolW, poolH, poolhStride, poolvStride, imageLayout = $imageLayout$)
+
+    ol = DnnLastLayer(cMap3, labelDim, pool, fc1WScale, fc1BValue)
+    
+    CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
+    Err = ClassificationError(labels, ol, tag = Eval)
+    OutputNodes = ol
+]
+

@@ -9,6 +9,7 @@
 
 #include "Transformer.h"
 #include "SequenceEnumerator.h"
+#include "ExceptionCapture.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -40,6 +41,12 @@ public:
         m_outputStreams = transformedStreams;
     }
 
+    // Returns current position in the global timeline. The returned value is in samples.
+    size_t GetCurrentSamplePosition() override
+    {
+        return m_sequenceProvider->GetCurrentSamplePosition();
+    }
+
     // Sets configuration for the current epoch.
     // Some transformers can change their config based on the epoch.
     virtual void StartEpoch(const EpochConfiguration &config) override
@@ -53,6 +60,11 @@ public:
         m_sequenceProvider->StartEpoch(config);
     }
 
+    void SetCurrentSamplePosition(size_t currentSamplePosition) override
+    {
+        m_sequenceProvider->SetCurrentSamplePosition(currentSamplePosition);
+    }
+
     // Description of streams that the transformer provides.
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
     {
@@ -61,25 +73,35 @@ public:
 
     // Gets next sequences up to a maximum count of samples,
     // applying transformers to particular streams.
-    virtual Sequences GetNextSequences(size_t sampleCount) override
+    virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) override
     {
         assert(m_sequenceProvider != nullptr);
-        Sequences sequences = m_sequenceProvider->GetNextSequences(sampleCount);
+        Sequences sequences = m_sequenceProvider->GetNextSequences(globalSampleCount, localSampleCount);
         if (sequences.m_data.empty())
         {
             return sequences;
         }
 
+        ExceptionCapture capture;
 #pragma omp parallel for schedule(dynamic)
         for (int j = 0; j < sequences.m_data.front().size(); ++j)
         {
-            for (auto& t : m_transformations)
+            capture.SafeRun([this, &sequences](int sequenceId)
             {
-                sequences.m_data[t.second][j] = t.first.m_transformer->Transform(sequences.m_data[t.second][j]);
-            }
+                for (auto& t : m_transformations)
+                {
+                    sequences.m_data[t.second][sequenceId] = t.first.m_transformer->Transform(sequences.m_data[t.second][sequenceId]);
+                }
+            }, j);
         }
 
+        capture.RethrowIfHappened();
         return sequences;
+    }
+
+    void SetConfiguration(const ReaderConfiguration& config) override
+    {
+        m_sequenceProvider->SetConfiguration(config);
     }
 
 private:

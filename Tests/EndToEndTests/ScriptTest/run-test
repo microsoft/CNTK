@@ -1,0 +1,15 @@
+#!/bin/bash
+
+SCRIPTSDIR=$TEST_ROOT_DIR/../../Scripts
+
+pushd $SCRIPTSDIR
+echo Current dir: $SCRIPTSDIR
+
+py.test
+
+if [ "$?" -eq "0" ]; then
+  echo "__COMPLETED__"
+fi
+
+popd
+

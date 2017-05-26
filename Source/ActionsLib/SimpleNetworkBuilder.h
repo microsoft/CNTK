@@ -66,7 +66,7 @@ enum class EvalCriterion : int
     CrossEntropy,
     SquareError,
     Logistic,
-    ErrorPrediction,
+    ClassificationError,
     ClassCrossEntropyWithSoftmax,
     NCECrossEntropyWithSoftmax,
     CRF,

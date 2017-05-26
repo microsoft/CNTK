@@ -1,0 +1,318 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU X5680 @ 3.33GHz
+    Hardware threads: 12
+    Total Memory: 33537232 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/d/GitHub/CNTK/x64/release/cntk.exe configFile=D:\GitHub\CNTK\Examples\Image\GettingStarted/05_OneConvRegr.cntk currentDirectory=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData RunDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu DataDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData ConfigDir=D:\GitHub\CNTK\Examples\Image\GettingStarted OutputDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true stderr=- trainNetwork=[SGD=[maxEpochs=3]]
+CNTK 2.0.beta6.0+ (chazhang/rmse 8f552e, Dec 20 2016 11:06:33) on CHAZHANG at 2016/12/20 19:44:31
+
+D:\GitHub\CNTK\x64\release\cntk.exe  configFile=D:\GitHub\CNTK\Examples\Image\GettingStarted/05_OneConvRegr.cntk  currentDirectory=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData  RunDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu  DataDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData  ConfigDir=D:\GitHub\CNTK\Examples\Image\GettingStarted  OutputDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  stderr=-  trainNetwork=[SGD=[maxEpochs=3]]
+Changed current directory to C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData
+12/20/2016 19:44:31: Redirecting stderr to file -_trainNetwork_testNetwork.log
+12/20/2016 19:44:31: -------------------------------------------------------------------
+12/20/2016 19:44:31: Build info: 
+
+12/20/2016 19:44:31: 		Built time: Dec 20 2016 11:06:33
+12/20/2016 19:44:31: 		Last modified date: Mon Dec 19 16:21:48 2016
+12/20/2016 19:44:31: 		Build type: Release
+12/20/2016 19:44:31: 		Build target: GPU
+12/20/2016 19:44:31: 		With 1bit-SGD: no
+12/20/2016 19:44:31: 		With ASGD: yes
+12/20/2016 19:44:31: 		Math lib: mkl
+12/20/2016 19:44:31: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+12/20/2016 19:44:31: 		CUB_PATH: C:\src\cub-1.4.1
+12/20/2016 19:44:31: 		CUDNN_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+12/20/2016 19:44:31: 		Build Branch: chazhang/rmse
+12/20/2016 19:44:31: 		Build SHA1: 8f552eb944007e43031ebd259ba4d6d998b2658a (modified)
+12/20/2016 19:44:31: 		Built by chazhang on CHAZHANG
+12/20/2016 19:44:31: 		Build Path: D:\GitHub\CNTK\Source\CNTK\
+12/20/2016 19:44:31: -------------------------------------------------------------------
+12/20/2016 19:44:32: -------------------------------------------------------------------
+12/20/2016 19:44:32: GPU info:
+
+12/20/2016 19:44:32: 		Device[0]: cores = 2688; computeCapability = 3.5; type = "GeForce GTX TITAN"; memory = 6144 MB
+12/20/2016 19:44:32: -------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: 05_OneConvRegr.cntk:command=trainNetwork:testNetwork
+configparameters: 05_OneConvRegr.cntk:ConfigDir=D:\GitHub\CNTK\Examples\Image\GettingStarted
+configparameters: 05_OneConvRegr.cntk:currentDirectory=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData
+configparameters: 05_OneConvRegr.cntk:dataDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData
+configparameters: 05_OneConvRegr.cntk:deviceId=0
+configparameters: 05_OneConvRegr.cntk:forceDeterministicAlgorithms=true
+configparameters: 05_OneConvRegr.cntk:modelPath=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu/Models/05_OneConvRegr
+configparameters: 05_OneConvRegr.cntk:outputDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu
+configparameters: 05_OneConvRegr.cntk:precision=float
+configparameters: 05_OneConvRegr.cntk:rootDir=..
+configparameters: 05_OneConvRegr.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu
+configparameters: 05_OneConvRegr.cntk:stderr=-
+configparameters: 05_OneConvRegr.cntk:testNetwork={
+    action = "test"
+minibatchSize = 1024    
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData/Test-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}
+
+configparameters: 05_OneConvRegr.cntk:timestamping=true
+configparameters: 05_OneConvRegr.cntk:traceLevel=1
+configparameters: 05_OneConvRegr.cntk:trainNetwork={
+    action = "train"
+    BrainScriptNetworkBuilder = {
+imageShape = 28:28:1                        
+labelDim = 10                               
+        featScale = 1/256
+        Scale{f} = x => Constant(f) .* x
+        model = Sequential (
+            Scale {featScale} :
+            ConvolutionalLayer {16, (5:5), pad = true} : ReLU : 
+            MaxPoolingLayer    {(2:2), stride=(2:2)} :
+            DenseLayer {64} : ReLU : 
+            LinearLayer {labelDim}
+        )
+        features = Input {imageShape}
+        labels = Input {labelDim}
+        z = model (features)
+        diff = labels - z
+        sqerr = ReduceSum (diff.*diff, axis=1)
+        rmse =  Sqrt (sqerr / labelDim)
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (rmse)
+        evaluationNodes = (rmse)
+        outputNodes     = (z)
+    }
+    SGD = {
+        epochSize = 0
+        minibatchSize = 64
+        maxEpochs = 15
+        learningRatesPerSample = 0.001*5:0.0005
+        momentumAsTimeConstant = 1024
+        numMBsToShowResult = 500
+    }
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu\TestData/Train-28x28_cntk_text.txt"
+        input = {
+            features   = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }   
+} [SGD=[maxEpochs=3]]
+
+12/20/2016 19:44:32: Commands: trainNetwork testNetwork
+12/20/2016 19:44:32: precision = "float"
+12/20/2016 19:44:32: WARNING: forceDeterministcAlgorithms flag is specified. Using 1 CPU thread for processing.
+
+12/20/2016 19:44:32: ##############################################################################
+12/20/2016 19:44:32: #                                                                            #
+12/20/2016 19:44:32: # trainNetwork command (train action)                                        #
+12/20/2016 19:44:32: #                                                                            #
+12/20/2016 19:44:32: ##############################################################################
+
+12/20/2016 19:44:32: 
+Creating virgin network.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[10 x 0] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[64 x 0] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[5 x 5 x 0 x 16] as glorotUniform later when dimensions are fully known.
+
+Post-processing network...
+
+2 roots:
+	rmse = Sqrt()
+	z = Plus()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> model.arrayOfFunctions[6].W = LearnableParameter() :  -> [10 x 0]
+Validating --> model.arrayOfFunctions[4].arrayOfFunctions[0].W = LearnableParameter() :  -> [64 x 0]
+Validating --> model.arrayOfFunctions[1].W = LearnableParameter() :  -> [5 x 5 x 0 x 16]
+Validating --> z.x._.x.x._.x.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *]
+Validating --> z.x._.x.x._.x = ElementTimes (z.x._.x.x._.x.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
+Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation) operation: Tensor shape was inferred as [5 x 5 x 1 x 16].
+Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation): Initializing Parameter[5 x 5 x 1 x 16] <- glorotUniform(seed=3, init dims=[400 x 25], range=0.118818(0.118818*1.000000), onCPU=true.
+)Validating --> z.x._.x.x._.c = Convolution (model.arrayOfFunctions[1].W, z.x._.x.x._.x) : [5 x 5 x 1 x 16], [28 x 28 x 1 x *] -> [28 x 28 x 16 x *]
+Validating --> model.arrayOfFunctions[1].b = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> z.x._.x.x._.res.x = Plus (z.x._.x.x._.c, model.arrayOfFunctions[1].b) : [28 x 28 x 16 x *], [1 x 1 x 16] -> [28 x 28 x 16 x *]
+Validating --> z.x._.x.x = RectifiedLinear (z.x._.x.x._.res.x) : [28 x 28 x 16 x *] -> [28 x 28 x 16 x *]
+Validating --> _z.x._.x = Pooling (z.x._.x.x) : [28 x 28 x 16 x *] -> [14 x 14 x 16 x *]
+Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 14 x 14 x 16].
+Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[64 x 14 x 14 x 16] <- glorotUniform(seed=2, init dims=[64 x 3136], range=0.043301(0.043301*1.000000), onCPU=true.
+)Validating --> z.x._.x.PlusArgs[0] = Times (model.arrayOfFunctions[4].arrayOfFunctions[0].W, _z.x._.x) : [64 x 14 x 14 x 16], [14 x 14 x 16 x *] -> [64 x *]
+Validating --> model.arrayOfFunctions[4].arrayOfFunctions[0].b = LearnableParameter() :  -> [64]
+Validating --> z.x._.x = Plus (z.x._.x.PlusArgs[0], model.arrayOfFunctions[4].arrayOfFunctions[0].b) : [64 x *], [64] -> [64 x *]
+Validating --> z.x = RectifiedLinear (z.x._.x) : [64 x *] -> [64 x *]
+Node 'model.arrayOfFunctions[6].W' (LearnableParameter operation) operation: Tensor shape was inferred as [10 x 64].
+Node 'model.arrayOfFunctions[6].W' (LearnableParameter operation): Initializing Parameter[10 x 64] <- glorotUniform(seed=1, init dims=[10 x 64], range=0.284747(0.284747*1.000000), onCPU=true.
+)Validating --> z.PlusArgs[0] = Times (model.arrayOfFunctions[6].W, z.x) : [10 x 64], [64 x *] -> [10 x *]
+Validating --> model.arrayOfFunctions[6].b = LearnableParameter() :  -> [10]
+Validating --> z = Plus (z.PlusArgs[0], model.arrayOfFunctions[6].b) : [10 x *], [10] -> [10 x *]
+Validating --> diff = Minus (labels, z) : [10 x *], [10 x *] -> [10 x *]
+Validating --> sqerr._ = ElementTimes (diff, diff) : [10 x *], [10 x *] -> [10 x *]
+Validating --> sqerr = ReduceElements (sqerr._) : [10 x *] -> [1 x *]
+Validating --> _rmse.z = LearnableParameter() :  -> [1]
+Validating --> rmse.z = ElementTimes (sqerr, _rmse.z) : [1 x *], [1] -> [1 x *]
+Validating --> rmse = Sqrt (rmse.z) : [1 x *] -> [1 x *]
+
+Validating network. 15 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+z.x._.x.x._.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+_z.x._.x: using cuDNN convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+
+
+
+Post-processing network complete.
+
+12/20/2016 19:44:32: 
+Model has 25 nodes. Using GPU 0.
+
+12/20/2016 19:44:32: Training criterion:   rmse = Sqrt
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 45 matrices, 28 are shared as 11, and 17 are not shared.
+
+	{ model.arrayOfFunctions[1].W : [5 x 5 x 1 x 16] (gradient)
+	  z.x._.x.x._.res.x : [28 x 28 x 16 x *] }
+	{ z.x : [64 x *]
+	  z.x._.x.PlusArgs[0] : [64 x *] (gradient) }
+	{ diff : [10 x *]
+	  z.PlusArgs[0] : [10 x *] (gradient) }
+	{ model.arrayOfFunctions[6].W : [10 x 64] (gradient)
+	  sqerr._ : [10 x *]
+	  z : [10 x *] (gradient) }
+	{ z.x._.x.x : [28 x 28 x 16 x *]
+	  z.x._.x.x._.c : [28 x 28 x 16 x *] (gradient) }
+	{ model.arrayOfFunctions[4].arrayOfFunctions[0].W : [64 x 14 x 14 x 16] (gradient)
+	  z.x._.x : [64 x *] }
+	{ diff : [10 x *] (gradient)
+	  model.arrayOfFunctions[6].b : [10] (gradient)
+	  sqerr : [1 x *] }
+	{ model.arrayOfFunctions[1].b : [1 x 1 x 16] (gradient)
+	  z.x._.x.PlusArgs[0] : [64 x *]
+	  z.x._.x.x : [28 x 28 x 16 x *] (gradient) }
+	{ _z.x._.x : [14 x 14 x 16 x *] (gradient)
+	  z.PlusArgs[0] : [10 x *]
+	  z.x._.x : [64 x *] (gradient) }
+	{ model.arrayOfFunctions[4].arrayOfFunctions[0].b : [64] (gradient)
+	  rmse.z : [1 x *]
+	  sqerr._ : [10 x *] (gradient)
+	  z.x : [64 x *] (gradient) }
+	{ _z.x._.x : [14 x 14 x 16 x *]
+	  z.x._.x.x._.res.x : [28 x 28 x 16 x *] (gradient) }
+
+
+12/20/2016 19:44:32: Training 201834 parameters in 6 out of 6 parameter tensors and 20 nodes with gradient:
+
+12/20/2016 19:44:32: 	Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation) : [5 x 5 x 1 x 16]
+12/20/2016 19:44:32: 	Node 'model.arrayOfFunctions[1].b' (LearnableParameter operation) : [1 x 1 x 16]
+12/20/2016 19:44:32: 	Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].W' (LearnableParameter operation) : [64 x 14 x 14 x 16]
+12/20/2016 19:44:32: 	Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].b' (LearnableParameter operation) : [64]
+12/20/2016 19:44:32: 	Node 'model.arrayOfFunctions[6].W' (LearnableParameter operation) : [10 x 64]
+12/20/2016 19:44:32: 	Node 'model.arrayOfFunctions[6].b' (LearnableParameter operation) : [10]
+
+12/20/2016 19:44:32: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+12/20/2016 19:44:32: Starting Epoch 1: learning rate per sample = 0.001000  effective momentum = 0.939413  momentum as time constant = 1024.0 samples
+
+12/20/2016 19:44:32: Starting minibatch loop.
+12/20/2016 19:44:36:  Epoch[ 1 of 3]-Minibatch[   1- 500]: rmse = 0.19692780 * 32000; time = 3.5997s; samplesPerSecond = 8889.6
+12/20/2016 19:44:38: Finished Epoch[ 1 of 3]: [Training] rmse = 0.16610838 * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.001; epochTime=5.13347s
+12/20/2016 19:44:38: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu/Models/05_OneConvRegr.1'
+
+12/20/2016 19:44:38: Starting Epoch 2: learning rate per sample = 0.001000  effective momentum = 0.939413  momentum as time constant = 1024.0 samples
+
+12/20/2016 19:44:38: Starting minibatch loop.
+12/20/2016 19:44:39:  Epoch[ 2 of 3]-Minibatch[   1- 500, 100.00%]: rmse = 0.10913648 * 32000; time = 1.7382s; samplesPerSecond = 18409.5
+12/20/2016 19:44:41: Finished Epoch[ 2 of 3]: [Training] rmse = 0.10355435 * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.001; epochTime=3.27313s
+12/20/2016 19:44:41: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu/Models/05_OneConvRegr.2'
+
+12/20/2016 19:44:41: Starting Epoch 3: learning rate per sample = 0.001000  effective momentum = 0.939413  momentum as time constant = 1024.0 samples
+
+12/20/2016 19:44:41: Starting minibatch loop.
+12/20/2016 19:44:43:  Epoch[ 3 of 3]-Minibatch[   1- 500, 100.00%]: rmse = 0.08839038 * 32000; time = 1.7339s; samplesPerSecond = 18455.8
+12/20/2016 19:44:44: Finished Epoch[ 3 of 3]: [Training] rmse = 0.08518207 * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.001; epochTime=3.26846s
+12/20/2016 19:44:44: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20161220114426.791596\Examples\Image\GettingStarted_05_OneConvRegr@release_gpu/Models/05_OneConvRegr'
+
+12/20/2016 19:44:44: Action "train" complete.
+
+
+12/20/2016 19:44:44: ##############################################################################
+12/20/2016 19:44:44: #                                                                            #
+12/20/2016 19:44:44: # testNetwork command (test action)                                          #
+12/20/2016 19:44:44: #                                                                            #
+12/20/2016 19:44:44: ##############################################################################
+
+
+Post-processing network...
+
+2 roots:
+	rmse = Sqrt()
+	z = Plus()
+
+Validating network. 25 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *1]
+Validating --> model.arrayOfFunctions[6].W = LearnableParameter() :  -> [10 x 64]
+Validating --> model.arrayOfFunctions[4].arrayOfFunctions[0].W = LearnableParameter() :  -> [64 x 14 x 14 x 16]
+Validating --> model.arrayOfFunctions[1].W = LearnableParameter() :  -> [5 x 5 x 1 x 16]
+Validating --> z.x._.x.x._.x.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *1]
+Validating --> z.x._.x.x._.x = ElementTimes (z.x._.x.x._.x.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *1] -> [28 x 28 x 1 x *1]
+Validating --> z.x._.x.x._.c = Convolution (model.arrayOfFunctions[1].W, z.x._.x.x._.x) : [5 x 5 x 1 x 16], [28 x 28 x 1 x *1] -> [28 x 28 x 16 x *1]
+Validating --> model.arrayOfFunctions[1].b = LearnableParameter() :  -> [1 x 1 x 16]
+Validating --> z.x._.x.x._.res.x = Plus (z.x._.x.x._.c, model.arrayOfFunctions[1].b) : [28 x 28 x 16 x *1], [1 x 1 x 16] -> [28 x 28 x 16 x *1]
+Validating --> z.x._.x.x = RectifiedLinear (z.x._.x.x._.res.x) : [28 x 28 x 16 x *1] -> [28 x 28 x 16 x *1]
+Validating --> _z.x._.x = Pooling (z.x._.x.x) : [28 x 28 x 16 x *1] -> [14 x 14 x 16 x *1]
+Validating --> z.x._.x.PlusArgs[0] = Times (model.arrayOfFunctions[4].arrayOfFunctions[0].W, _z.x._.x) : [64 x 14 x 14 x 16], [14 x 14 x 16 x *1] -> [64 x *1]
+Validating --> model.arrayOfFunctions[4].arrayOfFunctions[0].b = LearnableParameter() :  -> [64]
+Validating --> z.x._.x = Plus (z.x._.x.PlusArgs[0], model.arrayOfFunctions[4].arrayOfFunctions[0].b) : [64 x *1], [64] -> [64 x *1]
+Validating --> z.x = RectifiedLinear (z.x._.x) : [64 x *1] -> [64 x *1]
+Validating --> z.PlusArgs[0] = Times (model.arrayOfFunctions[6].W, z.x) : [10 x 64], [64 x *1] -> [10 x *1]
+Validating --> model.arrayOfFunctions[6].b = LearnableParameter() :  -> [10]
+Validating --> z = Plus (z.PlusArgs[0], model.arrayOfFunctions[6].b) : [10 x *1], [10] -> [10 x *1]
+Validating --> diff = Minus (labels, z) : [10 x *1], [10 x *1] -> [10 x *1]
+Validating --> sqerr._ = ElementTimes (diff, diff) : [10 x *1], [10 x *1] -> [10 x *1]
+Validating --> sqerr = ReduceElements (sqerr._) : [10 x *1] -> [1 x *1]
+Validating --> _rmse.z = LearnableParameter() :  -> [1]
+Validating --> rmse.z = ElementTimes (sqerr, _rmse.z) : [1 x *1], [1] -> [1 x *1]
+Validating --> rmse = Sqrt (rmse.z) : [1 x *1] -> [1 x *1]
+
+Validating network. 15 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+z.x._.x.x._.c: using cuDNN convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+_z.x._.x: using cuDNN convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+
+
+
+Post-processing network complete.
+
+evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 25 matrices, 0 are shared as 0, and 25 are not shared.
+
+
+12/20/2016 19:44:46: Minibatch[1-10]: rmse = 0.07736671 * 10000
+12/20/2016 19:44:46: Final Results: Minibatch[1-10]: rmse = 0.07736671 * 10000
+
+12/20/2016 19:44:46: Action "test" complete.
+
+12/20/2016 19:44:46: __COMPLETED__

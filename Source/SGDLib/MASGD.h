@@ -37,11 +37,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_reportFrequency; 
         size_t m_totalSamplesProcessedSinceLastReport; 
         size_t m_localSamplesProcessedSinceLastReport; 
+        double m_accumulatedSecondsOnSyncPointInOneEpoch;
+        size_t m_syncPointHitCounterInOneEpoch;
         Timer  m_Timer; 
 
     public:
         MASGDPerfStats(size_t myRank, size_t numWorkers):
-            m_numWorkers(numWorkers), m_myRank(myRank), m_numSyncPerformedInCurrentEpoch(0), m_reportFrequency(1)
+            m_numWorkers(numWorkers), m_myRank(myRank), m_numSyncPerformedInCurrentEpoch(0), m_reportFrequency(1), 
+            m_totalSamplesProcessedSinceLastReport(0), m_localSamplesProcessedSinceLastReport(0)
         {
             m_Timer.Start();
         }
@@ -55,6 +58,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_Timer.Restart(); 
             m_numSyncPerformedInCurrentEpoch = 0; 
+            m_accumulatedSecondsOnSyncPointInOneEpoch = 0;
+            m_syncPointHitCounterInOneEpoch = 0;
         }
         void OnEpochEnd()
         {
@@ -65,16 +70,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSyncPerformedInCurrentEpoch++;
             m_totalSamplesProcessedSinceLastReport += totalSamplesProcessedSinceLastSync; 
             m_localSamplesProcessedSinceLastReport += localSamplesProcessedSinceLastSync; 
-            if ( m_reportFrequency > 0 && m_numSyncPerformedInCurrentEpoch % m_reportFrequency == 0)
+            if ( m_reportFrequency > 0 && 
+                ( m_numSyncPerformedInCurrentEpoch % m_reportFrequency == 0 || m_numSyncPerformedInCurrentEpoch <=5 )
+               )
+                // reporting condition: 
+                // 1. if m_reportFrequency == 0 , no reporting 
+                // 2. if m_reportFrequence >0   , report MA perf Stats every m_reportFrequency model aggregation are performed 
+                //                                and the first 5 perf stats within each epoch is always reported 
             {
-                ReportMAPerfStats(
-                    m_totalSamplesProcessedSinceLastReport, 
-                    m_localSamplesProcessedSinceLastReport, 
-                    secondsOnCommunication
-                );
+                ReportMAPerfStats(m_totalSamplesProcessedSinceLastReport, 
+                                  m_localSamplesProcessedSinceLastReport, 
+                                  secondsOnCommunication );
 
                 m_totalSamplesProcessedSinceLastReport = 0; 
                 m_localSamplesProcessedSinceLastReport = 0; 
+            }
+        }
+        void OnArriveAtSyncPoint(double secondOnSyncPoint, bool printMessage)
+        {
+            if (printMessage)
+            {
+                m_accumulatedSecondsOnSyncPointInOneEpoch += secondOnSyncPoint;
+                m_syncPointHitCounterInOneEpoch++;
+                fprintf(stderr, "\t\t(model aggregation stats): %d-th sync point was hit, introducing a %.2f-seconds latency this time; accumulated time on sync point = %.2f seconds , average latency = %.2f seconds\n",
+                        (int)m_syncPointHitCounterInOneEpoch, 
+                        secondOnSyncPoint, 
+                        m_accumulatedSecondsOnSyncPointInOneEpoch, 
+                        m_accumulatedSecondsOnSyncPointInOneEpoch / m_syncPointHitCounterInOneEpoch);
             }
         }
 
@@ -93,7 +115,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             "\t\t(model aggregation stats) %d-th sync: totalThroughput = %.2fk samplesPerSecond , throughputPerWorker = %.2fk samplesPerSecond\n";
             fprintf(stderr, prefix.c_str(), (int)m_numSyncPerformedInCurrentEpoch, secondsSinceLastReport, secondOnCommunication, (int)totalSamplesProcessedSinceLastReport, (int)m_numWorkers, (int)localSamplesProcessedSinceLastReport,
                                             (int)m_numSyncPerformedInCurrentEpoch, totalThroughput, throughputPerWorker); 
-
         }
     };
     // base class for MA-SGD algorithm family 
@@ -131,7 +152,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     )
          {
              m_MAworkerStatus[m_myRank] = MAWorkerStatus::DataEnd;
-             bool read2sync=UpdateWorkerStatus(MAWorkerStatus::DataEnd);
+             Timer syncPointTimer; syncPointTimer.Start(); 
+             bool read2sync = UpdateWorkerStatus(MAWorkerStatus::DataEnd);
+             syncPointTimer.Stop();
+             m_perfReporter.OnArriveAtSyncPoint(syncPointTimer.ElapsedSeconds(), true);
              // assert(read2sync); 
              size_t totalSamplesProcessed = 0;
              float secondsOnCommunication = 0.0f; 
@@ -152,7 +176,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t  samplesSinceLastSync                                    /* input:  samples processed since last sync on this worker only */
              )
          {
+             Timer syncPointTimer; 
+             syncPointTimer.Start();
              bool read2Sync=UpdateWorkerStatus(MAWorkerStatus::DataProcessing);
+             syncPointTimer.Stop();
+             m_perfReporter.OnArriveAtSyncPoint(syncPointTimer.ElapsedSeconds(),read2Sync);
+
              size_t totalSamplesProcessed=0; 
              float secondsOnCommunication = 0.0f;
              if (read2Sync)
@@ -195,7 +224,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (dest != m_myRank)
                     {
-                        MPI_Isend(&sentSignal, 1, MPI_INT, dest, m_numSyncPerformed, m_pMPI->Communicator() , &sendRequests[dest]);
+                        m_pMPI->Isend(&sentSignal, 1, MPI_INT, dest, m_numSyncPerformed, &sendRequests[dest]);
                     }
                 }
                 // 2. recv others 
@@ -205,7 +234,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         int recvSignal = 0;
                         MPI_Status status;
-                        MPI_Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, m_pMPI->Communicator(), &status);
+                        m_pMPI->Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, &status);
                         m_MAworkerStatus[src] = (MAWorkerStatus)recvSignal;
 #if 0
                         assert(status.MPI_SOURCE == src);
@@ -218,7 +247,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (dest != m_myRank)
                     {
-                        MPI_Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
+                        m_pMPI->Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
                     }
                 }
                 retval = true; 
@@ -237,7 +266,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (dest != m_myRank)
                         {
-                            MPI_Isend(&sentSignal, 1, MPI_INT, dest, m_numSyncPerformed, m_pMPI->Communicator(), &sendRequests[dest]);
+                            m_pMPI->Isend(&sentSignal, 1, MPI_INT, dest, m_numSyncPerformed, &sendRequests[dest]);
                         }
                     }
                     // 2. recv status from others (blocking call)
@@ -247,7 +276,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             int recvSignal = 0;
                             MPI_Status status;
-                            MPI_Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, m_pMPI->Communicator(), &status);
+                            m_pMPI->Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, &status);
 #if 0 
                             // for debugging purpose, to be removed when mature 
                             assert(status.MPI_SOURCE == src);
@@ -261,7 +290,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (dest != m_myRank)
                         {
-                            MPI_Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
+                            m_pMPI->Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
                         }
                     }
                     // 4. check peer status again
@@ -289,7 +318,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t                      m_numWorkers; 
         size_t                      m_myRank;
         MASGDPerfStats              m_perfReporter;
-        MPIWrapperPtr m_pMPI;
+        MPIWrapperPtr               m_pMPI;
         DEVICEID_TYPE               m_deviceId;
  };
 

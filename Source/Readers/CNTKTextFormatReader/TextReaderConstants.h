@@ -18,7 +18,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     
     const char ESCAPE_SYMBOL = '#';
 
-    const auto BUFFER_SIZE = 256 * 1024;
+    const auto BUFFER_SIZE = 2 * 1024 * 1024;
 
     inline bool isPrintable(char c)
     {

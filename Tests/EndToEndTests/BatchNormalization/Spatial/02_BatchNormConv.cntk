@@ -1,0 +1,83 @@
+# Synthetic test for spatial batch normalization, (almost) in isolation of
+# other nodes (in particular Convolution). This is not a general example and/or
+# documenting best practices. The network was based on CIFAR-10/02_BatchNormConv.
+
+RootDir = "."
+
+ConfigDir = "$RootDir$"
+DataDir = "$RootDir$"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+
+ndlMacros = "$ConfigDir$/Macros.ndl"
+
+precision = "float"
+deviceId = 0
+imageLayout = "cudnn"
+
+batchNormalizationEngine = "testMustOverrideBatchNormalizationEngine"
+
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
+command = Train:Test
+
+traceLevel = 1
+numMBsToShowResult = 500
+
+Train = [
+    action = "train"
+    modelPath = "$ModelDir$/02_BatchNormConv"
+
+     NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/02_BatchNormConv.ndl"
+    ]
+    
+    SGD = [
+        epochSize = 1024
+        minibatchSize = 64
+        learningRatesPerMB = 0.03*7:0.01
+        momentumPerMB = 0
+        maxEpochs = 2
+        L2RegWeight = 0
+        dropoutRate = 0
+    ]
+    
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # See REAMDE.md for details on getting the data (Train_cntk_text.txt).
+        file = "$DataDir$/Train_cntk_text.txt"
+        input = [
+            features = [
+                dim = 3072
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]    
+]
+
+Test = [
+    action = "test"
+    modelPath = "$ModelDir$/02_BatchNormConv"
+    # Set minibatch size for testing.
+    minibatchSize = 16
+
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test_cntk_text.txt"
+        input = [
+            features = [
+                dim = 3072
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]    
+]

@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <ctime>
 #include <limits.h>
+#include "QuantizedOperations.h"
 
 //#include "GPUMatrix.h"
 //#include "CPUSparseMatrix.h"
@@ -27,8 +28,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 double logadd(double x, double y);
 
-//To compy with BLAS libraries matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor
-//convertion is need when passing data between CPUMatrix and C++ matrices
+// To comply with BLAS libraries matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor
+// conversion is need when passing data between CPUMatrix and C++ matrices
 template <class ElemType>
 class MATH_API CPUMatrix : public BaseMatrix<ElemType>
 {
@@ -60,9 +61,9 @@ public:
     using Base::IsEmpty;
     using Base::VerifySize;
 
-
 public:
     CPUMatrix();
+    CPUMatrix(const CPUMatrix<ElemType>& shallowCopyFrom, bool shallow);     // copy constructor, shallow
     CPUMatrix(const size_t numRows, const size_t numCols);
     CPUMatrix(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
     CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom);                      // copy constructor, deep copy
@@ -70,13 +71,13 @@ public:
     CPUMatrix(CPUMatrix<ElemType>&& moveFrom);                               // move constructor, shallow copy
     CPUMatrix<ElemType>& operator=(CPUMatrix<ElemType>&& moveFrom);          // move assignment operator, shallow copy
 
-    ~CPUMatrix();
-
 public:
     size_t BufferSize() const
     {
         return m_numRows * m_numCols * sizeof(ElemType);
     }
+
+    // Returns pointer into underlying data buffer corresponding to slice-view. This makes it different from method Buffer()
     ElemType* Data() const
     {
         return Buffer() + m_sliceViewOffset;
@@ -91,7 +92,13 @@ public:
     CPUMatrix<ElemType> Diagonal() const;
 
     ElemType Adagrad(CPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
-    void FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul);
+    
+    void FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, 
+                   ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+
+    void Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+              ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax=false);
+
     ElemType RmsProp(CPUMatrix<ElemType>& gradients,
                      ElemType RMS_GAMMA,
                      ElemType RMS_WGT_INC,
@@ -100,6 +107,7 @@ public:
                      ElemType RMS_WGT_MIN,
                      const bool needAveMultiplier);
 
+    void AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
 
     void Reshape(const size_t numRows, const size_t numCols);
 
@@ -137,7 +145,7 @@ public:
     //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, size_t matrixFlags = matrixFlagNormal);
 
-    void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
+    void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry);
 
     void SetColumn(const ElemType* colPointer, size_t colInd);
     void SetColumn(const CPUMatrix<ElemType>& valMat, size_t colInd);
@@ -147,6 +155,7 @@ public:
     void SetDiagonalValue(const CPUMatrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
     void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
     void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle);
     void AddGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
 
@@ -224,6 +233,7 @@ public:
     // sequence training
     CPUMatrix<ElemType>& DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType& threshhold);
     CPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha);
+    CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, CPUMatrix<ElemType>& totalScore, const vector<size_t>& uttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
     CPUMatrix<ElemType>& InplaceSqrt();
     CPUMatrix<ElemType>& AssignSqrtOf(const CPUMatrix<ElemType>& a);
 
@@ -257,6 +267,10 @@ public:
     ElemType SumOfAbsElements() const; // sum of all abs(elements)
     ElemType SumOfElements() const;    // sum of all elements
     CPUMatrix<ElemType>& AssignSumOfElements(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
+    CPUMatrix<ElemType>& GatherFromTarget(const CPUMatrix<ElemType>& indices, const CPUMatrix<ElemType>& target, size_t row_elements);
+    CPUMatrix<ElemType>& ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements);
 
     bool IsEqualTo(const CPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
@@ -368,26 +382,40 @@ public:
                             const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
                             CPUMatrix<ElemType>& grad) const;
 
-    void AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const;
-    void AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
-                                CPUMatrix<ElemType>& grad) const;
+    void ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                           const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, CPUMatrix<ElemType>& argmax) const;
 
-    void BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor, CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runInvStdDev,
+    void ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                            const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad, CPUMatrix<ElemType>& argmax) const;
+
+    void MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, const CPUMatrix<ElemType>& poolInput, CPUMatrix<ElemType>& input) const;
+
+    void AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output, const bool poolIncludePad) const;
+    void AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
+                                CPUMatrix<ElemType>& grad, const bool poolIncludePad) const;
+
+    void BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runVariance,
                                    CPUMatrix<ElemType>& out, double epsilon, CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const;
-    void BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& saveMean, const CPUMatrix<ElemType>& saveInvStdDev,
+    void BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<ElemType>& scale, double blendFactor, const CPUMatrix<ElemType>& saveMean, const CPUMatrix<ElemType>& saveInvStdDev,
                                     CPUMatrix<ElemType>& scaleGrad, CPUMatrix<ElemType>& biasGrad) const;
 
 public:
-    static int SetNumThreads(int numThreads); // note: this does not depend on <ElemType>, i.e. you can call it on any <ElemType>
+    // This functions do not depend on <ElemType>, i.e. you can call them on any <ElemType>
+    static int SetNumThreads(int numThreads);
+    static int GetMaxNumThreads();
+
+    static void SetCompatibleMode();
 
     // static BLAS functions
     static void SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT, CPUMatrix<ElemType>& W);
 
-    static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c);
+    static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier=nullptr);
     static void MultiplyAndAdd(const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, CPUMatrix<ElemType>& c);
     static void Multiply(const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, CPUMatrix<ElemType>& c);
     static void Multiply(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
     static void Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType beta, CPUMatrix<ElemType>& c);
+
+    static void ColumnwiseScaleAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& v, ElemType beta, CPUMatrix<ElemType>& c);
 
     static void ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);
     static void AddScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
@@ -422,6 +450,15 @@ public:
                   const std::array<size_t, 4>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+
+    int Argmin() const;
+    int Argmax() const;
+    int ArgOp(ElementWiseOperator reductionOp) const;
+
+    void TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
+                     const std::array<size_t, 2>& offsets,
+                     const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                     const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
 
     static CPUMatrix<ElemType> Ones(const size_t rows, const size_t cols);
     static CPUMatrix<ElemType> Zeros(const size_t rows, const size_t cols);
@@ -472,7 +509,7 @@ public:
 
         stream << us.m_numRows << us.m_numCols;
         for (size_t i = 0; i < us.GetNumElements(); ++i)
-            stream << us.Buffer()[i];
+            stream << us.Data()[i];
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         return stream;
     }
@@ -510,6 +547,8 @@ protected:
 
 private:
     void Clear();
+
+    void ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step = 1);
 };
 
 typedef CPUMatrix<float> CPUSingleMatrix;
