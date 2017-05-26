@@ -49,9 +49,10 @@ def create_image_mb_source(map_file, mean_file, train, total_number_of_samples):
 
     # deserializer
     return C.io.MinibatchSource(
-        C.io.ImageDeserializer(map_file, C.io.StreamDefs(
-            features=C.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-            labels=C.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+        C.io.ImageDeserializer(
+            map_file, 
+            C.io.StreamDefs(features=C.io.StreamDef(field='image', transforms=transforms), # 1st col in mapfile referred to as 'image'
+                            labels=C.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
         randomize=train,
         max_samples=total_number_of_samples,
         multithreaded_deserializer=True)
