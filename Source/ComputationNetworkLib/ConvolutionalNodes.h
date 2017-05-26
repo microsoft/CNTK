@@ -576,7 +576,7 @@ public:
         }
     }
 
-    void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_tempMatrixForward, matrixPool, 0, false, true);
@@ -595,7 +595,19 @@ public:
         RequestMatrixFromPool(m_tempMatrixBackward, matrixPool, 0, false, true);
     }
 
-    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    /*virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_tempMatrix, matrixPool);
+    }
+
+    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
+        RequestMatrixFromPool(m_tempMatrix, matrixPool);
+    }*/
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_tempMatrixBackward, matrixPool);

@@ -718,6 +718,23 @@ void CPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, c
 }
 
 template <class ElemType>
+void CPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE* h_CSRRow, const GPUSPARSE_INDEX_TYPE* h_Col, const ElemType* h_Val,
+    const size_t nz, const size_t numRows, const size_t numCols)
+{
+    if (!OwnBuffer())
+        LogicError("Cannot modify since the buffer is managed externally.");
+
+    SetFormat(matrixFormatSparseCSR);
+    RequireSizeAndAllocate(numRows, numCols, nz, true, false);
+
+    // Note: This is a casualty of the switch away from m_nz. RowSize and NzSize depend on ColLocation being correct for format SparseCSC. Thus we must
+    // copy ColLocation before RowLocation and NzValues. That's ugly and error prone.
+    memcpy(RowLocation(), h_CSRRow, sizeof(CPUSPARSE_INDEX_TYPE)*(numRows + 1));
+    memcpy(ColLocation(), h_Col, sizeof(CPUSPARSE_INDEX_TYPE)*nz);
+    memcpy(NzValues(), h_Val, sizeof(ElemType)*nz);
+}
+
+template <class ElemType>
 ElemType* CPUSparseMatrix<ElemType>::Data()  const
 {
     return (Buffer() + 

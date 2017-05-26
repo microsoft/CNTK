@@ -34,6 +34,7 @@
 #include "SimpleDistGradAggregator.h"
 #include "V2SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
+#include "LatticeFreeMMINode.h"
 #include "PerformanceProfiler.h"
 
 #include <map>
@@ -712,7 +713,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             // TODO(dataASGD) making evaluator becoming nondistributed one when using ASGD, since Multiverso has another background thread using MPI.
             //                Making the evaluation serial (non-distributed) will slowdown training especially when validation set is large.
-            SimpleEvaluator<ElemType> evalforvalidation(net, UsingAsyncGradientAggregation(i + 1) ?nullptr : m_mpi, m_enableDistributedMBReading);
+            SimpleEvaluator<ElemType> evalforvalidation(net, UsingAsyncGradientAggregation(i + 1) ?nullptr : m_mpi, m_enableDistributedMBReading, 100, 0, 0, m_useTwoPassTraining ? m_maxSamplesInRAM : SIZE_MAX, 1, m_useTwoPassTraining);
             vector<wstring> cvSetTrainAndEvalNodes;
             if (criterionNodes.size() > 0)
             {
@@ -1098,8 +1099,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchesNeeded<ElemType>(trainSetDataReader, m_maxSamplesInRAM, m_numSubminiBatches, tunedMBSize);
 
     // this is non-trivial, we need a manager object to handle this
-    if (numSubminibatchesNeeded > 1)
-        smbDispatcher.Init(net, learnableNodes, criterionNodes, evaluationNodes);
+    if (numSubminibatchesNeeded > 1 || m_useTwoPassTraining)
+        smbDispatcher.Init(net, learnableNodes, criterionNodes, evaluationNodes, m_useTwoPassTraining);
 
     // The following is a special feature only supported by the Kaldi2Reader for more efficient sequence training.
     // This attemps to compute the error signal for the whole utterance, which will
@@ -1136,7 +1137,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         if (useDistributedMBReading)
             fprintf(stderr, ", distributed reading is ENABLED");
 
-        if (numSubminibatchesNeeded > 1)
+        if (numSubminibatchesNeeded > 1 || m_useTwoPassTraining)
         {
             if (m_maxSamplesInRAM < SIZE_MAX)
                 fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
@@ -1162,7 +1163,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // for differential logging, we keep the previous criterion values around
     EpochCriterion         epochCriterionLastLogged  = epochCriterion;
     vector<EpochCriterion> epochEvalErrorsLastLogged = epochEvalErrors;
-
     EpochCriterion         tensorBoardEpochCriterionLastLogged = epochCriterion;
     vector<EpochCriterion> tensorBoardEpochEvalErrorsLastLogged = epochEvalErrors;
 
@@ -1192,6 +1192,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     forwardPropRoots.push_back(criterionNodes[0]);
 
     bool noMoreSamplesToProcess = false;
+    auto lfMMINode = dynamic_cast<LatticeFreeMMINode<ElemType>*>(criterionNodes[0].get());
     bool isFirstMinibatch = true;
     for (;;)
     {
@@ -1203,7 +1204,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         auto profGetMinibatch = ProfilerTimeBegin();
         bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
-                                                                                useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
+                                                                                useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi, m_useTwoPassTraining);
 
         if (maxNumSamplesExceeded) // Dropping data.
             wasDataRead = false;
@@ -1265,6 +1266,18 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
             // We optionally break the minibatch into sub-minibatches.
             // This, when enabled, is used when a full minibatch does not fit into GPU RAM.
+            if (m_useTwoPassTraining)
+            {
+                if (m_maxSamplesInRAM >= SIZE_MAX)
+                    LogicError("m_maxSamplesInRAM should not be larger than SIZE_MAX when m_useTwoPassTraining is true.");
+
+                numSubminibatchesNeeded = (actualMBSize + m_maxSamplesInRAM - 1) / m_maxSamplesInRAM;
+                if (lfMMINode)
+                {
+                    lfMMINode->SetTotalFrameNumberofCurrentMinibatch(actualMBSize);
+                }
+            }
+            
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
@@ -1287,13 +1300,35 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // backprop
                 // ===========================================================
 
-                if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
+                if (!(m_useTwoPassTraining && lfMMINode && actualNumSubminibatches > 1))
+                {
+                    if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
+                        net->Backprop(criterionNodes[0]);
+
+                    // house-keeping for sub-minibatching
+                    if (actualNumSubminibatches > 1)
+                        smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
+                }
+            }                                                        // end sub-minibatch loop
+
+            if (m_useTwoPassTraining && lfMMINode && actualNumSubminibatches > 1 && learnRatePerSample > 0.01 * m_minLearnRate)
+            {
+                for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
+                {
+                    smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
+                    ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+                    ComputationNetwork::BumpEvalTimeStamp(labelNodes);
+
+                    net->ForwardProp(evaluationNodes); // the bulk of this evaluation is reused in ComputeGradient() below
+                    net->ForwardProp(criterionNodes[0]);
+
                     net->Backprop(criterionNodes[0]);
 
-                // house-keeping for sub-minibatching
-                if (actualNumSubminibatches > 1)
+                    // house-keeping for sub-minibatching
                     smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
-            }                                                        // end sub-minibatch loop
+                }
+            }
+
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();
         } // if (actualMBSize > 0)
@@ -1806,7 +1841,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     const size_t numIterationsBeforePrintingProgress = 100;
     size_t numItersSinceLastPrintOfProgress = 0;
     size_t actualMBSizeDummy;
-    while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy, m_mpi))
+    while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy, m_mpi, m_useTwoPassTraining))
     {
         // TODO: move these into GetMinibatchIntoNetwork()  --but those are passed around; necessary? Can't we get them from 'net'?
         ComputationNetwork::BumpEvalTimeStamp(featureNodes);
@@ -2940,6 +2975,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_truncated = configSGD(L"truncated", false);
     m_maxSamplesInRAM = configSGD(L"maxSamplesInRAM", (size_t) SIZE_MAX);
     m_numSubminiBatches = configSGD(L"numSubminibatches", (size_t) 1);
+    m_useTwoPassTraining = configSGD(L"useTwoPassTraining", false);
 
     m_packThresholdSizeInBytes = configSGD(L"packThresholdSizeInKB", DEFAULT_PACK_THRESHOLD_SIZE_IN_KB) * 1024;
 

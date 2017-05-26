@@ -20,6 +20,7 @@
 #include "IDistGradAggregator.h"
 #include "SimpleDistGradAggregator.h"
 #include "Criterion.h"
+#include "LatticeFreeMMINode.h"
 #include "Globals.h"
 
 #include <vector>
@@ -39,7 +40,7 @@ class SimpleEvaluator
 {
 public:
     SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, bool enableDistributedMBReading = false, const size_t numMBsToShowResult = 100, const size_t firstMBsToShowResult = 0, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
-                    const size_t numSubminiBatches = 1) :
+                    const size_t numSubminiBatches = 1, const bool useTwoPassTraining = false) :
         m_net(net), 
         m_numMBsToShowResult(numMBsToShowResult), 
         m_firstMBsToShowResult(firstMBsToShowResult),
@@ -49,7 +50,8 @@ public:
         m_mpi(mpi), 
         m_distGradAgg(nullptr),
         m_gradHeader(nullptr),
-        m_enableDistributedMBReading(enableDistributedMBReading)
+        m_enableDistributedMBReading(enableDistributedMBReading),
+        m_useTwoPassTraining(useTwoPassTraining)
     {
     }
 
@@ -107,12 +109,19 @@ public:
         // Passing in two empty node lists so the dispatcher can work for the evalNodes.
         std::list<ComputationNodeBasePtr> learnableNodes;
         std::vector<ComputationNodeBasePtr> criterionNodes;
-        if (numSubminibatchesNeeded > 1)
-            smbDispatcher.Init(m_net, learnableNodes, criterionNodes, evalNodes);
+        if (numSubminibatchesNeeded > 1 || m_useTwoPassTraining)
+            smbDispatcher.Init(m_net, learnableNodes, criterionNodes, evalNodes, m_useTwoPassTraining);
 
         CriterionAccumulator<ElemType> localEpochEvalErrors(
             evalNodes, m_net->GetDeviceId(),
             {evalNodesWhichAccumulateResult.begin(), evalNodesWhichAccumulateResult.end()});
+
+        LatticeFreeMMINode<ElemType>* lfMMINode = nullptr;
+        for (auto& x : evalNodes)
+        {
+            lfMMINode = dynamic_cast<LatticeFreeMMINode<ElemType>*>(x.get());
+            if (lfMMINode) break;
+        }
 
         const size_t numIterationsBeforePrintingProgress = 100;
         size_t numItersSinceLastPrintOfProgress = 0;
@@ -120,10 +129,10 @@ public:
         for (;;)
         {
             size_t actualMBSize = 0;
-            bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
+            bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net, nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi, m_useTwoPassTraining);
             // in case of distributed reading, we do a few more loops until all ranks have completed
             // end of epoch
-            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) 
+            if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess))
                 break;
 
             // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
@@ -133,27 +142,38 @@ public:
 
             if (actualMBSize > 0)
             {
-
-            size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
-            for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
-            {
-                if (actualNumSubminibatches > 1)
+                if (m_useTwoPassTraining)
                 {
-                    smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
+                    if (m_maxSamplesInRAM >= SIZE_MAX)
+                        LogicError("m_maxSamplesInRAM should not be larger than SIZE_MAX when m_useTwoPassTraining is true.");
+
+                    numSubminibatchesNeeded = (actualMBSize + m_maxSamplesInRAM - 1) / m_maxSamplesInRAM;
+                    if (lfMMINode)
+                    {
+                        lfMMINode->SetTotalFrameNumberofCurrentMinibatch(actualMBSize);
+                    }
                 }
 
-                ComputationNetwork::BumpEvalTimeStamp(featureNodes);
-                ComputationNetwork::BumpEvalTimeStamp(labelNodes);
+                size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
+                for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
+                {
+                    if (actualNumSubminibatches > 1)
+                    {
+                        smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
+                    }
 
-                m_net->ForwardProp(evalNodes);
+                    ComputationNetwork::BumpEvalTimeStamp(featureNodes);
+                    ComputationNetwork::BumpEvalTimeStamp(labelNodes);
 
-                // house-keeping for sub-minibatching
+                    m_net->ForwardProp(evalNodes);
+
+                    // house-keeping for sub-minibatching
+                    if (actualNumSubminibatches > 1)
+                        smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
+                } // end sub-minibatch loop
+
                 if (actualNumSubminibatches > 1)
-                    smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
-            } // end sub-minibatch loop
-
-            if (actualNumSubminibatches > 1)
-                smbDispatcher.DoneWithCurrentMinibatch();
+                    smbDispatcher.DoneWithCurrentMinibatch();
             } // if (actualMBSize > 0)
 
             // BUGBUG (Issue #95): Once we have multiple layouts, this must be done on a per-node basis.
@@ -333,6 +353,7 @@ protected:
     size_t m_numSubminiBatches;
     MPIWrapperPtr m_mpi;
     bool m_enableDistributedMBReading;
+    bool m_useTwoPassTraining;
 
     std::shared_ptr<IDistGradAggregator<ElemType>> m_distGradAgg;
     std::shared_ptr<struct DistGradHeader> m_gradHeader;

@@ -323,6 +323,8 @@ protected:
     double m_seqGammarCalcWP;
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
+
+    bool m_useTwoPassTraining;
     
     // decide whether should apply regularization into BatchNormalizationNode
     // true: disable Regularization

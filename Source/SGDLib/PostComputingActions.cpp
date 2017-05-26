@@ -90,7 +90,7 @@ void PostComputingActions<ElemType>::BatchNormalizationStatistics(IDataReader * 
         {
             // during the bn stat, dataRead must be ensured
             bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net,
-                nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
+                nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi, /*useTwoPassTraining*/ false);
 
             if (!wasDataRead) LogicError("DataRead Failure in batch normalization statistics");
 
