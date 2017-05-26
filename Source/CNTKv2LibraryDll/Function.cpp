@@ -1215,10 +1215,10 @@ namespace CNTK
         return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
     }
 
-    FunctionPtr UniformRandom(const Variable& operand, double low, double high, unsigned long seed, const std::wstring& name)
+    FunctionPtr UniformRandomLike(const Variable& operand, double low, double high, unsigned long seed, const std::wstring& name)
     {
         if (low >= high)
-            LogicError("UniformRandom: low end of the range (%g) must be < high end of the range (%g)", low, high);
+            LogicError("UniformRandomLike: low end of the range (%g) must be < high end of the range (%g)", low, high);
         Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeUniform, { low, high }, seed);
         return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }
@@ -1231,10 +1231,10 @@ namespace CNTK
         return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
     }
 
-    FunctionPtr NormalRandom(const Variable& operand, double mean, double stdev, unsigned long seed, const std::wstring& name)
+    FunctionPtr NormalRandomLike(const Variable& operand, double mean, double stdev, unsigned long seed, const std::wstring& name)
     {
         if (stdev < 0)
-            LogicError("NormalRandom: standard deviation (%g) must be non-negative", stdev);
+            LogicError("NormalRandomLike: standard deviation (%g) must be non-negative", stdev);
         Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeNormal, { mean, stdev }, seed);
         return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }
@@ -1247,10 +1247,10 @@ namespace CNTK
         return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
     }
 
-    FunctionPtr GumbelRandom(const Variable& operand, double loc, double scale, unsigned long seed, const std::wstring& name)
+    FunctionPtr GumbelRandomLike(const Variable& operand, double loc, double scale, unsigned long seed, const std::wstring& name)
     {
         if (scale < 0)
-            LogicError("GumbelRandom: scale (%g) must be non-negative", scale);
+            LogicError("GumbelRandomLike: scale (%g) must be non-negative", scale);
         Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeGumbel, { loc, scale }, seed);
         return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }
@@ -1263,10 +1263,10 @@ namespace CNTK
         return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
     }
 
-    FunctionPtr BernoulliRandom(const Variable& operand, double mean, unsigned long seed, const std::wstring& name)
+    FunctionPtr BernoulliRandomLike(const Variable& operand, double mean, unsigned long seed, const std::wstring& name)
     {
         if (mean < 0 || mean > 1)
-            LogicError("BernoulliRandom: mean (%g) must be between 0 and 1", mean);
+            LogicError("BernoulliRandomLike: mean (%g) must be between 0 and 1", mean);
         Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeBernoulli, { mean }, seed);
         return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }

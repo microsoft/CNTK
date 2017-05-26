@@ -7,7 +7,6 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 from cntk.cntk_py import sentinel_value_for_auto_select_random_seed as auto_select
-from cntk.cntk_py import uniform_random, normal_random, gumbel_random, bernoulli_random
 from cntk.default_options import default_override_or
 from cntk.internal.swig_helper import typemap
 from cntk.internal import sanitize_random_args, sanitize_input
@@ -28,7 +27,15 @@ def uniform(shape, dtype=default_override_or(np.float32), low=0.0, high=1.0, see
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Examples:
+        >>> u = C.random.uniform((2,3), seed=98052)
+        >>> u.eval(device=C.cpu()) # explicitly setting cpu because this is tested on multiple platforms; leave it unspecified in your code
+        array([[ 0.931785,  0.814722,  0.479606],
+               [ 0.937468,  0.004351,  0.185131]], dtype=float32)
+
     """
+    from cntk.cntk_py import uniform_random
     shape, dtype = sanitize_random_args(shape, dtype)
     return uniform_random(shape, dtype, low, high, seed, name)
 
@@ -48,7 +55,14 @@ def normal(shape, dtype=default_override_or(np.float32), mean=0.0, scale=1.0, se
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Examples:
+        >>> z = C.random.normal((2,3), seed=98052)
+        >>> z.eval(device=C.cpu()) # explicitly setting cpu because this is tested on multiple platforms; leave it unspecified in your code
+        array([[ 1.803254,  0.995395, -0.631974],
+               [-1.73672 ,  0.005615, -0.340025]], dtype=float32)
     """
+    from cntk.cntk_py import normal_random
     shape, dtype = sanitize_random_args(shape, dtype)
     return normal_random(shape, dtype, mean, scale, seed, name)
 
@@ -69,10 +83,17 @@ def gumbel(shape, dtype=default_override_or(np.float32), loc=0.0, scale=1.0, see
     Returns:
         :class:`~cntk.ops.functions.Function`
 
+    Examples:
+        >>> g = C.random.gumbel((2,3), seed=98052)
+        >>> g.eval(device=C.cpu()) # explicitly setting cpu because this is tested on multiple platforms; leave it unspecified in your code
+        array([[-0.987713, -0.522298,  0.425918],
+               [-1.019599,  5.435177,  1.586071]], dtype=float32)
+
     See also:
         `The Gumbel-Max Trick
         <https://hips.seas.harvard.edu/blog/2013/04/06/the-gumbel-max-trick-for-discrete-distributions/>`_.
     """
+    from cntk.cntk_py import gumbel_random
     shape, dtype = sanitize_random_args(shape, dtype)
     return gumbel_random(shape, dtype, loc, scale, seed, name)
 
@@ -92,7 +113,13 @@ def bernoulli(shape, dtype=default_override_or(np.float32), mean=0.5, seed=auto_
     Returns:
         :class:`~cntk.ops.functions.Function`
 
+    Examples:
+        >>> b = C.random.bernoulli((2,3), seed=98052)
+        >>> b.eval(device=C.cpu()) # explicitly setting cpu because this is tested on multiple platforms; leave it unspecified in your code
+        array([[ 1.,  1.,  0.],
+               [ 1.,  0.,  0.]], dtype=float32)
     """
+    from cntk.cntk_py import bernoulli_random
     shape, dtype = sanitize_random_args(shape, dtype)
     return bernoulli_random(shape, dtype, mean, seed, name)
 
@@ -111,9 +138,19 @@ def uniform_like(x, low=0.0, high=1.0, seed=auto_select, name=''):
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Examples:
+        >>> x = C.input_variable(4)
+        >>> x0 = np.zeros((3,4), dtype=np.float32)
+        >>> u = C.random.uniform_like(x, seed=98052)
+        >>> u.eval({x:x0}, device=C.cpu()) # explicitly setting cpu because this is tested on multiple platforms; leave it unspecified in your code
+        array([[ 0.931785,  0.814722,  0.479606,  0.937468],
+               [ 0.004351,  0.185131,  0.00632 ,  0.118901],
+               [ 0.710054,  0.304273,  0.043126,  0.987818]], dtype=float32)
     """
+    from cntk.cntk_py import uniform_random_like
     x = sanitize_input(x)
-    return uniform_random(x, low, high, seed, name)
+    return uniform_random_like(x, low, high, seed, name)
 
 
 @typemap
@@ -130,9 +167,22 @@ def normal_like(x, mean=0.0, scale=1.0, seed=auto_select, name=''):
 
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Examples:
+        >>> x = C.parameter((2,3,4))
+        >>> z = C.random.normal_like(x, seed=98052)
+        >>> z.eval(device=C.cpu()) # explicitly setting cpu because this is tested on multiple platforms; leave it unspecified in your code
+        array([[[ 1.803254,  0.995395, -0.631974, -1.73672 ],
+                [ 0.005615, -0.340025, -0.011913, -0.236371],
+                [-1.207685, -0.495846,  0.037022, -1.220596]],
+        <BLANKLINE>
+               [[ 0.872981,  0.654405, -0.111421, -0.544074],
+                [ 1.543746, -0.63555 , -1.072869, -0.379701],
+                [ 0.592069, -1.035192,  1.679303, -0.391963]]], dtype=float32)
     """
+    from cntk.cntk_py import normal_random_like
     x = sanitize_input(x)
-    return normal_random(x, mean, scale, seed, name)
+    return normal_random_like(x, mean, scale, seed, name)
 
 
 @typemap
@@ -150,12 +200,25 @@ def gumbel_like(x, loc=0.0, scale=1.0, seed=auto_select, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
 
+    Examples:
+        >>> x = C.constant(np.zeros((2,3,4), dtype=np.float32))
+        >>> g = C.random.gumbel_like(x, seed=98052)
+        >>> g.eval(device=C.cpu()) # explicitly setting cpu because this is tested on multiple platforms; leave it unspecified in your code
+        array([[[-0.987713, -0.522298,  0.425918, -1.019599],
+                [ 5.435177,  1.586071,  5.060849,  2.066839],
+                [-0.213545,  1.013911,  3.12166 , -1.483367]],
+        <BLANKLINE>
+               [[ 0.450674,  0.632536,  2.168155,  0.446285],
+                [-0.658276,  0.11466 , -0.314369, -0.79247 ],
+                [ 1.977322, -0.36268 , -0.456649, -0.23685 ]]], dtype=float32)
+
     See also:
         `The Gumbel-Max Trick
         <https://hips.seas.harvard.edu/blog/2013/04/06/the-gumbel-max-trick-for-discrete-distributions/>`_.
     """
+    from cntk.cntk_py import gumbel_random_like
     x = sanitize_input(x)
-    return gumbel_random(x, loc, scale, seed, name)
+    return gumbel_random_like(x, loc, scale, seed, name)
 
 
 @typemap
@@ -172,8 +235,19 @@ def bernoulli_like(x, mean=0.5, seed=auto_select, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
 
+    Examples:
+        >>> p = C.placeholder()
+        >>> bp = C.random.bernoulli_like(p, seed=98052)
+        >>> x = C.sequence.input_variable(1)
+        >>> bx = bp.replace_placeholders({p:x})
+        >>> x0 = np.zeros((1,3,1), dtype=np.float32)
+        >>> bx.eval({x:x0}, device=C.cpu()) # explicitly setting cpu because this is tested on multiple platforms; leave it unspecified in your code
+        [array([[ 1.],
+               [ 1.],
+               [ 0.]], dtype=float32)]
     """
+    from cntk.cntk_py import bernoulli_random_like
     x = sanitize_input(x)
-    return bernoulli_random(x, mean, seed, name)
+    return bernoulli_random_like(x, mean, seed, name)
 
 
