@@ -4616,6 +4616,9 @@ namespace CNTK
     ///
     CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func);
 
+
+    CNTK_API LearnerPtr BatchUniversalLearner(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
+
     ///
     /// Distributed Learner.
     ///
