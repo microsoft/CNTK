@@ -383,6 +383,8 @@ namespace CNTK
 
         std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
 
+        std::unordered_set<Variable> m_assignRefs;
+
         bool m_networkMatricesAllocated;
 
         std::unordered_set<Variable> m_allNetworkRoots;
