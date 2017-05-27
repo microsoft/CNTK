@@ -15,7 +15,6 @@ from __future__ import print_function
 import os
 import cntk as C
 import numpy as np
-from sklearn import datasets, utils
 import scipy.sparse
 
 # Define the task.
@@ -23,14 +22,26 @@ input_shape = (28, 28)  # MNIST digits are 28 x 28
 num_classes = 10        # classify as one of 10 digits
 model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Models/mnist.cmf")
 
-# Fetch the MNIST data from mldata.
-mnist = datasets.fetch_mldata("MNIST original")
-X, Y = mnist.data / 255., mnist.target
-X_train, X_test = X[:60000].reshape((-1,28,28)), X[60000:].reshape((-1,28,28))
-Y_train, Y_test = Y[:60000].astype(int), Y[60000:].astype(int)
+# Fetch the MNIST data.
+# This requires scikit-learn, which is included in our recommended Python
+# distribution (Anaconda). If you do not have it, please install it using
+# pip (pip install -U scikit-learn) or conda (conda install scikit-learn).
+try:
+    from sklearn import datasets, utils
+    mnist = datasets.fetch_mldata("MNIST original")
+    X, Y = mnist.data / 255.0, mnist.target
+    X_train, X_test = X[:60000].reshape((-1,28,28)), X[60000:].reshape((-1,28,28))
+    Y_train, Y_test = Y[:60000].astype(int), Y[60000:].astype(int)
+except: # workaround if scikit-learn is not present
+    import requests, io, gzip
+    X_train, X_test = (np.fromstring(gzip.GzipFile(fileobj=io.BytesIO(requests.get('http://yann.lecun.com/exdb/mnist/' + name + '-images-idx3-ubyte.gz').content)).read()[16:], dtype=np.uint8).reshape((-1,28,28)).astype(np.float32) / 255.0 for name in ('train', 't10k'))
+    Y_train, Y_test = (np.fromstring(gzip.GzipFile(fileobj=io.BytesIO(requests.get('http://yann.lecun.com/exdb/mnist/' + name + '-labels-idx1-ubyte.gz').content)).read()[8:], dtype=np.uint8).astype(int) for name in ('train', 't10k'))
+
 # Shuffle the training data.
 np.random.seed(0) # always use the same reordering, for reproducability
-X_train, Y_train = utils.shuffle(X_train, Y_train)
+idx = np.random.permutation(len(X_train))
+X_train, Y_train = X_train[idx], Y_train[idx]
+
 # Further split off a cross-validation set
 X_train, X_cv = X_train[:54000], X_train[54000:]
 Y_train, Y_cv = Y_train[:54000], Y_train[54000:]

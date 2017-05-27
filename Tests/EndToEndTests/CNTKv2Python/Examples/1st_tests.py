@@ -47,7 +47,27 @@ def test_1st_steps_graph(device_id):
     #print(metric)
     assert np.allclose(metric, 0.0625, atol=1e-5)
 
+def test_1st_steps_mnist(device_id):
+    from cntk.ops.tests.ops_test_utils import cntk_device
+    cntk_py.force_deterministic_algorithms()
+    cntk_py.set_fixed_random_seed(1)
+    try_set_default_device(cntk_device(device_id))
+    reset_random_seed(0)
+    from MNIST_Complex_Training import final_loss, final_metric, final_samples, test_metric
+    print(final_loss, final_metric, final_samples, test_metric)
+    # these are the final values from the log output
+    # Since this has convolution, there is some variance.
+    # Finished Epoch[36]: loss = 0.009060 * 54000, metric = 0.27% * 54000 1.971s (27397.3 samples/s);
+    # Finished Evaluation [12]: Minibatch[1-24]: metric = 0.65% * 6000;
+    # Learning rate 7.8125e-06 too small. Training complete.
+    # Finished Evaluation [13]: Minibatch[1-313]: metric = 0.63% * 10000;
+    assert np.allclose(final_loss,   0.009060, atol=1e-5)
+    assert np.allclose(final_metric, 0.0027,   atol=1e-3)
+    assert np.allclose(test_metric,  0.0063,   atol=1e-3)
+    assert final_samples == 54000
+
 if __name__=='__main__':
     # run them directly so that this can be run without pytest
+    test_1st_steps_mnist(0)
     test_1st_steps_functional(0)
     test_1st_steps_graph(0)

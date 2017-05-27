@@ -1073,6 +1073,10 @@ def Dropout(dropout_rate=None,
     E.g. ``Dropout(0.3)`` means "drop 30% o the activation values."
     Alternatively, it can also be specified as the probability of *keeping* a value (``keep_prob``).
 
+    That dropout is only applied during training. During testing, this is a no-op.
+    To make sure that this leads to correct results, the dropout operation in training
+    multiplies the result by (1/(1-``dropout_rate``)).
+
     Example:
      >>> f = Dropout(0.2)   # "drop 20% of activations"
      >>> h = C.input_variable(3)
