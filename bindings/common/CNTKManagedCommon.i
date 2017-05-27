@@ -383,6 +383,10 @@ IGNORE_CLASS CNTK::Internal::TensorBoardFileWriter;
 IGNORE_STRUCT CNTK::GPUProperties;
 IGNORE_FUNCTION CNTK::DeviceDescriptor::GetGPUProperties;
 
+#ifndef _MSC_VER
+IGNORE_FUNCTION _wcsdup;
+#endif
+
 #ifdef SWIGJAVA
 // TODO: make Java binding deal with wchar_t correctly.
 IGNORE_FUNCTION CNTK::DeviceKindName;
