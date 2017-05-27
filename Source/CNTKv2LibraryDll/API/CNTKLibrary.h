@@ -2177,6 +2177,7 @@ private:
         /// Constant's value. The shapes of both views must be identical.
         ///
         CNTK_API void SetValue(const NDArrayViewPtr& value);
+        CNTK_API void RecordValueUpdate();
 
     private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
@@ -2187,8 +2188,6 @@ private:
         /// Construct a constant of specified shape whose contents are initialized using the specified initializer
         ///
         CNTK_API Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"");
-
-        void RecordValueUpdate();
     };
 
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 
