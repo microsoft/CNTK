@@ -1070,10 +1070,10 @@ def Dropout(dropout_rate=None,
     Layer factory function to create a drop-out layer.
 
     The dropout rate can be specified as the probability of *dropping* a value (``dropout_rate``).
-    E.g. ``Dropout(0.3)`` means "drop 30% o the activation values."
+    E.g. ``Dropout(0.3)`` means "drop 30% of the activation values."
     Alternatively, it can also be specified as the probability of *keeping* a value (``keep_prob``).
 
-    That dropout is only applied during training. During testing, this is a no-op.
+    The dropout operation is only applied during training. During testing, this is a no-op.
     To make sure that this leads to correct results, the dropout operation in training
     multiplies the result by (1/(1-``dropout_rate``)).
 
