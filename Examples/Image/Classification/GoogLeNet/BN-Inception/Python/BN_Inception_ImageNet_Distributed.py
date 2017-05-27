@@ -81,7 +81,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         mb_size = minibatch_size,
         progress_frequency = epoch_size,
         checkpoint_config=CheckpointConfig(frequency=epoch_size, filename=os.path.join(model_path, model_name), restore=restore),
-        test_config=TestConfig(source=test_source, mb_size=minibatch_size)
+        test_config=TestConfig(test_source, minibatch_size=minibatch_size)
     ).train()
         
     if profiling:
