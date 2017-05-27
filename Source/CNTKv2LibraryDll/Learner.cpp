@@ -857,28 +857,6 @@ namespace CNTK
         ValidateInput(parameters, gradients, Combine(outputs));
     }
 
-    LearnerUniversal::LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr>>& updateFunctions)
-        : LearnerBase(parameters, LearningRateSchedule(1.0, CNTK::LearningRateSchedule::UnitType::Sample), AdditionalLearningOptions(), /*allocateSmoothGradients*/ false)
-    {
-        if (parameters.size() != updateFunctions.size())
-            LogicError("Number of parameters (%zd) does not match number of updateFunctions (%zd)", parameters.size(), updateFunctions.size());
-        std::vector<Variable> gradients;
-        std::vector<FunctionPtr> functions;
-        for (size_t i = 0; i < parameters.size(); ++i)
-        {
-            gradients.push_back(updateFunctions[i].first);
-            functions.push_back(updateFunctions[i].second);
-        }
-        
-        std::vector<Variable> outputs;
-        for (auto f : functions)
-        {
-            for (auto o :f->Outputs())
-                outputs.push_back(o);
-        }
-        ValidateInput(parameters, gradients, Combine(outputs));
-    }
-
     LearnerUniversal::LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc)
         : LearnerBase(parameters, LearningRateSchedule(1.0, CNTK::LearningRateSchedule::UnitType::Sample), AdditionalLearningOptions(), /*allocateSmoothGradients*/ false)
     {
@@ -889,6 +867,9 @@ namespace CNTK
     {
         if (parameters.size() != gradients.size())
             LogicError("Number of parameters (%zd) does not match number of gradients (%zd)", parameters.size(), gradients.size());
+
+        if (parameters.size() == 0)
+            LogicError("At least 1 parameter is needed in universal learner");
 
         for (size_t i = 0; i < parameters.size(); ++i)
         {
@@ -916,7 +897,7 @@ namespace CNTK
 
         if (trainingSampleCount == 0)
             InvalidArgument("Learner::Update() cannot perform an update with an empty minibatch.");
-
+        
         static const std::unordered_map<Variable, ValuePtr> m_empty = {};
 
         for (const auto& parameter : Parameters())
@@ -924,7 +905,7 @@ namespace CNTK
             const auto& gradientValue = gradientValues.at(parameter);
             auto it = m_parameter_gradient_map.find(parameter);
             if (it == m_parameter_gradient_map.end())
-                LogicError("Parameter %ls does not found in universal learner's list", parameter.AsString().c_str());
+                fprintf(stderr, "Parameter %ls does not found in universal learner's list.\n", parameter.AsString().c_str());
             auto grad = Constant(it->second);
             grad.SetValue(gradientValue);
         }
@@ -956,12 +937,7 @@ namespace CNTK
     {
         return MakeSharedObject<LearnerUniversal>(parameters, func);
     }
-
-    LearnerPtr Internal::UniversalLearner(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr>>& updates)
-    {
-        return MakeSharedObject<LearnerUniversal>(parameters, updates);
-    }
-
+    
     LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc)
     {
         return MakeSharedObject<LearnerUniversal>(parameters, gradients, updateFunc);

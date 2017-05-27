@@ -332,8 +332,6 @@ namespace CNTK
     public:
         LearnerUniversal(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func);
 
-        LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr> >& updateFunctions);
-
         LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
     
         virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override;
