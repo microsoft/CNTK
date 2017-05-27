@@ -158,7 +158,7 @@ class Learner(cntk_py.Learner):
 
     def learning_rate(self):
         '''
-        Current learning rate.
+        Current learning rate schedule.
         '''
         return super(Learner, self).learning_rate()
 

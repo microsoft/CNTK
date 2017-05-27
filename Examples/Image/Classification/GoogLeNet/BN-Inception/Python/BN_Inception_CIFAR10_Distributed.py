@@ -83,7 +83,7 @@ def train_and_test(network, trainer, train_source, test_source, max_epochs, mini
                                            filename = os.path.join(
                                            model_path, "BN-Inception_CIFAR10"),
                                            restore=restore),
-        test_config=TestConfig(source=test_source, mb_size=minibatch_size)
+        test_config=TestConfig(test_source, minibatch_size=minibatch_size)
     ).train()
 
     if profiling:

@@ -11,13 +11,13 @@ e.g. a fully connected layer with non-linearity.
 
 from __future__ import division
 import numpy as np
-from ..ops.functions import Function
+from ..ops.functions import Function, BlockFunction
 from ..variables import Parameter, Record, Constant
 import cntk as C
 from ..ops import times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, reduce_mean, sqrt
 from cntk.internal import _as_tuple
 from cntk.cntk_py import sentinel_value_for_auto_select_random_seed as SentinelValueForAutoSelectRandomSeed
-from .blocks import _initializer_for, _INFERRED, identity, BlockFunction, UntestedBranchError  # helpers
+from .blocks import _initializer_for, _INFERRED, identity, UntestedBranchError  # helpers
 from cntk.default_options import is_default_override, get_default_override, default_override_or
 
 
@@ -410,7 +410,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
     emulating_output_depth = num_filters == ()
     emulating_input_depth  = reduction_rank == 0
     # 1D convolution is not supported by cudnn, so we also add a fake dimension.
-    emulating_1D = len(filter_shape) < 2
+    emulating_1D = False   # len(filter_shape) < 2 # TODO: 1D no longer needs emulation. Remove all related code once it passes Jenkins.
 
     actual_output_channels_shape = num_filters                if not emulating_output_depth else (1,)
     actual_reduction_shape       = _INFERRED * reduction_rank if not emulating_input_depth  else _INFERRED  # TODO: C++ suport for 1D
@@ -1070,8 +1070,12 @@ def Dropout(dropout_rate=None,
     Layer factory function to create a drop-out layer.
 
     The dropout rate can be specified as the probability of *dropping* a value (``dropout_rate``).
-    E.g. ``Dropout(0.3)`` means "drop 30% o the activation values."
+    E.g. ``Dropout(0.3)`` means "drop 30% of the activation values."
     Alternatively, it can also be specified as the probability of *keeping* a value (``keep_prob``).
+
+    The dropout operation is only applied during training. During testing, this is a no-op.
+    To make sure that this leads to correct results, the dropout operation in training
+    multiplies the result by (1/(1-``dropout_rate``)).
 
     Example:
      >>> f = Dropout(0.2)   # "drop 20% of activations"

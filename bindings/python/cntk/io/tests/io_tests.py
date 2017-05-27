@@ -893,8 +893,8 @@ def test_usermbsource_training(tmpdir):
         trainer=trainer, mb_source=mbs,
         model_inputs_to_streams=input_map,
         mb_size=4, max_samples=20,
-        cv_config = C.CrossValidationConfig(source=mbs_cv, max_samples=10,
-            mb_size=2)
+        cv_config = C.CrossValidationConfig(minibatch_source=mbs_cv, max_samples=10,
+            minibatch_size=2)
     )
     session.train()
 
