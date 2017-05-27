@@ -203,14 +203,15 @@ def gumbel_like(x, loc=0.0, scale=1.0, seed=auto_select, name=''):
     Examples:
         >>> x = C.constant(np.zeros((2,3,4), dtype=np.float32))
         >>> g = C.random.gumbel_like(x, seed=98052)
-        >>> g.eval(device=C.cpu()) # explicitly setting cpu because this is tested on multiple platforms; leave it unspecified in your code
-        array([[[-0.987713, -0.522298,  0.425918, -1.019599],
-                [ 5.435177,  1.586071,  5.060849,  2.066839],
-                [-0.213545,  1.013911,  3.12166 , -1.483367]],
+        >>> s = g.eval(device=C.cpu()) # explicitly setting cpu because this is tested on multiple platforms; leave it unspecified in your code
+        >>> np.round(s, 5)
+        array([[[-0.98771, -0.5223 ,  0.42592, -1.0196 ],
+                [ 5.43518,  1.58607,  5.06085,  2.06684],
+                [-0.21355,  1.01391,  3.12166, -1.48337]],
         <BLANKLINE>
-               [[ 0.450674,  0.632536,  2.168155,  0.446285],
-                [-0.658276,  0.11466 , -0.314369, -0.79247 ],
-                [ 1.977322, -0.36268 , -0.456649, -0.23685 ]]], dtype=float32)
+               [[ 0.45067,  0.63254,  2.16815,  0.44629],
+                [-0.65828,  0.11466, -0.31437, -0.79247],
+                [ 1.97732, -0.36268, -0.45665, -0.23685]]], dtype=float32)
 
     See also:
         `The Gumbel-Max Trick
