@@ -263,6 +263,7 @@ public:
             node->m_squashingFactor = m_squashingFactor;
             node->m_alignmentWindow = m_alignmentWindow;
             node->m_ceweight = m_ceweight;
+            node->m_boosted = m_boosted;			
             node->m_fsa = m_fsa;
             node->m_tmap->SetValue(*m_tmap);
             node->m_smap->SetValue(*m_smap);
@@ -361,6 +362,7 @@ public:
         fstream << m_squashingFactor;
         fstream << m_alignmentWindow;
         fstream << m_ceweight;
+        fstream << m_boosted;		
         fstream << *m_tmap;
         fstream << *m_smap;
         SaveFsa(fstream);
@@ -380,6 +382,8 @@ public:
         fstream >> m_squashingFactor;
         fstream >> m_alignmentWindow;
         fstream >> m_ceweight;
+        fstream >> m_boosted;
+		
         LoadMatrix(fstream, m_tmap);
         LoadMatrix(fstream, m_smap);
         //m_tmapTranspose = make_shared<Matrix<ElemType>>(m_tmap->Transpose(), m_deviceId);
@@ -394,7 +398,7 @@ public:
             Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
             char str[4096];
-            sprintf(str, "squashingFactor=%f alignmentWindow=%d ceweight=%f", this->m_squashingFactor, this->m_alignmentWindow, this->m_ceweight);
+            sprintf(str, "squashingFactor=%f alignmentWindow=%d ceweight=%f boosted=%f", this->m_squashingFactor, this->m_alignmentWindow, this->m_ceweight, this->m_boosted);
             fstream << string(str);
         }
 
