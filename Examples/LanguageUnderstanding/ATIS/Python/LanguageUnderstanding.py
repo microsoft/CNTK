@@ -75,7 +75,7 @@ def create_model_function():
 #  takes:   Function: features -> prediction
 #  returns: Function: (features, labels) -> (loss, metric)
 def create_criterion_function(model):
-    @cntk.FunctionOf(query = Sequence[SparseTensor[vocab_size]], labels = Sequence[SparseTensor[num_labels]])
+    @cntk.Function.with_signature(query = Sequence[SparseTensor[vocab_size]], labels = Sequence[SparseTensor[num_labels]])
     def criterion(query, labels):
         z = model(query)
         ce = cntk.losses.cross_entropy_with_softmax(z, labels)

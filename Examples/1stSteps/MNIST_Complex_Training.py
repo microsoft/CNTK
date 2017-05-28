@@ -4,7 +4,7 @@
 # for full license information.
 # ==============================================================================
 
-# This example show how to train a model, showcasing a range of training options: 
+# This example demonstrates how to train a model, showcasing a range of training options: 
 #  - checkpointing
 #  - testing after each minibatch
 #  - cross-validation based learning-rate control and early stopping in user code
@@ -70,9 +70,9 @@ with C.layers.default_options(activation=C.ops.relu, pad=False):
 # (input vectors, labels) to a loss function and an optional additional
 # metric. The loss function is used to train the model parameters.
 # We use cross entropy as a loss function.
-# We use CNTK @FunctionOf to declare a CNTK function with given input types.
+# We use CNTK @Function.with_signature to declare a CNTK function with given input types.
 # The cross-entropy formula requires the labels to be in one-hot format.
-@C.FunctionOf(C.layers.Tensor[input_shape], C.layers.SparseTensor[num_classes])
+@C.Function.with_signature(C.layers.Tensor[input_shape], C.layers.SparseTensor[num_classes])
 def criterion(data, label_one_hot):
     z = model(data)  # apply model. Computes a non-normalized log probability for every output class.
     loss   = C.cross_entropy_with_softmax(z, label_one_hot) # this applies softmax to z under the hood
@@ -158,7 +158,7 @@ test_metric   = progress.test_summary.metric
 # Inspect predictions on one minibatch, for illustration.
 # For evaluation, we map the output of the network between 0-1 and convert them into probabilities
 # for the two classes. We use a softmax function to get the probabilities of each of the class.
-@C.FunctionOf(C.layers.Tensor[input_shape])
+@C.Function.with_signature(C.layers.Tensor[input_shape])
 def get_probability(data):
     return C.softmax(model(data))
 

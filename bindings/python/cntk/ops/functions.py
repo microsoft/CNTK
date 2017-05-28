@@ -1289,7 +1289,7 @@ class Function(cntk_py.Function):
          >>> X = X.astype(np.float32)
          >>> model = cntk.layers.Dense(2, activation=None) # model function
          >>> import cntk.layers
-         >>> @cntk.FunctionOf(cntk.layers.Tensor[2], cntk.layers.SparseTensor[2]) # criterion function
+         >>> @cntk.Function.with_signature(cntk.layers.Tensor[2], cntk.layers.SparseTensor[2]) # criterion function
          ... def criterion(data, label_one_hot):
          ...     z = model(data)  # apply model. Computes a non-normalized log probability for every output class.
          ...     return cntk.cross_entropy_with_softmax(z, label_one_hot)
@@ -1510,38 +1510,38 @@ class Function(cntk_py.Function):
         
         raise ValueError('Cannot load a model that is neither a file nor a byte buffer.')
 
+    def with_signature(*args, **kwargs):
+        '''
+        Decorator for defining a @Function with a given signature. Same as @Function followed by @Signature.
+    
+        Example:
+         >>> from cntk.layers.typing import *
+         >>> @Function.with_signature(Tensor[13])
+         ... def f(x):
+         ...     return x * x
+         >>> print(f)
+         ElementTimes(x: Tensor[13]) -> Tensor[13]
+         >>> # which is equivalent to this:
+         >>> @Function
+         ... @Signature(Tensor[13])
+         ... def f(x):
+         ...     return x * x
+         >>> print(f)
+         ElementTimes(x: Tensor[13]) -> Tensor[13]
+    
+        '''
+        def decorator(f):
+            from cntk.layers.typing import Signature
+            f = Signature(*args, **kwargs)(f)
+            f = Function(f)
+            return f
+        return decorator
+
 def BlockFunction(op_name, name):
     '''
     Decorator for defining a @Function as a BlockFunction. Same as @Function, but wrap the content into an :func:`~cntk.ops.as_block`.
     '''
     return lambda f: Function(f, make_block=True, op_name=op_name, name=name)
-
-def FunctionOf(*args, **kwargs):
-    '''
-    Decorator for defining a @Function with a given signature. Same as @Function followed by @Signature.
-
-    Example:
-     >>> from cntk.layers.typing import *
-     >>> @FunctionOf(Tensor[13])
-     ... def f(x):
-     ...     return x * x
-     >>> print(f)
-     ElementTimes(x: Tensor[13]) -> Tensor[13]
-     >>> # which is equivalent to this:
-     >>> @Function
-     ... @Signature(Tensor[13])
-     ... def f(x):
-     ...     return x * x
-     >>> print(f)
-     ElementTimes(x: Tensor[13]) -> Tensor[13]
-
-    '''
-    def decorator(f):
-        from cntk.layers.typing import Signature
-        f = Signature(*args, **kwargs)(f)
-        f = Function(f)
-        return f
-    return decorator
 
 @typemap
 def register_native_user_function(op_id, module_name, factory_method_name):
