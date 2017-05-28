@@ -562,21 +562,21 @@ class LatticeFreeMMINodeNegStream : public ComputationNodeNonLooping /*Computati
     }
     
 public:
-    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name)
+    LatticeFreeMMINodeNegStream(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_squashingFactor(1.0), m_alignmentWindow(0), m_ceweight(0), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(0), m_negLabels(1)
     {
         InitMatrixes();
     }
 
-    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const int alignmentWindow, const ElemType ceweight, const ElemType boosted)
+    LatticeFreeMMINodeNegStream(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const int alignmentWindow, const ElemType ceweight, const ElemType boosted)
         : Base(deviceId, name), m_squashingFactor(squashingFactor), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(boosted), m_negLabels(1)
     {
         InitMatrixes();
         InitializeFromTfstFiles(fstFilePath, smapFilePath);
     }
 
-    LatticeFreeMMINode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"squashingFactor"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"boosted")) 
+    LatticeFreeMMINodeNegStream(const ScriptableObjects::IConfigRecordPtr configp)
+        : LatticeFreeMMINodeNegStream(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"squashingFactor"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"boosted")) 
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -742,7 +742,7 @@ public:
         Value().HasNan("LatticeFreeMMI");
 #endif
 #if DUMPOUTPUT
-        Value().Print("LatticeFreeMMINode");
+        Value().Print("LatticeFreeMMINodeNegStream");
 #endif
 
     }
@@ -763,7 +763,7 @@ public:
             //auto c3 = Input(3)->ValueAsMatrix().GetNumCols();
             //auto c4 = Input(4)->ValueAsMatrix().GetNumCols();
             //if (r0 != r4 || c3 != r3 || c3 != c4)
-            //    LogicError("The Matrix dimension in the LatticeFreeMMINode operation does not match.");
+            //    LogicError("The Matrix dimension in the LatticeFreeMMINodeNegStream operation does not match.");
         }
     }
 
@@ -772,7 +772,7 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<LatticeFreeMMINode<ElemType>>(nodeP);
+            auto node = dynamic_pointer_cast<LatticeFreeMMINodeNegStream<ElemType>>(nodeP);
             node->m_squashingFactor = m_squashingFactor;
             node->m_alignmentWindow = m_alignmentWindow;
             node->m_ceweight = m_ceweight;

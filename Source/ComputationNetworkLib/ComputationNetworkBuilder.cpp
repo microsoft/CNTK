@@ -77,6 +77,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(NDCG1EvalNode))                        return New<NDCG1EvalNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(KhatriRaoProductNode))                 return New<KhatriRaoProductNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LatticeFreeMMINode))                   return New<LatticeFreeMMINode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(LatticeFreeMMINodeNegStream))          return New<LatticeFreeMMINodeNegStream<ElemType>>(forward<_Types>(_Args)...);	
     else if (nodeType == OperationNameOf(LessEqualNode))                        return New<LessEqualNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LessNode))                             return New<LessNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LogNode))                              return New<LogNode<ElemType>>(forward<_Types>(_Args)...);
@@ -489,6 +490,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LatticeFreeMMI(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr logPrior, const std::wstring fstFilePath, const std::wstring smapFilePath, ElemType squashingFactor, int alignmentWindow, ElemType ceweight, ElemType boosted, std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<LatticeFreeMMINode<ElemType>>(net.GetDeviceId(), nodeName, fstFilePath, smapFilePath, squashingFactor, alignmentWindow, ceweight, boosted), { label, prediction, logPrior });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LatticeFreeMMINegStream(const ComputationNodePtr label, const ComputationNodePtr negLabel, const ComputationNodePtr prediction, const ComputationNodePtr logPrior, const std::wstring fstFilePath, const std::wstring smapFilePath, ElemType squashingFactor, int alignmentWindow, ElemType ceweight, ElemType boosted, std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<LatticeFreeMMINodeNegStream<ElemType>>(net.GetDeviceId(), nodeName, fstFilePath, smapFilePath, squashingFactor, alignmentWindow, ceweight, boosted), { label, negLabel, prediction, logPrior });
 }
 
 template <class ElemType>

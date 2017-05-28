@@ -197,6 +197,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(InvStdDevNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(KhatriRaoProductNode), L"ColumnwiseCrossProduct")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LatticeFreeMMINode), L"LatticeFreeMMI")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LatticeFreeMMINodeNegStream), L"LatticeFreeMMINegStream")) ret = true;	
     else if (EqualInsensitive(nodeType, OperationNameOf(LearnableParameter), L"Parameter")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LogNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LogPlusNode))) ret = true;
