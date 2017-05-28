@@ -289,6 +289,26 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
     m_posteriorsNum->Resize(nsenones, nf);
     m_posteriorsNum->SetValue(nsenones, nf, m_deviceId, &m_posteriorsAtHost[0]);
 
+	if (m_boosted != 0)
+	{
+		for (int i = 0; i < bufferSize; i++) m_likelihoodBuffer[i] += m_boosted;
+	    for (int i = 0+1; i < nf; i++)
+	    {
+	       
+            for (int j = 0; j <= i, j < nstates; j++)
+            {
+                if (i < m_senoneSequence[j].Begin || i > m_senoneSequence[j].End) continue;
+                int currentSenone = m_senoneSequence[j].Senone;
+                int baseIndex = (i - 1)*nstates + j;
+                assert(m_fsa[m_stateSequence[j]][currentSenone].second != 0);
+                assert(m_fsa[m_stateSequence[j - 1]][currentSenone].second != 0);
+                m_likelihoodBuffer[i * nsenones + currentSenone]-=m_boosted;
+            }
+	    }
+		for (int i = 0; i < bufferSize; i++) m_likelihoodBuffer[i] = exp(m_likelihoodBuffer[i]);
+		m_likelihoods->SetValue(nsenones, nf, m_deviceId, &m_likelihoodBuffer[0]);
+	}
+	
     // return the forward path score
     if (m_ceweight == 0)
         return logForwardScore;
