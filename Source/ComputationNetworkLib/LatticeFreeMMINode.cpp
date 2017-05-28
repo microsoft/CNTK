@@ -548,7 +548,7 @@ void LatticeFreeMMINodeNegStream<ElemType>::InitializeFromTfstFiles(const wstrin
 // If m_ceweight == 0, return the log numerator score of MMI
 // Else, return (1-m_ceweight) * logNum - m_ceweight * logCE
 template <class ElemType>
-double LatticeFreeMMINodeNegStream<ElemType>::CalculateNumeratorsWithCE(const Matrix<ElemType>& labelMatrix, const size_t nfCalculateNumeratorsWithCE)
+double LatticeFreeMMINodeNegStream<ElemType>::CalculateNumeratorsWithCE(const Matrix<ElemType>& labelMatrix, const size_t nf, const Matrix<ElemType>& negLabelMatrix)
 {
     if (nf == 0) return 0;
 
