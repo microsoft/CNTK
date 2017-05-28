@@ -846,7 +846,7 @@ double LatticeFreeMMINodeNegStream<ElemType>::ForwardBackwardProcessForDenormina
     return logForwardPath;
 }
 
-template class LatticeFreeMMINode<float>;
-template class LatticeFreeMMINode<double>;
+template class LatticeFreeMMINodeNegStream<float>;
+template class LatticeFreeMMINodeNegStream<double>;
 
 } } }
