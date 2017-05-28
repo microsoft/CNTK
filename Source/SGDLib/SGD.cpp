@@ -1157,8 +1157,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     forwardPropRoots.push_back(criterionNodes[0]);
 
     bool noMoreSamplesToProcess = false;
+    //auto lfMMINode = dynamic_cast<LatticeFreeMMINodeNegStream<ElemType>*>(criterionNodes[0].get());
+    //auto lfMMINodeNegStream = lfMMINode;
     auto lfMMINode = dynamic_cast<LatticeFreeMMINode<ElemType>*>(criterionNodes[0].get());
     auto lfMMINodeNegStream = dynamic_cast<LatticeFreeMMINodeNegStream<ElemType>*>(criterionNodes[0].get());
+
     bool isFirstMinibatch = true;
     for (;;)
     {

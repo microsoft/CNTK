@@ -656,19 +656,13 @@ public:
             m_smapTranspose = make_shared<Matrix<ElemType>>(m_smap->Transpose(), m_deviceId);
 
         FrameRange fr(Input(0)->GetMBLayout());
-
         auto inputV = Input(1+m_negLabels)->ValueFor(fr);
         auto inputL = Input(0)->ValueFor(fr);
         auto inputValue = &inputV;
         auto inputLabel = &inputL;
 
-		auto inputNegL=Input(0)->ValueFor(fr);
+		auto inputNegL=Input(1)->ValueFor(fr);
         auto inputNegLabel=&inputNegL;
-        if (m_negLabels) 
-        {
-            inputNegL=Input(1)->ValueFor(fr);
-            inputNegLabel=&inputNegL;	
-        }
 
         size_t nf = inputValue->GetNumCols();
 		if (m_negLabels) assert(nf==inputNegLabel->GetNumCols());
@@ -776,7 +770,8 @@ public:
             node->m_squashingFactor = m_squashingFactor;
             node->m_alignmentWindow = m_alignmentWindow;
             node->m_ceweight = m_ceweight;
-            node->m_boosted = m_boosted;			
+            node->m_boosted = m_boosted;		
+            node->m_negLabels=m_negLabels;
             node->m_fsa = m_fsa;
             node->m_tmap->SetValue(*m_tmap);
             node->m_smap->SetValue(*m_smap);
