@@ -4617,6 +4617,11 @@ namespace CNTK
     CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func);
 
     ///
+    /// Create an instance of a learner by specifying the parameters , gradients and update function. Return a CNTK FunctionPtr.
+    ///
+    CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
+
+    ///
     /// Distributed Learner.
     ///
     class DistributedLearner : public Learner

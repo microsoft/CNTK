@@ -359,7 +359,7 @@ def test_universal():
     builtin_sgd = lambda params: sgd(params, lr=learning_rate_schedule(0.125, UnitType.minibatch))
     builtin_last_avg_error, builtin_avg_error = ffnet(builtin_sgd)
     np.random.seed(98052)
-    my_sgd = lambda p, g: C.assign(p, p - 0.125/25 * g)
+    my_sgd = lambda ps, gs: C.combine([C.assign(p, p - 0.125/25 * g) for p, g in zip(ps, gs)])
     universal_sgd = lambda params: universal(my_sgd, params)
     my_last_avg_error, my_avg_error = ffnet(universal_sgd)
     assert np.allclose(my_last_avg_error, builtin_last_avg_error)
