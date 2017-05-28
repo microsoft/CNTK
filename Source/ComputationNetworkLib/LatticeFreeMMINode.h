@@ -63,20 +63,20 @@ class LatticeFreeMMINode : public ComputationNodeNonLooping /*ComputationNode*/<
     
 public:
     LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_squashingFactor(1.0), m_alignmentWindow(0), m_ceweight(0), m_totalFrameNumberOfCurrentMinibatch(0)
+        : Base(deviceId, name), m_squashingFactor(1.0), m_alignmentWindow(0), m_ceweight(0), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(0)
     {
         InitMatrixes();
     }
 
-    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const int alignmentWindow, const ElemType ceweight)
-        : Base(deviceId, name), m_squashingFactor(squashingFactor), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_totalFrameNumberOfCurrentMinibatch(0)
+    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const int alignmentWindow, const ElemType ceweight, const ElemType boosted)
+        : Base(deviceId, name), m_squashingFactor(squashingFactor), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(boosted)
     {
         InitMatrixes();
         InitializeFromTfstFiles(fstFilePath, smapFilePath);
     }
 
     LatticeFreeMMINode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"squashingFactor"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"))
+        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"squashingFactor"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"boosted"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -488,6 +488,7 @@ protected:
     ElemType m_squashingFactor;
     int m_alignmentWindow;
     ElemType m_ceweight;
+    ElemType m_boosted;	
     vector<map<int, pair<int, ElemType>>> m_fsa;
     shared_ptr<Matrix<ElemType>> m_tmap;
     shared_ptr<Matrix<ElemType>> m_smap;
