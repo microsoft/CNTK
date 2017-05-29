@@ -1510,6 +1510,7 @@ class Function(cntk_py.Function):
         
         raise ValueError('Cannot load a model that is neither a file nor a byte buffer.')
 
+    @staticmethod
     def with_signature(*args, **kwargs):
         '''
         Decorator for defining a @Function with a given signature. Same as @Function followed by @Signature.
