@@ -47,10 +47,10 @@ class TrainFunction(UserFunction):
                  num_anchorboxes=par_num_anchorboxes,
                  anchorbox_scales=par_anchorbox_scales,
                  num_gtbs_per_img=par_max_gtbs,
-                 lamda_coord =par_lamda_coord,
-                 lamda_obj=par_lamda_obj,
-                 lamda_no_obj = par_lamda_no_obj,
-                 lamda_cls = par_lamda_cls,
+                 lambda_coord =par_lambda_coord,
+                 lambda_obj=par_lambda_obj,
+                 lambda_no_obj = par_lambda_no_obj,
+                 lambda_cls = par_lambda_cls,
                  objectness_threshold=par_objectness_threshold,
                  default_box_values_for_first_n_mb = par_box_default_mbs,
                  default_box_scale=par_scale_default_boxes,
@@ -60,11 +60,11 @@ class TrainFunction(UserFunction):
         self.grid_size_hor = int(grid_size_hor)
         self.grid_size_ver = int(grid_size_ver)
 
-        assert lamda_no_obj <= 1, "lambda_no_obj must be smaller or equal 1"
-        self.lambda_no_obj = lamda_no_obj
-        self.lambda_coord = lamda_coord
-        self.lamda_obj = lamda_obj
-        self.lamda_cls = lamda_cls
+        assert lambda_no_obj <= 1, "lambda_no_obj must be smaller or equal 1"
+        self.lambda_no_obj = lambda_no_obj
+        self.lambda_coord = lambda_coord
+        self.lambda_obj = lambda_obj
+        self.lambda_cls = lambda_cls
         self.objectness_threshold=objectness_threshold
         self.num_anchorboxes = int(num_anchorboxes)
         self.anchorbox_scales  = anchorbox_scales
@@ -92,9 +92,13 @@ class TrainFunction(UserFunction):
     # @Override
     def forward(self, arguments, outputs=None, keep_for_backward=None, device=None, as_numpy=False):
         targets, scales = self.create_outputs_like_cyolo(arguments[0], arguments[1])
-        #import ipdb;ipdb.set_trace()
-        outputs[self.outputs[0]] = np.ascontiguousarray(targets, np.float32)
-        outputs[self.outputs[1]] = np.ascontiguousarray(scales, np.float32)
+
+        if not isinstance(targets, list):
+            targets = np.ascontiguousarray(targets, np.float32)
+            scales = np.ascontiguousarray(scales, np.float32)
+
+        outputs[self.outputs[0]] = targets
+        outputs[self.outputs[1]] = scales
 
         if False:
             self.check_values(arguments[0], outputs[self.outputs[0]], outputs[self.outputs[1]])
@@ -121,8 +125,8 @@ class TrainFunction(UserFunction):
         internal_state['lambda_coord'] = self.lambda_coord
         internal_state['num_gtbs_per_img'] = self.num_gtbs_per_img
 
-        internal_state['lamda_obj'] = self.lamda_obj
-        internal_state['lamda_cls'] = self.lamda_cls
+        internal_state['lambda_obj'] = self.lambda_obj
+        internal_state['lambda_cls'] = self.lambda_cls
         internal_state['objectness_threshold'] = self.objectness_threshold
         internal_state['default_box_values_for_first_n_mb'] = self.default_box_values_for_first_n_mb
         internal_state['default_box_scale'] = self.default_box_scale
@@ -140,8 +144,8 @@ class TrainFunction(UserFunction):
         lambda_no_obj = state['lambda_no_obj']
         lambda_coord = state['lambda_coord']
         num_gtbs_per_img = state['num_gtbs_per_img']
-        lamda_obj=state['lamda_obj']
-        lamda_cls=state['lamda_cls']
+        lambda_obj=state['lambda_obj']
+        lambda_cls=state['lambda_cls']
         objectness_threshold=state['objectness_threshold']
         default_box_values_for_first_n_mb=state['default_box_values_for_first_n_mb']
         default_box_scale=state['default_box_scale']
@@ -150,10 +154,10 @@ class TrainFunction(UserFunction):
                              grid_size_hor=grid_size_hor, grid_size_ver=grid_size_ver,
                              num_anchorboxes=num_anchorboxes, anchorbox_scales=anchorbox_scales,
                              num_gtbs_per_img=num_gtbs_per_img,
-                             lamda_coord=lambda_coord,
-                             lambda_obj=lamda_obj,
-                             lamda_no_obj=lambda_no_obj,
-                             lamda_cls=lamda_cls,
+                             lambda_coord=lambda_coord,
+                             lambda_obj=lambda_obj,
+                             lambda_no_obj=lambda_no_obj,
+                             lambda_cls=lambda_cls,
                              objectness_threshold=objectness_threshold,
                              default_box_values_for_first_n_mb=default_box_values_for_first_n_mb,
                              default_box_scale=default_box_scale,
@@ -170,6 +174,15 @@ class TrainFunction(UserFunction):
 
     ####### user functions ##########
     def create_outputs_like_cyolo(self, eval_results, gtb_inputs):
+
+        if isinstance(eval_results, list): # Apply on sequence
+            goal = []
+            scale = []
+            for res, gtb in zip(eval_results, gtb_inputs):
+                g, s = self.create_outputs_like_cyolo(res, gtb)
+                goal.append(g)
+                scale.append(s)
+            return goal, scale
 
 
         target = np.zeros(eval_results.shape)
@@ -268,7 +281,7 @@ class TrainFunction(UserFunction):
                         target[sample][vector_index][4] = highest_iou
 
                         scale[sample][vector_index][0:4] = self.lambda_coord
-                        scale[sample][vector_index][4] = self.lamda_obj * (2 - gtb_array[i][2]*gtb_array[i][3])#TODO check if 2-... is necessary
+                        scale[sample][vector_index][4] = self.lambda_obj * (2 - gtb_array[i][2]*gtb_array[i][3])#TODO check if 2-... is necessary
 
         return target, scale
 

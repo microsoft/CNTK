@@ -20,14 +20,14 @@ def get_error(network, gtb_input, cntk_only=False):
         ud_tf = TrainFunction(network, gtb_input)
         training_model = user_function(ud_tf)
 
-        # err = TrainFunction2.make_wh_sqrt(output) - TrainFunction2.make_wh_sqrt(training_model.outputs[0])  # substrac "goal" --> error
         #err = TrainFunction.make_wh_sqrt(training_model.outputs[0]) - TrainFunction.make_wh_sqrt(network)
-        err = training_model.outputs[0] - network
+        err = alias(training_model.outputs[0], 'TrainFunction_0') - network
         sq_err = err * err
-        sc_err = sq_err * training_model.outputs[1]  # apply scales (lambda_coord, lambda_no_obj, zeros on not learned params)
+        sc_err = sq_err * alias(training_model.outputs[1], 'TrainFunction_1')  # apply scales (lambda_coord, lambda_no_obj, zeros on not learned params)
         mse = reduce_mean(sc_err, axis=Axis.all_static_axes(), name="MeanSquaredError")
         return mse
 
+"""
 # The class below is an approach to use only cntk ops instead of the user defined function. It does not work well though and is not the preferred model because of that.
 class ErrorFunction(): # CNTK-only error function
     def __init__(self,
@@ -293,3 +293,4 @@ class ErrorFunction(): # CNTK-only error function
         union = (area1 + area2) - intersection
 
         return intersection / union
+"""

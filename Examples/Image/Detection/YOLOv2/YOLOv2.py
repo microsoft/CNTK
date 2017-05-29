@@ -4,6 +4,8 @@
 # for full license information.
 # ==============================================================================
 
+import os
+import numpy as np
 # import cntk
 from cntk import *
 from cntk.io import StreamDefs, StreamDef
@@ -14,34 +16,21 @@ from cntk.logging import ProgressPrinter
 from cntk.logging.graph import find_by_name, plot, get_node_outputs
 from cntk.io import ImageDeserializer, CTFDeserializer, MinibatchSource, TraceLevel
 import cntk.io.transforms as xforms
-import darknet.darknet19 as dn19
-from PARAMETERS import *
+import PARAMETERS
 
 
-
-
-
-
-def create_output_activation_layer(network, anchor_box_scales):
-    #network has shape (mb_size,)(numcls+5)*num_anchorbox, gridcell_height, gridcell_width
-    # network ~~ depth, height, width
-    if False:
-        from TrainUDFyolov2 import LambdaFunc
-        import ipdb
-        lfunc = LambdaFunc(network,when=lambda x: True, execute=lambda x: ipdb.set_trace(), name="print_shape")
-        network = user_function(lfunc)
-
-    n_gridcells_horizontal = int(par_image_width / par_downsample)
-    n_gridcells_vertical =  int(par_image_height / par_downsample)
+def create_output_activation_layer(network, par):
+    anchor_box_scales=par.par_anchorbox_scales
+    n_gridcells_horizontal = int(par.par_image_width / par.par_downsample)
+    n_gridcells_vertical =  int(par.par_image_height / par.par_downsample)
     n_anchorboxes=len(anchor_box_scales)
     output_width = n_gridcells_horizontal * n_gridcells_vertical * n_anchorboxes
-    output_height =  par_num_classes + 5
+    output_height =  par.par_num_classes + 5
 
     # reorder array! now 125*7*7
     # tp1 = ops.transpose(network, 0,2) # 7*7*125
     # tp2 = ops.transpose(tp1, 0, 1) # 7*7*125
-    tp = ops.transpose(network, (1,2,0), name="transposed")
-    # tp.shape =(gc_height, gc_width, depth)
+    tp = ops.transpose(network, (1,2,0))
     reshaped = ops.reshape(tp, (output_width, output_height))
     #shape is now 245 * 25
 
@@ -80,7 +69,6 @@ def create_output_activation_layer(network, anchor_box_scales):
         if(cur_x == n_gridcells_horizontal): cur_x = 0
         xs.append([cur_x])
         ys.append([cur_y])
-    import numpy as np
     xs = np.asarray(xs, np.float32)
     ys = np.asarray(ys, np.float32)
     xys = np.concatenate((xs,ys), axis=1)
@@ -115,23 +103,24 @@ def create_output_activation_layer(network, anchor_box_scales):
     wh_preds = wh_rels * anchorbox_scale_mults
 
     # Splice the parts back together!
-    full_output = ops.splice(xy_preds, wh_preds, obj_preds, cls_preds, axis=1)
+    full_output = ops.splice(xy_preds, wh_preds, obj_preds, cls_preds, axis=1, name="yolo_results")
     return full_output
 
 
-def create_detector(output_depth = (5+par_num_classes)*par_num_anchorboxes, batchnormalization = False):
+def create_detector(par, batchnormalization = False):
+    output_depth = (5+par.par_num_classes)*par.par_num_anchorboxes
     net = Sequential([
-        Convolution2D((3, 3), num_filters=par_dense_size, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
+        Convolution2D((3, 3), num_filters=par.par_dense_size, init=he_normal(), activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
         BatchNormalization(),
-        Convolution2D((3, 3), num_filters=par_dense_size, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
+        Convolution2D((3, 3), num_filters=par.par_dense_size, init=he_normal(), activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
         BatchNormalization(),
-        Convolution2D((3, 3), num_filters=par_dense_size, activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
+        Convolution2D((3, 3), num_filters=par.par_dense_size, init=he_normal(), activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
         #BatchNormalization(), #C-impl says no!
 
         Convolution2D((1, 1), num_filters=output_depth),
     ], "YOLOv2_Detector")
 
-    net2 = create_output_activation_layer(net, anchor_box_scales=par_anchorbox_scales)
+    net2 = create_output_activation_layer(net, par)
     return net2
 
 
@@ -143,29 +132,32 @@ def load_pretrained_darknet_feature_extractor():
 
     return combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: placeholder()})
 
-def load_pretrained_resnet18_feature_extractor():
-    loaded_model = load_model(os.path.join(par_abs_path, "..", "..", "PretrainedModels", "ResNet18_ImageNet_CNTK.model"))
+def load_pretrained_resnet18_feature_extractor(par):
+    model_fn = os.path.normpath(os.path.join(par.par_abs_path, "..", "..",
+        "PretrainedModels", "ResNet18_ImageNet_CNTK.model"))
+    if not os.path.exists(model_fn):
+        raise ValueError('Model %s does not exist'%model_fn)
+    loaded_model = load_model(model_fn)
 
 
     feature_layer = find_by_name(loaded_model, "features")
     fe_output_layer = find_by_name(loaded_model, "z.x.x.r")
-    ph = placeholder(shape=(par_num_channels, par_image_width, par_image_height), name="input_ph")
+    ph = placeholder(shape=(par.par_num_channels, par.par_image_width, par.par_image_height), name="input_ph")
     net = combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: ph})
 
     #plot(net, "ResNet18_s.pdf")
 
     return net
 
-
-def load_pretrained_resnet101_feature_extractor():
-    loaded_model = load_model(os.path.join(par_abs_path, "..", "..", "PretrainedModels", "ResNet101_ImageNet.model"))
+def load_pretrained_resnet101_feature_extractor(par):
+    loaded_model = load_model(os.path.join(par.par_abs_path, "..", "..", "PretrainedModels", "ResNet101_ImageNet.model"))
     feature_layer = find_by_name(loaded_model, "data")
     #first_conv = find_by_name(loaded_model, "conv1")
-    #first_conv = first_conv(placeholder(shape=(par_num_channels, par_image_width, par_image_height)))
+    #first_conv = first_conv(placeholder(shape=(par.par_num_channels, par.par_image_width, par.par_image_height)))
     fe_output_layer = find_by_name(loaded_model, "res5c_relu")
     #return combine([fe_output_layer.owner]).clone(CloneMethod.freeze, {first_conv: placeholder()})
     # return combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: placeholder()})
-    ph = placeholder(shape=(par_num_channels, par_image_width, par_image_height),name="input_ph")
+    ph = placeholder(shape=(par.par_num_channels, par.par_image_width, par.par_image_height),name="input_ph")
     net = combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: ph})
 
     return net
@@ -174,33 +166,34 @@ def load_pretrained_resnet101_feature_extractor():
 
 
 def create_untrained_darknet19_fe():
+    import darknet.darknet19 as dn19
     return dn19.create_feature_extractor(32)
 
 
-def create_feature_extractor(use_model = "pre_ResNet18_ImageNet"):
+def create_feature_extractor(par, use_model = "pre_ResNet18_ImageNet"):
     if(use_model == "pre_Darknet_Cifar"):
         fe = load_pretrained_darknet_feature_extractor()
     elif(use_model == "pre_ResNet101_ImageNet"):
-        fe = load_pretrained_resnet101_feature_extractor()
+        fe = load_pretrained_resnet101_feature_extractor(par)
     elif(use_model == "pre_ResNet18_ImageNet"):
-        fe = load_pretrained_resnet18_feature_extractor()
+        fe = load_pretrained_resnet18_feature_extractor(par)
     return fe
 
 
-def create_yolov2_net():
-    return create_detector()(create_feature_extractor())
+def create_yolov2_net(par):
+    return create_detector(par)(create_feature_extractor(par))
 
 
 ########################################################################################################################
 #   Main                                                                                                               #
 ########################################################################################################################
 
-def predict_image(model, path, conf_threshold = 0.5, show=True):
+def predict_image(model, path, par, conf_threshold = 0.5, show=True):
     import matplotlib.pyplot as mp
     import cv2
-    import ipdb;ipdb.set_trace()
+
     cv_img = cv2.imread(path)
-    resized = cv2.resize(cv_img, (par_image_width, par_image_height), interpolation=cv2.INTER_NEAREST)
+    resized = cv2.resize(cv_img, (par.par_image_width, par.par_image_height), interpolation=cv2.INTER_NEAREST)
     bgr_image = np.asarray(resized, dtype=np.float32)
     hwc_format = np.ascontiguousarray(np.rollaxis(bgr_image, 2))
 
@@ -222,15 +215,15 @@ def predict_image(model, path, conf_threshold = 0.5, show=True):
     box_list_len = len(box_list)
     for j in range(box_list_len):
         box = box_list[j]
-        xmin = int(par_image_width * box[0] - par_image_width * box[2] / 2)
-        xmax = int(xmin + par_image_width * box[2])
-        ymin = int(par_image_height * box[1] - par_image_height * box[3] / 2)
-        ymax = int(ymin + par_image_height * box[3])
-        if(xmax >= par_image_width or ymax >= par_image_height or xmin < 0 or ymin < 0):
+        xmin = int(par.par_image_width * box[0] - par.par_image_width * box[2] / 2)
+        xmax = int(xmin + par.par_image_width * box[2])
+        ymin = int(par.par_image_height * box[1] - par.par_image_height * box[3] / 2)
+        ymax = int(ymin + par.par_image_height * box[3])
+        if(xmax >= par.par_image_width or ymax >= par.par_image_height or xmin < 0 or ymin < 0):
             print("Box out of bounds: (" + str(xmin) +","+ str(ymin) +") ("+ str(xmax) +","+ str(ymax) +")")
             # print(box[5:])
-        xmax = par_image_width-1 if xmax >= par_image_width else xmax
-        ymax = par_image_height-1 if ymax >= par_image_height else ymax
+        xmax = par.par_image_width-1 if xmax >= par.par_image_width else xmax
+        ymax = par.par_image_height-1 if ymax >= par.par_image_height else ymax
         xmin = 0 if xmin < 0 else xmin
         ymin = 0 if ymin < 0 else ymin
 
@@ -249,8 +242,14 @@ def predict_image(model, path, conf_threshold = 0.5, show=True):
         mp.show()
     return image
 
-def create_mb_source(img_height, img_width, img_channels, output_size, image_file, roi_file, randomize = False, multithreaded_deserializer=False, max_samples=io.INFINITELY_REPEAT, max_epochs = io.INFINITELY_REPEAT):
+def create_mb_source(img_height, img_width, img_channels, output_size, image_file, roi_file, is_training = False, multithreaded_deserializer=False, max_samples=io.INFINITELY_REPEAT, max_epochs = io.INFINITELY_REPEAT):
     transforms = []
+
+    if is_training:
+        transforms += [
+            xforms.crop(crop_type='randomside', side_ratio=0.8, jitter_type='uniratio') # train uses jitter
+        ]
+   
     transforms += [
         xforms.scale(width=img_width, height=img_height, channels=img_channels, interpolations='linear',
                      scale_mode='fill'),
@@ -262,17 +261,87 @@ def create_mb_source(img_height, img_width, img_channels, output_size, image_fil
     # read rois and labels
     roi_source = CTFDeserializer(roi_file, StreamDefs(label=StreamDef(field='rois', shape=output_size)))
 
-    rc = MinibatchSource([image_source, roi_source], randomize=randomize, trace_level=TraceLevel.Error, multithreaded_deserializer=multithreaded_deserializer, max_samples=max_samples)#, max_epochs=max_epochs)
+    rc = MinibatchSource([image_source, roi_source], randomize=is_training, trace_level=TraceLevel.Error, multithreaded_deserializer=multithreaded_deserializer, max_samples=max_samples)#, max_epochs=max_epochs)
     return rc
 
 
 
 if __name__ == '__main__':
+    import PARAMETERS as par
+    model = create_yolov2_net(par)
+    print("created model!")
+    #model = load_pretrained_resnet101_feature_extractor()
+    # plot
+    print("beep")
+    plot(model, filename=os.path.join(par.par_abs_path, "YOLOv2.pdf"))
+    print("buup")
+
+    image_input= input((par.par_num_channels, par.par_image_height, par.par_image_width))
+    output = model(image_input) # append model to image input
+    plot(output, filename=os.path.join(par.par_abs_path, "YOLOv2_in.pdf"))
+    """
+    # input for ground truth boxes
+    num_gtb = par.par_max_gtbs
+    gtb_input = input((num_gtb*5)) # 5 for  x,y,w,h,class
+
+    from ErrorFunction import get_error
+    mse = get_error(output, gtb_input, cntk_only=False)
+
+    plot(mse, filename=os.path.join(par.par_abs_path,"Trainnet.pdf"))
 
 
+    # trainig params
+    max_epochs = par.par_max_epochs
+    epoch_size = par.par_epoch_size
+    minibatch_size = par.par_minibatch_size
+
+    lr_schedule = learning_rate_schedule(par.par_lr_schedule, learners.UnitType.sample, epoch_size)
+    mm_schedule = learners.momentum_schedule([-minibatch_size / np.log(par.par_momentum)], epoch_size)
+
+    # Instantiate the trainer object to drive the model training
+    learner = learners.momentum_sgd(mse.parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=0.0005)
+    trainer = Trainer(None, (mse, mse), [learner])
+
+    image_file = os.path.join(par.par_abs_path, "..", "..", "DataSets", "Pascal", "mappings" , "trainval2007.txt")
+    roi_file = os.path.join(par.par_abs_path, "..", "..", "DataSets", "Pascal", "mappings" , "trainval2007_rois_center_rel.txt")
+
+    minibatch_source = create_mb_source(par.par_image_height, par.par_image_width, par.par_num_channels, (5 * num_gtb), image_file, roi_file)
+
+    # define mapping from reader streams to network inputs
+    input_map = {
+        image_input: minibatch_source["features"],
+        gtb_input: minibatch_source["label"]
+    }
+
+    progress_printer = ProgressPrinter(freq= int(epoch_size / 10), tag='Training', rank=Communicator.rank(), gen_heartbeat=True,
+                                       num_epochs=max_epochs)
+
+
+    for epoch in range(max_epochs):  # loop over epochs
+        print("---Start new epoch---")
+        sample_count = 2
+        while sample_count < epoch_size :#- minibatch_size:  # loop over minibatches in the epoch
+
+            # get next minibatch data
+            data = minibatch_source.next_minibatch(min(minibatch_size, epoch_size - sample_count),
+                                                   input_map=input_map)  # fetch minibatch.
+            gtbs = (data[gtb_input]).asarray()
+
+            trainer.train_minibatch({image_input: data[image_input].asarray(), gtb_input:gtbs}, device=gpu(0))  # update model with it
+            sample_count += data[image_input].num_samples  # count samples processed so far
+            progress_printer.update_with_trainer(trainer=trainer, with_metric=True)  # log progress
+            print(progress_printer.avg_metric_since_start())
+
+        progress_printer.epoch_summary(with_metric=True)
+
+    save_path = os.path.join(par.par_abs_path,  "outputdir")
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    output.save_model(os.path.join(save_path, "YOLOv2.model"))
+    """
     # alternatively to training a model you can reload a pretrained!
     model = load_model(r".\outputdir\YOLOv2.model")
-    #image_input = input((par_num_channels, par_image_height, par_image_width))
+    #image_input = input((par.par_num_channels, par.par_image_height, par_image_width))
 
     plot(model, filename=os.path.join(par_abs_path, "YOLOv2.pdf"))
 
@@ -283,7 +352,7 @@ if __name__ == '__main__':
     names = ["000018.jpg","000118.jpg","001118.jpg","002118.jpg"]
     threshold_objectness = 0.505
     for i in range(len(names)):
-        image = os.path.join(par_abs_path, "..", "..", "DataSets", "Pascal", "VOCdevkit" , "VOC2007", "JPEGImages" ,names[i])
+        image = os.path.join(par.par_abs_path, "..", "..", "DataSets", "Pascal", "VOCdevkit" , "VOC2007", "JPEGImages" ,names[i])
         predict_image(output, image, conf_threshold=threshold_objectness)
 
     print("Done!")

@@ -82,7 +82,7 @@ elif(par_dataset_name == "Pascal_VOC_Both"):
 
 
 elif(par_dataset_name == "Logos158"):
-    par_minibatch_size = 128    # minibatch size
+    par_minibatch_size = 32    # minibatch size
     par_image_width = 416       # width the image is scaled to
     par_image_height = 416      # height the image is scaled to
     par_input_bias = 114        # average input value
@@ -124,10 +124,10 @@ par_anchorbox_scales_old =[[1.08/13, 1.19/13], # priors [width, height] for the 
                          [16.62/13, 10.52/13]]
 par_num_anchorboxes = len(par_anchorbox_scales)
 
-par_lamda_coord = 1
-par_lamda_obj = 5
-par_lamda_no_obj = 1
-par_lamda_cls = 1
+par_lambda_coord = 1
+par_lambda_obj = 5
+par_lambda_no_obj = 1
+par_lambda_cls = 1
 par_objectness_threshold=0.6
 par_box_default_mbs = int(100 * 128/par_minibatch_size)
 par_scale_default_boxes = 0.01
