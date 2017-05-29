@@ -24,7 +24,7 @@ class ClassMap():
 LIMIT_TO_FIRST = None
 NMS_IOU_THRESHOLD = 0.7
 cls_map = ClassMap(r"..\..\DataSets\Pascal\class_map.txt")
-DATA_SET = "Grocery"
+DATA_SET = "Pascal_VOC_2007"
 CONF_THRESHOLD = 0.05
 cls_map = ClassMap(r"..\..\DataSets\Pascal\class_map.txt") if DATA_SET == "Pascal_VOC_2007"\
     else ClassMap(r"..\..\DataSets\Grocery\Class_map.txt")

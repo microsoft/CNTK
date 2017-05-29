@@ -8,14 +8,11 @@ import os.path
 
 # Set to the DataSet you want to train
 par_dataset_name = "Pascal_VOC_2007"
-#par_dataset_name = "Logos158"
-
 
 par_trainset_label_file = "train_map.txt"
 par_testset_label_file = "test_map.txt"
 par_abs_path = os.path.dirname(os.path.abspath(__file__))
-par_max_epochs = 100
-#par_dataset_name = "Grocery"
+par_max_epochs = 75 #575
 
 _par_lr_dataset_adoption = 1
 par_downsample = 32
@@ -45,8 +42,6 @@ elif(par_dataset_name == "ImageNet50k"):
     par_minibatch_size = 24
 
 elif(par_dataset_name == "Pascal_VOC_2007"):
-    #par_image_width = 288       # width the image is scaled to
-    #par_image_height = 224      # height the image is scaled to
     par_minibatch_size = 32# 16    # minibatch size
     par_image_width = 416       # width the image is scaled to
     par_image_height = 416      # height the image is scaled to
@@ -58,6 +53,32 @@ elif(par_dataset_name == "Pascal_VOC_2007"):
     par_boxes_centered = True
     par_train_data_file = 'trainval2007.txt'
     par_train_roi_file = 'trainval2007_rois_center_rel.txt'
+
+elif(par_dataset_name == "Pascal_VOC_2012"):
+    par_minibatch_size = 32# 16    # minibatch size
+    par_image_width = 416       # width the image is scaled to
+    par_image_height = 416      # height the image is scaled to
+    par_input_bias = 114        # average input value
+    par_num_channels = 3        # nr of color-channels of the input
+    par_num_classes = 20        # nr of classes displayed
+    par_epoch_size = 115400       # nr of input images
+    par_max_gtbs = 56
+    par_boxes_centered = True
+    par_train_data_file = 'trainval2012.txt'
+    par_train_roi_file = 'trainval2012_rois_center_rel.txt'
+
+elif(par_dataset_name == "Pascal_VOC_Both"):
+    par_minibatch_size =64# 32# 16    # minibatch size
+    par_image_width = 416       # width the image is scaled to
+    par_image_height = 416      # height the image is scaled to
+    par_input_bias = 114        # average input value
+    par_num_channels = 3        # nr of color-channels of the input
+    par_num_classes = 20        # nr of classes displayed
+    par_epoch_size = 5011       # nr of input images
+    par_max_gtbs = 50
+    par_boxes_centered = True
+    par_train_data_file = 'trainvalBoth.txt'
+    par_train_roi_file = 'trainvalBoth_rois_center_rel.txt'
 
 
 elif(par_dataset_name == "Logos158"):
@@ -85,7 +106,7 @@ elif(par_dataset_name == "Grocery"):
     par_boxes_centered = False
     par_train_data_file = 'train.txt'
     par_train_roi_file = 'train.GTRois.txt'
-    par_max_epochs=1250
+    par_max_epochs=640
     _par_lr_dataset_adoption = 2
 
 # Priors from k-means
@@ -115,5 +136,6 @@ par_scale_default_boxes = 0.01
 par_base_lr = 0.001 *_par_lr_dataset_adoption
 par_lr_schedule = [par_base_lr*.1] * 10+[par_base_lr] * 60+ [par_base_lr*0.1] * 30 + [par_base_lr*0.01]*60 + [par_base_lr*0.001]
 par_lr_schedule = [par_base_lr*.1] * 10+[par_base_lr] * 600+ [par_base_lr*0.1] * 300 + [par_base_lr*0.01]*600 + [par_base_lr*0.001]
+par_lr_schedule = [par_base_lr*.1] * 2+[par_base_lr] * 318+ [par_base_lr*0.1] * 248 + [par_base_lr*0.01]
 par_momentum = 0.9
 par_weight_decay = 0.0005

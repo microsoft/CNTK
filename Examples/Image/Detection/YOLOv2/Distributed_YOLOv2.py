@@ -33,11 +33,16 @@ def create_trainer(to_train, epoch_size, minibatch_size, num_quantization_bits, 
 
     lr_schedule = cntk.learning_rate_schedule(par_lr_schedule, cntk.learners.UnitType.sample,
                                               epoch_size)
-    mm_schedule = cntk.learners.momentum_as_time_constant_schedule([-minibatch_size / np.log(par_momentum)], epoch_size)
+
+
+    mm_schedule = cntk.learners.momentum_schedule([par_momentum])
+    #mm_schedule = cntk.learners.momentum_schedule([-minibatch_size / np.log(par_momentum)],epoch_size=epoch_size)
+    #mm_schedule = cntk.learners.momentum_as_time_constant_schedule([-minibatch_size / np.log(par_momentum)])
+    #mm_schedule = cntk.learners.momentum_as_time_constant_schedule([-minibatch_size / np.log(par_momentum)], epoch_size)
 
     # Instantiate the trainer object to drive the model training
     local_learner = cntk.learners.momentum_sgd(to_train['output'].parameters, lr_schedule, mm_schedule, unit_gain=False,
-                                         l2_regularization_weight=0.0005)
+                                         l2_regularization_weight=par_weight_decay)
 
     # Create trainer
     if block_size != None:
@@ -58,21 +63,32 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         network['gtb_in']: train_source["label"]
     }
 
+    callback_frequenzy = 5
+
+    #'index', 'average_error', 'cv_num_samples', and 'cv_num_minibatches'
+    def safe_model_callback(index, average_error, cv_num_samples, cv_num_minibatches):
+        callback_save_file = os.path.join(model_path, "after_" + str(callback_frequenzy*(index+1)) + "_epochs.model")
+        network['output'].save(callback_save_file)
+        print("Saved intermediate model to " + callback_save_file)
+        return True
+
     # Train all minibatches
     training_session(
         trainer=trainer, mb_source=train_source,
         model_inputs_to_streams=input_map,
         mb_size=minibatch_size,
         progress_frequency=epoch_size,
-        checkpoint_config=None, # CheckpointConfig(filename=os.path.join(model_path, model_name), restore=restore),
-        test_config=TestConfig(source=test_source, mb_size=minibatch_size)
+        checkpoint_config= CheckpointConfig(filename=os.path.join(model_path, "Checkpoint_YOLOv2"), restore=restore),
+        test_config=TestConfig(source=test_source, mb_size=minibatch_size),
+        cv_config=cntk.CrossValidationConfig(None, mb_size=par_minibatch_size, frequency=callback_frequenzy*par_epoch_size, callback=safe_model_callback)
     ).train()
 
 
 # Train and evaluate the network.
-def yolov2_train_and_eval(network, image_file, gtb_file, num_quantization_bits=32, block_size=3200, warm_up=0,
+def yolov2_train_and_eval(network, image_file, gtb_file, num_quantization_bits=32, block_size=None,#3200,
+                           warm_up=0,
                            minibatch_size=64, epoch_size=5000, max_epochs=1,
-                           restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=True):
+                           restore=False, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=True):
     _cntk_py.set_computation_network_trace_level(0)
 
     progress_printer = ProgressPrinter(
@@ -96,7 +112,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
-    data_path = os.path.join(par_abs_path, "..", "..", "DataSets","Pascal", "mappings")
+    #data_path = os.path.join(par_abs_path, "..", "..", "DataSets","Pascal", "mappings")
+    data_path = os.path.join(par_abs_path, "..", "..", "DataSets", "Grocery")
     parser.add_argument('-datadir', '--datadir', help='Data directory where the ImageNet dataset is located',required=False, default=data_path)
     
     parser.add_argument('-images', '--images', help='File containing the images in ImageReader format',
@@ -161,9 +178,22 @@ if __name__ == '__main__':
     num_gtb = par_max_gtbs
     gtb_input = input((num_gtb * 5))  # 5 for class, x,y,w,h
 
+    if not par_boxes_centered:
+        original_shape = gtb_input.shape
+        new_shape = (num_gtb, 5)
+        reshaped = reshape(gtb_input, new_shape)
+        xy = reshaped[:,0:2]
+        wh = reshaped[:,2:4]
+        cls = reshaped[:,4:]
+        center_xy = xy + wh*.5
+        new_gtb = splice(xy,wh,cls,axis=1)
+        gtb_transformed = reshape(new_gtb, gtb_input.shape)
+    else:
+        gtb_transformed = gtb_input
+
 
     from ErrorFunction import get_error
-    mse = get_error(output, gtb_input, cntk_only=False)
+    mse = get_error(output, gtb_transformed, cntk_only=False)
 
     network = {
         'feature': image_input,
@@ -197,5 +227,5 @@ if __name__ == '__main__':
 
     if output is not None and output_dir is not None:
         save_path = os.path.join(output_dir, "YOLOv2.model")
-        output.save_model(save_path)
+        output.save(save_path)
         print("Saved model to " + save_path)
