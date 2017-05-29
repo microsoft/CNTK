@@ -11,6 +11,7 @@ from cntk.internal import typemap, sanitize_dtype_cntk, is_string
 from cntk.device import use_default_device
 from cntk.logging import TraceLevel, get_trace_level
 from cntk.variables import Record
+import cntk.io.transforms
 
 import numpy as np
 import uuid
