@@ -23,4 +23,6 @@ def test_cntk_050_guidedtour_evalCorrect(nb):
     testCell = [cell for cell in nb.cells
                 if cell.cell_type == 'code' and re.search('test_metric_lr =', cell.source)]
     assert len(testCell) == 1
-    assert re.match(expectedEvalError, testCell[0].outputs[0]['data']['text/plain'])
+    executeResultText = testCell[0].outputs[0]['text']
+    print(executeResultText)
+    assert re.search(expectedEvalError, executeResultText)
