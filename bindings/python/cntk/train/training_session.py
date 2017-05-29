@@ -68,10 +68,20 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
           Don't specify this if `minibatch_source` is a tuple of numpy/scipy arrays.
         criterion (:class:`~cntk.Function`): criterion function.
           Must be specified if `minibatch_source` is a tuple of numpy/scipy arrays.
+        source (:class:`~cntk.io.MinibatchSource`): DEPRECATED, use minibatch_source instead
+        mb_size(int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): DEPRECATED, use minibatch_size instead
     '''
     def __init__(self, minibatch_source=None, frequency=None, minibatch_size=32,
-            callback=None, max_samples=None, model_inputs_to_streams=None, criterion=None):
+            callback=None, max_samples=None, model_inputs_to_streams=None, criterion=None, source=None, mb_size=None):
         self.callback = callback
+
+        if source is not None:
+            self._warn_deprecated('"source" parameter is deprecated, please use "minibatch_source" instead')
+            minibatch_source = source
+
+        if mb_size is not None:
+            self._warn_deprecated('"mb_size" parameter is deprecated, please use "minibatch_size" instead')
+            minibatch_size = mb_size
 
         if minibatch_source is None and callback is None:
             if frequency is not None and frequency != 0:
@@ -108,20 +118,34 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
             super(CrossValidationConfig, self).__init__(
                 minibatch_source, schedule, frequency, max_samples)
 
+    def _warn_deprecated(self, message):
+        from warnings import warn
+        warn('DEPRECATED: ' + message, DeprecationWarning, stacklevel=2)
+
 class TestConfig(cntk_py.TestConfig):
     '''
     A test configuration for the training session.
 
     Args:
-        minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for testing
-        minibatch_size(:class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): minibatch schedule for testing
+        minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for cross validation
+        minibatch_size(int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): minibatch schedule for cross validation
         model_inputs_to_streams (dict): mapping between input variables and input streams
           If None, the mapping provided to the training session constructor is used.
           Don't specify this if `minibatch_source` is a tuple of numpy/scipy arrays.
         criterion (:class:`~cntk.Function`): criterion function.
           Must be specified if `minibatch_source` is a tuple of numpy/scipy arrays.
+        source (:class:`~cntk.io.MinibatchSource`): DEPRECATED, use minibatch_source instead
+        mb_size(int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): DEPRECATED, use minibatch_size instead
     '''
-    def __init__(self, minibatch_source, minibatch_size=32, model_inputs_to_streams=None, criterion=None):
+    def __init__(self, minibatch_source=None, minibatch_size=32, model_inputs_to_streams=None, criterion=None, source=None, mb_size=None):
+        if source is not None:
+            self._warn_deprecated('"source" parameter is deprecated, please use "minibatch_source" instead')
+            minibatch_source = source
+
+        if mb_size is not None:
+            self._warn_deprecated('"mb_size" parameter is deprecated, please use "minibatch_size" instead')
+            minibatch_size = mb_size
+
         schedule = minibatch_size
         if isinstance(minibatch_size, int):
             schedule = minibatch_size_schedule(minibatch_size)
@@ -139,6 +163,10 @@ class TestConfig(cntk_py.TestConfig):
             super(TestConfig, self).__init__(minibatch_source, schedule, model_inputs_to_streams)
         else:
             super(TestConfig, self).__init__(minibatch_source, schedule)
+
+    def _warn_deprecated(self, message):
+        from warnings import warn
+        warn('DEPRECATED: ' + message, DeprecationWarning, stacklevel=2)
 
 class TrainingSession(cntk_py.TrainingSession):
     '''

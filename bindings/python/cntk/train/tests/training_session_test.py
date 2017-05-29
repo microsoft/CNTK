@@ -537,8 +537,7 @@ def test_session_with_test(tmpdir, device_id):
     assert(t.total_number_of_samples_seen == 61)
     assert(writer.test_summary_counter == 1)
 
-
-def test_session_with_test_own_inputs(tmpdir, device_id):
+def run_simple_training(tmpdir, device_id, test_config_factory):
     device = cntk_device(device_id)
     writer = MockProgressWriter(expected_test_summary=[[92, 25]])
     t, feature, label = create_sample_model(device, writer)
@@ -560,8 +559,18 @@ def test_session_with_test_own_inputs(tmpdir, device_id):
         trainer=t, mb_source=mbs, 
         mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60,
-        test_config = C.TestConfig(mbs1, minibatch_size=2, model_inputs_to_streams = input_map1),
+        test_config=test_config_factory(mbs1, input_map)
     ).train(device)
 
     assert(t.total_number_of_samples_seen == 61)
     assert(writer.test_summary_counter == 1)
+
+def test_session_with_own_test_inputs(tmpdir, device_id):
+    run_simple_training(
+        tmpdir, device_id,
+        test_config_factory = lambda mbs, input_map : C.TestConfig(minibatch_source=mbs, minibatch_size=2, model_inputs_to_streams = input_map))
+
+def test_session_with_legacy_api(tmpdir, device_id):
+    run_simple_training(
+        tmpdir, device_id,
+        test_config_factory = lambda mbs, input_map : C.TestConfig(source=mbs, mb_size=2, model_inputs_to_streams = input_map))
