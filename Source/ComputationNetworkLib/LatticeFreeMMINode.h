@@ -544,7 +544,7 @@ class LatticeFreeMMINodeNegStream : public ComputationNodeNonLooping /*Computati
         CreateMatrixIfNull(m_smap);
         CreateMatrixIfNull(m_mbValues);
         CreateMatrixIfNull(m_mbLabels);
-        if (m_negLabels) CreateMatrixIfNull(m_mbNegLabels);
+        CreateMatrixIfNull(m_mbNegLabels);
         CreateMatrixIfNull(m_mbGradients);
     }
 
@@ -593,7 +593,7 @@ public:
         if (inputIndex == 1)
         {
             FrameRange fr(Input(0)->GetMBLayout());
-            auto gradient = Input(1+m_negLabels)->GradientFor(fr);	//output
+            auto gradient = Input(2)->GradientFor(fr);	//output
 
             if (m_totalFrameNumberOfCurrentMinibatch == 0 || m_frameNumberOfCurrentMinibatch == m_totalFrameNumberOfCurrentMinibatch)
             {
@@ -656,7 +656,7 @@ public:
             m_smapTranspose = make_shared<Matrix<ElemType>>(m_smap->Transpose(), m_deviceId);
 
         FrameRange fr(Input(0)->GetMBLayout());
-        auto inputV = Input(1+m_negLabels)->ValueFor(fr);
+        auto inputV = Input(2)->ValueFor(fr);
         auto inputL = Input(0)->ValueFor(fr);
         auto inputValue = &inputV;
         auto inputLabel = &inputL;
@@ -665,7 +665,7 @@ public:
         auto inputNegLabel=&inputNegL;
 
         size_t nf = inputValue->GetNumCols();
-		if (m_negLabels) assert(nf==inputNegLabel->GetNumCols());
+		assert(nf==inputNegLabel->GetNumCols());
         if (m_totalFrameNumberOfCurrentMinibatch > 0)
         {
             if (m_firstPassFinished) // Second pass of forward propergation
@@ -680,12 +680,12 @@ public:
                 size_t numRows = inputValue->GetNumRows();
                 m_mbValues->Resize(numRows, m_totalFrameNumberOfCurrentMinibatch);
                 m_mbLabels->Resize(numRows, m_totalFrameNumberOfCurrentMinibatch);
-				if (m_negLabels) m_mbNegLabels->Resize(numRows, m_totalFrameNumberOfCurrentMinibatch);				
+				m_mbNegLabels->Resize(numRows, m_totalFrameNumberOfCurrentMinibatch);				
             }
 
             m_mbValues->SetColumnSlice(*inputValue, m_frameNumberOfCurrentMinibatch, nf);
             m_mbLabels->SetColumnSlice(*inputLabel, m_frameNumberOfCurrentMinibatch, nf);
-            if (m_negLabels) m_mbNegLabels->SetColumnSlice(*inputNegLabel, m_frameNumberOfCurrentMinibatch, nf);			
+            m_mbNegLabels->SetColumnSlice(*inputNegLabel, m_frameNumberOfCurrentMinibatch, nf);			
             m_frameNumberOfCurrentMinibatch += nf;
 
             if (m_frameNumberOfCurrentMinibatch < m_totalFrameNumberOfCurrentMinibatch)
@@ -701,7 +701,7 @@ public:
             m_firstPassFinished = true;
             inputValue = m_mbValues.get();
             inputLabel = m_mbLabels.get();
-			if (m_negLabels) inputNegLabel = m_mbNegLabels.get();			
+			inputNegLabel = m_mbNegLabels.get();			
             nf = m_totalFrameNumberOfCurrentMinibatch;
         }
 
@@ -711,7 +711,7 @@ public:
         m_likelihoods->AssignLogSoftmaxOf(*inputValue, true);
         if (m_ceweight != 0)
             m_softmax->SetValue(*m_likelihoods);
-        (*m_likelihoods) -= Input(2+m_negLabels)->ValueAsMatrix();
+        (*m_likelihoods) -= Input(3)->ValueAsMatrix();
 
         if (m_squashingFactor != (ElemType)1.0)    // squashing factor
             (*m_likelihoods) *= m_squashingFactor;
