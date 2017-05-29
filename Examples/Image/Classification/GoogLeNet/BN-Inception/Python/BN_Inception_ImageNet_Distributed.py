@@ -97,7 +97,7 @@ def bn_inception_train_and_eval(train_data, test_data, mean_data, num_quantizati
 
     # NOTE: scaling up minibatch_size increases sample throughput. In 8-GPU machine,
     # ResNet110 samples-per-second is ~7x of single GPU, comparing to ~3x without scaling
-    # up. However, bigger minimatch size on the same number of samples means less updates, 
+    # up. However, bigger minibatch size on the same number of samples means less updates,
     # thus leads to higher training error. This is a trade-off of speed and accuracy
     if minibatch_size is None:
         mb_size = 32 * (Communicator.num_workers() if scale_up else 1)
@@ -168,4 +168,4 @@ if __name__=='__main__':
                                 scale_up=bool(args['scale_up']))
 
     # Must call MPI finalize when process exit without exceptions
-    cntk.distributed.Communicator.finalize()    
+    Communicator.finalize()
