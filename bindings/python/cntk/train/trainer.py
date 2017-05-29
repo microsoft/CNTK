@@ -245,7 +245,7 @@ class Trainer(cntk_py.Trainer):
             filename (str): filename to restore the checkpoint from
         '''
 
-        super(Trainer, self).restore_from_checkpoint(filename)
+        return super(Trainer, self).restore_from_checkpoint(filename)
 
     @property
     @typemap

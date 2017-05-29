@@ -405,6 +405,41 @@ namespace CNTK
 
 
         CNTK_API bool IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName);
+
+        // A stripped-down version of boost::optional.
+        // TODO: replace by std::optional, once it's fully supported by VS.
+        template <class T>
+        class Optional
+        {
+        public:
+            
+            Optional() = default;
+            
+            Optional& operator= (T value) 
+            {
+                m_initialized = true;
+                m_value = value;
+                return *this;
+            }
+
+            bool IsInitialized() const
+            {
+                return m_initialized;
+            }
+
+            T Get() const
+            {
+                if (IsInitialized())
+                    return m_value;
+                RuntimeError("Optional value is not initialized.");
+            }
+
+            Optional(const Optional&) = default; Optional& operator=(const Optional&) = default;
+            Optional(Optional&&) = delete; Optional& operator=(Optional&&) = delete; 
+        private:
+             T m_value;
+             bool m_initialized { false };
+        };
     }
 
     // Forward-declare test fixtures, so that they can be used as friends.
