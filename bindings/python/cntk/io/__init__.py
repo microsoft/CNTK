@@ -437,14 +437,13 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
     def get_checkpoint_state(self):
         '''
         Returns a dictionary describing the current state of the minibatch
-        source.
+        source. Needs to be overwritten if the state of the minibatch source
+        needs to be stored to and later restored from the checkpoint.
 
         Returns:
             dictionary, that can be later used on :meth:`restore_from_checkpoint`.
         '''
-        raise NotImplementedError('in order to use checkpointing on '
-            'UserMinibatchSource, you need to implement '
-            'get_checkpoint_state()')
+        return {}
 
     def _restore_from_checkpoint(self, state):
         self.restore_from_checkpoint(state)
@@ -456,9 +455,10 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
         Args:
             state (dict): dictionary containing the state
         '''
-        raise NotImplementedError('in order to use checkpointing on '
-            'UserMinibatchSource, you need to implement '
-            'restore_from_checkpoint(checkpoint)')
+        if state:
+            raise NotImplementedError('in order to use checkpointing on '
+                'UserMinibatchSource, you need to implement '
+                'restore_from_checkpoint(checkpoint)')
 
     def __getitem__(self, name):
         '''
