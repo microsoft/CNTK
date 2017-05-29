@@ -58,6 +58,9 @@
 %ignore operator>>;
 %ignore CNTK::DictionaryValue::operator=;
 %ignore CNTK::DictionaryValue::Value;
+// store python floats using double precision (if this overload is not ignored, 
+// it'll be invoked for all values irrespective of the original size)
+%ignore CNTK::DictionaryValue::DictionaryValue(float);
 
 %ignore CNTK::Dictionary::operator=;
 %ignore CNTK::Dictionary::operator[];
@@ -496,23 +499,38 @@ fail:
     }
 }
 
-%typemap(out, fragment="DictionaryValueToPy") const CNTK::Dictionary& Attributes(){
-    //out Dictionary& Attributes()
-    PyObject* container = PyDict_New();
-    if (container == NULL)
+%fragment("DictionaryToPy", "header", fragment="DictionaryValueToPy")
+{
+    PyObject *DictionaryToPy(const CNTK::Dictionary& dict)
     {
-        SWIG_exception(SWIG_RuntimeError, "error passing a dictionary to Python");
-    }
+        PyObject* pydict = PyDict_New();
+        if (pydict == NULL)
+        {
+            SWIG_exception(SWIG_RuntimeError, "error passing a dictionary to Python");
+        }
 
-    for (auto it = $1->begin(); it != $1->end(); ++it)
-    {
-        PyObject *key = PyUnicode_FromWideChar(it->first.c_str(), it->first.length());
-        PyObject *val = DictionaryValueToPy(it->second);
-        PyDict_SetItem(container, key, val);
-        Py_DECREF(key);
-        Py_DECREF(val);
+        for (const auto& kv : dict)
+        {
+            PyObject *key = PyUnicode_FromWideChar(kv.first.c_str(), kv.first.length());
+            PyObject *val = DictionaryValueToPy(kv.second);
+            PyDict_SetItem(pydict, key, val);
+            Py_DECREF(key);
+            Py_DECREF(val);
+        }
+        return pydict;
+fail:
+    return NULL;
     }
-    $result = container;
+}
+
+%typemap(out, fragment="DictionaryToPy") const CNTK::Dictionary& Attributes(){
+    //out Dictionary& Attributes()
+    $result = DictionaryToPy(*$1);
+}
+
+%typemap(out, fragment="DictionaryToPy") CNTK::Dictionary RestoreFromCheckpoint {
+    //out Dictionary& Attributes()
+    $result = DictionaryToPy($1);
 }
 
 %define %eq_for(DATA_TYPE, EQ)
@@ -809,19 +827,9 @@ public:
 // Implementing typemapping for UDFDeserializeCallbackWrapper (it has a dictionary
 // as one of its input parameters), which needs to be implemented in Python.
 
-%typemap(directorin, fragment="DictionaryValueToPy") const CNTK::Dictionary&
+%typemap(directorin, fragment="DictionaryToPy") const CNTK::Dictionary&
 {
-    PyObject* container = PyDict_New();
-
-    for (const auto& kv : $1)
-    {
-        PyObject *key = PyUnicode_FromWideChar(kv.first.c_str(), kv.first.length());
-        PyObject *val = DictionaryValueToPy(kv.second);
-        PyDict_SetItem(container, key, val);
-        Py_DECREF(key);
-        Py_DECREF(val);
-    }
-    $input = container;
+    $input = DictionaryToPy($1);
 }
 
 // Implementing typemapping for InferOutputs virtual function that takes vector of variables by reference
