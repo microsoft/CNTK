@@ -975,6 +975,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalExtendedClientTest",
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorials", "Tutorials", "{305456F0-D9DE-4452-87BE-1C9F3C34C14F}"
 	ProjectSection(SolutionItems) = preProject
+		Tutorials\CNTK_050_GuidedTour.ipynb = Tutorials\CNTK_050_GuidedTour.ipynb
 		Tutorials\CNTK_101_LogisticRegression.ipynb = Tutorials\CNTK_101_LogisticRegression.ipynb
 		Tutorials\CNTK_102_FeedForward.ipynb = Tutorials\CNTK_102_FeedForward.ipynb
 		Tutorials\CNTK_103A_MNIST_DataLoader.ipynb = Tutorials\CNTK_103A_MNIST_DataLoader.ipynb
