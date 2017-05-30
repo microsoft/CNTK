@@ -5,8 +5,10 @@
 # ==============================================================================
 
 # This example shows how to train a very basic CNTK model for logistic regression.
-# The task is to classify a 2-dimensional vector as belong to one of two classes.
-# The data is artificially created. Each class' data follows a normal distribution.
+# The task is to classify a 2-dimensional vector as belonging to one of two classes.
+# The data is artificially created.
+# This example is identical to LogisticRegression_FunctionalAPI.py, except that
+# it uses lower-level APIs.
 
 from __future__ import print_function
 import cntk
@@ -17,7 +19,7 @@ import scipy.sparse
 input_dim = 2    # classify 2-dimensional data
 num_classes = 2  # into one of two classes
 
-# This example uses synthetic data, which we generate in the following.
+# This example uses synthetic data from a normal distribution, which we generate in the following.
 #  X[corpus_size,input_dim] - our input data
 #  Y[corpus_size]           - labels (0 or 1), in one-hot representation
 np.random.seed(0)

@@ -6,7 +6,7 @@
 
 import numpy as np
 import cntk as C
-from cntk import Axis, reshape, sigmoid, element_max, Function, BlockFunction, FunctionOf, Constant, greater, default_options, default_options_for, \
+from cntk import Axis, reshape, sigmoid, element_max, Function, BlockFunction, Constant, greater, default_options, default_options_for, \
                  get_default_override, default_override_or
 from cntk.layers import Convolution, Convolution1D, Convolution2D, Convolution3D, Dense, Embedding, Fold, For, \
                         MaxPooling, MaxUnpooling, LSTM, GRU, RNNStep, Sequential, Stabilizer, Dropout, Recurrence, \
@@ -98,13 +98,13 @@ def test_Function():
     ####################################################
     # Test 3: Function() with shapes and type; short-cut
     ####################################################
-    @FunctionOf(Tensor[3,2])
+    @Function.with_signature(Tensor[3,2])
     def g(x):
         return x * x
     assert g.shape == (3,2)
     r = g([[[2, 1], [5, 2], [1, 3]]])
     e = [np.array([[2, 1], [5, 2], [1, 3]]) ** 2]
-    assert_list_of_arrays_equal(r, e, err_msg='@FunctionOf test failed')
+    assert_list_of_arrays_equal(r, e, err_msg='@Function.with_signature test failed')
 
 ####################################
 # . syntax for name lookup
