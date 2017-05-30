@@ -251,4 +251,4 @@ if __name__=='__main__':
                            epoch_size=args['epoch_size'],
                            gen_heartbeat=True)
     # Must call MPI finalize when process exit without exceptions
-    cntk.train.distributed.Communicator.finalize()
+    Communicator.finalize()
