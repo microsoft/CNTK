@@ -40,7 +40,7 @@ def build_pixelcnn_2_model(x, h=None, nr_resnet=4, nr_filters=1024, per_pixel_co
     x = nn.masked_conv2d(x, nr_filters, filter_shape=(1,1), strides=(1,1), mask_type='b', nonlinearity=ct.relu)
     return nn.masked_conv2d(x, per_pixel_count, filter_shape=(1,1), strides=(1,1), mask_type='b', nonlinearity=ct.relu)
 
-def build_pixelcnn_pp_model(x, h=None, dropout_p=0.5, nr_resnet=4, nr_filters=160, per_pixel_count=100, resnet_nonlinearity=nn.concat_elu, nonlinearity=ct.elu, first_run=False):
+def build_pixelcnn_pp_model(x, h=None, dropout_p=0.5, nr_resnet=5, nr_filters=160, per_pixel_count=100, resnet_nonlinearity=nn.concat_elu, nonlinearity=ct.elu, first_run=False):
     """
     Based on PixelCNN++ from https://openreview.net/pdf?id=BJrFC6ceg, the implementation is 
     a port from https://github.com/openai/pixel-cnn/blob/master/pixel_cnn_pp 

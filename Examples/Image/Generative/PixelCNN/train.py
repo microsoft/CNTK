@@ -101,7 +101,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
 
     # Set learning parameters
     lr = 0.001
-    lr_decay = 0.8 #0.999995
+    lr_decay = 0.9 #0.999995
 
     # Print progress
     progress_writers = [ct.logging.ProgressPrinter(tag='Training', freq=100, num_epochs=max_epochs)] # freq=100
