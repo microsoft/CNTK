@@ -39,3 +39,16 @@ def _to_csr(data):
     np_data = np.asarray(data, dtype=np.float32)
     data_reshaped = np_data.reshape((-1, np_data.shape[-1]))
     return sp.sparse.csr_matrix(data_reshaped, dtype=np.float32)
+
+def set_device_from_pytest_env():
+    '''
+    Helper function to select the right target device when this notebook is being tested.
+    Call this at the start of all Jupyter notebooks.
+    '''
+    # TODO: can we not call this ourselves right before calling into the Jupyter-notebook code?
+    import os
+    if 'TEST_DEVICE' in os.environ:
+        if os.environ['TEST_DEVICE'] == 'cpu':
+            C.device.try_set_default_device(C.device.cpu())
+        else:
+            C.device.try_set_default_device(C.device.gpu(0))

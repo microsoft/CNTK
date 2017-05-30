@@ -644,7 +644,7 @@ template <class ElemType>
         Validate(/*isFinalValidationPass =*/ true);
 
     // update the actual m_value allocation
-    if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
+    if ((!IsLeaf() || Is<RandomDistributionNode<ElemType>>()) && !RequiresPreCompute()) // TODO: guard this through overrides instead
         UpdateFunctionValuesSize();
 
     // give nodes a chance to update their internal state that may also have to match MB size

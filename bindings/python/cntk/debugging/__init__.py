@@ -18,17 +18,7 @@ def dump_signature(root, tag=None):
     '''
     Debug helper that prints the signature of a Function.
     '''
-    f_name = root.name if root.name else tag if tag else 'Function'
-    args = root.signature
-    def format_arg_spec(v):
-        s = v.name + ': ' if v.name else ''
-        return s + str(v._type)
-    outputs = root.outputs
-    if len(outputs) > 1:
-        output_signature = 'Tuple[' + ', '.join(format_arg_spec(output) for output in outputs) + ']'
-    else:
-        output_signature = format_arg_spec(outputs[0])
-    print(f_name + '(' + ", ".join([format_arg_spec(param) for param in args]) + ') -> ' + output_signature)
+    print(str(root))
 
 def dump_function(root, tag=None):
     from cntk.logging.graph import depth_first_search

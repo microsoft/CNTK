@@ -114,8 +114,6 @@ def test_mask(batch, seq_starts, expected):
 def test_one_hot_raises():
     with pytest.raises(ValueError):
         s = Value.one_hot([[1.0, 2.0], [3.]], 4)
-    with pytest.raises(ValueError):
-        s = Value.one_hot([1, 2], 4)
 
 
 @pytest.mark.parametrize("dtype", [

@@ -3,28 +3,113 @@
 # for full license information.
 # ==============================================================================
 
+'''
+Crosstalk (Contrib) is the utility to manage variables for debugging/conversion across scripts in different toolkits. 
+With crosstalk, user can define named watch points to variables or parameters, and setting up a work dir. 
+Then crosstalk can save/load variables to corresponding files from python debugger, and compare values using numpy. 
+'''
+
 import os
 import pickle
 import numpy as np
 from collections import namedtuple
 
-VarInfo = namedtuple('VarInfo', 'var type attr')
-FuncInfo = namedtuple('FuncInfo', 'setter getter')
+class VarInfo(namedtuple('VarInfo', 'var type attr')):
+    ''' Variable information
+
+    var
+        The variable object
+
+    type
+        The type of the variable object
+
+    attr
+        The attributes for variable setter/getter
+    '''
+
+class FuncInfo(namedtuple('FuncInfo', 'setter getter')):
+    ''' Setter/getter functions for a given variable type
+    
+    setter
+        The setter function
+
+    getter
+        The getter function
+    '''
 
 # attributes for high level blocks
-Conv2DAttr = namedtuple('Conv2DAttr', 'filter_shape num_filters')
-Conv2DArgs = namedtuple('Conv2DArgs', 'W b')
-#Conv2D filter shape (num_filters, filter_w, filter_h)
-#Conv2D bias shape (num_filters)
-#note that Conv2D output is expected to be in NCHW format
+class Conv2DAttr(namedtuple('Conv2DAttr', 'filter_shape num_filters')):
+    ''' Attribute for Conv2D variable
+    
+    filter_shape
+        The filter shape
 
-RnnAttr = namedtuple('RnnAttr', 'bidirectional op_type input_dim hidden_dim forget_bias')
-RnnArgs = namedtuple('RnnArgs', 'fw_W fw_H fw_b bw_W bw_H bw_b')
+    num_filters
+        Number of filters
+    '''
 
-# embed is a special trainable parameter that it has a dictionary to match
-# for word w, the embedding is p[dict.index(w), :]
-# crosstalk saves embedding as a dict of word -> weight
-EmbedAttr = namedtuple('EmbedAttr', 'dict input_dim')
+class Conv2DArgs(namedtuple('Conv2DArgs', 'W b')):
+    ''' Args inside Conv2D variable. Conv2D output is in NCHW format
+
+    W
+        The filter parameter in shape (num_filters, filter_w, filter_h,))
+
+    b
+        The bias parameter in shape (num_filters,)
+    '''
+
+class RnnAttr(namedtuple('RnnAttr', 'bidirectional op_type input_dim hidden_dim forget_bias')):
+    ''' Attribute for RNN variable
+    
+    bidirectional
+        True for bidirectional RNN, False for unidirection. Currently only support bidirectional=True
+
+    op_type
+        RNN cell type, currently only support 'lstm'
+        
+    input_dim
+        Input dimension
+
+    hidden_dim
+        Hidden dimension in RNN cell
+
+    forget_bias
+        forget gate bias in LSTM
+    '''
+
+class RnnArgs(namedtuple('RnnArgs', 'fw_W fw_H fw_b bw_W bw_H bw_b')):
+    ''' Args inside RNN variable.
+
+    fw_W
+        The input projection parameter for RNN forward in shape (input_dim, num_gates * hidden_dim)
+
+    fw_H
+        The hidden projection parameter for RNN forward in shape (hidden_dim, num_gates * hidden_dim)
+
+    fw_b
+        The bias parameter for RNN forward in shape (num_gates * hidden_dim,)
+        
+    bw_W
+        The input projection parameter for RNN backward in shape (input_dim, num_gates * hidden_dim)
+
+    bw_H
+        The hidden projection parameter for RNN backward in shape (hidden_dim, num_gates * hidden_dim)
+
+    bw_b
+        The bias parameter for RNN backward in shape (num_gates * hidden_dim,)
+    '''
+
+class EmbedAttr(namedtuple('EmbedAttr', 'dict input_dim')):
+    ''' Attribute for embedding variable
+        embed is a special trainable parameter that it has a dictionary to match
+        for word w, the embedding is p[dict.index(w), :]
+    
+    dict
+        The list of vocabulary of the embedding
+
+    input_dim
+        The input dimension of the embedding
+    '''
 
 def _compare_list_to_ndarray(list_value, ndarray_value, rtol, atol, equal_nan):
     if ndarray_value.shape[0] != len(list_value):
@@ -44,10 +129,7 @@ def _compare_list_to_ndarray(list_value, ndarray_value, rtol, atol, equal_nan):
 
 class Crosstalk(object):
     '''
-    Base class of Crosstalk. Crosstalk is a utility to manage variables for debugging/conversion across scripts in different toolkits.
-    
-    With crosstalk, user can define named watch points to variables or parameters, and setting up a work dir.
-    Then crosstalk can save/load variables to corresponding files from python debugger, and compare values using numpy.
+    Base class of Crosstalk.
     Please refer to crosstalk unittests for examples of how to exchange/compare values between different toolkits.
     '''
     def __init__(self):
@@ -133,7 +215,7 @@ class Crosstalk(object):
                 with open(self._get_filename(name)+'.pkl', 'wb') as pkl:
                     pickle.dump(raw_value, pkl)
         return raw_value
-        
+
     def compare(self, name, compare_name=None, rtol=1e-05, atol=1e-08, equal_nan=False):
         '''
         Compare var with name to value in file in work_dir. Specify compare_name if the file to compare is with a different name of var.
@@ -167,7 +249,7 @@ class Crosstalk(object):
         Load vars in list of names
         '''
         [self.assign(n, load=True) for n in names if n in self.vars.keys()]
-            
+
     def save(self, names):
         '''
         Save vars in list
@@ -179,7 +261,7 @@ class Crosstalk(object):
         Save all vars
         '''
         self.save(self.vars.keys())
-        
+
     def reset(self):
         '''
         Reset all vars and passes, setter/getter are kept

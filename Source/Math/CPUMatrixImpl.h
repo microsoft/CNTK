@@ -109,7 +109,15 @@ CPUMatrix<ElemType>::CPUMatrix()
 template <class ElemType>
 static ElemType* NewArray(size_t n)
 {
-    ElemType* p = new ElemType[n]();
+    // We need to allocate possibly one more element for the following reason.
+    // At some point we might want to fill a buffer with the result of a random
+    // number generator. The RNG is oblivious to whether the buffer is on the 
+    // CPU or GPU but it needs to keep an accurate tally of how many numbers it
+    // has generated. The trouble stems from the fact that generating an odd 
+    // number gaussians on the GPU is not supported so we must always 
+    // generate an even number. So since we wouldn't know how to update the tally
+    // we are making this allocate one more element in the worst case.
+    ElemType* p = new ElemType[AsMultipleOf(n, 2)]();
 #if 0 // _DEBUG
         ElemType nan = Matrix<ElemType>::MakeNan(__LINE__);
         for (size_t i = 0; i < n; i++)
@@ -1018,6 +1026,51 @@ void CPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemTy
         bufPtr[i] = r(generator);
     }
 }
+
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetUniformRandomValue(RNGHandle& rngHandle, const ElemType low, const ElemType high)
+{
+    if (IsEmpty())
+        LogicError("SetUniformRandomValue: Matrix is empty.");
+
+    CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&rngHandle);
+    if (cpuRNGHandle == nullptr)
+        LogicError("rngHandle must be a CPURNGHandle.");
+
+    boost::random::uniform_real_distribution<ElemType> r(low, high);
+    std::generate(Data(), Data() + GetNumElements(), [&cpuRNGHandle, &r]() {return r(cpuRNGHandle->Generator()); });
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetGaussianRandomValue(RNGHandle& rngHandle, const ElemType mean, const ElemType stdev)
+{
+    if (IsEmpty())
+        LogicError("SetGaussianRandomValue: Matrix is empty.");
+
+    CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&rngHandle);
+    if (cpuRNGHandle == nullptr)
+        LogicError("rngHandle must be a CPURNGHandle.");
+
+    boost::random::normal_distribution<ElemType> r(mean, stdev);
+    auto n = AsMultipleOf(GetNumElements(), 2);
+    std::generate(Data(), Data() + n, [&cpuRNGHandle, &r]() {return r(cpuRNGHandle->Generator()); });
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetGumbelRandomValue(RNGHandle& rngHandle, const ElemType loc, const ElemType scale)
+{
+    if (IsEmpty())
+        LogicError("SetGumbelRandomValue: Matrix is empty.");
+
+    CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&rngHandle);
+    if (cpuRNGHandle == nullptr)
+        LogicError("rngHandle must be a CPURNGHandle.");
+
+    boost::random::uniform_real_distribution<ElemType> r(0, 1);
+    std::generate(Data(), Data() + GetNumElements(), [&cpuRNGHandle, &r, loc, scale]() {return loc - scale * log(-log1p(-r(cpuRNGHandle->Generator()))); });
+}
+
 
 template <class ElemType>
 void CPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)

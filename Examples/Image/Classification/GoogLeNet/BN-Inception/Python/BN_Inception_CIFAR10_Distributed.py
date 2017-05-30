@@ -5,6 +5,8 @@
 # ==============================================================================
 
 from __future__ import print_function
+from __future__ import division
+
 import os
 import math
 import argparse
@@ -83,7 +85,7 @@ def train_and_test(network, trainer, train_source, test_source, max_epochs, mini
                                            filename = os.path.join(
                                            model_path, "BN-Inception_CIFAR10"),
                                            restore=restore),
-        test_config=TestConfig(source=test_source, mb_size=minibatch_size)
+        test_config=TestConfig(test_source, minibatch_size=minibatch_size)
     ).train()
 
     if profiling:
@@ -96,7 +98,7 @@ def bn_inception_train_and_eval(train_data, test_data, mean_data, num_quantizati
 
     # NOTE: scaling up minibatch_size increases sample throughput. In 8-GPU machine,
     # ResNet110 samples-per-second is ~7x of single GPU, comparing to ~3x without scaling
-    # up. However, bigger minimatch size on the same number of samples means less updates, 
+    # up. However, bigger minibatch size on the same number of samples means less updates,
     # thus leads to higher training error. This is a trade-off of speed and accuracy
     if minibatch_size is None:
         mb_size = 128 * (Communicator.num_workers() if scale_up else 1)

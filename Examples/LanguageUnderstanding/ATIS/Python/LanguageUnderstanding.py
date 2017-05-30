@@ -8,15 +8,9 @@ from __future__ import print_function
 import os
 import argparse
 import math
+import cntk
 from cntk.layers import *  # Layers library
 from cntk.layers.typing import *
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
-from cntk import Trainer, Value
-from cntk.learners import fsadagrad, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
-from cntk import splice, relu
-from cntk.losses import cross_entropy_with_softmax
-from cntk.metrics import classification_error
-from cntk.logging import *
 
 ########################
 # variables and stuff  #
@@ -38,11 +32,11 @@ hidden_dim = 300
 ########################
 
 def create_reader(path, is_training):
-    return MinibatchSource(CTFDeserializer(path, StreamDefs(
-        query         = StreamDef(field='S0', shape=vocab_size,  is_sparse=True),
-        intent_labels = StreamDef(field='S1', shape=num_intents, is_sparse=True),  # (used for intent classification variant)
-        slot_labels   = StreamDef(field='S2', shape=num_labels,  is_sparse=True)
-    )), randomize=is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
+    return cntk.io.MinibatchSource(cntk.io.CTFDeserializer(path, cntk.io.StreamDefs(
+        query         = cntk.io.StreamDef(field='S0', shape=vocab_size,  is_sparse=True),
+        intent_labels = cntk.io.StreamDef(field='S1', shape=num_intents, is_sparse=True),  # (used for intent classification variant)
+        slot_labels   = cntk.io.StreamDef(field='S2', shape=num_labels,  is_sparse=True)
+    )), randomize=is_training, max_sweeps = cntk.io.INFINITELY_REPEAT if is_training else 1)
 
 ########################
 # define the model     #
@@ -64,8 +58,8 @@ def create_model_function():
         #  - bidirectional LSTM
         # which would be invoked as follows:
         #Recurrence(GRU(hidden_dim)),
-        #Recurrence(RNNUnit(hidden_dim, activation=relu)),
-        #(Recurrence(LSTM(hidden_dim)), Recurrence(LSTM(hidden_dim), go_backwards=True)), splice,
+        #Recurrence(RNNStep(hidden_dim, activation=cntk.relu)),
+        #(Recurrence(LSTM(hidden_dim)), Recurrence(LSTM(hidden_dim), go_backwards=True)), cntk.splice,
         Stabilizer(),
         Label('hidden_representation'),
         Dense(num_labels, name='out_projection')
@@ -81,14 +75,11 @@ def create_model_function():
 #  takes:   Function: features -> prediction
 #  returns: Function: (features, labels) -> (loss, metric)
 def create_criterion_function(model):
-    #@Function
-    #def criterion(query: Sequence[SparseTensor[vocab_size]], labels: Sequence[SparseTensor[num_labels]]):
-    @Function
-    @Signature(query = Sequence[SparseTensor[vocab_size]], labels = Sequence[SparseTensor[num_labels]])
+    @cntk.Function.with_signature(query = Sequence[SparseTensor[vocab_size]], labels = Sequence[SparseTensor[num_labels]])
     def criterion(query, labels):
         z = model(query)
-        ce   = cross_entropy_with_softmax(z, labels)
-        errs = classification_error      (z, labels)
+        ce = cntk.losses.cross_entropy_with_softmax(z, labels)
+        errs = cntk.metrics.classification_error(z, labels)
         return (ce, errs)
     return criterion
 
@@ -112,10 +103,10 @@ def peek(model, epoch):
     # run a sequence through
     seq = 'BOS flights from new york to seattle EOS'  # example string
     w = [query_dict[w] for w in seq.split()]          # convert to word indices
-    z = model(Value.one_hot([w], vocab_size))               # run it through the model
+    z = model(cntk.Value.one_hot([w], vocab_size))    # run it through the model
     best = np.argmax(z,axis=2)                        # classify
     # show result
-    print("Example Sentence After Epoch [{}]".format(epoch))
+    print("Example Sentence After {} Epochs".format(epoch))
     for query, slot_label in zip(seq.split(),[slots_wl[s] for s in best[0]]):
         print("\t{}\t{}".format(query, slot_label))
     #print(model.embed.E.value)
@@ -128,7 +119,6 @@ def train(reader, model, max_epochs):
 
     # declare the model's input dimension, so that the saved model is usable
     model.update_signature(Sequence[SparseTensor[vocab_size]])
-    #model.declare_args(vocab_size)
 
     # criterion: (model args, labels) -> (loss, metric)
     #   here  (query, slot_labels) -> (ce, errs)
@@ -140,84 +130,54 @@ def train(reader, model, max_epochs):
     #from cntk.logging.graph import plot
     #plot(criterion, filename=data_dir + "/model.pdf")
 
-    # iteration parameters  --needed here because learner schedule needs it
+    # iteration parameters
+    # Epoch size in CNTK refers to not entire data sweeps, but rather number of samples
+    # between checkpointing and/or summarizing training progress.
     epoch_size = 36000
     minibatch_size = 70
-    #epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
 
     # SGD parameters
-    learner = fsadagrad(criterion.parameters,
-                        lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
-                        momentum   = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
+    learner = cntk.learners.fsadagrad(criterion.parameters,
+                        lr = cntk.learners.learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], cntk.learners.UnitType.sample, epoch_size),
+                        momentum = cntk.learners.momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
                         gradient_clipping_threshold_per_sample = 15,
                         gradient_clipping_with_truncation = True)
 
-    # trainer
-    trainer = Trainer(None, criterion, learner)
+    # logging
+    # We provide a progress_printer that logs loss and metric, as well as a callback
+    # for additional logging after every epoch ("training summary"),  in which we run
+    # an example through our model, to peek into how it improves.
+    cntk.logging.log_number_of_parameters(model) ; print()
+    progress_printer = cntk.logging.ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging
+    #progress_printer = cntk.logging.ProgressPrinter(tag='Training')
+    progress_callback = cntk.logging.TrainingSummaryProgressCallback(epoch_size, lambda epoch, *unused_args: peek(model, epoch+1))
 
-    # process minibatches and perform model training
-    log_number_of_parameters(model) ; print()
-    progress_printer = ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging
-    #progress_printer = ProgressPrinter(tag='Training')
-
-    t = 0
-    for epoch in range(max_epochs):         # loop over epochs
-        peek(model, epoch)                  # log some interesting info
-        epoch_end = (epoch+1) * epoch_size
-        while t < epoch_end:                # loop over minibatches on the epoch
-            # BUGBUG: The change of minibatch_size parameter vv has no effect.
-            # TODO: change all examples to this pattern; then remove this comment
-            data = reader.next_minibatch(min(minibatch_size, epoch_end-t))     # fetch minibatch
-            #trainer.train_minibatch(data[reader.streams.query], data[labels])  # update model with it
-            trainer.train_minibatch({criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[labels]})  # update model with it
-            t += data[labels].num_samples                                      # count samples processed so far
-            progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
-        loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
-
-    return loss, metric # return values from last epoch
+    peek(model, 0)                  # see how the model is doing
+    # train() will loop through the training data provided by 'reader', minibatch by minibatch,
+    # and update the model. The progress_printer is used to print loss and metric periodically.
+    # The progress_callback is another progress tracker we use to call into our peek() function,
+    # which illustrates how the model becomes better with each epoch.
+    progress = criterion.train(reader, streams=(reader.streams.query, reader.streams.slot_labels),
+                               minibatch_size=minibatch_size, max_epochs=max_epochs, epoch_size=epoch_size,
+                               parameter_learners=[learner],
+                               callbacks=[progress_printer, progress_callback])
+    return progress.epoch_summaries[-1].loss, progress.epoch_summaries[-1].metric # return loss and metric from last epoch
 
 
 ########################
 # eval action          #
 ########################
 
-# helper function to create a dummy Trainer that one can call test_minibatch() on
-# TODO: replace by a proper such class once available
-def Evaluator(model, criterion):
-    from cntk import Trainer
-    from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
-    loss, metric = Trainer._get_loss_metric(criterion)
-    parameters = set(loss.parameters)
-    if model:
-        parameters |= set(model.parameters)
-    if metric:
-        parameters |= set(metric.parameters)
-    dummy_learner = momentum_sgd(tuple(parameters), 
-                                 lr = learning_rate_schedule(1, UnitType.minibatch),
-                                 momentum = momentum_as_time_constant_schedule(0))
-    return Trainer(model, (loss, metric), dummy_learner)
-
 def evaluate(reader, model):
     criterion = create_criterion_function(model)
-
-    # process minibatches and perform evaluation
-    evaluator = Evaluator(None, criterion)
-
-    #progress_printer = ProgressPrinter(freq=100, first=10, tag='Evaluation') # more detailed logging
-    progress_printer = ProgressPrinter(tag='Evaluation')
-    while True:
-        minibatch_size = 1000
-        data = reader.next_minibatch(minibatch_size) # fetch minibatch
-        if not data:                                 # until we hit the end
-            break
-        #metric = evaluator.test_minibatch(query=data[reader.streams.query], labels=data[reader.streams.slot_labels])
-        # note: keyword syntax ^^ is optional; this is to demonstrate it
-        metric = evaluator.test_minibatch({criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[reader.streams.slot_labels]})
-        progress_printer.update(0, data[reader.streams.slot_labels].num_samples, metric) # log progress
-    loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
-
-    return loss, metric
-
+    progress_printer = cntk.logging.ProgressPrinter(tag='Evaluation')
+    # test() will loop through the data provided by the reader and accumulate the metirc value
+    # of the criterion function. At the end, progress_printer will be used to show the average value.
+    # test() returns an object that contains the average metric.
+    metric = criterion.test(reader, streams=(reader.streams.query, reader.streams.slot_labels),
+                            minibatch_size=1000, callbacks=[progress_printer]).metric
+                               
+    return metric
 
 #############################
 # main function boilerplate #

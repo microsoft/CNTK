@@ -72,6 +72,7 @@ for %%D in (
   Cntk.Deserializers.TextFormat-%CNTK_COMPONENT_VERSION%.dll
   Cntk.Math-%CNTK_COMPONENT_VERSION%.dll
   Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.BinaryConvolutionExample-%CNTK_COMPONENT_VERSION%.dll
   Cntk.PerformanceProfiler-%CNTK_COMPONENT_VERSION%.dll
   libiomp5md.dll
   mkl_cntk_p.dll

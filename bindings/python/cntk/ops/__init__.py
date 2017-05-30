@@ -8,7 +8,7 @@ from __future__ import print_function
 import numpy as np
 import numbers
 from . import sequence
-from .functions import CloneMethod, Function, load_model, register_native_user_function, native_user_function
+from .functions import CloneMethod, Function, BlockFunction, load_model, register_native_user_function, native_user_function
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
@@ -750,9 +750,9 @@ def pow(base, exponent, name=''):
     '''
     Computes `base` raised to the power of `exponent`. It supports broadcasting.
     This is well defined if `base` is non-negative or `exponent` is an integer.
-    Otherwise the result is NaN. The gradient with respect to the base is  well 
-    defined if the forward operation is well defined. The gradient with respect 
-    to the exponent is well defined if the base is non-negative, and it is set 
+    Otherwise the result is NaN. The gradient with respect to the base is  well
+    defined if the forward operation is well defined. The gradient with respect
+    to the exponent is well defined if the base is non-negative, and it is set
     to 0 otherwise.
 
     Example:
@@ -1686,7 +1686,8 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
                        bidirectional=False, recurrent_op='lstm', name=''):
     '''
     An RNN implementation that uses the primitives in cuDNN.
-    If cuDNN is not available it fails.
+    If cuDNN is not available it fails. You can use :class:`~cntk.misc.convert_optimized_rnnstack`
+    to convert a model to GEMM-based implementation when no cuDNN.
 
     Args:
         operand: input of the optimized RNN stack.
@@ -1756,12 +1757,12 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
     Args:
         x: tensor to be reshaped
         shape (tuple): a tuple defining the resulting shape. The specified shape tuple
-         may contain -1 for at most one axis, which is automatically inferred to the 
-         correct dimension size by dividing the total size of the sub-shape being reshaped 
+         may contain -1 for at most one axis, which is automatically inferred to the
+         correct dimension size by dividing the total size of the sub-shape being reshaped
          with the product of the dimensions of all the non-inferred axes of the replacement
          shape.
         begin_axis (int or None): shape replacement begins at this axis. Negative values
-         are counting from the end. `None` is the same as 0. To refer to the end of the shape tuple, 
+         are counting from the end. `None` is the same as 0. To refer to the end of the shape tuple,
          pass `Axis.new_leading_axis()`.
         end_axis (int or None): shape replacement ends at this axis (excluding this axis).
          Negative values are counting from the end. `None` refers to the end of the shape tuple.
