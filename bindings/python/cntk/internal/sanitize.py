@@ -364,7 +364,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     if isinstance(arguments, cntk_py.Value):
         if len(op_arguments) != 1:
             raise ValueError('your graph has %i inputs, but you specified '
-                             'only one' % (len(op_arguments), len(arguments)))
+                             'only one' % len(op_arguments))
 
         arguments = { op_arguments[0]: arguments }
 
