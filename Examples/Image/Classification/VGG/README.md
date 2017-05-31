@@ -18,7 +18,9 @@ ILSVRC2012 datasets are not included in the CNTK distribution. You may obtain it
 
 ## Details
 
-We give examples for BrainScript.
+We give examples for both Python and BrainScript.
+
+### [Python](./Python)
 
 ### [BrainScript](./BrainScript)
 

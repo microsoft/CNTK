@@ -265,7 +265,7 @@
         "name":  "VGG",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/VGG",
         "description":  "Deep CNN from University of Oxford. This was the winning model for the ILSVRC2014 localization task.",
-        "language":  ["BrainScript"],
+        "language":  ["Python", "BrainScript"],
         "type":  ["Recipe"],
 	"dateadded": "4/14/2017"
     },
