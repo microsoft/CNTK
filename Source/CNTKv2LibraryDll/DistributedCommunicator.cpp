@@ -1,5 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
@@ -31,11 +32,27 @@ namespace CNTK
 
     DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes)
     {
-        return std::make_shared<MPICommunicatorImpl>(packThresholdSizeInBytes);
+        return MPICommunicatorImpl::GetInstance(packThresholdSizeInBytes);
+    }
+
+    DistributedCommunicatorPtr MPICommunicatorImpl::s_comm = nullptr;
+
+    DistributedCommunicatorPtr MPICommunicatorImpl::GetInstance(size_t packThresholdSizeInBytes)
+    {
+        if(s_comm == nullptr)
+            s_comm = std::make_shared<MPICommunicatorImpl>(packThresholdSizeInBytes);
+        return s_comm;
+    }
+
+    void MPICommunicatorImpl::Finalize()
+    {
+        s_comm = nullptr;
     }
 
     void DistributedCommunicator::Finalize()
     {
+        MPICommunicatorImpl::Finalize();
+
         auto mpi = MPIWrapper::GetInstance(false);
         if (mpi)
             mpi->Finalize();
