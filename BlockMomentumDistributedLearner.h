@@ -66,6 +66,11 @@ namespace CNTK
                 InvalidArgument("Sync period is too small.");
         }
 
+        size_t MinibatchSizeScaleFactor() override
+        {
+            return m_communicator->Workers().size();
+        }
+
         bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& info) override
         {
             std::vector<Parameter> parameters;
