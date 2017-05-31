@@ -88,7 +88,7 @@ class Function(cntk_py.Function):
       >>> print(f)
       ElementTimes(x: Tensor[13]) -> Tensor[13]
 
-    ``make_block=True`` is an internal parameter used to implement :func:`@BlockFunction <cntk.layers.blocks.BlockFunction>`.
+    ``make_block=True`` is an internal parameter used to implement :func:`@BlockFunction <cntk.ops.functions.BlockFunction>`.
     If `BlockFunction()` passes `True`, then the result will be wrapped
     in :func:`~cntk.ops.as_block()`, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
     '''
@@ -1250,13 +1250,13 @@ class Function(cntk_py.Function):
         A number of callback mechanisms can optionally be specified as a list as `callbacks`.
         CNTK has a fixed set of callback types, and only those types are allowed in the `callbacks` list:
         An object of type :class:`~cntk.cntk_py.ProgressWriter` from :mod:`cntk.logging` is used for progress logging;
-        a :class:`~cntk.training_session.CheckpointConfig` configures the checkpointing mechanism, which
+        a :class:`~cntk.train.training_session.CheckpointConfig` configures the checkpointing mechanism, which
         keeps copies of models at regular intervals and allows to seamlessly restart from a last checkpoint;
-        a :class:`~cntk.training_session.TestConfig` allows to specify a test set that is evaluated at the end of the training;
-        and a :class:`~cntk.training_session.CrossValidationConfig` specifies a user callback that can be used to adjust learning
+        a :class:`~cntk.train.training_session.TestConfig` allows to specify a test set that is evaluated at the end of the training;
+        and a :class:`~cntk.train.training_session.CrossValidationConfig` specifies a user callback that can be used to adjust learning
         hyper-parameters or to denote to stop training, optionally based on a separate cross-validation data set.
 
-        This is a convenience wrapper around :class:`cntk.train.trainer.Trainer` :class:`cntk.train.trainer.TrainingSession`.
+        This is a convenience wrapper around :class:`cntk.train.trainer.Trainer` :class:`cntk.train.training_session.TrainingSession`.
 
         Args:
             self: the criterion function of a model to be trained. This is either a single-valued function (the loss)
@@ -1273,9 +1273,9 @@ class Function(cntk_py.Function):
             parameter_learners (list): list of learners from :mod:`cntk.learners`
             callbacks (list): list of callback objects, which can be of type
              :class:`~cntk.cntk_py.ProgressWriter` from :mod:`cntk.logging` (for logging),
-             :class:`~cntk.training_session.CheckpointConfig` (for check-pointing),
-             :class:`~cntk.training_session.TestConfig` (for automatic final evaluation on a test set), and
-             :class:`~cntk.training_session.CrossValidationConfig` (for cross-validation based training control).
+             :class:`~cntk.train.training_session.CheckpointConfig` (for check-pointing),
+             :class:`~cntk.train.training_session.TestConfig` (for automatic final evaluation on a test set), and
+             :class:`~cntk.train.training_session.CrossValidationConfig` (for cross-validation based training control).
              Except for progress writers, at most one of each is allowed.
             model_inputs_to_streams (dict): alternative to `streams`, specifying the mapping as a map from input variables to streams
             max_samples (int): maximum number of samples used for training; mutually exclusive with `max_epochs`
@@ -1303,8 +1303,8 @@ class Function(cntk_py.Function):
          0.76
 
         Returns:
-         progress: an object with progress.epoch_summaries and progress.updates being the progressions of av loss, av metric, and number of labels
-          for epochs and updates (groups of minibatches), respectively. If a `TestConfig` was given, then progress.test_summary
+         An object `progress` with `progress.epoch_summaries` and `progress.updates` being the progressions of av loss, av metric, and number of labels
+          for epochs and updates (groups of minibatches), respectively. If a `TestConfig` was given, then `progress.test_summary`
           includes the result (.metric and .samples)
         '''
         if minibatch_size is None:
@@ -1381,7 +1381,7 @@ class Function(cntk_py.Function):
         Measures the performance of a model, given by its criterion function, in the form of
         average metric value (or loss if model has only one output) on a set of data.
 
-        This is a convenience wrapper around :class:`cntk.train.trainer.Evaluator`.
+        This is a convenience wrapper around :class:`cntk.eval.evaluator.Evaluator`.
 
         Args:
             minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source for the test data
@@ -1393,7 +1393,7 @@ class Function(cntk_py.Function):
              progress.
 
         Returns:
-         test_summary: object with test_summary.metric being the average metric, and test_summary.samples the number of labels in the test set
+         An object `test_summary` with `test_summary.metric` being the average metric, and `test_summary.samples` the number of labels in the test set.
         '''
         if minibatch_size is None:
             raise ValueError("minibatch_size must not be None.")
