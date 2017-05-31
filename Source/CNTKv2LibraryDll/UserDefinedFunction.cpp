@@ -28,9 +28,13 @@ namespace CNTK
         : Function(inputs, {}, name)
     {}
 
-    Function::Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const std::wstring& name)
-        : Function(inputs, functionConfig, nullptr, name, Internal::GenerateUid(L"UserDefinedFunction"))
-    {}
+    //Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name, const std::wstring& uid)
+    //    : Function(inputs, move(functionConfig), nullptr, name, uid)
+    //{}
+
+    //Function::Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const std::wstring& name)
+    //    : Function(inputs, functionConfig, nullptr, name, Internal::GenerateUid(L"UserDefinedFunction"))
+    //{}
 
     /*static*/ FunctionPtr Function::DeserializeNativeImpl(const std::vector<Variable>& inputs, const std::wstring& name,  const Dictionary& dict)
     {

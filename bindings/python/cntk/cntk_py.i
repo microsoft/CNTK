@@ -151,6 +151,9 @@
 
 %ignore CNTK::Function::RegisterUDFDeserializeCallback;
 %ignore CNTK::Function::GetUDFDeserializeCallback;
+%ignore CNTK::Function::Function(std::vector<Variable> const &inputs, Dictionary &&functionConfig);
+%ignore CNTK::Function::Function(std::vector<Variable> const &inputs, Dictionary &&functionConfig, std::wstring const &name);
+%ignore CNTK::Function::Function(std::vector<Variable> const &inputs, Dictionary &&functionConfig, std::wstring const &name, std::wstring const &uid);
 
 %{
 #define SWIG_FILE_WITH_INIT

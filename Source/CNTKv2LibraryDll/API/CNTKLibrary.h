@@ -3475,8 +3475,8 @@ namespace CNTK
         ///
         /// Protected constructors for derived user-defined 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
         ///
-        CNTK_API Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const std::wstring& name = L"");
-        CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"");
+        //CNTK_API Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const std::wstring& name = L"");
+        //CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"");
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = std::wstring(), const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
         template <typename FunctionType>
@@ -3581,7 +3581,7 @@ namespace CNTK
         static UserFunctionFactoryPtr s_userFunctionFactory;
 
     private:
-        Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
+        //CNTK_API Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
         CNTK_API Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid);
         CNTK_API static FunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes);

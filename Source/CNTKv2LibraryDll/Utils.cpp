@@ -28,7 +28,7 @@ namespace CNTK
     // 1 -- initial version.
     // 2 -- add support for models exceeding 2GB in size.
     const size_t DictionaryValue::s_version = 2;
-    const size_t Dictionary::s_version = 2;
+    //const size_t Dictionary::s_version = 2;
 
     template<typename T>
     T* CreateDataPtr(const T& value)
