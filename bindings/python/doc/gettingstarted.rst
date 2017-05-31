@@ -2,6 +2,8 @@ Getting started
 ===============
 You can optionally try the `tutorials <https://notebooks.azure.com/cntk/libraries/tutorials>`__ with pre-installed CNTK running in Azure Notebook hosted environment (for free) if you have not installed the toolkit in your own machine.
 
+If you are coming from another deep learning toolkit you can start with an `**overview for advanced users** <https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_200_GuidedTour.ipynb>`__
+
 If you have installed CNTK on your machine, after going through the :cntkwiki:`installation steps <Setup-CNTK-on-your-machine>`,
 you can start using CNTK from Python right away (don't forget to ``activate`` your Python environment if you did not install CNTK into your root environment):
 
