@@ -482,8 +482,8 @@ class MinibatchSourceFromData(UserMinibatchSource):
     the data is already sufficiently randomized.
 
     While CNTK allows user code to iterate through minibatches by itself and feed data minibatch
-    by minibatch through :func:`~cntk.trainer.Trainer.train_minibatch`, the standard way is to iterate
-    through data using a MinibatchSource object. For example, the high-level :class:`~cntk.training_session.training_session`
+    by minibatch through :func:`~cntk.train.trainer.Trainer.train_minibatch`, the standard way is to iterate
+    through data using a MinibatchSource object. For example, the high-level :class:`~cntk.train.training_session.TrainingSession`
     interface, which manages a full training including checkpointing and cross validation, operates on this level.
 
     A MinibatchSource created as a `MinibatchSourceFromData` linearly iterates through the data provided by

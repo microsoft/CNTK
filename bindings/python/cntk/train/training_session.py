@@ -66,7 +66,7 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
         model_inputs_to_streams (dict): mapping between input variables and input streams
           If None, the mapping provided to the training session constructor is used.
           Don't specify this if `minibatch_source` is a tuple of numpy/scipy arrays.
-        criterion (:class:`~cntk.Function`): criterion function.
+        criterion (:class:`~cntk.ops.functions.Function`): criterion function.
           Must be specified if `minibatch_source` is a tuple of numpy/scipy arrays.
         source (:class:`~cntk.io.MinibatchSource`): DEPRECATED, use minibatch_source instead
         mb_size(int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): DEPRECATED, use minibatch_size instead
@@ -132,7 +132,7 @@ class TestConfig(cntk_py.TestConfig):
         model_inputs_to_streams (dict): mapping between input variables and input streams
           If None, the mapping provided to the training session constructor is used.
           Don't specify this if `minibatch_source` is a tuple of numpy/scipy arrays.
-        criterion (:class:`~cntk.Function`): criterion function.
+        criterion (:class:`~cntk.ops.functions.Function`): criterion function.
           Must be specified if `minibatch_source` is a tuple of numpy/scipy arrays.
         source (:class:`~cntk.io.MinibatchSource`): DEPRECATED, use minibatch_source instead
         mb_size(int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): DEPRECATED, use minibatch_size instead
