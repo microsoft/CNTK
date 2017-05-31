@@ -95,6 +95,12 @@
     <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\transfer_learning_test.py">
       <Link>Tests\EndToEndTests\cntkv2Python\Examples\transfer_learning_test.py</Link>
     </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\VGG16_ImageNet_Distributed_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\VGG16_ImageNet_Distributed_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\VGG19_ImageNet_Distributed_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\VGG19_ImageNet_Distributed_test.py</Link>
+    </Compile>
     <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\word_rnn_test.py">
       <Link>Tests\EndToEndTests\cntkv2Python\Examples\word_rnn_test.py</Link>
     </Compile>
