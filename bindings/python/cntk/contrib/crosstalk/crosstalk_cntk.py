@@ -15,10 +15,13 @@ def find_func_param(func, name=None, shape=None, allow_not_found=False):
     If the function only has one parameter it's directly returned.
     
     Args:
-        func: the function to search
-        name: the name of the parameter
-        shape: the shape of the parameter
-        allow_not_found: set to True to avoid raise exception when not found
+        func (:class:`~cntk.ops.functions.Function`): The function to search parameter for
+        name (string) : The name of the parameter
+        shape (tuple): The shape of the parameter
+        allow_not_found (bool): Set to True to avoid raise exception when not found
+    
+    Returns:
+        The :class:`~cntk.variables.Parameter` that is found
     '''
     if len(func.parameters) == 1:
         return func.parameters[0]
@@ -214,6 +217,9 @@ class CNTKCrosstalk(cstk.Crosstalk):
     def set_data(self, data):
         '''
         Set mapped data for variable evaluation
+        
+        Args:
+            data: The input data as arguments parameter in :func:`~cntk.ops.functions.Function.eval`
         '''
         super(CNTKCrosstalk, self).register_funcs(C.ops.functions.Function, getter=_function_getter(data))
         super(CNTKCrosstalk, self).register_funcs(C.variables.Variable, getter=_variable_getter(data))
@@ -221,19 +227,22 @@ class CNTKCrosstalk(cstk.Crosstalk):
     def is_param(self, name):
         '''
         Check if var with name is a parameter
+        
+        Args:
+            name (`str`): Variable name to check
         '''
         var_type = self.vars[name].type
         return var_type not in [C.ops.functions.Function, C.variables.Variable]
 
     def load_all_params(self):
         '''
-        Load all parameters from files
+        Load all parameters from files in working directory
         '''
         super(CNTKCrosstalk, self).load([n for n in self.vars.keys() if self.is_param(n)])
         
     def save_all_params(self):
         '''
-        Save all parameters to files
+        Save all parameters to files in working directory
         '''
         super(CNTKCrosstalk, self).save([n for n in self.vars.keys() if self.is_param(n)])
 
