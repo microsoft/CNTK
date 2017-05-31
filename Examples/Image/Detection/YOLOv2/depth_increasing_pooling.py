@@ -3,36 +3,43 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-from cntk import reshape, swapaxes
+from cntk import reshape, swapaxes, alias
+import numpy as np
 
-
-def transposeAlot(model, permutation):
+def transposeAlot(tensor, permutation):
     nr_of_axes = len(permutation)
+
+    #assertions on the input
+    assert len(tensor.shape) == nr_of_axes, "The number of axes in the permutation does not match the input!"
+    np_perm=np.asarray(permutation)
+    for i in range(nr_of_axes):
+        assert np.any(np_perm == i), "Axis " + str(i) + " is not set in the permutation!"
+
     current_permutation = np.arange(nr_of_axes)
 
     for i in range(nr_of_axes - 1):
         # does this position need to be changed?
-        if (permutation[i] != current_permutation[i]):
+        if permutation[i] != current_permutation[i]:
             # search for current position of the axis to be placed at i!
             for j in range(i, nr_of_axes):
-                if (current_permutation[j] == permutation[i]):
+                if current_permutation[j] == permutation[i]:
                     break
 
             # swap these two axes
-            model = swapaxes(model, i, j)
+            tensor = swapaxes(tensor, i, j)
 
-            tmp = current_permutation[i]
-            current_permutation[i] = current_permutation[j]
-            current_permutation[j] = tmp
+            current_permutation[[i, j]] = current_permutation[[j, i]]
             #print(current_permutation)
 
-    return model
+    return alias(tensor, "End_TranposeAlot_"+str(permutation))
 
 
-def depth_increasing_pooling(volume, pooling_window_shape, input_shape=None):
-    if input_shape is None: input_shape = volume.shape
+def depth_increasing_pooling(tensor, pooling_window_shape, input_shape=None):
+    if input_shape is None: input_shape = tensor.shape
     # this is necessary in case that the previous model has not yet inferred its shape.
     # In order to perform the reshape properly the input_shape must be known!
+
+    assert len(input_shape) == 3, "depth_increasing_pooling requires the input tensor to have 3 axes!"
 
     shape_tmp = (input_shape[0],
                  int(input_shape[1] / pooling_window_shape[0]),
@@ -43,7 +50,7 @@ def depth_increasing_pooling(volume, pooling_window_shape, input_shape=None):
                    input_shape[1] / pooling_window_shape[0],
                    input_shape[2] / pooling_window_shape[1])
 
-    temp1 = reshape(volume, shape_tmp)
+    temp1 = reshape(tensor, shape_tmp)
 
     temp2 = transposeAlot(temp1, (0, 2, 4, 1, 3))
 
@@ -56,7 +63,31 @@ if __name__ == '__main__':
     """
     Here the functionality for the pooling_window_shape (2,2) is validated.
     """
-    import numpy as np
+
+
+    #Test for transposeAlot
+    if False:
+        for i in range(1,12):
+            permutation = np.random.permutation(i+1)
+            shape = []
+            entries = 1
+            for j in range(i+1):
+                length = int(np.random.random_sample()*10)+1
+                shape += [length]
+                entries *= length
+
+            data = np.arange(entries)
+            data.shape = shape
+
+            print(data.shape, permutation)
+
+            np_transposed = np.transpose(np.copy(data), np.copy(permutation))
+            by_transposeAlot = transposeAlot(np.ascontiguousarray(np.copy(data)), np.copy(permutation)).eval()
+
+            assert np.alltrue(np_transposed == by_transposeAlot)
+
+
+    # Test for depth_increasing_pooling
 
     def dip_np(volume, pooling_window_shape):
         shape_tmp = (volume.shape[0],
@@ -80,10 +111,10 @@ if __name__ == '__main__':
 
         for i in range(nr_of_axes - 1):
             # does this position need to be changed?
-            if (permutation[i] != current_permutation[i]):
+            if permutation[i] != current_permutation[i]:
                 # search for current position of the axis to be placed at i!
                 for j in range(i, nr_of_axes):
-                    if (current_permutation[j] == permutation[i]):
+                    if current_permutation[j] == permutation[i]:
                         break
 
                 # swap these two axes
@@ -129,7 +160,7 @@ if __name__ == '__main__':
     print(data)
     print(data.shape)
 
-    goal = np.asarray(
+    expected = np.asarray(
         [[[0, 2],
           [20, 22]],
 
@@ -156,17 +187,17 @@ if __name__ == '__main__':
 
     np_transposed_version = dip_np(np.copy(data), (2, 2))
     print("Succeeded with numpy.transpose:")
-    print(np.alltrue(np_transposed_version==goal)) # true
+    print(np.alltrue(np_transposed_version == expected)) # true
     print()
 
     np_repeated_swap_version = dip_swap_np(np.copy(data), (2, 2))
     print("Succeeded with selfwritten transpose by numpy.swapaxes:")
-    print(np.alltrue(np_repeated_swap_version == goal)) #true
+    print(np.alltrue(np_repeated_swap_version == expected)) #true
     print()
 
     cntk_made = depth_increasing_pooling(np.copy(data), (2, 2)).eval()
     print("Succeeded with selfwritten cntk:")
-    print(np.alltrue(cntk_made == goal)) #true
+    print(np.alltrue(cntk_made == expected)) #true
     print()
 
     print("Ouput:")
