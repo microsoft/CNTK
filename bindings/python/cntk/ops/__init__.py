@@ -1686,7 +1686,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
                        bidirectional=False, recurrent_op='lstm', name=''):
     '''
     An RNN implementation that uses the primitives in cuDNN.
-    If cuDNN is not available it fails. You can use :class:`~cntk.misc.convert_optimized_rnnstack`
+    If cuDNN is not available it fails. You can use :class:`~cntk.misc.optimized_rnnstack_converter.convert_optimized_rnnstack`
     to convert a model to GEMM-based implementation when no cuDNN.
 
     Args:
