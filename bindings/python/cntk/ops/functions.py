@@ -507,15 +507,15 @@ class Function(cntk_py.Function):
         Allows to change a function attribute.
 
         Args:
-            name (string): one of 
+            name (string): one of
 
-             * 'dropoutRate': modifies the dropout rate of a dropout function 
-               (can only be invoked on a function instance returned either from 
+             * 'dropoutRate': modifies the dropout rate of a dropout function
+               (can only be invoked on a function instance returned either from
                :func:`~cntk.ops.dropout` or :func:`find_by_name`).
 
              * 'rngSeed': modifies the seed of a stateful function (can only be
-               invoked on  function instance returned from :func:`~cntk.ops.dropout`, 
-               :func:`~cntk.ops.random_sample`, 
+               invoked on  function instance returned from :func:`~cntk.ops.dropout`,
+               :func:`~cntk.ops.random_sample`,
                :func:`~cntk.ops.random_sample_inclusion_frequency` or :func:`find_by_name`)
 
             value (float in case of 'dropoutRate', int for 'rngSeed'): the new value
@@ -608,7 +608,7 @@ class Function(cntk_py.Function):
              to be performed.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
 
@@ -794,7 +794,7 @@ class Function(cntk_py.Function):
              the gradients have to be computed.
             as_numpy (bool): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
 
@@ -853,10 +853,10 @@ class Function(cntk_py.Function):
              computation is performed. If `None`, the default device is used.
             as_numpy (bool, default `True`): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
-            grad_root (:class:`~cntk.variables.Variable`, optional): specify the root of gradients calculation. 
+            grad_root (:class:`~cntk.variables.Variable`, optional): specify the root of gradients calculation.
              If not specified, the output of this function will be used as gradient root.
 
         Returns:
@@ -1029,6 +1029,8 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).uid()
 
+
+
     def __str__(self):
         '''
         Describes the Function and its signature as a string.
@@ -1073,6 +1075,8 @@ class Function(cntk_py.Function):
         if self.name:
             f_name += ": "
         return f_name + op_name + '(' + ", ".join([format_arg_spec(param) for param in args]) + ') -> ' + output_signature
+
+
 
     @typemap
     def replace_placeholders(self, substitutions):
@@ -1458,16 +1462,16 @@ class Function(cntk_py.Function):
         When loading a model, CNTK will try to automatically reconstruct any
         (non-native) user-defined functions by invoking a static
         :func:`~cntk.ops.functions.UserFunction.deserialize` method of the
-        corresponding UserFunction sub-class. This method allows to override 
-        default UDF deserialization behavior by specifying a user- defined 
-        function op name and the corresponding callback that should be invoked 
+        corresponding UserFunction sub-class. This method allows to override
+        default UDF deserialization behavior by specifying a user- defined
+        function op name and the corresponding callback that should be invoked
         instead of the ``deserialize`` method.
 
         Args:
             op_name (str): unique op name of the user-defined function.
-            callback (function): a function taking three arguments (a list of 
+            callback (function): a function taking three arguments (a list of
              inputs to the UserFunction, a string name, and a state dictionary
-             generated by the corresponding :func:`~cntk.ops.functions.UserFunction.serialize` 
+             generated by the corresponding :func:`~cntk.ops.functions.UserFunction.serialize`
              method) and returns an instance of the user-defined function.
         '''
         if op_name in Function._udf_callback_map:
@@ -1482,7 +1486,7 @@ class Function(cntk_py.Function):
         Load the ``model``, that has been saved using :func:`~cntk.ops.functions.Function.save`.
 
         Args:
-            model (str, bytes or bytearray): either a file path of a model file or a byte buffer 
+            model (str, bytes or bytearray): either a file path of a model file or a byte buffer
              containing the binary representation of a model.
             device (:class:`~cntk.device.DeviceDescriptor`, defaults to the current globally default device):
              specifies the device to allocate the model on.
@@ -1504,17 +1508,17 @@ class Function(cntk_py.Function):
 
         if is_buffer:
             return cntk_py.Function.load_from_buffer(model, device)
-        
+
         if is_file:
             return cntk_py.Function.load(model, device)
-        
+
         raise ValueError('Cannot load a model that is neither a file nor a byte buffer.')
 
     @staticmethod
     def with_signature(*args, **kwargs):
         '''
         Decorator for defining a @Function with a given signature. Same as @Function followed by @Signature.
-    
+
         Example:
          >>> from cntk.layers.typing import *
          >>> @Function.with_signature(Tensor[13])
@@ -1529,7 +1533,7 @@ class Function(cntk_py.Function):
          ...     return x * x
          >>> print(f)
          ElementTimes(x: Tensor[13]) -> Tensor[13]
-    
+
         '''
         def decorator(f):
             from cntk.layers.typing import Signature
@@ -1554,7 +1558,7 @@ def register_native_user_function(op_id, module_name, factory_method_name):
         op_id (str): Unique id of the native user-defined Function to register.
          This id must be unique and an error will be reported if it matches
          the 'op_id' specified for any other registered native user-defined Function.
-        module_name (str): Name of the module containing the factory method for creating 
+        module_name (str): Name of the module containing the factory method for creating
          instances of the native user-defined Function being registered. This is typically
          the name of a DLL/so which exports a factory method for creating instances of the
          native user-defined Function.
@@ -1572,10 +1576,10 @@ def native_user_function(op_id, operands, attributes=None, user_function_instanc
 
     Args:
         op_id (str): Id of the native user-defined Function to instantiate.
-         This must be the id that was used when registering the native user-function 
+         This must be the id that was used when registering the native user-function
          with the 'register_native_user_function' method.
         operands (list): input operands of the new instance of the native user-defined Function.
-        user_function_instance_name (str): Name of the instance of the created native 
+        user_function_instance_name (str): Name of the instance of the created native
          user-defined Function.
 
     Returns:
@@ -1758,7 +1762,7 @@ class UserFunction(Function):
         It assumes that the constructor signature of the user's implementation
         of the user function takes the inputs as individual arguments followed
         by the operator name. If the signature is different, then this method
-        needs to be overriden. 
+        needs to be overriden.
 
         Args:
             cloned_inputs: list of cloned inputs to the new user-defined
@@ -1783,7 +1787,7 @@ class UserFunction(Function):
         Args:
             inputs (list): a list of inputs to the function
             name (str): name of this function
-            state (dict): a state dictionary generated by the corresponding 
+            state (dict): a state dictionary generated by the corresponding
              :func:`~cntk.ops.functions.UserFunction.serialize` method.
 
         Returns:
