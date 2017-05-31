@@ -9,7 +9,7 @@ image classification, language understanding, reinforcement learning and others.
 Additionally, the folder NumpyInterop contains a simple example of how to use 
 numpy arrays as input for CNTK training and evaluation.
 
-### Functional API
+### Functional API (still Python)
 
 The FunctionalAPI folder is the staging area for Tutorials written using the Python Functional API. 
 The plan is to have each Tutorial in this folder translated to a more succinct style in the FunctionalAPI folder.
