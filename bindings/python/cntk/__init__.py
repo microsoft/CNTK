@@ -3,7 +3,7 @@
 # for full license information.
 # ==============================================================================
 
-__version__ = '2.0rc2+'
+__version__ = '2.0rc3+'
 
 import numpy as np
 
@@ -28,6 +28,8 @@ from . import debugging
 from . import logging
 from . import io
 from . import layers
+from . import misc
+from . import random
 
 from .sample_installer import install_samples
 

@@ -91,7 +91,7 @@ if __name__=='__main__':
     ]
     data_seq_axis = Axis('inputAxis')
     init_seq_axis = Axis('initAxis')
-    f = sequence.past_value(sequence.input(2, sequence_axis=data_seq_axis), time_step=2, initial_state=sequence.input(2, sequence_axis=init_seq_axis))
+    f = sequence.past_value(sequence.input_variable(2, sequence_axis=data_seq_axis), time_step=2, initial_state=sequence.input_variable(2, sequence_axis=init_seq_axis))
     res = f(data, initial_state)
     print(res)
 

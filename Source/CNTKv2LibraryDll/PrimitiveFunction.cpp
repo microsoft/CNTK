@@ -21,6 +21,7 @@
 #include "ConvolveGeometry.h"
 #include "ConvolutionalNodes.h"
 #include "Variable.h"
+#include "UserFunctionFactory.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -70,6 +71,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlendTimeConstant = L"blendTimeConstant";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameEpsilon = L"epsilon";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUseCuDNNEngine = L"useCuDNNEngine";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewDataType = L"newDataType";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewDynamicAxes = L"newDynamicAxes";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewSequenceAxisLengthScalingFactor = L"newSequenceAxisLengthScalingFactor";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewSequenceAxisLengthAdditiveFactor = L"newSequenceAxisLengthAdditiveFactor";
@@ -99,6 +101,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceAxisNamePrefix = L"sequenceAxis";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackPaddingValue = L"sequenceUnpackPaddingValue";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput = L"sequenceUnpackSuppressMaskOutput";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionType = L"randomDistributionType";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionArgs = L"randomDistributionArgs";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -172,7 +176,8 @@ namespace CNTK
             (op == PrimitiveOpType::ForwardBackward) ||
             (op == PrimitiveOpType::Logistic) ||
             (op == PrimitiveOpType::LambdaRank) ||
-            (op == PrimitiveOpType::NDCG))
+            (op == PrimitiveOpType::NDCG) || 
+            (op == PrimitiveOpType::RandomDistribution && inputs.empty()))
         {
             //outputDynamicAxes = std::vector<Axis>({});
         }
@@ -251,7 +256,7 @@ namespace CNTK
                         {
                             if (currentInputDynamicAxes != outputDynamicAxes)
                                 LogicError("Operation '%S': Operand '%S' has dynamic axes, that do not match the dynamic axes '%S' of the other operands.",
-                                            PrimitiveOpTypeName(op).c_str(), inputVar.AsString().c_str(), DynamicAxesAsString(outputDynamicAxes).c_str());
+                                            PrimitiveOpTypeName(op).c_str(), inputVar.AsString().c_str(), DynamicAxesAsString(outputDynamicAxes, Internal::IsReversingTensorShapesInErrorMessagesEnabled()).c_str());
                         }
                     }
                 }
@@ -306,16 +311,16 @@ namespace CNTK
                             LogicError("PastValue/FutureValue Function '%S': Input operand '%S' with #dynamic axes != 2 (1 sequence axis and 1 batch axis) is not supported.", AsString().c_str(), inputOperandVar.AsString().c_str());
                     }
 
-                    outputShape = BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], true, true);
+                    outputShape = BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], /*inferInputDimensions =*/ true);
                     break;
                 }
                 case PrimitiveOpType::Clip:
                     assert(m_inputs.size() == 3);
-                    outputShape = NaryElementwiseOpOutputShape(m_op, m_inputs, true, true);
+                    outputShape = NaryElementwiseOpOutputShape(m_op, m_inputs, /*inferInputDimensions =*/ true);
                     break;
                 case PrimitiveOpType::Select:
                     assert(m_inputs.size() == 3);
-                    outputShape = NaryElementwiseOpOutputShape(m_op, m_inputs, true, true);
+                    outputShape = NaryElementwiseOpOutputShape(m_op, m_inputs, /*inferInputDimensions =*/ true);
                     break;
                 default:
                     // For all other operations, shapes of all inputs must be known to determine the output shape
@@ -323,6 +328,23 @@ namespace CNTK
                     {
                         switch (m_op)
                         {
+                        case PrimitiveOpType::RandomDistribution:
+                        {
+                            assert(m_inputs.size() == 0 || m_inputs.size() == 1);
+                            if (m_inputs.size() == 1)
+                                outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
+                            else
+                            {
+                                outputShape = m_attributes[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
+                                if (outputShape.HasUnboundDimension()) //review: is unbound right or should this be Free or Inferred?
+                                    InvalidArgument("RandomDistribution: Output shape '%ls' must not have an unbound dimension.", outputShape.AsString().c_str());
+                                auto dataType = static_cast<DataType>(m_attributes[PrimitiveFunction::AttributeNameNewDataType].Value<int>());
+                                if (dataType != DataType::Float && dataType != DataType::Double)
+                                    InvalidArgument("RandomDistribution: data type must be one of float, double.");
+                                outputDataType = dataType;
+                            }
+                            break;
+                        }
                         case PrimitiveOpType::Negate:
                         case PrimitiveOpType::Sigmoid:
                         case PrimitiveOpType::Tanh:
@@ -343,6 +365,7 @@ namespace CNTK
                         case PrimitiveOpType::LabelsToGraph:
                         case PrimitiveOpType::StopGradient: // BUGBUG: StopGradient should also set m_needsGradient
                         case PrimitiveOpType::ELU:
+                        case PrimitiveOpType::StableSigmoid:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;
@@ -761,7 +784,7 @@ namespace CNTK
                                 assert(m_inputs.size() == 2);
 
                             // Validate that the first 2 operands are elementwise compatible and also infer operand shapes as needed
-                            BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], true, true);
+                            BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], /*inferInputDimensions =*/ true);
 
                             if (m_op == PrimitiveOpType::ClassificationError)
                             {
@@ -771,7 +794,7 @@ namespace CNTK
                             else if (m_op == PrimitiveOpType::Logistic)
                             {
                                 if (m_inputs.size() == 3)
-                                    BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[2], true, true);
+                                    BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[2], /*inferInputDimensions =*/ true);
                             }
 
                             outputShape = {};
@@ -965,7 +988,7 @@ namespace CNTK
         }
     }
 
-    static vector<DictionaryValue> GetInputUids(const Function& f)
+    vector<DictionaryValue> GetInputUids(const Function& f)
     {
         auto inputs = f.Inputs();
         vector<DictionaryValue> inputUids;
@@ -977,7 +1000,7 @@ namespace CNTK
         return inputUids;
     }
 
-    static Dictionary SerializeCommonAttributes(const Function& f, size_t version, const wstring& functionType)
+    Dictionary SerializeCommonFunctionAttributes(const Function& f, size_t version, const wstring& functionType)
     {
         Dictionary dict;
         dict[versionKey] = version;
@@ -993,7 +1016,7 @@ namespace CNTK
 
     /*virtual*/ Dictionary PrimitiveFunction::Serialize() const 
     {
-        Dictionary dict = SerializeCommonAttributes(*this, CurrentVersion(), s_primitiveFunctionTypeValue);
+        Dictionary dict = SerializeCommonFunctionAttributes(*this, CurrentVersion(), s_primitiveFunctionTypeValue);
         dict[opKey] = static_cast<size_t>(m_op);
         dict[attributesKey] = Attributes();
 
@@ -1020,7 +1043,7 @@ namespace CNTK
         return dict;
     }
 
-    static std::vector<Variable> GetInputVariables(const Dictionary& dict, const unordered_map<wstring, Variable>& uidToVariableMap, size_t currentSerializationVersion)
+    std::vector<Variable> GetInputVariables(const Dictionary& dict, const std::unordered_map<std::wstring, Variable>& uidToVariableMap, size_t currentSerializationVersion)
     {
         const auto& inputUids = dict[inputsKey].Value<vector<DictionaryValue>>();
 
@@ -1238,66 +1261,34 @@ namespace CNTK
         return anyParameterOperandDimsInferred;
     }
 
-    /*static*/ NDShape PrimitiveFunction::NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed, bool inferInputDimensions)
+    /*static*/ NDShape PrimitiveFunction::NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool inferInputDimensions)
     {
         assert(operands.size() > 1);
 
         // TODO: Is this logic of transitively constructing the output shape from the operands correct?
         Variable dummyOutputVariable = PlaceholderVariable(NDShape());
         for (auto& operand : operands)
-            dummyOutputVariable.m_dataFields->m_shape = BinaryElementwiseOpOutputShape(op, dummyOutputVariable, operand, broadcastAllowed, inferInputDimensions);
+            dummyOutputVariable.m_dataFields->m_shape = BinaryElementwiseOpOutputShape(op, dummyOutputVariable, operand, inferInputDimensions);
 
         return dummyOutputVariable.Shape();
     }
 
-    static const std::wstring s_userDefinedFunctionTypeValue = L"UserDefinedFunction";
-
-    /*static*/ bool UDFUtils::IsUDF(const FunctionPtr& f)
+    void PrimitiveFunction::SetDropoutRate(double dropoutRate)
     {
-        return (dynamic_cast<const PrimitiveFunction*>(f.get()) == nullptr);
+        if (OpType() != PrimitiveOpType::Dropout)
+            LogicError("Cannot set dropout rate on '%S' function.", OpName().c_str());
+
+        m_attributes[AttributeNameDropoutRate] = dropoutRate;
+        m_dirtyAttributes.insert(AttributeNameDropoutRate);
     }
 
-    /*static*/ bool UDFUtils::IsUDF(const Dictionary& dict)
+    void PrimitiveFunction::SetRandomSeed(size_t seed)
     {
-        return (dict.Contains(typeKey) && dict[typeKey].Value<std::wstring>() == s_userDefinedFunctionTypeValue);
-    }
+        if (!IsStateful())
+            LogicError("Cannot set random seed on '%S' function.", OpName().c_str());
 
-    /*static*/ Dictionary UDFUtils::Serialize(const FunctionPtr& udf)
-    {
-        Dictionary dict = SerializeCommonAttributes(*udf, s_serializationVersion, s_userDefinedFunctionTypeValue);
-        dict[userDefinedStateKey] = udf->Serialize();
-        return dict;
-    }
-
-    /*static*/ FunctionPtr UDFUtils::Deserialize(const Dictionary& dict,
-                                                 const unordered_map<std::wstring, Variable>& uidToVariableMap,
-                                                 const DeviceDescriptor& device,
-                                                 const Internal::UDFDeserializerPtr& deserializer)
-    {
-        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, uidKey, inputsKey, userDefinedStateKey };
-        ValidateDictionary<PrimitiveFunction>(dict, s_requiredDictionaryKeys, s_userDefinedFunctionTypeValue, s_serializationVersion);
-
-        const auto& uid = dict[uidKey].Value<std::wstring>();
-        std::wstring name = L"";
-        if (dict.Contains(nameKey))
-            name = dict[nameKey].Value<std::wstring>();
-
-        auto inputs = GetInputVariables(dict, uidToVariableMap, s_serializationVersion);
-
-        auto state = dict[userDefinedStateKey].Value<Dictionary>();
-
-        if (deserializer == nullptr) 
-        {
-            RuntimeError("No deserializer was provided to reconstruct UserDefinedFunctions.");
-        }
-
-        auto udf = deserializer->Deserialize(inputs, name, state);
-
-        // Restore the original uid, which other functions in the graph depend on
-        // (their inputs refer to the uids of this UDF outputs, which are generated base on the uid of this UDF).
-        udf->m_uid = uid;
-        
-        return udf;
+        m_attributes[AttributeNameRngSeed] = seed;
+        m_dirtyAttributes.insert(AttributeNameRngSeed);
     }
 
     /*virtual*/ void PrimitiveFunction::MemoizeKnowableValue() const /*override*/

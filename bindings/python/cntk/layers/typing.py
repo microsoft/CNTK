@@ -49,7 +49,7 @@ Example:
 
     >>> # This is just the same as saying
     >>> f = Dense(500)
-    >>> _ = f.replace_placeholders({f.arguments[0]: C.input(shape=(13,42), dynamic_axes=[Axis.default_batch_axis()])})
+    >>> _ = f.replace_placeholders({f.arguments[0]: C.input_variable(shape=(13,42), dynamic_axes=[Axis.default_batch_axis()])})
     >>> f.shape
     (500,)
 
@@ -85,16 +85,16 @@ This is often done for the criterion function.
 Example:
     >>> from cntk import debugging, cross_entropy_with_softmax
     >>> model = Sequential([Embedding(300), Fold(GRU(128)), Dense(10)])
-    >>> debugging.dump_signature(model)
-    Function(keep: Sequence[tensor]) -> Sequence[tensor]
+    >>> print(model)
+    Composite(keep: Sequence[tensor]) -> Sequence[tensor]
     >>> inputAxis = Axis('inputAxis')
     >>> @Function
     ... @Signature(input=SequenceOver[inputAxis][Tensor[128]], label=Tensor[10])
     ... def criterion(input, label):
     ...     output = model(input)
     ...     return cross_entropy_with_softmax(output, label)
-    >>> debugging.dump_signature(criterion)
-    Function(input: SequenceOver[inputAxis][Tensor[128]], label: Tensor[10]) -> Tensor[1]
+    >>> print(criterion)
+    Composite(input: SequenceOver[inputAxis][Tensor[128]], label: Tensor[10]) -> Tensor[1]
 
 The following lists a few common errors with CNTK type objects:
 
@@ -105,7 +105,7 @@ Example:
     ...     inp = Tensor[32]()   # attempt to create an instance of type Tensor[32]
     ... except TypeError as e:
     ...     print('ERROR: ' + str(e))
-    ERROR: abstract type Tensor[32] cannot be instantiated; use 'input(**Tensor[32])' instead
+    ERROR: abstract type Tensor[32] cannot be instantiated; use 'input_variable(**Tensor[32])' instead
 
     >>> # types are not inputs
     >>> try:
@@ -113,7 +113,7 @@ Example:
     ...     y = sigmoid(inp)
     ... except ValueError as e:
     ...     print('ERROR: ' + str(e))
-    ERROR: Input is a type object (Tensor[32]). Did you mean to pass 'input(Tensor[32])'?
+    ERROR: Input is a type object (Tensor[32]). Did you mean to pass 'input_variable(**Tensor[32])'?
 
     >>> # nested sequences are currently not supported
     >>> try:
@@ -128,7 +128,7 @@ Example:
     ... def f(x):
     ...    return sigmoid(x)
     >>> try:
-    ...     x = input((42,))
+    ...     x = C.input_variable((42,))
     ...     y = f(x)
     ... except TypeError as e:
     ...     print('ERROR: ' + str(e))
@@ -148,9 +148,9 @@ from ..axis import Axis
 from ..variables import Variable, Record
 from cntk.internal import sanitize_shape, _as_tuple
 from cntk.internal.utils import get_python_function_arguments, map_function_arguments
+import numpy as np
 
 def _make_tensor_meta(cls_name, **kwargs):
-    import numpy as np
     class TensorMeta(type):
         def __getitem__(self, shape):
             if not isinstance(shape, tuple):

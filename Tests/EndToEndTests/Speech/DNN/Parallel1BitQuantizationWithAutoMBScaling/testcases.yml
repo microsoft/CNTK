@@ -1,0 +1,39 @@
+dataDir: ../../Data
+tags:
+     - bvt-s (build_sku == '1bitsgd') and (os == 'linux') and (flavor == 'release')
+     - nightly-s (build_sku == '1bitsgd') and (os == 'linux') and (flavor == 'release')
+     - weekly-s (build_sku == '1bitsgd') and (os == 'linux') and (flavor == 'release')
+
+testCases:
+  Must train epochs in exactly same order and parameters for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Epochs must be finished with expected results for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - CrossEntropyWithSoftmax = {{float,tolerance=0.1%}}
+      - EvalClassificationError = {{float,tolerance=0.1%}}
+      - learningRatePerSample = {{float,tolerance=0.001%}}
+
+  Per-minibatch training results must match for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
+      - " * {{integer}}; "
+      - CrossEntropyWithSoftmax = {{float,tolerance=0.1%}}
+      - EvalClassificationError = {{float,tolerance=0.1%}}
+
+  DataParallelSGD training parameters must match for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Starting minibatch loop
+      - DataParallelSGD training
+      - myRank = {{integer}}
+      - numNodes = 2
+      - numGradientBits = 2
+      - distributed reading is ENABLED

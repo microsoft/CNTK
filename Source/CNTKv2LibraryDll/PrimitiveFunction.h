@@ -100,6 +100,8 @@ namespace CNTK
         {PrimitiveOpType::UnpackSequence, L"UnpackSequenceOp"},
         {PrimitiveOpType::Assign, L"Assign" },
         {PrimitiveOpType::Gather, L"Gather"},
+        {PrimitiveOpType::StableSigmoid, L"StableSigmoid"},
+        {PrimitiveOpType::RandomDistribution, L"RandomDistribution"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -231,6 +233,7 @@ namespace CNTK
         static const std::wstring AttributeNameBlendTimeConstant;
         static const std::wstring AttributeNameEpsilon;
         static const std::wstring AttributeNameUseCuDNNEngine;
+        static const std::wstring AttributeNameNewDataType;
         static const std::wstring AttributeNameNewDynamicAxes;
         static const std::wstring AttributeNameNewSequenceAxisLengthScalingFactor;
         static const std::wstring AttributeNameNewSequenceAxisLengthAdditiveFactor;
@@ -260,10 +263,12 @@ namespace CNTK
         static const std::wstring AttributeNameSequenceAxisNamePrefix;
         static const std::wstring AttributeNameSequenceUnpackPaddingValue;
         static const std::wstring AttributeNameSequenceUnpackSuppressMaskOutput;
+        static const std::wstring AttributeNameRandomDistributionType;
+        static const std::wstring AttributeNameRandomDistributionArgs;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
-            : Function(inputs, std::move(functionConfig), functionName, uid), m_op(op)
+            : Function(inputs, std::move(functionConfig), nullptr, functionName, uid), m_op(op)
         {}
 
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& outputShape, Dictionary&& functionConfig)
@@ -319,7 +324,8 @@ namespace CNTK
         {
             return (OpType() == PrimitiveOpType::Dropout) ||
                    (OpType() == PrimitiveOpType::RandomSample) ||
-                   (OpType() == PrimitiveOpType::RandomSampleInclusionFrequency);
+                   (OpType() == PrimitiveOpType::RandomSampleInclusionFrequency) ||
+                   (OpType() == PrimitiveOpType::RandomDistribution);
         }
 
         Dictionary GetState() const;
@@ -465,7 +471,7 @@ namespace CNTK
         static bool UpdateOperandShapes(std::vector<std::pair<Variable, NDShape>>& newOperandShapes);
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
-        static NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool broadcastAllowed, bool inferInputDimensions)
+        static NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool inferInputDimensions)
         {
             const auto& leftOperandShapeC  = leftOperand.Shape();
             const auto& rightOperandShapeC = rightOperand.Shape();
@@ -502,6 +508,8 @@ namespace CNTK
                             leftOperand.AsString().c_str(),
                             leftOperandShape.AsString().c_str());
 
+                    // Broadcast to a free-dimension, if the right operand axis's dimensionality is 1; otherwise the output axis dimensionality
+                    // is the known right operands axis's dimensionality 
                     outputDims[i] = (rightOperandShape[i] == 1) ? NDShape::FreeDimension : rightOperandShape[i];
                 }
                 else if (rightOperandShape[i] == NDShape::FreeDimension)
@@ -514,6 +522,8 @@ namespace CNTK
                             rightOperand.AsString().c_str(),
                             rightOperandShape.AsString().c_str());
 
+                    // Broadcast to a free-dimension, if the left operand axis's dimensionality is 1; otherwise the output axis dimensionality
+                    // is the known left operands axis's dimensionality 
                     outputDims[i] = (leftOperandShape[i] == 1) ? NDShape::FreeDimension : leftOperandShape[i];
                 }
                 else if ((leftOperandShape[i] == NDShape::InferredDimension) || (leftOperandShape[i] == 1))
@@ -542,9 +552,6 @@ namespace CNTK
                 }
             }
                         
-            UNUSED(broadcastAllowed);
-            // BUGBUG: if (broadcastAllowed) is missing here?
-
             // Broadcast in remaining axes
             for (size_t i = shapeWithSmallerNumAxes.Rank(); i < numOutputAxes; ++i)
                 outputDims[i] = shapeWithLargerNumAxes[i];
@@ -559,7 +566,7 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
-        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed, bool inferInputDimensions);
+        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool inferInputDimensions);
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
         static NDShape TimesOpOutputShape(Variable& leftOperand, Variable& rightOperand, size_t outputRank, int inferInputRankToMap, bool inferInputDimensions)
@@ -761,13 +768,16 @@ namespace CNTK
             return MakeSharedObject<PrimitiveFunction>(OpType(), clonedInputs, Dictionary(Attributes()), Name());
         }
 
+        void SetDropoutRate(double dropoutRate);
+
+        void SetRandomSeed(size_t seed);
+
         virtual NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&) const;
 
         virtual PrimitiveOpType Op() const { return m_op; }
 
     private:
         PrimitiveOpType m_op;
-
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
         // version 1: initial version.
@@ -781,24 +791,12 @@ namespace CNTK
         // Version 11: Add ToSequence, ToSequenceLike and UnpackSequence operators.
         // Version 12: Add Assign node.
         // Version 13: Add Gather op.
-        static const size_t s_serializationVersion = 13;
+        // Version 14: Add StableSigmoid
+        // Version 15: Add RandomDistribution
+        static const size_t s_serializationVersion = 15;
     };
 
-    class UDFUtils
-    {
-    public:
-
-        static bool IsUDF(const FunctionPtr& f);
-
-        static bool IsUDF(const Dictionary& dict);
-
-        static Dictionary Serialize(const FunctionPtr& dictionary);
-
-        static FunctionPtr Deserialize(const Dictionary& dictionary,
-            const std::unordered_map<std::wstring, Variable>& uidToVariableMap,
-            const CNTK::DeviceDescriptor& device,
-            const Internal::UDFDeserializerPtr& deserializer);
-
-        static const size_t s_serializationVersion = 0;
-    };
+    std::vector<DictionaryValue> GetInputUids(const Function& f);
+    Dictionary SerializeCommonFunctionAttributes(const Function& f, size_t version, const std::wstring& functionType);
+    std::vector<Variable> GetInputVariables(const Dictionary& dict, const std::unordered_map<std::wstring, Variable>& uidToVariableMap, size_t currentSerializationVersion);
 }

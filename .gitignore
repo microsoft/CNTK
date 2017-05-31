@@ -178,12 +178,12 @@ $RECYCLE.BIN/
 bin/
 LOG
 *.log
-core	
+core
 *.lyx#
 *.lyx#
 *.lyx~
 
-# prebuild file 
+# prebuild file
 Source/CNTK/buildinfo.h
 Source/CNTK/buildinfo.h$$
 Source/CNTKv2LibraryDll/buildinfo.h
@@ -236,6 +236,20 @@ bindings/csharp/Swig/cntk_cs_wrap.h
 bindings/csharp/Swig/cntk_cs_wrap.cxx
 bindings/csharp/CNTKLibraryManagedDll/SwigProxyClasses/*.cs
 
+# Java bindings
+bindings/java/Swig/cntk_java_wrap.h
+bindings/java/Swig/cntk_java_wrap.cxx
+bindings/java/**/*.class
+bindings/java/Swig/com/
+bindings/java/**/target
+bindings/java/**/*.jar
+
+# Java Eval Tests
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/.idea
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/data
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/out
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/**/*.class
+
 # Examples and Tutorials
 Examples/Image/DataSets/Pascal/VOC*
 Examples/Image/DataSets/Pascal/selective_search_data*
@@ -274,6 +288,9 @@ Tutorials/slots.wl
 bindings/python/tutorials/.ipynb_checkpoints
 Examples/Text/ATIS/Data
 Examples/Tutorials/ImageHandsOn/cifar-10-batches-py
+Examples/Video/DataSets/UCF11/action_youtube_naudio/
+Examples/Video/DataSets/UCF11/test_map.csv
+Examples/Video/DataSets/UCF11/train_map.csv
 Tutorials/zip
 
 # other

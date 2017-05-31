@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <numeric>
+#include <functional>
 
 namespace CNTK 
 {
@@ -17,7 +18,7 @@ namespace CNTK
     class LearnerBase : public Learner
     {
     public:
-        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override final;
+        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override;
 
         virtual Dictionary CreateCheckpoint() override final;
 
@@ -320,5 +321,35 @@ namespace CNTK
 
         template <typename ElementType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+    };
+
+
+    class LearnerUniversal : public LearnerBase
+    {
+        std::unordered_map<Parameter, Variable> m_parameter_gradient_map;
+        FunctionPtr m_update_func;
+
+    public:
+        LearnerUniversal(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func);
+
+        LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
+    
+        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override;
+
+    private:
+        void AllocateDummySmoothedGradients(const std::vector<Parameter>& parameters)
+        {
+            for (const auto& parameter : parameters)
+            {
+                m_smoothedGradientValues.emplace(parameter, AllocateNDArrayView(parameter, {}));
+            }
+        }
+
+        void ValidateInput(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
+
+
+    protected:
+
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
     };
 }

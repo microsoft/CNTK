@@ -78,6 +78,7 @@ struct StreamDescription
     ElementType m_elementType;     // Element type of the stream
     TensorShapePtr m_sampleLayout; // Layout of the sample for the stream
                                    // If not specified - can be specified per sequence
+    bool m_definesMbSize;          // Flag indicating whether the stream is defining the minibatch size
 };
 typedef std::shared_ptr<StreamDescription> StreamDescriptionPtr;
 

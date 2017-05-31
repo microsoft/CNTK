@@ -171,8 +171,8 @@ namespace CNTK
 
     void Variable::SetValue(const NDArrayViewPtr& value)
     {
-        if (!IsParameter())
-            LogicError("Variable '%S' SetValue(): Can only be invoked on a Parameter variable.", AsString().c_str());
+        if (!(IsParameter() || IsConstant()))
+            LogicError("Variable '%S' SetValue(): Can only be invoked on a Parameter or Constant variable.", AsString().c_str());
         else if (GetDataType() != value->GetDataType()) 
             LogicError("Variable '%S' SetValue(): 'source' and 'destination' have different data types.", AsString().c_str());
         if (Shape() != value->Shape() && (AsTensorShape(Shape()) != AsTensorShape(value->Shape())))
@@ -313,6 +313,10 @@ namespace CNTK
 
     static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, double scale, unsigned long seed) 
     {
+        if (scale <= 0) 
+            InvalidArgument("CreateInitializer: scale value for initializer '%S' cannot be 0.", 
+                initializerTypeName.c_str());
+
         Dictionary initConfig;
         initConfig[InitializerTypeAttributeName] = initializerTypeName;
         initConfig[ScaleAttributeName] = scale;
@@ -322,6 +326,10 @@ namespace CNTK
     
     static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, double scale, int outputRank, int filterRank, unsigned long seed)
     {
+        if (scale <= 0)
+            InvalidArgument("CreateInitializer: scale value for initializer '%S' cannot be 0.", 
+                initializerTypeName.c_str());
+
         auto initConfig = CreateInitializer(initializerTypeName, scale, seed);
         initConfig[OutputRankAttributeName] = outputRank;
         initConfig[FilterRankAttributeName] = filterRank;
@@ -407,6 +415,11 @@ namespace CNTK
         return newInitializerWithRanks;
     }
 
+    ParameterInitializer TruncatedNormalInitializer(double scale, unsigned long seed)
+    {
+        return CreateInitializer(Microsoft::MSR::CNTK::TruncNormalInitializerTypeName, scale, seed);
+    }
+
     Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
         : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, std::weak_ptr<Function>(), value, needsGradient, dynamicAxes, isSparse, name, uid))
     {}
@@ -438,7 +451,8 @@ namespace CNTK
 
             auto scale = initConfig[ScaleAttributeName].Value<double>();
             int outputRank = DefaultParamInitOutputRank, filterRank = DefaultParamInitFilterRank;
-            if (initializerType != Microsoft::MSR::CNTK::UniformInitializerTypeName)
+            if (initializerType != Microsoft::MSR::CNTK::UniformInitializerTypeName && 
+                initializerType != Microsoft::MSR::CNTK::TruncNormalInitializerTypeName)
             {
                 outputRank = initConfig[OutputRankAttributeName].Value<int>();
                 filterRank = initConfig[FilterRankAttributeName].Value<int>();
@@ -569,8 +583,10 @@ namespace CNTK
         m_dataFields->SetValueInitialization(initializer, device);
     }
 
-    size_t Parameter::CurrentValueTimeStamp() const
+    size_t Variable::CurrentValueTimeStamp() const
     {
+        if (!IsParameter() && !IsConstant())
+            LogicError("Variable '%S' CurrentValueTimeStamp: Variable must be a Parameter or Constant", AsString().c_str());
         return m_dataFields->m_valueTimeStamp.load(); 
     }
 
@@ -607,5 +623,16 @@ namespace CNTK
         auto constantValueCPU = originalConstantValue->DeepClone(DeviceDescriptor::CPUDevice(), true);
         NDArrayViewPtr newConstantValue = CloneAsDataType(constantValueCPU, dataType, true);
         return Constant(newConstantValue->DeepClone(originalConstantValue->Device(), originalConstantValue->IsReadOnly()), Name());
+    }
+
+    void Constant::RecordValueUpdate()
+    {
+        m_dataFields->m_valueTimeStamp++;
+    }
+
+    void Constant::SetValue(const NDArrayViewPtr& value)
+    {
+        Variable::SetValue(value);
+        RecordValueUpdate();
     }
 }

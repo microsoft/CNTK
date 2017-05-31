@@ -1534,10 +1534,52 @@ void Matrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType 
 }
 
 template <class ElemType>
+void Matrix<ElemType>::SetUniformRandomValue(RNGHandle& rngHandle, const ElemType low, const ElemType high)
+{
+    if (IsEmpty())
+        return;
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->SetUniformRandomValue(rngHandle, low, high),
+        m_GPUMatrix->SetUniformRandomValue(rngHandle, low, high),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::SetGaussianRandomValue(RNGHandle& rngHandle, const ElemType mean, const ElemType stdev)
+{
+    if (IsEmpty())
+        return;
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->SetGaussianRandomValue(rngHandle, mean, stdev),
+        m_GPUMatrix->SetGaussianRandomValue(rngHandle, mean, stdev),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::SetGumbelRandomValue(RNGHandle& rngHandle, const ElemType loc, const ElemType scale)
+{
+    if (IsEmpty())
+        return;
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->SetGumbelRandomValue(rngHandle, loc, scale),
+        m_GPUMatrix->SetGumbelRandomValue(rngHandle, loc, scale),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 void Matrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
 {
     if (sigma <= 0)
-        InvalidArgument("SetUniformRandomValue: sigma must be a positive value.");
+        InvalidArgument("SetGaussianRandomValue: sigma must be a positive value.");
 
     if (IsEmpty())
         return;
@@ -1551,10 +1593,27 @@ void Matrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemTyp
 }
 
 template <class ElemType>
+void Matrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+{
+    if (sigma <= 0)
+        InvalidArgument("SetTruncatedNormalRandomValue: sigma must be a positive value.");
+
+    if (IsEmpty())
+        return;
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->SetTruncatedNormalRandomValue(mean, sigma, seed),
+        m_GPUMatrix->SetTruncatedNormalRandomValue(mean, sigma, seed),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 void Matrix<ElemType>::AddGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
 {
     if (sigma <= 0)
-        InvalidArgument("SetUniformRandomValue: sigma must be a positive value.");
+        InvalidArgument("AddGaussianRandomValue: sigma must be a positive value.");
 
     if (IsEmpty())
         return;
