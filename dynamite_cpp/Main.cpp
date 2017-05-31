@@ -611,8 +611,8 @@ void LogVal(const Variable& x)
 void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabels)
 {
     const size_t inputDim         = 2000;
-    const size_t embeddingDim     = 50;
-    const size_t hiddenDim        = 25;
+    const size_t embeddingDim     = 500;
+    const size_t hiddenDim        = 250;
     const size_t attentionDim     = 20;
     const size_t numOutputClasses = 5;
 
