@@ -32,7 +32,8 @@ def test_VGG16_imagenet_distributed(device_id):
                "-datadir", prepare_ImageNet_data(),
                "-q", "32",
                "-device", str(device_id),
-               "-r"]
+               "-r",
+               "-testing"]
 
     # Currently we only test for CPU since the memory usage is very high for GPU (~6 GB)
-    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.99, True, timeout_seconds=900, use_only_cpu=True)
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.99, True, timeout_seconds=500, use_only_cpu=True)
