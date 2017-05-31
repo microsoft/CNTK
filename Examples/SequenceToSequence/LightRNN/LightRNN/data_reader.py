@@ -114,6 +114,14 @@ class DataSource(UserMinibatchSource):
             next_word = self.parse_word(label)
             samples.append((curr_word, next_word))
 
+        batchsize = len(samples) / self.seqlength
+        batchrange = list(map(int, [
+                (batchsize // number_of_workers) * worker_rank,
+                min((batchsize // number_of_workers) * (worker_rank + 1), batchsize)
+            ]))
+
+        samples = samples[batchrange[0] * self.seqlength: batchrange[1] * self.seqlength]
+
         minibatch = self.make_minibatch(samples)
         sample_count = len(samples)
         num_seq = len(minibatch[0])

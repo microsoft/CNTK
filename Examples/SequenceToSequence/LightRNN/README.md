@@ -14,6 +14,10 @@ This is the official implementation for [LightRNN: Memory and Computation-Effici
 - [Python 3.4](https://www.python.org/download/releases/3.4.3/) or later. 
 - g++ 4.8 or later
 
+__For multi gpu version__
+- openmpi
+- mpi4py
+
 ## Details
 
 ### [LightRNN/](LightRNN/)
@@ -61,6 +65,9 @@ The folder [LightRNN](LightRNN/) contains main structure of LightRNN.
         - `-epochs <list> (default: None)`, Number of epochs in every round
         - `-freq <int> (default: 100)`, Report status every this many iterations.
         - `-save <string> (default: model.dnn)`, Save the model to the file with this suffix.
+ - __[train_distributed.py](LightRNN/train_distribted)__
+    The multi-gpu version of the training proceduce of LightRNN, same options as *train.py*
+
 
 Run the example under [LightRNN](LightRNN/) as follows:
 
@@ -72,9 +79,15 @@ So, we will generate the sampled vocab named as *vocab.txt* and a random initial
 
 __Train__
 
-`python train.py -datadir ../PTB/data -vocab_file ../PTB/Data/vocab.txt -vocabdir ../PTB/Allocation -vocabsize 10000 -epochs 12 13 -nhid 1000 -embed 1000 -optim adam -lr 0.1 -batchsize 20 -layer 2 -dropout 0.5`
+`python train.py -datadir ../PTB/Data -vocab_file ../PTB/Allocation/vocab.txt -vocabdir ../PTB/Allocation -vocabsize 10000 -epochs 12 13 -nhid 1000 -embed 1000 -optim adam -lr 0.1 -batchsize 20 -layer 2 -dropout 0.5`
 
 This command will train a LightRNN model of 2 layers with 1000 hidden units and embedding dimension of 1000. The training procedure contains two rounds, with 12 epochs in the first round and 13 epochs in the second round. The word reallocation table will be optimized and updated after every round.
+
+__Multi-GPU__
+
+`mpiexec -n 2 python train.py -datadir ../PTB/Data -vocab_file ../PTB/Allocation/vocab.txt -vocabdir ../PTB/Allocation -vocabsize 10000 -epochs 12 13 -nhid 1000 -embed 1000 -optim adam -lr 0.1 -batchsize 20 -layer 2 -dropout 0.5`
+
+This command will train a LightRNN model on two GPU, you can specify the gpu number by using `mpiexec -n [gpus]`.
 
 ### [PTB/](PTB/)
 This folder contains an example of PTB dataset. You can use [download_data.py](PTB/Data/download_data.py) under [Data/](PTB/Data) to download the data. We provide a vocabulary file and a random table for word allocation under [Allocation/](PTB/Allocation).
@@ -115,16 +128,16 @@ The One Billion Words corpus contains about 799M tokens, with a vocabulary of 79
 
 __Performance__
 
-|Embed dimension|hidden dimension|Layer|batchsize|Model size (Bytes)|Speed (tokens/second)|GPU Memory |Time/epoch|
+|Embed dimension|hidden dimension|Layer|batchsize|Model size (Bytes)|tokens/second (1GPU/2GPU)|GPU Memory |Time/epoch (1GPU/2GPU)|
 |:---|:---|:---|:---|:---|:---|:---|:---|
-|500|500|2|100|5.7M|24615|901MB|9.01 h|
-|500|500|2|200|5.7M|32000|1558MB|6.93 h|
-|500|500|2|500|5.7M|32000|3528MB|6.93 h|
-|1000|1000|2|100|19M|12300|1640 MB|18.04 h|
-|1000|1000|2|200|19M|13000|2858 MB|17.07 h|
-|1000|1000|2|500|19M|14280|6526 MB|15.54 h|
-|1500|1500|2|100|41M|6900|2408 MB|32.16 h|
-|1500|1500|2|200|41M|7250|4238 MB|30.61 h|
+|500|500|2|100|5.7M|24615/40000|901MB|9.01 h/5.54 h|
+|500|500|2|200|5.7M|32000/49230|1558MB|6.93 h/4.50 h|
+|500|500|2|500|5.7M|32000/56140|3528MB|6.93 h/3.95 h|
+|1000|1000|2|100|19M|12300/19768|1640MB|18.04 h/11.22 h|
+|1000|1000|2|200|19M|13000/24150|2858MB|17.07 h/9.19 h|
+|1000|1000|2|500|19M|14280/28268|6526MB|15.54 h/7.85 h|
+|1500|1500|2|100|41M|6900/11034|2408MB|32.16 h/20.11 h|
+|1500|1500|2|200|41M|7250/13061|4238MB|30.61 h/16.99 h|
 
 We can achieve 122 perplexity (on the test set) after one epoch of training with a warm-start word allocation.
 
@@ -163,4 +176,4 @@ If you find LightRNN useful in your work, you can cite the paper as below:
     }
 
 ### Release Notes
-We will release the distributed version later.
+You need to ensure the version of openmpi correspond to the mpi which used to build mpi4py. We recommend you to build mpi4py from source.

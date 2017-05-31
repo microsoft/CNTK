@@ -3,6 +3,8 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+from mpi4py import MPI
+
 import ctypes
 import numpy as np
 import argparse
@@ -17,6 +19,9 @@ from cntk.ops import input_variable, dropout, combine, log, softmax
 from cntk.learners import sgd, adam, adagrad
 from cntk.learners import UnitType, learning_rate_schedule
 from cntk.learners import momentum_as_time_constant_schedule
+
+from cntk.train.distributed import Communicator
+from cntk.train.distributed import data_parallel_distributed_learner
 
 from cntk.layers.blocks import Stabilizer
 from cntk.layers.layers import Embedding, Dense
@@ -56,7 +61,7 @@ parser.add_argument('-pre_model', '--pre_model', default=None,
 
 # The model training parameters
 parser.add_argument('-batchsize', '--batchsize', default=20, type=int,
-                    help='The minibatch size')
+                    help='The minibatch size for on GPU')
 parser.add_argument('-embed', '--embed', default=512, type=int,
                     help='The dimension of word embedding')
 parser.add_argument('-nhid', '--nhid', default=512, type=int,
@@ -186,6 +191,7 @@ def create_model(input_dim):
     # variable : row label and col label
     row_label = input_variable(shape=input_dim, dynamic_axes=input_dynamic_axes)
     col_label = input_variable(shape=input_dim, dynamic_axes=input_dynamic_axes)
+
     model = combine([row_predict, col_predict])
 
     return {'row':       row,
@@ -265,7 +271,7 @@ def evaluate(network, path, location_path):
 
 # evaluate the loss vector from train data
 # return row and col probability distribution on location
-def calculate_loss_vector(network, path, location_path):
+def calculate_loss_vector(network, path, location_path, communicator):
     source = DataSource(path, opt.vocab_file, location_path,
                         opt.seqlength, opt.batchsize)
     # the curr row -> the curr col
@@ -278,7 +284,8 @@ def calculate_loss_vector(network, path, location_path):
 
     flag = True
     while flag:
-        mb = source.next_minibatch(opt.seqlength * opt.batchsize)
+        mb = source.next_minibatch(opt.seqlength * opt.batchsize * Communicator.num_workers(),
+                                   Communicator.num_workers(), communicator.rank())
         result = loss.eval({
             network['row']: mb[source.input1],
             network['col']: mb[source.input2],
@@ -311,6 +318,8 @@ def train(network, location_path, id):
     criterion = create_criterion(network)
     ce, pe = criterion[0], criterion[1]
     learner = create_learner(network['model'])
+    learner = data_parallel_distributed_learner(learner)
+    communicator = learner.communicator()
     trainer = Trainer(network['model'], (ce, pe), learner)
 
     # loop over epoch
@@ -323,7 +332,9 @@ def train(network, location_path, id):
 
         # loop over minibatch in the epoch
         while flag:
-            mb = source.next_minibatch(opt.seqlength * opt.batchsize)
+            mb = source.next_minibatch(opt.seqlength * opt.batchsize * Communicator.num_workers(),
+                                       Communicator.num_workers(), communicator.rank())
+            communicator.barrier()
             trainer.train_minibatch({
                 network['row']: mb[source.input1],
                 network['col']: mb[source.input2],
@@ -337,22 +348,39 @@ def train(network, location_path, id):
             batch_id += 1
             if batch_id != 0 and batch_id % opt.freq == 0:
                 diff_time = (datetime.datetime.now() - start_time)
-                print("Epoch {:2}: Minibatch [{:5} - {:5}], loss = {:.6f}, error = {:.6f}, speed = {:3} tokens/s".format(
+                if communicator.is_main():
+                    print("Epoch {:2}: Minibatch [{:5} - {:5}], loss = {:.6f}, error = {:.6f}, speed = {:3} tokens/s".format(
                         epoch + 1, batch_id - opt.freq + 1, batch_id,
                         loss / tokens, metric / tokens, tokens // diff_time.seconds))
+                communicator.barrier()
             flag = not mb[source.input1].sweep_end
 
         # Evaluation action
-        valid_error = evaluate(network, valid_path, location_path)
-        test_error = evaluate(network, test_path, location_path)
-        print("Epoch {:2} Done : Valid error = {:.6f}, Test error = {:.6f}".format(epoch + 1, valid_error, test_error))
-        network['model'].save(os.path.join(opt.outputdir, 'round{}_epoch{}_'.format(id, epoch) + opt.save))
+        if communicator.is_main():
+            valid_error = evaluate(network, valid_path, location_path)
+            test_error = evaluate(network, test_path, location_path)
+            print("Epoch {:2} Done : Valid error = {:.6f}, Test error = {:.6f}".format(epoch + 1, valid_error, test_error))
+            network['model'].save(os.path.join(opt.outputdir, 'round{}_epoch{}_'.format(id, epoch) + opt.save))
+        communicator.barrier()
 
     # word allocate action
-    row_loss, col_loss = calculate_loss_vector(network, train_path, location_path)
-    allocate_table(row_loss, col_loss,
-                   opt.vocabsize, vocab_sqrt, opt.vocab_file,
-                   get_k_round_location_path(id + 1))
+    row_loss, col_loss = calculate_loss_vector(network, train_path, location_path, communicator)
+    communicator.barrier()
+    comm = MPI.COMM_WORLD
+    if communicator.is_main():
+        for i in range(1, Communicator.num_workers()):
+            row_loss_add, col_loss_add = comm.recv(source=i)
+            row_loss += row_loss_add
+            col_loss += col_loss_add
+    else:
+        data_send = [row_loss, col_loss]
+        comm.send(data_send, 0)
+    communicator.barrier()
+    if communicator.is_main():
+        allocate_table(row_loss, col_loss,
+                       opt.vocabsize, vocab_sqrt, opt.vocab_file,
+                       get_k_round_location_path(id + 1))
+    communicator.barrier()
 
 
 #################
@@ -371,6 +399,7 @@ def main():
     for i in range(len(opt.epochs)):
         train(network, location_path, i)
         location_path = get_k_round_location_path(i + 1)
+    Communicator.finalize()
 
 
 if __name__ == "__main__":
