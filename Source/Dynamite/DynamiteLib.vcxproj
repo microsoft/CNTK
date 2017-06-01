@@ -25,7 +25,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{743FC7AA-3884-4C96-983A-A33FD6C56227}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>V2LibraryEndToEndTests</RootNamespace>
+    <RootNamespace>Dynamite</RootNamespace>
     <ProjectName>dynamite_cpp</ProjectName>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
