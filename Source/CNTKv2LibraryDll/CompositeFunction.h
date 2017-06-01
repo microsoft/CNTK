@@ -76,7 +76,7 @@ namespace CNTK
             std::unordered_set<FunctionPtr> visitedFunctions;
 
             // Call Collect to get the set of all functions in the graph
-#undef NO_ALL_PRIMITIVE_FUNCTIONS_HACK // hack to skip building m_allPrimitiveFunctionsSet for timing tests, as this has O(N^2) complexity
+#define NO_ALL_PRIMITIVE_FUNCTIONS_HACK // hack to skip building m_allPrimitiveFunctionsSet (will leak memory until solved properly), as this has O(N^2) complexity
 #ifndef NO_ALL_PRIMITIVE_FUNCTIONS_HACK
             CollectAllPrimitiveFunctions(rootFunction, visitedFunctions);
 #endif

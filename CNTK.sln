@@ -1549,6 +1549,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BinaryConvolutionLib", "Exa
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DynamiteLib", "Source\Dynamite\DynamiteLib.vcxproj", "{E2F320FE-0C01-4C80-810C-3A92205A29DB}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
