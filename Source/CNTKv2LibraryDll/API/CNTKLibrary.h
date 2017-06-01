@@ -3600,12 +3600,12 @@ namespace CNTK
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
         CNTK_API Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid);
         CNTK_API static FunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes);
-        // TODO: we can remove CNTK_API once we move stuff to AutoBatch.cpp
+        // TODO: we can remove CNTK_API once we move stuff to AutoBatch.cpp, and move it to Primitive only
         CNTK_API virtual NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&) const { NOT_IMPLEMENTED; }
-        //static CNTK_API void BackpropTo(const NDArrayView* outputGradient, size_t i,
-        //    PrimitiveOpType primitiveOp, const Dictionary& attributes,
-        //    const NDArrayView* outputValue, const vector<const NDArrayView*>& inputValues,
-        //    const NDArrayViewPtr& gradient, double beta);
+        CNTK_API virtual void BackpropTo(const NDArrayView* outputGradient, size_t i,
+            PrimitiveOpType primitiveOp, const Dictionary& attributes,
+            const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues,
+            const NDArrayViewPtr& gradient, double beta) { NOT_IMPLEMENTED; }
 
         std::vector<Variable> m_inputs; // primitives: direct input variables; composites: overall input variables, computed lazily (?)
         size_t/*std::once_flag*/ m_outputsInitFlag = 0;

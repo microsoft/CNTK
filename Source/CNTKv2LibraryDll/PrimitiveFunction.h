@@ -773,6 +773,10 @@ namespace CNTK
         void SetRandomSeed(size_t seed);
 
         virtual NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&) const;
+        virtual void BackpropTo(const NDArrayView* outputGradient, size_t i,
+            PrimitiveOpType primitiveOp, const Dictionary& attributes,
+            const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues,
+            const NDArrayViewPtr& gradient, double beta);
 
         virtual PrimitiveOpType Op() const { return m_op; }
 
