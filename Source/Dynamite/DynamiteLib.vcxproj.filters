@@ -14,14 +14,8 @@
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GetValue.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="GetValue.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Layers.h">
       <Filter>Header Files</Filter>
     </ClInclude>

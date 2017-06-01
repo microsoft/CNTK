@@ -8,12 +8,9 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "CNTKLibrary.h"
-#include <functional>
 #include "Common.h"
-#include "TimerUtility.h"
-#include "GetValue.h" // meat is here
 
-#include <iostream>
+#include <functional>
 #include <cstdio>
 #include <map>
 #include <set>
@@ -22,8 +19,9 @@
 #define let const auto
 
 using namespace CNTK;
-
 using namespace std;
+
+#define Barrier Alias
 
 namespace Dynamite {
 

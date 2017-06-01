@@ -3,16 +3,15 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+// This implements SequenceClassification.py as an example in CNTK Dynamite.
+
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "CNTKLibrary.h"
-#include <functional>
+#include "Layers.h"
 #include "Common.h"
 #include "TimerUtility.h"
-#include "Layers.h"
-//#include "GetValue.h" // meat is here
 
-#include <iostream>
 #include <cstdio>
 #include <map>
 #include <set>
@@ -25,6 +24,7 @@ using namespace std;
 
 using namespace Dynamite;
 
+// baseline model for CNTK Static
 UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
     return Sequential({
@@ -34,7 +34,6 @@ UnaryModel CreateModelFunction(size_t numOutputClasses, size_t embeddingDim, siz
     });
 }
 
-//function<pair<Variable,Variable>(Variable, Variable)> CreateCriterionFunction(UnaryModel model)
 BinaryModel CreateCriterionFunction(UnaryModel model)
 {
     return [=](const Variable& features, const Variable& labels)
@@ -50,7 +49,7 @@ BinaryModel CreateCriterionFunction(UnaryModel model)
     };
 }
 
-// SequenceClassification.py
+// CNTK Dynamite model
 UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, const DeviceDescriptor& device)
 {
     auto embed   = Embedding(embeddingDim, device);
@@ -80,6 +79,33 @@ UnaryModel CreateModelFunctionUnrolled(size_t numOutputClasses, size_t embedding
         state = barrier(state); // for better batching
         return linear(state);
     });
+}
+
+function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCriterionFunctionUnrolled(UnaryModel model)
+{
+    BinaryModel criterion = [=](const Variable& feature, const Variable& label) -> Variable
+    {
+        let z = model(feature);
+        //let loss = CNTK::CrossEntropyWithSoftmax(z, label);
+        auto s1 = label.Shape();
+        auto z1 = z.Shape();
+        //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(label, z, /*outputRank=*/0));
+        //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label, z, /*outputRank=*/0));
+        // TODO: reduce ops must be able to drop the axis
+        // TODO: dynamite should rewrite Times() that is really a dot product
+        let loss = Reshape(Minus(ReduceLogSum(z, Axis(0)), ReduceSum(ElementTimes(label, z), Axis(0))), NDShape());
+        return loss;
+    };
+    // create a batch mapper (which will allow suspension)
+    let batchModel = Batch::Map(criterion);
+    // for final summation, we create a new lambda (featBatch, labelBatch) -> mbLoss
+    return [=](const vector<Variable>& features, const vector<Variable>& labels)
+    {
+        let losses = batchModel(features, labels);
+        let collatedLosses = Splice(losses, Axis(0));     // collate all seq losses
+        let mbLoss = ReduceSum(collatedLosses, Axis(0));  // aggregate over entire minibatch
+        return mbLoss;
+    };
 }
 
 // helper to convert a tensor to a vector of slices
@@ -130,6 +156,7 @@ UnarySequenceModel BiRecurrence(const BinaryModel& stepFwd, const BinaryModel& s
     };
 }
 
+#if 0
 Variable softmax(const Variable& z)
 {
     //let Z = ReduceLogSum(z, Axis::AllStaticAxes());
@@ -167,6 +194,7 @@ function<Variable(const vector<Variable>&, const Variable&)> AttentionModel(size
 }
 
 // create a s2s translator
+//     auto d_model_fn1 = CreateModelFunctionS2SAtt(inputDim, embeddingDim, 2 * hiddenDim, attentionDim, device); // (Splice cannot concat, so hidden and embedding must be the same)
 BinarySequenceModel CreateModelFunctionS2SAtt(size_t numOutputClasses, size_t embeddingDim, size_t hiddenDim, size_t attentionDim, const DeviceDescriptor& device)
 {
     numOutputClasses; hiddenDim;
@@ -220,34 +248,9 @@ BinarySequenceModel CreateModelFunctionS2SAtt(size_t numOutputClasses, size_t em
         return losses;
     };
 }
+#endif
 
-function<Variable(const vector<Variable>&, const vector<Variable>&)> CreateCriterionFunctionUnrolled(UnaryModel model)
-{
-    BinaryModel criterion = [=](const Variable& feature, const Variable& label) -> Variable
-    {
-        let z = model(feature);
-        //let loss = CNTK::CrossEntropyWithSoftmax(z, label);
-        auto s1 = label.Shape();
-        auto z1 = z.Shape();
-        //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), TransposeTimes(label, z, /*outputRank=*/0));
-        //let loss = Minus(ReduceLogSum(z, Axis::AllStaticAxes()), Times(label, z, /*outputRank=*/0));
-        // TODO: reduce ops must be able to drop the axis
-        // TODO: dynamite should rewrite Times() that is really a dot product
-        let loss = Reshape(Minus(ReduceLogSum(z, Axis(0)), ReduceSum(ElementTimes(label, z), Axis(0))), NDShape());
-        return loss;
-    };
-    // create a batch mapper (which will allow suspension)
-    let batchModel = Batch::Map(criterion);
-    // for final summation, we create a new lambda (featBatch, labelBatch) -> mbLoss
-    return [=](const vector<Variable>& features, const vector<Variable>& labels)
-    {
-        let losses = batchModel(features, labels);
-        let collatedLosses = Splice(losses, Axis(0));     // collate all seq losses
-        let mbLoss = ReduceSum(collatedLosses, Axis(0));  // aggregate over entire minibatch
-        return mbLoss;
-    };
-}
-
+// helper for logging a Variable's value
 void LogVal(const Variable& x)
 {
     let& val = *x.Value();
@@ -276,7 +279,6 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
     // dybamic model and criterion function
     auto d_model_fn = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim, device);
-    auto d_model_fn1 = CreateModelFunctionS2SAtt(inputDim, embeddingDim, 2 * hiddenDim, attentionDim, device); // (Splice cannot concat, so hidden and embedding must be the same)
     auto d_criterion_fn = CreateCriterionFunctionUnrolled(d_model_fn);
 
     // data

@@ -5,33 +5,27 @@
 
 // The functions for automatically-batched evaluation of graphs is contained here.
 
-// TODO: move most of Dynamite GetValue.cpp here
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "stdafx.h"
 #include "PrimitiveFunction.h"
+#include "CNTKLibrary.h"
+#include "Variable.h"
+#include "PrimitiveOpType.h"
+#include "PrimitiveFunction.h"
+#include "CommonMatrix.h"
 #include "Utils.h"
 
+#include <unordered_map>
 #include <vector>
 #include <string>
 
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
 
-#define Barrier Alias
 #define BarrierOp NoOp
 
-//#include "GetValue.h"
-#include "CNTKLibrary.h"
-#include "Variable.h"
-#include "PrimitiveOpType.h"
-#include "PrimitiveFunction.h"
-#include "CommonMatrix.h"
-
-#include <unordered_map>
-
-#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
-
-#pragma warning (disable: 4456) // until I fixed the shdowing
+#pragma warning (disable: 4456) // until I fixed the shadowing
 
 #define let const auto
 #define fail_if(cond, err) (!!(cond) ? (LogicError(__FUNCTION__ ": " err),0) : 0)
@@ -1085,13 +1079,8 @@ public:
 // Computes lazily the value of a node. Does nothing if called again.
 NDArrayViewPtr PrimitiveFunction::BatchedForward() const
 {
-#if 0
-    // naive version for comparison purposes
-    return Value();
-#else
     auto autoBatcher = Memoize();
     return autoBatcher.GetValue(m_outputs[0]);
-#endif
 }
 
 // Perform backprop.
