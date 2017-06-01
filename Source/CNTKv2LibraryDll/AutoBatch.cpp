@@ -363,7 +363,7 @@ class Variable::Memoize
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
         // logging
-#undef LOGGING
+#define LOGGING
 #ifdef LOGGING
         fprintf(stderr, "%S%S = %S(", f.Uid().c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
         for (size_t i = 0; i < inputs.size() && i < 4; i++)
@@ -384,7 +384,7 @@ class Variable::Memoize
 #endif
         auto outValue = isFree ? nullptr : AllocateTensorInArena(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
         // execute it
-        output.m_dataFields->m_value = move(dynamic_cast<PrimitiveFunction&>(f).ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue)));
+        output.m_dataFields->m_value = move(dynamic_cast<PrimitiveFunction&>(f).ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue), f));
         return output;
     }
 
@@ -944,7 +944,7 @@ other_ops              = rest
         // If the input is a lazyIndex, then the gradient is a view into the lazy source.
         let beta = LazilyCreateLazilyIndexedGradient(input);
         // backprop into the input
-        dynamic_cast<PrimitiveFunction*>(f)->BackpropTo(outputGradient, index, f->Op(), f->m_attributes, outputValue, m_inputValuesBufferRaw, fields.m_gradient, beta);
+        dynamic_cast<PrimitiveFunction*>(f)->BackpropTo(outputGradient, index, f->Op(), f->m_attributes, outputValue, m_inputValuesBufferRaw, fields.m_gradient, beta, *f);
     }
 
     // helper to verify that the tree is clean

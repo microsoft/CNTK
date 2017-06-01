@@ -1317,6 +1317,6 @@ namespace CNTK
         for (size_t i = 0; i < args.size(); i++)
             args[i] = m_inputs[i].Value();
         NDArrayViewPtr out;
-        output.m_dataFields->m_value = move(ComputeKnowableValue(m_op, args, m_attributes, output.Shape(), move(out)));
+        output.m_dataFields->m_value = move(ComputeKnowableValue(m_op, args, m_attributes, output.Shape(), move(out), *this));
     }
 }

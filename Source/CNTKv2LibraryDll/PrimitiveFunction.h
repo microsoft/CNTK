@@ -779,8 +779,8 @@ namespace CNTK
 
     private:
         static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes);
-        /*static*/ NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&) const;
-        static void BackpropTo(const NDArrayView* outputGradient, size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes, const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues, const NDArrayViewPtr& gradient, double beta);
+        static NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&, const PrimitiveFunction& funcForErrMsg);
+        static void BackpropTo(const NDArrayView* outputGradient, size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes, const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues, const NDArrayViewPtr& gradient, double beta, const PrimitiveFunction& funcForErrMsg);
 
         virtual PrimitiveOpType Op() const { return m_op; }
 

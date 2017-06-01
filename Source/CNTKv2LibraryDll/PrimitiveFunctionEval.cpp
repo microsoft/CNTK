@@ -18,9 +18,9 @@ using namespace std;
 
 namespace CNTK
 {
-    // BUGBUG: AsString() is called on 'this' (affects only error messages; once gone, change to static)
-    NDArrayViewPtr PrimitiveFunction::ComputeKnowableValue(PrimitiveOpType primitiveOp, 
-        const vector<NDArrayViewPtr>& args, const Dictionary& attributes, const NDShape& outputShape, NDArrayViewPtr&& out) const
+    /*static*/ NDArrayViewPtr PrimitiveFunction::ComputeKnowableValue(PrimitiveOpType primitiveOp, 
+                     const vector<NDArrayViewPtr>& args, const Dictionary& attributes, const NDShape& outputShape,
+                     NDArrayViewPtr&& out, const PrimitiveFunction& funcForErrMsg)
     {
         // first handle ops that do not create new data
         if (primitiveOp == PrimitiveOpType::StopGradient ||
@@ -30,7 +30,7 @@ namespace CNTK
             primitiveOp == PrimitiveOpType::Slice)
         {
             if (out)
-                LogicError("Variable '%S' Value(): An output buffer was passed for op %S that does not need one.", AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+                LogicError("Variable '%S' Value(): An output buffer was passed for op %S that does not need one.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             out = args[0];
             switch (primitiveOp)
             {
@@ -68,7 +68,7 @@ namespace CNTK
         if (!out)
             out = make_shared<NDArrayView>(args.front()->GetDataType(), outputShape, args.front()->Device());
         else if (out->Shape() != outputShape)
-            LogicError("Variable '%S' Value(): The out buffer passed to op %S does not match outputShape.", AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+            LogicError("Variable '%S' Value(): The out buffer passed to op %S does not match outputShape.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
         // perform the operation
         auto op = Microsoft::MSR::CNTK::ElementWiseOperator::opNone;
         auto reductionOp = Microsoft::MSR::CNTK::ElementWiseOperator::opSum;
@@ -100,7 +100,7 @@ namespace CNTK
                     //  PrimitiveFunction::InternalMaxReductionOpName
                     //  PrimitiveFunction::InternalMinReductionOpName
                     //  PrimitiveFunction::InternalProdReductionOpName
-                    LogicError("Variable '%S' Value(): Reduction op %S not yet implemented.", AsString().c_str(), reductionOpName.c_str());
+                    LogicError("Variable '%S' Value(): Reduction op %S not yet implemented.", funcForErrMsg.AsString().c_str(), reductionOpName.c_str());
             }
             break;
             // non-elementwise ops are done here
@@ -143,7 +143,7 @@ namespace CNTK
         case PrimitiveOpType::TransposeAxes:
         case PrimitiveOpType::LogSoftmax:
         case PrimitiveOpType::SumAll:
-            LogicError("Variable '%S' Value(): Memoziation of unary operator %S not implemented yet.", AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+            LogicError("Variable '%S' Value(): Memoziation of unary operator %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             // binary operations to be completed
         case PrimitiveOpType::Equal:
         case PrimitiveOpType::NotEqual:
@@ -157,11 +157,11 @@ namespace CNTK
         case PrimitiveOpType::ClassificationError:
         case PrimitiveOpType::SquaredError:
         case PrimitiveOpType::Gather:
-                LogicError("Variable '%S' Value(): Memoziation of binary operator %S not implemented yet.", AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+                LogicError("Variable '%S' Value(): Memoziation of binary operator %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             // ternary operations to be completed
         case PrimitiveOpType::Clip:
         case PrimitiveOpType::Select:
-            LogicError("Variable '%S' Value(): Memoziation of ternary operator %S not implemented yet.", AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+            LogicError("Variable '%S' Value(): Memoziation of ternary operator %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             // dynamic-axis related operations are not supported as dynamic axes require Inputs and are therefore not applicable here
         case PrimitiveOpType::PackedIndex:
         case PrimitiveOpType::GatherPacked:
@@ -174,17 +174,17 @@ namespace CNTK
         case PrimitiveOpType::ToSequence:
         case PrimitiveOpType::ToSequenceLike:
         case PrimitiveOpType::UnpackSequence:
-            RuntimeError("Variable '%S' Value(): Memoziation of dynamic-axis related operation %S is not possible as they imply unknown inputs.", AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+            RuntimeError("Variable '%S' Value(): Memoziation of dynamic-axis related operation %S is not possible as they imply unknown inputs.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             // some operations are not supported because they do not apply
         case PrimitiveOpType::Combine:  // TODO: should be trivial to support, just need a test
         case PrimitiveOpType::Block:    // TODO: recursively invoke, needs a test and investigation whether blocks are always singleton copies
         case PrimitiveOpType::Assign:
-            RuntimeError("Variable '%S' Value(): Memoziation of operation %S not applicable.", AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+            RuntimeError("Variable '%S' Value(): Memoziation of operation %S not applicable.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             // the following operations are not TensorView, and may be implementable through relatively simple calls to Matrix
         case PrimitiveOpType::BatchNormalization:
         case PrimitiveOpType::CosDistance:
         case PrimitiveOpType::OneHot:
-            LogicError("Variable '%S' Value(): Memoziation of operation %S not implemented yet.", AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+            LogicError("Variable '%S' Value(): Memoziation of operation %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
             // the following operations are not TensorView, and hence should be routed through V1 ComputationNodes
             // convolution family
         case PrimitiveOpType::Convolution:  // TODO: route these through TensorView
@@ -202,9 +202,9 @@ namespace CNTK
         case PrimitiveOpType::LabelsToGraph:
         case PrimitiveOpType::ForwardBackward:
         case PrimitiveOpType::CosDistanceWithNegativeSamples:
-            LogicError("Variable '%S' Value(): Memoziation of operation %S not implemented yet.", AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+            LogicError("Variable '%S' Value(): Memoziation of operation %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
         default:
-            LogicError("Variable '%S' Value(): Memoziation of non-existent operation %S?", AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+            LogicError("Variable '%S' Value(): Memoziation of non-existent operation %S?", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
         }
         // most common case: elementwise ops are done here instead
         if (op != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
@@ -216,10 +216,10 @@ namespace CNTK
     // Gradient must have been allocated to the correct shape already.
     // If beta == 0 then gradient can be uninitialized memory.
     // For now only defined for functions with 1 output.
-    /*virtual*/ void PrimitiveFunction::BackpropTo(const NDArrayView* outputGradient, size_t i,
+    /*static*/ void PrimitiveFunction::BackpropTo(const NDArrayView* outputGradient, size_t i,
                            PrimitiveOpType primitiveOp, const Dictionary& attributes,
                            const NDArrayView* outputValue, const vector<const NDArrayView*>& inputValues,
-                           const NDArrayViewPtr& gradient, double beta)
+                           const NDArrayViewPtr& gradient, double beta, const PrimitiveFunction& funcForErrMsg)
     {
     #if 0   // TODO: bring this back once we have gradient functions that do not support beta
         if (beta == 0) // TODO: limit this to those ops that do not support beta
@@ -277,7 +277,7 @@ namespace CNTK
                     //  PrimitiveFunction::InternalMaxReductionOpName
                     //  PrimitiveFunction::InternalMinReductionOpName
                     //  PrimitiveFunction::InternalProdReductionOpName
-                    LogicError("Variable '%S' Value(): Gradient of reduction op %S not yet implemented.", L""/*AsString().c_str()*/, reductionOpName.c_str());
+                    LogicError("Variable '%S' Value(): Gradient of reduction op %S not yet implemented.", funcForErrMsg.AsString().c_str(), reductionOpName.c_str());
             }
             break;
             // hard stuff
@@ -316,8 +316,8 @@ namespace CNTK
             break;
         default:
             //fprintf(stderr, "NEEDS: %S\n", PrimitiveOpTypeName(primitiveOp).c_str());
-            LogicError("Variable '%S' Value(): Backpropagation for operation %S not implemented yet.", L""/*AsString().c_str()*/, PrimitiveOpTypeName(primitiveOp).c_str());
-            //LogicError("Variable '%S' Value(): Backpropagation for non-existent operation %S?", L""/*AsString().c_str()*/, PrimitiveOpTypeName(primitiveOp).c_str());
+            LogicError("Variable '%S' Value(): Backpropagation for operation %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+            //LogicError("Variable '%S' Value(): Backpropagation for non-existent operation %S?", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
         }
         // the simple TensorView operations are performed out here
         // TODO: we can eliminate the vector<> by passing a std::function, possibly?
