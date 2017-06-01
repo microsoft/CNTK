@@ -5,12 +5,13 @@
 # ==============================================================================
 
 
-from cntk.ops import parameter, past_value, placeholder_variable
+from cntk.ops import parameter, placeholder
+from cntk.ops.sequence import past_value
 from cntk.ops import times, sigmoid, tanh, slice
 from cntk.initializer import glorot_uniform
 
 
-def LightLSTMCell(x, y, dh, dc):
+def LSTMCell(x, y, dh, dc):
     '''The based LightLSTM Cell'''
     input_dim = x.shape[0]
     cell_dim = dh.shape[0]
@@ -57,17 +58,17 @@ def LightLSTMCell(x, y, dh, dc):
     return (ht, ct, ht2, ct2)
 
 
-def LightLSTM(input1, input2, cell_dim,
+def LSTM(input1, input2, cell_dim,
               recurrence_hookH=past_value, recurrence_hookC=past_value):
     '''Light-LSTM for language model'''
-    dh = placeholder_variable(shape=(cell_dim), dynamic_axes=input2.dynamic_axes)
-    dc = placeholder_variable(shape=(cell_dim), dynamic_axes=input2.dynamic_axes)
+    dh = placeholder(shape=(cell_dim), dynamic_axes=input2.dynamic_axes)
+    dc = placeholder(shape=(cell_dim), dynamic_axes=input2.dynamic_axes)
 
-    LSTMCell = LightLSTMCell(input1, input2, dh, dc)
-    actualDh = recurrence_hookH(LSTMCell[2])
-    actualDc = recurrence_hookC(LSTMCell[3])
+    Cell = LSTMCell(input1, input2, dh, dc)
+    actualDh = recurrence_hookH(Cell[2])
+    actualDc = recurrence_hookC(Cell[3])
 
-    LSTMCell[0].replace_placeholders(
+    Cell[0].replace_placeholders(
             {dh: actualDh.output, dc: actualDc.output})
 
-    return (LSTMCell[0], LSTMCell[1], LSTMCell[2], LSTMCell[3])
+    return (Cell[0], Cell[1], Cell[2], Cell[3])
