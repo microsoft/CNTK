@@ -85,7 +85,7 @@ This command will train a LightRNN model of 2 layers with 1000 hidden units and 
 
 __Multi-GPU__
 
-`mpiexec -n 2 python train.py -datadir ../PTB/Data -vocab_file ../PTB/Allocation/vocab.txt -vocabdir ../PTB/Allocation -vocabsize 10000 -epochs 12 13 -nhid 1000 -embed 1000 -optim adam -lr 0.1 -batchsize 20 -layer 2 -dropout 0.5`
+`mpiexec -n 2 python train_distributed.py -datadir ../PTB/Data -vocab_file ../PTB/Allocation/vocab.txt -vocabdir ../PTB/Allocation -vocabsize 10000 -epochs 12 13 -nhid 1000 -embed 1000 -optim adam -lr 0.1 -batchsize 20 -layer 2 -dropout 0.5`
 
 This command will train a LightRNN model on two GPU, you can specify the gpu number by using `mpiexec -n [gpus]`.
 
