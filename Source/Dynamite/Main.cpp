@@ -10,7 +10,7 @@
 #include "Common.h"
 #include "TimerUtility.h"
 #include "Layers.h"
-#include "GetValue.h" // meat is here
+//#include "GetValue.h" // meat is here
 
 #include <iostream>
 #include <cstdio>
@@ -400,10 +400,10 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "/// ### CNTK Dynamite:  %.6f sec\n");
             //loss1 = GetValue(mbLoss)->AsScalar<float>();
 #if 1       // model update with Dynamite
-            Backward(mbLoss, gradients);
+            mbLoss.Backward(gradients);
             d_learner->Update(gradients, minibatchData[labelStreamInfo].numberOfSamples);
 #endif
-            loss1 = GetValue(mbLoss)->AsScalar<float>(); // note: this does the GPU sync
+            loss1 = mbLoss.Value()->AsScalar<float>(); // note: this does the GPU sync
         }
         fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", loss1 / minibatchData[featureStreamInfo].numberOfSequences);
 #endif

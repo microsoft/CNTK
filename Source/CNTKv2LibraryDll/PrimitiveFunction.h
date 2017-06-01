@@ -772,6 +772,11 @@ namespace CNTK
 
         void SetRandomSeed(size_t seed);
 
+    public:
+        NDArrayViewPtr BatchedForward() const;
+        void BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const;
+
+    private:
         virtual NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&) const;
         virtual void BackpropTo(const NDArrayView* outputGradient, size_t i,
             PrimitiveOpType primitiveOp, const Dictionary& attributes,

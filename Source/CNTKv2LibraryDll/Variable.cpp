@@ -162,11 +162,23 @@ namespace CNTK
             const auto& owner = Owner();
             if (!owner)
                 LogicError("Variable '%S' Value(): Only Variables with owners can compute their Value.", AsString().c_str());
+#if 0
             owner->MemoizeKnowableValue();
+#else
+            dynamic_pointer_cast<PrimitiveFunction>(owner)->BatchedForward();
+#endif
         }
 
         assert(m_dataFields->m_value != nullptr);
         return m_dataFields->m_value;
+    }
+
+    void Variable::Backward(std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& gradients) const
+    {
+        const auto& owner = Owner();
+        if (!owner)
+            LogicError("Variable '%S' Value(): Only Variables with owners can Backprop.", AsString().c_str());
+        dynamic_pointer_cast<PrimitiveFunction>(owner)->BatchedBackward(gradients);
     }
 
     void Variable::SetValue(const NDArrayViewPtr& value)

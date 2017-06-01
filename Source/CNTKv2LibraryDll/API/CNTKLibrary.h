@@ -1910,7 +1910,7 @@ namespace CNTK
         /// In a dynamic setting, this computes the gradient of this Variable w.r.t. given leaves.
         /// TODO: Function::grad() allows to pass multiple roots. Does that ever make sense in this context?
         ///
-        //CNTK_API void Backward(const Variable& root, std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& gradients) const;
+        CNTK_API void Backward(std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& gradients) const;
     protected:
         class Memoize;
     protected:
