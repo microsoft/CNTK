@@ -37,6 +37,8 @@
     <ClCompile Include="ProgressWriter.cpp" />
     <ClCompile Include="Evaluator.cpp" />
     <ClCompile Include="UserDefinedFunction.cpp" />
+    <ClCompile Include="PrimitiveFunctionEval.cpp" />
+    <ClCompile Include="AutoBatch.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />

@@ -859,10 +859,10 @@ namespace CNTK
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
 
     private:
-        CNTK_API NDArrayView(::CNTK::DataType dataType, const DeviceDescriptor& device, ::CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
+        CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
 
         template <typename ElementType>
-        static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>* tensorView, size_t rowColSplitPoint);
+        static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>& tensorView, size_t rowColSplitPoint);
 
         template <typename ElementType>
         std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint) const;
@@ -871,16 +871,24 @@ namespace CNTK
         std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint);
 
         template <typename ElementType>
-        const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView() const;
+        const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorViewPtr() const;
 
         template <typename ElementType>
-        Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorView();
+        Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorViewPtr();
 
         template <typename ElementType>
-        const Microsoft::MSR::CNTK::TensorView<ElementType> NativeTensorView() const;
+        std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> GetTensorViewMin2D() const;
 
         template <typename ElementType>
-        Microsoft::MSR::CNTK::TensorView<ElementType> WritableNativeTensorView();
+        std::shared_ptr<Microsoft::MSR::CNTK::TensorView<ElementType>> GetWritableTensorViewMin2D();
+
+        template <typename ElementType>
+        std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> NativeTensorView() const;
+
+        template <typename ElementType>
+        std::shared_ptr<Microsoft::MSR::CNTK::TensorView<ElementType>> WritableNativeTensorView();
+
+        std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase> GetStorageObjectPtr() const;
 
     private:
         ::CNTK::DataType m_dataType;
@@ -889,7 +897,7 @@ namespace CNTK
         NDShape m_viewShape;
         bool m_isReadOnly;
 
-        std::shared_ptr<void> m_tensorView; // Microsoft::MSR::CNTK::TensorView<ElemType>*
+        std::shared_ptr<void> m_tensorViewPtr; // Microsoft::MSR::CNTK::TensorView<ElemType>*
     };
 
     enum class MaskKind : char

@@ -146,6 +146,8 @@
     <ClInclude Include="Variable.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AutoBatch.cpp" />
+    <ClCompile Include="PrimitiveFunctionEval.cpp" />
     <ClCompile Include="BackCompat.cpp" />
     <ClCompile Include="Common.cpp" />
     <ClCompile Include="CompositeFunction.cpp" />
