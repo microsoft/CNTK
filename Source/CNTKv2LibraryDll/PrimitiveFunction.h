@@ -778,6 +778,7 @@ namespace CNTK
         void BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const;
 
     private:
+        static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes);
         /*static*/ NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&) const;
         static void BackpropTo(const NDArrayView* outputGradient, size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes, const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues, const NDArrayViewPtr& gradient, double beta);
 
@@ -801,6 +802,10 @@ namespace CNTK
         // Version 14: Add StableSigmoid
         // Version 15: Add RandomDistribution
         static const size_t s_serializationVersion = 15;
+
+        // Dynamite
+        int m_pendingInputs = -1;   // counter how many inputs have already become available
+        PrimitiveFunction* m_link;  // auto-batch uses temporary linked lists
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

@@ -34,11 +34,11 @@ namespace CNTK
         // value
         NDArrayViewPtr m_value;
         NDArrayViewPtr m_gradient;
-        std::pair<FunctionPtr, size_t> m_lazyIndex;
+        std::pair<PrimitiveFunctionPtr, size_t> m_lazyIndex;
 
         // computation
         std::atomic<size_t> m_valueTimeStamp;
-        std::pair<std::pair<Function*,size_t>, std::vector<std::pair<Function*, size_t>>> m_consumers;
+        std::pair<std::pair<PrimitiveFunction*,size_t>, std::vector<std::pair<PrimitiveFunction*, size_t>>> m_consumers;
         mutable bool m_visited;
 
         // lazy initialization

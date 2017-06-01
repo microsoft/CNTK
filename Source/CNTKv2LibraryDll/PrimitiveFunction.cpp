@@ -1291,6 +1291,17 @@ namespace CNTK
         m_dirtyAttributes.insert(AttributeNameRngSeed);
     }
 
+    // TODO: If this is only used in auto-batching, then move it there as a regular function.
+    /*static*/ std::shared_ptr<PrimitiveFunction> PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes)
+    {
+        auto res = MakeSharedObject<PrimitiveFunction>(op, move(inputs), shape, move(attributes));
+        //std::call_once(m_outputsInitFlag, [this]() {});
+        res->m_outputsInitFlag++;
+        res->m_outputs.front().SetOwner(res);
+        // BUGBUG: This ^^ belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
+        return res;
+    }
+
     // note: This is actually not used except as a fallback for debugging--let's inline this
     void PrimitiveFunction::MemoizeKnowableValue() const
     {

@@ -102,14 +102,14 @@ class Variable::Memoize
             op == PrimitiveOpType::Slice;
     }
 
-    class NonOwningFunctionList // over Function, using m_link
+    class NonOwningFunctionList // over PrimitiveFunction, using m_link
     {
     protected:
-        Function* head;
+        PrimitiveFunction* head;
         size_t count; // note: count is only in here for diagnostics; only needed in builder
     public:
         NonOwningFunctionList() { clear(); }
-        NonOwningFunctionList(Function* f) : head(f), count(1) { }
+        NonOwningFunctionList(PrimitiveFunction* f) : head(f), count(1) { }
         void operator=(const NonOwningFunctionList& other)
         {
             head  = other.head;
@@ -124,7 +124,7 @@ class Variable::Memoize
             *this = other;
             other.clear();
         }
-        Function* front() const { return head; }
+        PrimitiveFunction* front() const { return head; }
         bool empty() const { return !head; }
         size_t size() const { return count; }
         void clear()
@@ -134,24 +134,24 @@ class Variable::Memoize
         }
         class FunctionListIterator
         {
-            Function* iter;
+            PrimitiveFunction* iter;
         public:
-            FunctionListIterator(Function* f) : iter(f) { }
-            Function* operator->() const { return iter; }
-            Function& operator*() const { return *iter; } // TODO: This is weird, figure this out
-            Function* operator++() { iter = iter->m_link; return iter; }
+            FunctionListIterator(PrimitiveFunction* f) : iter(f) { }
+            PrimitiveFunction* operator->() const { return iter; }
+            PrimitiveFunction& operator*() const { return *iter; } // TODO: This is weird, figure this out
+            PrimitiveFunction* operator++() { iter = iter->m_link; return iter; }
             bool operator!=(const FunctionListIterator& other) { return iter != other.iter; }
         };
         FunctionListIterator begin() const { return front(); }
         FunctionListIterator end()   const { return nullptr; }
     };
-    class NonOwningFunctionListBuilder : public NonOwningFunctionList // over Function, using m_link
+    class NonOwningFunctionListBuilder : public NonOwningFunctionList // over PrimitiveFunction, using m_link
     {
-        Function* tail; // note: value undefined when list empty
+        PrimitiveFunction* tail; // note: value undefined when list empty
     public:
         NonOwningFunctionListBuilder() : NonOwningFunctionList() { }
-        NonOwningFunctionListBuilder(Function* f) : NonOwningFunctionList(f), tail(f) { f->m_link = nullptr; }
-        void push_back(Function* f)
+        NonOwningFunctionListBuilder(PrimitiveFunction* f) : NonOwningFunctionList(f), tail(f) { f->m_link = nullptr; }
+        void push_back(PrimitiveFunction* f)
         {
             if (!head)
                 head = f;
@@ -171,7 +171,7 @@ class Variable::Memoize
         NonOwningFunctionListBuilder m_barrierOps;
         // TODO: This must be turned into something hashable.
         // test whether two PrimitiveFunctions can be executed as a single batched operation
-        static bool AreBatchable(const Function* a, const Function* b)
+        static bool AreBatchable(const PrimitiveFunction* a, const PrimitiveFunction* b)
         {
             // first it must be the same operation
             let op = a->Op();
@@ -212,7 +212,7 @@ class Variable::Memoize
         }
     public:
         // schedule an operation that has been confirmed ready
-        void Schedule(Function* f)
+        void Schedule(PrimitiveFunction* f)
         {
             let op = f->Op();
             // we manage three ready sets, since two common kinds are very simple
@@ -237,7 +237,7 @@ class Variable::Memoize
             }
         }
         // notify a function that an input has become available; schedule it when all inputs are now available
-        void NotifyInputAvailable(Function* f)
+        void NotifyInputAvailable(PrimitiveFunction* f)
         {
             if (f->m_pendingInputs <= 0)
                 LogicError("NotifyInputAvailable: pending inputs already 0 yet we are executing it");
@@ -299,7 +299,7 @@ class Variable::Memoize
                 LogicError("Parameter/Constant has no Value??");
             return;
         }
-        auto& f = *fields.m_ownerFunction.lock();
+        auto& f = *dynamic_pointer_cast<PrimitiveFunction>(fields.m_ownerFunction.lock());
         if (f.m_pendingInputs != -1) // already visited
             return;
         // determine how many inputs are pending; and also recurse and set up the consumer list
@@ -337,7 +337,7 @@ class Variable::Memoize
         if (fields.m_value)
             return fields.m_value;
         fail_if(!fields.m_lazyIndex.first, "variable unexpectedly has no value yet, nor is it a slice view into a batched op");
-        // the Function does not own its output, it is a slice view into another
+        // the PrimitiveFunction does not own its output, it is a slice view into another
         let& from = LazilyIndexedValue(fields.m_lazyIndex.first->m_outputs[0]);
         let index = fields.m_lazyIndex.second;
         if (index == SIZE_MAX) // special sentinel value that means "don't slice, actually"
@@ -349,7 +349,7 @@ class Variable::Memoize
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
     vector<NDArrayViewPtr> m_inputValuesBuffer; // Use a buffer for this that does not get destructed, to reuse the memory allocation.
-    const Variable& MemoizeKnowableValueInArena(Function& f, bool isFree = false)
+    const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false)
     {
         if (f.m_outputs.size() != 1)
             LogicError("MemoizeKnowableValueInArena: only functions with 1 output are supported");
@@ -388,7 +388,7 @@ class Variable::Memoize
         return output;
     }
 
-    static void ResetPendingToIdle(Function& f)
+    static void ResetPendingToIdle(PrimitiveFunction& f)
     {
         if (f.m_pendingInputs != 0)
             LogicError("ResetPendingToIdle: pendingINputs is not 0, so we should not have gotten here");
@@ -401,7 +401,7 @@ class Variable::Memoize
     size_t m_numBatchedLaunches = 0; // (for statistics only)
 
     // batch-execute a set of ops that are known to be batchable
-    // For every batched operation, this generates a new Function object for the op itself, and one
+    // For every batched operation, this generates a new PrimitiveFunction object for the op itself, and one
     // for a splice operation for each batched inputs.
     // I.e. this is not a full graph transform, but rather a graph augmentation, so that during backprop,
     // we can recover the batched operations, while the original graph does not get modified.
@@ -457,7 +457,7 @@ class Variable::Memoize
         // Every resulting batched op consists of the following new operations:
         //  - a Splice() or Slice() for each input (e.g. 2 for a binary op)
         //  - a PrimitiveFunction that is the op itself
-        //  - m_lazyIndex entries that represent a "virtual" Slice() that is never created as a Function object to saved mallocs.
+        //  - m_lazyIndex entries that represent a "virtual" Slice() that is never created as a PrimitiveFunction object to saved mallocs.
         // As for resource management, m_lazyIndex will hold a strong ref to the PrimitiveFunction;
         // and we will hack its m_inputs[].m_outputComposite to hold a strong reference to the Splice() or Slice().
         // (This is a little ugly since m_outputComposite is meant to hold a CompositeFunction, but we misuse it
@@ -540,14 +540,14 @@ class Variable::Memoize
                         m_batchedInputs[i] = output; // note: graph already has a strong ref to output elsewhere
                     else // sub-range: splice it by taking a slice view on the previously spliced batch
                     {
-                        // create a new Function Splice()
+                        // create a new PrimitiveFunction Splice()
                         vector<size_t> outputShape = fromDims; // determine output shape
                         outputShape[axis] = j;
                         auto additionalProperties = Dictionary(); // create additional arguments
                         additionalProperties[L"axis"      /*PrimitiveFunction::AttributeNameAxis*/      ] = Axis((int)axis);
                         additionalProperties[L"beginIndex"/*PrimitiveFunction::AttributeNameBeginIndex*/] = (int)begin;
                         additionalProperties[L"endIndex"  /*PrimitiveFunction::AttributeNameEndIndex*/  ] = (int)(begin + j);
-                        let spliceOp = Function::RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape, move(additionalProperties));
+                        let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape, move(additionalProperties));
 #ifdef LOGGING
                         spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
 #endif
@@ -562,7 +562,7 @@ class Variable::Memoize
                 }
                 else
                 {
-                    // create a new Function Splice()
+                    // create a new PrimitiveFunction Splice()
                     vector<size_t> outputShape; // determine output shape
                     outputShape.reserve(maxRank + 1);
                     outputShape = LazilyIndexedValue(spliceInputs[0])->Shape().Dimensions();
@@ -570,7 +570,7 @@ class Variable::Memoize
                     outputShape.push_back(spliceInputs.size()); // and add the batch axis
                     auto additionalProperties = Dictionary(); // create additional arguments
                     additionalProperties[L"axis"/*PrimitiveFunction::AttributeNameAxis*/] = Axis((int)maxRank);
-                    let spliceOp = Function::RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(spliceInputs), outputShape, move(additionalProperties));
+                    let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(spliceInputs), outputShape, move(additionalProperties));
 #ifdef LOGGING
                     spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
 #endif
@@ -588,15 +588,15 @@ class Variable::Memoize
                 spliceInputs.clear();
             }
             // execute the operation and implant the results
-            // BUGBUG: The newly created Function objects must get their consumer chain set up.
+            // BUGBUG: The newly created PrimitiveFunction objects must get their consumer chain set up.
             let& unbatchedOutputShape = f0.m_outputs[0].Shape();
-            FunctionPtr batchedOp;
+            PrimitiveFunctionPtr batchedOp;
             if (anyBatchedInputs)
             {
-                // create a new Function for the batched op
+                // create a new PrimitiveFunction for the batched op
                 // Batched inputs have been prepared in m_batchedInputs[].
                 let expectedOutputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
-                batchedOp = Function::RawPrimitiveFunction(f0.Op(), vector<Variable>(m_batchedInputs), expectedOutputShape, Dictionary(f0.Attributes()));
+                batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.Op(), vector<Variable>(m_batchedInputs), expectedOutputShape, Dictionary(f0.Attributes()));
 #ifdef LOGGING
                 batchedOp->m_uid = L"*" + f0.Uid();
 #endif
@@ -604,7 +604,7 @@ class Variable::Memoize
             else
             {
                 // all inputs identical: compute it only once
-                batchedOp = Function::RawPrimitiveFunction(f0.Op(), vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), Dictionary(f0.Attributes()));
+                batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.Op(), vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), Dictionary(f0.Attributes()));
 #ifdef LOGGING
                 batchedOp->m_uid = L"." + f0.Uid();
 #endif
@@ -727,11 +727,11 @@ class Variable::Memoize
         else
 #endif
         {
-            auto& f = *fields.m_ownerFunction.lock();
+            auto& f = *dynamic_pointer_cast<PrimitiveFunction>(fields.m_ownerFunction.lock());
             DetermineConsumersForBackward(f);
         }
     }
-    void DetermineConsumersForBackward(Function& f)
+    void DetermineConsumersForBackward(PrimitiveFunction& f)
     {
         fail_if(f.m_pendingInputs == -2, "unexpectedly encountered a cyclic graph??"); // graph is cyclic??
 
@@ -740,7 +740,7 @@ class Variable::Memoize
 
         fail_if(f.Op() == PrimitiveOpType::StopGradient, "unexpectedly encountered a StopGradient, which should have propagated m_needsGradient=false upwards");
 
-        // we are now in a Function that should backprop its gradient
+        // we are now in a PrimitiveFunction that should backprop its gradient
         // TODO: implement short-circuiting here
         f.m_pendingInputs = -2; // (temp value to detect cycles; not really needed)
 
@@ -791,11 +791,11 @@ class Variable::Memoize
     // backprop gradient into 'var' by pulling all of its consumers (recursively)
     // This is the second function that does batching.
     // The vectors for building the lists are class members so that we reuse the malloc.
-    vector<pair<Function*, size_t>> m_placeItemConsumers;    // IndexLastAxis() op  --do we have those actually? Or already short-circuited?
-    vector<pair<Function*, size_t>> m_matrixWeightConsumers;
-    vector<pair<Function*, size_t>> m_reduceSumConsumers;
-    vector<pair<Function*, size_t>> m_otherConsumers;
-    __declspec(noinline) vector<pair<Function*, size_t>>& DetermineBucket (const pair<Function*, size_t>& c)
+    vector<pair<PrimitiveFunction*, size_t>> m_placeItemConsumers;    // IndexLastAxis() op  --do we have those actually? Or already short-circuited?
+    vector<pair<PrimitiveFunction*, size_t>> m_matrixWeightConsumers;
+    vector<pair<PrimitiveFunction*, size_t>> m_reduceSumConsumers;
+    vector<pair<PrimitiveFunction*, size_t>> m_otherConsumers;
+    __declspec(noinline) vector<pair<PrimitiveFunction*, size_t>>& DetermineBucket (const pair<PrimitiveFunction*, size_t>& c)
     {
         let* f = c.first;
         let index = c.second;
@@ -817,7 +817,7 @@ other_ops              = rest
     // This can be batched into a single matrix product.
     vector<NDArrayViewPtr> m_matrixDataGradients;
     vector<NDArrayViewPtr> m_matrixDataInput1s;
-    void BackpropToMatrixWeight(vector<pair<Function*, size_t>>& consumers)
+    void BackpropToMatrixWeight(vector<pair<PrimitiveFunction*, size_t>>& consumers)
     {
 #if 1
         for (auto& c : consumers)
@@ -910,10 +910,10 @@ other_ops              = rest
     }
 
     // back-propagate all of f's outputs' m_gradients to one input
-    // This wraps the Function's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
+    // This wraps the PrimitiveFunction's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
     // Note that each input that is lazy should redirect into a slice in its lazy source.
     vector<const NDArrayView*> m_inputValuesBufferRaw;
-    void BackpropTo(Function* f, size_t index)
+    void BackpropTo(PrimitiveFunction* f, size_t index)
     {
         let& inputs =  f->m_inputs;
         auto& input = inputs[index];
@@ -970,7 +970,7 @@ other_ops              = rest
 public:
     // Value(), computed with automatic batching
     // This routine uses temporary fields that are assumed initialized in a specific way:
-    //  - Function::m_pendingInputs:
+    //  - PrimitiveFunction::m_pendingInputs:
     //     - #inputs that still need to be computed before a node's value can be computed
     //     - also used as a 'visited' flag during traversal
     //     - upon entry and exit of this function, this must be -1 (idle)
@@ -978,7 +978,7 @@ public:
     //     - set of consumers of this value. Used to count m_pendingInputs.
     //     - must be empty upon entry and exit
     // plus more temp fields:
-    //  - Function::m_link: pointer to next Function in the same batchable op
+    //  - PrimitiveFunction::m_link: pointer to next PrimitiveFunction in the same batchable op
     // And it leaves the following:
     //  - m_value: updated as desired
     //    TODO: values not needed by user or gradient should use scratch space

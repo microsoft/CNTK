@@ -3592,7 +3592,6 @@ namespace CNTK
         //CNTK_API Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
         CNTK_API Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid);
-        CNTK_API static FunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes);
 
         std::vector<Variable> m_inputs; // primitives: direct input variables; composites: overall input variables, computed lazily (?)
         size_t/*std::once_flag*/ m_outputsInitFlag = 0;
@@ -3603,9 +3602,6 @@ namespace CNTK
         mutable std::wstring m_uid;
         Dictionary m_attributes;
         std::unordered_set<std::wstring> m_dirtyAttributes;
-
-        int m_pendingInputs = -1; // for Dynamite
-        Function* m_link;
 
 #ifdef SWIGPYTHON
     public:

@@ -178,6 +178,9 @@ namespace CNTK
     class Function;
     typedef std::shared_ptr<Function> FunctionPtr;
 
+    class PrimitiveFunction;
+    typedef std::shared_ptr<PrimitiveFunction> PrimitiveFunctionPtr;
+
     class Learner;
     typedef std::shared_ptr<Learner> LearnerPtr;
 
