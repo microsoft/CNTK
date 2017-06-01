@@ -9,7 +9,6 @@
 #include <functional>
 #include "Common.h"
 #include "TimerUtility.h"
-#include "Layers.h"
 #include "GetValue.h" // meat is here
 
 #include <iostream>
