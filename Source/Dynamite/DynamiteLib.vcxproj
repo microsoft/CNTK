@@ -26,7 +26,7 @@
     <ProjectGuid>{E2F320FE-0C01-4C80-810C-3A92205A29DB}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Dynamite</RootNamespace>
-    <ProjectName>DynamiteLib</ProjectName>
+    <ProjectName>DynamiteTest</ProjectName>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
