@@ -16,7 +16,7 @@ ConvBNReLULayer {outChannels, kernel, stride, pad, bnTimeConst} = Sequential(
 #
 # Figure 10 from https://arxiv.org/pdf/1602.07261v2.pdf
 #
-InceptionResNetA {bnTimeConst, scale} = {
+InceptionResNetA {bnTimeConst} = {
     apply(x) = {
         # 1x1 Convolution
         branch1x1 = ConvBNReLULayer{32, (1:1), (1:1), true, bnTimeConst}(x)
@@ -38,8 +38,7 @@ InceptionResNetA {bnTimeConst, scale} = {
         concat = Splice((branch1x1:branch3x3:branch3x3dbl), axis=3)
         residual = ConvBNLayer{256, (1:1), (1:1), true, bnTimeConst}(concat)
 
-        scaledResidual = ElementTimes(residual, scale)
-        sum = Plus(scaledResidual, x)
+        sum = Plus(residual, x)
         out = ReLU(sum)
     }.out
 }.apply
@@ -47,7 +46,7 @@ InceptionResNetA {bnTimeConst, scale} = {
 #
 # Figure 11 from https://arxiv.org/pdf/1602.07261v2.pdf
 #
-InceptionResNetB {bnTimeConst, scale} = {
+InceptionResNetB {bnTimeConst} = {
     apply(x) = {
         # 1x1 Convolution
         branch1x1 = ConvBNReLULayer{128, (1:1), (1:1), true, bnTimeConst}(x)
@@ -63,8 +62,7 @@ InceptionResNetB {bnTimeConst, scale} = {
         concat = Splice((branch1x1:branch7x7), axis=3)
         residual = ConvBNLayer{896, (1:1), (1:1), true, bnTimeConst}(concat)
 
-        scaledResidual = ElementTimes(residual, scale)
-        sum = Plus(scaledResidual, x)
+        sum = Plus(residual, x)
         out = ReLU(sum)
     }.out
 }.apply
@@ -72,7 +70,7 @@ InceptionResNetB {bnTimeConst, scale} = {
 #
 # Figure 19 from https://arxiv.org/pdf/1602.07261v2.pdf
 #
-InceptionResNetC {bnTimeConst, scale} = {
+InceptionResNetC {bnTimeConst} = {
     apply(x) = {
         # 1x1 Convolution
         branch1x1 = ConvBNReLULayer{192, (1:1), (1:1), true, bnTimeConst}(x)
@@ -88,8 +86,7 @@ InceptionResNetC {bnTimeConst, scale} = {
         concat = Splice((branch1x1:branch3x3), axis=3)
         residual = ConvBNLayer{1792, (1:1), (1:1), true, bnTimeConst}(concat)
 
-        scaledResidual = ElementTimes(residual, scale)
-        sum = Plus(scaledResidual, x)
+        sum = Plus(residual, x)
         out = ReLU(sum)
     }.out
 }.apply
