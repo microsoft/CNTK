@@ -35,7 +35,7 @@ using namespace std;
 
 namespace CNTK
 {
-class Memoize
+class Variable::Memoize
 {
     // how graphs work in CNTK V2:
     //  - nodes := PrimitiveFunctions (incl. BlockFunction)
@@ -386,7 +386,7 @@ class Memoize
 #endif
         auto outValue = isFree ? nullptr : AllocateTensorInArena(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
         // execute it
-        output.m_dataFields->m_value = move(f.ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue)));
+        output.m_dataFields->m_value = move(dynamic_cast<PrimitiveFunction&>(f).ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue)));
         return output;
     }
 
@@ -946,7 +946,7 @@ other_ops              = rest
         // If the input is a lazyIndex, then the gradient is a view into the lazy source.
         let beta = LazilyCreateLazilyIndexedGradient(input);
         // backprop into the input
-        f->BackpropTo(outputGradient, index, f->Op(), f->m_attributes, outputValue, m_inputValuesBufferRaw, fields.m_gradient, beta);
+        dynamic_cast<PrimitiveFunction*>(f)->BackpropTo(outputGradient, index, f->Op(), f->m_attributes, outputValue, m_inputValuesBufferRaw, fields.m_gradient, beta);
     }
 
     // helper to verify that the tree is clean
@@ -1079,7 +1079,7 @@ public:
 // Computes lazily the value of a node. Does nothing if called again.
 NDArrayViewPtr PrimitiveFunction::BatchedForward() const
 {
-    auto autoBatcher = Memoize();
+    auto autoBatcher = Variable::Memoize();
     return autoBatcher.GetValue(m_outputs[0]);
 }
 
@@ -1087,7 +1087,7 @@ NDArrayViewPtr PrimitiveFunction::BatchedForward() const
 // CNTK grad() allows to pass multiple roots. Does that ever make sense in this context?
 void PrimitiveFunction::BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const
 {
-    auto autoBatcher = Memoize(); // has some internal state
+    auto autoBatcher = Variable::Memoize(); // has some internal state
     autoBatcher.Backward(m_outputs[0], gradients);
 }
-} // namespace
+} // namespace CNTK

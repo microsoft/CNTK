@@ -1291,7 +1291,8 @@ namespace CNTK
         m_dirtyAttributes.insert(AttributeNameRngSeed);
     }
 
-    /*virtual*/ void PrimitiveFunction::MemoizeKnowableValue() const /*override*/
+    // note: This is actually not used except as a fallback for debugging--let's inline this
+    void PrimitiveFunction::MemoizeKnowableValue() const
     {
         if (m_outputs.size() != 1)
             LogicError("Variable '%S' Value(): Only Variables with one output can compute their Value for now.", AsString().c_str());

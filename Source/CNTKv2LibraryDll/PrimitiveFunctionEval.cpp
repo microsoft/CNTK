@@ -18,8 +18,8 @@ using namespace std;
 
 namespace CNTK
 {
-    // BUGBUG: AsString() is called on 'this' (affects only error messages; once gone, change to static; also no need to be virtual)
-    /*virtual*/ NDArrayViewPtr PrimitiveFunction::ComputeKnowableValue(PrimitiveOpType primitiveOp, 
+    // BUGBUG: AsString() is called on 'this' (affects only error messages; once gone, change to static)
+    NDArrayViewPtr PrimitiveFunction::ComputeKnowableValue(PrimitiveOpType primitiveOp, 
         const vector<NDArrayViewPtr>& args, const Dictionary& attributes, const NDShape& outputShape, NDArrayViewPtr&& out) const
     {
         // first handle ops that do not create new data

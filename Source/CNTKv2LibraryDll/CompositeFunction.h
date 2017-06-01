@@ -103,8 +103,6 @@ namespace CNTK
             NOT_IMPLEMENTED;
         }
 
-        virtual void MemoizeKnowableValue() const override { m_rootFunction->MemoizeKnowableValue(); }
-
         void InferOutputs(std::vector<Variable>& outputs) override
         {
             auto& inferred = m_rootFunction->InitOutputs();

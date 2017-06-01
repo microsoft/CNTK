@@ -3036,7 +3036,7 @@ namespace CNTK
         friend class BlockFunction;
         friend class UDFUtils;
         friend class Trainer;
-        friend class Memoize;
+        friend class Variable::Memoize;
 
         friend Variable GetCorrespondingOutputVariableFromClone(const Variable&, const FunctionPtr&, const FunctionPtr&);
         friend bool Internal::IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName);
@@ -3471,14 +3471,6 @@ namespace CNTK
 
         static UDFDeserializeCallbackPtr GetUDFDeserializeCallback(const std::wstring& uniqueOpName);
 
-
-    public:
-
-        ///
-        /// Partially compute values that do not depend in Input or Placeholder.
-        ///
-        CNTK_API virtual void MemoizeKnowableValue() const { NOT_IMPLEMENTED; }
-
     protected:
         static bool IsArgument(const Variable& var)
         {
@@ -3584,6 +3576,7 @@ namespace CNTK
                                  std::unordered_map<Variable, Variable>& leafVariablesCloneMap,
                                  std::unordered_map<Variable, Variable>& placeholderReplacements);
 
+        // TODO: remove this from Function if possible
         CNTK_API virtual PrimitiveOpType Op() const { NOT_IMPLEMENTED; }
 
         // Disallow copy and move construction and assignment
@@ -3600,12 +3593,6 @@ namespace CNTK
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
         CNTK_API Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid);
         CNTK_API static FunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes);
-        // TODO: we can remove CNTK_API once we move stuff to AutoBatch.cpp, and move it to Primitive only
-        CNTK_API virtual NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&) const { NOT_IMPLEMENTED; }
-        CNTK_API virtual void BackpropTo(const NDArrayView*, size_t,
-            PrimitiveOpType, const Dictionary&,
-            const NDArrayView*, const std::vector<const NDArrayView*>&,
-            const NDArrayViewPtr&, double) { NOT_IMPLEMENTED; }
 
         std::vector<Variable> m_inputs; // primitives: direct input variables; composites: overall input variables, computed lazily (?)
         size_t/*std::once_flag*/ m_outputsInitFlag = 0;

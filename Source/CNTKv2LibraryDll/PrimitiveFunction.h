@@ -187,6 +187,7 @@ namespace CNTK
     {
         friend class Function;
         friend class Utils;
+        friend class Variable::Memoize;
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
@@ -332,7 +333,7 @@ namespace CNTK
 
         void SetState(const Dictionary& state);
 
-        virtual void MemoizeKnowableValue() const override;
+        void MemoizeKnowableValue() const;
 
     private:
 
@@ -777,11 +778,8 @@ namespace CNTK
         void BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const;
 
     private:
-        virtual NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&) const;
-        virtual void BackpropTo(const NDArrayView* outputGradient, size_t i,
-            PrimitiveOpType primitiveOp, const Dictionary& attributes,
-            const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues,
-            const NDArrayViewPtr& gradient, double beta);
+        /*static*/ NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&) const;
+        static void BackpropTo(const NDArrayView* outputGradient, size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes, const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues, const NDArrayViewPtr& gradient, double beta);
 
         virtual PrimitiveOpType Op() const { return m_op; }
 
