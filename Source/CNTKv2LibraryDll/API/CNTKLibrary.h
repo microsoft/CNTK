@@ -859,10 +859,10 @@ namespace CNTK
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
 
     private:
-        CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, bool readOnly, const std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase>& storageObject);
+        CNTK_API NDArrayView(::CNTK::DataType dataType, const DeviceDescriptor& device, ::CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
 
         template <typename ElementType>
-        static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>& tensorView, size_t rowColSplitPoint);
+        static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>* tensorView, size_t rowColSplitPoint);
 
         template <typename ElementType>
         std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint) const;
@@ -871,24 +871,16 @@ namespace CNTK
         std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetWritableMatrix(size_t rowColSplitPoint = AutoSelectRowColSplitPoint);
 
         template <typename ElementType>
-        const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorViewPtr() const;
+        const Microsoft::MSR::CNTK::TensorView<ElementType>* GetTensorView() const;
 
         template <typename ElementType>
-        Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorViewPtr();
+        Microsoft::MSR::CNTK::TensorView<ElementType>* GetWritableTensorView();
 
         template <typename ElementType>
-        std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> GetTensorViewMin2D() const;
+        const Microsoft::MSR::CNTK::TensorView<ElementType> NativeTensorView() const;
 
         template <typename ElementType>
-        std::shared_ptr<Microsoft::MSR::CNTK::TensorView<ElementType>> GetWritableTensorViewMin2D();
-
-        template <typename ElementType>
-        std::shared_ptr<const Microsoft::MSR::CNTK::TensorView<ElementType>> NativeTensorView() const;
-
-        template <typename ElementType>
-        std::shared_ptr<Microsoft::MSR::CNTK::TensorView<ElementType>> WritableNativeTensorView();
-
-        std::shared_ptr<Microsoft::MSR::CNTK::MatrixBase> GetStorageObjectPtr() const;
+        Microsoft::MSR::CNTK::TensorView<ElementType> WritableNativeTensorView();
 
     private:
         ::CNTK::DataType m_dataType;
@@ -897,7 +889,7 @@ namespace CNTK
         NDShape m_viewShape;
         bool m_isReadOnly;
 
-        std::shared_ptr<void> m_tensorViewPtr; // Microsoft::MSR::CNTK::TensorView<ElemType>*
+        std::shared_ptr<void> m_tensorView; // Microsoft::MSR::CNTK::TensorView<ElemType>*
     };
 
     enum class MaskKind : char
@@ -3415,6 +3407,12 @@ namespace CNTK
         ///
         CNTK_API std::wstring AsString(bool doNotInferOutputs = true) const;
 
+        ///
+        /// Prints the entire graph underlying this Function to stderr
+        ///
+        //CNTK_API void PrintGraph() const;
+        // (was in my old version but no longer after merge--make sure it's not a merge error)
+
         /// 
         /// Allows to change a function attribute. Currently supported:
         ///
@@ -3473,10 +3471,12 @@ namespace CNTK
         }
 
         ///
-        /// Protected constructors for derived user-defined 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
+        /// Protected constructor for user-derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
         ///
+        // TODO: Is this used by anyone else? If not, revert back to const Dictionary&
         //CNTK_API Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const std::wstring& name = L"");
         //CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"");
+        // ^^ those I commented out after merge, and then found I can delete tem
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = std::wstring(), const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
         template <typename FunctionType>
@@ -3596,6 +3596,9 @@ namespace CNTK
         mutable std::wstring m_uid;
         Dictionary m_attributes;
         std::unordered_set<std::wstring> m_dirtyAttributes;
+
+        int m_pendingInputs = -1; // for Dynamite
+        Function* m_link;
 
 #ifdef SWIGPYTHON
     public:
@@ -5378,8 +5381,8 @@ namespace CNTK
     CNTK_API ImageTransform ReaderCrop(const wchar_t* cropType = L"center",
         std::pair<int, int> cropSize = std::make_pair(0, 0),
         std::pair<float, float> sideRatio = std::make_pair(0.0f, 0.0f),
-        std::pair<float, float> areaRatio = std::make_pair(0.0f, 0.0f), 
-        std::pair<float, float> aspectRatio = std::make_pair(1.0f, 1.0f), 
+        std::pair<float, float> areaRatio = std::make_pair(0.0f, 0.0f),
+        std::pair<float, float> aspectRatio = std::make_pair(1.0f, 1.0f),
         const wchar_t* jitterType = L"none");
 
     /// 
