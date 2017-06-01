@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-// The functions for automatically-batched evaluation of graphs is contained here.
+// The functions for automatically-batched evaluation of dynamic graphs (forward and backward) is contained here.
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
@@ -30,8 +30,6 @@ using namespace std;
 #define let const auto
 #define fail_if(cond, err) (!!(cond) ? (LogicError(__FUNCTION__ ": " err),0) : 0)
 #define BreakPoint fprintf(stderr, "") // use this inside a conditional to be able to set a breakpoint in Release code
-
-using namespace std;
 
 namespace CNTK
 {
@@ -759,7 +757,7 @@ class Variable::Memoize
             if (!fields.m_needsGradient)
                 continue; // skip inputs that receive no gradients
             // this input will receive a gradient; reset it (later, we *accumulate* into it since nodes can receive gradients from multiple consumers)
-            // Note that Backward() returns shared_ptrs to the gradient values, so they won't get lost.
+            // Note that BatchedBackward() returns shared_ptrs to the gradient values, so they won't get lost.
             // BUGBUG: (But they get reallocated over again, and will hold the entire arena!!) BUGBUG!
             // BUGBUG: we must not kill the gradient buffers passed by the user
             fields.m_gradient.reset();
@@ -805,7 +803,7 @@ class Variable::Memoize
         // backprop into Times' matrix argument
         if (f->Op() == PrimitiveOpType::Times && index == 0)
             return m_matrixWeightConsumers;
-/*
+/* port from the Python prototype where it makes sense:
 place_item_ops         = [arg for arg in args if arg.op is Variable._op_place_item]
 transpose_dot_item_ops = [arg for arg in args if arg.op is cntk.NDArrayView.transpose_dot]
 reduce_sum_item_ops    = [arg for arg in args if arg.op is cntk.NDArrayView.reduce_sum]
@@ -950,21 +948,21 @@ other_ops              = rest
     }
 
     // helper to verify that the tree is clean
-    void AssertTreeStateGetValue(const Variable& v) const
+    void AssertTreeStateForward(const Variable& v) const
     {
 #if 1
         v;
 #else
         let& fields = *v.m_dataFields;
         if (fields.m_consumers.first.first || !fields.m_consumers.second.empty())
-            LogicError("AssertTreeStateGetValue: m_consumers should be empty");
+            LogicError("AssertTreeStateForward: m_consumers should be empty");
         let owner = fields.m_ownerFunction.lock();
         if (owner)
         {
             if (owner->m_pendingInputs != -1)
-                LogicError("AssertTreeStateGetValue: m_pendingInputs should be -1");
+                LogicError("AssertTreeStateForward: m_pendingInputs should be -1");
             for (let& input : owner->m_inputs)
-                AssertTreeStateGetValue(input);
+                AssertTreeStateForward(input);
         }
 #endif
     }
@@ -986,13 +984,13 @@ public:
     //    TODO: values not needed by user or gradient should use scratch space
     //  - m_lazyIndex: if a slice or view came from a batched operation, this points to it
     //     - Any newly created batched ops are referenced this way.
-    NDArrayViewPtr GetValue(const Variable& v)
+    NDArrayViewPtr BatchedForward(const Variable& v)
     {
         auto& fields = *v.m_dataFields;
         // if value already there then just return it
         if (fields.m_value)
             return fields.m_value;
-        AssertTreeStateGetValue(v); // (sanity check)
+        AssertTreeStateForward(v); // (sanity check)
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
         if (!fields.m_value)
         {
@@ -1008,33 +1006,30 @@ public:
             }
             assert(fields.m_value);
         }
-        AssertTreeStateGetValue(v); // (sanity check)
+        AssertTreeStateForward(v); // (sanity check)
         return LazilyIndexedValue(v);
     }
 
     // implant gradients into all variables
-    // Unlike GetValue(), this is eager. If you call it twice, it's a completely new computation.
+    // Unlike BatchedForward(), this is eager. If you call it twice, it's a completely new computation.
     // If you need multiple gradients, ask for them in a single go.
-
-    // BUGBUG!!! This is now again operating on the unbatched graph!! Must keep batching info!
-
-    void Backward(const Variable& root, unordered_map<Parameter, NDArrayViewPtr>& gradients)
+    void BatchedBackward(const Variable& root, unordered_map<Parameter, NDArrayViewPtr>& gradients)
     {
         if (!root.m_dataFields->m_needsGradient)
-            logic_error("Backward: cannot compute gradient for root with m_needsGradient being False.");
+            logic_error("BatchedBackward: cannot compute gradient for root with m_needsGradient being False.");
         // BUGBUG: make sure some edge cases are done right:
         //  - root.m_needsGradient=false
         //  - gradients contains root
         //  - root is a m_lazyIndex
         // first get the forward computation, batching, etc. done if not yet
-        GetValue(root);
-        // set up the m_consumer fields, which Backward() will work off
+        BatchedForward(root);
+        // set up the m_consumer fields, which BatchedBackward() will work off
         DetermineConsumersForBackward(root); // (gotta improve the name of these things)
         // implant the first gradient
         // TODO: allow user to pass in the starting value
         // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
         //if (root.Value()->Shape() != NDShape{})
-        //    LogicError("Backward: root must be a scalar, or root gradient must have been implanted already");
+        //    LogicError("BatchedBackward: root must be a scalar, or root gradient must have been implanted already");
         root.m_dataFields->m_gradient = AllocateTensorInArena(root.Shape(), root.GetDataType(), root.Value()->Device());
         root.m_dataFields->m_gradient->SetValue(1.0f);
         // if user passed NDArrayViewPtrs for the gradients, then keep using them
@@ -1054,16 +1049,16 @@ public:
             let& param = kv.first;
             let& fields = *param.m_dataFields;
             if (!fields.m_consumers.first.first) // if no consumer entry, we did not reach this gradient
-                logic_error("Backward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
+                logic_error("BatchedBackward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
             if (!fields.m_needsGradient) // (we could also just leafve the gradient 0)
-                logic_error("Backward: cannot compute gradient for variable with m_needsGradient being False.");
+                logic_error("BatchedBackward: cannot compute gradient for variable with m_needsGradient being False.");
             AggregateGradientFromAllConsumers(param);
         }
         //fprintf(stderr, "Back-propagated through %d functions\n", (int)order.size());
         // implant the results into the map the user passed in
         for (auto& kv : gradients)
             kv.second = kv.first.m_dataFields->m_gradient;
-        //AssertTreeStateGetValue(root); // (sanity check)  --TODO: gotta think this through e.g. nodes for which no gradient is requested
+        //AssertTreeStateForward(root); // (sanity check)  --TODO: gotta think this through e.g. nodes for which no gradient is requested
         // WORKAROUND for above. With this, we can at least com,pute more than 1 gradient fro a parameter
         for (auto& kv : gradients)
         {
@@ -1080,7 +1075,7 @@ public:
 NDArrayViewPtr PrimitiveFunction::BatchedForward() const
 {
     auto autoBatcher = Variable::Memoize();
-    return autoBatcher.GetValue(m_outputs[0]);
+    return autoBatcher.BatchedForward(m_outputs[0]);
 }
 
 // Perform backprop.
@@ -1088,6 +1083,7 @@ NDArrayViewPtr PrimitiveFunction::BatchedForward() const
 void PrimitiveFunction::BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const
 {
     auto autoBatcher = Variable::Memoize(); // has some internal state
-    autoBatcher.Backward(m_outputs[0], gradients);
+    autoBatcher.BatchedBackward(m_outputs[0], gradients);
 }
+
 } // namespace CNTK
