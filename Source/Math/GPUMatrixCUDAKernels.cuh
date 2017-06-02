@@ -1825,6 +1825,68 @@ __global__ void _convertInd2ValsAdjustInd(
     }
 }
 
+// Get the number of words per sample.
+template <class ElemType>
+__global__ void _getNumberOfWordsPerSample(size_t *numberOfWordsPerSample, const ElemType *inputSubBatch, const size_t inputWidthXinputChannels, const size_t inputChannels)
+{
+    size_t i = threadIdx.x;
+    for (size_t k = 0; k < inputWidthXinputChannels; k++)
+    {
+        auto j = inputWidthXinputChannels - k - 1;
+        auto index = i * inputWidthXinputChannels + j;
+        if (inputSubBatch[index] > 0)
+        {
+            numberOfWordsPerSample[i] = j / inputChannels + 1;
+            break;
+        }
+    }
+}
+
+template <class ElemType>
+__global__ void _assignPackedConvolutionInputCDSSM(ElemType *output, const ElemType *input, const size_t batchSize, 
+                                                   
+                                                   const size_t inputWidth, const size_t inputChannels, 
+                                                   const size_t outputWidth, const size_t outputChannels,
+                                                   const size_t kernelWidth, 
+    const bool padding, 
+    const size_t *numberOfWordsPerSample
+    )
+{
+    size_t inputIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    size_t inputDims = inputWidth * inputChannels;
+    size_t sampleId = inputIndex / inputDims;
+
+    if (sampleId >= batchSize)
+    {
+        return;
+    }
+
+    size_t inputDimsPerSample = inputIndex % inputDims;
+    size_t wordIndex = inputDimsPerSample / inputChannels;
+    size_t channelIndex = inputDimsPerSample % inputChannels;
+    size_t numberOfWords = numberOfWordsPerSample[sampleId];
+    size_t outputDims = outputWidth * kernelWidth * inputChannels;
+    int kernelWidthMinus1 = kernelWidth - 1;
+    int numberOfWindows = padding ? numberOfWords : (numberOfWords + kernelWidthMinus1) / kernelWidth;
+    int paddingWidth = padding ? (kernelWidth >> 1) : 0;
+    int windowIndex = (paddingWidth + (int)wordIndex) - kernelWidthMinus1;
+    if (windowIndex < 0)
+    {
+        windowIndex = 0;
+    }
+
+    int windowOffset = paddingWidth + wordIndex - windowIndex;
+    for (; windowOffset >= 0 && windowIndex < numberOfWindows; windowIndex++, windowOffset--)
+    {
+        size_t outputIndex = windowIndex * inputChannels * kernelWidth + channelIndex * kernelWidth + windowOffset;
+        if (outputIndex < outputDims)
+        {
+            outputIndex += sampleId * outputDims;
+            output[outputIndex] = input[inputIndex];
+        }
+    }
+}
+
 //assume each column is an input sample. Each sample is stored in [channel, row, col]  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
 template <class ElemType>
 __global__ void _assignPackedConvolutionInput(ElemType* packedMatrix, const ElemType* inputSubBatch, const CUDA_LONG batchSize,
@@ -1956,6 +2018,58 @@ __global__ void _unpackConvolutionInput(const ElemType* packedMatrix, ElemType* 
     }
 
     inputSubBatch[id + sample * inputDim] = currentInputValue;
+}
+
+template <class ElemType>
+__global__ void _numberOfWindowsPerSampleKernel(const ElemType in[], size_t *out,
+    const size_t inputWidth  /* 288 */, const size_t inputHeight /* 10 */, const size_t inputSizePerSample /* 2880 */)
+{
+    size_t i = threadIdx.x;
+    for (size_t inputRowIndex = 0; inputRowIndex < inputHeight; inputRowIndex++)
+    {
+        bool allZero = true;
+        for (size_t inputColIndex = 0; inputColIndex < inputWidth; inputColIndex++)
+        {
+            size_t inputIndex = i * inputSizePerSample + inputRowIndex * inputWidth + inputColIndex;
+            if (abs(in[inputIndex]) > 0.00000001)
+            {
+                allZero = false;
+                break;
+            }
+        }
+
+        if (allZero)
+        {
+            out[i] = inputRowIndex;
+            break;
+        }
+    }
+}
+
+template <class ElemType>
+__global__ void _assignMaxPoolingResultCDSSM(const ElemType in[], const size_t cols,
+                                             ElemType out[],
+                                             const size_t numberOfWindowsPerSample[],
+                                             const size_t inputWidth  /* 288 */, const size_t inputHeight /* 10 */, const size_t inputSizePerSample /* 2880 */,
+                                             const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample)
+{
+    size_t outputIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    size_t sampleId = outputIndex / outputSizePerSample;
+    size_t inputColIndex = outputIndex % outputSizePerSample;
+    size_t numberOfWindows = (int)numberOfWindowsPerSample[sampleId];
+
+    ElemType max = -3.402823466e+38F;
+    for (size_t inputRowIndex = 0; inputRowIndex < inputHeight && inputRowIndex < numberOfWindows; inputRowIndex++) // 10
+    {
+        size_t inputIndex = sampleId * inputSizePerSample + inputRowIndex * inputWidth + inputColIndex;
+        ElemType val = in[inputIndex];
+        if (val > max)
+        {
+            max = val;
+        }
+    }
+
+    out[outputIndex] = max;
 }
 
 template <class ElemType>

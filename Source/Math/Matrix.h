@@ -487,6 +487,14 @@ public:
                                                    const size_t outputWidth, const size_t outputHeight, const size_t outputChannels,
                                                    const size_t kernelWidth, const size_t kernelHeight, const size_t horizontalSubsample, const size_t verticalSubsample,
                                                    const bool zeroPadding = false);
+
+    Matrix<ElemType>& AssignPackedConvolutionInputCDSSM(const Matrix<ElemType>& inputSubBatch,
+                                                        const size_t inputWidth, const size_t inputChannels,
+                                                        const size_t outputWidth, const size_t outputChannels,
+                                                        const size_t kernelWidth, 
+                                                        std::vector<size_t>* numberOfWindowsPerSample,
+                                                        const bool zeroPadding = false);
+
     Matrix<ElemType>& UnpackConvolutionInput(Matrix<ElemType>& inputSubBatch,
                                              const size_t inputWidth, const size_t inputHeight, const size_t inputChannels,
                                              const size_t outputWidth, const size_t outputHeight, const size_t outputChannels,
@@ -496,6 +504,10 @@ public:
                                              const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
                                              const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
                                              const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
+    Matrix<ElemType>& AssignMaxPoolingResultCDSSM(const Matrix<ElemType>& inputBatch, const size_t channels,
+                                                  const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
+                                                  const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
+                                                  const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
     Matrix<ElemType>& AddMaxPoolingGradient(const Matrix<ElemType>& outputGradientBatch, const Matrix<ElemType>& inputBatch, const Matrix<ElemType>& outputBatch,
                                             const size_t channels,
                                             const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,

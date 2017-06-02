@@ -4166,6 +4166,41 @@ Matrix<ElemType>& Matrix<ElemType>::AssignPackedConvolutionInput(const Matrix<El
 
 //helpfer function used for convolution neural network
 template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignPackedConvolutionInputCDSSM(const Matrix<ElemType>& inputSubBatch,
+                                                                      const size_t inputWidth, const size_t inputChannels,
+                                                                      const size_t outputWidth, const size_t outputChannels,
+                                                                      const size_t kernelWidth,
+                                                                      std::vector<size_t>* numberOfWindowsPerSample,
+                                                                      const bool zeroPadding)
+{
+    DecideAndMoveToRightDevice(inputSubBatch, *this);
+    SwitchToMatrixType(inputSubBatch.GetMatrixType(), inputSubBatch.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(
+        &inputSubBatch,
+        this,
+        m_CPUMatrix->AssignPackedConvolutionInput(
+            *(inputSubBatch.m_CPUMatrix),
+            inputWidth, 1, inputChannels,
+            outputWidth, 1, outputChannels,
+            kernelWidth, 1, 1, 1,
+            zeroPadding),
+        m_GPUMatrix->AssignPackedConvolutionInputCDSSM(
+            *(inputSubBatch.m_GPUMatrix),
+            inputWidth, inputChannels,
+            outputWidth, outputChannels,
+            kernelWidth,
+            numberOfWindowsPerSample,
+            zeroPadding),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED
+    );
+
+    return *this;
+}
+
+//helpfer function used for convolution neural network
+template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::UnpackConvolutionInput(Matrix<ElemType>& inputSubBatch,
                                                            const size_t inputWidth, const size_t inputHeight, const size_t inputChannels,
                                                            const size_t outputWidth, const size_t outputHeight, const size_t outputChannels,
@@ -4214,6 +4249,30 @@ Matrix<ElemType>& Matrix<ElemType>::AssignMaxPoolingResult(const Matrix<ElemType
                                                                 windowWidth, windowHeight, horizontalSubsample, verticalSubsample),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignMaxPoolingResultCDSSM(const Matrix<ElemType>& inputBatch, const size_t channels,
+                                                                const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
+                                                                const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
+                                                                const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample)
+{
+    DecideAndMoveToRightDevice(inputBatch, *this);
+    SwitchToMatrixType(inputBatch.GetMatrixType(), inputBatch.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&inputBatch,
+        this,
+        m_CPUMatrix->AssignMaxPoolingResult(*(inputBatch.m_CPUMatrix), channels,
+            inputWidth, inputHeight, inputSizePerSample,
+            outputWidth, outputHeight, outputSizePerSample,
+            windowWidth, windowHeight, horizontalSubsample, verticalSubsample),
+        m_GPUMatrix->AssignMaxPoolingResultCDSSM(*(inputBatch.m_GPUMatrix),
+            inputWidth, inputHeight, inputSizePerSample,
+            outputWidth, outputHeight, outputSizePerSample),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
 
     return *this;
 }

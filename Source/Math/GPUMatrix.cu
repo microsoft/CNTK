@@ -3053,6 +3053,73 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignPackedConvolutionInput(const GPU
 
 //helpfer function used for convolution neural network
 template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignPackedConvolutionInputCDSSM(const GPUMatrix<ElemType>& inputSubBatch,
+                                                                            const size_t inputWidth, const size_t inputChannels,
+                                                                            const size_t outputWidth, const size_t outputChannels,
+                                                                            const size_t kernelWidth, 
+                                                                            std::vector<size_t>* numberOfWindowsPerSample,
+                                                                            const bool zeroPadding)
+{
+    
+    size_t packedInputRows = kernelWidth * 1 * inputChannels;
+    size_t packedInputColsPerSample = outputWidth * 1;
+    size_t smallBatchSize = inputSubBatch.GetNumCols();
+    
+    RequireSize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+    if (zeroPadding)
+        SetValue((ElemType)0);
+
+    PrepareDevice();
+
+    // Get the number of words per sample.
+    size_t *numberOfWordsPerSample = (size_t *)malloc(smallBatchSize * sizeof(size_t));
+    size_t *dev_numberOfWordsPerSample = 0;
+    CUDA_CALL(cudaMalloc((void **)&dev_numberOfWordsPerSample, smallBatchSize * sizeof(size_t)));
+    _getNumberOfWordsPerSample << < 1, smallBatchSize >> >(dev_numberOfWordsPerSample, inputSubBatch.Data(), inputWidth * inputChannels, inputChannels);
+    CUDA_CALL(cudaMemcpy(numberOfWordsPerSample, dev_numberOfWordsPerSample, smallBatchSize * sizeof(size_t), cudaMemcpyDeviceToHost));
+
+    int numThreadPerBlock = GridDim::maxThreadsPerBlock;
+#if 1
+    // 64 * 10 * 1 * 49292
+    int blocksPerGrid = (smallBatchSize * inputWidth * inputChannels + numThreadPerBlock - 1) / numThreadPerBlock;
+#else
+    dim3 blocksPerGrid((inputWidth * 1 * inputChannels + numThreadPerBlock - 1) / numThreadPerBlock, smallBatchSize);
+#endif
+    SyncGuard syncGuard;
+
+    _assignPackedConvolutionInputCDSSM << <blocksPerGrid, numThreadPerBlock, 0, t_stream >> > (Data(),
+        inputSubBatch.Data(),
+        smallBatchSize,
+        inputWidth, inputChannels,
+        outputWidth, outputChannels,
+        kernelWidth, zeroPadding, dev_numberOfWordsPerSample);
+
+    numberOfWindowsPerSample->clear();
+    for (size_t i = 0; i < smallBatchSize; i++)
+    {
+        if (zeroPadding)
+        {
+            numberOfWindowsPerSample->push_back(numberOfWordsPerSample[i]);
+        }
+        else {
+            if (numberOfWordsPerSample[i] < kernelWidth)
+            {
+                numberOfWindowsPerSample->push_back(1);
+            }
+            else {
+                numberOfWindowsPerSample->push_back(numberOfWordsPerSample[i] - kernelWidth + 1);
+            }
+        }
+    }
+
+    CUDA_CALL(cudaFree(dev_numberOfWordsPerSample));
+    free(numberOfWordsPerSample);
+
+    return *this;
+}
+
+//helpfer function used for convolution neural network
+template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::UnpackConvolutionInput(GPUMatrix<ElemType>& inputSubBatch,
                                                                  const size_t inputWidth, const size_t inputHeight, const size_t inputChannels,
                                                                  const size_t outputWidth, const size_t outputHeight, const size_t outputChannels,
@@ -3101,6 +3168,34 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignMaxPoolingResult(const GPUMatrix
                                                                                inputWidth, inputHeight, inputSizePerSample,
                                                                                outputWidth, outputHeight, outputSizePerSample,
                                                                                windowWidth, windowHeight, horizontalSubsample, verticalSubsample);
+
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignMaxPoolingResultCDSSM(const GPUMatrix<ElemType>& inputBatch,
+                                                                      const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
+                                                                      const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample)
+{
+    unsigned int batchSize = inputBatch.GetNumCols();
+    RequireSize(outputSizePerSample, batchSize);
+
+    int numThreadPerBlock = GridDim::maxThreadsPerBlock;
+    int blocksPerGrid = (batchSize * outputSizePerSample + numThreadPerBlock - 1) / numThreadPerBlock;
+
+    PrepareDevice();
+
+    size_t* dev_numberOfWindowsPerSample = 0;
+    CUDA_CALL(cudaMalloc((void **)&dev_numberOfWindowsPerSample, batchSize * sizeof(size_t)));
+    SyncGuard syncGuard;
+    _numberOfWindowsPerSampleKernel << <1, batchSize >> > (inputBatch.Data(), dev_numberOfWindowsPerSample, inputWidth, inputHeight, inputSizePerSample);
+    _assignMaxPoolingResultCDSSM << <blocksPerGrid, numThreadPerBlock, 0, t_stream >> >(inputBatch.Data(), batchSize, 
+                                                                                        Data(),
+                                                                                        dev_numberOfWindowsPerSample,
+                                                                                        inputWidth, inputHeight, inputSizePerSample,
+                                                                                        outputWidth, outputHeight, outputSizePerSample);
+
+    CUDA_CALL(cudaFree(dev_numberOfWindowsPerSample));
 
     return *this;
 }
