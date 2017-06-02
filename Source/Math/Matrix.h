@@ -495,8 +495,7 @@ public:
     Matrix<ElemType>& AssignPackedConvolutionInputCDSSM(const Matrix<ElemType>& inputSubBatch,
                                                         const size_t inputWidth, const size_t inputChannels,
                                                         const size_t outputWidth, const size_t outputChannels,
-                                                        const size_t kernelWidth, 
-                                                        std::vector<size_t>* numberOfWindowsPerSample,
+                                                        const size_t kernelWidth,
                                                         const bool zeroPadding = false);
 
     Matrix<ElemType>& UnpackConvolutionInput(Matrix<ElemType>& inputSubBatch,

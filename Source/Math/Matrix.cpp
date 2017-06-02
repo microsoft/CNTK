@@ -4229,7 +4229,6 @@ Matrix<ElemType>& Matrix<ElemType>::AssignPackedConvolutionInputCDSSM(const Matr
                                                                       const size_t inputWidth, const size_t inputChannels,
                                                                       const size_t outputWidth, const size_t outputChannels,
                                                                       const size_t kernelWidth,
-                                                                      std::vector<size_t>* numberOfWindowsPerSample,
                                                                       const bool zeroPadding)
 {
     DecideAndMoveToRightDevice(inputSubBatch, *this);
@@ -4249,7 +4248,6 @@ Matrix<ElemType>& Matrix<ElemType>::AssignPackedConvolutionInputCDSSM(const Matr
             inputWidth, inputChannels,
             outputWidth, outputChannels,
             kernelWidth,
-            numberOfWindowsPerSample,
             zeroPadding),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED

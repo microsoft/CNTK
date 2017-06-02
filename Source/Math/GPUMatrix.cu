@@ -3154,8 +3154,7 @@ template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignPackedConvolutionInputCDSSM(const GPUMatrix<ElemType>& inputSubBatch,
                                                                             const size_t inputWidth, const size_t inputChannels,
                                                                             const size_t outputWidth, const size_t outputChannels,
-                                                                            const size_t kernelWidth, 
-                                                                            std::vector<size_t>* numberOfWindowsPerSample,
+                                                                            const size_t kernelWidth,
                                                                             const bool zeroPadding)
 {
     
@@ -3170,12 +3169,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignPackedConvolutionInputCDSSM(cons
     PrepareDevice();
 
     // Get the number of words per sample.
-    size_t *numberOfWordsPerSample = (size_t *)malloc(smallBatchSize * sizeof(size_t));
     size_t *dev_numberOfWordsPerSample = 0;
     CUDA_CALL(cudaMalloc((void **)&dev_numberOfWordsPerSample, smallBatchSize * sizeof(size_t)));
     _getNumberOfWordsPerSample << < 1, smallBatchSize >> >(dev_numberOfWordsPerSample, inputSubBatch.Data(), inputWidth * inputChannels, inputChannels);
-    CUDA_CALL(cudaMemcpy(numberOfWordsPerSample, dev_numberOfWordsPerSample, smallBatchSize * sizeof(size_t), cudaMemcpyDeviceToHost));
-
+    
     int numThreadPerBlock = GridDim::maxThreadsPerBlock;
 #if 1
     // 64 * 10 * 1 * 49292
@@ -3192,27 +3189,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignPackedConvolutionInputCDSSM(cons
         outputWidth, outputChannels,
         kernelWidth, zeroPadding, dev_numberOfWordsPerSample);
 
-    numberOfWindowsPerSample->clear();
-    for (size_t i = 0; i < smallBatchSize; i++)
-    {
-        if (zeroPadding)
-        {
-            numberOfWindowsPerSample->push_back(numberOfWordsPerSample[i]);
-        }
-        else {
-            if (numberOfWordsPerSample[i] < kernelWidth)
-            {
-                numberOfWindowsPerSample->push_back(1);
-            }
-            else {
-                numberOfWindowsPerSample->push_back(numberOfWordsPerSample[i] - kernelWidth + 1);
-            }
-        }
-    }
-
     CUDA_CALL(cudaFree(dev_numberOfWordsPerSample));
-    free(numberOfWordsPerSample);
-
     return *this;
 }
 

@@ -1872,7 +1872,6 @@ __global__ void _getNumberOfWordsPerSample(size_t *numberOfWordsPerSample, const
 
 template <class ElemType>
 __global__ void _assignPackedConvolutionInputCDSSM(ElemType *output, const ElemType *input, const size_t batchSize, 
-                                                   
                                                    const size_t inputWidth, const size_t inputChannels, 
                                                    const size_t outputWidth, const size_t outputChannels,
                                                    const size_t kernelWidth, 

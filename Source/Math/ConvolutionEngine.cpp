@@ -272,7 +272,6 @@ public:
         m_kernelT(m_geometry->KernelShape(), ImageLayoutKind::CHW), m_strideT(m_geometry->Stride(), ImageLayoutKind::CHW)
     {
         m_padding = m_geometry->AutoPad()[0];
-        
     }
 
 protected:
@@ -315,7 +314,7 @@ protected:
                           in.GetMatrixType() == MatrixType::SPARSE);
         m_gpuSparse1D = (m_gpuSparseOpt && m_inT.h() == 1);
 
-        m_cdssm = m_inT.h() == 1 && m_kernelT.h() == 1 && m_strideT.w() == 1; // && in.GetMatrixType() == MatrixType::SPARSE;
+        m_cdssm = m_inT.h() == 1 && m_kernelT.h() == 1 && m_strideT.w() == 1;
 
         out.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
 
@@ -327,11 +326,6 @@ protected:
 
         size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
         size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
-
-        if (m_cdssm)
-        {
-            m_numberOfWindowsPerSample.resize(subBatchSize);
-        }
 
         for (size_t i = 0; i < numSubBatches; i++)
         {
@@ -352,7 +346,7 @@ protected:
             if (m_cdssm)
             {
                 inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
-                workspace.AssignPackedConvolutionInputCDSSM(inputSubBatch, m_inT.w(), m_inT.c(), m_outT.w(), m_outT.c(), m_kernelT.w(), &m_numberOfWindowsPerSample, m_padding);
+                workspace.AssignPackedConvolutionInputCDSSM(inputSubBatch, m_inT.w(), m_inT.c(), m_outT.w(), m_outT.c(), m_kernelT.w(), m_padding);
                 Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
 
                 // workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
@@ -512,21 +506,10 @@ protected:
     {
         if (m_poolKind == PoolKind::Max)
         {
-            std::unique_ptr<ElemType[]> refI(in.CopyToArray());
-            for (int ii = 0; ii < 10; ii++)
-            {
-                for (int jj = 0; jj < 10; jj++)
-                {
-                    int iii = ii * 2880 + jj;
-                    printf("%f ", refI[iii]);
-                }
-
-                printf("\r\n");
-            }
-
-            printf("\r\n");
-
-            m_cdssm = m_inT.c() == 1 && m_outT.c() == 1 && m_outT.h() == 1 && m_kernelT.c() == 1 && m_kernelT.w() == 1 && m_strideT.w() == 1 && m_strideT.h() == 1;
+            m_cdssm = m_inT.c() == 1 && 
+                      m_outT.c() == 1 && m_outT.h() == 1 && 
+                      m_kernelT.c() == 1 && m_kernelT.w() == 1 && 
+                      m_strideT.w() == 1 && m_strideT.h() == 1;
 
             if (m_cdssm)
             {
@@ -539,26 +522,6 @@ protected:
                     m_outT.w(), m_outT.h(), m_outT.w() * m_outT.h() * m_outT.c(),
                     m_kernelT.w(), m_kernelT.h(), m_strideT.w(), m_strideT.h());
             }
-
-            std::unique_ptr<ElemType[]> refO(out.CopyToArray());
-            for (int ii = 0; ii < 10; ii++)
-            {
-                for (int jj = 0; jj < 5; jj++)
-                {
-                    int iii = ii * 288 + jj;
-                    printf("%f ", refO[iii]);
-                }
-
-                for (int jj = 0; jj < 5; jj++)
-                {
-                    int iii = (ii + 1) * 288 - 5 + jj;
-                    printf("%f ", refO[iii]);
-                }
-
-                printf("\r\n");
-            }
-
-            printf("\r\n");
         }
         else if (m_poolKind == PoolKind::Average)
         {
@@ -609,7 +572,6 @@ private:
     bool m_gpuSparse1D;
 
     bool m_cdssm;
-    std::vector<size_t> m_numberOfWindowsPerSample;
 };
 
 //------------------------------------------------------------------
