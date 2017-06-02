@@ -593,7 +593,7 @@ public:
         if (inputIndex == 1)
         {
             FrameRange fr(Input(0)->GetMBLayout());
-            auto gradient = Input(2)->GradientFor(fr);	//output
+            auto gradient = Input(1)->GradientFor(fr);	//output
 
             if (m_totalFrameNumberOfCurrentMinibatch == 0 || m_frameNumberOfCurrentMinibatch == m_totalFrameNumberOfCurrentMinibatch)
             {
@@ -656,12 +656,12 @@ public:
             m_smapTranspose = make_shared<Matrix<ElemType>>(m_smap->Transpose(), m_deviceId);
 
         FrameRange fr(Input(0)->GetMBLayout());
-        auto inputV = Input(2)->ValueFor(fr);
+        auto inputV = Input(1)->ValueFor(fr);
         auto inputL = Input(0)->ValueFor(fr);
         auto inputValue = &inputV;
         auto inputLabel = &inputL;
 
-		auto inputNegL=Input(1)->ValueFor(fr);
+		auto inputNegL=Input(3)->ValueFor(fr);
         auto inputNegLabel=&inputNegL;
 
         size_t nf = inputValue->GetNumCols();
@@ -711,7 +711,7 @@ public:
         m_likelihoods->AssignLogSoftmaxOf(*inputValue, true);
         if (m_ceweight != 0)
             m_softmax->SetValue(*m_likelihoods);
-        (*m_likelihoods) -= Input(3)->ValueAsMatrix();
+        (*m_likelihoods) -= Input(2)->ValueAsMatrix();
 
         if (m_squashingFactor != (ElemType)1.0)    // squashing factor
             (*m_likelihoods) *= m_squashingFactor;

@@ -495,7 +495,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Latti
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LatticeFreeMMINegStream(const ComputationNodePtr label, const ComputationNodePtr negLabel, const ComputationNodePtr prediction, const ComputationNodePtr logPrior, const std::wstring fstFilePath, const std::wstring smapFilePath, ElemType squashingFactor, int alignmentWindow, ElemType ceweight, ElemType boosted, std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<LatticeFreeMMINodeNegStream<ElemType>>(net.GetDeviceId(), nodeName, fstFilePath, smapFilePath, squashingFactor, alignmentWindow, ceweight, boosted), { label, negLabel, prediction, logPrior });
+    return net.AddNodeToNetAndAttachInputs(New<LatticeFreeMMINodeNegStream<ElemType>>(net.GetDeviceId(), nodeName, fstFilePath, smapFilePath, squashingFactor, alignmentWindow, ceweight, boosted), { label, prediction, logPrior , negLabel});
 }
 
 template <class ElemType>
