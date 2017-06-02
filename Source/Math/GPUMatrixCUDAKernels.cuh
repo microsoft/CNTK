@@ -5451,12 +5451,12 @@ __global__ void _assignAlphaScore(
                 if (phoneId == blankTokenId)
                 {
                     // only constraint right side
-                    if (t > phoneBoundId_r + delayConstraint - 1 || t < phoneBoundId_l - delayConstraint + 1)
+                    if (t > phoneBoundId_r + delayConstraint - 1 || (phoneBoundId_l + 1 > delayConstraint  &&  t < phoneBoundId_l - delayConstraint + 1))
                         alphaScore[alphaId] = LZERO;
                 }
                 else if (phoneId != blankTokenId)
                 {
-                    if (t > phoneBoundId_r + delayConstraint || t < phoneBoundId_l - delayConstraint)
+                    if (t > phoneBoundId_r + delayConstraint || (phoneBoundId_l > delayConstraint && t < phoneBoundId_l - delayConstraint))
                         alphaScore[alphaId] = LZERO;
                 }
             }
@@ -5542,12 +5542,12 @@ __global__ void _assignBetaScore(
 				LONG64 phoneBoundId_l = (LONG64)(phoneBound[labelid]);
                 if (phoneId == blankTokenId)
                 {
-                    if (t > phoneBoundId_r + delayConstraint - 1 || t < phoneBoundId_l - delayConstraint +1)
+                    if (t > phoneBoundId_r + delayConstraint - 1 || (phoneBoundId_l + 1 > delayConstraint  &&  t < phoneBoundId_l - delayConstraint + 1))
                         betaScore[betaid] = LZERO;
                 }
                 else if (phoneId != blankTokenId)
                 {
-                    if (t > phoneBoundId_r + delayConstraint || t < phoneBoundId_l - delayConstraint)
+                    if (t > phoneBoundId_r + delayConstraint || (phoneBoundId_l > delayConstraint && t < phoneBoundId_l - delayConstraint))
                         betaScore[betaid] = LZERO;
                 }
             }
