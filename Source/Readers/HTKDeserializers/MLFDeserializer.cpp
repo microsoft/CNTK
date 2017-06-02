@@ -76,12 +76,12 @@ protected:
           m_descriptor(descriptor),
           m_deserializer(deserializer)
     {
-        if (descriptor.m_sequences.empty() || !descriptor.m_byteSize)
+        if (descriptor.Sequences().empty() || !descriptor.SizeInBytes())
             LogicError("Empty chunks are not supported.");
 
         auto f = shared_ptr<FILE>(fopenOrDie(fileName, L"rbS"), [](FILE *f) { if (f) fclose(f); });
         size_t sizeInBytes =
-            descriptor.m_sequences.back().OffsetInChunk() + descriptor.m_sequences.back().SizeInBytes();
+            descriptor.Sequences().back().OffsetInChunk() + descriptor.Sequences().back().SizeInBytes();
 
         // Make sure we always have 0 at the end for buffer overrun.
         m_buffer.resize(sizeInBytes + 1);
@@ -97,7 +97,7 @@ protected:
         freadOrDie(m_buffer.data(), 1, sizeInBytes, f.get());
 
         // all sequences are valid by default.
-        m_valid.resize(m_descriptor.m_numberOfSequences, true);
+        m_valid.resize(m_descriptor.Sequences().size(), true);
     }
 
     string KeyOf(const SequenceDescriptor& s)
@@ -122,11 +122,11 @@ public:
     SequenceChunk(const MLFDeserializer& parent, const ChunkDescriptor& descriptor, const wstring& fileName, StateTablePtr states)
         : ChunkBase(parent, descriptor, fileName, states)
     {
-        m_sequences.resize(m_descriptor.m_numberOfSequences);
+        m_sequences.resize(m_descriptor.Sequences().size());
 
 #pragma omp parallel for schedule(dynamic)
-        for (int i = 0; i < descriptor.m_sequences.size(); ++i)
-            CacheSequence(descriptor.m_sequences[i], i);
+        for (int i = 0; i < descriptor.Sequences().size(); ++i)
+            CacheSequence(descriptor.Sequences()[i], i);
 
         CleanBuffer();
     }
@@ -172,7 +172,7 @@ public:
         }
 
         const auto& utterance = m_sequences[sequenceIndex];
-        const auto& sequence = m_descriptor.m_sequences[sequenceIndex];
+        const auto& sequence = m_descriptor.Sequences()[sequenceIndex];
 
         // Packing labels for the utterance into sparse sequence.
         vector<size_t> sequencePhoneBoundaries(m_deserializer.m_withPhoneBoundaries ? utterance.size() : 0);
@@ -213,12 +213,12 @@ public:
         : ChunkBase(parent, descriptor, fileName, states)
     {
         // Preallocate a big array for filling in class ids for the whole chunk.
-        m_classIds.resize(m_descriptor.m_numberOfSamples);
+        m_classIds.resize(m_descriptor.NumSamples());
 
         // Parse the data on different threads to avoid locking during GetSequence calls.
 #pragma omp parallel for schedule(dynamic)
-        for (int i = 0; i < descriptor.m_sequences.size(); ++i)
-            CacheSequence(descriptor.m_sequences[i], i);
+        for (int i = 0; i < descriptor.Sequences().size(); ++i)
+            CacheSequence(descriptor.Sequences()[i], i);
 
         CleanBuffer();
     }
@@ -228,11 +228,11 @@ public:
     size_t GetUtteranceForChunkFrameIndex(size_t frameIndex) const
     {
         auto result = upper_bound(
-            m_descriptor.m_sequenceOffsetInChunkInSamples.begin(),
-            m_descriptor.m_sequenceOffsetInChunkInSamples.end(),
+            m_descriptor.SequenceOffsetInSamples().begin(),
+            m_descriptor.SequenceOffsetInSamples().end(),
             frameIndex,
             [](size_t fi, const size_t& a) { return fi < a; });
-        return result - 1 - m_descriptor.m_sequenceOffsetInChunkInSamples.begin();
+        return result - 1 - m_descriptor.SequenceOffsetInSamples().begin();
     }
 
     void GetSequence(size_t sequenceIndex, vector<SequenceDataPtr>& result) override
@@ -267,7 +267,7 @@ public:
             return;
         }
 
-        auto startRange = m_classIds.begin() + m_descriptor.m_sequenceOffsetInChunkInSamples[index];
+        auto startRange = m_classIds.begin() + m_descriptor.SequenceOffsetInSamples()[index];
         for(size_t i = 0; i < utterance.size(); ++i)
         {
             const auto& range = utterance[i];
@@ -385,18 +385,18 @@ void MLFDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus, co
 
         // Build auxiliary for GetSequenceByKey.
         const auto& index = indexer->GetIndex();
-        for (uint32_t chunkIndex = 0; chunkIndex < index.m_chunks.size(); ++chunkIndex)
+        for (uint32_t chunkIndex = 0; chunkIndex < index.Chunks().size(); ++chunkIndex)
         {
-            const auto& chunk = index.m_chunks[chunkIndex];
+            const auto& chunk = index.Chunks()[chunkIndex];
             // Preparing chunk info that will be exposed to the outside.
-            for (uint32_t i = 0; i < chunk.m_sequences.size(); ++i)
+            for (uint32_t i = 0; i < chunk.Sequences().size(); ++i)
             {
-                const auto& sequence = chunk.m_sequences[i];
+                const auto& sequence = chunk.Sequences()[i];
                 m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key, static_cast<ChunkIdType>(m_chunks.size()), i));
             }
 
-            totalNumSequences += chunk.m_numberOfSequences;
-            totalNumFrames += chunk.m_numberOfSamples;
+            totalNumSequences += chunk.Sequences().size();
+            totalNumFrames += chunk.NumSamples();
             m_chunkToFileIndex.insert(make_pair(&chunk, m_mlfFiles.size() - 1));
             m_chunks.push_back(&chunk);
             if (m_chunks.size() >= numeric_limits<ChunkIdType>::max())
@@ -458,8 +458,8 @@ ChunkDescriptions MLFDeserializer::GetChunkDescriptions()
         if (cd->m_id != i)
             RuntimeError("ChunkIdType overflow during creation of a chunk description.");
 
-        cd->m_numberOfSequences =  m_frameMode ? m_chunks[i]->m_numberOfSamples : m_chunks[i]->m_numberOfSequences;
-        cd->m_numberOfSamples = m_chunks[i]->m_numberOfSamples;
+        cd->m_numberOfSequences =  m_frameMode ? m_chunks[i]->NumSamples() : m_chunks[i]->Sequences().size();
+        cd->m_numberOfSamples = m_chunks[i]->NumSamples();
         chunks.push_back(cd);
     }
     return chunks;
@@ -502,15 +502,16 @@ bool MLFDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDe
     auto chunkId = std::get<1>(*found);
     auto sequenceIndexInChunk = std::get<2>(*found);
 
+
     const auto* chunk = m_chunks[chunkId];
-    const auto& sequence = chunk->m_sequences[sequenceIndexInChunk];
+    const auto& sequence = chunk->Sequences()[sequenceIndexInChunk];
 
     result.m_chunkId = std::get<1>(*found);
     result.m_key = key;
 
     if (m_frameMode)
     {
-        result.m_indexInChunk = chunk->m_sequenceOffsetInChunkInSamples[sequenceIndexInChunk] + key.m_sample;
+        result.m_indexInChunk = chunk->SequenceOffsetInSamples()[sequenceIndexInChunk] + key.m_sample;
         result.m_numberOfSamples = 1;
     }
     else

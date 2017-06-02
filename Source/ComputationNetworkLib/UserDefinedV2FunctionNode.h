@@ -39,6 +39,12 @@ public:
             LogicError("UserDefinedV2FunctionNode ctor should never be called with externalFunction == nullptr");
     }
 
+    virtual bool ForceDynamicValidation() const override 
+    {
+        auto outputs = m_externalFunction->Outputs();
+        return std::any_of(outputs.begin(), outputs.end(), [](const ::CNTK::Variable& output) { return output.Shape().HasFreeDimension(); });
+    }
+
     virtual void ForwardPropNonLooping() override
     {
         this->m_outputsValue[0] = m_value;
@@ -95,9 +101,9 @@ public:
             this->m_outputsValue[i]->SetValue(*outputMatrixAndLayout.first);
 
             if ((this->m_outputsMBLayout[i] != nullptr) && (outputMatrixAndLayout.second == nullptr))
-                LogicError("The UserDefinedFunction node has a non-null output MBLayout but none found from the (%S) user Function::Forward output Value", m_externalFunction->Name().c_str());
+                LogicError("The UserDefinedFunction node has a non-null output MBLayout but none found from the '%S' user Function::Forward output Value", m_externalFunction->Name().c_str());
             else if ((this->m_outputsMBLayout[i] == nullptr) && (outputMatrixAndLayout.second != nullptr))
-                LogicError("The UserDefinedFunction node does not have an output MBLayout but the (%S) user Function::Forward output Value have a non-null layout", m_externalFunction->Name().c_str());
+                LogicError("The UserDefinedFunction node does not have an output MBLayout but the '%S' user Function::Forward output Value has a non-null layout", m_externalFunction->Name().c_str());
             else if ((this->m_outputsMBLayout[i] == nullptr) && (outputMatrixAndLayout.second == nullptr))
                 ;
             else
@@ -107,7 +113,10 @@ public:
                 else
                 {
                     if (*this->m_outputsMBLayout[i] != *outputMatrixAndLayout.second)
-                        LogicError("The MBLayout of the output computed by the external function (%S) does not match the expected MBLayout", m_externalFunction->Name().c_str());
+                        LogicError("The MBLayout 'NumSequences=%zu, NumTimeSteps=%zu' of the output computed by the external function '%S' does not match the expected MBLayout 'NumSequences=%zu, NumTimeSteps=%zu'.",
+                            outputMatrixAndLayout.second->GetNumSequences(), outputMatrixAndLayout.second->GetNumTimeSteps(),
+                            m_externalFunction->Name().c_str(),
+                            this->m_outputsMBLayout[i]->GetNumSequences(), this->m_outputsMBLayout[i]->GetNumTimeSteps());
                 }
             }
         }
@@ -176,7 +185,10 @@ public:
             InputRef(i).Gradient() += *newInputGradientMatrixAndLayout.first;
 
             if (*InputRef(i).GetMBLayout() != *newInputGradientMatrixAndLayout.second)
-                LogicError("The MBLayout of the input (%lu) gradient computed by the external function (%S) does not match the expected MBLayout", (unsigned long)i, this->GetName().c_str());
+                LogicError("The MBLayout 'NumSequences=%zu, NumTimeSteps=%zu' of the Input(%zu) gradient computed by the external function '%S' does not match the expected MBLayout 'NumSequences=%zu, NumTimeSteps=%zu'.",
+                    newInputGradientMatrixAndLayout.second->GetNumSequences(), newInputGradientMatrixAndLayout.second->GetNumTimeSteps(),
+                    i, this->GetName().c_str(),
+                    InputRef(i).GetMBLayout()->GetNumSequences(), InputRef(i).GetMBLayout()->GetNumTimeSteps());
         }
 
         m_currentBackpropStatePtr = nullptr;
@@ -187,66 +199,48 @@ public:
         Base::Validate(isFinalValidationPass);
 
         auto outputs = m_externalFunction->Outputs();
+        bool layoutNotInitialized = (m_pMBLayout == nullptr);
         for (size_t i = 0; i < outputs.size(); ++i)
         {
             auto output = outputs[i];
 
             if (output.GetDataType() != ::CNTK::AsDataType<ElemType>())
             {
-                LogicError("The DataType (%s) of the external user defined Function's output does not match the internal ComputationNode's ElemType (%s)",
+                LogicError("The DataType '%s' of the external user defined Function's output does not match the internal ComputationNode's ElemType '%s'.",
                     DataTypeName(output.GetDataType()),
                     DataTypeName(::CNTK::AsDataType<ElemType>()));
             }
 
             auto outputNDShape = output.Shape();
-            auto outputDynamicAxes = output.DynamicAxes();
-            if (outputDynamicAxes.empty())
+            if (layoutNotInitialized)
             {
-                this->m_outputsHasNewMBLayout[i] = true;
-                this->m_outputsMBLayout[i] = nullptr;
-            }
-            else
-            {
-                auto argumentVariables = m_externalFunction->Arguments();
-                size_t j = 0;
-                auto numInputs = GetNumInputs();
-                for (size_t k = 0; k < numInputs; ++k)
+                auto outputDynamicAxes = output.DynamicAxes();
+                if (outputDynamicAxes.empty())
                 {
-                    auto& input = InputRef(k);
-                    if (input.template Is<LearnableParameter<ElemType>>())
-                        continue;
-
-                    auto argumentVar = argumentVariables[j];
-                    if (argumentVar.DynamicAxes() == outputDynamicAxes)
-                    {
-                        this->m_outputsMBLayout[i] = input.GetMBLayout();
-                        break;
-                    }
-
-                    j++;
+                    this->m_outputsHasNewMBLayout[i] = true;
+                    this->m_outputsMBLayout[i] = nullptr;
                 }
-
-                if (!this->m_outputsMBLayout[i])
+                else
                 {
                     this->m_outputsMBLayout[i] = make_shared<MBLayout>(); // this generates a new layout
                     this->m_outputsMBLayout[i]->SetUniqueAxisName(InternalDynamicAxisNameFromDynamicAxes(output.DynamicAxes()));
                     this->m_outputsHasNewMBLayout[i] = true;
                 }
-                else
-                    this->m_outputsHasNewMBLayout[i] = false;
+            }
 
-                for (size_t k = 0; k < outputNDShape.Rank(); ++k)
-                {
-                    if ((outputNDShape[k] == ::CNTK::NDShape::FreeDimension) || (outputNDShape[k] == ::CNTK::NDShape::InferredDimension))
-                        outputNDShape[k] = 1;
-                }
+            for (size_t k = 0; k < outputNDShape.Rank(); ++k)
+            {
+                if ((outputNDShape[k] == ::CNTK::NDShape::FreeDimension) || (outputNDShape[k] == ::CNTK::NDShape::InferredDimension))
+                    outputNDShape[k] = 1;
             }
 
             this->m_outputsShape[i] = ::CNTK::AsTensorShape(outputNDShape);
 
             if (i == 0)
             {
-                m_pMBLayout = this->m_outputsMBLayout[i];
+                if (layoutNotInitialized)
+                    m_pMBLayout = this->m_outputsMBLayout[i];
+
                 SetDims(this->m_outputsShape[i], HasMBLayout());
             }
         }

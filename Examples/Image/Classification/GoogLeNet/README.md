@@ -38,7 +38,8 @@ Models pre-trained with CNTK scripts.
 ### Caffe-Converted
 
 #### BN-Inception
-|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/BNInception_ImageNet.model
+|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/BNInception_ImageNet_Caffe.model
 |:---------|:---
+|Last updated | April, 28th, 2017
 |Source Caffe model website | https://github.com/BVLC/caffe/tree/master/models/bvlc_googlenet
 |Single crop top 5 error | 11.50%

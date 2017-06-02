@@ -11,6 +11,7 @@ import math
 import cntk
 import numpy as np
 
+import cntk as C
 from cntk.logging import *
 from cntk import input, cross_entropy_with_softmax, classification_error
 from cntk import Trainer, cntk_py 
@@ -42,8 +43,8 @@ model_name   = "ResNet_CIFAR10_DataAug.model"
 # Create network
 def create_resnet_network(network_name):
     # Input variables denoting the features and label data
-    input_var = input((num_channels, image_height, image_width))
-    label_var = input((num_classes))
+    input_var = C.input_variable((num_channels, image_height, image_width))
+    label_var = C.input_variable((num_classes))
 
     # create model, and configure learning parameters 
     if network_name == 'resnet20': 
@@ -116,7 +117,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         model_inputs_to_streams = input_map,
         checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
         progress_frequency=epoch_size,
-        test_config = TestConfig(source=test_source, mb_size=16)
+        test_config = TestConfig(test_source, minibatch_size=16)
     ).train()
     
     if profiling:

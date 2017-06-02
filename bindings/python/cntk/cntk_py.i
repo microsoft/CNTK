@@ -42,25 +42,10 @@
 %rename(_stream_infos) CNTK::SwigMinibatchSource::StreamInfos(PyObject*);
 %rename(_next_minibatch) CNTK::SwigMinibatchSource::_GetNextMinibatch;
 %rename(_register_udf_deserialize_callback) CNTK::Internal::RegisterUDFDeserializeCallbackWrapper;
-
+%rename(base64_image_deserializer) CNTK::Base64ImageDeserializer;
 %rename(_none) CNTK::DictionaryValue::Type::None;
 
-// Disabling warning about constructor shadowing, learner tests check this.
-%warnfilter(401, 509) CNTK::TrainingParameterPerUnitSchedule;
-%warnfilter(509) CNTK::MomentumAsTimeConstantSchedule;
-%warnfilter(509) CNTK::NDArrayView::NDArrayView;
-
-%warnfilter(315) CNTK::TrainingParameterPerSampleSchedule;
-
-// Disabling warning about movable constructor shadowing, io tests check this.
-%warnfilter(509) CNTK::DictionaryValue::DictionaryValue;
-%warnfilter(509) CNTK::Dictionary::Dictionary;
-
-// Disabling warning about Trainer shadowing, trainer tests check this.
-%warnfilter(509) TrainerImpl;
-
-// Returning an immutable string by reference.
-%warnfilter(473) CNTK::Function::OpName;
+%include "CNTKWarnFilters.i"
 
 // Operator overloading is not supported by Python.
 %rename(eq) operator==;
@@ -68,30 +53,14 @@
 %ignore CNTK::AddConfigString;
 %ignore CNTK::GetCorrespondingOutputVariableFromClone;
 
-// Specialization of non-template function - hash,
-// TODO: it is not clear how to limit this only to hash, but we do not use partial specialization in other places.
-#pragma SWIG nowarn=-317
-
-// Disabling enable_shared_from_this - we never use this class to actually access the object.
-%warnfilter(401) CNTK::NDArrayView;
-%warnfilter(401) CNTK::NDMask;
-%warnfilter(401) CNTK::Function;
-%warnfilter(401) CNTK::Internal::UDFDeserializeCallbackWrapper;
-%warnfilter(401) CNTK::Trainer;
-%warnfilter(401) CNTK::Evaluator;
-%warnfilter(401) CNTK::Value;
-%warnfilter(401) CNTK::BackPropState;
-%warnfilter(401) CNTK::MinibatchSource;
-
-%warnfilter(401, 509) CNTK::MomentumAsTimeConstantSchedule;
-
-%warnfilter(340) CNTK::NoOp;
-
 // The following operators are not supported in Python.
 %ignore operator<<;
 %ignore operator>>;
 %ignore CNTK::DictionaryValue::operator=;
 %ignore CNTK::DictionaryValue::Value;
+// store python floats using double precision (if this overload is not ignored, 
+// it'll be invoked for all values irrespective of the original size)
+%ignore CNTK::DictionaryValue::DictionaryValue(float);
 
 %ignore CNTK::Dictionary::operator=;
 %ignore CNTK::Dictionary::operator[];
@@ -101,8 +70,10 @@
 
 %ignore CNTK::GetCheckedMode;
 
-// renaming overloads for TrainMinibatch and TestMinibatch that take a map 
-// of Variables and MinibatchData as their first parameter. If this is not done, 
+%ignore CNTK::Internal::Optional::operator=;
+
+// renaming overloads for TrainMinibatch and TestMinibatch that take a map
+// of Variables and MinibatchData as their first parameter. If this is not done,
 // the overloads that are legal in C++ will be shadowed and ignored by SWIG.
 // The naming here is somewhat cumbersome, but it's only intended for internal
 // consumption in proxy objects.
@@ -149,9 +120,12 @@
 %template() std::pair<size_t, double>;
 %template() std::pair<size_t, size_t>;
 %template() std::pair<size_t, int>;
+%template() std::pair<float, float>;
+%template() std::pair<int, int>;
 %template() std::vector<std::pair<size_t, double>>;
 %template() std::vector<std::pair<size_t, size_t>>;
 %template() std::vector<std::pair<CNTK::Variable, CNTK::Variable>>;
+%template() std::vector<std::pair<CNTK::Variable, std::shared_ptr<CNTK::Function>>>;
 %template() std::vector<CNTK::Dictionary>;
 %template() std::vector<std::wstring>;
 %template() std::pair<std::vector<std::shared_ptr<CNTK::NDArrayView>>, std::vector<bool>>;
@@ -173,6 +147,7 @@
 %ignore CNTK::Internal::GetComputationNetworkTraceLevel;
 %ignore CNTK::Internal::TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
 %ignore CNTK::Internal::Convolution; 
+%ignore CNTK::Internal::UniversalLearner;
 
 %ignore CNTK::Function::RegisterUDFDeserializeCallback;
 %ignore CNTK::Function::GetUDFDeserializeCallback;
@@ -271,7 +246,7 @@ def dynamic_axes(self):
         {
             delete cpuView;
         }
-        
+
         return ndarray;
     }
 }
@@ -524,23 +499,38 @@ fail:
     }
 }
 
-%typemap(out, fragment="DictionaryValueToPy") const CNTK::Dictionary& Attributes(){
-    //out Dictionary& Attributes()
-    PyObject* container = PyDict_New();
-    if (container == NULL)
+%fragment("DictionaryToPy", "header", fragment="DictionaryValueToPy")
+{
+    PyObject *DictionaryToPy(const CNTK::Dictionary& dict)
     {
-        SWIG_exception(SWIG_RuntimeError, "error passing a dictionary to Python");
-    }
+        PyObject* pydict = PyDict_New();
+        if (pydict == NULL)
+        {
+            SWIG_exception(SWIG_RuntimeError, "error passing a dictionary to Python");
+        }
 
-    for (auto it = $1->begin(); it != $1->end(); ++it)
-    {
-        PyObject *key = PyUnicode_FromWideChar(it->first.c_str(), it->first.length());
-        PyObject *val = DictionaryValueToPy(it->second);
-        PyDict_SetItem(container, key, val);
-        Py_DECREF(key);
-        Py_DECREF(val);
+        for (const auto& kv : dict)
+        {
+            PyObject *key = PyUnicode_FromWideChar(kv.first.c_str(), kv.first.length());
+            PyObject *val = DictionaryValueToPy(kv.second);
+            PyDict_SetItem(pydict, key, val);
+            Py_DECREF(key);
+            Py_DECREF(val);
+        }
+        return pydict;
+fail:
+    return NULL;
     }
-    $result = container;
+}
+
+%typemap(out, fragment="DictionaryToPy") const CNTK::Dictionary& Attributes(){
+    //out Dictionary& Attributes()
+    $result = DictionaryToPy(*$1);
+}
+
+%typemap(out, fragment="DictionaryToPy") CNTK::Dictionary RestoreFromCheckpoint {
+    //out Dictionary& Attributes()
+    $result = DictionaryToPy($1);
 }
 
 %define %eq_for(DATA_TYPE, EQ)
@@ -577,6 +567,12 @@ public:
 };
 %}
 
+%extend CNTK::Internal::Optional {
+    void Set(T value) {
+        *($self) = value;
+    }
+}
+
 // extend constructor
 %extend CNTK::DictionaryValue {
     DictionaryValue(const SizeTWrapper& w)
@@ -584,7 +580,6 @@ public:
         return new DictionaryValue(w.value);
     }
 }
-
 
 %ignore CNTK::Dictionary::Keys;
 
@@ -663,7 +658,8 @@ public:
 
 %feature("director") CNTK::SwigMinibatchSource;
 %feature("nodirector") CNTK::SwigMinibatchSource::StreamInfos();
-%feature("nodirector") CNTK::SwigMinibatchSource::GetNextMinibatch;//(size_t minibatchSizeInSamples, size_t minibatchSizeInSequences, size_t numberOfWorkers, size_t workerRank, const DeviceDescriptor&); 
+%feature("nodirector") CNTK::SwigMinibatchSource::GetNextMinibatch;//(size_t minibatchSizeInSamples, size_t minibatchSizeInSequences, size_t numberOfWorkers, size_t workerRank, const DeviceDescriptor&);
+%feature("nodirector") CNTK::SwigMinibatchSource::GetCheckpointState;
 
 %{
     #include "CNTKLibrary.h"
@@ -676,7 +672,7 @@ public:
 //
 // Exception handling
 //
-%include "CNTK_ExceptionHandling.i"
+%include "CNTKExceptionHandling.i"
 
 %feature("director:except") {
     if ($error != NULL) {
@@ -764,12 +760,12 @@ public:
 // Converting Python dictionary {Variable: ValuePtr} to std::unordered_map
 //
 
-%define %unordered_map_conversion(KEY_TYPE, VALUE_TYPE, SWIG_KEY_TYPE, SWIG_VALUE_TYPE) 
+%define %unordered_map_conversion(KEY_TYPE, VALUE_TYPE, SWIG_KEY_TYPE, SWIG_VALUE_TYPE)
     // '1000' is the typecheck precedence code. It means: check after basic
     // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
     %typecheck(1000) std::unordered_map<KEY_TYPE, VALUE_TYPE> const&,
-        const std::unordered_map<KEY_TYPE, VALUE_TYPE>&, 
-        std::unordered_map<KEY_TYPE, VALUE_TYPE>&  
+        const std::unordered_map<KEY_TYPE, VALUE_TYPE>&,
+        std::unordered_map<KEY_TYPE, VALUE_TYPE>&
     { $1 = PyDict_Check($input) ? 1 : 0; }
 
     %typemap(in) std::unordered_map<KEY_TYPE, VALUE_TYPE>& (
@@ -798,7 +794,7 @@ public:
 
                 KEY_TYPE* var = reinterpret_cast<KEY_TYPE*>(raw_var);
 
-                int val_flags = 0; 
+                int val_flags = 0;
                 if (SWIG_VALUE_TYPE == $descriptor(CNTK::Variable *))
                     val_flags |= SWIG_POINTER_IMPLICIT_CONV;
                 void *raw_value = 0;
@@ -831,19 +827,9 @@ public:
 // Implementing typemapping for UDFDeserializeCallbackWrapper (it has a dictionary
 // as one of its input parameters), which needs to be implemented in Python.
 
-%typemap(directorin, fragment="DictionaryValueToPy") const CNTK::Dictionary&
+%typemap(directorin, fragment="DictionaryToPy") const CNTK::Dictionary&
 {
-    PyObject* container = PyDict_New();
-    
-    for (const auto& kv : $1)
-    {
-        PyObject *key = PyUnicode_FromWideChar(kv.first.c_str(), kv.first.length());
-        PyObject *val = DictionaryValueToPy(kv.second);
-        PyDict_SetItem(container, key, val);
-        Py_DECREF(key);
-        Py_DECREF(val);
-    }
-    $input = container;
+    $input = DictionaryToPy($1);
 }
 
 // Implementing typemapping for InferOutputs virtual function that takes vector of variables by reference
@@ -955,7 +941,7 @@ public:
             void *cpp_key = 0;
             int key_res = SWIG_ConvertPtr(py_key, &cpp_key, $descriptor(CNTK::Variable *), 0 | SWIG_POINTER_IMPLICIT_CONV);
             if (!SWIG_IsOK(key_res)) {
-                RuntimeError("cannot convert key of dictionary to CNTK::Variable"); 
+                RuntimeError("cannot convert key of dictionary to CNTK::Variable");
             }
 
             CNTK::Variable* cntk_var = reinterpret_cast<CNTK::Variable*>(cpp_key);
@@ -966,7 +952,7 @@ public:
                 void *cpp_val = 0;
                 int val_res = SWIG_ConvertPtr(py_value, &cpp_val, $descriptor(CNTK::ValuePtr *), 0);
                 if (!SWIG_IsOK(val_res)) {
-                    RuntimeError("cannot convert value of dictionary CNTK::ValuePtr"); 
+                    RuntimeError("cannot convert value of dictionary CNTK::ValuePtr");
                 }
 
                 CNTK::ValuePtr* cpp_value = reinterpret_cast<CNTK::ValuePtr*>(cpp_val);
@@ -1172,8 +1158,8 @@ public:
      }
 }
 
-%typemap(argout, fragment="pydict_insert") 
-std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>& 
+%typemap(argout, fragment="pydict_insert")
+std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>&
 {
     if (!PyDict_Check($input)) {
         SWIG_exception(SWIG_TypeError, "dictionary expected");
@@ -1233,7 +1219,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
     {
         SWIG_exception(SWIG_RuntimeError, "error passing a set to Python");
     }
- 
+
     for (auto var : $1)
     {
         PyObject *item = SWIG_NewPointerObj(new CNTK::DATA_TYPE(var), _SWIG_TYPE, SWIG_POINTER_OWN );
@@ -1245,7 +1231,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
     $result = container;
 }
 %enddef
- 
+
 %define %unordered_set_ref_conversion(DATA_TYPE, _SWIG_TYPE)
 
 %typecheck(1000) std::unordered_set<DATA_TYPE>&, std::unordered_set<DATA_TYPE>const & {
@@ -1255,7 +1241,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 }
 
 %typemap(in) std::unordered_set<DATA_TYPE>& (
-        std::unordered_set<DATA_TYPE> args_set 
+        std::unordered_set<DATA_TYPE> args_set
 ) {
      if (PySet_Check($input) || PyList_Check($input)) {
 
@@ -1263,17 +1249,17 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 
         PyObject *iterator = PyObject_GetIter($input);
         if (iterator == NULL) {
-            SWIG_exception_fail(SWIG_ValueError, "cannot convert element"); 
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert element");
         }
 
         while ((item = PyIter_Next(iterator))) {
             void *raw_var = 0 ;
-            int flags = 0; 
+            int flags = 0;
             if (_SWIG_TYPE == $descriptor(CNTK::Variable *))
                 flags |=  SWIG_POINTER_IMPLICIT_CONV;
             int res1 = SWIG_ConvertPtr(item, &raw_var, _SWIG_TYPE,  flags);
             if (!SWIG_IsOK(res1)) {
-                SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element"); 
+                SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element");
             }
             if (!raw_var) {
                 SWIG_exception_fail(SWIG_ValueError, "invalid null reference");
@@ -1289,7 +1275,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
         Py_DECREF(iterator);
 
         if (PyErr_Occurred()) {
-            SWIG_exception_fail(SWIG_ValueError, "cannot convert set element"); 
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert set element");
         }
 
         $1 = &args_set;
@@ -1494,6 +1480,12 @@ namespace CNTK
             size_t workerRank,
             const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) { NOT_IMPLEMENTED }
 
+
+        virtual Dictionary _GetCheckpointState() const
+        {
+            return Dictionary();
+        }
+
     protected:
         // Making these protected to prevent them to be caught by Swig's
         // director support, because the "nodirector" feature has issues seperating
@@ -1509,7 +1501,7 @@ namespace CNTK
                 PyObject *pylist = PyList_New(0);
 
                 // Necassary due to SWIG convention, it seems the reference is stolen by the function,
-                // though I could not find any explicit confirmation of this.
+                // though I could not find any explicit confirmation for this.
                 Py_INCREF(pylist);
                 // Actually calling the python side.
                 StreamInfos(pylist);
@@ -1517,16 +1509,16 @@ namespace CNTK
                 PyObject *item = nullptr;
                 PyObject *iterator = PyObject_GetIter(pylist);
                 if (!iterator)
-                    SWIG_Error(SWIG_ValueError, "cannot convert list element to CNTK::StreamInformation");
+                    SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::StreamInformation");
 
                 while ((item = PyIter_Next(iterator)))
                 {
                     StreamInformation* var = nullptr;
                     int res = SWIG_ConvertPtr(item, (void**)&var, SWIGTYPE_p_CNTK__StreamInformation,  SWIG_POINTER_IMPLICIT_CONV);
                     if (!SWIG_IsOK(res))
-                        SWIG_Error(SWIG_ArgError(res), "cannot convert list element to CNTK::StreamInformation");
+                        SWIG_exception_fail(SWIG_ArgError(res), "cannot convert list element to CNTK::StreamInformation");
                     if (!var)
-                        SWIG_Error(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::StreamInformation");
+                        SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::StreamInformation");
 
                     m_streamInfos.insert(*var);
                     Py_DECREF(item);
@@ -1534,6 +1526,14 @@ namespace CNTK
 
                 Py_DECREF(iterator);
                 Py_DECREF(pylist);
+
+                return m_streamInfos;
+
+            fail:
+                Py_XDECREF(iterator);
+                Py_XDECREF(pylist);
+                m_streamInfos.clear();
+                return m_streamInfos;
             });
 
             return m_streamInfos;
@@ -1544,7 +1544,7 @@ namespace CNTK
             size_t minibatchSizeInSequences,
             size_t numberOfWorkers,
             size_t workerRank,
-            const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) override 
+            const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) override
         {
             PyObject* pyInfoMap = PyDict_New();
 
@@ -1565,22 +1565,32 @@ namespace CNTK
                 StreamInformation* stream = nullptr;
                 int res = SWIG_ConvertPtr(key, (void**)&stream, SWIGTYPE_p_CNTK__StreamInformation,  0);
                 if (!SWIG_IsOK(res))
-                    SWIG_Error(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInformation");
+                    SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInformation");
                 if (!stream)
-                    SWIG_Error(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInformation");
+                    SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInformation");
 
                 CNTK::MinibatchData *data = nullptr;
                 res = SWIG_ConvertPtr(value, (void**)&data, SWIGTYPE_p_CNTK__MinibatchData,  0);
                 if (!SWIG_IsOK(res))
-                    SWIG_Error(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::MinibatchData");
+                    SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::MinibatchData");
                 if (!data)
-                    SWIG_Error(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::MinibatchData");
+                    SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::MinibatchData");
 
                 m_minibatchData.insert(std::make_pair(*stream, *data));
             }
 
             Py_DECREF(pyInfoMap);
             return m_minibatchData;
+
+        fail:
+            Py_XDECREF(pyInfoMap);
+            m_minibatchData.clear();
+            return m_minibatchData;
+        }
+
+        Dictionary GetCheckpointState() const
+        {
+            return _GetCheckpointState();
         }
     };
 }
@@ -1809,6 +1819,8 @@ namespace CNTK
 typedef CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample> MinibatchSizeSchedule;
 %template(minibatch_size_schedule) CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample>;
 
+%template(OptionalBool) CNTK::Internal::Optional<bool>;
+
 //
 // The following callback code is only for testing. Will have to be merged with
 // the operator classes.
@@ -1822,12 +1834,16 @@ namespace CNTK {
     class UserBackPropState;
     typedef std::shared_ptr<UserBackPropState> UserBackPropStatePtr;
 
-    class UserBackPropState : public BackPropState {
+    class UserBackPropState : public BackPropState
+    {
+
+        template <typename T, typename ...CtorArgTypes>
+        friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
+
     public:
-        UserBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
-            : BackPropState(function, computeDevice), m_userData(userData)
+        static BackPropStatePtr Create(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
         {
-            Py_INCREF(m_userData);
+            return MakeSharedObject<UserBackPropState>(function, computeDevice, userData);
         }
 
         const PyObject* Data() const
@@ -1851,22 +1867,17 @@ namespace CNTK {
         }
 
     private:
+        UserBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
+            : BackPropState(function, computeDevice), m_userData(userData)
+        {
+            Py_INCREF(m_userData);
+        }
+
         const PyObject* m_userData;
     };
 }
 
 %}
-
-
-//
-// Release the GIL before calling into C++
-//
-%exception {
-  Py_BEGIN_ALLOW_THREADS;
-  $action
-  Py_END_ALLOW_THREADS;
-}
-
 
 //
 // Setting up hash calculation so that __hash__ on Swig objects

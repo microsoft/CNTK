@@ -359,5 +359,8 @@
     <None Include="cntk\io\transforms.py">
       <Filter>cntk\io</Filter>
     </None>
+    <None Include="cntk\ops\tests\sequence_test.py">
+      <Filter>cntk\ops\tests</Filter>
+    </None>
   </ItemGroup>
 </Project>

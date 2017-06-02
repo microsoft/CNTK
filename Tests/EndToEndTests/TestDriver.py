@@ -257,6 +257,7 @@ class Test:
     # preparing environment for the test script
     os.environ["TEST_FLAVOR"] = flavor
     os.environ["TEST_DEVICE"] = device
+    os.environ["TEST_TAG"] = args.tag or ''
     os.environ["TEST_BUILD_LOCATION"] = args.build_location
     if windows:
       if args.build_sku == "cpu":
@@ -640,19 +641,21 @@ class TestCaseRunResult:
 # Lists all available tests
 def listCommand(args):
   testsByTag = {}
+  args.test = [t.rstrip('/').lower() for t in args.test]
   for test in list(Test.allTestsIndexedByFullName.values()):
-     for flavor in args.flavors:
-        for device in args.devices:
-           for os in args.oses:
-             for build_sku in args.buildSKUs:
-               if build_sku=="cpu" and device=="gpu":
-                 continue
-               tag = test.matchesTag(args.tag, flavor, device, os, build_sku) if args.tag else '*'
-               if tag:
-                 if tag in list(testsByTag.keys()):
-                   testsByTag[tag].add(test.fullName)
-                 else:
-                   testsByTag[tag] = set([test.fullName])
+     if not args.test or test.fullName.lower() in args.test:
+        for flavor in args.flavors:
+           for device in args.devices:
+              for os in args.oses:
+                for build_sku in args.buildSKUs:
+                  if build_sku=="cpu" and device=="gpu":
+                    continue
+                  tag = test.matchesTag(args.tag, flavor, device, os, build_sku) if args.tag else '*'
+                  if tag:
+                    if tag in list(testsByTag.keys()):
+                      testsByTag[tag].add(test.fullName)
+                    else:
+                      testsByTag[tag] = set([test.fullName])
   for tag in sorted(testsByTag.keys()):
     if tag=="*":
       six.print_(' \n'.join(sorted(testsByTag[tag])))
@@ -779,9 +782,9 @@ if __name__ == "__main__":
   subparsers = parser.add_subparsers(help="command to execute. Run TestDriver.py <command> --help for command-specific help")
   runSubparser = subparsers.add_parser("run", help="run test(s)")
   runSubparser.add_argument("test", nargs="*",
-                      help="optional test name(s) to run, specified as Suite/TestName. "
-                           "Use list command to list available tests. "
-                           "If not specified then all tests will be run.")
+                            help="optional test name(s) to run, specified as Suite/TestName. "
+                                 "Use list command to list available tests. "
+                                 "If not specified then all tests will be run.")
 
   defaultBuildSKU = "gpu"
 
@@ -795,7 +798,7 @@ if __name__ == "__main__":
   runSubparser.add_argument("--py35-paths", help="comma-separated paths to prepend when running a test against Python 3.5")
   runSubparser.add_argument("--py36-paths", help="comma-separated paths to prepend when running a test against Python 3.6")
   tmpDir = os.getenv("TEMP") if windows else "/tmp"
-  defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
+  defaultRunDir = os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
   runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")
   runSubparser.add_argument("--update-baseline", action='store_true', help="update baseline file(s) instead of matching them")
   runSubparser.add_argument("--create-baseline", action='store_true', help="create new baseline file(s) (named as baseline.<os>.<device>.txt) for tests that do not currently have baselines")
@@ -810,6 +813,8 @@ if __name__ == "__main__":
   listSubparser.add_argument("-f", "--flavor", help="release|debug - tests for specified flavor")
   listSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - list tests only for a specified build SKU")
   listSubparser.add_argument("--os", help="windows|linux - tests for a specified operating system")
+  listSubparser.add_argument("test", nargs="*",
+                             help="optional test name(s) to list, specified as Suite/TestName. ")
 
   listSubparser.set_defaults(func=listCommand)
 

@@ -275,7 +275,7 @@ ORIGINDIR:='$$ORIGIN'
 # Components VERSION info
 ########################################
 
-CNTK_COMPONENT_VERSION := 2.0rc2
+CNTK_COMPONENT_VERSION := 2.0
 ifeq ("$(BUILDTYPE)","debug")
 CNTK_COMPONENT_VERSION := $(CNTK_COMPONENT_VERSION)d
 endif
@@ -342,6 +342,8 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/FramePacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ReaderBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/Indexer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/MemoryBuffer.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/DataDeserializerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/ReaderUtil.cpp \
 
@@ -538,6 +540,27 @@ $(CPP_EXTENSIBILITY_EXAMPLES_LIB): $(CPP_EXTENSIBILITY_EXAMPLES_LIBRARY_OBJ) | $
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY)
+
+
+##############################################
+# Binary convolution example library
+##############################################
+
+BINARY_CONVOLUTION_EXAMPLE_LIBRARY_SRC =\
+	$(SOURCEDIR)/../Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/BinaryConvolutionLib.cpp \
+
+BINARY_CONVOLUTION_EXAMPLE_LIBRARY_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(BINARY_CONVOLUTION_EXAMPLE_LIBRARY_SRC))
+
+BINARY_CONVOLUTION_EXAMPLE_LIB:= $(LIBDIR)/Cntk.BinaryConvolutionExample-$(CNTK_COMPONENT_VERSION).so
+ALL_LIBS += $(BINARY_CONVOLUTION_EXAMPLE_LIB)
+PYTHON_LIBS += $(BINARY_CONVOLUTION_EXAMPLE_LIB)
+SRC += $(BINARY_CONVOLUTION_EXAMPLE_LIBRARY_SRC)
+
+$(BINARY_CONVOLUTION_EXAMPLE_LIB): $(BINARY_CONVOLUTION_EXAMPLE_LIBRARY_OBJ) | $(CNTKLIBRARY_LIB)
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
+	@mkdir -p $(dir $@)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY) $(SOURCEDIR)/../Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve_nofeatures.a
 
 
 ########################################
@@ -1372,7 +1395,7 @@ java: $(JAVA_LIBS)
 	cd $(JAVA_SWIG_DIR) && $(JDK_BIN_PATH)/jar -cvf cntk.jar com
 	cp $(JAVA_SWIG_DIR)/cntk.jar $(LIBDIR)/java
 	javac -cp $(JAVA_SWIG_DIR) $(JAVA_TEST_DIR)/src/Main.java -d $(LIBDIR)/java
-	$(CXX) $(LDFLAGS) -shared $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) -DSWIG $(INCLUDEPATH:%=-I%) $(JDK_INCLUDE_PATH:%=-I%) $(patsubst %,$(RPATH)%, $(ORIGINDIR)) -L$(LIBDIR) $(JAVA_SWIG_DIR)/cntk_java_wrap.cxx -l$(CNTKMATH) -l$(CNTKLIBRARY) -o $(LIBDIR)/libCntk.Core.JavaBinding-$(CNTK_COMPONENT_VERSION).so
+	$(CXX) $(LDFLAGS) -shared $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) $(JDK_INCLUDE_PATH:%=-I%) $(patsubst %,$(RPATH)%, $(ORIGINDIR)) -L$(LIBDIR) $(JAVA_SWIG_DIR)/cntk_java_wrap.cxx -l$(CNTKMATH) -l$(CNTKLIBRARY) -o $(LIBDIR)/libCntk.Core.JavaBinding-$(CNTK_COMPONENT_VERSION).so
 
 ALL += java
 

@@ -23,7 +23,7 @@ All video examples use CNTK Python API, so make sure that you can call CNTK API 
 
 Also, all examples depend on `imageio` package, to install imageio do the following:
 
-* For Anaconda: `conda install -c pyzo imageio`
+* For Anaconda: `conda install -c conda-forge imageio`
 * For pip: `pip install imageio`
 
 ### Run

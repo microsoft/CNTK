@@ -143,6 +143,7 @@ namespace CNTK
     class BlockFunction;
     class Function;
     class Variable;
+    class Parameter;
     class Axis;
     class DeviceDescriptor;
     enum class PrimitiveOpType : unsigned int;
@@ -305,6 +306,20 @@ namespace CNTK
         // This is an internal API, needed for testing.
         CNTK_API Dictionary ToDictionary(const MinibatchSourceConfig& dict);
 
+#ifndef SWIG
+        /// Convenience constructor that should be used by foreign language bindings.
+        /// This is the Proper declaration understood by a real C++ compiler.
+        LearnerPtr UniversalLearner(const std::vector<::CNTK::Parameter>& parameters, const std::vector<std::pair<::CNTK::Variable, ::CNTK::FunctionPtr> >& updates);
+#else
+        /// Convenience constructor that should be used by foreign language bindings.
+        /// Workaround declaration for SWIG. 
+        /// This is for now necessary because it has been elusive to find an equivalent of 
+        /// %template() std::vector<std::pair<CNTK::Variable, std::shared_ptr<CNTK::Function>>>;
+        /// which will generate correct code (i.e. code that will accept a list of tuples in the foreign language)
+        /// when the proper declaration is processed by SWIG.
+        LearnerPtr UniversalLearner(const std::vector<CNTK::Parameter>& parameters, const std::vector<std::pair<CNTK::Variable, CNTK::FunctionPtr> >& updates);
+#endif
+
         CNTK_API void PrintBuiltInfo();
         CNTK_API void PrintGpuInfo(const std::vector<Microsoft::MSR::CNTK::GpuData>& gpusData);
 
@@ -390,6 +405,41 @@ namespace CNTK
 
 
         CNTK_API bool IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName);
+
+        // A stripped-down version of boost::optional.
+        // TODO: replace by std::optional, once it's fully supported by VS.
+        template <class T>
+        class Optional
+        {
+        public:
+            
+            Optional() = default;
+            
+            Optional& operator= (T value) 
+            {
+                m_initialized = true;
+                m_value = value;
+                return *this;
+            }
+
+            bool IsInitialized() const
+            {
+                return m_initialized;
+            }
+
+            T Get() const
+            {
+                if (IsInitialized())
+                    return m_value;
+                RuntimeError("Optional value is not initialized.");
+            }
+
+            Optional(const Optional&) = default; Optional& operator=(const Optional&) = default;
+            Optional(Optional&&) = delete; Optional& operator=(Optional&&) = delete; 
+        private:
+             T m_value;
+             bool m_initialized { false };
+        };
     }
 
     // Forward-declare test fixtures, so that they can be used as friends.
