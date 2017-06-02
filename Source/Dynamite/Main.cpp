@@ -319,6 +319,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto trainer = CreateTrainer(nullptr, loss, loss/*metric*/, { learner });
 
     // force synchronized GPU operation so we can profile more meaningfully
+    // better do this externally: set CUDA_LAUNCH_BLOCKING=1
     //DeviceDescriptor::EnableSynchronousGPUKernelExecution();
 
     const size_t minibatchSize = 200;
@@ -362,35 +363,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         {
             // compute not directly comparable due to (1) no batching and (2) sparse, which may be expensive w.r.t. slicing, or not
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "d_criterion_fn: %.6f sec\n");
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //GetValue(mbLoss)->AsScalar<float>();
             mbLoss = d_criterion_fn(args[0], args[1]);// mbLoss.Value();//->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
-            //mbLoss.Value()->AsScalar<float>();
         }
         //fprintf(stderr, "uid of first parameter: %S\n", mbLoss.Uid().c_str());
         //fprintf(stderr, "uid of loss: %S\n", d_parameters[0].Uid().c_str());
@@ -400,7 +373,6 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         double loss1;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "/// ### CNTK Dynamite:  %.6f sec\n");
-            //loss1 = GetValue(mbLoss)->AsScalar<float>();
 #if 1       // model update with Dynamite
             mbLoss.Backward(gradients);
             d_learner->Update(gradients, minibatchData[labelStreamInfo].numberOfSamples);
@@ -410,20 +382,10 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         fprintf(stderr, "Dynamite:    CrossEntropy loss = %.7f\n", loss1 / minibatchData[featureStreamInfo].numberOfSequences);
 #endif
 #if 1   // static CNTK
-        //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
         double crit;// = trainer->PreviousMinibatchLossAverage();
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "\\\\\\ ### CNTK Static:    %.6f sec\n");
             trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
-            //trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] },{ labels, minibatchData[labelStreamInfo] } }, device);
             crit = trainer->PreviousMinibatchLossAverage(); // note: this does the GPU sync
         }
         PrintTrainingProgress(trainer, repeats, /*outputFrequencyInMinibatches=*/ 1);
