@@ -76,7 +76,7 @@ namespace CNTK
 
                     if (input.IsOutput())
                     {
-                        auto retVal = FindTrainingSampleCountVar(input.OwnerPrimitive());
+                        auto retVal = FindTrainingSampleCountVar(input.OutputOwner());
                         if (retVal.second)
                             return retVal;
                     }

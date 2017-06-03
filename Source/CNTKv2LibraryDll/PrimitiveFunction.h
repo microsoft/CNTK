@@ -311,12 +311,9 @@ namespace CNTK
                 // known that it can never be part of a cycle.
                 if (input.IsOutput())
                 {
-                    const auto owner = input.OwnerPrimitive();
-                    if (!owner)
-                        LogicError("UpdateAcyclicReferences: Got an OutputVariable without owner??");
-                    auto prOwner = std::dynamic_pointer_cast<const PrimitiveFunction>(owner);
-                    if (prOwner->m_isKnownToBeAcyclic)
-                        input.m_acyclicOutputPrimitiveReference = std::move(prOwner);
+                    auto owner = input.OutputOwner();
+                    if (owner->m_isKnownToBeAcyclic)
+                        input.m_acyclicOutputPrimitiveReference = std::move(owner);
                     else
                         // If any input already is not guaranteed to be cyclic, this PrimitiveFunction is neither.
                         goto isAcyclic;

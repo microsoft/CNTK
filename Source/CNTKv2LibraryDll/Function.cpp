@@ -360,8 +360,8 @@ namespace CNTK
                     inputVar.m_outputComposite = nullptr;
                 }
 
-                if (inputVar.IsOutput() && (visitedFunctions.find(inputVar.OwnerPrimitive().get()) == visitedFunctions.end()))
-                    inputVar.OwnerPrimitive()->ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
+                if (inputVar.IsOutput() && (visitedFunctions.find(inputVar.OutputOwner().get()) == visitedFunctions.end()))
+                    inputVar.OutputOwner()->ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
             }
         }
 
@@ -430,7 +430,7 @@ namespace CNTK
             updated = true;
         }
 
-        if (currentOutputVar.OwnerPrimitive()->IsBlock())
+        if (currentOutputVar.OutputOwner()->IsBlock())
             currentOutputVar.m_dataFields->m_blockFunctionVariableMapping = newOutputVar.BlockFunctionVariableMapping();
 
         return updated;
@@ -471,7 +471,7 @@ namespace CNTK
         {
             if (input.IsOutput())
             {
-                auto owner = input.OwnerPrimitive().get();
+                auto owner = input.OutputOwner().get();
                 if (visitedFunctions.find(owner) == visitedFunctions.end())
                 {
                     outputsUsingNewInputs.clear();
@@ -756,9 +756,9 @@ namespace CNTK
                     assert(cloneeInput.IsOutput());
 
                     // If this is an already visited Function's output then we use a placeholder
-                    if (cloneMap.find(cloneeInput.OwnerPrimitive().get()) != cloneMap.end())
+                    if (cloneMap.find(cloneeInput.OutputOwner().get()) != cloneMap.end())
                     {
-                        if (cloneMap.at(cloneeInput.OwnerPrimitive().get()) == nullptr)
+                        if (cloneMap.at(cloneeInput.OutputOwner().get()) == nullptr)
                         {
                             // See if we already created a placeholder for this already visited Function's output
                             auto existingPlaceholderReplacement = std::find_if(placeholderReplacements.begin(), placeholderReplacements.end(), [cloneeInput](const std::pair<Variable, Variable>& placeholderReplacement) {
@@ -774,12 +774,12 @@ namespace CNTK
                                 clonedInput = existingPlaceholderReplacement->first;
                         }
                         else
-                            clonedInput = GetCorrespondingOutputVariableFromClone(cloneeInput, cloneeInput.OwnerPrimitive(), cloneMap.at(cloneeInput.OwnerPrimitive().get()));
+                            clonedInput = GetCorrespondingOutputVariableFromClone(cloneeInput, cloneeInput.OutputOwner(), cloneMap.at(cloneeInput.OutputOwner().get()));
                     }
                     else
                     {
-                        auto clonedFunction = Clone(cloneeInput.OwnerPrimitive(), parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements);
-                        clonedInput = GetCorrespondingOutputVariableFromClone(cloneeInput, cloneeInput.OwnerPrimitive(), clonedFunction);
+                        auto clonedFunction = Clone(cloneeInput.OutputOwner(), parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements);
+                        clonedInput = GetCorrespondingOutputVariableFromClone(cloneeInput, cloneeInput.OutputOwner(), clonedFunction);
                     }
                 }
             }
@@ -890,7 +890,7 @@ namespace CNTK
             {
                 std::unordered_set<FunctionPtr> owners;
                 for (auto replacementOutput : rootFunctionOutputReplacements)
-                    owners.insert(replacementOutput.OwnerPrimitive());
+                    owners.insert(replacementOutput.OutputOwner());
 
                 if ((owners.size() == 1) && *owners.begin())
                     return AsComposite(*owners.begin());
@@ -910,15 +910,15 @@ namespace CNTK
         {
             if (varPair.second.IsOutput())
             {
-                if (cloneMap.find(varPair.second.OwnerPrimitive().get()) != cloneMap.end())
-                    placeholderReplacements[varPair.first] = GetCorrespondingOutputVariableFromClone(varPair.second, varPair.second.OwnerPrimitive(), cloneMap.at(varPair.second.OwnerPrimitive().get()));
+                if (cloneMap.find(varPair.second.OutputOwner().get()) != cloneMap.end())
+                    placeholderReplacements[varPair.first] = GetCorrespondingOutputVariableFromClone(varPair.second, varPair.second.OutputOwner(), cloneMap.at(varPair.second.OutputOwner().get()));
                 else
                 {
                     // Check if any of the inputs or intermediate functions in the graph underneath the replacement
                     // are one of the cloned Functions or inputs; if so then we should clone the graph underneath
                     // this replacement too
                     std::unordered_set<FunctionPtr> visitedFunctions;
-                    auto visitedLeaves = CompositeFunction::DetermineInputs(varPair.second.OwnerPrimitive(), visitedFunctions);
+                    auto visitedLeaves = CompositeFunction::DetermineInputs(varPair.second.OutputOwner(), visitedFunctions);
                     std::unordered_map<Variable, Variable> cloningReplacementsForPlaceholderReplacement;
                     for (auto visitedLeaf : visitedLeaves)
                     {
@@ -938,10 +938,10 @@ namespace CNTK
 
                     if (!cloningReplacementsForPlaceholderReplacement.empty())
                     {
-                        auto replacementToClone = AsComposite(varPair.second.OwnerPrimitive());
+                        auto replacementToClone = AsComposite(varPair.second.OutputOwner());
                         auto replacementClone = replacementToClone->Clone(parameterCloneMethod, cloningReplacementsForPlaceholderReplacement);
                         replacementClones.insert(replacementClone);
-                        placeholderReplacements[varPair.first] = GetCorrespondingOutputVariableFromClone(varPair.second, varPair.second.OwnerPrimitive(), replacementClone->RootFunction());
+                        placeholderReplacements[varPair.first] = GetCorrespondingOutputVariableFromClone(varPair.second, varPair.second.OutputOwner(), replacementClone->RootFunction());
                     }
                 }
             }

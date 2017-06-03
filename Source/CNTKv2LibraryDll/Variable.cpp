@@ -69,14 +69,19 @@ namespace CNTK
         return m_dataFields->m_blockFunctionVariableMapping;
     }
 
-    PrimitiveFunctionPtr Variable::OwnerPrimitive() const 
+    PrimitiveFunctionPtr Variable::OutputOwner() const 
     {
-        return m_dataFields->Owner();
+        if (!IsOutput())
+            LogicError("OutputOwner: Must only be called on OutputVariables");
+        auto owner = m_dataFields->Owner();
+        if (!owner)
+            LogicError("OutputOwner: Got an OutputVariable without owner??");
+        return owner;
     }
 
     FunctionPtr Variable::Owner() const
     {
-        return OwnerPrimitive();
+        return m_dataFields->Owner();
     }
 
     bool Variable::OwnerIs(const Function* f) const
@@ -115,7 +120,7 @@ namespace CNTK
         if (Kind() != VariableKind::Output)
             LogicError("Variable '%S' SetOwner: Owner can only be set for Output Variables", AsString().c_str());
 
-        if (OwnerPrimitive() != nullptr)
+        if (!OwnerIs(nullptr))
             LogicError("Variable '%S' SetOwner: An Output Variable whose owner has previously been set, cannot be reset.", AsString().c_str());
 
         m_dataFields->m_ownerFunction = ownerFunction;
@@ -123,7 +128,7 @@ namespace CNTK
 
     Variable::operator FunctionPtr() const
     {
-        auto varOwner = OwnerPrimitive();
+        auto varOwner = Owner();
         if (varOwner)
             return AsComposite(varOwner, varOwner->Name());
         else
@@ -168,13 +173,10 @@ namespace CNTK
         // compute a knowable value if possible
         if (!m_dataFields->m_value)
         {
-            const auto& owner = OwnerPrimitive();
-            if (!owner)
-                LogicError("Variable '%S' Value(): Only Variables with owners can compute their Value.", AsString().c_str());
 #if 0
-            owner->MemoizeKnowableValue();
+            OutputOwner()->MemoizeKnowableValue();
 #else
-            dynamic_pointer_cast<PrimitiveFunction>(owner)->BatchedForward();
+            OutputOwner()->BatchedForward();
 #endif
         }
 
@@ -184,10 +186,7 @@ namespace CNTK
 
     void Variable::Backward(std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& gradients) const
     {
-        const auto& owner = OwnerPrimitive();
-        if (!owner)
-            LogicError("Variable '%S' Value(): Only Variables with owners can Backprop.", AsString().c_str());
-        dynamic_pointer_cast<PrimitiveFunction>(owner)->BatchedBackward(gradients);
+        OutputOwner()->BatchedBackward(gradients);
     }
 
     void Variable::SetValue(const NDArrayViewPtr& value)

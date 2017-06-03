@@ -121,7 +121,7 @@ namespace CNTK
                 // check if this input corresponds to a cyclic edge in the graph.
                 // BUG: A function being visited twice does not indicate it being a cyclic edge in the graph.
                 // It just means there are at least 2 successors in the graph that have the function as input
-                bool mustBeReplaced = input.IsOutput() && (visitedFunctions.find(input.OwnerPrimitive()) != visitedFunctions.end());
+                bool mustBeReplaced = input.IsOutput() && (visitedFunctions.find(input.OutputOwner()) != visitedFunctions.end());
 
                 if (mustBeReplaced)
                 {
@@ -548,8 +548,7 @@ namespace CNTK
     {
         Variable mappingVariable = variable;
 
-        auto ownerFunc = variable.IsOutput() ? variable.OwnerPrimitive().get() : nullptr;
-        auto ownerPrimitiveFunc = dynamic_cast<PrimitiveFunction*>(ownerFunc);
+        auto ownerPrimitiveFunc = variable.IsOutput() ? variable.OutputOwner().get() : nullptr;
         if (ownerPrimitiveFunc && (ownerPrimitiveFunc->OpType() == PrimitiveOpType::NoOp))
             mappingVariable = ownerPrimitiveFunc->Inputs()[0];
 
@@ -563,15 +562,14 @@ namespace CNTK
     {
         Variable mappingVariable = variable;
 
-        auto ownerFunc = variable.IsOutput() ? variable.OwnerPrimitive().get() : nullptr;
-        auto ownerPrimitiveFunc = dynamic_cast<PrimitiveFunction*>(ownerFunc);
+        auto ownerPrimitiveFunc = variable.IsOutput() ? variable.OutputOwner().get() : nullptr;
         if (ownerPrimitiveFunc)
         {
             if (ownerPrimitiveFunc->OpType() == PrimitiveOpType::NoOp)
                 mappingVariable = GetMappingForNoOpOutput(variable);
             else
             {
-                auto ownerBlockFunc = dynamic_cast<BlockFunction*>(ownerFunc);
+                auto ownerBlockFunc = dynamic_cast<BlockFunction*>(ownerPrimitiveFunc);
                 if (ownerBlockFunc)
                     mappingVariable = ownerBlockFunc->CompositeOutputsMap().at(variable);
             }
@@ -1116,7 +1114,7 @@ namespace CNTK
     {
         assert(variable.IsOutput());
 
-        Function* function = variable.OwnerPrimitive().get();
+        Function* function = variable.OutputOwner().get();
         ComputationNodeBasePtr computationNodePtr;
         auto& functionInputs = function->m_inputs;
 
@@ -1231,7 +1229,7 @@ namespace CNTK
         PatchBlockArgumentsAndOutputsMapping = [&variableToNodeMap, &PatchBlockArgumentsAndOutputsMapping](const Variable& var) {
             if (var.IsOutput())
             {
-                BlockFunction* blockFunction = dynamic_cast<BlockFunction*>(var.OwnerPrimitive().get());
+                BlockFunction* blockFunction = dynamic_cast<BlockFunction*>(var.OutputOwner().get());
                 if (blockFunction)
                 {
                     PostorderTraverseVariables(blockFunction->BlockRoot(), PatchBlockArgumentsAndOutputsMapping);
@@ -1291,7 +1289,7 @@ namespace CNTK
             if (std::find(currentComputationNodeInputs.begin(), currentComputationNodeInputs.end(), nullptr) != currentComputationNodeInputs.end())
             {
                 // This ComputationNode has at least one null input which now needs to be properly attached
-                const PrimitiveFunction* primitiveFunc = dynamic_cast<const PrimitiveFunction*>(currentVar.OwnerPrimitive().get());
+                const PrimitiveFunction* primitiveFunc = currentVar.OutputOwner().get();
 
                 // Skip block primitives since they do not directly map to a computation node
                 if (primitiveFunc->OpType() == PrimitiveOpType::Block)
@@ -1725,7 +1723,7 @@ namespace CNTK
             auto sanitizedOutput = output.NonCompositePreservingCopy();
 
             if (sanitizedOutput.IsOutput())
-                ExecVars().m_perOutputVarArgumentDependencies[sanitizedOutput] = AsComposite(sanitizedOutput.OwnerPrimitive())->Arguments();
+                ExecVars().m_perOutputVarArgumentDependencies[sanitizedOutput] = AsComposite(sanitizedOutput.OutputOwner())->Arguments();
             else if (sanitizedOutput.IsParameter() || sanitizedOutput.IsConstant())
                 ExecVars().m_perOutputVarArgumentDependencies[sanitizedOutput] = {};
             else
@@ -1947,7 +1945,7 @@ namespace CNTK
             if (!var.IsOutput())
                 continue;
 
-            auto function = var.OwnerPrimitive();
+            auto function = var.OutputOwner();
 
             if (function->m_dirtyAttributes.empty())
                 continue;

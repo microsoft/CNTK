@@ -1936,7 +1936,7 @@ namespace CNTK
         CNTK_API Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid);
 
 private:
-        PrimitiveFunctionPtr OwnerPrimitive() const; // version with more restricted type for internal use
+        PrimitiveFunctionPtr OutputOwner() const; // for Outputs only; can never return null
         bool OwnerIs(const Function* f) const; // faster than saying Owner() == ...
 
         CNTK_API const Variable& BlockFunctionVariableMapping() const;

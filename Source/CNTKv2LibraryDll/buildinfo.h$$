@@ -1,8 +1,8 @@
 #ifndef _BUILDINFO_H 
 #define _BUILDINFO_H 
 #define _GIT_EXIST 
-#define _BUILDBRANCH_  "fseide/complexity"      
-#define _BUILDSHA1_    "511addaa70a7751c820abcd08f418b2b4743af50 (modified)"
+#define _BUILDBRANCH_  "fseide/dynamite"      
+#define _BUILDSHA1_    "fb8c7fcf00bd06aec08ee31d3ea078858a589fc7 (modified)"
 #define _MATHLIB_ "mkl"
 #define _BUILDER_ "fseide"     
 #define _BUILDMACHINE_ "fseide-sb"    
