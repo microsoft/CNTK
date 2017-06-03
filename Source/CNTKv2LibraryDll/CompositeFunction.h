@@ -250,7 +250,7 @@ namespace CNTK
         CompositeFunction(const FunctionPtr& rootFunction, FastFunctionCollectionPtr&& allPrimitiveFunctions, const std::wstring& name,
                           const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
             : Function({}, Dictionary(), rootFunction, name, uid),
-            m_allPrimitiveFunctionsHolder(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
+            m_allPrimitiveFunctionsHolder(std::move(allPrimitiveFunctions))
         {}
 
         std::vector<Variable> DetermineInputs(bool pythonOperandOrder = false) const
@@ -367,31 +367,31 @@ namespace CNTK
 
         void ClearExistingOutputOrGradientStorageReferences()
         {
-            for (auto& existingStorageWeakReference : m_existingNetworkStorageReferences)
+            for (auto& existingStorageWeakReference : V1InteropState().m_existingNetworkStorageReferences)
             {
                 auto existingStorageReference = existingStorageWeakReference.lock();
                 if (existingStorageReference)
                     existingStorageReference->Erase();
             }
 
-            m_existingNetworkStorageReferences.clear();
+            V1InteropState().m_existingNetworkStorageReferences.clear();
         }
 
         void PurgeComputationNetwork()
         {
-            m_currentBackpropRoots.clear();
-            m_inputsExcludedFromGradientComputation.clear();
-            m_variableToNodeMap.clear();
-            m_currentOutputsToEvaluate.clear();
-            m_lastRecordedTimeStamps.clear();
+            V1InteropState().m_currentBackpropRoots.clear();
+            V1InteropState().m_inputsExcludedFromGradientComputation.clear();
+            V1InteropState().m_variableToNodeMap.clear();
+            V1InteropState().m_currentOutputsToEvaluate.clear();
+            V1InteropState().m_lastRecordedTimeStamps.clear();
 
-            m_networkMatricesAllocated = false;
-            m_computationNetwork = nullptr;
+            V1InteropState().m_networkMatricesAllocated = false;
+            V1InteropState().m_computationNetwork = nullptr;
         }
 
         void RecordRefVariableUpdates()
         {
-            for (auto refVar : m_refVariables)
+            for (auto refVar : V1InteropState().m_refVariables)
                 refVar.IsParameter() ? Parameter(refVar).RecordValueUpdate() : Constant(refVar).RecordValueUpdate();
         }
 
@@ -401,39 +401,57 @@ namespace CNTK
         // by holding strong references to them
         FastFunctionCollectionPtr m_allPrimitiveFunctionsHolder;
 
-        // A map from Variable objects to ComputationNode objects in the ComputationNetwork instance that implements 'this' Composite Function
-        std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_variableToNodeMap;
+        // all variables for V1 evaluation are in a sub-structure
+        // because those sets cause multiple mallocs() for every composite we create
+        struct V1InteropStateVars
+        {
+            // A map from Variable objects to ComputationNode objects in the ComputationNetwork instance that implements 'this' Composite Function
+            std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_variableToNodeMap;
 
-        std::unordered_map<Variable, Variable> m_fullyDefinedArgumentsMap;
-        FunctionPtr m_latestFullyDefinedCompositeForCheckedModeValidation;
+            std::unordered_map<Variable, Variable> m_fullyDefinedArgumentsMap;
+            FunctionPtr m_latestFullyDefinedCompositeForCheckedModeValidation;
 
-        Microsoft::MSR::CNTK::ComputationNetworkPtr m_computationNetwork;
+            Microsoft::MSR::CNTK::ComputationNetworkPtr m_computationNetwork;
 
-        // Map to keep track of any references to network output/gradient storage handed out so far
-        std::vector<PackedValueWeakPtr> m_existingNetworkStorageReferences;
+            // Map to keep track of any references to network output/gradient storage handed out so far
+            std::vector<PackedValueWeakPtr> m_existingNetworkStorageReferences;
 
-        // The backpropRoots specified in the most recent 'Forward' call on 'this' Function.
-        // This indicates for which of its roots has 'this' Function retained required intermediate 
-        // states from the previos Forward call to be able to backpropagate gradients backwards from in
-        // the next 'Backward' call.
-        std::unordered_set<Variable> m_currentBackpropRoots;
+            // The backpropRoots specified in the most recent 'Forward' call on 'this' Function.
+            // This indicates for which of its roots has 'this' Function retained required intermediate 
+            // states from the previos Forward call to be able to backpropagate gradients backwards from in
+            // the next 'Backward' call.
+            std::unordered_set<Variable> m_currentBackpropRoots;
 
-        // Outputs to evaluate are the list of outputs that the forward pass need to evaluate. m_currentOutputsToEvaluate
-        // will store this list, from the last forward pass call, only in training mode. The reason for that
-        // is to run PostForwardAndBackProp after backprop phase finish.
-        std::vector<Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_currentOutputsToEvaluate;
+            // Outputs to evaluate are the list of outputs that the forward pass need to evaluate. m_currentOutputsToEvaluate
+            // will store this list, from the last forward pass call, only in training mode. The reason for that
+            // is to run PostForwardAndBackProp after backprop phase finish.
+            std::vector<Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_currentOutputsToEvaluate;
 
-        std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
+            std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
 
-        std::unordered_set<Variable> m_refVariables;
+            std::unordered_set<Variable> m_refVariables;
 
-        bool m_networkMatricesAllocated;
+            bool m_networkMatricesAllocated = false;
 
-        std::unordered_set<Variable> m_allNetworkRoots;
+            std::unordered_set<Variable> m_allNetworkRoots;
 
-        std::unordered_map<Variable, size_t> m_lastRecordedTimeStamps;
+            std::unordered_map<Variable, size_t> m_lastRecordedTimeStamps;
 
-        std::unordered_set<Variable> m_inputsExcludedFromGradientComputation;
+            std::unordered_set<Variable> m_inputsExcludedFromGradientComputation;
+        };
+        mutable std::unique_ptr<V1InteropStateVars> m_v1InteropState; // the actual object is created lazily on demand
+        V1InteropStateVars& V1InteropState()
+        {
+            if (!m_v1InteropState)
+                m_v1InteropState = std::make_unique<V1InteropStateVars>();
+            return *m_v1InteropState;
+        }
+        const V1InteropStateVars& V1InteropState() const
+        {
+            if (!m_v1InteropState)
+                m_v1InteropState = std::make_unique<V1InteropStateVars>();
+            return *m_v1InteropState;
+        }
 
         // Version history:
         // 1 -- initial version.

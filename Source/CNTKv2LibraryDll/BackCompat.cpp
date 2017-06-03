@@ -633,14 +633,14 @@ namespace CNTK
             compositeFunction->UpdateInternalState();
 
             DeviceDescriptor device = DeviceDescriptor::CPUDevice();
-            if (compositeFunction->m_computationNetwork == nullptr)
+            if (compositeFunction->V1InteropState().m_computationNetwork == nullptr)
             {
                 auto parameters = compositeFunction->Parameters();
                 if (!parameters.empty())
                     device = parameters.front().Value()->Device();
             }
             else
-                device = AsDeviceDescriptor(compositeFunction->m_computationNetwork->GetDeviceId());
+                device = AsDeviceDescriptor(compositeFunction->V1InteropState().m_computationNetwork->GetDeviceId());
 
             // We create a fresh computation network for the compositeFunction for the save since we want the underlying
             // computation network to have mangled names for the ComputationNodes such that when the V1 model is deserialized,
