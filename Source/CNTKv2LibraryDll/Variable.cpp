@@ -69,7 +69,12 @@ namespace CNTK
         return m_dataFields->m_blockFunctionVariableMapping;
     }
 
-    /*Primitive*/FunctionPtr Variable::Owner() const 
+    PrimitiveFunctionPtr Variable::Owner() const 
+    {
+        return m_dataFields->Owner();
+    }
+
+    /*Primitive*/FunctionPtr Variable::OwnerAsFunction() const
     {
         return m_dataFields->Owner();
     }

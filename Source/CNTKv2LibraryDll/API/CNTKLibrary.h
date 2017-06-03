@@ -1873,7 +1873,9 @@ namespace CNTK
         /// Returns the a strong reference to the Function object which 'this' variable is an output of.
         /// Returns null when called for a Variable that is not of 'Output' VariableKind.
         ///
-        CNTK_API /*Primitive*/FunctionPtr Owner() const;
+        CNTK_API PrimitiveFunctionPtr Owner() const;
+        // using this ugly name until we have fixed the uses
+        CNTK_API /*Primitive*/FunctionPtr OwnerAsFunction() const;
 
         ///
         /// Checks whether the owner is the passed object (which may be nullptr).
@@ -3510,9 +3512,9 @@ namespace CNTK
             std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
             for (const auto& rootInput : rootFunctionInputs)
             {
-                if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
+                if (rootInput.IsOutput() && visitedFunctions.find(rootInput.OwnerAsFunction()) == visitedFunctions.end())
                 {
-                    const auto& function = rootInput.Owner();
+                    const auto& function = rootInput.OwnerAsFunction();
                     PreorderTraverseFunctions(function, visitedFunctions, functor, traverseInsideBlockFunction);
                 }
             }
