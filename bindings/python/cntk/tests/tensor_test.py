@@ -46,6 +46,7 @@ def test_ndarrayview_operators(device_id, precision):
     from cntk.ops.tests.ops_test_utils import cntk_device
     from cntk.ops import input_variable, sigmoid, tanh, relu, exp, reduce_sum, reduce_log_sum_exp, reshape
     from ..cntk_py import Variable
+    from cntk import NDArrayView
 
     def test(what, args, rtol=0, atol=0):
         args = [arg.astype(precision, copy=True) for arg in args]

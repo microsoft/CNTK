@@ -4,6 +4,7 @@
 //
 
 // This implements SequenceClassification.py as an example in CNTK Dynamite.
+// Both CNTK Static and CNTK Dynamite are run in parallel to show that both produce the same result.
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 

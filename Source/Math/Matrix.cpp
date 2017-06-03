@@ -831,37 +831,45 @@ void Matrix<ElemType>::CopyColumnsStrided(const Matrix<ElemType>& fromMatrix, si
 }
 
 template <class ElemType>
-void Matrix<ElemType>::GatherBatch(const std::function<shared_ptr<Matrix<ElemType>>(size_t)>& inputs)
+void Matrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::function<const Matrix<ElemType>&(size_t)>& inputs)
 {
-    let input0 = inputs(0);
-    let numItems = GetNumCols() / input0->GetNumCols();
-    if (numItems * input0->GetNumCols() != GetNumCols())
-        InvalidArgument("GatherBatch: Number of output columns is incompatible with the first input.");
-    if (GetNumRows() != input0->GetNumRows())
-        InvalidArgument("GatherBatch: First input is incompatible with output.");
-
-    // we dispatch on the first input (determines where the operation will run)
-    // Output will be generated there; all other inputs must be on the same device.
-    DISPATCH_MATRIX_ON_FLAG(input0, this,
+    // This concatenates all matrices of the inputs, where each matrix is first reshaped to numRows rows.
+    // This function is only meant to support TensorView::GatherBatch().
+    // Output will be on the same device as the first input.
+    if (numRows == 0 && numInputs != 0)
+        InvalidArgument("GatherBatch: The numRows parameter must not be 0 unless the result is empty.");
+    let& input0 = inputs(0);
+    DISPATCH_MATRIX_ON_FLAG(&input0, this,
         {
-            // CPU version: copying naively is fine
-            // TODO: do we need to switch it to CPU first; or verify whether SetColumnSlice() did?
-            for (auto i = 0; i < numItems; i++)
+            // CPU version: just copy with memcpy()
+            // We could speed this up by first creating a pointer array, and then parallelizing the actual copy operations.
+            ElemType* dst = m_CPUMatrix->Buffer();            // copy to here...
+            size_t spaceLeft = m_CPUMatrix->GetNumElements(); // ...this many elements in total
+            for (size_t i = 0; i < numInputs; i++)
             {
-                let input = (i == 0) ? input0 : inputs(i);
-                if (input->GetNumRows() != input0->GetNumRows() || input->GetNumCols() != input0->GetNumCols())
-                    InvalidArgument("GatherBatch: All inputs must have the same dimensions.");
-                let numInCols = input0->GetNumCols();
-                SetColumnSlice(*input, i * numInCols, numInCols);
+                let& input = inputs(i);
+                input._transferToDevice(CPU); // make sure the input is actually on the CPU
+                let* src = input.m_CPUMatrix->Buffer(); // copy from here...
+                let  num = input.GetNumElements();      // ...this many elements
+                if (num % numRows != 0)
+                    InvalidArgument("GatherBatch: All inputs must be reshapable to have numRows (%d).", (int)numRows);
+                if (spaceLeft < num) // size mismatch
+                    InvalidArgument("GatherBatch: Total number of input elements must be equal to number of output elements.");
+                memcpy(dst, src, num * sizeof(ElemType));
+                dst += num;
+                spaceLeft -= num;
             }
+            if (spaceLeft != 0)
+                InvalidArgument("GatherBatch: Total number of input elements must be equal to number of output elements.");
         },
         {
             // GPU version: perform as a singe CUDA launch
-            m_GPUMatrix->GatherBatch([&](size_t i) -> shared_ptr<GPUMatrix<ElemType>>
+            let outputDeviceId = GetPreferredDeviceId();
+            m_GPUMatrix->GatherBatch(numRows, numInputs, [&](size_t i) -> GPUMatrix<ElemType>&
             {
-                let input = (i == 0) ? input0 : inputs(i);
-                // TODO: check device or move
-                return input->m_GPUMatrix;
+                let& input = inputs(i);
+                input._transferToDevice(outputDeviceId); // make sure the input is actually on the right GPU
+                return *input.m_GPUMatrix;
             });
         },
         { NOT_IMPLEMENTED; },

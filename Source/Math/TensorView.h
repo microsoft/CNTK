@@ -156,13 +156,14 @@ public:
     void AddMatrixProductOf   (           bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
 
     // -------------------------------------------------------------------
-    // gather batch -- splice multiple TensorViews into a batch
-    // Result overwrites 'this'. 'this' must have at least one extra trailing axis, which becomes the batch axis.
+    // gather batch -- splice multiple TensorViews into a batch along an output axis.
+    // Result overwrites 'this'. 'axis' must be the last axis.
     // Instead of passing TensorView objects, a functor is passed, to avoid an unnecessary malloc().
-    // For efficient interop with NDArrayView, tensor shapes may have additional padded 1-dimensions.
+    // If inputs have less axes than output, 1-dims will be padded.
+    // Otherwise, they will be concatenated along their last axis.
     // -------------------------------------------------------------------
 
-    void DoGatherBatchOf(const std::function<const TensorView&(size_t)>& inputs);
+    void DoGatherBatchOf(size_t numInputs, const std::function<const TensorView&(size_t)>& inputs);
 
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
     const TensorShape& GetShape() const { return m_shape; }

@@ -363,7 +363,7 @@ class Variable::Memoize
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
         // logging
-#define LOGGING
+#undef LOGGING
 #ifdef LOGGING
         fprintf(stderr, "%S%S = %S(", f.Uid().c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
         for (size_t i = 0; i < inputs.size() && i < 4; i++)

@@ -398,7 +398,9 @@ class NDArrayViewOpsMixin(object):
     def splice(*args, axis=-1, out=None): # negative axis will insert a new axis
         # TODO: rename this to reflect its limited functionality
         # BUGBUG: axis=-1 conflicts with numpy's meaning, which will reference from the end. Maybe use None instead?
-        axis = len(args[0].shape) - 1 - axis # swap to C++ API convention
+        #         But it also seems that numpy.concatenate does not allow to batch a long a new axis.
+        #         To create a new axis, numpy has numpy.stack().
+        axis = len(args[0].shape) - 1 - axis # swap to C++ API convention --TODO: put this instead into the derived Python class
         res = NDArrayView.gather_batch(args, axis, out)
         res.__class__ = args[0].__class__
         return res

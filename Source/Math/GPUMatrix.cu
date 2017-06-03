@@ -662,7 +662,7 @@ template <size_t N, class ElemType>
 class GatherMemcpyPointerArray
 {
     size_t numElements;
-    ElemType* pointers[N];
+    const ElemType* pointers[N];
 public:
     // reading out data
     __device__ __host__ size_t size() const { return (size_t)numElements; }
@@ -679,7 +679,7 @@ public:
     GatherMemcpyPointerArray() { clear(); }
     size_t capacity() const { return N; }
     void clear() { numElements = 0; }
-    void push_back(ElemType* p)
+    void push_back(const ElemType* p)
     {
         assert(numElements < (CUDA_LONG)N);
         pointers[numElements++] = p;
@@ -697,33 +697,34 @@ struct AsRef
         return reinterpret_cast<const GatherMemcpyPointerArray<Nother, ElemType>&>(other);
     }
 };
+// Kernel to copy inputPointers.size() vectors of length numRows into consecutive output locations starting at dstPtr.
 // This kernel expects to be called for NN/GATHER_LOCAL_LOOPS times, and performs GATHER_LOCAL_LOOPS local loops
 // instead. This is to mitigate the overhead of copying those many pointers.
 template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
-__global__ void _gatherMemcpy(ElemType* outData, GatherMemcpyPointerArray<N, ElemType> inputPointers, const CUDA_LONG inputSize)
+__global__ void _gatherMemcpy(ElemType* dstPtr, GatherMemcpyPointerArray<N, ElemType> inputPointers, const CUDA_LONG numRows)
 {
     const CUDA_LONG threadId = blockDim.x * blockIdx.x + threadIdx.x;
     const CUDA_LONG id0 = threadId * GATHER_LOCAL_LOOPS;
     // values cached across loop iterations
     const ElemType* inputPointer;
     CUDA_LONG prevCol;   // value of 'col' in previous loop iteration
-    CUDA_LONG colOffset; // cached value of col * inputSize
+    CUDA_LONG colOffset; // cached value of col * numRows
 #pragma unroll
     for (CUDA_LONG i = 0; i < GATHER_LOCAL_LOOPS; i++)
     {
         const CUDA_LONG id = id0 + i;
-        const CUDA_LONG col = id / inputSize; // thread grid is organized as concatenation of columns
+        const CUDA_LONG col = id / numRows; // thread grid is organized as concatenation of columns
         if (col >= inputPointers.size())
             return;
         // both the pointer lookup and the offset computation (int mul) are not cheap, so cache them across loop iterations
         if (i == 0 || col != prevCol)
         {
-            colOffset = col * inputSize;
+            colOffset = col * numRows;
             inputPointer = inputPointers[col];
         }
         const CUDA_LONG row = id - colOffset;
-        //outData[IDX2C(row, col, inputSize)] = inputPointer[row];
-        outData[colOffset + row] = inputPointer[row];
+        //dstPtr[IDX2C(row, col, numRows)] = inputPointer[row];
+        dstPtr[colOffset + row] = inputPointer[row];
         prevCol = col;
     }
 }
@@ -732,73 +733,86 @@ __global__ void _gatherMemcpy(ElemType* outData, GatherMemcpyPointerArray<N, Ele
 static const size_t maxPtrArgsP2 = (4096 / sizeof(void*)); // max bytes for function args in CUDA 8 is 4k
 static const size_t maxPtrArgs   = maxPtrArgsP2 - 10; // max args: leave some margin
 template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
-void GatherMemcpy(ElemType* outData, const GatherMemcpyPointerArray<maxPtrArgs, ElemType>& inputPointersBuffer, size_t inputSize)
+static void GatherMemcpy(ElemType* dstPtr, const GatherMemcpyPointerArray<maxPtrArgs, ElemType>& inputPointersBuffer, size_t numRows)
 {
 #if 1
     let& inputPointersArray = AsRef<N>::AsRef1(inputPointersBuffer);
-    let numElements = inputPointersArray.size() * inputSize;
+    let numElements = inputPointersArray.size() * numRows;
     let NN = CeilDiv(numElements, GATHER_LOCAL_LOOPS); // we do GATHER_LOCAL_LOOPS in each thread launch (thread launches seem expensive)
     GridDim grid(NN);
     SyncGuard syncGuard;
-    _gatherMemcpy<N, GATHER_LOCAL_LOOPS, ElemType> <<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(outData, inputPointersArray, (CUDA_LONG)inputSize);
+    _gatherMemcpy<N, GATHER_LOCAL_LOOPS, ElemType> <<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(dstPtr, inputPointersArray, (CUDA_LONG)numRows);
 #else
     // naive reference implementation
     for (size_t j = 0; j < numInputPointers; j++)
-        CUDA_CALL(cudaMemcpy(outData + inputSize * j, inputPointers[j], sizeof(ElemType) * inputSize, cudaMemcpyDeviceToDevice));
+        CUDA_CALL(cudaMemcpy(dstPtr + numRows * j, inputPointers[j], sizeof(ElemType) * numRows, cudaMemcpyDeviceToDevice));
 #endif
 }
 
 // GatherBatch() batches many independent inputs into one output tensor
 template <class ElemType>
-void GPUMatrix<ElemType>::GatherBatch(const std::function<shared_ptr<GPUMatrix<ElemType>>(size_t)>& inputs)
+void GPUMatrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::function<GPUMatrix<ElemType>&(size_t)>& inputs)
 {
-    let input0 = inputs(0); // TODO: can we avoid the extra shared_ptr and just get a const&? (did not work initially)
-    let numItems = GetNumCols() / input0->GetNumCols();
-    if (numItems * input0->GetNumCols() != GetNumCols())
-        InvalidArgument("GatherBatch: Number of output columns is incompatible with the first input.");
-    if (GetNumRows() != input0->GetNumRows())
-        InvalidArgument("GatherBatch: First input is incompatible with output.");
-
-    let numInCols = input0->GetNumCols();
-    let inputSize = m_numRows * numInCols;
+    PrepareDevice();
     GatherMemcpyPointerArray<maxPtrArgs, ElemType> inputPointerBuffer; // leave some space fro extra function args
-    size_t chunkSize = maxPtrArgsP2; // max number of pointers to pass in a single CUDA launch
-    size_t i1;
-    for (auto i0 = 0; i0 < numItems; i0 += inputPointerBuffer.size()) // we hop through the indices in chunks
+    // output matrix iterator
+    ElemType* dstPtr  = Data();
+    size_t    dstLeft = GetNumElements();
+    // inputs iterator
+    const ElemType* srcPtr = nullptr; // pointer to the next column to copy from current input
+    size_t srcLeft = 0;               // #elements left to copy from current input
+    size_t nextInput = 0; // index of next unconsumed input
+    // go over all inputs and outputs, a complicated dance of iterators...
+    inputPointerBuffer.clear();
+    while (dstLeft > 0)
     {
-        // We do this in chunks so that we can pass a chunk of pointers through the CUDA kernel's argument list.
-        // The alternative, passing all pointers through a memory buffer, will require resource lifetime
-        // management tied to when the CUDA kernel completes, which is much harder to implement, so for now try this.
-        while (numItems - i0 <= chunkSize / 2)
-            chunkSize = chunkSize / 2; // use next smaller kernel, to save transfer time and memory
-        i1 = min(i0 + min(chunkSize, inputPointerBuffer.capacity()), numItems); // collect input pointers up to this
-        inputPointerBuffer.clear();
-        for (size_t i = i0; i < i1; i++) // collect up input pointers
+        if (dstLeft < numRows) // enough space for one more column?
+            InvalidArgument("GatherBatch: Total number of input elements must be equal to number of output elements.");
+        // pull the next input if needed
+        while (srcLeft == 0) // (use while since input may have 0 columns)
         {
-            let input = (i == 0) ? input0 : inputs(i);
-            if (input->GetNumRows() != input0->GetNumRows() || input->GetNumCols() != input0->GetNumCols())
-                InvalidArgument("GatherBatch: All inputs must have the same dimensions.");
-            inputPointerBuffer.push_back(input->Data());
+            if (nextInput >= numInputs) // running out of input data?
+                InvalidArgument("GatherBatch: Total number of input elements must be equal to number of output elements.");
+            let& input = inputs(nextInput++); // consume the next input
+            srcPtr  = input.Data();
+            srcLeft = input.GetNumElements();
+            if (srcLeft % numRows != 0)
+                InvalidArgument("GatherBatch: All inputs must be reshapable to have numRows (%d) rows.", (int)numRows);
         }
-        // now copy all inputs we have collected in inputPointerBuffer
-        let startColumn = i0 * numInCols;
-        auto* outData = Data() + LocateColumn(startColumn);
-        PrepareDevice();
-        switch (chunkSize)
+        // queue the next column copy
+        inputPointerBuffer.push_back(srcPtr);
+        srcPtr  += numRows;
+        srcLeft -= numRows; // (we have verified elsewhere that srcLeft and dstLeft >= numRows)
+        dstLeft -= numRows;
+        // if buffer is full then perform a batch copy op
+        if (inputPointerBuffer.size() == inputPointerBuffer.capacity())
         {
-        case 1:          GatherMemcpy<         1,  1, ElemType>(outData, inputPointerBuffer, inputSize); break;
-        case 2:          GatherMemcpy<         2,  2, ElemType>(outData, inputPointerBuffer, inputSize); break;
-        case 4:          GatherMemcpy<         4,  4, ElemType>(outData, inputPointerBuffer, inputSize); break;
-        case 8:          GatherMemcpy<         8,  8, ElemType>(outData, inputPointerBuffer, inputSize); break;
-        case 16:         GatherMemcpy<        16,  8, ElemType>(outData, inputPointerBuffer, inputSize); break;
-        case 32:         GatherMemcpy<        32,  8, ElemType>(outData, inputPointerBuffer, inputSize); break;
-        case 64:         GatherMemcpy<        64,  8, ElemType>(outData, inputPointerBuffer, inputSize); break;
-        case 128:        GatherMemcpy<       128,  8, ElemType>(outData, inputPointerBuffer, inputSize); break;
-        case 256:        GatherMemcpy<       256,  8, ElemType>(outData, inputPointerBuffer, inputSize); break;
-        case maxPtrArgs: GatherMemcpy<maxPtrArgs,  8, ElemType>(outData, inputPointerBuffer, inputSize); break;
-        default: LogicError("GatherBatch: Missed a case.");
+            let n = inputPointerBuffer.size() * numRows; // number of elements to copy in this chunk
+            GatherMemcpy<maxPtrArgs, 8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+            dstPtr  += n;
+            inputPointerBuffer.clear();
         }
     }
+    if (nextInput != numInputs || srcLeft != 0) // consumed all inputs?
+        InvalidArgument("GatherBatch: Total number of input elements must be equal to number of output elements.");
+    // now do the last chunk. For the last one, we may use smaller chunk size
+    let colsLeft = inputPointerBuffer.size();
+    if      (colsLeft == 0) {}
+    else if (colsLeft <= 1)          GatherMemcpy<         1,  1, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 2)          GatherMemcpy<         2,  2, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 4)          GatherMemcpy<         4,  4, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 8)          GatherMemcpy<         8,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 16)         GatherMemcpy<        16,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 24)         GatherMemcpy<        24,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 32)         GatherMemcpy<        32,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 48)         GatherMemcpy<        48,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 64)         GatherMemcpy<        64,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 96)         GatherMemcpy<        96,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 128)        GatherMemcpy<       128,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 192)        GatherMemcpy<       192,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 256)        GatherMemcpy<       256,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= maxPtrArgs) GatherMemcpy<maxPtrArgs,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else LogicError("GatherBatch: We should have flushed inside the loop, but somehow didn't??");
 }
 
 //for each column of a, we assign all rows of a to this starting from startIndex

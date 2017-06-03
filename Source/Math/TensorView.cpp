@@ -422,45 +422,34 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
 // -------------------------------------------------------------------
 
 template <class ElemType>
-void TensorView<ElemType>::DoGatherBatchOf(const std::function<const TensorView&(size_t)>& inputs)
+void TensorView<ElemType>::DoGatherBatchOf(size_t numInputs, const std::function<const TensorView&(size_t)>& inputs)
 {
-    // This is implemented by assigning matrix column slices. So we first must bring our shapes into the right form.
-    // The mapping to matrix shapes is driven by the first input.
-    // The output matrix shape will that of the first input's concatenated numItems times.
-    // This dance is done so that we can batch sparse vectors and even sparse ND objects one day.
-    // (We can't right now since the underlying Matrix function will not yet implement the sparse version.)
-    // (As a consequence, it will not work with strided TensorViews. If that is needed, please implement it using tensor assignments.)
+    // Batches inputs along the last axis of outputs.
+    // The output matrix shape must be that of the first input's (1-padded to output rank),
+    // with the last dimension replaced by the sum over all inputs.
+    // At present, this will not work with strided TensorViews. If that is needed, please implement it using tensor assignments.
     if (m_shape.GetRank() == 0)
-        InvalidArgument("DoGatherBatchOf: Output must have a batch dimension that is equal to the number of items to batch.");
-    let numItems = m_shape[m_shape.GetRank() - 1]; // last axis of output is batch dimension
-    // check dimensions --TODO: This check is a bit too permissive. Fix this one day.
-    let& input0 = inputs(0);
-    if (input0.m_shape.GetNumElements() * numItems != m_shape.GetNumElements())
-        InvalidArgument("DoGatherBatchOf: Output must have a batch dimension that is equal to the number of items to batch.");
-    // create a matrix view for the output that is the same as numItems inputs as matrix concatenated
-    let input0AsMatrix = input0.AsMatrix();
-    auto outputReshaped = Reshaped(TensorShape(input0AsMatrix->GetNumRows(), input0AsMatrix->GetNumCols() * numItems));
-    auto outputAsMatrix = outputReshaped.AsMatrix();
-    outputAsMatrix->GatherBatch([&](size_t i) -> shared_ptr<Matrix<ElemType>> // TODO: why not just pass the storage object?
+        InvalidArgument("DoGatherBatchOf: Output cannot be a scalar.");
+    let numRows = m_shape.GetNumElements() / m_shape.GetDims().back();
+    GetSOB().GatherBatch(numRows, numInputs, [&](size_t i) -> const Matrix<ElemType>&
     {
-        let& input = (i == 0) ? input0 : inputs(i); // (only call each one once, avoid assumptions on statefulness)
-        if (input.m_shape != input0.m_shape)
-            InvalidArgument("DoGatherBatchOf: All inputs must have the same shape. Input %d has shape %s vs. Input 0's shape of %s.",
-                            (int)i, string(input.m_shape).c_str(), string(input0.m_shape).c_str());
-        return input.AsMatrix();
+        let& input = inputs(i); // (only call each one once, avoid assumptions on statefulness)
+        // dimension check
+        if (input.m_shape.GetRank() > m_shape.GetRank())
+            InvalidArgument("DoGatherBatchOf: Input %d's shape %s has more axes than the output shape %s.",
+                            (int)i, string(input.m_shape).c_str(), string(m_shape).c_str());
+        let n = min(input.m_shape.GetRank(), m_shape.GetRank() - 1);
+        for (size_t k = 0; k < n; k++)
+            if (input.m_shape[k] != m_shape[k])
+                InvalidArgument("DoGatherBatchOf: Input %d's shape %s mismatches the output shape %s.",
+                                (int)i, string(input.m_shape).c_str(), string(m_shape).c_str());
+        for (size_t k = n; k < m_shape.GetRank() - 1; k++)
+            if (1 != m_shape[k])
+                InvalidArgument("DoGatherBatchOf: Input %d's shape %s missing non-1 dimensions of output shape %s.",
+                                (int)i, string(input.m_shape).c_str(), string(m_shape).c_str());
+        // all good, it's OK to concatenate
+        return input.GetSOB();
     });
-    //// naive implementation --TODO: move this down into Matrix
-    //for (auto i = 0; i < numItems; i++)
-    //{
-    //    // input slice
-    //    let& input = (i == 0) ? input0 : inputs(i); // (only call each one once, avoid assumptions on statefulness)
-    //    if (input.m_shape != input0.m_shape)
-    //        InvalidArgument("DoGatherBatchOf: All inputs must have the same shape.");
-    //    let inputAsMatrix = input.AsMatrix();
-    //    let numInCols = inputAsMatrix->GetNumCols();
-    //    // assign as column assignment
-    //    outputAsMatrix->SetColumnSlice(*inputAsMatrix, i * numInCols, numInCols);
-    //}
 }
 
 template class TensorView<float>;
