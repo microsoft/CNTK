@@ -138,7 +138,7 @@ namespace CNTK
             tensorflow::NodeDef* result = nullptr;
             if (src.IsOutput())
             {
-                result = CreateFunctionNode(src.OwnerAsFunction(), dst, functionNodes, variableNodes, placeholders,
+                result = CreateFunctionNode(src.Owner(), dst, functionNodes, variableNodes, placeholders,
                                             placeholderInputs, scope);
             }
             else

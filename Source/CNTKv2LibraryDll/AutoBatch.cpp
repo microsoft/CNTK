@@ -62,13 +62,15 @@ class Variable::Memoize
 
     // allocate a new tensor in a large arena
     // TODO: move this function up since it is ahred between fo2ward and backward
-    //NDArrayViewPtr m_currentArena;
-    //size_t m_currentArenaUsed;
+    // TODO: make this static, so that we can carry the allocator over across invocations
+    //       Currently, if I do that, program crashes upon termination (unloaded CUDA too early?)
+    NDArrayViewPtr m_currentArena;
+    size_t m_currentArenaUsed;
     static const size_t ARENASIZE = 64000000; // we allocate in this chunk size
     NDArrayViewPtr AllocateTensorInArena(const NDShape& shape, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
     {
-        static NDArrayViewPtr m_currentArena; // for now static so that it carries over across invocations, to save the allocation
-        static size_t m_currentArenaUsed;
+        //static NDArrayViewPtr m_currentArena; // for now static so that it carries over across invocations, to save the allocation
+        //static size_t m_currentArenaUsed;
         let numElements = shape.TotalSize();
         // if too large then plain alloc
         if (numElements > ARENASIZE)

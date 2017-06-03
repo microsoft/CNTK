@@ -36,7 +36,8 @@ private:
         auto weightBuffer = weights->DataBuffer<float>();
         auto inputBuffer = input->DataBuffer<float>();
         auto outBuffer = output->WritableDataBuffer<float>();
-        invoke_halide_convolve(weightBuffer, inputBuffer, num_filters, size, channels, pad, stride, w, h, outBuffer); 
+        // TODO: not sure why 'pad' is not a bool?
+        invoke_halide_convolve(weightBuffer, inputBuffer, num_filters, size, channels, pad != 0, stride, w, h, outBuffer); 
     }
 
     // forward function definition, needs to parse the data and call into the Convolve function
@@ -53,7 +54,7 @@ private:
         auto kernelRank = leftOperandData->Shape().Rank();
         long unsigned int num_filters;
         if (kernelRank >= 4) {
-            num_filters = leftOperandData->Shape()[3];
+            num_filters = (long unsigned int)leftOperandData->Shape()[3];
         } else {
             num_filters = 1; 
         }
@@ -78,7 +79,8 @@ private:
         // extract the output data
         auto outputData = outputValue->Data();
         // pass everything to Halide to compute the result, outputs are directly stored in the outputData buffer
-        Convolve(leftOperandData, rightOperandData, size, stride, pad, w, h, channels, num_filters, outputData);
+        // TODO: fix 'pad' int vs. bool
+        Convolve(leftOperandData, rightOperandData, size, stride, (int)pad, (int)w, (int)h, (int)channels, (int)num_filters, outputData);
 
         // Let's save the right input's Value in the BackPropSate to be used in the backward pass for computing gradients
         return MakeSharedObject<BackPropState>(this->shared_from_this(), computeDevice, std::unordered_map<Variable, ValuePtr>({ {Inputs()[1], inputValues[1] } }));
@@ -89,6 +91,7 @@ private:
                   const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                   std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override
     {
+        state; rootGradientValues; backPropagatedGradientValuesForInputs;
         std::runtime_error("Binary Convolution does not currently support backprop");
     }
 
@@ -117,7 +120,7 @@ private:
         long unsigned int num_filters;
         // determine the number of filters 
         if (kernelRank >= 4) {
-            num_filters = leftOperand.Shape()[3];
+            num_filters = (long unsigned int)leftOperand.Shape()[3];
         } else {
             num_filters = 1; 
         }

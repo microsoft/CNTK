@@ -347,7 +347,7 @@ struct halide_type_t {
      * bits: The bit size of one element.
      * lanes: The number of vector elements in the type. */
     HALIDE_ALWAYS_INLINE halide_type_t(halide_type_code_t code, uint8_t bits, uint16_t lanes = 1)
-        : code(code), bits(bits), lanes(lanes) {
+        : code((uint8_t)code), bits(bits), lanes(lanes) {
     }
 
     /** Default constructor is required e.g. to declare halide_trace_event

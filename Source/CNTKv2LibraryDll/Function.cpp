@@ -25,7 +25,7 @@ namespace CNTK
 
     /*static*/ FunctionPtr Function::NativeUserFunction(const std::wstring& opId, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName)
     {
-        return AsCompositeIfNotYet(s_userFunctionFactory->CreateInstance(opId, operands, functionConfig, userFunctionInstanceName), userFunctionInstanceName);
+        return AsComposite(s_userFunctionFactory->CreateInstance(opId, operands, functionConfig, userFunctionInstanceName), userFunctionInstanceName);
     }
 
     bool Internal::IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName)
@@ -143,14 +143,14 @@ namespace CNTK
         const auto& outputs = RawOutputs();
         if (outputs.size() != 1)
             RuntimeError("A Function instance '%S' with more than one output cannot be implicitly converted to a Variable.", AsString().c_str());
-        std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : AsComposite(dynamic_pointer_cast<PrimitiveFunction>(const_cast<Function*>(this)->shared_from_this()));
+        std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : PrimitiveAsComposite(dynamic_pointer_cast<PrimitiveFunction>(const_cast<Function*>(this)->shared_from_this()));
         return outputs[0].CompositePreservingCopy(composite);
     }
 
     std::shared_ptr<std::vector<Variable>> Function::OutputsImpl() const
     {
         std::vector<Variable> outputs;
-        std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : AsComposite(dynamic_pointer_cast<PrimitiveFunction>(const_cast<Function*>(this)->shared_from_this()));
+        std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : PrimitiveAsComposite(dynamic_pointer_cast<PrimitiveFunction>(const_cast<Function*>(this)->shared_from_this()));
         for (auto& v : RawOutputs())
             outputs.push_back(v.CompositePreservingCopy(composite));
 
@@ -360,8 +360,8 @@ namespace CNTK
                     inputVar.m_outputComposite = nullptr;
                 }
 
-                if (inputVar.IsOutput() && (visitedFunctions.find(inputVar.Owner().get()) == visitedFunctions.end()))
-                    inputVar.Owner()->ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
+                if (inputVar.IsOutput() && (visitedFunctions.find(inputVar.OwnerPrimitive().get()) == visitedFunctions.end()))
+                    inputVar.OwnerPrimitive()->ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
             }
         }
 
@@ -430,7 +430,7 @@ namespace CNTK
             updated = true;
         }
 
-        if (currentOutputVar.Owner()->IsBlock())
+        if (currentOutputVar.OwnerPrimitive()->IsBlock())
             currentOutputVar.m_dataFields->m_blockFunctionVariableMapping = newOutputVar.BlockFunctionVariableMapping();
 
         return updated;
@@ -471,7 +471,7 @@ namespace CNTK
         {
             if (input.IsOutput())
             {
-                auto owner = input.Owner().get();
+                auto owner = input.OwnerPrimitive().get();
                 if (visitedFunctions.find(owner) == visitedFunctions.end())
                 {
                     outputsUsingNewInputs.clear();
@@ -756,9 +756,9 @@ namespace CNTK
                     assert(cloneeInput.IsOutput());
 
                     // If this is an already visited Function's output then we use a placeholder
-                    if (cloneMap.find(cloneeInput.Owner().get()) != cloneMap.end())
+                    if (cloneMap.find(cloneeInput.OwnerPrimitive().get()) != cloneMap.end())
                     {
-                        if (cloneMap.at(cloneeInput.Owner().get()) == nullptr)
+                        if (cloneMap.at(cloneeInput.OwnerPrimitive().get()) == nullptr)
                         {
                             // See if we already created a placeholder for this already visited Function's output
                             auto existingPlaceholderReplacement = std::find_if(placeholderReplacements.begin(), placeholderReplacements.end(), [cloneeInput](const std::pair<Variable, Variable>& placeholderReplacement) {
@@ -774,12 +774,12 @@ namespace CNTK
                                 clonedInput = existingPlaceholderReplacement->first;
                         }
                         else
-                            clonedInput = GetCorrespondingOutputVariableFromClone(cloneeInput, cloneeInput.Owner(), cloneMap.at(cloneeInput.Owner().get()));
+                            clonedInput = GetCorrespondingOutputVariableFromClone(cloneeInput, cloneeInput.OwnerPrimitive(), cloneMap.at(cloneeInput.OwnerPrimitive().get()));
                     }
                     else
                     {
-                        auto clonedFunction = Clone(cloneeInput.Owner(), parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements);
-                        clonedInput = GetCorrespondingOutputVariableFromClone(cloneeInput, cloneeInput.Owner(), clonedFunction);
+                        auto clonedFunction = Clone(cloneeInput.OwnerPrimitive(), parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements);
+                        clonedInput = GetCorrespondingOutputVariableFromClone(cloneeInput, cloneeInput.OwnerPrimitive(), clonedFunction);
                     }
                 }
             }
@@ -890,10 +890,10 @@ namespace CNTK
             {
                 std::unordered_set<FunctionPtr> owners;
                 for (auto replacementOutput : rootFunctionOutputReplacements)
-                    owners.insert(replacementOutput.Owner());
+                    owners.insert(replacementOutput.OwnerPrimitive());
 
                 if ((owners.size() == 1) && *owners.begin())
-                    return AsCompositeIfNotYet(*owners.begin());
+                    return AsComposite(*owners.begin());
                 else
                     return Combine(rootFunctionOutputReplacements);
             }
@@ -910,15 +910,15 @@ namespace CNTK
         {
             if (varPair.second.IsOutput())
             {
-                if (cloneMap.find(varPair.second.Owner().get()) != cloneMap.end())
-                    placeholderReplacements[varPair.first] = GetCorrespondingOutputVariableFromClone(varPair.second, varPair.second.Owner(), cloneMap.at(varPair.second.Owner().get()));
+                if (cloneMap.find(varPair.second.OwnerPrimitive().get()) != cloneMap.end())
+                    placeholderReplacements[varPair.first] = GetCorrespondingOutputVariableFromClone(varPair.second, varPair.second.OwnerPrimitive(), cloneMap.at(varPair.second.OwnerPrimitive().get()));
                 else
                 {
                     // Check if any of the inputs or intermediate functions in the graph underneath the replacement
                     // are one of the cloned Functions or inputs; if so then we should clone the graph underneath
                     // this replacement too
                     std::unordered_set<FunctionPtr> visitedFunctions;
-                    auto visitedLeaves = CompositeFunction::DetermineInputs(varPair.second.Owner(), visitedFunctions);
+                    auto visitedLeaves = CompositeFunction::DetermineInputs(varPair.second.OwnerPrimitive(), visitedFunctions);
                     std::unordered_map<Variable, Variable> cloningReplacementsForPlaceholderReplacement;
                     for (auto visitedLeaf : visitedLeaves)
                     {
@@ -938,10 +938,10 @@ namespace CNTK
 
                     if (!cloningReplacementsForPlaceholderReplacement.empty())
                     {
-                        auto replacementToClone = AsCompositeIfNotYet(varPair.second.Owner());
+                        auto replacementToClone = AsComposite(varPair.second.OwnerPrimitive());
                         auto replacementClone = replacementToClone->Clone(parameterCloneMethod, cloningReplacementsForPlaceholderReplacement);
                         replacementClones.insert(replacementClone);
-                        placeholderReplacements[varPair.first] = GetCorrespondingOutputVariableFromClone(varPair.second, varPair.second.Owner(), replacementClone->RootFunction());
+                        placeholderReplacements[varPair.first] = GetCorrespondingOutputVariableFromClone(varPair.second, varPair.second.OwnerPrimitive(), replacementClone->RootFunction());
                     }
                 }
             }
@@ -952,7 +952,7 @@ namespace CNTK
             }
         }
 
-        auto clonedComposite = AsCompositeIfNotYet(clonedRootFunction, compositeFunction->Name());
+        auto clonedComposite = AsComposite(clonedRootFunction, compositeFunction->Name());
         clonedComposite->ReplacePlaceholders(placeholderReplacements);
         return clonedComposite;
     }
@@ -1057,13 +1057,13 @@ namespace CNTK
     FunctionPtr NullaryOp(PrimitiveOpType op, Dictionary&& opConfig, const std::wstring& name)
     {
         std::vector<Variable> operands{};
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
+        return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
     }
 
     FunctionPtr UnaryOp(PrimitiveOpType op, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
     {
         //std::vector<Variable> operands = { operand };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operand, std::move(opConfig), name), name);
+        return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(op, operand, std::move(opConfig), name), name);
     }
 
     FunctionPtr Negate(const Variable& operand, const std::wstring& name)
@@ -1341,7 +1341,7 @@ namespace CNTK
 
     FunctionPtr BinaryOp(PrimitiveOpType op, const Variable& leftOperand, const Variable& rightOperand, Dictionary&& opConfig, const std::wstring& name)
     {
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, leftOperand, rightOperand, std::move(opConfig), name), name);
+        return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(op, leftOperand, rightOperand, std::move(opConfig), name), name);
     }
 
     FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
@@ -1427,7 +1427,7 @@ namespace CNTK
     FunctionPtr CosineDistanceWithNegativeSamples(const Variable& leftOperand, const Variable& rightOperand, size_t shiftWindow, size_t numberOfNegativeSamples, const std::wstring& name)
     {
         std::vector<Variable> operands = {leftOperand, rightOperand, Constant::Scalar((float) shiftWindow),  Constant::Scalar((float) numberOfNegativeSamples) };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::CosDistanceWithNegativeSamples, operands, Dictionary(), name), name);
+        return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::CosDistanceWithNegativeSamples, operands, Dictionary(), name), name);
     }
 
     FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name)
@@ -1444,19 +1444,19 @@ namespace CNTK
     FunctionPtr WeightedBinaryCrossEntropy(const Variable& prediction, const Variable& targets, const Variable& weights, const std::wstring& name)
     {
         std::vector<Variable> operands = { prediction, targets, weights };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Logistic, operands, Dictionary(), name), name);
+        return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Logistic, operands, Dictionary(), name), name);
     }
 
     FunctionPtr LambdaRank(const Variable& prediction, const Variable& gains, const Variable& groupId, const std::wstring& name)
     {
         std::vector<Variable> operands = { prediction, gains, groupId };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::LambdaRank, operands, Dictionary(), name), name);
+        return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::LambdaRank, operands, Dictionary(), name), name);
     }
 
     FunctionPtr NDCGAt1(const Variable& prediction, const Variable& gains, const Variable& groupId, const std::wstring& name)
     {
         std::vector<Variable> operands = { prediction, gains, groupId };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::NDCG, operands, Dictionary(), name), name);
+        return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::NDCG, operands, Dictionary(), name), name);
     }
 
     FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name)
@@ -1515,7 +1515,7 @@ namespace CNTK
                 LogicError("ClassificationError: The topN feature is not supported along a specific axis.");
 
             std::vector<Variable> operands = { prediction, labels, Constant::Scalar((float)topN) };
-            return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ClassificationError, operands, Dictionary(), name), name);
+            return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ClassificationError, operands, Dictionary(), name), name);
         }
     }
 
@@ -1696,7 +1696,7 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape({0});
 
         std::vector<Variable> operands = { operand, poolingInput};
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Unpooling, operands, std::move(additionalProperties), name), name);
+        return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Unpooling, operands, std::move(additionalProperties), name), name);
     }
 
     FunctionPtr BatchNormalization(const Variable& operand,
@@ -1720,24 +1720,20 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameUseCuDNNEngine] = useCuDNNEngine;
 
         std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd, runningCount };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization,
-                                            operands,
-                                            std::move(additionalProperties),
-                                            name),
-                                         name);
+        return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization, operands, std::move(additionalProperties), name), name);
     }
 
     FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name)
     {
         std::vector<Variable> operands = { operand, min, max };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Clip, operands, Dictionary(), name), name);
+        return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Clip, operands, Dictionary(), name), name);
     }
 
     FunctionPtr ElementSelect(const Variable& condition, const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         // TODO: If the condition is a scalar constant, we can just pass-through the appropriate operand
         std::vector<Variable> operands = { condition, leftOperand, rightOperand };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Select, operands, Dictionary(), name), name);
+        return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Select, operands, Dictionary(), name), name);
     }
 
     FunctionPtr Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name)
@@ -1746,12 +1742,12 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
 
         std::vector<Variable> operandsCopy = operands;
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Splice, operandsCopy, std::move(additionalProperties), name), name);
+        return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Splice, operandsCopy, std::move(additionalProperties), name), name);
     }
 
     FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name)
     {
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operands, Dictionary(), name), name);
+        return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operands, Dictionary(), name), name);
     }
 
     FunctionPtr Alias(const Variable& operand, const std::wstring& name)
@@ -1764,20 +1760,21 @@ namespace CNTK
         if (!composite->IsComposite())
             InvalidArgument("Composite argument '%S' to AsBlock is not a composite Function.", composite->AsString().c_str());
 
-        return AsComposite(MakeSharedObject<BlockFunction>(std::move(composite), argumentsMap, blockOpName, Dictionary(), blockName), blockName);
+        return PrimitiveAsComposite(MakeSharedObject<BlockFunction>(std::move(composite), argumentsMap, blockOpName, Dictionary(), blockName), blockName);
     }
 
-    FunctionPtr AsComposite(const PrimitiveFunctionPtr& rootFunction, const std::wstring& name)
+    FunctionPtr PrimitiveAsComposite(const PrimitiveFunctionPtr& rootFunction, const std::wstring&)
     {
 #ifdef NO_ALL_PRIMITIVE_FUNCTIONS_HACK
         if (!rootFunction->IsComposite())
             new shared_ptr<Function>(rootFunction); // this creates a memory leak but eliminates O(N^2) complexity
 #endif
+        let& name = rootFunction->Name();
         return CompositeFunction::Create(dynamic_pointer_cast<PrimitiveFunction>(rootFunction), name);
     }
 
     // TODO: when can it be a composite??
-    FunctionPtr AsCompositeIfNotYet(const /*Primitive*/FunctionPtr& rootFunction, const std::wstring& name)
+    FunctionPtr AsComposite(const /*Primitive*/FunctionPtr& rootFunction, const std::wstring& name)
     {
 #ifdef NO_ALL_PRIMITIVE_FUNCTIONS_HACK
         if (!rootFunction->IsComposite())
@@ -2046,7 +2043,7 @@ namespace CNTK
         FunctionPtr ScatterPacked(const Variable& operand, const Variable& packedIndex, const Variable& condition, const std::wstring& name)
         {
             std::vector<Variable> operands = { operand, packedIndex, condition };
-            return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ScatterPacked, operands, Dictionary(), name), name);
+            return PrimitiveAsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ScatterPacked, operands, Dictionary(), name), name);
         }
 
         FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand)

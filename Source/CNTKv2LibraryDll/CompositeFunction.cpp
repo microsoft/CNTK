@@ -121,7 +121,7 @@ namespace CNTK
                 // check if this input corresponds to a cyclic edge in the graph.
                 // BUG: A function being visited twice does not indicate it being a cyclic edge in the graph.
                 // It just means there are at least 2 successors in the graph that have the function as input
-                bool mustBeReplaced = input.IsOutput() && (visitedFunctions.find(input.Owner()) != visitedFunctions.end());
+                bool mustBeReplaced = input.IsOutput() && (visitedFunctions.find(input.OwnerPrimitive()) != visitedFunctions.end());
 
                 if (mustBeReplaced)
                 {
@@ -548,7 +548,7 @@ namespace CNTK
     {
         Variable mappingVariable = variable;
 
-        auto ownerFunc = variable.IsOutput() ? variable.Owner().get() : nullptr;
+        auto ownerFunc = variable.IsOutput() ? variable.OwnerPrimitive().get() : nullptr;
         auto ownerPrimitiveFunc = dynamic_cast<PrimitiveFunction*>(ownerFunc);
         if (ownerPrimitiveFunc && (ownerPrimitiveFunc->OpType() == PrimitiveOpType::NoOp))
             mappingVariable = ownerPrimitiveFunc->Inputs()[0];
@@ -563,7 +563,7 @@ namespace CNTK
     {
         Variable mappingVariable = variable;
 
-        auto ownerFunc = variable.IsOutput() ? variable.Owner().get() : nullptr;
+        auto ownerFunc = variable.IsOutput() ? variable.OwnerPrimitive().get() : nullptr;
         auto ownerPrimitiveFunc = dynamic_cast<PrimitiveFunction*>(ownerFunc);
         if (ownerPrimitiveFunc)
         {
@@ -1116,7 +1116,7 @@ namespace CNTK
     {
         assert(variable.IsOutput());
 
-        Function* function = variable.Owner().get();
+        Function* function = variable.OwnerPrimitive().get();
         ComputationNodeBasePtr computationNodePtr;
         auto& functionInputs = function->m_inputs;
 
@@ -1231,7 +1231,7 @@ namespace CNTK
         PatchBlockArgumentsAndOutputsMapping = [&variableToNodeMap, &PatchBlockArgumentsAndOutputsMapping](const Variable& var) {
             if (var.IsOutput())
             {
-                BlockFunction* blockFunction = dynamic_cast<BlockFunction*>(var.Owner().get());
+                BlockFunction* blockFunction = dynamic_cast<BlockFunction*>(var.OwnerPrimitive().get());
                 if (blockFunction)
                 {
                     PostorderTraverseVariables(blockFunction->BlockRoot(), PatchBlockArgumentsAndOutputsMapping);
@@ -1291,7 +1291,7 @@ namespace CNTK
             if (std::find(currentComputationNodeInputs.begin(), currentComputationNodeInputs.end(), nullptr) != currentComputationNodeInputs.end())
             {
                 // This ComputationNode has at least one null input which now needs to be properly attached
-                const PrimitiveFunction* primitiveFunc = dynamic_cast<const PrimitiveFunction*>(currentVar.Owner().get());
+                const PrimitiveFunction* primitiveFunc = dynamic_cast<const PrimitiveFunction*>(currentVar.OwnerPrimitive().get());
 
                 // Skip block primitives since they do not directly map to a computation node
                 if (primitiveFunc->OpType() == PrimitiveOpType::Block)
@@ -1725,7 +1725,7 @@ namespace CNTK
             auto sanitizedOutput = output.NonCompositePreservingCopy();
 
             if (sanitizedOutput.IsOutput())
-                V1InteropState().m_perOutputVarArgumentDependencies[sanitizedOutput] = AsCompositeIfNotYet(sanitizedOutput.Owner())->Arguments();
+                V1InteropState().m_perOutputVarArgumentDependencies[sanitizedOutput] = AsComposite(sanitizedOutput.OwnerPrimitive())->Arguments();
             else if (sanitizedOutput.IsParameter() || sanitizedOutput.IsConstant())
                 V1InteropState().m_perOutputVarArgumentDependencies[sanitizedOutput] = {};
             else
@@ -1947,7 +1947,7 @@ namespace CNTK
             if (!var.IsOutput())
                 continue;
 
-            auto function = var.Owner();
+            auto function = var.OwnerPrimitive();
 
             if (function->m_dirtyAttributes.empty())
                 continue;

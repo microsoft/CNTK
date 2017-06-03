@@ -279,7 +279,7 @@ namespace CNTK
                     return false;
                 }
 
-                if (inputs1[i].IsOutput() && !AreEquivalent(inputs1[i].OwnerAsFunction(), inputs2[i].OwnerAsFunction(), uids))
+                if (inputs1[i].IsOutput() && !AreEquivalent(inputs1[i].Owner(), inputs2[i].Owner(), uids))
                 {
                     return false;
                 }

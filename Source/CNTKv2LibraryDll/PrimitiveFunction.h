@@ -323,7 +323,7 @@ namespace CNTK
             {
                 if (!input.IsOutput())
                     continue;
-                const auto owner = input.Owner();
+                const auto owner = input.OwnerPrimitive();
                 if (!owner)
                     LogicError("SetAcyclicOutputReferences: Got an OutputVariable without owner??");
                 auto prOwner = std::dynamic_pointer_cast<const PrimitiveFunction>(owner);

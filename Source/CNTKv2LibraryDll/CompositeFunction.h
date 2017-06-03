@@ -169,9 +169,9 @@ namespace CNTK
             {
                 if (rootInput.IsOutput())
                 {
-                    if (visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
+                    if (visitedFunctions.find(rootInput.OwnerPrimitive()) == visitedFunctions.end())
                     {
-                        const auto& function = rootInput.Owner();
+                        const auto& function = rootInput.OwnerPrimitive();
                         TraverseVariables(function, visitedFunctions, functor, pythonOperandOrder, preOrder);
                     }
                 }
@@ -208,7 +208,7 @@ namespace CNTK
                 auto replacingVariable = placeholderReplacements.at(replacedPlaceholder);
                 if (replacingVariable.IsOutput())
                 {
-                    auto ownerFunc = replacingVariable.Owner();
+                    auto ownerFunc = replacingVariable.OwnerPrimitive();
                     std::unordered_set<FunctionPtr> visitedFunctions2;
                     CollectAllPrimitiveFunctions(ownerFunc, visitedFunctions2);
 
