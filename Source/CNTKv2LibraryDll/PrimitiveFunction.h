@@ -275,20 +275,7 @@ namespace CNTK
               m_op(op)
         {
             // set inputs' acyclic strong references if possible
-            SetAcyclicOutputReferences();
-            // TODO: merge the below into the above
-            // determine whether this primitive is really guaranteed to be acyclic
-            for (const auto& input : m_inputs)
-            {
-                if (input.IsPlaceholder() || (input.IsOutput() && !input.m_acyclicOutputPrimitiveReference))
-                {
-                    // If any input is a Placeholder, it is for sure not dynamic, and may eventually
-                    // be looped back through ReplacePlaceholder().
-                    // Likewise, if any input already is not guaranteed, this one is neither.
-                    m_isKnownToBeAcyclic = false;
-                    break;
-                }
-            }
+            UpdateAcyclicReferences();
         }
 
     private:
@@ -297,7 +284,7 @@ namespace CNTK
             : Function(std::move(inputs), std::move(outputs), std::move(functionConfig), nullptr, std::wstring(), std::wstring()),
               m_op(op)
         {
-            SetAcyclicOutputReferences();
+            UpdateAcyclicReferences();
         }
 
         static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes)
@@ -315,23 +302,35 @@ namespace CNTK
             return res;
         }
 
-
         // implant the acyclic strong reference if it is safe
-        void SetAcyclicOutputReferences()
+        void UpdateAcyclicReferences()
         {
             for (auto& input : m_inputs)
             {
-                if (!input.IsOutput())
-                    continue;
-                const auto owner = input.OwnerPrimitive();
-                if (!owner)
-                    LogicError("SetAcyclicOutputReferences: Got an OutputVariable without owner??");
-                auto prOwner = std::dynamic_pointer_cast<const PrimitiveFunction>(owner);
-                if (prOwner->m_isKnownToBeAcyclic)
-                    input.m_acyclicOutputPrimitiveReference = std::move(prOwner);
-                else
-                    fprintf(stderr, "");
+                // Implant a strong ref to the input's PrimitiveFunction into the input if it is
+                // known that it can never be part of a cycle.
+                if (input.IsOutput())
+                {
+                    const auto owner = input.OwnerPrimitive();
+                    if (!owner)
+                        LogicError("UpdateAcyclicReferences: Got an OutputVariable without owner??");
+                    auto prOwner = std::dynamic_pointer_cast<const PrimitiveFunction>(owner);
+                    if (prOwner->m_isKnownToBeAcyclic)
+                        input.m_acyclicOutputPrimitiveReference = std::move(prOwner);
+                    else
+                        // If any input already is not guaranteed to be cyclic, this PrimitiveFunction is neither.
+                        goto isAcyclic;
+                }
+                else if (input.IsPlaceholder())
+                    // If any input is a Placeholder, it is for sure not dynamic, and may eventually
+                    // be looped back through ReplacePlaceholder().
+                    goto isAcyclic;
             }
+            return;
+            // If acyclic, we exit the loop above even if we don't implant all possible
+            // acyclic references into inputs, since it won't help anyway.
+        isAcyclic:
+            m_isKnownToBeAcyclic = false;
         }
 
     public:

@@ -90,6 +90,12 @@ namespace CNTK
             return composite;
         }
 
+        // This version is used for all the primitive ops. It inherits the root's name.
+        static CompositeFunctionPtr Create(const PrimitiveFunctionPtr& rootFunction)
+        {
+            return Create(rootFunction, rootFunction->Name());
+        }
+
         BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                  std::unordered_map<Variable, ValuePtr>& outputs,
                                  const DeviceDescriptor& computeDevice,

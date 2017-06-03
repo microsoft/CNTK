@@ -4251,8 +4251,6 @@ namespace CNTK
     ///
     /// TODO: This is not something that external users should do. Move to an appropriate place. 
     CNTK_API FunctionPtr AsComposite(const /*Primitive*/FunctionPtr& rootFunction, const std::wstring& name = std::wstring());
-    // TODO: make this a method of PrimitiveFunction, or why not have a constructor?
-    FunctionPtr PrimitiveAsComposite(const PrimitiveFunctionPtr& rootFunction, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise exponential linear unit operation with the specified input operand.
