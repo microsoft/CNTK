@@ -128,9 +128,10 @@ namespace CNTK
 
     Variable::operator FunctionPtr() const
     {
+        // Note: This function does not get executed in dynamic networks.
         auto varOwner = Owner();
         if (varOwner)
-            return AsComposite(varOwner, varOwner->Name()); // TODO: Is this run on every dynamic step?
+            return AsComposite(varOwner, varOwner->Name());
         else
             return Combine({ *this });
     }

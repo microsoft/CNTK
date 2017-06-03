@@ -346,7 +346,7 @@ vector<vector<Variable>> FromCNTKMB(const vector<ValuePtr>& inputs, const vector
         for (size_t s = 0; s < numSeq; s++)
         {
             auto data = sequences[s];      // NDArrayView
-            data = data->DeepClone(); // otherwise getting a dangling ref with the allPrimitiveFunctions hack
+            //data = data->DeepClone(); // otherwise getting a dangling ref with the allPrimitiveFunctions hack
             // return in correct shape
             if (!hasAxis)
             {
