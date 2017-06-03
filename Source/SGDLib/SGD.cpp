@@ -40,9 +40,12 @@
 #include <set>
 
 // For debug
-#define OPEN_DUMP 0
+#define OPEN_DUMP 1
 static int __iteration_index = 0;
 static int __count = 0;
+static const int __count_dump_interval = 100;
+static const int __count_threshold = 1;
+static bool __is_initized = false;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -2366,19 +2369,42 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 #if OPEN_DUMP
     FILE *dumpFile = nullptr;
     bool isDump = false;
-    isDump = __count < 1;
+    isDump = (__count % __count_dump_interval) < __count_threshold;
 
     //printf("%s\n", isDump ? "true" : "false");
+    if (!__is_initized)
+    {
+        static int max_count = 0;
+        max_count = max(max_count, __count);
+
+        if (max_count != __count)
+        {
+            __is_initized = true;
+
+            char outputFileName[100];
+            FILE *outputFile = nullptr;
+            sprintf(outputFileName, "common_dump_output.txt");
+            outputFile = fopen(outputFileName, "w+");
+
+            LOGPRINTF(outputFile, "max_count=%d\n", max_count);
+
+            fflush(outputFile);
+            fclose(outputFile);
+        }
+    }
+
     if (isDump)
     {
         char dumpFileName[100];
-        sprintf(dumpFileName, "dump_iter%06d_buf%06d.txt", __iteration_index, __count++);
+        sprintf(dumpFileName, "dump_iter%06d_buf%06d.txt", __iteration_index, __count);
         dumpFile = fopen(dumpFileName, "w+");
         LOGPRINTF(dumpFile, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%llu\n",
             learnRatePerSample, momentum, actualMBSize);
         LOGPRINTF(dumpFile, "GradUpdateType()=%d, GradientUpdateNoiseStd()=%0.8f\n",
             GradUpdateType(), GradientUpdateNoiseStd());
     }
+
+    __count++;
 #endif
 
     // make actualMBSize is a valid value
@@ -2469,6 +2495,7 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
         }
 #endif
 
+//#define USE_MEAN_GRADIENT
 #if USE_MEAN_GRADIENT
 
         auto learningRate = learnRatePerSample * actualMBSize;
@@ -2480,7 +2507,6 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 
         smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learnRatePerSample,
             momentum, (ElemType)m_rpi.gamma, needAveMultiplier);
-
 
 #endif
 
