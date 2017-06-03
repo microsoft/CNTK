@@ -157,7 +157,7 @@ namespace CNTK
         : m_rootFunction(rootFunction), m_name(name), m_uid(uid), m_attributes(std::move(functionConfig))
     {
         m_inputs.reserve(inputs.size());
-        for (auto inputVar : inputs)
+        for (const auto& inputVar : inputs)
         {
 #if 1
             m_inputs.emplace_back(std::move(inputVar.NonCompositePreservingCopy()));
@@ -170,6 +170,7 @@ namespace CNTK
             }
 #endif
 
+#if 0
             if (!inputVar.IsInput() &&
                 !inputVar.IsOutput() &&
                 !inputVar.IsParameter() &&
@@ -178,6 +179,7 @@ namespace CNTK
             {
                 InvalidArgument("Function '%S' input has invalid VariableKind.", inputVar.AsString().c_str());
             }
+#endif
         }
     }
 

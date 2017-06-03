@@ -273,8 +273,11 @@ namespace CNTK
             : Function(inputs, std::move(functionConfig), nullptr, functionName, uid),
               m_op(op)
         {
+            // set inputs' acyclic strong references if possible
+            SetAcyclicOutputReferences();
+            // TODO: merge the below into the above
             // determine whether this primitive is really guaranteed to be acyclic
-            for (const auto& input : inputs)
+            for (const auto& input : m_inputs)
             {
                 if (input.IsPlaceholder() || (input.IsOutput() && !input.m_acyclicOutputPrimitiveReference))
                 {
@@ -292,7 +295,9 @@ namespace CNTK
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig)
             : Function(std::move(inputs), std::move(outputs), std::move(functionConfig), nullptr, std::wstring(), std::wstring()),
               m_op(op)
-        {}
+        {
+            SetAcyclicOutputReferences();
+        }
 
         static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes)
         {
@@ -307,6 +312,25 @@ namespace CNTK
             res->m_outputs.front().SetOwner(res);
             // This really belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
             return res;
+        }
+
+
+        // implant the acyclic strong reference if it is safe
+        void SetAcyclicOutputReferences()
+        {
+            for (auto& input : m_inputs)
+            {
+                if (!input.IsOutput())
+                    continue;
+                const auto owner = input.Owner();
+                if (!owner)
+                    LogicError("SetAcyclicOutputReferences: Got an OutputVariable without owner??");
+                auto prOwner = std::dynamic_pointer_cast<const PrimitiveFunction>(owner);
+                if (prOwner->m_isKnownToBeAcyclic)
+                    input.m_acyclicOutputPrimitiveReference = std::move(prOwner);
+                else
+                    fprintf(stderr, "");
+            }
         }
 
     public:
