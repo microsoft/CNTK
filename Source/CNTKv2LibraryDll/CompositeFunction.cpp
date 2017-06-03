@@ -200,9 +200,10 @@ namespace CNTK
             name = dict[nameKey].Value<std::wstring>();
         const auto& uid = dict[uidKey].Value<std::wstring>();
 
-        FunctionPtr root = *std::find_if(allPrimitiveFunctions.begin(), allPrimitiveFunctions.end(), [&rootUid](const FunctionPtr& func) {
+        // TODO: change allPrimitiveFunctions to a set of PrimitiveFunctions, as the name says
+        PrimitiveFunctionPtr root = dynamic_pointer_cast<PrimitiveFunction>(*std::find_if(allPrimitiveFunctions.begin(), allPrimitiveFunctions.end(), [&rootUid](const FunctionPtr& func) {
             return func->Uid() == rootUid;
-        });
+        }));
 
         // Find the subset of placeholder replacements that apply for this composite
         FunctionPtr composite = CompositeFunction::Create(root, name, uid);

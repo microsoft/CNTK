@@ -1762,13 +1762,14 @@ namespace CNTK
         return AsComposite(MakeSharedObject<BlockFunction>(std::move(composite), argumentsMap, blockOpName, Dictionary(), blockName), blockName);
     }
 
+    // TODO: make the arg a PrimitiveFunction
     FunctionPtr AsComposite(const FunctionPtr& rootFunction, const std::wstring& name)
     {
 #ifdef NO_ALL_PRIMITIVE_FUNCTIONS_HACK
         if (!rootFunction->IsComposite())
             new shared_ptr<Function>(rootFunction); // this creates a memory leak but eliminates O(N^2) complexity
 #endif
-        return rootFunction->IsComposite() ? rootFunction : CompositeFunction::Create(rootFunction, name);
+        return rootFunction->IsComposite() ? rootFunction : CompositeFunction::Create(dynamic_pointer_cast<PrimitiveFunction>(rootFunction), name);
     }
 
     FunctionPtr OptimizedRNNStack(const Variable& operand, const Variable& weights, size_t hiddenSize, size_t numLayers, bool bidirectional, const std::wstring& recurrentOp, const std::wstring& name)

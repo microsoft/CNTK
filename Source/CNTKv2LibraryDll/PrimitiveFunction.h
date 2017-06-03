@@ -186,6 +186,7 @@ namespace CNTK
     class PrimitiveFunction : public Function
     {
         friend class Function;
+        friend class CompositeFunction;
         friend class Utils;
         friend class Variable::Memoize;
         template <typename T, typename ...CtorArgTypes>

@@ -70,15 +70,16 @@ namespace CNTK
         }
 
     public:
-        static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = std::wstring(),
+        static CompositeFunctionPtr Create(const PrimitiveFunctionPtr& rootFunction, const std::wstring& name = std::wstring(),
                                            const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
         {
             std::unordered_set<FunctionPtr> visitedFunctions;
 
             // Call Collect to get the set of all functions in the graph
-#define NO_ALL_PRIMITIVE_FUNCTIONS_HACK // hack to skip building m_allPrimitiveFunctionsSet (will leak memory until solved properly), as this has O(N^2) complexity
+#undef NO_ALL_PRIMITIVE_FUNCTIONS_HACK // hack to skip building m_allPrimitiveFunctionsSet (will leak memory until solved properly), as this has O(N^2) complexity
 #ifndef NO_ALL_PRIMITIVE_FUNCTIONS_HACK
-            CollectAllPrimitiveFunctions(rootFunction, visitedFunctions);
+            if (!rootFunction->m_isKnownToBeAcyclic)
+                CollectAllPrimitiveFunctions(rootFunction, visitedFunctions);
 #endif
 
             auto composite = MakeSharedObject<CompositeFunction>(rootFunction, make_shared<FastFunctionCollection>(std::move(visitedFunctions)), name, uid);

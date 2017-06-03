@@ -360,7 +360,6 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         //mbLoss = d_criterion_fn(args[0], args[1]); mbLoss.Value()->AsScalar<float>();
         //let s2sLoss = Batch::sum(Batch::Map(d_model_fn1)(vargs[0], vargs[0])); // for now auto-encoder
         //s2sLoss.Value();
-        for (size_t xxx = 0; xxx < 1; xxx++)
         {
             // compute not directly comparable due to (1) no batching and (2) sparse, which may be expensive w.r.t. slicing, or not
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "d_criterion_fn: %.6f sec\n");
