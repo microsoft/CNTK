@@ -83,7 +83,7 @@ namespace CNTK
 
         std::wstring AsString() const;
         std::shared_ptr<VariableFields> Clone() const;
-        /*Primitive*/FunctionPtr Owner() const;
+        PrimitiveFunctionPtr Owner() const;
         bool OwnerIs(const Function* f) const;
         const std::wstring& Uid() const;
 

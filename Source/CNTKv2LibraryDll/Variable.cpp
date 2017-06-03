@@ -250,13 +250,13 @@ namespace CNTK
         return wss.str();
     }
 
-    /*Primitive*/FunctionPtr VariableFields::Owner() const
+    PrimitiveFunctionPtr VariableFields::Owner() const
     {
         if (IsObjectExpired(m_ownerFunction))
             LogicError("The owner function of Variable '%S' is unexpectedly expired.", AsString().c_str());
 
         auto ownerFunctionPtr = m_ownerFunction.lock();
-#if 0
+#if 1
         return ownerFunctionPtr;
 #else
         if (ownerFunctionPtr != nullptr)
