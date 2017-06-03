@@ -2469,10 +2469,20 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
         }
 #endif
 
+#if USE_MEAN_GRADIENT
+
         auto learningRate = learnRatePerSample * actualMBSize;
         Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
         smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learningRate,
                                          momentum, (ElemType) m_rpi.gamma, needAveMultiplier);
+
+#else
+
+        smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learnRatePerSample,
+            momentum, (ElemType)m_rpi.gamma, needAveMultiplier);
+
+
+#endif
 
 #if OPEN_DUMP
         if (isDump)
