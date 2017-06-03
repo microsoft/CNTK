@@ -332,15 +332,15 @@ namespace CNTK
 
     public:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
-            : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, GenerateUid(op))
+            : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, std::wstring())//GenerateUid(op))
         {}
 
         PrimitiveFunction(PrimitiveOpType op, const Variable& input0, const Variable& input1, Dictionary&& functionConfig, const std::wstring& functionName = L"")
-            : PrimitiveFunction(op, { input0, input1 }, std::move(functionConfig), functionName, GenerateUid(op))
+            : PrimitiveFunction(op, { input0, input1 }, std::move(functionConfig), functionName, std::wstring())//GenerateUid(op))
         {}
 
         PrimitiveFunction(PrimitiveOpType op, const Variable& input0, Dictionary&& functionConfig, const std::wstring& functionName = L"")
-            : PrimitiveFunction(op, { input0 }, std::move(functionConfig), functionName, GenerateUid(op))
+            : PrimitiveFunction(op, { input0 }, std::move(functionConfig), functionName, std::wstring())//GenerateUid(op))
         {}
 
         // Primitive functions are currently implemented using the core CNTK engine ComputationNode types

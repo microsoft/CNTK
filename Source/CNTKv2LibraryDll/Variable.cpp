@@ -130,7 +130,7 @@ namespace CNTK
     {
         auto varOwner = Owner();
         if (varOwner)
-            return AsComposite(varOwner, varOwner->Name());
+            return AsComposite(varOwner, varOwner->Name()); // TODO: Is this run on every dynamic step?
         else
             return Combine({ *this });
     }

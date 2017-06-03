@@ -282,10 +282,19 @@ namespace CNTK
 
         m_name = name;
     }
-    
-    const std::wstring& Function::Uid() const
+
+    /*virtual*/ const std::wstring& Function::Uid() const //override
     {
-        // TODO: generate lazily
+        // generate lazily
+        // This is only the fallback if this is not overridden. Better pass a uid for those in the first place.
+        if (m_uid.empty())
+        {
+            auto p = (dynamic_cast<const PrimitiveFunction*>(this));
+            if (p) // (this includes BlockFunction as well)
+                m_uid = GenerateUid(p->Op());
+            else // everything else is a composite
+                m_uid = Internal::GenerateUid(L"CompositeFunction");
+        }
         return m_uid;
     }
 
@@ -1766,11 +1775,7 @@ namespace CNTK
     // TODO: when can it be a composite??
     FunctionPtr AsComposite(const /*Primitive*/FunctionPtr& rootFunction, const std::wstring& name)
     {
-#ifdef NO_ALL_PRIMITIVE_FUNCTIONS_HACK
-        if (!rootFunction->IsComposite())
-            new shared_ptr<Function>(rootFunction); // this creates a memory leak but eliminates O(N^2) complexity
-#endif
-        return rootFunction->IsComposite() ? rootFunction : CompositeFunction::Create(dynamic_pointer_cast<PrimitiveFunction>(rootFunction), name);
+        return rootFunction->IsComposite() ? rootFunction : CompositeFunction::Create(dynamic_pointer_cast<PrimitiveFunction>(rootFunction), name, Internal::GenerateUid(L"CompositeFunction"));
     }
 
     FunctionPtr OptimizedRNNStack(const Variable& operand, const Variable& weights, size_t hiddenSize, size_t numLayers, bool bidirectional, const std::wstring& recurrentOp, const std::wstring& name)

@@ -70,8 +70,8 @@ namespace CNTK
         }
 
     public:
-        static CompositeFunctionPtr Create(const PrimitiveFunctionPtr& rootFunction, const std::wstring& name,// = std::wstring(),
-                                           const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
+        static CompositeFunctionPtr Create(const PrimitiveFunctionPtr& rootFunction, const std::wstring& name,
+                                           const std::wstring& uid)
         {
             std::unordered_set<FunctionPtr> visitedFunctions;
 
@@ -93,7 +93,7 @@ namespace CNTK
         // This version is used for all the primitive ops. It inherits the root's name.
         static CompositeFunctionPtr Create(const PrimitiveFunctionPtr& rootFunction)
         {
-            return Create(rootFunction, rootFunction->Name());
+            return Create(rootFunction, rootFunction->Name(), wstring());//Internal::GenerateUid(L"CompositeFunction"));
         }
 
         BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,

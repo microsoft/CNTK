@@ -1140,7 +1140,7 @@ namespace CNTK
             auto runCount = Constant::Scalar(0.0f, device);
             // HACK: uid has to be changed (by adding some unique prefix to the auto-generated "Constant"+ID_counter) 
             // to avoid conflicts with uids recorded in the function graph, which we are deserializing.
-            runCount.m_dataFields->m_uid = L"BatchNormSampleCount" + runCount.m_dataFields->m_uid;
+            runCount.m_dataFields->m_uid = L"BatchNormSampleCount" + runCount.m_dataFields->Uid();
             inputs.push_back(runCount);
         }
         

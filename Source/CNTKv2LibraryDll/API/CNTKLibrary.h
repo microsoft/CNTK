@@ -3218,6 +3218,7 @@ namespace CNTK
 
         ///
         /// Returns the internally generated unique name of the Function
+        /// The uid may be generated lazily upon first call.
         ///
         CNTK_API const std::wstring& Uid() const;
 
