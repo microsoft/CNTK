@@ -25,7 +25,7 @@ namespace CNTK
 
     /*static*/ FunctionPtr Function::NativeUserFunction(const std::wstring& opId, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName)
     {
-        return AsComposite(s_userFunctionFactory->CreateInstance(opId, operands, functionConfig, userFunctionInstanceName), userFunctionInstanceName);
+        return AsCompositeIfNotYet(s_userFunctionFactory->CreateInstance(opId, operands, functionConfig, userFunctionInstanceName), userFunctionInstanceName);
     }
 
     bool Internal::IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName)
@@ -143,14 +143,14 @@ namespace CNTK
         const auto& outputs = RawOutputs();
         if (outputs.size() != 1)
             RuntimeError("A Function instance '%S' with more than one output cannot be implicitly converted to a Variable.", AsString().c_str());
-        std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : AsComposite(const_cast<Function*>(this)->shared_from_this());
+        std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : AsComposite(dynamic_pointer_cast<PrimitiveFunction>(const_cast<Function*>(this)->shared_from_this()));
         return outputs[0].CompositePreservingCopy(composite);
     }
 
     std::shared_ptr<std::vector<Variable>> Function::OutputsImpl() const
     {
         std::vector<Variable> outputs;
-        std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : AsComposite(const_cast<Function*>(this)->shared_from_this());
+        std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : AsComposite(dynamic_pointer_cast<PrimitiveFunction>(const_cast<Function*>(this)->shared_from_this()));
         for (auto& v : RawOutputs())
             outputs.push_back(v.CompositePreservingCopy(composite));
 
@@ -893,7 +893,7 @@ namespace CNTK
                     owners.insert(replacementOutput.Owner());
 
                 if ((owners.size() == 1) && *owners.begin())
-                    return AsComposite(*owners.begin());
+                    return AsCompositeIfNotYet(*owners.begin());
                 else
                     return Combine(rootFunctionOutputReplacements);
             }
@@ -938,7 +938,7 @@ namespace CNTK
 
                     if (!cloningReplacementsForPlaceholderReplacement.empty())
                     {
-                        auto replacementToClone = AsComposite(varPair.second.Owner());
+                        auto replacementToClone = AsCompositeIfNotYet(varPair.second.Owner());
                         auto replacementClone = replacementToClone->Clone(parameterCloneMethod, cloningReplacementsForPlaceholderReplacement);
                         replacementClones.insert(replacementClone);
                         placeholderReplacements[varPair.first] = GetCorrespondingOutputVariableFromClone(varPair.second, varPair.second.Owner(), replacementClone->RootFunction());
@@ -952,7 +952,7 @@ namespace CNTK
             }
         }
 
-        auto clonedComposite = AsComposite(clonedRootFunction, compositeFunction->Name());
+        auto clonedComposite = AsCompositeIfNotYet(clonedRootFunction, compositeFunction->Name());
         clonedComposite->ReplacePlaceholders(placeholderReplacements);
         return clonedComposite;
     }
@@ -1767,8 +1767,17 @@ namespace CNTK
         return AsComposite(MakeSharedObject<BlockFunction>(std::move(composite), argumentsMap, blockOpName, Dictionary(), blockName), blockName);
     }
 
-    // TODO: make the arg a PrimitiveFunction
-    FunctionPtr AsComposite(const FunctionPtr& rootFunction, const std::wstring& name)
+    FunctionPtr AsComposite(const PrimitiveFunctionPtr& rootFunction, const std::wstring& name)
+    {
+#ifdef NO_ALL_PRIMITIVE_FUNCTIONS_HACK
+        if (!rootFunction->IsComposite())
+            new shared_ptr<Function>(rootFunction); // this creates a memory leak but eliminates O(N^2) complexity
+#endif
+        return CompositeFunction::Create(dynamic_pointer_cast<PrimitiveFunction>(rootFunction), name);
+    }
+
+    // TODO: when can it be a composite??
+    FunctionPtr AsCompositeIfNotYet(const /*Primitive*/FunctionPtr& rootFunction, const std::wstring& name)
     {
 #ifdef NO_ALL_PRIMITIVE_FUNCTIONS_HACK
         if (!rootFunction->IsComposite())

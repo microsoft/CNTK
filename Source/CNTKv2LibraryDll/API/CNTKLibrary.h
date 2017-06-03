@@ -1873,7 +1873,7 @@ namespace CNTK
         /// Returns the a strong reference to the Function object which 'this' variable is an output of.
         /// Returns null when called for a Variable that is not of 'Output' VariableKind.
         ///
-        CNTK_API FunctionPtr Owner() const;
+        CNTK_API /*Primitive*/FunctionPtr Owner() const;
 
         ///
         /// Checks whether the owner is the passed object (which may be nullptr).
@@ -4251,7 +4251,10 @@ namespace CNTK
     /// The composite denotes a higher-level Function encapsulating the entire graph
     /// of Functions underlying the specified rootFunction.
     ///
-    CNTK_API FunctionPtr AsComposite(const FunctionPtr& rootFunction, const std::wstring& name = std::wstring());
+    /// TODO: This does not belong here; move to an appropriate place. 
+    CNTK_API FunctionPtr AsComposite(const PrimitiveFunctionPtr& rootFunction, const std::wstring& name = std::wstring());
+    // using this ugly name to mark al the places that might need to be fixed
+    CNTK_API FunctionPtr AsCompositeIfNotYet(const /*Primitive*/FunctionPtr& rootFunction, const std::wstring& name = std::wstring());
 
     ///
     /// Create an instance of the CNTK built-in elementwise exponential linear unit operation with the specified input operand.

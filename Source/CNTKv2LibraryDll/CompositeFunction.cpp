@@ -1725,7 +1725,7 @@ namespace CNTK
             auto sanitizedOutput = output.NonCompositePreservingCopy();
 
             if (sanitizedOutput.IsOutput())
-                m_perOutputVarArgumentDependencies[sanitizedOutput] = AsComposite(sanitizedOutput.Owner())->Arguments();
+                m_perOutputVarArgumentDependencies[sanitizedOutput] = AsCompositeIfNotYet(sanitizedOutput.Owner())->Arguments();
             else if (sanitizedOutput.IsParameter() || sanitizedOutput.IsConstant())
                 m_perOutputVarArgumentDependencies[sanitizedOutput] = {};
             else

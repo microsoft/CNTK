@@ -69,7 +69,7 @@ namespace CNTK
         return m_dataFields->m_blockFunctionVariableMapping;
     }
 
-    FunctionPtr Variable::Owner() const 
+    /*Primitive*/FunctionPtr Variable::Owner() const 
     {
         return m_dataFields->Owner();
     }
@@ -120,7 +120,7 @@ namespace CNTK
     {
         auto varOwner = Owner();
         if (varOwner)
-            return AsComposite(varOwner, varOwner->Name());
+            return AsCompositeIfNotYet(varOwner, varOwner->Name());
         else
             return Combine({ *this });
     }
@@ -250,16 +250,20 @@ namespace CNTK
         return wss.str();
     }
 
-    FunctionPtr VariableFields::Owner() const
+    /*Primitive*/FunctionPtr VariableFields::Owner() const
     {
         if (IsObjectExpired(m_ownerFunction))
             LogicError("The owner function of Variable '%S' is unexpectedly expired.", AsString().c_str());
 
         auto ownerFunctionPtr = m_ownerFunction.lock();
+#if 0
+        return ownerFunctionPtr;
+#else
         if (ownerFunctionPtr != nullptr)
             return ownerFunctionPtr->shared_from_this(); // TODO: it's already a shared_ptr... so why shared_from_this()?
         else
             return nullptr;
+#endif
     }
 
     bool VariableFields::OwnerIs(const Function* f) const
