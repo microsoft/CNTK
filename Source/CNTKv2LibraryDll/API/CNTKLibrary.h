@@ -1803,6 +1803,7 @@ namespace CNTK
 
         ///
         /// Implicit conversion to a FunctionPtr; creates a pass through primitive Function
+        /// This returns a new CompositeFunction that wraps Owner().   --TODO: ^^is this comment correct?
         ///
         CNTK_API operator FunctionPtr() const;
 
@@ -1864,11 +1865,12 @@ namespace CNTK
 
         ///
         /// Returns the internally generated unique name of the variable
+        /// The uid may be generated on demand upon first call.
         ///
         CNTK_API const std::wstring& Uid() const;
 
         ///
-        /// Returns the Function object which 'this' variable is an output of.
+        /// Returns the a strong reference to the Function object which 'this' variable is an output of.
         /// Returns null when called for a Variable that is not of 'Output' VariableKind.
         ///
         CNTK_API FunctionPtr Owner() const;
@@ -1910,7 +1912,7 @@ namespace CNTK
         /// In a dynamic setting, this computes the gradient of this Variable w.r.t. given leaves.
         /// TODO: Function::grad() allows to pass multiple roots. Does that ever make sense in this context?
         ///
-        CNTK_API void Backward(std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& gradients) const;
+        CNTK_API void Backward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const;
     protected:
         class Memoize;
     protected:
@@ -1973,7 +1975,8 @@ private:
         static const size_t s_serializationVersion = 1;
 
     private:
-        std::shared_ptr<const Function> m_outputComposite; // Currently needed for outputs.
+        std::shared_ptr<const Function> m_outputComposite; // Outputs() returns copies with this set.
+        std::shared_ptr<const PrimitiveFunction> m_acyclicOutputPrimitiveReference; // Output: ref to Primitive if known to be acyclic.
     };
 
     // TODO: Variable equality should be based on uids.
@@ -2324,6 +2327,7 @@ namespace std {
     };
 
     // TODO: Variable hash should be based on uid.
+    // TODO: Actually not; uids are expensive. The pointer is fine.
     template <> struct hash<::CNTK::Variable>
     {
         size_t operator()(const ::CNTK::Variable& x) const
@@ -3591,7 +3595,8 @@ namespace CNTK
     private:
         //CNTK_API Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
-        CNTK_API Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid);
+        // move constructor where everything is prepared outside; used in auto-batching
+        Function(std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig, FunctionPtr&& rootFunction, std::wstring&& name, std::wstring&& uid);
 
         std::vector<Variable> m_inputs; // primitives: direct input variables; composites: overall input variables, computed lazily (?)
         size_t/*std::once_flag*/ m_outputsInitFlag = 0;

@@ -268,15 +268,46 @@ namespace CNTK
         static const std::wstring AttributeNameRandomDistributionArgs;
 
     protected:
+        // base constructor, called by all others except the move one
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
-            : Function(inputs, std::move(functionConfig), nullptr, functionName, uid), m_op(op)
+            : Function(inputs, std::move(functionConfig), nullptr, functionName, uid),
+              m_op(op)
+        {
+            // determine whether this primitive is really guaranteed to be acyclic
+            for (const auto& input : inputs)
+            {
+                if (input.IsPlaceholder() || (input.IsOutput() && !input.m_acyclicOutputPrimitiveReference))
+                {
+                    // If any input is a Placeholder, it is for sure not dynamic, and may eventually
+                    // be looped back through ReplacePlaceholder().
+                    // Likewise, if any input already is not guaranteed, this one is neither.
+                    m_isKnownToBeAcyclic = false;
+                    break;
+                }
+            }
+        }
+
+    private:
+        // fast alternative constructor private to RawPrimitiveFunction()--not meant for any other use
+        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, std::vector<Variable>&& outputs, Dictionary&& functionConfig)
+            : Function(std::move(inputs), std::move(outputs), std::move(functionConfig), nullptr, std::wstring(), std::wstring()),
+              m_op(op)
         {}
 
-        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& outputShape, Dictionary&& functionConfig)
-            : Function(std::move(inputs),  // BUGBUG: possibly buggy due to undefined C++ arg eval order
-                       std::vector<Variable>({ OutputVariable(outputShape, inputs[0].GetDataType(),{}, std::any_of(inputs.begin(), inputs.end(), [](const Variable& input) { return input.NeedsGradient(); }), std::wstring()) }),
-                       std::move(functionConfig), nullptr, std::wstring(), std::wstring()), m_op(op)
-        {}
+        static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes)
+        {
+            std::vector<Variable> output({
+                OutputVariable(shape, inputs[0].GetDataType(), {},
+                               std::any_of(inputs.begin(), inputs.end(), [](const Variable& input) { return input.NeedsGradient(); }),
+                               std::wstring())
+            });
+            auto res = MakeSharedObject<PrimitiveFunction>(op, std::move(inputs), std::move(output), std::move(attributes));
+            //std::call_once(m_outputsInitFlag, [this]() {});
+            res->m_outputsInitFlag++;
+            res->m_outputs.front().SetOwner(res);
+            // This really belongs inside the constructor, but we don't have the shared_ptr yet. Not nice this way.
+            return res;
+        }
 
     public:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
@@ -778,11 +809,10 @@ namespace CNTK
         void BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const;
 
     private:
-        static PrimitiveFunctionPtr RawPrimitiveFunction(PrimitiveOpType op, std::vector<Variable>&& inputs, const NDShape& shape, Dictionary&& attributes);
         static NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&, const PrimitiveFunction& funcForErrMsg);
         static void BackpropTo(const NDArrayView* outputGradient, size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes, const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues, const NDArrayViewPtr& gradient, double beta, const PrimitiveFunction& funcForErrMsg);
 
-        virtual PrimitiveOpType Op() const { return m_op; }
+        virtual PrimitiveOpType Op() const { return m_op; } // TODO: remove if no longer needed
 
     private:
         PrimitiveOpType m_op;
@@ -804,9 +834,10 @@ namespace CNTK
         static const size_t s_serializationVersion = 15;
 
         // Dynamite
+        bool m_isKnownToBeAcyclic = true; // true if it is guaranteed that this PrimitiveFunction can never be part of a cycle (==has no Placeholder leaves)
         int m_pendingInputs = -1;   // counter how many inputs have already become available
         PrimitiveFunction* m_link;  // auto-batch uses temporary linked lists
-    };
+    }; // end class PrimitiveFunction
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);
     Dictionary SerializeCommonFunctionAttributes(const Function& f, size_t version, const std::wstring& functionType);

@@ -278,7 +278,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto model_fn = CreateModelFunction(numOutputClasses, embeddingDim, hiddenDim, device);
     auto criterion_fn = CreateCriterionFunction(model_fn);
 
-    // dybamic model and criterion function
+    // dynamic model and criterion function
     auto d_model_fn = CreateModelFunctionUnrolled(numOutputClasses, embeddingDim, hiddenDim, device);
     auto d_criterion_fn = CreateCriterionFunctionUnrolled(d_model_fn);
 

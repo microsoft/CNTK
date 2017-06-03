@@ -83,8 +83,10 @@ namespace CNTK
     {
         // We have to preserve the whole subgraph.
         Variable result;
+        // This must copy all data members except m_outputComposite.
         result.m_outputComposite = composite;
         result.m_dataFields = m_dataFields;
+        result.m_acyclicOutputPrimitiveReference = m_acyclicOutputPrimitiveReference;
         return result;
     }
 
@@ -92,7 +94,9 @@ namespace CNTK
     {
 #if 1
         Variable result;
+        // This must copy all data members except m_outputComposite.
         result.m_dataFields = m_dataFields;
+        result.m_acyclicOutputPrimitiveReference = m_acyclicOutputPrimitiveReference;
         return result;
 #else
         Variable copy = *this;
