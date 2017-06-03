@@ -156,13 +156,61 @@ namespace CNTK
 
     class Serializer;
 
+    template<class T>
+    class ObjectPool
+    {
+        // actual allocated item is a char array large enough to hold Node and T
+        struct Node { Node* next; };
+        Node* first = nullptr;
+    public:
+        // destructor frees up all items in the linked list
+        ~ObjectPool()
+        {
+            while (first)
+            {
+                Node* next = first->next;
+                delete[] (char*)first;
+                first = next;
+            }
+        }
+        // allocate one
+        T* CheckOut()
+        {
+            Node* p = first;
+            if (p)
+                first = p->next; // got one in the free list: check it out from there
+            else
+                p = (Node*)new char[std::max(sizeof T, sizeof Node)]; // else allocate a new one
+            return (T*)p;
+        }
+        // deallocate: return buffer to the free list
+        // User must already have called the destructor, so this is now uninitialized memory.
+        void Return(T* pt)
+        {
+            Node* p = (Node*)pt;
+            p->next = first;
+            first = p;
+        }
+    };
+
     // Similar to make_shared except that it associates a custom deleter with the shared_ptr to ensure
     // that objects are deleted on the same side of the library DLL where they are allocated
     template <typename T, typename ...CtorArgTypes>
     inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs)
     {
+#if 1
+        static ObjectPool<T> objPool;
+        auto objPtr = objPool.CheckOut();
+        new (objPtr) T(std::forward<CtorArgTypes>(ctorArgs)...);
+        return std::shared_ptr<T>(objPtr, [&](T* ptr)
+        {
+            ptr->~T();
+            objPool.Return(ptr);
+        });
+#else
         auto objPtr = new T(std::forward<CtorArgTypes>(ctorArgs)...);
         return std::shared_ptr<T>(objPtr, [](T* ptr) { delete ptr; });
+#endif
     }
 
     // Forward declarations
