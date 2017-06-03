@@ -161,11 +161,12 @@ namespace CNTK
     {
         // actual allocated item is a char array large enough to hold Node and T
         struct Node { Node* next; };
-        Node* first = nullptr;
+        static Node* & s_first() { static Node* first = nullptr; return first; }
     public:
         // destructor frees up all items in the linked list
         ~ObjectPool()
         {
+            auto& first = s_first();
             while (first)
             {
                 Node* next = first->next;
@@ -174,8 +175,9 @@ namespace CNTK
             }
         }
         // allocate one
-        T* CheckOut()
+        static T* CheckOut()
         {
+            auto& first = s_first();
             Node* p = first;
             if (p)
                 first = p->next; // got one in the free list: check it out from there
@@ -185,11 +187,18 @@ namespace CNTK
         }
         // deallocate: return buffer to the free list
         // User must already have called the destructor, so this is now uninitialized memory.
-        void Return(T* pt)
+        static void Return(T* pt)
         {
+            auto& first = s_first();
             Node* p = (Node*)pt;
             p->next = first;
             first = p;
+        }
+        // the deleter to pass to the shared_ptr
+        static void Delete(T* ptr)
+        {
+            ptr->~T();
+            Return(ptr);
         }
     };
 
@@ -199,14 +208,14 @@ namespace CNTK
     inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs)
     {
 #if 1
-        static ObjectPool<T> objPool;
-        auto objPtr = objPool.CheckOut();
+        auto objPtr = ObjectPool<T>::CheckOut();
         new (objPtr) T(std::forward<CtorArgTypes>(ctorArgs)...);
-        return std::shared_ptr<T>(objPtr, [&](T* ptr)
-        {
-            ptr->~T();
-            objPool.Return(ptr);
-        });
+        return std::shared_ptr<T>(objPtr, ObjectPool<T>::Delete);
+        //[&](T* ptr)
+        //{
+        //    ptr->~T();
+        //    objPool.Return(ptr);
+        //});
 #else
         auto objPtr = new T(std::forward<CtorArgTypes>(ctorArgs)...);
         return std::shared_ptr<T>(objPtr, [](T* ptr) { delete ptr; });
