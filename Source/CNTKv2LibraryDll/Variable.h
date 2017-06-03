@@ -19,7 +19,7 @@ namespace CNTK
         VariableKind m_varKind;
 
         // graph
-        std::weak_ptr<Function> m_ownerFunction;
+        std::weak_ptr<PrimitiveFunction> m_ownerFunction; // OutputVariables only: Primitive that owns this output.
         std::wstring m_name;
         mutable std::wstring m_uid;
         Variable m_blockFunctionVariableMapping;
@@ -46,7 +46,7 @@ namespace CNTK
         std::unique_ptr<ParameterInitializer> m_valueInitializer;
         std::unique_ptr<DeviceDescriptor> m_valueInitializationDevice;
 
-        VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, const std::weak_ptr<Function>& ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
+        VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, const std::weak_ptr<PrimitiveFunction>& ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
             : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value),
               m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid), m_valueTimeStamp(0)
         {

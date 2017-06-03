@@ -105,7 +105,7 @@ namespace CNTK
 #endif
     }
 
-    void Variable::SetOwner(const std::weak_ptr<Function>& ownerFunction)
+    void Variable::SetOwner(const std::weak_ptr<PrimitiveFunction>& ownerFunction)
     {
         if (Kind() != VariableKind::Output)
             LogicError("Variable '%S' SetOwner: Owner can only be set for Output Variables", AsString().c_str());
@@ -437,7 +437,7 @@ namespace CNTK
     }
 
     Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
-        : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, std::weak_ptr<Function>(), value, needsGradient, dynamicAxes, isSparse, name, uid))
+        : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, std::weak_ptr<PrimitiveFunction>(), value, needsGradient, dynamicAxes, isSparse, name, uid))
     {}
 
     template <typename ElementType>

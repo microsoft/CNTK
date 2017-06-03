@@ -63,7 +63,7 @@ namespace CNTK
                 outputs.reserve(Function::MaxNumOutputs);
             InferOutputs(outputs); // gives us a full copy of all those Variable objects
             if (!IsPrimitive())
-                assert(outputs.capacity() = Function::MaxNumOutputs); // must not have touched this
+                assert(outputs.capacity() == Function::MaxNumOutputs); // must not have touched this
             //m_outputs.reserve(outputs.size());
             //for (auto& outputVar : outputs)
             for (size_t i = 0; i < outputs.size(); i++)
@@ -71,7 +71,12 @@ namespace CNTK
                 auto& outputVar = outputs[i];
 
                 if (outputVar.IsOutput()/*could be something else for Combine()*/ && outputVar.OwnerIs(nullptr))
-                    outputVar.SetOwner(shared_from_this());
+                {
+                    auto prOwner = dynamic_pointer_cast<PrimitiveFunction>(shared_from_this());
+                    if (!prOwner)
+                        LogicError("InitOutputs: Cannot initialize an output's owner to be a Composite.");
+                    outputVar.SetOwner(prOwner);
+                }
 
                 //if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.OwnerIs(this))
                 //{
