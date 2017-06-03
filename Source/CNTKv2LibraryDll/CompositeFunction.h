@@ -70,7 +70,7 @@ namespace CNTK
         }
 
     public:
-        static CompositeFunctionPtr Create(const PrimitiveFunctionPtr& rootFunction, const std::wstring& name = std::wstring(),
+        static CompositeFunctionPtr Create(const PrimitiveFunctionPtr& rootFunction, const std::wstring& name,// = std::wstring(),
                                            const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
         {
             std::unordered_set<FunctionPtr> visitedFunctions;
@@ -367,31 +367,31 @@ namespace CNTK
 
         void ClearExistingOutputOrGradientStorageReferences()
         {
-            for (auto& existingStorageWeakReference : V1InteropState().m_existingNetworkStorageReferences)
+            for (auto& existingStorageWeakReference : ExecVars().m_existingNetworkStorageReferences)
             {
                 auto existingStorageReference = existingStorageWeakReference.lock();
                 if (existingStorageReference)
                     existingStorageReference->Erase();
             }
 
-            V1InteropState().m_existingNetworkStorageReferences.clear();
+            ExecVars().m_existingNetworkStorageReferences.clear();
         }
 
         void PurgeComputationNetwork()
         {
-            V1InteropState().m_currentBackpropRoots.clear();
-            V1InteropState().m_inputsExcludedFromGradientComputation.clear();
-            V1InteropState().m_variableToNodeMap.clear();
-            V1InteropState().m_currentOutputsToEvaluate.clear();
-            V1InteropState().m_lastRecordedTimeStamps.clear();
+            ExecVars().m_currentBackpropRoots.clear();
+            ExecVars().m_inputsExcludedFromGradientComputation.clear();
+            ExecVars().m_variableToNodeMap.clear();
+            ExecVars().m_currentOutputsToEvaluate.clear();
+            ExecVars().m_lastRecordedTimeStamps.clear();
 
-            V1InteropState().m_networkMatricesAllocated = false;
-            V1InteropState().m_computationNetwork = nullptr;
+            ExecVars().m_networkMatricesAllocated = false;
+            ExecVars().m_computationNetwork = nullptr;
         }
 
         void RecordRefVariableUpdates()
         {
-            for (auto refVar : V1InteropState().m_refVariables)
+            for (auto refVar : ExecVars().m_refVariables)
                 refVar.IsParameter() ? Parameter(refVar).RecordValueUpdate() : Constant(refVar).RecordValueUpdate();
         }
 
@@ -403,7 +403,7 @@ namespace CNTK
 
         // all variables for V1 evaluation are in a sub-structure
         // because those sets cause multiple mallocs() for every composite we create
-        struct V1InteropStateVars
+        struct ExecVars_t
         {
             // A map from Variable objects to ComputationNode objects in the ComputationNetwork instance that implements 'this' Composite Function
             std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_variableToNodeMap;
@@ -439,18 +439,18 @@ namespace CNTK
 
             std::unordered_set<Variable> m_inputsExcludedFromGradientComputation;
         };
-        mutable std::unique_ptr<V1InteropStateVars> m_v1InteropState; // the actual object is created lazily on demand
-        V1InteropStateVars& V1InteropState()
+        mutable std::unique_ptr<ExecVars_t> m_execVars; // the actual object is created lazily on demand
+        ExecVars_t& ExecVars()
         {
-            if (!m_v1InteropState)
-                m_v1InteropState = std::make_unique<V1InteropStateVars>();
-            return *m_v1InteropState;
+            if (!m_execVars)
+                m_execVars = std::make_unique<ExecVars_t>();
+            return *m_execVars;
         }
-        const V1InteropStateVars& V1InteropState() const
+        const ExecVars_t& ExecVars() const
         {
-            if (!m_v1InteropState)
-                m_v1InteropState = std::make_unique<V1InteropStateVars>();
-            return *m_v1InteropState;
+            if (!m_execVars)
+                m_execVars = std::make_unique<ExecVars_t>();
+            return *m_execVars;
         }
 
         // Version history:

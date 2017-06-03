@@ -53,7 +53,7 @@ namespace CNTK
     // the corresponding stateful primitive functions.
     void CompositeFunction::UpdateInternalState() const
     {
-        if (!V1InteropState().m_computationNetwork)
+        if (!ExecVars().m_computationNetwork)
             return;
 
         for (auto& function : GetAllPrimitiveFunctionsCollection()->AsIterable())
@@ -68,7 +68,7 @@ namespace CNTK
             if (outputs.size() != 1)
                 LogicError("Function '%S' UpdateInternalState: a stateful primitive function must have a single output.", AsString().c_str());
 
-            const auto& rng = V1InteropState().m_variableToNodeMap.at(outputs[0])->As<RngUser>();
+            const auto& rng = ExecVars().m_variableToNodeMap.at(outputs[0])->As<RngUser>();
 
             Dictionary state;
             state[PrimitiveFunction::AttributeNameRngSeed] = static_cast<size_t>(rng->GetRngSeed());
@@ -393,7 +393,7 @@ namespace CNTK
             
             primitiveFunction->SetState(functionState);
 
-            if (!V1InteropState().m_computationNetwork)
+            if (!ExecVars().m_computationNetwork)
                 continue;
 
             auto seed = functionState[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
@@ -402,7 +402,7 @@ namespace CNTK
             // copy the state directly into the network
             for (const auto& output : function->RawOutputs())
             {
-                auto node = V1InteropState().m_variableToNodeMap.at(output);
+                auto node = ExecVars().m_variableToNodeMap.at(output);
                 node->As<RngUser>()->SetRngState(seed, offset);
             }
         }
@@ -1344,32 +1344,32 @@ namespace CNTK
     {
         // Lets purge the current computation network and regenerate the network if the CompositeFunction
         // was previously compiled just for evaluation and not for gradient backpropagation.
-        if ((V1InteropState().m_computationNetwork != nullptr) && (V1InteropState().m_currentBackpropRoots.empty() && !backpropRoots.empty()))
+        if ((ExecVars().m_computationNetwork != nullptr) && (ExecVars().m_currentBackpropRoots.empty() && !backpropRoots.empty()))
             PurgeComputationNetwork();
 
-        if (V1InteropState().m_computationNetwork != nullptr)
+        if (ExecVars().m_computationNetwork != nullptr)
         {
             // TODO: We should either invalidate and readapt the network if the backpropRoots change compared to what was specified when the network
             // was last constructed, to just recreate a new network.
             // For now just disallow changing the backpropRoots after the network is created
-            if (!backpropRoots.empty() && (V1InteropState().m_currentBackpropRoots != backpropRoots))
+            if (!backpropRoots.empty() && (ExecVars().m_currentBackpropRoots != backpropRoots))
                 LogicError("Function '%S': Changing backprop roots (Current = '%S', New = '%S') across different Forward calls on a CNTK composite Function is currently unsupported.",
-                            AsString().c_str(), NamedListString(V1InteropState().m_currentBackpropRoots).c_str(), NamedListString(backpropRoots).c_str());
+                            AsString().c_str(), NamedListString(ExecVars().m_currentBackpropRoots).c_str(), NamedListString(backpropRoots).c_str());
 
             // TODO: Support changing the device across different invocations of the forward method on a Function instance
-            if (AsDeviceDescriptor(V1InteropState().m_computationNetwork->GetDeviceId()) != device)
+            if (AsDeviceDescriptor(ExecVars().m_computationNetwork->GetDeviceId()) != device)
                 LogicError("Function '%S': Changing device (Current = '%S', New = %S') across different Forward calls on a CNTK composite Function is currently unsupported.",
-                            AsString().c_str(), AsDeviceDescriptor(V1InteropState().m_computationNetwork->GetDeviceId()).AsString().c_str(), device.AsString().c_str());
+                            AsString().c_str(), AsDeviceDescriptor(ExecVars().m_computationNetwork->GetDeviceId()).AsString().c_str(), device.AsString().c_str());
             
-            if (!backpropRoots.empty() && (inputsToExcludeGradientsFor != V1InteropState().m_inputsExcludedFromGradientComputation))
+            if (!backpropRoots.empty() && (inputsToExcludeGradientsFor != ExecVars().m_inputsExcludedFromGradientComputation))
                 LogicError("Function '%S': Changing the set of inputs to exclude from gradient computation, across different Forward calls on a CNTK composite Function, is currently unsupported.", AsString().c_str());
 
             // Verify if the free dimensions of any of the arguments have changed, and if so, update the corresponding
             // input ComputationNodes and rerun validation on the computation network
-            for (auto freeDimensionArgumentMapping : V1InteropState().m_fullyDefinedArgumentsMap)
+            for (auto freeDimensionArgumentMapping : ExecVars().m_fullyDefinedArgumentsMap)
             {
                 auto newShape = freeDimensionArgumentMapping.second.Shape();
-                auto argumentComputationNode = V1InteropState().m_variableToNodeMap[freeDimensionArgumentMapping.first];
+                auto argumentComputationNode = ExecVars().m_variableToNodeMap[freeDimensionArgumentMapping.first];
                 if (AsTensorShape(newShape) != argumentComputationNode->GetSampleLayout())
                     argumentComputationNode->SetDims(AsTensorShape(newShape), argumentComputationNode->HasMBLayout());
             }
@@ -1386,8 +1386,8 @@ namespace CNTK
                                     inputExcluded.AsString().c_str(), this->AsString().c_str());
             }
 
-            V1InteropState().m_inputsExcludedFromGradientComputation = NonOwnerPreservingCopy(inputsToExcludeGradientsFor);
-            V1InteropState().m_currentBackpropRoots = NonOwnerPreservingCopy(backpropRoots);
+            ExecVars().m_inputsExcludedFromGradientComputation = NonOwnerPreservingCopy(inputsToExcludeGradientsFor);
+            ExecVars().m_currentBackpropRoots = NonOwnerPreservingCopy(backpropRoots);
 
             // TODO: We currently only support one backprop root
             if (backpropRoots.size() > 1)
@@ -1406,7 +1406,7 @@ namespace CNTK
             {
                 if (argument.Shape().HasInferredDimension())
                 {
-                    auto fullyDefinedArgument = V1InteropState().m_fullyDefinedArgumentsMap.at(argument);
+                    auto fullyDefinedArgument = ExecVars().m_fullyDefinedArgumentsMap.at(argument);
                     for (size_t i = 0; i < argument.Shape().Rank(); ++i)
                         if (argument.Shape()[i] == NDShape::InferredDimension)
                             argument.m_dataFields->m_shape[i] = fullyDefinedArgument.Shape()[i];
@@ -1417,47 +1417,47 @@ namespace CNTK
             // internal computation network
             ValidateOrUpdateOutputs();
 
-            std::tie(V1InteropState().m_computationNetwork, V1InteropState().m_variableToNodeMap) = CreateComputationNetwork<ElementType>(this->shared_from_this(), device, outputs, V1InteropState().m_fullyDefinedArgumentsMap, V1InteropState().m_inputsExcludedFromGradientComputation, /*useMangledNamesForComputationNodes =*/ false);
+            std::tie(ExecVars().m_computationNetwork, ExecVars().m_variableToNodeMap) = CreateComputationNetwork<ElementType>(this->shared_from_this(), device, outputs, ExecVars().m_fullyDefinedArgumentsMap, ExecVars().m_inputsExcludedFromGradientComputation, /*useMangledNamesForComputationNodes =*/ false);
 
             // Record the timestamps of Parameters and Constants
-            assert(V1InteropState().m_lastRecordedTimeStamps.empty());
+            assert(ExecVars().m_lastRecordedTimeStamps.empty());
             auto functionParameters = Parameters();
             for (auto parameter : functionParameters)
-                V1InteropState().m_lastRecordedTimeStamps.insert({ parameter, parameter.CurrentValueTimeStamp() });
+                ExecVars().m_lastRecordedTimeStamps.insert({ parameter, parameter.CurrentValueTimeStamp() });
             auto functionConstants = Constants();
             for (auto constant : functionConstants)
-                V1InteropState().m_lastRecordedTimeStamps.insert({ constant, constant.CurrentValueTimeStamp() });
+                ExecVars().m_lastRecordedTimeStamps.insert({ constant, constant.CurrentValueTimeStamp() });
 
             // Collect parameters and constants being assigned to
             PreorderTraverseFunctions(RootFunction(), [this](const FunctionPtr& function) {
                 auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
                 if (primitiveFunction && (primitiveFunction->OpType() == PrimitiveOpType::Assign))
-                    V1InteropState().m_refVariables.insert(primitiveFunction->Inputs()[0]);
+                    ExecVars().m_refVariables.insert(primitiveFunction->Inputs()[0]);
             }, /*nestedSearchInsideBlockFunction =*/ true);
         }
 
-        if (!V1InteropState().m_networkMatricesAllocated && allocateNetworkMatrices)
+        if (!ExecVars().m_networkMatricesAllocated && allocateNetworkMatrices)
         {
-            V1InteropState().m_allNetworkRoots = V1InteropState().m_currentBackpropRoots;
+            ExecVars().m_allNetworkRoots = ExecVars().m_currentBackpropRoots;
             ComputationNodeBasePtr backpropRootNode;
-            if (!V1InteropState().m_currentBackpropRoots.empty())
-                backpropRootNode = V1InteropState().m_variableToNodeMap.at(*V1InteropState().m_currentBackpropRoots.begin());
+            if (!ExecVars().m_currentBackpropRoots.empty())
+                backpropRootNode = ExecVars().m_variableToNodeMap.at(*ExecVars().m_currentBackpropRoots.begin());
 
             // Now recursively traverse the network in a top-down fashion
             auto rootFunction = RootFunction();
             auto rootFunctionOutputs = rootFunction->RawOutputs();
-            V1InteropState().m_allNetworkRoots.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
+            ExecVars().m_allNetworkRoots.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
             std::vector<ComputationNodeBasePtr> forwardRootNodes;
             for (auto rootOutput : rootFunctionOutputs)
-                forwardRootNodes.push_back(V1InteropState().m_variableToNodeMap.at(rootOutput));
+                forwardRootNodes.push_back(ExecVars().m_variableToNodeMap.at(rootOutput));
 
             std::vector<ComputationNodeBasePtr> forwardOutputNodes;
-            V1InteropState().m_allNetworkRoots.insert(outputs.begin(), outputs.end());
+            ExecVars().m_allNetworkRoots.insert(outputs.begin(), outputs.end());
             for (auto output : outputs)
-                forwardOutputNodes.push_back(V1InteropState().m_variableToNodeMap.at(output));
+                forwardOutputNodes.push_back(ExecVars().m_variableToNodeMap.at(output));
 
-            V1InteropState().m_computationNetwork->AllocateAllMatrices(forwardRootNodes, forwardOutputNodes, backpropRootNode);
-            V1InteropState().m_networkMatricesAllocated = allocateNetworkMatrices;
+            ExecVars().m_computationNetwork->AllocateAllMatrices(forwardRootNodes, forwardOutputNodes, backpropRootNode);
+            ExecVars().m_networkMatricesAllocated = allocateNetworkMatrices;
         }
         else
         {
@@ -1465,14 +1465,14 @@ namespace CNTK
             // in the cached computation network
             for (auto output : outputs)
             {
-                if (V1InteropState().m_allNetworkRoots.find(output) == V1InteropState().m_allNetworkRoots.end())
+                if (ExecVars().m_allNetworkRoots.find(output) == ExecVars().m_allNetworkRoots.end())
                     LogicError("Function '%S': Requested output '%S' is not part of the list of outputs '%S' that the Function was initially compiled for. "
                                 "Changing requested outputs across different Forward calls is currently unsupported.",
-                                AsString().c_str(), output.AsString().c_str(), NamedListString(V1InteropState().m_allNetworkRoots).c_str());
+                                AsString().c_str(), output.AsString().c_str(), NamedListString(ExecVars().m_allNetworkRoots).c_str());
             }
         }
 
-        return V1InteropState().m_computationNetwork;
+        return ExecVars().m_computationNetwork;
     }
 
     template <typename ElementType>
@@ -1522,32 +1522,32 @@ namespace CNTK
 
         if (!inferredArgumentDimensions.empty())
         {
-            if (V1InteropState().m_fullyDefinedArgumentsMap.empty())
+            if (ExecVars().m_fullyDefinedArgumentsMap.empty())
             {
                 for (auto inferredArgumentShapePair : inferredArgumentDimensions)
                 {
                     auto fullyDefinedArgument = inferredArgumentShapePair.first.Clone();
                     fullyDefinedArgument.m_dataFields->m_shape = inferredArgumentShapePair.second;
-                    V1InteropState().m_fullyDefinedArgumentsMap.insert({ inferredArgumentShapePair.first, fullyDefinedArgument });
+                    ExecVars().m_fullyDefinedArgumentsMap.insert({ inferredArgumentShapePair.first, fullyDefinedArgument });
                 }
 
                 if (GetCheckedMode())
-                    V1InteropState().m_latestFullyDefinedCompositeForCheckedModeValidation = this->Clone(ParameterCloningMethod::Share, V1InteropState().m_fullyDefinedArgumentsMap);
+                    ExecVars().m_latestFullyDefinedCompositeForCheckedModeValidation = this->Clone(ParameterCloningMethod::Share, ExecVars().m_fullyDefinedArgumentsMap);
             }
             else
             {
                 bool argumentShapeChangedSinceLastTime = false;
                 for (auto inferredArgumentShapePair : inferredArgumentDimensions)
                 {
-                    if (inferredArgumentShapePair.second != V1InteropState().m_fullyDefinedArgumentsMap[inferredArgumentShapePair.first].Shape())
+                    if (inferredArgumentShapePair.second != ExecVars().m_fullyDefinedArgumentsMap[inferredArgumentShapePair.first].Shape())
                     {
                         argumentShapeChangedSinceLastTime = true;
-                        V1InteropState().m_fullyDefinedArgumentsMap[inferredArgumentShapePair.first].m_dataFields->m_shape = inferredArgumentShapePair.second;
+                        ExecVars().m_fullyDefinedArgumentsMap[inferredArgumentShapePair.first].m_dataFields->m_shape = inferredArgumentShapePair.second;
                     }
                 }
 
-                if (argumentShapeChangedSinceLastTime && V1InteropState().m_latestFullyDefinedCompositeForCheckedModeValidation)
-                    V1InteropState().m_latestFullyDefinedCompositeForCheckedModeValidation->ValidateOrUpdateOutputs();
+                if (argumentShapeChangedSinceLastTime && ExecVars().m_latestFullyDefinedCompositeForCheckedModeValidation)
+                    ExecVars().m_latestFullyDefinedCompositeForCheckedModeValidation->ValidateOrUpdateOutputs();
             }
         }
 
@@ -1561,7 +1561,7 @@ namespace CNTK
         for (auto argumentValuePair : arguments)
         {
             auto argument = argumentValuePair.first;
-            auto argumentComputationNode = V1InteropState().m_variableToNodeMap.at(argument);
+            auto argumentComputationNode = ExecVars().m_variableToNodeMap.at(argument);
             assert(argumentComputationNode);
             inputNodes.push_back(argumentComputationNode);
 
@@ -1580,7 +1580,7 @@ namespace CNTK
             }
         }
 
-        V1InteropState().m_computationNetwork->BumpEvalTimeStamp(inputNodes);
+        ExecVars().m_computationNetwork->BumpEvalTimeStamp(inputNodes);
     }
 
     template <typename ElementType>
@@ -1606,7 +1606,7 @@ namespace CNTK
         auto functionOutputs = RawOutputs();
         for (auto gradientVarValuePair : gradients)
         {
-            auto outputComputationNode = V1InteropState().m_variableToNodeMap.at(gradientVarValuePair.first);
+            auto outputComputationNode = ExecVars().m_variableToNodeMap.at(gradientVarValuePair.first);
             ValuePtr gradientValue = gradientVarValuePair.second;
 
             switch (gradientValue->GetDataType())
@@ -1675,13 +1675,13 @@ namespace CNTK
         for (auto& outputVarValuePair : outputs)
         {
             auto& valuePtr = outputVarValuePair.second;
-            auto node = V1InteropState().m_variableToNodeMap.at(outputVarValuePair.first);
+            auto node = ExecVars().m_variableToNodeMap.at(outputVarValuePair.first);
             bool noValueStrorageProvided = (valuePtr == nullptr);
             GetNodeOutputOrGradient(outputVarValuePair.first, valuePtr, node, false /*getGradient*/);
 
             auto packedVarValue = std::dynamic_pointer_cast<PackedValue>(valuePtr);
             if (noValueStrorageProvided && packedVarValue && packedVarValue->IsPacked())
-                V1InteropState().m_existingNetworkStorageReferences.push_back(packedVarValue);
+                ExecVars().m_existingNetworkStorageReferences.push_back(packedVarValue);
         }
     }
 
@@ -1697,12 +1697,12 @@ namespace CNTK
                                 gradientVarValuePair.first.AsString().c_str(), this->AsString().c_str());
 
             // Gradients can only be obtained for parameter variables or input variables that NeedsGradient
-            if (!gradientVarValuePair.first.NeedsGradient() || (V1InteropState().m_inputsExcludedFromGradientComputation.find(gradientVarValuePair.first) != V1InteropState().m_inputsExcludedFromGradientComputation.end()))
+            if (!gradientVarValuePair.first.NeedsGradient() || (ExecVars().m_inputsExcludedFromGradientComputation.find(gradientVarValuePair.first) != ExecVars().m_inputsExcludedFromGradientComputation.end()))
                 InvalidArgument("Gradient value incorrectly requested for Variable '%S', "
                                 "an Output or Constant or Input Variable with NeedsGradient setting of false, or an input for which gradient computation was explicitly excluded.",
                                 gradientVarValuePair.first.AsString().c_str());
 
-            auto computationNodePtr = V1InteropState().m_variableToNodeMap.at(gradientVarValuePair.first);
+            auto computationNodePtr = ExecVars().m_variableToNodeMap.at(gradientVarValuePair.first);
 
             if (!computationNodePtr->NeedsGradient())
                 LogicError("Function '%S': Backpropagated gradient value cannot be read from a Variable '%S' whose ComputationNode has NeedsGradient set to false.",
@@ -1714,34 +1714,34 @@ namespace CNTK
 
             auto packedVarValue = std::dynamic_pointer_cast<PackedValue>(valuePtr);
             if (noValueStrorageProvided && packedVarValue && packedVarValue->IsPacked())
-                V1InteropState().m_existingNetworkStorageReferences.push_back(packedVarValue);
+                ExecVars().m_existingNetworkStorageReferences.push_back(packedVarValue);
         }
     }
 
     const std::vector<Variable>& CompositeFunction::GetArgumentDependencies(const Variable& output)
     {
-        if (V1InteropState().m_perOutputVarArgumentDependencies.find(output) == V1InteropState().m_perOutputVarArgumentDependencies.end())
+        if (ExecVars().m_perOutputVarArgumentDependencies.find(output) == ExecVars().m_perOutputVarArgumentDependencies.end())
         {
             auto sanitizedOutput = output.NonCompositePreservingCopy();
 
             if (sanitizedOutput.IsOutput())
-                V1InteropState().m_perOutputVarArgumentDependencies[sanitizedOutput] = AsComposite(sanitizedOutput.OwnerPrimitive())->Arguments();
+                ExecVars().m_perOutputVarArgumentDependencies[sanitizedOutput] = AsComposite(sanitizedOutput.OwnerPrimitive())->Arguments();
             else if (sanitizedOutput.IsParameter() || sanitizedOutput.IsConstant())
-                V1InteropState().m_perOutputVarArgumentDependencies[sanitizedOutput] = {};
+                ExecVars().m_perOutputVarArgumentDependencies[sanitizedOutput] = {};
             else
-                V1InteropState().m_perOutputVarArgumentDependencies[sanitizedOutput] = { sanitizedOutput };
+                ExecVars().m_perOutputVarArgumentDependencies[sanitizedOutput] = { sanitizedOutput };
         }
 
-        return V1InteropState().m_perOutputVarArgumentDependencies[output];
+        return ExecVars().m_perOutputVarArgumentDependencies[output];
     }
 
     std::unordered_map<Variable, uint64_t> CompositeFunction::GetCurrentBackpropRootsTimeStamps() const
     {
         std::unordered_map<Variable, uint64_t> currentBackpropRootsTimeStamps;
-        assert(V1InteropState().m_computationNetwork != nullptr);
+        assert(ExecVars().m_computationNetwork != nullptr);
 
-        for (auto& backpropRoot : V1InteropState().m_currentBackpropRoots)
-            currentBackpropRootsTimeStamps[backpropRoot] = V1InteropState().m_variableToNodeMap.at(backpropRoot)->GetEvalTimeStamp();
+        for (auto& backpropRoot : ExecVars().m_currentBackpropRoots)
+            currentBackpropRootsTimeStamps[backpropRoot] = ExecVars().m_variableToNodeMap.at(backpropRoot)->GetEvalTimeStamp();
 
         return currentBackpropRootsTimeStamps;
     }
@@ -1826,7 +1826,7 @@ namespace CNTK
         ApplyAttributeUpdates();
 
         // Bump the timestamp of the parameter nodes whose values have changed
-        for (auto& timeStampRecord : V1InteropState().m_lastRecordedTimeStamps)
+        for (auto& timeStampRecord : ExecVars().m_lastRecordedTimeStamps)
         {
             auto variable = timeStampRecord.first;
             auto prevTimeStamp = timeStampRecord.second;
@@ -1834,48 +1834,48 @@ namespace CNTK
             if (newTimeStamp > prevTimeStamp)
             {
                 timeStampRecord.second = newTimeStamp;
-                V1InteropState().m_variableToNodeMap.at(variable)->BumpEvalTimeStamp();
+                ExecVars().m_variableToNodeMap.at(variable)->BumpEvalTimeStamp();
             }
         }
 
         std::vector<ComputationNodeBasePtr> outputsToEvaluate;
         for (auto outputVariable : requestedOutputVariables)
-            outputsToEvaluate.push_back(V1InteropState().m_variableToNodeMap.at(outputVariable));
+            outputsToEvaluate.push_back(ExecVars().m_variableToNodeMap.at(outputVariable));
 
         // The 'outputsToRetainBackwardStateFor' nodes also need to be evaluated if not already specified in 'outputs'
         for (auto rootVarForBackprop : outputsToRetainBackwardStateFor)
         {
             if (outputs.find(rootVarForBackprop) == outputs.end())
-                outputsToEvaluate.push_back(V1InteropState().m_variableToNodeMap.at(rootVarForBackprop));
+                outputsToEvaluate.push_back(ExecVars().m_variableToNodeMap.at(rootVarForBackprop));
         }
 
         // Reset the timestamps of all backward roots to record an update in one or more inputs
-        for (auto& backpropRoot : V1InteropState().m_currentBackpropRoots)
-            V1InteropState().m_variableToNodeMap.at(backpropRoot)->SetEvalTimeStampOutdatedWrtAll();
+        for (auto& backpropRoot : ExecVars().m_currentBackpropRoots)
+            ExecVars().m_variableToNodeMap.at(backpropRoot)->SetEvalTimeStampOutdatedWrtAll();
 
         // Reset the timestamps of all dropout node to force recomputation of the (random) dropout mask.
-        list<ComputationNodeBasePtr> dropoutNodes = V1InteropState().m_computationNetwork->GetNodesWithType<DropoutNodeBase>();
+        list<ComputationNodeBasePtr> dropoutNodes = ExecVars().m_computationNetwork->GetNodesWithType<DropoutNodeBase>();
         for (auto& dropout : dropoutNodes)
             dropout->SetEvalTimeStampOutdatedWrtAll();
 
         // Free any previous references to the matrix storage associated with the outputsToEvaluate
         ClearExistingOutputOrGradientStorageReferences();
 
-        ScopedNetworkOperationMode modeGuard(V1InteropState().m_computationNetwork, outputsToRetainBackwardStateFor.empty() ? NetworkOperationMode::inferring : NetworkOperationMode::training);
+        ScopedNetworkOperationMode modeGuard(ExecVars().m_computationNetwork, outputsToRetainBackwardStateFor.empty() ? NetworkOperationMode::inferring : NetworkOperationMode::training);
 
-        V1InteropState().m_computationNetwork->ForwardProp(outputsToEvaluate);
+        ExecVars().m_computationNetwork->ForwardProp(outputsToEvaluate);
 
         // Call PostForwardAndBackProp after ForwardProp only in evaluation mode.
         if (outputsToRetainBackwardStateFor.empty())
         {
-            V1InteropState().m_computationNetwork->PostForwardAndBackProp(outputsToEvaluate);
+            ExecVars().m_computationNetwork->PostForwardAndBackProp(outputsToEvaluate);
             RecordRefVariableUpdates();
         }
         else
         {
-            V1InteropState().m_currentOutputsToEvaluate.clear();
+            ExecVars().m_currentOutputsToEvaluate.clear();
             for (auto outputToEvaluate : outputsToEvaluate)
-                V1InteropState().m_currentOutputsToEvaluate.push_back(outputToEvaluate);
+                ExecVars().m_currentOutputsToEvaluate.push_back(outputToEvaluate);
         }
 
         GetNetworkOutputs(outputs);
@@ -1913,24 +1913,24 @@ namespace CNTK
 
         // Zero all gradients of nodes below the root nodes
         for (auto rootGradientVarValuePair : rootGradientValues)
-            V1InteropState().m_computationNetwork->ZeroInputGradients(V1InteropState().m_variableToNodeMap.at(rootGradientVarValuePair.first));
+            ExecVars().m_computationNetwork->ZeroInputGradients(ExecVars().m_variableToNodeMap.at(rootGradientVarValuePair.first));
 
         // Feed data into the arguments of the network
         PopulateNetworkGradients(rootGradientValues);
 
         // Backpropagate through the network
-        ScopedNetworkOperationMode modeGuard(V1InteropState().m_computationNetwork, NetworkOperationMode::training);
+        ScopedNetworkOperationMode modeGuard(ExecVars().m_computationNetwork, NetworkOperationMode::training);
 
-        auto rootComputationNodePtr = V1InteropState().m_variableToNodeMap.at(rootGradientValues.begin()->first);
-        V1InteropState().m_computationNetwork->GetNestedNetwork(rootComputationNodePtr)->Backprop(FrameRange(nullptr), true, true);
+        auto rootComputationNodePtr = ExecVars().m_variableToNodeMap.at(rootGradientValues.begin()->first);
+        ExecVars().m_computationNetwork->GetNestedNetwork(rootComputationNodePtr)->Backprop(FrameRange(nullptr), true, true);
 
         GetNetworkGradients(backPropagatedGradientValuesForInputs);
 
-        if (V1InteropState().m_currentOutputsToEvaluate.size() > 0)
+        if (ExecVars().m_currentOutputsToEvaluate.size() > 0)
         {
-            V1InteropState().m_computationNetwork->PostForwardAndBackProp(V1InteropState().m_currentOutputsToEvaluate);
+            ExecVars().m_computationNetwork->PostForwardAndBackProp(ExecVars().m_currentOutputsToEvaluate);
             RecordRefVariableUpdates();
-            V1InteropState().m_currentOutputsToEvaluate.clear();
+            ExecVars().m_currentOutputsToEvaluate.clear();
         }
 
         // TODO: How to deal with the specified 'computeDevice'
@@ -1941,7 +1941,7 @@ namespace CNTK
         // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
         // This mask is regenerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
         // w.r.t. inputs to force evaluation in each minibatch
-        for (auto varNodePair : V1InteropState().m_variableToNodeMap)
+        for (auto varNodePair : ExecVars().m_variableToNodeMap)
         {
             auto var = varNodePair.first;
             if (!var.IsOutput())
