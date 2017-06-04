@@ -20,8 +20,9 @@
 #include <vector>
 #include <string>
 
-#define LOG_DETAILS
-#define LOG_STATS
+#define LOG_DETAILS   // if defined, log all forward and backward operations
+#define LOG_STATS     // if defined, log statistics (#operations)
+#undef NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
@@ -771,7 +772,6 @@ public:
         else
         {
             // create new gradient
-#undef NO_BATCHED_BACKPROP
 #ifndef NO_BATCHED_BACKPROP
             // if this op draws from a batched op, then the gradient lives in there as well; we return a view onto it
             if (fields.m_lazyIndex.first)
