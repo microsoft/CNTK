@@ -20,6 +20,9 @@
 #include <vector>
 #include <string>
 
+#undef LOG_DETAILS
+#define LOG_STATS
+
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
 
@@ -89,6 +92,10 @@ class Variable::Memoize
     }
 
     // ===== forward =====
+
+    size_t numOpNodes = 0;
+    size_t numLeafNodes = 0;
+    size_t numBatchedForwardCalls = 0;
 
     // predicate whether an op is only taking a view on its input
     // These are considered zero-cost, always batched whole-sale, and always done first.
@@ -299,9 +306,10 @@ class Variable::Memoize
                 var.Value(); // this initializes it
             if (!fields.m_value)
                 LogicError("Parameter/Constant has no Value??");
+            numLeafNodes++;
             return;
         }
-        auto& f = *dynamic_pointer_cast<PrimitiveFunction>(fields.m_ownerFunction.lock());
+        auto& f = *fields.m_ownerFunction.lock();
         if (f.m_pendingInputs != -1) // already visited
             return;
         // determine how many inputs are pending; and also recurse and set up the consumer list
@@ -325,11 +333,14 @@ class Variable::Memoize
                         fields.m_consumers.second.push_back(make_pair(&f, i));
                 }
             }
+            else
+                numLeafNodes++;
         }
         f.m_pendingInputs = (int)pendingInputs;
         // if none then operation is ready
         if (pendingInputs == 0)
             m_schedule.Schedule(&f); // add to ready set
+        numOpNodes++;
     }
 
     // return the m_value field of a variable, but possibly realizing it lazily if it is an index operation
@@ -365,8 +376,7 @@ class Variable::Memoize
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
         // logging
-#undef LOGGING
-#ifdef LOGGING
+#ifdef LOG_DETAILS
         fprintf(stderr, "%S%S = %S(", f.Uid().c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
         for (size_t i = 0; i < inputs.size() && i < 4; i++)
         {
@@ -386,7 +396,8 @@ class Variable::Memoize
 #endif
         auto outValue = isFree ? nullptr : AllocateTensorInArena(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
         // execute it
-        output.m_dataFields->m_value = move(dynamic_cast<PrimitiveFunction&>(f).ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue), f));
+        output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue), f));
+        numBatchedForwardCalls++;
         return output;
     }
 
@@ -550,7 +561,7 @@ class Variable::Memoize
                         additionalProperties[L"beginIndex"/*PrimitiveFunction::AttributeNameBeginIndex*/] = (int)begin;
                         additionalProperties[L"endIndex"  /*PrimitiveFunction::AttributeNameEndIndex*/  ] = (int)(begin + j);
                         let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Slice, vector<Variable>{ output }, outputShape, move(additionalProperties));
-#ifdef LOGGING
+#ifdef LOG_DETAILS
                         spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
 #endif
                         // and execute it
@@ -573,7 +584,7 @@ class Variable::Memoize
                     auto additionalProperties = Dictionary(); // create additional arguments
                     additionalProperties[L"axis"/*PrimitiveFunction::AttributeNameAxis*/] = Axis((int)maxRank);
                     let spliceOp = PrimitiveFunction::RawPrimitiveFunction(PrimitiveOpType::Splice, vector<Variable>(spliceInputs), outputShape, move(additionalProperties));
-#ifdef LOGGING
+#ifdef LOG_DETAILS
                     spliceOp->m_uid = L"#" + spliceInputs[0].Uid();
 #endif
                     // and execute it
@@ -599,7 +610,7 @@ class Variable::Memoize
                 // Batched inputs have been prepared in m_batchedInputs[].
                 let expectedOutputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
                 batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.Op(), vector<Variable>(m_batchedInputs), expectedOutputShape, Dictionary(f0.Attributes()));
-#ifdef LOGGING
+#ifdef LOG_DETAILS
                 batchedOp->m_uid = L"*" + f0.Uid();
 #endif
             }
@@ -607,7 +618,7 @@ class Variable::Memoize
             {
                 // all inputs identical: compute it only once
                 batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.Op(), vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), Dictionary(f0.Attributes()));
-#ifdef LOGGING
+#ifdef LOG_DETAILS
                 batchedOp->m_uid = L"." + f0.Uid();
 #endif
                 // TODO: the following is a little more efficient, but creates a cycle, so we should exclude the lazy index for the first op
@@ -657,7 +668,11 @@ class Variable::Memoize
 
     // ===== backward =====
 
-    // lazily create m_gradient, which may live in a batched op
+    size_t numBackpropToCalls = 0;
+    size_t numBatchedBackpropToCalls = 0;
+
+    // allocate memory m_gradient
+    // This lazily creates the m_gradient NDArrayView, which may live in a batched op.
     // Returns beta = 0 if gradient was newly created, otherwise 1
     __declspec(noinline) double LazilyCreateLazilyIndexedGradient(const Variable& v)
     {
@@ -713,6 +728,9 @@ class Variable::Memoize
         auto& fields = *var.m_dataFields;
         fields.m_visited = false; // we use this for backprop control  --TODO: consolidate these
 
+        if (fields.m_varKind == VariableKind::Parameter)
+            numBackpropToCalls++;  // stats
+
         if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
             return; // reached a leaf
 
@@ -720,26 +738,42 @@ class Variable::Memoize
         fail_if(!fields.m_needsGradient, "unexpectedly encountered a node with m_needsGradient=false??");
         fail_if(fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder, "unexpectedly encountered an Input or a Placeholder??");
 
+        // If a variable has the m_lazyIndex field set, it means that its value was not
+        // actually computed from its true input; but rather a slice into the result of
+        // a batched operation. In that case, we traverse through that batched operation
+        // instead. As a consequence, it is the batched operation that will be recorded as the
+        // consumer of all inputs of the batched operation, rather than the original
+        // unbatched operation. And as a consequence of that, back propagation will use
+        // the same batching that was determined in forward computation.
 #ifndef NO_BATCHED_BACKPROP
-        if(fields.m_lazyIndex.first)
-        {
-            auto& f = *fields.m_lazyIndex.first;
-            DetermineConsumersForBackward(f);
-        }
-        else
+        auto& f = fields.m_lazyIndex.first        // if var was computed via batched op
+                ? *fields.m_lazyIndex.first       // then backprop into the batched op
+                : *fields.m_ownerFunction.lock(); // otherwise traverse the original op
+#else
+        auto& f = *fields.m_ownerFunction.lock();
 #endif
-        {
-            auto& f = *dynamic_pointer_cast<PrimitiveFunction>(fields.m_ownerFunction.lock());
-            DetermineConsumersForBackward(f);
-        }
-    }
-    void DetermineConsumersForBackward(PrimitiveFunction& f)
-    {
+        //DetermineConsumersForBackward(f);
+//#if 1//ndef NO_BATCHED_BACKPROP
+//        if(fields.m_lazyIndex.first)
+//        {
+//            auto& f = *fields.m_lazyIndex.first;
+//            DetermineConsumersForBackward(f);
+//        }
+//        else
+//#endif
+//        {
+//            auto& f = *dynamic_pointer_cast<PrimitiveFunction>(fields.m_ownerFunction.lock());
+//            DetermineConsumersForBackward(f);
+//        }
+    //}
+    //void DetermineConsumersForBackward(PrimitiveFunction& f)
+    //{
         fail_if(f.m_pendingInputs == -2, "unexpectedly encountered a cyclic graph??"); // graph is cyclic??
 
         if (f.m_pendingInputs != -1) // already visited
             return;
 
+        numBackpropToCalls++;  // stats
         fail_if(f.Op() == PrimitiveOpType::StopGradient, "unexpectedly encountered a StopGradient, which should have propagated m_needsGradient=false upwards");
 
         // we are now in a PrimitiveFunction that should backprop its gradient
@@ -751,6 +785,7 @@ class Variable::Memoize
         for (size_t i = 0; i < inputs.size(); i++)
         {
             let* inputp = &inputs[i];
+            // if the input is a result of a batched operation, then traverse into that instead
             if (inputp->m_dataFields->m_lazyIndex.first)
                 inputp = &inputp->m_dataFields->m_lazyIndex.first->m_outputs[0];
             let& input = *inputp;
@@ -767,11 +802,14 @@ class Variable::Memoize
             // Remember that any input that is a lazyIndex has been redirected to its lazy source,
             // i.e. it is the lazy source that will pull this gradient.
             if (!fields.m_consumers.first.first)
+            {
                 fields.m_consumers.first = make_pair(&f, i);
+                DetermineConsumersForBackward(input);
+            }
             else
                 fields.m_consumers.second.push_back(make_pair(&f, i));
             // now process recursively the inputs
-            DetermineConsumersForBackward(input);
+            //DetermineConsumersForBackward(input);
         }
         f.m_pendingInputs = 0; // used as a visited flag
     }
@@ -853,8 +891,13 @@ other_ops              = rest
 #endif
     }
 
-
-
+    // compute a variable's outputs' gradient (var.m_gradient)
+    // A variable knows all of its consumers. This function back-propagates from all consumers
+    // into the variable's m_gradient field.
+    // A consumer is a specific input of a PrimitiveFunction, specified as (function pointer, input index).
+    // This operates on the xxx
+    // In the case of multiple consumers, the gradient xxx
+    // This recursively traverses the graph upwards via the consumers chain.
     __declspec(noinline) void AggregateGradientFromAllConsumers(const Variable& var)
     {
         let& fields = *var.m_dataFields;
@@ -891,7 +934,7 @@ other_ops              = rest
             return;
         }
 
-        // optimized path
+        // auto-batched path
         // First sort all consumer gradients according to their operation.
         fail_if(!m_otherConsumers.empty(), "consumer bucket lists unexpectedly not cleaned up");
         DetermineBucket(c).push_back(c);
@@ -946,7 +989,8 @@ other_ops              = rest
         // If the input is a lazyIndex, then the gradient is a view into the lazy source.
         let beta = LazilyCreateLazilyIndexedGradient(input);
         // backprop into the input
-        dynamic_cast<PrimitiveFunction*>(f)->BackpropTo(outputGradient, index, f->Op(), f->m_attributes, outputValue, m_inputValuesBufferRaw, fields.m_gradient, beta, *f);
+        PrimitiveFunction::BackpropTo(outputGradient, index, f->Op(), f->m_attributes, outputValue, m_inputValuesBufferRaw, fields.m_gradient, beta, *f);
+        numBatchedBackpropToCalls++;  // stats
     }
 
     // helper to verify that the tree is clean
@@ -1009,6 +1053,9 @@ public:
             assert(fields.m_value);
         }
         AssertTreeStateForward(v); // (sanity check)
+#ifdef LOG_STATS
+        fprintf(stderr, "BatchedForward: %d forward computations executed in nominal %d ops and %d leaves\n", (int)numBatchedForwardCalls, (int)numOpNodes, (int)numLeafNodes);
+#endif
         return LazilyIndexedValue(v);
     }
 
@@ -1069,6 +1116,9 @@ public:
             fields.m_consumers.first.first = nullptr;
             fields.m_consumers.second.clear();
         }
+#ifdef LOG_STATS
+        fprintf(stderr, "BatchedBackward: %d backprop computations executed in nominal %d post-batching ops\n", (int)numBatchedBackpropToCalls, (int)numBackpropToCalls);
+#endif
     }
 }; // class
 

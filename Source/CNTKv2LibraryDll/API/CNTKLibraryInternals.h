@@ -194,7 +194,7 @@ namespace CNTK
             p->next = first;
             first = p;
         }
-        // the deleter to pass to the shared_ptr
+        // the deleter function to pass to the shared_ptr
         static void Delete(T* ptr)
         {
             ptr->~T();
@@ -211,11 +211,6 @@ namespace CNTK
         auto objPtr = ObjectPool<T>::CheckOut();
         new (objPtr) T(std::forward<CtorArgTypes>(ctorArgs)...);
         return std::shared_ptr<T>(objPtr, ObjectPool<T>::Delete);
-        //[&](T* ptr)
-        //{
-        //    ptr->~T();
-        //    objPool.Return(ptr);
-        //});
 #else
         auto objPtr = new T(std::forward<CtorArgTypes>(ctorArgs)...);
         return std::shared_ptr<T>(objPtr, [](T* ptr) { delete ptr; });
