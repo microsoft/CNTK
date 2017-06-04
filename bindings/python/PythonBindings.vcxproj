@@ -68,6 +68,7 @@
     <None Include="cntk\internal\tests\__init__.py" />
     <None Include="cntk\internal\utils.py" />
     <None Include="cntk\internal\__init__.py" />
+    <None Include="cntk\io\transforms.py" />
     <None Include="cntk\layers\blocks.py" />
     <None Include="cntk\layers\higher_order_layers.py" />
     <None Include="cntk\layers\layers.py" />
@@ -93,9 +94,12 @@
     <None Include="cntk\metrics\tests\metrics_test.py" />
     <None Include="cntk\metrics\tests\__init__.py" />
     <None Include="cntk\metrics\__init__.py" />
+    <None Include="cntk\ops\tests\assign_test.py" />
     <None Include="cntk\ops\tests\block_test.py" />
     <None Include="cntk\ops\tests\combine_test.py" />
+    <None Include="cntk\ops\tests\sequence_test.py" />
     <None Include="cntk\ops\tests\sparse_test.py" />
+    <None Include="cntk\ops\tests\stop_gradient_test.py" />
     <None Include="cntk\ops\tests\userfunction_complex_test.py" />
     <None Include="cntk\ops\tests\userfunction_test.py" />
     <None Include="cntk\pytest.ini" />

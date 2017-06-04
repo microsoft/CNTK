@@ -54,8 +54,8 @@
 #define CNTK_MODEL_VERSION_22 22 // Slice and pad accepts multiple axes 
 #define CNTK_MODEL_VERSION_23 23 // pooling: add include pad func for average pooling
 #define CNTK_MODEL_VERSION_24 24 // ReduceElements: add keepDimensions
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_24
-
+#define CNTK_MODEL_VERSION_25 25 // transpose: allow specifying a permutation
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_25
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
@@ -95,6 +95,10 @@ struct /*interface*/ IComputationNode
     virtual void BeginForwardProp() = 0;             // called beforefirst iteration step of ForwardProp()
     virtual void ForwardProp(const FrameRange&) = 0; // forward prop for one minibatch
     virtual void EndForwardProp() = 0;               // called after last iteration step of ForwardProp()
+
+    virtual void PostForwardAndBackProp() {} // Optional: Post forward and backprop prop for one minibatch, this will be called in a second 
+                                             //           looping on the graph, after the backward pass finish. Or after forward pass in inference
+                                             //           mode.
 
     virtual void BeginBackprop() = 0;                                        // called before first iteration step of ComputeGradient()
     virtual void BackpropTo(const size_t inputIndex, const FrameRange&) = 0; // backprop gradient into one of the inputs
@@ -658,12 +662,14 @@ public:
     bool NeedsGradient() const { return m_needsGradient; }
 
     void MarkNeedsDynamicValidation() { m_needsDynamicValidation = true; }
-    virtual bool NeedsDynamicValidation() const { return m_needsDynamicValidation; }
+    bool NeedsDynamicValidation() const { return m_needsDynamicValidation; }
+
+    virtual bool ForceDynamicValidation() const { return false; }
 
     void SetLearningRateMultiplier(float f) 
     { 
         if (f < 0)
-            InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are tring to set it to %f.", NodeDescription().c_str(), f);
+            InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are trying to set it to %f.", NodeDescription().c_str(), f);
         m_learningRateMultiplier = f; 
     }
     float GetLearningRateMultiplier() const { return m_learningRateMultiplier; }
@@ -1669,8 +1675,8 @@ protected:
             {
                 const auto& shape = GetSampleLayout();
                 size_t rank = shape.GetRank();
-                rows = rank > 0 ? shape[0] : 0;
-                cols = rank > 0 ? 1 : 0;
+                rows = rank > 0 ? shape[0] : 1;
+                cols = 1;
                 for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
                     cols *= shape[k];
             }
@@ -1798,7 +1804,7 @@ public:
         {
             for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
             {
-                if (!multiOutputNode->m_outputsIsValueSparse[i])
+                if (IsValueSharable() && !multiOutputNode->m_outputsIsValueSparse[i])
                     RequestMatrixFromPool(multiOutputNode->m_outputsValue[i], matrixPool, multiOutputNode->m_outputsShape[i].GetNumElements(), multiOutputNode->m_outputsMBLayout[i] != nullptr);
                 else
                     CreateMatrixIfNull(multiOutputNode->m_outputsValue[i]);
@@ -1858,7 +1864,7 @@ public:
 
                 for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
                 {
-                    if (!multiOutputNode->m_outputsIsValueSparse[i])
+                    if (IsValueSharable() && !multiOutputNode->m_outputsIsValueSparse[i])
                         ReleaseMatrixToPool(multiOutputNode->m_outputsValue[i], matrixPool);
                 }
             }

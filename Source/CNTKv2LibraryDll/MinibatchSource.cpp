@@ -35,6 +35,14 @@ namespace CNTK
         return GetNextMinibatch(minibatchSizeInSequences, minibatchSizeInSamples, 1, 0, device);
     }
 
+    template<typename DataType>
+    std::wstring pair_to_colon_format(const pair<DataType, DataType>& pair)
+    {
+        std::wostringstream str;
+        str << pair.first << L":" << pair.second;
+        return str.str();
+    }
+
     MinibatchSourceConfig::MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, bool randomize/* = true*/) 
         : deserializers(deserializers)
     {
@@ -290,16 +298,24 @@ namespace CNTK
     }
 
     /* static */ ImageTransform ReaderCrop(const wchar_t* cropType,
-            int cropSize, float sideRatio, float areaRatio,
-            float aspectRatio, const wchar_t* jitterType)
+            std::pair<int, int> cropSize, std::pair<float, float> sideRatio, std::pair<float, float> areaRatio,
+            std::pair<float, float> aspectRatio, const wchar_t* jitterType)
     {
         ImageTransform crop;
+
+        if (sideRatio.first > sideRatio.second)
+            RuntimeError("For sideRatio values: the first number must be smaller than or equal to the second number.");
+        if (areaRatio.first > areaRatio.second)
+            RuntimeError("For areaRatio values: the first number must be smaller than or equal to the second number.");
+        if (aspectRatio.first > aspectRatio.second)
+            RuntimeError("For aspectRatio values: the first number must be smaller than or equal to the second number.");
+
         crop.Add(L"type", L"Crop",
             L"cropType", cropType,
-            L"cropSize", cropSize,
-            L"sideRatio", sideRatio,
-            L"areaRatio", areaRatio,
-            L"aspectRatio", aspectRatio,
+            L"cropSize", pair_to_colon_format(cropSize),
+            L"sideRatio", pair_to_colon_format(sideRatio),
+            L"areaRatio", pair_to_colon_format(areaRatio),
+            L"aspectRatio", pair_to_colon_format(aspectRatio),
             L"jitterType", jitterType);
         return crop;
     }
@@ -337,19 +353,40 @@ namespace CNTK
         return color;
     }
 
-    Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    Deserializer BuildImageDeserializer(const std::wstring deserializer,
+        const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels,
+        const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms) 
     {
         Deserializer img;
         std::vector<DictionaryValue> actualTransforms;
         std::transform(transforms.begin(), transforms.end(), std::back_inserter(actualTransforms), [](ImageTransform t) { return static_cast<DictionaryValue>(t); });
+
+        // Add the transpose transform by default.
+        Dictionary transposeTransform;
+        transposeTransform[L"type"] = L"Transpose";
+        actualTransforms.push_back(DictionaryValue(transposeTransform));
+
         Dictionary labeldim;
         labeldim[L"labelDim"] = numLabels;
+
         Dictionary xforms;
         xforms[L"transforms"] = actualTransforms;
         Dictionary input;
         input.Add(imageStreamName.c_str(), xforms, labelStreamName.c_str(), labeldim);
-        img.Add(L"type", L"ImageDeserializer", L"file", fileName, L"input", input);
+        img.Add(L"type", deserializer, L"file", fileName, L"input", input);
         return img;
+    }
+
+    Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, 
+        const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    {
+        return BuildImageDeserializer(L"ImageDeserializer", fileName, labelStreamName, numLabels, imageStreamName, transforms);
+    }
+
+    Deserializer Base64ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, 
+        const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    {
+        return BuildImageDeserializer(L"Base64ImageDeserializer", fileName, labelStreamName, numLabels, imageStreamName, transforms);
     }
 
     Deserializer CTFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams)
@@ -362,6 +399,7 @@ namespace CNTK
             Dictionary stream;
             stream[L"dim"] = s.m_dim;
             stream[L"format"] = s.m_isSparse ? L"sparse" : L"dense";
+            stream[L"definesMBSize"] = s.m_definesMbSize;
             if (!s.m_streamAlias.empty())
                 stream[L"alias"] = s.m_streamAlias;
             input[key] = stream;
@@ -380,13 +418,14 @@ namespace CNTK
             Dictionary stream;
             std::vector<DictionaryValue> ctxWindow = { DictionaryValue(s.m_left), DictionaryValue(s.m_right) };
             stream.Add(L"scpFile", s.m_scp, L"dim", s.m_dim, L"contextWindow", ctxWindow, L"expandToUtterance", s.m_broadcast);
+            stream[L"definesMBSize"] = s.m_definesMbSize;
             input[key] = stream;
         }
         htk.Add(L"type", L"HTKFeatureDeserializer", L"input", input);
         return htk;
     }
 
-    Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles)
+    Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries)
     {
         Deserializer htk;
         Dictionary stream;
@@ -400,6 +439,10 @@ namespace CNTK
             labels[L"mlfFile"] = actualFiles[0];
         else
             LogicError("HTKMLFDeserializer: No mlf files were specified");
+        if (phoneBoundaries)
+            labels[L"phoneBoundaries"] = L"true";
+        else
+            labels[L"phoneBoundaries"] = L"false";
         stream[streamName] = labels;
         htk.Add(L"type", L"HTKMLFDeserializer", L"input", stream);
         return htk;
@@ -433,12 +476,14 @@ namespace CNTK
                 augmentedConfiguration[L"randomize"] = true;
                 augmentedConfiguration[L"randomizationWindow"] = configuration.randomizationWindowInSamples;
                 augmentedConfiguration[L"sampleBasedRandomizationWindow"] = true;
+                augmentedConfiguration[L"randomizationSeed"] = configuration.randomizationSeed;
             }
             else if (configuration.randomizationWindowInChunks != 0) 
             {
                 augmentedConfiguration[L"randomize"] = true;
                 augmentedConfiguration[L"randomizationWindow"] = configuration.randomizationWindowInChunks;
                 augmentedConfiguration[L"sampleBasedRandomizationWindow"] = false;
+                augmentedConfiguration[L"randomizationSeed"] = configuration.randomizationSeed;
             }
             else 
             {
@@ -452,9 +497,9 @@ namespace CNTK
             }
 
             augmentedConfiguration[L"frameMode"] = configuration.isFrameModeEnabled;
-            augmentedConfiguration[L"multiThreadedDeserialization"] = configuration.isMultithreaded;
             augmentedConfiguration[L"traceLevel"] = static_cast<size_t>(configuration.traceLevel);
 
+            bool defaultMultithreaded = false;
             // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
             // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
             // TODO: This should be done in the same manner for CNTK exe as well.
@@ -464,29 +509,15 @@ namespace CNTK
                 static const std::unordered_map<std::wstring, std::wstring> deserializerTypeNameToModuleNameMap = {
                     { L"CNTKTextFormatDeserializer", L"CNTKTextFormatReader" },
                     { L"ImageDeserializer",          L"ImageReader" },
+                    { L"Base64ImageDeserializer",    L"ImageReader" },
                     { L"HTKFeatureDeserializer",     L"HTKDeserializers" },
                     { L"HTKMLFDeserializer",         L"HTKDeserializers" },
                 };
 
                 auto deserializerTypeName = deserializerConfig[L"type"].Value<std::wstring>();
-                if (deserializerTypeName == L"ImageDeserializer")
+                if (deserializerTypeName == L"ImageDeserializer" || deserializerTypeName == L"Base64ImageDeserializer")
                 {
-                    // Add a transpose transform since the image data in read in HWC (CWH in column major format) form while 
-                    // the CNTK convolution engive supports WHC (in column-major format)
-                    auto& inputStreamsConfig = deserializerConfig[L"input"].Value<Dictionary>();
-                    for (auto& inputStreamEntry : inputStreamsConfig)
-                    {
-                        auto& inputStreamConfig = inputStreamEntry.second.Value<Dictionary>();
-                        if (inputStreamConfig.Contains(L"transforms"))
-                        {
-                            auto& transforms = inputStreamConfig[L"transforms"].Value<std::vector<DictionaryValue>>();
-
-                            // Add the transpose transform
-                            Dictionary transposeTransform;
-                            transposeTransform[L"type"] = L"Transpose";
-                            transforms.push_back(DictionaryValue(transposeTransform));
-                        }
-                    }
+                    defaultMultithreaded = true;
                 }
 
                 if (deserializerTypeNameToModuleNameMap.find(deserializerTypeName) == deserializerTypeNameToModuleNameMap.end())
@@ -495,6 +526,9 @@ namespace CNTK
                 deserializerConfig[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
                 deserializers.push_back(deserializerConfig);
             }
+
+            augmentedConfiguration[L"multiThreadedDeserialization"] = 
+                (configuration.isMultithreaded.IsInitialized()) ? configuration.isMultithreaded.Get() : defaultMultithreaded;
 
             augmentedConfiguration[L"deserializers"] = deserializers;
 

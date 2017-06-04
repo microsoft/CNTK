@@ -15,23 +15,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class UtteranceDescription
 {
     // Archive filename and frame range in that file.
-    msra::asr::htkfeatreader::parsedpath m_path;
+    htkfeatreader::parsedpath m_path;
 
     // Utterance id.
     size_t m_id;
 
 public:
-    UtteranceDescription(msra::asr::htkfeatreader::parsedpath&& path)
+    UtteranceDescription(htkfeatreader::parsedpath&& path)
         : m_path(std::move(path)), m_id(0)
     {
     }
 
-    const msra::asr::htkfeatreader::parsedpath& GetPath() const
+    const htkfeatreader::parsedpath& GetPath() const
     {
         return m_path;
     }
 
-    size_t GetNumberOfFrames() const
+    uint32_t GetNumberOfFrames() const
     {
         return m_path.numframes();
     }

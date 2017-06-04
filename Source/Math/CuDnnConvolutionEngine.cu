@@ -42,13 +42,18 @@ public:
         const auto& filt = geometry.KernelShape();
         size_t mapCount = geometry.GetMapCount(geometry.InputShape().GetRank() - 1);
         if (mapCount != geometry.MapCount().GetNumElements())
-            InvalidArgument("cuDNN does not support map tensor of this configuration.");
-        SmallVector<int> dims(filt.GetRank() + 1);
-        for (int i = 0; i < filt.GetRank(); i++)
-            dims[dims.size() - 1 - i] = (int)filt[i];
+            InvalidArgument("cuDNN does not support map tensor of this configuration."); 
+
+        const size_t minDimSize = (size_t)4;    // minimum descriptor dim size is 4 for cuDNN 
+        const size_t filt_size = filt.GetRank();
+        size_t dim_size = std::max(filt_size + 1, minDimSize);
+        SmallVector<int> dims(dim_size, 1);
+        for (int i = 0; i < filt_size -1; i++)
+            dims[dim_size - 1 - i] = (int)filt[i];
         // Set map count(aka K) dimension.
         dims[0] = (int)mapCount;
-        CUDNN_CALL(cudnnSetFilterNdDescriptor_v4(m_kernel, dataType, FILTER_FORMAT, (int)dims.size(), dims.data()));
+        dims[1] = (int)filt[filt_size - 1];
+        CUDNN_CALL(cudnnSetFilterNdDescriptor(m_kernel, dataType, FILTER_FORMAT, (int)dim_size, dims.data()));
     }
 
     ~CuDnnKernel()
@@ -81,16 +86,19 @@ public:
         // Set cuDNN convolution parameters. cuDNN uses row-major format while TensorShape - column-major
         // so conversion is required. Also, for 2D convolutions (which have 3D tensor shapes)
         // cuDNN uses 2D descriptors while for 3D convolutions - 3D so we need to ignore
-        // rightmost dimension in ConvolveGeometry tensors.
-        SmallVector<int> stride(geometry.InputShape().GetRank() - 1);
-        SmallVector<int> pad(stride.size());
-        for (int i = 0; i < stride.size(); i++)
+        // rightmost dimension in ConvolveGeometry tensors. 
+        const size_t minDimSize = (size_t)2;    // minimum stride and pad size 2 for cuDNN
+        size_t stride_size = geometry.InputShape().GetRank() - 1;
+        size_t dim_size = std::max(stride_size, minDimSize);
+        SmallVector<int> stride(dim_size, 1);
+        SmallVector<int> pad(dim_size, 0);
+        for (int i = 0; i < stride_size; i++)
         {
-            stride[stride.size() - 1 - i] = (int)geometry.GetStride(i);
-            pad[stride.size() - 1 - i] = geometry.GetLowerPad(i);
+            stride[dim_size - 1 - i] = (int)geometry.GetStride(i);
+            pad[dim_size - 1 - i] = geometry.GetLowerPad(i);
         }
-        SmallVector<int> upscale(stride.size(), 1);
-        CUDNN_CALL(cudnnSetConvolutionNdDescriptor(m_conv, (int)stride.size(), pad.data(),
+        SmallVector<int> upscale(dim_size, 1);
+        CUDNN_CALL(cudnnSetConvolutionNdDescriptor(m_conv, (int)dim_size, pad.data(),
                                                    stride.data(), upscale.data(),
                                                    CUDNN_CROSS_CORRELATION, dataType));
     }
@@ -127,26 +135,29 @@ public:
         // Set cuDNN pooling parameters. cuDNN uses row-major format while TensorShape - column-major
         // so conversion is required. Same as in convolution descriptor, cuDNN uses 2D descriptors
         // for 3D inputs.
-        SmallVector<int> dims(geometry.InputShape().GetRank() - 1);
-        SmallVector<int> stride(dims.size());
-        SmallVector<int> pad(stride.size());
-        int j = (int)dims.size() - 1;
-        for (int i = 0; i < stride.size(); i++, j--)
+        const size_t minDimSize = (size_t)2;    // minimum stride and pad size 2 for cuDNN
+        size_t stride_size = geometry.InputShape().GetRank() - 1;
+        size_t dim_size = std::max(stride_size, minDimSize);
+        SmallVector<int> dims(dim_size, 1); 
+        SmallVector<int> stride(dim_size, 1);
+        SmallVector<int> pad(dim_size, 0);
+        auto kernelShape = geometry.KernelShape(); 
+        for (int i = 0; i < stride_size; i++)
         {
-            dims[j] = (int)geometry.KernelShape()[i];
-            stride[j] = (int)geometry.GetStride(i);
-            pad[j] = geometry.GetLowerPad(i);
+            dims[dim_size - 1 - i] = (int)kernelShape[i];
+            stride[dim_size - 1 - i] = (int)geometry.GetStride(i);
+            pad[dim_size - 1 - i] = geometry.GetLowerPad(i);
         }
         cudnnPoolingMode_t poolMode = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
         if (poolIncludePad)
             poolMode = CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
         // deterministic maxpool is not working when kernel size > stride size in cuDNN. We ignore this flag for now. 
-        forceDeterministicAlgorithms; 
+        if (forceDeterministicAlgorithms) {}
         // Must use CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING to get the same results as in reference engine.
         CUDNN_CALL(cudnnSetPoolingNdDescriptor(m_pool,
                                                kind == PoolKind::Max ? CUDNN_POOLING_MAX : poolMode,
                                                CUDNN_PROPAGATE_NAN,
-                                               (int)dims.size(), dims.data(), pad.data(), stride.data()));
+                                               (int)dim_size, dims.data(), pad.data(), stride.data()));
     }
 
     ~CuDnnPool()
@@ -189,10 +200,25 @@ public:
         : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad),
           m_cudnn(CuDnn::Instance()),
           m_dataType(CuDnnTensor::GetDataType<ElemType>()),
-          m_inT(geometry->InputShape(), m_dataType),
-          m_outT(geometry->OutputShape(), m_dataType),
           m_forceDeterministicAlgorithms(forceDeterministicAlgorithms)
     {
+        auto inShape = geometry->InputShape(); 
+        auto outShape = geometry->OutputShape(); 
+
+        const size_t minDimSize = (size_t)3;    // minimum input and output size are 3 for cuDNN
+        size_t input_size = inShape.GetRank();
+        size_t dim_size = std::max(input_size, minDimSize);
+        SmallVector<size_t> inputDims(dim_size, 1); 
+        SmallVector<size_t> outputDims(dim_size, 1);
+        for (int i = 0; i < input_size - 1; i++)
+        {
+            inputDims[dim_size - 1 - i] = inShape[input_size - 1 - i];
+            outputDims[dim_size - 1 - i] = outShape[input_size - 1 - i];
+        }
+        inputDims[0] = inShape[0]; 
+        outputDims[0] = outShape[0]; 
+        m_inT.Set(TensorShape(inputDims), m_dataType);
+        m_outT.Set(TensorShape(outputDims), m_dataType);
     }
 
     virtual bool ImplementsGradientOverwriteOptimization() const override { return true; }
@@ -452,6 +478,7 @@ private:
         if (algo.autotuningState == AutotuningState::Running && batchSize > algo.maxMBSizeSeen)
         {
             algo.autotuningState = AutotuningState::Init;
+            cudaDeviceSynchronize(); // make sure no in-flight GPU kernels using workspace before release its memory
             workspace.Resize(0,0,0,false);
             algo.AlgoWorkspaceSize = 0;
             algo.MBSizeForCurrentWorkspace = 0;
@@ -666,17 +693,19 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
 
     // cuDNN as of version 6.0 does not handle asymmetric padding for even size kernel convolution correctly. We need to detect asymmetric
     // padding due to auto-padding and choose the reference convolution implementation instead
+    // a special case is when stride >= input, this means we will have a single output, and thus asymmetric padding is not an issue 
     if (poolKind == PoolKind::None)     // only for convolution, pooling seems fine
     {
         for (int i = 0; i < kernelRank; i++)
         {
             auto lowerPad = geometry->GetLowerPad(i); 
             auto upperPad = geometry->GetUpperPad(i); 
-            if (kernel[i] % 2 == 0 && lowerPad < upperPad)
+            auto stride = geometry->GetStride(i); 
+            if (kernel[i] % 2 == 0 && lowerPad < upperPad && stride < input[i])
             {
                 fprintf(stderr, "WARNING: Detected asymmetric padding issue with even kernel size and lowerPad (%d) < higherPad (%d) (i=%d), cuDNN will not be able to produce correct result. Switch to reference engine (VERY SLOW). \n", lowerPad, upperPad, i);
-                retVal = false; 
-                break; 
+                retVal = false;
+                break;
             }
         }
     }

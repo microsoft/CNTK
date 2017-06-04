@@ -379,30 +379,6 @@ void PrintUsageInfo()
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 }
 
-// print gpu info for current gpu devices (e.g. Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; total memory = 8192 MB; free memory = 8192 MB)
-void PrintGpuInfo()
-{
-#ifndef CPUONLY
-    std::vector<GpuData> gpusData = GetAllGpusData();
-
-    if (gpusData.empty())
-    {
-        LOGPRINTF(stderr, "No GPUs found\n");
-        return;
-    }
-
-    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
-    LOGPRINTF(stderr, "GPU info:\n\n");
-
-    for (GpuData& data : gpusData)
-    {
-        LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; total memory = %lu MB; free memory = %lu MB\n",
-                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), (unsigned long)data.totalMemory, (unsigned long)data.freeMemory);
-    }
-    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
-#endif
-}
-
 // ---------------------------------------------------------------------------
 // main() for use with BrainScript as entire config language (this is experimental)
 // ---------------------------------------------------------------------------
@@ -546,11 +522,13 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
         RedirectStdErr(logpath);
         LOGPRINTF(stderr, "%ls\n", startupMessage.c_str());
-        ::CNTK::PrintBuiltInfo();
+        ::CNTK::Internal::PrintBuiltInfo();
     }
 
     // echo gpu info to log
-    PrintGpuInfo();
+#ifndef CPUONLY
+    ::CNTK::Internal::PrintGpuInfo(GetAllGpusData());
+#endif
 
     // Setup profiling
     ProfilerContext profilerContext;
@@ -605,6 +583,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
+    // In case of success, finalizing the mpi if necessary.
+    if (mpi)
+        mpi->Finalize();
     return EXIT_SUCCESS;
 }
 
@@ -614,7 +595,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 2.0rc1+ (");
+    fprintf(stderr, "CNTK 2.0+ (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
@@ -711,8 +692,10 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     }
 
     // full config info
-    ::CNTK::PrintBuiltInfo();
-    PrintGpuInfo();
+    ::CNTK::Internal::PrintBuiltInfo();
+#ifndef CPUONLY
+    ::CNTK::Internal::PrintGpuInfo(GetAllGpusData());
+#endif
 
 #ifdef _DEBUG
     if (traceLevel > 0)
@@ -781,6 +764,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         fprintf(stderr, "COMPLETED.\n");
     fflush(stderr);
 
+    if (mpi)
+        mpi->Finalize();
     return EXIT_SUCCESS;
 }
 
@@ -804,7 +789,7 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     {        
         if (argc <= 1)
         {
-            ::CNTK::PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
+            ::CNTK::Internal::PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
             LOGPRINTF(stderr, "No command-line argument given.\n");
             PrintUsageInfo();
             fflush(stderr);

@@ -26,6 +26,17 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    std::atomic<bool> s_checkedMode(false);
+    void SetCheckedMode(bool enable)
+    {
+        s_checkedMode.store(enable);
+    }
+
+    bool GetCheckedMode()
+    {
+        return s_checkedMode.load();
+    }
+
     namespace Internal
     {
         static std::atomic_ullong s_nextUniqueId = ATOMIC_VAR_INIT(0);
@@ -33,15 +44,50 @@ namespace CNTK
         {
             return s_nextUniqueId++;
         }
-
+        static std::mutex s_fixedSeedMutex;
+        static bool s_fixedRandomSeed = false;
         static std::atomic_ullong s_currentRandomSeed = ATOMIC_VAR_INIT(0);
 
-        // This is used to generate a default seed for stateful nodes (dropout, and both
-        // flavors of random sample). As a result, in distributed environment, each worker 
-        // ends up having a different seed.
-        
-        size_t GenerateRandomSeed()
+        unsigned long GetRandomSeed()
         {
+            return static_cast<unsigned long>(s_currentRandomSeed.load());
+        }
+
+        void SetFixedRandomSeed(unsigned long value)
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            s_currentRandomSeed.store(value);
+            s_fixedRandomSeed = true;
+        }
+
+        bool IsRandomSeedFixed()
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            return s_fixedRandomSeed;
+        }
+
+        void ResetRandomSeed(unsigned long value)
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            s_currentRandomSeed.store(value);
+            s_fixedRandomSeed = false;
+        }
+
+        // This is used to generate a default seed value for random parameter initializer and also 
+        // for stateful nodes (dropout, and both flavors of random sample). The 'perWorkerLocalValue' flag
+        // indicates if the generated value should be identical accross individual workers in distributed 
+        // setting or if each worker should get a different seed value.        
+        size_t GenerateRandomSeed(bool perWorkerLocalValue /*= false*/)
+        {
+            std::unique_lock<std::mutex> lock(s_fixedSeedMutex);
+            
+            if (s_fixedRandomSeed)
+                return s_currentRandomSeed;
+            
+
+            if (!perWorkerLocalValue)
+                return s_currentRandomSeed++;
+
             static size_t numWorkers = 1, rank = 0;
             static bool initialized = false;
             if (MPIWrapper::GetTotalNumberOfMPINodes() != 0 && !initialized) 
@@ -410,17 +456,6 @@ namespace CNTK
             return s_computationNetworkTraceLevel.load();
         }
 
-        std::atomic<bool> s_computationNetworkTrackGapNans(false);
-        void SetComputationNetworkTrackGapNans(bool enable)
-        {
-            s_computationNetworkTrackGapNans.store(enable);
-        }
-
-        bool GetComputationNetworkTrackGapNans()
-        {
-            return s_computationNetworkTrackGapNans.load();
-        }
-
         void SetGPUMemoryAllocationTraceLevel(int traceLevel)
         {
             Microsoft::MSR::CNTK::TracingGPUMemoryAllocator::SetTraceLevel(traceLevel);
@@ -522,14 +557,30 @@ namespace CNTK
 
         if (!s_defaultDeviceFrozen && s_defaultDevice == nullptr)
         {
+            if (GetTraceLevel() >= TraceLevel::Info) 
+            {
+                fprintf(stderr, "Auto-selecting process wide default device.\n");
+            }
+
+            // This will both initialize the list of available devices and log the the device stats
+            // (including the info on which devices are compatible and eligible for selection).
+            const auto& allDevices = AllDevices();
+            UNUSED(allDevices);
+
             vector<int> excludedIds;
             for (auto device : s_excludedDevices)
             {
                 excludedIds.push_back(AsCNTKImplDeviceId(device));
             }
+
             auto id = Microsoft::MSR::CNTK::GetBestDevice(excludedIds);
             auto selectedDevice = id >= 0 ? DeviceDescriptor::GPUDevice(id) : DeviceDescriptor::CPUDevice();
             s_defaultDevice.reset(new DeviceDescriptor(selectedDevice));
+        }
+
+        if (!s_defaultDeviceFrozen)
+        {
+            fprintf(stderr, "Selected %S as the process wide default device.\n", s_defaultDevice->AsString().c_str());
         }
 
         s_defaultDeviceFrozen = true;
@@ -580,7 +631,12 @@ namespace CNTK
         std::call_once(s_initAllDevicesFlag, [&]
         {
 #ifndef CPUONLY
-           auto allGpusData = GetAllGpusData();
+            auto allGpusData = GetAllGpusData();
+
+            if (GetTraceLevel() >= TraceLevel::Info)
+            {
+                Internal::PrintGpuInfo(allGpusData);
+            }
 
             for (const auto& gpuData : allGpusData)
             {
@@ -603,6 +659,18 @@ namespace CNTK
         });
 
         return s_allDevices;
+    }
+
+    std::wstring DeviceDescriptor::AsString() const
+    {
+        std::wstring str = DeviceKindName(Type());
+        if (Type() == DeviceKind::GPU)
+        {
+            auto props = GetGPUProperties(*this);
+            std::wstring wname(props.name.begin(), props.name.end());
+            str = str + L"[" + std::to_wstring(Id()) + L"] " + wname;
+        }
+        return str;
     }
 
     /*static*/ DeviceDescriptor DeviceDescriptor::GPUDevice(unsigned int deviceId) 
@@ -642,7 +710,7 @@ namespace CNTK
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForUnknownAxes = std::numeric_limits<int>::max() - 2;
     /*static*/ const int Axis::SentinelEndStaticAxisIndexValue = std::numeric_limits<int>::max() - 3;
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllAxes = std::numeric_limits<int>::max() - 4;
-    
+
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
 
     bool Axis::UniqueDynamicAxesNames::RegisterAxisName(const std::wstring& axisName)
@@ -781,54 +849,78 @@ namespace CNTK
         va_end(args);
     }
 
-
-    void PrintBuiltInfo()
+    namespace Internal
     {
-        LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
-        LOGPRINTF(stderr, "Build info: \n\n");
-        LOGPRINTF(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
-        LOGPRINTF(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
+        void PrintBuiltInfo()
+        {
+            LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+            LOGPRINTF(stderr, "Build info: \n\n");
+            LOGPRINTF(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
+            LOGPRINTF(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
 #ifdef _BUILDTYPE_
-        LOGPRINTF(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
+            LOGPRINTF(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
 #endif
 #ifdef _BUILDTARGET_
-        LOGPRINTF(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
+            LOGPRINTF(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
 #endif
 #ifdef _WITH_1BITSGD_
-        LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
+            LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
 #endif
 #ifdef _WITH_ASGD_
-        LOGPRINTF(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
+            LOGPRINTF(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
 #endif
 #ifdef _MATHLIB_
-        LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
+            LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
 #endif
 #ifdef _CUDA_PATH_
-        LOGPRINTF(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
+            LOGPRINTF(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
 #endif
 #ifdef _CUB_PATH_
-        LOGPRINTF(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
+            LOGPRINTF(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
 #endif
 #ifdef _CUDNN_PATH_
-        LOGPRINTF(stderr, "\t\tCUDNN_PATH: %s\n", _CUDNN_PATH_);
+            LOGPRINTF(stderr, "\t\tCUDNN_PATH: %s\n", _CUDNN_PATH_);
 #endif
 #ifdef _GIT_EXIST
-        LOGPRINTF(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
-        LOGPRINTF(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
+            LOGPRINTF(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
+            LOGPRINTF(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
 #endif
 #ifdef _BUILDER_
-        LOGPRINTF(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
+            LOGPRINTF(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
 #endif
 #ifdef _BUILDPATH_
-        LOGPRINTF(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
+            LOGPRINTF(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
 #endif
 #ifdef _MPI_NAME_
-        LOGPRINTF(stderr, "\t\tMPI distribution: %s\n", _MPI_NAME_);
+            LOGPRINTF(stderr, "\t\tMPI distribution: %s\n", _MPI_NAME_);
 #endif
 #ifdef _MPI_VERSION_
-        LOGPRINTF(stderr, "\t\tMPI version: %s\n", _MPI_VERSION_);
+            LOGPRINTF(stderr, "\t\tMPI version: %s\n", _MPI_VERSION_);
 #endif
-        LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+            LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+        }
+
+        // print gpu info for current gpu devices (e.g. Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; total memory = 8192 MB; free memory = 8192 MB)
+        void PrintGpuInfo(const std::vector<Microsoft::MSR::CNTK::GpuData>& gpusData)
+        {
+#ifndef CPUONLY
+            if (gpusData.empty())
+            {
+                LOGPRINTF(stderr, "No GPUs found\n");
+                return;
+            }
+
+            LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+            LOGPRINTF(stderr, "GPU info:\n\n");
+
+            for (const GpuData& data : gpusData)
+            {
+                LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; total memory = %lu MB; free memory = %lu MB\n",
+                    data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), (unsigned long)data.totalMemory, (unsigned long)data.freeMemory);
+            }
+            LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+#endif
+        }
     }
 
     template CNTK_API __declspec_noreturn void ThrowFormatted<std::runtime_error>(const char* format, ...);

@@ -4,9 +4,7 @@ cd /d "%~dp0"
 set PYTHONPATH=%CD%\..
 set PATH=%CD%\..;%CD%\..\..\..\x64\Release;%PATH%
 
-@REM TODO better align conf.py exclude with excluded paths here
-sphinx-apidoc.exe ..\cntk -o . -f ^
-  ..\cntk\blocks.py ^
+sphinx-apidoc.exe ..\cntk --module-first --separate --no-toc --output-dir=. --force ^
   ..\cntk\cntk_py.py ^
   ..\cntk\conftest.py ^
   ..\cntk\tests ^

@@ -70,20 +70,22 @@ template <class ElemType>
 {
     // We are mixing two kinds of operations here; elementwise and whole-batch or sequence reduction (ReduceAllAxes()).
     // In the latter case, we must mimic the behaviour of ComputationNodeNonLooping.
-    if ((ReduceAllAxes() || ReduceSequenceAxis()) && !fr.IsAllFrames())
+    if ((ReduceAllAxes() || ReduceSequenceAxis() || ReduceBatchAxis()) && !fr.IsAllFrames())
         LogicError("%ls: %s node should never be in a loop when reducing over all static and dynamic axes or just the sequence axis.", Base::NodeDescription().c_str(), typeid(*this).name());
 
-    const auto frInput = !ReduceAllAxes() ? fr : FrameRange(InputRef(0).GetMBLayout()); // can't use 'fr' for ReduceAllAxes() as it refers to the result (same as for training criteria)
+    const auto frInput = (ReduceAllAxes() || ReduceBatchAxis()) ? FrameRange(InputRef(0).GetMBLayout()) : fr; // can't use 'fr' for ReduceAllAxes() and ReduceBatchAxis() as it refers to the result (same as for training criteria)
 
     // when reducing all, we must mask gaps
-    if (ReduceAllAxes())
+    if (ReduceAllAxes() || ReduceBatchAxis())
     {
         InputRef(0).MaskMissingValueColumnsTo(frInput, NeutralValue(m_reductionOp));
         if (IsMean())
         {
-            //for mean reduction and all axes we need to carefully compute the scaling factor
+            // In mean reduction for all axes or batch axis, we need to carefully compute the scaling factor
             auto actual_samples = InputRef(0).HasMBLayout() ? InputRef(0).GetMBLayout()->GetActualNumSamples() : 1;
-            m_scale = ElemType((1.0 / GetInputSampleLayout(0).GetNumElements()) / actual_samples);
+            m_scale = ElemType(1.0 / actual_samples);
+            if (ReduceAllAxes())
+                m_scale /= ElemType(GetInputSampleLayout(0).GetNumElements());
         }
     }
 
@@ -108,7 +110,7 @@ template <class ElemType>
     else
         input = InputRef(0).ValueTensorFor(rank, frInput);
 
-    auto result = !ReduceAllAxes() ? ValueTensorFor(rank, fr) : TensorView<ElemType>(ValuePtr(), TensorShape(1));
+    auto result = ReduceAllAxes() ? TensorView<ElemType>(ValuePtr(), GetSampleLayout()) : ValueTensorFor(rank, fr);
 
     switch (m_reductionOp)
     {
@@ -136,10 +138,10 @@ template <class ElemType>
     }
     else
     {
-        const auto frInput = !ReduceAllAxes() ? fr : FrameRange(InputRef(0).GetMBLayout()); // can't use 'fr' for ReduceAllAxes() as it refers to the result (same as for training criteria)
+        const auto frInput = (ReduceAllAxes() || ReduceBatchAxis()) ? FrameRange(InputRef(0).GetMBLayout()) : fr; // can't use 'fr' for ReduceAllAxes() as it refers to the result (same as for training criteria)
                                                                                         // get the args
         size_t rank = DetermineElementwiseTensorRank();
-        auto sliceOutputGrad = !ReduceAllAxes() ? GradientTensorFor(rank, fr) : TensorView<ElemType>(GradientPtr(), TensorShape(1)); // propagate from this one...
+        auto sliceOutputGrad = ReduceAllAxes() ? TensorView<ElemType>(GradientPtr(), GetSampleLayout()) : GradientTensorFor(rank, fr); // propagate from this one...
         auto sliceInputGrad = InputRef(0).GradientTensorFor(rank, frInput); // ...to this one
 
         // gradients are not as simple as passing an op-code, unfortunately
@@ -267,6 +269,14 @@ template <class ElemType>
 
         SetDims(Input(0)->GetSampleLayout(), HasMBLayout());
     }
+    else if (ReduceBatchAxis())
+    {
+        Base::Validate(isFinalValidationPass);
+        if (isFinalValidationPass && !Input(0)->HasMBLayout())
+            InvalidArgument("%ls %ls operation can perform batch axis reduction only on minibatch data (which have a layout).", NodeName().c_str(), OperationName().c_str());
+
+        SetDims(Input(0)->GetSampleLayout(), false);
+    }
     else
     {
         Base::Validate(isFinalValidationPass);
@@ -275,10 +285,10 @@ template <class ElemType>
         let shape = Input(0)->GetSampleLayout();
         auto dims = shape.GetDims();
         size_t reducedDim = 0; // (init to keep compiler happy)
-        if (ReduceAllStaticAxes() || ReduceAllAxes())
+        if (ReduceAllStaticAxes())
         {
             reducedDim = shape.GetNumElements();
-            dims = m_keepDimensions ? SmallVector<size_t>(shape.GetRank(), 1) : SmallVector<size_t>({ 1 }); // entire sample is reduced to a scalar
+            dims = m_keepDimensions ? SmallVector<size_t>(shape.GetRank(), 1) : (Environment().IsV2Library() ? SmallVector<size_t>({}) : SmallVector<size_t>({ 1 })); // entire sample is reduced to a scalar
         }
         else if (m_axis - 1 >= 0 && m_axis - 1 < dims.size())
         {
@@ -425,7 +435,7 @@ template <class ElemType>
     // we map scalars to scalars
     if (isFinalValidationPass && Input(0)->GetSampleLayout().GetNumElements() != 1)
         InvalidArgument("%ls %ls operation can only operate on scalar input.", NodeName().c_str(), OperationName().c_str());
-    SetDims(TensorShape(1), true);
+    SetDims(TensorShape::Scalar(Environment().IsV2Library()), true);
 }
 
 template class WhereNode<float>;

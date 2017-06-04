@@ -129,7 +129,7 @@ namespace CNTK
             LogicError("The number (%d) of requested axes exceeds the currently supported limit (%d)", (int)viewShape.Rank(), (int)maxNumAxesSupportedByTensorView);
 
         // TensorShape is required to be at least 1D
-        size_t minRankSize = 1;
+        size_t minRankSize = 0;
         Microsoft::MSR::CNTK::SmallVector<size_t> tensorViewShape(std::max<size_t>(minRankSize, viewShape.Rank()));
         for (size_t i = 0; i < tensorViewShape.size(); ++i)
             tensorViewShape[i] = (i < viewShape.Rank()) ? viewShape[i] : 1;
@@ -151,7 +151,7 @@ namespace CNTK
     inline std::pair<size_t, size_t> GetMatrixDimensions(const NDShape& viewShape)
     {
         // Ensure none of the shape dimensions are unknown
-        if (viewShape.HasInferredDimension() || viewShape.HasFreeDimension())
+        if (viewShape.HasUnboundDimension())
             InvalidArgument("Cannot create an NDArrayView using a view shape '%S' that has unknown dimensions for any of its axes.", viewShape.AsString().c_str());
 
         size_t matrixRowSize = (viewShape.Rank() > 0) ? viewShape[0] : 1;
@@ -307,6 +307,7 @@ namespace CNTK
     static int const CNTKInternalIdxValueForAllStaticAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllStaticAxes;
     static int const CNTKInternalIdxValueForAllAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllAxes;
     static int const CNTKInternalIdxValueForSequenceAxis = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForSequenceAxis;
+    static int const CNTKInternalIdxValueForBatchAxis = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForBatchAxis;
 
     inline Axis AsAxis(int CNTKInternalAxisIdx)
     {
@@ -318,6 +319,9 @@ namespace CNTK
 
         if (CNTKInternalAxisIdx == CNTKInternalIdxValueForSequenceAxis)
             return Axis::OperandSequenceAxis();
+
+        if (CNTKInternalAxisIdx == CNTKInternalIdxValueForBatchAxis)
+            return Axis::DefaultBatchAxis();
 
         return Axis(CNTKInternalAxisIdx - 1);
     }
@@ -340,6 +344,9 @@ namespace CNTK
 
         if (axis.IsDynamicAxis() && axis.IsOrdered())
             return CNTKInternalIdxValueForSequenceAxis;
+
+        if (axis == Axis::DefaultBatchAxis())
+            return CNTKInternalIdxValueForBatchAxis;
 
         if (!axis.IsStaticAxis())
             LogicError("Only Static Axes can be converted to a CNTK internal axis index");
@@ -432,9 +439,14 @@ namespace CNTK
     static const std::wstring UidPrefix = L"__v2libuid__";
     static const std::wstring NamePrefix = L"__v2libname__";
 
-    inline std::wstring CNTKInternalNodeNameFromUidAndName(const std::wstring& uid, const std::wstring& name)
+    // 'generateMangledNames' = true is used if we want to emit mangled names for the internal CNTK v1 nodes so that when
+    // saving the model in V1 format and loading it back, we can retrieve the original V2 Variable/Function UID and Name.
+    inline std::wstring CNTKInternalNodeNameFromUidAndName(const std::wstring& uid, const std::wstring& name, bool generateMangledNames = false)
     {
-        return UidPrefix + uid + NamePrefix + name;
+        if (generateMangledNames)
+            return UidPrefix + uid + NamePrefix + name;
+        else
+            return uid;
     }
 
     inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName)
@@ -504,25 +516,29 @@ namespace CNTK
         return{ Axis(derivedDynamicAxisName, sourceAxis.IsOrdered()) };
     }
 
+    inline Axis& NormalizeStaticAxis(Axis& axis, size_t rank)
+    {
+        if (axis == Axis::EndStaticAxis())
+            axis = Axis((int)rank);
+        else if (axis.StaticAxisIndex() < 0)
+        {
+            auto normalizedAxis = Axis((int)rank + axis.StaticAxisIndex());
+            if (normalizedAxis.StaticAxisIndex() < 0)
+                InvalidArgument("Axis '%S' is out of bounds for the rank '%zd' it applies to.", axis.AsString().c_str(), rank);
+            else
+                axis = normalizedAxis;
+        }
+        return axis;
+    }
+
     inline Axis& NormalizeStaticAxis(Axis& axis, const NDShape& operandShape)
     {
         if (axis != Axis::AllStaticAxes() && axis != Axis::AllAxes())
         {
             assert(axis.IsStaticAxis());
             assert(operandShape != NDShape::Unknown);
-
-            if (axis == Axis::EndStaticAxis())
-                axis = Axis((int)operandShape.Rank());
-            else if (axis.StaticAxisIndex() < 0)
-            {
-                auto normalizedAxis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
-                if (normalizedAxis.StaticAxisIndex() < 0)
-                    InvalidArgument("Axis '%S' is out of bounds of the operand shape '%S' it applies to.", axis.AsString().c_str(), operandShape.AsString().c_str());
-                else
-                    axis = normalizedAxis;
-            }
+            axis = NormalizeStaticAxis(axis, operandShape.Rank());
         }
-
         return axis;
     }
 
@@ -581,9 +597,9 @@ namespace CNTK
 
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes);
 
-    inline size_t ShapeRowColSplitPoint(const NDShape& varShape, bool isSparse)
+    inline size_t ShapeRowColSplitPoint(const NDShape& varShape, bool isSparse, bool noDynamicAxes)
     {
-        if (isSparse)
+        if (isSparse || noDynamicAxes)
             return std::min<size_t>(varShape.Rank(), 1);
         else
             return varShape.Rank();
@@ -591,7 +607,7 @@ namespace CNTK
 
     inline size_t VariableRowColSplitPoint(const Variable& var)
     {
-        return ShapeRowColSplitPoint(var.Shape(), var.IsSparse());
+        return ShapeRowColSplitPoint(var.Shape(), var.IsSparse(), var.DynamicAxes().empty());
     }
 
     bool IsPackedValue(const ValuePtr& value);
@@ -604,7 +620,7 @@ namespace CNTK
 
         for (size_t i = 0; i < fullyDefinedVarShape.Rank(); ++i)
         {
-            if (fullyDefinedVarShape[i] == NDShape::FreeDimension)
+            if ((fullyDefinedVarShape[i] == NDShape::FreeDimension) || (fullyDefinedVarShape[i] == NDShape::InferredDimension))
                 fullyDefinedVarShape[i] = computationNodeShape.GetDim(i);
             else if (fullyDefinedVarShape[i] != computationNodeShape.GetDim(i))
                 LogicError("Computation node tensor shape '%s' does not match variable shape '%S'.", ((std::string)computationNodeShape).c_str(), fullyDefinedVarShape.AsString().c_str());

@@ -1,9 +1,12 @@
 name: cntk-py27
 channels: !!python/tuple
 - defaults
+# For imageio:
+- conda-forge
 dependencies:
 - enum34=1.1.6=py27_0
 - h5py=2.6.0=np111py27_2
+- imageio=2.1.1=py27_0
 - jupyter=1.0.0=py27_3
 - matplotlib=1.5.3=np111py27_0
 - numpy=1.11.2=py27_0
@@ -23,5 +26,5 @@ dependencies:
   - sphinx==1.5.4
   - sphinx-rtd-theme==0.2.4
   - twine==1.8.1
-  - gym==0.5.2
+  - gym[atari]==0.8.1
   - pydot-ng==1.0.0

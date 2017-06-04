@@ -8,7 +8,7 @@
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-from ..ops.functions import CloneMethod, Function, load_model
+from ..ops.functions import CloneMethod, Function
 from ..variables import Variable, Parameter, Constant
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, typemap
 from cntk.internal.utils import get_data_type
@@ -23,8 +23,8 @@ def cosine_distance(x, y, name=''):
     Example:
         >>> a = np.asarray([-1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]).reshape(3,2,2)
         >>> b = np.asarray([1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1]).reshape(3,2,2)
-        >>> x = C.sequence.input(shape=(2,))
-        >>> y = C.sequence.input(shape=(2,))
+        >>> x = C.sequence.input_variable(shape=(2,))
+        >>> y = C.sequence.input_variable(shape=(2,))
         >>> np.round(C.cosine_distance(x,y).eval({x:a,y:b}),5)
         array([[-1.,  1.],
                [ 1.,  0.],
@@ -61,8 +61,8 @@ def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, nam
     Example:
         >>> qry = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
         >>> doc = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
-        >>> x = C.sequence.input(shape=(4,))
-        >>> y = C.sequence.input(shape=(4,))
+        >>> x = C.sequence.input_variable(shape=(4,))
+        >>> y = C.sequence.input_variable(shape=(4,))
         >>> model = C.cosine_distance_with_negative_samples(x, y, shift=1, num_negative_samples=2)
         >>> np.round(model.eval({x: qry, y: doc}), decimals=4)
         array([[[ 1. ,  0.5,  0. ]],
@@ -92,15 +92,16 @@ def binary_cross_entropy(output, target, name=''):
     r'''
     Computes the binary cross entropy (aka logistic loss) between the ``output`` and ``target``.
 
-    Example:
-        TBA
-
     Args:
         output: the computed posterior probability for a variable to be 1 from the network (typ. a ``sigmoid``)
         target: ground-truth label, 0 or 1
         name (str, optional): the name of the Function instance in the network
+
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
     from cntk.cntk_py import binary_cross_entropy
     dtype = get_data_type(output, target)
@@ -113,16 +114,17 @@ def weighted_binary_cross_entropy(output, target, weight, name=''):
     r'''
     This operation computes the weighted binary cross entropy (aka logistic loss) between the ``output`` and ``target``.
 
-    Example:
-        TBA
-
     Args:
         output: the computed posterior probability from the network
         target: ground-truth label, 0 or 1
         weight: weight of each example
         name (str, optional): the name of the Function instance in the network
+
     Returns:
         :class:`~cntk.ops.functions.Function`
+
+    Todo:
+        add an example
     '''
     from cntk.cntk_py import weighted_binary_cross_entropy
     dtype = get_data_type(output, target, weight)
@@ -181,8 +183,8 @@ def squared_error(output, target, name=''):
     This is often used as a training criterion.
 
     Example:
-        >>> i1 = C.input((1,2))
-        >>> i2 = C.input((1,2))
+        >>> i1 = C.input_variable((1,2))
+        >>> i2 = C.input_variable((1,2))
         >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[2., 1.]]], dtype=np.float32), i2:np.asarray([[[4., 6.]]], dtype=np.float32)})
         array([ 29.], dtype=float32)
 
@@ -227,9 +229,9 @@ def lambda_rank(output, gain, group, name=''):
     In the backward direction it back-propagates LambdaRank gradients.
 
     Example:
-        >>> group = C.input((1,))
-        >>> score = C.input((1,), needs_gradient=True)
-        >>> gain  = C.input((1,))
+        >>> group = C.input_variable((1,))
+        >>> score = C.input_variable((1,), needs_gradient=True)
+        >>> gain  = C.input_variable((1,))
         >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1)
         >>> s = np.array([1, 2, 3, 4], dtype=np.float32).reshape(4,1)
         >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1)

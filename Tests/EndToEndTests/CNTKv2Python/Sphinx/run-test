@@ -23,7 +23,7 @@ else
   FIND=find
 fi
 
-sphinx-apidoc "$MODULE_DIR" -o . -f \
+sphinx-apidoc "$MODULE_DIR" --module-first --separate --no-toc --output-dir=. --force \
   $( ( printf "$MODULE_DIR/%s\n" cntk_py.py conftest.py internal; $FIND "$MODULE_DIR" -type d -name tests ) | $NORM_PATH)
 
 sphinx-build -b html -d _build/doctrees -W -j $(nproc) . _build/html
@@ -47,7 +47,7 @@ if grep -a '``' _build/html/*.html; then
   ((ERROR++))
 fi
 
-if grep -a ':[a-z][a-z]*:'; then
+if grep -a ':[a-z][a-z]*:' _build/html/*.html; then
    echo Unrendered content leaked into the documentation. Please check.
    ((ERROR++))
 fi

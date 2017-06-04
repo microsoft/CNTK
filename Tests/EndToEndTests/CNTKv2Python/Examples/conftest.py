@@ -12,7 +12,7 @@ _DEFAULT_DEVICE_ID=-1
 import cntk
 import cntk.debugging
 cntk.cntk_py.always_allow_setting_default_device()
-cntk.debugging.set_computation_network_track_gap_nans(True)
+cntk.debugging.set_checked_mode(True)
 
 def pytest_addoption(parser):
     parser.addoption("--deviceid", action="append", default=[_DEFAULT_DEVICE_ID],
@@ -56,3 +56,7 @@ def pytest_generate_tests(metafunc):
                 raise RuntimeError("invalid is1bitsgd value {}, only 0 or 1 allowed".format(elem))
 
         metafunc.parametrize("is_1bit_sgd", is1bitsgd, scope='session')
+
+@pytest.fixture(autouse=True)
+def reset_random_seed():
+    cntk.cntk_py.reset_random_seed(0)

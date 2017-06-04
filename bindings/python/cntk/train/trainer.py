@@ -8,7 +8,9 @@ from .. import cntk_py
 from ..device import use_default_device
 from cntk.internal import sanitize_var_map, sanitize_function, typemap, \
                           _value_as_sequence_or_array
-from ..io import _py_dict_to_cntk_dict, MinibatchData
+from cntk.internal.utils import _py_dict_to_cntk_dict
+from ..io import MinibatchData
+
 
 __doc__ = '''\
 A trainer encapsulates the overall training process and employs one or more
@@ -28,14 +30,16 @@ class Trainer(cntk_py.Trainer):
     Args:
        model (:class:`~cntk.ops.functions.Function`): root node of the function to train
        criterion (tuple of :class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`):
-        Function with one or two outputs, representing loss and, if given, evaluation metric (in this order).
-        Alternatively, a tuple(loss Function, evaluation Function) is also accepted.
+        Function with one or two outputs, representing loss and, if given, evaluation metric
+        (in this order). Alternatively, a tuple(loss Function, evaluation Function) is also
+        accepted.
        parameter_learners (list): list of learners from :mod:`cntk.learners`
-       progress_writers (list): optionally, list of progress writers from :mod:`cntk.utils` to automatically track
-        training progress.
+       progress_writers (progress writer or list of them): optionally, list of
+        progress writers from :mod:`cntk.logging` to automatically track training
+        progress.
 
     Todo:
-        Would be great to allow to skip some parameters that should not be updated.
+       Allow to skip some parameters that should not be updated.
     '''
 
     @staticmethod
@@ -100,7 +104,7 @@ class Trainer(cntk_py.Trainer):
 
                * `dict`: keys are input variable or names, and values are the input data.
 
-               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+               * any other type: if node has a unique input, ``arguments`` is mapped to this input.
                  For nodes with more than one input, only `dict` is allowed.
 
              In both cases, every sample in the data will be interpreted
@@ -182,7 +186,7 @@ class Trainer(cntk_py.Trainer):
                * `dict`: keys are input variable or names, and values are the input data.
                  See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
 
-               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+               * any other type: if node has a unique input, ``arguments`` is mapped to this input.
                  For nodes with more than one input, only `dict` is allowed.
 
              In both cases, every sample in the data will be interpreted
@@ -241,7 +245,7 @@ class Trainer(cntk_py.Trainer):
             filename (str): filename to restore the checkpoint from
         '''
 
-        super(Trainer, self).restore_from_checkpoint(filename)
+        return super(Trainer, self).restore_from_checkpoint(filename)
 
     @property
     @typemap

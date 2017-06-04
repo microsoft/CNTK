@@ -324,9 +324,13 @@ public:
 #endif
 
         // Directly unpack into Value() matrix
+        auto valueMatrixNumRows = outputValuePtrRef->GetNumRows();
+        auto valueMatrixNumCols = outputValuePtrRef->GetNumCols();
         auto unpackedInput = ComputationNode<ElemType>::Unpack(InputRef(0).GetSampleLayout(), InputRef(0).Value(), InputRef(0).GetMBLayout(), outputValuePtrRef, m_tempScatterIndices, m_tempMask, /*batchMajor=*/ false, &m_paddingValue);
         if (unpackedInput.GetSOBPtr() != outputValuePtrRef)
             Value().AssignValuesOf(*unpackedInput.GetSOBPtr());
+
+        Value().Reshape(valueMatrixNumRows, valueMatrixNumCols);
 
         if (!m_suppressMaskOutput)
         {
@@ -395,7 +399,7 @@ public:
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return false; }
 
-    virtual bool NeedsDynamicValidation() const override { return true; }
+    bool ForceDynamicValidation() const override { return true; }
 
     virtual void Validate(bool isFinalValidationPass) override
     {

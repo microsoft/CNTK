@@ -1,0 +1,8 @@
+#!/bin/bash
+
+. $TEST_DIR/../run-test-common
+
+# increase stack limit 
+ulimit -s 65536
+
+cntkrun ResNet34_ImageNet1K.cntk "forceDeterministicAlgorithms=true traceLevel=0 stderr=- TrainNetwork=[SGD=[epochSize=4,minibatchSize=2,maxEpochs=2,numMBsToShowResult=1,learningRatesPerMB=0.01]] BNStatistics=[minibatchSize=2,itersPerNode=1] Eval=[minibatchSize=2]"

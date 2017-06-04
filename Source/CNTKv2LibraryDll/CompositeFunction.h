@@ -180,6 +180,15 @@ namespace CNTK
             }
         }
 
+        template <typename ElementType>
+        static std::pair<Microsoft::MSR::CNTK::ComputationNetworkPtr, std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>>
+            CreateComputationNetwork(const FunctionPtr& rootFunction,
+                                     const DeviceDescriptor& device,
+                                     const std::unordered_set<Variable>& networkOutputs,
+                                     const std::unordered_map<Variable, Variable>& fullyDefinedArgumentsMap,
+                                     const std::unordered_set<Variable>& inputsExcludedFromGradientComputation,
+                                     bool useMangledNamesForComputationNodes);
+
     private:
         // Replace any PlaceHolder Variables in the graph of Functions underlying 'this' CompositeFunction. All PlaceHolder variables
         // should have been replaced before performing any Forward compute of 'this' Function.
@@ -243,6 +252,9 @@ namespace CNTK
         // Copy the internal state from the network into the function graph.
         void UpdateInternalState() const;
 
+        // Copy all new values for 'dirty' attributes from functions into corresponding network nodes.
+        void ApplyAttributeUpdates();
+
         // Generate a dictionary representing the internal (local) state of the function graph.
         Dictionary GetInternalState() const;
 
@@ -276,7 +288,8 @@ namespace CNTK
                                                                                   Function* function,
                                                                                   const std::vector<std::shared_ptr<Microsoft::MSR::CNTK::ComputationNode<ElementType>>>& inputNodes,
                                                                                   Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
-                                                                                  std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap);
+                                                                                  std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap,
+                                                                                  bool useMangledNamesForComputationNodes);
 
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetOutputVariableNode(const Variable& variable,
@@ -285,7 +298,8 @@ namespace CNTK
                                                                                   const std::unordered_map<Variable, Variable>& fullyDefinedArgumentsMap,
                                                                                   std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap,
                                                                                   std::unordered_map<Variable, bool>& isVariableRootMap,
-                                                                                  const std::unordered_set<Variable>& inputsToExcludeGradientsFor);
+                                                                                  const std::unordered_set<Variable>& inputsToExcludeGradientsFor,
+                                                                                  bool useMangledNamesForComputationNodes);
 
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr GetNode(const Variable& variable, Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
@@ -293,7 +307,8 @@ namespace CNTK
                                                                     const std::unordered_map<Variable, Variable>& fullyDefinedArgumentsMap,
                                                                     std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap,
                                                                     std::unordered_map<Variable, bool>& isVariableRootMap,
-                                                                    const std::unordered_set<Variable>& inputsToExcludeGradientsFor);
+                                                                    const std::unordered_set<Variable>& inputsToExcludeGradientsFor,
+                                                                    bool useMangledNamesForComputationNodes);
 
         template <typename ElementType>
         static void PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode, std::unordered_map< Microsoft::MSR::CNTK::MBLayoutPtr, Variable>& layoutsPopulated);
@@ -326,6 +341,24 @@ namespace CNTK
             m_existingNetworkStorageReferences.clear();
         }
 
+        void PurgeComputationNetwork()
+        {
+            m_currentBackpropRoots.clear();
+            m_inputsExcludedFromGradientComputation.clear();
+            m_variableToNodeMap.clear();
+            m_currentOutputsToEvaluate.clear();
+            m_lastRecordedTimeStamps.clear();
+
+            m_networkMatricesAllocated = false;
+            m_computationNetwork = nullptr;
+        }
+
+        void RecordRefVariableUpdates()
+        {
+            for (auto refVar : m_refVariables)
+                refVar.IsParameter() ? Parameter(refVar).RecordValueUpdate() : Constant(refVar).RecordValueUpdate();
+        }
+
     private:
 
         // Set of all primitive functions in the graph underlying 'this' Function. Also keeps the primitive Function objects alive 
@@ -335,27 +368,34 @@ namespace CNTK
         // A map from Variable objects to ComputationNode objects in the ComputationNetwork instance that implements 'this' Composite Function
         std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_variableToNodeMap;
 
-        FunctionPtr m_latestFullyDefinedComposite;
         std::unordered_map<Variable, Variable> m_fullyDefinedArgumentsMap;
+        FunctionPtr m_latestFullyDefinedCompositeForCheckedModeValidation;
 
         Microsoft::MSR::CNTK::ComputationNetworkPtr m_computationNetwork;
 
         // Map to keep track of any references to network output/gradient storage handed out so far
         std::vector<PackedValueWeakPtr> m_existingNetworkStorageReferences;
 
-        // The backpropRoots sepecified in the most recent 'Forward' call on 'this' Function.
+        // The backpropRoots specified in the most recent 'Forward' call on 'this' Function.
         // This indicates for which of its roots has 'this' Function retained required intermediate 
         // states from the previos Forward call to be able to backpropagate gradients backwards from in
         // the next 'Backward' call.
         std::unordered_set<Variable> m_currentBackpropRoots;
 
+        // Outputs to evaluate are the list of outputs that the forward pass need to evaluate. m_currentOutputsToEvaluate
+        // will store this list, from the last forward pass call, only in training mode. The reason for that
+        // is to run PostForwardAndBackProp after backprop phase finish.
+        std::vector<Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_currentOutputsToEvaluate;
+
         std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
+
+        std::unordered_set<Variable> m_refVariables;
 
         bool m_networkMatricesAllocated;
 
         std::unordered_set<Variable> m_allNetworkRoots;
 
-        std::unordered_map<Parameter, size_t> m_lastRecordedParameterValueTimeStamps;
+        std::unordered_map<Variable, size_t> m_lastRecordedTimeStamps;
 
         std::unordered_set<Variable> m_inputsExcludedFromGradientComputation;
 

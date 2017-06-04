@@ -25,6 +25,7 @@ static const wchar_t* GlorotNormalInitializerTypeName =     L"glorotNormal";
 static const wchar_t* HeUniformInitializerTypeName =        L"heUniform";
 static const wchar_t* HeNormalInitializerTypeName =         L"heNormal";
 static const wchar_t* BilinearInitializerTypeName =         L"bilinear";
+static const wchar_t* TruncNormalInitializerTypeName =      L"TruncNormal";
 
 // -----------------------------------------------------------------------
 // LearnableParameter (/*no input*/)

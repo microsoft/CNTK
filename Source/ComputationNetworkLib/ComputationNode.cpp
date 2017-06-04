@@ -237,7 +237,6 @@ template<class ElemType>
 /*static*/ const std::wstring ComputationNodeBase::DefaultDynamicAxisName = L"*";
 /*static*/ const std::wstring ComputationNodeBase::DefaultNoSequenceAxisName = L"__noSequenceAxis";
 
-
 // -----------------------------------------------------------------------
 // subroutines for Validate() implementations
 // -----------------------------------------------------------------------
@@ -418,7 +417,7 @@ void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass, bool k
     assert(m_inputs.size() == 1);
     ComputationNodeBase::Validate(isFinalValidationPass);
     m_pMBLayout = nullptr; // this node does not hold mini-batch data
-    SetDims(keepDimensions ? m_inputs[0]->GetSampleLayout() : TensorShape(1), false);
+    SetDims(keepDimensions ? m_inputs[0]->GetSampleLayout() : (TensorShape::Scalar(Environment().IsV2Library())), false);
 }
 
 // binary reduce-to-(1,1) operation, e.g. CrossEntropyWithSoftmaxNode
@@ -446,7 +445,7 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
             LogicError("%ls: Expected MBLayout in Input 1.", NodeDescription().c_str());
         // Shape of the MBLayouts is checked at runtime.
     }
-    SetDims(TensorShape(1), false);
+    SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
 }
 
 // helper function for validation
@@ -645,7 +644,7 @@ template <class ElemType>
         Validate(/*isFinalValidationPass =*/ true);
 
     // update the actual m_value allocation
-    if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
+    if ((!IsLeaf() || Is<RandomDistributionNode<ElemType>>()) && !RequiresPreCompute()) // TODO: guard this through overrides instead
         UpdateFunctionValuesSize();
 
     // give nodes a chance to update their internal state that may also have to match MB size

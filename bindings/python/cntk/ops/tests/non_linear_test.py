@@ -11,6 +11,7 @@ the forward and the backward pass
 
 from __future__ import division
 import numpy as np
+import cntk as C
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, precision, PRECISION_TO_TYPE, cntk_device
 from cntk.tests.test_utils import TOLERANCE_ABSOLUTE
@@ -150,7 +151,7 @@ def test_op_tanh(operand, device_id, precision):
 @pytest.mark.parametrize("shape", [(3, 9), (10, 20, 30)])
 @pytest.mark.parametrize("dropout_rate", [0.0, 0.2, 0.5, 0.8])
 def test_op_dropout(shape, dropout_rate, device_id, precision):
-    from cntk import dropout, input
+    from cntk import dropout
 
     count = 10
     resulted_non_zeros = 0
@@ -160,7 +161,7 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
     for i in range(count):
         value = np.ones(shape=shape, dtype=PRECISION_TO_TYPE[precision])
 
-        a = input(shape=value.shape,
+        a = C.input_variable(shape=value.shape,
                   dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
                   needs_gradient=True,
                   name='a')
@@ -186,12 +187,57 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
     assert(abs(resulted_non_zeros - expected_non_zeros) <
            max_off)
 
+
+def test_changing_dropout_rate():
+    from cntk import dropout, input
+
+    resulted_non_zeros = 0
+
+    shape = (100,100)
+    dtype = np.float32
+    value = np.ones(shape=shape, dtype=dtype)
+
+    a = input(shape=shape, needs_gradient=True, dtype=dtype)
+    dropout_node = dropout(a, dropout_rate=0.1)
+
+    value.shape = (1,) + value.shape
+
+    for dropout_rate in [0.0, 0.25,  0.5, 0.78, 0.99999]:
+        dropout_node.set_attribute('dropoutRate', dropout_rate)
+        forward, _ = cntk_eval(dropout_node, {a: value}, dtype, backward_pass=True)
+        resulted_non_zeros = np.count_nonzero(forward[dropout_node.output])
+        if (dropout_rate == 0):
+            assert resulted_non_zeros == value.size
+        
+        assert np.isclose((1-dropout_rate), resulted_non_zeros* 1.0/ value.size, atol=0.01)
+
+def test_dropout_random_mask_is_recomputed_on_forward_pass():
+    from cntk import dropout, input
+
+    shape = (100,100)
+    dtype = np.float32
+    value = np.ones(shape=shape, dtype=dtype)
+
+    a = input(shape=shape, needs_gradient=True, dtype=dtype)
+    dropout_node = dropout(a, dropout_rate=0.1)
+    network = dropout_node + constant(0)
+
+    value.shape = (1,) + value.shape
+
+    _, forward = network.forward({a: value}, network.outputs, network.outputs)
+    non_zeros_1 = forward[network.output] > 0.0
+
+    _, forward = network.forward({a: value}, network.outputs, network.outputs)
+    non_zeros_2 = forward[network.output] > 0.0
+
+    assert not (non_zeros_1 == non_zeros_2).all()
+
 def test_op_dropout_with_explicit_seed(device_id, precision):
-    from cntk import combine, dropout, input
+    from cntk import combine, dropout
 
-    value = np.ones(shape=(10,10), dtype=PRECISION_TO_TYPE[precision])
+    value = np.ones(shape=(100,100), dtype=PRECISION_TO_TYPE[precision])
 
-    a = input(shape=value.shape,
+    a = C.input_variable(shape=value.shape,
               dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
               name='a')
@@ -205,10 +251,13 @@ def test_op_dropout_with_explicit_seed(device_id, precision):
         dropout(a, dropout_rate=0.5)
     ]
 
+    cloned_nodes = [x.clone('clone') for x in dropout_nodes]
+
     value.shape = (1, 1) + value.shape
-    forward_input = {a: value}
+    
     results = []
-    for node in dropout_nodes:
+    for node in dropout_nodes + cloned_nodes:
+        forward_input = {node.inputs[0]: value}
         forward, backward = cntk_eval(node,
                                       forward_input,
                                       precision,
@@ -221,12 +270,16 @@ def test_op_dropout_with_explicit_seed(device_id, precision):
     assert not np.allclose(results[0], results[2])
     assert not np.allclose(results[0], results[3])
 
+    clones = results[len(dropout_nodes):]
+    for i in range(len(clones)):
+        assert np.allclose(results[i], clones[i])
+
 
 @pytest.mark.parametrize("dropout_rate", [-0.1, 1.0, 100])
 def test_op_dropout_bad_input(dropout_rate):
-    from cntk import dropout, input
+    from cntk import dropout
 
-    a = input(shape=(1, 2), dtype='float', needs_gradient=True, name='a')
+    a = C.input_variable(shape=(1, 2), dtype='float', needs_gradient=True, name='a')
 
     with pytest.raises(ValueError):
         dropout_node = dropout(a, dropout_rate=dropout_rate)
@@ -482,9 +535,9 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
     run_variance = constant(var,  shape=(1), dtype=dtype, device=dev)
     run_count    = constant(0,               dtype=dtype, device=dev)
 
-    from cntk import batch_normalization, input
+    from cntk import batch_normalization
 
-    a = input(shape=(1), dtype=dtype, needs_gradient=False, name='a')
+    a = C.input_variable(shape=(1), dtype=dtype, needs_gradient=False, name='a')
 
     with pytest.warns(Warning):
         op = batch_normalization(a, scale, bias, run_mean, run_variance, False,
@@ -503,7 +556,7 @@ TENSOR_PAIRS = [
     ([[0.1]], [[0.3]]),
     ([[1.5, 2.1]], [[-2., -3.]]),
     ([[1., 2.], [3., 4.], [1., 2.]],
-     [[2., 2.], [3., 1.], [-1., -2.]])
+     [[2., 2.], [3., 1.], [-1., -2.]]),
 ]
 
 @pytest.mark.parametrize("base, exponent", TENSOR_PAIRS)
@@ -516,6 +569,27 @@ def test_op_pow(base, exponent, device_id, precision):
     expected_backward = {
             'left_arg':  [exponent * base**(exponent-1)],
             'right_arg': [expected_forward * np.log(base)]
+        }
+
+    from .. import pow
+    _test_binary_op(precision, device_id, pow,
+                    base, exponent,
+                    AA([expected_forward]), expected_backward)
+
+NEGATIVE_TENSOR_PAIRS = [                    
+    ([-1., -2., -3., -4.], [2., -3., 3., -2.]),
+]
+
+@pytest.mark.parametrize("base, exponent", NEGATIVE_TENSOR_PAIRS)
+def test_op_neg_pow(base, exponent, device_id, precision):
+    dt =  PRECISION_TO_TYPE[precision]
+    base = AA(base,dtype=dt)
+    exponent = AA(exponent,dtype=dt)
+    expected_forward = base ** exponent
+
+    expected_backward = {
+            'left_arg':  [exponent * base**(exponent-1)],
+            'right_arg': [expected_forward * 0]
         }
 
     from .. import pow

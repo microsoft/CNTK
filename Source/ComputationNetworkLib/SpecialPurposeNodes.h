@@ -892,7 +892,7 @@ public:
                 LogicError("ForwardBackwardNode: Please pass LabelsToGraph(labels) for second argument");
         }
 
-        SetDims(TensorShape(1), false);
+        SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
     }
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1012,6 +1012,78 @@ public:
 
 template class StopGradientNode<float>;
 template class StopGradientNode<double>;
+
+// -----------------------------------------------------------------------
+// AssignNode (RefInput, Input)
+// -----------------------------------------------------------------------
+template <class ElemType>
+class AssignNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"Assign"; }
+
+    shared_ptr<Matrix<ElemType>> m_result;
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(AssignNode);
+    AssignNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        m_result->Resize(Input(0)->Value());
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        auto& result = Value();
+        auto& inputValue = InputRef(1).Value();
+
+        m_result->AssignValuesOf(inputValue);
+        result.AssignValuesOf(inputValue);
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ PostForwardAndBackProp() override
+    {
+        auto& refValue = InputRef(0).Value();
+        refValue.AssignValuesOf(*m_result);
+
+        // We update Input(0) so bump the timestamp for the new data.
+        Input(0)->BumpEvalTimeStamp();
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        if (inputIndex == 1)
+            Input(1)->Gradient() += Gradient();
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateBinaryZip(isFinalValidationPass, false);
+
+        if (Input(0)->HasMBLayout() || Input(1)->HasMBLayout())
+            InvalidArgument("AssignNode: None of the inputs can have dynamic axes.");
+
+        if (Input(0)->GetSampleLayout() != Input(1)->GetSampleLayout())
+            InvalidArgument("AssignNode: All inputs should have same sample layout.");
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_result, matrixPool);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+};
+
+template class AssignNode<float>;
+template class AssignNode<double>;
 
 // -----------------------------------------------------------------------
 // OutputMultiplexerNode(userDefinedV2FunctionNode, outputIndex)
