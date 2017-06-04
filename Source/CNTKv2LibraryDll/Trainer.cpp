@@ -416,6 +416,12 @@ namespace CNTK
         renameOrDie(tempCheckpointFile, trainerStateCheckpointFilePath);
     }
 
+    void Trainer::RestoreModel(const std::wstring& modelFilePath)
+    {
+        // Restore the model's parameters
+        m_combinedTrainingFunction->Restore(modelFilePath);
+    }
+
     Dictionary Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
     {
         // Restore the model's parameters

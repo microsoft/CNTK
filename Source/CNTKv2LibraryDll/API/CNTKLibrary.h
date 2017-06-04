@@ -4881,6 +4881,11 @@ namespace CNTK
         CNTK_API void SaveCheckpoint(const std::wstring& filePath, Dictionary externalState = Dictionary());
 
         ///
+        /// Restore the model from a previously saved model from the specified file location
+        ///
+        CNTK_API void RestoreModel(const std::wstring& filePath);
+
+        ///
         /// Restore the model and trainer state from a previously saved model and checkpoint from the specified file location
         ///
         CNTK_API Dictionary RestoreFromCheckpoint(const std::wstring& filePath);

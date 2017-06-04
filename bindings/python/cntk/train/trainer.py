@@ -236,6 +236,17 @@ class Trainer(cntk_py.Trainer):
 
         super(Trainer, self).save_checkpoint(filename, _py_dict_to_cntk_dict(external_state))
 
+    def restore_model(self, filename):
+        '''
+        Restores a checkpoint of the model from the
+        specified file location.
+
+        Args:
+            filename (str): filename to restore the model from
+        '''
+
+        return super(Trainer, self).restore_model(filename)
+
     def restore_from_checkpoint(self, filename):
         '''
         Restores a checkpoint of the model and Trainer state from the
