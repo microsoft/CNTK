@@ -11,6 +11,7 @@ from cntk.internal import typemap, sanitize_dtype_cntk, is_string
 from cntk.device import use_default_device
 from cntk.logging import TraceLevel, get_trace_level
 from cntk.variables import Record
+import cntk.io.transforms
 
 import numpy as np
 import uuid
@@ -110,7 +111,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
 
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
-    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, randomization_seed=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=False, frame_mode=False, truncation_length=0, randomize=True)
+    MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, randomization_seed=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=None, frame_mode=False, truncation_length=0, randomize=True)
 
     Args:
         deserializers (a single deserializer or a `list`): deserializers to be used in the composite reader
@@ -137,8 +138,10 @@ class MinibatchSource(cntk_py.MinibatchSource):
             the input data is re-randomized).
         trace_level (an instance of :class:`cntk.logging.TraceLevel`): the output verbosity level, defaults to
           the current logging verbosity level given by :func:`~cntk.logging.get_trace_level`.
-        multithreaded_deserializer (`bool`, defaults to `False`): specifies if the deserialization should be
-          done on a single or multiple threads.
+        multithreaded_deserializer (`bool`): specifies if the deserialization should be
+          done on a single or multiple threads. Defaults to `None`, which is effectively "auto" (multhithreading 
+          is disabled unless ImageDeserializer is present in the deserializers list). `False` and `True` 
+          faithfully turn the multithreading off/on.
         frame_mode (`bool`, defaults to `False`): switches the frame mode on and off. If the frame mode
           is enabled the input data will be processed as individual frames ignoring all sequence information
           (this option cannot be used for BPTT, an exception will be raised if frame mode is enabled and the
@@ -157,7 +160,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         randomization_window_in_samples = 0,
         randomization_seed=0,
         trace_level = TraceLevel.Warning,
-        multithreaded_deserializer=False,
+        multithreaded_deserializer=None,
         frame_mode=False,
         truncation_length=0,
         randomize=True):
@@ -171,7 +174,10 @@ class MinibatchSource(cntk_py.MinibatchSource):
         config.randomization_window_in_chunks = randomization_window_in_chunks
         config.randomization_window_in_samples = randomization_window_in_samples
         config.randomization_seed = randomization_seed;
-        config.is_multithreaded = multithreaded_deserializer
+
+        if multithreaded_deserializer is not None:
+            config.is_multithreaded.set(multithreaded_deserializer)
+
         config.is_frame_mode_enabled = frame_mode
         config.truncation_length = truncation_length
 
@@ -265,9 +271,10 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
         Returns:
             cntk.io.MinibatchData:
-            A mapping of :class:`StreamInformation` to :class:`MinibatchData` if
-            `input_map` was not specified. Otherwise, the returned value will
-            be a mapping of :class:`~cntk.variables.Variable` to class:`MinibatchData`.
+             A mapping of :class:`StreamInformation` to :class:`MinibatchData` if
+             `input_map` was not specified. Otherwise, the returned value will
+             be a mapping of :class:`~cntk.variables.Variable` to class:`MinibatchData`.
+             When the maximum number of epochs/samples is exhausted, the return value is an empty dict.
         '''
         if device is None:
             device = use_default_device()
@@ -362,6 +369,10 @@ class StreamInformation(cntk_py.StreamInformation):
         self.m_element_type = sanitize_dtype_cntk(dtype)
         self.m_sample_layout = cntk_py.NDShape(shape)
 
+    @property
+    def name(self):
+        return self.m_name
+
 
 class UserMinibatchSource(cntk_py.SwigMinibatchSource):
     '''
@@ -432,17 +443,13 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
     def get_checkpoint_state(self):
         '''
         Returns a dictionary describing the current state of the minibatch
-        source.
+        source. Needs to be overwritten if the state of the minibatch source
+        needs to be stored to and later restored from the checkpoint.
 
         Returns:
             dictionary, that can be later used on :meth:`restore_from_checkpoint`.
         '''
-        raise NotImplementedError('in order to use checkpointing on '
-            'UserMinibatchSource, you need to implement '
-            'get_checkpoint_state()')
-
-    def _restore_from_checkpoint(self, state):
-        self.restore_from_checkpoint(state)
+        return {}
 
     def restore_from_checkpoint(self, state):
         '''
@@ -451,9 +458,10 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
         Args:
             state (dict): dictionary containing the state
         '''
-        raise NotImplementedError('in order to use checkpointing on '
-            'UserMinibatchSource, you need to implement '
-            'restore_from_checkpoint(checkpoint)')
+        if state:
+            raise NotImplementedError('in order to use checkpointing on '
+                'UserMinibatchSource, you need to implement '
+                'restore_from_checkpoint(checkpoint)')
 
     def __getitem__(self, name):
         '''
@@ -465,6 +473,245 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
               :class:`StreamInformation` for
         '''
         return self.stream_info(name)
+
+class MinibatchSourceFromData(UserMinibatchSource):
+    '''
+    This wraps in-memory data as a CNTK MinibatchSource object (aka "reader"), used to feed the data into a TrainingSession.
+
+    Use this if your data is small enough to be loaded into RAM in its entirety, and
+    the data is already sufficiently randomized.
+
+    While CNTK allows user code to iterate through minibatches by itself and feed data minibatch
+    by minibatch through :func:`~cntk.train.trainer.Trainer.train_minibatch`, the standard way is to iterate
+    through data using a MinibatchSource object. For example, the high-level :class:`~cntk.train.training_session.TrainingSession`
+    interface, which manages a full training including checkpointing and cross validation, operates on this level.
+
+    A MinibatchSource created as a `MinibatchSourceFromData` linearly iterates through the data provided by
+    the caller as numpy arrays or scipy.sparse.csr_matrix objects, without randomization.
+    The data is not copied, so if you want to modify the data while being read through a `MinibatchSourceFromData`,
+    please pass a copy.
+
+    Example:
+     >>> N = 5
+     >>> X = np.arange(3*N).reshape(N,3).astype(np.float32) # 6 rows of 3 values
+     >>> s = C.io.MinibatchSourceFromData(dict(x=X), max_samples=len(X))
+     >>> mb = s.next_minibatch(3) # get a minibatch of 3
+     >>> d = mb[s.streams['x']]
+     >>> d.data.asarray()
+     array([[ 0.,  1.,  2.],
+            [ 3.,  4.,  5.],
+            [ 6.,  7.,  8.]], dtype=float32)
+     >>> mb = s.next_minibatch(3) # note: only 2 left
+     >>> d = mb[s.streams['x']]
+     >>> d.data.asarray()
+     array([[  9.,  10.,  11.],
+            [ 12.,  13.,  14.]], dtype=float32)
+     >>> mb = s.next_minibatch(3)
+     >>> mb
+     {}
+
+     >>> # example of a sparse input
+     >>> Y = np.array([i % 3 == 0 for i in range(N)], np.float32)
+     >>> import scipy.sparse
+     >>> Y = scipy.sparse.csr_matrix((np.ones(N,np.float32), (range(N), Y)), shape=(N, 2))
+     >>> s = C.io.MinibatchSourceFromData(dict(x=X, y=Y)) # also not setting max_samples -> will repeat
+     >>> mb = s.next_minibatch(3)
+     >>> d = mb[s.streams['y']]
+     >>> d.data.asarray().todense()
+     matrix([[ 0.,  1.],
+             [ 1.,  0.],
+             [ 1.,  0.]], dtype=float32)
+     >>> mb = s.next_minibatch(3) # at end only 2 sequences
+     >>> d = mb[s.streams['y']]
+     >>> d.data.asarray().todense()
+     matrix([[ 0.,  1.],
+             [ 1.,  0.]], dtype=float32)
+
+     >>> # if we do not set max_samples, then it will start over once the end is hit
+     >>> mb = s.next_minibatch(3)
+     >>> d = mb[s.streams['y']]
+     >>> d.data.asarray().todense()
+     matrix([[ 0.,  1.],
+             [ 1.,  0.],
+             [ 1.,  0.]], dtype=float32)
+
+     >>> # values can also be GPU-side CNTK Value objects (if everything fits into the GPU at once)
+     >>> s = C.io.MinibatchSourceFromData(dict(x=C.Value(X), y=C.Value(Y)))
+     >>> mb = s.next_minibatch(3)
+     >>> d = mb[s.streams['y']]
+     >>> d.data.asarray().todense()
+     matrix([[ 0.,  1.],
+             [ 1.,  0.],
+             [ 1.,  0.]], dtype=float32)
+
+     >>> # data can be sequences
+     >>> import cntk.layers.typing
+     >>> XX = [np.array([1,3,2], np.float32),np.array([4,1], np.float32)]  # 2 sequences
+     >>> YY = [scipy.sparse.csr_matrix(np.array([[0,1],[1,0],[1,0]], np.float32)), scipy.sparse.csr_matrix(np.array([[1,0],[1,0]], np.float32))]
+     >>> s = cntk.io.MinibatchSourceFromData(dict(xx=(XX, cntk.layers.typing.Sequence[cntk.layers.typing.tensor]), yy=(YY, cntk.layers.typing.Sequence[cntk.layers.typing.tensor])))
+     >>> mb = s.next_minibatch(3)
+     >>> mb[s.streams['xx']].data.asarray()
+     array([[ 1.,  3.,  2.]], dtype=float32)
+     >>> mb[s.streams['yy']].data.shape # getting sequences out is messy, so we only show the shape
+     (1, 3, 2)
+
+    Args:
+        data_streams: name-value pairs
+        max_samples (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of samples
+          the reader can produce. If inputs are sequences, and the different streams have different
+          lengths, then each sequence counts with the the maximum length.
+          After this number has been reached, the reader
+          returns empty minibatches on subsequent calls to :meth:`next_minibatch`.
+          **Important:**
+          Click :cntkwiki:`here <BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`
+          for a description of input and label samples.
+
+    Returns:
+     An implementation of a :class:`cntk.io.MinibatchSource` that will iterate through the data.
+    '''
+    def __init__(self, data_streams, max_samples = INFINITELY_REPEAT):
+        from cntk import Variable
+        if not data_streams:
+            raise(ValueError('at least one stream must be specified, in the form name=data or name=(data, type)'))
+        self._data = dict()         # [name] -> numpy.array or scipy.sparse.csr_matrix
+        self._types = dict()        # [name] -> Variable._Type
+        self._is_sequence = dict()  # [name] -> bool
+        self._vars = dict()         # [name] -> Variable
+        self._max_samples = max_samples
+
+        # get the data and types from the input, and form streams array
+        self._num_samples = -1  # total number of samples --must be the same for all args
+        from scipy import sparse
+        for name, arg in data_streams.items():
+            if isinstance(arg, tuple):
+                value, type = arg
+                type = Variable._Type._sanitize(type)
+                dynamic_axes = getattr(type, 'dynamic_axes', None)
+                is_sequence = dynamic_axes and len(dynamic_axes) > 1
+                if not isinstance(type, Variable._Type):
+                    raise ValueError('type must be a CNTK variable type, e.g. Tensor[13]')
+            else:
+                value = arg
+                is_sequence = False  # data without type cannot have a dynamic axis
+                type = Variable._Type(is_sparse=isinstance(value, sparse.csr_matrix)) # shape implanted below
+            if not isinstance(value[0] if isinstance(value, list) else value, (np.ndarray, sparse.csr_matrix, Value)):
+                raise TypeError('data must be a numpy.array or scipy.sparse.csr_matrix, or a list of those')
+            sample_shape = value[0].shape[1:] if is_sequence else value.shape[1:]
+            if not type.shape_is_known:
+                type = type.updated_with(shape=sample_shape) # implant the shape
+            elif type.shape != sample_shape:
+                ValueError("specified type's shape does not match the data's shape")
+            try:
+                dtype = value.dtype # numpy array and Value
+            except:
+                dtype = value[0].dtype # for lists
+            try:
+                type.dtype
+            except:
+                type = type.updated_with(dtype=dtype) # implant the dtype
+            num_samples = MinibatchSourceFromData._get_len(value)
+            if self._num_samples == -1:
+                if num_samples == 0:
+                    raise(ValueError('data is empty'))
+                self._num_samples = num_samples
+            elif self._num_samples != num_samples:
+                raise TypeError('all data items must have the same first dimension')
+            self._data[name] = value
+            self._types[name] = type
+            self._is_sequence[name] = is_sequence
+
+        self._cursor = 0            # current position
+        self._total_num_samples = 0 # total count; once the limit is reached, we stop returning data
+
+        super(MinibatchSourceFromData, self).__init__()
+
+    @staticmethod
+    def _get_len(value): # helper to determine the length of the corpus
+        try:
+            return len(value) # if input is list
+        except:
+            return value.shape[0] # if input is csr_matrix
+
+    def stream_infos(self):
+        return [StreamInformation(name, i, ['dense', 'sparse'][getattr(self._types[name], 'is_sparse', False)], 
+                                  self._types[name].dtype, self._types[name].shape)
+                for i, name in enumerate(self._data.keys())]
+
+    def next_minibatch(self, num_samples, number_of_workers=1, worker_rank=0, device=None):        
+        if self._total_num_samples >= self._max_samples:
+            return {}
+        # determine how many samples, starting from self._cursor, will fit into the requested minibatch size of num_samples
+        begin = self._cursor
+        end = self._cursor
+        assert begin < self._num_samples
+        actual_num_samples = { name: 0 for name in self._data.keys() }
+        while end < self._num_samples: 
+            new_num_samples = { name: actual_num_samples[name] + (MinibatchSourceFromData._get_len(value[end]) if self._is_sequence[name] else 1)
+                                for name, value in self._data.items() }
+            # return up to requested number of samples. but at least one even if longer
+            # also stop if we hit the maximum requested number of samples
+            max_num_samples = max(new_num_samples.values())
+            if actual_num_samples and (max_num_samples > num_samples or self._total_num_samples + max_num_samples > self._max_samples):
+                break
+            actual_num_samples = new_num_samples
+            end += 1
+
+        self._total_num_samples += max(actual_num_samples.values())
+
+        # the minibatch data to return
+        result = {}  # [stream_info] -> MinibatchData
+        at_end = (end == self._num_samples)
+        for si in self.streams.values():
+            arg = self._data[si.name]
+            if isinstance(arg, Value):  # if entire corpus is one big Value, then slice NDArrayView directly
+                data = arg.data
+                sub_shape = data.shape[1:]
+                extent = (end - begin,) + sub_shape
+                start_offset = (begin,) + tuple(0 for _ in sub_shape)
+                if number_of_workers != 1: # slice_view presently does not support strides
+                    raise ValueError('distributed reading from Value objects is not supported')
+                mb_data = data.slice_view(start_offset, extent, data.is_read_only)
+            else:
+                # in case of distributed reading, we sub-slice the minibatch
+                #print('rank/worker', worker_rank, number_of_workers, 'reading', slice(begin+worker_rank, end+worker_rank, number_of_workers))
+                mb_data = arg[begin+worker_rank:end+worker_rank:number_of_workers]
+                if number_of_workers != 1:
+                    mb_data = mb_data.copy() # un-stride it, to avoid performance warning
+            if isinstance(mb_data, list): # create a Value object
+                if si.name not in self._vars: # this case is more complex, we need a CNTK Variable
+                    from cntk import input_variable, device
+                    self._vars[si.name] = input_variable(**self._types[si.name])
+                value = Value.create(self._vars[si.name], mb_data)
+            else:
+                value = Value(mb_data)
+            result[si] = MinibatchData(value, num_sequences=end - begin, num_samples=actual_num_samples[si.name],
+                                       sweep_end=at_end or (self._total_num_samples >= self._max_samples))
+
+        # wrap around the cursor
+        self._cursor = 0 if at_end else end
+
+        return result
+
+    def get_checkpoint_state(self):
+        '''
+        Gets the checkpoint state of the MinibatchSource.
+
+        Returns:
+            cntk.cntk_py.Dictionary:
+            A :class:`~cntk.cntk_py.Dictionary` that has the checkpoint state
+            of the MinibatchSource
+        '''
+        return dict(cursor=self._cursor, total_num_samples=self._total_num_samples)
+
+    def restore_from_checkpoint(self, checkpoint):
+        '''
+        Restores the MinibatchSource state from the specified checkpoint.
+
+        Args:
+            checkpoint (:class:`~cntk.cntk_py.Dictionary`): checkpoint to restore from
+        '''
+        self._cursor = checkpoint['cursor']
+        self._total_num_samples = checkpoint['total_num_samples']
 
 
 def HTKFeatureDeserializer(streams):

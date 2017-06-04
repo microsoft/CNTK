@@ -1,5 +1,6 @@
 from os import path
 from enum import Enum, unique
+import sys
 import warnings
 import collections
 
@@ -61,9 +62,8 @@ class Function(cntk_py.Function):
       >>> @Function
       ... def f(x):
       ...     return x * x
-      >>> from cntk import debugging
-      >>> debugging.dump_signature(f)
-      Function(x: Sequence[tensor]) -> Sequence[tensor]
+      >>> print(f)    # inspect the Function's type
+      ElementTimes(x: Sequence[tensor]) -> Sequence[tensor]
 
     The above form creates a CNTK Function whose arguments are placeholder variables.
     Such a function can only be combined with other symbolic functions.
@@ -85,10 +85,10 @@ class Function(cntk_py.Function):
       ... @Signature(Tensor[13])
       ... def f(x):
       ...     return x * x
-      >>> debugging.dump_signature(f)
-      Function(x: Tensor[13]) -> Tensor[13]
+      >>> print(f)
+      ElementTimes(x: Tensor[13]) -> Tensor[13]
 
-    ``make_block=True`` is an internal parameter used to implement :func:`@BlockFunction <cntk.layers.blocks.BlockFunction>`.
+    ``make_block=True`` is an internal parameter used to implement :func:`@BlockFunction <cntk.ops.functions.BlockFunction>`.
     If `BlockFunction()` passes `True`, then the result will be wrapped
     in :func:`~cntk.ops.as_block()`, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
     '''
@@ -507,15 +507,15 @@ class Function(cntk_py.Function):
         Allows to change a function attribute.
 
         Args:
-            name (string): one of 
+            name (string): one of
 
-             * 'dropoutRate': modifies the dropout rate of a dropout function 
-               (can only be invoked on a function instance returned either from 
+             * 'dropoutRate': modifies the dropout rate of a dropout function
+               (can only be invoked on a function instance returned either from
                :func:`~cntk.ops.dropout` or :func:`find_by_name`).
 
              * 'rngSeed': modifies the seed of a stateful function (can only be
-               invoked on  function instance returned from :func:`~cntk.ops.dropout`, 
-               :func:`~cntk.ops.random_sample`, 
+               invoked on  function instance returned from :func:`~cntk.ops.dropout`,
+               :func:`~cntk.ops.random_sample`,
                :func:`~cntk.ops.random_sample_inclusion_frequency` or :func:`find_by_name`)
 
             value (float in case of 'dropoutRate', int for 'rngSeed'): the new value
@@ -608,7 +608,7 @@ class Function(cntk_py.Function):
              to be performed.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
 
@@ -794,7 +794,7 @@ class Function(cntk_py.Function):
              the gradients have to be computed.
             as_numpy (bool): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
 
@@ -853,10 +853,10 @@ class Function(cntk_py.Function):
              computation is performed. If `None`, the default device is used.
             as_numpy (bool, default `True`): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object. Also, the Value objects 
+             costly conversion but returns a somewhat opaque object. Also, the Value objects
              are temporary and only guaranteed to be valid until the next forward/eval/backward/grad call.
              You must explicitly clone the temporay Value objects if they need to be accessed later.
-            grad_root (:class:`~cntk.variables.Variable`, optional): specify the root of gradients calculation. 
+            grad_root (:class:`~cntk.variables.Variable`, optional): specify the root of gradients calculation.
              If not specified, the output of this function will be used as gradient root.
 
         Returns:
@@ -1029,6 +1029,55 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).uid()
 
+
+
+    def __str__(self):
+        '''
+        Describes the Function and its signature as a string.
+
+        Example:
+         >>> f = C.log(C.input(1), name='f') # Function constructed as a graph
+         >>> print(f)
+         f: Log(Tensor[1]) -> Tensor[1]
+         >>> d = C.layers.Dense(10) # Function constructed as a layer
+         >>> print(d)
+         Dense(x: Sequence[tensor]) -> Sequence[tensor]
+         >>> @C.Function   # construct a primitive Function through @Function
+         ... def g(x,y):
+         ...     return x+y
+         >>> print(g)
+         Plus(x: Sequence[tensor], y: Sequence[tensor]) -> Sequence[tensor]
+         >>> @C.Function   # construct a composite through @Function
+         ... def h(x,y):
+         ...     return C.exp(x+y)
+         >>> print(h)
+         Composite(x: Sequence[tensor], y: Sequence[tensor]) -> Sequence[tensor]
+        '''
+        f_name = self.name
+        op_name = self.op_name
+        if self.is_composite:
+            if self.root_function and all(i.uid == ri.uid for i, ri in zip(self.inputs, self.root_function.inputs)):
+                op_name = self.root_function.op_name
+            else:
+                op_name = 'Composite' # (real op_name is CompositeFunctionOpName)
+        else:
+            op_name = self.op_name
+
+        args = self.signature
+        def format_arg_spec(v, is_output=False):
+            s = v.name + ': ' if not is_output and v.name else ''  # (suppress output names, since they duplicate the function name)
+            return s + str(v._type)
+        outputs = self.outputs
+        if len(outputs) > 1:
+            output_signature = 'Tuple[' + ', '.join(format_arg_spec(output, True) for output in outputs) + ']'
+        else:
+            output_signature = format_arg_spec(outputs[0], True)
+        if self.name:
+            f_name += ": "
+        return f_name + op_name + '(' + ", ".join([format_arg_spec(param) for param in args]) + ') -> ' + output_signature
+
+
+
     @typemap
     def replace_placeholders(self, substitutions):
         '''
@@ -1133,6 +1182,250 @@ class Function(cntk_py.Function):
         from cntk.logging import graph
         return graph.find_by_name(self, name, depth)
 
+    class _ProgressCollector(cntk_py.ProgressWriter):
+        '''
+        Internal helper for tracking loss and metric values for train() and test().
+        '''
+        # TODO: If this is of general interest, consider to move it to progress_print.py
+        def __init__(self, progress_writers=None, summary_period=None):
+            self.training_updates = []
+            self.training_summaries = []
+            self.test_summaries = []
+            coll_period = progress_writers[0].freq if (progress_writers and progress_writers[0]) else \
+                          summary_period if summary_period is not None else \
+                          sys.maxsize
+            super(Function._ProgressCollector, self).__init__(coll_period, 0, sys.maxsize, 0, sys.maxsize, 0)
+            self.__disown__()
+        def on_write_training_update(self, samples, updates, aggregate_loss, aggregate_metric):
+            aggregate_loss        = aggregate_loss[1]   - aggregate_loss[0]
+            aggregate_metric      = aggregate_metric[1] - aggregate_metric[0]
+            samples = samples[1]          - samples[0]
+            aggregate_loss   /= (samples if samples != 0 else 1)
+            aggregate_metric /= (samples if samples != 0 else 1)
+            self.training_updates.append(Record(loss=aggregate_loss, metric=aggregate_metric, samples=samples))
+        def on_write_test_update(self, *args, **kwargs):
+            pass
+        def on_write_training_summary(self, samples, updates, summaries, aggregate_loss, aggregate_metric, elapsed_milliseconds):
+            aggregate_loss   /= (samples if samples != 0 else 1)
+            aggregate_metric /= (samples if samples != 0 else 1)
+            self.training_summaries.append(Record(loss=aggregate_loss, metric=aggregate_metric, samples=samples))
+        def on_write_test_summary(self, samples, updates, summaries, aggregate_metric, elapsed_milliseconds):
+            aggregate_metric /= (samples if samples != 0 else 1)
+            self.test_summaries.append(Record(metric=aggregate_metric, samples=samples))
+        def write(self, *args, **kwargs):
+            pass
+
+    def train(self, minibatch_source,
+              minibatch_size=32, streams=None, model_inputs_to_streams=None, parameter_learners=[],
+              callbacks=[], progress_frequency=None, max_epochs=None, epoch_size=None, max_samples=None):
+        '''
+        Trains a model, given by its criterion function, using the specified training parameters and configs.
+        Different aspects of training such as data sources, checkpointing, cross validation, progress printing
+        can be configured using the corresponding config classes.
+
+        The input data can be specified as a data reader (:class:`~cntk.io.MinibatchSource`)
+        for large corpora; or directly as numpy/scipy arrays if the data is so small that it
+        is feasible to keep it all in RAM.
+
+        Data is processed in minibatches. The minibatch size defaults to 32, which is a choice that commonly works well.
+        However, for maximum efficiency, we recommend to experiment with minibatch sizes
+        and choose the largest that converges well and does not exceed the GPU RAM.
+        This is particularly important for distributed training, where
+        often, the minibatch size can be increased throughout the training, which reduces data bandwidth
+        and thus speeds up parallel training.
+
+        If input data is given through a data reader (as opposed to directly as a numpy/scipy array),
+        the user must also specify the epoch size. This is because data readers are used for
+        large corpora, and the traditional definition of epoch size as number of samples in the corpus
+        is not very relevant. Instead, CNTK really means the number of samples
+        between summary actions, such as printing training progress, adjusting the learning rate, and/or checkpointing the model.
+
+        The function returns an object that contains these members: `epoch_summaries` is a list that
+        contains the progression of epoch loss (`.loss`) and metric (`.metric`) values and the corresponding
+        number of labels (`.samples`) that they were averaged over. This is the same value that a progress printer would print as epoch
+        summaries. `updates` is a similar list with the more fine-grained minibatch updates.
+        If a `TestConfig` was specified, then `test_summary` is the metric and sample count on the specified test set
+        for the final model.
+
+        A number of callback mechanisms can optionally be specified as a list as `callbacks`.
+        CNTK has a fixed set of callback types, and only those types are allowed in the `callbacks` list:
+        An object of type :class:`~cntk.cntk_py.ProgressWriter` from :mod:`cntk.logging` is used for progress logging;
+        a :class:`~cntk.train.training_session.CheckpointConfig` configures the checkpointing mechanism, which
+        keeps copies of models at regular intervals and allows to seamlessly restart from a last checkpoint;
+        a :class:`~cntk.train.training_session.TestConfig` allows to specify a test set that is evaluated at the end of the training;
+        and a :class:`~cntk.train.training_session.CrossValidationConfig` specifies a user callback that can be used to adjust learning
+        hyper-parameters or to denote to stop training, optionally based on a separate cross-validation data set.
+
+        This is a convenience wrapper around :class:`cntk.train.trainer.Trainer` :class:`cntk.train.training_session.TrainingSession`.
+
+        Args:
+            self: the criterion function of a model to be trained. This is either a single-valued function (the loss)
+             or a tuple-valued function (loss and metric).
+            minibatch_source (:class:`~cntk.io.MinibatchSource` or tuple of numpy/scripy arrays):
+             data source used for training. For large data, use a MinibatchSource. For small data, pass a tuple of numpy/scipy arrays.
+             The number of streams/arrays must match the number of arguments of `self`.
+            streams (tuple): (only if minibatch_source is a data reader) the streams of the minibatch_source in argument order.
+             Not to be given if minibatch_source is specified as numpy/scipy arrays rather than a data reader.
+            minibatch_size (int or :class:`~cntk.cntk_py.minibatch_size_schedule`, defaults to 32): minibatch size (or schedule) for training
+            epoch_size (int): in CNTK, epoch size means the number of samples between outputting summary information and/or checkpointing.
+             This must be specified unless the user directly passes numpy/scipy arrays for the `minibatch_source`.
+            max_epochs (int, defaults to 1): maximum number of samples used for training; requires `epoch_size`
+            parameter_learners (list): list of learners from :mod:`cntk.learners`
+            callbacks (list): list of callback objects, which can be of type
+             :class:`~cntk.cntk_py.ProgressWriter` from :mod:`cntk.logging` (for logging),
+             :class:`~cntk.train.training_session.CheckpointConfig` (for check-pointing),
+             :class:`~cntk.train.training_session.TestConfig` (for automatic final evaluation on a test set), and
+             :class:`~cntk.train.training_session.CrossValidationConfig` (for cross-validation based training control).
+             Except for progress writers, at most one of each is allowed.
+            model_inputs_to_streams (dict): alternative to `streams`, specifying the mapping as a map from input variables to streams
+            max_samples (int): maximum number of samples used for training; mutually exclusive with `max_epochs`
+            progress_frequency (int): frequency in samples for aggregated progress printing. Defaults to `epoch_size` if given, or `None` otherwise
+
+        Example:
+         >>> # a simple logistic-regression model
+         >>> N = 250
+         >>> np.random.seed(0)
+         >>> Y = np.random.randint(size=N, low=0, high=2)  # labels
+         >>> X = (np.random.randn(N, 2)+3) * (Y[:,None]+1)   # data
+         >>> # Our model expects float32 features, and cross-entropy expects one-hot encoded labels.
+         >>> import scipy.sparse
+         >>> Y = scipy.sparse.csr_matrix((np.ones(N,np.float32), (range(N), Y)), shape=(N, 2))
+         >>> X = X.astype(np.float32)
+         >>> model = cntk.layers.Dense(2, activation=None) # model function
+         >>> import cntk.layers
+         >>> @cntk.Function.with_signature(cntk.layers.Tensor[2], cntk.layers.SparseTensor[2]) # criterion function
+         ... def criterion(data, label_one_hot):
+         ...     z = model(data)  # apply model. Computes a non-normalized log probability for every output class.
+         ...     return cntk.cross_entropy_with_softmax(z, label_one_hot)
+         >>> learner = cntk.sgd(model.parameters, cntk.learning_rate_schedule(0.1, cntk.UnitType.minibatch))
+         >>> progress = criterion.train((X, Y), minibatch_size=25, max_epochs=2, epoch_size=125, parameter_learners=[learner])
+         >>> print("%.2f" % progress.epoch_summaries[-1].loss) # get the final epoch's loss value
+         0.76
+
+        Returns:
+         An object `progress` with `progress.epoch_summaries` and `progress.updates` being the progressions of av loss, av metric, and number of labels
+          for epochs and updates (groups of minibatches), respectively. If a `TestConfig` was given, then `progress.test_summary`
+          includes the result (.metric and .samples)
+        '''
+        if minibatch_size is None:
+            raise ValueError("minibatch_size must not be None.")
+        elif isinstance(minibatch_size, int): # convert to a schedule
+            from ..train.training_session import minibatch_size_schedule
+            minibatch_size = minibatch_size_schedule(minibatch_size)
+        elif not isinstance(minibatch_size, cntk_py.minibatch_size_schedule):
+            raise ValueError('minibatch_size must be an int or the result an call to the minibatch_size_schedule() function')
+        # max_samples
+        # Can be either directly specified as max_samples or indirectly as (max_epochs, epoch_size).
+        if max_samples is None:
+            # derive from (max_epochs, epoch_size)
+            if epoch_size is None:
+                from ..io import MinibatchSource, UserMinibatchSource
+                if isinstance(minibatch_source, (MinibatchSource, UserMinibatchSource)): # UserMinibatchSource derives from cntk_py.SwigMinibatchSource, not MinibatchSource, for director purposes
+                    raise ValueError("epoch_size must be specified, unless max_samples is given or input is given as numpy/scipy arrays.")
+                first_input = _as_tuple(minibatch_source)[0]
+                try:
+                    epoch_size = len(first_input)
+                except:
+                    epoch_size = first_input.shape[0] # if input is csr_matrix
+            if max_epochs is None:
+                max_epochs = 1 # default to 1 epoch
+            max_samples = int(max_epochs * epoch_size) # (we allow fractional epochs so our testing system can run abbreviated tests)
+        elif max_epochs is not None:
+            raise ValueError("max_epochs and max_samples are mutually exclusive.")
+        # parse callbacks list into the 4 different parameters that training_session expects
+        from ..train.training_session import training_session, CheckpointConfig, CrossValidationConfig, TestConfig
+        from ..cntk_py import ProgressWriter
+        configs = Record(progress_writers=[], checkpoint_configs=[None], cv_configs=[None], test_configs=[None])
+        types_to_configs = {
+            ProgressWriter:        configs.progress_writers,
+            CheckpointConfig:      configs.checkpoint_configs,
+            CrossValidationConfig: configs.cv_configs,
+            TestConfig:            configs.test_configs
+        }
+        for cb in callbacks: # separate the callbacks list into one of 4 separate types
+            for type, config in types_to_configs.items():
+                if isinstance(cb, type):
+                    if isinstance(cb, cntk.cntk_py.ProgressWriter): # multiple progress writers are allowed
+                        config.append(cb)
+                    elif config[0]:
+                        ValueError('only one callback of type ' + str(type) + ' is permitted')
+                    else:
+                        config[0] = cb
+            else:
+                ValueError('callbacks list can only contain objects of type ProgressWriter, CheckpointConfig, CrossValidationConfig, and TestConfig.')
+        # use a progress tracker to capture the loss, metric, and count values
+        if progress_frequency is None and epoch_size is not None: # if epoch size is given then default training summary frequency to it
+            progress_frequency = epoch_size
+        collector = Function._ProgressCollector(configs.progress_writers, progress_frequency // minibatch_size[0] if progress_frequency is not None else None)
+        # Trainer instance
+        from ..train.trainer import Trainer
+        trainer = Trainer(None, self, parameter_learners, progress_writers=configs.progress_writers + [collector])
+        # input map
+        if streams:
+            if model_inputs_to_streams:
+                raise ValueError("streams and model_inputs_to_streams are mutually exclusive.")
+            model_inputs_to_streams = self.argument_map(*streams)
+        # training session
+        ts = training_session(trainer, minibatch_source, minibatch_size, model_inputs_to_streams=model_inputs_to_streams,
+                              progress_frequency=progress_frequency, max_samples=max_samples,
+                              checkpoint_config=configs.checkpoint_configs[0], cv_config=configs.cv_configs[0], test_config=configs.test_configs[0])
+        ts.train()
+        res = Record(updates=collector.training_updates, epoch_summaries=collector.training_summaries) if len(collector.training_summaries) > 0 else \
+              Record(updates=[Record(loss=0, metric=0, samples=0)], epoch_summaries=[Record(loss=0, metric=0, samples=0)])
+        if configs.test_configs[0]:
+            res = res.updated_with(test_summary=collector.test_summaries[-1])
+        return res
+
+    def test(self, minibatch_source, minibatch_size=32, streams=None, model_inputs_to_streams=None, callbacks=None):
+        '''
+        Measures the performance of a model, given by its criterion function, in the form of
+        average metric value (or loss if model has only one output) on a set of data.
+
+        This is a convenience wrapper around :class:`cntk.eval.evaluator.Evaluator`.
+
+        Args:
+            minibatch_source (:class:`~cntk.io.MinibatchSource`): minibatch source for the test data
+            minibatch_size (:class:`~cntk.cntk_py.minibatch_size_schedule` or int): minibatch size for evaluation
+            streams (tuple): the streams of the minibatch_source in argument order
+            model_inputs_to_streams (dict): mapping between input variables and input streams
+            callbacks (progress writer or list of them): optionally, list of
+             progress writers from :mod:`cntk.logging` to automatically track training
+             progress.
+
+        Returns:
+         An object `test_summary` with `test_summary.metric` being the average metric, and `test_summary.samples` the number of labels in the test set.
+        '''
+        if minibatch_size is None:
+            raise ValueError("minibatch_size must not be None.")
+        # input map
+        if streams:
+            if model_inputs_to_streams:
+                raise ValueError("streams and model_inputs_to_streams are mutually exclusive.")
+            model_inputs_to_streams = self.argument_map(*streams)
+        # wrap the data if needed
+        from ..train.training_session import TrainingSession
+        minibatch_source, model_inputs_to_streams = TrainingSession._sanitize_minibatch_source(minibatch_source, model_inputs_to_streams, self, infinitely_repeat=False)
+        # use a progress tracker to capture the metric and count values
+        collector = Function._ProgressCollector()
+        # Evaluator instance
+        from ..eval.evaluator import Evaluator
+        outputs = self.outputs
+        output = outputs[0] if len(outputs) == 1 else outputs[1] # use metric if present, otherwise loss
+        # callbacks. Only ProgressWriter is allowed in test()
+        from ..cntk_py import ProgressWriter
+        if callbacks and any(not isinstance(cb, ProgressWriter) for cb in callbacks):
+            ValueError('callbacks list must only contain objects of type ProgressWriter')
+        progress_writers = callbacks or []
+        evaluator = Evaluator(output, progress_writers + [collector])
+        # evaluation loop
+        while True:
+            data = minibatch_source.next_minibatch(minibatch_size) # fetch minibatch
+            if not data:
+                break                                              # until we hit the end
+            evaluator.test_minibatch({ input: data[si] for input, si in model_inputs_to_streams.items()})
+        evaluator.summarize_test_progress()
+        return collector.test_summaries[-1]
+
     @typemap
     def save(self, filename):
         '''
@@ -1169,16 +1462,16 @@ class Function(cntk_py.Function):
         When loading a model, CNTK will try to automatically reconstruct any
         (non-native) user-defined functions by invoking a static
         :func:`~cntk.ops.functions.UserFunction.deserialize` method of the
-        corresponding UserFunction sub-class. This method allows to override 
-        default UDF deserialization behavior by specifying a user- defined 
-        function op name and the corresponding callback that should be invoked 
+        corresponding UserFunction sub-class. This method allows to override
+        default UDF deserialization behavior by specifying a user- defined
+        function op name and the corresponding callback that should be invoked
         instead of the ``deserialize`` method.
 
         Args:
             op_name (str): unique op name of the user-defined function.
-            callback (function): a function taking three arguments (a list of 
+            callback (function): a function taking three arguments (a list of
              inputs to the UserFunction, a string name, and a state dictionary
-             generated by the corresponding :func:`~cntk.ops.functions.UserFunction.serialize` 
+             generated by the corresponding :func:`~cntk.ops.functions.UserFunction.serialize`
              method) and returns an instance of the user-defined function.
         '''
         if op_name in Function._udf_callback_map:
@@ -1193,7 +1486,7 @@ class Function(cntk_py.Function):
         Load the ``model``, that has been saved using :func:`~cntk.ops.functions.Function.save`.
 
         Args:
-            model (str, bytes or bytearray): either a file path of a model file or a byte buffer 
+            model (str, bytes or bytearray): either a file path of a model file or a byte buffer
              containing the binary representation of a model.
             device (:class:`~cntk.device.DeviceDescriptor`, defaults to the current globally default device):
              specifies the device to allocate the model on.
@@ -1215,11 +1508,45 @@ class Function(cntk_py.Function):
 
         if is_buffer:
             return cntk_py.Function.load_from_buffer(model, device)
-        
+
         if is_file:
             return cntk_py.Function.load(model, device)
-        
+
         raise ValueError('Cannot load a model that is neither a file nor a byte buffer.')
+
+    @staticmethod
+    def with_signature(*args, **kwargs):
+        '''
+        Decorator for defining a @Function with a given signature. Same as @Function followed by @Signature.
+
+        Example:
+         >>> from cntk.layers.typing import *
+         >>> @Function.with_signature(Tensor[13])
+         ... def f(x):
+         ...     return x * x
+         >>> print(f)
+         ElementTimes(x: Tensor[13]) -> Tensor[13]
+         >>> # which is equivalent to this:
+         >>> @Function
+         ... @Signature(Tensor[13])
+         ... def f(x):
+         ...     return x * x
+         >>> print(f)
+         ElementTimes(x: Tensor[13]) -> Tensor[13]
+
+        '''
+        def decorator(f):
+            from cntk.layers.typing import Signature
+            f = Signature(*args, **kwargs)(f)
+            f = Function(f)
+            return f
+        return decorator
+
+def BlockFunction(op_name, name):
+    '''
+    Decorator for defining a @Function as a BlockFunction. Same as @Function, but wrap the content into an :func:`~cntk.ops.as_block`.
+    '''
+    return lambda f: Function(f, make_block=True, op_name=op_name, name=name)
 
 @typemap
 def register_native_user_function(op_id, module_name, factory_method_name):
@@ -1231,7 +1558,7 @@ def register_native_user_function(op_id, module_name, factory_method_name):
         op_id (str): Unique id of the native user-defined Function to register.
          This id must be unique and an error will be reported if it matches
          the 'op_id' specified for any other registered native user-defined Function.
-        module_name (str): Name of the module containing the factory method for creating 
+        module_name (str): Name of the module containing the factory method for creating
          instances of the native user-defined Function being registered. This is typically
          the name of a DLL/so which exports a factory method for creating instances of the
          native user-defined Function.
@@ -1249,10 +1576,10 @@ def native_user_function(op_id, operands, attributes=None, user_function_instanc
 
     Args:
         op_id (str): Id of the native user-defined Function to instantiate.
-         This must be the id that was used when registering the native user-function 
+         This must be the id that was used when registering the native user-function
          with the 'register_native_user_function' method.
         operands (list): input operands of the new instance of the native user-defined Function.
-        user_function_instance_name (str): Name of the instance of the created native 
+        user_function_instance_name (str): Name of the instance of the created native
          user-defined Function.
 
     Returns:
@@ -1435,7 +1762,7 @@ class UserFunction(Function):
         It assumes that the constructor signature of the user's implementation
         of the user function takes the inputs as individual arguments followed
         by the operator name. If the signature is different, then this method
-        needs to be overriden. 
+        needs to be overriden.
 
         Args:
             cloned_inputs: list of cloned inputs to the new user-defined
@@ -1460,7 +1787,7 @@ class UserFunction(Function):
         Args:
             inputs (list): a list of inputs to the function
             name (str): name of this function
-            state (dict): a state dictionary generated by the corresponding 
+            state (dict): a state dictionary generated by the corresponding
              :func:`~cntk.ops.functions.UserFunction.serialize` method.
 
         Returns:

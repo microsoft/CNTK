@@ -3,4 +3,5 @@
 # for full license information.
 # ==============================================================================
 
+from .converter import *
 from .optimized_rnnstack_converter import *

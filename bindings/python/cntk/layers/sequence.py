@@ -167,17 +167,25 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
     '''
     RecurrenceFrom(step_function, go_backwards=False, return_full_state=False, name='')
 
-    Layer factory function to create a function that runs a cell function recurrently over an input sequence, with initial state.
+    Layer factory function to create a function that runs a step function recurrently over an input sequence, with initial state.
     This layer is very similar to :func:`~cntk.layers.sequence.Recurrence`,
-    except that the initial state is data dependent, and thus passed to the layer function as a data input
-    rather than as an initialization parameter to the factory function.
+    except that the initial state is not a constant but computed from input data.
+    Thus, in `RecurrenceFrom()`, the initial state is passed to the layer function as a data input
+    rather than, like `Recurrence()`, as an initialization parameter to the factory function.
     This form is meant for use in sequence-to-sequence scenarios.
     This documentation only covers this case; for additional information on parameters, see :func:`~cntk.layers.sequence.Recurrence`.
+    In pseudo-code::
+
+      # pseudo-code for y = RecurrenceFrom(step_function)(s,x)
+      #  x: input sequence of tensors along the dynamic axis
+      #  s: initial state for the recurrence (computed from input data elsewhew)
+      #  y: resulting sequence of outputs along the same dynamic axis
+      y = []              # result sequence goes here
+      for x_n in x:       # pseudo-code for looping over all steps of input sequence along its dynamic axis
+          s = step_function(s, x_n)  # pass previous state and new data to step_function -> new state
+          y.append(s)
 
     The layer function returned by this factory function accepts the initial state as data argument(s).
-    It has the signature ``(initial_state, input_sequence) -> output_sequence``.
-    If the step function has multiple state variables, then the first N parameters are the initial state variables.
-
     The initial state can be non-sequential data, as one would have for a plain sequence-to-sequence model,
     or sequential data. In the latter case, the last item is the initial state.
 
@@ -222,7 +230,7 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
 
     step_function = _sanitize_function(step_function)
 
-    # get signature of cell
+    # get signature of step function
     #*prev_state_args, _ = step_function.signature  # Python 3
     prev_state_args = step_function.signature[0:-1]
 
@@ -280,13 +288,27 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     '''
     Recurrence(step_function, go_backwards=False, initial_state=0, return_full_state=False, name='')
 
-    Layer factory function to create a function that runs a step function recurrently over an input sequence.
-    This implements the typical recurrent model.
+    Layer factory function that implements a recurrent model, including the common RNN, LSTM, and GRU recurrences.
+    This factory function creates a function that runs a step function recurrently over an input sequence,
+    where in each step, Recurrence() will pass to the step function a data input as well as the output of the
+    previous step.
+    The following pseudo-code repesents what happens when you call a `Recurrence()` layer::
 
-    The step function can be any :class:`~cntk.ops.functions.Function` or Python function
-    with a signature ``(h_prev, x) -> h``, where ``h_prev`` is the previous state, ``x`` is the new
+      # pseudo-code for y = Recurrence(step_function)(x)
+      #  x: input sequence of tensors along the dynamic axis
+      #  y: resulting sequence of outputs along the same dynamic axis
+      y = []              # result sequence goes here
+      s = initial_state   # s = output of previous step ("state")
+      for x_n in x:       # pseudo-code for looping over all steps of input sequence along its dynamic axis
+          s = step_function(s, x_n)  # pass previous state and new data to step_function -> new state
+          y.append(s)
+
+    The common step functions are :func:`~cntk.layers.blocks.LSTM`, :func:`~cntk.layers.blocks.GRU`, and :func:`~cntk.layers.blocks.RNNStep`,
+    but the step function can be any :class:`~cntk.ops.functions.Function` or Python function.
+    The signature of a step function with a single state variable must be
+    ``(h_prev, x) -> h``, where ``h_prev`` is the previous state, ``x`` is the new
     data input, and the output is the new state.
-    All three are sequences of the same length. The step function will be called item by item.
+    The step function will be called item by item, resulting in a sequence of the same length as the input.
 
     Step functions can have more than one state output, e.g. :func:`~cntk.layers.blocks.LSTM`.
     In this case, the first N arguments are the previous state, followed by one more argument that
@@ -295,10 +317,12 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     (in the LSTM case, the ``h``), while additional state variables are internal (like the LSTM's ``c``).
     If all state variables should be returned, pass ``return_full_state=True``.
 
-    Typical step functions are :func:`~cntk.layers.blocks.LSTM`, :func:`~cntk.layers.blocks.GRU`, and :func:`~cntk.layers.blocks.RNNUnit`.
-    However, any function with a signature as described above is admissible.
+    To provide your own step function, just use any :class:`~cntk.ops.functions.Function` (or equivalent Python function) that
+    has a signature as described above.
     For example, a cumulative sum over a sequence can be computed as ``Recurrence(plus)``,
-    or a GRU layer with projection could be realized as ``Recurrence(GRU(500) >> Dense(200))``;
+    where each step consists of `plus(s,x_n)`, where `s` is the output of the previous call
+    and hence the cumulative sum of all elements up to `x_n`.
+    Another example is a GRU layer with projection, which could be realized as ``Recurrence(GRU(500) >> Dense(200))``,
     where the projection is applied to the hidden state as fed back to the next step.
     ``F>>G`` is a short-hand for ``Sequential([F, G])``.
 
@@ -327,7 +351,8 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
      >>> tuple(str(axis.name) for axis in bi_lstm_layer.dynamic_axes)  # (note: str() needed only for Python 2.7)
      ('defaultBatchAxis', 'defaultDynamicAxis')
 
-     >>> # cumulative sum over inputs
+     >>> # custom step function example: using Recurrence() to
+     >>> # compute the cumulative sum over an input sequence
      >>> x = C.input_variable(**Sequence[Tensor[2]])
      >>> x0 = np.array([[   3,    2],
      ...                [  13,   42],
@@ -369,7 +394,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
 
     step_function = _sanitize_function(step_function)
 
-    # get signature of cell
+    # get signature of step function
     #*prev_state_args, _ = step_function.signature  # Python 3
     prev_state_args = step_function.signature[0:-1]
 
@@ -400,6 +425,15 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
     Layer factory function to create a function that runs a step function recurrently over an input sequence,
     and returns the final state.
     This is often used for embeddings of sequences, e.g. in a sequence-to-sequence model.
+    Pseudo-code::
+
+      # pseudo-code for h = Fold(step_function)(x)
+      #  x: input sequence of tensors along the dynamic axis
+      #  h: resulting final step-function output tensor that no longer has a dynamic axis
+      h = initial_state   # h = output of previous step ("state"), and also the final result
+      for x_n in x:       # pseudo-code for looping over all steps of input sequence along its dynamic axis
+          h = step_function(h, x_n)  # pass previous state and new data to step_function -> new state
+      # now h is the result of the final invocation of the step function
 
     ``Fold()`` is the same as :func:`~cntk.layers.sequence.Recurrence` except that only the final state is returned
     (whereas ``Recurrence()`` returns the entire state sequence).
@@ -485,9 +519,21 @@ def UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name
     Layer factory function to create a function that implements a recurrent generator.
     Starting with a seed state, the ``UnfoldFrom()`` layer
     repeatedly applies ``generator_function`` and emits the sequence of results.
-    ``UnfoldFrom(f)(s)``
-    emits the sequence ``f(s), f(f(s)), f(f(f(s))), ...``.
-    ``s`` can be tuple-valued.
+    It stops after a maximum number of steps, or earlier when, if provided, `until_predicate` evaluates to True for the current output.
+    The maximum number of steps is based on a second input from which only the dynamic-axis information is used.
+    This is best explained in pseudo-code::
+
+      # pseudo-code for y = UnfoldFrom(generator_function, until_predicate)(s,axis_like)
+      #  s:         initial state for the recurrence (computed from input data elsewhew),
+      #  axis_like: any input with a dynamic axis, unfold will happen along the same dynamic axis,
+      #  y:         resulting sequence of outputs along the same dynamic axis
+      y = []               # result sequence goes here
+      for _ in axis_like:  # pseudo-code for looping over all steps of dynamic axis of axis_like
+          s = generator_function(s)  # pass previous state and new data to step_function -> new state
+          y.append(s)
+          if until_predicate(s):
+              break
+      # now y is the output of repeatedly applying generator_function()
 
     A typical application is the decoder of a sequence-to-sequence model,
     the generator function ``f`` accepts a two-valued state, with the first

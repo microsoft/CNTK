@@ -8,7 +8,7 @@ from __future__ import print_function
 import numpy as np
 import numbers
 from . import sequence
-from .functions import CloneMethod, Function, load_model, register_native_user_function, native_user_function
+from .functions import CloneMethod, Function, BlockFunction, load_model, register_native_user_function, native_user_function
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args, sanitize_permutation
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
@@ -267,11 +267,11 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     :math:`[3 \\times W \\times H]`, i.e. a :math:`[W \\times H]`-sized structure, where each entry (pixel) consists of a 3-tuple.
 
     `convolution_transpose` convolves the input ``operand`` with a :math:`n+2` rank tensor of (typically learnable) filters called
-    ``convolution_map`` of shape :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
-    The first dimension, :math:`O`, is the nunber of convolution filters (i.e. the number of
-    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input.
+    ``convolution_map`` of shape :math:`[I \\times O \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
+    The first dimension, :math:`I`, must match the number of channels in the input. The second dimension, :math:`O`, is the number of convolution filters (i.e. the number of
+    channels in the output).
     The last n dimensions are the spatial extent of the filter. I.e. for each output position, a vector of
-    dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
+    dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`I \\times O \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
 
 
     Example:
@@ -286,7 +286,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
                   [ -6.,   5.,   6.,  16.]]]], dtype=float32)
 
     Args:
-        convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
+        convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[I \\times O \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
          where :math:`[m_1 \\times m_2 \\times \\ldots \\times m_n]` must be the kernel dimensions (spatial extent of the filter).
         operand: convolution input. A tensor with dimensions :math:`[I \\times M_1 \\times M_2 \\times \\ldots \\times M_n]`.
         strides (tuple, optional): stride dimensions. If strides[i] > 1 then only pixel positions that are multiples of strides[i] are computed.
@@ -750,9 +750,9 @@ def pow(base, exponent, name=''):
     '''
     Computes `base` raised to the power of `exponent`. It supports broadcasting.
     This is well defined if `base` is non-negative or `exponent` is an integer.
-    Otherwise the result is NaN. The gradient with respect to the base is  well 
-    defined if the forward operation is well defined. The gradient with respect 
-    to the exponent is well defined if the base is non-negative, and it is set 
+    Otherwise the result is NaN. The gradient with respect to the base is  well
+    defined if the forward operation is well defined. The gradient with respect
+    to the exponent is well defined if the base is non-negative, and it is set
     to 0 otherwise.
 
     Example:
@@ -1686,7 +1686,8 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
                        bidirectional=False, recurrent_op='lstm', name=''):
     '''
     An RNN implementation that uses the primitives in cuDNN.
-    If cuDNN is not available it fails.
+    If cuDNN is not available it fails. You can use :class:`~cntk.misc.optimized_rnnstack_converter.convert_optimized_rnnstack`
+    to convert a model to GEMM-based implementation when no cuDNN.
 
     Args:
         operand: input of the optimized RNN stack.
@@ -1756,12 +1757,12 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
     Args:
         x: tensor to be reshaped
         shape (tuple): a tuple defining the resulting shape. The specified shape tuple
-         may contain -1 for at most one axis, which is automatically inferred to the 
-         correct dimension size by dividing the total size of the sub-shape being reshaped 
+         may contain -1 for at most one axis, which is automatically inferred to the
+         correct dimension size by dividing the total size of the sub-shape being reshaped
          with the product of the dimensions of all the non-inferred axes of the replacement
          shape.
         begin_axis (int or None): shape replacement begins at this axis. Negative values
-         are counting from the end. `None` is the same as 0. To refer to the end of the shape tuple, 
+         are counting from the end. `None` is the same as 0. To refer to the end of the shape tuple,
          pass `Axis.new_leading_axis()`.
         end_axis (int or None): shape replacement ends at this axis (excluding this axis).
          Negative values are counting from the end. `None` refers to the end of the shape tuple.

@@ -22,24 +22,25 @@ sys.path.append(example_dir)
 TOLERANCE_ABSOLUTE = 2E-1
 TIMEOUT_SECONDS = 300
 
-def mpiexec_execute(script, mpiexec_params, params):
+def mpiexec_execute(script, mpiexec_params, params, timeout_seconds=TIMEOUT_SECONDS):
     cmd = ["mpiexec"] + mpiexec_params + ["python", script] + params
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     if sys.version_info[0] < 3:
         out = p.communicate()[0]
     else:
         try:
-            out = p.communicate(timeout=TIMEOUT_SECONDS)[0]  # in case we have a hang
+            out = p.communicate(timeout=timeout_seconds)[0]  # in case we have a hang
         except subprocess.TimeoutExpired:
             os.kill(p.pid, signal.CTRL_C_EVENT)
             raise RuntimeError('Timeout in mpiexec, possibly hang')
     str_out = out.decode(sys.getdefaultencoding())
     return str_out
 
-def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error, match_exactly=True, per_minibatch_tolerance=TOLERANCE_ABSOLUTE, error_tolerance=TOLERANCE_ABSOLUTE):
-    if cntk_device(device_id).type() != DeviceKind_GPU:
-       pytest.skip('test only runs on GPU')
-    str_out = mpiexec_execute(script, mpiexec_params, params)
+def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error, match_exactly=True, per_minibatch_tolerance=TOLERANCE_ABSOLUTE, error_tolerance=TOLERANCE_ABSOLUTE, timeout_seconds=TIMEOUT_SECONDS, use_only_cpu=False):
+    device_is_cpu = (cntk_device(device_id).type() != DeviceKind_GPU)
+    if use_only_cpu != device_is_cpu:
+       pytest.skip('test only runs on ' + ('CPU' if use_only_cpu else 'GPU'))
+    str_out = mpiexec_execute(script, mpiexec_params, params, timeout_seconds)
     results = re.findall("Finished Evaluation \[.+?\]: Minibatch\[.+?\]: metric = (.+?)%", str_out)
 
     assert len(results) == 2

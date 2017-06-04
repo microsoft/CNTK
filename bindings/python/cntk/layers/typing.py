@@ -85,16 +85,16 @@ This is often done for the criterion function.
 Example:
     >>> from cntk import debugging, cross_entropy_with_softmax
     >>> model = Sequential([Embedding(300), Fold(GRU(128)), Dense(10)])
-    >>> debugging.dump_signature(model)
-    Function(keep: Sequence[tensor]) -> Sequence[tensor]
+    >>> print(model)
+    Composite(keep: Sequence[tensor]) -> Sequence[tensor]
     >>> inputAxis = Axis('inputAxis')
     >>> @Function
     ... @Signature(input=SequenceOver[inputAxis][Tensor[128]], label=Tensor[10])
     ... def criterion(input, label):
     ...     output = model(input)
     ...     return cross_entropy_with_softmax(output, label)
-    >>> debugging.dump_signature(criterion)
-    Function(input: SequenceOver[inputAxis][Tensor[128]], label: Tensor[10]) -> Tensor[1]
+    >>> print(criterion)
+    Composite(input: SequenceOver[inputAxis][Tensor[128]], label: Tensor[10]) -> Tensor[1]
 
 The following lists a few common errors with CNTK type objects:
 

@@ -29,6 +29,16 @@ MOMENTUM_SCHEDULE_PARAMS = [
         (([0.2,0.4], 5), [0.2]*5+[0.4]*20),
         (([(3,0.2),(2,0.4),(1,0.8)], 5), [0.2]*15+[0.4]*10+[0.8]*20),
         ]
+        
+LEARNER_LAMBDAS = [
+    lambda params: C.adadelta(params),
+    lambda params: C.adagrad(params, lr=learning_rate_schedule(1, UnitType.minibatch)),
+    lambda params: C.adam(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)),
+    lambda params: C.fsadagrad(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)),
+    lambda params: C.nesterov(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9)),
+    lambda params: C.rmsprop(params, lr=learning_rate_schedule(1, UnitType.minibatch), gamma=0.1, inc=3.0, dec=0.1, max=np.inf, min=1e-8),
+    lambda params: C.sgd(params, lr=learning_rate_schedule(1, UnitType.minibatch)),
+    lambda params: C.momentum_sgd(params, lr=learning_rate_schedule(1, UnitType.minibatch), momentum=C.momentum_schedule(0.9))]
 
 @pytest.mark.parametrize("params, expectation", LR_SCHEDULE_PARAMS)
 def test_learning_rate_schedule(params, expectation):
@@ -104,7 +114,7 @@ def test_learner_init():
     C.fsadagrad(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
     C.fsadagrad(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
 
-    gamma, inc, dec, max, min = [0.1]*5
+    gamma, inc, dec, max, min = [0.5, 1.2, 0.7, 10, 1e-8]
     lr_per_sample = learning_rate_schedule([0.1, 0.2], UnitType.sample, 100)
     C.rmsprop(res.parameters, lr_per_sample, gamma, inc, dec, max, min, True)
 
@@ -302,28 +312,32 @@ def test_learner_empy_parameters_list():
         learner = C.sgd([], lr_per_sample)
 
 
-def ffnet(learner):
-    inputs = 3
+def ffnet(learner, trainer=None):
+    inputs = 4
     outputs = 3
     layers = 2
     hidden_dimension = 3
 
-    # input variables denoting the features and label data
-    features = C.input_variable((inputs), np.float32)
-    label = C.input_variable((outputs), np.float32)
+    if trainer is None:
+        # input variables denoting the features and label data
+        features = C.input_variable((inputs), np.float32)
+        label = C.input_variable((outputs), np.float32)
 
-    # Instantiate the feedforward classification model
-    my_model = Sequential ([
-                    Dense(hidden_dimension, activation=C.sigmoid, init=C.glorot_uniform(seed=98052)),
-                    Dense(outputs, init=C.glorot_uniform(seed=98052))])
-    z = my_model(features)
+        # Instantiate the feedforward classification model
+        my_model = Sequential ([
+                        Dense(hidden_dimension, activation=C.sigmoid, init=C.glorot_uniform(seed=98052)),
+                        Dense(outputs, init=C.glorot_uniform(seed=98052))])
+        z = my_model(features)
 
-    ce = C.cross_entropy_with_softmax(z, label)
-    pe = C.classification_error(z, label)
+        ce = C.cross_entropy_with_softmax(z, label)
+        pe = C.classification_error(z, label)
 
-    # Instantiate the trainer object to drive the model training
-    progress_printer = ProgressPrinter(0)
-    trainer = C.Trainer(z, (ce, pe), [learner(z.parameters)], [progress_printer])
+        # Instantiate the trainer object to drive the model training
+        progress_printer = ProgressPrinter(0)
+        trainer = C.Trainer(z, (ce, pe), [learner(z.parameters)], [progress_printer])
+    else:
+        features = trainer.loss_function.arguments[0]
+        label = trainer.loss_function.arguments[1]
 
     # Get minibatches of training data and perform model training
     minibatch_size = 25
@@ -342,7 +356,7 @@ def ffnet(learner):
     test_features, test_labels = generate_random_data(minibatch_size, inputs, outputs)
     avg_error = trainer.test_minibatch({features : test_features, label : test_labels})
     print(' error rate on an unseen minibatch: {}'.format(avg_error))
-    return last_avg_error, avg_error
+    return last_avg_error, avg_error, trainer
 
 def test_sgd_with_noise():
     # Runs a network where the number of parameters is odd
@@ -357,11 +371,11 @@ def test_sgd_with_noise():
 def test_universal():
     np.random.seed(98052)
     builtin_sgd = lambda params: sgd(params, lr=learning_rate_schedule(0.125, UnitType.minibatch))
-    builtin_last_avg_error, builtin_avg_error = ffnet(builtin_sgd)
+    builtin_last_avg_error, builtin_avg_error, _ = ffnet(builtin_sgd)
     np.random.seed(98052)
-    my_sgd = lambda p, g: C.assign(p, p - 0.125/25 * g)
+    my_sgd = lambda ps, gs: C.combine([C.assign(p, p - 0.125/25 * g) for p, g in zip(ps, gs)])
     universal_sgd = lambda params: universal(my_sgd, params)
-    my_last_avg_error, my_avg_error = ffnet(universal_sgd)
+    my_last_avg_error, my_avg_error, _ = ffnet(universal_sgd)
     assert np.allclose(my_last_avg_error, builtin_last_avg_error)
     assert np.allclose(my_avg_error, builtin_avg_error)
 
@@ -378,3 +392,30 @@ def test_0d_1d_parameter_set_value():
     w_1d_grad = op.grad({x : np.asarray([1, 2], dtype=np.float32)}, wrt=[w_1d], as_numpy=False)
     w_1d.value = w_1d_grad.data
     assert np.array_equal(w_1d.value, [1., 1.])
+
+@pytest.mark.parametrize("learner", LEARNER_LAMBDAS)
+def test_restore_from_checkpoint(tmpdir, learner):
+    np.random.seed(0)
+    last_avg_err1, avg_err1, trainer1 = ffnet(learner)
+    np.random.seed(0)
+    last_avg_err2, avg_err2, trainer2 = ffnet(learner)
+    
+    assert np.allclose(last_avg_err1, last_avg_err2)
+    assert np.allclose(avg_err1, avg_err2)
+
+    # create a checkpoint for trainer and continue training
+    checkpoint_filename = str(tmpdir.join('checkpoint'))
+    trainer2.save_checkpoint(checkpoint_filename)
+    np.random.seed(1)
+    last_avg_err1, avg_err1, _ = ffnet(None, trainer1)
+    np.random.seed(1)
+    last_avg_err2, avg_err2, _ = ffnet(None, trainer2)
+    assert np.allclose(last_avg_err1, last_avg_err2)
+    assert np.allclose(avg_err1, avg_err2)
+
+    # restore from the checkpoint, make sure results match the one without checkpointing
+    trainer2.restore_from_checkpoint(checkpoint_filename)
+    np.random.seed(1)
+    last_avg_err2, avg_err2, _ = ffnet(None, trainer2)
+    assert np.allclose(last_avg_err1, last_avg_err2)
+    assert np.allclose(avg_err1, avg_err2)

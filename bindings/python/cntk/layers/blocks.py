@@ -65,11 +65,7 @@ def _get_initial_state_or_default(initial_state):
     else:
         return initial_state # already in good shape: return as is
 
-def BlockFunction(op_name, name):
-    '''
-    Decorator for defining a @Function as a BlockFunction. Same as @Function, but wrap the content into an :func:`~cntk.ops.as_block`.
-    '''
-    return lambda f: Function(f, make_block=True, op_name=op_name, name=name)
+from cntk.ops.functions import BlockFunction # (deprecated)
 
 def _inject_name(f, name):
     '''
@@ -205,7 +201,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
                     enable_self_stabilization,
                     name=''):
     '''
-    Helper to create a recurrent block of type 'LSTM', 'GRU', or RNNUnit.
+    Helper to create a recurrent block of type 'LSTM', 'GRU', or RNNStep.
     '''
 
     has_projection = cell_shape is not None
@@ -222,13 +218,13 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     cell_shape_list = list(cell_shape)
     stacked_dim = cell_shape_list[stack_axis]
     cell_shape_list[stack_axis] = stacked_dim * {
-        'RNNUnit': 1,
+        'RNNStep': 1,
         'GRU': 3,
         'LSTM': 4
     }[type]
     cell_shape_stacked = tuple(cell_shape_list)  # patched dims with stack_axis duplicated 4 times
     cell_shape_list[stack_axis] = stacked_dim * {
-        'RNNUnit': 1,
+        'RNNStep': 1,
         'GRU': 2,
         'LSTM': 4
     }[type]
@@ -339,7 +335,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         #return Function.NamedOutput(h=h)
         return h
 
-    def rnn(dh, x):
+    def rnn_step(dh, x):
         dhs = Sdh(dh)  # previous value, stabilized
         ht = activation (times(x, W) + times(dhs, H) + b)
         h = times(Sht(ht), Wmr) if has_projection else \
@@ -348,7 +344,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         return h
 
     function = {
-        'RNNUnit': rnn,
+        'RNNStep': rnn_step,
         'GRU':     gru,
         'LSTM':    lstm
     }[type]
@@ -390,7 +386,7 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
         A function ``(prev_h, prev_c, input) -> (h, c)`` that implements one step of a recurrent LSTM layer.
     '''
 
-    activation                = get_default_override(RNNUnit, activation=activation)
+    activation                = get_default_override(LSTM, activation=activation)
     use_peepholes             = get_default_override(LSTM, use_peepholes=use_peepholes)
     init                      = get_default_override(LSTM, init=init)
     init_bias                 = get_default_override(LSTM, init_bias=init_bias)
@@ -401,13 +397,12 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
                            enable_self_stabilization=enable_self_stabilization, name=name)
 
 
-# TODO: needs better name
-def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
+def RNNStep(shape, cell_shape=None, activation=default_override_or(sigmoid),
             init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
             enable_self_stabilization=default_override_or(False),
             name=''):
     '''
-    RNNUnit(shape, cell_shape=None, activation=sigmoid, init=glorot_uniform(), init_bias=0, enable_self_stabilization=False, name='')
+    RNNStep(shape, cell_shape=None, activation=sigmoid, init=glorot_uniform(), init_bias=0, enable_self_stabilization=False, name='')
 
     Layer factory function to create a plain RNN block for use inside a recurrence.
     The RNN block implements one step of the recurrence and is stateless. It accepts the previous state as its first argument,
@@ -416,7 +411,7 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
     Example:
      >>> # a plain relu RNN layer
      >>> from cntk.layers import *
-     >>> relu_rnn_layer = Recurrence(RNNUnit(500, activation=C.relu))
+     >>> relu_rnn_layer = Recurrence(RNNStep(500, activation=C.relu))
 
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
@@ -434,14 +429,40 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
         A function ``(prev_h, input) -> h`` where ``h = activation(input @ W + prev_h @ R + b)``
     '''
 
+    activation                = get_default_override(RNNStep, activation=activation)
+    init                      = get_default_override(RNNStep, init=init)
+    init_bias                 = get_default_override(RNNStep, init_bias=init_bias)
+    enable_self_stabilization = get_default_override(RNNStep, enable_self_stabilization=enable_self_stabilization)
+
+    return _RecurrentBlock('RNNStep', shape, cell_shape, activation=activation, use_peepholes=False,
+                           init=init, init_bias=init_bias,
+                           enable_self_stabilization=enable_self_stabilization, name=name)
+
+
+
+# Old name of this, deprecated
+def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
+            init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
+            enable_self_stabilization=default_override_or(False),
+            name=''):
+    '''
+    RNNUnit(shape, cell_shape=None, activation=sigmoid, init=glorot_uniform(), init_bias=0, enable_self_stabilization=False, name='')
+
+    This is a deprecated name for :func:`~cntk.layers.blocks.RNNStep`. Use that name instead.
+    '''
+
     activation                = get_default_override(RNNUnit, activation=activation)
     init                      = get_default_override(RNNUnit, init=init)
     init_bias                 = get_default_override(RNNUnit, init_bias=init_bias)
     enable_self_stabilization = get_default_override(RNNUnit, enable_self_stabilization=enable_self_stabilization)
 
-    return _RecurrentBlock('RNNUnit', shape, cell_shape, activation=activation, use_peepholes=False,
+    warnings.warn('This name will be removed in future versions. Please use '
+            'RNNStep(...) instead, which is identical except for its name', DeprecationWarning)
+
+    return _RecurrentBlock('RNNStep', shape, cell_shape, activation=activation, use_peepholes=False,
                            init=init, init_bias=init_bias,
                            enable_self_stabilization=enable_self_stabilization, name=name)
+
 
 
 def GRU(shape, cell_shape=None, activation=default_override_or(tanh),

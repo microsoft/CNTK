@@ -33,7 +33,7 @@ DEBUG_USAGE = '''\
         q - quit\
 '''
 
-__doc__ = '''
+__doc__ = '''\
 In order to debug a graph one simply needs to wrap the root node as follows::
 
     # ... setting up the model in z

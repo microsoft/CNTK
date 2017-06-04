@@ -49,9 +49,10 @@ def create_image_mb_source(map_file, mean_file, train, total_number_of_samples):
 
     # deserializer
     return C.io.MinibatchSource(
-        C.io.ImageDeserializer(map_file, C.io.StreamDefs(
-            features=C.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-            labels=C.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+        C.io.ImageDeserializer(
+            map_file, 
+            C.io.StreamDefs(features=C.io.StreamDef(field='image', transforms=transforms), # 1st col in mapfile referred to as 'image'
+                            labels=C.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
         randomize=train,
         max_samples=total_number_of_samples,
         multithreaded_deserializer=True)
@@ -95,13 +96,15 @@ def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_
         raise RuntimeError("Block momentum cannot be used with quantization, please remove quantized_bits option.")
 
     local_learner = C.learners.momentum_sgd(network['output'].parameters,
-                                              lr_schedule, mm_schedule,
-                                              l2_regularization_weight=l2_reg_weight)
+                                            lr_schedule, mm_schedule,
+                                            l2_regularization_weight=l2_reg_weight)
 
     if block_size != None:
         parameter_learner = C.train.distributed.block_momentum_distributed_learner(local_learner, block_size=block_size)
     else:
-        parameter_learner = C.train.distributed.data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
+        parameter_learner = C.train.distributed.data_parallel_distributed_learner(local_learner, 
+                                                                                  num_quantization_bits=num_quantization_bits, 
+                                                                                  distributed_after=warm_up)
 
     # Create trainer
     return C.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, progress_writers)
@@ -127,7 +130,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         checkpoint_config = CheckpointConfig(frequency = epoch_size,
                                              filename = os.path.join(model_path, "ConvNet_CIFAR10_DataAug"),
                                              restore = restore),
-        test_config = TestConfig(source = test_source, mb_size=minibatch_size)
+        test_config = TestConfig(test_source, minibatch_size=minibatch_size)
     ).train()
 
     if profiling:
@@ -171,18 +174,25 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 
-    parser.add_argument('-datadir', '--datadir', help='Data directory where the CIFAR dataset is located', required=False, default=data_path)
+    parser.add_argument('-datadir', '--datadir', help='Data directory where the CIFAR dataset is located', 
+                        required=False, default=data_path)
     parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False, default=None)
     parser.add_argument('-logdir', '--logdir', help='Log file', required=False, default=None)
-    parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir', help='Directory where TensorBoard logs should be created', required=False, default=None)
+    parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir', help='Directory where TensorBoard logs should be created', 
+                        required=False, default=None)
     parser.add_argument('-n', '--num_epochs', help='Total number of epochs to train', type=int, required=False, default='160')
     parser.add_argument('-m', '--minibatch_size', help='Minibatch size', type=int, required=False, default='64')
     parser.add_argument('-e', '--epoch_size', help='Epoch size', type=int, required=False, default='50000')
-    parser.add_argument('-q', '--quantized_bits', help='Number of quantized bits used for gradient aggregation', type=int, required=False, default='32')
-    parser.add_argument('-a', '--distributed_after', help='Number of samples to train with before running distributed', type=int, required=False, default='0')
-    parser.add_argument('-b', '--block_samples', type=int, help="Number of samples per block for block momentum (BM) distributed learner (if 0 BM learner is not used)", required=False, default=None)
-    parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', action='store_true')
-    parser.add_argument('-device', '--device', type=int, help="Force to run the script on a specified device", required=False, default=None)
+    parser.add_argument('-q', '--quantized_bits', help='Number of quantized bits used for gradient aggregation', type=int, 
+                        required=False, default='32')
+    parser.add_argument('-a', '--distributed_after', help='Number of samples to train with before running distributed', type=int, 
+                        required=False, default='0')
+    parser.add_argument('-b', '--block_samples', type=int, help="Number of samples per block for block momentum (BM) distributed learner (if 0 BM learner is not used)", 
+                        required=False, default=None)
+    parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', 
+                        action='store_true')
+    parser.add_argument('-device', '--device', type=int, help="Force to run the script on a specified device", 
+                        required=False, default=None)
     parser.add_argument('-profile', '--profile', help="Turn on profiling", action='store_true', default=False)
 
     args = vars(parser.parse_args())
@@ -217,5 +227,5 @@ if __name__=='__main__':
                             profiling=args['profile'],
                             tensorboard_logdir=args['tensorboard_logdir'])
     # Must call MPI finalize when process exit without exceptions
-    cntk.train.distributed.Communicator.finalize()
+    C.train.distributed.Communicator.finalize()
 

@@ -738,8 +738,8 @@ bool ComputationNetwork::ValidateNode(ComputationNodeBasePtr node, bool isFinalV
     auto sampleLayout = node->GetSampleLayout();
 
     // also take the opportunity to propagate m_needsGradient and m_nodeNeedsDynamicValidation
-    bool nodeNeedsDynamicValidation = node->NeedsDynamicValidation();
-    node->m_needsDynamicValidation |= nodeNeedsDynamicValidation;
+    auto nodeNeedsDynamicValidation = node->NeedsDynamicValidation();
+    node->m_needsDynamicValidation |= node->ForceDynamicValidation();
     auto needsGradient = node->m_needsGradient;
     for (auto& child : children) // TODO: do we need a check that this is stable if isFinalValidationPass?
     {

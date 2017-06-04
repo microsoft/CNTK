@@ -72,4 +72,8 @@ def test_cntk_basic():
     ci.assign('p1_p2', load=True)
     assert np.isclose(p1.value, param1).all() and np.isclose(p2.value, param2).all()
     
+    # test assign with value
+    ci.assign('p1', value=param1)
+    ci.assign('p1_p2', value={'param1':param1, 'param2':param2})
+    
     ci.reset()
