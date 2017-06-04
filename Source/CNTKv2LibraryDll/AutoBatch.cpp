@@ -369,7 +369,7 @@ class Variable::Memoize
         return fields.m_value;
     }
 
-    static void LogFunction(PrimitiveFunction& f, const char* prefix = "")
+    static void LogFunction(PrimitiveFunction& f, const char* prefix = "", size_t markIndex = SIZE_MAX)
     {
         let& inputs = f.m_inputs;
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
@@ -379,13 +379,22 @@ class Variable::Memoize
         {
             let& input = inputs[i];
             let& fields = *input.m_dataFields;
+            // little helper function to fix up variable names by removing _Output_0
+            // TODO: Once we support >1 output, this needs a bit more code.
+            let GetVarName = [](const Variable& input) -> wstring
+            {
+                auto uid = input.Uid();
+                if (uid.size() > 9 && wcscmp(uid.c_str() + uid.size() - 9, L"_Output_0") == 0)
+                    uid.resize(uid.size() - 9);
+                return uid;
+            };
             if (fields.m_lazyIndex.first)
             {
                 let& input1 = fields.m_lazyIndex.first->m_outputs[0];
-                fprintf(stderr, "%s%S%S[%d]", (i == 0) ? "" : ", ", input1.Uid().c_str(), input1.Shape().AsString().c_str(), (int)fields.m_lazyIndex.second);
+                fprintf(stderr, "%s%s%S%S[%d]", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input1).c_str(), input1.Shape().AsString().c_str(), (int)fields.m_lazyIndex.second);
             }
             else
-                fprintf(stderr, "%s%S%S", (i == 0) ? "" : ", ", input.Uid().c_str(), input.Shape().AsString().c_str());
+                fprintf(stderr, "%s%s%S%S", (i == 0) ? "" : ", ", (i == markIndex) ? "=>" : "", GetVarName(input).c_str(), input.Shape().AsString().c_str());
         }
         if (inputs.size() > 4)
             fprintf(stderr, ", +%d", (int)(inputs.size() - 4));
@@ -409,7 +418,7 @@ class Variable::Memoize
         let& outputShape = output.Shape();
         // logging
 #ifdef LOG_DETAILS
-        LogFunction(f, "[b] ");
+        LogFunction(f, "[bf] ");
 #endif
         auto outValue = isFree ? nullptr : AllocateTensorInArena(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
         // execute it
@@ -1034,6 +1043,9 @@ other_ops              = rest
     vector<const NDArrayView*> m_inputValuesBufferRaw;
     void BackpropTo(PrimitiveFunction* f, size_t index)
     {
+#ifdef LOG_DETAILS
+        LogFunction(*f, "[bb] ", index);
+#endif
         let& inputs =  f->m_inputs;
         auto& input = inputs[index];
         auto& fields = *input.m_dataFields;
