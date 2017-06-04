@@ -323,7 +323,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     // better do this externally: set CUDA_LAUNCH_BLOCKING=1
     //DeviceDescriptor::EnableSynchronousGPUKernelExecution();
 
-    const size_t minibatchSize = 200;
+    const size_t minibatchSize = 6;//200;
     for (size_t repeats = 0; true; repeats++)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);

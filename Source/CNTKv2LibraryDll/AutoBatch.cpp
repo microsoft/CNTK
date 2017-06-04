@@ -20,7 +20,7 @@
 #include <vector>
 #include <string>
 
-#undef LOG_DETAILS
+#define LOG_DETAILS
 #define LOG_STATS
 
 using namespace Microsoft::MSR::CNTK;
@@ -93,9 +93,18 @@ class Variable::Memoize
 
     // ===== forward =====
 
-    size_t numOpNodes = 0;
-    size_t numLeafNodes = 0;
-    size_t numBatchedForwardCalls = 0;
+    struct
+    {
+        // forward
+        size_t numOpNodes = 0;
+        size_t numLeafNodes = 0;
+        size_t numDoneSpliceOps = 0;
+        size_t numDoneFreeOps = 0;
+        size_t numDoneOtherOps = 0;
+        // backward
+        size_t numBackpropsToInputs = 0;
+        size_t numBatchedBackpropToCalls = 0;
+    } stats;
 
     // predicate whether an op is only taking a view on its input
     // These are considered zero-cost, always batched whole-sale, and always done first.
@@ -306,7 +315,7 @@ class Variable::Memoize
                 var.Value(); // this initializes it
             if (!fields.m_value)
                 LogicError("Parameter/Constant has no Value??");
-            numLeafNodes++;
+            stats.numLeafNodes++;
             return;
         }
         auto& f = *fields.m_ownerFunction.lock();
@@ -334,13 +343,13 @@ class Variable::Memoize
                 }
             }
             else
-                numLeafNodes++;
+                stats.numLeafNodes++;
         }
         f.m_pendingInputs = (int)pendingInputs;
         // if none then operation is ready
         if (pendingInputs == 0)
             m_schedule.Schedule(&f); // add to ready set
-        numOpNodes++;
+        stats.numOpNodes++;
     }
 
     // return the m_value field of a variable, but possibly realizing it lazily if it is an index operation
@@ -360,6 +369,29 @@ class Variable::Memoize
         return fields.m_value;
     }
 
+    static void LogFunction(PrimitiveFunction& f, const char* prefix = "")
+    {
+        let& inputs = f.m_inputs;
+        let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
+        let& outputShape = output.Shape();
+        fprintf(stderr, "%s%S%S = %S(", prefix, f.Uid().c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
+        for (size_t i = 0; i < inputs.size() && i < 4; i++)
+        {
+            let& input = inputs[i];
+            let& fields = *input.m_dataFields;
+            if (fields.m_lazyIndex.first)
+            {
+                let& input1 = fields.m_lazyIndex.first->m_outputs[0];
+                fprintf(stderr, "%s%S%S[%d]", (i == 0) ? "" : ", ", input1.Uid().c_str(), input1.Shape().AsString().c_str(), (int)fields.m_lazyIndex.second);
+            }
+            else
+                fprintf(stderr, "%s%S%S", (i == 0) ? "" : ", ", input.Uid().c_str(), input.Shape().AsString().c_str());
+        }
+        if (inputs.size() > 4)
+            fprintf(stderr, ", +%d", (int)(inputs.size() - 4));
+        fprintf(stderr, ")\n");
+    }
+
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
     vector<NDArrayViewPtr> m_inputValuesBuffer; // Use a buffer for this that does not get destructed, to reuse the memory allocation.
     const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false)
@@ -377,27 +409,23 @@ class Variable::Memoize
         let& outputShape = output.Shape();
         // logging
 #ifdef LOG_DETAILS
-        fprintf(stderr, "%S%S = %S(", f.Uid().c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
-        for (size_t i = 0; i < inputs.size() && i < 4; i++)
-        {
-            let& input = inputs[i];
-            let& fields = *input.m_dataFields;
-            if (fields.m_lazyIndex.first)
-            {
-                let& input1 = fields.m_lazyIndex.first->m_outputs[0];
-                fprintf(stderr, "%s%S%S[%d]", (i == 0) ? "" : ", ", input1.Uid().c_str(), input1.Shape().AsString().c_str(), (int)fields.m_lazyIndex.second);
-            }
-            else
-                fprintf(stderr, "%s%S%S", (i == 0) ? "" : ", ", input.Uid().c_str(), input.Shape().AsString().c_str());
-        }
-        if (inputs.size() > 4)
-            fprintf(stderr, ", +%d", (int)(inputs.size() - 4));
-        fprintf(stderr, ")\n");
+        LogFunction(f, "[b] ");
 #endif
         auto outValue = isFree ? nullptr : AllocateTensorInArena(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
         // execute it
         output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue), f));
-        numBatchedForwardCalls++;
+        // stats
+        let primitiveOp = f.Op();
+        if (primitiveOp == PrimitiveOpType::StopGradient ||
+            primitiveOp == PrimitiveOpType::Pass ||
+            primitiveOp == PrimitiveOpType::NoOp ||
+            primitiveOp == PrimitiveOpType::Reshape ||
+            primitiveOp == PrimitiveOpType::Slice)
+            stats.numDoneFreeOps++;
+        else if (primitiveOp == PrimitiveOpType::Splice)
+            stats.numDoneSpliceOps++;
+        else
+            stats.numDoneOtherOps++;
         return output;
     }
 
@@ -685,6 +713,9 @@ public:
     //     - Any newly created batched ops are referenced this way.
     NDArrayViewPtr BatchedForward(const Variable& v)
     {
+#ifdef LOG_DETAILS
+        Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr& f) { LogFunction(dynamic_cast<PrimitiveFunction&>(*f), "[r] "); });
+#endif
         auto& fields = *v.m_dataFields;
         // if value already there then just return it
         if (fields.m_value)
@@ -700,22 +731,23 @@ public:
             {
                 // select the best amongst the scheduled ops
                 auto opBatch = m_schedule.pop_best();
-                // execute it, and also update all outputs' values and consumers, and the schedule 
+                // execute it, and also update all outputs' values and consumers, and the schedule
                 ExecuteBatchedOpAndUpdateSchedule(opBatch);
             }
             assert(fields.m_value);
         }
         AssertTreeStateForward(v); // (sanity check)
 #ifdef LOG_STATS
-        fprintf(stderr, "BatchedForward: %d forward computations executed in nominal %d ops and %d leaves\n", (int)numBatchedForwardCalls, (int)numOpNodes, (int)numLeafNodes);
+        fprintf(stderr, "BatchedForward: %d forward ops executed besides %d splices and %d views, in nominally %d PrimitiveFunctions on %d known values\n",
+                (int)stats.numDoneOtherOps, (int)stats.numDoneSpliceOps, (int)stats.numDoneFreeOps, (int)stats.numOpNodes, (int)stats.numLeafNodes);
+        size_t numOpNodes1 = 0;
+        Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr&) { numOpNodes1++; });
+        fail_if(numOpNodes1 != stats.numOpNodes, "we did not traverse the graph correctly");
 #endif
         return LazilyIndexedValue(v);
     }
 
     // ===== backward =====
-
-    size_t numBackpropToCalls = 0;
-    size_t numBatchedBackpropToCalls = 0;
 
     // allocate memory m_gradient
     // This lazily creates the m_gradient NDArrayView, which may live in a batched op.
@@ -774,9 +806,6 @@ public:
         auto& fields = *var.m_dataFields;
         fields.m_visited = false; // we use this for backprop control  --TODO: consolidate these
 
-        if (fields.m_varKind == VariableKind::Parameter)
-            numBackpropToCalls++;  // stats
-
         if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
             return; // reached a leaf
 
@@ -819,7 +848,6 @@ public:
         if (f.m_pendingInputs != -1) // already visited
             return;
 
-        numBackpropToCalls++;  // stats
         fail_if(f.Op() == PrimitiveOpType::StopGradient, "unexpectedly encountered a StopGradient, which should have propagated m_needsGradient=false upwards");
 
         // we are now in a PrimitiveFunction that should backprop its gradient
@@ -850,12 +878,12 @@ public:
             if (!fields.m_consumers.first.first)
             {
                 fields.m_consumers.first = make_pair(&f, i);
+                // now process recursively the inputs
                 DetermineConsumersForBackward(input);
             }
             else
                 fields.m_consumers.second.push_back(make_pair(&f, i));
-            // now process recursively the inputs
-            //DetermineConsumersForBackward(input);
+            stats.numBackpropsToInputs++;
         }
         f.m_pendingInputs = 0; // used as a visited flag
     }
@@ -1036,7 +1064,7 @@ other_ops              = rest
         let beta = LazilyCreateLazilyIndexedGradient(input);
         // backprop into the input
         PrimitiveFunction::BackpropTo(outputGradient, index, f->Op(), f->m_attributes, outputValue, m_inputValuesBufferRaw, fields.m_gradient, beta, *f);
-        numBatchedBackpropToCalls++;  // stats
+        stats.numBatchedBackpropToCalls++;  // stats
     }
 
     // helper to verify that the tree is clean
@@ -1118,7 +1146,8 @@ public:
             fields.m_consumers.second.clear();
         }
 #ifdef LOG_STATS
-        fprintf(stderr, "BatchedBackward: %d backprop computations executed in nominal %d post-batching ops\n", (int)numBatchedBackpropToCalls, (int)numBackpropToCalls);
+        fprintf(stderr, "BatchedBackward: %d backprop computations executed in nominal %d post-batching ops\n",
+                (int)stats.numBatchedBackpropToCalls, (int)stats.numBackpropsToInputs);
 #endif
     }
 }; // class
