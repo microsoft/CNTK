@@ -666,6 +666,52 @@ class Variable::Memoize
         }
     }
 
+public:
+    // Value(), computed with automatic batching
+    // This routine uses temporary fields that are assumed initialized in a specific way:
+    //  - PrimitiveFunction::m_pendingInputs:
+    //     - #inputs that still need to be computed before a node's value can be computed
+    //     - also used as a 'visited' flag during traversal
+    //     - upon entry and exit of this function, this must be -1 (idle)
+    //  - Variable::m_consumers:
+    //     - set of consumers of this value. Used to count m_pendingInputs.
+    //     - must be empty upon entry and exit
+    // plus more temp fields:
+    //  - PrimitiveFunction::m_link: pointer to next PrimitiveFunction in the same batchable op
+    // And it leaves the following:
+    //  - m_value: updated as desired
+    //    TODO: values not needed by user or gradient should use scratch space
+    //  - m_lazyIndex: if a slice or view came from a batched operation, this points to it
+    //     - Any newly created batched ops are referenced this way.
+    NDArrayViewPtr BatchedForward(const Variable& v)
+    {
+        auto& fields = *v.m_dataFields;
+        // if value already there then just return it
+        if (fields.m_value)
+            return fields.m_value;
+        AssertTreeStateForward(v); // (sanity check)
+        // mark all nodes w.r.t. how many inputs they are waiting for before being computable
+        if (!fields.m_value)
+        {
+            // prepare and schedule first set
+            TraverseFunctionTreeForward(v);
+            // compute the entire graph
+            while (!m_schedule.empty())
+            {
+                // select the best amongst the scheduled ops
+                auto opBatch = m_schedule.pop_best();
+                // execute it, and also update all outputs' values and consumers, and the schedule 
+                ExecuteBatchedOpAndUpdateSchedule(opBatch);
+            }
+            assert(fields.m_value);
+        }
+        AssertTreeStateForward(v); // (sanity check)
+#ifdef LOG_STATS
+        fprintf(stderr, "BatchedForward: %d forward computations executed in nominal %d ops and %d leaves\n", (int)numBatchedForwardCalls, (int)numOpNodes, (int)numLeafNodes);
+#endif
+        return LazilyIndexedValue(v);
+    }
+
     // ===== backward =====
 
     size_t numBackpropToCalls = 0;
@@ -1014,51 +1060,6 @@ other_ops              = rest
     }
 
 public:
-    // Value(), computed with automatic batching
-    // This routine uses temporary fields that are assumed initialized in a specific way:
-    //  - PrimitiveFunction::m_pendingInputs:
-    //     - #inputs that still need to be computed before a node's value can be computed
-    //     - also used as a 'visited' flag during traversal
-    //     - upon entry and exit of this function, this must be -1 (idle)
-    //  - Variable::m_consumers:
-    //     - set of consumers of this value. Used to count m_pendingInputs.
-    //     - must be empty upon entry and exit
-    // plus more temp fields:
-    //  - PrimitiveFunction::m_link: pointer to next PrimitiveFunction in the same batchable op
-    // And it leaves the following:
-    //  - m_value: updated as desired
-    //    TODO: values not needed by user or gradient should use scratch space
-    //  - m_lazyIndex: if a slice or view came from a batched operation, this points to it
-    //     - Any newly created batched ops are referenced this way.
-    NDArrayViewPtr BatchedForward(const Variable& v)
-    {
-        auto& fields = *v.m_dataFields;
-        // if value already there then just return it
-        if (fields.m_value)
-            return fields.m_value;
-        AssertTreeStateForward(v); // (sanity check)
-        // mark all nodes w.r.t. how many inputs they are waiting for before being computable
-        if (!fields.m_value)
-        {
-            // prepare and schedule first set
-            TraverseFunctionTreeForward(v);
-            // compute the entire graph
-            while (!m_schedule.empty())
-            {
-                // select the best amongst the scheduled ops
-                auto opBatch = m_schedule.pop_best();
-                // execute it, and also update all outputs' values and consumers, and the schedule 
-                ExecuteBatchedOpAndUpdateSchedule(opBatch);
-            }
-            assert(fields.m_value);
-        }
-        AssertTreeStateForward(v); // (sanity check)
-#ifdef LOG_STATS
-        fprintf(stderr, "BatchedForward: %d forward computations executed in nominal %d ops and %d leaves\n", (int)numBatchedForwardCalls, (int)numOpNodes, (int)numLeafNodes);
-#endif
-        return LazilyIndexedValue(v);
-    }
-
     // implant gradients into all variables
     // Unlike BatchedForward(), this is eager. If you call it twice, it's a completely new computation.
     // If you need multiple gradients, ask for them in a single go.
