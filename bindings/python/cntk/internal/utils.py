@@ -39,7 +39,7 @@ def get_data_type(*args):
                 cntk_dtypes.add(np.float64)
             elif cntk_py.DataType_Float == arg.get_data_type():
                 cntk_dtypes.add(np.float32)
-        elif isinstance(arg, np.inexact):
+        elif isinstance(arg, (np.ndarray, np.inexact)):
             # https://docs.scipy.org/doc/numpy/reference/arrays.scalars.html
             # integer are not np.inexact -> np.float32
             # only accepts numpy types
