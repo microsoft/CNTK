@@ -5,8 +5,8 @@ setx CNTK_MKL_PATH "D:\Dev\Lib\CNTK_Dependencies\CNTKCustomMKL"
 :: Automatically be set by the installer system environment variables
 
 :: boost
-setx BOOST_INCLUDE_PATH "D:\Dev\Lib\boost_1_63_0"
-setx BOOST_LIB_PATH "D:\Dev\Lib\boost_1_63_0\stage\lib"
+setx BOOST_INCLUDE_PATH "D:\Dev\Lib\boost_1_64_0"
+setx BOOST_LIB_PATH "D:\Dev\Lib\boost_1_64_0\stage\lib"
 
 :: Protobuf
 setx PROTOBUF_PATH "D:\Dev\Lib\CNTK_Dependencies\protobuf-3.1.0-vs15"
