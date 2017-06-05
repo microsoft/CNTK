@@ -377,6 +377,8 @@ public:
         InitAsNoSlice();
     }
 
+    inline static TensorShape Scalar(bool isV2Library) { return isV2Library ? TensorShape() : TensorShape(1); }
+
     // boilerplate
     bool operator==(const TensorShape& other) const { return m_dims == other.m_dims; }
     bool operator!=(const TensorShape& other) const { return !operator==(other); } // duh!
@@ -659,6 +661,7 @@ public:
             NarrowTo(k, (size_t)bounds.first[k], (size_t)bounds.second[k]);
         return *this;
     }
+
     // swap two existing dimensions (implements transposition)
     // This yields the same tensor but index positions are exchanged.
     // This tensor is now no longer stored as column-major.
@@ -668,6 +671,20 @@ public:
             return;
         std::swap(m_dims[i],    m_dims[j]);
         std::swap(m_strides[i], m_strides[j]);
+    }
+
+    // permute existing dimensions (implements generalized transposition)
+    // This tensor is now no longer stored as column-major.
+    void PermuteDimsInPlace(const std::vector<size_t>& permutation)
+    {
+        auto m_dims_copy = m_dims;
+        auto m_strides_copy = m_strides;
+        auto size = permutation.size();
+        for (auto i = 0; i < size; ++i) 
+        {
+            m_dims[i] = m_dims_copy[permutation[i]];
+            m_strides[i] = m_strides_copy[permutation[i]];
+        }
     }
 
     // Flatten a tensor shape into a 2D tensor, where splitPoint is the first index to go into the second dimension

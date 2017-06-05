@@ -54,8 +54,8 @@
 #define CNTK_MODEL_VERSION_22 22 // Slice and pad accepts multiple axes 
 #define CNTK_MODEL_VERSION_23 23 // pooling: add include pad func for average pooling
 #define CNTK_MODEL_VERSION_24 24 // ReduceElements: add keepDimensions
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_24
-
+#define CNTK_MODEL_VERSION_25 25 // transpose: allow specifying a permutation
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_25
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
@@ -662,12 +662,14 @@ public:
     bool NeedsGradient() const { return m_needsGradient; }
 
     void MarkNeedsDynamicValidation() { m_needsDynamicValidation = true; }
-    virtual bool NeedsDynamicValidation() const { return m_needsDynamicValidation; }
+    bool NeedsDynamicValidation() const { return m_needsDynamicValidation; }
+
+    virtual bool ForceDynamicValidation() const { return false; }
 
     void SetLearningRateMultiplier(float f) 
     { 
         if (f < 0)
-            InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are tring to set it to %f.", NodeDescription().c_str(), f);
+            InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are trying to set it to %f.", NodeDescription().c_str(), f);
         m_learningRateMultiplier = f; 
     }
     float GetLearningRateMultiplier() const { return m_learningRateMultiplier; }
@@ -1802,7 +1804,7 @@ public:
         {
             for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
             {
-                if (!multiOutputNode->m_outputsIsValueSparse[i])
+                if (IsValueSharable() && !multiOutputNode->m_outputsIsValueSparse[i])
                     RequestMatrixFromPool(multiOutputNode->m_outputsValue[i], matrixPool, multiOutputNode->m_outputsShape[i].GetNumElements(), multiOutputNode->m_outputsMBLayout[i] != nullptr);
                 else
                     CreateMatrixIfNull(multiOutputNode->m_outputsValue[i]);
@@ -1862,7 +1864,7 @@ public:
 
                 for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
                 {
-                    if (!multiOutputNode->m_outputsIsValueSparse[i])
+                    if (IsValueSharable() && !multiOutputNode->m_outputsIsValueSparse[i])
                         ReleaseMatrixToPool(multiOutputNode->m_outputsValue[i], matrixPool);
                 }
             }

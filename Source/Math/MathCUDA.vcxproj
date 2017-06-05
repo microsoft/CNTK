@@ -34,7 +34,7 @@
         <CuDnnIncPath>$(CUDNN_PATH)\include</CuDnnIncPath>
         <CuDnnLibPath>$(CUDNN_PATH)\lib\x64</CuDnnLibPath>
         <CuDnnLib>cudnn.lib</CuDnnLib>
-        <CuDnnDll>$(CUDNN_PATH)\bin\cudnn64_5.dll</CuDnnDll>
+        <CuDnnDll>$(CUDNN_PATH)\bin\cudnn64_*.dll</CuDnnDll>
       </PropertyGroup>
     </When>
     <Otherwise>
@@ -94,7 +94,7 @@
     </CudaCompile>
     <PostBuildEvent>
       <Command>for %%l in ($(CudaDlls)) do if exist "$(CudaPath)\bin\%%l" xcopy /D /Y "$(CudaPath)\bin\%%l*" "$(OutputPath)"
-if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
+xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>

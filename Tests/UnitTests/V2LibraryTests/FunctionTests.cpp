@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Common.h"
+#include <numeric>
 
 using namespace CNTK;
 
@@ -1001,6 +1002,100 @@ void TestFindName(const DeviceDescriptor& device)
     CheckFindAllWithNameResult(minusFunc4->FindAllWithName(aliasFuncName, true), aliasFuncName, 1);
 }
 
+
+std::function<std::vector<float>(FunctionPtr)> CreateForwardFunctor(const DeviceDescriptor& device, const Variable& inputVar)
+{
+    auto shape = inputVar.Shape();
+    auto size = shape.TotalSize();
+    auto inputData = std::make_shared<std::vector<float>>(size, 1.0f);
+    ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(shape, *inputData, false));
+     
+    auto outputData = std::make_shared<std::vector<float>>(size, 0.0f);
+    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(shape.AppendShape({ 1, 1 }), *outputData, false));
+
+    return [device, inputVar, inputValue, outputValue, inputData, outputData](FunctionPtr f) -> std::vector<float> {
+        std::unordered_map<Variable, ValuePtr> inputMap { { inputVar, inputValue } };
+        std::unordered_map<Variable, ValuePtr> outputMap { { f->Output(), outputValue } };
+        f->Forward(inputMap, outputMap, device, { f->Output() });
+        return *outputData;
+    };
+}
+
+void SetDropoutRate(const DeviceDescriptor& device) 
+{
+    auto zeroCount = [](const std::vector<float>& v) 
+    {
+        size_t count = 0;
+        for (auto e : v) if (e == 0.0) count++;
+        return count;
+    };
+
+    auto shape = NDShape({ 10, 10, 10, 10 });
+    auto input = InputVariable(shape, DataType::Float);
+    auto dropout = Dropout(input, 0.0, 5336, L"Dropout");
+    auto forwardFunc = CreateForwardFunctor(device, input);
+
+    BOOST_TEST(zeroCount(forwardFunc(dropout)) == 0); // initially dropout is disabled;
+
+    for (auto dropoutRate : { 0.9, 0.4, 0.0, 0.1 }) 
+    {
+        dropout->SetAttribute(L"dropoutRate", dropoutRate);
+        BOOST_TEST(abs(zeroCount(forwardFunc(dropout)) - dropoutRate*shape.TotalSize()) < 100);
+    }
+
+    auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>(shape, -0.5, 0.5, 1, device));
+    auto combine = Combine({ Plus(plusParam, Plus(dropout, ElementTimes(plusParam, Constant::Scalar(-1.0f)))) });
+
+    auto dropout2 = combine->FindByName(L"Dropout");
+
+    for (auto dropoutRate : { 0.3, 0.7, 0.2 })
+    {
+        dropout2->SetAttribute(L"dropoutRate", dropoutRate);
+        BOOST_TEST(abs(zeroCount(forwardFunc(combine)) - dropoutRate*shape.TotalSize()) < 100);
+    }
+}
+
+void SetRandomSeed(const DeviceDescriptor& device)
+{
+    auto diff = [](const std::vector<float>& a, const std::vector<float>& b)
+    {
+        bool foundDifference = false;
+        for (int i = 0; !foundDifference && i < a.size() && i < b.size(); ++i)
+        {
+            foundDifference = (a[i] != b[i]);
+        }
+        return foundDifference;
+    };
+
+    auto shape = NDShape({ 10, 10, 10, 10 });
+    auto input = InputVariable(shape, DataType::Float);
+    auto dropout = Dropout(input, 0.5, 5336, L"Dropout");
+    auto forwardFunc = CreateForwardFunctor(device, input);
+
+    auto result1 = forwardFunc(dropout);
+
+    dropout->SetAttribute(L"rngSeed", 5337);
+
+    auto result2 = forwardFunc(dropout);
+
+    BOOST_TEST(diff(result1, result2));
+
+    dropout->SetAttribute(L"rngSeed", 5336);
+    auto result3 = forwardFunc(dropout);
+    BOOST_TEST(!diff(result1, result3));
+
+    auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>(shape, -0.5, 0.5, 1, device));
+    auto combine = Combine({ Plus(plusParam, Plus(dropout, ElementTimes(plusParam, Constant::Scalar(-1.0f)))) });
+ 
+    forwardFunc(combine); // this will force the composite function to construct a new computation network.
+
+    auto dropout2 = combine->FindByName(L"Dropout");
+    dropout2->SetAttribute(L"rngSeed", 5337);
+    auto result4 = forwardFunc(combine);
+    // there could be small differences between result2 and result4 due to rounding errors.
+    FloatingPointVectorCompare(result2, result4, "SetRandomSeed: output does match the expected after resetting the dropout seed.");
+}
+
 BOOST_AUTO_TEST_SUITE(FunctionSuite)
 
 BOOST_AUTO_TEST_CASE(FindNameInCPU)
@@ -1107,6 +1202,26 @@ BOOST_AUTO_TEST_CASE(TimesIndirectSparseGradType)
     if (ShouldRunOnCpu())
         TestTimesIndirectSparseInputGradientSparse(DeviceDescriptor::CPUDevice());
 }
+
+
+BOOST_AUTO_TEST_CASE(TestSettingDropoutRate)
+{
+    if (ShouldRunOnCpu())
+        SetDropoutRate(DeviceDescriptor::CPUDevice());
+    
+    if (ShouldRunOnGpu())
+        SetDropoutRate(DeviceDescriptor::GPUDevice(0));
+}
+
+BOOST_AUTO_TEST_CASE(TestSettingRandomSeed)
+{
+    if (ShouldRunOnCpu())
+        SetRandomSeed(DeviceDescriptor::CPUDevice());
+
+    if (ShouldRunOnGpu())
+        SetRandomSeed(DeviceDescriptor::GPUDevice(0));
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 

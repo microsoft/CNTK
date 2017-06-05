@@ -29,13 +29,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (ferror(m_deserializer.m_dataFile.get()) != 0)
                 m_deserializer.m_dataFile.reset(fopenOrDie(m_deserializer.m_fileName.c_str(), L"rbS"), [](FILE* f) { if (f) fclose(f); });
 
-            if (descriptor.m_sequences.empty() || !descriptor.m_byteSize)
+            if (descriptor.Sequences().empty() || !descriptor.SizeInBytes())
                 LogicError("Empty chunks are not supported.");
 
-            m_buffer.resize(descriptor.m_byteSize + 1);
+            m_buffer.resize(descriptor.SizeInBytes() + 1);
 
             // Make sure we always have 0 at the end for buffer overrun.
-            m_buffer[descriptor.m_byteSize] = 0;
+            m_buffer[descriptor.SizeInBytes()] = 0;
             m_chunkOffset = descriptor.m_offset;
 
             // Read chunk into memory.
@@ -43,12 +43,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rc)
                 RuntimeError("Error seeking to position '%" PRId64 "' in the input file '%ls', error code '%d'", m_chunkOffset, m_deserializer.m_fileName.c_str(), rc);
 
-            freadOrDie(m_buffer.data(), descriptor.m_byteSize, 1, m_deserializer.m_dataFile.get());
+            freadOrDie(m_buffer.data(), descriptor.SizeInBytes(), 1, m_deserializer.m_dataFile.get());
         }
 
         std::string KeyOf(const SequenceDescriptor& s) const
         {
-            return m_deserializer.m_corpus->IdToKey(s.m_key.m_sequence);
+            return m_deserializer.m_corpus->IdToKey(s.m_key);
         }
 
         void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
@@ -56,7 +56,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const size_t innerSequenceIndex = m_deserializer.m_multiViewCrop ? sequenceIndex / ImageDeserializerBase::NumMultiViewCopies : sequenceIndex;
             const size_t copyId = m_deserializer.m_multiViewCrop ? sequenceIndex % ImageDeserializerBase::NumMultiViewCopies : 0;
 
-            const auto& sequence = m_descriptor.m_sequences[innerSequenceIndex];
+            const auto& sequence = m_descriptor.Sequences()[innerSequenceIndex];
             const size_t offset = sequence.OffsetInChunk();
 
             // m_buffer always end on 0, so no overrun can happen.
@@ -83,7 +83,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t labelDimension = m_deserializer.m_labelGenerator->LabelDimension();
             if (classId >= labelDimension)
                 RuntimeError(
-                    "Image with id '%s' has invalid class id '%" PRIu64 "'. It is exceeding the label dimension of '%" PRIu64,
+                    "Image with id '%s' has invalid class id '%zu'. It is exceeding the label dimension of '%zu'",
                     KeyOf(sequence).c_str(), classId, labelDimension);
 
             // Let's find the end of the label, we still expect to find the data afterwards.
@@ -107,14 +107,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             cv::Mat image;
             if (!DecodeBase64(imageStart, currentSequence, decodedImage))
             {
-                fprintf(stderr, "WARNING: Cannot decode sequence with id %" PRIu64 " in the input file '%ls'\n", sequence.m_key.m_sequence, m_deserializer.m_fileName.c_str());
+                fprintf(stderr, "WARNING: Cannot decode sequence with id %zu in the input file '%ls'\n", sequence.m_key, m_deserializer.m_fileName.c_str());
             }
             else
             {
                 image = cv::imdecode(decodedImage, m_deserializer.m_grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
             }
 
-            m_deserializer.PopulateSequenceData(image, classId, copyId, sequence.m_key, result);
+            m_deserializer.PopulateSequenceData(image, classId, copyId, { sequence.m_key, 0 }, result);
         }
     };
 
@@ -160,13 +160,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // In case of multi crop the deserializer provides the same sequence NumMultiViewCopies times.
         size_t sequencesPerInitialSequence = m_multiViewCrop ? ImageDeserializerBase::NumMultiViewCopies : 1;
         ChunkDescriptions result;
-        result.reserve(index.m_chunks.size() * sequencesPerInitialSequence);
-        for (auto const& chunk : index.m_chunks)
+        result.reserve(index.Chunks().size() * sequencesPerInitialSequence);
+        for(uint32_t i = 0; i < index.Chunks().size(); ++i)
         {
+            const auto& chunk = index.Chunks()[i];
             auto c = std::make_shared<ChunkDescription>();
-            c->m_id = chunk.m_id;
-            assert(chunk.m_numberOfSamples == chunk.m_numberOfSequences);
-            c->m_numberOfSamples = c->m_numberOfSequences = chunk.m_numberOfSequences * sequencesPerInitialSequence;
+            c->m_id = i;
+            assert(chunk.NumSamples() == chunk.Sequences().size());
+            c->m_numberOfSamples = c->m_numberOfSequences = chunk.Sequences().size() * sequencesPerInitialSequence;
             result.push_back(c);
         }
         return result;
@@ -175,13 +176,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Base64ImageDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result)
     {
         const auto& index = m_indexer->GetIndex();
-        const auto& chunk = index.m_chunks[chunkId];
+        const auto& chunk = index.Chunks()[chunkId];
         size_t sequenceCopies = m_multiViewCrop ? NumMultiViewCopies : 1;
-        result.reserve(sequenceCopies * chunk.m_sequences.size());
+        result.reserve(sequenceCopies * chunk.Sequences().size());
         size_t currentId = 0;
-        for (uint32_t indexInChunk = 0; indexInChunk < chunk.m_sequences.size(); ++indexInChunk)
+        for (uint32_t indexInChunk = 0; indexInChunk < chunk.Sequences().size(); ++indexInChunk)
         {
-            auto const& s = chunk.m_sequences[indexInChunk];
+            auto const& s = chunk.Sequences()[indexInChunk];
             assert(currentId / sequenceCopies == indexInChunk);
             for (size_t i = 0; i < sequenceCopies; ++i)
             {
@@ -190,7 +191,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     currentId,
                     s.m_numberOfSamples,
                     chunkId,
-                    s.m_key
+                    { s.m_key, 0 }
                 });
 
                 currentId++;
@@ -200,30 +201,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     ChunkPtr Base64ImageDeserializer::GetChunk(ChunkIdType chunkId)
     {
-        const auto& chunkDescriptor = m_indexer->GetIndex().m_chunks[chunkId];
+        const auto& chunkDescriptor = m_indexer->GetIndex().Chunks()[chunkId];
         return make_shared<ImageChunk>(chunkDescriptor, *this);
     }
 
-    bool Base64ImageDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
+    bool Base64ImageDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& r)
     {
-        const auto& index = m_indexer->GetIndex();
-
-        const auto& keys = index.m_keyToSequenceInChunk;
-        auto sequenceLocation = keys.find(key.m_sequence);
-        if (sequenceLocation == keys.end())
-            return false;
-
-        assert(sequenceLocation->second.first < index.m_chunks.size());
-        const auto& chunk = index.m_chunks[sequenceLocation->second.first];
-
-        assert(sequenceLocation->second.second < chunk.m_sequences.size());
-        const auto sequence = chunk.m_sequences[sequenceLocation->second.second];
-
-        result.m_chunkId = sequenceLocation->second.first;
-        result.m_indexInChunk = sequenceLocation->second.second;
-        result.m_key = sequence.m_key;
-        result.m_numberOfSamples = sequence.m_numberOfSamples;
-        return true;
+        return DataDeserializerBase::GetSequenceDescriptionByKey(m_indexer->GetIndex(), key, r);
     }
-
 }}}

@@ -10,13 +10,18 @@ using namespace CNTK;
 class UserTimesFunction final : public Function
 {
 public:
-    static FunctionPtr Create(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
+    static FunctionPtr Create(const Variable& leftOperand, const Variable& rightOperand, const Dictionary& attributes, const std::wstring& name)
     {
-        return AsComposite(MakeSharedObject<UserTimesFunction>(leftOperand, rightOperand, name));
+        return AsComposite(MakeSharedObject<UserTimesFunction>(leftOperand, rightOperand, attributes, name));
     }
 
-    UserTimesFunction(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
-        : Function({ leftOperand, rightOperand }, Dictionary(), name)
+    static FunctionPtr Create(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
+    {
+        return Create(leftOperand, rightOperand, Dictionary(), name);
+    }
+
+    UserTimesFunction(const Variable& leftOperand, const Variable& rightOperand, const Dictionary& attributes, const std::wstring& name)
+        : Function({ leftOperand, rightOperand }, attributes, name)
     {}
 
 private:
@@ -111,11 +116,10 @@ private:
 
     const std::wstring& OpName() const override
     {
-        static const std::wstring opName = L"UserTimesOp";
+        static const std::wstring opName = L"NativeUserTimesOp";
         return opName;
     }
 
-    Dictionary Serialize() const override { NOT_IMPLEMENTED; }
     size_t CurrentVersion() const override { NOT_IMPLEMENTED; }
 
     void InferOutputs(std::vector<Variable>& outputs) override

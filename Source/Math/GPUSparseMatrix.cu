@@ -1595,7 +1595,9 @@ void GPUSparseMatrix<ElemType>::Adam(
     ElemType momentum,
     ElemType adaWeight,
     ElemType adaMul,
-    bool unitGainMomentum)
+    ElemType epsilon,
+    bool unitGainMomentum,
+    bool adamax)
 {
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
     {
@@ -1617,7 +1619,7 @@ void GPUSparseMatrix<ElemType>::Adam(
     _adam4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
         n, Data(), ColOrRow2BlockId(), GetNumRows(),
         c.Data(), c.Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, unitGainMomentum);
+        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainMomentum, adamax);
 }
 
 template <class ElemType>
@@ -1627,7 +1629,8 @@ ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
     ElemType RMS_WGT_MAX,
     ElemType RMS_WGT_DEC,
     ElemType RMS_WGT_MIN,
-    const bool needAveMultiplier)
+    const bool needAveMultiplier,
+    const bool initialized)
 {
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
     {
@@ -1644,7 +1647,7 @@ ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
     if (needAveMultiplier)
         numColsNeeded += GetNumCols();
 
-    if (c.IsEmpty() || c.GetNumCols() < numColsNeeded)
+    if (c.IsEmpty() || c.GetNumCols() < numColsNeeded || !initialized)
     {
         c.RequireSize(GetNumRows(), numColsNeeded);
         c.SetValue(0.0);

@@ -536,8 +536,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // We use the same seed across workers until parallel training kicks in to ensure that the workers have identical models
         size_t parallelWorkerIdx = ((m_mpi == nullptr) || !UsingParallelTrain(i)) ? 0 : m_mpi->CurrentNodeRank();
         size_t randSeedBase = (parallelWorkerIdx * m_maxEpochs) + i;
-        ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate);
-        ComputationNetwork::SetIRngUserSeed<ElemType>(net, criterionNodes[0], randSeedBase);
+        ComputationNetwork::SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate);
+        ComputationNetwork::SetIRngUserSeed(net, criterionNodes[0], randSeedBase);
         ComputationNetwork::SetBatchNormalizationTimeConstants<ElemType>(net, criterionNodes[0], 
                                                                          m_batchNormalizationTimeConstant[i], prevNormalizationTimeConstant,
                                                                          m_batchNormalizationBlendTimeConstant[i], prevNormalizationBlendTimeConstant);
@@ -2412,17 +2412,18 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 #if 0   // BUGBUG!!! This replicates a bug carried over from Alexey's original implementation.
         static double smoothedCount = 0;
 #endif
+        smoothedCount = varMomentum * smoothedCount + (1.0 - varMomentum) * actualMBSize;
+        double targetAdagradAvDenom_x_sqrtAdagradSqrFrames = m_gradType.targetAdagradAvDenom * sqrt(smoothedCount);
 
-        smoothedGradientValues.FSAdagradUpdate(actualMBSize,
-                                         gradientValues, functionValues, smoothedCount,
-                                         learnRatePerSample, m_gradType.targetAdagradAvDenom,
-                                         momentum, varMomentum);
+        smoothedGradientValues.FSAdagradUpdate(
+                                         gradientValues, functionValues, targetAdagradAvDenom_x_sqrtAdagradSqrFrames,
+                                         learnRatePerSample, momentum, varMomentum);
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {
         double aveMultiplier = smoothedGradientValues.RmsProp(gradientValues, (ElemType) m_rpi.gamma,
                                                         (ElemType) m_rpi.inc, (ElemType) m_rpi.max,
-                                                        (ElemType) m_rpi.dec, (ElemType) m_rpi.min, needAveMultiplier);
+                                                        (ElemType) m_rpi.dec, (ElemType) m_rpi.min, needAveMultiplier, true);
         Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
     }
 

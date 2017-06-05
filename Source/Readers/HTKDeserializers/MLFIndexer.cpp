@@ -7,6 +7,7 @@
 #define _SCL_SECURE_NO_WARNINGS
 #include "MLFIndexer.h"
 #include "MLFUtils.h"
+#include "ReaderUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -163,13 +164,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         tokens.clear();
                         auto container = boost::make_iterator_range(&m_lastNonEmptyLine[0], &m_lastNonEmptyLine[0] + m_lastNonEmptyLine.size());
-                        boost::split(tokens, container, boost::is_any_of(" "));
+
+                        const static std::vector<bool> delim = DelimiterHash({ ' ' });
+                        Split(container.begin(), container.end(), delim, tokens);
+
                         auto range = MLFFrameRange::ParseFrameRange(tokens, sequenceEndOffset);
                         numberOfSamples = static_cast<uint32_t>(range.second);
                     }
 
                     if (isValid)
-                        m_index.AddSequence(SequenceDescriptor{ KeyType { id, 0 }, numberOfSamples }, sequenceStartOffset, sequenceEndOffset);
+                        m_index.AddSequence(SequenceDescriptor{ id, numberOfSamples }, sequenceStartOffset, sequenceEndOffset);
                     else
                         fprintf(stderr, "WARNING: Cannot parse the utterance '%s' at offset (%" PRIu64 ")\n", corpus->IdToKey(id).c_str(), sequenceStartOffset);
                     currentState = State::UtteranceKey; // Let's try the next one.
@@ -191,13 +195,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             RefillBuffer();
         }
+
+        // Clean the buffer.
+        std::vector<char> tmp;
+        m_buffer.swap(tmp);
     }
 
     void MLFIndexer::ReadLines(vector<char>& buffer, vector<boost::iterator_range<char*>>& lines)
     {
         lines.clear();
-        auto range = boost::make_iterator_range(buffer.data(), buffer.data() + buffer.size());
-        boost::split(lines, range, boost::is_any_of("\r\n"));
+
+        const static std::vector<bool> delim = DelimiterHash({ '\r', '\n' });
+        Split(buffer.data(), buffer.data() + buffer.size(), delim, lines);
     }
 
     // Tries to parse sequence key

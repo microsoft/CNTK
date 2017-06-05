@@ -1,5 +1,23 @@
 [
     {
+        "category": ["GettingStarted"],
+        "name":  "LogisticRegression_FunctionalAPI",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/1stSteps/LogisticRegression_FunctionalAPI.py",
+        "description":  "Introduces basic CNTK usage using logistic regression as an example, using the Functional API.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "5/24/2017"
+    },
+    {
+        "category": ["GettingStarted"],
+        "name":  "LogisticRegression_GraphAPI",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/1stSteps/LogisticRegression_GraphAPI.py",
+        "description":  "Introduces basic CNTK usage using logistic regression as an example, using the Graph API.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "5/24/2017"
+    },
+    {
         "category": [""],
         "name":  "Model Evaluation on Azure",
         "url":  "https://github.com/Microsoft/CNTK/wiki/Evaluate-a-model-in-an-Azure-WebApi",
@@ -40,7 +58,7 @@
         "name":  "Image auto encoder",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#07_deconvolution",
         "description":  "A simple image auto encoder using deconvolution and unpooling.",
-        "language":  ["BrainScript, Python"],
+        "language":  ["BrainScript", "Python"],
         "type":  ["Recipe"],
 	"dateadded": "4/14/2017"
     },
@@ -109,12 +127,30 @@
     },
     {
         "category": ["Image"],
+        "name":  "MNIST Logistic Regression (LR) OCR",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103B_MNIST_LogisticRegression.ipynb",
+        "description":  "Recognize hand written digits (OCR) with MNIST data using multi-class LR.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "4/26/2017"
+    },
+    {
+        "category": ["Image"],
         "name":  "MNIST Multi-Layer Perceptron (MLP) OCR",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103C_MNIST_MultiLayerPerceptron.ipynb",
         "description":  "Recognize hand written digits (OCR) with MNIST data using MLP.",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"],
 	"dateadded": "4/24/2017"
+    },
+    {
+        "category": ["Image"],
+        "name":  "MNIST Convolutional Neural Network (CNN) OCR",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103D_MNIST_ConvolutionalNeuralNetwork.ipynb",
+        "description":  "Recognize hand written digits (OCR) with MNIST data using CNN.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"],
+	"dateadded": "5/1/2017"
     },
     {
         "category": ["Image"],
@@ -256,7 +292,7 @@
         "name":  "Logistic Regression",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_101_LogisticRegression.ipynb",
         "description":  "Classify cancer using simulated data (Logistic Regression).",
-        "language":  ["Python", "BrainScript"],
+        "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"],
 	"dateadded": "4/14/2017"
     },
@@ -466,5 +502,14 @@
         "language":  ["Python"],
         "type":  ["Recipe"],
 	"dateadded": "4/14/2017"
+    },
+    {
+        "category": ["Reinforcement Learning"],
+        "name": "Deep Q Neural Network",
+        "url":"https://github.com/Microsoft/CNTK/tree/master/Examples/ReinforcementLearning",
+        "description": "Train an agent to play Atari Games using Reinforcement Learning",
+        "language": ["Python"],
+        "type": ["Recipe"],
+        "dataadded": "05/05/2017"
     }
 ]

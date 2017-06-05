@@ -24,6 +24,12 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    // Version history:
+    // 1 -- initial version.
+    // 2 -- add support for models exceeding 2GB in size.
+    const size_t DictionaryValue::s_version = 2;
+    const size_t Dictionary::s_version = 2;
+
     template<typename T>
     T* CreateDataPtr(const T& value)
     {
@@ -519,7 +525,9 @@ namespace CNTK
 
     /*static*/ void Utils::VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape)
     {
-        bool allowFreeDimensionsInVar = true;
+        // TODO: This is a temporary debugging aid and should be removed after the functionality to late bind
+        // inferred/free dimensions is more baked and stable.
+        bool allowFreeOrInferredDimensionsInVar = true;
 
         if (var.GetDataType() != value->GetDataType())
             LogicError("The Variable '%S' DataType %s does not match the corresponding Value's DataType %s", var.AsString().c_str(), DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
@@ -555,7 +563,7 @@ namespace CNTK
         {
             // If the leading dim of the value shape is same as the total size of the varShape,
             // lets expand the leading dim to varShape for the purposes of the rest of the validation
-            if (allowFreeDimensionsInVar && varShape.HasFreeDimension())
+            if (allowFreeOrInferredDimensionsInVar && varShape.HasUnboundDimension())
             {
                 auto newVarShape = varShape;
                 for (size_t i = 0; i < newVarShape.Rank(); ++i)
@@ -579,7 +587,7 @@ namespace CNTK
 
         if (valueShape.Rank() > (varShape.Rank() + numDynamicAxes))
         {
-            for (size_t i = 0; i < (maxAddionalValueAxes - numDynamicAxes); ++i)
+            for (size_t i = 0; i < (valueShape.Rank() - (varShape.Rank() + numDynamicAxes)); ++i)
             {
                 if (valueShape[varShape.Rank() + i] != 1)
                     InvalidArgument("Value rank (%d) should be larger than the Variable rank (%d) at most by number of dynamic axes (%d); Variable = '%S', Value shape = '%S'.",
@@ -592,7 +600,7 @@ namespace CNTK
         {
             for (size_t i = 0; i < varShape.Rank(); ++i)
             {
-                if (allowFreeDimensionsInVar && (varShape[i] == NDShape::FreeDimension))
+                if (allowFreeOrInferredDimensionsInVar && ((varShape[i] == NDShape::FreeDimension) || (varShape[i] == NDShape::InferredDimension)))
                     varShape[i] = valueVarSubshape[i];
                 else if (varShape[i] != valueVarSubshape[i])
                 {
@@ -618,7 +626,7 @@ namespace CNTK
 
         if (inferredVarShape)
         {
-            if (varShape.HasFreeDimension())
+            if (varShape.HasUnboundDimension())
                 InvalidArgument("At least one of the free dimensions of Variable '%S' could not be resolved from the supplied value.", varShape.AsString().c_str());
 
             *inferredVarShape = varShape;
@@ -636,16 +644,18 @@ namespace CNTK
             LogicError("The specified ElementType %s does not match the Value object's DataType %s for Variable '%S'",
                         typeid(ElementType).name(), DataTypeName(value->GetDataType()), var.AsString().c_str());
 
+        auto CreateLayoutWithUnitBatchSizeAndSequenceLength = []() {
+            auto layout = std::make_shared<MBLayout>();
+            layout->InitAsFrameMode(1);
+            return layout;
+        };
+
         auto packedValue = dynamic_cast<PackedValue*>(value.get());
         if (packedValue && packedValue->IsPacked())
         {
             auto packedMatrixAndLayout = packedValue->PackedData<ElementType>();
             if (!var.DynamicAxes().empty() && (packedMatrixAndLayout.second == nullptr))
-            {
-                auto layout = std::make_shared<MBLayout>();
-                layout->InitAsFrameMode(1);
-                packedMatrixAndLayout.second = layout;
-            }
+                packedMatrixAndLayout.second = CreateLayoutWithUnitBatchSizeAndSequenceLength();
 
             return packedMatrixAndLayout;
         }
@@ -990,13 +1000,34 @@ namespace CNTK
 
     bool Learners::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& minibatch)
     {
+        std::vector<MinibatchInfo> mbInfoPerLearner;
+        mbInfoPerLearner.resize(m_learners.size());
+
         bool anyUpdatesPerformed = false;
-        for (auto l : m_learners)
+        for (size_t i = 0; i < m_learners.size(); i++)
         {
+            auto l  = m_learners[i];
+            mbInfoPerLearner[i] = minibatch;
+
             auto learner = dynamic_pointer_cast<DistributedLearner>(l);
+            assert(learner != nullptr); // Already checked in the constructor.
+
             std::unordered_map<Parameter, NDArrayViewPtr> learnerGradients;
             GetLearnerGradients(learner, gradientValues, learnerGradients);
-            anyUpdatesPerformed |= learner->Update(learnerGradients, minibatch);
+            anyUpdatesPerformed |= learner->Update(learnerGradients, mbInfoPerLearner[i]);
+        }
+
+        minibatch = mbInfoPerLearner.front();
+
+        // Checking that progress on the global timeline performed equally.
+        // This will currently prohibit usage of BlockMomentum with Simple/1Bit,
+        // but 1Bit and Simple can be used together.
+        for (size_t i = 1; i < mbInfoPerLearner.size(); i++)
+        {
+            auto mbInfo = mbInfoPerLearner[i];
+            if (minibatch.numberOfSamples != mbInfo.numberOfSamples)
+                RuntimeError("Combining distributed learners with different methods"
+                    " for aggregation minibatch sample count is currently not supported");
         }
         return anyUpdatesPerformed;
     }

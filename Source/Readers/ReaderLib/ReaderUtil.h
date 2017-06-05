@@ -7,12 +7,19 @@
 
 #include "Reader.h"
 #include "SequenceEnumerator.h"
+#include "Config.h"
+#include <boost/algorithm/string.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 class ConfigParameters;
 
 size_t GetRandomizationWindowFromConfig(const ConfigParameters& config);
+
+inline size_t GetRandomSeed(const ConfigParameters& config)
+{
+    return config(L"randomizationSeed", size_t(0));
+}
 
 // Returns the size of the type.
 inline size_t GetSizeByType(ElementType type)
@@ -145,5 +152,60 @@ private:
     // Max number of allowed invalid sequences.
     size_t m_maxNumberOfInvalidSequences;
 };
+
+// Boost split is too slow, this one gives almost 200% better results for initial parsing of big text files.
+// Splits the incoming sequence given by begin and end according to the delimiters without string copies.
+template<class T>
+inline void Split(T* begin, T* end, const std::vector<bool>& delimiters, std::vector<boost::iterator_range<T*>>& result)
+{
+    assert(delimiters.size() > std::numeric_limits<unsigned char>::max());
+
+    auto start = begin;
+    while (begin != end)
+    {
+        if (delimiters[static_cast<unsigned char>(*begin)])
+        {
+            result.push_back(boost::make_iterator_range(start, begin));
+            start = begin + 1;
+        }
+        ++begin;
+    }
+
+    // Adding last.
+    result.push_back(boost::make_iterator_range(start, end));
+}
+
+// Function that is used to build delimiter hashes.
+inline std::vector<bool> DelimiterHash(const std::vector<char>& values)
+{
+    std::vector<bool> delim_equal(256, false);
+    for (const auto& c : values)
+        delim_equal[c] = true;
+    return delim_equal;
+}
+
+// Reads from start to end till one of the delimiters is reached.
+// Can be used on character buffers that are not proper C strings.
+// Returns a new start pointer.
+template<class T>
+inline T* ReadTillDelimiter(T* begin, T* end, const std::vector<bool>& delimiters, boost::iterator_range<T*>& result)
+{
+    assert(delimiters.size() > std::numeric_limits<unsigned char>::max());
+
+    auto start = begin;
+    while (begin != end)
+    {
+        if (delimiters[static_cast<unsigned char>(*begin)])
+        {
+            result = boost::make_iterator_range(start, begin);
+            return begin + 1;
+        }
+
+        ++begin;
+    }
+
+    result = boost::make_iterator_range(begin, end);
+    return end;
+}
 
 }}}
