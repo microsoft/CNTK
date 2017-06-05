@@ -27,7 +27,7 @@
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
 
-#define BarrierOp NoOp
+#define BarrierOp NoOp // for now, we use Alias() (=NoOp) to denote a Barrier(). Should become an op in its own right.
 
 #pragma warning (disable: 4456) // until I fixed the shadowing
 
@@ -73,8 +73,7 @@ namespace CNTK
 class NDArrayViewArena
 {
     // allocate a new tensor in a large arena
-    // TODO: move this function up since it is ahred between fo2ward and backward
-    // TODO: make this static, so that we can carry the allocator over across invocations
+    // TODO: make the arena static, so that we can carry the allocator over across invocations
     //       Currently, if I do that, program crashes upon termination (unloaded CUDA too early?)
     NDArrayViewPtr m_currentArena;
     size_t m_currentArenaUsed;
@@ -92,7 +91,10 @@ public:
         // if too large then plain alloc
         if (numElements > ARENASIZE)
             return make_shared<NDArrayView>(dataType, CNTK::StorageFormat::Dense, shape, device);
-        // if arena not large enough then waste its remainder and just allocate a fresh one
+        // If arena not large enough then waste its remainder and just allocate a fresh one.
+        // This abandons the current arena. This will not cause a memory leak, however:
+        // Since the slices into it that were returned before all hold a ref-count to that arena,
+        // it will be deallocated automatically as soon the last slice goes away.
         if (!m_currentArena || numElements > (ARENASIZE - m_currentArenaUsed))
         {
             m_currentArena = make_shared<NDArrayView>(dataType, CNTK::StorageFormat::Dense, NDShape{ ARENASIZE }, device);
@@ -107,7 +109,8 @@ public:
 };
 
 // ---------------------------------------------------------------------------
-// RuntimeStatistics -- helper class for collecting runtime statistics, for diagnostics and debugging purposes
+// RuntimeStatistics -- helper class for collecting runtime statistics, for
+// diagnostics and debugging purposes
 // ---------------------------------------------------------------------------
 
 struct RuntimeStatistics
@@ -125,14 +128,19 @@ struct RuntimeStatistics
 
 // ---------------------------------------------------------------------------
 // NonOwningFunctionList, NonOwningFunctionListBuilder -- helper classes:
-// linked list over PrimitiveFunction objects, using m_link
+// linked list over PrimitiveFunction objects, using m_link.
+// This is used in auto-batching instead of, say, a std::vector<> or std::set<>
+// for performance reasons. It also does not hold shared_ptrs, since those
+// have significant runtime overhead. We don't need them, since the lists
+// we build here operate on existing structures without allocating additional
+// resources to be tracked.
 // ---------------------------------------------------------------------------
 
-class NonOwningFunctionList // over PrimitiveFunction, using m_link
+class NonOwningFunctionList
 {
 protected:
-    PrimitiveFunction* head;
-    size_t count; // note: count is only in here for diagnostics; only needed in builder
+    PrimitiveFunction* head; // first item or nullptr
+    size_t count;            // note: count is only in here for diagnostics; only needed in builder
 public:
     NonOwningFunctionList() { clear(); }
     NonOwningFunctionList(PrimitiveFunction* f) : head(f), count(1) { }
