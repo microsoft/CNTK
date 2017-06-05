@@ -857,6 +857,8 @@ namespace CNTK
         // Dynamite
         bool m_isKnownToBeAcyclic = true; // true if it is guaranteed that this PrimitiveFunction can never be part of a cycle (==has no Placeholder leaves)
         int m_pendingInputs = -1;   // counter how many inputs have already become available
+        friend class NonOwningFunctionList;
+        friend class NonOwningFunctionListBuilder;
         PrimitiveFunction* m_link;  // auto-batch uses temporary linked lists
     }; // end class PrimitiveFunction
 

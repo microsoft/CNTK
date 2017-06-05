@@ -37,8 +37,6 @@ using namespace std;
 
 namespace CNTK
 {
-class Variable::Memoize
-{
     // how graphs work in CNTK V2:
     //  - nodes := PrimitiveFunctions (incl. BlockFunction)
     //  - edges := Variables
@@ -64,6 +62,16 @@ class Variable::Memoize
     //     - Splice() for each of the N inputs
     // 'free' ops are always batched together and get executed first
 
+// ===========================================================================
+// helper classes
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// NDArrayViewArena -- helper class that implements efficient arena allocation for NDArrayView objects
+// ---------------------------------------------------------------------------
+
+class NDArrayViewArena
+{
     // allocate a new tensor in a large arena
     // TODO: move this function up since it is ahred between fo2ward and backward
     // TODO: make this static, so that we can carry the allocator over across invocations
@@ -71,7 +79,12 @@ class Variable::Memoize
     NDArrayViewPtr m_currentArena;
     size_t m_currentArenaUsed;
     static const size_t ARENASIZE = 64000000; // we allocate in this chunk size
-    NDArrayViewPtr AllocateTensorInArena(const NDShape& shape, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
+public:
+    // allocate an NDArrayView of a given shape, data type, and device
+    // The returned memory region is a slice into a much larger NDArrayView; therefore,
+    // this operation short-circuits CUDA and is very fast.
+    // TODO: once operators exist that emit sparse outputs, we need sparse support here as well
+    NDArrayViewPtr NewNDArrayView(const NDShape& shape, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
     {
         //static NDArrayViewPtr m_currentArena; // for now static so that it carries over across invocations, to save the allocation
         //static size_t m_currentArenaUsed;
@@ -91,21 +104,105 @@ class Variable::Memoize
         m_currentArenaUsed += numElements;
         return region->AsShape(shape);
     }
+};
 
-    // ===== forward =====
+// ---------------------------------------------------------------------------
+// RuntimeStatistics -- helper class for collecting runtime statistics, for diagnostics and debugging purposes
+// ---------------------------------------------------------------------------
 
-    struct
+struct RuntimeStatistics
+{
+    // forward
+    size_t numOpNodes = 0;
+    size_t numLeafNodes = 0;
+    size_t numDoneSpliceOps = 0;
+    size_t numDoneFreeOps = 0;
+    size_t numDoneOtherOps = 0;
+    // backward
+    size_t numBackpropsToInputs = 0;
+    size_t numBatchedBackpropToCalls = 0;
+};
+
+// ---------------------------------------------------------------------------
+// NonOwningFunctionList, NonOwningFunctionListBuilder -- helper classes:
+// linked list over PrimitiveFunction objects, using m_link
+// ---------------------------------------------------------------------------
+
+class NonOwningFunctionList // over PrimitiveFunction, using m_link
+{
+protected:
+    PrimitiveFunction* head;
+    size_t count; // note: count is only in here for diagnostics; only needed in builder
+public:
+    NonOwningFunctionList() { clear(); }
+    NonOwningFunctionList(PrimitiveFunction* f) : head(f), count(1) { }
+    void operator=(const NonOwningFunctionList& other)
     {
-        // forward
-        size_t numOpNodes = 0;
-        size_t numLeafNodes = 0;
-        size_t numDoneSpliceOps = 0;
-        size_t numDoneFreeOps = 0;
-        size_t numDoneOtherOps = 0;
-        // backward
-        size_t numBackpropsToInputs = 0;
-        size_t numBatchedBackpropToCalls = 0;
-    } stats;
+        head  = other.head;
+        count = other.count;
+    }
+    NonOwningFunctionList(const NonOwningFunctionList& other)
+    {
+        *this = other;
+    }
+    NonOwningFunctionList(NonOwningFunctionList&& other)
+    {
+        *this = other;
+        other.clear();
+    }
+    PrimitiveFunction* front() const { return head; }
+    bool empty() const { return !head; }
+    size_t size() const { return count; }
+    void clear()
+    {
+        head = nullptr;
+        count = 0;
+    }
+    class FunctionListIterator
+    {
+        PrimitiveFunction* iter;
+    public:
+        FunctionListIterator(PrimitiveFunction* f) : iter(f) { }
+        PrimitiveFunction* operator->() const { return iter; }
+        PrimitiveFunction& operator*() const { return *iter; } // TODO: This is weird, figure this out
+        PrimitiveFunction* operator++() { iter = iter->m_link; return iter; }
+        bool operator!=(const FunctionListIterator& other) { return iter != other.iter; }
+    };
+    FunctionListIterator begin() const { return front(); }
+    FunctionListIterator end()   const { return nullptr; }
+};
+class NonOwningFunctionListBuilder : public NonOwningFunctionList // over PrimitiveFunction, using m_link
+{
+    PrimitiveFunction* tail; // note: value undefined when list empty
+public:
+    NonOwningFunctionListBuilder() : NonOwningFunctionList() { }
+    NonOwningFunctionListBuilder(PrimitiveFunction* f) : NonOwningFunctionList(f), tail(f) { f->m_link = nullptr; }
+    void push_back(PrimitiveFunction* f)
+    {
+        if (!head)
+            head = f;
+        else
+            tail->m_link = f;
+        tail = f;
+        count++;
+        f->m_link = nullptr;
+    }
+};
+
+// ===========================================================================
+// Memoize -- autobatching happening inside here
+// The auto-batching related functions are grouped inside a class, since they
+// share quite a bit of state.
+// ===========================================================================
+
+class Variable::Memoize
+{
+    NDArrayViewArena arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
+    RuntimeStatistics stats;
+
+    // =======================================================================
+    // forward-related functions
+    // =======================================================================
 
     // predicate whether an op is only taking a view on its input
     // These are considered zero-cost, always batched whole-sale, and always done first.
@@ -120,67 +217,6 @@ class Variable::Memoize
             op == PrimitiveOpType::Reshape      ||
             op == PrimitiveOpType::Slice;
     }
-
-    class NonOwningFunctionList // over PrimitiveFunction, using m_link
-    {
-    protected:
-        PrimitiveFunction* head;
-        size_t count; // note: count is only in here for diagnostics; only needed in builder
-    public:
-        NonOwningFunctionList() { clear(); }
-        NonOwningFunctionList(PrimitiveFunction* f) : head(f), count(1) { }
-        void operator=(const NonOwningFunctionList& other)
-        {
-            head  = other.head;
-            count = other.count;
-        }
-        NonOwningFunctionList(const NonOwningFunctionList& other)
-        {
-            *this = other;
-        }
-        NonOwningFunctionList(NonOwningFunctionList&& other)
-        {
-            *this = other;
-            other.clear();
-        }
-        PrimitiveFunction* front() const { return head; }
-        bool empty() const { return !head; }
-        size_t size() const { return count; }
-        void clear()
-        {
-            head = nullptr;
-            count = 0;
-        }
-        class FunctionListIterator
-        {
-            PrimitiveFunction* iter;
-        public:
-            FunctionListIterator(PrimitiveFunction* f) : iter(f) { }
-            PrimitiveFunction* operator->() const { return iter; }
-            PrimitiveFunction& operator*() const { return *iter; } // TODO: This is weird, figure this out
-            PrimitiveFunction* operator++() { iter = iter->m_link; return iter; }
-            bool operator!=(const FunctionListIterator& other) { return iter != other.iter; }
-        };
-        FunctionListIterator begin() const { return front(); }
-        FunctionListIterator end()   const { return nullptr; }
-    };
-    class NonOwningFunctionListBuilder : public NonOwningFunctionList // over PrimitiveFunction, using m_link
-    {
-        PrimitiveFunction* tail; // note: value undefined when list empty
-    public:
-        NonOwningFunctionListBuilder() : NonOwningFunctionList() { }
-        NonOwningFunctionListBuilder(PrimitiveFunction* f) : NonOwningFunctionList(f), tail(f) { f->m_link = nullptr; }
-        void push_back(PrimitiveFunction* f)
-        {
-            if (!head)
-                head = f;
-            else
-                tail->m_link = f;
-            tail = f;
-            count++;
-            f->m_link = nullptr;
-        }
-    };
 
     // class to manage the set of ready operations (the schedule)
     class ReadyOps
@@ -421,7 +457,7 @@ class Variable::Memoize
 #ifdef LOG_DETAILS
         LogFunction(f, "[bf] ");
 #endif
-        auto outValue = isFree ? nullptr : AllocateTensorInArena(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
+        auto outValue = isFree ? nullptr : arena.NewNDArrayView(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
         // execute it
         output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue), f));
         // stats
@@ -705,6 +741,10 @@ class Variable::Memoize
     }
 
 public:
+    // -----------------------------------------------------------------------
+    // BatchedForward() -- auto-batched implementation of PrimitiveFunction::Value()
+    // -----------------------------------------------------------------------
+
     // Value(), computed with automatic batching
     // This routine uses temporary fields that are assumed initialized in a specific way:
     //  - PrimitiveFunction::m_pendingInputs:
@@ -757,9 +797,11 @@ public:
         return LazilyIndexedValue(v);
     }
 
-    // ===== backward =====
+    // =======================================================================
+    // backward-related functions
+    // =======================================================================
 
-    // allocate memory m_gradient
+    // allocate memory for m_gradient
     // This lazily creates the m_gradient NDArrayView, which may live in a batched op.
     // Returns beta = 0 if gradient was newly created, otherwise 1
     __declspec(noinline) double LazilyCreateLazilyIndexedGradient(const Variable& v)
@@ -798,7 +840,7 @@ public:
             {
                 // create a new one
                 // TODO: allocate parameters as separate objects; and allow user to pass buffers in
-                fields.m_gradient = AllocateTensorInArena(fields.m_shape, fields.m_dataType, fields.m_value->Device());
+                fields.m_gradient = arena.NewNDArrayView(fields.m_shape, fields.m_dataType, fields.m_value->Device());
                 beta = 0.0; // has not been initialized (...actually has; but this saves memory round trips)
             }
         }
@@ -907,7 +949,7 @@ public:
         gatherBatchResultDims.assign(inputShape.begin(), inputShape.end());
         let axis = gatherBatchResultDims.size();
         gatherBatchResultDims.push_back(inputs.size());
-        auto out = AllocateTensorInArena(gatherBatchResultDims, input0.GetDataType(), input0.Device());
+        auto out = arena.NewNDArrayView(gatherBatchResultDims, input0.GetDataType(), input0.Device());
         return move(NDArrayView::GatherBatch(inputs, (int)axis, move(out)));
     }
 
@@ -1128,6 +1170,10 @@ other_ops              = rest
     }
 
 public:
+    // -----------------------------------------------------------------------
+    // BatchedBackward() -- auto-batched implementation of PrimitiveFunction::Backward()
+    // -----------------------------------------------------------------------
+
     // implant gradients into all variables
     // Unlike BatchedForward(), this is eager. If you call it twice, it's a completely new computation.
     // If you need multiple gradients, ask for them in a single go.
@@ -1148,7 +1194,7 @@ public:
         // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
         //if (root.Value()->Shape() != NDShape{})
         //    LogicError("BatchedBackward: root must be a scalar, or root gradient must have been implanted already");
-        root.m_dataFields->m_gradient = AllocateTensorInArena(root.Shape(), root.GetDataType(), root.Value()->Device());
+        root.m_dataFields->m_gradient = arena.NewNDArrayView(root.Shape(), root.GetDataType(), root.Value()->Device());
         root.m_dataFields->m_gradient->SetValue(1.0f);
         // if user passed NDArrayViewPtrs for the gradients, then keep using them
         // This way, the same buffers can be recycled.
@@ -1192,6 +1238,10 @@ public:
     }
 }; // class
 
+// ===========================================================================
+// auto-batching entry points
+// ===========================================================================
+
 // this will become Variable::Value()
 // Computes lazily the value of a node. Does nothing if called again.
 NDArrayViewPtr PrimitiveFunction::BatchedForward() const
@@ -1201,7 +1251,7 @@ NDArrayViewPtr PrimitiveFunction::BatchedForward() const
 }
 
 // Perform backprop.
-// CNTK grad() allows to pass multiple roots. Does that ever make sense in this context?
+// TODO: CNTK grad() allows to pass multiple roots. Does that ever make sense in this context?
 void PrimitiveFunction::BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const
 {
     auto autoBatcher = Variable::Memoize(); // has some internal state
