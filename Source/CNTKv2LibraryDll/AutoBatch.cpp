@@ -208,6 +208,19 @@ class Variable::AutoBatch
     NDArrayViewArena arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
     RuntimeStatistics stats;
 
+    // buffers for building NDArrayViewPtr vectors. Keep as class members to avoid repeated memory allocations.
+    vector<NDArrayViewPtr> m_inputValuesBuffer;
+    vector<NDArrayViewPtr> m_outputGradientsBuffer;
+    vector<const NDArrayView*> m_inputValuesBufferRaw;
+    template<class B> // B=vector<NDArrayViewPtr>
+    B& BorrowBuffer(B& buffer, size_t batchSize)
+    {
+        if (buffer.capacity() < batchSize)
+            buffer.reserve(batchSize * 2);
+        buffer.resize(batchSize);
+        return buffer;
+    }
+
     // =======================================================================
     // forward-related functions
     // =======================================================================
@@ -447,15 +460,13 @@ class Variable::AutoBatch
     }
 
     // compute the value of 'f', storing it in the arena (unless 'isFree', which must be set when there is nothing to store)
-    vector<NDArrayViewPtr> m_inputValuesBuffer; // Use a buffer for this that does not get destructed, to reuse the memory allocation.
     const Variable& MemoizeKnowableValueInArena(PrimitiveFunction& f, bool isFree = false)
     {
         if (f.m_outputs.size() != 1)
             LogicError("MemoizeKnowableValueInArena: only functions with 1 output are supported");
         // fetch the NDArrayViewPtrs for all inputs
-        auto& inputValues = m_inputValuesBuffer;
         let& inputs = f.m_inputs;
-        inputValues.resize(inputs.size());
+        auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
             inputValues[i] = LazilyIndexedValue(inputs[i]); // (if this is a lazy slice, then now we must resolve it)\
         // allocate the output NDArrayViewPtr in the arena
@@ -750,7 +761,7 @@ class Variable::AutoBatch
 
 public:
     // -----------------------------------------------------------------------
-    // BatchedForward() -- auto-batched implementation of PrimitiveFunction::Value()
+    // BatchedForward() -- entry point for auto-batched implementation of PrimitiveFunction::Value()
     // -----------------------------------------------------------------------
 
     // Value(), computed with automatic batching
@@ -974,66 +985,83 @@ public:
         let index = c.second;
         fail_if(f->m_outputs.size() != 1, "for now only functions with a single output are supported"); // (needs some more plumbing to fix this)
         // backprop into Times' matrix argument
-        // We only collect matrix products with fully matching dimensions.
-        if (f->m_op == PrimitiveOpType::Times && index == 0)
+        let IsMatrixGradient0Batchable = [](const PrimitiveFunction& f, const PrimitiveFunction& g) -> bool
         {
-            // BUGBUG: Finish this. Dimensions must match!
-            //if (m_matrixWeightConsumers.empty() ||
-            //    (c.first->m_outputs[0].Shape() == m_matrixWeightConsumers.back().first->m_inputs[0].Shape() &&
-            //        c.first->m_outputs[1].Shape() == m_matrixWeightConsumers.back().first->m_inputs[1].Shape()
-            //        ))
+#if 1
+            return false;
+#else
+            // we compute leftGrad = outGrad @ right^T
+            let&   fOutShape = f.m_outputs[0].Shape().Dimensions();
+            let&   gOutShape = g.m_outputs[0].Shape().Dimensions();
+            let& fRightShape = f.m_inputs[1].Shape().Dimensions();
+            let& gRightShape = g.m_inputs[1].Shape().Dimensions();
+            let&   leftShape = f.m_inputs[0].Shape().Dimensions();
+            let    outRank =   fOutShape.size();
+            let   gOutRank =   gOutShape.size();
+            let  rightRank = fRightShape.size();
+            let gRightRank = gRightShape.size();
+            let   leftRank =   leftShape.size();
+            fail_if(leftShape != g.m_inputs[0].Shape().Dimensions(), "IsMatrixGradient0Batchable: dimensions of matrix gradient don't match");
+            if (outRank != gOutRank || rightRank != gRightRank)
+                return false; // rank not matching: stop batching right here (we could do better)
+            // the center 'reductionRank' dimensions get reduced over
+            if (outRank + rightRank - leftRank != 2) // if 2 then we reduce over a single batch axis
+                return false; // this is not a batch gradient; back out
+            fail_if(fOutShape.back() != fRightShape.front() || gOutShape.back() != gRightShape.front(), "IsMatrixGradient0Batchable: inner dimensions of matrix gradient don't match");
+            // the two gradient ops match if all dimensions except for the batch dim match
+            for (size_t k = 0; k < outRank - 1; k++) // check outGrad
+                if (fOutShape[k] != gOutShape[k])
+                    return false;
+            for (size_t k = 1; k < rightRank; k++) // check right
+                if (fRightShape[k] != gRightShape[k])
+                    return false;
+            // gradient is batchable
+            return true;
+#endif
+        };
+        // We only collect matrix products with fully matching dimensions.
+        if (f->m_op == PrimitiveOpType::Times && index == 0 &&
+            (m_matrixWeightConsumers.empty() || (IsMatrixGradient0Batchable(*f, *m_matrixWeightConsumers.back().first))))
             m_matrixWeightConsumers.push_back(c);
-            return;
-        }
         // backprop into either of Plus' arguments
-        //if (f->m_op == PrimitiveOpType::Plus)
+        //else if (f->m_op == PrimitiveOpType::Plus)
         //    return m_summandConsumers;
         // all other
-        m_otherConsumers.push_back(c);
-
-/* port from the Python prototype where it makes sense:
-place_item_ops         = [arg for arg in args if arg.op is Variable._op_place_item]
-transpose_dot_item_ops = [arg for arg in args if arg.op is cntk.NDArrayView.transpose_dot]
-reduce_sum_item_ops    = [arg for arg in args if arg.op is cntk.NDArrayView.reduce_sum]
-other_ops              = rest
-*/
+        else
+            m_otherConsumers.push_back(c);
     };
 
     // backprop into weight parameter of a Times op (inputs[0])
     // This can be batched into a single matrix product.
-    vector<NDArrayViewPtr> m_matrixDataGradients;
-    vector<NDArrayViewPtr> m_matrixDataInput1s;
     void BackpropToMatrixWeight(vector<pair<PrimitiveFunction*, size_t>>& consumers)
     {
 #if 1
         for (auto& c : consumers)
             BackpropTo(c.first, c.second);
 #else
-        // to do this right:
-        //  - split matrix by outputRank
-        //  - determine those axes for both inputs
-        //  - all additional 0 or more axes are map axes that must match pairwise
-        //  - we should reshape those to 1
-        //  - and concatenate both inputs along that axis
-        // This is too complex for now. Inputs are already batched irregularly
-        // (e.g. an input represents R*h(t) in a recurrence for multiple sequences that,
-        // have at least t steps, where we get multiple of those here, each of different size).
+        // We compute
+        //  leftGrad = sum_i outGrad_i @ right_i^T
+        //           = (concat_i outGrad_i) @ (concat_i right_i)^T
+        // where concat_i means to concatenate matrices along their trailing (batch) axis.
+        // It has already been verified that all i have the same rank and dimensions except for a single reduction dimension.
+        // So concatenate outGrad and right
+        let batchSize = m_matrixWeightConsumers.size();
+        auto& m_timesOutGrads        = BorrowBuffer(m_inputValuesBuffer,     batchSize);
+        auto& m_timesDataRightInputs = BorrowBuffer(m_outputGradientsBuffer, batchSize);
         let& f0 = *m_matrixWeightConsumers.front().first;
         let& input0 = f0.m_inputs[0];
-        for (auto& c : m_matrixWeightConsumers)
+        for (size_t i = 0; i < batchSize; i++)
         {
+            let &c = m_matrixWeightConsumers[i];
             fail_if(c.second != 0, "wrong input??");
-            m_matrixDataGradients.push_back(c.first->m_outputs[0].m_dataFields->m_gradient);
-            m_matrixDataInput1s  .push_back(c.first->m_inputs [1].m_dataFields->m_value   );
+            m_timesOutGrads       .push_back(c.first->m_outputs[0].m_dataFields->m_gradient);
+            m_timesDataRightInputs.push_back(c.first->m_inputs [1].m_dataFields->m_value   );
         }
 
-        auto input1Value    = GatherBatchInArena(m_matrixDataInput1s); // TODO: we can further factor this and pass a lambda
-        auto outputGradient = GatherBatchInArena(m_matrixDataGradients);
+        auto rightBatch   = GatherBatchInArena(m_timesDataRightInputs); // TODO: we can further factor this and pass a lambda
+        auto outGradBatch = GatherBatchInArena(m_timesOutGrads);
         let beta = LazilyCreateLazilyIndexedGradient(input0);
-        CNTK::BackpropTo(outputGradient.get(), /*index=*/0, f0.m_op, f0.m_attributes, /*outputValue=*/nullptr, { nullptr, input1Value.get() }, input0.m_dataFields->m_gradient, beta);
-
-        m_matrixDataInput1s.clear(); // move this into lambda
-        m_matrixDataGradients.clear();
+        PrimitiveFunction::BackpropTo(outGradBatch.get(), /*index=*/0, f0.m_op, f0.m_attributes, /*outputValue=*/nullptr, { nullptr, rightBatch.get() }, input0.m_dataFields->m_gradient, beta);
 #endif
     }
 
@@ -1118,7 +1146,6 @@ other_ops              = rest
     // back-propagate all of f's outputs' m_gradients to one input
     // This wraps the PrimitiveFunction's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
     // Note that each input that is lazy should redirect into a slice in its lazy source.
-    vector<const NDArrayView*> m_inputValuesBufferRaw;
     void BackpropTo(PrimitiveFunction* f, size_t index)
     {
 #ifdef LOG_DETAILS
@@ -1140,6 +1167,7 @@ other_ops              = rest
         let* outputValue    = outputFields.m_value   .get();
         let* outputGradient = outputFields.m_gradient.get();
 
+        // TODO: use BorrowBuffer()
         m_inputValuesBufferRaw.clear(); // input values
         for (let& input1 : inputs)
         {
@@ -1179,7 +1207,7 @@ other_ops              = rest
 
 public:
     // -----------------------------------------------------------------------
-    // BatchedBackward() -- auto-batched implementation of PrimitiveFunction::Backward()
+    // BatchedBackward() -- entry point for auto-batched implementation of PrimitiveFunction::Backward()
     // -----------------------------------------------------------------------
 
     // implant gradients into all variables
