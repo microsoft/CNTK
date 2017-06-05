@@ -5407,6 +5407,7 @@ __global__ void _assignAlphaScore(
     LONG64 alphaId_1 = alphaId_0 - 1; // alpha_{t-1}(s-1)
     LONG64 alphaId_2 = alphaId_0 - 2; // alpha_{t-1}(s-2)
 
+	LONG64 t_l;
     if (t == 0)
     {
         // Initialize recursion
@@ -5451,12 +5452,14 @@ __global__ void _assignAlphaScore(
                 if (phoneId == blankTokenId)
                 {
                     // only constraint right side
-                    if (t > phoneBoundId_r + delayConstraint - 1 || (phoneBoundId_l + 1 > delayConstraint  &&  t < phoneBoundId_l - delayConstraint + 1))
+					t_l = max(phoneBoundId_l - delayConstraint - 1, (LONG64)0);
+                    if (t > phoneBoundId_r + delayConstraint - 1 || t < t_l)
                         alphaScore[alphaId] = LZERO;
                 }
                 else if (phoneId != blankTokenId)
                 {
-                    if (t > phoneBoundId_r + delayConstraint || (phoneBoundId_l > delayConstraint && t < phoneBoundId_l - delayConstraint))
+					t_l = max(phoneBoundId_l - delayConstraint, (LONG64)0);
+                    if (t > phoneBoundId_r + delayConstraint ||t < t_l)
                         alphaScore[alphaId] = LZERO;
                 }
             }
@@ -5503,6 +5506,7 @@ __global__ void _assignBetaScore(
     LONG64 betaid_1 = betaid_0 + 1;
     LONG64 betaid_2 = betaid_0 + 2;
 
+	LONG64 t_l;
     if (t == frameNum - 1)
     {
         if (phoneSeqId == phoneNum - 3 || phoneSeqId == phoneNum - 2)
@@ -5542,12 +5546,14 @@ __global__ void _assignBetaScore(
 				LONG64 phoneBoundId_l = (LONG64)(phoneBound[labelid]);
                 if (phoneId == blankTokenId)
                 {
-                    if (t > phoneBoundId_r + delayConstraint - 1 || (phoneBoundId_l + 1 > delayConstraint  &&  t < phoneBoundId_l - delayConstraint + 1))
+					t_l = max(phoneBoundId_l - delayConstraint - 1, (LONG64)0);
+                    if (t > phoneBoundId_r + delayConstraint - 1 || t < t_l)
                         betaScore[betaid] = LZERO;
-                }
+                }g
                 else if (phoneId != blankTokenId)
                 {
-                    if (t > phoneBoundId_r + delayConstraint || (phoneBoundId_l > delayConstraint && t < phoneBoundId_l - delayConstraint))
+					t_l = max(phoneBoundId_l - delayConstraint , (LONG64)0);
+                    if (t > phoneBoundId_r + delayConstraint || t < t_l)
                         betaScore[betaid] = LZERO;
                 }
             }
