@@ -331,5 +331,4 @@ namespace CNTK
                                           Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
     }
 
-
 }

@@ -190,12 +190,12 @@ public:
 };
 
 // ===========================================================================
-// Memoize -- autobatching happening inside here
+// AutoBatch -- autobatching happening inside here
 // The auto-batching related functions are grouped inside a class, since they
 // share quite a bit of state.
 // ===========================================================================
 
-class Variable::Memoize
+class Variable::AutoBatch
 {
     NDArrayViewArena arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
     RuntimeStatistics stats;
@@ -229,12 +229,12 @@ class Variable::Memoize
         static bool AreBatchable(const PrimitiveFunction* a, const PrimitiveFunction* b)
         {
             // first it must be the same operation
-            let op = a->Op();
+            let op = a->m_op;
             // free ops always get batched; even if they have different op-codes
             if (IsViewOp(op) && op != PrimitiveOpType::BarrierOp)
                 LogicError("should not get here for view ops or barrier ops");
             // op codes must match
-            if (op != b->Op())
+            if (op != b->m_op)
                 return false;
             // all input dimensions must match (with exception of a few special cases)
             assert(a->m_inputs.size() == b->m_inputs.size());
@@ -269,7 +269,7 @@ class Variable::Memoize
         // schedule an operation that has been confirmed ready
         void Schedule(PrimitiveFunction* f)
         {
-            let op = f->Op();
+            let op = f->m_op;
             // we manage three ready sets, since two common kinds are very simple
             if (op == PrimitiveOpType::BarrierOp)
                 m_barrierOps.push_back(f);
@@ -459,9 +459,9 @@ class Variable::Memoize
 #endif
         auto outValue = isFree ? nullptr : arena.NewNDArrayView(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
         // execute it
-        output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.Op(), inputValues, f.Attributes(), outputShape, move(outValue), f));
+        output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
         // stats
-        let primitiveOp = f.Op();
+        let primitiveOp = f.m_op;
         if (primitiveOp == PrimitiveOpType::StopGradient ||
             primitiveOp == PrimitiveOpType::Pass ||
             primitiveOp == PrimitiveOpType::NoOp ||
@@ -502,7 +502,7 @@ class Variable::Memoize
         // TODO: need to handle ops that have >1 output, such as Combine(). Just don't batch them ever? Combine() is just a see-through anyway.
         // get a representative op
         auto& f0 = *ops.front();
-        let op = f0.Op();
+        let op = f0.m_op;
         let batchSize = ops.size();
         let isFree = IsViewOp(op);
         if (!isFree)
@@ -530,13 +530,13 @@ class Variable::Memoize
                 // reset state
                 ResetPendingToIdle(*op);
                 // TODO: realize splice ops that are index ops as a m_lazyIndex at this point
-                //if (f0.Op() == PrimitiveOpType::Slice)
+                //if (f0.m_op == PrimitiveOpType::Slice)
                 //{
                 //    // inject the lazyIndex
                 //}
 #if 0           // test effect of the unbatched sparse times
-                if (f0.Op() == PrimitiveOpType::Times)
-                    op->ComputeKnowableValue(op->Op(), m_inputValuesBuffer, op->Attributes(), op->m_outputs[0].Shape(), move(out));
+                if (f0.m_op == PrimitiveOpType::Times)
+                    op->ComputeKnowableValue(op->m_op, m_inputValuesBuffer, op->Attributes(), op->m_outputs[0].Shape(), move(out));
 #endif
             }
         }
@@ -683,7 +683,7 @@ class Variable::Memoize
                 // create a new PrimitiveFunction for the batched op
                 // Batched inputs have been prepared in m_batchedInputs[].
                 let expectedOutputShape = unbatchedOutputShape.AppendAxis(maxRank, batchSize);
-                batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.Op(), vector<Variable>(m_batchedInputs), expectedOutputShape, Dictionary(f0.Attributes()));
+                batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.m_op, vector<Variable>(m_batchedInputs), expectedOutputShape, Dictionary(f0.Attributes()));
 #ifdef LOG_DETAILS
                 batchedOp->m_uid = L"*" + f0.Uid();
 #endif
@@ -691,7 +691,7 @@ class Variable::Memoize
             else
             {
                 // all inputs identical: compute it only once
-                batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.Op(), vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), Dictionary(f0.Attributes()));
+                batchedOp = PrimitiveFunction::RawPrimitiveFunction(f0.m_op, vector<Variable>(f0.m_inputs), f0.m_outputs[0].Shape(), Dictionary(f0.Attributes()));
 #ifdef LOG_DETAILS
                 batchedOp->m_uid = L"." + f0.Uid();
 #endif
@@ -899,7 +899,7 @@ public:
         if (f.m_pendingInputs != -1) // already visited
             return;
 
-        fail_if(f.Op() == PrimitiveOpType::StopGradient, "unexpectedly encountered a StopGradient, which should have propagated m_needsGradient=false upwards");
+        fail_if(f.m_op == PrimitiveOpType::StopGradient, "unexpectedly encountered a StopGradient, which should have propagated m_needsGradient=false upwards");
 
         // we are now in a PrimitiveFunction that should backprop its gradient
         // TODO: implement short-circuiting here
@@ -967,7 +967,7 @@ public:
         fail_if(f->m_outputs.size() != 1, "for now only functions with a single output are supported"); // (needs some more plumbing to fix this)
         // backprop into Times' matrix argument
         // We only collect matrix products with fully matching dimensions.
-        if (f->Op() == PrimitiveOpType::Times && index == 0)
+        if (f->m_op == PrimitiveOpType::Times && index == 0)
         {
             // BUGBUG: Finish this. Dimensions must match!
             //if (m_matrixWeightConsumers.empty() ||
@@ -978,7 +978,7 @@ public:
             return;
         }
         // backprop into either of Plus' arguments
-        //if (f->Op() == PrimitiveOpType::Plus)
+        //if (f->m_op == PrimitiveOpType::Plus)
         //    return m_summandConsumers;
         // all other
         m_otherConsumers.push_back(c);
@@ -1022,7 +1022,7 @@ other_ops              = rest
         auto input1Value    = GatherBatchInArena(m_matrixDataInput1s); // TODO: we can further factor this and pass a lambda
         auto outputGradient = GatherBatchInArena(m_matrixDataGradients);
         let beta = LazilyCreateLazilyIndexedGradient(input0);
-        CNTK::BackpropTo(outputGradient.get(), /*index=*/0, f0.Op(), f0.m_attributes, /*outputValue=*/nullptr, { nullptr, input1Value.get() }, input0.m_dataFields->m_gradient, beta);
+        CNTK::BackpropTo(outputGradient.get(), /*index=*/0, f0.m_op, f0.m_attributes, /*outputValue=*/nullptr, { nullptr, input1Value.get() }, input0.m_dataFields->m_gradient, beta);
 
         m_matrixDataInput1s.clear(); // move this into lambda
         m_matrixDataGradients.clear();
@@ -1145,7 +1145,7 @@ other_ops              = rest
         // If the input is a lazyIndex, then the gradient is a view into the lazy source.
         let beta = LazilyCreateLazilyIndexedGradient(input);
         // backprop into the input
-        PrimitiveFunction::BackpropTo(outputGradient, index, f->Op(), f->m_attributes, outputValue, m_inputValuesBufferRaw, fields.m_gradient, beta, *f);
+        PrimitiveFunction::BackpropTo(outputGradient, index, f->m_op, f->m_attributes, outputValue, m_inputValuesBufferRaw, fields.m_gradient, beta, *f);
         stats.numBatchedBackpropToCalls++;  // stats
     }
 
@@ -1246,7 +1246,7 @@ public:
 // Computes lazily the value of a node. Does nothing if called again.
 NDArrayViewPtr PrimitiveFunction::BatchedForward() const
 {
-    auto autoBatcher = Variable::Memoize();
+    auto autoBatcher = Variable::AutoBatch();
     return autoBatcher.BatchedForward(m_outputs[0]);
 }
 
@@ -1254,8 +1254,27 @@ NDArrayViewPtr PrimitiveFunction::BatchedForward() const
 // TODO: CNTK grad() allows to pass multiple roots. Does that ever make sense in this context?
 void PrimitiveFunction::BatchedBackward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const
 {
-    auto autoBatcher = Variable::Memoize(); // has some internal state
+    auto autoBatcher = Variable::AutoBatch(); // has some internal state
     autoBatcher.BatchedBackward(m_outputs[0], gradients);
+}
+
+// non-batched version of BatchedForward()
+// This is actually not used except as a fallback for debugging.
+void PrimitiveFunction::MemoizeKnowableValue() const
+{
+    if (m_outputs.size() != 1)
+        LogicError("Variable '%S' Value(): Only Variables with one output can compute their Value for now.", AsString().c_str());
+    const auto& output = m_outputs[0];
+    if (output.m_dataFields->m_value) // already done
+        return;
+    // get the input values (recursively compute them if needed)
+    if (m_inputs.empty())
+        LogicError("Variable '%S' Value(): Only Variables with input arguments can compute their Value.", AsString().c_str());
+    vector<NDArrayViewPtr> args(m_inputs.size());
+    for (size_t i = 0; i < args.size(); i++)
+        args[i] = m_inputs[i].Value();
+    NDArrayViewPtr out;
+    output.m_dataFields->m_value = move(ComputeKnowableValue(m_op, args, m_attributes, output.Shape(), move(out), *this));
 }
 
 } // namespace CNTK

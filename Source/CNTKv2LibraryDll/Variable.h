@@ -14,7 +14,7 @@ namespace CNTK
     struct VariableFields final : public std::enable_shared_from_this<VariableFields>
     {
         friend class CompositeFunction;
-        friend class Memoize;
+        friend class AutoBatch;
 
         VariableKind m_varKind;
 

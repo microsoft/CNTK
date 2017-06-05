@@ -1778,7 +1778,6 @@ namespace CNTK
         friend class Trainer;
         friend class PrimitiveFunction;
         friend class Utils;
-        friend class Memoize;
         friend struct VariableFields;
 
         template <typename T>
@@ -1909,7 +1908,7 @@ namespace CNTK
         ///
         CNTK_API void Backward(std::unordered_map<Parameter, NDArrayViewPtr>& gradients) const;
     protected:
-        class Memoize;
+        class AutoBatch;
     protected:
 #ifdef SWIGPYTHON
     public:
@@ -3038,7 +3037,7 @@ namespace CNTK
         friend class BlockFunction;
         friend class UDFUtils;
         friend class Trainer;
-        friend class Variable::Memoize;
+        friend class Variable::AutoBatch;
 
         friend Variable GetCorrespondingOutputVariableFromClone(const Variable&, const FunctionPtr&, const FunctionPtr&);
         friend bool Internal::IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName);
@@ -3578,9 +3577,6 @@ namespace CNTK
                                  std::unordered_map<const Function*, FunctionPtr>& cloneMap,
                                  std::unordered_map<Variable, Variable>& leafVariablesCloneMap,
                                  std::unordered_map<Variable, Variable>& placeholderReplacements);
-
-        // TODO: remove this from Function if possible
-        CNTK_API virtual PrimitiveOpType Op() const { NOT_IMPLEMENTED; }
 
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;

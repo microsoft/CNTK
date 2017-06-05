@@ -1291,22 +1291,4 @@ namespace CNTK
         m_attributes[AttributeNameRngSeed] = seed;
         m_dirtyAttributes.insert(AttributeNameRngSeed);
     }
-
-    // note: This is actually not used except as a fallback for debugging--let's inline this
-    void PrimitiveFunction::MemoizeKnowableValue() const
-    {
-        if (m_outputs.size() != 1)
-            LogicError("Variable '%S' Value(): Only Variables with one output can compute their Value for now.", AsString().c_str());
-        const auto& output = m_outputs[0];
-        if (output.m_dataFields->m_value) // already done
-            return;
-        // get the input values (recursively compute them if needed)
-        if (m_inputs.empty())
-            LogicError("Variable '%S' Value(): Only Variables with input arguments can compute their Value.", AsString().c_str());
-        vector<NDArrayViewPtr> args(m_inputs.size());
-        for (size_t i = 0; i < args.size(); i++)
-            args[i] = m_inputs[i].Value();
-        NDArrayViewPtr out;
-        output.m_dataFields->m_value = move(ComputeKnowableValue(m_op, args, m_attributes, output.Shape(), move(out), *this));
-    }
 }

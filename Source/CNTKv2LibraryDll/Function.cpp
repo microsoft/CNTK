@@ -291,7 +291,7 @@ namespace CNTK
         {
             auto p = (dynamic_cast<const PrimitiveFunction*>(this));
             if (p) // (this includes BlockFunction as well)
-                m_uid = GenerateUid(p->Op());
+                m_uid = GenerateUid(p->m_op);
             else // everything else is a composite
                 m_uid = Internal::GenerateUid(L"CompositeFunction");
         }
