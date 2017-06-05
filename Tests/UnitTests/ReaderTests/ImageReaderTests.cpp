@@ -150,7 +150,8 @@ BOOST_AUTO_TEST_CASE(Base64WithWriteIds)
         std::vector<std::wstring> additionalParameters
         {
             L"MapFile=\"$RootDir$/Base64WithStringIds_map.txt\"",
-            L"DeserializerType=\"Base64ImageDeserializer\""
+            L"DeserializerType=\"Base64ImageDeserializer\"",
+            L"useNumericSequenceKeys=false"
         };
 
         multiset<string> actualKeys;
@@ -539,7 +540,8 @@ BOOST_AUTO_TEST_CASE(ImageReaderNoMatchingIds)
             true,
             { L"MapFile=\"$RootDir$/Base64WithStringIds_map.txt\"",
               L"SecondMapFile=\"$RootDir$/Base64WithStringIdsAnother_map.txt\"",
-              L"Deserializer=\"Base64ImageDeserializer\""}),
+              L"Deserializer=\"Base64ImageDeserializer\"",
+              L"useNumericSequenceKeys=false" }),
         std::runtime_error,
         [](const std::runtime_error& ex)
     {

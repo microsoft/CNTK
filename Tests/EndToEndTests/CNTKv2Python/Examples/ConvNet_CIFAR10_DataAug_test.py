@@ -16,9 +16,9 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python"))
 from prepare_test_data import prepare_CIFAR10_data
-from ConvNet_CIFAR10_DataAug import create_reader, create_convnet_cifar10_model, train_model
+from ConvNet_CIFAR10_DataAug import *
 
-TOLERANCE_ABSOLUTE = 1E-3
+TOLERANCE_ABSOLUTE = 1e-1
 
 def test_cifar_convnet_error(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
@@ -33,42 +33,14 @@ def test_cifar_convnet_error(device_id):
     set_fixed_random_seed(1)
     force_deterministic_algorithms()
 
-    reader_train1 = create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
-    reader_test1  = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
-    model1 = create_convnet_cifar10_model(num_classes=10)
-    train_loss1 = train_model(reader_train1, reader_test1, model1, epoch_size=128, max_epochs=1)
+    reader_train = create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
+    model = create_convnet_cifar10_model(num_classes=10)
+    model.update_signature((num_channels, image_height, image_width))
+    criterion = create_criterion_function(model, normalize=lambda x: x / 256)
+    train_loss, metric = train_model(reader_train, model, criterion, epoch_size=128, max_epochs=5)
 
-#    reader_train2 = create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
-#    reader_test2  = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
-#    model2 = create_convnet_cifar10_model(num_classes=10)
-#    train_loss2 = train_model(reader_train2, reader_test2, model2, epoch_size=128, max_epochs=1)
-
-#    assert np.allclose(train_loss1, train_loss2, atol=TOLERANCE_ABSOLUTE)
-    
-# We are removing tolerance in error because running small epoch size has huge variance in accuracy. Will add
-# tolerance back once convolution operator is determinsitic. 
-    
-#    expected_test_error = 0.617
-
-#    assert np.allclose(train_loss1, expected_test_error,
-#                       atol=TOLERANCE_ABSOLUTE)
-
-    # enable this:
-    #reader_train = create_reader(data_path, 'train_map.txt', 'CIFAR-10_mean.xml', is_training=True)
-    #reader_test  = create_reader(data_path, 'test_map.txt',  'CIFAR-10_mean.xml', is_training=False)
-    #loss_avg, evaluation_avg = train_and_evaluate(reader_train, reader_test, model, max_epochs=1)
-    #print("-->", evaluation_avg, loss_avg)
-    #expected_avg = [5.47968, 1.5783466666030883]
-    #assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
-    #
-    ## save and load
-    #path = data_path + "/model.cmf"
-    #save_model(model, path)
-    #model = load_model(path)
-    #
-    ## test
-    #reader_test  = create_reader(data_path, 'test_map.txt', 'CIFAR-10_mean.xml', is_training=False)
-    #evaluate(reader_test, model)
+    expected_loss_metric = (2.2963, 0.9062)
+    assert np.allclose((train_loss, metric), expected_loss_metric, atol=TOLERANCE_ABSOLUTE)
 
 if __name__=='__main__':
     test_cifar_convnet_error(0)

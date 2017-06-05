@@ -35,6 +35,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         subversion \
         # For Kaldi's dependencies
         libapr1 libaprutil1 libltdl-dev libltdl7 libserf-1-1 libsigsegv2 libsvn1 m4 \
+        # For Java Bindings
+        openjdk-7-jdk \
         # For SWIG
         libpcre++-dev && \
     rm -rf /var/lib/apt/lists/*
@@ -130,7 +132,7 @@ RUN mv /bin/sh /bin/sh.orig && \
 RUN cd /root && \
     wget -q http://prdownloads.sourceforge.net/swig/swig-3.0.10.tar.gz -O - | tar xvfz - && \
     cd swig-3.0.10 && \
-    ./configure --without-java --without-perl5 && \
+    ./configure --without-perl5 && \
     make -j $(nproc) && \
     make install
 

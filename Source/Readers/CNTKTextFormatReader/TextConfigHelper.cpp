@@ -68,6 +68,7 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         stream.m_id = id++;
         stream.m_name = name;
         stream.m_sampleDimension = input2(L"dim");
+        stream.m_definesMbSize = input2(L"definesMBSize", false);
         string type = input2(L"format");
 
         if (AreEqualIgnoreCase(type, "dense"))

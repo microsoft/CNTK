@@ -31,7 +31,7 @@ class DeviceKind(Enum):
 
 class DeviceDescriptor(cntk_py.DeviceDescriptor):
     '''
-    Describes a device by an unique id and its type. If the device corresponds
+    Describes a device by a unique id and its type. If the device corresponds
     to a GPU its type is 1, otherwise, it is 0
     '''
 
@@ -40,7 +40,7 @@ class DeviceDescriptor(cntk_py.DeviceDescriptor):
         Returns id of device descriptor
 
         Returns:
-            `int`: id
+            int: id
         '''
         return super(DeviceDescriptor, self).id()
 
@@ -49,7 +49,7 @@ class DeviceDescriptor(cntk_py.DeviceDescriptor):
         Returns type of device descriptor. 1 if it is a GPU device or 0 if CPU.
 
         Returns:
-            `int`: type
+            int: type
         '''
         return super(DeviceDescriptor, self).type()
 
@@ -110,17 +110,6 @@ def use_default_device():
         default device
     '''
     return cntk_py.DeviceDescriptor.use_default_device()
-
-
-def set_default_device(new_default_device):
-    '''
-    See :func:`try_set_default_device`
-    '''
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-                  'DeviceDescriptor.try_set_default_device() instead.',
-                  DeprecationWarning)
-    return try_set_default_device(new_default_device, False)
 
 
 def try_set_default_device(new_default_device, acquire_device_lock=False):

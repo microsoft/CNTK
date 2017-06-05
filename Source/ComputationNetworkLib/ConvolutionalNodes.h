@@ -329,7 +329,8 @@ public:
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
 
-    virtual bool ImplementsGradientOverwriteOptimization() const override { return m_convEng->ImplementsGradientOverwriteOptimization(); }
+    // TODO: the check for NeedsDynamicValidation() is a temporary resolution and needs to be properly handled when we look at support for free dimension convolution inputs. 
+    virtual bool ImplementsGradientOverwriteOptimization() const override { return Base::NeedsDynamicValidation() ? false : m_convEng->ImplementsGradientOverwriteOptimization(); }
 
 public:
     void Save(File& fstream) const override

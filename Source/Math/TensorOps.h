@@ -64,6 +64,7 @@ OverloadUnaryMathFns(log1p);
     }
 
 // Because we compile with fast math the following produces nan for negative numbers raised to integer power.
+// To avoid this we define safepow_ further below.
 // Is there an nvcc pragma to disable fast math temporarily? Something like 
 // #pragma fast-math push
 // #pragma fast-math off
@@ -71,6 +72,24 @@ OverloadUnaryMathFns(log1p);
 // #pragma fast-math pop
 OverloadBinaryMathFns(pow);
 
+template<typename T>
+DECL T safepow_(T base, T exponent)        
+{
+    if (exponent == 0) 
+        return T(1);
+    if (base == 0)
+        return T(0);
+    else if (base > 0)
+        return pow_(base, exponent);
+    else 
+    {
+        int exp_as_int = static_cast<int>(exponent);
+        if (exponent != exp_as_int)
+            return T(NAN);
+        else
+            return pow_(fabs_(base), exponent) * (1 - 2 * (exp_as_int & 1));
+    }
+}                                    
 
 #pragma pop_macro("OverloadBinaryMathFns")
 
@@ -109,10 +128,30 @@ DECL ElemType Sigmoid(ElemType z)
 #endif
 }
 
+// Numerically stable Sigmoid, we can't remove the old one due to Speech dependency.
+template <class ElemType>
+DECL ElemType StableSigmoid(ElemType z)
+{
+    ElemType q = exp_(-fabs_(z));
+    ElemType numer;
+    if (z > 0) // q = exp(-z)
+        numer = 1;
+    else // q = exp(z)
+        numer = q;
+    return numer / (1 + q);
+}
+
 template <class ElemType>
 DECL ElemType SigmoidDerivative(ElemType z)
 {
     ElemType v = Sigmoid(z);
+    return v * (1 - v);
+}
+
+template <class ElemType>
+DECL ElemType StableSigmoidDerivative(ElemType z)
+{
+    ElemType v = StableSigmoid(z);
     return v * (1 - v);
 }
 
@@ -231,6 +270,7 @@ DefUnaryOp(Cosine, cos_(a));
 DefUnaryOp(Sin, sin_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
 DefUnaryOp(ExponentialLinearUnit, a >= 0 ? a : (exp_(a)-1));
+DefUnaryOp(StableSigmoid, StableSigmoid(a));
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
@@ -248,7 +288,7 @@ DefBinaryOp(Difference, a - b);
 DefBinaryOp(ElementwiseProduct, a* b);
 DefBinaryOp(ElementwiseQuotient, ClippedQuotient(a, b));
 DefBinaryOp(LogSum, LogAdd(a, b));
-DefBinaryOp(Pow, pow_(a, b));
+DefBinaryOp(Pow, safepow_(a, b));
 DefBinaryOp(Max, a > b ? a : b);
 DefBinaryOp(Min, a < b ? a : b);
 DefBinaryOp(Equal, a == b);
@@ -287,10 +327,10 @@ DefBinaryOp(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, b >
 DefTernaryOp(Cond, a ? b : c);
 DefTernaryOp(CopyIfEqual, a == b ? c : 0); // CopyIfEqual(a,b)(c) -- if a==b copy c, otherwise 0; used for gradient of clip, min, max, etc.
 DefTernaryOp(Clip, c < a ? a : (c > b ? b : c)); // Clip(min,max)(data) => a=min, b=max, c=data
-DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
+DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * StableSigmoid(c - b));
 DefTernaryOp(ElementwiseProductWithExpOfDiff, a * exp_(b - c));
 DefTernaryOp(ElementwiseProductWithQuotient, a * b * OpReciprocal(c));
-DefTernaryOp(ElementwiseProductWithPowExponentDerivative, a * b * OpLog(c));
+DefTernaryOp(ElementwiseProductWithPowExponentDerivative, c <= 0 ? 0 : a * b * log_(c)); // same behavior as other toolkits
 DefTernaryOp(ElementwiseProductWithPowBaseDerivative, a * c * OpPow(b, c - 1)); // Using the output of pow would be faster but it requires a quaternary op and users will likely only use pow in forward mode
 
 #pragma pop_macro("DefTernaryOp")

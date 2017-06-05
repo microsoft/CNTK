@@ -74,7 +74,7 @@ def train_and_test(s2smodel, train_reader, test_reader, block_size, num_quantiza
         checkpoint_config=CheckpointConfig(frequency = epoch_size,
                                            filename = os.path.join(model_path, "SequenceToSequence"),
                                            restore = False),
-        cv_config=CrossValidationConfig(source=test_reader, mb_size=minibatch_size)
+        cv_config=CrossValidationConfig(test_reader, minibatch_size=minibatch_size)
     ).train()
 
 def sequence_to_sequence_translator(train_data, test_data, epoch_size=908241, num_quantization_bits=default_quantization_bits, block_size=3200, warm_up=0, minibatch_size=72, max_epochs=10, randomize_data=False, log_to_file=None, num_mbs_per_log=10, gen_heartbeat=False):
@@ -136,17 +136,16 @@ if __name__ == '__main__':
     train_data = os.path.join(data_path, 'cmudict-0.7b.train-dev-20-21.ctf')
     test_data = os.path.join(data_path, 'cmudict-0.7b.test.ctf')
 
-    try:
-        sequence_to_sequence_translator(train_data, test_data,
-                                        epoch_size=args['epoch_size'],
-                                        num_quantization_bits=args['quantized_bits'],
-                                        block_size=args['block_samples'],
-                                        warm_up=args['distributed_after'],
-                                        minibatch_size= args['minibatch_size'],
-                                        max_epochs=args['epochs'],
-                                        randomize_data=args['randomize_data'],
-                                        log_to_file=args['logdir'],
-                                        num_mbs_per_log=10)
-
-    finally:
-        Communicator.finalize()
+    
+    sequence_to_sequence_translator(train_data, test_data,
+                                    epoch_size=args['epoch_size'],
+                                    num_quantization_bits=args['quantized_bits'],
+                                    block_size=args['block_samples'],
+                                    warm_up=args['distributed_after'],
+                                    minibatch_size= args['minibatch_size'],
+                                    max_epochs=args['epochs'],
+                                    randomize_data=args['randomize_data'],
+                                    log_to_file=args['logdir'],
+                                    num_mbs_per_log=10)
+    # Must call MPI finalize when process exit without exceptions
+    Communicator.finalize()
