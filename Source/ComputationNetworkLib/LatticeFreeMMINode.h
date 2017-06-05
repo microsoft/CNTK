@@ -63,20 +63,20 @@ class LatticeFreeMMINode : public ComputationNodeNonLooping /*ComputationNode*/<
     
 public:
     LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_squashingFactor(1.0), m_alignmentWindow(0), m_ceweight(0), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(0)
+        : Base(deviceId, name), m_squashingFactor(1.0), m_alignmentWindow(0), m_ceweight(0), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(0), m_denWeight(1)
     {
         InitMatrixes();
     }
 
-    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const int alignmentWindow, const ElemType ceweight, const ElemType boosted)
-        : Base(deviceId, name), m_squashingFactor(squashingFactor), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(boosted)
+    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const int alignmentWindow, const ElemType ceweight, const ElemType boosted, const ElemType denWeight)
+        : Base(deviceId, name), m_squashingFactor(squashingFactor), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(boosted), m_denWeight(denWeight)
     {
         InitMatrixes();
         InitializeFromTfstFiles(fstFilePath, smapFilePath);
     }
 
     LatticeFreeMMINode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"squashingFactor"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"boosted"))
+        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"squashingFactor"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"boosted"), configp->Get(L"denWeight"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -213,7 +213,18 @@ public:
         (*m_likelihoods) += (ElemType)1e-15;
 
         double logNumeratorWithCE = CalculateNumeratorsWithCE(*inputLabel, nf);
-        double logDenominator = ForwardBackwardProcessForDenorminator(nf, *m_posteriorsDen, *m_tmap, *m_tmapTranspose, *m_smap, *m_smapTranspose);
+        double logDenominator=0;
+        if (m_denWeight)
+        {
+            logDenominator = ForwardBackwardProcessForDenorminator(nf, *m_posteriorsDen, *m_tmap, *m_tmapTranspose, *m_smap, *m_smapTranspose);
+            m_posteriorsDen->Scale(m_denWeight, *m_posteriorsDen);
+        }
+        else
+        {
+            m_posteriorsDen->Resize(m_smap->GetNumRows(), nf);
+            m_posteriorsDen->SetValue(0.0);
+        }
+
         
         // Got the final numbers
         m_savedCriterionValue = (1 - m_ceweight) * logDenominator - logNumeratorWithCE;
@@ -264,6 +275,7 @@ public:
             node->m_alignmentWindow = m_alignmentWindow;
             node->m_ceweight = m_ceweight;
             node->m_boosted = m_boosted;            
+            node->m_denWeight = m_denWeight;            
             node->m_fsa = m_fsa;
             node->m_tmap->SetValue(*m_tmap);
             node->m_smap->SetValue(*m_smap);
@@ -363,6 +375,7 @@ public:
         fstream << m_alignmentWindow;
         fstream << m_ceweight;
         fstream << m_boosted;       
+        fstream << m_denWeight;       
         fstream << *m_tmap;
         fstream << *m_smap;
         SaveFsa(fstream);
@@ -383,7 +396,8 @@ public:
         fstream >> m_alignmentWindow;
         fstream >> m_ceweight;
         fstream >> m_boosted;
-        
+        fstream >> m_denWeight;
+
         LoadMatrix(fstream, m_tmap);
         LoadMatrix(fstream, m_smap);
         //m_tmapTranspose = make_shared<Matrix<ElemType>>(m_tmap->Transpose(), m_deviceId);
@@ -398,7 +412,7 @@ public:
             Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
             char str[4096];
-            sprintf(str, "squashingFactor=%f alignmentWindow=%d ceweight=%f boosted=%f", this->m_squashingFactor, this->m_alignmentWindow, this->m_ceweight, this->m_boosted);
+            sprintf(str, "squashingFactor=%f alignmentWindow=%d ceweight=%f boosted=%f denWeight=%f", this->m_squashingFactor, this->m_alignmentWindow, this->m_ceweight, this->m_boosted, this->m_denWeight);
             fstream << string(str);
         }
 
@@ -493,6 +507,7 @@ protected:
     int m_alignmentWindow;
     ElemType m_ceweight;
     ElemType m_boosted; 
+	ElemType m_denWeight; 
     vector<map<int, pair<int, ElemType>>> m_fsa;
     shared_ptr<Matrix<ElemType>> m_tmap;
     shared_ptr<Matrix<ElemType>> m_smap;

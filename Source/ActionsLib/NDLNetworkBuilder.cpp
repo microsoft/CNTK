@@ -619,6 +619,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             int alignmentWindow = node->GetOptionalParameter("alignmentWindow", "0");
             ElemType ceweight = node->GetOptionalParameter("ceweight", "0.0");
             ElemType boosted = node->GetOptionalParameter("boosted", "0.0");            
+            ElemType denWeight = node->GetOptionalParameter("denWeight", "1.0");            
             std::string fstFilePath = node->GetOptionalParameter("fstFilePath", "");
             if (fstFilePath == "")
                 RuntimeError("fstFilePath must be set");
@@ -637,7 +638,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             if (!fexists(smapFilePath))
                 RuntimeError("File pointed to by smapFilePath does not exist: %s", smapFilePath.c_str());
 
-            nodePtr = builder.LatticeFreeMMI(nullptr, nullptr, nullptr, msra::strfun::utf16(fstFilePath), msra::strfun::utf16(smapFilePath), squashingFactor, alignmentWindow, ceweight, boosted, name);
+            nodePtr = builder.LatticeFreeMMI(nullptr, nullptr, nullptr, msra::strfun::utf16(fstFilePath), msra::strfun::utf16(smapFilePath), squashingFactor, alignmentWindow, ceweight, boosted, denWeight, name);
         }
     }
     else if (cnNodeType == OperationNameOf(CropNode))
