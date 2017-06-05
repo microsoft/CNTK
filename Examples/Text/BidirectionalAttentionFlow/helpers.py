@@ -10,10 +10,10 @@ def OptimizedRnnStack(hidden_dim, num_layers=1, recurrent_op='lstm', bidirection
         return func
     else:
         def func(x):
-            return C.splice(
-                        C.layers.Recurrence(C.layers.LSTM(hidden_dim))(x),
-                        C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=True)(x),
-                        name=name)
+            with C.default_options(enable_self_stabilization=True):
+                return C.splice(C.layers.Recurrence(C.layers.LSTM(hidden_dim))(x),
+                                C.layers.Recurrence(C.layers.LSTM(hidden_dim), go_backwards=True)(x),
+                                name=name)
         return func
 
 def HighwayBlock(dim, # ideally this should be inferred, but times does not allow inferred x inferred parameter for now

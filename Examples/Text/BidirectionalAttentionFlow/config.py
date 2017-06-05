@@ -12,7 +12,7 @@ model_config = {
     'dropout'        	: 0.2,
     'highway_layers' 	: 2,
     'two_step'          : True,
-    'use_cudnn'         : True,
+    'use_cudnn'         : False, # prefer self stabilizer, True means you have to use whatever flavor cudnn supports
 }
 
 training_config = {
