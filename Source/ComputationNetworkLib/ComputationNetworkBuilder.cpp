@@ -77,7 +77,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(NDCG1EvalNode))                        return New<NDCG1EvalNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(KhatriRaoProductNode))                 return New<KhatriRaoProductNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LatticeFreeMMINode))                   return New<LatticeFreeMMINode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(LatticeFreeMMINodeNegStream))          return New<LatticeFreeMMINodeNegStream<ElemType>>(forward<_Types>(_Args)...);	
+    else if (nodeType == OperationNameOf(LatticeFreeMMINodeNegStream))          return New<LatticeFreeMMINodeNegStream<ElemType>>(forward<_Types>(_Args)...);   
     else if (nodeType == OperationNameOf(LessEqualNode))                        return New<LessEqualNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LessNode))                             return New<LessNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LogNode))                              return New<LogNode<ElemType>>(forward<_Types>(_Args)...);

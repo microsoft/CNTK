@@ -263,7 +263,7 @@ public:
             node->m_squashingFactor = m_squashingFactor;
             node->m_alignmentWindow = m_alignmentWindow;
             node->m_ceweight = m_ceweight;
-            node->m_boosted = m_boosted;			
+            node->m_boosted = m_boosted;            
             node->m_fsa = m_fsa;
             node->m_tmap->SetValue(*m_tmap);
             node->m_smap->SetValue(*m_smap);
@@ -362,7 +362,7 @@ public:
         fstream << m_squashingFactor;
         fstream << m_alignmentWindow;
         fstream << m_ceweight;
-        fstream << m_boosted;		
+        fstream << m_boosted;       
         fstream << *m_tmap;
         fstream << *m_smap;
         SaveFsa(fstream);
@@ -383,7 +383,7 @@ public:
         fstream >> m_alignmentWindow;
         fstream >> m_ceweight;
         fstream >> m_boosted;
-		
+        
         LoadMatrix(fstream, m_tmap);
         LoadMatrix(fstream, m_smap);
         //m_tmapTranspose = make_shared<Matrix<ElemType>>(m_tmap->Transpose(), m_deviceId);
@@ -492,7 +492,7 @@ protected:
     ElemType m_squashingFactor;
     int m_alignmentWindow;
     ElemType m_ceweight;
-    ElemType m_boosted;	
+    ElemType m_boosted; 
     vector<map<int, pair<int, ElemType>>> m_fsa;
     shared_ptr<Matrix<ElemType>> m_tmap;
     shared_ptr<Matrix<ElemType>> m_smap;
@@ -535,7 +535,7 @@ class LatticeFreeMMINodeNegStream : public ComputationNodeNonLooping /*Computati
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName()
     {
-		return L"LatticeFreeMMINegStream";
+        return L"LatticeFreeMMINegStream";
     }
 
     void InitMatrixes()
@@ -593,7 +593,7 @@ public:
         if (inputIndex == 1)
         {
             FrameRange fr(Input(0)->GetMBLayout());
-            auto gradient = Input(1)->GradientFor(fr);	//output
+            auto gradient = Input(1)->GradientFor(fr);  //output
 
             if (m_totalFrameNumberOfCurrentMinibatch == 0 || m_frameNumberOfCurrentMinibatch == m_totalFrameNumberOfCurrentMinibatch)
             {
@@ -661,11 +661,11 @@ public:
         auto inputValue = &inputV;
         auto inputLabel = &inputL;
 
-		auto inputNegL=Input(3)->ValueFor(fr);
+        auto inputNegL=Input(3)->ValueFor(fr);
         auto inputNegLabel=&inputNegL;
 
         size_t nf = inputValue->GetNumCols();
-		assert(nf==inputNegLabel->GetNumCols());
+        assert(nf==inputNegLabel->GetNumCols());
         if (m_totalFrameNumberOfCurrentMinibatch > 0)
         {
             if (m_firstPassFinished) // Second pass of forward propergation
@@ -680,12 +680,12 @@ public:
                 size_t numRows = inputValue->GetNumRows();
                 m_mbValues->Resize(numRows, m_totalFrameNumberOfCurrentMinibatch);
                 m_mbLabels->Resize(numRows, m_totalFrameNumberOfCurrentMinibatch);
-				m_mbNegLabels->Resize(numRows, m_totalFrameNumberOfCurrentMinibatch);				
+                m_mbNegLabels->Resize(numRows, m_totalFrameNumberOfCurrentMinibatch);               
             }
 
             m_mbValues->SetColumnSlice(*inputValue, m_frameNumberOfCurrentMinibatch, nf);
             m_mbLabels->SetColumnSlice(*inputLabel, m_frameNumberOfCurrentMinibatch, nf);
-            m_mbNegLabels->SetColumnSlice(*inputNegLabel, m_frameNumberOfCurrentMinibatch, nf);			
+            m_mbNegLabels->SetColumnSlice(*inputNegLabel, m_frameNumberOfCurrentMinibatch, nf);         
             m_frameNumberOfCurrentMinibatch += nf;
 
             if (m_frameNumberOfCurrentMinibatch < m_totalFrameNumberOfCurrentMinibatch)
@@ -701,7 +701,7 @@ public:
             m_firstPassFinished = true;
             inputValue = m_mbValues.get();
             inputLabel = m_mbLabels.get();
-			inputNegLabel = m_mbNegLabels.get();			
+            inputNegLabel = m_mbNegLabels.get();            
             nf = m_totalFrameNumberOfCurrentMinibatch;
         }
 
@@ -770,7 +770,7 @@ public:
             node->m_squashingFactor = m_squashingFactor;
             node->m_alignmentWindow = m_alignmentWindow;
             node->m_ceweight = m_ceweight;
-            node->m_boosted = m_boosted;		
+            node->m_boosted = m_boosted;        
             node->m_negLabels=m_negLabels;
             node->m_fsa = m_fsa;
             node->m_tmap->SetValue(*m_tmap);
@@ -870,7 +870,7 @@ public:
         fstream << m_squashingFactor;
         fstream << m_alignmentWindow;
         fstream << m_ceweight;
-        fstream << m_boosted;		
+        fstream << m_boosted;       
         fstream << *m_tmap;
         fstream << *m_smap;
         SaveFsa(fstream);
@@ -891,7 +891,7 @@ public:
         fstream >> m_alignmentWindow;
         fstream >> m_ceweight;
         fstream >> m_boosted;
-		
+        
         LoadMatrix(fstream, m_tmap);
         LoadMatrix(fstream, m_smap);
         //m_tmapTranspose = make_shared<Matrix<ElemType>>(m_tmap->Transpose(), m_deviceId);
@@ -1000,7 +1000,7 @@ protected:
     ElemType m_squashingFactor;
     int m_alignmentWindow;
     ElemType m_ceweight;
-    ElemType m_boosted;	
+    ElemType m_boosted; 
     vector<map<int, pair<int, ElemType>>> m_fsa;
     shared_ptr<Matrix<ElemType>> m_tmap;
     shared_ptr<Matrix<ElemType>> m_smap;
@@ -1018,8 +1018,8 @@ protected:
 
     shared_ptr<Matrix<ElemType>> m_mbValues;
     shared_ptr<Matrix<ElemType>> m_mbLabels;
-	int m_negLabels;
-    shared_ptr<Matrix<ElemType>> m_mbNegLabels;	
+    int m_negLabels;
+    shared_ptr<Matrix<ElemType>> m_mbNegLabels; 
     shared_ptr<Matrix<ElemType>> m_mbGradients;
 
     // For CE

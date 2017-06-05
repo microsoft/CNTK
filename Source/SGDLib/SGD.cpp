@@ -1245,7 +1245,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 {
                     lfMMINode->SetTotalFrameNumberofCurrentMinibatch(actualMBSize);
                 }
-				if (lfMMINodeNegStream)
+                if (lfMMINodeNegStream)
                 {
                     lfMMINodeNegStream->SetTotalFrameNumberofCurrentMinibatch(actualMBSize);
                 }

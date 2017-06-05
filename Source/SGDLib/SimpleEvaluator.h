@@ -162,7 +162,7 @@ public:
                     if (lfMMINodeNegStream)
                     {
                         lfMMINodeNegStream->SetTotalFrameNumberofCurrentMinibatch(actualMBSize);
-                    }					
+                    }                   
                 }
 
                 size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);

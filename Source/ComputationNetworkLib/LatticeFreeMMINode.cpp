@@ -289,12 +289,12 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
     m_posteriorsNum->Resize(nsenones, nf);
     m_posteriorsNum->SetValue(nsenones, nf, m_deviceId, &m_posteriorsAtHost[0]);
 
-	if (m_boosted != 0)
-	{
-		for (int i = 0; i < bufferSize; i++) m_likelihoodBuffer[i] += m_boosted;
-	    for (int i = 0+1; i < nf; i++)
-	    {
-	       
+    if (m_boosted != 0)
+    {
+        for (int i = 0; i < bufferSize; i++) m_likelihoodBuffer[i] += m_boosted;
+        for (int i = 0+1; i < nf; i++)
+        {
+           
             for (int j = 0; j <= i, j < nstates; j++)
             {
                 if (i < m_senoneSequence[j].Begin || i > m_senoneSequence[j].End) continue;
@@ -304,11 +304,11 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
                 assert(m_fsa[m_stateSequence[j - 1]][currentSenone].second != 0);
                 m_likelihoodBuffer[i * nsenones + currentSenone]-=m_boosted;
             }
-	    }
-		for (int i = 0; i < bufferSize; i++) m_likelihoodBuffer[i] = exp(m_likelihoodBuffer[i]);
-		m_likelihoods->SetValue(nsenones, nf, m_deviceId, &m_likelihoodBuffer[0]);
-	}
-	
+        }
+        for (int i = 0; i < bufferSize; i++) m_likelihoodBuffer[i] = exp(m_likelihoodBuffer[i]);
+        m_likelihoods->SetValue(nsenones, nf, m_deviceId, &m_likelihoodBuffer[0]);
+    }
+    
     // return the forward path score
     if (m_ceweight == 0)
         return logForwardScore;
@@ -696,22 +696,22 @@ double LatticeFreeMMINodeNegStream<ElemType>::CalculateNumeratorsWithCE(const Ma
     m_posteriorsNum->Resize(nsenones, nf);
     m_posteriorsNum->SetValue(nsenones, nf, m_deviceId, &m_posteriorsAtHost[0]);
 
-	if (m_negLabels)
-	{
-		assert(m_boosted);
-		GetLabelSequence(negLabelMatrix);
-	    for (int i = 0+1; i < nf; i++)
-	    {	       
-			int currentSenone = (int)m_labelVector[i];
-            m_likelihoodBuffer[i * nsenones + currentSenone]+=m_boosted;	//twice boosted the negtive stream
-	    }
-	}
-	if (m_boosted != 0)
-	{
-		for (int i = 0; i < bufferSize; i++) m_likelihoodBuffer[i] += m_boosted;
-	    for (int i = 0+1; i < nf; i++)
-	    {
-	       
+    if (m_negLabels)
+    {
+        assert(m_boosted);
+        GetLabelSequence(negLabelMatrix);
+        for (int i = 0+1; i < nf; i++)
+        {          
+            int currentSenone = (int)m_labelVector[i];
+            m_likelihoodBuffer[i * nsenones + currentSenone]+=m_boosted;    //twice boosted the negtive stream
+        }
+    }
+    if (m_boosted != 0)
+    {
+        for (int i = 0; i < bufferSize; i++) m_likelihoodBuffer[i] += m_boosted;
+        for (int i = 0+1; i < nf; i++)
+        {
+           
             for (int j = 0; j <= i, j < nstates; j++)
             {
                 if (i < m_senoneSequence[j].Begin || i > m_senoneSequence[j].End) continue;
@@ -721,11 +721,11 @@ double LatticeFreeMMINodeNegStream<ElemType>::CalculateNumeratorsWithCE(const Ma
                 assert(m_fsa[m_stateSequence[j - 1]][currentSenone].second != 0);
                 m_likelihoodBuffer[i * nsenones + currentSenone]-=m_boosted;
             }
-	    }
-		for (int i = 0; i < bufferSize; i++) m_likelihoodBuffer[i] = exp(m_likelihoodBuffer[i]);
-		m_likelihoods->SetValue(nsenones, nf, m_deviceId, &m_likelihoodBuffer[0]);
-	}
-	
+        }
+        for (int i = 0; i < bufferSize; i++) m_likelihoodBuffer[i] = exp(m_likelihoodBuffer[i]);
+        m_likelihoods->SetValue(nsenones, nf, m_deviceId, &m_likelihoodBuffer[0]);
+    }
+    
     // return the forward path score
     if (m_ceweight == 0)
         return logForwardScore;

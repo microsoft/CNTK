@@ -577,7 +577,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             ElemType squashingFactor = node->GetOptionalParameter("squashingFactor", "1.0");
             int alignmentWindow = node->GetOptionalParameter("alignmentWindow", "0");
             ElemType ceweight = node->GetOptionalParameter("ceweight", "0.0");
-            ElemType boosted = node->GetOptionalParameter("boosted", "0.0");			
+            ElemType boosted = node->GetOptionalParameter("boosted", "0.0");            
             std::string fstFilePath = node->GetOptionalParameter("fstFilePath", "");
             if (fstFilePath == "")
                 RuntimeError("fstFilePath must be set");
@@ -618,7 +618,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             ElemType squashingFactor = node->GetOptionalParameter("squashingFactor", "1.0");
             int alignmentWindow = node->GetOptionalParameter("alignmentWindow", "0");
             ElemType ceweight = node->GetOptionalParameter("ceweight", "0.0");
-            ElemType boosted = node->GetOptionalParameter("boosted", "0.0");			
+            ElemType boosted = node->GetOptionalParameter("boosted", "0.0");            
             std::string fstFilePath = node->GetOptionalParameter("fstFilePath", "");
             if (fstFilePath == "")
                 RuntimeError("fstFilePath must be set");
