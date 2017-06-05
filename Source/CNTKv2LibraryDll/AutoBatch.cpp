@@ -1167,13 +1167,14 @@ public:
         let* outputValue    = outputFields.m_value   .get();
         let* outputGradient = outputFields.m_gradient.get();
 
-        // TODO: use BorrowBuffer()
-        m_inputValuesBufferRaw.clear(); // input values
-        for (let& input1 : inputs)
+        let numInputs = inputs.size();
+        auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, numInputs);
+        for (size_t i = 0; i < numInputs; i++)
         {
+            let& input1 = inputs[i];
             let& fields = *input1.m_dataFields;
             fail_if(!fields.m_value, "unexpectedly ran into a function that has no m_value yet??");
-            m_inputValuesBufferRaw.push_back(fields.m_value.get());
+            inputValues[i] = fields.m_value.get();
         }
 
         // compute gradients for the desired input
@@ -1181,8 +1182,8 @@ public:
         // If the input is a lazyIndex, then the gradient is a view into the lazy source.
         let beta = LazilyCreateLazilyIndexedGradient(input);
         // backprop into the input
-        PrimitiveFunction::BackpropTo(outputGradient, index, f->m_op, f->m_attributes, outputValue, m_inputValuesBufferRaw, fields.m_gradient, beta, *f);
-        stats.numBatchedBackpropToCalls++;  // stats
+        PrimitiveFunction::BackpropTo(outputGradient, index, f->m_op, f->m_attributes, outputValue, inputValues, fields.m_gradient, beta, *f);
+        stats.numBatchedBackpropToCalls++;
     }
 
     // helper to verify that the tree is clean
