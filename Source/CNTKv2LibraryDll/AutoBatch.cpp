@@ -20,7 +20,7 @@
 #include <vector>
 #include <string>
 
-#define LOG_DETAILS   // if defined, log all forward and backward operations
+#undef LOG_DETAILS   // if defined, log all forward and backward operations
 #define LOG_STATS     // if defined, log statistics (#operations)
 #undef NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
@@ -916,24 +916,37 @@ public:
     // The vectors for building the lists are class members so that we reuse the malloc.
     vector<pair<PrimitiveFunction*, size_t>> m_placeItemConsumers;    // IndexLastAxis() op  --do we have those actually? Or already short-circuited?
     vector<pair<PrimitiveFunction*, size_t>> m_matrixWeightConsumers;
-    vector<pair<PrimitiveFunction*, size_t>> m_reduceSumConsumers;
+    vector<pair<PrimitiveFunction*, size_t>> m_summandConsumers;
     vector<pair<PrimitiveFunction*, size_t>> m_otherConsumers;
-    __declspec(noinline) vector<pair<PrimitiveFunction*, size_t>>& DetermineBucket (const pair<PrimitiveFunction*, size_t>& c)
+    __declspec(noinline) void DetermineAndAddToBucket (const pair<PrimitiveFunction*, size_t>& c)
     {
         let* f = c.first;
         let index = c.second;
         fail_if(f->m_outputs.size() != 1, "for now only functions with a single output are supported"); // (needs some more plumbing to fix this)
         // backprop into Times' matrix argument
+        // We only collect matrix products with fully matching dimensions.
         if (f->Op() == PrimitiveOpType::Times && index == 0)
-            return m_matrixWeightConsumers;
+        {
+            // BUGBUG: Finish this. Dimensions must match!
+            //if (m_matrixWeightConsumers.empty() ||
+            //    (c.first->m_outputs[0].Shape() == m_matrixWeightConsumers.back().first->m_inputs[0].Shape() &&
+            //        c.first->m_outputs[1].Shape() == m_matrixWeightConsumers.back().first->m_inputs[1].Shape()
+            //        ))
+            m_matrixWeightConsumers.push_back(c);
+            return;
+        }
+        // backprop into either of Plus' arguments
+        //if (f->Op() == PrimitiveOpType::Plus)
+        //    return m_summandConsumers;
+        // all other
+        m_otherConsumers.push_back(c);
+
 /* port from the Python prototype where it makes sense:
 place_item_ops         = [arg for arg in args if arg.op is Variable._op_place_item]
 transpose_dot_item_ops = [arg for arg in args if arg.op is cntk.NDArrayView.transpose_dot]
 reduce_sum_item_ops    = [arg for arg in args if arg.op is cntk.NDArrayView.reduce_sum]
 other_ops              = rest
 */
-        // all other
-        return m_otherConsumers;
     };
 
     // backprop into weight parameter of a Times op (inputs[0])
@@ -975,11 +988,11 @@ other_ops              = rest
     }
 
     // compute a variable's outputs' gradient (var.m_gradient)
+    // This operates on the PrimitiveFunction(s) that use this var's output value--its "consumers".
     // A variable knows all of its consumers. This function back-propagates from all consumers
     // into the variable's m_gradient field.
     // A consumer is a specific input of a PrimitiveFunction, specified as (function pointer, input index).
-    // This operates on the xxx
-    // In the case of multiple consumers, the gradient xxx
+    // In the case of multiple consumers, the gradient is the sum.
     // This recursively traverses the graph upwards via the consumers chain.
     __declspec(noinline) void AggregateGradientFromAllConsumers(const Variable& var)
     {
@@ -996,7 +1009,7 @@ other_ops              = rest
 
         fields.m_visited = true;
 
-        // realize all consumers' outputs' gradients
+        // recursively realize all consumers' outputs' gradients
         for (let& output : c.first->m_outputs)
             AggregateGradientFromAllConsumers(output);
         for (auto& c : fields.m_consumers.second)
@@ -1018,11 +1031,23 @@ other_ops              = rest
         }
 
         // auto-batched path
+        // The forward prop has already batched data. However, for backprop, there can
+        // be more batching across the multiple consumer's backprop operations.
+
+        // At this point, we need to execute the BackpropTo() function for every
+        // consumer (function, input), and then sum up the result.
+        // The combination of the backprop functions and summing up their result
+        // may be batchable, as for the matrix product.
+
+        // Since a variable can be consumed by multiple different kinds of PrimitiveFunctions,
+        // which each have a different gradient computation, we need to separate them out.
+        // At present, we aim for weight gradients that are part of a matrix product
+        // or a bias addition.
         // First sort all consumer gradients according to their operation.
         fail_if(!m_otherConsumers.empty(), "consumer bucket lists unexpectedly not cleaned up");
-        DetermineBucket(c).push_back(c);
+        DetermineAndAddToBucket(c);
         for (auto& c : fields.m_consumers.second)
-            DetermineBucket(c).push_back(c);
+            DetermineAndAddToBucket(c);
 
         // matrix-weight bucket
         if (!m_matrixWeightConsumers.empty())
@@ -1030,6 +1055,9 @@ other_ops              = rest
             BackpropToMatrixWeight(m_matrixWeightConsumers);
             m_matrixWeightConsumers.clear();
         }
+
+        // summation bucket
+        // ...
 
         // others bucket
         for (auto& c : m_otherConsumers)
