@@ -216,10 +216,11 @@ namespace CNTK
     // Gradient must have been allocated to the correct shape already.
     // If beta == 0 then gradient can be uninitialized memory.
     // For now only defined for functions with 1 output.
-    /*static*/ void PrimitiveFunction::BackpropTo(const NDArrayView* outputGradient, size_t i,
-                           PrimitiveOpType primitiveOp, const Dictionary& attributes,
-                           const NDArrayView* outputValue, const vector<const NDArrayView*>& inputValues,
-                           const NDArrayViewPtr& gradient, double beta, const PrimitiveFunction& funcForErrMsg)
+    /*static*/ void PrimitiveFunction::BackpropTo(const NDArrayView* outputGradient,                         // incoming gradient from top...
+                              size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes,           // ...goes through this backprop function...
+                              const NDArrayView* outputValue, const vector<const NDArrayView*>& inputValues, // ...using these values from forward pass...
+                              const NDArrayViewPtr& gradient, double beta,                                   // ...into here. (Despite 'const', *gradient is the output.)
+                              const PrimitiveFunction& funcForErrMsg)
     {
     #if 0   // TODO: bring this back once we have gradient functions that do not support beta
         if (beta == 0) // TODO: limit this to those ops that do not support beta

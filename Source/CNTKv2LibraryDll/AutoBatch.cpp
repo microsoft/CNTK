@@ -823,7 +823,7 @@ public:
     // allocate memory for m_gradient
     // This lazily creates the m_gradient NDArrayView, which may live in a batched op.
     // Returns beta = 0 if gradient was newly created, otherwise 1
-    __declspec(noinline) double LazilyCreateLazilyIndexedGradient(const Variable& v)
+    double LazilyCreateLazilyIndexedGradient(const Variable& v)
     {
         auto& fields = *v.m_dataFields;
         // if gradient exists then return it
@@ -897,22 +897,6 @@ public:
 #else
         auto& f = *fields.m_ownerFunction.lock();
 #endif
-        //DetermineConsumersForBackward(f);
-//#if 1//ndef NO_BATCHED_BACKPROP
-//        if(fields.m_lazyIndex.first)
-//        {
-//            auto& f = *fields.m_lazyIndex.first;
-//            DetermineConsumersForBackward(f);
-//        }
-//        else
-//#endif
-//        {
-//            auto& f = *dynamic_pointer_cast<PrimitiveFunction>(fields.m_ownerFunction.lock());
-//            DetermineConsumersForBackward(f);
-//        }
-    //}
-    //void DetermineConsumersForBackward(PrimitiveFunction& f)
-    //{
         fail_if(f.m_pendingInputs == -2, "unexpectedly encountered a cyclic graph??"); // graph is cyclic??
 
         if (f.m_pendingInputs != -1) // already visited
@@ -958,16 +942,19 @@ public:
         f.m_pendingInputs = 0; // used as a visited flag
     }
 
-    // helper to batch an array of NDArrayViews of the same shape into a new axis
+    // helper to batch an array of NDArrayViews of the same rank along either the last or into a new axis
     // TODO: do this with a lambda so we can go straight into gatherBatchResultDims
     vector<size_t> gatherBatchResultDims;
-    NDArrayViewPtr GatherBatchInArena(const vector<NDArrayViewPtr>& inputs)
+    NDArrayViewPtr GatherBatchInArena(const vector<NDArrayViewPtr>& inputs, size_t axis, size_t batchDim)
     {
         let& input0 = *inputs[0];
         let& inputShape = input0.Shape().Dimensions();
         gatherBatchResultDims.assign(inputShape.begin(), inputShape.end());
-        let axis = gatherBatchResultDims.size();
-        gatherBatchResultDims.push_back(inputs.size());
+        fail_if(axis + 1 < gatherBatchResultDims.size(), "axis not trailing??");
+        if (axis == gatherBatchResultDims.size())
+            gatherBatchResultDims.push_back(inputs.size());
+        else
+            gatherBatchResultDims[axis] = batchDim;
         auto out = arena.NewNDArrayView(gatherBatchResultDims, input0.GetDataType(), input0.Device());
         return move(NDArrayView::GatherBatch(inputs, (int)axis, move(out)));
     }
@@ -985,12 +972,13 @@ public:
         let index = c.second;
         fail_if(f->m_outputs.size() != 1, "for now only functions with a single output are supported"); // (needs some more plumbing to fix this)
         // backprop into Times' matrix argument
+        // BUGBUG: This currently does not capture single time steps that backprop into the same matrix as a batch.
         let IsMatrixGradient0Batchable = [](const PrimitiveFunction& f, const PrimitiveFunction& g) -> bool
         {
-#if 1
+#if 0
             return false;
 #else
-            // we compute leftGrad = outGrad @ right^T
+            // we compute leftGrad += outGrad @ right^T
             let&   fOutShape = f.m_outputs[0].Shape().Dimensions();
             let&   gOutShape = g.m_outputs[0].Shape().Dimensions();
             let& fRightShape = f.m_inputs[1].Shape().Dimensions();
@@ -1001,18 +989,18 @@ public:
             let  rightRank = fRightShape.size();
             let gRightRank = gRightShape.size();
             let   leftRank =   leftShape.size();
-            fail_if(leftShape != g.m_inputs[0].Shape().Dimensions(), "IsMatrixGradient0Batchable: dimensions of matrix gradient don't match");
+            fail_if(leftShape != g.m_inputs[0].Shape().Dimensions(), "dimensions of matrix gradient don't match??");
             if (outRank != gOutRank || rightRank != gRightRank)
                 return false; // rank not matching: stop batching right here (we could do better)
             // the center 'reductionRank' dimensions get reduced over
             if (outRank + rightRank - leftRank != 2) // if 2 then we reduce over a single batch axis
                 return false; // this is not a batch gradient; back out
-            fail_if(fOutShape.back() != fRightShape.front() || gOutShape.back() != gRightShape.front(), "IsMatrixGradient0Batchable: inner dimensions of matrix gradient don't match");
+            fail_if(fOutShape.back() != fRightShape.back() || gOutShape.back() != gRightShape.back(), "inner dimensions of matrix gradient don't match??");
             // the two gradient ops match if all dimensions except for the batch dim match
             for (size_t k = 0; k < outRank - 1; k++) // check outGrad
                 if (fOutShape[k] != gOutShape[k])
                     return false;
-            for (size_t k = 1; k < rightRank; k++) // check right
+            for (size_t k = 0; k < rightRank - 1; k++) // check right
                 if (fRightShape[k] != gRightShape[k])
                     return false;
             // gradient is batchable
@@ -1035,33 +1023,47 @@ public:
     // This can be batched into a single matrix product.
     void BackpropToMatrixWeight(vector<pair<PrimitiveFunction*, size_t>>& consumers)
     {
-#if 1
+#if 0
         for (auto& c : consumers)
             BackpropTo(c.first, c.second);
 #else
         // We compute
-        //  leftGrad = sum_i outGrad_i @ right_i^T
-        //           = (concat_i outGrad_i) @ (concat_i right_i)^T
+        //  leftGrad += sum_i outGrad_i @ right_i^T
+        //            = (concat_i outGrad_i) @ (concat_i right_i)^T
         // where concat_i means to concatenate matrices along their trailing (batch) axis.
         // It has already been verified that all i have the same rank and dimensions except for a single reduction dimension.
-        // So concatenate outGrad and right
-        let batchSize = m_matrixWeightConsumers.size();
-        auto& m_timesOutGrads        = BorrowBuffer(m_inputValuesBuffer,     batchSize);
-        auto& m_timesDataRightInputs = BorrowBuffer(m_outputGradientsBuffer, batchSize);
+
+        // batch all outGrads, and batch all right inputs
+        let numBatchItems = m_matrixWeightConsumers.size();
+        auto& timesOutGrads        = BorrowBuffer(m_inputValuesBuffer,     numBatchItems);
+        auto& timesDataRightInputs = BorrowBuffer(m_outputGradientsBuffer, numBatchItems);
         let& f0 = *m_matrixWeightConsumers.front().first;
         let& input0 = f0.m_inputs[0];
-        for (size_t i = 0; i < batchSize; i++)
+        size_t batchDim = 0;
+        for (size_t i = 0; i < numBatchItems; i++)
         {
             let &c = m_matrixWeightConsumers[i];
             fail_if(c.second != 0, "wrong input??");
-            m_timesOutGrads       .push_back(c.first->m_outputs[0].m_dataFields->m_gradient);
-            m_timesDataRightInputs.push_back(c.first->m_inputs [1].m_dataFields->m_value   );
+            let& outGrad = c.first->m_outputs[0].m_dataFields->m_gradient;
+            let& right = c.first->m_inputs[1].m_dataFields->m_value;
+            timesOutGrads       [i] = outGrad;
+            timesDataRightInputs[i] = right;
+            let numItems = outGrad->Shape().Dimensions().back();
+            fail_if(numItems != right->Shape().Dimensions().back(), "batch dimension of two inputs not ther same??");
+            batchDim += numItems;
         }
+        auto outGradBatch = GatherBatchInArena(timesOutGrads       , f0.m_outputs[0].Shape().Rank() - 1, batchDim);
+        auto rightBatch   = GatherBatchInArena(timesDataRightInputs, f0.m_inputs[1] .Shape().Rank() - 1, batchDim);
 
-        auto rightBatch   = GatherBatchInArena(m_timesDataRightInputs); // TODO: we can further factor this and pass a lambda
-        auto outGradBatch = GatherBatchInArena(m_timesOutGrads);
+        // backprop into the left input from the batched outGrad and right
+        auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, 2);
+        inputValues[0] = nullptr;
+        inputValues[1] = rightBatch.get();
         let beta = LazilyCreateLazilyIndexedGradient(input0);
-        PrimitiveFunction::BackpropTo(outGradBatch.get(), /*index=*/0, f0.m_op, f0.m_attributes, /*outputValue=*/nullptr, { nullptr, rightBatch.get() }, input0.m_dataFields->m_gradient, beta);
+        PrimitiveFunction::BackpropTo(/*outputGradient=*/outGradBatch.get(),      // incoming gradient from top...
+                                      /*index=*/0, f0.m_op, f0.m_attributes,      // ...goes through this function...
+                                      /*outputValue=*/nullptr, inputValues,       // ...using these values from forward pass...
+                                      input0.m_dataFields->m_gradient, beta, f0); // ...into here
 #endif
     }
 
