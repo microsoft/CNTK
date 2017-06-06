@@ -165,7 +165,7 @@ def get_probability(data):
 X_check, Y_check = X_test[0:10000:400].copy(), Y_test[0:10000:400] # a small subsample of 25 examples
 result = get_probability(X_check)
 
-print("Label    :", [label.argmax() for label in Y_check])
+print("Label    :", [label.todense().argmax() for label in Y_check])
 print("Predicted:", [result[i,:].argmax() for i in range(len(result))])
 
 # Must call MPI finalize when process exit without exceptions
