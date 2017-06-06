@@ -1,3 +1,8 @@
+'''
+CNTK variables, parameters, constants, and records.
+'''
+
+
 import numpy as np
 
 from . import cntk_py

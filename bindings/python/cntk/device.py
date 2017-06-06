@@ -3,7 +3,9 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-
+"""
+Utilities to specify device on which CNTK computation can be executed. 
+"""
 from enum import Enum, unique
 from . import cntk_py
 from cntk.internal import typemap

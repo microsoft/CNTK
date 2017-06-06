@@ -2,6 +2,10 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+"""
+Functions that generate random numbers with respect to designated distributions.
+"""
+
 
 from __future__ import division
 from __future__ import print_function
