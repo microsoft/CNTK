@@ -39,7 +39,7 @@ namespace CNTK
         // computation
         std::atomic<size_t> m_valueTimeStamp;
         std::pair<std::pair<PrimitiveFunction*,size_t>, std::vector<std::pair<PrimitiveFunction*, size_t>>> m_consumers;
-        mutable bool m_visited;
+        mutable size_t m_visitedTag = 0; // used for tree traversal
 
         // lazy initialization
         std::unique_ptr<std::once_flag> m_initValueFlag;

@@ -388,13 +388,21 @@ class Variable::AutoBatch
     //  - m_value must not have been set (don't call this function if it has)
     //  - m_pendingInputs has been initialized to -1 by the constructor
     // Caller must call m_visitorTag.Begin() first.
-    void TraverseFunctionTreeForward(const Variable& var)
+    void RInitForScheduling(const Variable& var)
     {
-        let& fields = *var.m_dataFields;
+        auto& fields = *var.m_dataFields;
+        // return if already visit
+        if (m_visitorTag.Visited(fields.m_visitedTag))
+            return;
+        // some sanity checks
         if (fields.m_value)
-            LogicError("TraverseFunctionTreeForward() should not have been called on variables that already have a value.");
+            LogicError("RInitForScheduling() should not have been called on variables that already have a value.");
         if (fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder)
             LogicError("Value() depends on Input or Placeholder, it is not knowable.");
+        // initialize m_consumers chain
+        fields.m_consumers.first.first = nullptr;
+        fields.m_consumers.second.clear();
+        // handle leaves
         if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
         {
             if (!fields.m_value)
@@ -404,10 +412,8 @@ class Variable::AutoBatch
             m_stats.numLeafNodes++;
             return;
         }
+        // not a leaf
         auto& f = *fields.m_ownerFunction.lock();
-        // return if already visit
-        if (m_visitorTag.Visited(f.m_visitedTag))
-            return;
         // determine how many inputs are pending; and also recurse and set up the consumer list
         size_t pendingInputs = 0;
         let& inputs = f.m_inputs;
@@ -418,11 +424,12 @@ class Variable::AutoBatch
             // recursively traverse
             if (!fields.m_value)
             {
-                TraverseFunctionTreeForward(input);
+                RInitForScheduling(input);
                 if (!fields.m_value) // (in case of a Parameter, we now may have a value)
                 {
                     pendingInputs++;
                     // record ourselves as a consumer of the input
+                    // Note that RInitForScheduling() will have reset this upon first visit of 'input'.
                     if (!fields.m_consumers.first.first) // optimized for main case of 1 consumer. No std::vector in that case.
                         fields.m_consumers.first = make_pair(&f, i); // note: we don't need i for forward; can optimize
                     else
@@ -823,7 +830,7 @@ public:
         {
             // prepare and schedule first set
             m_visitorTag.Begin();
-            TraverseFunctionTreeForward(v);
+            RInitForScheduling(v);
             // compute the entire graph
             while (!m_schedule.empty())
             {
@@ -900,10 +907,9 @@ public:
     //  - short-circuit into batched ops (m_lazyIndex) so that we backprop through them instead
     // All nodes that were traversed have all input's m_consumers set up and their m_pendingInputs set to 0.
     // Caller must call m_visitorTag.Begin() first.
-    void DetermineConsumersForBackward(const Variable& var)
+    void RDetermineConsumersForBackward(const Variable& var)
     {
         auto& fields = *var.m_dataFields;
-        fields.m_visited = false; // we use this for backprop control  --TODO: consolidate these
 
         if (fields.m_varKind == VariableKind::Parameter || fields.m_varKind == VariableKind::Constant)
             return; // reached a leaf
@@ -942,7 +948,6 @@ public:
                 inputp = &inputp->m_dataFields->m_lazyIndex.first->m_outputs[0];
             let& input = *inputp;
             auto& fields = *input.m_dataFields;
-            fields.m_visited = false; // TODO: clean this up
             if (!fields.m_needsGradient)
                 continue; // skip inputs that receive no gradients
             // this input will receive a gradient; reset it (later, we *accumulate* into it since nodes can receive gradients from multiple consumers)
@@ -957,7 +962,7 @@ public:
             {
                 fields.m_consumers.first = make_pair(&f, i);
                 // now process recursively the inputs
-                DetermineConsumersForBackward(input);
+                RDetermineConsumersForBackward(input);
             }
             else
                 fields.m_consumers.second.push_back(make_pair(&f, i));
@@ -1099,27 +1104,26 @@ public:
     // A consumer is a specific input of a PrimitiveFunction, specified as (function pointer, input index).
     // In the case of multiple consumers, the gradient is the sum.
     // This recursively traverses the graph upwards via the consumers chain.
-    __declspec(noinline) void AggregateGradientFromAllConsumers(const Variable& var)
+    // Caller must call m_visitorTag.Begin() first.
+    __declspec(noinline) void RAggregateGradientFromAllConsumers(const Variable& var)
     {
         let& fields = *var.m_dataFields;
-        if (fields.m_visited)
+        if (m_visitorTag.Visited(fields.m_visitedTag))
             return;
 
         auto& c = fields.m_consumers.first;
-        // reached a leaf
+        // reached a "leaf" in the revesre tree; i.e. we hit the root
         if (!c.first)
             return;
 
         fail_if(!fields.m_needsGradient, "backprop into variable that does not need gradient");
 
-        fields.m_visited = true;
-
         // recursively realize all consumers' outputs' gradients
         for (let& output : c.first->m_outputs)
-            AggregateGradientFromAllConsumers(output);
+            RAggregateGradientFromAllConsumers(output);
         for (auto& c : fields.m_consumers.second)
             for (let& output : c.first->m_outputs)
-                AggregateGradientFromAllConsumers(output);
+                RAggregateGradientFromAllConsumers(output);
         // Now all consumers are ready to propagate into var's m_gradient.
         // The resulting gradient is the sum of all that's backpropped here,
         // and this is the only place where a variable's gradient ever gets aggregated.
@@ -1233,7 +1237,7 @@ public:
         BatchedForward(root);
         // set up the m_consumer fields, which BatchedBackward() will work off
         m_visitorTag.Begin();
-        DetermineConsumersForBackward(root); // (gotta improve the name of these things)
+        RDetermineConsumersForBackward(root); // (gotta improve the name of these things)
         // implant the first gradient
         // TODO: allow user to pass in the starting value
         // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
@@ -1253,6 +1257,7 @@ public:
         // perform backprop
         // This traverses the tree top-down, where each node pulls gradient(s) from its consumer(s).
         // This way we can optimize operations, such as a matrix product or gradient of GatherBatch().
+        m_visitorTag.Begin();
         for (auto& kv : gradients)
         {
             let& param = kv.first;
@@ -1261,7 +1266,7 @@ public:
                 logic_error("BatchedBackward: a requested gradient is not part of root."); // TODO: or could it be due to StopGradient? What if StopGradient is used only sometimes?
             if (!fields.m_needsGradient) // (we could also just leafve the gradient 0)
                 logic_error("BatchedBackward: cannot compute gradient for variable with m_needsGradient being False.");
-            AggregateGradientFromAllConsumers(param);
+            RAggregateGradientFromAllConsumers(param);
         }
         //fprintf(stderr, "Back-propagated through %d functions\n", (int)order.size());
         // implant the results into the map the user passed in
