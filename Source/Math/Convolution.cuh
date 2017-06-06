@@ -391,7 +391,7 @@ __global__ void kMaxROIPoolingBackward(const int totalIterations,
         }
 
         num_of_gradients = max(num_of_gradients, 1);
-        grad[index] = gradient / num_of_gradients;
+        atomicAdd(&grad[index], gradient / num_of_gradients);
     }
 }
 

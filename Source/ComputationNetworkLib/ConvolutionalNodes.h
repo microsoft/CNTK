@@ -676,7 +676,7 @@ public:
     }
 
     ROIPoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", PoolKindFrom(configp->Get(L"pool")), configp->Get(L"roiOutputShape"), configp->Get(L"spatialScale"))
+        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", PoolKindFrom(configp->Get(L"pool")), configp->Get(L"roiOutputShape"), configp->Get(L"scale"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
@@ -773,19 +773,31 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << (int32_t)m_poolKind;
         m_roiOutputShape.Save(fstream);
+        fstream << (int32_t)m_poolKind;
         fstream << m_spatialScale;
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        int32_t k;
-        fstream >> k;
-        m_poolKind = (PoolKind)k;
         m_roiOutputShape.Load(fstream);
-        fstream >> m_spatialScale;
+
+        if (modelVersion < CNTK_MODEL_VERSION_26)
+        {
+            // There are 2 problems here:
+            //    1. m_spatialScale value depends on your location in the network, for current R-CNN and its family it is 1/16.
+            //    2. roiData format also has changed from ratio to absolute values and those are given as input.
+            m_poolKind = PoolKind::Max;
+            m_spatialScale = 1.0/16.0;
+        }
+        else
+        {
+            int32_t k;
+            fstream >> k;
+            m_poolKind = (PoolKind)k;
+            fstream >> m_spatialScale;
+        }
     }
 
     void Validate(bool isFinalValidationPass) override
