@@ -5549,7 +5549,7 @@ __global__ void _assignBetaScore(
 					t_l = max(phoneBoundId_l - delayConstraint - 1, (LONG64)0);
                     if (t > phoneBoundId_r + delayConstraint - 1 || t < t_l)
                         betaScore[betaid] = LZERO;
-                }g
+                }
                 else if (phoneId != blankTokenId)
                 {
 					t_l = max(phoneBoundId_l - delayConstraint , (LONG64)0);
