@@ -59,6 +59,10 @@ def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, misc={}):
                     eof = True
                     break
 
+                if misc is not None:
+                    import re
+                    misc['uid'].append(re.match('^([^\t]*)', line).groups()[0])
+
                 ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids = tsv2ctf.tsv_iter(line, polymath.vocab, polymath.chars, is_test, misc)
 
                 batch['cwids'].append(cwids)
@@ -287,7 +291,7 @@ def get_answer(raw_text, tokens, start, end):
 
 def test(test_data, model_path, model_file, config_file):
     polymath = PolyMath(config_file)
-    model = C.load_model(os.path.join(model_path, model_file if model_file else model_name))
+    model = C.load_model(os.path.join(model_path, model_file))
     begin_logits = model.outputs[0]
     end_logits   = model.outputs[1]
     loss         = C.as_composite(model.outputs[2].owner)
@@ -301,32 +305,42 @@ def test(test_data, model_path, model_file, config_file):
     num_seq = 0
     batch_size = 64 # in sequences
     num_batch = 0
-    misc = {'rawctx':[], 'ctoken':[], 'answer':[]}
+    misc = {'rawctx':[], 'ctoken':[], 'answer':[], 'uid':[]}
     tsv_reader = create_tsv_reader(loss, test_data, polymath, batch_size, is_test=True, misc=misc)
-    for data in tsv_reader:
-        start_time = time.time()
-        out = model.eval(data, outputs=[begin_logits,end_logits,loss], as_numpy=False)
-        g = best_span_score.grad({begin_prediction:out[begin_logits], end_prediction:out[end_logits]}, wrt=[begin_prediction,end_prediction], as_numpy=False)
-        other_input_map = {begin_prediction: g[begin_prediction], end_prediction: g[end_prediction]}
-        span = predicted_span.eval((other_input_map))
-        for seq, (raw_text, ctokens, answer) in enumerate(zip(misc['rawctx'], misc['ctoken'], misc['answer'])):
-            seq_where = np.argwhere(span[seq])[:,0]
-            span_begin = np.min(seq_where)
-            span_end = np.max(seq_where)
-            predict_answer = get_answer(raw_text, ctokens, span_begin, span_end)
-            f1 = metric_max_over_ground_truths(f1_score, predict_answer, misc['answer'][seq])
-            em = metric_max_over_ground_truths(exact_match_score, predict_answer, misc['answer'][seq])
-            f1_sum += f1
-            em_sum += 1 if em else 0
-            #print(f1, em, predict_answer.encode('utf-8'), [ans.encode('utf-8') for ans in answer])
-        
-        num_seq += len(misc['rawctx'])
-        misc['rawctx'] = []
-        misc['ctoken'] = []
-        misc['answer'] = []
-        num_batch += 1
-        end_time = time.time()
-        print("Tested {} batches ({:.1f} seq / second), F1 {:.4f}, EM {:.4f}".format(num_batch, batch_size / (end_time - start_time), f1_sum / num_seq, em_sum / num_seq))
+    first_json = True
+    with open('{}_out.json'.format(model_file), 'w', encoding='utf-8') as json_out:
+        json_out.write('{')
+        for data in tsv_reader:
+            start_time = time.time()
+            out = model.eval(data, outputs=[begin_logits,end_logits,loss], as_numpy=False)
+            g = best_span_score.grad({begin_prediction:out[begin_logits], end_prediction:out[end_logits]}, wrt=[begin_prediction,end_prediction], as_numpy=False)
+            other_input_map = {begin_prediction: g[begin_prediction], end_prediction: g[end_prediction]}
+            span = predicted_span.eval((other_input_map))
+            for seq, (raw_text, ctokens, answer, uid) in enumerate(zip(misc['rawctx'], misc['ctoken'], misc['answer'], misc['uid'])):
+                seq_where = np.argwhere(span[seq])[:,0]
+                span_begin = np.min(seq_where)
+                span_end = np.max(seq_where)
+                predict_answer = get_answer(raw_text, ctokens, span_begin, span_end)
+                f1 = metric_max_over_ground_truths(f1_score, predict_answer, misc['answer'][seq])
+                em = metric_max_over_ground_truths(exact_match_score, predict_answer, misc['answer'][seq])
+                f1_sum += f1
+                em_sum += 1 if em else 0
+                if first_json:
+                    first_json = False
+                    comma = ''
+                else:
+                    comma = ', '
+                json_out.write('{}"{}":"{}"'.format(comma, uid, predict_answer.replace('"', r'\"')))
+            
+            num_seq += len(misc['rawctx'])
+            misc['rawctx'] = []
+            misc['ctoken'] = []
+            misc['answer'] = []
+            misc['uid'] = []
+            num_batch += 1
+            end_time = time.time()
+            print("Tested {} batches ({:.1f} seq / second), F1 {:.4f}, EM {:.4f}".format(num_batch, batch_size / (end_time - start_time), f1_sum / num_seq, em_sum / num_seq))
+        json_out.write('}')
 
 if __name__=='__main__':
     # default Paths relative to current python file.
@@ -343,7 +357,7 @@ if __name__=='__main__':
     parser.add_argument('-config', '--config', help='Config file', required=False, default='config')
     parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', action='store_true')
     parser.add_argument('-test', '--test', help='Test data file', required=False, default=None)
-    parser.add_argument('-model', '--model', help='Model file name', required=False, default=None)
+    parser.add_argument('-model', '--model', help='Model file name', required=False, default=model_name)
 
     args = vars(parser.parse_args())
 
