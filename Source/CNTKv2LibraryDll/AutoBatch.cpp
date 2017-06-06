@@ -73,10 +73,8 @@ namespace CNTK
 class NDArrayViewArena
 {
     // allocate a new tensor in a large arena
-    // TODO: make the arena static, so that we can carry the allocator over across invocations
-    //       Currently, if I do that, program crashes upon termination (unloaded CUDA too early?)
-    NDArrayViewPtr m_currentArena;
-    size_t m_currentArenaUsed;
+    static NDArrayViewPtr s_currentArena;
+    static size_t s_currentArenaUsed;
     static const size_t ARENASIZE = 64000000; // we allocate in this chunk size
 public:
     // allocate an NDArrayView of a given shape, data type, and device
@@ -85,28 +83,29 @@ public:
     // TODO: once operators exist that emit sparse outputs, we need sparse support here as well
     NDArrayViewPtr NewNDArrayView(const NDShape& shape, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
     {
-        //static NDArrayViewPtr m_currentArena; // for now static so that it carries over across invocations, to save the allocation
-        //static size_t m_currentArenaUsed;
         let numElements = shape.TotalSize();
         // if too large then plain alloc
         if (numElements > ARENASIZE)
             return make_shared<NDArrayView>(dataType, CNTK::StorageFormat::Dense, shape, device);
         // If arena not large enough then waste its remainder and just allocate a fresh one.
-        // This abandons the current arena. This will not cause a memory leak, however:
+        // This abandons the current m_arena. This will not cause a memory leak, however:
         // Since the slices into it that were returned before all hold a ref-count to that arena,
         // it will be deallocated automatically as soon the last slice goes away.
-        if (!m_currentArena || numElements > (ARENASIZE - m_currentArenaUsed))
+        if (!s_currentArena || numElements > (ARENASIZE - s_currentArenaUsed))
         {
-            m_currentArena = make_shared<NDArrayView>(dataType, CNTK::StorageFormat::Dense, NDShape{ ARENASIZE }, device);
-            m_currentArenaUsed = 0;
+            s_currentArena = make_shared<NDArrayView>(dataType, CNTK::StorageFormat::Dense, NDShape{ ARENASIZE }, device);
+            s_currentArenaUsed = 0;
         }
-        vector<size_t> startOffset{ m_currentArenaUsed };
+        vector<size_t> startOffset{ s_currentArenaUsed };
         vector<size_t> extent{ numElements };
-        NDArrayViewPtr region = m_currentArena->SliceView(startOffset, extent);
-        m_currentArenaUsed += numElements;
+        NDArrayViewPtr region = s_currentArena->SliceView(startOffset, extent);
+        s_currentArenaUsed += numElements;
         return region->AsShape(shape);
     }
 };
+
+/*static*/ NDArrayViewPtr NDArrayViewArena::s_currentArena;
+/*static*/ size_t NDArrayViewArena::s_currentArenaUsed = 0;
 
 // ---------------------------------------------------------------------------
 // RuntimeStatistics -- helper class for collecting runtime statistics, for
@@ -197,6 +196,33 @@ public:
     }
 };
 
+// ---------------------------------------------------------------------------
+// VisitorTag -- helper for graph traversal
+//  - call VisitorTag::Begin()
+//  - in traversal: if (VisitorTag::Visited(node.m_visitedTag)) return;
+// This does not nest!
+// ---------------------------------------------------------------------------
+
+class VisitorTag
+{
+    static size_t s_nextVisitTag; // unique id for a single non-nested visiting process
+    size_t m_visitTag;
+public:
+    void Begin() // call this at start
+    {
+        // TODO: to make this thread-safe, use atomic increment
+        m_visitTag = s_nextVisitTag++;
+    }
+    bool Visited(size_t& tag)
+    {
+        if (tag == m_visitTag)
+            return true;
+        tag = m_visitTag;
+        return false;
+    }
+};
+/*static*/ size_t VisitorTag::s_nextVisitTag = 1;
+
 // ===========================================================================
 // AutoBatch -- autobatching happening inside here
 // The auto-batching related functions are grouped inside a class, since they
@@ -205,8 +231,9 @@ public:
 
 class Variable::AutoBatch
 {
-    NDArrayViewArena arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
-    RuntimeStatistics stats;
+    NDArrayViewArena m_arena; // helper to allocate NDArrayViews as slices into very large NDArrayView objects
+    RuntimeStatistics m_stats;
+    VisitorTag m_visitorTag; // helper for managing tree traversal (non-nested)
 
     // buffers for building NDArrayViewPtr vectors. Keep as class members to avoid repeated memory allocations.
     vector<NDArrayViewPtr> m_inputValuesBuffer;
@@ -360,6 +387,7 @@ class Variable::AutoBatch
     //  - it only runs once
     //  - m_value must not have been set (don't call this function if it has)
     //  - m_pendingInputs has been initialized to -1 by the constructor
+    // Caller must call m_visitorTag.Begin() first.
     void TraverseFunctionTreeForward(const Variable& var)
     {
         let& fields = *var.m_dataFields;
@@ -373,11 +401,12 @@ class Variable::AutoBatch
                 var.Value(); // this initializes it
             if (!fields.m_value)
                 LogicError("Parameter/Constant has no Value??");
-            stats.numLeafNodes++;
+            m_stats.numLeafNodes++;
             return;
         }
         auto& f = *fields.m_ownerFunction.lock();
-        if (f.m_pendingInputs != -1) // already visited
+        // return if already visit
+        if (m_visitorTag.Visited(f.m_visitedTag))
             return;
         // determine how many inputs are pending; and also recurse and set up the consumer list
         size_t pendingInputs = 0;
@@ -401,13 +430,13 @@ class Variable::AutoBatch
                 }
             }
             else
-                stats.numLeafNodes++;
+                m_stats.numLeafNodes++;
         }
         f.m_pendingInputs = (int)pendingInputs;
         // if none then operation is ready
         if (pendingInputs == 0)
             m_schedule.Schedule(&f); // add to ready set
-        stats.numOpNodes++;
+        m_stats.numOpNodes++;
     }
 
     // return the m_value field of a variable, but possibly realizing it lazily if it is an index operation
@@ -476,7 +505,7 @@ class Variable::AutoBatch
 #ifdef LOG_DETAILS
         LogFunction(f, "[bf] ");
 #endif
-        auto outValue = isFree ? nullptr : arena.NewNDArrayView(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
+        auto outValue = isFree ? nullptr : m_arena.NewNDArrayView(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
         // execute it
         output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
         // stats
@@ -486,11 +515,11 @@ class Variable::AutoBatch
             primitiveOp == PrimitiveOpType::NoOp ||
             primitiveOp == PrimitiveOpType::Reshape ||
             primitiveOp == PrimitiveOpType::Slice)
-            stats.numDoneFreeOps++;
+            m_stats.numDoneFreeOps++;
         else if (primitiveOp == PrimitiveOpType::Splice)
-            stats.numDoneSpliceOps++;
+            m_stats.numDoneSpliceOps++;
         else
-            stats.numDoneOtherOps++;
+            m_stats.numDoneOtherOps++;
         return output;
     }
 
@@ -789,11 +818,11 @@ public:
         // if value already there then just return it
         if (fields.m_value)
             return fields.m_value;
-        AssertTreeStateForward(v); // (sanity check)
         // mark all nodes w.r.t. how many inputs they are waiting for before being computable
         if (!fields.m_value)
         {
             // prepare and schedule first set
+            m_visitorTag.Begin();
             TraverseFunctionTreeForward(v);
             // compute the entire graph
             while (!m_schedule.empty())
@@ -805,13 +834,12 @@ public:
             }
             assert(fields.m_value);
         }
-        AssertTreeStateForward(v); // (sanity check)
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedForward: %d forward ops executed besides %d splices and %d views, in nominally %d PrimitiveFunctions on %d known values\n",
-                (int)stats.numDoneOtherOps, (int)stats.numDoneSpliceOps, (int)stats.numDoneFreeOps, (int)stats.numOpNodes, (int)stats.numLeafNodes);
+                (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneSpliceOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numOpNodes, (int)m_stats.numLeafNodes);
         size_t numOpNodes1 = 0;
         Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr&) { numOpNodes1++; });
-        fail_if(numOpNodes1 != stats.numOpNodes, "we did not traverse the graph correctly");
+        fail_if(numOpNodes1 != m_stats.numOpNodes, "we did not traverse the graph correctly");
 #endif
         return LazilyIndexedValue(v);
     }
@@ -859,7 +887,7 @@ public:
             {
                 // create a new one
                 // TODO: allocate parameters as separate objects; and allow user to pass buffers in
-                fields.m_gradient = arena.NewNDArrayView(fields.m_shape, fields.m_dataType, fields.m_value->Device());
+                fields.m_gradient = m_arena.NewNDArrayView(fields.m_shape, fields.m_dataType, fields.m_value->Device());
                 beta = 0.0; // has not been initialized (...actually has; but this saves memory round trips)
             }
         }
@@ -871,6 +899,7 @@ public:
     //  - can skip any branch that does not need a gradient (!m_needsGradient and StopGradient ops).
     //  - short-circuit into batched ops (m_lazyIndex) so that we backprop through them instead
     // All nodes that were traversed have all input's m_consumers set up and their m_pendingInputs set to 0.
+    // Caller must call m_visitorTag.Begin() first.
     void DetermineConsumersForBackward(const Variable& var)
     {
         auto& fields = *var.m_dataFields;
@@ -897,16 +926,11 @@ public:
 #else
         auto& f = *fields.m_ownerFunction.lock();
 #endif
-        fail_if(f.m_pendingInputs == -2, "unexpectedly encountered a cyclic graph??"); // graph is cyclic??
-
-        if (f.m_pendingInputs != -1) // already visited
+        // return if we already visited the function
+        if (m_visitorTag.Visited(f.m_visitedTag))
             return;
 
         fail_if(f.m_op == PrimitiveOpType::StopGradient, "unexpectedly encountered a StopGradient, which should have propagated m_needsGradient=false upwards");
-
-        // we are now in a PrimitiveFunction that should backprop its gradient
-        // TODO: implement short-circuiting here
-        f.m_pendingInputs = -2; // (temp value to detect cycles; not really needed)
 
         // determine how many inputs are pending; and also recurse and set up the consumer list
         let& inputs = f.m_inputs;
@@ -937,7 +961,7 @@ public:
             }
             else
                 fields.m_consumers.second.push_back(make_pair(&f, i));
-            stats.numBackpropsToInputs++;
+            m_stats.numBackpropsToInputs++;
         }
         f.m_pendingInputs = 0; // used as a visited flag
     }
@@ -955,7 +979,7 @@ public:
             gatherBatchResultDims.push_back(inputs.size());
         else
             gatherBatchResultDims[axis] = batchDim;
-        auto out = arena.NewNDArrayView(gatherBatchResultDims, input0.GetDataType(), input0.Device());
+        auto out = m_arena.NewNDArrayView(gatherBatchResultDims, input0.GetDataType(), input0.Device());
         return move(NDArrayView::GatherBatch(inputs, (int)axis, move(out)));
     }
 
@@ -1064,7 +1088,7 @@ public:
                                       /*index=*/0, f0.m_op, f0.m_attributes,      // ...goes through this function...
                                       /*outputValue=*/nullptr, inputValues,       // ...using these values from forward pass...
                                       input0.m_dataFields->m_gradient, beta, f0); // ...into here
-        stats.numBatchedBackpropToCalls++;
+        m_stats.numBatchedBackpropToCalls++;
 #endif
     }
 
@@ -1186,27 +1210,7 @@ public:
         let beta = LazilyCreateLazilyIndexedGradient(input);
         // backprop into the input
         PrimitiveFunction::BackpropTo(outputGradient, index, f->m_op, f->m_attributes, outputValue, inputValues, fields.m_gradient, beta, *f);
-        stats.numBatchedBackpropToCalls++;
-    }
-
-    // helper to verify that the tree is clean
-    void AssertTreeStateForward(const Variable& v) const
-    {
-#if 1
-        v;
-#else
-        let& fields = *v.m_dataFields;
-        if (fields.m_consumers.first.first || !fields.m_consumers.second.empty())
-            LogicError("AssertTreeStateForward: m_consumers should be empty");
-        let owner = fields.m_ownerFunction.lock();
-        if (owner)
-        {
-            if (owner->m_pendingInputs != -1)
-                LogicError("AssertTreeStateForward: m_pendingInputs should be -1");
-            for (let& input : owner->m_inputs)
-                AssertTreeStateForward(input);
-        }
-#endif
+        m_stats.numBatchedBackpropToCalls++;
     }
 
 public:
@@ -1228,13 +1232,14 @@ public:
         // first get the forward computation, batching, etc. done if not yet
         BatchedForward(root);
         // set up the m_consumer fields, which BatchedBackward() will work off
+        m_visitorTag.Begin();
         DetermineConsumersForBackward(root); // (gotta improve the name of these things)
         // implant the first gradient
         // TODO: allow user to pass in the starting value
         // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
         //if (root.Value()->Shape() != NDShape{})
         //    LogicError("BatchedBackward: root must be a scalar, or root gradient must have been implanted already");
-        root.m_dataFields->m_gradient = arena.NewNDArrayView(root.Shape(), root.GetDataType(), root.Value()->Device());
+        root.m_dataFields->m_gradient = m_arena.NewNDArrayView(root.Shape(), root.GetDataType(), root.Value()->Device());
         root.m_dataFields->m_gradient->SetValue(1.0f);
         // if user passed NDArrayViewPtrs for the gradients, then keep using them
         // This way, the same buffers can be recycled.
@@ -1262,8 +1267,6 @@ public:
         // implant the results into the map the user passed in
         for (auto& kv : gradients)
             kv.second = kv.first.m_dataFields->m_gradient;
-        //AssertTreeStateForward(root); // (sanity check)  --TODO: gotta think this through e.g. nodes for which no gradient is requested
-        // WORKAROUND for above. With this, we can at least com,pute more than 1 gradient fro a parameter
         for (auto& kv : gradients)
         {
             let& param = kv.first;
@@ -1273,7 +1276,7 @@ public:
         }
 #ifdef LOG_STATS
         fprintf(stderr, "BatchedBackward: %d backprop computations executed in nominal %d post-batching ops\n",
-                (int)stats.numBatchedBackpropToCalls, (int)stats.numBackpropsToInputs);
+                (int)m_stats.numBatchedBackpropToCalls, (int)m_stats.numBackpropsToInputs);
 #endif
     }
 }; // class
