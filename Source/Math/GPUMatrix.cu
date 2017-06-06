@@ -3263,7 +3263,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignMaxPoolingResultCDSSM(const GPUM
     size_t* dev_numberOfWindowsPerSample = 0;
     CUDA_CALL(cudaMalloc((void **)&dev_numberOfWindowsPerSample, batchSize * sizeof(size_t)));
     SyncGuard syncGuard;
-    _numberOfWindowsPerSampleKernel << <1, batchSize >> > (inputBatch.Data(), dev_numberOfWindowsPerSample, inputWidth, inputHeight, inputSizePerSample);
+    _getNumberOfWindowsPerSample << <1, batchSize >> > (inputBatch.Data(), dev_numberOfWindowsPerSample, inputWidth, inputHeight, inputSizePerSample);
     _assignMaxPoolingResultCDSSM << <blocksPerGrid, numThreadPerBlock, 0, t_stream >> >(inputBatch.Data(), batchSize, 
                                                                                         Data(),
                                                                                         dev_numberOfWindowsPerSample,
@@ -3295,6 +3295,30 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddMaxPoolingGradient(const GPUMatrix<
                                                                               inputWidth, inputHeight, inputSizePerSample,
                                                                               outputWidth, outputHeight, outputSizePerSample,
                                                                               windowWidth, windowHeight, horizontalSubsample, verticalSubsample);
+
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddMaxPoolingGradientCDSSM(const GPUMatrix<ElemType>& outputGradientBatch, const GPUMatrix<ElemType>& inputBatch, const GPUMatrix<ElemType>& outputBatch,
+    const size_t channels,
+    const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
+    const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
+    const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample)
+{
+    assert(verticalSubsample <= windowHeight && horizontalSubsample <= windowWidth);
+
+    unsigned int batchSize = outputGradientBatch.GetNumCols();
+    int numThreadPerBlock = GridDim::maxThreadsPerBlock;
+
+    PrepareDevice();
+    SyncGuard syncGuard;
+
+    int blocksPerGrid = (batchSize * inputSizePerSample + numThreadPerBlock - 1) / numThreadPerBlock;
+    _addMaxPoolingGradientCDSSM << <blocksPerGrid, numThreadPerBlock, 0, t_stream >> >(Data(), outputGradientBatch.Data(), inputBatch.Data(), outputBatch.Data(), batchSize, channels,
+        inputWidth, inputHeight, inputSizePerSample,
+        outputWidth, outputHeight, outputSizePerSample,
+        windowWidth, windowHeight, horizontalSubsample, verticalSubsample);
 
     return *this;
 }

@@ -537,10 +537,20 @@ protected:
     {
         if (m_poolKind == PoolKind::Max)
         {
-            grad.AddMaxPoolingGradient(srcGrad, in, out,
-                                       m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
-                                       m_outT.w(), m_outT.h(), m_outT.w() * m_outT.h() * m_outT.c(),
-                                       m_kernelT.w(), m_kernelT.h(), m_strideT.w(), m_strideT.h());
+            if (m_cdssm)
+            {
+                grad.AddMaxPoolingGradientCDSSM(srcGrad, in, out,
+                                                m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
+                                                m_outT.w(), m_outT.h(), m_outT.w() * m_outT.h() * m_outT.c(),
+                                                m_kernelT.w(), m_kernelT.h(), m_strideT.w(), m_strideT.h());
+            }
+            else {
+                grad.AddMaxPoolingGradient(srcGrad, in, out,
+                                           m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
+                                           m_outT.w(), m_outT.h(), m_outT.w() * m_outT.h() * m_outT.c(),
+                                           m_kernelT.w(), m_kernelT.h(), m_strideT.w(), m_strideT.h());
+            }
+
         }
         else if (m_poolKind == PoolKind::Average)
         {

@@ -516,6 +516,11 @@ public:
                                             const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
                                             const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
                                             const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
+    Matrix<ElemType>& AddMaxPoolingGradientCDSSM(const Matrix<ElemType>& outputGradientBatch, const Matrix<ElemType>& inputBatch, const Matrix<ElemType>& outputBatch,
+                                                 const size_t channels,
+                                                 const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
+                                                 const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
+                                                 const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
     Matrix<ElemType>& AssignAveragePoolingResult(const Matrix<ElemType>& inputBatch, const size_t channels,
                                                  const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
                                                  const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,

@@ -4365,6 +4365,36 @@ Matrix<ElemType>& Matrix<ElemType>::AddMaxPoolingGradient(const Matrix<ElemType>
 }
 
 template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AddMaxPoolingGradientCDSSM(const Matrix<ElemType>& outputGradientBatch, const Matrix<ElemType>& inputBatch, const Matrix<ElemType>& outputBatch,
+                                                               const size_t channels,
+                                                               const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
+                                                               const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
+                                                               const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample)
+{
+    DecideAndMoveToRightDevice(*this, outputGradientBatch, inputBatch);
+    outputBatch._transferToDevice(GetDeviceId());
+
+    if (!(GetMatrixType() == outputGradientBatch.GetMatrixType() && GetMatrixType() == inputBatch.GetMatrixType() && GetMatrixType() == outputBatch.GetMatrixType()))
+        NOT_IMPLEMENTED;
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->AddMaxPoolingGradient(*(outputGradientBatch.m_CPUMatrix), *(inputBatch.m_CPUMatrix), *(outputBatch.m_CPUMatrix), channels,
+            inputWidth, inputHeight, inputSizePerSample,
+            outputWidth, outputHeight, outputSizePerSample,
+            windowWidth, windowHeight, horizontalSubsample, verticalSubsample),
+        m_GPUMatrix->AddMaxPoolingGradientCDSSM(*(outputGradientBatch.m_GPUMatrix), *(inputBatch.m_GPUMatrix), *(outputBatch.m_GPUMatrix), channels,
+            inputWidth, inputHeight, inputSizePerSample,
+            outputWidth, outputHeight, outputSizePerSample,
+            windowWidth, windowHeight, horizontalSubsample, verticalSubsample);
+    ,
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignAveragePoolingResult(const Matrix<ElemType>& inputBatch, const size_t channels,
                                                                const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
                                                                const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,

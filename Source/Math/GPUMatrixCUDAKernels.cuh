@@ -2048,7 +2048,7 @@ __global__ void _unpackConvolutionInput(const ElemType* packedMatrix, ElemType* 
 }
 
 template <class ElemType>
-__global__ void _numberOfWindowsPerSampleKernel(const ElemType in[], size_t *out,
+__global__ void _getNumberOfWindowsPerSample(const ElemType in[], size_t *out,
     const size_t inputWidth  /* 288 */, const size_t inputHeight /* 10 */, const size_t inputSizePerSample /* 2880 */)
 {
     size_t i = threadIdx.x;
@@ -2141,6 +2141,34 @@ __global__ void _assignMaxPoolingResult(ElemType* outputBatch, const ElemType* i
     outputBatch[outputIndexWithinSample + sample * outputSizePerSample] = maxVal;
 }
 
+
+template <class ElemType>
+__global__ void _addMaxPoolingGradientCDSSM(ElemType* inputGradientBatch, const ElemType* outputGradientBatch, const ElemType* inputBatch, const ElemType* outputBatch,
+                                            const CUDA_LONG batchSize, const CUDA_LONG channels,
+                                            const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputSizePerSample,
+                                            const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample,
+                                            const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
+{
+    const CUDA_LONG inputIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG sampleId = inputIndex / inputSizePerSample;
+    if (sampleId >= batchSize)
+    {
+        return;
+    }
+
+    const CUDA_LONG inputIndexWithinSample = inputIndex % inputSizePerSample;
+    const CUDA_LONG inputRowIndex = inputIndexWithinSample / inputWidth;
+    const CUDA_LONG inputColIndex = inputIndexWithinSample % inputWidth;
+
+    const CUDA_LONG outputIndex = outputSizePerSample * sampleId + inputColIndex;
+    ElemType oVal = outputBatch[outputIndex];
+    ElemType iVal = inputBatch[inputIndex];
+    if (oVal == iVal)
+    {
+        inputGradientBatch[inputIndex] += outputGradientBatch[outputIndex];
+    }
+}
+
 template <class ElemType>
 __global__ void _addMaxPoolingGradient(ElemType* inputGradientBatch, const ElemType* outputGradientBatch, const ElemType* inputBatch, const ElemType* outputBatch,
                                        const CUDA_LONG batchSize, const CUDA_LONG channels,
@@ -2189,6 +2217,7 @@ __global__ void _addMaxPoolingGradient(ElemType* inputGradientBatch, const ElemT
         }
     }
 }
+
 template <class ElemType>
 __global__ void _assignAveragePoolingResult(ElemType* outputBatch, const ElemType* inputBatch, const CUDA_LONG batchSize, const CUDA_LONG channels,
                                             const CUDA_LONG inputWidth, const CUDA_LONG inputHeight, const CUDA_LONG inputSizePerSample,
