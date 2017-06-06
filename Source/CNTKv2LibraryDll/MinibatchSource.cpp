@@ -267,7 +267,15 @@ namespace CNTK
                     size_t numSamples = input.pMBLayout->GetActualNumSamples();
                     size_t numSequences = input.pMBLayout->GetNumSequences();
 
-                    m_minibatchData[currentStreamInfo] = { minibatchValuePtr, numSequences, numSamples, hasReachedSweepEnd };
+                    // Copy sequence ids without gaps.
+                    std::vector<size_t> ids;
+                    const auto& seqInfo = input.pMBLayout->GetAllSequences();
+                    ids.reserve(seqInfo.size());
+                    for (const auto& seq : seqInfo)
+                        if (seq.seqId != GAP_SEQUENCE_ID)
+                            ids.push_back(seq.seqId);
+
+                    m_minibatchData[currentStreamInfo] = { minibatchValuePtr, numSequences, numSamples, hasReachedSweepEnd, m_matrices.m_getKeyById, std::move(ids) };
                 }
                 else
                     LogicError("GetNextMinibatch: Input of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");

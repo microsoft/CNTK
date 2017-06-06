@@ -95,6 +95,7 @@
 %template() std::vector<size_t>;
 %template() std::vector<float>;
 %template() std::vector<double>;
+%template() std::vector<std::string>;
 %template() std::vector<std::vector<size_t>>;
 %template() std::vector<std::vector<float>>;
 %template() std::vector<std::vector<double>>;

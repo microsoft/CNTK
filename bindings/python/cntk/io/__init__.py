@@ -66,6 +66,13 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         return super(MinibatchData, self).data()
 
     @property
+    def sequence_ids(self):
+        '''
+        The list of sequence identifiers inside the minibatch.
+        '''
+        return list(super(MinibatchData, self).sequence_ids())
+
+    @property
     def shape(self):
         '''
         The shape of the data in this minibatch as tuple.
@@ -290,7 +297,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
                                             minibatch_size_in_samples,
                                             num_data_partitions,
                                             partition_index, device)
-
         if not mb:
             return mb
 

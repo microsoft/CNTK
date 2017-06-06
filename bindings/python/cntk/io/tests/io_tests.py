@@ -116,6 +116,7 @@ def test_text_format(tmpdir):
     assert features.num_sequences == 2
     assert features.num_samples == 7
     assert features.is_sparse
+    feature_ids = features.sequence_ids
 
     labels = mb[labels_si]
     # 2 samples, max seq len 1, 5 dim
@@ -124,6 +125,7 @@ def test_text_format(tmpdir):
     assert labels.num_sequences == 2
     assert labels.num_samples == 2
     assert not labels.is_sparse
+    label_ids = labels.sequence_ids
 
     label_data = labels.asarray()
     assert np.allclose(label_data,
@@ -131,6 +133,9 @@ def test_text_format(tmpdir):
                            [[1.,  0.,  0.,  0.,  0.]],
                            [[0.,  1.,  0.,  0.,  0.]]
                        ]))
+
+    assert label_ids == feature_ids
+    assert label_ids == ['0', '1']
 
     mb = mb_source.next_minibatch(1)
     features = mb[features_si]
@@ -141,6 +146,11 @@ def test_text_format(tmpdir):
     assert features.num_samples < 7
     assert labels.num_samples == 1
 
+    feature_ids = features.sequence_ids
+    label_ids = labels.sequence_ids
+
+    assert label_ids == feature_ids
+    assert label_ids == ['0']
 
 def check_default_config_keys(d):
         assert 5 <= len(d.keys())
@@ -1039,53 +1049,3 @@ def test_base64_is_equal_image(tmpdir):
         images2 = mb[images2_stream].asarray()
         assert(images1 == images2).all()
 
-def test_sequence_ids(tmpdir):
-    tmpfile = _write_data(tmpdir, MBDATA_SPARSE)
-
-    input_dim = 1000
-    num_output_classes = 5
-
-    mb_source = MinibatchSource(CTFDeserializer(tmpfile, StreamDefs(
-        features=StreamDef(field='x', shape=input_dim, is_sparse=True),
-        labels=StreamDef(field='y', shape=num_output_classes, is_sparse=False)
-    )), randomize=False)
-
-    features_si = mb_source.stream_info('features')
-    labels_si = mb_source.stream_info('labels')
-
-    mb = mb_source.next_minibatch(7)
-
-    for id, values in extract_data(mb):
-        print(id, values[features_si].asarray(), values[labels_si].asarray())
-
-    features = mb[features_si]
-    # 2 samples, max seq len 4, 1000 dim
-    assert features.shape == (2, 4, input_dim)
-    assert features.end_of_sweep
-    assert features.num_sequences == 2
-    assert features.num_samples == 7
-    assert features.is_sparse
-
-    labels = mb[labels_si]
-    # 2 samples, max seq len 1, 5 dim
-    assert labels.shape == (2, 1, num_output_classes)
-    assert labels.end_of_sweep
-    assert labels.num_sequences == 2
-    assert labels.num_samples == 2
-    assert not labels.is_sparse
-
-    label_data = labels.asarray()
-    assert np.allclose(label_data,
-                       np.asarray([
-                           [[1.,  0.,  0.,  0.,  0.]],
-                           [[0.,  1.,  0.,  0.,  0.]]
-                       ]))
-
-    mb = mb_source.next_minibatch(1)
-    features = mb[features_si]
-    labels = mb[labels_si]
-
-    assert not features.end_of_sweep
-    assert not labels.end_of_sweep
-    assert features.num_samples < 7
-    assert labels.num_samples == 1

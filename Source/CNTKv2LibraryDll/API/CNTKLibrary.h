@@ -5027,12 +5027,16 @@ namespace CNTK
         MinibatchData(ValuePtr value) : MinibatchData(value, 0)
         {}
 
-        MinibatchData(ValuePtr value, size_t numSamples, bool sweepEnd = false) 
+        MinibatchData(ValuePtr value, size_t numSamples, bool sweepEnd = false)
             : MinibatchData(value, numSamples, numSamples, sweepEnd)
         {}
 
-        MinibatchData(ValuePtr value, size_t numSequences, size_t numSamples, bool sweepEnd) 
+        MinibatchData(ValuePtr value, size_t numSequences, size_t numSamples, bool sweepEnd)
             : data(value), numberOfSequences(numSequences), numberOfSamples(numSamples), sweepEnd(sweepEnd) 
+        {}
+
+        MinibatchData(ValuePtr value, size_t numSequences, size_t numSamples, bool sweepEnd, std::function<std::string(size_t)> idToString, std::vector<size_t>&& ids)
+            : data(value), numberOfSequences(numSequences), numberOfSamples(numSamples), sweepEnd(sweepEnd), m_idToString(std::move(idToString)), m_numericIds(std::move(ids))
         {}
 
         std::wstring AsString() const
@@ -5042,10 +5046,26 @@ namespace CNTK
             return wss.str();
         }
 
+        const std::vector<std::string>& SequenceIds()
+        {
+            if (m_ids.empty() && m_idToString && !m_numericIds.empty())
+            {
+                for (auto id : m_numericIds)
+                    m_ids.push_back(m_idToString(id));
+            }
+
+            return m_ids;
+        }
+
         ValuePtr data;
         size_t numberOfSequences;
         size_t numberOfSamples;
-        bool sweepEnd; 
+        bool sweepEnd;
+
+    private:
+        std::vector<std::string> m_ids;
+        std::function<std::string(size_t)> m_idToString;
+        std::vector<size_t> m_numericIds;
     };
 
     ///
