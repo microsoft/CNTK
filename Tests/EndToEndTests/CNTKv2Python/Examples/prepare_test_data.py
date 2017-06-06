@@ -169,3 +169,30 @@ def prepare_UCF11_data():
                                 *"DataSets/UCF11-v0.tar".split("/"))
         with tarfile.TarFile(tar_path) as mytar:
             mytar.extractall(base_path)
+
+def prepare_penn_treebank_data():
+    base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         *"../../../../Examples/Text/WordLMWithSampledSoftmax/ptb".split("/"))
+    base_path = os.path.normpath(base_path)
+
+    print(base_path)
+    if not os.path.exists(base_path):
+        os.makedirs(base_path)
+
+    src_files = ["Text/WordLMWithSampledSoftmax_ptb/freq.txt",
+                 "Text/WordLMWithSampledSoftmax_ptb/test.txt",
+                 "Text/WordLMWithSampledSoftmax_ptb/token2freq.txt",
+                 "Text/WordLMWithSampledSoftmax_ptb/token2id.txt",
+                 "Text/WordLMWithSampledSoftmax_ptb/train.txt",
+                 "Text/WordLMWithSampledSoftmax_ptb/valid.txt",
+                 "Text/WordLMWithSampledSoftmax_ptb/vocab.txt"]
+
+    dst_files = ["../../../Examples/Text/WordLMWithSampledSoftmax/ptb/freq.txt",
+                 "../../../Examples/Text/WordLMWithSampledSoftmax/ptb/test.txt",
+                 "../../../Examples/Text/WordLMWithSampledSoftmax/ptb/token2freq.txt",
+                 "../../../Examples/Text/WordLMWithSampledSoftmax/ptb/token2id.txt",
+                 "../../../Examples/Text/WordLMWithSampledSoftmax/ptb/train.txt",
+                 "../../../Examples/Text/WordLMWithSampledSoftmax/ptb/valid.txt",
+                 "../../../Examples/Text/WordLMWithSampledSoftmax/ptb/vocab.txt"]
+
+    _data_copier(src_files, dst_files)
