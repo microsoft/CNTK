@@ -122,6 +122,8 @@ struct RuntimeStatistics
     size_t numDoneOtherOps = 0;
     // backward
     size_t numBackpropsToInputs = 0;
+    size_t numBackpropGathers = 0;
+    size_t numBackpropScatters = 0;
     size_t numBatchedBackpropToCalls = 0;
 };
 
@@ -235,10 +237,11 @@ class Variable::AutoBatch
     RuntimeStatistics m_stats;
     VisitorTag m_visitorTag; // helper for managing tree traversal (non-nested)
 
-    // buffers for building NDArrayViewPtr vectors. Keep as class members to avoid repeated memory allocations.
-    vector<NDArrayViewPtr> m_inputValuesBuffer;
-    vector<NDArrayViewPtr> m_outputGradientsBuffer;
+    // buffers e.g. for building NDArrayViewPtr vectors. Kept as class members to avoid repeated memory allocations.
+    vector<NDArrayViewPtr>     m_inputValuesBuffer;
+    vector<NDArrayViewPtr>     m_outputGradientsBuffer;
     vector<const NDArrayView*> m_inputValuesBufferRaw;
+    vector<size_t>             m_dimsBuffer;
     template<class B> // B=vector<NDArrayViewPtr>
     B& BorrowBuffer(B& buffer, size_t batchSize)
     {
@@ -973,11 +976,11 @@ public:
 
     // helper to batch an array of NDArrayViews of the same rank along either the last or into a new axis
     // TODO: do this with a lambda so we can go straight into gatherBatchResultDims
-    vector<size_t> gatherBatchResultDims;
     NDArrayViewPtr GatherBatchInArena(const vector<NDArrayViewPtr>& inputs, size_t axis, size_t batchDim)
     {
         let& input0 = *inputs[0];
         let& inputShape = input0.Shape().Dimensions();
+        auto& gatherBatchResultDims = BorrowBuffer(m_dimsBuffer, inputShape.size()+1);
         gatherBatchResultDims.assign(inputShape.begin(), inputShape.end());
         fail_if(axis + 1 < gatherBatchResultDims.size(), "axis not trailing??");
         if (axis == gatherBatchResultDims.size())
@@ -985,6 +988,7 @@ public:
         else
             gatherBatchResultDims[axis] = batchDim;
         auto out = m_arena.NewNDArrayView(gatherBatchResultDims, input0.GetDataType(), input0.Device());
+        m_stats.numBackpropGathers++;
         return move(NDArrayView::GatherBatch(inputs, (int)axis, move(out)));
     }
 
@@ -1028,7 +1032,7 @@ public:
         // If the input is a lazyIndex, then the gradient is a view into the lazy source.
         let beta = LazilyCreateLazilyIndexedGradient(input);
         // backprop into the input
-        PrimitiveFunction::BackpropTo(outputGradient, index, f->m_op, f->m_attributes, outputValue, inputValues, fields.m_gradient, beta, *f);
+        PrimitiveFunction::BackpropTo(outputGradient/*incoming*/, index, f->m_op, f->m_attributes, outputValue, inputValues, fields.m_gradient/*target*/, beta, *f);
         m_stats.numBatchedBackpropToCalls++;
     }
 
@@ -1056,45 +1060,40 @@ public:
             BackpropToUnbatched(f, index);
             m_stats.numBatchedBackpropToCalls--; // for now fake the call count to see the potentail impact
         }
-        m_stats.numBatchedBackpropToCalls++;
 #else
 #ifdef LOG_DETAILS
-        LogFunction(*f, "[bb] ", index);
+        LogFunction(*f, "[bb] ", SIZE_MAX);
 #endif
+        // The gradient of Splice is just copying all columns to the respective inputs.
         let& inputs =  f->m_inputs;
-        auto& input = inputs[index];
-        auto& fields = *input.m_dataFields;
-        fail_if(!fields.m_needsGradient, "function unexpectedly does not need a gradient");
         // get the TensorViews for everything we may compute the gradient from
-        let& outputs = f->m_outputs;
-        fail_if(outputs.size() != 1, "only functions with 1 output are currently supported");
-        let& outputFields = *outputs[0].m_dataFields;
+        let& output = f->m_outputs[0];
+        let& outputFields = *output.m_dataFields;
 #ifndef NO_BATCHED_BACKPROP
         fail_if(outputFields.m_lazyIndex.first, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
 #endif
         fail_if(!outputFields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
         fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
-        let* outputValue    = outputFields.m_value   .get();
-        let* outputGradient = outputFields.m_gradient.get();
+        let* outputGradient = outputFields.m_gradient.get(); // this is the incoming batch of gradients
 
         let numInputs = inputs.size();
-        auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, numInputs);
+        auto& inputGradients = BorrowBuffer(m_inputValuesBuffer, numInputs); // target locations to propagate the columns to
         for (size_t i = 0; i < numInputs; i++)
         {
-            let& input1 = inputs[i];
-            let& fields = *input1.m_dataFields;
-            fail_if(!fields.m_value, "unexpectedly ran into a function that has no m_value yet??");
-            inputValues[i] = fields.m_value.get();
+            let& input = inputs[i];
+            // create the gradients
+            let beta = LazilyCreateLazilyIndexedGradient(input);
+            // TODO: how to deal with inconsistent beta??
+            let& fields = *input.m_dataFields;
+            inputGradients[i] = fields.m_gradient;
         }
 
-        // compute gradients for the desired input
-        // Get or create m_gradient as the desired gradient's TensorView.
-        // If the input is a lazyIndex, then the gradient is a view into the lazy source.
-        let beta = LazilyCreateLazilyIndexedGradient(input);
-        // backprop into the input
-        PrimitiveFunction::BackpropTo(outputGradient, index, f->m_op, f->m_attributes, outputValue, inputValues, fields.m_gradient, beta, *f);
-        m_stats.numBatchedBackpropToCalls++;
+        // backprop into all inputs
+        // TODO: Does this need to be wrapped, or just call ScatterBatch()?
+        // CONTINUEHERE
+        PrimitiveFunction::BackpropTo(outputGradient, index, f->m_op, f->m_attributes, outputValue, inputGradients, fields.m_gradient, beta, *f);
 #endif
+        m_stats.numBackpropScatters++;
     }
 
     // backprop into weight parameter of a Times op (inputs[0])
@@ -1360,8 +1359,8 @@ public:
             fields.m_consumers.second.clear();
         }
 #ifdef LOG_STATS
-        fprintf(stderr, "BatchedBackward: %d backprop computations executed in nominal %d post-batching ops\n",
-                (int)m_stats.numBatchedBackpropToCalls, (int)m_stats.numBackpropsToInputs);
+        fprintf(stderr, "BatchedBackward: %d backprop computations besides %d gathers and %d scatters executed in nominal %d post-batching ops\n",
+                (int)m_stats.numBatchedBackpropToCalls, (int)m_stats.numBackpropGathers, (int)m_stats.numBackpropScatters, (int)m_stats.numBackpropsToInputs);
 #endif
     }
 }; // class
