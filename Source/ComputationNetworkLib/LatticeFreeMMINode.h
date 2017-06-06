@@ -507,7 +507,7 @@ protected:
     int m_alignmentWindow;
     ElemType m_ceweight;
     ElemType m_boosted; 
-	ElemType m_denWeight; 
+    ElemType m_denWeight; 
     vector<map<int, pair<int, ElemType>>> m_fsa;
     shared_ptr<Matrix<ElemType>> m_tmap;
     shared_ptr<Matrix<ElemType>> m_smap;
