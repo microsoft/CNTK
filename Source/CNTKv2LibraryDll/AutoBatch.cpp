@@ -989,9 +989,10 @@ public:
     }
 
     // back-propagate f's outputs' m_gradient to a specified input
+    // This is the standard path for all unbatched ops.
     // This wraps the PrimitiveFunction's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
     // Note that each input that is lazy should redirect into a slice in its lazy source.
-    void BackpropTo(PrimitiveFunction* f, size_t index)
+    void BackpropToUnbatched(PrimitiveFunction* f, size_t index)
     {
 #ifdef LOG_DETAILS
         LogFunction(*f, "[bb] ", index);
@@ -1032,10 +1033,18 @@ public:
     }
 
     // backprop into an input of a splice operation
-    // This should be a single CUDA launch into all inputs
-    void BackpropToSplice(PrimitiveFunction* f, size_t index)
+    // This is done as a single CUDA launch into all inputs.
+    // This is a little tricky. We backprop into all inputs.
+    // So we must make sure we run this only once.
+    // The first time this gradient gets puled, we do it for all inputs
+    // and remember that this has been done.
+    void BackpropToSplice(PrimitiveFunction* f)
     {
-        BackpropTo(f, index);
+        // if we pull this a second time, then don't propagate again
+        if (m_visitorTag.Visited(f->m_visitedTag))
+            return;
+        for (size_t index = 0; index < f->m_inputs.size(); index++)
+            BackpropToUnbatched(f, index);
     }
 
     // backprop into weight parameter of a Times op (inputs[0])
@@ -1044,7 +1053,7 @@ public:
     {
 #if 0
         for (auto& c : consumers)
-            BackpropTo(c.first, c.second);
+            BackpropToUnbatched(c.first, c.second);
 #else
         // We compute
         //  leftGrad += sum_i outGrad_i @ right_i^T
@@ -1090,6 +1099,7 @@ public:
     // backprop gradient into 'var' by pulling all of its consumers (recursively)
     // This is the second function that does batching.
     // The vectors for building the lists are class members so that we reuse the malloc.
+    // This is a subroutine of RAggregateGradientFromAllConsumers().
     vector<pair<PrimitiveFunction*, size_t>> m_spliceConsumers;
     vector<pair<PrimitiveFunction*, size_t>> m_matrixWeightConsumers;
     vector<pair<PrimitiveFunction*, size_t>> m_summandConsumers;
@@ -1166,6 +1176,9 @@ public:
     // In the case of multiple consumers, the gradient is the sum.
     // This recursively traverses the graph upwards via the consumers chain.
     // Caller must call m_visitorTag.Begin() first.
+    // This uses Variable::m_visitedTag for traversing the consumer tree upwards.
+    // It uses PrimitiveFunction::m_visitedTag for bulk gradient of currently the
+    // Splice op, which produces all inputs' gradients in a single go and must therefore only run once.
     __declspec(noinline) void RAggregateGradientFromAllConsumers(const Variable& var)
     {
         let& fields = *var.m_dataFields;
@@ -1196,7 +1209,7 @@ public:
         // fast path: only one consumer, nothing to batch
         if (fields.m_consumers.second.empty())
         {
-            BackpropTo(c.first, c.second);
+            BackpropToUnbatched(c.first, c.second);
             return;
         }
 
@@ -1220,7 +1233,7 @@ public:
 
         // splice bucket
         for (auto& c : m_spliceConsumers)
-            BackpropToSplice(c.first, c.second);
+            BackpropToSplice(c.first);
 
         // matrix-weight bucket
         if (!m_matrixWeightConsumers.empty())
@@ -1231,7 +1244,7 @@ public:
 
         // others bucket
         for (auto& c : m_otherConsumers)
-            BackpropTo(c.first, c.second);
+            BackpropToUnbatched(c.first, c.second);
     }
 
 public:
