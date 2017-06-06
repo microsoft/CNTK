@@ -988,6 +988,105 @@ public:
         return move(NDArrayView::GatherBatch(inputs, (int)axis, move(out)));
     }
 
+    // back-propagate f's outputs' m_gradient to a specified input
+    // This wraps the PrimitiveFunction's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
+    // Note that each input that is lazy should redirect into a slice in its lazy source.
+    void BackpropTo(PrimitiveFunction* f, size_t index)
+    {
+#ifdef LOG_DETAILS
+        LogFunction(*f, "[bb] ", index);
+#endif
+        let& inputs =  f->m_inputs;
+        auto& input = inputs[index];
+        auto& fields = *input.m_dataFields;
+        fail_if(!fields.m_needsGradient, "function unexpectedly does not need a gradient");
+        // get the TensorViews for everything we may compute the gradient from
+        let& outputs = f->m_outputs;
+        fail_if(outputs.size() != 1, "only functions with 1 output are currently supported");
+        let& outputFields = *outputs[0].m_dataFields;
+#ifndef NO_BATCHED_BACKPROP
+        fail_if(outputFields.m_lazyIndex.first, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
+#endif
+        fail_if(!outputFields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
+        fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
+        let* outputValue    = outputFields.m_value   .get();
+        let* outputGradient = outputFields.m_gradient.get();
+
+        let numInputs = inputs.size();
+        auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, numInputs);
+        for (size_t i = 0; i < numInputs; i++)
+        {
+            let& input1 = inputs[i];
+            let& fields = *input1.m_dataFields;
+            fail_if(!fields.m_value, "unexpectedly ran into a function that has no m_value yet??");
+            inputValues[i] = fields.m_value.get();
+        }
+
+        // compute gradients for the desired input
+        // Get or create m_gradient as the desired gradient's TensorView.
+        // If the input is a lazyIndex, then the gradient is a view into the lazy source.
+        let beta = LazilyCreateLazilyIndexedGradient(input);
+        // backprop into the input
+        PrimitiveFunction::BackpropTo(outputGradient, index, f->m_op, f->m_attributes, outputValue, inputValues, fields.m_gradient, beta, *f);
+        m_stats.numBatchedBackpropToCalls++;
+    }
+
+    // backprop into an input of a splice operation
+    // This should be a single CUDA launch into all inputs
+    void BackpropToSplice(PrimitiveFunction* f, size_t index)
+    {
+        BackpropTo(f, index);
+    }
+
+    // backprop into weight parameter of a Times op (inputs[0])
+    // This can be batched into a single matrix product.
+    void BackpropToMatrixWeight(vector<pair<PrimitiveFunction*, size_t>>& consumers)
+    {
+#if 0
+        for (auto& c : consumers)
+            BackpropTo(c.first, c.second);
+#else
+        // We compute
+        //  leftGrad += sum_i outGrad_i @ right_i^T
+        //            = (concat_i outGrad_i) @ (concat_i right_i)^T
+        // where concat_i means to concatenate matrices along their trailing (batch) axis.
+        // It has already been verified that all i have the same rank and dimensions except for a single reduction dimension.
+
+        // batch all outGrads, and batch all right inputs
+        let numBatchItems = m_matrixWeightConsumers.size();
+        auto& timesOutGrads        = BorrowBuffer(m_inputValuesBuffer,     numBatchItems);
+        auto& timesDataRightInputs = BorrowBuffer(m_outputGradientsBuffer, numBatchItems);
+        let& f0 = *m_matrixWeightConsumers.front().first;
+        let& input0 = f0.m_inputs[0];
+        size_t batchDim = 0;
+        for (size_t i = 0; i < numBatchItems; i++)
+        {
+            let &c = m_matrixWeightConsumers[i];
+            fail_if(c.second != 0, "wrong input??");
+            let& outGrad = c.first->m_outputs[0].m_dataFields->m_gradient;
+            let& right = c.first->m_inputs[1].m_dataFields->m_value;
+            timesOutGrads       [i] = outGrad;
+            timesDataRightInputs[i] = right;
+            let numItems = outGrad->Shape().Dimensions().back();
+            fail_if(numItems != right->Shape().Dimensions().back(), "batch dimension of two inputs not ther same??");
+            batchDim += numItems;
+        }
+        auto outGradBatch = GatherBatchInArena(timesOutGrads       , f0.m_outputs[0].Shape().Rank() - 1, batchDim);
+        auto rightBatch   = GatherBatchInArena(timesDataRightInputs, f0.m_inputs[1] .Shape().Rank() - 1, batchDim);
+
+        // backprop into the left input from the batched outGrad and right
+        auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, 2);
+        inputValues[0] = nullptr;
+        inputValues[1] = rightBatch.get();
+        let beta = LazilyCreateLazilyIndexedGradient(input0);
+        PrimitiveFunction::BackpropTo(/*outputGradient=*/outGradBatch.get(),      // incoming gradient from top...
+                                      /*index=*/0, f0.m_op, f0.m_attributes,      // ...goes through this function...
+                                      /*outputValue=*/nullptr, inputValues,       // ...using these values from forward pass...
+                                      input0.m_dataFields->m_gradient, beta, f0); // ...into here
+        m_stats.numBatchedBackpropToCalls++;
+#endif
+    }
+
     // backprop gradient into 'var' by pulling all of its consumers (recursively)
     // This is the second function that does batching.
     // The vectors for building the lists are class members so that we reuse the malloc.
@@ -1058,62 +1157,6 @@ public:
         else
             m_otherConsumers.push_back(c);
     };
-
-    // backprop into an input of a splice operation
-    // This should be a single CUDA launch into all inputs
-    void BackpropToSplice(PrimitiveFunction* f, size_t index)
-    {
-        BackpropTo(f, index);
-    }
-
-    // backprop into weight parameter of a Times op (inputs[0])
-    // This can be batched into a single matrix product.
-    void BackpropToMatrixWeight(vector<pair<PrimitiveFunction*, size_t>>& consumers)
-    {
-#if 0
-        for (auto& c : consumers)
-            BackpropTo(c.first, c.second);
-#else
-        // We compute
-        //  leftGrad += sum_i outGrad_i @ right_i^T
-        //            = (concat_i outGrad_i) @ (concat_i right_i)^T
-        // where concat_i means to concatenate matrices along their trailing (batch) axis.
-        // It has already been verified that all i have the same rank and dimensions except for a single reduction dimension.
-
-        // batch all outGrads, and batch all right inputs
-        let numBatchItems = m_matrixWeightConsumers.size();
-        auto& timesOutGrads        = BorrowBuffer(m_inputValuesBuffer,     numBatchItems);
-        auto& timesDataRightInputs = BorrowBuffer(m_outputGradientsBuffer, numBatchItems);
-        let& f0 = *m_matrixWeightConsumers.front().first;
-        let& input0 = f0.m_inputs[0];
-        size_t batchDim = 0;
-        for (size_t i = 0; i < numBatchItems; i++)
-        {
-            let &c = m_matrixWeightConsumers[i];
-            fail_if(c.second != 0, "wrong input??");
-            let& outGrad = c.first->m_outputs[0].m_dataFields->m_gradient;
-            let& right = c.first->m_inputs[1].m_dataFields->m_value;
-            timesOutGrads       [i] = outGrad;
-            timesDataRightInputs[i] = right;
-            let numItems = outGrad->Shape().Dimensions().back();
-            fail_if(numItems != right->Shape().Dimensions().back(), "batch dimension of two inputs not ther same??");
-            batchDim += numItems;
-        }
-        auto outGradBatch = GatherBatchInArena(timesOutGrads       , f0.m_outputs[0].Shape().Rank() - 1, batchDim);
-        auto rightBatch   = GatherBatchInArena(timesDataRightInputs, f0.m_inputs[1] .Shape().Rank() - 1, batchDim);
-
-        // backprop into the left input from the batched outGrad and right
-        auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, 2);
-        inputValues[0] = nullptr;
-        inputValues[1] = rightBatch.get();
-        let beta = LazilyCreateLazilyIndexedGradient(input0);
-        PrimitiveFunction::BackpropTo(/*outputGradient=*/outGradBatch.get(),      // incoming gradient from top...
-                                      /*index=*/0, f0.m_op, f0.m_attributes,      // ...goes through this function...
-                                      /*outputValue=*/nullptr, inputValues,       // ...using these values from forward pass...
-                                      input0.m_dataFields->m_gradient, beta, f0); // ...into here
-        m_stats.numBatchedBackpropToCalls++;
-#endif
-    }
 
     // compute a variable's outputs' gradient (var.m_gradient)
     // This operates on the PrimitiveFunction(s) that use this var's output value--its "consumers".
@@ -1189,49 +1232,6 @@ public:
         // others bucket
         for (auto& c : m_otherConsumers)
             BackpropTo(c.first, c.second);
-    }
-
-    // back-propagate all of f's outputs' m_gradients to one input
-    // This wraps the PrimitiveFunction's BackpropTo(), interfacing from vectors of Variable to vectors of NDArrayViewPtr.
-    // Note that each input that is lazy should redirect into a slice in its lazy source.
-    void BackpropTo(PrimitiveFunction* f, size_t index)
-    {
-#ifdef LOG_DETAILS
-        LogFunction(*f, "[bb] ", index);
-#endif
-        let& inputs =  f->m_inputs;
-        auto& input = inputs[index];
-        auto& fields = *input.m_dataFields;
-        fail_if(!fields.m_needsGradient, "function unexpectedly does not need a gradient");
-        // get the TensorViews for everything we may compute the gradient from
-        let& outputs = f->m_outputs;
-        fail_if(outputs.size() != 1, "only functions with 1 output are currently supported");
-        let& outputFields = *outputs[0].m_dataFields;
-#ifndef NO_BATCHED_BACKPROP
-        fail_if(outputFields.m_lazyIndex.first, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
-#endif
-        fail_if(!outputFields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
-        fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
-        let* outputValue    = outputFields.m_value   .get();
-        let* outputGradient = outputFields.m_gradient.get();
-
-        let numInputs = inputs.size();
-        auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, numInputs);
-        for (size_t i = 0; i < numInputs; i++)
-        {
-            let& input1 = inputs[i];
-            let& fields = *input1.m_dataFields;
-            fail_if(!fields.m_value, "unexpectedly ran into a function that has no m_value yet??");
-            inputValues[i] = fields.m_value.get();
-        }
-
-        // compute gradients for the desired input
-        // Get or create m_gradient as the desired gradient's TensorView.
-        // If the input is a lazyIndex, then the gradient is a view into the lazy source.
-        let beta = LazilyCreateLazilyIndexedGradient(input);
-        // backprop into the input
-        PrimitiveFunction::BackpropTo(outputGradient, index, f->m_op, f->m_attributes, outputValue, inputValues, fields.m_gradient, beta, *f);
-        m_stats.numBatchedBackpropToCalls++;
     }
 
 public:
