@@ -170,29 +170,19 @@ def prepare_UCF11_data():
         with tarfile.TarFile(tar_path) as mytar:
             mytar.extractall(base_path)
 
-def prepare_penn_treebank_data():
-    base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         *"../../../../Examples/Text/WordLMWithSampledSoftmax/ptb".split("/"))
+# TODO: We should have a common PTB (Penn Tree Bank) dataset for other tests also based on it
+#       There is already similar data checked in Examples\SequenceToSequence\PennTreebank\Data
+def prepare_WordLMWithSampledSoftmax_ptb_data():
+    base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", "Examples", "Text", "WordLMWithSampledSoftmax", "ptb")
     base_path = os.path.normpath(base_path)
 
-    print(base_path)
     if not os.path.exists(base_path):
         os.makedirs(base_path)
 
-    src_files = ["Text/WordLMWithSampledSoftmax_ptb/freq.txt",
-                 "Text/WordLMWithSampledSoftmax_ptb/test.txt",
-                 "Text/WordLMWithSampledSoftmax_ptb/token2freq.txt",
-                 "Text/WordLMWithSampledSoftmax_ptb/token2id.txt",
-                 "Text/WordLMWithSampledSoftmax_ptb/train.txt",
-                 "Text/WordLMWithSampledSoftmax_ptb/valid.txt",
-                 "Text/WordLMWithSampledSoftmax_ptb/vocab.txt"]
+    external_data_path = os.path.join(os.environ[envvar], "Text", "WordLMWithSampledSoftmax_ptb")
+    src_files = ["test.txt", "token2freq.txt", "token2id.txt", "train.txt", "valid.txt", "vocab.txt", "freq.txt"]
 
-    dst_files = ["../../../Examples/Text/WordLMWithSampledSoftmax/ptb/freq.txt",
-                 "../../../Examples/Text/WordLMWithSampledSoftmax/ptb/test.txt",
-                 "../../../Examples/Text/WordLMWithSampledSoftmax/ptb/token2freq.txt",
-                 "../../../Examples/Text/WordLMWithSampledSoftmax/ptb/token2id.txt",
-                 "../../../Examples/Text/WordLMWithSampledSoftmax/ptb/train.txt",
-                 "../../../Examples/Text/WordLMWithSampledSoftmax/ptb/valid.txt",
-                 "../../../Examples/Text/WordLMWithSampledSoftmax/ptb/vocab.txt"]
-
-    _data_copier(src_files, dst_files)
+    for src_file in src_files:
+        if os.path.isfile(os.path.join(base_path, src_file)):
+            continue
+        copyfile(os.path.join(external_data_path, src_file), os.path.join(base_path, src_file))

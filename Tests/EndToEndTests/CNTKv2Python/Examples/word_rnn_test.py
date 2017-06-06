@@ -17,34 +17,34 @@ sys.path.append(abs_path)
 base_path = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Text", "WordLMWithSampledSoftmax")
 sys.path.append(base_path)
 
-from prepare_test_data import prepare_penn_treebank_data
+from prepare_test_data import prepare_WordLMWithSampledSoftmax_ptb_data
 import word_rnn as W
 from data_reader import get_count_data
-from word_rnn import train_lm
 
 TOLERANCE_ABSOLUTE = 1e-1
 
 def test_data_reader(device_id):
     try_set_default_device(cntk_device(device_id))
 
-    prepare_penn_treebank_data()
+    prepare_WordLMWithSampledSoftmax_ptb_data()
 
     expected_count = 2104
 
     current_path = os.getcwd()
     os.chdir(os.path.join(base_path))
 
-    actual_count = get_count_data()
-
-    os.chdir(current_path)
-    assert actual_count == expected_count
+    try:
+        actual_count = get_count_data()
+        assert actual_count == expected_count
+    finally:
+        os.chdir(current_path)
 
 def test_ptb_word_rnn(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('This test only runs on GPU')
     try_set_default_device(cntk_device(device_id))
 
-    prepare_penn_treebank_data()
+    prepare_WordLMWithSampledSoftmax_ptb_data()
 
     W.num_epochs = 1
     W.softmax_sample_size = 3
@@ -87,4 +87,4 @@ def test_word_rnn(device_id):
     W.train_file_path             = os.path.join(dir, 'test/text.txt')
     W.token_frequencies_file_path = os.path.join(dir, 'test/freq.txt')
 
-    W.train_lm()
+    W.train_lm(testing=True)
