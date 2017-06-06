@@ -1064,6 +1064,7 @@ public:
                                       /*index=*/0, f0.m_op, f0.m_attributes,      // ...goes through this function...
                                       /*outputValue=*/nullptr, inputValues,       // ...using these values from forward pass...
                                       input0.m_dataFields->m_gradient, beta, f0); // ...into here
+        stats.numBatchedBackpropToCalls++;
 #endif
     }
 

@@ -284,6 +284,7 @@ namespace CNTK
             // hard stuff
         case PrimitiveOpType::Splice:
             {
+                // TODO: allow to pass index as SIZE_MAX to denote all; but only allow that for splice.
                 auto axis = attributes[L"axis"/*PrimitiveFunction::AttributeNameAxis*/].Value<Axis>();
                 if (axis.StaticAxisIndex() != arg1->Shape().Rank() -1)
                     LogicError("NDArrayView::GatherBatch: Currently only splicing in a new slowest-changing axis is supported.");
