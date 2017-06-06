@@ -1596,11 +1596,18 @@ namespace CNTK
             name);
     }
 
-    FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name/* = L""*/)
+    FunctionPtr ROIPooling(const Variable& operand, 
+                           const Variable& rois, 
+                           PoolingType poolingType, 
+                           const NDShape& roiOutputShape, 
+                           double spatialScale, 
+                           const std::wstring& name/* = L""*/)
     {
         auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)poolingType;
         additionalProperties[PrimitiveFunction::AttributeNameROIOutputShape] = roiOutputShape;
-        return BinaryOp(PrimitiveOpType::ROIPooling, convolutionMap, rois, std::move(additionalProperties), name);
+        additionalProperties[PrimitiveFunction::AttributeNameSpatialScale] = spatialScale;
+        return BinaryOp(PrimitiveOpType::ROIPooling, operand, rois, std::move(additionalProperties), name);
     }
 
     FunctionPtr Pooling(const Variable& operand,
