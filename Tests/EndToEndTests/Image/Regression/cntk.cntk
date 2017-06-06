@@ -1,0 +1,158 @@
+precision = "float"
+command = train:test:write
+deviceId = $DeviceId$
+
+ndlMacros = "$ConfigDir$/Macros.ndl"
+parallelTrain = false
+numCPUThreads = 1
+
+train = [
+    action = "train"
+    modelPath = "$RunDir$/models/cntk.dnn"
+    traceLevel = 1
+    
+    NDLNetworkBuilder=[
+        networkDescription = "$ConfigDir$/regression.ndl"
+        keepCheckPointFiles = false
+    ]
+    
+    SGD = [
+        epochSize = 200
+        minibatchSize = 20
+        learningRatesPerSample = 0.01*20:0.002*20:0.0004*30:0.0001*30:0.00002*50:0.00001
+        maxEpochs = 200
+        keepCheckPointFiles = false
+        dropoutRate = 0.1
+    ]
+
+    reader = [
+        verbosity = 0
+        randomize = true
+        
+        deserializers = (
+        [
+            type = "CNTKTextFormatDeserializer"
+            module = "CNTKTextFormatReader"
+            file = "$DataDir$/regression_train_labels.txt"
+
+            input = [
+                labels = [
+                    dim = 4
+                    format = "dense"
+                ]
+            ]
+        ]:[
+            type = "ImageDeserializer"
+            module = "ImageReader"
+            file = "$DataDir$/regression_train_features.txt"
+            grayscale = true
+
+            input = [
+                features = [
+                    transforms = (
+                        [
+                            type = "Scale"
+                            width = 4
+                            height = 4
+                            channels = 1
+                            interpolations = "linear"
+                        ]
+                    )
+                ]
+
+                ignored = [
+                    labelDim = 4
+                ]
+            ]
+        ]
+        )
+    ]
+]
+
+test = [
+    action = "test"
+    modelPath = "$RunDir$/models/cntk.dnn"
+    minibatchSize = 10
+
+    reader = [
+        verbosity = 0
+        randomize = true
+        
+        deserializers = (
+        [
+            type = "CNTKTextFormatDeserializer"
+            module = "CNTKTextFormatReader"
+            file = "$DataDir$/regression_test_labels.txt"
+
+            input = [
+                labels = [
+                    dim = 4
+                    format = "dense"
+                ]
+            ]
+        ]:[
+            type = "ImageDeserializer"
+            module = "ImageReader"
+            file = "$DataDir$/regression_test_features.txt"
+            grayscale = true
+
+            input = [
+                features = [
+                    transforms = (
+                        [
+                            type = "Scale"
+                            width = 4
+                            height = 4
+                            channels = 1
+                            interpolations = "linear"
+                        ]
+                    )
+                ]
+
+                ignored = [
+                    labelDim = 4
+                ]
+            ]
+        ]
+        )
+    ]
+]
+
+write = [
+    action = "write"
+    modelPath = "$RunDir$/models/cntk.dnn"
+    outputPath = "$RunDir$/write/output"
+    minibatchSize = 1
+
+    reader = [
+        verbosity = 0
+        randomize = true
+        
+        deserializers = (
+        [
+            type = "ImageDeserializer"
+            module = "ImageReader"
+            file = "$DataDir$/regression_write_features.txt"
+            grayscale = true
+
+            input = [
+                features = [
+                    transforms = (
+                        [
+                            type = "Scale"
+                            width = 4
+                            height = 4
+                            channels = 1
+                            interpolations = "linear"
+                        ]
+                    )
+                ]
+
+                ignored = [
+                    labelDim = 4
+                ]
+            ]
+        ]
+        )
+    ]
+]

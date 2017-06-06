@@ -1,0 +1,35 @@
+load=ndlMacros
+run=DNN
+
+ndlMacros = [
+    imageW = 4
+    imageH = 4
+    labelDim = 4
+    
+    labels = Input(labelDim, tag="label")    
+    features = ImageInput(imageW, imageH, 1, imageLayout="cudnn", tag="feature")
+    
+    meanVal = Mean(features)
+    invstdVal = InvStdDev(features)
+    featScaled = PerDimMeanVarNormalization(features,meanVal,invstdVal)
+]
+
+DNN = [
+    A1 = conv1; A2 = dc1; A3 = h1 ; A4 = d1; A5 = o1
+    
+    kW1 = 1
+    kH1 = 1
+    cMap1 = 64
+    hStride1 = 1
+    vStride1 = 1
+    conv1 = ConvReLULayer(featScaled, cMap1, 1, kW1, kH1, hStride1, vStride1, 1, 1)
+    dc1 = dropout(conv1)
+
+    hiddenDim = 64
+    h1 = DNNImageReLULayer(4, 4, cMap1, hiddenDim, dc1, 1, 1)
+    d1 = Dropout(h1)
+    o1 = DNNLastLayer(hiddenDim, labelDim, d1, 1, 1)
+    
+    sqErr = SquareError(labels, o1, tag="criterion")
+    OutputNodes = o1
+]
