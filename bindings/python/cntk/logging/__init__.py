@@ -3,7 +3,9 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-
+"""
+Utilities for logging. 
+"""
 from cntk import cntk_py
 from .progress_print import *
 from .graph import *

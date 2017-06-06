@@ -2,6 +2,13 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+"""
+Core numerical constructs:
+
+* :class:`NDArrayView <NDArrayView>`
+* :class:`Value <Value>`
+"""
+
 
 import warnings
 import numbers
