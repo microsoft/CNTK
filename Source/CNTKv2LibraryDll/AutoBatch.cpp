@@ -991,12 +991,19 @@ public:
     // backprop gradient into 'var' by pulling all of its consumers (recursively)
     // This is the second function that does batching.
     // The vectors for building the lists are class members so that we reuse the malloc.
-    vector<pair<PrimitiveFunction*, size_t>> m_placeItemConsumers;    // IndexLastAxis() op  --do we have those actually? Or already short-circuited?
+    vector<pair<PrimitiveFunction*, size_t>> m_spliceConsumers;
     vector<pair<PrimitiveFunction*, size_t>> m_matrixWeightConsumers;
     vector<pair<PrimitiveFunction*, size_t>> m_summandConsumers;
     vector<pair<PrimitiveFunction*, size_t>> m_otherConsumers;
-    __declspec(noinline) void DetermineAndAddToBucket (const pair<PrimitiveFunction*, size_t>& c)
+    void DetermineAndAddToBucket (const pair<PrimitiveFunction*, size_t>& c, bool isFirstCall = false)
     {
+        if (isFirstCall) // first time pass true here
+        {
+            m_spliceConsumers      .clear();
+            m_matrixWeightConsumers.clear();
+            m_summandConsumers     .clear();
+            m_otherConsumers       .clear();
+        }
         let* f = c.first;
         let index = c.second;
         fail_if(f->m_outputs.size() != 1, "for now only functions with a single output are supported"); // (needs some more plumbing to fix this)
@@ -1036,8 +1043,12 @@ public:
             return true;
 #endif
         };
+        // splice operation must use scatter
+        if (f->m_op == PrimitiveOpType::Splice)
+            m_spliceConsumers.push_back(c);
+        // matrix product
         // We only collect matrix products with fully matching dimensions.
-        if (f->m_op == PrimitiveOpType::Times && index == 0 &&
+        else if (f->m_op == PrimitiveOpType::Times && index == 0 &&
             (m_matrixWeightConsumers.empty() || (IsMatrixGradient0Batchable(*f, *m_matrixWeightConsumers.back().first))))
             m_matrixWeightConsumers.push_back(c);
         // backprop into either of Plus' arguments
@@ -1047,6 +1058,13 @@ public:
         else
             m_otherConsumers.push_back(c);
     };
+
+    // backprop into an input of a splice operation
+    // This should be a single CUDA launch into all inputs
+    void BackpropToSplice(PrimitiveFunction* f, size_t index)
+    {
+        BackpropTo(f, index);
+    }
 
     // backprop into weight parameter of a Times op (inputs[0])
     // This can be batched into a single matrix product.
@@ -1153,17 +1171,17 @@ public:
         // At present, we aim for weight gradients that are part of a matrix product
         // or a bias addition.
         // First sort all consumer gradients according to their operation.
-        fail_if(!m_otherConsumers.empty(), "consumer bucket lists unexpectedly not cleaned up");
-        DetermineAndAddToBucket(c);
+        DetermineAndAddToBucket(c, /*isFirstCall=*/true);
         for (auto& c : fields.m_consumers.second)
             DetermineAndAddToBucket(c);
 
+        // splice bucket
+        for (auto& c : m_spliceConsumers)
+            BackpropToSplice(c.first, c.second);
+
         // matrix-weight bucket
         if (!m_matrixWeightConsumers.empty())
-        {
             BackpropToMatrixWeight(m_matrixWeightConsumers);
-            m_matrixWeightConsumers.clear();
-        }
 
         // summation bucket
         // ...
@@ -1171,7 +1189,6 @@ public:
         // others bucket
         for (auto& c : m_otherConsumers)
             BackpropTo(c.first, c.second);
-        m_otherConsumers.clear();
     }
 
     // back-propagate all of f's outputs' m_gradients to one input
