@@ -299,7 +299,6 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
             {
                 if (i < m_senoneSequence[j].Begin || i > m_senoneSequence[j].End) continue;
                 int currentSenone = m_senoneSequence[j].Senone;
-                int baseIndex = (i - 1)*nstates + j;
                 assert(m_fsa[m_stateSequence[j]][currentSenone].second != 0);
                 assert(m_fsa[m_stateSequence[j - 1]][currentSenone].second != 0);
                 m_likelihoodBuffer[i * nsenones + currentSenone]-=m_boosted;
@@ -716,7 +715,6 @@ double LatticeFreeMMINodeNegStream<ElemType>::CalculateNumeratorsWithCE(const Ma
             {
                 if (i < m_senoneSequence[j].Begin || i > m_senoneSequence[j].End) continue;
                 int currentSenone = m_senoneSequence[j].Senone;
-                int baseIndex = (i - 1)*nstates + j;
                 assert(m_fsa[m_stateSequence[j]][currentSenone].second != 0);
                 assert(m_fsa[m_stateSequence[j - 1]][currentSenone].second != 0);
                 m_likelihoodBuffer[i * nsenones + currentSenone]-=m_boosted;
