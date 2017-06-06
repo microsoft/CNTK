@@ -307,40 +307,36 @@ def test(test_data, model_path, model_file, config_file):
     num_batch = 0
     misc = {'rawctx':[], 'ctoken':[], 'answer':[], 'uid':[]}
     tsv_reader = create_tsv_reader(loss, test_data, polymath, batch_size, is_test=True, misc=misc)
-    first_json = True
-    with open('{}_out.json'.format(model_file), 'w', encoding='utf-8') as json_out:
-        json_out.write('{')
-        for data in tsv_reader:
-            start_time = time.time()
-            out = model.eval(data, outputs=[begin_logits,end_logits,loss], as_numpy=False)
-            g = best_span_score.grad({begin_prediction:out[begin_logits], end_prediction:out[end_logits]}, wrt=[begin_prediction,end_prediction], as_numpy=False)
-            other_input_map = {begin_prediction: g[begin_prediction], end_prediction: g[end_prediction]}
-            span = predicted_span.eval((other_input_map))
-            for seq, (raw_text, ctokens, answer, uid) in enumerate(zip(misc['rawctx'], misc['ctoken'], misc['answer'], misc['uid'])):
-                seq_where = np.argwhere(span[seq])[:,0]
-                span_begin = np.min(seq_where)
-                span_end = np.max(seq_where)
-                predict_answer = get_answer(raw_text, ctokens, span_begin, span_end)
-                f1 = metric_max_over_ground_truths(f1_score, predict_answer, misc['answer'][seq])
-                em = metric_max_over_ground_truths(exact_match_score, predict_answer, misc['answer'][seq])
-                f1_sum += f1
-                em_sum += 1 if em else 0
-                if first_json:
-                    first_json = False
-                    comma = ''
-                else:
-                    comma = ', '
-                json_out.write('{}"{}":"{}"'.format(comma, uid, predict_answer.replace('"', r'\"')))
-            
-            num_seq += len(misc['rawctx'])
-            misc['rawctx'] = []
-            misc['ctoken'] = []
-            misc['answer'] = []
-            misc['uid'] = []
-            num_batch += 1
-            end_time = time.time()
-            print("Tested {} batches ({:.1f} seq / second), F1 {:.4f}, EM {:.4f}".format(num_batch, batch_size / (end_time - start_time), f1_sum / num_seq, em_sum / num_seq))
-        json_out.write('}')
+    results = {}
+    for data in tsv_reader:
+        start_time = time.time()
+        out = model.eval(data, outputs=[begin_logits,end_logits,loss], as_numpy=False)
+        g = best_span_score.grad({begin_prediction:out[begin_logits], end_prediction:out[end_logits]}, wrt=[begin_prediction,end_prediction], as_numpy=False)
+        other_input_map = {begin_prediction: g[begin_prediction], end_prediction: g[end_prediction]}
+        span = predicted_span.eval((other_input_map))
+        for seq, (raw_text, ctokens, answer, uid) in enumerate(zip(misc['rawctx'], misc['ctoken'], misc['answer'], misc['uid'])):
+            seq_where = np.argwhere(span[seq])[:,0]
+            span_begin = np.min(seq_where)
+            span_end = np.max(seq_where)
+            predict_answer = get_answer(raw_text, ctokens, span_begin, span_end)
+            f1 = metric_max_over_ground_truths(f1_score, predict_answer, misc['answer'][seq])
+            em = metric_max_over_ground_truths(exact_match_score, predict_answer, misc['answer'][seq])
+            f1_sum += f1
+            em_sum += 1 if em else 0
+            results[uid] = predict_answer
+        
+        num_seq += len(misc['rawctx'])
+        misc['rawctx'] = []
+        misc['ctoken'] = []
+        misc['answer'] = []
+        misc['uid'] = []
+        num_batch += 1
+        end_time = time.time()
+        print("Tested {} batches ({:.1f} seq / second), F1 {:.4f}, EM {:.4f}".format(num_batch, batch_size / (end_time - start_time), f1_sum / num_seq, em_sum / num_seq))
+    
+    with open('{}_out.json'.format(model_file), 'w', encoding='utf-8') as out:
+        import json
+        json.dump(results, out)
 
 if __name__=='__main__':
     # default Paths relative to current python file.
