@@ -313,7 +313,7 @@ def test_learner_empy_parameters_list():
 
 
 def ffnet(learner, trainer=None):
-    inputs = 4
+    inputs = 5
     outputs = 3
     layers = 2
     hidden_dimension = 3

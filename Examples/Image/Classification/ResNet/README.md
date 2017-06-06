@@ -44,6 +44,18 @@ Models pre-trained with CNTK scripts.
 |Training script | [ResNet50_ImageNet1K.cntk](./BrainScript/ResNet50_ImageNet1K.cntk)
 |Single crop top 1 / top 5 error | 23.862% / 7.180%
 
+#### ResNet20
+|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet20_CIFAR10_Python.model
+|:-------|:---
+|Training script | [TrainResNet_CIFAR10.py --network resnet20](./Python/TrainResNet_CIFAR10.py)
+|Single crop top 1 error | 8.17%
+
+#### ResNet110
+|CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/ResNet110_CIFAR10_Python.model
+|:-------|:---
+|Training script | [TrainResNet_CIFAR10.py --network resnet110](./Python/TrainResNet_CIFAR10.py)
+|Single crop top 1 error | 6.08%
+
 ### Caffe-Converted
 Models converted from Caffe model zoo.
 #### ResNet50
