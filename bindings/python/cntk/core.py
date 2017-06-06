@@ -35,7 +35,8 @@ class NDArrayView(cntk_py.NDArrayView):
         data_type (np.float32, np.float64): data type of the data
         device (:class:`~cntk.device.DeviceDescriptor`): device this value
          should be put on
-    '''
+
+'''
 
     def __init__(self, shape, data_type, device=None):
         from cntk.internal import sanitize_shape, sanitize_dtype_cntk
@@ -73,6 +74,8 @@ class NDArrayView(cntk_py.NDArrayView):
                           'data/computation to avoid costly data conversions',
                           RuntimeWarning)
             np_array = np.ascontiguousarray(np_array)
+            # You can not borrow a temporary array.
+            borrow = False
 
         if device is None:
             device = use_default_device()
