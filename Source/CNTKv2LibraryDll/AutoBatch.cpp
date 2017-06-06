@@ -1043,8 +1043,58 @@ public:
         // if we pull this a second time, then don't propagate again
         if (m_visitorTag.Visited(f->m_visitedTag))
             return;
+        // Considerations:
+        //  - Note that we do not need to handle consecutive inputs, because those
+        //    would not have been transformed into a Splice operation.
+        //    Hence, this is strictly a ScatterBatch operation.
+        //  - It is possible that the Splice operation consumed the same input twice.
+        //    This is currently handled via atomicAdd(), i.e. will have non-determinism.
+        //    (A striding trick will minimize the probability of clashes.)
+#if 1
         for (size_t index = 0; index < f->m_inputs.size(); index++)
+        {
             BackpropToUnbatched(f, index);
+            m_stats.numBatchedBackpropToCalls--; // for now fake the call count to see the potentail impact
+        }
+        m_stats.numBatchedBackpropToCalls++;
+#else
+#ifdef LOG_DETAILS
+        LogFunction(*f, "[bb] ", index);
+#endif
+        let& inputs =  f->m_inputs;
+        auto& input = inputs[index];
+        auto& fields = *input.m_dataFields;
+        fail_if(!fields.m_needsGradient, "function unexpectedly does not need a gradient");
+        // get the TensorViews for everything we may compute the gradient from
+        let& outputs = f->m_outputs;
+        fail_if(outputs.size() != 1, "only functions with 1 output are currently supported");
+        let& outputFields = *outputs[0].m_dataFields;
+#ifndef NO_BATCHED_BACKPROP
+        fail_if(outputFields.m_lazyIndex.first, "unexpectedly ran into a function that does not own its output"); // we don't backprop through unbatched ops
+#endif
+        fail_if(!outputFields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
+        fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
+        let* outputValue    = outputFields.m_value   .get();
+        let* outputGradient = outputFields.m_gradient.get();
+
+        let numInputs = inputs.size();
+        auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, numInputs);
+        for (size_t i = 0; i < numInputs; i++)
+        {
+            let& input1 = inputs[i];
+            let& fields = *input1.m_dataFields;
+            fail_if(!fields.m_value, "unexpectedly ran into a function that has no m_value yet??");
+            inputValues[i] = fields.m_value.get();
+        }
+
+        // compute gradients for the desired input
+        // Get or create m_gradient as the desired gradient's TensorView.
+        // If the input is a lazyIndex, then the gradient is a view into the lazy source.
+        let beta = LazilyCreateLazilyIndexedGradient(input);
+        // backprop into the input
+        PrimitiveFunction::BackpropTo(outputGradient, index, f->m_op, f->m_attributes, outputValue, inputValues, fields.m_gradient, beta, *f);
+        m_stats.numBatchedBackpropToCalls++;
+#endif
     }
 
     // backprop into weight parameter of a Times op (inputs[0])
@@ -1120,7 +1170,7 @@ public:
         // BUGBUG: This currently does not capture single time steps that backprop into the same matrix as a batch.
         let IsMatrixGradient0Batchable = [](const PrimitiveFunction& f, const PrimitiveFunction& g) -> bool
         {
-#if 0
+#if 0       // use 1 to disable batching of matrix gradients
             return false;
 #else
             // we compute leftGrad += outGrad @ right^T
