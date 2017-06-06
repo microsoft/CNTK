@@ -1,6 +1,8 @@
 Tutorials
 =========
 
+*For a quick tour if you are familiar with another deep learning toolkit please fast forward to CNTK 200.*
+
 #.  *Classify cancer using simulated data (Logistic Regression)*
      CNTK 101: :cntktut:`Logistic Regression <CNTK_101_LogisticRegression>` with NumPy
 
@@ -23,6 +25,9 @@ Tutorials
 #.  *Forecasting using data from an IOT device*
      CNTK 106: LSTM based forecasting - Part A: :cntktut:`with simulated data <CNTK_106A_LSTM_Timeseries_with_Simulated_Data>`,
      Part B: :cntktut:`with real IOT data <CNTK_106B_LSTM_Timeseries_with_IOT_Data>`
+
+#.  *Quick tour for those familiar with other deep learning toolkits*
+     CNTK 200: :cntktut:`Guided Tour <CNTK_200_GuidedTour>`
 
 #.  *Recognize objects in images from CIFAR-10 data (Convolutional Network, CNN)*
      CNTK 201 Part A: :cntktut:`CIFAR data preparation <CNTK_201A_CIFAR-10_DataLoader>`,

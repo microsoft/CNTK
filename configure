@@ -125,7 +125,7 @@ default_kaldis="kaldi-trunk kaldi-c024e8aa"
 default_gdk_includes="include/nvidia/gdk"
 default_gdk_nvml_libs="src/gdk/nvml/lib"
 default_cubs="cub-1.4.1"
-default_cudnns="cudnn-5.1 cudnn-5.0"
+default_cudnns="cudnn-6.0 cudnn-5.1 cudnn-5.0"
 default_opencvs="opencv-3.1.0 opencv-3.0.0"
 default_protobuf="protobuf-3.1.0"
 default_libzips="libzip-1.1.2"
@@ -1066,7 +1066,7 @@ if test x$opencv_path = x
 then
     opencv_path=$(find_opencv)
     if test x$opencv_path = x ; then
-        echo Cannot locate OpenCV 3.0.0 directory
+        echo 'Cannot locate OpenCV (>= 3.0.0) directory'
         echo ImageReader will NOT be built.
     else
         echo Found OpenCV at $opencv_path

@@ -35,6 +35,14 @@ namespace CNTK
         return GetNextMinibatch(minibatchSizeInSequences, minibatchSizeInSamples, 1, 0, device);
     }
 
+    template<typename DataType>
+    std::wstring pair_to_colon_format(const pair<DataType, DataType>& pair)
+    {
+        std::wostringstream str;
+        str << pair.first << L":" << pair.second;
+        return str.str();
+    }
+
     MinibatchSourceConfig::MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, bool randomize/* = true*/) 
         : deserializers(deserializers)
     {
@@ -290,16 +298,24 @@ namespace CNTK
     }
 
     /* static */ ImageTransform ReaderCrop(const wchar_t* cropType,
-            int cropSize, float sideRatio, float areaRatio,
-            float aspectRatio, const wchar_t* jitterType)
+            std::pair<int, int> cropSize, std::pair<float, float> sideRatio, std::pair<float, float> areaRatio,
+            std::pair<float, float> aspectRatio, const wchar_t* jitterType)
     {
         ImageTransform crop;
+
+        if (sideRatio.first > sideRatio.second)
+            RuntimeError("For sideRatio values: the first number must be smaller than or equal to the second number.");
+        if (areaRatio.first > areaRatio.second)
+            RuntimeError("For areaRatio values: the first number must be smaller than or equal to the second number.");
+        if (aspectRatio.first > aspectRatio.second)
+            RuntimeError("For aspectRatio values: the first number must be smaller than or equal to the second number.");
+
         crop.Add(L"type", L"Crop",
             L"cropType", cropType,
-            L"cropSize", cropSize,
-            L"sideRatio", sideRatio,
-            L"areaRatio", areaRatio,
-            L"aspectRatio", aspectRatio,
+            L"cropSize", pair_to_colon_format(cropSize),
+            L"sideRatio", pair_to_colon_format(sideRatio),
+            L"areaRatio", pair_to_colon_format(areaRatio),
+            L"aspectRatio", pair_to_colon_format(aspectRatio),
             L"jitterType", jitterType);
         return crop;
     }
@@ -344,8 +360,15 @@ namespace CNTK
         Deserializer img;
         std::vector<DictionaryValue> actualTransforms;
         std::transform(transforms.begin(), transforms.end(), std::back_inserter(actualTransforms), [](ImageTransform t) { return static_cast<DictionaryValue>(t); });
+
+        // Add the transpose transform by default.
+        Dictionary transposeTransform;
+        transposeTransform[L"type"] = L"Transpose";
+        actualTransforms.push_back(DictionaryValue(transposeTransform));
+
         Dictionary labeldim;
         labeldim[L"labelDim"] = numLabels;
+
         Dictionary xforms;
         xforms[L"transforms"] = actualTransforms;
         Dictionary input;
@@ -474,9 +497,9 @@ namespace CNTK
             }
 
             augmentedConfiguration[L"frameMode"] = configuration.isFrameModeEnabled;
-            augmentedConfiguration[L"multiThreadedDeserialization"] = configuration.isMultithreaded;
             augmentedConfiguration[L"traceLevel"] = static_cast<size_t>(configuration.traceLevel);
 
+            bool defaultMultithreaded = false;
             // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
             // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
             // TODO: This should be done in the same manner for CNTK exe as well.
@@ -492,24 +515,9 @@ namespace CNTK
                 };
 
                 auto deserializerTypeName = deserializerConfig[L"type"].Value<std::wstring>();
-                if (deserializerTypeName == L"ImageDeserializer")
+                if (deserializerTypeName == L"ImageDeserializer" || deserializerTypeName == L"Base64ImageDeserializer")
                 {
-                    // Add a transpose transform since the image data in read in HWC (CWH in column major format) form while 
-                    // the CNTK convolution engive supports WHC (in column-major format)
-                    auto& inputStreamsConfig = deserializerConfig[L"input"].Value<Dictionary>();
-                    for (auto& inputStreamEntry : inputStreamsConfig)
-                    {
-                        auto& inputStreamConfig = inputStreamEntry.second.Value<Dictionary>();
-                        if (inputStreamConfig.Contains(L"transforms"))
-                        {
-                            auto& transforms = inputStreamConfig[L"transforms"].Value<std::vector<DictionaryValue>>();
-
-                            // Add the transpose transform
-                            Dictionary transposeTransform;
-                            transposeTransform[L"type"] = L"Transpose";
-                            transforms.push_back(DictionaryValue(transposeTransform));
-                        }
-                    }
+                    defaultMultithreaded = true;
                 }
 
                 if (deserializerTypeNameToModuleNameMap.find(deserializerTypeName) == deserializerTypeNameToModuleNameMap.end())
@@ -518,6 +526,9 @@ namespace CNTK
                 deserializerConfig[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
                 deserializers.push_back(deserializerConfig);
             }
+
+            augmentedConfiguration[L"multiThreadedDeserialization"] = 
+                (configuration.isMultithreaded.IsInitialized()) ? configuration.isMultithreaded.Get() : defaultMultithreaded;
 
             augmentedConfiguration[L"deserializers"] = deserializers;
 

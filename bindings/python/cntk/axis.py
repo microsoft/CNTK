@@ -149,22 +149,6 @@ class Axis(cntk_py.Axis):
 
     @staticmethod
     @typemap
-    def end_static_axis():
-        '''
-        DEPRECATED.
-
-        Creates an Axis object representing a new leading static axis.
-
-        Returns:
-            :class:`Axis`: axis object representing a new leading static axis.
-        '''
-        import warnings
-        warnings.warn('This will be removed in future versions. Please use '
-                'Axis.new_leading_axis() instead.', DeprecationWarning)
-        return cntk_py.Axis.end_static_axis()
-
-    @staticmethod
-    @typemap
     def new_leading_axis():
         '''
         Creates an Axis object representing a new leading static axis.

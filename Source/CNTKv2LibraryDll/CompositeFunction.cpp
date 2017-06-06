@@ -407,6 +407,7 @@ namespace CNTK
         }
     }
 
+
     // Recursively create a sub-network of ComputationNode instances corresponding to the graph of Functions 
     // underlying the specified 'variable' and return the ComputationNode instance that corresponds to the 
     // top level 'variable'
@@ -750,6 +751,26 @@ namespace CNTK
                     auto dropoutRate = functionConfig[PrimitiveFunction::AttributeNameDropoutRate].Value<double>();
                     computationNodePtr = New<DropoutNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                     computationNodePtr->As<DropoutNode<ElementType>>()->SetDropoutRate(dropoutRate);
+                    break;
+                }
+                case PrimitiveOpType::RandomDistribution:
+                {
+                    auto seed = functionConfig[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
+                    auto offset = functionConfig[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
+                    auto rvtype = functionConfig[PrimitiveFunction::AttributeNameRandomDistributionType].Value<std::wstring>();
+
+                    std::vector<double> randomDistributionArgs;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameRandomDistributionArgs))
+                        randomDistributionArgs = AsVector<double>(functionConfig[PrimitiveFunction::AttributeNameRandomDistributionArgs].Value<std::vector<DictionaryValue>>());
+
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameNewShape))
+                    {
+                        auto shape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
+                        computationNodePtr = New<RandomDistributionNode<ElementType>>(network->GetDeviceId(), internalNodeName, rvtype, randomDistributionArgs, AsTensorShape(shape));
+                    }
+                    else
+                        computationNodePtr = New<RandomDistributionNode<ElementType>>(network->GetDeviceId(), internalNodeName, rvtype, randomDistributionArgs);
+                    computationNodePtr->As<RandomDistributionNode<ElementType>>()->SetRngState(seed, offset);
                     break;
                 }
                 case PrimitiveOpType::Reshape:
@@ -1405,6 +1426,13 @@ namespace CNTK
             auto functionConstants = Constants();
             for (auto constant : functionConstants)
                 m_lastRecordedTimeStamps.insert({ constant, constant.CurrentValueTimeStamp() });
+
+            // Collect parameters and constants being assigned to
+            PreorderTraverseFunctions(RootFunction(), [this](const FunctionPtr& function) {
+                auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(function.get());
+                if (primitiveFunction && (primitiveFunction->OpType() == PrimitiveOpType::Assign))
+                    m_refVariables.insert(primitiveFunction->Inputs()[0]);
+            }, /*nestedSearchInsideBlockFunction =*/ true);
         }
 
         if (!m_networkMatricesAllocated && allocateNetworkMatrices)
@@ -1838,7 +1866,10 @@ namespace CNTK
 
         // Call PostForwardAndBackProp after ForwardProp only in evaluation mode.
         if (outputsToRetainBackwardStateFor.empty())
+        {
             m_computationNetwork->PostForwardAndBackProp(outputsToEvaluate);
+            RecordRefVariableUpdates();
+        }
         else
         {
             m_currentOutputsToEvaluate.clear();
@@ -1847,14 +1878,7 @@ namespace CNTK
         }
 
         GetNetworkOutputs(outputs);
-
         // TODO: How to deal with the specified 'computeDevice'
-        Variable evalTimeStampVariable;
-        if (requiredArgumentValues.empty())
-            evalTimeStampVariable = Inputs()[0];
-        else
-            evalTimeStampVariable = requiredArgumentValues.begin()->first;
-
         BackPropStatePtr backpropStatePtr;
         if (outputsToRetainBackwardStateFor.size() > 0)
             backpropStatePtr = MakeSharedObject<CNTKBackPropState>(this->shared_from_this(), computeDevice, GetCurrentBackpropRootsTimeStamps());
@@ -1904,6 +1928,7 @@ namespace CNTK
         if (m_currentOutputsToEvaluate.size() > 0)
         {
             m_computationNetwork->PostForwardAndBackProp(m_currentOutputsToEvaluate);
+            RecordRefVariableUpdates();
             m_currentOutputsToEvaluate.clear();
         }
 

@@ -53,7 +53,7 @@ public:
         // Set map count(aka K) dimension.
         dims[0] = (int)mapCount;
         dims[1] = (int)filt[filt_size - 1];
-        CUDNN_CALL(cudnnSetFilterNdDescriptor_v4(m_kernel, dataType, FILTER_FORMAT, (int)dim_size, dims.data()));
+        CUDNN_CALL(cudnnSetFilterNdDescriptor(m_kernel, dataType, FILTER_FORMAT, (int)dim_size, dims.data()));
     }
 
     ~CuDnnKernel()

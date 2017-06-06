@@ -66,4 +66,8 @@ def test_cntk_embed():
 
     ci.assign('embed', load=True)
     assert np.isclose(emb2, embed.value).all()
+    
+    # test assign with value
+    ci.assign('embed', value={'a':emb1[0], 'b':emb1[1], 'c':emb1[2]})
+    
     ci.reset()

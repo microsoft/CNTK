@@ -71,6 +71,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlendTimeConstant = L"blendTimeConstant";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameEpsilon = L"epsilon";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUseCuDNNEngine = L"useCuDNNEngine";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewDataType = L"newDataType";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewDynamicAxes = L"newDynamicAxes";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewSequenceAxisLengthScalingFactor = L"newSequenceAxisLengthScalingFactor";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewSequenceAxisLengthAdditiveFactor = L"newSequenceAxisLengthAdditiveFactor";
@@ -100,6 +101,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceAxisNamePrefix = L"sequenceAxis";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackPaddingValue = L"sequenceUnpackPaddingValue";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput = L"sequenceUnpackSuppressMaskOutput";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionType = L"randomDistributionType";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionArgs = L"randomDistributionArgs";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -173,7 +176,8 @@ namespace CNTK
             (op == PrimitiveOpType::ForwardBackward) ||
             (op == PrimitiveOpType::Logistic) ||
             (op == PrimitiveOpType::LambdaRank) ||
-            (op == PrimitiveOpType::NDCG))
+            (op == PrimitiveOpType::NDCG) || 
+            (op == PrimitiveOpType::RandomDistribution && inputs.empty()))
         {
             outputDynamicAxes = std::vector<Axis>({});
         }
@@ -323,6 +327,23 @@ namespace CNTK
                     {
                         switch (m_op)
                         {
+                        case PrimitiveOpType::RandomDistribution:
+                        {
+                            assert(m_inputs.size() == 0 || m_inputs.size() == 1);
+                            if (m_inputs.size() == 1)
+                                outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
+                            else
+                            {
+                                outputShape = m_attributes[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
+                                if (outputShape.HasUnboundDimension()) //review: is unbound right or should this be Free or Inferred?
+                                    InvalidArgument("RandomDistribution: Output shape '%ls' must not have an unbound dimension.", outputShape.AsString().c_str());
+                                auto dataType = static_cast<DataType>(m_attributes[PrimitiveFunction::AttributeNameNewDataType].Value<int>());
+                                if (dataType != DataType::Float && dataType != DataType::Double)
+                                    InvalidArgument("RandomDistribution: data type must be one of float, double.");
+                                outputDataType = dataType;
+                            }
+                            break;
+                        }
                         case PrimitiveOpType::Negate:
                         case PrimitiveOpType::Sigmoid:
                         case PrimitiveOpType::Tanh:
@@ -1260,9 +1281,7 @@ namespace CNTK
 
     void PrimitiveFunction::SetRandomSeed(size_t seed)
     {
-        if (!(OpType() == PrimitiveOpType::Dropout ||
-            OpType() == PrimitiveOpType::RandomSample ||
-            OpType() == PrimitiveOpType::RandomSampleInclusionFrequency))
+        if (!IsStateful())
             LogicError("Cannot set random seed on '%S' function.", OpName().c_str());
 
         m_attributes[AttributeNameRngSeed] = seed;

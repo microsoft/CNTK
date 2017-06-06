@@ -24,6 +24,12 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    // Version history:
+    // 1 -- initial version.
+    // 2 -- add support for models exceeding 2GB in size.
+    const size_t DictionaryValue::s_version = 2;
+    const size_t Dictionary::s_version = 2;
+
     template<typename T>
     T* CreateDataPtr(const T& value)
     {
@@ -994,13 +1000,34 @@ namespace CNTK
 
     bool Learners::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& minibatch)
     {
+        std::vector<MinibatchInfo> mbInfoPerLearner;
+        mbInfoPerLearner.resize(m_learners.size());
+
         bool anyUpdatesPerformed = false;
-        for (auto l : m_learners)
+        for (size_t i = 0; i < m_learners.size(); i++)
         {
+            auto l  = m_learners[i];
+            mbInfoPerLearner[i] = minibatch;
+
             auto learner = dynamic_pointer_cast<DistributedLearner>(l);
+            assert(learner != nullptr); // Already checked in the constructor.
+
             std::unordered_map<Parameter, NDArrayViewPtr> learnerGradients;
             GetLearnerGradients(learner, gradientValues, learnerGradients);
-            anyUpdatesPerformed |= learner->Update(learnerGradients, minibatch);
+            anyUpdatesPerformed |= learner->Update(learnerGradients, mbInfoPerLearner[i]);
+        }
+
+        minibatch = mbInfoPerLearner.front();
+
+        // Checking that progress on the global timeline performed equally.
+        // This will currently prohibit usage of BlockMomentum with Simple/1Bit,
+        // but 1Bit and Simple can be used together.
+        for (size_t i = 1; i < mbInfoPerLearner.size(); i++)
+        {
+            auto mbInfo = mbInfoPerLearner[i];
+            if (minibatch.numberOfSamples != mbInfo.numberOfSamples)
+                RuntimeError("Combining distributed learners with different methods"
+                    " for aggregation minibatch sample count is currently not supported");
         }
         return anyUpdatesPerformed;
     }

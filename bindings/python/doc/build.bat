@@ -5,7 +5,6 @@ set PYTHONPATH=%CD%\..
 set PATH=%CD%\..;%CD%\..\..\..\x64\Release;%PATH%
 
 sphinx-apidoc.exe ..\cntk --module-first --separate --no-toc --output-dir=. --force ^
-  ..\cntk\blocks.py ^
   ..\cntk\cntk_py.py ^
   ..\cntk\conftest.py ^
   ..\cntk\tests ^

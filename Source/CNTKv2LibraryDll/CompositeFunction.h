@@ -353,6 +353,12 @@ namespace CNTK
             m_computationNetwork = nullptr;
         }
 
+        void RecordRefVariableUpdates()
+        {
+            for (auto refVar : m_refVariables)
+                refVar.IsParameter() ? Parameter(refVar).RecordValueUpdate() : Constant(refVar).RecordValueUpdate();
+        }
+
     private:
 
         // Set of all primitive functions in the graph underlying 'this' Function. Also keeps the primitive Function objects alive 
@@ -382,6 +388,8 @@ namespace CNTK
         std::vector<Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_currentOutputsToEvaluate;
 
         std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
+
+        std::unordered_set<Variable> m_refVariables;
 
         bool m_networkMatricesAllocated;
 
