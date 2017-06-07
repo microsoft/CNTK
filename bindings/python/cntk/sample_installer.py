@@ -3,7 +3,7 @@
 # for full license information.
 # ==============================================================================
 """
-Utilities for fetching  CNTK sample data.
+Utilities for fetching CNTK samples data.
 """
 
 

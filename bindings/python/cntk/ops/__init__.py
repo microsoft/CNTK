@@ -3,7 +3,7 @@
 # for full license information.
 # ==============================================================================
 """
-CNTK core operators. Calling these operators creates nodes in CNTK computational graph.
+CNTK core operators. Calling these operators creates nodes in the CNTK computational graph.
 """
 
 

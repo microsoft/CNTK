@@ -3,10 +3,10 @@
 # for full license information.
 # ==============================================================================
 """
-Core numerical constructs:
+Core numerical constructs.
 
-* :class:`NDArrayView <NDArrayView>`
-* :class:`Value <Value>`
+* :class:`NDArrayView`
+* :class:`Value`
 """
 
 
