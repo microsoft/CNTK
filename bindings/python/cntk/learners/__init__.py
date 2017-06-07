@@ -221,7 +221,25 @@ class UserLearner(cntk_py.Learner):
             parameters associated with this learner
         '''
         raise NotImplementedError('UserLearner.update must be overriden')
-
+        
+class pgd(UserLearner):
+    
+    """Optimizer that implements the proximal gradient descent algorithm.
+  See this [paper](http://papers.nips.cc/paper/3793-efficient-learning-using-forward-backward-splitting.pdf).
+  """
+    
+    def __init__(self, parameters, lr_schedule,l1_regularization_weight=0.0, l2_regularization_weight=0.0):
+        super(pgd, self).__init__(parameters, lr_schedule)
+        self.l1 = l1_regularization_weight
+        self.l2 = l2_regularization_weight
+        
+    def update(self, gradient_values, training_sample_count, sweep_end):
+        eta = self.learning_rate()/training_sample_count
+        l1 = self.l1
+        l2 = self.l2
+        for p, g in gradient_values.items():
+            p.value = (np.sign(p.value) * np.maximum(np.abs(p.value - g.to_ndarray()*eta) - eta*l1, 0.0) / (1.0 + l2*eta))
+        return True
 
 @typemap
 def training_parameter_schedule(schedule, unit, epoch_size=None):
