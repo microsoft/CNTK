@@ -126,14 +126,15 @@ namespace CNTK
     // TODO: THIS NO LONGER PADS. Simplify.
     // V1 code traditionally assumed that tensors are at least 1D, so whenever
     // interacting with V1 code, use this function to pad the shape accordingly.
+    // TODO: ^^ no longer true
     inline Microsoft::MSR::CNTK::TensorShape AsTensorShape(const NDShape& viewShape)
     {
         const size_t maxNumAxesSupportedByTensorView = 12;
         if (viewShape.Rank() > maxNumAxesSupportedByTensorView)
             LogicError("The number (%d) of requested axes exceeds the currently supported limit (%d)", (int)viewShape.Rank(), (int)maxNumAxesSupportedByTensorView);
 
-        // In lots of V1 code, TensorShape is assumed to be at least 1D.
-        size_t minRankSize = 0;
+        // In lots of V1 code, TensorShape is assumed to be at least 1D.  --TODO: no longer true
+        size_t minRankSize = 0; // TODO: This deactivates this ^^ constraint, and still works. --> remove it
         Microsoft::MSR::CNTK::SmallVector<size_t> tensorViewShape(std::max<size_t>(minRankSize, viewShape.Rank()));
         for (size_t i = 0; i < tensorViewShape.size(); ++i)
             tensorViewShape[i] = (i < viewShape.Rank()) ? viewShape[i] : 1;

@@ -613,16 +613,17 @@ namespace CNTK
             InvalidArgument("NDArrayView::SliceView: Specified slice extent is zero along at least one of the axes.");
 
         bool anyPrevAxisSliced = false; // (only used for error check)
-        NDShape sliceViewShape(extent);
-        std::vector<size_t> endOffset(rank);
+        NDShape sliceViewShape(extent);       // note: has same #dims as extent
+        std::vector<size_t> endOffset(rank);  // note: these have same #dims as 'this', not extent
         std::vector<size_t> lastOffset(rank);
         for (size_t i = 0; i < rank; ++i)
         {
             if ((i < sliceViewShape.Rank()) && (sliceViewShape[i] == NDShape::InferredDimension))
                 sliceViewShape[i] = Shape()[i] - startOffset[i];
 
-            // It is allowed that the passed Shape has more axes than the actual data, as long that slice is [0:1].
-            // Those additional dimensions are retained in the resulting object.
+            // It is allowed that extent[] is shorter than Shape().
+            // In this case, those extend values default to 1, and the dimensions are dropped in the result.
+            // This allows to express the common case of indexing the last axis and dropping it.
             endOffset[i] = startOffset[i] + ((i < sliceViewShape.Rank()) ? sliceViewShape[i] : 1);
             lastOffset[i] = endOffset[i] - 1;
 
@@ -639,11 +640,20 @@ namespace CNTK
         }
 
         // determine the canonical matrix shape of our storage object
-        if ((startOffset[0] != 0) || (endOffset[0] != Shape()[0]) && IsSparse())
-            InvalidArgument("NDArrayView::SliceView: The first axis of a sparse tensor cannot be slice-viewed.");
+        if (IsSparse())
+        {
+            if (rank == 0)
+                LogicError("NDArrayView::SliceView: Scalars cannot be sparse.");
+            if (startOffset.front() != 0 || endOffset.front() != Shape().Dimensions().front())
+                InvalidArgument("NDArrayView::SliceView: The first axis of a sparse tensor cannot be slice-viewed.");
+        }
+        auto tensorShape = AsTensorShape(Shape());
 
-        auto flatBufferOffset = AsTensorShape(Shape()).Locate(startOffset);  // offset and length into underlying ElementType array...
-        auto flatBufferLength = AsTensorShape(Shape()).Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
+        auto flatBufferOffset = tensorShape.Locate(startOffset);  // offset and length into underlying ElementType array...
+        auto flatBufferLength = tensorShape.Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
+        auto matrixShape = tensorShape;
+        ToMatrixShape(matrixShape, NDArrayView::AutoSelectRowColSplitPoint, NDArrayView::AutoSelectRowColSplitPoint);
+
         shared_ptr<MatrixBase> matrix;
         // At this point, it is guaranteed that the slice is consecutive in memory. We distinguish two cases:
         // If the slice is expressable a column slice, we will use ColumnSlice(). This will work with sparse data.
@@ -703,6 +713,7 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(GetDataType(), sliceViewShape, IsReadOnly() || readOnly, matrix);
     }
 
+    // TODO: This case is covered by using a shorter extent above; so just implement it with that.
     NDArrayViewPtr NDArrayView::IndexLastAxis(size_t index, bool readOnly) const
     {
         auto rank = Shape().Rank();
