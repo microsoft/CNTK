@@ -1,5 +1,5 @@
 """
-CNTK function constructs. This is the core abstraction of all primitive operators in CNTK computational graph.
+CNTK function constructs. This is the core abstraction of all primitive operators in the CNTK computational graph.
 """
 
 

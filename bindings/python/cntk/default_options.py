@@ -5,7 +5,10 @@
 # ==============================================================================
 
 '''
-Default options of CNTK functions. Usage: 
+Default options of CNTK functions. 
+
+
+Usage: 
 
 * ``with default_options():``, and
 * ``with default_options_for():``

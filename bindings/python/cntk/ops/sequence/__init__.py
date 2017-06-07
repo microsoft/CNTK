@@ -3,7 +3,7 @@
 # for full license information.
 # ==============================================================================
 """
-CNTK operators that are specialized in sequences.  Calling these operators creates nodes in CNTK computational graph.
+CNTK operators that are specialized in sequences.  Calling these operators creates nodes in the CNTK computational graph.
 """
 import numpy as np
 from cntk.internal import typemap, sanitize_input

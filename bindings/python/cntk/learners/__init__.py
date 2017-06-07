@@ -4,7 +4,7 @@
 # ==============================================================================
 
 '''
-Learner tunes a set of parameters during the training process. One can use
+A learner tunes a set of parameters during the training process. One can use
 different learners for different sets of parameters. Currently, CNTK supports
 the following learning algorithms:
 
