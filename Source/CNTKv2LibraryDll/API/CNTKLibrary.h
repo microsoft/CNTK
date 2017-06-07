@@ -4672,6 +4672,17 @@ namespace CNTK
         //
         CNTK_API virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& minibatch) = 0;
 
+        //
+        // In distributed mode all built-in minibatch sources return a minibatch decimated by the number of workers.
+        // Some distributed methods (i.e. BlockMomentum) require each worker to run with original/not decimated minibatch size.
+        // This method is used by the training session to adapt minibatch size before asking the minibatch source for data.
+        // The function returns the scale factor for the minibatch size.
+        //
+        virtual size_t MinibatchSizeScaleFactor()
+        {
+            return 1;
+        }
+
     protected:
         DistributedLearner(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
             : Learner(learner? learner->Parameters() : std::vector<Parameter>(),
@@ -5635,6 +5646,9 @@ namespace CNTK
         size_t m_parallelAfterSamples;
         size_t m_workerRank;
         size_t m_numberOfWorkers;
+
+        // Scaler for the minibatch size in distributed mode.
+        size_t m_mbSizeScaleFactor;
 
         std::vector<PeriodicAction> m_actions;
 
