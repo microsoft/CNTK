@@ -13,6 +13,7 @@ from cntk.io import FULL_DATA_SWEEP
 from cntk import *
 from cntk.logging import ProgressPrinter
 from cntk.train.distributed import Communicator
+from numpy.distutils.lib2def import output_def
 
 import YOLOv2 as yolo2
 from TrainUDFyolov2 import *
@@ -69,13 +70,13 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size,
     }
 
 
-    callback_frequenzy = 5
+    callback_frequency = par_save_after_each_n_epochs
 
     #'index', 'average_error', 'cv_num_samples', and 'cv_num_minibatches'
     def safe_model_callback(index, average_error, cv_num_samples, cv_num_minibatches):
-        if(Communicator.rank()!=0):return True
+        if(Communicator.rank()!=0 or model_path is None or callback_frequency is None):return True
         callback_save_file = os.path.join(model_path,
-                                          "after_" + str(callback_frequenzy * (index + 1)) + "_epochs.model")
+                                          "after_" + str(callback_frequency * (index + 1)) + "_epochs.model")
         print(Communicator.rank())
         network['output'].save(callback_save_file)
         print("Saved intermediate model to " + callback_save_file)
@@ -89,16 +90,16 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size,
                                            frequency=5000,
                                            preserve_all=True,
                                            restore=restore) if model_path else None
-
+    cv_config = cntk.CrossValidationConfig(None, mb_size=par_minibatch_size, frequency=callback_frequency*par_epoch_size, callback=safe_model_callback) if callback_frequency is not None else None
     # Train all minibatches
     training_session(
         trainer=trainer, mb_source=train_source,
         model_inputs_to_streams=input_map,
         mb_size=minibatch_size,
         progress_frequency=epoch_size,
-        checkpoint_config= CheckpointConfig(filename=os.path.join(model_path, "Checkpoint_YOLOv2"), restore=restore),
+        checkpoint_config= CheckpointConfig(filename=os.path.join(model_path, "Checkpoint_YOLOv2"), restore=restore) if model_path is not None else None,
         test_config=TestConfig(source=test_source, mb_size=minibatch_size) if test_source else None,
-        cv_config=cntk.CrossValidationConfig(None, mb_size=par_minibatch_size, frequency=callback_frequenzy*par_epoch_size, callback=safe_model_callback)
+        cv_config=cv_config
     ).train()
 
 
@@ -139,6 +140,7 @@ if __name__ == '__main__':
 
     #data_path = os.path.join(par_abs_path, "..", "..", "DataSets","Pascal", "mappings")
     data_path = os.path.join(par_abs_path, "..", "..", "DataSets", "Grocery")
+    data_path = os.path.join(par_abs_path, "..", "..", "DataSets", "Overfit")
     parser.add_argument('-datadir', '--datadir', help='Data directory where the ImageNet dataset is located',required=False, default=data_path)
     
     parser.add_argument('-trainimages', '--trainimages', help='File containing the images in ImageReader format',
@@ -171,7 +173,7 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
 
-    output_dir = None
+    output_dir = ".\outputdir"#None
     if args['outputdir'] is not None:
         output_dir = args['outputdir']
         model_path = args['outputdir'] + "/models"
@@ -205,12 +207,12 @@ if __name__ == '__main__':
     ####################################################################################################################
     model = yolo2.create_yolov2_net(par)
 
-    image_input = input((par_num_channels, par_image_height, par_image_width), name="data")
+    image_input = input_variable((par_num_channels, par_image_height, par_image_width), name="data")
     output = model(image_input)  # append model to image input
 
     # input for ground truth boxes
     num_gtb = par_max_gtbs
-    gtb_input = input((num_gtb * 5))  # 5 for class, x,y,w,h
+    gtb_input = input_variable((num_gtb * 5))  # 5 for class, x,y,w,h
 
     if not par_boxes_centered:
         original_shape = gtb_input.shape
@@ -264,3 +266,6 @@ if __name__ == '__main__':
         save_path = os.path.join(output_dir, "YOLOv2.model")
         output.save(save_path)
         print("Saved model to " + save_path)
+
+    from cntk.logging.graph import plot
+    plot(output, "./yopar.pdf")

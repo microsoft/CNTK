@@ -7,18 +7,27 @@
 from __future__ import print_function
 
 from cntk.layers import Sequential
-from Distributed_Utils import *
-from darknet19 import create_classification_model_darknet19
+from darknet.Distributed_Utils import  *
+from darknet.darknet19 import create_classification_model_darknet19
+from darknet.darknet19 import put_classifier_on_feature_extractor
 
-import argparse, cntk
 import os
+
+
+
+########################################################################################################################
+#   Main                                                                                                               #
+########################################################################################################################
 
 
 if __name__ == '__main__':
     # from cntk.cntk_py import force_deterministic_algorithms
     # force_deterministic_algorithms()
 
+    import argparse, cntk
+
     parser = argparse.ArgumentParser()
+    # data_path = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 
     parser.add_argument('-datadir', '--datadir', help='Data directory where the CIFAR dataset is located',
                         required=False, default=par_data_path)
@@ -69,6 +78,37 @@ if __name__ == '__main__':
     #  and normalizes the input features by subtracting 114 and dividing by 256
     model2 = Sequential([[lambda x: (x - par_input_bias)], [lambda x: (x / 256)], model])
 
+    if True:
+        #pretrain on cifar-10
+        pre_data_dir = os.path.join(data_path, "..", "cifar-10")
+        pre_trainset_label_file = "train_map.txt"
+        pre_testset_label_file = "test_map.txt"
+        pre_train_data = os.path.join(pre_data_dir, pre_trainset_label_file)
+        pre_test_data = os.path.join(pre_data_dir, pre_testset_label_file)
+
+        without_classifier=cntk.logging.graph.find_by_name(model2,"featureExtractor_output")
+        cifar_model = put_classifier_on_feature_extractor(without_classifier, 10)
+
+        try:
+            run_distributed(cifar_model, pre_train_data, pre_test_data, result_path,
+                            minibatch_size=args['minibatch_size'],
+                            epoch_size=args['epoch_size'],
+                            num_quantization_bits=args['quantized_bits'],
+                            block_size=args['block_samples'],
+                            warm_up=args['distributed_after'],
+                            max_epochs=args['num_epochs'],
+                            restore=not args['restart'],
+                            log_to_file=args['logdir'],
+                            num_mbs_per_log=100,
+                            gen_heartbeat=True,
+                            profiling=args['profile'],
+                            tensorboard_logdir=args['tensorboard_logdir'])
+
+        finally:
+            cntk.train.distributed.Communicator.finalize()
+
+
+
     try:
         run_distributed(model2, train_data, test_data, result_path,
                                 minibatch_size=args['minibatch_size'],
@@ -80,7 +120,7 @@ if __name__ == '__main__':
                                 restore=not args['restart'],
                                 log_to_file=args['logdir'],
                                 num_mbs_per_log=100,
-                                gen_heartbeat=False,
+                                gen_heartbeat=True,
                                 profiling=args['profile'],
                                 tensorboard_logdir=args['tensorboard_logdir'])
 

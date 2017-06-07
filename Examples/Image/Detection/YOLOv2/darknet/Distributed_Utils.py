@@ -10,9 +10,11 @@ from PARAMETERS import *
 import cntk
 from cntk.train.training_session import *
 from cntk.debugging import *
+# from Utils import *
 import cntk.io.transforms as xforms
 import _cntk_py
 import os
+import numpy as np
 
 
 
@@ -45,11 +47,12 @@ def train_and_test(network, trainer, train_source, test_source, checkpoint_confi
 # Create trainer
 def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up, progress_writers):
     # Set learning parameters
-    lr_per_sample     = [0.0015625]*20 + [0.00046875]*20 + [0.00015625]*20 + [0.000046875]*10 + [0.000015625]
+    lr_factor = 0.01
+    lr_per_sample     = [1*lr_factor]*10 + [0.1*lr_factor]*10 + [0.01*lr_factor]*10 + [0.001*lr_factor]*10 + [0.0001*lr_factor]*20 + [0.00001*lr_factor]
     lr_schedule       = cntk.learning_rate_schedule(lr_per_sample, unit=cntk.learners.UnitType.sample, epoch_size=epoch_size)
-    mm_time_constant  = [0]*20 + [600]*20 + [1200]
+    mm_time_constant  = [-par_minibatch_size / np.log(0.9)]
     mm_schedule       = cntk.learners.momentum_as_time_constant_schedule(mm_time_constant, epoch_size=epoch_size)
-    l2_reg_weight     = 0.002
+    l2_reg_weight     = 0.0005
 
     # Create learner
     if block_size != None and num_quantization_bits != 32:
@@ -58,7 +61,7 @@ def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_
     # fails here since input is unknown I guess
     local_learner = cntk.learners.momentum_sgd(network['output'].parameters,
                                           lr_schedule, mm_schedule,
-                                          l2_regularization_weight=l2_reg_weight)
+                                          l2_regularization_weight=l2_reg_weight, unit_gain=False)
 
     if block_size != None:
         parameter_learner = cntk.train.distributed.block_momentum_distributed_learner(local_learner, block_size=block_size)
@@ -66,7 +69,7 @@ def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_
         parameter_learner = cntk.train.distributed.data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
 
     # Create trainer
-    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, progress_writers)
+    return cntk.Trainer(network['output'], (network['bce'], network['pe']), parameter_learner, progress_writers)
 
 
 def add_model_input_and_output(model, input_shape, output_shape):
@@ -77,6 +80,8 @@ def add_model_input_and_output(model, input_shape, output_shape):
     z = model(feature_var)
 
     # loss and metric
+    sse = cntk.squared_error(z, label_var)
+    bce = cntk.binary_cross_entropy(z, label_var)
     ce = cntk.cross_entropy_with_softmax(z, label_var)
     pe = cntk.classification_error(z, label_var)
 
@@ -86,6 +91,8 @@ def add_model_input_and_output(model, input_shape, output_shape):
     return {
         'feature': feature_var,
         'label': label_var,
+        'sse' : sse,
+        'bce' : bce,
         'ce': ce,
         'pe': pe,
         'output': z
@@ -128,7 +135,7 @@ def run_distributed(model, train_data, test_data, result_path, minibatch_size=pa
     network = add_model_input_and_output(model, (par_num_channels , par_image_height, par_image_width), (par_num_classes))
 
     print("Created Model!")
-
+    epoch_size = 1200000
     progress_writers = [cntk.logging.ProgressPrinter(
         freq=num_mbs_per_log,
         tag='Training',
@@ -145,7 +152,10 @@ def run_distributed(model, train_data, test_data, result_path, minibatch_size=pa
             model=model['output']))
 
 
+    import Utils
     trainer = create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up, progress_writers)
+    # train_source = Utils.create_reader(train_data,is_training=True, is_distributed=True)
+    # test_source = Utils.create_reader(test_data, is_training=False, is_distributed= True)
     train_source = create_image_mb_source(train_data, train=True,
                                           total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, train=False,

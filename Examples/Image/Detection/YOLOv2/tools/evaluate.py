@@ -24,9 +24,9 @@ class ClassMap():
 LIMIT_TO_FIRST = None
 NMS_IOU_THRESHOLD = 0.7
 cls_map = ClassMap(r"..\..\DataSets\Pascal\class_map.txt")
-DATA_SET = "Pascal_VOC_2007"
-CONF_THRESHOLD = 0.05
-cls_map = ClassMap(r"..\..\DataSets\Pascal\class_map.txt") if DATA_SET == "Pascal_VOC_2007"\
+DATA_SET = "Overfit"
+CONF_THRESHOLD = 0.15
+cls_map = ClassMap(r"..\..\DataSets\Pascal\class_map.txt") if DATA_SET == "Pascal_VOC_2007" or DATA_SET=="Overfit"\
     else ClassMap(r"..\..\DataSets\Grocery\Class_map.txt")
 
 def draw_bb_on_image(image, bb_list):
@@ -113,12 +113,13 @@ def save_image(img, dir, name):
 
 if __name__ == "__main__":
 
-    model = load_model(os.path.join(".", "outputdir", "YOLOv2.model"))
+    model = load_model(os.path.join(".", "outputdir", r"YOLOv2.model"))
     data_input = logging.graph.find_by_name(model, "data")
     img_width = data_input.shape[2]
     img_height= data_input.shape[1]
 
     if DATA_SET == "Pascal_VOC_2007":
+        obj_min, obj_max=1, 0
         data_path= r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\JPEGImages"
         img_list = [18,118,1118,27,2118,4118,1,2,3,4,5,6,7,8,9,10]
         # img_list = open(r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\ImageSets\Main\test.txt").read().split()
@@ -143,6 +144,13 @@ if __name__ == "__main__":
             out_img = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
 
             save_image(out_img, save_path, "bb_"+img_name)
+
+            import math
+            objectnesses = preds[:,4]
+            obj_min = np.minimum(obj_min, np.minimum.reduce(objectnesses))
+            obj_max = np.maximum(obj_max, np.maximum.reduce(objectnesses))
+        print((obj_min,obj_max))
+
 
     elif DATA_SET == "Grocery":
         data_path = r"..\..\DataSets\Grocery"
@@ -176,3 +184,37 @@ if __name__ == "__main__":
             out_img = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
             bla+=1
             save_image(out_img, save_path, "bb_" + str(bla)+".jpg")
+
+    elif DATA_SET == "Overfit":
+        obj_min, obj_max = 1, 0
+        data_path = r"..\..\DataSets\Overfit"
+        img_list = [37,38]
+        # img_list = open(r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\ImageSets\Main\test.txt").read().split()
+        save_path = os.path.join(".", "outputdir", "results", "overfit")
+        if not os.path.exists(save_path):
+            os.mkdir(save_path)
+
+        for i in range(len(img_list)):
+            img_name = "{:06}.jpg".format(img_list[i])
+            img = load_image(os.path.join(data_path, img_name))
+
+            preds = predictions_for_image(img, model, img_width, img_height)
+            preds_nms = do_nms(preds)
+            # import ipdb;ipdb.set_trace()
+            color_image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+            draw_bb_on_image(color_image, preds_nms)
+
+            if i < 0:
+                plot_image(color_image)
+
+            out_img = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
+
+            save_image(out_img, save_path, "bb_" + img_name)
+
+            import math
+
+            objectnesses = preds[:, 4]
+            obj_min = np.minimum(obj_min, np.minimum.reduce(objectnesses))
+            obj_max = np.maximum(obj_max, np.maximum.reduce(objectnesses))
+        print((obj_min, obj_max))

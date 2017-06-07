@@ -24,8 +24,15 @@ def get_error(network, gtb_input, cntk_only=False):
         err = alias(training_model.outputs[0], 'TrainFunction_0') - network
         sq_err = err * err
         sc_err = sq_err * alias(training_model.outputs[1], 'TrainFunction_1')  # apply scales (lambda_coord, lambda_no_obj, zeros on not learned params)
-        mse = reduce_mean(sc_err, axis=Axis.all_static_axes(), name="MeanSquaredError")
+        mse = reduce_sum(sc_err, axis=Axis.all_static_axes(), name="MeanSquaredError")
         return mse
+
+def test_get_error():
+    """
+    Test for get_error()
+    :return: Nothing
+    """
+    assert False, "Not implemented yet"
 
 """
 # The class below is an approach to use only cntk ops instead of the user defined function. It does not work well though and is not the preferred model because of that.

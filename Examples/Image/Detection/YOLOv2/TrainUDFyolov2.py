@@ -395,3 +395,24 @@ class TrainFunction(UserFunction):
             import ipdb
             ipdb.set_trace()
             exit()
+
+def test_create_outputs_like_cyolo():
+    """
+    Test for create_outputs_like_cyolo()
+    :return:
+    """
+    assert False, "Not implemented yet"
+
+def test_iou():
+    """
+    Test for iou()
+    :return:
+    """
+    assert False, "Not implemented yet"
+
+def test_numpy_iou():
+    """
+    Test for numpy_iou()
+    :return:
+    """
+    assert False, "Not implemented yet"
