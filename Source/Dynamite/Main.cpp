@@ -330,7 +330,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto t1 = make_shared<NDArrayView>(DataType::Float, NDShape({  1,42 }), device);
     auto t2 = make_shared<NDArrayView>(DataType::Float, NDShape({ 13,42 }), device);
     auto t3 = make_shared<NDArrayView>(DataType::Float, NDShape({ 13,42 }), device);
-    t3->NumericOperation({ t1, t2 }, 1.0, 19/*PrimitiveOpType::Plus*/);
+    t3->NumericOperation({ t1, t2 }, 1.0, 26/*PrimitiveOpType::Plus*/);
 
     const size_t minibatchSize = 200;  // use 6 for ~2 sequences/batch
     for (size_t repeats = 0; true; repeats++)
@@ -407,8 +407,9 @@ int main(int argc, char *argv[])
     argc; argv;
     try
     {
-        TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
-        //TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
+        //TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
+        TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
+        // BUGBUG: CPU currently outputs loss=0??
     }
     catch (exception& e)
     {

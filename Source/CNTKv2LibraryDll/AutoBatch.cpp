@@ -1058,7 +1058,7 @@ public:
         //  - It is possible that the Splice operation consumed the same input twice.
         //    This is currently handled via atomicAdd(), i.e. will have non-determinism.
         //    (A striding trick minimizes the probability of clashes.)
-#if 1
+#if 0
         for (size_t index = 0; index < f->m_inputs.size(); index++)
         {
             BackpropToUnbatched(f, index);

@@ -831,12 +831,6 @@ void Matrix<ElemType>::CopyColumnsStrided(const Matrix<ElemType>& fromMatrix, si
 }
 
 template <class ElemType>
-void Matrix<ElemType>::ScatterBatch(ElemType beta, size_t numRows, size_t numOutputs, const std::function<Matrix<ElemType>&(size_t)>& outputs) const
-{
-    beta; numRows; numOutputs; outputs;
-}
-
-template <class ElemType>
 void Matrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::function<const Matrix<ElemType>&(size_t)>& inputs)
 {
     // This concatenates all matrices of the inputs, where each matrix is first reshaped to numRows rows.
@@ -846,40 +840,90 @@ void Matrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::
         InvalidArgument("GatherBatch: The numRows parameter must not be 0 unless the result is empty.");
     let& input0 = inputs(0);
     DISPATCH_MATRIX_ON_FLAG(&input0, this,
+    {
+        // CPU version: just copy with memcpy()
+        // We could speed this up by first creating a pointer array, and then parallelizing the actual copy operations.
+        ElemType* dst = m_CPUMatrix->Buffer();            // copy to here...
+        size_t spaceLeft = m_CPUMatrix->GetNumElements(); // ...this many elements in total
+        for (size_t i = 0; i < numInputs; i++)
         {
-            // CPU version: just copy with memcpy()
-            // We could speed this up by first creating a pointer array, and then parallelizing the actual copy operations.
-            ElemType* dst = m_CPUMatrix->Buffer();            // copy to here...
-            size_t spaceLeft = m_CPUMatrix->GetNumElements(); // ...this many elements in total
-            for (size_t i = 0; i < numInputs; i++)
-            {
-                let& input = inputs(i);
-                input._transferToDevice(CPU); // make sure the input is actually on the CPU
-                let* src = input.m_CPUMatrix->Buffer(); // copy from here...
-                let  num = input.GetNumElements();      // ...this many elements
-                if (num % numRows != 0)
-                    InvalidArgument("GatherBatch: All inputs must be reshapable to have numRows (%d).", (int)numRows);
-                if (spaceLeft < num) // size mismatch
-                    InvalidArgument("GatherBatch: Total number of input elements must be equal to number of output elements.");
-                memcpy(dst, src, num * sizeof(ElemType));
-                dst += num;
-                spaceLeft -= num;
-            }
-            if (spaceLeft != 0)
+            let& input = inputs(i);
+            input._transferToDevice(CPUDEVICE, /*isBeingMoved=*/false, /*emptyTransfer=*/false); // make sure the input is actually on the CPU
+            let* src = input.m_CPUMatrix->Buffer(); // copy from here...
+            let  num = input.GetNumElements();      // ...this many elements
+            if (num % numRows != 0)
+                InvalidArgument("GatherBatch: All inputs must be reshapable to have numRows (%d).", (int)numRows);
+            if (spaceLeft < num) // size mismatch
                 InvalidArgument("GatherBatch: Total number of input elements must be equal to number of output elements.");
-        },
+            memcpy(dst, src, num * sizeof(ElemType));
+            dst += num;
+            spaceLeft -= num;
+        }
+        if (spaceLeft != 0)
+            InvalidArgument("GatherBatch: Total number of input elements must be equal to number of output elements.");
+    },
+    {
+        // GPU version: perform as a single CUDA launch
+        let outputDeviceId = GetPreferredDeviceId();
+        m_GPUMatrix->GatherBatch(numRows, numInputs, [&](size_t i) -> GPUMatrix<ElemType>&
         {
-            // GPU version: perform as a singe CUDA launch
-            let outputDeviceId = GetPreferredDeviceId();
-            m_GPUMatrix->GatherBatch(numRows, numInputs, [&](size_t i) -> GPUMatrix<ElemType>&
-            {
-                let& input = inputs(i);
-                input._transferToDevice(outputDeviceId); // make sure the input is actually on the right GPU
-                return *input.m_GPUMatrix;
-            });
-        },
-        { NOT_IMPLEMENTED; },
-        { NOT_IMPLEMENTED; });
+            let& input = inputs(i);
+            input._transferToDevice(outputDeviceId, /*isBeingMoved=*/false, /*emptyTransfer=*/false); // make sure the input is actually on the right GPU
+            return *input.m_GPUMatrix;
+        });
+    },
+    { NOT_IMPLEMENTED; },
+    { NOT_IMPLEMENTED; });
+}
+
+template <class ElemType>
+void Matrix<ElemType>::ScatterBatch(ElemType beta, size_t numRows, size_t numOutputs, const std::function<Matrix<ElemType>&(size_t)>& outputs) const
+{
+    // This concatenates all matrices of the inputs, where each matrix is first reshaped to numRows rows.
+    // This function is only meant to support TensorView::GatherBatch().
+    // Output will be on the same device as the first input.
+    if (numRows == 0 && numOutputs != 0)
+        InvalidArgument("ScatterBatch: The numRows parameter must not be 0 unless the input is empty.");
+    let& output0 = outputs(0);
+    DISPATCH_MATRIX_ON_FLAG(this, &output0,
+    {
+        // CPU version: just copy with memcpy()
+        // We could speed this up by first creating a pointer array, and then parallelizing the actual copy operations.
+        const ElemType* src = m_CPUMatrix->Buffer();      // copy from here...
+        size_t spaceLeft = m_CPUMatrix->GetNumElements(); // ...this many elements in total
+        for (size_t i = 0; i < numOutputs; i++)
+        {
+            auto& output = outputs(i);
+            output._transferToDevice(CPUDEVICE, /*isBeingMoved=*/true, /*emptyTransfer=*/true); // make sure the output is actually on the CPU
+            auto* dst = output.m_CPUMatrix->Buffer(); // copy to here...
+            let   num = output.GetNumElements();      // ...this many elements
+            if (num % numRows != 0)
+                InvalidArgument("ScatterBatch: All outputs must be reshapable to have numRows (%d).", (int)numRows);
+            if (spaceLeft < num) // size mismatch
+                InvalidArgument("ScatterBatch: Total number of output elements must be equal to number of input elements.");
+            if (beta == 0)
+                memcpy(dst, src, num * sizeof(ElemType));
+            else
+                for (size_t k = 0; k < num; k++) // TODO: use BLAS here (need to add a helper in CPUMatrixImpl.h)
+                    dst[k] = dst[k] * beta + src[k];
+            src += num;
+            spaceLeft -= num;
+        }
+        if (spaceLeft != 0)
+            InvalidArgument("ScatterBatch: Total number of output elements must be equal to number of input elements.");
+    },
+    {
+        // GPU version: perform as a single CUDA launch
+        //let outputDeviceId = GetPreferredDeviceId();
+        //m_GPUMatrix->ScatterBatch(numRows, numOutputs, [&](size_t i) -> GPUMatrix<ElemType>&
+        //{
+        //    let& output = outputs(i);
+        //    output._transferToDevice(outputDeviceId, /*isBeingMoved=*/true, /*emptyTransfer=*/true); // make sure the output is actually on the right GPU
+        //    return *output.m_GPUMatrix;
+        //});
+    },
+    { NOT_IMPLEMENTED; },
+    { NOT_IMPLEMENTED; });
 }
 
 template <class ElemType>
