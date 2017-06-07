@@ -61,16 +61,16 @@ class PolyMath:
         return func
 
     def input_layer(self,cgw,cnw,cc,qgw,qnw,qc):
-        cgw_ph = C.placeholder_variable()
-        cnw_ph = C.placeholder_variable()
-        cc_ph  = C.placeholder_variable()
-        qgw_ph = C.placeholder_variable()
-        qnw_ph = C.placeholder_variable()
-        qc_ph  = C.placeholder_variable()
+        cgw_ph = C.placeholder()
+        cnw_ph = C.placeholder()
+        cc_ph  = C.placeholder()
+        qgw_ph = C.placeholder()
+        qnw_ph = C.placeholder()
+        qc_ph  = C.placeholder()
     
-        input_chars = C.placeholder_variable(shape=(1,self.word_size,self.c_dim))
-        input_glove_words = C.placeholder_variable(shape=(self.wg_dim,))
-        input_nonglove_words = C.placeholder_variable(shape=(self.wn_dim,))
+        input_chars = C.placeholder(shape=(1,self.word_size,self.c_dim))
+        input_glove_words = C.placeholder(shape=(self.wg_dim,))
+        input_nonglove_words = C.placeholder(shape=(self.wn_dim,))
 
         # we need to reshape because GlobalMaxPooling/reduce_max is retaining a trailing singleton dimension
         # todo GlobalPooling/reduce_max should have a keepdims default to False
@@ -94,8 +94,8 @@ class PolyMath:
             'input_layer')
         
     def attention_layer(self, context, query):
-        q_processed = C.placeholder_variable(shape=(2*self.hidden_dim,))
-        c_processed = C.placeholder_variable(shape=(2*self.hidden_dim,))
+        q_processed = C.placeholder(shape=(2*self.hidden_dim,))
+        c_processed = C.placeholder(shape=(2*self.hidden_dim,))
 
         #convert query's sequence axis to static
         qvw, qvw_mask = C.sequence.unpack(q_processed, padding_value=0).outputs
@@ -138,7 +138,7 @@ class PolyMath:
             'attention_layer')
             
     def modeling_layer(self, attention_context):
-        att_context = C.placeholder_variable(shape=(8*self.hidden_dim,))
+        att_context = C.placeholder(shape=(8*self.hidden_dim,))
         #modeling layer
         # todo: use dropout in optimized_rnn_stack from cudnn once API exposes it
         mod_context = C.layers.Sequential([
@@ -154,8 +154,8 @@ class PolyMath:
             'modeling_layer')
     
     def output_layer(self, attention_context, modeling_context):
-        att_context = C.placeholder_variable(shape=(8*self.hidden_dim,))
-        mod_context = C.placeholder_variable(shape=(2*self.hidden_dim,))
+        att_context = C.placeholder(shape=(8*self.hidden_dim,))
+        mod_context = C.placeholder(shape=(2*self.hidden_dim,))
         #output layer
         start_logits = C.layers.Dense(1, name='out_start')(C.dropout(C.splice(mod_context, att_context), self.dropout))
         if self.two_step:

@@ -33,7 +33,7 @@ def create_mb_and_map(func, data_file, polymath, randomize=True, repeat=True):
                 context_chars    = C.io.StreamDef('cc',  shape=polymath.word_size,  is_sparse=False),
                 query_chars      = C.io.StreamDef('qc',  shape=polymath.word_size,  is_sparse=False))),
         randomize=randomize,
-        epoch_size=C.io.INFINITELY_REPEAT if repeat else C.io.FULL_DATA_SWEEP)
+        max_sweeps=C.io.INFINITELY_REPEAT if repeat else 1)
 
     input_map = {
         argument_by_name(func, 'cgw'): mb_source.streams.context_g_words,

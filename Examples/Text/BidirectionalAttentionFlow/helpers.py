@@ -23,7 +23,7 @@ def HighwayBlock(dim, # ideally this should be inferred, but times does not allo
     update_weight_initializer=0
     update_bias_initializer=0
     def func(x_var):
-        x  = C.placeholder_variable()
+        x  = C.placeholder()
         WT = C.Parameter((dim,dim,), init=transform_weight_initializer, name=name+'_WT')
         bT = C.Parameter(dim,        init=transform_bias_initializer,   name=name+'_bT')
         WU = C.Parameter((dim,dim,), init=update_weight_initializer,    name=name+'_WU')
