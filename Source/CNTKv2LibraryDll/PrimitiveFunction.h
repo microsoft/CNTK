@@ -831,7 +831,7 @@ namespace CNTK
         void MemoizeKnowableValue() const;
         static NDArrayViewPtr ComputeKnowableValue(PrimitiveOpType, const std::vector<NDArrayViewPtr>&, const Dictionary&, const NDShape&, NDArrayViewPtr&&, const PrimitiveFunction& funcForErrMsg);
         static void BackpropTo(const NDArrayView* outputGradient, size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes, const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues, const NDArrayViewPtr& inputGradient, double beta, const PrimitiveFunction& funcForErrMsg);
-        static void BackpropToAll(const NDArrayViewPtr outputGradient, PrimitiveOpType primitiveOp, const Dictionary& attributes, const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues, const std::vector<const NDArrayView*>& inputGradients, double beta, const PrimitiveFunction& funcForErrMsg);
+        static void BackpropToAll(const NDArrayViewPtr& outputGradient, PrimitiveOpType primitiveOp, const Dictionary& attributes, const NDArrayViewPtr& outputValue, const std::vector<NDArrayViewPtr>& inputValues, std::vector<NDArrayViewPtr>& inputGradients, double beta, const PrimitiveFunction& funcForErrMsg);
 
     private:
         PrimitiveOpType m_op;

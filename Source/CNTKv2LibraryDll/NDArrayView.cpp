@@ -503,7 +503,36 @@ namespace CNTK
         return out;
     }
 
-    /*static*/ NDArrayViewPtr NDArrayView::GatherBatch(const std::vector<NDArrayViewPtr>& inputs, int axis, NDArrayViewPtr out)
+    /*static*/ void NDArrayView::ScatterBatch(const NDArrayViewPtr& input, vector<NDArrayViewPtr>& outputs)
+    {
+#if 1
+        input; outputs;
+#else
+        // perform the operation
+        // The underlying TensorView call expects a functor to access the TensorView items.
+        // Any error checking will happen inside the TensorView function, so we don't duplicate it here.
+        switch (input->m_dataType)
+        {
+        case DataType::Float:
+            input->NativeTensorView<float>()->DoScatterBatchOf(outputs.size(), [&](size_t i) -> TensorView<float>&
+            {
+                return *outputs[i]->GetWritableTensorViewPtr<float>();
+            });
+            break;
+        case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
+            input->NativeTensorView<double>()->DoScatterBatchOf(outputs.size(), [&](size_t i) -> TensorView<double>&
+            {
+                return *outputs[i]->GetWritableTensorViewPtr<double>();
+            });
+            break;
+        default:
+            LogicError("NDArrayView::GatherBatch: Unsupported DataType %s", DataTypeName(input->m_dataType));
+            break;
+        }
+#endif
+    }
+
+    /*static*/ NDArrayViewPtr NDArrayView::GatherBatch(const vector<NDArrayViewPtr>& inputs, int axis, NDArrayViewPtr out)
     {
         size_t numInputs = inputs.size();
         if (!out        || true) // keep this for now for testing this

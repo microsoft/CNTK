@@ -215,20 +215,20 @@ namespace CNTK
 
     // perform back into all inputs
     // Currently only supported for Splice.
-    /*static*/ void PrimitiveFunction::BackpropToAll(const NDArrayViewPtr outputGradient,  // incoming gradient from top
-                              PrimitiveOpType primitiveOp, const Dictionary& attributes, // goes through this backprop function
-                              const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues, // using these values from forward pass
-                              const std::vector<const NDArrayView*>& inputGradients, double beta, // into here
+    // TODO: Remove this, it's simple enough.
+    /*static*/ void PrimitiveFunction::BackpropToAll(const NDArrayViewPtr& outputGradient,                  // incoming gradient from top...
+                              PrimitiveOpType primitiveOp, const Dictionary& attributes,                    // ...goes through this backprop function...
+                              const NDArrayViewPtr& outputValue, const vector<NDArrayViewPtr>& inputValues, // ...using these values from forward pass...
+                              vector<NDArrayViewPtr>& inputGradients, double beta,                          // ...into here
                               const PrimitiveFunction& funcForErrMsg)
     {
         if (primitiveOp == PrimitiveOpType::Splice)
         {
-            outputValue;  inputGradients; // not used for Splice
-            auto axis = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+            outputValue;  inputValues; // not used for Splice
             if (inputGradients.size() > 1)
-                ;// NDArrayView::ScatterBatch(outputGradient, inputGradients, axis.StaticAxisIndex());
+                NDArrayView::ScatterBatch(outputGradient, inputGradients);
             else // only one: propagate by copying
-                NDArrayView::NumericOperation({ outputGradient }, 1.0, opCopy, const_cast<NDArrayView*>(inputGradients[0])->shared_from_this(), 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+                NDArrayView::NumericOperation({ outputGradient }, 1.0, opCopy, inputGradients.front(), 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
         }
         else
             LogicError("Variable '%S' Value(): Bulk backpropagation for operation %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());

@@ -1048,12 +1048,12 @@ public:
         if (m_visitorTag.Visited(f->m_visitedTag))
             return;
         // Considerations:
-        //  - Note that we do not need to handle consecutive inputs, because those
+        //  - Note that we do not need to optimize for consecutive inputs, because those
         //    would not have been transformed into a Splice operation.
         //    Hence, this is strictly a ScatterBatch operation.
         //  - It is possible that the Splice operation consumed the same input twice.
         //    This is currently handled via atomicAdd(), i.e. will have non-determinism.
-        //    (A striding trick will minimize the probability of clashes.)
+        //    (A striding trick minimizes the probability of clashes.)
 #if 1
         for (size_t index = 0; index < f->m_inputs.size(); index++)
         {
@@ -1077,7 +1077,7 @@ public:
         let& outputGradient = outputFields.m_gradient; // this is the incoming batch of gradients
 
         let numInputs = inputs.size();
-        auto& inputGradients = BorrowBuffer(m_inputValuesBufferRaw, numInputs); // target locations to propagate the columns to
+        auto& inputGradients = BorrowBuffer(m_inputValuesBuffer, numInputs); // target locations to propagate the columns to
         bool allBetasZero = true;
         for (size_t i = 0; i < numInputs; i++)
         {
@@ -1085,7 +1085,7 @@ public:
             // create the gradient memory for this input
             let beta = LazilyCreateLazilyIndexedGradient(input);
             let& fields = *input.m_dataFields;
-            inputGradients[i] = fields.m_gradient.get();
+            inputGradients[i] = fields.m_gradient;
             // handle inconsistent betas
             if (beta != 0 && allBetasZero)
             {
@@ -1101,8 +1101,6 @@ public:
         let beta = allBetasZero ? 0.0 : 1.0; // if at least one is not zero, we must run qwith beta=1
 
         // backprop into all inputs
-        // TODO: Does this need to be wrapped, or just call ScatterBatch()?
-        // CONTINUE HERE
         PrimitiveFunction::BackpropToAll(outputGradient, f->m_op, f->m_attributes, nullptr, {}, inputGradients, beta, *f);
 #endif
         m_stats.numBackpropScatters++;
