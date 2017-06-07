@@ -188,17 +188,12 @@ namespace CNTK
         GetWritableMatrix<double>()->SetValue(value);
     }
 
-    template <typename ElementType>
-    /*static*/ std::shared_ptr<Matrix<ElementType>> NDArrayView::GetMatrixImpl(const TensorView<ElementType>& tensorView, size_t rowColSplitPoint)
+    // determine matrix shape from TensorShape
+    // Resulting tensorShape has rank 2.
+    static void ToMatrixShape(Microsoft::MSR::CNTK::TensorShape& tensorShape, size_t rowColSplitPoint, const size_t AutoSelectRowColSplitPoint)
     {
-        auto tensorShape = tensorView.GetShape();
-
-        // we should always reshape for rank-0, so that batch and sequence axis goes to columns
-        if (tensorShape.GetRank() <= 1 && rowColSplitPoint != 0)
-            return tensorView.AsMatrix();
-
         size_t splitPoint = rowColSplitPoint;
-        if (splitPoint == NDArrayView::AutoSelectRowColSplitPoint)
+        if (splitPoint == AutoSelectRowColSplitPoint)
         {
             // Determine the split point by determining which of the axes can be 
             // folded and selecting the non-foldable axis as the split point
@@ -216,7 +211,9 @@ namespace CNTK
                 LogicError("The TensorView (shape = %s) underlying this NDArrayView cannot be flattened to a Matrix.", ((std::string)tensorShape).c_str());
 
             // If we can fold the entire tensor down to a vector so any of the axes can be a valid split point,
-            // let's pick the split point to be 1
+            // let's pick the split point to be 1 (that is, the first dim becomes the row, the rest become the column).
+            // This is consisten with sparse tensor, where the first dimension is sparse, while the remaining
+            // ones are the (dense) index, for which we can fold multiple tensor axes together.
             splitPoint = 1;
             if (numDimsThatCannotBeDropped > 1)
             {
@@ -225,7 +222,19 @@ namespace CNTK
             }
         }
 
-        tensorShape.FlattenTo2DInPlace(splitPoint, "NDArrayView::GetMatrix");
+        tensorShape.FlattenTo2DInPlace(splitPoint, "NDArrayView::ToMatrixShape");
+    }
+
+    template <typename ElementType>
+    /*static*/ std::shared_ptr<Matrix<ElementType>> NDArrayView::GetMatrixImpl(const TensorView<ElementType>& tensorView, size_t rowColSplitPoint)
+    {
+        // we should always reshape for rank-0, so that batch and sequence axis goes to columns
+        if (tensorView.GetShape().GetRank() <= 1 && rowColSplitPoint != 0)
+            return tensorView.AsMatrix();
+
+        auto tensorShape = tensorView.GetShape();
+
+        ToMatrixShape(tensorShape, rowColSplitPoint, AutoSelectRowColSplitPoint);
 
         return tensorView.Reshaped(tensorShape).AsMatrix();
     }
@@ -612,9 +621,14 @@ namespace CNTK
             if ((i < sliceViewShape.Rank()) && (sliceViewShape[i] == NDShape::InferredDimension))
                 sliceViewShape[i] = Shape()[i] - startOffset[i];
 
+            // It is allowed that the passed Shape has more axes than the actual data, as long that slice is [0:1].
+            // Those additional dimensions are retained in the resulting object.
             endOffset[i] = startOffset[i] + ((i < sliceViewShape.Rank()) ? sliceViewShape[i] : 1);
             lastOffset[i] = endOffset[i] - 1;
 
+            // Only the last non-singleton axis can be a slice proper.
+            // Any axes after that must be sliced to a singleton axis.
+            // Otherwise, data would be non-contiguous, which the Matrix class does not support.
             if (anyPrevAxisSliced && ((endOffset[i] - startOffset[i]) != 1))
                 InvalidArgument("NDArrayView::SliceView: Cannot create a slice which is not contiguous in memory. "
                     "This NDArrayView shape = %S, slice offset = %S, slice extent = %S.",
@@ -623,6 +637,10 @@ namespace CNTK
             bool isCurrentAxisSliced = (startOffset[i] != 0) || (endOffset[i] != Shape()[i]);
             anyPrevAxisSliced = anyPrevAxisSliced || isCurrentAxisSliced;
         }
+
+        // determine the canonical matrix shape of our storage object
+        if ((startOffset[0] != 0) || (endOffset[0] != Shape()[0]) && IsSparse())
+            InvalidArgument("NDArrayView::SliceView: The first axis of a sparse tensor cannot be slice-viewed.");
 
         auto flatBufferOffset = AsTensorShape(Shape()).Locate(startOffset);  // offset and length into underlying ElementType array...
         auto flatBufferLength = AsTensorShape(Shape()).Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
