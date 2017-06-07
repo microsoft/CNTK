@@ -19,9 +19,9 @@ All FunctionalAPI Tutorials are fully tested, same as the Tutorials here.
 ## BrainScript
 
 There are four detailed tutorials on how to use CNTK with BrainScript. 
-A step-by-step walk through for each of these is provided on the [CNTK wiki](https://github.com/Microsoft/CNTK/wiki/Tutorials).
+A step-by-step walk through for each of these is provided in the [documentation](https://docs.microsoft.com/en-us/cognitive-toolkit/Tutorials).
 
-* Hello World - Logistic Regression ([Details](https://github.com/Microsoft/CNTK/wiki/Tutorial))
-* Image Hands On ([Details](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition)) 
-* SLU (Language Understanding) Hands On ([Details](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Language-Understanding))
-* Object detection using Fast R-CNN ([Code](https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Detection/FastRCNN), [Details](https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN))
+* Hello World - Logistic Regression ([Details](https://docs.microsoft.com/en-us/cognitive-toolkit/Tutorials))
+* Image Hands On ([Details](https://docs.microsoft.com/en-us/cognitive-toolkit/Hands-On-Labs-Image-Recognition)) 
+* SLU (Language Understanding) Hands On ([Details](https://docs.microsoft.com/en-us/cognitive-toolkit/Hands-On-Labs-Language-Understanding))
+* Object detection using Fast R-CNN ([Code](https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Detection/FastRCNN), [Details]https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN))
