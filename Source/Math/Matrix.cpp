@@ -794,7 +794,7 @@ Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCol
 template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::ReshapeSliceReshape(size_t interpretAsRows, size_t interpretAsCols,
     size_t startRow, size_t numRows, size_t startColumn, size_t numCols,
-    size_t reshapeAsRows, size_t reshapeAsCols)
+    size_t reshapeAsRows, size_t reshapeAsCols) const
 {
     if (startColumn + numCols > interpretAsCols || startRow + numRows > interpretAsRows)
         InvalidArgument("ReshapeSliceReshape: Slice out of bounds.");

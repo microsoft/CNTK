@@ -809,6 +809,8 @@ namespace CNTK
         ///
         /// Creates a new NDArrayView which is an alias of a slice of 'this' view; i.e. a new view over the underlying data
         /// corresponding to the specified slice of 'this' view.
+        /// If extent[] has less axes than the object, those axes are dropped from the result, assuming extents of assumed 1.
+        /// This expresses the common case of indexing the batch (=trailing) axis.
         /// If the tensor is sparse, the leading axis (which is the sparse one) cannot be slice-viewed.
         ///
         CNTK_API NDArrayViewPtr SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly = false) const;
@@ -817,6 +819,7 @@ namespace CNTK
         /// Creates a new NDArrayView which is a view that indexes the last axis.
         /// The axis itself is dropped in the returned view.
         /// If the tensor is sparse, it must have at least two axes (since the leading axis, which is the sparse one, cannot be slice-viewed).
+        /// BUGBUG: This is covered by SliceView() with too short extent[], so remove this function and use SliceView() instead.
         ///
         CNTK_API NDArrayViewPtr IndexLastAxis(size_t index, bool readOnly = false) const;
 
