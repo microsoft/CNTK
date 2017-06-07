@@ -843,10 +843,12 @@ __global__ void _scatterMemcpy(ElemType beta, const ElemType* srcPtr, GatherScat
             outputPointer = outputPointers[col];
         }
         const CUDA_LONG row = id - colOffset;
-        auto val = srcPtr[colOffset + row];
+        let val = srcPtr[colOffset + row];
+        auto& dst = outputPointer[row]; // note: beta = 1 assumed for now
         if (beta != 0)
-            val += outputPointer[row] * beta;
-        outputPointer[row] = val;
+            atomicAdd(&dst, val); // dst += val;
+        else
+            dst = val;
         prevCol = col;
     }
 }
@@ -856,6 +858,8 @@ template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
 static void ScatterMemcpy(ElemType beta, const ElemType* srcPtr, const GatherScatterPointerArray<maxPtrArgs, ElemType>& outputPointersBuffer, size_t numRows)
 {
 #if 1
+    if (beta != 0 && beta != 1)
+        LogicError("ScatterMemcpy(): Beta != 0 and != 1 currently not implemented."); // ... because not needed and makes atomicAdd harder
     let& outputPointersArray = AsGatherScatterPointerArrayRef<N>::AsGatherScatterPointerArrayRef1(outputPointersBuffer);
     let numElements = outputPointersArray.size() * numRows;
     let NN = CeilDiv(numElements, GATHER_LOCAL_LOOPS); // we do GATHER_LOCAL_LOOPS in each thread launch (thread launches seem expensive)
@@ -895,6 +899,8 @@ void GPUMatrix<ElemType>::ScatterBatch(ElemType beta, size_t numRows, size_t num
         {
             if (nextOutput >= numOutputs) // running out of output data?
                 InvalidArgument("ScatterBatch: Total number of output elements must be equal to number of output elements.");
+            // TODO: shuffle the index around a little, to make it less likely that consecutive duplicates
+            // of the same output end up in the same CUDA launch
             let& output = outputs(nextOutput++); // consume the next output
             dstPtr  = output.Data();
             dstLeft = output.GetNumElements();
