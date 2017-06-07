@@ -145,10 +145,14 @@ def positive_int(x):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-tr", "--train-map-file", help="Path to file "
+    train_or_evaluate = parser.add_mutually_exclusive_group()
+    train_or_evaluate.add_argument("-tr", "--train-map-file", help="Path to file "
                         "where paths to train images are written into "
-                        "(https://git.io/vH4XD)", required=True,
+                        "(https://git.io/vH4XD)", required=False,
                         default=argparse.SUPPRESS)
+    train_or_evaluate.add_argument("-ev", "--evaluate-only",
+                        help="Run only an evaluation on the model provided",
+                        action="store_true", required=False, default=False)
     parser.add_argument("-ts", "--test-map-file", help="Path to file where "
                         "paths to test images are written into "
                         "(https://git.io/vH4XD)", required=True,
@@ -162,9 +166,6 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--epochs",
                         help="Total number of epochs to train the model on",
                         type=int, required=False, default=5)
-    parser.add_argument("-ev", "--evaluate-only",
-                        help="Run only an evaluation on the model provided",
-                        action="store_true", required=False, default=False)
     parser.add_argument("-bs", "--batch-size", help="Batch size dimension",
                         type=int, required=False, default=mb_size)
     parser.add_argument("-a", "--distributed-after",
@@ -181,15 +182,23 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
     VERBOSE = not args["quiet"]
 
-    if distributed.Communicator.num_workers() < 2:
-        if distributed.Communicator.rank() == 0:
-            print("\n ERROR: Run this script with at least two workers.",
-                  file=sys.stderr)
-            exit()
 
-    # Read the amount the user inserted, or set it to one epoch-size.
-    distributed_after = args.get("distributed_after", False)
+    if not (args.get("train_map_file", False) or 
+            args.get("evaluate_only", False)):
+        print("\n ERROR: Choose whether to transfer learning on a new model "
+              "(`-tr' option) or to evaluate the performance of the model on "
+              "some images (`-ev' option).",
+              file=sys.stderr)
+        exit(1)
+    elif (distributed.Communicator.num_workers() < 2 and 
+          distributed.Communicator.rank() == 0):
+        print("\n ERROR: Run this script with at least two workers.",
+              file=sys.stderr)
+        exit(1)
+
+    distributed_after = args.get("distributed_after", False)    
     if not distributed_after:
+        # Read the amount the user inserted, or set it to one epoch-size.
         # -1 stands for "distribute after one epoch size".
         distributed_after = -1
 
@@ -198,7 +207,7 @@ if __name__ == "__main__":
         if not class_mapping and distributed.Communicator.rank() == 0:
             print("\n ERROR: empty class mapping file '{}'.".format(
                 args["labels_list_file"]), file=sys.stderr)
-            exit()
+            exit(1)
 
     class_mapping = np.asarray(class_mapping.strip("[] ").split(", "))
 
@@ -235,7 +244,7 @@ if __name__ == "__main__":
                         tl_model_file
                     ),
                   file=sys.stderr)
-            exit()
+            exit(1)
         elif args["evaluate_only"]:
             trained_model = load_model(args["model_file"])
 
