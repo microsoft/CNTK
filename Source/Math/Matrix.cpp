@@ -865,7 +865,7 @@ void Matrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::
     {
         // GPU version: perform as a single CUDA launch
         let outputDeviceId = GetPreferredDeviceId();
-        m_GPUMatrix->GatherBatch(numRows, numInputs, [&](size_t i) -> GPUMatrix<ElemType>&
+        m_GPUMatrix->GatherBatch(numRows, numInputs, [&](size_t i) -> const GPUMatrix<ElemType>&
         {
             let& input = inputs(i);
             input._transferToDevice(outputDeviceId, /*isBeingMoved=*/false, /*emptyTransfer=*/false); // make sure the input is actually on the right GPU
@@ -914,13 +914,13 @@ void Matrix<ElemType>::ScatterBatch(ElemType beta, size_t numRows, size_t numOut
     },
     {
         // GPU version: perform as a single CUDA launch
-        //let outputDeviceId = GetPreferredDeviceId();
-        //m_GPUMatrix->ScatterBatch(numRows, numOutputs, [&](size_t i) -> GPUMatrix<ElemType>&
-        //{
-        //    let& output = outputs(i);
-        //    output._transferToDevice(outputDeviceId, /*isBeingMoved=*/true, /*emptyTransfer=*/true); // make sure the output is actually on the right GPU
-        //    return *output.m_GPUMatrix;
-        //});
+        let outputDeviceId = GetPreferredDeviceId();
+        m_GPUMatrix->ScatterBatch(beta, numRows, numOutputs, [&](size_t i) -> GPUMatrix<ElemType>&
+        {
+            let& output = outputs(i);
+            output._transferToDevice(outputDeviceId, /*isBeingMoved=*/true, /*emptyTransfer=*/true); // make sure the output is actually on the right GPU
+            return *output.m_GPUMatrix;
+        });
     },
     { NOT_IMPLEMENTED; },
     { NOT_IMPLEMENTED; });

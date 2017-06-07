@@ -213,7 +213,8 @@ public:
 
     void CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride);
 
-    void GatherBatch(size_t numRows, size_t numInputs, const std::function<GPUMatrix<ElemType>&(size_t)>& inputs);
+    void GatherBatch(size_t numRows, size_t numInputs, const std::function<const GPUMatrix<ElemType>&(size_t)>& inputs);
+    void ScatterBatch(ElemType beta, size_t numRows, size_t numOutputs, const std::function<GPUMatrix<ElemType>&(size_t)>& inputs) const;
 
     GPUMatrix<ElemType> Diagonal() const;
 

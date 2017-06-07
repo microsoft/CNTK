@@ -659,49 +659,51 @@ void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatr
 }
 
 template <size_t N, class ElemType>
-class GatherMemcpyPointerArray
+class GatherScatterPointerArray
 {
     size_t numElements;
-    const ElemType* pointers[N];
+    ElemType* pointers[N];
 public:
     // reading out data
     __device__ __host__ size_t size() const { return (size_t)numElements; }
     __device__ __host__ const ElemType* operator[](size_t i) const { return pointers[i]; }
+    __device__ __host__       ElemType* operator[](size_t i)       { return pointers[i]; }
     // cast as a struct with a different template parameter
     template<size_t Nother>
-    const GatherMemcpyPointerArray<Nother, ElemType>& AsRef() const
+    const GatherScatterPointerArray<Nother, ElemType>& AsGatherScatterPointerArrayRef() const
     {
         if (size() > Nother)
-            LogicError("GatherMemcpyPointerArray: Attempted to cast to a templated buffer size that is too small.");
-        return reinterpret_cast<const GatherMemcpyPointerArray<Nother, ElemType>&>(*this);
+            LogicError("GatherScatterPointerArray: Attempted to cast to a templated buffer size that is too small.");
+        return reinterpret_cast<const GatherScatterPointerArray<Nother, ElemType>&>(*this);
     }
     // creating the array
-    GatherMemcpyPointerArray() { clear(); }
+    GatherScatterPointerArray() { clear(); }
     size_t capacity() const { return N; }
     void clear() { numElements = 0; }
-    void push_back(const ElemType* p)
+    void push_back(ElemType* p)
     {
         assert(numElements < (CUDA_LONG)N);
         pointers[numElements++] = p;
     }
+    void push_back(const ElemType* p) { push_back(const_cast<ElemType*>(p)); }
 };
 // TODO: do this template abomination the right way
 template<size_t Nother>
-struct AsRef
+struct AsGatherScatterPointerArrayRef
 {
     template <size_t N, class ElemType>
-    static const GatherMemcpyPointerArray<Nother, ElemType>& AsRef1(const GatherMemcpyPointerArray<N, ElemType>& other)
+    static const GatherScatterPointerArray<Nother, ElemType>& AsGatherScatterPointerArrayRef1(const GatherScatterPointerArray<N, ElemType>& other)
     {
         if (other.size() > Nother)
-            LogicError("GatherMemcpyPointerArray: Attempted to cast to a templated buffer size that is too small.");
-        return reinterpret_cast<const GatherMemcpyPointerArray<Nother, ElemType>&>(other);
+            LogicError("GatherScatterPointerArray: Attempted to cast to a templated buffer size that is too small.");
+        return reinterpret_cast<const GatherScatterPointerArray<Nother, ElemType>&>(other);
     }
 };
 // Kernel to copy inputPointers.size() vectors of length numRows into consecutive output locations starting at dstPtr.
 // This kernel expects to be called for NN/GATHER_LOCAL_LOOPS times, and performs GATHER_LOCAL_LOOPS local loops
 // instead. This is to mitigate the overhead of copying those many pointers.
 template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
-__global__ void _gatherMemcpy(ElemType* dstPtr, GatherMemcpyPointerArray<N, ElemType> inputPointers, const CUDA_LONG numRows)
+__global__ void _gatherMemcpy(ElemType* dstPtr, GatherScatterPointerArray<N, ElemType> inputPointers, const CUDA_LONG numRows)
 {
     const CUDA_LONG threadId = blockDim.x * blockIdx.x + threadIdx.x;
     const CUDA_LONG id0 = threadId * GATHER_LOCAL_LOOPS;
@@ -733,10 +735,10 @@ __global__ void _gatherMemcpy(ElemType* dstPtr, GatherMemcpyPointerArray<N, Elem
 static const size_t maxPtrArgsP2 = (4096 / sizeof(void*)); // max bytes for function args in CUDA 8 is 4k
 static const size_t maxPtrArgs   = maxPtrArgsP2 - 10; // max args: leave some margin
 template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
-static void GatherMemcpy(ElemType* dstPtr, const GatherMemcpyPointerArray<maxPtrArgs, ElemType>& inputPointersBuffer, size_t numRows)
+static void GatherMemcpy(ElemType* dstPtr, const GatherScatterPointerArray<maxPtrArgs, ElemType>& inputPointersBuffer, size_t numRows)
 {
 #if 1
-    let& inputPointersArray = AsRef<N>::AsRef1(inputPointersBuffer);
+    let& inputPointersArray = AsGatherScatterPointerArrayRef<N>::AsGatherScatterPointerArrayRef1(inputPointersBuffer);
     let numElements = inputPointersArray.size() * numRows;
     let NN = CeilDiv(numElements, GATHER_LOCAL_LOOPS); // we do GATHER_LOCAL_LOOPS in each thread launch (thread launches seem expensive)
     GridDim grid(NN);
@@ -751,14 +753,14 @@ static void GatherMemcpy(ElemType* dstPtr, const GatherMemcpyPointerArray<maxPtr
 
 // GatherBatch() batches many independent inputs into one output tensor
 template <class ElemType>
-void GPUMatrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::function<GPUMatrix<ElemType>&(size_t)>& inputs)
+void GPUMatrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::function<const GPUMatrix<ElemType>&(size_t)>& inputs)
 {
     PrepareDevice();
-    GatherMemcpyPointerArray<maxPtrArgs, ElemType> inputPointerBuffer; // leave some space fro extra function args
-    // output matrix iterator
+    GatherScatterPointerArray<maxPtrArgs, ElemType> inputPointerBuffer; // leave some space for extra function args
+    // output-batch matrix iterator
     ElemType* dstPtr  = Data();
     size_t    dstLeft = GetNumElements();
-    // inputs iterator
+    // input-items iterator
     const ElemType* srcPtr = nullptr; // pointer to the next column to copy from current input
     size_t srcLeft = 0;               // #elements left to copy from current input
     size_t nextInput = 0; // index of next unconsumed input
@@ -813,6 +815,126 @@ void GPUMatrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const st
     else if (colsLeft <= 256)        GatherMemcpy<       256,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
     else if (colsLeft <= maxPtrArgs) GatherMemcpy<maxPtrArgs,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
     else LogicError("GatherBatch: We should have flushed inside the loop, but somehow didn't??");
+}
+
+// Kernel to copy outputPointers.size() vectors of length numRows from consecutive input locations starting at srcPtr.
+// This kernel expects to be called for NN/GATHER_LOCAL_LOOPS times, and performs GATHER_LOCAL_LOOPS local loops
+// instead. This is to mitigate the overhead of copying those many pointers.
+template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
+__global__ void _scatterMemcpy(ElemType beta, const ElemType* srcPtr, GatherScatterPointerArray<N, ElemType> outputPointers, const CUDA_LONG numRows)
+{
+    const CUDA_LONG threadId = blockDim.x * blockIdx.x + threadIdx.x;
+    const CUDA_LONG id0 = threadId * GATHER_LOCAL_LOOPS;
+    // values cached across loop iterations
+    ElemType* outputPointer;
+    CUDA_LONG prevCol;   // value of 'col' in previous loop iteration
+    CUDA_LONG colOffset; // cached value of col * numRows
+#pragma unroll
+    for (CUDA_LONG i = 0; i < GATHER_LOCAL_LOOPS; i++)
+    {
+        const CUDA_LONG id = id0 + i;
+        const CUDA_LONG col = id / numRows; // thread grid is organized as concatenation of columns
+        if (col >= outputPointers.size())
+            return;
+        // both the pointer lookup and the offset computation (int mul) are not cheap, so cache them across loop iterations
+        if (i == 0 || col != prevCol)
+        {
+            colOffset = col * numRows;
+            outputPointer = outputPointers[col];
+        }
+        const CUDA_LONG row = id - colOffset;
+        auto val = srcPtr[colOffset + row];
+        if (beta != 0)
+            val += outputPointer[row] * beta;
+        outputPointer[row] = val;
+        prevCol = col;
+    }
+}
+
+// helper function template for ScatterBatch() below
+template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
+static void ScatterMemcpy(ElemType beta, const ElemType* srcPtr, const GatherScatterPointerArray<maxPtrArgs, ElemType>& outputPointersBuffer, size_t numRows)
+{
+#if 1
+    let& outputPointersArray = AsGatherScatterPointerArrayRef<N>::AsGatherScatterPointerArrayRef1(outputPointersBuffer);
+    let numElements = outputPointersArray.size() * numRows;
+    let NN = CeilDiv(numElements, GATHER_LOCAL_LOOPS); // we do GATHER_LOCAL_LOOPS in each thread launch (thread launches seem expensive)
+    GridDim grid(NN);
+    SyncGuard syncGuard;
+    _scatterMemcpy<N, GATHER_LOCAL_LOOPS, ElemType> <<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(beta, srcPtr, outputPointersArray, (CUDA_LONG)numRows);
+#else
+    // naive reference implementation
+    // BUGBUG: Not handling beta
+    for (size_t j = 0; j < numInputPointers; j++)
+        CUDA_CALL(outputPointers[j], sizeof(ElemType) * numRows, cudaMemcpy(srcPtr + numRows * j, cudaMemcpyDeviceToDevice));
+#endif
+}
+
+// ScatterBatch() batches many independent outputs into one output tensor
+// TODO: This code has quite some duplication from Gather... can this be abstracted?
+template <class ElemType>
+void GPUMatrix<ElemType>::ScatterBatch(ElemType beta, size_t numRows, size_t numOutputs, const std::function<GPUMatrix<ElemType>&(size_t)>& outputs) const
+{
+    PrepareDevice();
+    GatherScatterPointerArray<maxPtrArgs, ElemType> outputPointerBuffer; // leave some space for extra function args
+    // input-batch matrix iterator
+    ElemType* srcPtr  = Data();
+    size_t    srcLeft = GetNumElements();
+    // output-items iterator
+    const ElemType* dstPtr = nullptr; // pointer to the next column in current output to copy to
+    size_t dstLeft = 0;               // #elements left to copy to current output
+    size_t nextOutput = 0; // index of next un-copied output
+    // go over all inputs and outputs, a complicated dance of iterators...
+    outputPointerBuffer.clear();
+    while (srcLeft > 0)
+    {
+        if (srcLeft < numRows) // enough space for one more column?
+            InvalidArgument("ScatterBatch: Total number of output elements must be equal to number of output elements.");
+        // pull the next output if needed
+        while (dstLeft == 0) // (use while since output may have 0 columns)
+        {
+            if (nextOutput >= numOutputs) // running out of output data?
+                InvalidArgument("ScatterBatch: Total number of output elements must be equal to number of output elements.");
+            let& output = outputs(nextOutput++); // consume the next output
+            dstPtr  = output.Data();
+            dstLeft = output.GetNumElements();
+            if (dstLeft % numRows != 0)
+                InvalidArgument("ScatterBatch: All outputs must be reshapable to have numRows (%d) rows.", (int)numRows);
+        }
+        // queue the next column copy
+        outputPointerBuffer.push_back(dstPtr);
+        dstPtr  += numRows;
+        dstLeft -= numRows; // (we have verified elsewhere that dstLeft and srcLeft >= numRows)
+        srcLeft -= numRows;
+        // if buffer is full then perform a batch copy op
+        if (outputPointerBuffer.size() == outputPointerBuffer.capacity())
+        {
+            let n = outputPointerBuffer.size() * numRows; // number of elements to copy in this chunk
+            ScatterMemcpy<maxPtrArgs, 8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+            srcPtr  += n;
+            outputPointerBuffer.clear();
+        }
+    }
+    if (nextOutput != numOutputs || dstLeft != 0) // consumed all outputs?
+        InvalidArgument("ScatterBatch: Total number of output elements must be equal to number of output elements.");
+    // now do the last chunk. For the last one, we may use smaller chunk size
+    let colsLeft = outputPointerBuffer.size();
+    if      (colsLeft == 0) {}
+    else if (colsLeft <= 1)          ScatterMemcpy<         1,  1, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 2)          ScatterMemcpy<         2,  2, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 4)          ScatterMemcpy<         4,  4, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 8)          ScatterMemcpy<         8,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 16)         ScatterMemcpy<        16,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 24)         ScatterMemcpy<        24,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 32)         ScatterMemcpy<        32,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 48)         ScatterMemcpy<        48,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 64)         ScatterMemcpy<        64,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 96)         ScatterMemcpy<        96,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 128)        ScatterMemcpy<       128,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 192)        ScatterMemcpy<       192,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 256)        ScatterMemcpy<       256,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= maxPtrArgs) ScatterMemcpy<maxPtrArgs,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else LogicError("ScatterBatch: We should have flushed inside the loop, but somehow didn't??");
 }
 
 //for each column of a, we assign all rows of a to this starting from startIndex
