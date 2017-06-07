@@ -171,17 +171,9 @@ def roiTransformPadScale(rect, w_offset, h_offset, scale = 1.0):
     return rect
 
 def getCntkRoiCoordsLine(rect, targetw, targeth):
-    # convert from absolute to relative co-ordinates
+    # Return the absolute coordinate of the ROI in the original image.
     x, y, x2, y2 = rect
-    xrel = float(x) / (1.0 * targetw)
-    yrel = float(y) / (1.0 * targeth)
-    wrel = float(x2 - x) / (1.0 * targetw)
-    hrel = float(y2 - y) / (1.0 * targeth)
-    assert xrel <= 1.0, "Error: xrel should be <= 1 but is " + str(xrel)
-    assert yrel <= 1.0, "Error: yrel should be <= 1 but is " + str(yrel)
-    assert wrel >= 0.0, "Error: wrel should be >= 0 but is " + str(wrel)
-    assert hrel >= 0.0, "Error: hrel should be >= 0 but is " + str(hrel)
-    return " {} {} {} {}".format(xrel, yrel, wrel, hrel)
+    return " {} {} {} {}".format(x, y, x2, y2)
 
 def getCntkRoiLabelsLine(overlaps, thres, nrClasses):
     # get one hot encoding
