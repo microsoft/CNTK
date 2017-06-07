@@ -238,7 +238,8 @@ public:
                      ElemType RMS_WGT_MAX, 
                      ElemType RMS_WGT_DEC, 
                      ElemType RMS_WGT_MIN, 
-                     const bool needAveMultiplier);
+                     const bool needAveMultiplier,
+                     const bool initialized);
 
     void AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
 

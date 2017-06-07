@@ -1363,14 +1363,15 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
                                       ElemType RMS_WGT_MAX,
                                       ElemType RMS_WGT_DEC,
                                       ElemType RMS_WGT_MIN,
-                                      const bool needAveMultiplier)
+                                      const bool needAveMultiplier,
+                                      const bool initialized)
 {
     const ElemType floor = 1e-6f;
 
     size_t n = gradients.GetNumElements();
     ElemType* curr_grad = gradients.Data();
 
-    if (IsEmpty() || GetNumCols() < gradients.GetNumCols() * 3)
+    if (IsEmpty() || GetNumCols() < gradients.GetNumCols() * 3 || !initialized)
     {
         RequireSize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
         SetValue(0.0);
