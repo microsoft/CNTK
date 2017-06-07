@@ -676,7 +676,7 @@ public:
     }
 
     ROIPoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", PoolKindFrom(configp->Get(L"pool")), configp->Get(L"roiOutputShape"), configp->Get(L"scale"))
+        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", PoolKindFrom(configp->Get(L"pool")), configp->Get(L"roiOutputShape"), configp->Get(L"featureScale"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }

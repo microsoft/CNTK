@@ -344,6 +344,9 @@ def roipooling(operand, rois, pooling_type, roi_output_shape, spatial_scale, nam
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import roipooling
+    if pooling_type != MAX_POOLING:
+        raise ValueError('Unsupported pooling type, ROIPooling support only MAX pooling.')
+
     operand = sanitize_input(operand)
     rois = sanitize_input(rois)
     roi_output_shape = sanitize_shape(roi_output_shape)

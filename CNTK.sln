@@ -1151,8 +1151,25 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BrainScript", "BrainScript"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FastRCNN", "FastRCNN", "{4EAFF1B2-2D70-4486-B95E-684E39A50609}"
 	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Detection\FastRCNN\__init__.py = Examples\Image\Detection\FastRCNN\__init__.py
+		Examples\Image\Detection\FastRCNN\A1_GenerateInputROIs.py = Examples\Image\Detection\FastRCNN\A1_GenerateInputROIs.py
+		Examples\Image\Detection\FastRCNN\A2_RunWithBSModel.py = Examples\Image\Detection\FastRCNN\A2_RunWithBSModel.py
+		Examples\Image\Detection\FastRCNN\A2_RunWithPyModel.py = Examples\Image\Detection\FastRCNN\A2_RunWithPyModel.py
+		Examples\Image\Detection\FastRCNN\A3_ParseAndEvaluateOutput.py = Examples\Image\Detection\FastRCNN\A3_ParseAndEvaluateOutput.py
+		Examples\Image\Detection\FastRCNN\B1_VisualizeInputROIs.py = Examples\Image\Detection\FastRCNN\B1_VisualizeInputROIs.py
+		Examples\Image\Detection\FastRCNN\B2_EvaluateInputROIs.py = Examples\Image\Detection\FastRCNN\B2_EvaluateInputROIs.py
+		Examples\Image\Detection\FastRCNN\B3_VisualizeOutputROIs.py = Examples\Image\Detection\FastRCNN\B3_VisualizeOutputROIs.py
+		Examples\Image\Detection\FastRCNN\C1_DrawBboxesOnImages.py = Examples\Image\Detection\FastRCNN\C1_DrawBboxesOnImages.py
+		Examples\Image\Detection\FastRCNN\C2_AssignLabelsToBboxes.py = Examples\Image\Detection\FastRCNN\C2_AssignLabelsToBboxes.py
+		Examples\Image\Detection\FastRCNN\CNTK_FastRCNN_Eval.ipynb = Examples\Image\Detection\FastRCNN\CNTK_FastRCNN_Eval.ipynb
+		Examples\Image\Detection\FastRCNN\cntk_helpers.py = Examples\Image\Detection\FastRCNN\cntk_helpers.py
 		Examples\Image\Detection\FastRCNN\fastrcnn.cntk = Examples\Image\Detection\FastRCNN\fastrcnn.cntk
+		Examples\Image\Detection\FastRCNN\imdb_data.py = Examples\Image\Detection\FastRCNN\imdb_data.py
+		Examples\Image\Detection\FastRCNN\install_fastrcnn.py = Examples\Image\Detection\FastRCNN\install_fastrcnn.py
+		Examples\Image\Detection\FastRCNN\LabelMeConverter.py = Examples\Image\Detection\FastRCNN\LabelMeConverter.py
+		Examples\Image\Detection\FastRCNN\PARAMETERS.py = Examples\Image\Detection\FastRCNN\PARAMETERS.py
 		Examples\Image\Detection\FastRCNN\README.md = Examples\Image\Detection\FastRCNN\README.md
+		Examples\Image\Detection\FastRCNN\requirements.txt = Examples\Image\Detection\FastRCNN\requirements.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LanguageUnderstanding", "LanguageUnderstanding", "{11FBC2F7-5340-4E19-9BDC-1140D54817E2}"
@@ -1546,6 +1563,25 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BinaryConvolutionLib", "Examples\Extensibility\BinaryConvolution\BinaryConvolutionLib\BinaryConvolutionLib.vcxproj", "{20DEE94F-2802-40B1-B88B-22755A03AA48}"
 	ProjectSection(ProjectDependencies) = postProject
 		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "selectivesearch", "selectivesearch", "{BEF04803-47B4-4322-B9D7-E10A8468E79F}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Detection\FastRCNN\selectivesearch\__init__.py = Examples\Image\Detection\FastRCNN\selectivesearch\__init__.py
+		Examples\Image\Detection\FastRCNN\selectivesearch\README.md = Examples\Image\Detection\FastRCNN\selectivesearch\README.md
+		Examples\Image\Detection\FastRCNN\selectivesearch\selectivesearch.py = Examples\Image\Detection\FastRCNN\selectivesearch\selectivesearch.py
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "fastRCNN", "fastRCNN", "{C28E4FD7-F9A9-4473-8E5D-D209AF36A1E7}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Detection\FastRCNN\fastRCNN\__init__.py = Examples\Image\Detection\FastRCNN\fastRCNN\__init__.py
+		Examples\Image\Detection\FastRCNN\fastRCNN\imdb.py = Examples\Image\Detection\FastRCNN\fastRCNN\imdb.py
+		Examples\Image\Detection\FastRCNN\fastRCNN\nms.py = Examples\Image\Detection\FastRCNN\fastRCNN\nms.py
+		Examples\Image\Detection\FastRCNN\fastRCNN\pascal_voc.py = Examples\Image\Detection\FastRCNN\fastRCNN\pascal_voc.py
+		Examples\Image\Detection\FastRCNN\fastRCNN\test.py = Examples\Image\Detection\FastRCNN\fastRCNN\test.py
+		Examples\Image\Detection\FastRCNN\fastRCNN\timer.py = Examples\Image\Detection\FastRCNN\fastRCNN\timer.py
+		Examples\Image\Detection\FastRCNN\fastRCNN\train_svms.py = Examples\Image\Detection\FastRCNN\fastRCNN\train_svms.py
+		Examples\Image\Detection\FastRCNN\fastRCNN\voc_eval.py = Examples\Image\Detection\FastRCNN\fastRCNN\voc_eval.py
 	EndProjectSection
 EndProject
 Global
@@ -2275,5 +2311,7 @@ Global
 		{5D1972FA-F0A4-4035-8E63-8BAEF0230097} = {F37067BD-8BB1-4F93-AEF4-F37434613AE4}
 		{65649688-3377-4FA9-8CD0-BDC3AC72E0AD} = {3BF56127-6F0F-41CF-BFCE-31165A0A5E73}
 		{20DEE94F-2802-40B1-B88B-22755A03AA48} = {65649688-3377-4FA9-8CD0-BDC3AC72E0AD}
+		{BEF04803-47B4-4322-B9D7-E10A8468E79F} = {4EAFF1B2-2D70-4486-B95E-684E39A50609}
+		{C28E4FD7-F9A9-4473-8E5D-D209AF36A1E7} = {4EAFF1B2-2D70-4486-B95E-684E39A50609}
 	EndGlobalSection
 EndGlobal
