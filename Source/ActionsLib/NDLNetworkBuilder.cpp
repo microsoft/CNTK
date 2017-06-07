@@ -234,6 +234,21 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr = builder.RowRepeat(NULL, num_repeat, name);
         }
     }
+    else if (cnNodeType == OperationNameOf(StochasticBinaryNode))
+    {
+        if (parameter.size() != 1)
+            RuntimeError("StochasticBinaryNode Usage: StochasticBinary(NodeName, neuronST=true, RFAdjusted=false, passThrough=true, annealRate=1.0).");
+        nodeParamCount = 1;
+        nodeParamStart = 0; 
+        if (pass == ndlPassInitial)
+        {
+            bool t_neuronST = node->GetOptionalParameter("neuronST", "true");
+            bool t_RFAdjusted = node->GetOptionalParameter("RFAdjusted", "false");
+            bool t_passThrough = node->GetOptionalParameter("passThrough", "false");
+            float t_annealRate = node->GetOptionalParameter("annealRate", "1.0");
+            nodePtr = builder.StochasticBinary(NULL, t_neuronST, t_RFAdjusted, t_passThrough, t_annealRate, name);
+        } 
+    }
     else if (cnNodeType == OperationNameOf(DiagonalNode))
     {
         if (parameter.size() != 1)
