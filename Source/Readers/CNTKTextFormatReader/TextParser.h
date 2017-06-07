@@ -153,6 +153,8 @@ private:
 
     bool TryReadRealNumber(ElemType& value, size_t& bytesToRead);
 
+    bool TryReadNaN(ElemType& value, size_t& bytesToRead);
+
     bool TryReadUint64(size_t& value, size_t& bytesToRead);
 
     // Reads dense sample values into the provided vector.

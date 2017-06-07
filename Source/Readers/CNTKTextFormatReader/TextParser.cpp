@@ -7,14 +7,15 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <cfloat>
+#include <limits>
 #include "Indexer.h"
 #include "TextParser.h"
 #include "TextReaderConstants.h"
 
+
 #define isSign(c) (((c) == '-' || (c) == '+'))
 #define isE(c) (((c) == 'e' || (c) == 'E'))
 #define isN(c) (((c) == 'n' || (c) == 'N'))
-#define isA(c) (((c) == 'a' || (c) == 'A'))
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -33,9 +34,9 @@ enum State
     TheLetterE,
     ExponentSign,
     Exponent,
-    NanBegin,
-    NanEnd
 };
+
+const static char* g_nan = "NAN";
 
 template <class ElemType>
 class TextParser<ElemType>::TextDataChunk : public Chunk, public std::enable_shared_from_this<Chunk>
@@ -1058,7 +1059,7 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             else if (isN(c))
             {
-                state = NanBegin;
+                return TryReadNaN(value, bytesToRead);
             }
             else
             {
@@ -1208,41 +1209,6 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
                 return true;
             }
             break;
-        case NanBegin:
-            if (isA(c))
-            {
-                state = NanEnd;
-            }
-            else
-            {
-                if (ShouldWarn())
-                {
-                    fprintf(stderr,
-                        "WARNING: Encountered an unexpected character('%c')"
-                        " in a nan value %ls.\n", c, GetFileInfo().c_str());
-                }
-                return false;
-            }
-            break;
-        case NanEnd:
-            if (isN(c))
-            {
-                value = std::numeric_limits<ElemType>::lowest();
-                ++m_pos;
-                --bytesToRead;
-                return true;
-            }
-            else
-            {
-                if (ShouldWarn())
-                {
-                    fprintf(stderr,
-                        "WARNING: Encountered an unexpected character('%c')"
-                        " in a nan value %ls.\n", c, GetFileInfo().c_str());
-                }
-                return false;
-            }
-            break;
         default:
             if (ShouldWarn())
             {
@@ -1299,6 +1265,71 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
         fprintf(stderr,
             "WARNING: Expected %" PRIu64 " more bytes, but no more input is available for the current sequence"
             " while reading an input row %ls.\n", bytesToRead, GetFileInfo().c_str());
+    }
+
+    return false;
+}
+
+template <class ElemType>
+bool TextParser<ElemType>::TryReadNaN(ElemType& value, size_t& bytesToRead) 
+{
+    auto index = 0;
+
+    while (bytesToRead && CanRead())
+    {
+        char c = *m_pos;
+        char expected = g_nan[index];
+
+        if (c == expected || c == expected + 32) 
+        {
+            if (index == 2)
+            {
+                if (std::numeric_limits<ElemType>::has_quiet_NaN) 
+                {
+                    value = std::numeric_limits<ElemType>::quiet_NaN();
+                    return true;
+                }
+
+                if (ShouldWarn())
+                {
+                    fprintf(stderr,
+                        "WARNING: Encountered a NaN value %ls,"
+                        "which can not be represented by %s.\n",
+                        GetFileInfo().c_str(), typeid(ElemType).name());
+                }
+                return false;                
+            }
+        } 
+        else
+        {
+            if (ShouldWarn())
+            {
+                fprintf(stderr,
+                    "WARNING: Encountered an unexpected character('%c')"
+                    " in a nan value %ls.\n", c, GetFileInfo().c_str());
+            }
+            return false;
+        }
+
+        ++index;
+        ++m_pos;
+        --bytesToRead;
+    }
+
+    if (ShouldWarn())
+    {
+        if (bytesToRead == 0) {
+            fprintf(stderr,
+                "WARNING: Exhausted all input expected for the current sequence"
+                " while reading a NaN value %ls.\n", GetFileInfo().c_str());
+        }
+        else if (!CanRead())
+        {
+            fprintf(stderr,
+                "WARNING: Expected %" PRIu64 " more bytes, but no more input is available for the current sequence"
+                " while reading a NaN value %ls.\n", bytesToRead, GetFileInfo().c_str());
+        }
+
     }
 
     return false;
