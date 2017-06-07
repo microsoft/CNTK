@@ -19,6 +19,8 @@ from cntk.debugging import set_computation_network_trace_level
 from cntk.logging import *
 from cntk.debugging import *
 from resnet_models import *
+from cntk.learners import nesterov,fsadagrad
+from Prograd import *
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -94,8 +96,17 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
         progress_writers.append(tensorboard_writer)
 
     # trainer object
-    learner = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
-                           l2_regularization_weight = l2_reg_weight)
+    if sgd_method == 'fsadagrad':
+        learner = fsadagrad(z.parameters, lr_schedule, mm_schedule,
+                               l2_regularization_weight = l2_reg_weight)
+    if sgd_method == 'momentum_sgd':
+        learner = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
+                               l2_regularization_weight = l2_reg_weight)
+    if sgd_method == 'nesterov':
+        learner = nesterov(z.parameters, lr_schedule, mm_schedule,
+                               l2_regularization_weight = l2_reg_weight)
+    if sgd_method == 'Prograd':
+        learner = Pro_grad(z.parameters, lr_schedule,l2_regularization_weight = l2_reg_weight)
     trainer = Trainer(z, (ce, pe), learner, progress_writers)
 
     # define mapping from reader streams to network inputs
