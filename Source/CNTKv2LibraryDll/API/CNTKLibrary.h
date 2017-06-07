@@ -804,7 +804,7 @@ namespace CNTK
         /// Scatter a single tensor into all inputs along the slowest-changing axis.
         /// This is the inverse to GatherBatch().
         ///
-        CNTK_API static void ScatterBatch(const NDArrayViewPtr& input, std::vector<NDArrayViewPtr>& outputs);
+        CNTK_API static void ScatterBatch(const NDArrayViewPtr& input, std::vector<NDArrayViewPtr>& outputs, double beta = 0);
 
         ///
         /// Creates a new NDArrayView which is an alias of a slice of 'this' view; i.e. a new view over the underlying data

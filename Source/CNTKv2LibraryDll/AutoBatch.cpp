@@ -1047,9 +1047,13 @@ public:
         // if we pull this a second time, then don't propagate again
         if (m_visitorTag.Visited(f->m_visitedTag))
             return;
+        // fast path: only one input
+        if (f->m_inputs.size() == 1)
+            return BackpropToUnbatched(f, 0);
         // Considerations:
-        //  - Note that we do not need to optimize for consecutive inputs, because those
-        //    would not have been transformed into a Splice operation.
+        //  - For now we do optimize for consecutive inputs, because those would not
+        //    have been transformed into a Splice operation in auto-batching.
+        //    User's batch ops go here as well; we won't optimize for them for now.
         //    Hence, this is strictly a ScatterBatch operation.
         //  - It is possible that the Splice operation consumed the same input twice.
         //    This is currently handled via atomicAdd(), i.e. will have non-determinism.
@@ -1101,7 +1105,7 @@ public:
         let beta = allBetasZero ? 0.0 : 1.0; // if at least one is not zero, we must run qwith beta=1
 
         // backprop into all inputs
-        PrimitiveFunction::BackpropToAll(outputGradient, f->m_op, f->m_attributes, nullptr, {}, inputGradients, beta, *f);
+        NDArrayView::ScatterBatch(outputGradient, inputGradients, beta);
 #endif
         m_stats.numBackpropScatters++;
     }

@@ -213,27 +213,6 @@ namespace CNTK
         return out;
     }
 
-    // perform back into all inputs
-    // Currently only supported for Splice.
-    // TODO: Remove this, it's simple enough.
-    /*static*/ void PrimitiveFunction::BackpropToAll(const NDArrayViewPtr& outputGradient,                  // incoming gradient from top...
-                              PrimitiveOpType primitiveOp, const Dictionary& attributes,                    // ...goes through this backprop function...
-                              const NDArrayViewPtr& outputValue, const vector<NDArrayViewPtr>& inputValues, // ...using these values from forward pass...
-                              vector<NDArrayViewPtr>& inputGradients, double beta,                          // ...into here
-                              const PrimitiveFunction& funcForErrMsg)
-    {
-        if (primitiveOp == PrimitiveOpType::Splice)
-        {
-            outputValue;  inputValues; // not used for Splice
-            if (inputGradients.size() > 1)
-                NDArrayView::ScatterBatch(outputGradient, inputGradients);
-            else // only one: propagate by copying
-                NDArrayView::NumericOperation({ outputGradient }, 1.0, opCopy, inputGradients.front(), 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
-        }
-        else
-            LogicError("Variable '%S' Value(): Bulk backpropagation for operation %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
-    }
-
     // perform back propagation into an input
     // Gradient must have been allocated to the correct shape already.
     // If beta == 0 then gradient can be uninitialized memory.
