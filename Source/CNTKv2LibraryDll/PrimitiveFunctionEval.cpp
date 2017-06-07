@@ -18,9 +18,10 @@ using namespace std;
 
 namespace CNTK
 {
-    /*static*/ NDArrayViewPtr PrimitiveFunction::ComputeKnowableValue(PrimitiveOpType primitiveOp, 
-                     const vector<NDArrayViewPtr>& args, const Dictionary& attributes, const NDShape& outputShape,
-                     NDArrayViewPtr&& out, const PrimitiveFunction& funcForErrMsg)
+    /*static*/ NDArrayViewPtr PrimitiveFunction::ComputeKnowableValue(PrimitiveOpType primitiveOp,  // execute this op
+                     const vector<NDArrayViewPtr>& args, const Dictionary& attributes, // on these inputs --TODO: move attributes up
+                     const NDShape& outputShape, NDArrayViewPtr&& out, // into this output (if null then create a new one)
+                     const PrimitiveFunction& funcForErrMsg)
     {
         // first handle ops that do not create new data
         if (primitiveOp == PrimitiveOpType::StopGradient ||
@@ -208,14 +209,36 @@ namespace CNTK
         }
         // most common case: elementwise ops are done here instead
         if (op != Microsoft::MSR::CNTK::ElementWiseOperator::opNone)
-            out->NumericOperation(args, 1.0, op, out, 0.0, reductionOp);
+            NDArrayView::NumericOperation(args, 1.0, op, out, 0.0, reductionOp);
         return out;
     }
 
-    // perform back propagation
+    // perform back into all inputs
+    // Currently only supported for Splice.
+    /*static*/ void PrimitiveFunction::BackpropToAll(const NDArrayViewPtr outputGradient,  // incoming gradient from top
+                              PrimitiveOpType primitiveOp, const Dictionary& attributes, // goes through this backprop function
+                              const NDArrayView* outputValue, const std::vector<const NDArrayView*>& inputValues, // using these values from forward pass
+                              const std::vector<const NDArrayView*>& inputGradients, double beta, // into here
+                              const PrimitiveFunction& funcForErrMsg)
+    {
+        if (primitiveOp == PrimitiveOpType::Splice)
+        {
+            outputValue;  inputGradients; // not used for Splice
+            auto axis = attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+            if (inputGradients.size() > 1)
+                ;// NDArrayView::ScatterBatch(outputGradient, inputGradients, axis.StaticAxisIndex());
+            else // only one: propagate by copying
+                NDArrayView::NumericOperation({ outputGradient }, 1.0, opCopy, const_cast<NDArrayView*>(inputGradients[0])->shared_from_this(), 0.0, Microsoft::MSR::CNTK::ElementWiseOperator::opSum);
+        }
+        else
+            LogicError("Variable '%S' Value(): Bulk backpropagation for operation %S not implemented yet.", funcForErrMsg.AsString().c_str(), PrimitiveOpTypeName(primitiveOp).c_str());
+    }
+
+    // perform back propagation into an input
     // Gradient must have been allocated to the correct shape already.
     // If beta == 0 then gradient can be uninitialized memory.
     // For now only defined for functions with 1 output.
+    // TODO: decide whether we pass raw pointers or shared pointers...
     /*static*/ void PrimitiveFunction::BackpropTo(const NDArrayView* outputGradient,                         // incoming gradient from top...
                               size_t i, PrimitiveOpType primitiveOp, const Dictionary& attributes,           // ...goes through this backprop function...
                               const NDArrayView* outputValue, const vector<const NDArrayView*>& inputValues, // ...using these values from forward pass...

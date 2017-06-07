@@ -898,7 +898,7 @@ public:
                 // create a new one
                 // TODO: allocate parameters as separate objects; and allow user to pass buffers in
                 fields.m_gradient = m_arena.NewNDArrayView(fields.m_shape, fields.m_dataType, fields.m_value->Device());
-                beta = 0.0; // has not been initialized (...actually has; but this saves memory round trips)
+                beta = 0.0; // has not been initialized (random section in arena)
             }
         }
         return beta;
@@ -1074,24 +1074,36 @@ public:
 #endif
         fail_if(!outputFields.m_value,    "unexpectedly ran into a function that has no m_value yet??");
         fail_if(!outputFields.m_gradient, "unexpectedly ran into a function that has no m_gradient yet??");
-        let* outputGradient = outputFields.m_gradient.get(); // this is the incoming batch of gradients
+        let& outputGradient = outputFields.m_gradient; // this is the incoming batch of gradients
 
         let numInputs = inputs.size();
-        auto& inputGradients = BorrowBuffer(m_inputValuesBuffer, numInputs); // target locations to propagate the columns to
+        auto& inputGradients = BorrowBuffer(m_inputValuesBufferRaw, numInputs); // target locations to propagate the columns to
+        bool allBetasZero = true;
         for (size_t i = 0; i < numInputs; i++)
         {
             let& input = inputs[i];
-            // create the gradients
+            // create the gradient memory for this input
             let beta = LazilyCreateLazilyIndexedGradient(input);
-            // TODO: how to deal with inconsistent beta??
             let& fields = *input.m_dataFields;
-            inputGradients[i] = fields.m_gradient;
+            inputGradients[i] = fields.m_gradient.get();
+            // handle inconsistent betas
+            if (beta != 0 && allBetasZero)
+            {
+                // We were running under the assumption that all betas are zero, so we can use beta=0 below.
+                // Now we must run with beta 1, and therefore manually reset all pevious ones.
+                for (size_t i1 = 0; i1 < i; i++) // tehse were all beta=0
+                    inputs[i1].m_dataFields->m_gradient->SetValue(0.0f);
+                allBetasZero = false;
+            }
+            else if (beta == 0 && !allBetasZero)
+                fields.m_gradient->SetValue(0.0f);
         }
+        let beta = allBetasZero ? 0.0 : 1.0; // if at least one is not zero, we must run qwith beta=1
 
         // backprop into all inputs
         // TODO: Does this need to be wrapped, or just call ScatterBatch()?
-        // CONTINUEHERE
-        PrimitiveFunction::BackpropTo(outputGradient, index, f->m_op, f->m_attributes, outputValue, inputGradients, fields.m_gradient, beta, *f);
+        // CONTINUE HERE
+        PrimitiveFunction::BackpropToAll(outputGradient, f->m_op, f->m_attributes, nullptr, {}, inputGradients, beta, *f);
 #endif
         m_stats.numBackpropScatters++;
     }
