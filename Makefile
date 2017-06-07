@@ -61,7 +61,7 @@ endif
 ifneq ("$(wildcard $(BUILD_TOP)/Config.make)","")
   include $(BUILD_TOP)/Config.make
 else
-  $(error Cannot find $(BUILD_TOP)/Config.make.  Please see the CNTK documentation at https://docs.microsoft.com/en-us/cognitive-toolkit for configuration instructions.)
+  $(error Cannot find $(BUILD_TOP)/Config.make.  Please see the CNTK documentation at https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Linux for configuration instructions.)
 endif
 
 ifndef BUILDTYPE
@@ -993,7 +993,7 @@ endif
 ifeq ("$(CNTK_ENABLE_ASGD)","true")
 
 ifeq (,$(wildcard Source/Multiverso/include/multiverso/*.h))
-  $(error Build with Multiverso was requested but cannot find the code. Please check https://docs.microsoft.com/en-us/cognitive-toolkit/Multiple-GPUs-and-machines#24-data-parallel-asgd to learn more.)
+  $(error Build with Multiverso was requested but cannot find the code. Please check https://docs.microsoft.com/en-us/cognitive-toolkit/Multiple-GPUs-and-machines#8-data-parallel-training-with-parameter-server to learn more.)
 endif
 
 lMULTIVERSO:=-lmultiverso

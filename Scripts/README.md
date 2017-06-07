@@ -27,7 +27,7 @@ Run `python uci2ctf.py -h` to see usage instructions and example.
 For Example:
 
 ```
-python Scripts/uci2ctf.py --input_file Examples/Image/MNIST/Data/Train-28x28.txt --features_start 1 --features_dim 784 --labels_start 0 --labels_dim 1 --num_labels 10  --output_file xamples/Image/MNIST/Data/Train-28x28_cntk_text.txt
+python Scripts/uci2ctf.py --input_file Examples/Image/MNIST/Data/Train-28x28.txt --features_start 1 --features_dim 784 --labels_start 0 --labels_dim 1 --num_labels 10  --output_file examples/Image/MNIST/Data/Train-28x28_cntk_text.txt
 ```
 
 * `input_file` - original dataset in the (columnar) UCI format

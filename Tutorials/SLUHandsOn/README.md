@@ -6,5 +6,5 @@ This hands-on lab shows how to implement a recurrent network to process text, fo
 
 ## Tutorial
 
-Please find a detailed tutorial that uses the data and configurations in this folder on out website at https://docs.microsoft.com/en-us/cognitive-toolkit/Hands-On-Labs-Language-Understanding.
+Please find a detailed tutorial that uses the data and configurations in this folder on our website at https://docs.microsoft.com/en-us/cognitive-toolkit/Hands-On-Labs-Language-Understanding.
 

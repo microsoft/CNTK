@@ -1,6 +1,6 @@
 #EvalClients
 
-The folder contains some examples using the CNTK to evalaute a trained model in your application. Please note that Visual Studio 2015 update 3 is required, and only the 64-bit target is supported.
+The folder contains some examples using the CNTK to evaluate a trained model in your application. Please note that Visual Studio 2015 update 3 is required, and only the 64-bit target is supported.
 
 The [CNTK Eval Examples](https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-Eval-Examples) page provides more details of these examples.
 
@@ -10,7 +10,8 @@ The CNTKLibraryEvalExamples.sln contains code samples demonstrating how to use t
 
 * CNTKLibraryCSEvalCPUOnlyExamples uses the CNTK Library CPU-Only Nuget package to evaluate models on CPU-only devices in C#.
 * CNTKLibraryCSEvalGPUExamples uses the CNTK Library GPU Nuget package to evaluate models on GPU devices in C#.
-* CNTKLibraryCPPEvalCPUOnlyExamples uses the CNTK Library C++ API to evaluate models on CPU-only devices. It uses the CNTK Library CPU-Only Nuget package.*- CNTKLibraryCPPEvalGPUExamples uses the CNTK Library C++ API to evaluate models on GPU devices. It uses the CNTK Library GPU Nuget package.
+* CNTKLibraryCPPEvalCPUOnlyExamples uses the CNTK Library C++ API to evaluate models on CPU-only devices. It uses the CNTK Library CPU-Only Nuget package.
+* CNTKLibraryCPPEvalGPUExamples uses the CNTK Library C++ API to evaluate models on GPU devices. It uses the CNTK Library GPU Nuget package.
 
 After a successful build, the executable is saved under the $(SolutionDir)..\..$(Platform)$(ProjectName).$(Configuration)\ folder, e.g. ..\..\X64\CNTKLibraryCSEvalCPUOnlyExamples.Release\CNTKLibraryCSEvalCPUOnlyExamples.exe.
 On Linux, only C++ is supported. Please refer to Makefile for building samples. The target name CNTKLIBRARY_CPP_EVAL_EXAMPLES is used to build CNTKLibraryCPPEvalExamples.
