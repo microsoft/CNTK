@@ -700,6 +700,8 @@ def test_base64_image_deserializer(tmpdir):
             # original images are RBG, openCV produces BGR images,
             # reverse the last dimension of the original images
             bgrImage = images[int(index[i])][:,:,::-1]
+            # transposing to get CHW representation
+            bgrImage = np.transpose(bgrImage, (2, 0, 1))
             assert (bgrImage == results[i][0]).all()
 
 class MyDataSource(UserMinibatchSource):
@@ -984,3 +986,55 @@ def test_minibatch_defined_by_labels(tmpdir):
         ))], randomize=False)
 
     assert_data(combined_mb_source)
+
+
+# Create base64 and usual image deserializers
+# and check that they give equal minibatch data on
+# the same input images
+def test_base64_is_equal_image(tmpdir):
+    import io, base64; from PIL import Image
+    np.random.seed(1)
+
+    file_mapping_path = str(tmpdir / 'file_mapping.txt')
+    base64_mapping_path = str(tmpdir / 'base64_mapping.txt')
+
+    with open(file_mapping_path, 'w') as file_mapping:
+        with open(base64_mapping_path, 'w') as base64_mapping:
+            for i in range(10):
+                data = np.random.randint(0, 2**8, (5,7,3))
+                image = Image.fromarray(data.astype('uint8'), "RGB")
+                buf = io.BytesIO()
+                image.save(buf, format='PNG')
+                assert image.width == 7 and image.height == 5
+                
+                label = str(i) 
+                # save to base 64 mapping file
+                encoded = base64.b64encode(buf.getvalue()).decode('ascii')
+                base64_mapping.write('%s\t%s\n' % (label, encoded))
+         
+                # save to mapping + png file
+                file_name = label + '.png'
+                with open(str(tmpdir/file_name), 'wb') as f:
+                    f.write(buf.getvalue())
+                file_mapping.write('.../%s\t%s\n' % (file_name, label))
+
+    transforms = [xforms.scale(width=7, height=5, channels=3)]
+    b64_deserializer = Base64ImageDeserializer(base64_mapping_path,
+        StreamDefs(
+            images1=StreamDef(field='image', transforms=transforms),
+            labels1=StreamDef(field='label', shape=10)))
+
+    file_image_deserializer = ImageDeserializer(file_mapping_path,
+        StreamDefs(
+            images2=StreamDef(field='image', transforms=transforms),
+            labels2=StreamDef(field='label', shape=10)))
+
+    mb_source = MinibatchSource([b64_deserializer, file_image_deserializer])
+    for j in range(20):
+        mb = mb_source.next_minibatch(1)
+
+        images1_stream = mb_source.streams['images1']
+        images1 = mb[images1_stream].asarray()
+        images2_stream = mb_source.streams['images2']
+        images2 = mb[images2_stream].asarray()
+        assert(images1 == images2).all()
