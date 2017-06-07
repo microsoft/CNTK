@@ -158,7 +158,6 @@ namespace CNTK
                 break;
             }
         });
-
     }
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device)
@@ -570,22 +569,18 @@ namespace CNTK
 
     /*static*/ void NDArrayView::ScatterBatch(const NDArrayViewPtr& input, vector<NDArrayViewPtr>& outputs, double beta)
     {
-#if 1
-        input; outputs;
-#else
-        // perform the operation
         // The underlying TensorView call expects a functor to access the TensorView items.
         // Any error checking will happen inside the TensorView function, so we don't duplicate it here.
         switch (input->m_dataType)
         {
         case DataType::Float:
-            input->NativeTensorView<float>()->DoScatterBatchOf(outputs.size(), [&](size_t i) -> TensorView<float>&
+            input->NativeTensorView<float>()->DoScatterBatchOf((float)beta, outputs.size(), [&](size_t i) -> TensorView<float>&
             {
                 return *outputs[i]->GetWritableTensorViewPtr<float>();
             });
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
-            input->NativeTensorView<double>()->DoScatterBatchOf(outputs.size(), [&](size_t i) -> TensorView<double>&
+            input->NativeTensorView<double>()->DoScatterBatchOf((double)beta, outputs.size(), [&](size_t i) -> TensorView<double>&
             {
                 return *outputs[i]->GetWritableTensorViewPtr<double>();
             });
@@ -594,7 +589,6 @@ namespace CNTK
             LogicError("NDArrayView::GatherBatch: Unsupported DataType %s", DataTypeName(input->m_dataType));
             break;
         }
-#endif
     }
 
     NDArrayViewPtr NDArrayView::SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly) const

@@ -419,36 +419,62 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
 
 // -------------------------------------------------------------------
 // gather batch -- splice multiple TensorViews into a batch
+// scatter batch -- redistribute a gathered batch into multiple TensorViews
 // -------------------------------------------------------------------
 
+// helper to report mismatching dimensions for DoGather/ScatterBatchOf()
+// Item = the individual item (Gather: input; Scatter: output)
+// Batch = the batched item (Gather: this (=output); Scatter: this (=input))
+static void GatherScatterCheckDimensions(const TensorShape& itemShape, const TensorShape& batchedShape,
+                                         const char* funcName, size_t i) // <- for error messages
+{
+    // item must not have more axes than batch
+    if (itemShape.GetRank() > batchedShape.GetRank())
+        InvalidArgument("%s: Item %d's shape %s has more axes than the batched shape %s.",
+                        funcName, (int)i, string(itemShape).c_str(), string(batchedShape).c_str());
+    let n = min(itemShape.GetRank(), batchedShape.GetRank() - 1);
+    for (size_t k = 0; k < n; k++)
+        if (itemShape[k] != batchedShape[k])
+            InvalidArgument("%s: Item %d's shape %s mismatches the batched shape %s.",
+                            funcName, (int)i, string(itemShape).c_str(), string(batchedShape).c_str());
+    for (size_t k = n; k < batchedShape.GetRank() - 1; k++)
+        if (1 != batchedShape[k])
+            InvalidArgument("%s: Item %d's shape %s missing non-1 dimensions of batched shape %s.",
+                            funcName, (int)i, string(itemShape).c_str(), string(batchedShape).c_str());
+}
 template <class ElemType>
 void TensorView<ElemType>::DoGatherBatchOf(size_t numInputs, const std::function<const TensorView&(size_t)>& inputs)
 {
     // Batches inputs along the last axis of outputs.
-    // The output matrix shape must be that of the first input's (1-padded to output rank),
-    // with the last dimension replaced by the sum over all inputs.
+    // Each input shape must, 1-padded, match the output shape except for the last output
+    // dimension, which is the sum of the (1-padded) input dimensions.
     // At present, this will not work with strided TensorViews. If that is needed, please implement it using tensor assignments.
     if (m_shape.GetRank() == 0)
         InvalidArgument("DoGatherBatchOf: Output cannot be a scalar.");
     let numRows = m_shape.GetNumElements() / m_shape.GetDims().back();
     GetSOB().GatherBatch(numRows, numInputs, [&](size_t i) -> const Matrix<ElemType>&
     {
-        let& input = inputs(i); // (only call each one once, avoid assumptions on statefulness)
-        // dimension check
-        if (input.m_shape.GetRank() > m_shape.GetRank())
-            InvalidArgument("DoGatherBatchOf: Input %d's shape %s has more axes than the output shape %s.",
-                            (int)i, string(input.m_shape).c_str(), string(m_shape).c_str());
-        let n = min(input.m_shape.GetRank(), m_shape.GetRank() - 1);
-        for (size_t k = 0; k < n; k++)
-            if (input.m_shape[k] != m_shape[k])
-                InvalidArgument("DoGatherBatchOf: Input %d's shape %s mismatches the output shape %s.",
-                                (int)i, string(input.m_shape).c_str(), string(m_shape).c_str());
-        for (size_t k = n; k < m_shape.GetRank() - 1; k++)
-            if (1 != m_shape[k])
-                InvalidArgument("DoGatherBatchOf: Input %d's shape %s missing non-1 dimensions of output shape %s.",
-                                (int)i, string(input.m_shape).c_str(), string(m_shape).c_str());
-        // all good, it's OK to concatenate
+        let& input = inputs(i);
+        GatherScatterCheckDimensions(input.m_shape, m_shape, "DoGatherBatchOf", i);
         return input.GetSOB();
+    });
+}
+
+template <class ElemType>
+void TensorView<ElemType>::DoScatterBatchOf(ElemType beta, size_t numOutputs, const std::function<TensorView&(size_t)>& outputs) const
+{
+    // Redistributes a batched object to outputs along the last axis of 'this'.
+    // Each output shape must, 1-padded, match the input ('this') shape except for the last input
+    // dimension, which is the sum of the (1-padded) output dimensions.
+    // At present, this will not work with strided TensorViews. If that is needed, please implement it using tensor assignments.
+    if (m_shape.GetRank() == 0)
+        InvalidArgument("DoScatterBatchOf: Input cannot be a scalar.");
+    let numRows = m_shape.GetNumElements() / m_shape.GetDims().back();
+    GetSOB().ScatterBatch(beta, numRows, numOutputs, [&](size_t i) -> Matrix<ElemType>&
+    {
+        auto& output = outputs(i);
+        GatherScatterCheckDimensions(output.m_shape, m_shape, "DoScatterBatchOf", i);
+        return output.GetSOB();
     });
 }
 

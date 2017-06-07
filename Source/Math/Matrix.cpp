@@ -831,6 +831,12 @@ void Matrix<ElemType>::CopyColumnsStrided(const Matrix<ElemType>& fromMatrix, si
 }
 
 template <class ElemType>
+void Matrix<ElemType>::ScatterBatch(ElemType beta, size_t numRows, size_t numOutputs, const std::function<Matrix<ElemType>&(size_t)>& outputs) const
+{
+    beta; numRows; numOutputs; outputs;
+}
+
+template <class ElemType>
 void Matrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::function<const Matrix<ElemType>&(size_t)>& inputs)
 {
     // This concatenates all matrices of the inputs, where each matrix is first reshaped to numRows rows.

@@ -156,14 +156,17 @@ public:
     void AddMatrixProductOf   (           bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
 
     // -------------------------------------------------------------------
-    // gather batch -- splice multiple TensorViews into a batch along an output axis.
-    // Result overwrites 'this'. 'axis' must be the last axis.
+    // gather/scatter batch -- splice multiple TensorViews into/back from a
+    // batched tensor along the trailing (slowest-increasing) axis.
+    // Gather: Result overwrites 'this'.
+    // Scatter: 'this' is the input; target objects are 'outputs'.
+    // The batched tensor must match all individual tensor's 1-paded shapes,
+    // except for the trailing dimension, which must be the sum.
     // Instead of passing TensorView objects, a functor is passed, to avoid an unnecessary malloc().
-    // If inputs have less axes than output, 1-dims will be padded.
-    // Otherwise, they will be concatenated along their last axis.
     // -------------------------------------------------------------------
 
     void DoGatherBatchOf(size_t numInputs, const std::function<const TensorView&(size_t)>& inputs);
+    void DoScatterBatchOf(ElemType beta, size_t numOutputs, const std::function<TensorView&(size_t)>& inputs) const;
 
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
     const TensorShape& GetShape() const { return m_shape; }

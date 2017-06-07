@@ -200,6 +200,7 @@ public:
     void CopyColumnsStrided(const Matrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride);
 
     void GatherBatch(size_t numRows, size_t numInputs, const std::function<const Matrix<ElemType>&(size_t)>& inputs);
+    void ScatterBatch(ElemType beta, size_t numRows, size_t numOutputs, const std::function<Matrix<ElemType>&(size_t)>& outputs) const;
 
     Matrix<ElemType> Diagonal() const;
     void AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
