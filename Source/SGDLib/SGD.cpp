@@ -1192,7 +1192,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     forwardPropRoots.push_back(criterionNodes[0]);
 
     bool noMoreSamplesToProcess = false;
+    //auto lfMMINode = dynamic_cast<LatticeFreeMMINodeNegStream<ElemType>*>(criterionNodes[0].get());
+    //auto lfMMINodeNegStream = lfMMINode;
     auto lfMMINode = dynamic_cast<LatticeFreeMMINode<ElemType>*>(criterionNodes[0].get());
+    auto lfMMINodeNegStream = dynamic_cast<LatticeFreeMMINodeNegStream<ElemType>*>(criterionNodes[0].get());
+
     bool isFirstMinibatch = true;
     for (;;)
     {
@@ -1276,6 +1280,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 {
                     lfMMINode->SetTotalFrameNumberofCurrentMinibatch(actualMBSize);
                 }
+                if (lfMMINodeNegStream)
+                {
+                    lfMMINodeNegStream->SetTotalFrameNumberofCurrentMinibatch(actualMBSize);
+                }
             }
             
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
@@ -1300,7 +1308,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // backprop
                 // ===========================================================
 
-                if (!(m_useTwoPassTraining && lfMMINode && actualNumSubminibatches > 1))
+                if (!(m_useTwoPassTraining && (lfMMINode || lfMMINodeNegStream )&& actualNumSubminibatches > 1))
                 {
                     if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                         net->Backprop(criterionNodes[0]);
@@ -1311,7 +1319,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 }
             }                                                        // end sub-minibatch loop
 
-            if (m_useTwoPassTraining && lfMMINode && actualNumSubminibatches > 1 && learnRatePerSample > 0.01 * m_minLearnRate)
+            if (m_useTwoPassTraining && (lfMMINode || lfMMINodeNegStream ) && actualNumSubminibatches > 1 && learnRatePerSample > 0.01 * m_minLearnRate)
             {
                 for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
                 {

@@ -147,7 +147,8 @@ public:
     ComputationNodePtr LambdaRank(const ComputationNodePtr gain, const ComputationNodePtr prediction, const ComputationNodePtr queryId, const std::wstring nodeName = L"");
     ComputationNodePtr NDCG1Eval(const ComputationNodePtr gain, const ComputationNodePtr prediction, const ComputationNodePtr queryId, const std::wstring nodeName = L"");
     ComputationNodePtr KhatriRaoProduct(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
-    ComputationNodePtr LatticeFreeMMI(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr logPrior, const std::wstring fstFilePath, const std::wstring smapFilePath, ElemType squashingFactor, int alignmentWindow, ElemType ceweight, std::wstring nodeName = L"");
+    ComputationNodePtr LatticeFreeMMI(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr logPrior, const std::wstring fstFilePath, const std::wstring smapFilePath, ElemType squashingFactor, int alignmentWindow, ElemType ceweight, ElemType boosted, ElemType denWeight, std::wstring nodeName = L"");
+    ComputationNodePtr LatticeFreeMMINegStream(const ComputationNodePtr label, const ComputationNodePtr negLabel, const ComputationNodePtr prediction, const ComputationNodePtr logPrior, const std::wstring fstFilePath, const std::wstring smapFilePath, ElemType squashingFactor, int alignmentWindow, ElemType ceweight, ElemType boosted, std::wstring nodeName = L"");    
     ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr LogPlus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr LogSoftmax(const ComputationNodePtr a, const std::wstring nodeName = L"");

@@ -123,6 +123,13 @@ public:
             if (lfMMINode) break;
         }
 
+        LatticeFreeMMINodeNegStream<ElemType>* lfMMINodeNegStream = nullptr;
+        for (auto& x : evalNodes)
+        {
+            lfMMINodeNegStream = dynamic_cast<LatticeFreeMMINodeNegStream<ElemType>*>(x.get());
+            if (lfMMINodeNegStream) break;
+        }
+
         const size_t numIterationsBeforePrintingProgress = 100;
         size_t numItersSinceLastPrintOfProgress = 0;
         bool noMoreSamplesToProcess = false;
@@ -152,6 +159,10 @@ public:
                     {
                         lfMMINode->SetTotalFrameNumberofCurrentMinibatch(actualMBSize);
                     }
+                    if (lfMMINodeNegStream)
+                    {
+                        lfMMINodeNegStream->SetTotalFrameNumberofCurrentMinibatch(actualMBSize);
+                    }                   
                 }
 
                 size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
