@@ -222,6 +222,19 @@ class UserLearner(cntk_py.Learner):
         '''
         raise NotImplementedError('UserLearner.update must be overriden')
 
+class PGD(UserLearner):
+
+    def __init__(self, parameters, lr_schedule):
+        super(PGD, self).__init__(parameters, lr_schedule)
+
+    def update(self, gradient_values, training_sample_count, sweep_end):
+        eta = self.learning_rate() / training_sample_count
+        for p, g in gradient_values.items():
+            #print (p.value)
+            new_p = p - eta * C.constant(g) - eta * np.sign(p.value)
+            #new_p = p - eta * C.constant(g)
+            p.set_value(new_p.eval(as_numpy=False).data)
+        return True
 
 @typemap
 def training_parameter_schedule(schedule, unit, epoch_size=None):
