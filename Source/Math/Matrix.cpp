@@ -780,6 +780,39 @@ Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCol
     return slice;
 }
 
+// This is a compound for slicing and reshaping. It
+//  - interprets 'this' as reshaped to (interpretAsRows, interpretAsCols)
+//  - slices it as (startRow, numRows, startColumn, numCols) w.r.t. this reshaped interpretation
+//  - reshape the result to (reshapeAsRows, reshapeAsCols)
+// The slice must be consecutive in memory; i.e.
+//  - either be a column slice (numCols > 1 ==> numRows == interpretAsRows)
+//  - or a slice of a single column (numCols == 1 ==> any numRows allowed)
+// This compound version does all that in a single go, without allocating temporary slices.
+template <class ElemType>
+Matrix<ElemType> Matrix<ElemType>::ReshapeSliceReshape(size_t interpretAsRows, size_t interpretAsCols,
+    size_t startRow, size_t numRows, size_t startColumn, size_t numCols,
+    size_t reshapeAsRows, size_t reshapeAsCols)
+{
+    if (startColumn + numCols > interpretAsCols || startRow + numRows > interpretAsRows)
+        InvalidArgument("ReshapeSliceReshape: Slice out of bounds.");
+#if 1 // naive implementation (not optimized)
+    // reshape and slice the column
+    auto slice = Reshaped(interpretAsRows, interpretAsCols).ColumnSlice(startColumn, numCols);
+    if (numRows != interpretAsRows)
+    {
+        if (numCols != 1)
+            InvalidArgument("ReshapeSliceReshape: Slice must be memory-consecutive.");
+        // turn into column, slice (and later turn back)
+        slice.Reshape(1, interpretAsRows);
+        slice = slice.ColumnSlice(startRow, numRows);
+    }
+    slice.Reshape(reshapeAsRows, reshapeAsCols);
+    return slice;
+#else
+#endif
+}
+
+
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
 {

@@ -186,7 +186,10 @@ public:
     // REVIEW alexeyk: GPU version copies from device to host only, implement all versions (device <-> host).
     void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const;
 
-    Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const; // note: 'const' is misleading here, as the returned matrix is a mutable reference
+    Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;              // note: 'const' is misleading here, as the returned matrix is a mutable reference
+    Matrix<ElemType> ReshapeSliceReshape(size_t interpretAsRows, size_t interpretAsCols, // note: 'const' is misleading here, as the returned matrix is a mutable reference
+        size_t startRow, size_t numRows, size_t startColumn, size_t numCols,
+        size_t reshapeAsRows, size_t reshapeAsCols);
 
     // difference between AssignColumnSlice and SetColumnSlice
     // AssignColumnSlice :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, startColumn: startColumn+numCols-1)
