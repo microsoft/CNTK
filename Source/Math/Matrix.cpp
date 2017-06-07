@@ -787,6 +787,9 @@ Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCol
 // The slice must be consecutive in memory; i.e.
 //  - either be a column slice (numCols > 1 ==> numRows == interpretAsRows)
 //  - or a slice of a single column (numCols == 1 ==> any numRows allowed)
+// For sparse matrices, only a straight ColumnSlice() is supported, i.e.
+//  - (sparse) interpretAsX must not actually reshape
+//  - (sparse) startRow == 0, numRows == interpretAsRow required
 // This compound version does all that in a single go, without allocating temporary slices.
 template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::ReshapeSliceReshape(size_t interpretAsRows, size_t interpretAsCols,

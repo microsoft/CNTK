@@ -650,7 +650,7 @@ namespace CNTK
             }
             break;
         }
-        case DataType::Double:
+                case DataType::Double:
         {
 #if 1
             auto currentMatrix = GetMatrix<double>();
