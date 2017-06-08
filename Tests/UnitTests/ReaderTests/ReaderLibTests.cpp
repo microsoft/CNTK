@@ -30,6 +30,8 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
+using namespace ::CNTK;
+
 BOOST_AUTO_TEST_SUITE(ReaderLibTests)
 
 class MockChunk : public Chunk
@@ -37,7 +39,7 @@ class MockChunk : public Chunk
 private:
     size_t m_chunkBegin;
     size_t m_chunkEnd;
-    TensorShapePtr m_sampleLayout;
+    NDShape m_sampleShape;
     uint32_t m_sequenceLength;
     vector<vector<float>>& m_sequenceData;
 
@@ -45,7 +47,7 @@ public:
     MockChunk(size_t chunkBegin, size_t chunkEnd, vector<vector<float>>& sequenceData, uint32_t sequenceLength)
         : m_chunkBegin(chunkBegin),
           m_chunkEnd(chunkEnd),
-          m_sampleLayout(make_shared<TensorShape>(1)),
+          m_sampleShape(NDShape({ 1 })),
           m_sequenceLength(sequenceLength),
           m_sequenceData(sequenceData)
     {
@@ -61,30 +63,30 @@ public:
         auto data = make_shared<MockDenseSequenceData>();
         data->m_data = &m_sequenceData[sequenceId][0];
         data->m_numberOfSamples = m_sequenceLength;
-        data->m_sampleLayout = m_sampleLayout;
+        data->m_sampleShape = m_sampleShape;
         result.push_back(data);
     }
 
     ~MockChunk() override {};
 };
 
-class MockDeserializer : public IDataDeserializer
+class MockDeserializer : public DataDeserializer
 {
 private:
     uint32_t m_sequenceLength;
     size_t m_numChunks;
     size_t m_numSequencesPerChunk;
     vector<SequenceDescription> m_descriptions;
-    vector<StreamDescriptionPtr> m_streams;
-    TensorShapePtr m_sampleLayout;
-    vector<ChunkDescriptionPtr> m_chunkDescriptions;
+    vector<StreamInformation> m_streams;
+    NDShape m_sampleShape;
+    vector<ChunkDescription> m_chunkDescriptions;
     vector<vector<float>> m_sequenceData;
 
 public:
     MockDeserializer(size_t numChunks, size_t numSequencesPerChunks, const vector<float>& data, uint32_t sequenceLength = 1)
         : m_numChunks(numChunks),
           m_numSequencesPerChunk(numSequencesPerChunks),
-          m_sampleLayout(make_shared<TensorShape>(1)),
+          m_sampleShape(NDShape(1)),
           m_sequenceLength(sequenceLength)
     {
         m_sequenceData.reserve(data.size());
@@ -109,25 +111,23 @@ public:
 
         for (ChunkIdType i = 0; i < numChunks; i++)
         {
-            m_chunkDescriptions.push_back(make_shared<ChunkDescription>(ChunkDescription {
+            m_chunkDescriptions.push_back(ChunkDescription {
                 i,
                 m_numSequencesPerChunk * m_sequenceLength,
                 m_numSequencesPerChunk
-            }));
+            });
         }
 
-        m_streams.push_back(make_shared<StreamDescription>(StreamDescription{
-            L"input",
-            0,
-            StorageType::dense,
-            ElementType::tfloat,
-            m_sampleLayout
-        }));
-
-
+        StreamInformation si;
+        si.m_name = L"input";
+        si.m_id = 0;
+        si.m_storageFormat = StorageFormat::Dense;
+        si.m_elementType = DataType::Float;
+        si.m_sampleLayout = m_sampleShape;
+        m_streams.push_back(si);
     };
 
-    vector<StreamDescriptionPtr> GetStreamDescriptions() const override
+    vector<StreamInformation> GetStreamDescriptions() const override
     {
         return m_streams;
     }
@@ -439,7 +439,7 @@ void OneEpochRandomizationTest(SequenceEnumerator& randomizer, size_t sweepSize,
                                   actual.begin(), actual.end());
 }
 
-void TestRandomization(EpochConfiguration& epochConfiguration, IDataDeserializerPtr deserializer, size_t sweepSize, const vector<float>& expectedRandomized, const vector<float>& expectedNotRandomized, size_t sequenceLength = 1)
+void TestRandomization(EpochConfiguration& epochConfiguration, DataDeserializerPtr deserializer, size_t sweepSize, const vector<float>& expectedRandomized, const vector<float>& expectedNotRandomized, size_t sequenceLength = 1)
 {
     BlockRandomizer randomizer1(0, SIZE_MAX, deserializer, /*prefetch =*/ false);
     BlockRandomizer randomizer2(0, SIZE_MAX, deserializer, /*prefetch =*/ true);

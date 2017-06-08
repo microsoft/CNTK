@@ -14,19 +14,14 @@
 #include "DataReader.h"
 #include "Reader.h"
 
-namespace CNTK
-{
-    class CompositeMinibatchSource;
-}
+namespace CNTK {
 
-namespace Microsoft { namespace MSR { namespace CNTK {
-
-typedef ReaderPtr (*ReaderFactory)(const ConfigParameters& parameters);
+typedef ReaderPtr (*ReaderFactory)(const Microsoft::MSR::CNTK::ConfigParameters& parameters);
 
 template <class ElemType>
-class ReaderShim : public IDataReader
+class ReaderShim : public Microsoft::MSR::CNTK::IDataReader
 {
-    friend class ::CNTK::CompositeMinibatchSource;
+    friend class CompositeMinibatchSource;
 private:
     ReaderShim();
 
@@ -36,11 +31,11 @@ public:
 
     virtual ~ReaderShim() { }
 
-    virtual void Init(const ScriptableObjects::IConfigRecord& /*config*/) override
+    virtual void Init(const Microsoft::MSR::ScriptableObjects::IConfigRecord& /*config*/) override
     {
         assert(false);
     }
-    virtual void Init(const ConfigParameters& config) override;
+    virtual void Init(const Microsoft::MSR::CNTK::ConfigParameters& config) override;
 
     virtual void Destroy() override
     {
@@ -57,10 +52,13 @@ public:
         delete this;
     }
 
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, const std::unordered_set<InputStreamDescription>& inputs, size_t requestedEpochSamples = requestDataSize) override;
-    virtual void StartDistributedMinibatchLoop(size_t requestedMBSize, size_t epoch, size_t subsetNum, size_t numSubsets, const std::unordered_set<InputStreamDescription>& inputs, size_t requestedEpochSamples) override;
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch,
+        const std::unordered_set<Microsoft::MSR::CNTK::InputStreamDescription>& inputs, size_t requestedEpochSamples = requestDataSize) override;
+    virtual void StartDistributedMinibatchLoop(size_t requestedMBSize, size_t epoch, size_t subsetNum, size_t numSubsets,
+        const std::unordered_set<Microsoft::MSR::CNTK::InputStreamDescription>& inputs, size_t requestedEpochSamples) override;
 
-    void StartEpoch(const EpochConfiguration& epoch, const std::unordered_set<InputStreamDescription>& inputs);
+    void StartEpoch(const EpochConfiguration& epoch, 
+        const std::unordered_set<Microsoft::MSR::CNTK::InputStreamDescription>& inputs);
 
     virtual void StartMinibatchLoop(size_t, size_t, size_t) override
     {
@@ -82,11 +80,11 @@ public:
         return false;
     }
 
-    virtual bool GetMinibatch(StreamMinibatchInputs& matrices) override;
+    virtual bool GetMinibatch(Microsoft::MSR::CNTK::StreamMinibatchInputs& matrices) override;
 
     virtual bool DataEnd() override;
 
-    void CopyMBLayoutTo(MBLayoutPtr) override;
+    void CopyMBLayoutTo(Microsoft::MSR::CNTK::MBLayoutPtr) override;
 
     virtual size_t GetNumParallelSequencesForFixingBPTTMode() override;
 
@@ -128,14 +126,14 @@ private:
     size_t m_numParallelSequences;
 
     std::unordered_map<std::wstring, size_t> m_nameToStreamId;
-    std::vector<StreamDescriptionPtr> m_streams;
+    std::vector<StreamInformation> m_streams;
     launch m_launchType;
 
     // Data structure required for prefetch.
     struct StreamPrefetchBuffer
     {
-        std::shared_ptr<Matrix<ElemType>> m_matrix;
-        MBLayoutPtr m_mbLayout;
+        std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElemType>> m_matrix;
+        Microsoft::MSR::CNTK::MBLayoutPtr m_mbLayout;
     };
 
     // Intermediate buffer where the prefetch thread puts its data to.
@@ -146,7 +144,7 @@ private:
     // Alternating data transfer operations. In the current version these are only two - 
     // currently waiting on the main thread and the one that can be started by the prefetch thread 
     // in the meantime.
-    std::vector<DataTransfererPtr> m_dataTransferers;
+    std::vector<Microsoft::MSR::CNTK::DataTransfererPtr> m_dataTransferers;
 
     // Id to key mapping.
     std::function<std::string(size_t)> m_getKeyById;
@@ -164,11 +162,11 @@ private:
     size_t m_currentSamplePosition;
 
     static void FillMatrixFromStream(
-        StorageType type,
-        Matrix<ElemType>* matrix,
+        StorageFormat type,
+        Microsoft::MSR::CNTK::Matrix<ElemType>* matrix,
         size_t numRows,
         const StreamMinibatchPtr& stream,
-        DataTransferer* transferer);
+        Microsoft::MSR::CNTK::DataTransferer* transferer);
 };
 
-}}}
+}

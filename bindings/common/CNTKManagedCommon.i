@@ -36,6 +36,7 @@
 %shared_ptr(CNTK::NDShape);
 %shared_ptr(CNTK::NDArrayView);
 %shared_ptr(CNTK::NDMask);
+%shared_ptr(CNTK::NDShape);
 %shared_ptr(std::vector<float>);
 
 // temaplate definitions

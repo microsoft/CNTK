@@ -12,7 +12,7 @@
 #include "UtteranceDescription.h"
 #include "ssematrix.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Class represents a description of an HTK chunk.
 // It is only used internally by the HTK deserializer.
@@ -38,7 +38,7 @@ class HTKChunkDescription
 
 public:
 
-    HTKChunkDescription() : m_chunkId(CHUNKID_MAX) { };
+    HTKChunkDescription() : m_chunkId(ChunkIdMax) { };
 
     HTKChunkDescription(ChunkIdType chunkId) : m_chunkId(chunkId) { };
 
@@ -198,4 +198,4 @@ public:
         }
 };
 
-}}}
+}

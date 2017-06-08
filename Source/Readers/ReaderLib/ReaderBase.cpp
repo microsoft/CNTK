@@ -8,9 +8,9 @@
 #include "CudaMemoryProvider.h"
 #include "HeapMemoryProvider.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
-std::vector<StreamDescriptionPtr> ReaderBase::GetStreamDescriptions()
+std::vector<StreamInformation> ReaderBase::GetStreamDescriptions()
 {
     return m_deserializer->GetStreamDescriptions();
 }
@@ -39,13 +39,13 @@ void ReaderBase::StartEpoch(const EpochConfiguration& config, const std::map<std
         {
             // TODO: In case when the network requires less inputs,
             // we should not even have them.
-            if (m_requiredInputs.find(streams[i]->m_name) == m_requiredInputs.end())
+            if (m_requiredInputs.find(streams[i].m_name) == m_requiredInputs.end())
             {
                 m_memoryProviders[i] = std::make_shared<HeapMemoryProvider>();
                 continue;
             }
 
-            int deviceId = m_requiredInputs[streams[i]->m_name];
+            int deviceId = m_requiredInputs[streams[i].m_name];
             if (deviceId < 0)
                 m_memoryProviders[i] = std::make_shared<HeapMemoryProvider>();
             else
@@ -80,4 +80,4 @@ void ReaderBase::SetConfiguration(const ReaderConfiguration& config, const std::
     m_packer->SetConfiguration(config, m_memoryProviders);
 }
 
-}}}
+}

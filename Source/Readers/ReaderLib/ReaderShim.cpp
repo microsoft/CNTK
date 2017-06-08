@@ -20,7 +20,9 @@
 #include "DataTransferer.h"
 #include "PerformanceProfiler.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 template <class ElemType>
 ReaderShim<ElemType>::ReaderShim() :
@@ -68,7 +70,7 @@ void ReaderShim<ElemType>::Init(const ConfigParameters& config)
     m_streams = m_reader->GetStreamDescriptions();
     for (auto i : m_streams)
     {
-        m_nameToStreamId.insert(std::make_pair(i->m_name, i->m_id));
+        m_nameToStreamId.insert(std::make_pair(i.m_name, i.m_id));
     }
 }
 
@@ -359,8 +361,15 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
         const auto& stream = minibatch.m_data[streamId];
         mx.second.m_mbLayout = stream->m_layout;
 
-        size_t sampleSize = m_streams[streamId]->m_sampleLayout->GetNumElements();
-        FillMatrixFromStream(m_streams[streamId]->m_storageType, mx.second.m_matrix.get(), sampleSize, stream, m_dataTransferers[currentDataTransferIndex].get());
+        if (m_streams[streamId].m_sampleLayout.IsUnknown())
+        {
+            // Sample layout can be lazily updated on the first minibatch, so let reread it.
+            // In the future we should use NDShape for the sequence instead of sample.
+            m_streams = m_reader->GetStreamDescriptions();
+        }
+
+        size_t sampleSize = m_streams[streamId].m_sampleLayout.TotalSize();
+        FillMatrixFromStream(m_streams[streamId].m_storageFormat, mx.second.m_matrix.get(), sampleSize, stream, m_dataTransferers[currentDataTransferIndex].get());
     }
 
     // Let's record that we started the copy, so that the main thread can wait afterwards.
@@ -372,16 +381,16 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
 
 
 template <class ElemType>
-/*static*/ void ReaderShim<ElemType>::FillMatrixFromStream(StorageType type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream, DataTransferer* transferer)
+/*static*/ void ReaderShim<ElemType>::FillMatrixFromStream(StorageFormat type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream, DataTransferer* transferer)
 {
     size_t numCols = stream->m_layout->GetNumCols();
 
-    if (type == StorageType::dense)
+    if (type == StorageFormat::Dense)
     {
         auto data = reinterpret_cast<const ElemType*>(stream->m_data);
         matrix->SetValue(numRows, numCols, matrix->GetDeviceId(), const_cast<ElemType*>(data), matrixFlagNormal, transferer);
     }
-    else if (type == StorageType::sparse_csc)
+    else if (type == StorageFormat::SparseCSC)
     {
         // In the sparse case the m_data layout is identical to CUDA's CSC layout
         // (see http://docs.nvidia.com/cuda/cusparse/#compressed-sparse-column-format-csc).
@@ -429,4 +438,4 @@ size_t ReaderShim<ElemType>::GetCurrentSamplePosition()
 
 template class ReaderShim<float>;
 template class ReaderShim<double>;
-} } }
+}

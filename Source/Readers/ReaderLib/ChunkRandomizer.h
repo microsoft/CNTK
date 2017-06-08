@@ -9,7 +9,7 @@
 #include "DataDeserializer.h"
 #include <random>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     // Represents an interval of chunks closed on the left and opened on the right.
     struct ClosedOpenChunkInterval
@@ -71,7 +71,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class ChunkRandomizer
     {
     public:
-        ChunkRandomizer(IDataDeserializerPtr deserializer, size_t randomizationRange, bool sampleBasedRandomizationWindow = true);
+        ChunkRandomizer(DataDeserializerPtr deserializer, size_t randomizationRange, bool sampleBasedRandomizationWindow = true);
 
         // Gets randomized chunks.
         const std::vector<RandomizedChunk>& GetRandomizedChunks() const;
@@ -86,11 +86,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void RandomizeUsingWindowInChunks();
 
     private:
-        IDataDeserializerPtr m_deserializer;
+        DataDeserializerPtr m_deserializer;
         // Randomized chunks.
         std::vector<RandomizedChunk> m_randomizedChunks;
         // Original chunks.
-        std::vector<ChunkDescriptionPtr> m_originalChunks;
+        std::vector<ChunkDescription> m_originalChunks;
 
         // Randomization range in samples.
         size_t m_randomizationRange;
@@ -104,4 +104,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     typedef std::shared_ptr<ChunkRandomizer> ChunkRandomizerPtr;
-}}}
+}

@@ -11,9 +11,10 @@
 #include "StringUtil.h"
 #include "ReaderConstants.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 using namespace std;
+using namespace Microsoft::MSR::CNTK;
 
 static float s_oneFloat = 1.0;
 static double s_oneDouble = 1.0;
@@ -28,9 +29,10 @@ struct MLFSequenceData : SparseSequenceData
 {
     vector<ElemType> m_values;
     vector<IndexType> m_indexBuffer;
+    const NDShape& m_frameShape;
 
-    MLFSequenceData(size_t numberOfSamples) :
-        m_values(numberOfSamples, 1)
+    MLFSequenceData(size_t numberOfSamples, const NDShape& frameShape) :
+        m_values(numberOfSamples, 1), m_frameShape(frameShape)
     {
         if (numberOfSamples > numeric_limits<IndexType>::max())
         {
@@ -46,8 +48,8 @@ struct MLFSequenceData : SparseSequenceData
         m_indices = &m_indexBuffer[0];
     }
 
-    MLFSequenceData(size_t numberOfSamples, const vector<size_t>& phoneBoundaries) :
-        MLFSequenceData(numberOfSamples)
+    MLFSequenceData(size_t numberOfSamples, const vector<size_t>& phoneBoundaries, const NDShape& frameShape) :
+        MLFSequenceData(numberOfSamples, frameShape)
     {
         for (auto boundary : phoneBoundaries)
             m_values[boundary] = s_phoneBoundary;
@@ -56,6 +58,11 @@ struct MLFSequenceData : SparseSequenceData
     const void* GetDataBuffer() override
     {
         return m_values.data();
+    }
+
+    const NDShape& GetSampleShape() override
+    {
+        return m_frameShape;
     }
 };
 
@@ -151,7 +158,7 @@ public:
 
     void GetSequence(size_t sequenceIndex, vector<SequenceDataPtr>& result) override
     {
-        if (m_deserializer.m_elementType == ElementType::tfloat)
+        if (m_deserializer.m_elementType == DataType::Float)
             return GetSequence<float>(sequenceIndex, result);
         else
         {
@@ -165,7 +172,7 @@ public:
     {
         if (!m_valid[sequenceIndex])
         {
-            SparseSequenceDataPtr s = make_shared<MLFSequenceData<ElementType>>(0);
+            SparseSequenceDataPtr s = make_shared<MLFSequenceData<ElementType>>(0, m_deserializer.m_streams.front().m_sampleLayout);
             s->m_isValid = false;
             result.push_back(s);
             return;
@@ -182,7 +189,7 @@ public:
                 sequencePhoneBoundaries[i] = utterance[i].FirstFrame();
         }
 
-        auto s = make_shared<MLFSequenceData<ElementType>>(sequence.m_numberOfSamples, sequencePhoneBoundaries);;
+        auto s = make_shared<MLFSequenceData<ElementType>>(sequence.m_numberOfSamples, sequencePhoneBoundaries, m_deserializer.m_streams.front().m_sampleLayout);
         auto* startRange = s->m_indices;
         for (const auto& range : utterance)
         {
@@ -240,7 +247,7 @@ public:
         size_t utteranceId = GetUtteranceForChunkFrameIndex(sequenceIndex);
         if (!m_valid[utteranceId])
         {
-            SparseSequenceDataPtr s = make_shared<MLFSequenceData<float>>(0);
+            SparseSequenceDataPtr s = make_shared<MLFSequenceData<float>>(0, m_deserializer.m_streams.front().m_sampleLayout);
             s->m_isValid = false;
             result.push_back(s);
             return;
@@ -290,7 +297,7 @@ MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParamet
     m_frameMode = (ConfigValue)cfg("frameMode", "true");
 
     wstring precision = cfg(L"precision", L"float");;
-    m_elementType = AreEqualIgnoreCase(precision, L"float") ? ElementType::tfloat : ElementType::tdouble;
+    m_elementType = AreEqualIgnoreCase(precision, L"float") ? DataType::Float : DataType::Double;
 
     // Same behavior as for the old deserializer - keep almost all in memory,
     // because there are a lot of none aligned sets.
@@ -341,7 +348,7 @@ MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParamet
     m_chunkSizeBytes = labelConfig(L"chunkSizeInBytes", g_64MB);
 
     wstring precision = labelConfig(L"precision", L"float");;
-    m_elementType = AreEqualIgnoreCase(precision, L"float") ? ElementType::tfloat : ElementType::tdouble;
+    m_elementType = AreEqualIgnoreCase(precision, L"float") ? DataType::Float : DataType::Double;
 
     m_withPhoneBoundaries = labelConfig(L"phoneBoundaries", "false");
 
@@ -420,14 +427,14 @@ void MLFDeserializer::InitializeReadOnlyArrayOfLabels()
     m_categoryIndices.reserve(m_dimension);
     for (size_t i = 0; i < m_dimension; ++i)
     {
-        auto category = make_shared<CategorySequenceData>();
+        auto category = make_shared<CategorySequenceData>(m_streams.front().m_sampleLayout);
         m_categoryIndices.push_back(static_cast<IndexType>(i));
         category->m_indices = &(m_categoryIndices[i]);
         category->m_nnzCounts.resize(1);
         category->m_nnzCounts[0] = 1;
         category->m_totalNnzCount = 1;
         category->m_numberOfSamples = 1;
-        if (m_elementType == ElementType::tfloat)
+        if (m_elementType == DataType::Float)
             category->m_data = &s_oneFloat;
         else
             category->m_data = &s_oneDouble;
@@ -438,12 +445,12 @@ void MLFDeserializer::InitializeReadOnlyArrayOfLabels()
 void MLFDeserializer::InitializeStream(const wstring& name)
 {
     // Initializing stream description - a single stream of MLF data.
-    StreamDescriptionPtr stream = make_shared<StreamDescription>();
-    stream->m_id = 0;
-    stream->m_name = name;
-    stream->m_sampleLayout = make_shared<TensorShape>(m_dimension);
-    stream->m_storageType = StorageType::sparse_csc;
-    stream->m_elementType = m_elementType;
+    StreamInformation stream;
+    stream.m_id = 0;
+    stream.m_name = name;
+    stream.m_sampleLayout = NDShape({ m_dimension });
+    stream.m_storageFormat = StorageFormat::SparseCSC;
+    stream.m_elementType = m_elementType;
     m_streams.push_back(stream);
 }
 
@@ -453,13 +460,13 @@ ChunkDescriptions MLFDeserializer::GetChunkDescriptions()
     chunks.reserve(m_chunks.size());
     for (size_t i = 0; i < m_chunks.size(); ++i)
     {
-        auto cd = make_shared<ChunkDescription>();
-        cd->m_id = static_cast<ChunkIdType>(i);
-        if (cd->m_id != i)
+        ChunkDescription cd;
+        cd.m_id = static_cast<ChunkIdType>(i);
+        if (cd.m_id != i)
             RuntimeError("ChunkIdType overflow during creation of a chunk description.");
 
-        cd->m_numberOfSequences =  m_frameMode ? m_chunks[i]->NumSamples() : m_chunks[i]->Sequences().size();
-        cd->m_numberOfSamples = m_chunks[i]->NumSamples();
+        cd.m_numberOfSequences =  m_frameMode ? m_chunks[i]->NumSamples() : m_chunks[i]->Sequences().size();
+        cd.m_numberOfSamples = m_chunks[i]->NumSamples();
         chunks.push_back(cd);
     }
     return chunks;
@@ -523,4 +530,4 @@ bool MLFDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDe
     return true;
 }
 
-}}}
+}

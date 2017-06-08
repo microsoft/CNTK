@@ -11,7 +11,9 @@
 #include "FileHelper.h"
 #include <vector>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 enum class MatrixEncodingType : unsigned char
 {
@@ -88,7 +90,7 @@ BinaryChunkDeserializer::~BinaryChunkDeserializer()
 }
 
 
-void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstring>& rename, ElementType precision)
+void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstring>& rename, DataType precision)
 {
     if (m_file)
         CNTKBinaryFileHelper::CloseOrDie(m_file);
@@ -132,12 +134,12 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
             RuntimeError("Unknown encoding type %u requested.", (unsigned int)type);
 
         auto description = m_deserializers[i]->GetStreamDescription();
-        description->m_id = i;
+        description.m_id = i;
         // Check if we should rename this input based on the config
-        auto it = rename.find(description->m_name);
+        auto it = rename.find(description.m_name);
         if (it != rename.end()) 
         {
-            description->m_name = it->second;
+            description.m_name = it->second;
         }
 
         m_streams[i] = description;
@@ -161,8 +163,7 @@ ChunkDescriptions BinaryChunkDeserializer::GetChunkDescriptions()
 
     for (ChunkIdType i = 0; i < m_numChunks; i++ ) 
     {
-        result.push_back(shared_ptr<ChunkDescription>(
-            new ChunkDescription{ i, m_chunkTable->GetNumSamples(i), m_chunkTable->GetNumSequences(i) }));
+        result.push_back(ChunkDescription{ i, m_chunkTable->GetNumSamples(i), m_chunkTable->GetNumSequences(i) });
     }
 
     return result;
@@ -228,4 +229,4 @@ void BinaryChunkDeserializer::SetTraceLevel(unsigned int traceLevel)
     m_traceLevel = traceLevel;
 }
 
-}}}
+}

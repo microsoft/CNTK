@@ -14,7 +14,7 @@
 #include "ReaderUtil.h"
 #include <future>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // A randomizer that firstly randomizes chunks and then sequences inside a rolling window of chunks.
 // Uses ChunkRandomizer to randomize chunk descriptions and SequenceRandomizer to randomize sequence descriptions inside a window of chunks.
@@ -39,7 +39,7 @@ public:
     BlockRandomizer(
         int verbosity,
         size_t randomizationRange,
-        IDataDeserializerPtr deserializer,
+        DataDeserializerPtr deserializer,
         bool shouldPrefetch,
         bool multithreadedGetNextSequences = false,
         size_t maxNumberOfInvalidSequences = 0, // per worker
@@ -55,7 +55,7 @@ public:
     virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) override;
 
     // Gets stream descriptions.
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
+    virtual std::vector<StreamInformation> GetStreamDescriptions() const override
     {
         return m_deserializer->GetStreamDescriptions();
     }
@@ -124,7 +124,7 @@ private:
     // Total number of samples in a sweep.
     size_t m_sweepSizeInSamples;
 
-    IDataDeserializerPtr m_deserializer;
+    DataDeserializerPtr m_deserializer;
 
     // Chunk randomizer.
     ChunkRandomizerPtr m_chunkRandomizer;
@@ -133,7 +133,7 @@ private:
     SequenceRandomizerPtr m_sequenceRandomizer;
 
     // Exposed streams.
-    std::vector<StreamDescriptionPtr> m_streams;
+    std::vector<StreamInformation> m_streams;
 
     // A map of data chunks from original chunk id into chunk.
     std::map<size_t, ChunkPtr> m_chunks;
@@ -170,4 +170,4 @@ private:
     SequenceCleaner m_cleaner;
 };
 
-}}}
+}

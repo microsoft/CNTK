@@ -11,15 +11,22 @@
 #include "Sequences.h"
 #include "TensorShape.h"
 #include "ReaderConstants.h"
+#include "CNTKLibrary.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+    struct MBLayout;
+    typedef std::shared_ptr<MBLayout> MBLayoutPtr;
+}}}
+
+namespace CNTK {
 
 typedef GPUSPARSE_INDEX_TYPE IndexType;
 
-typedef std::shared_ptr<TensorShape> TensorShapePtr;
+using Microsoft::MSR::CNTK::MBLayout;
+using Microsoft::MSR::CNTK::MBLayoutPtr;
 
-struct MBLayout;
-typedef std::shared_ptr<MBLayout> MBLayoutPtr;
+typedef std::shared_ptr<Microsoft::MSR::CNTK::TensorShape> TensorShapePtr;
+
 
 // Configuration for the current epoch.
 // Each time the epoch is started CNTK should provide the configuration to the reader using StartEpoch method
@@ -49,38 +56,7 @@ struct EpochConfiguration : public ReaderConfiguration
     size_t m_epochIndex;                    // Current epoch index [0 .. max number of epochs)
 };
 
-// Supported primitive element types, will be extended in the future.
-enum class ElementType
-{
-    tvariant,// Used by stream definition if deserializer can expose sequences of different type.
-             // Before the sequence enters the network there should be a transform that
-             // cast all sequences from such stream to the same type (i.e. tdouble or tfloat).
-    tfloat,  // single precision
-    tdouble, // double precision
-    tuchar,  // unsigned char
-};
-
-// Supported storage types, will be extended in the future.
-enum class StorageType
-{
-    dense,
-    sparse_csc,
-};
-
 typedef size_t StreamId;
-
-// This class describes a particular stream: its name, element type, storage, etc.
-struct StreamDescription
-{
-    std::wstring m_name;           // Unique name of the stream
-    StreamId m_id;                 // Unique identifier of the stream
-    StorageType m_storageType;     // Storage type of the stream
-    ElementType m_elementType;     // Element type of the stream
-    TensorShapePtr m_sampleLayout; // Layout of the sample for the stream
-                                   // If not specified - can be specified per sequence
-    bool m_definesMbSize;          // Flag indicating whether the stream is defining the minibatch size
-};
-typedef std::shared_ptr<StreamDescription> StreamDescriptionPtr;
 
 // Represent a minibatch date for a single stream formatted in according to the minibatch layout.
 // This data is returned per stream as a part of Minibatch from the ReadMinibatch function.
@@ -125,7 +101,7 @@ class Reader
 {
 public:
     // Describes the streams this reader produces.
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() = 0;
+    virtual std::vector<StreamInformation> GetStreamDescriptions() = 0;
 
     // Starts a new epoch with the provided configuration
     // TODO: should be deprecated, SetConfiguration should be used instead.
@@ -150,4 +126,4 @@ public:
 };
 
 typedef std::shared_ptr<Reader> ReaderPtr;
-}}}
+}

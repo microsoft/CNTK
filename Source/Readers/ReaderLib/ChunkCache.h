@@ -8,7 +8,7 @@
 #include <map>
 #include "DataDeserializer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // A cache to store the complete dataset (all chunks) in memory. The caching can
 // be switched on/off by a boolean flag in the reader config section, independent 
@@ -16,13 +16,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // when the whole dataset fits in memory.
 // Implemented as a wrapping proxy around a deserializer that stores pointers to
 // all chunks it sees in an internal map.
-class ChunkCache : public IDataDeserializer
+class ChunkCache : public DataDeserializer
 {
 public:
 
-    ChunkCache(IDataDeserializerPtr deserializer) : m_deserializer(deserializer) { }
+    ChunkCache(DataDeserializerPtr deserializer) : m_deserializer(deserializer) { }
 
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
+    virtual std::vector<StreamInformation> GetStreamDescriptions() const override
     {
         return m_deserializer->GetStreamDescriptions();
     }
@@ -48,9 +48,9 @@ public:
 private:
     // A map of currently loaded chunks
     std::map<size_t, ChunkPtr> m_chunkMap;
-    IDataDeserializerPtr m_deserializer;
+    DataDeserializerPtr m_deserializer;
 
     DISABLE_COPY_AND_MOVE(ChunkCache);
 };
 
-} } }
+}

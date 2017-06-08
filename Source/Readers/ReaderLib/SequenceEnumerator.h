@@ -8,9 +8,7 @@
 #include <vector>
 #include "DataDeserializer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
-
-class ConfigParameters;
+namespace CNTK {
 
 // Defines a set of sequences for a set of streams.
 // Return by the sequence enumerator.
@@ -18,7 +16,7 @@ struct Sequences
 {
     // Data for up to a requested number of sequences.
     // Indices in the outer vector have to correspond to the stream ids returned from the GetStreamDescriptions().
-    std::vector<std::vector<SequenceDataPtr>> m_data;
+    std::vector<std::vector<::CNTK::SequenceDataPtr>> m_data;
 
     // Indicates whether the returned data comes from a sweep end or
     // crosses a sweep boundary (and as a result includes sequences 
@@ -41,7 +39,7 @@ class SequenceEnumerator
 {
 public:
     // Describes streams the sequence enumerator produces.
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const = 0;
+    virtual std::vector<::CNTK::StreamInformation> GetStreamDescriptions() const = 0;
 
     // Sets current epoch configuration.
     // TODO: should be deprecated.
@@ -64,4 +62,4 @@ public:
     }
 };
 
-}}}
+}

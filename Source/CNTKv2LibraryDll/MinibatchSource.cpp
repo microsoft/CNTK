@@ -122,11 +122,11 @@ namespace CNTK
 
         typedef Reader*(*CreateCompositeDataReaderProc)(const ConfigParameters* parameters);
         CreateCompositeDataReaderProc createReaderProc = (CreateCompositeDataReaderProc)Plugin().Load(L"CompositeDataReader", "CreateCompositeDataReader");
-        std::shared_ptr<Microsoft::MSR::CNTK::Reader> compositeDataReader(createReaderProc(&config));
+        std::shared_ptr<Reader> compositeDataReader(createReaderProc(&config));
 
         m_compositeDataReaderStreamDescs = compositeDataReader->GetStreamDescriptions();
         for (auto streamDesc : m_compositeDataReaderStreamDescs)
-            m_streamInfos.insert({ streamDesc->m_name, streamDesc->m_id, AsStorageFormat(streamDesc->m_storageType), AsDataType(streamDesc->m_elementType), AsNDShape(*(streamDesc->m_sampleLayout)) });
+            m_streamInfos.insert(streamDesc);
 
         m_shim = std::shared_ptr<ReaderShim<float>>(new ReaderShim<float>(compositeDataReader), [](ReaderShim<float>* x) { x->Destroy(); });
         m_shim->Init(config);
@@ -188,8 +188,8 @@ namespace CNTK
 
                     if (s.m_elementType == DataType::Float)
                     {
-                        auto iter = std::find_if(m_compositeDataReaderStreamDescs.begin(), m_compositeDataReaderStreamDescs.end(), [s](StreamDescriptionPtr& streamInfo) {
-                            return streamInfo->m_id == s.m_id;
+                        auto iter = std::find_if(m_compositeDataReaderStreamDescs.begin(), m_compositeDataReaderStreamDescs.end(), [s](StreamInformation& streamInfo) {
+                            return streamInfo.m_id == s.m_id;
                         });
                         assert(iter != m_compositeDataReaderStreamDescs.end());
 
@@ -197,7 +197,7 @@ namespace CNTK
                             s.m_name,
                             std::make_shared<Matrix<float>>(0, 0, inputStreamDescription.GetDeviceId(), inputStreamDescription.GetMatrixType(), inputStreamDescription.GetMatrixFormat()),
                             std::make_shared<MBLayout>(),
-                            *(*iter)->m_sampleLayout);
+                            AsTensorShape(iter->m_sampleLayout));
                     }
                     else
                         LogicError("GetNextMinibatch: Input of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");

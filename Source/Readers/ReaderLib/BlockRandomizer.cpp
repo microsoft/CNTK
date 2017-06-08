@@ -14,12 +14,12 @@
 #include "DataReader.h"
 #include "ExceptionCapture.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 BlockRandomizer::BlockRandomizer(
     int verbosity,
     size_t randomizationRange,
-    IDataDeserializerPtr deserializer,
+    DataDeserializerPtr deserializer,
     bool shouldPrefetch,
     bool multithreadedGetNextSequence,
     size_t maxNumberOfInvalidSequences,
@@ -34,7 +34,7 @@ BlockRandomizer::BlockRandomizer(
       m_sweepSizeInSamples(0),
       m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRange, sampleBasedRandomizationWindow)),
       m_multithreadedGetNextSequences(multithreadedGetNextSequence),
-      m_prefetchedChunk(CHUNKID_MAX),
+      m_prefetchedChunk(ChunkIdMax),
       m_cleaner(maxNumberOfInvalidSequences),
       m_seedOffset(seedOffset)
 {
@@ -49,7 +49,7 @@ BlockRandomizer::BlockRandomizer(
     m_sweepSizeInSamples = 0;
     for (auto const & chunk : m_deserializer->GetChunkDescriptions())
     {
-        m_sweepSizeInSamples += chunk->m_numberOfSamples;
+        m_sweepSizeInSamples += chunk.m_numberOfSamples;
     }
 }
 
@@ -69,7 +69,7 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
     {
         m_epochSize = m_sweepSizeInSamples * config.m_totalEpochSizeInSweeps;
     }
-    else if (config.m_totalEpochSizeInSamples == requestDataSize)
+    else if (config.m_totalEpochSizeInSamples == Microsoft::MSR::CNTK::requestDataSize)
     {
         m_epochSize = m_sweepSizeInSamples;
     }
@@ -430,7 +430,7 @@ void BlockRandomizer::LoadDataChunks(const ClosedOpenChunkInterval& windowRange)
 // Identifies chunk id that should be prefetched.
 ChunkIdType BlockRandomizer::GetChunkToPrefetch(const ClosedOpenChunkInterval& windowRange)
 {
-    ChunkIdType toBePrefetched = CHUNKID_MAX;
+    ChunkIdType toBePrefetched = ChunkIdMax;
     auto current = windowRange.m_end;
     while (current < m_chunkRandomizer->GetRandomizedChunks().size())
     {
@@ -450,7 +450,7 @@ ChunkIdType BlockRandomizer::GetChunkToPrefetch(const ClosedOpenChunkInterval& w
 void BlockRandomizer::Prefetch(ChunkIdType chunkId)
 {
     // Start new prefetch if necessary.
-    if (m_prefetchedChunk != chunkId && chunkId != CHUNKID_MAX)
+    if (m_prefetchedChunk != chunkId && chunkId != ChunkIdMax)
     {
         // Wait to make sure there is no outstanding prefetches.
         if (m_prefetch.valid())
@@ -489,4 +489,4 @@ void BlockRandomizer::SetConfiguration(const ReaderConfiguration& config)
     *((ReaderConfiguration*)&m_config) = config;
 }
 
-}}}
+}

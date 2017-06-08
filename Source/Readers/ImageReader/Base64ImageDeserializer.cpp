@@ -11,7 +11,8 @@
 #include "ImageTransformers.h"
 #include "ReaderUtil.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+    using namespace Microsoft::MSR::CNTK;
 
     class Base64ImageDeserializer::ImageChunk : public Chunk, public std::enable_shared_from_this<ImageChunk>
     {
@@ -164,10 +165,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for(uint32_t i = 0; i < index.Chunks().size(); ++i)
         {
             const auto& chunk = index.Chunks()[i];
-            auto c = std::make_shared<ChunkDescription>();
-            c->m_id = i;
+            ChunkDescription c;
+            c.m_id = i;
             assert(chunk.NumSamples() == chunk.Sequences().size());
-            c->m_numberOfSamples = c->m_numberOfSequences = chunk.Sequences().size() * sequencesPerInitialSequence;
+            c.m_numberOfSamples = c.m_numberOfSequences = chunk.Sequences().size() * sequencesPerInitialSequence;
             result.push_back(c);
         }
         return result;
@@ -209,4 +210,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return DataDeserializerBase::GetSequenceDescriptionByKey(m_indexer->GetIndex(), key, r);
     }
-}}}
+}

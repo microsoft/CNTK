@@ -13,7 +13,9 @@
 #include "HeapMemoryProvider.h"
 #include "StringUtil.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 // TODO: Memory provider should be injected by SGD.
 
@@ -34,7 +36,7 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
 // A factory method for creating text deserializers.
-extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool primary)
+extern "C" DATAREADER_API bool CreateDeserializer(DataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool primary)
 {
     string precision = deserializerConfig.Find("precision", "float");
     if (!AreEqualIgnoreCase(precision, "float") && !AreEqualIgnoreCase(precision, "double"))
@@ -58,4 +60,4 @@ extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializ
 }
 
 
-}}}
+}

@@ -10,13 +10,13 @@
 #include "CorpusDescriptor.h"
 #include "Indexer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     // Base 64 Image deserializer.
     class Base64ImageDeserializer : public ImageDeserializerBase
     {
     public:
-        Base64ImageDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
+        Base64ImageDeserializer(CorpusDescriptorPtr corpus, const Microsoft::MSR::CNTK::ConfigParameters& config, bool primary);
 
         // Get a chunk by id.
         ChunkPtr GetChunk(ChunkIdType chunkId) override;
@@ -41,4 +41,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::wstring m_fileName;
     };
 
-}}}
+}

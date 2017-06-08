@@ -15,6 +15,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
+    using namespace ::CNTK;
+
     struct MockDenseSequenceData : DenseSequenceData
     {
         const void* GetDataBuffer() override
@@ -22,13 +24,19 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             return m_data;
         }
 
+        const NDShape& GetSampleShape() override
+        {
+            return m_sampleShape;
+        }
+
         void* m_data;
+        NDShape m_sampleShape;
     };
 
     // A mock deserializer that produces N sequential samples
     // with value from 0 .. N-1
 
-    class SequentialDeserializer : public IDataDeserializer
+    class SequentialDeserializer : public DataDeserializer
     {
     public:
         struct SequenceInfo
@@ -44,9 +52,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             std::vector<std::vector<float>> m_data;
             size_t m_sizeInSamples;
             size_t m_sizeInSequences;
-            const TensorShapePtr m_sampleLayout;
+            NDShape m_sampleShape;
 
-            SequentialChunk(size_t approxSize) : m_sizeInSamples{ 0 }, m_sizeInSequences{ 0 }, m_sampleLayout(std::make_shared<TensorShape>(1))
+            SequentialChunk(size_t approxSize) : m_sizeInSamples{ 0 }, m_sizeInSequences{ 0 }, m_sampleShape({1})
             {
                 m_data.reserve(approxSize);
             }
@@ -82,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
                 auto s = make_shared<MockDenseSequenceData>();
                 s->m_data = (void*)&data[0];
                 s->m_numberOfSamples = (uint32_t)data.size();
-                s->m_sampleLayout = m_sampleLayout;
+                s->m_sampleShape = m_sampleShape;
                 result.push_back(s);
             }
         };
@@ -93,7 +101,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             size_t chunkSizeInSamples,
             size_t sweepNumberOfSamples,
             uint32_t maxSequenceLength)
-            : m_sampleLayout(make_shared<TensorShape>(1))
+            : m_sampleShape(NDShape({ 1 }))
         {
             std::mt19937_64 engine(seed);
             boost::random::uniform_int_distribution<int> length(1, maxSequenceLength);
@@ -157,18 +165,15 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             return m_chunks;
         }
 
-        vector<StreamDescriptionPtr> GetStreamDescriptions() const override
+        vector<StreamInformation> GetStreamDescriptions() const override
         {
-            return std::vector<StreamDescriptionPtr>
-            {
-                make_shared<StreamDescription>(StreamDescription{
-                    L"input",
-                    0,
-                    StorageType::dense,
-                    ElementType::tfloat,
-                    m_sampleLayout
-                })
-            };
+            StreamInformation si;
+            si.m_name = L"input";
+            si.m_id = 0;
+            si.m_storageFormat = StorageFormat::Dense;
+            si.m_elementType = DataType::Float;
+            si.m_sampleLayout = m_sampleShape;
+            return std::vector<StreamInformation>{si};
         }
 
         virtual ChunkPtr GetChunk(ChunkIdType chunkId) override
@@ -188,8 +193,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             ChunkDescriptions result;
             for (size_t i = 0; i < m_chunks.size(); ++i)
             {
-                result.push_back(std::make_shared<ChunkDescription>(
-                    ChunkDescription{ (ChunkIdType)i, m_chunks[i]->SizeInSamples(), m_chunks[i]->SizeInSequences() }));
+                result.push_back(ChunkDescription{ (ChunkIdType)i, m_chunks[i]->SizeInSamples(), m_chunks[i]->SizeInSequences() });
             }
             return result;
         }
@@ -227,7 +231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
     private:
         std::vector<SequentialChunkPtr> m_chunks;
         std::map<size_t, SequenceInfo> m_sequenceInfos;
-        TensorShapePtr m_sampleLayout;
+        NDShape m_sampleShape;
 
         DISABLE_COPY_AND_MOVE(SequentialDeserializer);
     };

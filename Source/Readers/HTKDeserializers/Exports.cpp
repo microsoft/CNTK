@@ -18,7 +18,9 @@
 #include "MLFDeserializer.h"
 #include "StringUtil.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 // For old config, we have to emulate the same behavior as the old reader.
 template<class ElemType>
@@ -52,7 +54,7 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 }
 
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
-extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus,  bool primary)
+extern "C" DATAREADER_API bool CreateDeserializer(DataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus,  bool primary)
 {
     if (type == L"HTKFeatureDeserializer")
     {
@@ -72,4 +74,4 @@ extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializ
     return true;
 }
 
-}}}
+}

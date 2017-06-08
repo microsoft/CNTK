@@ -10,7 +10,7 @@
 #include "DataDeserializer.h"
 #include "ReaderUtil.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // The class represents a randomizer that does not randomize input (identity function over the original timeline).
 // Used training where the training data has already been pre - randomized.
@@ -20,13 +20,13 @@ class NoRandomizer : public SequenceEnumerator
 {
 public:
     NoRandomizer(
-        IDataDeserializerPtr deserializer, 
+        DataDeserializerPtr deserializer, 
         bool multithreadedGetNextSequences = false,
         size_t maxNumberOfInvalidSequences = 0); // per worker
 
     virtual void StartEpoch(const EpochConfiguration& config) override;
     virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) override;
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
+    virtual std::vector<StreamInformation> GetStreamDescriptions() const override
     {
         return m_deserializer->GetStreamDescriptions();
     }
@@ -51,14 +51,14 @@ private:
         return m_config.m_totalEpochSizeInSamples * (m_config.m_epochIndex + 1);
     }
 
-    IDataDeserializerPtr m_deserializer;
+    DataDeserializerPtr m_deserializer;
 
     // Whether to get sequences using multiple thread.
     // Useful in case deserializer performs CPU intensive deserialization (e.g. decompression)
     bool m_multithreadedGetNextSequences;
 
     // Stream descriptions
-    std::vector<StreamDescriptionPtr> m_streams;
+    std::vector<StreamInformation> m_streams;
 
     // Epoch configuration
     EpochConfiguration m_config;
@@ -102,4 +102,4 @@ private:
     SequenceCleaner m_cleaner;
 };
 
-}}}
+}

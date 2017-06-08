@@ -13,7 +13,7 @@
 #include "ConfigHelper.h"
 #include <boost/noncopyable.hpp>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Class represents an HTK deserializer.
 // Provides a set of chunks/sequences to the upper layers.
@@ -54,7 +54,7 @@ private:
     size_t m_dimension;
 
     // Type of the features.
-    ElementType m_elementType;
+    DataType m_elementType;
 
     // Chunk descriptions.
     std::vector<HTKChunkDescription> m_chunks;
@@ -86,4 +86,4 @@ private:
 
 typedef std::shared_ptr<HTKDeserializer> HTKDeserializerPtr;
 
-}}}
+}

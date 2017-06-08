@@ -54,7 +54,7 @@ namespace CNTK
         size_t m_maxNumSweepsToRead;
         size_t m_truncationLength;
         std::unordered_map<StreamInformation, MinibatchData> m_minibatchData;
-        std::vector<Microsoft::MSR::CNTK::StreamDescriptionPtr> m_compositeDataReaderStreamDescs;
+        std::vector<StreamInformation> m_compositeDataReaderStreamDescs;
 
         // Restore position on the global timeline.
         // Is set in the RestoreFromCheckpoint call and used in the next GetNextMinibatch.
@@ -64,7 +64,7 @@ namespace CNTK
         // Please only use a subset of the shim interface that includes
         // Init()/StartEpoch()/GetMinibatch()/IsEndOfEpoch()
         // Shim will be deleted in the future versions.
-        std::shared_ptr<Microsoft::MSR::CNTK::ReaderShim<float>> m_shim;
+        std::shared_ptr<ReaderShim<float>> m_shim;
         Microsoft::MSR::CNTK::StreamMinibatchInputs m_matrices;
     };
 }
