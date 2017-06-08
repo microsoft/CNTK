@@ -672,15 +672,18 @@ namespace CNTK
 #endif
 #if 0
             auto& sob = GetTensorViewPtr<float>()->GetSOB();
-            if (flatBufferOffset % matrixShape[0] == 0 && flatBufferLength % matrixShape[0] == 0)
-            {
-                //matrix = make_shared<Matrix<float>>(std::move(sob.->ColumnSlice(flatBufferOffset / matrixShape[0], flatBufferLength / matrixShape[0])));
-                matrix = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(flatBufferOffset / matrixShape[0], flatBufferLength / matrixShape[0]));
-            }
-            else
+            if (flatBufferOffset % matrixShape[0] == 0 && flatBufferLength % matrixShape[0] == 0) // can be expressed as column slice
             {
                 matrix = make_shared<Matrix<float>>(std::move(sob.ReshapeSliceReshape(
-                    1, 0,                                     // interpret as flat vector --note: we know this is not a sparse object
+                    matrixShape[0], matrixShape[1],
+                    0, matrixShape[0], flatBufferOffset / matrixShape[0], flatBufferLength / matrixShape[0],
+                    matrixShape[0], flatBufferLength / matrixShape[0])));
+                //matrix = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(flatBufferOffset / matrixShape[0], flatBufferLength / matrixShape[0]));
+            }
+            else // cannot be expressed as column slice
+            {
+                matrix = make_shared<Matrix<float>>(std::move(sob.ReshapeSliceReshape(
+                    1, matrixShape[0] * matrixShape[1],       // interpret as flat vector --note: we know this is not a sparse object
                     flatBufferOffset, flatBufferLength, 0, 1, // slice out the range
                     flatBufferLength, 1)));                   // and reshape that into a column
 #else
