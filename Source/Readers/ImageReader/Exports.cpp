@@ -46,7 +46,7 @@ extern "C" DATAREADER_API bool CreateDeserializer(DataDeserializer** deserialize
     if (type == L"ImageDeserializer")
         *deserializer = new ImageDataDeserializer(corpus, deserializerConfig, primary);
     else if (type == L"Base64ImageDeserializer")
-        *deserializer = new Base64ImageDeserializer(corpus, deserializerConfig, primary);
+        *deserializer = new Base64ImageDeserializerImpl(corpus, deserializerConfig, primary);
     else
         // Unknown type.
         return false;

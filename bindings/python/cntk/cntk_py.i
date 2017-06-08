@@ -1596,6 +1596,42 @@ namespace CNTK
             return _GetCheckpointState();
         }
     };
+
+    class SwigDataDeserializer final : public CNTK::DataDeserializer
+    {
+        std::unordered_set<StreamInformation> m_streamInfos;
+        std::once_flag m_streamInfosInitFlag;
+
+        std::unordered_map<StreamInformation, MinibatchData> m_minibatchData;
+
+    public:
+        SwigDataDeserializer() { }
+
+        std::vector<StreamInformation> GetStreamDescriptions() const override
+        {
+            NOT_IMPLEMENTED;
+        }
+
+        ChunkDescriptions GetChunkDescriptions() override
+        {
+            NOT_IMPLEMENTED;
+        }
+
+        void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& descriptions) override
+        {
+            NOT_IMPLEMENTED;
+        }
+
+        bool GetSequenceDescription(const SequenceDescription& primary, SequenceDescription& description) override
+        {
+            NOT_IMPLEMENTED;
+        }
+
+        ChunkPtr GetChunk(ChunkIdType chunkId) override
+        {
+            NOT_IMPLEMENTED;
+        }
+    };
 }
 %}
 
