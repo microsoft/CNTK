@@ -1,3 +1,8 @@
+"""
+CNTK function constructs. This is the core abstraction of all primitive operators in the CNTK computational graph.
+"""
+
+
 from os import path
 from enum import Enum, unique
 import sys

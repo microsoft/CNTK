@@ -2,6 +2,10 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+"""
+CNTK core operators. Calling these operators creates nodes in the CNTK computational graph.
+"""
+
 
 from __future__ import division
 from __future__ import print_function
