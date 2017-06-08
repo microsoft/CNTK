@@ -83,7 +83,7 @@ public:
         return Buffer() + m_sliceViewOffset;
     }
 
-    CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
+    CPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols, size_t sourceNumCols) const;
     CPUMatrix<ElemType>& AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
     CPUMatrix<ElemType>& SetColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 

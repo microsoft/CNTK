@@ -460,8 +460,7 @@ Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE dev
 
     deepCopyFrom._transferToDevice(m_preferredDeviceId, true);
 
-    DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom,
-                            this,
+    DISPATCH_MATRIX_ON_FLAG(&deepCopyFrom, this,
                             m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(*(deepCopyFrom.m_CPUMatrix)),
                             m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(*(deepCopyFrom.m_GPUMatrix)),
                             m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(*(deepCopyFrom.m_CPUSparseMatrix)),
@@ -726,8 +725,15 @@ void Matrix<ElemType>::CopySection(size_t numRows, size_t numCols, ElemType* dst
 // BUGBUG: Some code checks before calling here whether one of the dimensions is 0.
 //         This function must handle that case properly, that is, preserving the non-zero dimension.
 template <class ElemType>
-Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
+Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols, size_t pretendSourceHasNumCols /*= 0*/) const
 {
+    // If pretendSourceHasNumCols is given, we first reshape the matrix to this many columns,
+    // and interpret startColumn/numCols w.r.t. those reshaped dimensions.
+    // This e.g. is useful for avoiding intermediate objects for NDArrayView::SliceView().
+    // For sparse matrices, since they cannot be reshaped, pretendSourceHasNumCols cannot specify a different #cols.
+    let sourceNumCols = pretendSourceHasNumCols ? pretendSourceHasNumCols : GetNumCols();
+    // From here on, sourceNumCols is assumed to be the #columns of the matrix (and #rows are adjusted accordingly).
+
     int devId = GetDeviceId();
 
     Matrix<ElemType> slice(matrixFlagDontOwnBuffer, (DEVICEID_TYPE) devId); // this already creates pointers
@@ -741,20 +747,22 @@ Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCol
         if (GetCurrentMatrixLocation() == CPU || GetCurrentMatrixLocation() == BOTH)
         {
             if (slice.m_CPUMatrix)
-                slice.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUMatrix->ColumnSlice(startColumn, numCols)));
+                slice.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
             else
-                slice.m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(static_cast<CPUMatrix<ElemType>&&>(m_CPUMatrix->ColumnSlice(startColumn, numCols)));
+                slice.m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(static_cast<CPUMatrix<ElemType>&&>(m_CPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
         }
         if (GetCurrentMatrixLocation() == GPU || GetCurrentMatrixLocation() == BOTH)
         {
             if (slice.m_GPUMatrix)
-                slice.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->ColumnSlice(startColumn, numCols)));
+                slice.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
             else
-                slice.m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->ColumnSlice(startColumn, numCols)));
+                slice.m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->ColumnSlice(startColumn, numCols, sourceNumCols)));
         }
     }
     else if (GetMatrixType() == MatrixType::SPARSE)
     {
+        if (sourceNumCols != GetNumCols())
+            LogicError("ColumnSlice: Sparse matrices cannot be reshaped.");
         if (GetCurrentMatrixLocation() == CPU || GetCurrentMatrixLocation() == BOTH)
         {
             if (slice.m_CPUSparseMatrix)
@@ -791,6 +799,7 @@ Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCol
 //  - (sparse) interpretAsX must not actually reshape
 //  - (sparse) startRow == 0, numRows == interpretAsRow required
 // This compound version does all that in a single go, without allocating temporary slices.
+// If this function slices and reshapes nothing, it returns the original object; NOT a slice.
 template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::ReshapeSliceReshape(size_t interpretAsRows, size_t interpretAsCols,
     size_t startRow, size_t numRows, size_t startColumn, size_t numCols,
@@ -827,24 +836,23 @@ Matrix<ElemType> Matrix<ElemType>::ReshapeSliceReshape(size_t interpretAsRows, s
 #endif
 }
 
-
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
 {
     ReleaseMemory();
     m_preferredDeviceId = fromMatrix.m_preferredDeviceId;
 
-    DISPATCH_MATRIX_ON_FLAG(&fromMatrix,
-                            this,
-                            if (m_CPUMatrix) m_CPUMatrix->AssignColumnSlice(*fromMatrix.m_CPUMatrix, startColumn, numCols);
-                            else m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(fromMatrix.m_CPUMatrix->ColumnSlice(startColumn, numCols)),
-
-                            if (m_GPUMatrix) m_GPUMatrix->AssignColumnSlice(*fromMatrix.m_GPUMatrix, startColumn, numCols);
-                            else m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(fromMatrix.m_GPUMatrix->ColumnSlice(startColumn, numCols)),
-
-                            NOT_IMPLEMENTED,
-
-                            NOT_IMPLEMENTED);
+    DISPATCH_MATRIX_ON_FLAG(&fromMatrix, this,
+        {
+            if (m_CPUMatrix) m_CPUMatrix->AssignColumnSlice(*fromMatrix.m_CPUMatrix, startColumn, numCols);
+            else m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(fromMatrix.m_CPUMatrix->ColumnSlice(startColumn, numCols, numCols));
+        },
+        {
+            if (m_GPUMatrix) m_GPUMatrix->AssignColumnSlice(*fromMatrix.m_GPUMatrix, startColumn, numCols);
+            else m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(fromMatrix.m_GPUMatrix->ColumnSlice(startColumn, numCols, numCols));
+        },
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
 
     return *this;
 }
@@ -3592,13 +3600,16 @@ DeviceBoundNumber<ElemType> Matrix<ElemType>::Sum_AsDeviceBoundNum() const
 {
     DeviceBoundNumber<ElemType> result;
 
-    DISPATCH_MATRIX_ON_FLAG(this,
-                            nullptr,
-                            ElemType* val = new ElemType;
-                                * val = m_CPUMatrix->SumOfElements(); result.ShallowCopyFrom(val, -1); return result,
-                                                                                                              return m_GPUMatrix->Sum_AsDeviceBoundNum(),
-                                                                                                              NOT_IMPLEMENTED,
-                                                                                                              NOT_IMPLEMENTED);
+    DISPATCH_MATRIX_ON_FLAG(this, nullptr,
+        {
+            ElemType* val = new ElemType;
+            *val = m_CPUMatrix->SumOfElements();
+            result.ShallowCopyFrom(val, -1);
+            return result;
+        },
+        return m_GPUMatrix->Sum_AsDeviceBoundNum(),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
 }
 
 //sum of all elements
@@ -6160,7 +6171,7 @@ template Matrix<char>& Matrix<char>::operator=(Matrix<char>&& moveFrom);
 template char* Matrix<char>::Data() const;
 template int Matrix<char>::GetDeviceId() const;
 template size_t Matrix<char>::GetNumElements() const;
-template Matrix<char> Matrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template Matrix<char> Matrix<char>::ColumnSlice(size_t startColumn, size_t numCols, size_t pretendNumCols) const;
 template void Matrix<char>::_transferToDevice(int id_to, bool isBeingMoved, bool emptyTransfer) const;
 template void Matrix<char>::TransferToDeviceIfNotThere(int id_to, bool isBeingMoved, bool emptyTransfer, bool updatePreferredDevice) const;
 template size_t Matrix<char>::GetNumRows() const;
@@ -6186,7 +6197,7 @@ template Matrix<short>& Matrix<short>::operator=(Matrix<short>&& moveFrom);
 template short* Matrix<short>::Data() const;
 template int Matrix<short>::GetDeviceId() const;
 template size_t Matrix<short>::GetNumElements() const;
-template Matrix<short> Matrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template Matrix<short> Matrix<short>::ColumnSlice(size_t startColumn, size_t numCols, size_t pretendNumCols) const;
 template void Matrix<short>::_transferToDevice(int id_to, bool isBeingMoved, bool emptyTransfer) const;
 template void Matrix<short>::TransferToDeviceIfNotThere(int id_to, bool isBeingMoved, bool emptyTransfer, bool updatePreferredDevice) const;
 template size_t Matrix<short>::GetNumRows() const;

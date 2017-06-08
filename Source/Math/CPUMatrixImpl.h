@@ -205,14 +205,24 @@ void CPUMatrix<ElemType>::Clear()
 #pragma region Basic Operators
 
 template <class ElemType>
-CPUMatrix<ElemType> CPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
+CPUMatrix<ElemType> CPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols, size_t sourceNumCols) const
 {
-    if (startColumn + numCols > m_numCols)
+    // we reinterpret the matrix to have sourceNumCols columns
+    size_t sourceNumRows = GetNumRows();
+    if (sourceNumCols != GetNumCols() && sourceNumRows != 0)
+    {
+        if (GetNumElements() % sourceNumCols != 0)
+            InvalidArgument("ColumnSlice: sourceNumCols argument incompatible with shape.");
+        sourceNumRows = GetNumElements() / sourceNumCols;
+    }
+
+    if (startColumn + numCols > sourceNumCols)
         InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
 
     CPUMatrix<ElemType> slice(*this, /* shallow= */ true);
     slice.m_numCols = numCols;
-    slice.m_sliceViewOffset = m_sliceViewOffset + startColumn * m_numRows;
+    slice.m_numRows = sourceNumRows;
+    slice.m_sliceViewOffset = m_sliceViewOffset + startColumn * sourceNumRows;
 
     return slice;
 }
@@ -4515,8 +4525,8 @@ void CPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
 #pragma omp parallel for
     for (int imgIdx = 0; imgIdx < numImg; imgIdx++)
     {
-        auto img = ColumnSlice(imgIdx, 1);
-        auto rois = roiData.ColumnSlice(imgIdx, 1);
+        auto img = ColumnSlice(imgIdx, 1, 1);
+        auto rois = roiData.ColumnSlice(imgIdx, 1, 1);
 #pragma omp parallel for
         for (int roiIdx = 0; roiIdx < numRois; roiIdx++)
         {
@@ -4608,10 +4618,10 @@ void CPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t 
     for (int imgIdx = 0; imgIdx < numImg; imgIdx++) 
     {
         // ROIs for this image. length 4*numRois;
-        auto rois = roiData.ColumnSlice(imgIdx, 1).Data();
+        auto rois = roiData.ColumnSlice(imgIdx, 1, 1).Data();
         // gradient values for all ROIs from this image. length numRois*pooledHeight*pooledWidth*channels;
-        auto pooledGrad = ColumnSlice(imgIdx, 1).Data();
-        auto argmaxCol = argmax.ColumnSlice(imgIdx, 1).Data();
+        auto pooledGrad = ColumnSlice(imgIdx, 1, 1).Data();
+        auto argmaxCol = argmax.ColumnSlice(imgIdx, 1, 1).Data();
 
         // loop over spatial locations in the image.
 #pragma omp parallel for
@@ -6474,10 +6484,10 @@ void CPUMatrix<ElemType>::RCRFTransGrdCompute(const CPUMatrix<ElemType>& lbls,
 
     for (size_t tPos = 0; tPos < iNumPos; tPos++)
     {
-        CPUMatrix<ElemType> b = beta.ColumnSlice(tPos, 1);
+        CPUMatrix<ElemType> b = beta.ColumnSlice(tPos, 1, 1);
         CPUMatrix<ElemType> a;
         if (tPos > 0)
-            a = alpha.ColumnSlice(tPos - 1, 1);
+            a = alpha.ColumnSlice(tPos - 1, 1, 1);
 
 #pragma omp parallel for
         for (int i = 0; i < iNumLab; i++)
@@ -6533,10 +6543,10 @@ void CPUMatrix<ElemType>::_rcrfTransGrdCompute(size_t i,
             break;
         }
 
-    CPUMatrix<ElemType> b = beta.ColumnSlice(tPos, 1);
+    CPUMatrix<ElemType> b = beta.ColumnSlice(tPos, 1, 1);
     CPUMatrix<ElemType> a;
     if (tPos > 0)
-        a = alpha.ColumnSlice(tPos - 1, 1);
+        a = alpha.ColumnSlice(tPos - 1, 1, 1);
 
     {
         ElemType fTmp = (ElemType) LZERO;
@@ -7327,7 +7337,7 @@ template CPUMatrix<char>::CPUMatrix();
 template CPUMatrix<char>::CPUMatrix(CPUMatrix<char> const&);
 template CPUMatrix<char>::CPUMatrix(CPUMatrix<char>&&);
 template size_t CPUMatrix<char>::LocateElement(size_t, size_t) const;
-template CPUMatrix<char> CPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template CPUMatrix<char> CPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols, size_t pretendNumCols) const;
 template CPUMatrix<char>& CPUMatrix<char>::operator=(CPUMatrix<char>&&);
 template void CPUMatrix<char>::SetValue(const char);
 template void CPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, char* pArray, size_t matrixFlags);
@@ -7348,7 +7358,7 @@ template CPUMatrix<short>::CPUMatrix();
 template CPUMatrix<short>::CPUMatrix(CPUMatrix<short> const&);
 template CPUMatrix<short>::CPUMatrix(CPUMatrix<short>&&);
 template size_t CPUMatrix<short>::LocateElement(size_t, size_t) const;
-template CPUMatrix<short> CPUMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template CPUMatrix<short> CPUMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols, size_t pretendNumCols) const;
 template CPUMatrix<short>& CPUMatrix<short>::operator=(CPUMatrix<short>&&);
 template void CPUMatrix<short>::SetValue(const short);
 template void CPUMatrix<short>::SetValue(const size_t numRows, const size_t numCols, short* pArray, size_t matrixFlags);

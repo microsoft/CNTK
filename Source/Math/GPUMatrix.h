@@ -207,7 +207,7 @@ public:
     void ChangeDeviceTo(DEVICEID_TYPE to_id);
 
 public:
-    GPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
+    GPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols, size_t sourceNumCols) const;
     GPUMatrix<ElemType>& AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
     GPUMatrix<ElemType>& SetColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 

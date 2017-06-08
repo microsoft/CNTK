@@ -590,16 +590,26 @@ void GPUMatrix<ElemType>::ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> 
 
 #pragma region Basic Operators
 template <class ElemType>
-GPUMatrix<ElemType> GPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
+GPUMatrix<ElemType> GPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols, size_t sourceNumCols) const
 {
-    if (startColumn + numCols > GetNumCols())
-        InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) GetNumCols());
+    // we reinterpret the matrix to have sourceNumCols columns
+    size_t sourceNumRows = GetNumRows();
+    if (sourceNumCols != GetNumCols() && sourceNumRows != 0)
+    {
+        if (GetNumElements() % sourceNumCols != 0)
+            InvalidArgument("ColumnSlice: sourceNumCols argument incompatible with shape.");
+        sourceNumRows = GetNumElements() / sourceNumCols;
+    }
+
+    if (startColumn + numCols > sourceNumCols)
+        InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int) startColumn, (int) numCols, (int) m_numCols);
 
     GPUMatrix<ElemType> slice(GetComputeDeviceId());
 
     slice.ShallowCopyFrom(*this);
     slice.m_numCols = numCols;
-    slice.m_sliceViewOffset = m_sliceViewOffset + startColumn * GetNumRows();
+    slice.m_numRows = sourceNumRows;
+    slice.m_sliceViewOffset = m_sliceViewOffset + startColumn * sourceNumRows;
 
     return slice;
 }
@@ -5254,7 +5264,7 @@ template void GPUMatrix<char>::Resize(size_t, size_t, bool);
 template void GPUMatrix<char>::RequireSize(size_t, size_t, bool);
 
 template GPUMatrix<char>::~GPUMatrix();
-template GPUMatrix<char> GPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template GPUMatrix<char> GPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols, size_t sourceNumCols) const;
 template GPUMatrix<char>& GPUMatrix<char>::operator=(GPUMatrix<char>&&);
 template GPUMatrix<char>::GPUMatrix(int);
 template void GPUMatrix<char>::SetValue(const char);
@@ -5279,7 +5289,7 @@ template void GPUMatrix<short>::Resize(size_t, size_t, bool);
 template void GPUMatrix<short>::RequireSize(size_t, size_t, bool);
 
 template GPUMatrix<short>::~GPUMatrix();
-template GPUMatrix<short> GPUMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template GPUMatrix<short> GPUMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols, size_t sourceNumCols) const;
 template GPUMatrix<short>& GPUMatrix<short>::operator=(GPUMatrix<short>&&);
 template GPUMatrix<short>::GPUMatrix(int);
 template void GPUMatrix<short>::SetValue(const short);
