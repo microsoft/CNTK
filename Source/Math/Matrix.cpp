@@ -798,6 +798,10 @@ Matrix<ElemType> Matrix<ElemType>::ReshapeSliceReshape(size_t interpretAsRows, s
 {
     if (startColumn + numCols > interpretAsCols || startRow + numRows > interpretAsRows)
         InvalidArgument("ReshapeSliceReshape: Slice out of bounds.");
+    if ((interpretAsRows != GetNumRows() || interpretAsRows != numRows || interpretAsRows != reshapeAsRows) &&
+        GetMatrixType() == MatrixType::SPARSE)
+        InvalidArgument("ReshapeSliceReshape: For sparse matrices, rows cannot be slice-viewed.");
+
 #if 1 // naive implementation (not optimized)
     // reshape and slice the column
     auto slice = Reshaped(interpretAsRows, interpretAsCols).ColumnSlice(startColumn, numCols);

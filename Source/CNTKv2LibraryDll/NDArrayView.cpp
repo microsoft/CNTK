@@ -612,7 +612,7 @@ namespace CNTK
         if (std::find(extent.begin(), extent.end(), 0) != extent.end())
             InvalidArgument("NDArrayView::SliceView: Specified slice extent is zero along at least one of the axes.");
 
-        bool anyPrevAxisSliced = false; // (only used for error check)
+        bool anyPrevAxisSliced = false;
         NDShape sliceViewShape(extent);       // note: has same #dims as extent
         std::vector<size_t> endOffset(rank);  // note: these have same #dims as 'this', not extent
         std::vector<size_t> lastOffset(rank);
@@ -648,11 +648,12 @@ namespace CNTK
                 InvalidArgument("NDArrayView::SliceView: The first axis of a sparse tensor cannot be slice-viewed.");
         }
         auto tensorShape = AsTensorShape(Shape());
-
         auto flatBufferOffset = tensorShape.Locate(startOffset);  // offset and length into underlying ElementType array...
         auto flatBufferLength = tensorShape.Locate(lastOffset) + 1 - flatBufferOffset; // ...which is known to be consecutive
-        auto matrixShape = tensorShape;
-        ToMatrixShape(matrixShape, NDArrayView::AutoSelectRowColSplitPoint, NDArrayView::AutoSelectRowColSplitPoint);
+
+        ToMatrixShape(tensorShape, NDArrayView::AutoSelectRowColSplitPoint, NDArrayView::AutoSelectRowColSplitPoint);
+        let storedRows = tensorShape[0];
+        let storedCols = tensorShape[1];
 
         shared_ptr<MatrixBase> matrix;
         // At this point, it is guaranteed that the slice is consecutive in memory. We distinguish two cases:
@@ -667,33 +668,43 @@ namespace CNTK
 #if 1
             auto currentMatrix = GetMatrix<float>();
             std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
-            if (currentMatrixDims.first != matrixShape[0] || currentMatrixDims.second != matrixShape[1])
+            if (currentMatrixDims.first != storedRows || currentMatrixDims.second != storedCols)
                 LogicError("NDArrayView::SliceView: ToMatrixShape() returned shape different from GetMatrix().");
 #endif
-#if 0
-            auto& sob = GetTensorViewPtr<float>()->GetSOB();
-            if (flatBufferOffset % matrixShape[0] == 0 && flatBufferLength % matrixShape[0] == 0) // can be expressed as column slice
+#if 1
+            const auto& sob = GetTensorViewPtr<float>()->GetSOBPtr();
+            if (!anyPrevAxisSliced) // nothing was sliced: current SOB is just fine
             {
-                matrix = make_shared<Matrix<float>>(std::move(sob.ReshapeSliceReshape(
-                    matrixShape[0], matrixShape[1],
-                    0, matrixShape[0], flatBufferOffset / matrixShape[0], flatBufferLength / matrixShape[0],
-                    matrixShape[0], flatBufferLength / matrixShape[0])));
-                //matrix = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(flatBufferOffset / matrixShape[0], flatBufferLength / matrixShape[0]));
+                matrix = sob;
+            }
+            else if (flatBufferOffset % storedRows == 0 && flatBufferLength % storedRows == 0) // can be expressed as column slice
+            {
+                matrix = make_shared<Matrix<float>>(std::move(sob->ReshapeSliceReshape(
+                    storedRows, storedCols,
+                    0, storedRows, flatBufferOffset / storedRows, flatBufferLength / storedRows,
+                    storedRows, flatBufferLength / storedRows)));
             }
             else // cannot be expressed as column slice
             {
-                matrix = make_shared<Matrix<float>>(std::move(sob.ReshapeSliceReshape(
-                    1, matrixShape[0] * matrixShape[1],       // interpret as flat vector --note: we know this is not a sparse object
+#if 1
+                matrix = make_shared<Matrix<float>>(std::move(sob->ReshapeSliceReshape(
+                    storedRows * storedCols, 1,              // interpret as flat vector --note: we know this is not a sparse object
                     flatBufferOffset, flatBufferLength, 0, 1, // slice out the range
                     flatBufferLength, 1)));                   // and reshape that into a column
 #else
-            if (flatBufferOffset % matrixShape[0] == 0 && flatBufferLength % matrixShape[0] == 0)
+                matrix = make_shared<Matrix<float>>(std::move(sob->ReshapeSliceReshape(
+                    1, storedRows * storedCols,              // interpret as flat vector --note: we know this is not a sparse object
+                    0, 1, flatBufferOffset, flatBufferLength, // slice out the range
+                    flatBufferLength, 1)));                   // and reshape that into a column
+#endif
+#else
+            if (flatBufferOffset % storedRows == 0 && flatBufferLength % storedRows == 0)
             {
-                matrix = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(flatBufferOffset / matrixShape[0], flatBufferLength / matrixShape[0]));
+                matrix = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(flatBufferOffset / storedRows, flatBufferLength / storedRows));
             }
             else
             {
-                auto sliced = currentMatrix->Reshaped(1, matrixShape[0] * matrixShape[1]).ColumnSlice(flatBufferOffset, flatBufferLength);
+                auto sliced = currentMatrix->Reshaped(1, storedRows * storedCols).ColumnSlice(flatBufferOffset, flatBufferLength);
                 sliced.Reshape(flatBufferLength, 1);
                 matrix = make_shared<Matrix<float>>(std::move(sliced));
 #endif
@@ -704,13 +715,13 @@ namespace CNTK
         {
 #if 1
             auto currentMatrix = GetMatrix<double>();
-            if (flatBufferOffset % matrixShape[0] == 0 && flatBufferLength % matrixShape[0] == 0)
+            if (flatBufferOffset % storedRows == 0 && flatBufferLength % storedRows == 0)
             {
-                matrix = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(flatBufferOffset / matrixShape[0], flatBufferLength / matrixShape[0]));
+                matrix = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(flatBufferOffset / storedRows, flatBufferLength / storedRows));
             }
             else
             {
-                auto sliced = currentMatrix->Reshaped(1, matrixShape[0] * matrixShape[1]).ColumnSlice(flatBufferOffset, flatBufferLength);
+                auto sliced = currentMatrix->Reshaped(1, storedRows * storedCols).ColumnSlice(flatBufferOffset, flatBufferLength);
                 sliced.Reshape(flatBufferLength, 1);
                 matrix = make_shared<Matrix<double>>(std::move(sliced));
             }
