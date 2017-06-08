@@ -11,24 +11,24 @@
 #include "BinaryDataChunk.h"
 #include "FileHelper.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 
 class BinaryDataDeserialzer 
 {
 public:
 
-    BinaryDataDeserialzer(FILE* file, ElementType precision = ElementType::tfloat)
+    BinaryDataDeserialzer(FILE* file, DataType precision = DataType::Float)
     {
         ReadName(file);
         ReadDataType(file);
         ReadSampleSize(file);
-        
-        if (precision != ElementType::tfloat && precision != ElementType::tdouble)
+
+        if (precision != DataType::Float && precision != DataType::Double)
             LogicError("Unsupported precision type %u.", (unsigned int)precision);
 
-        if ((m_dataType == DataType::tfloat && precision != ElementType::tfloat) ||
-            (m_dataType == DataType::tdouble && precision != ElementType::tdouble))
+        if ((m_dataType == ReaderDataType::tfloat && precision != DataType::Float) ||
+            (m_dataType == ReaderDataType::tdouble && precision != DataType::Double))
             LogicError("Unsupported combination of the input data type %u and precision %u. "
                 "At the moment, both have to match.", (unsigned int)m_dataType, (unsigned int)precision);
 
@@ -37,28 +37,28 @@ public:
 
     virtual size_t GetSequenceDataForChunk(size_t numSequences, void* data, std::vector<SequenceDataPtr>& result) = 0;
 
-    virtual StorageType GetStorageType() = 0;
+    virtual StorageFormat GetStorageFormat() = 0;
 
-    StreamDescriptionPtr GetStreamDescription() 
+    StreamInformation GetStreamDescription() 
     {
-        auto streamDescription = std::make_shared<StreamDescription>();
-        streamDescription->m_elementType = m_precision;
-        streamDescription->m_storageType = GetStorageType();
-        streamDescription->m_sampleLayout = GetSampleLayout();
-        streamDescription->m_name = m_name;
+        StreamInformation streamDescription;
+        streamDescription.m_elementType = m_precision;
+        streamDescription.m_storageFormat = GetStorageFormat();
+        streamDescription.m_sampleLayout = GetSampleShape();
+        streamDescription.m_name = m_name;
         return streamDescription;
     }
 
-    TensorShapePtr GetSampleLayout() 
+    NDShape GetSampleShape()
     {
-        return  make_shared<TensorShape>(m_sampleDimension);
+        return  NDShape({ m_sampleDimension });
     }
 
     size_t SizeOfDataType()
     {
-        if (m_dataType == DataType::tfloat)
+        if (m_dataType == ReaderDataType::tfloat)
             return sizeof(float);
-        if (m_dataType == DataType::tdouble)
+        if (m_dataType == ReaderDataType::tdouble)
             return sizeof(double);
         
         LogicError("Unsupported input data type %u.", (unsigned int)m_dataType);
@@ -66,7 +66,7 @@ public:
 
 protected:
 
-    enum class DataType : unsigned char
+    enum class ReaderDataType : unsigned char
     {
         tfloat = 0,
         tdouble = 1,
@@ -90,7 +90,7 @@ protected:
     void ReadDataType(FILE* file)
     {
         CNTKBinaryFileHelper::ReadOrDie(&m_dataType, sizeof(m_dataType), 1, file);
-        if (m_dataType> DataType::tdouble)
+        if (m_dataType> ReaderDataType::tdouble)
             RuntimeError("Unsupported input data type %u.", (unsigned int)m_dataType);
     }
 
@@ -106,8 +106,14 @@ protected:
             return m_data;
         }
 
+        const NDShape& GetSampleShape() override
+        {
+            return m_sampleShape;
+        }
+
         void* m_data;
         DataType m_dataType;
+        NDShape m_sampleShape;
     };
 
     struct SparseInputStreamBuffer : SparseSequenceData
@@ -121,12 +127,18 @@ protected:
         {
             return m_data;
         }
-        
+
+        const NDShape& GetSampleShape() override
+        {
+            return m_sampleShape;
+        }
+
         void* m_data;
+        NDShape m_sampleShape;
     };
 
-    ElementType m_precision;
-    DataType m_dataType;
+    DataType m_precision;
+    ReaderDataType m_dataType;
     uint32_t m_sampleDimension;
     wstring m_name;
 };
@@ -138,7 +150,7 @@ class DenseBinaryDataDeserializer : public BinaryDataDeserialzer
 public:
     using BinaryDataDeserialzer::BinaryDataDeserialzer;
 
-    virtual  StorageType GetStorageType() override { return StorageType::dense; }
+    virtual  StorageFormat GetStorageFormat() override { return StorageFormat::Dense; }
 
     size_t GetSequenceDataForChunk(size_t numSequences, void* data, std::vector<SequenceDataPtr>& result)
     {
@@ -151,7 +163,7 @@ public:
             sequenceDataPtr->m_numberOfSamples = *(uint32_t*)((char*)data + offset);
             offset += sizeof(uint32_t);
             sequenceDataPtr->m_data = (char*)data + offset;
-            sequenceDataPtr->m_sampleLayout = GetSampleLayout();
+            sequenceDataPtr->m_sampleShape = GetSampleShape();
             sequenceDataPtr->m_elementType = m_precision;
             result[i]  = sequenceDataPtr;
             offset += m_sampleDimension * valueSize * sequenceDataPtr->m_numberOfSamples;
@@ -164,7 +176,7 @@ public:
 class SparseBinaryDataDeserializer : public BinaryDataDeserialzer
 {
 public:
-    SparseBinaryDataDeserializer(FILE* file, ElementType precision = ElementType::tfloat)
+    SparseBinaryDataDeserializer(FILE* file, DataType precision = DataType::Float)
         :BinaryDataDeserialzer(file, precision)
     {
         if (IndexType(m_sampleDimension) < 0)
@@ -173,7 +185,7 @@ public:
         }
     }
 
-    virtual  StorageType GetStorageType() override { return StorageType::sparse_csc; }
+    virtual  StorageFormat GetStorageFormat() override { return StorageFormat::SparseCSC; }
 
     // The format of data is: 
     // sequence[numSequences], where each sequence consists of:
@@ -190,7 +202,7 @@ public:
         {
             shared_ptr<SparseInputStreamBuffer> sequenceDataPtr = make_shared<SparseInputStreamBuffer>();
             offset += GetSequenceData((char*)data + offset, sequenceDataPtr);
-            sequenceDataPtr->m_sampleLayout = GetSampleLayout();
+            sequenceDataPtr->m_sampleShape = GetSampleShape();
             sequenceDataPtr->m_elementType = m_precision;
             result[i] = sequenceDataPtr;
         }
@@ -241,4 +253,4 @@ public:
 };
 
     
-}}}
+}

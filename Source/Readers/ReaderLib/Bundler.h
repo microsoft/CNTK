@@ -9,7 +9,7 @@
 #include "DataDeserializerBase.h"
 #include "Config.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Class represents an bundler of several deserializers.
 // In case when only a single deserializer is used, the bundler can be omitted and 
@@ -17,7 +17,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class Bundler : public DataDeserializerBase
 {
 public:
-    Bundler(const ConfigParameters& readerConfig, IDataDeserializerPtr driver, std::vector<IDataDeserializerPtr> deserializers, bool cleanse);
+    Bundler(const ConfigParameters& readerConfig, DataDeserializerPtr driver, std::vector<DataDeserializerPtr> deserializers, bool cleanse);
 
     // Gets chunk descriptions.
     virtual ChunkDescriptions GetChunkDescriptions() override;
@@ -39,13 +39,13 @@ private:
     void CreateChunkDescriptions();
 
     // Underlying deserializers.
-    std::vector<IDataDeserializerPtr> m_deserializers;
+    std::vector<DataDeserializerPtr> m_deserializers;
 
     // Driving deserializer that defines chunks.
-    IDataDeserializerPtr m_primaryDeserializer;
+    DataDeserializerPtr m_primaryDeserializer;
 
     // Chunk descriptions.
-    std::vector<BundlerChunkDescriptionPtr> m_chunks;
+    std::vector<BundlerChunkDescription> m_chunks;
 
     // A flag that indicates whether there is a need to clean data between different deserializers.
     // It is possible that some sequence is valid in one deserializer but invalid in another. This sequences should be removed.
@@ -70,4 +70,4 @@ private:
     size_t m_mbDefiningDeserializer;
 };
 
-}}}
+}

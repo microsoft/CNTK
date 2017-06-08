@@ -10,7 +10,7 @@
 #include "CorpusDescriptor.h"
 #include "ImageUtil.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     // Base class of image deserializers.
     class ImageDeserializerBase : public DataDeserializerBase
@@ -38,7 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::map<size_t, size_t> m_keyToSequence;
 
         // Precision required by the network.
-        ElementType m_precision;
+        DataType m_precision;
 
         // Flag whether images shall be loaded in grayscale.
         bool m_grayscale;
@@ -52,4 +52,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Corpus descriptor.
         CorpusDescriptorPtr m_corpus;
     };
-}}}
+}

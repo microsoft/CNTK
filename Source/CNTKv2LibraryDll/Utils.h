@@ -96,32 +96,6 @@ namespace CNTK
         return std::vector<size_t>(tensorShape.GetDims().begin(), tensorShape.GetDims().end());
     }
 
-    inline DataType AsDataType(Microsoft::MSR::CNTK::ElementType readerDataType)
-    {
-        switch (readerDataType)
-        {
-        case Microsoft::MSR::CNTK::ElementType::tfloat:
-            return DataType::Float;
-        case Microsoft::MSR::CNTK::ElementType::tdouble:
-            return DataType::Double;
-        default:
-            LogicError("Unsupported ElementType from CNTK Reader");
-        }
-    }
-
-    inline StorageFormat AsStorageFormat(Microsoft::MSR::CNTK::StorageType readerStorageType)
-    {
-        switch (readerStorageType)
-        {
-        case Microsoft::MSR::CNTK::StorageType::dense:
-            return StorageFormat::Dense;
-        case Microsoft::MSR::CNTK::StorageType::sparse_csc:
-            return StorageFormat::SparseCSC;
-        default:
-            LogicError("Unsupported StorageType from CNTK Reader");
-        }
-    }
-
     inline Microsoft::MSR::CNTK::TensorShape AsTensorShape(const NDShape& viewShape)
     {
         const size_t maxNumAxesSupportedByTensorView = 12;

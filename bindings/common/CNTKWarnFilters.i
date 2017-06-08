@@ -23,6 +23,8 @@
 
 // Returning an immutable string by reference.
 %warnfilter(473) CNTK::Function::OpName;
+// Allowing creating of deserializer as raw pointer.
+%warnfilter(473) CNTK::DeserializerFactory;
 
 // Specialization of non-template function - hash,
 // TODO: it is not clear how to limit this only to hash, but we do not use partial specialization in other places.

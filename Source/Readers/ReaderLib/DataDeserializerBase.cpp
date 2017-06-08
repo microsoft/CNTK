@@ -7,7 +7,7 @@
 #include "DataDeserializerBase.h"
 #include "Indexer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
     bool DataDeserializerBase::GetSequenceDescriptionByKey(const Index& index, const KeyType& key, SequenceDescription& r)
     {
@@ -32,4 +32,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return true;
     }
 
-}}}
+}

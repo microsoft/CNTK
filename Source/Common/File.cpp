@@ -973,21 +973,33 @@ extern std::unordered_map<std::wstring, std::wstring> g_deprecatedReaderWriterNa
 
 #ifdef _WIN32
 
+template<class T>
+inline bool has_suffix(const T& value, const T& suffix)
+{
+    if (suffix.size() > value.size())
+        return false;
+    return std::equal(suffix.rbegin(), suffix.rend(), value.rbegin());
+}
+
 FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc, bool isCNTKPlugin)
 {
     m_dllName = plugin;
 
-    if (isCNTKPlugin)
+    // For python modules we do not need to append anything.
+    if(!has_suffix<std::wstring>(m_dllName, L".pyd"))
     {
-        // map legacy names to new naming scheme
-        auto entry = g_deprecatedReaderWriterNameMap.find(m_dllName);
-        if (entry != g_deprecatedReaderWriterNameMap.end())
-            m_dllName = entry->second;
+        if (isCNTKPlugin)
+        {
+            // map legacy names to new naming scheme
+            auto entry = g_deprecatedReaderWriterNameMap.find(m_dllName);
+            if (entry != g_deprecatedReaderWriterNameMap.end())
+                m_dllName = entry->second;
+            m_dllName += L"-" + msra::strfun::utf16(std::string(CNTK_COMPONENT_VERSION));
+        }
 
-        m_dllName += L"-" + msra::strfun::utf16(std::string(CNTK_COMPONENT_VERSION));
+        m_dllName += L".dll";
     }
 
-    m_dllName += L".dll";
     m_hModule = LoadLibrary(m_dllName.c_str());
     if (m_hModule == NULL)
         RuntimeError("Plugin not found: '%ls'", m_dllName.c_str());
@@ -1008,17 +1020,20 @@ void* Plugin::LoadInternal(const std::string& plugin, const std::string& proc, b
     string soName = plugin;
     wstring soNameW = msra::strfun::utf16(plugin);
 
-    if (isCNTKPlugin)
+    if (!has_suffix<std::string>(soNameW, ".pyd"))
     {
-        // map legacy names to new naming scheme
-        auto entry = g_deprecatedReaderWriterNameMap.find(soNameW);
-        if (entry != g_deprecatedReaderWriterNameMap.end())
-            soName = msra::strfun::utf8(entry->second);
+        if (isCNTKPlugin)
+        {
+            // map legacy names to new naming scheme
+            auto entry = g_deprecatedReaderWriterNameMap.find(soNameW);
+            if (entry != g_deprecatedReaderWriterNameMap.end())
+                soName = msra::strfun::utf8(entry->second);
 
-        soName += "-" + std::string(TOSTRING(CNTK_COMPONENT_VERSION));
+            soName += "-" + std::string(TOSTRING(CNTK_COMPONENT_VERSION));
+        }
+        soName += ".so";
     }
 
-    soName += ".so";
     void* handle = dlopen(soName.c_str(), RTLD_LAZY);
     if (handle == NULL)
         RuntimeError("Plugin not found: '%s' (error: %s)", soName.c_str(), dlerror());

@@ -11,7 +11,7 @@
 #include "Packer.h"
 #include "CorpusDescriptor.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // A base class for Packers.
 class PackerBase : public Packer
@@ -34,12 +34,17 @@ protected:
 
     PackerBase(CorpusDescriptorPtr corpus,
                SequenceEnumeratorPtr sequenceEnumerator,
-               const std::vector<StreamDescriptionPtr>& streams,
+               const std::vector<::CNTK::StreamInformation>& streams,
                size_t numberOfBuffers);
 
-    typedef std::vector<SequenceDataPtr> StreamBatch;
+    typedef std::vector<::CNTK::SequenceDataPtr> StreamBatch;
 
-    size_t GetSampleSize(StreamDescriptionPtr stream);
+    size_t GetSampleSize(const ::CNTK::StreamInformation& stream);
+
+    std::vector<StreamInformation> GetStreamDescriptions() override
+    {
+        return m_outputStreamDescriptions;
+    }
 
     // Packs a sparse sample as dense:
     //  - 0-fills a region of sampleSize bytes in the block of memory pointed to by destination;
@@ -48,28 +53,28 @@ protected:
     // at the offset equal to value index * elementSize. sampleOffset specifies the offset of the
     // first value from the given sample in the sequence data/indices array (sampleOffset is equal
     // to the sum of non-zero value counts of all preceding samples).
-    void PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,
+    void PackSparseSampleAsDense(char* destination, ::CNTK::SparseSequenceDataPtr sequence,
         size_t sampleIndex, size_t sampleOffset, size_t sampleSize, size_t elementSize);
 
     // Packs a dense sample as dense. Copies sampleSize bytes staring at the sampleOffset from 
     // the data portion of the source sequence to the destination block of memory. sampleOffset 
     // specifies the offset of the first value from the given sample in the sequence data/ array 
     // (sampleOffset is equal to the sum of sample sizes of all preceding samples).
-    void PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize);
+    void PackDenseSample(char* destination, ::CNTK::SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize);
 
     // Establishes a mapping between id inside the mb layout and the global key in the corpus.
     // Assumes the sequences inside MBLayout have the same order as Sequences.
     void EstablishIdToKey(Minibatch& minibatch, const Sequences& sequences);
 
-    static void CheckNameUniqueness(const std::vector<StreamDescriptionPtr>& streams);
+    static void CheckNameUniqueness(const std::vector<::CNTK::StreamInformation>& streams);
 
     SequenceEnumeratorPtr m_sequenceEnumerator;
 
     // Input stream descriptions provided by the transformer.
-    std::vector<StreamDescriptionPtr> m_outputStreamDescriptions;
+    std::vector<::CNTK::StreamInformation> m_outputStreamDescriptions;
 
     // Output stream descriptions expected by the network.
-    std::vector<StreamDescriptionPtr> m_inputStreamDescriptions;
+    std::vector<::CNTK::StreamInformation> m_inputStreamDescriptions;
 
     // Indicates how many internal buffers with pinned memory are supported.
     // If N - then N sequential calls to PackMinibatch are valid, and N+1 call will overwrite 
@@ -99,7 +104,7 @@ public:
     virtual void SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) override;
 };
 
-inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,
+inline void PackerBase::PackSparseSampleAsDense(char* destination, ::CNTK::SparseSequenceDataPtr sequence,
     size_t sampleIndex, size_t sampleOffset, size_t sampleSize, size_t elementSize)
 {
     //The sample is sparse, first, need to zero out the buffer.
@@ -122,10 +127,10 @@ inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenc
     }
 }
 
-inline void PackerBase::PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize)
+inline void PackerBase::PackDenseSample(char* destination, ::CNTK::SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize)
 {
     // Because the sample is dense - simply copying it to the output.
     memcpy(destination, (const char*)(sequence->GetDataBuffer()) + sampleOffset, sampleSize);
 }
 
-}}}
+}

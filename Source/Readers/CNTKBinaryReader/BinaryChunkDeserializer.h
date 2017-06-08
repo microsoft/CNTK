@@ -11,7 +11,7 @@
 #include "BinaryDataChunk.h"
 #include "BinaryDataDeserializer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Chunk meta-info: byte offset in the inputfile, number of sequences and samples in the chunk.
 struct ChunkInfo 
@@ -99,7 +99,7 @@ public:
 
 private:
     // Builds an index of the input data.
-    void Initialize(const std::map<std::wstring, std::wstring>& rename, ElementType precision);
+    void Initialize(const std::map<std::wstring, std::wstring>& rename, DataType precision);
 
     // Reads the chunk table from disk into memory
     void ReadChunkTable(FILE* infile, uint32_t firstChunkIdx, uint32_t numChunks);
@@ -135,4 +135,4 @@ private:
 
     DISABLE_COPY_AND_MOVE(BinaryChunkDeserializer);
 };
-}}}
+}

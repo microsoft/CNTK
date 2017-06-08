@@ -158,6 +158,30 @@ class MinibatchSource(cntk_py.MinibatchSource):
         randomize (`bool`, defaults to `True`): Enables or disables randomization; use randomization_window_in_chunks or
           randomization_window_in_samples to specify the randomization range
     '''
+    _runtime_deserializer_table = {}
+    _deserializer_factory = None
+
+    @staticmethod
+    def _create_deserializer(id):
+        der = MinibatchSource._runtime_deserializer_table[id]
+        del MinibatchSource._runtime_deserializer_table[id]
+        return der
+
+
+    @staticmethod
+    def _serialize(deserializer):
+        import uuid
+        from cntk.internal import _DeserializerFactory
+
+        if MinibatchSource._deserializer_factory is None:
+            MinibatchSource._deserializer_factory = _DeserializerFactory(MinibatchSource._create_deserializer)
+            cntk_py._register_deserializer_factory(MinibatchSource._deserializer_factory)
+
+        id = str(uuid.uuid4())
+        MinibatchSource._runtime_deserializer_table[id] = deserializer
+        d = { 'type' : id, 'module': '_cntk_py.pyd', 'composable': 'false' }
+        return cntk.utils._py_dict_to_cntk_dict(d)
+
     def __init__(self,
         deserializers,
         max_samples = INFINITELY_REPEAT,
@@ -173,6 +197,8 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [ deserializers ]
+
+        deserializers = [d if not isinstance(d, UserDeserializer) else MinibatchSource._serialize(d) for d in deserializers]
 
         config = cntk_py.MinibatchSourceConfig(deserializers)
         config.max_samples = max_samples
@@ -379,12 +405,14 @@ class StreamInformation(cntk_py.StreamInformation):
         self.m_id = stream_id
         self.m_storage_format = StreamInformation._storage[storage_format]
         self.m_element_type = sanitize_dtype_cntk(dtype)
-        self.m_sample_layout = cntk_py.NDShape(shape)
+        # raw NDShape is column based, so we ned to reverse dimensions.
+        self.m_sample_layout = cntk_py.NDShape(list(reversed(shape)))
+        self.sample_shape = shape
+        self.storage_format = storage_format
 
     @property
     def name(self):
         return self.m_name
-
 
 class UserMinibatchSource(cntk_py.SwigMinibatchSource):
     '''
@@ -1069,3 +1097,86 @@ def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
         lines.append('%i\t|' % seq_idx + ' |'.join(line))
 
     return '\n'.join(lines)
+
+class UserDeserializer(cntk_py.SwigDataDeserializer):
+    '''
+    User deserializer is a base class for all user defined deserializers.
+    To support deserialization of a custom format, please implement the public
+    methods of this class and pass an instance of it to MinibatchSource.
+    A UserDeserializer is a plug-in to MinibatchSource for reading data in custom formats.
+    Reading data through this mechanism provides the following benefits:
+        - randomization of data too large to fit into RAM, through
+          CNTK chunked paging algorithm
+        - distributed reading - only chunks needed by a particular worker are requested
+        - composibility of transforms (currently composibility of user deserializers is not yet supported)
+        - transparent support of sequence/frame/truncated BPTT modes
+        - automatic chunk and minibatch prefetch
+        - checkpointing
+
+    The MinibatchSource uses the information provided by this class to build the timeline and move
+    along it when the next minibatch is requested. The deserializer itself, however, is stateless.
+    '''
+    def __init__(self):
+        super(UserDeserializer, self).__init__()
+        self.__disown__()
+
+    def stream_infos(self):
+        '''
+        Should return a list of meta information :class:`StreamInformation` about all 
+        streams exposed by the deserializer.
+
+        Returns:
+            list of :class:`StreamInformation` exposed by the deserializer
+        '''
+        raise NotImplementedError('should return a list of StreamInformation for all streams')
+
+    def num_chunks(self):
+        '''
+        Should return the total number of chunks.
+        '''
+        raise NotImplementedError('should return the total number of chunks.')
+
+    def get_chunk(self, chunk_id):
+        '''
+        Should return a dictionary of stream name -> data of the chunk, where data is csr_matrix/numpy array in sample mode,
+        or a list of csr_matrix/numpy array in sequence mode.
+
+        Args:
+            chunk_id(int): id of the chunk to be read, 0 <= chunk_id < num_chunks
+
+        Returns:
+            dict containing the data
+        '''
+        raise NotImplementedError('should return data for the chunk.')
+
+    def _stream_infos(self, infos=None):
+        self._last_chunk = None
+        self._last_chunk_id = None
+        inner = self.stream_infos()
+        if len(inner) == 0:
+            raise ValueError('Deserializer must provide at least one stream')
+        infos.extend(inner)
+
+        streams = {si.m_name: si for si in inner}
+        self.streams = Record(**streams)
+
+    def _chunk_infos(self, infos=None):
+        total = self.num_chunks()
+        if total == 0:
+            raise ValueError('Deserializer must provide at least one chunk')
+        inner = []
+        for i in range(total):
+            t = cntk_py.ChunkDescription()
+            t.m_id = i
+            inner.append(t)
+        infos.extend(inner)
+
+    def _get_chunk(self, chunk_id):
+        self._last_chunk = self.get_chunk(chunk_id=chunk_id)
+        self._last_chunk_id = chunk_id
+        return self._last_chunk
+
+    def _get_sequences_for_chunk(self, chunk_id, sequences):
+        if self._last_chunk_id != chunk_id:
+            raise ValueError('Logical error in randomizer: unexpected chunk id')
+        sequences.extend(self._last_chunk.sequence_infos())

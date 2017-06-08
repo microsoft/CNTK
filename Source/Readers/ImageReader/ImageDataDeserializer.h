@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include "CorpusDescriptor.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Image data deserializer based on the OpenCV library.
 // The deserializer currently supports two output streams only: a feature and a label stream.
@@ -70,4 +70,4 @@ private:
     std::unique_ptr<FileByteReader> m_defaultReader;
 };
 
-}}}
+}

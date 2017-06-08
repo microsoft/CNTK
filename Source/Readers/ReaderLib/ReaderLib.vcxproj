@@ -43,7 +43,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\PerformanceProfilerDll;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\PerformanceProfilerDll;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -54,6 +54,9 @@
     <ClInclude Include="ChunkRandomizer.h" />
     <ClInclude Include="ExceptionCapture.h" />
     <ClInclude Include="Indexer.h" />
+    <ClInclude Include="LocalTimelineBlockRandomizer.h" />
+    <ClInclude Include="LocalTimelineNoRandomizer.h" />
+    <ClInclude Include="LocalTimelineRandomizerBase.h" />
     <ClInclude Include="MemoryBuffer.h" />
     <ClInclude Include="ReaderBase.h" />
     <ClInclude Include="ReaderConstants.h" />
@@ -86,6 +89,9 @@
     <ClCompile Include="ChunkRandomizer.cpp" />
     <ClCompile Include="DataDeserializerBase.cpp" />
     <ClCompile Include="Indexer.cpp" />
+    <ClCompile Include="LocalTimelineBlockRandomizer.cpp" />
+    <ClCompile Include="LocalTimelineNoRandomizer.cpp" />
+    <ClCompile Include="LocalTimelineRandomizerBase.cpp" />
     <ClCompile Include="MemoryBuffer.cpp" />
     <ClCompile Include="NoRandomizer.cpp" />
     <ClCompile Include="BlockRandomizer.cpp" />
@@ -97,6 +103,9 @@
     <ClCompile Include="SequencePacker.cpp" />
     <ClCompile Include="SequenceRandomizer.cpp" />
     <ClCompile Include="TruncatedBpttPacker.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

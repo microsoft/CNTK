@@ -11,7 +11,7 @@
 #include "Indexer.h"
 #include "CorpusDescriptor.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 template <class ElemType>
 class CNTKTextFormatReaderTestRunner;
@@ -44,7 +44,7 @@ private:
     struct DenseInputStreamBuffer : DenseSequenceData
     {
         // capacity = expected number of samples * sample size
-        DenseInputStreamBuffer(size_t capacity)
+        DenseInputStreamBuffer(size_t capacity, const NDShape& sampleShape) : m_sampleShape(sampleShape)
         {
             m_buffer.reserve(capacity);
         }
@@ -54,6 +54,12 @@ private:
             return m_buffer.data();
         }
 
+        const NDShape& GetSampleShape() override
+        {
+            return m_sampleShape;
+        }
+
+        const NDShape& m_sampleShape;
         std::vector<ElemType> m_buffer;
     };
 
@@ -62,7 +68,7 @@ private:
     // of NNZ counts (one for each sample).
     struct SparseInputStreamBuffer : SparseSequenceData
     {
-        SparseInputStreamBuffer()
+        SparseInputStreamBuffer(const NDShape& sampleShape) : m_sampleShape(sampleShape)
         {
             m_totalNnzCount = 0;
         }
@@ -72,6 +78,12 @@ private:
             return m_buffer.data();
         }
 
+        const NDShape& GetSampleShape() override
+        {
+            return m_sampleShape;
+        }
+
+        const NDShape& m_sampleShape;
         std::vector<IndexType> m_indicesBuffer;
         std::vector<ElemType> m_buffer;
     };
@@ -198,4 +210,4 @@ private:
 
     DISABLE_COPY_AND_MOVE(TextParser);
 };
-}}}
+}
