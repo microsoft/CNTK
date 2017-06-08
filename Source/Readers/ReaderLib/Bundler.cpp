@@ -9,12 +9,12 @@
 #include <inttypes.h>
 #include <set>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Represents bundled chunk description with possible cleansed data.
 struct Bundler::BundlerChunkDescription : public ChunkDescription
 {
-    ChunkDescriptionPtr m_original;
+    ChunkDescription m_original;
 
     // Sequences that are invalid in at least one deserializer.
     std::set<size_t> m_invalid;
@@ -22,8 +22,8 @@ struct Bundler::BundlerChunkDescription : public ChunkDescription
 
 Bundler::Bundler(
     const ConfigParameters& readerConfig,
-    IDataDeserializerPtr primaryDeserializer,
-    std::vector<IDataDeserializerPtr> deserializers,
+    DataDeserializerPtr primaryDeserializer,
+    std::vector<DataDeserializerPtr> deserializers,
     bool cleanse)
     : DataDeserializerBase(true),
       m_deserializers(deserializers),
@@ -38,9 +38,9 @@ Bundler::Bundler(
         auto d = deserializers[j];
         for (auto i : d->GetStreamDescriptions())
         {
-            StreamDescriptionPtr stream = std::make_shared<StreamDescription>(*i);
-            stream->m_id = m_streams.size();
-            if (stream->m_definesMbSize)
+            StreamInformation stream = i;
+            stream.m_id = m_streams.size();
+            if (stream.m_definesMbSize)
             {
                 if (m_mbDefiningDeserializer != std::numeric_limits<size_t>::max())
                     RuntimeError("Only a single deserializer is allowed to define minibatch size, at least two found.");
@@ -65,7 +65,7 @@ void Bundler::CreateChunkDescriptions()
     {
         RuntimeError("Driving deserializer should at least provide one chunk.");
     }
-    if (CHUNKID_MAX < chunks.size())
+    if (ChunkIdMax < chunks.size())
     {
         RuntimeError("Driving deserializer provided too many chunks.");
     }
@@ -88,7 +88,7 @@ void Bundler::CreateChunkDescriptions()
 
     // Build bundling chunks using underlying deserializers.
     std::vector<SequenceDescription> sequenceDescriptions;
-    sequenceDescriptions.reserve(chunks.front()->m_numberOfSequences);
+    sequenceDescriptions.reserve(chunks.front().m_numberOfSequences);
     SequenceDescription s;
     for (ChunkIdType chunkIndex = 0; chunkIndex < chunks.size(); ++chunkIndex)
     {
@@ -97,7 +97,7 @@ void Bundler::CreateChunkDescriptions()
         sequenceDescriptions.clear();
 
         // Iterating thru all sequences and identifying whether they are valid among all deserializers.
-        m_primaryDeserializer->GetSequencesForChunk(chunks[chunkIndex]->m_id, sequenceDescriptions);
+        m_primaryDeserializer->GetSequencesForChunk(chunks[chunkIndex].m_id, sequenceDescriptions);
         std::set<size_t> invalid;
         for (size_t sequenceIndex = 0; sequenceIndex < sequenceDescriptions.size(); ++sequenceIndex)
         {
@@ -143,13 +143,13 @@ void Bundler::CreateChunkDescriptions()
         // Build a chunk for valid sequences.
         if (numberOfSamples > 0)
         {
-            auto cd = std::make_shared<BundlerChunkDescription>();
-            cd->m_numberOfSamples = numberOfSamples;
-            cd->m_numberOfSequences = numberOfSequences;
-            cd->m_id = (ChunkIdType) m_chunks.size();
-            cd->m_original = chunks[chunkIndex];
+            BundlerChunkDescription cd;
+            cd.m_numberOfSamples = numberOfSamples;
+            cd.m_numberOfSequences = numberOfSequences;
+            cd.m_id = (ChunkIdType) m_chunks.size();
+            cd.m_original = chunks[chunkIndex];
+            cd.m_invalid = std::move(invalid);
             m_chunks.push_back(cd);
-            cd->m_invalid = std::move(invalid);
         }
     }
 
@@ -170,9 +170,9 @@ ChunkDescriptions Bundler::GetChunkDescriptions()
 // Gets sequence descriptions for a chunk.
 void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& sequences)
 {
-    BundlerChunkDescriptionPtr chunk = m_chunks[chunkId];
-    ChunkDescriptionPtr original = chunk->m_original;
-    m_primaryDeserializer->GetSequencesForChunk(original->m_id, sequences);
+    const BundlerChunkDescription& chunk = m_chunks[chunkId];
+    const ChunkDescription& original = chunk.m_original;
+    m_primaryDeserializer->GetSequencesForChunk(original.m_id, sequences);
 
     std::vector<SequenceDescription> result;
     if (m_takePrimarySequenceLength) // No need to consult other deserializers.
@@ -181,7 +181,7 @@ void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDesc
         result.reserve(sequences.size());
         for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
         {
-            if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
+            if (chunk.m_invalid.find(sequenceIndex) != chunk.m_invalid.end())
             {
                 continue;
             }
@@ -196,7 +196,7 @@ void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDesc
         SequenceDescription s;
         for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
         {
-            if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
+            if (chunk.m_invalid.find(sequenceIndex) != chunk.m_invalid.end())
                 continue;
 
             auto sequence = sequences[sequenceIndex];
@@ -245,21 +245,21 @@ public:
     BundlingChunk(size_t numberOfInputs, Bundler* parent, ChunkIdType chunkId)
         : m_numberOfInputs(numberOfInputs), m_parent(parent), m_chunkId(chunkId)
     {
-        BundlerChunkDescriptionPtr chunk = m_parent->m_chunks[m_chunkId];
-        ChunkDescriptionPtr original = chunk->m_original;
+        const BundlerChunkDescription& chunk = m_parent->m_chunks[m_chunkId];
+        const ChunkDescription& original = chunk.m_original;
 
         auto& deserializers = m_parent->m_deserializers;
         std::vector<SequenceDescription> sequences;
-        sequences.reserve(original->m_numberOfSequences);
+        sequences.reserve(original.m_numberOfSequences);
 
         // Creating chunk mapping.
-        m_parent->m_primaryDeserializer->GetSequencesForChunk(original->m_id, sequences);
-        ChunkPtr drivingChunk = m_parent->m_primaryDeserializer->GetChunk(original->m_id);
+        m_parent->m_primaryDeserializer->GetSequencesForChunk(original.m_id, sequences);
+        ChunkPtr drivingChunk = m_parent->m_primaryDeserializer->GetChunk(original.m_id);
         m_sequenceToSequence.resize(deserializers.size() * sequences.size());
         m_innerChunks.resize(deserializers.size() * sequences.size());
         for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
         {
-            if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
+            if (chunk.m_invalid.find(sequenceIndex) != chunk.m_invalid.end())
             {
                 continue;
             }
@@ -276,7 +276,7 @@ public:
             auto& chunkTable = m_parent->m_weakChunkTable[deserializerIndex];
             for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
             {
-                if (chunk->m_invalid.find(sequenceIndex) != chunk->m_invalid.end())
+                if (chunk.m_invalid.find(sequenceIndex) != chunk.m_invalid.end())
                 {
                     continue;
                 }
@@ -316,4 +316,4 @@ ChunkPtr Bundler::GetChunk(ChunkIdType chunkId)
     return std::make_shared<BundlingChunk>(m_streams.size(), this, chunkId);
 }
 
-}}}
+}

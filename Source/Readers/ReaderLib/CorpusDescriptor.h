@@ -13,7 +13,7 @@
 #include <functional>
 #include <sstream>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Represents a full corpus.
 // Defines which sequences should participate in the reading.
@@ -130,4 +130,4 @@ private:
 
 typedef std::shared_ptr<CorpusDescriptor> CorpusDescriptorPtr;
 
-}}}
+}

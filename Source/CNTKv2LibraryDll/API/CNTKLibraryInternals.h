@@ -412,14 +412,19 @@ namespace CNTK
         class Optional
         {
         public:
-            
+
             Optional() = default;
-            
-            Optional& operator= (T value) 
+
+            Optional& operator= (T value)
             {
                 m_initialized = true;
                 m_value = value;
                 return *this;
+            }
+
+            void Reset()
+            {
+                m_initialized = false;
             }
 
             bool IsInitialized() const

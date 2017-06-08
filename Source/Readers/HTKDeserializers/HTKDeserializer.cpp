@@ -10,7 +10,9 @@
 #include "StringUtil.h"
 #include <unordered_set>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 std::unordered_map<std::string, unsigned int> htkfeatreader::parsedpath::archivePathStringMap;
 std::vector<std::wstring> htkfeatreader::parsedpath::archivePathStringVector;
@@ -45,7 +47,7 @@ HTKDeserializer::HTKDeserializer(
         InvalidArgument("Cannot expand utterances of the primary stream %ls, please change your configuration.", inputName.c_str());
     }
 
-    m_elementType = AreEqualIgnoreCase(precision,  L"float") ? ElementType::tfloat : ElementType::tdouble;
+    m_elementType = AreEqualIgnoreCase(precision,  L"float") ? DataType::Float : DataType::Double;
     m_dimension = config.GetFeatureDimension();
     m_dimension = m_dimension * (1 + context.first + context.second);
 
@@ -74,7 +76,7 @@ HTKDeserializer::HTKDeserializer(
     m_verbosity = feature(L"verbosity", 0);
 
     auto context = config.GetContextWindow();
-    m_elementType = config.GetElementType();
+    m_elementType = config.GetDataType();
 
     m_dimension = config.GetFeatureDimension();
     m_dimension = m_dimension * (1 + context.first + context.second);
@@ -250,12 +252,12 @@ void HTKDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
 // Describes exposed stream - a single stream of htk features.
 void HTKDeserializer::InitializeStreams(const wstring& featureName)
 {
-    StreamDescriptionPtr stream = make_shared<StreamDescription>();
-    stream->m_id = 0;
-    stream->m_name = featureName;
-    stream->m_sampleLayout = make_shared<TensorShape>(m_dimension);
-    stream->m_elementType = m_elementType;
-    stream->m_storageType = StorageType::dense;
+    StreamInformation stream;
+    stream.m_id = 0;
+    stream.m_name = featureName;
+    stream.m_sampleLayout = NDShape({ m_dimension });
+    stream.m_elementType = m_elementType;
+    stream.m_storageFormat = StorageFormat::Dense;
     m_streams.push_back(stream);
 }
 
@@ -280,12 +282,12 @@ ChunkDescriptions HTKDeserializer::GetChunkDescriptions()
 
     for (ChunkIdType i = 0; i < m_chunks.size(); ++i)
     {
-        auto cd = make_shared<ChunkDescription>();
-        cd->m_id = i;
-        cd->m_numberOfSamples = m_chunks[i].GetTotalFrames();
+        ChunkDescription cd;
+        cd.m_id = i;
+        cd.m_numberOfSamples = m_chunks[i].GetTotalFrames();
         // In frame mode, each frame is represented as sequence.
         // The augmentation is still done for frames in the same sequence only, please see GetSequenceById method.
-        cd->m_numberOfSequences = m_frameMode ? m_chunks[i].GetTotalFrames() : m_chunks[i].GetNumberOfUtterances();
+        cd.m_numberOfSequences = m_frameMode ? m_chunks[i].GetTotalFrames() : m_chunks[i].GetNumberOfUtterances();
         chunks.push_back(cd);
     }
     return chunks;
@@ -326,7 +328,7 @@ void HTKDeserializer::GetSequencesForChunk(ChunkIdType chunkId, vector<SequenceD
             f.m_key.m_sequence = sequence;
             f.m_key.m_sample = 0;
             f.m_indexInChunk = offsetInChunk++;
-            if (SEQUENCELEN_MAX < utterance->GetNumberOfFrames())
+            if (SequenceLenMax < utterance->GetNumberOfFrames())
             {
                 RuntimeError("Maximum number of samples per sequence exceeded");
             }
@@ -450,7 +452,7 @@ private:
 // This class stores sequence data for HTK for floats.
 struct HTKFloatSequenceData : DenseSequenceData
 {
-    HTKFloatSequenceData(FeatureMatrix&& data) : m_buffer(data)
+    HTKFloatSequenceData(FeatureMatrix&& data, const NDShape& frameShape) : m_buffer(data), m_frameShape(frameShape)
     {
         m_numberOfSamples = (uint32_t)data.GetNumberOfColumns();
         if (m_numberOfSamples != data.GetNumberOfColumns())
@@ -464,20 +466,26 @@ struct HTKFloatSequenceData : DenseSequenceData
         return m_buffer.GetData();
     }
 
+    const NDShape& GetSampleShape() override
+    {
+        return m_frameShape;
+    }
+
 private:
     FeatureMatrix m_buffer;
+    const NDShape& m_frameShape;
 };
 
 // This class stores sequence data for HTK for doubles.
 struct HTKDoubleSequenceData : DenseSequenceData
 {
-    HTKDoubleSequenceData(FeatureMatrix& data) : m_buffer(data.GetData(), data.GetData() + data.GetTotalSize())
+    HTKDoubleSequenceData(FeatureMatrix& data, const NDShape& frameShape)
+        : m_buffer(data.GetData(), data.GetData() + data.GetTotalSize()),
+          m_frameShape(frameShape)
     {
         m_numberOfSamples = (uint32_t)data.GetNumberOfColumns();
         if (m_numberOfSamples != data.GetNumberOfColumns())
-        {
             RuntimeError("Maximum number of samples per sequence exceeded.");
-        }
     }
 
     const void* GetDataBuffer() override
@@ -485,8 +493,14 @@ struct HTKDoubleSequenceData : DenseSequenceData
         return m_buffer.data();
     }
 
+    const NDShape& GetSampleShape() override
+    {
+        return m_frameShape;
+    }
+
 private:
     std::vector<double> m_buffer;
+    const NDShape& m_frameShape;
 };
 
 // Copies a source into a destination with the specified destination offset.
@@ -568,10 +582,10 @@ void HTKDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<Seq
 
     // Copy features to the sequence depending on the type.
     DenseSequenceDataPtr result;
-    if (m_elementType == ElementType::tdouble)
-        result = make_shared<HTKDoubleSequenceData>(features);
-    else if (m_elementType == ElementType::tfloat)
-        result = make_shared<HTKFloatSequenceData>(std::move(features));
+    if (m_elementType == DataType::Double)
+        result = make_shared<HTKDoubleSequenceData>(features, m_streams.front().m_sampleLayout);
+    else if (m_elementType == DataType::Float)
+        result = make_shared<HTKFloatSequenceData>(std::move(features), m_streams.front().m_sampleLayout);
     else
         LogicError("Currently, HTK Deserializer supports only double and float types.");
 
@@ -619,4 +633,4 @@ bool HTKDeserializer::GetSequenceDescription(const SequenceDescription& primary,
     return true;
 }
 
-}}}
+}

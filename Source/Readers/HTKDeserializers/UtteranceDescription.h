@@ -8,7 +8,7 @@
 #include "DataDeserializer.h"
 #include "HTKFeaturesIO.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // This class represents a descriptor for a single utterance.
 // It is only used internally by the HTK deserializer.
@@ -40,4 +40,4 @@ public:
     void SetId(size_t id) { m_id = id; }
 };
 
-}}}
+}

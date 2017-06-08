@@ -51,11 +51,11 @@ namespace CNTK
         Unknown = 0,
         Float = 1,
         Double = 2,
+        UChar = 3,
 
         /* TODO:
         Bit,
         Char,
-        UChar,
         Short,
         UShort,
         Int,
@@ -4770,11 +4770,16 @@ namespace CNTK
     ///
     struct StreamInformation
     {
+        StreamInformation() : m_id(0), m_storageFormat(StorageFormat::Dense), m_elementType(DataType::Unknown),
+            m_sampleLayout(NDShape::Unknown)
+        {}
+
         std::wstring m_name;           // Unique name of the stream
         size_t m_id;                   // Unique identifier of the stream
         StorageFormat m_storageFormat; // Storage format of the stream
         DataType m_elementType;        // Element type of the stream
         NDShape m_sampleLayout;        // Layout of the sample for the stream
+        bool m_definesMbSize = false;  // Flag indicating whether this stream defines minibatch size.
 
         std::wstring AsString() const
         {
@@ -5831,6 +5836,7 @@ namespace CNTK
         const CheckpointConfig& checkpointing = { L"" },
         const CrossValidationConfig& crossValidation = { nullptr },
         const TestConfig& test = { nullptr });
+    
 }
 
 

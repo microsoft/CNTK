@@ -8,7 +8,7 @@
 #include "Serialization.h"
 #include "PrimitiveFunction.h"
 #include "CompositeFunction.h"
-
+#include "CNTKLibraryExperimental.h"
 
 namespace CNTK
 {

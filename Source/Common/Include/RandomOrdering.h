@@ -50,6 +50,17 @@ inline void RandomShuffleMT(TVector& v, std::mt19937_64& rng)
     }
 }
 
+template <typename TVector>
+inline void RandomShuffleMT(TVector& v, size_t begin, size_t end, std::mt19937_64& rng)
+{
+    for(size_t i = begin; i < end; ++i)
+    {
+        // Pick a random location a location and swap with current
+        const size_t randomLocation = RandMT(begin, end, rng);
+        std::swap(v[i], v[randomLocation]);
+    }
+}
+
 class RandomOrdering // note: NOT thread-safe at all
 {
     // constants for randomization

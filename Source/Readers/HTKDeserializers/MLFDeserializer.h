@@ -11,7 +11,7 @@
 #include "MLFUtils.h"
 #include "MLFIndexer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Class represents an MLF deserializer.
 // Provides a set of chunks/sequences to the upper layers.
@@ -55,7 +55,7 @@ private:
     std::vector<std::tuple<size_t, ChunkIdType, uint32_t>> m_keyToChunkLocation;
 
     // Type of the data this serializer provides.
-    ElementType m_elementType;
+    DataType m_elementType;
 
     // Array of available categories.
     // We do no allocate data for all input sequences, only returning a pointer to existing category.
@@ -85,4 +85,4 @@ private:
     std::vector<std::wstring> m_mlfFiles;
 };
 
-}}}
+}

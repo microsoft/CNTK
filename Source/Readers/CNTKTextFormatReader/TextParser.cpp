@@ -14,7 +14,9 @@
 #define isSign(c) ((c == '-' || c == '+'))
 #define isE(c) ((c == 'e' || c == 'E'))
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 inline bool IsDigit(char c)
 {
@@ -53,8 +55,8 @@ public:
 template <class ElemType>
 struct TextParser<ElemType>::StreamInfo
 {
-    StorageType m_type;
-    size_t m_sampleDimension;
+    StorageFormat m_type;
+    NDShape m_sampleShape;
 };
 
 template <class ElemType>
@@ -105,12 +107,13 @@ TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const std::wstring&
             m_maxAliasLength = alias.length();
         }
         m_aliasToIdMap[alias] = i;
-        m_streamInfos[i].m_type = stream.m_storageType;
-        m_streamInfos[i].m_sampleDimension = stream.m_sampleDimension;
 
-        auto streamDescription = std::make_shared<StreamDescription>(stream);
-        streamDescription->m_sampleLayout = std::make_shared<TensorShape>(stream.m_sampleDimension);
+        StreamInformation streamDescription = stream;
+        streamDescription.m_sampleLayout = NDShape({ stream.m_sampleDimension });
         m_streams.push_back(streamDescription);
+
+        m_streamInfos[i].m_type = stream.m_storageFormat;
+        m_streamInfos[i].m_sampleShape = streamDescription.m_sampleLayout;
     }
 
     assert(m_maxAliasLength > 0);
@@ -206,12 +209,11 @@ ChunkDescriptions TextParser<ElemType>::GetChunkDescriptions()
     result.reserve(index.Chunks().size());
     for (ChunkIdType i = 0; i < index.Chunks().size(); ++i)
     {
-        result.push_back(shared_ptr<ChunkDescription>(
-            new ChunkDescription{
+        result.push_back(ChunkDescription{
                 i,
                 index.Chunks()[i].NumSamples(),
                 index.Chunks()[i].Sequences().size()
-        }));
+        });
     }
 
     return result;
@@ -355,14 +357,14 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     // TODO: reuse loaded sequences instead of creating new ones!
     for (auto const & stream : m_streamInfos)
     {
-        if (stream.m_type == StorageType::dense)
+        if (stream.m_type == StorageFormat::Dense)
         {
             sequence.push_back(make_unique<DenseInputStreamBuffer>(
-                stream.m_sampleDimension * sequenceDsc.m_numberOfSamples));
+                stream.m_sampleShape.Dimensions()[0] * sequenceDsc.m_numberOfSamples, stream.m_sampleShape));
         }
         else
         {
-            sequence.push_back(make_unique<SparseInputStreamBuffer>());
+            sequence.push_back(make_unique<SparseInputStreamBuffer>(stream.m_sampleShape));
         }
     }
 
@@ -412,7 +414,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         {
             fprintf(stderr,
                 "ERROR: Input ('%ls') is empty in sequence (id = %" PRIu64 ") %ls.\n",
-                m_streams[i]->m_name.c_str(), sequenceDsc.m_key, GetFileInfo().c_str());
+                m_streams[i].m_name.c_str(), sequenceDsc.m_key, GetFileInfo().c_str());
             hasEmptyInputs = true;
         }
 
@@ -424,7 +426,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
                 fprintf(stderr,
                     "WARNING: Input ('%ls') contains more samples than expected"
                     " (%u vs. %" PRIu64 ") for sequence (id = %" PRIu64 ") %ls.\n",
-                    m_streams[i]->m_name.c_str(), sequence[i]->m_numberOfSamples, expectedRowCount,
+                    m_streams[i].m_name.c_str(), sequence[i]->m_numberOfSamples, expectedRowCount,
                     sequenceDsc.m_key, GetFileInfo().c_str());
             }
         }
@@ -473,12 +475,7 @@ void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, co
     {
         const StreamInfo& stream = m_streamInfos[j];
         SequenceDataBase* data = sequenceData[j].get();
-        if (stream.m_type == StorageType::dense)
-        {
-            auto denseData = static_cast<DenseInputStreamBuffer*>(data);
-            denseData->m_sampleLayout = m_streams[j]->m_sampleLayout;
-        }
-        else
+        if (stream.m_type == StorageFormat::SparseCSC)
         {
             auto sparseData = static_cast<SparseInputStreamBuffer*>(data);
             sparseData->m_indices = sparseData->m_indicesBuffer.data();
@@ -599,13 +596,13 @@ bool TextParser<ElemType>::TryReadSample(SequenceBuffer& sequence, size_t& bytes
 
     const StreamInfo& stream = m_streamInfos[id];
 
-    if (stream.m_type == StorageType::dense)
+    if (stream.m_type == StorageFormat::Dense)
     {
         DenseInputStreamBuffer* data = reinterpret_cast<DenseInputStreamBuffer*>(sequence[id].get());
         vector<ElemType>& values = data->m_buffer;
         size_t size = values.size();
         assert(size % stream.m_sampleDimension == 0);
-        if (!TryReadDenseSample(values, stream.m_sampleDimension, bytesToRead))
+        if (!TryReadDenseSample(values, stream.m_sampleShape.Dimensions()[0], bytesToRead))
         {
             // expected a dense sample, but was not able to fully read it, ignore it.
             if (values.size() != size)
@@ -626,7 +623,7 @@ bool TextParser<ElemType>::TryReadSample(SequenceBuffer& sequence, size_t& bytes
         vector<IndexType>& indices = data->m_indicesBuffer;
         assert(values.size() == indices.size());
         size_t size = values.size();
-        if (!TryReadSparseSample(values, indices, stream.m_sampleDimension, bytesToRead))
+        if (!TryReadSparseSample(values, indices, stream.m_sampleShape.Dimensions()[0], bytesToRead))
         {
             // expected a sparse sample, but something went south, ignore it.
             if (values.size() != size)
@@ -1307,4 +1304,4 @@ bool TextParser<ElemType>::GetSequenceDescriptionByKey(const KeyType& key, Seque
 
 template class TextParser<float>;
 template class TextParser<double>;
-}}}
+}
