@@ -679,26 +679,22 @@ namespace CNTK
             }
             else if (flatBufferOffset % storedRows == 0 && flatBufferLength % storedRows == 0) // can be expressed as column slice
             {
-                matrix = make_shared<Matrix<float>>(std::move(sob->ColumnSlice(flatBufferOffset / storedRows, flatBufferLength / storedRows, storedCols)));
+                // this slices the range as columns
+                // In order to not have to care about the actual SOB shape, we tell ColumnSlice()
+                // to interpret it as having 'storedCols', w.r.t. which we had found that we can column-slice.
+                matrix = make_shared<Matrix<float>>(std::move(sob->ColumnSlice(flatBufferOffset / storedRows,
+                                                                               flatBufferLength / storedRows,
+                                                                               storedCols)));
             }
             else // cannot be expressed as column slice
             {
 #if 1
-                matrix = make_shared<Matrix<float>>(std::move(sob->ReshapeSliceReshape(
-                    storedRows * storedCols, 1,              // interpret as flat vector --note: we know this is not a sparse object
-                    flatBufferOffset, flatBufferLength, 0, 1, // slice out the range
-                    flatBufferLength, 1)));                   // and reshape that into a column
-
-                //auto slice = ColumnSlice(startColumn, numCols, interpretAsCols);
-                //if (numRows != interpretAsRows)
-                //{
-                //    if (numCols != 1)
-                //        InvalidArgument("ReshapeSliceReshape: Slice must be memory-consecutive.");
-                //    // turn into column, slice (and later turn back)
-                //    slice = slice.ColumnSlice(startRow, numRows, interpretAsRows);
-                //}
-                //slice.Reshape(reshapeAsRows, reshapeAsCols);
-
+                // this does the following:
+                //  - reinterpret the SOB as a row vector of (storedRows * storedCols)
+                //  - column-slice the desired elements (which are really a range of row elements)
+                //  - reshape it back to a column
+                matrix = make_shared<Matrix<float>>(std::move(sob->ColumnSlice(flatBufferOffset, flatBufferLength, storedRows * storedCols).
+                                                                   Reshape(flatBufferLength, 1)));
 #else
                 matrix = make_shared<Matrix<float>>(std::move(sob->ReshapeSliceReshape(
                     1, storedRows * storedCols,              // interpret as flat vector --note: we know this is not a sparse object

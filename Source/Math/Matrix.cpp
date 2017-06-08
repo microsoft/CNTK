@@ -2015,7 +2015,7 @@ void Matrix<ElemType>::AdaDeltaUpdate(Matrix<ElemType>& gradients,
 }
 
 template <class ElemType>
-void Matrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
+Matrix<ElemType>& Matrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 {
     if (numRows != GetNumRows() || numCols != GetNumCols())
     {
@@ -2025,6 +2025,7 @@ void Matrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
             { NOT_IMPLEMENTED; },
             { m_GPUSparseMatrix->Reshape(numRows, numCols); });
     }
+    return *this;
 }
 
 // Note: Resize() will leave the matrix content undefined.
@@ -6187,7 +6188,7 @@ template void Matrix<char>::AssignValuesOf(const Matrix<char>&);
 template void Matrix<char>::CastAssignValuesOf(const MatrixBase& other);
 template bool Matrix<char>::IsEmpty() const;
 template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
-template void Matrix<char>::Reshape(const size_t, const size_t);
+template Matrix<char>& Matrix<char>::Reshape(const size_t, const size_t);
 template char* Matrix<char>::CopyToArray(void) const;
 
 // Matrix<short> methods
@@ -6213,7 +6214,7 @@ template void Matrix<short>::AssignValuesOf(const Matrix<short>&);
 template void Matrix<short>::CastAssignValuesOf(const MatrixBase& other);
 template bool Matrix<short>::IsEmpty() const;
 template void Matrix<short>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
-template void Matrix<short>::Reshape(const size_t, const size_t);
+template Matrix<short>& Matrix<short>::Reshape(const size_t, const size_t);
 template short* Matrix<short>::CopyToArray(void) const;
 
 template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
