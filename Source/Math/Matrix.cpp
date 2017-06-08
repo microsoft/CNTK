@@ -796,10 +796,18 @@ Matrix<ElemType> Matrix<ElemType>::ReshapeSliceReshape(size_t interpretAsRows, s
     size_t startRow, size_t numRows, size_t startColumn, size_t numCols,
     size_t reshapeAsRows, size_t reshapeAsCols) const
 {
+    if (interpretAsRows * interpretAsCols != GetNumElements())
+        InvalidArgument("ReshapeSliceReshape: Interpret-as parameter do not match matrix size.");
+    if (numRows * numCols != reshapeAsRows * reshapeAsCols)
+        InvalidArgument("ReshapeSliceReshape: Reshape-as parameter do not match slice.");
     if (startColumn + numCols > interpretAsCols || startRow + numRows > interpretAsRows)
         InvalidArgument("ReshapeSliceReshape: Slice out of bounds.");
-    if ((interpretAsRows != GetNumRows() || interpretAsRows != numRows || interpretAsRows != reshapeAsRows) &&
-        GetMatrixType() == MatrixType::SPARSE)
+    // fast path: it's just a column slice
+    if (interpretAsRows == GetNumRows() && interpretAsRows == numRows && interpretAsRows == reshapeAsRows)
+    {
+        return ColumnSlice(startColumn, numCols);
+    }
+    if (GetMatrixType() == MatrixType::SPARSE)
         InvalidArgument("ReshapeSliceReshape: For sparse matrices, rows cannot be slice-viewed.");
 
 #if 1 // naive implementation (not optimized)
