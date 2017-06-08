@@ -726,10 +726,17 @@ namespace CNTK
         // if last axis already has only 1 element then just reshape it away
         if (m_viewShape[rank - 1] == 1)
             return AsShape(sliceViewShape);
+        // set startOffset to 0 except for the last axis
 
         std::vector<size_t> startOffset(rank, 0);
-        std::vector<size_t> endOffset = m_viewShape.Dimensions();
         startOffset[rank - 1] = index;
+#if 1
+        // SliceView() keeps as many axes as extent[] has.
+        // Any additional axes are sliced to 1 element. So by passing sliceViewShape,
+        // which has been striped of the last axis, as extent[], the last axis will be
+        // sliced to 1 element and removed.
+        return SliceView(startOffset, /*extent=*/ sliceViewShape.Dimensions(), readOnly);
+#else
         endOffset[rank - 1] = index + 1;
         std::vector<size_t> lastOffset(rank);
         for (size_t i = 0; i < rank; ++i)
@@ -797,6 +804,7 @@ namespace CNTK
         }
 
         return MakeSharedObject<NDArrayView>(GetDataType(), sliceViewShape, IsReadOnly() || readOnly, matrix);
+#endif
     }
 
     NDArrayViewPtr NDArrayView::AsShape(const NDShape& newShape) const
