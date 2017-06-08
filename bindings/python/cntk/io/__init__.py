@@ -1062,3 +1062,31 @@ def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
         lines.append('%i\t|' % seq_idx + ' |'.join(line))
 
     return '\n'.join(lines)
+
+class UserChunk(cntk_py.SwigChunk):
+    def __init__(self):
+        super(UserChunk, self).__init__()
+
+    def get_sequence(self, chunkId):
+        raise NotImplementedError
+
+class UserDeserializer(cntk_py.SwigDataDeserializer):
+    def __init__(self):
+        super(UserDeserializer, self).__init__()
+
+        streams = { si.m_name: si for si in self.stream_infos() }
+        self.streams = Record(**streams)
+
+    def stream_infos(self):
+        raise NotImplementedError
+
+    def _stream_infos(self, sinfos=None):
+        # sinfos is a list of stream information, which we need to fill in
+        # place, # because Swig demands it that way.
+        sinfos.extend(self.stream_infos())
+
+    def chunk_infos(self):
+        raise NotImplementedError
+
+    def get_chunk(self, chunkId):
+        raise NotImplementedError

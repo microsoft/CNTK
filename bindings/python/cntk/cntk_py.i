@@ -45,6 +45,11 @@
 %rename(base64_image_deserializer) CNTK::Base64ImageDeserializer;
 %rename(_none) CNTK::DictionaryValue::Type::None;
 
+%rename(_get_stream_infos) CNTK::SwigDataDeserializer::_GetStreamInfos(PyObject*);
+%rename(_get_chunk_infos) CNTK::SwigDataDeserializer::_GetChunkInfos(size_t index, PyObject*);
+%rename(_get_chunk) CNTK::SwigDataDeserializer::_GetChunk(size_t index, PyObject*);
+%rename(_get_sequence) CNTK::SwigChunk::_GetSequence(size_t index, PyObject*);
+
 %include "CNTKWarnFilters.i"
 
 // Operator overloading is not supported by Python.
@@ -660,6 +665,16 @@ public:
 %feature("nodirector") CNTK::SwigMinibatchSource::StreamInfos();
 %feature("nodirector") CNTK::SwigMinibatchSource::GetNextMinibatch;//(size_t minibatchSizeInSamples, size_t minibatchSizeInSequences, size_t numberOfWorkers, size_t workerRank, const DeviceDescriptor&);
 %feature("nodirector") CNTK::SwigMinibatchSource::GetCheckpointState;
+
+%feature("directory") CNTK::SwigDataDeserializer;
+%feature("nodirector") CNTK::SwigDataDeserializer::GetStreamDescriptions;
+%feature("nodirector") CNTK::SwigDataDeserializer::GetChunkDescriptions;
+%feature("nodirector") CNTK::SwigDataDeserializer::GetChunk;
+%feature("nodirector") CNTK::SwigDataDeserializer::GetSequencesForChunk;
+%feature("nodirector") CNTK::SwigDataDeserializer::GetSequenceDescription;
+
+%feature("directory") CNTK::SwigChunk;
+%feature("nodirector") CNTK::SwigChunk::GetSequence;
 
 %{
     #include "CNTKLibrary.h"
@@ -1451,6 +1466,9 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 
     class SwigDataDeserializer;
     typedef std::shared_ptr<SwigDataDeserializer> SwigDataDeserializerPtr;
+
+    class SwigChunk;
+    typedef std::shared_ptr<SwigChunk> SwigChunkPtr;
 %}
 
 %shared_ptr(CNTK::SwigMinibatchSource)
@@ -1597,14 +1615,29 @@ namespace CNTK
         }
     };
 
+    class SwigChunk final : public CNTK::Chunk
+    {
+        std::unordered_set<StreamInformation> m_streamInfos;
+        std::once_flag m_streamInfosInitFlag;
+
+    public:
+        void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
+        {
+        }
+
+        virtual void _GetSequence(size_t index, PyObject*) = 0;
+    };
+
     class SwigDataDeserializer final : public CNTK::DataDeserializer
     {
         std::unordered_set<StreamInformation> m_streamInfos;
         std::once_flag m_streamInfosInitFlag;
 
-        std::unordered_map<StreamInformation, MinibatchData> m_minibatchData;
-
     public:
+        virtual void _GetStreamInfos(PyObject*) = 0;
+        virtual void _GetChunkInfos(PyObject*) = 0;
+        virtual void _GetChunk(size_t index, PyObject*) = 0;
+
         SwigDataDeserializer() { }
 
         std::vector<StreamInformation> GetStreamDescriptions() const override
@@ -1617,17 +1650,17 @@ namespace CNTK
             NOT_IMPLEMENTED;
         }
 
+        ChunkPtr GetChunk(ChunkIdType chunkId) override
+        {
+            NOT_IMPLEMENTED;
+        }
+
         void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& descriptions) override
         {
             NOT_IMPLEMENTED;
         }
 
         bool GetSequenceDescription(const SequenceDescription& primary, SequenceDescription& description) override
-        {
-            NOT_IMPLEMENTED;
-        }
-
-        ChunkPtr GetChunk(ChunkIdType chunkId) override
         {
             NOT_IMPLEMENTED;
         }
