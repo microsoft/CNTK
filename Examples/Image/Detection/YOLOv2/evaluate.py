@@ -7,6 +7,7 @@
 from py_cpu_nms import *
 import cv2, os
 import matplotlib.pyplot as mp
+import pdb
 
 from cntk import *
 
@@ -23,10 +24,10 @@ class ClassMap():
 
 LIMIT_TO_FIRST = None
 NMS_IOU_THRESHOLD = 0.7
-cls_map = ClassMap(r"..\..\DataSets\Pascal\class_map.txt")
+cls_map = ClassMap(r"..\..\DataSets\Pascal\mappings\class_map.txt")
 DATA_SET = "Overfit"
-CONF_THRESHOLD = 0.15
-cls_map = ClassMap(r"..\..\DataSets\Pascal\class_map.txt") if DATA_SET == "Pascal_VOC_2007" or DATA_SET=="Overfit"\
+CONF_THRESHOLD = -1.0 # 0.015
+cls_map = ClassMap(r"..\..\DataSets\Pascal\mappings\class_map.txt") if DATA_SET == "Pascal_VOC_2007" or DATA_SET=="Overfit"\
     else ClassMap(r"..\..\DataSets\Grocery\Class_map.txt")
 
 def draw_bb_on_image(image, bb_list):
@@ -190,7 +191,7 @@ if __name__ == "__main__":
         data_path = r"..\..\DataSets\Overfit"
         img_list = [37,38]
         # img_list = open(r"..\..\DataSets\Pascal\VOCdevkit\VOC2007\ImageSets\Main\test.txt").read().split()
-        save_path = os.path.join(".", "outputdir", "results", "overfit")
+        save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputdir", "results", "overfit")
         if not os.path.exists(save_path):
             os.mkdir(save_path)
 

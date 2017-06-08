@@ -20,6 +20,9 @@ from TrainUDFyolov2 import *
 from PARAMETERS import *
 import PARAMETERS as par
 
+import pdb
+from cntk_debug import DebugLayer
+from cntk_debug_single import DebugLayerSingle
 
 # Create a minibatch source.
 def create_image_mb_source(image_file, gtb_file, is_training, total_number_of_samples):
@@ -85,22 +88,40 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size,
     model_name = "checkpoint"
 
 
-    test_config = TestConfig(source=test_source, mb_size=minibatch_size) if test_source else None
-    checkpoint_config = CheckpointConfig(filename=os.path.join(model_path, model_name),
-                                           frequency=5000,
-                                           preserve_all=True,
-                                           restore=restore) if model_path else None
-    cv_config = cntk.CrossValidationConfig(None, mb_size=par_minibatch_size, frequency=callback_frequency*par_epoch_size, callback=safe_model_callback) if callback_frequency is not None else None
+    #test_config = TestConfig(source=test_source, mb_size=minibatch_size) if test_source else None
+    #checkpoint_config = CheckpointConfig(filename=os.path.join(model_path, model_name),
+    #                                       frequency=5000,
+    #                                       preserve_all=True,
+    #                                       restore=restore) if model_path else None
+    cv_config = cntk.CrossValidationConfig(None, mb_size=par_minibatch_size, frequency=1,
+                                           callback=safe_model_callback)
+
+    if False:
+        mb = train_source.next_minibatch(1)
+        test_features = mb[train_source.streams.features]
+
+        WH_out = network['mse'].find_by_name('WH-Out')
+        feat = cntk.combine([WH_out]).eval(test_features)
+        print("raw cntk: {}".format(feat[0, 527, :]))
+
+        udf_wh_out = network['mse'].find_by_name('WH_Out_d_alias')
+        feat = cntk.combine([udf_wh_out]).eval(test_features)
+        print("udf raw cntk: {}".format(feat[0, 527, :]))
+
     # Train all minibatches
     training_session(
         trainer=trainer, mb_source=train_source,
         model_inputs_to_streams=input_map,
         mb_size=minibatch_size,
         progress_frequency=epoch_size,
-        checkpoint_config= CheckpointConfig(filename=os.path.join(model_path, "Checkpoint_YOLOv2"), restore=restore) if model_path is not None else None,
+        checkpoint_config= CheckpointConfig(filename=os.path.join(model_path, "Checkpoint_YOLOv2"), restore=False) if model_path is not None else None,
         test_config=TestConfig(source=test_source, mb_size=minibatch_size) if test_source else None,
         cv_config=cv_config
     ).train()
+
+    #WH_out = network['mse'].find_by_name('WH-Out')
+    #feat = cntk.combine([WH_out]).eval(test_features)
+    #print("raw cntk: {}".format(feat[0, 527, :]))
 
 
 # Train and evaluate the network.
@@ -227,8 +248,10 @@ if __name__ == '__main__':
     else:
         gtb_transformed = gtb_input
 
-
     from ErrorFunction import get_error
+
+    if False:
+        output = user_function(DebugLayer(output, image_input, gtb_transformed, debug_name="out-img-gt"))
     mse = get_error(output, gtb_transformed, cntk_only=False)
 
     network = {
@@ -268,4 +291,5 @@ if __name__ == '__main__':
         print("Saved model to " + save_path)
 
     from cntk.logging.graph import plot
-    plot(output, "./yopar.pdf")
+    plot(output, "./yopar.png")
+    plot(network['mse'], "./yolo_mse.png")

@@ -10,6 +10,7 @@ from cntk.ops import *
 import numpy as np
 import math
 from PARAMETERS import *
+import pdb
 
 class LambdaFunc(UserFunction): # usefoll for debugging...
     def __init__(self,
@@ -175,6 +176,7 @@ class TrainFunction(UserFunction):
     ####### user functions ##########
     def create_outputs_like_cyolo(self, eval_results, gtb_inputs):
 
+        # Handling sequences ...
         if isinstance(eval_results, list): # Apply on sequence
             goal = []
             scale = []
@@ -183,7 +185,6 @@ class TrainFunction(UserFunction):
                 goal.append(g)
                 scale.append(s)
             return goal, scale
-
 
         target = np.zeros(eval_results.shape)
         scale = np.zeros(eval_results.shape)
@@ -221,25 +222,28 @@ class TrainFunction(UserFunction):
                 ious = self.numpy_iou(pred_bb_transposed, gtb_array[gtb_index, 0:4])
                 ious.shape += (1,)
                 target[sample][:,4:5] = np.maximum(target[sample][:,4:5], ious) #objectness is not learned here! but we need to find the highest iou amogst the gtb to determine whether it is no_obj!
-                gtb_cls_nr = int(gtb_array[gtb_index, 4] - 1)+5
-                target[sample, :, gtb_cls_nr:gtb_cls_nr + 1] += np.select([ious>0],[1],0)
+                #gtb_cls_nr = int(gtb_array[gtb_index, 4] - 1)+5
+                #target[sample, :, gtb_cls_nr:gtb_cls_nr + 1] += np.select([ious>0],[1],0)
 
         #set no_obj
-        target[:,:,4:5]=np.select(target[:,:,4:5] > self.objectness_threshold, target[:,:,4:5], 0)
-        scale[:,:,4:5]=np.select([target[:,:,4:5]==0], [self.lambda_no_obj],0)
+        #pdb.set_trace()
+        #scale[:,:,4:5]=np.select(target[:,:,4:5] > self.objectness_threshold, [self.lambda_obj], self.lambda_no_obj)
+        greater_than = np.where(target[:,:,4:5] > self.objectness_threshold)
+        scale[:,:,4:5] = self.lambda_no_obj
+        scale[greater_than] = self.lambda_obj
 
-        divisor_wzero = np.add.reduce(target[:,:,5:], axis=2)
-        divisor = np.zeros(divisor_wzero.shape) + divisor_wzero
-        divisor[np.where(divisor == 0)] = 1
-
-        divisor.shape += (1,)
-        divisor_wzero.shape += (1,)
-
-        target[:, :, 5:] /= divisor
-        active = np.zeros(divisor.shape)
-        active[np.where(divisor_wzero > 0)] = 1
-
-        scale[:,:,5:] += active
+        # divisor_wzero = np.add.reduce(target[:,:,5:], axis=2)
+        # divisor = np.zeros(divisor_wzero.shape) + divisor_wzero
+        # divisor[np.where(divisor == 0)] = 1
+        #
+        # divisor.shape += (1,)
+        # divisor_wzero.shape += (1,)
+        #
+        # target[:, :, 5:] /= divisor
+        # active = np.zeros(divisor.shape)
+        # active[np.where(divisor_wzero > 0)] = 1
+        #
+        # scale[:,:,5:] += active
 
 
         ### set x,y,w,h,o for the resposible box ###
@@ -273,7 +277,7 @@ class TrainFunction(UserFunction):
                     vector_index = y * self.grid_size_hor * self.num_anchorboxes + x * self.num_anchorboxes + highest_iou_index
 
                     # BUT set only if the gridcell is not already responsible for another gtb with higher iou
-                    if highest_iou > target[sample][vector_index][4]:
+                    if highest_iou >= target[sample][vector_index][4] or target[sample][vector_index][0] == 0:
                         target[sample][vector_index][0] = gtb_array[i][0]
                         target[sample][vector_index][1] = gtb_array[i][1]
                         target[sample][vector_index][2] = gtb_array[i][2]
@@ -282,6 +286,15 @@ class TrainFunction(UserFunction):
 
                         scale[sample][vector_index][0:4] = self.lambda_coord
                         scale[sample][vector_index][4] = self.lambda_obj * (2 - gtb_array[i][2]*gtb_array[i][3])#TODO check if 2-... is necessary
+
+                        target[sample][vector_index][5:] = 0
+                        target[sample][vector_index][5 + int(gtb_array[i][4]) - 1] = 1
+                        scale[sample][vector_index][5:] = self.lambda_cls
+
+        #ost = target[:,:,4:5]
+        #osc = scale[:,:,4:5]
+        #print("obj_targets: {}".format(ost.flatten()))
+        #print("obj_scales: {}".format(osc.flatten()))
 
         return target, scale
 
@@ -396,23 +409,23 @@ class TrainFunction(UserFunction):
             ipdb.set_trace()
             exit()
 
-def test_create_outputs_like_cyolo():
-    """
-    Test for create_outputs_like_cyolo()
-    :return:
-    """
-    assert False, "Not implemented yet"
-
-def test_iou():
-    """
-    Test for iou()
-    :return:
-    """
-    assert False, "Not implemented yet"
-
-def test_numpy_iou():
-    """
-    Test for numpy_iou()
-    :return:
-    """
-    assert False, "Not implemented yet"
+# def test_create_outputs_like_cyolo():
+#     """
+#     Test for create_outputs_like_cyolo()
+#     :return:
+#     """
+#     assert False, "Not implemented yet"
+#
+# def test_iou():
+#     """
+#     Test for iou()
+#     :return:
+#     """
+#     assert False, "Not implemented yet"
+#
+# def test_numpy_iou():
+#     """
+#     Test for numpy_iou()
+#     :return:
+#     """
+#     assert False, "Not implemented yet"
