@@ -821,14 +821,13 @@ Matrix<ElemType> Matrix<ElemType>::ReshapeSliceReshape(size_t interpretAsRows, s
 
 #if 1 // naive implementation (not optimized)
     // reshape and slice the column
-    auto slice = Reshaped(interpretAsRows, interpretAsCols).ColumnSlice(startColumn, numCols);
+    auto slice = ColumnSlice(startColumn, numCols, interpretAsCols);
     if (numRows != interpretAsRows)
     {
         if (numCols != 1)
             InvalidArgument("ReshapeSliceReshape: Slice must be memory-consecutive.");
         // turn into column, slice (and later turn back)
-        slice.Reshape(1, interpretAsRows);
-        slice = slice.ColumnSlice(startRow, numRows);
+        slice = slice.ColumnSlice(startRow, numRows, interpretAsRows);
     }
     slice.Reshape(reshapeAsRows, reshapeAsCols);
     return slice;
@@ -844,12 +843,16 @@ Matrix<ElemType>& Matrix<ElemType>::AssignColumnSlice(const Matrix<ElemType>& fr
 
     DISPATCH_MATRIX_ON_FLAG(&fromMatrix, this,
         {
-            if (m_CPUMatrix) m_CPUMatrix->AssignColumnSlice(*fromMatrix.m_CPUMatrix, startColumn, numCols);
-            else m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(fromMatrix.m_CPUMatrix->ColumnSlice(startColumn, numCols, numCols));
+            if (m_CPUMatrix)
+                m_CPUMatrix->AssignColumnSlice(*fromMatrix.m_CPUMatrix, startColumn, numCols);
+            else
+                m_CPUMatrix = make_shared<CPUMatrix<ElemType>>(fromMatrix.m_CPUMatrix->ColumnSlice(startColumn, numCols, numCols));
         },
         {
-            if (m_GPUMatrix) m_GPUMatrix->AssignColumnSlice(*fromMatrix.m_GPUMatrix, startColumn, numCols);
-            else m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(fromMatrix.m_GPUMatrix->ColumnSlice(startColumn, numCols, numCols));
+            if (m_GPUMatrix)
+                m_GPUMatrix->AssignColumnSlice(*fromMatrix.m_GPUMatrix, startColumn, numCols);
+            else
+                m_GPUMatrix = make_shared<GPUMatrix<ElemType>>(fromMatrix.m_GPUMatrix->ColumnSlice(startColumn, numCols, numCols));
         },
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
