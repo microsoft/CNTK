@@ -269,6 +269,21 @@ class Variable::AutoBatch
             op == PrimitiveOpType::Slice;
     }
 
+    // predicate whether an op's gradient is a no-op (just copies the output gradient)
+    // These are short-circuited in backprop.
+    static bool IsGradientCopyingOp(PrimitiveOpType op, size_t inputIndex)
+    {
+        // if really needed, this can be done as a bit-test
+        return
+            op == PrimitiveOpType::StopGradient ||
+            op == PrimitiveOpType::Pass         ||
+            op == PrimitiveOpType::NoOp         ||
+            op == PrimitiveOpType::BarrierOp    ||
+            //op == PrimitiveOpType::Reshape      ||
+            op == PrimitiveOpType::Plus         ||
+            (op == PrimitiveOpType::Plus && inputIndex == 0);
+    }
+
     // class to manage the set of ready operations (the schedule)
     class ReadyOps
     {
@@ -905,6 +920,8 @@ public:
     }
 
     // recursively traverse the tree hanging off a Variable and build the m_consumer fields
+    // This propagates in depth-first order like a naive backprop, but only for the purpose
+    // of recording consumers of each node.
     // Unlike forward prop, we...
     //  - can skip any branch that does not need a gradient (!m_needsGradient and StopGradient ops).
     //  - short-circuit into batched ops (m_lazyIndex) so that we backprop through them instead
@@ -921,27 +938,37 @@ public:
         fail_if(!fields.m_needsGradient, "unexpectedly encountered a node with m_needsGradient=false??");
         fail_if(fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder, "unexpectedly encountered an Input or a Placeholder??");
 
-        // If a variable has the m_lazyIndex field set, it means that its value was not
-        // actually computed from its true input; but rather a slice into the result of
-        // a batched operation. In that case, we traverse through that batched operation
-        // instead. As a consequence, it is the batched operation that will be recorded as the
-        // consumer of all inputs of the batched operation, rather than the original
-        // unbatched operation. And as a consequence of that, back propagation will use
-        // the same batching that was determined in forward computation.
+        // Determine the function that 'var' is an output of.
+        // TODO:
+        // If that function is a no-op, such as Reshape or NoOp, then short-circuit straight into that input.
+        // BUGBUG: Maybe the wrong place here?
+        PrimitiveFunctionPtr fp;
+        auto* varp = &var;
+        {
+            // If 'var' has the m_lazyIndex field set, it means that its value was not
+            // actually computed from its true owner function; but rather a slice into the result of
+            // a batched operation. In that case, we traverse through that batched operation
+            // instead. As a consequence, it is the batched operation that will be recorded as the
+            // consumer of all inputs of the batched operation, rather than the original
+            // unbatched operation. And as a consequence of that, back propagation will use
+            // the same batching that was determined in forward computation.
+            auto& outFields = *varp->m_dataFields;
 #ifndef NO_BATCHED_BACKPROP
-        auto& f = fields.m_lazyIndex.first        // if var was computed via batched op
-                ? *fields.m_lazyIndex.first       // then backprop into the batched op
-                : *fields.m_ownerFunction.lock(); // otherwise traverse the original op
+            fp = outFields.m_lazyIndex.first       // if var was computed via batched op
+               ? outFields.m_lazyIndex.first       // then backprop into the batched op
+               : outFields.m_ownerFunction.lock(); // otherwise traverse the original op
 #else
-        auto& f = *fields.m_ownerFunction.lock();
+            fp = outFields.m_ownerFunction.lock();
 #endif
+        }
+        auto&f = *fp;
         // return if we already visited the function
         if (m_visitorTag.Visited(f.m_visitedTag))
             return;
 
         fail_if(f.m_op == PrimitiveOpType::StopGradient, "unexpectedly encountered a StopGradient, which should have propagated m_needsGradient=false upwards");
 
-        // determine how many inputs are pending; and also recurse and set up the consumer list
+        // recurse and set up the consumer list
         let& inputs = f.m_inputs;
         for (size_t i = 0; i < inputs.size(); i++)
         {
@@ -1275,9 +1302,11 @@ public:
         // fast path: only one consumer, nothing to batch
         if (fields.m_consumers.second.empty())
         {
+#if 0       // crashes with "unexpectedly already has a gradient"
             if (c.first->m_op == PrimitiveOpType::Splice)
                 BackpropToSplice(c.first);
             else
+#endif
                 BackpropToUnbatched(c.first, c.second);
             return;
         }
