@@ -788,53 +788,6 @@ Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCol
     return slice;
 }
 
-// This is a compound for slicing and reshaping. It
-//  - interprets 'this' as reshaped to (interpretAsRows, interpretAsCols)
-//  - slices it as (startRow, numRows, startColumn, numCols) w.r.t. this reshaped interpretation
-//  - reshape the result to (reshapeAsRows, reshapeAsCols)
-// The slice must be consecutive in memory; i.e.
-//  - either be a column slice (numCols > 1 ==> numRows == interpretAsRows)
-//  - or a slice of a single column (numCols == 1 ==> any numRows allowed)
-// For sparse matrices, only a straight ColumnSlice() is supported, i.e.
-//  - (sparse) interpretAsX must not actually reshape
-//  - (sparse) startRow == 0, numRows == interpretAsRow required
-// This compound version does all that in a single go, without allocating temporary slices.
-// If this function slices and reshapes nothing, it returns the original object; NOT a slice.
-template <class ElemType>
-Matrix<ElemType> Matrix<ElemType>::ReshapeSliceReshape(size_t interpretAsRows, size_t interpretAsCols,
-    size_t startRow, size_t numRows, size_t startColumn, size_t numCols,
-    size_t reshapeAsRows, size_t reshapeAsCols) const
-{
-    if (interpretAsRows * interpretAsCols != GetNumElements())
-        InvalidArgument("ReshapeSliceReshape: Interpret-as parameter do not match matrix size.");
-    if (numRows * numCols != reshapeAsRows * reshapeAsCols)
-        InvalidArgument("ReshapeSliceReshape: Reshape-as parameter do not match slice.");
-    if (startColumn + numCols > interpretAsCols || startRow + numRows > interpretAsRows)
-        InvalidArgument("ReshapeSliceReshape: Slice out of bounds.");
-    // fast path: it's just a column slice
-    if (interpretAsRows == GetNumRows() && interpretAsRows == numRows && interpretAsRows == reshapeAsRows)
-    {
-        return ColumnSlice(startColumn, numCols);
-    }
-    if (GetMatrixType() == MatrixType::SPARSE)
-        InvalidArgument("ReshapeSliceReshape: For sparse matrices, rows cannot be slice-viewed.");
-
-#if 1 // naive implementation (not optimized)
-    // reshape and slice the column
-    auto slice = ColumnSlice(startColumn, numCols, interpretAsCols);
-    if (numRows != interpretAsRows)
-    {
-        if (numCols != 1)
-            InvalidArgument("ReshapeSliceReshape: Slice must be memory-consecutive.");
-        // turn into column, slice (and later turn back)
-        slice = slice.ColumnSlice(startRow, numRows, interpretAsRows);
-    }
-    slice.Reshape(reshapeAsRows, reshapeAsCols);
-    return slice;
-#else
-#endif
-}
-
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
 {

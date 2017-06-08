@@ -665,80 +665,46 @@ namespace CNTK
         {
         case DataType::Float:
         {
-#if 1
-            auto currentMatrix = GetMatrix<float>();
-            std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
-            if (currentMatrixDims.first != storedRows || currentMatrixDims.second != storedCols)
-                LogicError("NDArrayView::SliceView: ToMatrixShape() returned shape different from GetMatrix().");
-#endif
-#if 1
             const auto& sob = GetTensorViewPtr<float>()->GetSOBPtr();
-            if (!anyPrevAxisSliced) // nothing was sliced: current SOB is just fine
-            {
+            if (!anyPrevAxisSliced)
+                // Nothing was sliced: current SOB is just fine.
                 matrix = sob;
-            }
-            else if (flatBufferOffset % storedRows == 0 && flatBufferLength % storedRows == 0) // can be expressed as column slice
-            {
-                // this slices the range as columns
+            else if (flatBufferOffset % storedRows == 0 && flatBufferLength % storedRows == 0)
+                // SliceView() can be expressed as column slice. This slices the range as columns.
                 // In order to not have to care about the actual SOB shape, we tell ColumnSlice()
                 // to interpret it as having 'storedCols', w.r.t. which we had found that we can column-slice.
                 matrix = make_shared<Matrix<float>>(std::move(sob->ColumnSlice(flatBufferOffset / storedRows,
                                                                                flatBufferLength / storedRows,
                                                                                storedCols)));
-            }
-            else // cannot be expressed as column slice
-            {
-#if 1
-                // this does the following:
+            else
+                // SliceView() cannot be expressed as column slice. This does the following:
                 //  - reinterpret the SOB as a row vector of (storedRows * storedCols)
                 //  - column-slice the desired elements (which are really a range of row elements)
                 //  - reshape it back to a column
                 matrix = make_shared<Matrix<float>>(std::move(sob->ColumnSlice(flatBufferOffset, flatBufferLength, storedRows * storedCols).
                                                                    Reshape(flatBufferLength, 1)));
-#else
-                matrix = make_shared<Matrix<float>>(std::move(sob->ReshapeSliceReshape(
-                    1, storedRows * storedCols,              // interpret as flat vector --note: we know this is not a sparse object
-                    0, 1, flatBufferOffset, flatBufferLength, // slice out the range
-                    flatBufferLength, 1)));                   // and reshape that into a column
-#endif
-#else
-            if (flatBufferOffset % storedRows == 0 && flatBufferLength % storedRows == 0)
-            {
-                matrix = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(flatBufferOffset / storedRows, flatBufferLength / storedRows));
-            }
-            else
-            {
-                auto sliced = currentMatrix->Reshaped(1, storedRows * storedCols).ColumnSlice(flatBufferOffset, flatBufferLength);
-                sliced.Reshape(flatBufferLength, 1);
-                matrix = make_shared<Matrix<float>>(std::move(sliced));
-#endif
-            }
             break;
         }
-                case DataType::Double:
+        case DataType::Double:
         {
-#if 1
-            auto currentMatrix = GetMatrix<double>();
-            if (flatBufferOffset % storedRows == 0 && flatBufferLength % storedRows == 0)
-            {
-                matrix = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(flatBufferOffset / storedRows, flatBufferLength / storedRows));
-            }
+            const auto& sob = GetTensorViewPtr<double>()->GetSOBPtr();
+            if (!anyPrevAxisSliced)
+                // Nothing was sliced: current SOB is just fine.
+                matrix = sob;
+            else if (flatBufferOffset % storedRows == 0 && flatBufferLength % storedRows == 0)
+                // SliceView() can be expressed as column slice. This slices the range as columns.
+                // In order to not have to care about the actual SOB shape, we tell ColumnSlice()
+                // to interpret it as having 'storedCols', w.r.t. which we had found that we can column-slice.
+                matrix = make_shared<Matrix<double>>(std::move(sob->ColumnSlice(flatBufferOffset / storedRows,
+                                                                                flatBufferLength / storedRows,
+                                                                                storedCols)));
             else
-            {
-                auto sliced = currentMatrix->Reshaped(1, storedRows * storedCols).ColumnSlice(flatBufferOffset, flatBufferLength);
-                sliced.Reshape(flatBufferLength, 1);
-                matrix = make_shared<Matrix<double>>(std::move(sliced));
-            }
-#else // keeping old version for easier comparison in case something goes wrong--to be deleted soon
-            // TODO: This was changed on master; below is latest. Maybe it does the same as my change above. Test this.
-            auto currentMatrix = GetMatrix<double>();
-            std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
-            std::shared_ptr<Matrix<double>> slicedMatrixView;
-            if (sliceViewMatrixDims.first != currentMatrixDims.first)
-                slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->Reshaped(1, currentMatrix->GetNumElements()).ColumnSlice(flatBufferOffset, sliceViewShape.TotalSize()));
-            else
-                slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
-#endif
+                // SliceView() cannot be expressed as column slice. This does the following:
+                //  - reinterpret the SOB as a row vector of (storedRows * storedCols)
+                //  - column-slice the desired elements (which are really a range of row elements)
+                //  - reshape it back to a column
+                matrix = make_shared<Matrix<double>>(std::move(sob->ColumnSlice(flatBufferOffset, flatBufferLength, storedRows * storedCols).
+                                                                    Reshape(flatBufferLength, 1)));
             break;
         }
         default:
