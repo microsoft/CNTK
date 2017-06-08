@@ -679,10 +679,7 @@ namespace CNTK
             }
             else if (flatBufferOffset % storedRows == 0 && flatBufferLength % storedRows == 0) // can be expressed as column slice
             {
-                matrix = make_shared<Matrix<float>>(std::move(sob->ReshapeSliceReshape(
-                    storedRows, storedCols,
-                    0, storedRows, flatBufferOffset / storedRows, flatBufferLength / storedRows,
-                    storedRows, flatBufferLength / storedRows)));
+                matrix = make_shared<Matrix<float>>(std::move(sob->ColumnSlice(flatBufferOffset / storedRows, flatBufferLength / storedRows, storedCols)));
             }
             else // cannot be expressed as column slice
             {
@@ -691,6 +688,17 @@ namespace CNTK
                     storedRows * storedCols, 1,              // interpret as flat vector --note: we know this is not a sparse object
                     flatBufferOffset, flatBufferLength, 0, 1, // slice out the range
                     flatBufferLength, 1)));                   // and reshape that into a column
+
+                //auto slice = ColumnSlice(startColumn, numCols, interpretAsCols);
+                //if (numRows != interpretAsRows)
+                //{
+                //    if (numCols != 1)
+                //        InvalidArgument("ReshapeSliceReshape: Slice must be memory-consecutive.");
+                //    // turn into column, slice (and later turn back)
+                //    slice = slice.ColumnSlice(startRow, numRows, interpretAsRows);
+                //}
+                //slice.Reshape(reshapeAsRows, reshapeAsCols);
+
 #else
                 matrix = make_shared<Matrix<float>>(std::move(sob->ReshapeSliceReshape(
                     1, storedRows * storedCols,              // interpret as flat vector --note: we know this is not a sparse object
