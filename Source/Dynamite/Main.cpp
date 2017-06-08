@@ -332,7 +332,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto t3 = make_shared<NDArrayView>(DataType::Float, NDShape({ 13,42 }), device);
     t3->NumericOperation({ t1, t2 }, 1.0, 26/*PrimitiveOpType::Plus*/);
 
-    const size_t minibatchSize = 200;  // use 6 for ~2 sequences/batch
+    const size_t minibatchSize = 10;//200;  // use 6 for ~2 sequences/batch
     for (size_t repeats = 0; true; repeats++)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
@@ -351,10 +351,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
         Variable mbLoss;
         {
             Microsoft::MSR::CNTK::ScopeTimer timer(3, "FromCNTKMB:     %.6f sec\n");
-            //args = FromCNTKMB({ minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data }, FunctionPtr(loss)->Arguments(), device);
             args = FromCNTKMB({ minibatchData[featureStreamInfo].data, minibatchData[labelStreamInfo].data },
-                              //{ InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName),
-                              //  InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName,{ Axis::DefaultBatchAxis() }) }, device);
                               { features, labels }, device);
         }
         //vector<vector<vector<Variable>>> vargs(args.size());

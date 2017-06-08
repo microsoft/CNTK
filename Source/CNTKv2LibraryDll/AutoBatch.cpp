@@ -20,8 +20,8 @@
 #include <vector>
 #include <string>
 
-#undef LOG_DETAILS   // if defined, log all forward and backward operations
-#undef LOG_STATS     // if defined, log statistics (#operations)
+#define LOG_DETAILS   // if defined, log all forward and backward operations
+#define LOG_STATS     // if defined, log statistics (#operations)
 #undef NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
 using namespace Microsoft::MSR::CNTK;
@@ -466,7 +466,7 @@ class Variable::AutoBatch
         return fields.m_value;
     }
 
-    static void LogFunction(PrimitiveFunction& f, const char* prefix = "", size_t markIndex = SIZE_MAX)
+    static void LogFunction(const PrimitiveFunction& f, const char* prefix = "", size_t markIndex = SIZE_MAX)
     {
         let& inputs = f.m_inputs;
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
@@ -1066,7 +1066,7 @@ public:
         }
 #else
 #ifdef LOG_DETAILS
-        LogFunction(*f, "[bb] ", SIZE_MAX);
+        LogFunction(*f, "[bb#] ", SIZE_MAX);
 #endif
         // The gradient of Splice is just copying all columns to the respective inputs.
         let& inputs =  f->m_inputs;
@@ -1129,6 +1129,9 @@ public:
         auto& timesOutGrads        = BorrowBuffer(m_inputValuesBuffer,     numBatchItems);
         auto& timesDataRightInputs = BorrowBuffer(m_outputGradientsBuffer, numBatchItems);
         let& f0 = *m_matrixWeightConsumers.front().first;
+#ifdef LOG_DETAILS
+        LogFunction(f0, "[bb*] ", 0);
+#endif
         let& input0 = f0.m_inputs[0];
         size_t batchDim = 0;
         for (size_t i = 0; i < numBatchItems; i++)
@@ -1272,7 +1275,10 @@ public:
         // fast path: only one consumer, nothing to batch
         if (fields.m_consumers.second.empty())
         {
-            BackpropToUnbatched(c.first, c.second);
+            if (c.first->m_op == PrimitiveOpType::Splice)
+                BackpropToSplice(c.first);
+            else
+                BackpropToUnbatched(c.first, c.second);
             return;
         }
 
