@@ -20,18 +20,6 @@ namespace CNTK
         s_SWIGCallbackWrapper = callbackPtr;
     }
 
-    static Experimental::DeserializerFactoryPtr s_createDeserializerCallback;
-
-    void Experimental::RegisterDeserializerFactory(Experimental::DeserializerFactoryPtr callbackPtr)
-    {
-        s_createDeserializerCallback = callbackPtr;
-    }
-
-    Experimental::DeserializerFactoryPtr Experimental::GetDeserializerFactory()
-    {
-        return s_createDeserializerCallback;
-    }
-
     static const std::wstring s_nativeUDFTypeValue = L"NativeUserDefinedFunction" ;
 
     static std::unordered_map<std::wstring, std::pair<std::wstring, std::wstring>> s_deserializedUDFsRegistry;

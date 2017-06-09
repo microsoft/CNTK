@@ -42,7 +42,7 @@
 %rename(_stream_infos) CNTK::SwigMinibatchSource::StreamInfos(PyObject*);
 %rename(_next_minibatch) CNTK::SwigMinibatchSource::_GetNextMinibatch;
 %rename(_register_udf_deserialize_callback) CNTK::Internal::RegisterUDFDeserializeCallbackWrapper;
-%rename(_register_deserializer_factory) CNTK::Experimental::RegisterDeserializerFactory;
+%rename(_register_deserializer_factory) CNTK::RegisterDeserializerFactory;
 %rename(base64_image_deserializer) CNTK::Base64ImageDeserializer;
 %rename(_none) CNTK::DictionaryValue::Type::None;
 
@@ -625,7 +625,7 @@ public:
 %feature("nodirector") CNTK::Function::OpName;
 // Callback support
 %feature("director") CNTK::Internal::UDFDeserializeCallbackWrapper;
-%feature("director") CNTK::Experimental::DeserializerFactory;
+%feature("director") CNTK::DeserializerFactory;
 
 %typemap(directorout) std::shared_ptr<CNTK::Function> (void * swig_argp, int swig_res = 0) {
   if ($input == Py_None) {
@@ -1423,7 +1423,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::Internal::TensorBoardFileWriter)
 %shared_ptr(CNTK::ProgressWriter)
 %shared_ptr(CNTK::Internal::UDFDeserializeCallbackWrapper)
-%shared_ptr(CNTK::Experimental::DeserializerFactory)
+%shared_ptr(CNTK::DeserializerFactory)
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibraryExperimental.h"
@@ -1485,19 +1485,6 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 #else // no DLLs on Linux
 #define CNTKPYTHON_API
 #endif
-
-#include "CNTKLibraryExperimental.h"
-
-// Python deserializers should get all configuration already on the python side.
-// Here we effectively retrieve earlier created by user deserializer.
-extern "C" __declspec(dllexport) bool CreateDeserializer(CNTK::DataDeserializer** deserializer, const std::wstring& id)
-{
-    auto factory = CNTK::Experimental::GetDeserializerFactory();
-    auto d = (*factory)(id);
-    NOT_IMPLEMENTED;
-    // Deserializer created.
-    return true;
-}
 
 namespace CNTK
 {
@@ -1816,7 +1803,42 @@ namespace CNTK
     {
         return std::make_shared<SwigDataDeserializer>();
     }
+
+    class DeserializerFactory
+    {
+    public:
+        virtual DataDeserializerPtr operator()(const std::wstring&) const { return nullptr; }
+        virtual ~DeserializerFactory() {}
+    };
+
+    typedef std::shared_ptr<DeserializerFactory> DeserializerFactoryPtr;
+
+    static DeserializerFactoryPtr s_createDeserializerCallback;
+
+    void RegisterDeserializerFactory(DeserializerFactoryPtr callbackPtr)
+    {
+        s_createDeserializerCallback = callbackPtr;
+    }
+
+    DeserializerFactoryPtr GetDeserializerFactory()
+    {
+        return s_createDeserializerCallback;
+    }
+
 }
+
+// Python deserializers should get all configuration already on the python side.
+// Here we effectively retrieve earlier created by user deserializer.
+extern "C" __declspec(dllexport) bool CreateDeserializer(CNTK::DataDeserializer** deserializer, const std::wstring& id)
+{
+    auto factory = CNTK::GetDeserializerFactory();
+    auto d = (*factory)(id);
+    NOT_IMPLEMENTED;
+    // Deserializer created.
+    return true;
+}
+
+
 %}
 
 //

@@ -21,15 +21,4 @@
 ///
 namespace CNTK { namespace Experimental {
 
-    class DeserializerFactory
-    {
-    public:
-        virtual DataDeserializerPtr operator()(const std::wstring&) const = 0;
-        virtual ~DeserializerFactory() = default;
-    };
-
-    typedef std::shared_ptr<DeserializerFactory> DeserializerFactoryPtr;
-
-    CNTK_API void RegisterDeserializerFactory(DeserializerFactoryPtr callbackPtr);
-    CNTK_API DeserializerFactoryPtr GetDeserializerFactory();
 }}
