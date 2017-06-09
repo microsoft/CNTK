@@ -275,7 +275,7 @@ if __name__ == '__main__':
 
     from ErrorFunction import get_error
 
-    if True:
+    if False:
         output = user_function(DebugLayer(output, image_input, gtb_transformed, debug_name="out-img-gt"))
     mse = get_error(output, gtb_transformed, cntk_only=False)# + zero
 
