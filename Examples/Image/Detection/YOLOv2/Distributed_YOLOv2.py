@@ -96,14 +96,14 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size,
     cv_config = cntk.CrossValidationConfig(None, mb_size=par_minibatch_size, frequency=1,
                                            callback=safe_model_callback)
 
-    mb = train_source.next_minibatch(2)
-    test_features = mb[train_source.streams.features]
+    if False:
+        mb = train_source.next_minibatch(2)
+        test_features = mb[train_source.streams.features]
 
-    data_node = network['mse'].find_by_name('data')
-    feat = cntk.combine([data_node]).eval(test_features)
-    print("raw features:\n{}".format(feat[:,:,22:23,:10]))
+        data_node = network['mse'].find_by_name('data')
+        feat = cntk.combine([data_node]).eval(test_features)
+        print("raw features:\n{}".format(feat[:, :, 22:23, :10]))
 
-    if True:
         WH_out = network['mse'].find_by_name('WH-Out')
         feat = cntk.combine([WH_out]).eval(test_features)
         print("raw wh-out map: {}".format(feat[0, 527, :]))
