@@ -124,7 +124,7 @@ elif(par_dataset_name == "Overfit"):
     par_train_data_file = 'trainval.txt'
     par_train_roi_file = 'trainval_rois_center_rel.txt'
     par_max_epochs = 260
-    _par_lr_dataset_adoption = 0.1
+    _par_lr_dataset_adoption = 0.01
 
 # Priors from k-means
 par_anchorbox_scales = [[ 0.09635106,  0.14264049],
