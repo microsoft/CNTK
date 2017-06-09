@@ -2566,6 +2566,8 @@ public:
         Matrix<ElemType>& runVariance     = Input(RUN_VAR)->Value();
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
+        bool isFrozen = Input(SCALE)->GetLearningRateMultiplier() == 0.0 && Input(BIAS)->GetLearningRateMultiplier() == 0.0;
+
         assert(scale.GetNumRows() == bias.GetNumRows());
         assert(scale.GetNumCols() == bias.GetNumCols());
         assert(runMean.GetNumRows() == scale.GetNumRows());
@@ -2577,6 +2579,12 @@ public:
         double expAvgFactor = ComputeExpAvgFactor(); // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
         double blendFactor  = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
 
+        if (isFrozen)
+        {
+            expAvgFactor = 0;
+            blendFactor = 1;
+        }
+        
         // In inference-only mode, m_savedMean and m_saveInvStdDev will not be
         // produced and BackpropToNonLooping() may not be called. In
         // non-inference (training) mode, saved statistics must be produced.

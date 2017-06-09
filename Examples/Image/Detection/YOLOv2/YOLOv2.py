@@ -310,7 +310,7 @@ def create_detector(par, regular_input, bypass_input=None):
     #first_bnrelu_name = "z.x.x.x.x.x.x.x.x.x.x"
     #first_bnrelu_node = regular_input.find_by_name(first_bnrelu_name)
     #dummy2 = user_function(DebugLayerSingle(first_bnrelu_node, debug_name='bnrelu1'))
-    #zero += reduce_mean(dummy2 * 0)
+    #zero = reduce_mean(dummy2 * 0)
 
     #regular_input = user_function(DebugLayerSingle(regular_input, debug_name='regular_input_d'))
 
@@ -340,7 +340,7 @@ def create_detector(par, regular_input, bypass_input=None):
         lf = LambdaFunc(net2,execute=lambda arg: print(arg.shape))
         net2 = user_function(lf)
 
-    net3 = create_output_activation_layer(net2, par) #+ zero
+    net3 = create_output_activation_layer(net2, par)# + zero
     return net3
 
 
@@ -358,7 +358,6 @@ def load_pretrained_resnet18_feature_extractor(par):
     if not os.path.exists(model_fn):
         raise ValueError('Model %s does not exist'%model_fn)
     loaded_model = load_model(model_fn)
-
 
     feature_layer = find_by_name(loaded_model, "features")
     fe_output_layer = find_by_name(loaded_model, "z.x.x.r")

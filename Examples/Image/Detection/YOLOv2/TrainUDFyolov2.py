@@ -282,8 +282,9 @@ class TrainFunction(UserFunction):
                         target[sample][vector_index][1] = gtb_array[i][1]
                         target[sample][vector_index][2] = gtb_array[i][2]
                         target[sample][vector_index][3] = gtb_array[i][3]
-                        target[sample][vector_index][4] = highest_iou
-
+                        #target[sample][vector_index][4] = highest_iou
+                        target[sample][vector_index][4] = self.iou(gtb_array[i][0:4],
+                                                                   eval_results[sample][vector_index][0:4])
                         scale[sample][vector_index][0:4] = self.lambda_coord
                         scale[sample][vector_index][4] = self.lambda_obj * (2 - gtb_array[i][2]*gtb_array[i][3])#TODO check if 2-... is necessary
 

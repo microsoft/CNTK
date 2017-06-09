@@ -112,19 +112,19 @@ elif(par_dataset_name == "Grocery"):
     _par_lr_dataset_adoption = 100
 
 elif(par_dataset_name == "Overfit"):
-    par_minibatch_size = 1  # minibatch size
+    par_minibatch_size = 2  # minibatch size
     par_image_width = 448  # width the image is scaled to
     par_image_height = 416  # height the image is scaled to
     par_input_bias = 114  # average input value
     par_num_channels = 3  # nr of color-channels of the input
     par_num_classes = 20  # nr of classes displayed
-    par_epoch_size = 1  # nr of input images
+    par_epoch_size = 2  # nr of input images
     par_max_gtbs = 3
     par_boxes_centered = True
     par_train_data_file = 'trainval.txt'
     par_train_roi_file = 'trainval_rois_center_rel.txt'
-    par_max_epochs = 60
-    _par_lr_dataset_adoption = 10.0
+    par_max_epochs = 260
+    _par_lr_dataset_adoption = 0.1
 
 # Priors from k-means
 par_anchorbox_scales = [[ 0.09635106,  0.14264049],
@@ -142,7 +142,7 @@ par_anchorbox_scales_old =[[1.08/13, 1.19/13], # priors [width, height] for the 
 par_num_anchorboxes = len(par_anchorbox_scales)
 
 par_lambda_coord = 1
-par_lambda_obj = 50
+par_lambda_obj = 5
 par_lambda_no_obj = 0.5
 par_lambda_cls = 1
 par_objectness_threshold=0.6

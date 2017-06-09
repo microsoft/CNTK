@@ -14,7 +14,7 @@ class DebugLayerSingle(UserFunction):
         super(DebugLayerSingle, self).__init__([arg1], name=debug_name)
         self._debug_name = debug_name
         self._split_char = "\n" if split_line else " "
-        self._img1 = False
+        self._img1 = True
         self._img2 = True
         self._print_grads = print_grads
         self._verbose_fwd = True
