@@ -302,6 +302,18 @@ def create_output_activation_layer(network, par):
 
 
 def create_detector(par, regular_input, bypass_input=None):
+    first_conv_name = "z.x.x.x.x.x.x.x.x.x.x._.x.c"
+    first_conv_node = regular_input.find_by_name(first_conv_name)
+    dummy = user_function(DebugLayerSingle(first_conv_node, debug_name='conv1'))
+    zero = reduce_mean(dummy * 0)
+
+    first_bnrelu_name = "z.x.x.x.x.x.x.x.x.x.x"
+    first_bnrelu_node = regular_input.find_by_name(first_bnrelu_name)
+    dummy2 = user_function(DebugLayerSingle(first_bnrelu_node, debug_name='bnrelu1'))
+    zero += reduce_mean(dummy2 * 0)
+
+    regular_input = user_function(DebugLayerSingle(regular_input, debug_name='regular_input_d'))
+
     output_depth = (5+par.par_num_classes)*par.par_num_anchorboxes
     first_net = Sequential([
         Convolution2D((3, 3), num_filters=par.par_dense_size, init=he_normal(), activation=lambda x: 0.1*x + 0.9*relu(x), pad=True),
@@ -328,7 +340,7 @@ def create_detector(par, regular_input, bypass_input=None):
         lf = LambdaFunc(net2,execute=lambda arg: print(arg.shape))
         net2 = user_function(lf)
 
-    net3 = create_output_activation_layer(net2, par)
+    net3 = create_output_activation_layer(net2, par) + zero
     return net3
 
 
@@ -350,13 +362,15 @@ def load_pretrained_resnet18_feature_extractor(par):
 
     feature_layer = find_by_name(loaded_model, "features")
     fe_output_layer = find_by_name(loaded_model, "z.x.x.r")
-    ph = placeholder(shape=(par.par_num_channels, par.par_image_width, par.par_image_height), name="input_ph")
-    net = combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: ph})
+    #ph = placeholder(shape=(par.par_num_channels, par.par_image_width, par.par_image_height), name="input_ph")
+    #net = combine([fe_output_layer.owner]).clone(CloneMethod.clone, {feature_layer: ph})
+    ph = placeholder(shape=(100, 100, 100), name="input_ph")
+    net = combine([fe_output_layer.owner]).clone(CloneMethod.freeze, {feature_layer: ph})
 
     #plot(net, "ResNet18_s.pdf")
 
     return Sequential([
-        [lambda x: x-par.par_input_bias]
+        [lambda x: x - par.par_input_bias]
         ,net])
 
 def load_pretrained_resnet101_feature_extractor(par):

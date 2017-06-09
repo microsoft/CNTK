@@ -22,15 +22,33 @@ class DebugLayerSingle(UserFunction):
         return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes, name=self._debug_name)]
 
     def forward(self, arguments, device=None, outputs_to_retain=None):
-        print("udf_cntk: {}".format(arguments[0, 527, :]))
-        print(self.format_line(arguments))
+        #print("udf_cntk: {}".format(arguments[0, 527, :]))
+        if self._debug_name=="image_input_d":
+            #pdb.set_trace()
+            print("udf features:\n{}".format(arguments[:, :, 22:23, :10]))
+        elif self._debug_name == "regular_input_d":
+            # pdb.set_trace()
+            print("resnet out:\n{}".format(arguments[:, 3:5, 2:4, :10]))
+        elif self._debug_name == "conv1" or self._debug_name == "bnrelu1":
+            #pdb.set_trace()
+            print("{}:\n{}".format(self._debug_name, arguments[:, 3:5, 2:4, :10]))
+        else:
+            #pass
+            print(self.format_line(arguments))
 
         return None, arguments
 
     def backward(self, state, root_gradients):
         #pdb.set_trace()
         arguments = root_gradients
-        print(self.format_line(arguments, fwd=False))
+        if self._debug_name=="image_input_d":
+            pass
+        elif self._debug_name=="regular_input_d":
+            pass
+        elif self._debug_name == "conv1" or self._debug_name == "bnrelu1":
+            pass
+        else:
+            print(self.format_line(arguments, fwd=False))
 
         return root_gradients
 
@@ -51,6 +69,8 @@ class DebugLayerSingle(UserFunction):
         #pdb.set_trace()
         # responsible boxes [527, 527], [453, 453, 523, 523, 630, 630]
         boxes = []
+        #if self._debug_name=='WH_Out_d':
+        #    import pdb;pdb.set_trace()
 
         if self._img1:
             b1 = arguments[0,527,:]
@@ -66,5 +86,5 @@ class DebugLayerSingle(UserFunction):
 
         line = "{}_{}:".format("fwd" if fwd else "bkw", self._debug_name)
         for i, item in enumerate(boxes):
-            line = "{}{}b{}: {}".format(line, self._split_char, i, item)
+            line = "{}{}b{}: {}".format(line, self._split_char, i+1, item)
         return line

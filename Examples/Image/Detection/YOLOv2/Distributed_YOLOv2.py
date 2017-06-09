@@ -29,7 +29,7 @@ def create_image_mb_source(image_file, gtb_file, is_training, total_number_of_sa
 
     return yolo2.create_mb_source(par_image_height, par_image_width, par_num_channels, (5 * par_max_gtbs), image_file,
                                         gtb_file,
-                                        multithreaded_deserializer=True, 
+                                        multithreaded_deserializer=False,
                                         is_training=is_training, 
                                         max_samples=total_number_of_samples)
 
@@ -96,28 +96,39 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size,
     cv_config = cntk.CrossValidationConfig(None, mb_size=par_minibatch_size, frequency=1,
                                            callback=safe_model_callback)
 
-    if False:
-        mb = train_source.next_minibatch(1)
-        test_features = mb[train_source.streams.features]
+    mb = train_source.next_minibatch(2)
+    test_features = mb[train_source.streams.features]
 
+    data_node = network['mse'].find_by_name('data')
+    feat = cntk.combine([data_node]).eval(test_features)
+    print("raw features:\n{}".format(feat[:,:,22:23,:10]))
+
+    if True:
         WH_out = network['mse'].find_by_name('WH-Out')
         feat = cntk.combine([WH_out]).eval(test_features)
-        print("raw cntk: {}".format(feat[0, 527, :]))
+        print("raw wh-out map: {}".format(feat[0, 527, :]))
 
         udf_wh_out = network['mse'].find_by_name('WH_Out_d_alias')
         feat = cntk.combine([udf_wh_out]).eval(test_features)
-        print("udf raw cntk: {}".format(feat[0, 527, :]))
+        print("udf wh-out map: {}".format(feat[0, 527, :]))
+
+    for i in range(3):
+        print("--- iteration {} ---".format(i))
+        data = train_source.next_minibatch(2, input_map=input_map)  # fetch minibatch.
+        trainer.train_minibatch({image_input: data[image_input].asarray(),
+                                 gtb_input: (data[gtb_input]).asarray()}, device=gpu(0))
 
     # Train all minibatches
-    training_session(
-        trainer=trainer, mb_source=train_source,
-        model_inputs_to_streams=input_map,
-        mb_size=minibatch_size,
-        progress_frequency=epoch_size,
-        checkpoint_config= CheckpointConfig(filename=os.path.join(model_path, "Checkpoint_YOLOv2"), restore=False) if model_path is not None else None,
-        test_config=TestConfig(source=test_source, mb_size=minibatch_size) if test_source else None,
-        cv_config=cv_config
-    ).train()
+    if False:
+        training_session(
+            trainer=trainer, mb_source=train_source,
+            model_inputs_to_streams=input_map,
+            mb_size=minibatch_size,
+            progress_frequency=epoch_size,
+            checkpoint_config= CheckpointConfig(filename=os.path.join(model_path, "Checkpoint_YOLOv2"), restore=False) if model_path is not None else None,
+            test_config=TestConfig(source=test_source, mb_size=minibatch_size) if test_source else None,
+            cv_config=cv_config
+        ).train()
 
     #WH_out = network['mse'].find_by_name('WH-Out')
     #feat = cntk.combine([WH_out]).eval(test_features)
@@ -229,6 +240,10 @@ if __name__ == '__main__':
     model = yolo2.create_yolov2_net(par)
 
     image_input = input_variable((par_num_channels, par_image_height, par_image_width), name="data")
+    dummy = user_function(DebugLayerSingle(image_input, debug_name='image_input_d'))
+    zeros = dummy * 0
+    zero = reduce_mean(zeros)
+
     output = model(image_input)  # append model to image input
 
     # input for ground truth boxes
@@ -252,13 +267,13 @@ if __name__ == '__main__':
 
     if False:
         output = user_function(DebugLayer(output, image_input, gtb_transformed, debug_name="out-img-gt"))
-    mse = get_error(output, gtb_transformed, cntk_only=False)
+    mse = get_error(output, gtb_transformed, cntk_only=False) + zero
 
     network = {
         'feature': image_input,
         'gtb_in': gtb_input,
         'mse': mse,
-        'output': output,
+        'output': output
         #'trainfunction': ud_tf
     }
 
