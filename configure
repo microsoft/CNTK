@@ -94,7 +94,7 @@ py_versions=
 declare -A py_paths
 
 jdk_check=include/jni.h
-default_jdk="jvm/java-7-openjdk-amd64"
+default_jdk="jvm/java-8-openjdk-amd64 jvm/java-7-openjdk-amd64"
 
 mathlib=
 
@@ -331,7 +331,7 @@ enable_python=$(default_use_python)
 
 function find_jdk ()
 {
-    echo $(find_dir $default_jdk "$jdk_check")
+    echo $(find_dir "$default_jdk" "$jdk_check")
 }
 
 function default_use_java ()
