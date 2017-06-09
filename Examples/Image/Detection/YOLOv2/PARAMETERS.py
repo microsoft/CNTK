@@ -112,13 +112,13 @@ elif(par_dataset_name == "Grocery"):
     _par_lr_dataset_adoption = 100
 
 elif(par_dataset_name == "Overfit"):
-    par_minibatch_size = 2  # minibatch size
+    par_minibatch_size = 1  # minibatch size
     par_image_width = 448  # width the image is scaled to
     par_image_height = 416  # height the image is scaled to
     par_input_bias = 114  # average input value
     par_num_channels = 3  # nr of color-channels of the input
     par_num_classes = 20  # nr of classes displayed
-    par_epoch_size = 2  # nr of input images
+    par_epoch_size = 1  # nr of input images
     par_max_gtbs = 3
     par_boxes_centered = True
     par_train_data_file = 'trainval.txt'

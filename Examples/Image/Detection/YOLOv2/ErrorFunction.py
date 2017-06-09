@@ -27,7 +27,7 @@ def get_error(network, gtb_input, cntk_only=False):
 
         network = user_function(DebugLayerSingle(network, debug_name='net_out', split_line=True))
         targets = user_function(DebugLayerSingle(targets, debug_name='targets', split_line=True, print_grads=False))
-        err_w = user_function(DebugLayerSingle(err_w, debug_name='err_weights', split_line=True, print_grads=False))
+        #err_w = user_function(DebugLayerSingle(err_w, debug_name='err_weights', split_line=True, print_grads=False))
 
         err = targets - network
         sq_err = err * err

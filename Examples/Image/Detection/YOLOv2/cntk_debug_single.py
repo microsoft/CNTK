@@ -15,40 +15,44 @@ class DebugLayerSingle(UserFunction):
         self._debug_name = debug_name
         self._split_char = "\n" if split_line else " "
         self._img1 = True
-        self._img2 = True
+        self._img2 = False
         self._print_grads = print_grads
+        self._verbose_fwd = True
+        self._verbose_bkw = False
 
     def infer_outputs(self):
         return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes, name=self._debug_name)]
 
     def forward(self, arguments, device=None, outputs_to_retain=None):
-        #print("udf_cntk: {}".format(arguments[0, 527, :]))
-        if self._debug_name=="image_input_d":
-            #pdb.set_trace()
-            print("udf features:\n{}".format(arguments[:, :, 22:23, :10]))
-        elif self._debug_name == "regular_input_d":
-            # pdb.set_trace()
-            print("resnet out:\n{}".format(arguments[:, 3:5, 2:4, :10]))
-        elif self._debug_name == "conv1" or self._debug_name == "bnrelu1":
-            #pdb.set_trace()
-            print("{}:\n{}".format(self._debug_name, arguments[:, 3:5, 2:4, :10]))
-        else:
-            #pass
-            print(self.format_line(arguments))
+        if self._verbose_fwd:
+            #print("udf_cntk: {}".format(arguments[0, 527, :]))
+            if self._debug_name=="image_input_d":
+                #pdb.set_trace()
+                print("udf features:\n{}".format(arguments[:, :, 22:23, :10]))
+            elif self._debug_name == "regular_input_d":
+                # pdb.set_trace()
+                print("resnet out:\n{}".format(arguments[:, 3:5, 2:4, :10]))
+            elif self._debug_name == "conv1" or self._debug_name == "bnrelu1":
+                #pdb.set_trace()
+                print("{}:\n{}".format(self._debug_name, arguments[:, 3:5, 2:4, :10]))
+            else:
+                #pass
+                print(self.format_line(arguments))
 
         return None, arguments
 
     def backward(self, state, root_gradients):
-        #pdb.set_trace()
-        arguments = root_gradients
-        if self._debug_name=="image_input_d":
-            pass
-        elif self._debug_name=="regular_input_d":
-            pass
-        elif self._debug_name == "conv1" or self._debug_name == "bnrelu1":
-            pass
-        else:
-            print(self.format_line(arguments, fwd=False))
+        if self._verbose_bkw:
+            #pdb.set_trace()
+            arguments = root_gradients
+            if self._debug_name=="image_input_d":
+                pass
+            elif self._debug_name=="regular_input_d":
+                pass
+            elif self._debug_name == "conv1" or self._debug_name == "bnrelu1":
+                pass
+            else:
+                print(self.format_line(arguments, fwd=False))
 
         return root_gradients
 

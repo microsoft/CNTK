@@ -225,11 +225,11 @@ def create_output_activation_layer(network, par):
     objectnesses =  ops.slice(reshaped, axis=1, begin_index=4, end_index=5, name="Obj_Out")
     cls_outs = ops.slice(reshaped, axis=1, begin_index=5, end_index=output_height, name="Cls_Out")
 
-    xy_cords = user_function(DebugLayerSingle(xy_cords, debug_name='XY_Out_d'))
-    wh_mults = user_function(DebugLayerSingle(wh_mults, debug_name='WH_Out_d'))
-    wh_mults = alias(wh_mults, name="WH_Out_d_alias")
-    objectnesses = user_function(DebugLayerSingle(objectnesses, debug_name='Obj_Out_d'))
-    cls_outs = user_function(DebugLayerSingle(cls_outs, debug_name='Cls_Out_d', split_line=True))
+    #xy_cords = user_function(DebugLayerSingle(xy_cords, debug_name='XY_Out_d'))
+    #wh_mults = user_function(DebugLayerSingle(wh_mults, debug_name='WH_Out_d'))
+    #wh_mults = alias(wh_mults, name="WH_Out_d_alias")
+    #objectnesses = user_function(DebugLayerSingle(objectnesses, debug_name='Obj_Out_d'))
+    #cls_outs = user_function(DebugLayerSingle(cls_outs, debug_name='Cls_Out_d', split_line=True))
 
     if False: # Test-case to see if bounding-box placement is ok!
         xy_cords = xy_cords * [0]
@@ -291,10 +291,10 @@ def create_output_activation_layer(network, par):
     # wh_preds = cntk.ops.times(wh_rels, anchorbox_scale_mults) # this is mat-mul not element-wise!
     wh_preds = wh_rels * anchorbox_scale_mults
 
-    wh_preds = user_function(DebugLayerSingle(wh_preds, debug_name='wh_preds_d'))
-    xy_preds = user_function(DebugLayerSingle(xy_preds, debug_name='xy_preds_d'))
-    obj_preds = user_function(DebugLayerSingle(obj_preds, debug_name='obj_preds_d'))
-    cls_preds = user_function(DebugLayerSingle(cls_preds, debug_name='cls_preds_d', split_line=True))
+    #wh_preds = user_function(DebugLayerSingle(wh_preds, debug_name='wh_preds_d'))
+    #xy_preds = user_function(DebugLayerSingle(xy_preds, debug_name='xy_preds_d'))
+    #obj_preds = user_function(DebugLayerSingle(obj_preds, debug_name='obj_preds_d'))
+    #cls_preds = user_function(DebugLayerSingle(cls_preds, debug_name='cls_preds_d', split_line=True))
 
     # Splice the parts back together!
     full_output = ops.splice(xy_preds, wh_preds, obj_preds, cls_preds, axis=1, name="yolo_results")
@@ -302,17 +302,17 @@ def create_output_activation_layer(network, par):
 
 
 def create_detector(par, regular_input, bypass_input=None):
-    first_conv_name = "z.x.x.x.x.x.x.x.x.x.x._.x.c"
-    first_conv_node = regular_input.find_by_name(first_conv_name)
-    dummy = user_function(DebugLayerSingle(first_conv_node, debug_name='conv1'))
-    zero = reduce_mean(dummy * 0)
+    #first_conv_name = "z.x.x.x.x.x.x.x.x.x.x._.x.c"
+    #first_conv_node = regular_input.find_by_name(first_conv_name)
+    #dummy = user_function(DebugLayerSingle(first_conv_node, debug_name='conv1'))
+    #zero = reduce_mean(dummy * 0)
 
-    first_bnrelu_name = "z.x.x.x.x.x.x.x.x.x.x"
-    first_bnrelu_node = regular_input.find_by_name(first_bnrelu_name)
-    dummy2 = user_function(DebugLayerSingle(first_bnrelu_node, debug_name='bnrelu1'))
-    zero += reduce_mean(dummy2 * 0)
+    #first_bnrelu_name = "z.x.x.x.x.x.x.x.x.x.x"
+    #first_bnrelu_node = regular_input.find_by_name(first_bnrelu_name)
+    #dummy2 = user_function(DebugLayerSingle(first_bnrelu_node, debug_name='bnrelu1'))
+    #zero += reduce_mean(dummy2 * 0)
 
-    regular_input = user_function(DebugLayerSingle(regular_input, debug_name='regular_input_d'))
+    #regular_input = user_function(DebugLayerSingle(regular_input, debug_name='regular_input_d'))
 
     output_depth = (5+par.par_num_classes)*par.par_num_anchorboxes
     first_net = Sequential([
@@ -340,7 +340,7 @@ def create_detector(par, regular_input, bypass_input=None):
         lf = LambdaFunc(net2,execute=lambda arg: print(arg.shape))
         net2 = user_function(lf)
 
-    net3 = create_output_activation_layer(net2, par) + zero
+    net3 = create_output_activation_layer(net2, par) #+ zero
     return net3
 
 

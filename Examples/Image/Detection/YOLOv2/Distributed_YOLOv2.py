@@ -112,23 +112,25 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size,
         feat = cntk.combine([udf_wh_out]).eval(test_features)
         print("udf wh-out map: {}".format(feat[0, 527, :]))
 
-    for i in range(3):
-        print("--- iteration {} ---".format(i))
-        data = train_source.next_minibatch(2, input_map=input_map)  # fetch minibatch.
-        trainer.train_minibatch({image_input: data[image_input].asarray(),
-                                 gtb_input: (data[gtb_input]).asarray()}, device=gpu(0))
+    use_training_session = True
+    if not use_training_session:
+        for i in range(3):
+            print("--- iteration {} ---".format(i))
+            data = train_source.next_minibatch(2, input_map=input_map)  # fetch minibatch.
+            trainer.train_minibatch({image_input: data[image_input].asarray(),
+                                     gtb_input: (data[gtb_input]).asarray()}, device=gpu(0))
 
     # Train all minibatches
-    if False:
+    else:
         training_session(
-            trainer=trainer, mb_source=train_source,
-            model_inputs_to_streams=input_map,
-            mb_size=minibatch_size,
-            progress_frequency=epoch_size,
-            checkpoint_config= CheckpointConfig(filename=os.path.join(model_path, "Checkpoint_YOLOv2"), restore=False) if model_path is not None else None,
-            test_config=TestConfig(source=test_source, mb_size=minibatch_size) if test_source else None,
-            cv_config=cv_config
-        ).train()
+        trainer=trainer, mb_source=train_source,
+        model_inputs_to_streams=input_map,
+        mb_size=minibatch_size,
+        progress_frequency=epoch_size,
+        checkpoint_config= CheckpointConfig(filename=os.path.join(model_path, "Checkpoint_YOLOv2"), restore=False) if model_path is not None else None,
+        test_config=TestConfig(source=test_source, mb_size=minibatch_size) if test_source else None,
+        cv_config=cv_config
+    ).train()
 
     #WH_out = network['mse'].find_by_name('WH-Out')
     #feat = cntk.combine([WH_out]).eval(test_features)
@@ -169,7 +171,7 @@ def yolov2_train_and_eval(network,
 if __name__ == '__main__':
     DETERMINISTIC = True
 
-    if DebugLayer:
+    if DETERMINISTIC:
         from _cntk_py import set_fixed_random_seed, force_deterministic_algorithms
 
         set_fixed_random_seed(1)
@@ -248,9 +250,9 @@ if __name__ == '__main__':
     model = yolo2.create_yolov2_net(par)
 
     image_input = input_variable((par_num_channels, par_image_height, par_image_width), name="data")
-    dummy = user_function(DebugLayerSingle(image_input, debug_name='image_input_d'))
-    zeros = dummy * 0
-    zero = reduce_mean(zeros)
+    #dummy = user_function(DebugLayerSingle(image_input, debug_name='image_input_d'))
+    #zeros = dummy * 0
+    #zero = reduce_mean(zeros)
 
     output = model(image_input)  # append model to image input
 
@@ -273,9 +275,9 @@ if __name__ == '__main__':
 
     from ErrorFunction import get_error
 
-    if False:
+    if True:
         output = user_function(DebugLayer(output, image_input, gtb_transformed, debug_name="out-img-gt"))
-    mse = get_error(output, gtb_transformed, cntk_only=False) + zero
+    mse = get_error(output, gtb_transformed, cntk_only=False)# + zero
 
     network = {
         'feature': image_input,

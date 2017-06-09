@@ -1,6 +1,2 @@
 0	C:\src\CNTK\Examples\Image\DataSets\Overfit\000037.jpg	0
 1	C:\src\CNTK\Examples\Image\DataSets\Overfit\000037.jpg	0
-2	C:\src\CNTK\Examples\Image\DataSets\Overfit\000038.jpg	0
-3	C:\src\CNTK\Examples\Image\DataSets\Overfit\000037.jpg	0
-4	C:\src\CNTK\Examples\Image\DataSets\Overfit\000037.jpg	0
-5	C:\src\CNTK\Examples\Image\DataSets\Overfit\000038.jpg	0
