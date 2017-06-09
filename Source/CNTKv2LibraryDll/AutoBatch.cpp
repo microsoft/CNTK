@@ -586,7 +586,7 @@ class Variable::AutoBatch
         let isTimes = (op == PrimitiveOpType::Times); // is special-cased
         let doNaively =
             isFree ||
-            isTimes && f0.m_inputs[1].m_dataFields->m_value && (f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
+            (isTimes && f0.m_inputs[1].m_dataFields->m_value && f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
             op == PrimitiveOpType::Splice ||
             batchSize == 1;
         //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
@@ -1193,7 +1193,7 @@ public:
             batchDim += numItems;
         }
         auto outGradBatch = GatherBatchInArena(timesOutGrads       , f0.m_outputs[0].Shape().Rank() - 1, batchDim);
-        auto rightBatch   = GatherBatchInArena(timesDataRightInputs, f0.m_inputs[1] .Shape().Rank() - 1, batchDim);
+        auto rightBatch   = GatherBatchInArena(timesDataRightInputs, f0.m_inputs[1].Shape().Rank() - 1, batchDim);
 
         // backprop into the left input from the batched outGrad and right
         auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, 2);
