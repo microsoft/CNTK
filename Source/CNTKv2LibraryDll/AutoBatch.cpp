@@ -20,8 +20,8 @@
 #include <vector>
 #include <string>
 
-#define LOG_DETAILS   // if defined, log all forward and backward operations
-#define LOG_STATS     // if defined, log statistics (#operations)
+//#define LOG_DETAILS   // if defined, log all forward and backward operations
+//#define LOG_STATS     // if defined, log statistics (#operations)
 #undef NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
 using namespace Microsoft::MSR::CNTK;
@@ -80,7 +80,8 @@ public:
     // allocate an NDArrayView of a given shape, data type, and device
     // The returned memory region is a slice into a much larger NDArrayView; therefore,
     // this operation short-circuits CUDA and is very fast.
-    // TODO: once operators exist that emit sparse outputs, we need sparse support here as well
+    // TODO: Once operators exist that emit sparse outputs, we need sparse support here as well.
+    //       Snce sparse slices cannot be written to, we should simply return a non=arena-allocated sparse object in that case.
     NDArrayViewPtr NewNDArrayView(const NDShape& shape, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
     {
         let numElements = shape.TotalSize();
@@ -919,6 +920,23 @@ public:
         return beta;
     }
 
+    // determine the input to backprop a gradient into
+    // Normally that is f.m_inputs[index].
+    // However, some gradients are just copies, so we can see through them.
+    // This saves memory and allows easier discovery of optimizable patterns.
+    // Note that every single time one iterates over m_inputs for gradients, this function must be used.
+    // Note: THIS IS NOT LEVERAGED YET, and could be removed if we don't leverage it.
+    const Variable& GetShortCircuitedGradientInput(const PrimitiveFunction& f, size_t index)
+    {
+        let& input = f.m_inputs[index];
+#ifndef NO_BATCHED_BACKPROP
+        // if the input is a result of a batched operation, then traverse into that instead
+        if (input.m_dataFields->m_lazyIndex.first)
+            return input.m_dataFields->m_lazyIndex.first->m_outputs[0];
+#endif
+        return input;
+    }
+
     // recursively traverse the tree hanging off a Variable and build the m_consumer fields
     // This propagates in depth-first order like a naive backprop, but only for the purpose
     // of recording consumers of each node.
@@ -939,29 +957,21 @@ public:
         fail_if(fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder, "unexpectedly encountered an Input or a Placeholder??");
 
         // Determine the function that 'var' is an output of.
-        // TODO:
-        // If that function is a no-op, such as Reshape or NoOp, then short-circuit straight into that input.
-        // BUGBUG: Maybe the wrong place here?
-        PrimitiveFunctionPtr fp;
-        auto* varp = &var;
-        {
-            // If 'var' has the m_lazyIndex field set, it means that its value was not
-            // actually computed from its true owner function; but rather a slice into the result of
-            // a batched operation. In that case, we traverse through that batched operation
-            // instead. As a consequence, it is the batched operation that will be recorded as the
-            // consumer of all inputs of the batched operation, rather than the original
-            // unbatched operation. And as a consequence of that, back propagation will use
-            // the same batching that was determined in forward computation.
-            auto& outFields = *varp->m_dataFields;
+        // If 'var' has the m_lazyIndex field set, it means that its value was not
+        // actually computed from its true owner function; but rather a slice into the result of
+        // a batched operation. In that case, we traverse through that batched operation
+        // instead. As a consequence, it is the batched operation that will be recorded as the
+        // consumer of all inputs of the batched operation, rather than the original
+        // unbatched operation. And as a consequence of that, back propagation will use
+        // the same batching that was determined in forward computation.
+        auto& outFields = *var.m_dataFields;
 #ifndef NO_BATCHED_BACKPROP
-            fp = outFields.m_lazyIndex.first       // if var was computed via batched op
-               ? outFields.m_lazyIndex.first       // then backprop into the batched op
-               : outFields.m_ownerFunction.lock(); // otherwise traverse the original op
+        auto&f = outFields.m_lazyIndex.first       // if var was computed via batched op
+              ? *outFields.m_lazyIndex.first       // then backprop into the batched op
+              : *outFields.m_ownerFunction.lock(); // otherwise traverse the original op
 #else
-            fp = outFields.m_ownerFunction.lock();
+        auto&f = outFields.m_ownerFunction.lock();
 #endif
-        }
-        auto&f = *fp;
         // return if we already visited the function
         if (m_visitorTag.Visited(f.m_visitedTag))
             return;
@@ -972,11 +982,20 @@ public:
         let& inputs = f.m_inputs;
         for (size_t i = 0; i < inputs.size(); i++)
         {
+#if 1
+            // Note: Using this function may be misleading.
+            // We are not short-circuiting the input here, but rather determine which function
+            // it came from.
+            let& input = GetShortCircuitedGradientInput(f, i);
+#else
             let* inputp = &inputs[i];
+#ifndef NO_BATCHED_BACKPROP
             // if the input is a result of a batched operation, then traverse into that instead
             if (inputp->m_dataFields->m_lazyIndex.first)
                 inputp = &inputp->m_dataFields->m_lazyIndex.first->m_outputs[0];
+#endif
             let& input = *inputp;
+#endif
             auto& fields = *input.m_dataFields;
             if (!fields.m_needsGradient)
                 continue; // skip inputs that receive no gradients
@@ -1074,7 +1093,7 @@ public:
         // if we pull this a second time, then don't propagate again
         if (m_visitorTag.Visited(f->m_visitedTag))
             return;
-        // fast path: only one input
+        // fast path: only one input (and not Splice, which we do in bulk)
         if (f->m_inputs.size() == 1)
             return BackpropToUnbatched(f, 0);
         // Considerations:
@@ -1296,18 +1315,15 @@ public:
         // and this is the only place where a variable's gradient ever gets aggregated.
 
         // create var's m_gradient (may be a slice view)
-        // For Parameters, m_gradient may already exist; for all others, it must not.
-        fail_if(var.Kind() != VariableKind::Parameter && fields.m_gradient, "non-Parameter variable unexpectedly already has a gradient"); // (sanity check; I am not sure actually, maybe too strict)
+        // m_gradient may already exist for Parameters, and when it came through Splice.
+        // Because of the latter, we cannot really test this here, and should just remove this check.
+        //fail_if(var.Kind() != VariableKind::Parameter && fields.m_gradient, "non-Parameter variable unexpectedly already has a gradient"); // (sanity check; I am not sure actually, maybe too strict)
 
         // fast path: only one consumer, nothing to batch
-        if (fields.m_consumers.second.empty())
+        // (with exception of Splice, which has a different optimization)
+        if (fields.m_consumers.second.empty() && fields.m_consumers.first.first->m_op != PrimitiveOpType::Splice)
         {
-#if 0       // crashes with "unexpectedly already has a gradient"
-            if (c.first->m_op == PrimitiveOpType::Splice)
-                BackpropToSplice(c.first);
-            else
-#endif
-                BackpropToUnbatched(c.first, c.second);
+            BackpropToUnbatched(c.first, c.second);
             return;
         }
 

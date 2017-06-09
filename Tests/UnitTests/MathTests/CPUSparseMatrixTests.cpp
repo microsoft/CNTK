@@ -33,7 +33,7 @@ BOOST_FIXTURE_TEST_CASE(CPUSparseMatrixColumnSlice, RandomSeedFixture)
 
     const size_t start = 10;
     const size_t numCols = 20;
-    DenseMatrix dm1 = dm0.ColumnSlice(start, numCols);
+    DenseMatrix dm1 = dm0.ColumnSlice(start, numCols, numCols);
     DenseMatrix dm2 = sm0.ColumnSlice(start, numCols).CopyColumnSliceToDense(0, numCols);
 
     BOOST_CHECK(dm1.IsEqualTo(dm2, c_epsilonFloatE4));
@@ -55,7 +55,7 @@ BOOST_FIXTURE_TEST_CASE(CPUSparseMatrixCopyColumnSliceToDense, RandomSeedFixture
 
     const size_t start = 10;
     const size_t numCols = 20;
-    DenseMatrix dm1 = dm0.ColumnSlice(start, numCols);
+    DenseMatrix dm1 = dm0.ColumnSlice(start, numCols, numCols);
     DenseMatrix dm2 = sm0.CopyColumnSliceToDense(start, numCols);
 
     BOOST_CHECK(dm1.IsEqualTo(dm2, c_epsilonFloatE4));

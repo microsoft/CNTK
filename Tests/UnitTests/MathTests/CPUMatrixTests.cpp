@@ -584,7 +584,7 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixColumnSlice, RandomSeedFixture)
     m1(1, 0) = 4;
     m1(1, 1) = 5;
 
-    DMatrix m2 = m0.ColumnSlice(0, 2);
+    DMatrix m2 = m0.ColumnSlice(0, 2, 2);
     BOOST_CHECK(m2.IsEqualTo(m1, c_epsilonFloatE4));
 
     m1(0, 0) = 2;
@@ -592,7 +592,7 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixColumnSlice, RandomSeedFixture)
     m1(1, 0) = 5;
     m1(1, 1) = 6;
 
-    m2 = m0.ColumnSlice(1, 2);
+    m2 = m0.ColumnSlice(1, 2, 2);
     BOOST_CHECK(m2.IsEqualTo(m1, c_epsilonFloatE4));
 
     // TODO: this fails due to access violation (at least on desktop machine of pkranen)
@@ -618,8 +618,8 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixColumnSlice, RandomSeedFixture)
 
     for (int i = 0; i < m; i++)
     {
-        DMatrix colMB = mB.ColumnSlice(i, 1);
-        DMatrix colMC = mC.ColumnSlice(i, 1);
+        DMatrix colMB = mB.ColumnSlice(i, 1, 1);
+        DMatrix colMC = mC.ColumnSlice(i, 1, 1);
         DMatrix::MultiplyAndAdd(mA, false, colMB, false, colMC);
     }
 
