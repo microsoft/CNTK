@@ -158,10 +158,22 @@ class MinibatchSource(cntk_py.MinibatchSource):
           randomization_window_in_samples to specify the randomization range
     '''
     _runtime_deserializer_table = {}
+    _deserializer_factory = None
+
+    @staticmethod
+    def _create_deserializer(id):
+        return MinibatchSource._runtime_deserializer_table[id]
 
     @staticmethod
     def _serialize(deserializer):
+        import pdb; pdb.set_trace()
         import uuid
+        from cntk.internal import _DeserializerFactory
+
+        if MinibatchSource._deserializer_factory is None:
+            MinibatchSource._deserializer_factory = _DeserializerFactory(MinibatchSource._create_deserializer)
+            cntk_py._register_deserializer_factory(MinibatchSource._deserializer_factory)
+
         id = str(uuid.uuid4())
         MinibatchSource._runtime_deserializer_table[id] = deserializer
         d = { 'type' : id, 'module': '_cntk_py.pyd' }
@@ -1086,10 +1098,9 @@ class UserChunk(cntk_py.SwigChunk):
 
 class UserDeserializer(cntk_py.SwigDataDeserializer):
     def __init__(self):
-        super(UserDeserializer, self).__init__()
-
-        streams = { si.m_name: si for si in self.stream_infos() }
-        self.streams = Record(**streams)
+        import pdb; pdb.set_trace()
+        source = cntk_py.create_user_deserializer()
+        self.__dict__ = source.__dict__
 
     def stream_infos(self):
         raise NotImplementedError
@@ -1192,6 +1203,8 @@ class FromData(UserDeserializer):
      An implementation of a :class:`cntk.io.UserDeserializer` that can passed to the minibatch source.
     '''
     def __init__(self, data_streams, max_samples = INFINITELY_REPEAT):
+        super(FromData, self).__init__()
+
         from cntk import Variable
         if not data_streams:
             raise(ValueError('at least one stream must be specified, in the form name=data or name=(data, type)'))
@@ -1244,7 +1257,6 @@ class FromData(UserDeserializer):
 
         self._cursor = 0            # current position
         self._total_num_samples = 0 # total count; once the limit is reached, we stop returning data
-
         super(FromData, self).__init__()
 
     @staticmethod

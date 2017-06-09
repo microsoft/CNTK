@@ -8,7 +8,7 @@
 #include "Serialization.h"
 #include "PrimitiveFunction.h"
 #include "CompositeFunction.h"
-
+#include "CNTKLibraryExperimental.h"
 
 namespace CNTK
 {
@@ -18,6 +18,18 @@ namespace CNTK
     void Internal::RegisterUDFDeserializeCallbackWrapper(UDFDeserializeCallbackWrapperPtr callbackPtr) 
     {
         s_SWIGCallbackWrapper = callbackPtr;
+    }
+
+    static Experimental::DeserializerFactoryPtr s_createDeserializerCallback;
+
+    void Experimental::RegisterDeserializerFactory(Experimental::DeserializerFactoryPtr callbackPtr)
+    {
+        s_createDeserializerCallback = callbackPtr;
+    }
+
+    Experimental::DeserializerFactoryPtr Experimental::GetDeserializerFactory()
+    {
+        return s_createDeserializerCallback;
     }
 
     static const std::wstring s_nativeUDFTypeValue = L"NativeUserDefinedFunction" ;
