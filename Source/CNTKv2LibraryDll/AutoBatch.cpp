@@ -270,6 +270,18 @@ class Variable::AutoBatch
             op == PrimitiveOpType::Slice;
     }
 
+    // predicate whether an op just passes through its input
+    // This is used to decide whether we can short-circuit it in Unalias().
+    static bool IsAlias(PrimitiveOpType op)
+    {
+        // if really needed, this can be done as a bit-test
+        return
+            op == PrimitiveOpType::StopGradient ||
+            op == PrimitiveOpType::Pass ||
+            op == PrimitiveOpType::NoOp ||
+            op == PrimitiveOpType::BarrierOp;
+    }
+
     // predicate whether an op's gradient is a no-op (just copies the output gradient)
     // These are short-circuited in backprop.
     static bool IsGradientCopyingOp(PrimitiveOpType op, size_t inputIndex)
@@ -289,7 +301,20 @@ class Variable::AutoBatch
     // Use this for ANY access to PrimitiveFunction::m_inputs EXCEPT when directly getting the shape.
     static const Variable& Unalias(const vector<Variable>& inputs, size_t index)
     {
-        return inputs[index];
+        let& input = inputs[index];
+        let& fields = *input.m_dataFields;
+        // lazy index: not an alias
+        if (fields.m_lazyIndex.first)
+            return input;
+        // does not have an owner: not an alias
+        let f = fields.Owner();
+        if (!f)
+            return input;
+        // op is not an alias
+        if (!IsAlias(f->m_op))
+            return input;
+        // it is an alias: see right through
+        return Unalias(f->m_inputs, 0); // (all aliases are unary functions)
     }
 
     // class to manage the set of ready operations (the schedule)
