@@ -41,12 +41,12 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
 // A factory method for creating image deserializers.
-extern "C" DATAREADER_API bool CreateDeserializer(DataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool primary)
+extern "C" DATAREADER_API bool CreateDeserializer(DataDeserializerPtr& deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool primary)
 {
     if (type == L"ImageDeserializer")
-        *deserializer = new ImageDataDeserializer(corpus, deserializerConfig, primary);
+        deserializer = make_shared<ImageDataDeserializer>(corpus, deserializerConfig, primary);
     else if (type == L"Base64ImageDeserializer")
-        *deserializer = new Base64ImageDeserializerImpl(corpus, deserializerConfig, primary);
+        deserializer = make_shared<Base64ImageDeserializerImpl>(corpus, deserializerConfig, primary);
     else
         // Unknown type.
         return false;

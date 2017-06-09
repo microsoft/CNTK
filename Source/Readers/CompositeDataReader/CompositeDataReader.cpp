@@ -241,14 +241,14 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
 // factory function for a particular deserializer type.
 DataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParameters& deserializerConfig, bool primary)
 {
-    typedef bool(*CreateDeserializerFactory) (DataDeserializer** d, const std::wstring& type, const ConfigParameters& cfg, CorpusDescriptorPtr corpus, bool primary);
+    typedef bool(*CreateDeserializerFactory) (DataDeserializerPtr& d, const std::wstring& type, const ConfigParameters& cfg, CorpusDescriptorPtr corpus, bool primary);
 
     std::string deserializerModule = deserializerConfig("module");
     CreateDeserializerFactory f = (CreateDeserializerFactory)Plugin::Load(deserializerModule, "CreateDeserializer");
 
     std::wstring deserializerType = deserializerConfig("type");
-    DataDeserializer* d;
-    if (!f(&d, deserializerType, deserializerConfig, m_corpus, primary))
+    DataDeserializerPtr d;
+    if (!f(d, deserializerType, deserializerConfig, m_corpus, primary))
     {
         RuntimeError("Cannot create deserializer. Please check module and type in the configuration.");
     }
@@ -257,7 +257,7 @@ DataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParamete
     CreateTransforms(deserializerConfig);
 
     assert(d != nullptr);
-    return DataDeserializerPtr(d);
+    return d;
 }
 
 // Create transformers based on the configuration, i.e.
@@ -273,6 +273,9 @@ DataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParamete
 void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerConfig)
 {
     std::string defaultModule = deserializerConfig("module");
+    if (!deserializerConfig.Exists("input"))
+        return;
+
     argvector<ConfigParameters> inputs = deserializerConfig("input");
     for (size_t i = 0; i < inputs.size(); ++i)
     {
