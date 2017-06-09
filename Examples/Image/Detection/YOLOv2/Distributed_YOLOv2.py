@@ -167,6 +167,14 @@ def yolov2_train_and_eval(network,
 
 
 if __name__ == '__main__':
+    DETERMINISTIC = True
+
+    if DebugLayer:
+        from _cntk_py import set_fixed_random_seed, force_deterministic_algorithms
+
+        set_fixed_random_seed(1)
+        force_deterministic_algorithms()
+
 
     parser = argparse.ArgumentParser()
 
