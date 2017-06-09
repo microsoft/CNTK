@@ -47,7 +47,7 @@
 
 %rename(_get_stream_infos) CNTK::SwigDataDeserializer::_GetStreamInfos(PyObject*);
 %rename(_get_chunk_infos) CNTK::SwigDataDeserializer::_GetChunkInfos(size_t index, PyObject*);
-%rename(_get_chunk) CNTK::SwigDataDeserializer::_GetChunk(size_t index, PyObject*);
+%rename(_get_chunk) CNTK::SwigDataDeserializer::GetChunk;
 %rename(_get_sequence) CNTK::SwigChunk::_GetSequence(size_t index, PyObject*);
 
 %include "CNTKWarnFilters.i"
@@ -669,7 +669,6 @@ public:
 %feature("directory") CNTK::SwigDataDeserializer;
 %feature("nodirector") CNTK::SwigDataDeserializer::GetStreamDescriptions;
 %feature("nodirector") CNTK::SwigDataDeserializer::GetChunkDescriptions;
-%feature("nodirector") CNTK::SwigDataDeserializer::GetChunk;
 %feature("nodirector") CNTK::SwigDataDeserializer::GetSequencesForChunk;
 %feature("nodirector") CNTK::SwigDataDeserializer::GetSequenceDescription;
 
@@ -1415,6 +1414,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::BackPropState)
 %shared_ptr(CNTK::Learner)
 %shared_ptr(CNTK::MinibatchSource)
+%shared_ptr(CNTK::DataDeserializer)
 %shared_ptr(CNTK::DistributedCommunicator)
 %shared_ptr(CNTK::QuantizedDistributedCommunicator)
 %shared_ptr(CNTK::DistributedLearner)
@@ -1472,9 +1472,23 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %}
 
 %shared_ptr(CNTK::SwigMinibatchSource)
-
+%shared_ptr(CNTK::SwigDataDeserializer)
 
 %inline %{
+
+#ifdef _WIN32
+#define CNTKPYTHON_API __declspec(dllexport)
+#else // no DLLs on Linux
+#define CNTKPYTHON_API
+#endif
+
+extern "C" __declspec(dllexport) bool CreateDeserializer(CNTK::DataDeserializer**, const std::wstring&)
+{
+    NOT_IMPLEMENTED;
+    // Deserializer created.
+    return true;
+}
+
 namespace CNTK
 {
     //
@@ -1623,39 +1637,161 @@ namespace CNTK
     public:
         void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
         {
+            PyObject *numpyArrayObject = _GetSequence(sequenceIndex);
+
+            if (!PyArray_Check((PyArrayObject*)numpyArrayObject))
+            {
+                // Note that in contrast to numpy.i's implementation we demand NumPy arrays
+                // and do not accept arbitrary sequences, which would needed to be copied around.
+                throw std::logic_error("NumPy array expected");
+            }
+
+            PyArrayObject* array = (PyArrayObject*)numpyArrayObject;
+
+            int rank = PyArray_NDIM(array);
+
+            npy_intp* np_shape = PyArray_SHAPE(array);
+            std::vector<size_t> shape(rank);
+
+            npy_intp num_elements = 1;
+
+            // CNTK uses column major, thus we reverse the shape
+            for (int i = 0; i < rank; i++)
+            {
+                shape[rank-i-1] = np_shape[i];
+                num_elements *= np_shape[i];
+            }
+
+            int typecode = PyArray_TYPE(array);
+
+            if (typecode == NPY_FLOAT)
+            {
+                NOT_IMPLEMENTED;
+                //view = new NDArrayView(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else if (typecode == NPY_DOUBLE)
+            {
+                NOT_IMPLEMENTED;
+                //view = new NDArrayView(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else
+            {
+                throw std::logic_error("NumPy array of type float32 or float64 expected");
+            }
         }
 
-        virtual void _GetSequence(size_t index, PyObject*) = 0;
+        virtual PyObject* _GetSequence(size_t index) { NOT_IMPLEMENTED; }
     };
 
     class SwigDataDeserializer final : public CNTK::DataDeserializer
     {
-        std::unordered_set<StreamInformation> m_streamInfos;
-        std::once_flag m_streamInfosInitFlag;
+        mutable std::vector<StreamInformation> m_streamInfos;
+        mutable std::once_flag m_streamInfosInitFlag;
+
+        mutable ChunkDescriptions m_chunkInfos;
+        mutable std::once_flag m_chunkInfosInitFlag;
 
     public:
-        virtual void _GetStreamInfos(PyObject*) = 0;
-        virtual void _GetChunkInfos(PyObject*) = 0;
-        virtual void _GetChunk(size_t index, PyObject*) = 0;
+        virtual void _GetStreamInfos(PyObject*) const { NOT_IMPLEMENTED; }
+        virtual void _GetChunkInfos(PyObject*) { NOT_IMPLEMENTED; }
 
         SwigDataDeserializer() { }
 
         std::vector<StreamInformation> GetStreamDescriptions() const override
         {
-            NOT_IMPLEMENTED;
+            std::call_once(m_streamInfosInitFlag, [this]() {
+                PyObject *pylist = PyList_New(0);
+
+                // Necassary due to SWIG convention, it seems the reference is stolen by the function,
+                // though I could not find any explicit confirmation for this.
+                Py_INCREF(pylist);
+
+                // Actually calling the python side.
+                _GetStreamInfos(pylist);
+
+                PyObject *item = nullptr;
+                PyObject *iterator = PyObject_GetIter(pylist);
+                if (!iterator)
+                    SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::StreamInformation");
+
+                while ((item = PyIter_Next(iterator)))
+                {
+                    StreamInformation* var = nullptr;
+                    int res = SWIG_ConvertPtr(item, (void**)&var, SWIGTYPE_p_CNTK__StreamInformation,  SWIG_POINTER_IMPLICIT_CONV);
+                    if (!SWIG_IsOK(res))
+                        SWIG_exception_fail(SWIG_ArgError(res), "cannot convert list element to CNTK::StreamInformation");
+                    if (!var)
+                        SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::StreamInformation");
+
+                    m_streamInfos.push_back(*var);
+                    Py_DECREF(item);
+                }
+
+                Py_DECREF(iterator);
+                Py_DECREF(pylist);
+                return m_streamInfos;
+
+            fail:
+                Py_XDECREF(iterator);
+                Py_XDECREF(pylist);
+                m_streamInfos.clear();
+                return m_streamInfos;
+            });
+
+            return m_streamInfos;
         }
 
         ChunkDescriptions GetChunkDescriptions() override
         {
-            NOT_IMPLEMENTED;
-        }
+            std::call_once(m_chunkInfosInitFlag, [this]() {
+                PyObject *pylist = PyList_New(0);
 
-        ChunkPtr GetChunk(ChunkIdType chunkId) override
-        {
-            NOT_IMPLEMENTED;
+                // Necassary due to SWIG convention, it seems the reference is stolen by the function,
+                // though I could not find any explicit confirmation for this.
+                Py_INCREF(pylist);
+
+                // Actually calling the python side.
+                _GetChunkInfos(pylist);
+
+                PyObject *item = nullptr;
+                PyObject *iterator = PyObject_GetIter(pylist);
+                if (!iterator)
+                    SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::ChunkDescription");
+
+                while ((item = PyIter_Next(iterator)))
+                {
+                    ChunkDescription* var = nullptr;
+                    int res = SWIG_ConvertPtr(item, (void**)&var, SWIGTYPE_p_CNTK__ChunkDescription,  SWIG_POINTER_IMPLICIT_CONV);
+                    if (!SWIG_IsOK(res))
+                        SWIG_exception_fail(SWIG_ArgError(res), "cannot convert list element to CNTK::StreamInformation");
+                    if (!var)
+                        SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::ChunkDescription");
+
+                    m_chunkInfos.push_back(*var);
+                    Py_DECREF(item);
+                }
+
+                Py_DECREF(iterator);
+                Py_DECREF(pylist);
+                return m_chunkInfos;
+
+            fail:
+                Py_XDECREF(iterator);
+                Py_XDECREF(pylist);
+                m_chunkInfos.clear();
+                return m_chunkInfos;
+            });
+
+            return m_chunkInfos;
         }
 
         void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& descriptions) override
+        {
+            auto chunk = GetChunk(chunkId);
+            NOT_IMPLEMENTED;
+        }
+
+        ChunkPtr GetChunk(ChunkIdType chunkId)
         {
             NOT_IMPLEMENTED;
         }

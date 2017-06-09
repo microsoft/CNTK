@@ -157,6 +157,16 @@ class MinibatchSource(cntk_py.MinibatchSource):
         randomize (`bool`, defaults to `True`): Enables or disables randomization; use randomization_window_in_chunks or
           randomization_window_in_samples to specify the randomization range
     '''
+    _runtime_deserializer_table = {}
+
+    @staticmethod
+    def _serialize(deserializer):
+        import uuid
+        id = str(uuid.uuid4())
+        MinibatchSource._runtime_deserializer_table[id] = deserializer
+        d = { 'type' : id, 'module': '_cntk_py.pyd' }
+        return cntk.utils._py_dict_to_cntk_dict(d)
+
     def __init__(self,
         deserializers,
         max_samples = INFINITELY_REPEAT,
@@ -170,8 +180,12 @@ class MinibatchSource(cntk_py.MinibatchSource):
         truncation_length=0,
         randomize=True):
 
+        import pdb; pdb.set_trace()
+
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [ deserializers ]
+       
+        deserializers = [d if not isinstance(d, UserDeserializer) else MinibatchSource._serialize(d) for d in deserializers]
 
         config = cntk_py.MinibatchSourceConfig(deserializers)
         config.max_samples = max_samples
@@ -1090,3 +1104,166 @@ class UserDeserializer(cntk_py.SwigDataDeserializer):
 
     def get_chunk(self, chunkId):
         raise NotImplementedError
+
+
+class FromData(UserDeserializer):
+    '''
+    This wraps in-memory data as a CNTK deserializer.
+    Use this if your data is small enough to be loaded into RAM in its entirety.
+    The data is not copied, so if you want to modify the data while being read through a `MinibatchSourceFromData`,
+    please pass a copy.
+
+    Example:
+     >>> N = 5
+     >>> X = np.arange(3*N).reshape(N,3).astype(np.float32) # 6 rows of 3 values
+     >>> s = C.io.MinibatchSource([FromData(dict(x=X), max_samples=len(X))])
+     >>> mb = s.next_minibatch(3) # get a minibatch of 3
+     >>> d = mb[s.streams['x']]
+     >>> d.data.asarray()
+     array([[ 0.,  1.,  2.],
+            [ 3.,  4.,  5.],
+            [ 6.,  7.,  8.]], dtype=float32)
+     >>> mb = s.next_minibatch(3) # note: only 2 left
+     >>> d = mb[s.streams['x']]
+     >>> d.data.asarray()
+     array([[  9.,  10.,  11.],
+            [ 12.,  13.,  14.]], dtype=float32)
+     >>> mb = s.next_minibatch(3)
+     >>> mb
+     {}
+
+     >>> # example of a sparse input
+     >>> Y = np.array([i % 3 == 0 for i in range(N)], np.float32)
+     >>> import scipy.sparse
+     >>> Y = scipy.sparse.csr_matrix((np.ones(N,np.float32), (range(N), Y)), shape=(N, 2))
+     >>> s = C.io.MinibatchSourceFromData(dict(x=X, y=Y)) # also not setting max_samples -> will repeat
+     >>> mb = s.next_minibatch(3)
+     >>> d = mb[s.streams['y']]
+     >>> d.data.asarray().todense()
+     matrix([[ 0.,  1.],
+             [ 1.,  0.],
+             [ 1.,  0.]], dtype=float32)
+     >>> mb = s.next_minibatch(3) # at end only 2 sequences
+     >>> d = mb[s.streams['y']]
+     >>> d.data.asarray().todense()
+     matrix([[ 0.,  1.],
+             [ 1.,  0.]], dtype=float32)
+
+     >>> # if we do not set max_samples, then it will start over once the end is hit
+     >>> mb = s.next_minibatch(3)
+     >>> d = mb[s.streams['y']]
+     >>> d.data.asarray().todense()
+     matrix([[ 0.,  1.],
+             [ 1.,  0.],
+             [ 1.,  0.]], dtype=float32)
+
+     >>> # values can also be GPU-side CNTK Value objects (if everything fits into the GPU at once)
+     >>> s = C.io.MinibatchSourceFromData(dict(x=C.Value(X), y=C.Value(Y)))
+     >>> mb = s.next_minibatch(3)
+     >>> d = mb[s.streams['y']]
+     >>> d.data.asarray().todense()
+     matrix([[ 0.,  1.],
+             [ 1.,  0.],
+             [ 1.,  0.]], dtype=float32)
+
+     >>> # data can be sequences
+     >>> import cntk.layers.typing
+     >>> XX = [np.array([1,3,2], np.float32),np.array([4,1], np.float32)]  # 2 sequences
+     >>> YY = [scipy.sparse.csr_matrix(np.array([[0,1],[1,0],[1,0]], np.float32)), scipy.sparse.csr_matrix(np.array([[1,0],[1,0]], np.float32))]
+     >>> s = cntk.io.MinibatchSourceFromData(dict(xx=(XX, cntk.layers.typing.Sequence[cntk.layers.typing.tensor]), yy=(YY, cntk.layers.typing.Sequence[cntk.layers.typing.tensor])))
+     >>> mb = s.next_minibatch(3)
+     >>> mb[s.streams['xx']].data.asarray()
+     array([[ 1.,  3.,  2.]], dtype=float32)
+     >>> mb[s.streams['yy']].data.shape # getting sequences out is messy, so we only show the shape
+     (1, 3, 2)
+
+    Args:
+        data_streams: name-value pairs
+        max_samples (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of samples
+          the reader can produce. If inputs are sequences, and the different streams have different
+          lengths, then each sequence counts with the the maximum length.
+          After this number has been reached, the reader
+          returns empty minibatches on subsequent calls to :meth:`next_minibatch`.
+          **Important:**
+          Click :cntkwiki:`here <BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`
+          for a description of input and label samples.
+
+    Returns:
+     An implementation of a :class:`cntk.io.UserDeserializer` that can passed to the minibatch source.
+    '''
+    def __init__(self, data_streams, max_samples = INFINITELY_REPEAT):
+        from cntk import Variable
+        if not data_streams:
+            raise(ValueError('at least one stream must be specified, in the form name=data or name=(data, type)'))
+        self._data = dict()         # [name] -> numpy.array or scipy.sparse.csr_matrix
+        self._types = dict()        # [name] -> Variable._Type
+        self._is_sequence = dict()  # [name] -> bool
+        self._vars = dict()         # [name] -> Variable
+        self._max_samples = max_samples
+
+        # get the data and types from the input, and form streams array
+        self._num_samples = -1  # total number of samples --must be the same for all args
+        from scipy import sparse
+        for name, arg in data_streams.items():
+            if isinstance(arg, tuple):
+                value, type = arg
+                type = Variable._Type._sanitize(type)
+                dynamic_axes = getattr(type, 'dynamic_axes', None)
+                is_sequence = dynamic_axes and len(dynamic_axes) > 1
+                if not isinstance(type, Variable._Type):
+                    raise ValueError('type must be a CNTK variable type, e.g. Tensor[13]')
+            else:
+                value = arg
+                is_sequence = False  # data without type cannot have a dynamic axis
+                type = Variable._Type(is_sparse=isinstance(value, sparse.csr_matrix)) # shape implanted below
+            if not isinstance(value[0] if isinstance(value, list) else value, (np.ndarray, sparse.csr_matrix, Value)):
+                raise TypeError('data must be a numpy.array or scipy.sparse.csr_matrix, or a list of those')
+            sample_shape = value[0].shape[1:] if is_sequence else value.shape[1:]
+            if not type.shape_is_known:
+                type = type.updated_with(shape=sample_shape) # implant the shape
+            elif type.shape != sample_shape:
+                ValueError("specified type's shape does not match the data's shape")
+            try:
+                dtype = value.dtype # numpy array and Value
+            except:
+                dtype = value[0].dtype # for lists
+            try:
+                type.dtype
+            except:
+                type = type.updated_with(dtype=dtype) # implant the dtype
+            num_samples = FromData._get_len(value)
+            if self._num_samples == -1:
+                if num_samples == 0:
+                    raise(ValueError('data is empty'))
+                self._num_samples = num_samples
+            elif self._num_samples != num_samples:
+                raise TypeError('all data items must have the same first dimension')
+            self._data[name] = value
+            self._types[name] = type
+            self._is_sequence[name] = is_sequence
+
+        self._cursor = 0            # current position
+        self._total_num_samples = 0 # total count; once the limit is reached, we stop returning data
+
+        super(FromData, self).__init__()
+
+    @staticmethod
+    def _get_len(value): # helper to determine the length of the corpus
+        try:
+            return len(value) # if input is list
+        except:
+            return value.shape[0] # if input is csr_matrix
+
+    def stream_infos(self):
+        return [StreamInformation(name, i, ['dense', 'sparse'][getattr(self._types[name], 'is_sparse', False)], 
+                                  self._types[name].dtype, self._types[name].shape)
+                for i, name in enumerate(self._data.keys())]
+
+    def chunk_infos(self):
+        return [ChunkInformation(0, self._num_samples,)]
+
+    def get_chunk(self, chunk_id):        
+        for si in self.streams.values():
+            arg = self._data[si.name]
+            mb_data = arg
+        return mb_data

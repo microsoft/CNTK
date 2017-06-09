@@ -5985,24 +5985,37 @@ namespace CNTK
     class DataDeserializer
     {
     public:
+        ///
         /// Gets stream descriptions for all streams this deserializer exposes.
+        ///
         virtual std::vector<StreamInformation> GetStreamDescriptions() const = 0;
 
+        ///
         /// Gets chunk descriptions this deserializer exposes.
+        ///
         virtual ChunkDescriptions GetChunkDescriptions() = 0;
 
+        ///
         /// Gets sequence descriptions for a given a chunk.
+        ///
         virtual void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& descriptions) = 0;
 
+        ///
         /// Gets sequence description given the sequence description of the primary deserializer.
         /// Used for deserializers not in driving/primary mode.
         /// Returns false if the corresponding secondary sequence is not valid.
+        ///
         virtual bool GetSequenceDescription(const SequenceDescription& primary, SequenceDescription& description) = 0;
 
+        ///
         /// Gets chunk data given its id.
+        ///
         virtual ChunkPtr GetChunk(ChunkIdType chunkId) = 0;
 
         virtual ~DataDeserializer() {};
+
+    protected:
+        DataDeserializer() {}
     };
 
     typedef std::shared_ptr<DataDeserializer> DataDeserializerPtr;

@@ -506,7 +506,7 @@ namespace CNTK
             vector<DictionaryValue> deserializers;
             for (auto deserializerConfig : configuration.deserializers)
             {
-                static const std::unordered_map<std::wstring, std::wstring> deserializerTypeNameToModuleNameMap = {
+                static const std::unordered_map<std::wstring, std::wstring> deserializerTypeToModule = {
                     { L"CNTKTextFormatDeserializer", L"CNTKTextFormatReader" },
                     { L"ImageDeserializer",          L"ImageReader" },
                     { L"Base64ImageDeserializer",    L"ImageReader" },
@@ -520,10 +520,13 @@ namespace CNTK
                     defaultMultithreaded = true;
                 }
 
-                if (deserializerTypeNameToModuleNameMap.find(deserializerTypeName) == deserializerTypeNameToModuleNameMap.end())
-                    InvalidArgument("Unknown deserializer type '%S' specified for CNTK built-in composite MinibatchSource construction.", deserializerTypeName.c_str());
-
-                deserializerConfig[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
+                if (deserializerTypeToModule.find(deserializerTypeName) == deserializerTypeToModule.end())
+                {
+                    if (!deserializerConfig.Contains(L"module"))
+                        InvalidArgument("Unknown deserializer type '%S' specified for CNTK built-in composite MinibatchSource construction.", deserializerTypeName.c_str());
+                }
+                else
+                    deserializerConfig[L"module"] = deserializerTypeToModule.at(deserializerTypeName);
                 deserializers.push_back(deserializerConfig);
             }
 
