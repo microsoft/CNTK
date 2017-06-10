@@ -160,6 +160,7 @@ public:
     // The sparse matrix representation of CSC/CSR uses one large matrix (m_pArray) with offsets to the Major/Secondary index location.
     // m_pArray [0,nz] are the nz elements, [nz+1,2*nz+1] is the major index location, and [2*nz+2,2*nz+2+ numcols/rows] is the secondary
     // index location.
+    // BUGBUG: This function does not honor the slice-view offset, while CPUSparseMatrix::MajorIndexLocation() does.
     GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const // row/col ids in CSC/CSR format, blockId2col/blockId2row in BlockCol/BlockRow format
     {
         return (GPUSPARSE_INDEX_TYPE*) (Buffer() + GetSizeAllocated());
@@ -211,7 +212,7 @@ public:
             NOT_IMPLEMENTED;
     }
 
-    // Since the m_sliceViewOffset effects Data and MajorIndexLocation differently than SecondaryIndexLocation, we compute it fully here.
+    // Since the m_sliceViewOffset affects Data and MajorIndexLocation differently than SecondaryIndexLocation, we compute it fully here.
     GPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const // compressed index, col/row in CSC/CSR format, col2blockId/row2blockId in BlockCol/BlockRow format
     {
         if (GetFormat() == matrixFormatSparseBlockCol)

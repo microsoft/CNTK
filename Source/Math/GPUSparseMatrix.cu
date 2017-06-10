@@ -2638,6 +2638,7 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
 
 // GatherBatch() batches many independent inputs into one output tensor
 // Only supports CSC format. Matrix must already have the output shape and correct type.
+// This current implementation is not efficient for data other than one-hot.
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::function<const GPUSparseMatrix<ElemType>&(size_t)>& inputs)
 {
@@ -2668,31 +2669,48 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
     // allocate
     RequireSizeAndAllocate(numRows, numCols, nz, /*growOnly=*/true, /*keepExistingValues=*/false);
     m_sliceViewOffset = 0;
-    auto* outValues     = Data();
+    auto* outValues     = Buffer();             // not using Data() since m_sliceViewOffset == 0, and 2nd index not existing yet
     auto* outRowIndices = MajorIndexLocation();
-    auto* outColOffsets = SecondaryIndexLocation();
+    vector<GPUSPARSE_INDEX_TYPE> outColOffsets(numCols + 1);
+    //auto* outColOffsets = SecondaryIndexLocation(); // TODO: build this as an STL vector & transfer in one
     // perform the actual operation
     size_t k = 0; // running output element index (outData, outRowIndices)
-    size_t j = 0; // running output column index
-    auto SetColOffsetjTok = [&]()
+    size_t j = 0; // running output-column offset index
+    auto SetColOffsetj = [&](size_t k)
     {
-        GPUSPARSE_INDEX_TYPE k1 = (GPUSPARSE_INDEX_TYPE)k;
-        CUDA_CALL(cudaMemcpy(&outColOffsets[j], &k1, sizeof(k1), cudaMemcpyHostToDevice));
-        //outColOffsets[j] = (GPUSPARSE_INDEX_TYPE)k;
+        //GPUSPARSE_INDEX_TYPE k1 = (GPUSPARSE_INDEX_TYPE)k;
+        //CUDA_CALL(cudaMemcpy(&outColOffsets[j], &k1, sizeof(k1), cudaMemcpyHostToDevice));
+        outColOffsets[j] = (GPUSPARSE_INDEX_TYPE)k;
     };
     for (size_t i = 0; i < numInputs; i++)
     {
         let& input = inputs(i);
-        let* inValues     = input.Data();                   // ptr to first value
-        let* inRowIndices = input.MajorIndexLocation();     // and its row index  --BUGBUG: GPU sync here
+        let* inValues     = input.Data();                                  // ptr to first value, TODO: try to avoid GPU sync here
+        // ^^ one GPU sync here unless slice-view offset == 0
+        //let* inRowIndices = input.MajorIndexLocationWithSliceViewOffset(); // and its row index, 2nd GPU round-trip
+        let* inRowIndices = (GPUSPARSE_INDEX_TYPE*)(inValues/*Data()*/ + GetSizeAllocated());
         let inCols = input.GetNumCols();
         if (inCols == 0)
             continue;
 #if 1
+        // first column has no correction term
+        for (size_t n = 0; n < 1; n++, j++)
+            outColOffsets[j] = (GPUSPARSE_INDEX_TYPE)k;
+        // additional columns need one; avoid unnecessary GPU access
         if (inCols > 1)
-            LogicError("GatherBatch: for now limited to single-column inputs");
-        SetColOffsetjTok();
-        j++;
+        {
+            // UNTESTED
+            //let* inColOffsets = input.SecondaryIndexLocation(); // where val/index items start for first column (a slice view may give an offset view)
+            let inColOffset0 = SecondaryIndexValueAt(0);
+            // ^^ one GPU sync here unless slice-view offset == 0
+            for (size_t n = 1; n < inCols; n++, j++)
+            {
+                let k1 = SecondaryIndexValueAt(n) - inColOffset0 + (GPUSPARSE_INDEX_TYPE)k; // k = start element index of this section
+                // ^^ one GPU sync here unless slice-view offset == 0
+                outColOffsets[j] = k1;
+                //SetColOffsetj(k1);
+            }
+        }
 #else
         let* inColOffsets = input.SecondaryIndexLocation(); // where val/index items start for first column (a slice view may give an offset view)
         for (size_t n = 0; n < inCols; n++, j++)
@@ -2700,8 +2718,10 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
 #endif
         let inNz = input.NzCount();
 #if 1
-        CUDA_CALL(cudaMemcpy(&outValues[k],     inValues,     inNz * sizeof(inValues[0]),     cudaMemcpyHostToDevice));
-        CUDA_CALL(cudaMemcpy(&outRowIndices[k], inRowIndices, inNz * sizeof(inRowIndices[0]), cudaMemcpyHostToDevice));
+        CUDA_CALL(cudaMemcpy(&outValues[k],     inValues,     inNz * sizeof(inValues[0]),     cudaMemcpyDeviceToDevice));
+        CUDA_CALL(cudaMemcpy(&outRowIndices[k], inRowIndices, inNz * sizeof(inRowIndices[0]), cudaMemcpyDeviceToDevice));
+        // note: this should not cause a GPU sync (but still incurs lots of CUDA launch overheads)
+        // TOOD: turn this into a kernel
         k += inNz;
 #else
         for (size_t n = 0; n < inNz; n++, k++)
@@ -2711,10 +2731,14 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
         }
 #endif
     }
-    SetColOffsetjTok();
-    //outColOffsets[j] = (GPUSPARSE_INDEX_TYPE)k;
+    outColOffsets[j] = (GPUSPARSE_INDEX_TYPE)k;
+    //SetColOffsetj();
     if (j != numCols || k != nz)
         LogicError("GatherBatch (sparse): copied incorrect number of elements??");
+    // move secondary index (item offsets) to GPU
+    CUDA_CALL(cudaMemcpy(SecondaryIndexLocation(), outColOffsets.data(), outColOffsets.size() * sizeof(outColOffsets[0]), cudaMemcpyHostToDevice));
+    // ^^ one GPU sync here (synchronous copy)
+    // TODO: use an array-set kernel
     UpdateCachedNzCount(nz);
 }
 

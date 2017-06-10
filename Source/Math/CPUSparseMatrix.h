@@ -297,6 +297,7 @@ public:
 
     CPUSPARSE_INDEX_TYPE* MajorIndexLocation() const
     {
+        // BUGBUG: Slice-view offset should not apply to CSR, since there is no RowSlice() operation
         return (GetUnCompIndex() + 
             ((GetFormat() == matrixFormatSparseCSC || GetFormat() == matrixFormatSparseCSR) ? GetCompIndex()[m_sliceViewOffset] : 0));
     } // this is the major index, row/col ids in CSC/CSR format
