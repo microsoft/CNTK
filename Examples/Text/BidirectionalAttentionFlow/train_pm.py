@@ -106,6 +106,15 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 
     C.set_default_use_mean_gradient_value(True)
     lr = C.learning_rate_schedule(training_config['lr'], unit=C.learners.UnitType.sample)
+
+    ema = {}
+    dummies = []
+    for p in z.parameters:
+        ema_p = C.constant(0, shape=p.shape, dtype=p.dtype, name='ema_%s' % p.uid)
+        ema[p.uid] = ema_p
+        dummies.append(C.reduce_sum(C.assign(ema_p, 0.999 * ema_p + 0.001 * p)))
+    dummy = C.combine(dummies)
+
     learner = C.adadelta(z.parameters, lr)
 
     if C.Communicator.num_workers() > 1:
@@ -139,11 +148,16 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 
         if epoch_stat['val_since'] == training_config['val_interval']:
             epoch_stat['val_since'] = 0
+            temp = dict((p.uid, p.value) for p in z.parameters)
+            for p in trainer.model.parameters:
+                p.value = ema[p.uid].value
             val_err = validate_model(os.path.join(data_path, training_config['val_data']), model, polymath)
             if epoch_stat['best_val_err'] > val_err:
                 epoch_stat['best_val_err'] = val_err
                 epoch_stat['best_since'] = 0
                 trainer.save_checkpoint(model_file)
+                for p in trainer.model.parameters:
+                    p.value = temp[p.uid]
             else:
                 epoch_stat['best_since'] += 1
                 if epoch_stat['best_since'] > training_config['stop_after']:
@@ -170,6 +184,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 
                 trainer.train_minibatch(data)
                 num_seq += trainer.previous_minibatch_sample_count
+                dummy.eval()
                 if num_seq >= epoch_size:
                     break
             if not post_epoch_work(epoch_stat):
