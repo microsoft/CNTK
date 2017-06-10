@@ -282,7 +282,7 @@ public:
     {
     }
     // ConfigValuePtr(const function<ConfigValuePtr()> & f, TextLocation location, const std::wstring & expressionName) : shared_ptr<Object>(make_shared<Thunk>(f, location)), location(location), expressionName(expressionName) { }
-    static ConfigValuePtr MakeThunk(const function<ConfigValuePtr(void)> &f, const function<void(const std::wstring &)> &failfn, const std::wstring &expressionName)
+    static ConfigValuePtr MakeThunk(const function<ConfigValuePtr()> &f, const function<void(const std::wstring &)> &failfn, const std::wstring &expressionName)
     {
         return ConfigValuePtr(make_shared<Thunk>(f, failfn), failfn, expressionName);
     }
@@ -399,7 +399,7 @@ public:
         const auto p = dynamic_cast<C *>(get());
         if (p == nullptr) // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
         {
-            auto&& obj = *get();
+            const auto& obj {*get()};
             Fail(L"config member has wrong type (" + msra::strfun::utf16(typeid(obj).name()) + L"), expected a " + TypeId<C>());
         }
         return *p;
@@ -411,7 +411,7 @@ public:
         const auto p = dynamic_pointer_cast<C>(*this);
         if (!p)
         { // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
-            auto&& obj = *get();
+            const auto& obj {*get()};
             Fail(L"config member has wrong type (" + msra::strfun::utf16(typeid(obj).name()) + L"), expected a " + TypeId<C>());
         }
         return p;
@@ -421,7 +421,7 @@ public:
 
     const char *TypeName() const
     {
-        auto&& obj{ *get() };
+        const auto& obj {*get()};
         return typeid(obj).name();
     }
     const std::wstring &GetExpressionName() const
@@ -740,11 +740,10 @@ public:
             const auto valuei = namedArgs.find(id); // was such parameter passed?
             if (valuei == namedArgs.end())          // named parameter not passed
             {                                       // if not given then fall back to default
-                auto f2 = [&namedParam](void) -> const ConfigValuePtr&  // we pass a lambda that resolves it upon first use, in our original location
+                auto f2 = [&namedParam]() -> const ConfigValuePtr&  // we pass a lambda that resolves it upon first use, in our original location
                 {
                     return namedParam.second.ResolveValue();
                 };
-                
                 actualNamedArgs[id] = move(ConfigValuePtr::MakeThunk(f2, namedParam.second.GetFailFn(), exprName));
             }
             else                                            // named parameter was passed

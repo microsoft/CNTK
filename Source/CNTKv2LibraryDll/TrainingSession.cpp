@@ -4,7 +4,6 @@
 //
 
 #include "stdafx.h"
-//#include <boost/algorithm/string/predicate.hpp>
 
 #include "CNTKLibrary.h"
 #include "fileutil.h"

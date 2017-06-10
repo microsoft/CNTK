@@ -123,25 +123,6 @@ __declspec_noreturn static inline void InvalidArgument(const char* format, _Type
 }
 #endif
 
-// Warning - warn with a formatted error string
-/*
-#pragma warning(push)
-#pragma warning(disable : 4996)
-static inline void Warning(const char* format, ...)
-{
-    va_list args;
-    char buffer[1024];
-
-    va_start(args, format);
-    vsprintf(buffer, format, args);
-};
-#pragma warning(pop)
-static inline void Warning(const string& message)
-{
-    Warning("%s", message.c_str());
-}
-*/
-
 #ifndef NOT_IMPLEMENTED
 #define NOT_IMPLEMENTED                                                                                                              \
     \

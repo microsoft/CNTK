@@ -35,14 +35,17 @@ LUSequenceParser<NumType, LabelType>::~LUSequenceParser()
 }
 
 // instantiate UCI parsers for supported types
-//template class LUSequenceParser<float, int>;
-//template class LUSequenceParser<float, float>;
-//template class LUSequenceParser<float, std::string>;
-//template class LUSequenceParser<float, std::wstring>;
-//template class LUSequenceParser<double, int>;
-//template class LUSequenceParser<double, double>;
-//template class LUSequenceParser<double, std::string>;
-//template class LUSequenceParser<double, std::wstring>;
+// TODO: figure out a clang version that does not barf when processing these
+#ifndef __clang__
+template class LUSequenceParser<float, int>;
+template class LUSequenceParser<float, float>;
+template class LUSequenceParser<float, std::string>;
+template class LUSequenceParser<float, std::wstring>;
+template class LUSequenceParser<double, int>;
+template class LUSequenceParser<double, double>;
+template class LUSequenceParser<double, std::string>;
+template class LUSequenceParser<double, std::wstring>;
+#endif
 
 template <class NumType, class LabelType>
 long BatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<long> *labels, std::vector<vector<long>> *input, std::vector<SequencePosition> *seqPos, const map<wstring, long> &inputlabel2id, const map<wstring, long> &outputlabel2id, bool canMultiplePassData)

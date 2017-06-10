@@ -99,7 +99,7 @@ CPPFLAGS:=
 CXXFLAGS:= $(SSE_FLAGS) -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
 LIBS_LIST:=
-#LDFLAGS:=
+LDFLAGS:= -Wl,--unresolved-symbols,ignore-all
 
 CXXVER_GE480:= $(shell expr `$(CXX) -dumpversion | sed -e 's/\.\([0-9][0-9]\)/\1/g' -e 's/\.\([0-9]\)/0\1/g' -e 's/^[0-9]\{3,4\}$$/&00/'` \>= 40800)
 ifeq ($(CXXVER_GE480),1)
@@ -249,7 +249,7 @@ ifeq ("$(BUILDTYPE)","release")
     GENCODE_FLAGS := $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50)
   endif
 
-  CXXFLAGS += -g -O0 -Wfatal-errors
+  CXXFLAGS += -g -O3
   LDFLAGS += -rdynamic
   COMMON_FLAGS += -DNDEBUG -DNO_SYNC
   CUFLAGS += -O3 -g -use_fast_math $(GENCODE_FLAGS)

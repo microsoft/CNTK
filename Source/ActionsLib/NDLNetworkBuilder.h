@@ -10,7 +10,6 @@
 #include <string>
 #include "DataReader.h"
 #include "Matrix.h"
-//#include "NDLUtil.h"
 #include "ScriptableObjects.h"
 #include "BestGpu.h"
 #include <stdexcept>
@@ -735,15 +734,5 @@ template class NDLUtil<double>;
 
 template class NDLBuilder<float>;
 template class NDLBuilder<double>;
-
-
-
-
-
-
-
-
-
-
 
 } } }

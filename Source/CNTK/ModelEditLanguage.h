@@ -10,7 +10,6 @@
 #include "ComputationNetworkBuilder.h"
 #include "NetworkDescriptionLanguage.h"
 #include "NDLNetworkBuilder.h"
-//#include "NDLUtil.h"
 #include <stdarg.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
