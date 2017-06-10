@@ -64,7 +64,7 @@ class NDArrayView(cntk_py.NDArrayView):
             np_array (numpy.ndarray): NumPy array
             device (:class:`~cntk.device.DeviceDescriptor`): device this value
              should be put on
-            borrow (bool, default False): whether nd_arrary memory can be
+            borrow (bool, default False): whether nd_array memory can be
              borrowed internally to speed up the data creation
             read_only (bool, optional): whether the data can be modified or
              not (default False)
@@ -103,7 +103,7 @@ class NDArrayView(cntk_py.NDArrayView):
              should be put on
             read_only (bool, optional): whether the data can be modified or
              not (default False)
-            borrow (bool, default False): whether nd_arrary memory can be
+            borrow (bool, default False): whether nd_array memory can be
              borrowed internally to speed up the data creation
             shape (tuple, default None): shape of the created NDArrayView.
              If unspecified, the created NDArrayView has the same shape as the csr_matrix.
@@ -153,7 +153,7 @@ class NDArrayView(cntk_py.NDArrayView):
              should be put on
             read_only (bool, optional): whether the data can be modified or
              not (default False)
-            borrow (bool, default False): whether nd_arrary memory can be
+            borrow (bool, default False): whether nd_array memory can be
              borrowed internally to speed up the data creation
 
         Returns:

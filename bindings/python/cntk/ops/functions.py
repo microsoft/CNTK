@@ -622,7 +622,7 @@ class Function(cntk_py.Function):
              passing input data.
 
         Returns:
-           dict or NumPy Array: Dict with keys of ouput variable names and values of
+           dict or NumPy Array: Dict with keys of output variable names and values of
            output variable. A single NumPy array if there is only one output value.
         '''
         if outputs is None:
