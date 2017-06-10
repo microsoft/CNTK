@@ -322,7 +322,7 @@ class Variable::AutoBatch
     {
         NonOwningFunctionListBuilder m_viewOps;
         vector<NonOwningFunctionListBuilder> m_regularOps; // m_regularOps[] is a linked list
-        NonOwningFunctionListBuilder m_barrierOps;
+        NonOwningFunctionListBuilder m_barrierOps; // TODO: currently dead
         // TODO: This must be turned into something hashable.
         // test whether two PrimitiveFunctions can be executed as a single batched operation
         static bool AreBatchable(const PrimitiveFunction* a, const PrimitiveFunction* b)
@@ -334,6 +334,9 @@ class Variable::AutoBatch
                 LogicError("should not get here for view ops or barrier ops");
             // op codes must match
             if (op != b->m_op)
+                return false;
+            // priority must match (depending on barrier or not)
+            if (a->m_priority != b->m_priority)
                 return false;
             // all input dimensions must match (with exception of a few special cases)
             assert(a->m_inputs.size() == b->m_inputs.size());
@@ -369,11 +372,24 @@ class Variable::AutoBatch
             let op = f->m_op;
             // we manage three ready sets, since two common kinds are very simple
             if (op == PrimitiveOpType::BarrierOp)
+                // BUGBUG: We never get here since we now see through barriers for efficiency...
                 m_barrierOps.push_back(f);
             else if (IsViewOp(op))
                 m_viewOps.push_back(f);
             else
             {
+                // determine the priority. This is for Barriers after short-circuiting NoOps...
+                // This is highly inefficient, always reaching through the Owner pointer. Needs a flag.
+                int pri = 0; // normal
+                for (let& input : f->m_inputs)
+                {
+                    if (input.IsOutput() && input.OutputOwner()->m_op == PrimitiveOpType::BarrierOp)
+                    {
+                        pri = -1;
+                        break;
+                    }
+                }
+                f->m_priority = pri;
                 // this naive implementation just scans linearly
                 // scan through all op sets to see if one is batchable with 'f'
                 for (auto iter = m_regularOps.begin(); iter != m_regularOps.end(); iter++)
@@ -413,7 +429,11 @@ class Variable::AutoBatch
                 auto best = m_regularOps.begin();
                 for (auto iter = best + 1; iter != m_regularOps.end(); iter++)
                 {
-                    if (iter->size() > best->size())
+                    // barrier is realized through priority
+                    int diff = iter->front()->m_priority - best->front()->m_priority;
+                    if (diff == 0)
+                        diff = (int)iter->size() - (int)best->size();
+                    if (diff > 0)
                         best = iter;
                 }
                 // and remove this one from the list
@@ -896,7 +916,8 @@ public:
                 (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneSpliceOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numOpNodes, (int)m_stats.numLeafNodes);
         size_t numOpNodes1 = 0;
         Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr&) { numOpNodes1++; });
-        fail_if(numOpNodes1 != m_stats.numOpNodes, "we did not traverse the graph correctly");
+        if (numOpNodes1 != m_stats.numOpNodes)
+            fprintf(stderr, "BatchedForward: short-circuited %d aliases\n", (int)(numOpNodes1 - m_stats.numOpNodes));
 #endif
         return LazilyIndexedValue(v);
     }

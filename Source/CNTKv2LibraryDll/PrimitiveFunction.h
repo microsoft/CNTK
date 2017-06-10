@@ -858,6 +858,7 @@ namespace CNTK
         friend class NonOwningFunctionList;
         friend class NonOwningFunctionListBuilder;
         PrimitiveFunction* m_link;  // auto-batch uses temporary linked lists
+        int m_priority;             // used by scheduler
     }; // end class PrimitiveFunction
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);
