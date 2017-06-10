@@ -322,6 +322,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     // force synchronized GPU operation so we can profile more meaningfully
     // better do this externally: set CUDA_LAUNCH_BLOCKING=1
     //DeviceDescriptor::EnableSynchronousGPUKernelExecution();
+    fprintf(stderr, "CUDA_LAUNCH_BLOCKING=%s\n", getenv("CUDA_LAUNCH_BLOCKING"));
 
     // force-ininitialize the GPU system
     // This is a hack for profiling only.
