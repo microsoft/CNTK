@@ -314,6 +314,8 @@ public:
     GPUMatrix<ElemType> CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
     void AssignColumnSliceToDense(GPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const;
 
+    void GatherBatch(size_t numInputs, const std::function<const GPUSparseMatrix<ElemType>&(size_t)>& inputs);
+
     GPUMatrix<ElemType> DiagonalToDense() const;
 
     GPUMatrix<ElemType> CopyToDenseMatrix() const;

@@ -892,7 +892,15 @@ void Matrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::
             return *input.m_CPUSparseMatrix;
         });
     },
-    { NOT_IMPLEMENTED; });
+    {
+        let outputDeviceId = GetPreferredDeviceId();
+        m_GPUSparseMatrix->GatherBatch(numInputs, [&](size_t i) -> const GPUSparseMatrix<ElemType>&
+        {
+            let& input = inputs(i);
+            input._transferToDevice(outputDeviceId, /*isBeingMoved=*/false, /*emptyTransfer=*/false); // make sure the input is actually on the right GPU
+            return *input.m_GPUSparseMatrix;
+        });
+    });
 }
 
 template <class ElemType>

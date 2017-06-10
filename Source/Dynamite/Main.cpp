@@ -405,8 +405,8 @@ int main(int argc, char *argv[])
     argc; argv;
     try
     {
-        //TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
-        TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
+        TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
+        //TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
         // BUGBUG: CPU currently outputs loss=0??
     }
     catch (exception& e)

@@ -2585,6 +2585,65 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
     return slice;
 }
 
+// GatherBatch() batches many independent inputs into one output tensor
+// Only supports CSC format. Matrix must already have the output shape and correct type.
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::function<const GPUSparseMatrix<ElemType>&(size_t)>& inputs)
+{
+    if (GetFormat() != MatrixFormat::matrixFormatSparseCSC)
+        InvalidArgument("GatherBatch (sparse): Requires CSC format.");
+    if (NzCount() != 0)
+        InvalidArgument("GatherBatch (sparse): The target matrix cannot have pre-existing non-zero values when being gathered into.");
+    // determine necessary allocation
+    let numRows = GetNumRows();
+    size_t numCols = 0;
+    size_t nz = 0;
+    for (size_t i = 0; i < numInputs; i++)
+    {
+        let& input = inputs(i);
+        if (input.GetFormat() != MatrixFormat::matrixFormatSparseCSC)
+            InvalidArgument("GatherBatch (sparse): Requires CSC format.");
+        if (input.GetNumRows() != numRows)
+            InvalidArgument("GatherBatch (sparse): All inputs must have the same number of rows as the output (%d).", (int)numRows);
+        let inputCols = input.GetNumCols();
+        nz += input.NzCount();
+        numCols += inputCols;
+    }
+    if (numCols != GetNumCols())
+        InvalidArgument("GatherBatch: Total number of input columns (%d) must be equal to number of output columns (%d).",
+            numCols, GetNumCols());
+    // allocate
+    RequireSizeAndAllocate(numRows, numCols, nz, /*growOnly=*/true, /*keepExistingValues=*/false);
+#if 0
+    m_sliceViewOffset = 0;
+    auto* outValues     = Data();
+    auto* outRowIndices = MajorIndexLocation();
+    auto* outColOffsets = SecondaryIndexLocation();
+    // perform the actual operation
+    size_t k = 0; // running output element index (outData, outRowIndices)
+    size_t j = 0; // running output column index
+    for (size_t i = 0; i < numInputs; i++)
+    {
+        let& input = inputs(i);
+        let* inColOffsets = input.SecondaryIndexLocation(); // where val/index items start for first column (a slice view may give an offset view)
+        let* inValues     = input.Data();                   // ptr to first value
+        let* inRowIndices = input.MajorIndexLocation();     // and its row index
+        let inCols = input.GetNumCols();
+        for (size_t n = 0; n < inCols; n++, j++)
+            outColOffsets[j] = inColOffsets[n] - inColOffsets[0] + (GPUSPARSE_INDEX_TYPE)k; // k = start element index of this section
+        let inNz = input.NzCount();
+        for (size_t n = 0; n < inNz; n++, k++)
+        {
+            outValues[k]     = inValues[n];
+            outRowIndices[k] = inRowIndices[n];
+        }
+    }
+    outColOffsets[j] = (GPUSPARSE_INDEX_TYPE)k;
+    if (j != numCols || k != NzCount())
+        LogicError("GatherBatch (sparse): copied incorrect number of elements??");
+#endif
+}
+
 template <class ElemType>
 GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::DiagonalToDense() const
 {
