@@ -1315,6 +1315,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
         }
 
         size_t* blockSize = TracingGPUMemoryAllocator::Allocate<size_t>(lhs.GetComputeDeviceId(), 1);
+        // (perf note: we could use a kernel to set the value, to avoid the GPU sync; but below we copy it back, which cannot be avoided)
         CUDA_CALL(cudaMemcpy(blockSize, &blockSizePrev, sizeof(size_t), cudaMemcpyHostToDevice));
 
         blocksPerGrid = (int) ceil(((double) rhs_nz) / GridDim::maxThreadsPerBlock);
@@ -1887,7 +1888,7 @@ void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseB
         TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(GetComputeDeviceId(), csrRowPtrC);
 }
 
-// Multiply - multiply one spares matrix by another sparse matrix
+// Multiply - multiply one sparse matrix by another sparse matrix
 // S1 - first sparse matrix
 // transposeS1 - transpose first matrix?
 // S2 - second sparse matrix
@@ -1965,6 +1966,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignProductOf(const GPUS
     return *this;
 }
 
+// sparse op sparse -> sparse
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
 {
@@ -2026,6 +2028,7 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatri
     cusparseDestroy(cusparseHandle);
 }
 
+// sparse op dense -> dense
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
 {
@@ -2189,6 +2192,7 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUMatrix<ElemT
     return GPUSparseMatrix<ElemType>::InnerProductOfMatrices(b, a);
 }
 
+// sparse op dense -> dense
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::InnerProduct(const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const bool isColWise)
 {
@@ -2527,12 +2531,13 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     GPUSparseMatrix<ElemType> slice(GetComputeDeviceId());
     slice.ShallowCopyFrom(*this);
     slice.SetNumCols(numCols);
-    slice.m_sliceViewOffset          = m_sliceViewOffset + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
+    slice.m_sliceViewOffset = m_sliceViewOffset + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
     // Note: m_nz is missing from here because it does not exist. We must compute it every time.
 
     return slice;
 }
-    
+
+// -> dense
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::AssignColumnSliceToDense(GPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const
 {
@@ -2592,9 +2597,11 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
 {
     if (GetFormat() != MatrixFormat::matrixFormatSparseCSC)
         InvalidArgument("GatherBatch (sparse): Requires CSC format.");
+    // TODO: NzCount() is two GPU syncs! We should cache this value CPU-side.
     if (NzCount() != 0)
         InvalidArgument("GatherBatch (sparse): The target matrix cannot have pre-existing non-zero values when being gathered into.");
     // determine necessary allocation
+    PrepareDevice();
     let numRows = GetNumRows();
     size_t numCols = 0;
     size_t nz = 0;
@@ -2644,6 +2651,7 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
 #endif
 }
 
+// -> dense
 template <class ElemType>
 GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::DiagonalToDense() const
 {
@@ -2664,6 +2672,7 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::DiagonalToDense() const
     return tmp.Diagonal();
 }
 
+// -> scalar
 template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::SumOfAbsElements() const
 {
@@ -2685,6 +2694,7 @@ ElemType GPUSparseMatrix<ElemType>::SumOfAbsElements() const
     }
 }
 
+// -> scalar
 template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::SumOfElements() const
 {
@@ -2701,7 +2711,7 @@ ElemType GPUSparseMatrix<ElemType>::SumOfElements() const
     return h_sum;
 }
 
-// sqrt(sum all elements^2)
+// sqrt(sum all elements^2) -> scalar
 template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::FrobeniusNorm() const
 {
@@ -2721,6 +2731,7 @@ ElemType GPUSparseMatrix<ElemType>::FrobeniusNorm() const
         return (ElemType) sqrt((double) h_sum);
 }
 
+// -> scalar
 template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::MatrixNormInf() const
 {
@@ -2740,6 +2751,7 @@ ElemType GPUSparseMatrix<ElemType>::MatrixNormInf() const
         return h_maxAbs;
 }
 
+// -> scalar
 template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::MatrixNorm1() const
 {
@@ -2978,7 +2990,7 @@ template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
 {
     if (a.IsEmpty())
-        LogicError("AssignOneHot: Matrix a is empty.");
+        LogicError("AssignOneHot: Matrix a is empty."); // BUGBUG: Just handle this gracefully.
 
     if (GetFormat() != matrixFormatSparseCSC)
         LogicError("AssignOneHot: Matrix format is not supported.");
@@ -3056,7 +3068,8 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::SetToZeroIfAbsLessThan(con
 
 #pragma region Helper Functions
 
-//outBuffer should be allocated to be >= size by the caller
+// This is a memcpy() with built-in type cast.
+// outBuffer should be allocated to be >= size by the caller
 template <class ElemType>
 template <class OutType, class InType>
 /*private*/ void GPUSparseMatrix<ElemType>::ConvertBuffer(OutType* outBuffer, const InType* inBuffer, const size_t size)
