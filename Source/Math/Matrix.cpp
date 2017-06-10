@@ -855,14 +855,14 @@ void Matrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::
     {
         // CPU version: just copy with memcpy()
         // We could speed this up by first creating a pointer array, and then parallelizing the actual copy operations.
-        ElemType* dst = m_CPUMatrix->Buffer();            // copy to here...
+        ElemType* dst = m_CPUMatrix->Data();              // copy to here...
         size_t spaceLeft = m_CPUMatrix->GetNumElements(); // ...this many elements in total
         for (size_t i = 0; i < numInputs; i++)
         {
             let& input = inputs(i);
             input._transferToDevice(CPUDEVICE, /*isBeingMoved=*/false, /*emptyTransfer=*/false); // make sure the input is actually on the CPU
-            let* src = input.m_CPUMatrix->Buffer(); // copy from here...
-            let  num = input.GetNumElements();      // ...this many elements
+            let* src = input.m_CPUMatrix->Data(); // copy from here...
+            let  num = input.GetNumElements();    // ...this many elements
             if (num % numRows != 0)
                 InvalidArgument("GatherBatch: All inputs must be reshapable to have numRows (%d).", (int)numRows);
             if (spaceLeft < num) // size mismatch
@@ -908,14 +908,14 @@ void Matrix<ElemType>::ScatterBatch(ElemType beta, size_t numRows, size_t numOut
     {
         // CPU version: just copy with memcpy()
         // We could speed this up by first creating a pointer array, and then parallelizing the actual copy operations.
-        const ElemType* src = m_CPUMatrix->Buffer();      // copy from here...
+        const ElemType* src = m_CPUMatrix->Data();        // copy from here...
         size_t spaceLeft = m_CPUMatrix->GetNumElements(); // ...this many elements in total
         for (size_t i = 0; i < numOutputs; i++)
         {
             auto& output = outputs(i);
             output._transferToDevice(CPUDEVICE, /*isBeingMoved=*/true, /*emptyTransfer=*/true); // make sure the output is actually on the CPU
-            auto* dst = output.m_CPUMatrix->Buffer(); // copy to here...
-            let   num = output.GetNumElements();      // ...this many elements
+            auto* dst = output.m_CPUMatrix->Data(); // copy to here...
+            let   num = output.GetNumElements();    // ...this many elements
             if (num % numRows != 0)
                 InvalidArgument("ScatterBatch: All outputs must be reshapable to have numRows (%d).", (int)numRows);
             if (spaceLeft < num) // size mismatch
