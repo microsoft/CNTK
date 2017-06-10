@@ -1324,7 +1324,8 @@ void Matrix<int>::AssignValuesOf(const Matrix<int>&) { NOT_IMPLEMENTED; }
 template<class ElemType, class ElemTypeOther>
 static void DoCastAssignValuesOf(Matrix<ElemType>& target, const Matrix<ElemTypeOther>& source)
 {
-    target; source;
+    (void)target; 
+    (void)source;
     // this is implemented in a rather tedious way:
     //  - copy to a CPU-side STL vector
     //  - type-cast

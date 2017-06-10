@@ -118,8 +118,8 @@ private:
 
     bool ReNewBufferForMultiIO(size_t i);
 
-    size_t GetNumParallelSequencesForFixingBPTTMode();
-    void SetNumParallelSequences(const size_t){};
+    size_t GetNumParallelSequencesForFixingBPTTMode() override;
+    void SetNumParallelSequences(const size_t) override {};
 
     template <class ConfigRecordType>
     void GetDataNamesFromConfig(const ConfigRecordType& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels,
@@ -165,7 +165,7 @@ public:
     {
         InitFromConfig(config);
     }
-    virtual void Destroy()
+    virtual void Destroy() override
     {
         delete this;
     }
@@ -173,7 +173,7 @@ public:
     {
     }
 
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override
     {
         return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
     }
@@ -185,18 +185,18 @@ public:
 
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
 
-    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
-    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
-    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
-    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
-    virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices) override;
+    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName) override;
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping) override;
+    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0) override;
+    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap) override;
+    virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm) override;
 
-    virtual bool DataEnd();
-    void CopyMBLayoutTo(MBLayoutPtr);
+    virtual bool DataEnd() override;
+    void CopyMBLayoutTo(MBLayoutPtr) override;
     void SetSentenceEndInBatch(vector<size_t>& /*sentenceEnd*/);
-    void SetSentenceEnd(int /*actualMbSize*/){};
-    void SetRandomSeed(int){NOT_IMPLEMENTED};
+    void SetSentenceEnd(int /*actualMbSize*/) {};
+    void SetRandomSeed(int) {NOT_IMPLEMENTED};
 
     size_t GetCurrentSamplePosition() override
     {

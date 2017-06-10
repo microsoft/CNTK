@@ -407,9 +407,9 @@ void TestCommandLine(const ConfigParameters& configBase)
     bool bf = config("boolFalse");
     //    boolImpliedTrue
     bool bit = config("boolImpliedTrue");
-    bit;
+    (void)bit;
     bool bif = config.Exists(L"boolImpliedFalse");
-    bif;
+    (void)bif;
     bf = config("nothere", "false");
     // cout << bf << endl;
     //    float=1234.5678
@@ -499,7 +499,7 @@ void TestCommandLine(const ConfigParameters& configBase)
     ConfigParameters dictQuotedStrings(dictTests("dictQuotedStrings"));
     arrayQuotedStrings = dictQuotedStrings("files");
     const char* mapping = dictQuotedStrings("mapping");
-    mapping;
+    (void)mapping;
     //
     //    #super nesting
     //    dictNested=[

@@ -437,7 +437,7 @@ namespace CNTK
         const auto length = wstring.length() * sizeof(std::wstring::value_type) + 1;
         char buf[length];
         const auto res = std::wcstombs(buf, wstring.c_str(), sizeof(buf));
-        return (res >= 0) ? buf : "";
+        return (res > 0) ? buf : "";
 #endif
     }
 
@@ -450,7 +450,7 @@ namespace CNTK
         const auto length = string.length() + 1;
         wchar_t buf[length];
         const auto res = std::mbstowcs(buf, string.c_str(),  sizeof(buf));
-        return (res >= 0) ? buf : L"";
+        return (res > 0) ? buf : L"";
 #endif
     }
 

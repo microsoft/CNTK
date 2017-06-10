@@ -132,7 +132,7 @@ public:
         InitFromConfig(config);
     }
 
-    virtual void Destroy();
+    virtual void Destroy() override;
     UCIFastReader()
     {
         fprintf(stderr, "********** DEPRECATED **********\n" 
@@ -145,7 +145,7 @@ public:
     }
     virtual ~UCIFastReader();
 
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override
     {
         return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
     }
@@ -157,26 +157,26 @@ public:
 
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
 
-    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices) override;
 
     bool GetMinibatchImpl(StreamMinibatchInputs& matrices);
 
-    size_t GetNumParallelSequencesForFixingBPTTMode()
+    size_t GetNumParallelSequencesForFixingBPTTMode() override
     {
         return m_pMBLayout->GetNumParallelSequences();
     }
-    void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) override
     {
         pMBLayout->CopyFrom(m_pMBLayout);
     };
-    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
-    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
+    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName) override;
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping) override;
+    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0) override;
 
-    virtual bool DataEnd();
+    virtual bool DataEnd() override;
     void SetSentenceSegBatch(Matrix<float>&, Matrix<ElemType>&){};
 
-    void SetNumParallelSequences(const size_t sz);
+    void SetNumParallelSequences(const size_t sz) override;
 
     void SetRandomSeed(int)
     {

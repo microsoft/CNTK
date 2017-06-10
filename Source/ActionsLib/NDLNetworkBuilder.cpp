@@ -621,6 +621,10 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
 
     switch (pass)
     {
+    default:
+        RuntimeError("Maximum number of passes reached. Bailing...");
+        break;
+
     case ndlPassInitial:
         node->SetEvalValue(nodePtr.get());
         // evaluate parameters

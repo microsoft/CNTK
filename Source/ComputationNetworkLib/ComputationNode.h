@@ -326,7 +326,7 @@ public:
     {
     }
 
-    virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const
+    virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
         if (OperationName() != node->OperationName())
             RuntimeError("Cannot copy from one node type to another node type");
@@ -359,13 +359,13 @@ public:
 
     virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName = L"", const CopyNodeFlags flags = CopyNodeFlags::copyNodeAll) const = 0;   // (called on here implemented by ComputationNode<ElemType>
 
-    virtual void Load(File& /*fstream*/, size_t /*modelVersion*/)
+    virtual void Load(File& /*fstream*/, size_t /*modelVersion*/) override
     {
         // it is assumed that OperationName and NodeName have already been consumed
         // base class has nothing else to load
     }
 
-    virtual void Save(File& /*fstream*/) const
+    virtual void Save(File& /*fstream*/) const override
     {
         // it is assumed that OperationName and NodeName have already been saved
         // base class has nothing else to save
@@ -676,7 +676,7 @@ public:
     bool IsParameterUpdateRequired() const { return m_learningRateMultiplier > 0; }
 
     // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
-    virtual bool /*IComputationNode::*/ RequiresPreCompute() const { return false; }
+    virtual bool /*IComputationNode::*/ RequiresPreCompute() const override { return false; }
 
     const ComputationEnvironment& Environment() const
     {
@@ -696,7 +696,7 @@ public:
     // -----------------------------------------------------------------------
 
     // This is overridden by every node. This base class just checks for unconnected and empty inputs. Overrides must call their base version first.
-    virtual void Validate(bool isFinalValidationPass) // main base validation function
+    virtual void Validate(bool isFinalValidationPass) override // main base validation function
     {
         // check for NULL pointers
         for (size_t i = 0; i < m_inputs.size(); i++)
@@ -896,7 +896,7 @@ public:
     virtual void PrintSelf(bool printMatrices = false) const = 0;
 
     // called in validation loop right before Validate()
-    virtual std::string /*IComputationNode::*/ FormatOperationPrototype(const std::string& extraArgs) const;
+    virtual std::string /*IComputationNode::*/ FormatOperationPrototype(const std::string& extraArgs) const override;
 
     // helper for topology plot: enumerate arcs that can be reached starting from the current node's children
     typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
@@ -1338,7 +1338,7 @@ public:
     // This verifies the number of inputs. For that, nodes with fixed number of inputs derive from NumInputs<N>.
     // This function discovers this through RTTI and performs a runtime check. Nodes should not have additional checks in their implementation (save the code).
     // Note: Nodes with variable number of inputs will not derive from NumInputs<>, but instead check their inputs in Validate().
-    void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs)
+    void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override
     {
 #ifdef _DEBUG
         wstring name = NodeName();
@@ -1921,7 +1921,7 @@ public:
     // miscellaneous
     // -----------------------------------------------------------------------
 
-    virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const;
+    virtual void DumpNodeInfo(const bool /*printValues*/, const bool /*printMetadata*/, File& fstream) const override;
 
     // helper for SimpleOutWriter, living in here to be able to use in debugging
     void WriteMinibatchWithFormatting(FILE* f, const FrameRange& fr, size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, bool isSparse,
@@ -2044,7 +2044,7 @@ public:
     }
 
     // for debugging purposes
-    void /*ComputationNodeBase::*/ PrintSelf(bool printMatrices = false) const
+    void /*ComputationNodeBase::*/ PrintSelf(bool printMatrices = false) const override
     {
         fprintf(stderr, "\n%ls[%s%ls] = %ls", NodeName().c_str(), string(GetSampleLayout()).c_str(), GetMBLayoutAxisString().c_str(), OperationName().c_str());
 
@@ -2070,26 +2070,7 @@ public:
         }
     }
 
-    // NOTE: we should reimplement this to be thread-safe and use a larger than requested initialized memory block
-    // we can then just wrap that memory block in a matrix of the correct dimensions since it will be const no one can change it
-    // should only need one memory block per device
-    // Thread-safety could be achieved by changing this to a shared_ptr.
-    // When using the TensorView interface, one could instead just use a 1x1 matrix with a view that broadcasts its columns (stride 0).
-    static const Matrix<ElemType>& ConstOnes(const size_t rows, const size_t cols, const DEVICEID_TYPE deviceId)
-    {
-        if (s_constOnes.find(rows) == s_constOnes.end() ||
-            s_constOnes[rows].find(cols) == s_constOnes[rows].end()) // not found
-        {
-            shared_ptr<Matrix<ElemType>> matrix = make_shared<Matrix<ElemType>>(rows, cols, (DEVICEID_TYPE) deviceId);
-            matrix->SetValue(1);
-            s_constOnes[rows][cols] = matrix;
-        }
-
-        shared_ptr<Matrix<ElemType>> m = s_constOnes[rows][cols];
-        m->TransferFromDeviceToDevice(m->GetDeviceId(), deviceId);
-
-        return *m;
-    }
+    static const Matrix<ElemType>& ConstOnes(const size_t rows, const size_t cols, const DEVICEID_TYPE deviceId);
 
     // -----------------------------------------------------------------------
     // data members

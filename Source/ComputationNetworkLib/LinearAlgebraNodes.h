@@ -352,7 +352,7 @@ public:
         }
     }
 
-    void Save(File& fstream) const
+    void Save(File& fstream) const override
     {
         Base::Save(fstream);
         fstream << m_outputRank;
@@ -1086,7 +1086,7 @@ public:
         }
     }
 
-    void Save(File& fstream) const
+    void Save(File& fstream) const override
     {
         Base::Save(fstream);
         fstream << m_bitShiftA;
@@ -1211,7 +1211,7 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
-    void Save(File& fstream) const
+    void Save(File& fstream) const override
     {
         Base::Save(fstream);
         fstream << m_axis1 << m_axis2;
@@ -1441,7 +1441,7 @@ public:
     }
 
     // request matrices needed to do node function value evaluation
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_invNorm0, matrixPool, 1, true, true);
@@ -1449,14 +1449,14 @@ public:
     }
 
     // request matrices that are needed for gradient computation
-    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_temp, matrixPool, 1, true, true);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_invNorm0, matrixPool);
@@ -1733,7 +1733,7 @@ public:
         }
 
         auto input3AsLearnableParameterNode = Input(3)->template As<LearnableParameter<ElemType>>();
-        if (isFinalValidationPass && (!input3AsLearnableParameterNode || input3AsLearnableParameterNode->GetLearningRateMultiplier() != 0) || (Input(3)->GetSampleLayout().GetNumElements() != 1))
+        if (isFinalValidationPass && (!input3AsLearnableParameterNode || input3AsLearnableParameterNode->GetLearningRateMultiplier() != 0 || Input(3)->GetSampleLayout().GetNumElements() != 1))
             LogicError("%ls %ls operation expects a constant scalar for Input(3) which corresponds to number of negative samples.", NodeName().c_str(), OperationName().c_str());
 
         // input(2) is shift, input(3) is the #neg
@@ -1758,7 +1758,7 @@ public:
         }
     }
     // request matrices needed to do node function value evaluation
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_invNorm0, matrixPool);
@@ -1768,7 +1768,7 @@ public:
     }
 
     // request matrices that are needed for gradient computation
-    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_invNormSquare, matrixPool);
@@ -1776,7 +1776,7 @@ public:
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_invNorm0, matrixPool);
@@ -1852,7 +1852,7 @@ public:
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName,
                         const CopyNodeFlags flags) const override;
 
-    virtual void Validate(bool isFinalValidationPass);
+    virtual void Validate(bool isFinalValidationPass) override;
 
     // Returns tensor view for the accumulator matrix. If accumulator matrix memory is not allocated
     // accumulator matrix will be resized (memory will be allocated).

@@ -1234,7 +1234,7 @@ public:
 
     void dump(char *name) const
     {
-        name;
+        (void)name;
         // provide if necessary
     }
 };
@@ -1535,17 +1535,17 @@ public:
 
     void write(const HANDLE f, const char *name) const
     {
-        fputTag(f, "BMAT");
+        fputTag((FILE*)f, "BMAT");
         fputstring(f, name);
-        fputint(f, (int) this->numrows);
-        fputint(f, (int) this->numcols);
+        fputint((FILE*)f, (int) this->numrows);
+        fputint((FILE*)f, (int) this->numcols);
         const auto &us = *this;
         foreach_column (j, us)
         {
             auto column = ssematrixbase::col(j);
             fwriteOrDie(column, f);
         }
-        fputTag(f, "EMAT");
+        fputTag((FILE*)f, "EMAT");
     }
 
     void read(FILE *f, const char *name)
@@ -1570,13 +1570,13 @@ public:
     // TODO: should this be a function template?
     void read(const HANDLE f, const char *name)
     {
-        fcheckTag(f, "BMAT");
+        fcheckTag((FILE*)f, "BMAT");
         char namebuf[80];
-        const char *nameread = fgetstring(f, namebuf);
+        const char *nameread = fgetstring((FILE*)f, namebuf);
         if (strcmp(name, nameread) != 0)
             RuntimeError("unexpected matrix name tag '%s', expected '%s'", nameread, name);
-        size_t n = fgetint(f);
-        size_t m = fgetint(f);
+        size_t n = fgetint((FILE*)f);
+        size_t m = fgetint((FILE*)f);
         resize(n, m);
         auto &us = *this;
         foreach_column (j, us)
@@ -1584,7 +1584,7 @@ public:
             auto column = ssematrixbase::col(j);
             freadOrDie(&column[0], sizeof(column[0]), column.size(), f);
         }
-        fcheckTag(f, "EMAT");
+        fcheckTag((FILE*)f, "EMAT");
     }
 
     // paging support (used in feature source)

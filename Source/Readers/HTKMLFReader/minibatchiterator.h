@@ -55,8 +55,8 @@ public:
                           std::vector<std::vector<size_t>> &phoneboundaries)
     {
         assert((subsetnum == 0) && (numsubsets == 1) && !supportsbatchsubsetting());
-        subsetnum;
-        numsubsets;
+        (void)subsetnum;
+        (void)numsubsets;
         bool retVal = getbatch(globalts, framesrequested, feat, uids, transcripts, lattices, sentendmark, phoneboundaries);
         framesadvanced = feat[0].cols();
 

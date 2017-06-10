@@ -396,6 +396,7 @@ File& File::operator<<(FileMarker marker)
         break;
     case fileMarkerBeginSection: // beginning of section
     case fileMarkerEndSection:   // end of section
+    default:
         assert(false);           // sections should use a string modifier
         break;
     }
@@ -407,7 +408,7 @@ File& File::operator<<(FileMarker marker)
 File& File::PutMarker(FileMarker marker, size_t count)
 {
     assert(marker == fileMarkerBeginList);
-    marker; // only beginning of list supported for count  markers
+    (void)marker; // only beginning of list supported for count  markers
     *this << count;
     return *this;
 }
@@ -419,7 +420,7 @@ File& File::PutMarker(FileMarker marker, const std::string& section)
     File& file = *this;
     // only the section markers take a string parameter
     assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
-    marker;
+    (void)marker;
     file << section;
     return file;
 }
@@ -431,7 +432,7 @@ File& File::PutMarker(FileMarker marker, const std::wstring& section)
     File& file = *this;
     // only the section markers take a string parameter
     assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
-    marker;
+    (void)marker;
     file << section;
     return file;
 }
@@ -694,6 +695,7 @@ File& File::operator>>(FileMarker marker)
         break;
     case fileMarkerBeginSection: // beginning of section
     case fileMarkerEndSection:   // end of section
+    default:
         assert(false);           // sections should use a string modifier
         break;
     }
@@ -736,6 +738,9 @@ bool File::IsMarker(FileMarker marker, bool skip)
     case fileMarkerEndSection:   // end of section
         // can't destinquish from a string currently
         break;
+    default:
+        assert(false);
+        break;
     }
     return retval;
 }
@@ -745,7 +750,7 @@ bool File::IsMarker(FileMarker marker, bool skip)
 File& File::GetMarker(FileMarker marker, size_t& count)
 {
     assert(marker == fileMarkerBeginList);
-    marker; // only beginning of list supported for count file markers
+    (void)marker; // only beginning of list supported for count file markers
     // use text based try, so it can fail without an exception
     if (IsTextBased())
         ftrygetText(m_file, count);
@@ -760,7 +765,7 @@ File& File::GetMarker(FileMarker marker, const std::string& section)
 {
     // only the section markers take a string parameter
     assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
-    marker;
+    (void)marker;
     string str;
     *this >> str;
     if (str != section)
@@ -774,7 +779,7 @@ File& File::GetMarker(FileMarker marker, const std::wstring& section)
 {
     // only the section markers take a string parameter
     assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
-    marker;
+    (void)marker;
     wstring str;
     *this >> str;
     if (str != section)
@@ -788,7 +793,7 @@ bool File::TryGetMarker(FileMarker marker, const std::wstring& section)
 {
     // only the section markers take a string parameter
     assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
-    marker;
+    (void)marker;
     size_t pos = GetPosition();
     std::wstring str;
     try
@@ -811,7 +816,7 @@ bool File::TryGetMarker(FileMarker marker, const std::string& section)
 {
     // only the section markers take a string parameter
     assert(marker == fileMarkerBeginSection || marker == fileMarkerEndSection);
-    marker;
+    (void)marker;
     size_t pos = GetPosition();
     std::string str;
     try

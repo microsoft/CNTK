@@ -517,7 +517,8 @@ template <typename ElementType>
 void ValueCopyToOneHotTest(const DeviceDescriptor& device)
 {
     size_t dim = 100;
-    NDShape sampleShape{{dim}};
+    std::vector<size_t> vec{dim};
+    NDShape sampleShape{vec};
     std::vector<std::vector<size_t>> input;
     std::vector<std::vector<size_t>> output;
     std::vector<size_t> expectedSeqLens;
@@ -635,7 +636,8 @@ void ValueCopyToExceptionsTest(const DeviceDescriptor& device)
     std::vector<std::vector<double>> outputInDouble;
     std::vector<std::vector<size_t>> outputInOneHot;
     NDShape sampleShape{{2, 3}};
-    NDShape sampleOneHotShape{{100}};
+    std::vector<size_t> vec{100};
+    NDShape sampleOneHotShape{vec};
 
     input = GenerateSequences<float>(expectedSeqLens, sampleShape);
     auto val = Value::Create(sampleShape, input, device);

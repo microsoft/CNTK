@@ -101,8 +101,8 @@ class DenseBinaryMatrix : public BinaryMatrix<ElemType>
 public:
     DenseBinaryMatrix(wstring name, int deviceID, size_t numRows, size_t numCols);
     // DenseBinaryMatrix(wstring name, size_t numRows, size_t numCols);
-    virtual void Clear();
-    virtual void Dispose();
+    virtual void Clear() override;
+    virtual void Dispose() override;
     virtual void Fill(Matrix<ElemType>* matrix) override;
     virtual void AddValues(void* values, size_t numRows) override;
     virtual void AddColIndices(void* /*colIndices*/, size_t /*numCols*/) override
@@ -117,7 +117,7 @@ public:
     {
         NOT_IMPLEMENTED
     }
-    virtual void ResizeArrays(size_t)
+    virtual void ResizeArrays(size_t) override
     {
         NOT_IMPLEMENTED
     }
@@ -134,8 +134,8 @@ class SparseBinaryMatrix : public BinaryMatrix<ElemType>
 public:
     SparseBinaryMatrix(wstring name, int deviceID, size_t numRows, size_t numCols);
     // SparseBinaryMatrix(wstring name, size_t numRows, size_t numCols);
-    virtual void Clear();
-    virtual void Dispose();
+    virtual void Clear() override;
+    virtual void Dispose() override;
     virtual void Fill(Matrix<ElemType>* matrix) override;
     virtual void AddValues(void* values, size_t nnz) override;
     virtual void AddColIndices(void* colIndices, size_t numCols) override;
@@ -250,7 +250,7 @@ public:
     template <class ConfigRecordType>
     void InitFromConfig(const ConfigRecordType&);
 
-    virtual void Destroy();
+    virtual void Destroy() override;
 
     LibSVMBinaryReader()
         : m_dssmLabels(nullptr), DSSMCols(0)
@@ -261,9 +261,9 @@ public:
 
     virtual ~LibSVMBinaryReader();
 
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples) override;
-    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices) override;
 
     virtual bool SupportsDistributedMBRead() const override
     {
@@ -272,15 +272,15 @@ public:
 
     template <class ConfigRecordType>
     void RenamedMatrices(const ConfigRecordType& readerConfig, std::map<std::wstring, std::wstring>& rename);
-    virtual void SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<LabelIdType, LabelType>& /*labelMapping*/){NOT_IMPLEMENTED};
-    virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart = 0*/){NOT_IMPLEMENTED};
-    virtual bool DataEnd();
+    virtual void SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<LabelIdType, LabelType>& /*labelMapping*/) override {NOT_IMPLEMENTED};
+    virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart = 0*/) override {NOT_IMPLEMENTED};
+    virtual bool DataEnd() override;
 
-    size_t GetNumParallelSequencesForFixingBPTTMode()
+    size_t GetNumParallelSequencesForFixingBPTTMode() override
     {
         return m_pMBLayout->GetNumParallelSequences();
     }
-    void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) override
     {
         pMBLayout->CopyFrom(m_pMBLayout);
     };

@@ -226,7 +226,7 @@ static double emulateforwardbackwardlattice(const size_t* batchsizeforward, cons
                                             std::vector<double>& logaccalphas, std::vector<double>& logaccbetas, std::vector<double>& logframescorrectedge,
                                             std::vector<double>& logEframescorrect, std::vector<double>& Eframescorrectbuf, double& logEframescorrecttotal)
 {
-    Eframescorrectbuf; // TODO: remove this [v-hansu]
+    (void) Eframescorrectbuf; // TODO: remove this [v-hansu]
     dim3 t(32, 8);
     const size_t tpb = t.x * t.y;
     dim3 b((unsigned int) ((logalphas.size() + tpb - 1) / tpb));
@@ -566,7 +566,7 @@ struct parallelstateimpl
 #else
         alignresult->allocate(edgeAlignments.getalignbuffersize());
         edgeacscoresgpu->allocate(edges.size());
-        edgeacscores; // reference to make compilor happy
+        (void) edgeacscores; // reference to make compilor happy
 #endif
 
         // LLs

@@ -57,7 +57,8 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        assert(inputIndex == 0), inputIndex;
+        assert(inputIndex == 0);
+        (void)inputIndex;
 
         // get the args
         size_t rank = DetermineElementwiseTensorRank();
@@ -187,7 +188,7 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         assert(inputIndex == 0);
-        inputIndex;
+        (void)inputIndex;
 
         // get the args
         // Some do not consume input and/or output values. Don't touch those, pass dummies instead, since memshare may have taken them away already.
@@ -232,14 +233,14 @@ public:
     }
 
     // request matrices that are needed for gradient computation
-    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_gradientTemp, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_gradientTemp, matrixPool);
@@ -278,7 +279,7 @@ public:
 
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
-    /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
+    /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override
     {
         Matrix<ElemType>& diff = *m_diff;
         gradient.AssignInnerProductOf(gradientValues, functionValues, true);
@@ -303,14 +304,14 @@ public:
         }
     }
     // request matrices that are needed for gradient computation
-    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_diff, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_diff, matrixPool);
@@ -346,7 +347,7 @@ public:
 
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 
-    /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
+    /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override
     {
         Matrix<ElemType>& softmax = *m_softmax;
         softmax.AssignExpOf(functionValues);
@@ -370,14 +371,14 @@ public:
         }
     }
     // request matrices that are needed for gradient computation
-    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_softmax, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_softmax, matrixPool);
@@ -415,7 +416,7 @@ public:
 
     /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override
     {
-        gradient; inputFunctionValues; inputGradientValues; gradientValues;
+        (void)gradient; (void)inputFunctionValues; (void)inputGradientValues; (void)gradientValues;
         // Hardmax cannot back-propagate a gradient.
         // We must not forbid this function to be called, though, since Hardmax may be running
         // as part of a recurrent decoding loop. Sequence-to-sequence models run the Hardmax

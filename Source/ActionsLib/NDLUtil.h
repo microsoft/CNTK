@@ -12,6 +12,7 @@
 #include <string>
 #include "Config.h"
 #include <stdexcept>
+#include <memory>
 
 using namespace std;
 
@@ -100,6 +101,7 @@ public:
                 m_net->DumpAllNodesToFile(false, true, dumpFileName);
         }
         NDLNodeEvaluatorImpl<ElemType> ndlEvaluator(m_net);
+        //auto ndlEvaluator = make_unique<NDLNodeEvaluatorImpl<ElemType>>(m_net);
         NDLNode<ElemType>* lastNode = script->Evaluate(ndlEvaluator, L"", ndlPass, skipThrough);
         if (ndlPass == ndlPassResolve)
             SetOutputNodes(script);

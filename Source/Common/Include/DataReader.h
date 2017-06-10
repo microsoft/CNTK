@@ -430,7 +430,7 @@ public:
     // mbSize - [in] size of the minibatch (number of frames, etc.)
     // epoch - [in] epoch number for this loop
     // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
 
     virtual bool SupportsDistributedMBRead() const override;
     virtual bool IsLegacyReader() const override;
@@ -443,22 +443,22 @@ public:
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
     //             [out] each matrix resized if necessary containing data.
     // returns - true if there are more minibatches, false if no more minibatchs remain
-    virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
-    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
-    virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
+    virtual bool GetMinibatch(StreamMinibatchInputs& matrices) override;
+    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap) override;
+    virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm) override;
 
-    size_t GetNumParallelSequencesForFixingBPTTMode();
+    size_t GetNumParallelSequencesForFixingBPTTMode() override;
     //int GetSentenceEndIdFromOutputLabel();
     //bool RequireSentenceSeg() const override;
 
     // GetLabelMapping - Gets the label mapping from integer index to label type
     // returns - a map from numeric datatype to native label type
-    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
+    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName) override;
 
     // SetLabelMapping - Sets the label mapping from integer index to label
     // labelMapping - mapping table from label values to IDs (must be 0-n)
     // note: for tasks with labels, the mapping table must be the same between a training run and a testing run
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping) override;
 
     // GetData - Gets metadata from the specified section (into CPU memory)
     // sectionName - section name to retrieve data from
@@ -468,9 +468,9 @@ public:
     //                  [out] size of buffer filled with data
     // recordStart - record to start reading from, defaults to zero (start of data)
     // returns: true if data remains to be read, false if the end of data was reached
-    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
+    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0) override;
 
-    virtual bool DataEnd();
+    virtual bool DataEnd() override;
     // TODO: The return value if this is never used except in loops where we do an &=. It is not clear whether that is a bug or intentionally prevents DataEnd() from being called.
     //       Once this is understood, we can change the return value to void.
 
@@ -479,21 +479,21 @@ public:
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         StreamMinibatchInputs& matrices,
-        MBLayoutPtr);
+        MBLayoutPtr) override;
 
     // Sets the neural network output to the reader. This can be useful if some
     // of the computation has to happen in the reader.
     virtual bool SetNetOutput(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const MatrixBase& outputs,
-        const MBLayoutPtr);
+        const MBLayoutPtr) override;
 
-    void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) override;
 
     void SetRandomSeed(int);
 
-    bool GetProposalObs(StreamMinibatchInputs*, const size_t, vector<size_t>&);
-    void InitProposals(StreamMinibatchInputs* matrices);
+    bool GetProposalObs(StreamMinibatchInputs*, const size_t, vector<size_t>&) override;
+    void InitProposals(StreamMinibatchInputs* matrices) override;
 };
 
 }}}

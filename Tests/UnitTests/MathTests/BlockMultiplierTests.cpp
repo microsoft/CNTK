@@ -49,8 +49,8 @@ template<typename ScalarAT, typename ScalarBT, typename ScalarCT> class Referenc
         void MultiplyMatrices(ScalarAT* A, int m, int k, ScalarBT* B, int n, ScalarCT* C, ScalarAT alpha = (ScalarAT)1, ScalarBT beta = (ScalarBT)0)
         {
 
-            alpha;
-            beta;
+            (void)alpha;
+            (void)beta;
             for (int r = 0; r < m; ++r)
             {
                 for (int c = 0; c < n; ++c)
@@ -85,7 +85,7 @@ template<typename ScalarCT> void CompareMatricesAndDump(const ScalarCT* ref, con
 template<typename ScalarAT, typename ScalarBT, typename ScalarCT, typename MultiplierT>static void TestMultiplierSub(
             int m, int k, int n, MultiplierT& testMult, int numThreads = 1, ScalarCT epsilon = ScalarCT())
 {
-    epsilon;
+    (void)epsilon;
     testMult.SetNumThreads(numThreads);
     ReferenceMultiplier<ScalarAT, ScalarBT, ScalarCT> refMult;
 

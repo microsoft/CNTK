@@ -41,7 +41,7 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
             // Verbosity is a general config parameter, not specific to the binary format reader.
             log << " | randomizing with window: " 
                 << window 
-                << configHelper.UseSampleBasedRandomizationWindow() ? " samples" : " chunks";
+                << (configHelper.UseSampleBasedRandomizationWindow() ? " samples" : " chunks");
             int verbosity = config(L"verbosity", 0);
             m_sequenceEnumerator = make_shared<BlockRandomizer>(
                 verbosity, /* verbosity */

@@ -47,7 +47,7 @@ namespace CNTK
                 Value::Erase();
         }
 
-        /* virtual */ bool IsValid() const
+        /* virtual */ bool IsValid() const override
         {
             if (IsPacked())
                 return m_packedData != nullptr;

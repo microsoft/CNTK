@@ -133,7 +133,7 @@ class DataWriter : public IDataWriter, protected Plugin
 
     // Destroy - cleanup and remove this class
     // NOTE: this destroys the object, and it can't be used past this point
-    virtual void Destroy();
+    virtual void Destroy() override;
 
 public:
     // DataWriter Constructor
@@ -147,7 +147,7 @@ public:
     }
     virtual ~DataWriter();
 
-    virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections);
+    virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections) override;
 
     // SaveData - save data in the file/files
     // recordStart - Starting record number
@@ -155,13 +155,13 @@ public:
     // numRecords - number of records we are saving, can be zero if not applicable
     // datasetSize - size of the dataset (in records)
     // byteVariableSized - for variable sized data, size of current block to be written, zero when not used, or ignored if not variable sized data
-    virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized = 0);
+    virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized = 0) override;
 
     // SaveMapping - save a map into the file
     // saveId - name of the section to save into (section:subsection format)
     // labelMapping - map we are saving to the file
-    virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping);
-    virtual bool SupportMultiUtterances() const 
+    virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping) override;
+    virtual bool SupportMultiUtterances() const override
     {
         return false;
     };

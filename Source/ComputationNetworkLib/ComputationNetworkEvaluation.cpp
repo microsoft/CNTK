@@ -176,7 +176,8 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
 {
-    childrenInThisLoop, childrenInOuterLoop; // TODO: think through what these mean when coming from PAR mode
+    (void)childrenInThisLoop;
+    (void) childrenInOuterLoop; // TODO: think through what these mean when coming from PAR mode
     // process nodes in pre-determined order
     for (auto pnode = m_nestedNodes.rbegin(); pnode != m_nestedNodes.rend(); pnode++) // iterate backwards over evaluation order
     {
@@ -301,7 +302,8 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
 
 /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::Backprop(const FrameRange&, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
 {
-    childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
+    (void) childrenInThisLoop;
+    (void) childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
     const auto& recurrentNodes = m_nestedNodes; // BUGBUG: -ForForward?? Does this mean we can remove non-ForForward?
     auto pMBLayout = recurrentNodes[0]->GetMBLayout();
     FrameRangeIteration range(pMBLayout, m_steppingDirection);

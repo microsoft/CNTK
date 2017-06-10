@@ -278,11 +278,12 @@ public:
         {
             file.GetLine(str);
             if (str.empty())
+            {
                 if (file.IsEOF())
                     break;
                 else
                     RuntimeError("LoadLabelFile: Invalid empty line in label file.");
-
+            }
             retLabels.push_back(trim(str));
         }
     }

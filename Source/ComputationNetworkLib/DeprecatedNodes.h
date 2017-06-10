@@ -267,7 +267,7 @@ public:
         }
     }
     // request matrices that are needed for gradient computation
-    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_innerproduct, matrixPool);
@@ -275,7 +275,7 @@ public:
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_innerproduct, matrixPool);

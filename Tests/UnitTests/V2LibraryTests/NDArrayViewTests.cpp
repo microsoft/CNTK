@@ -98,7 +98,7 @@ void TestReadonliness(const NDArrayViewPtr aliasView, const NDArrayViewPtr dataV
     // Should not be able to get the WritableDataBuffer for a read-only view
     VerifyException([&aliasView]() {
         ElementType* aliasViewBuffer = aliasView->WritableDataBuffer<ElementType>();
-        aliasViewBuffer;
+        (void) aliasViewBuffer;
     }, errorMsg);
 
     // Should not be able to copy into a read-only view

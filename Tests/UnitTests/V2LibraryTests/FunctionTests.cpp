@@ -1040,7 +1040,7 @@ void SetDropoutRate(const DeviceDescriptor& device)
     for (auto dropoutRate : { 0.9, 0.4, 0.0, 0.1 }) 
     {
         dropout->SetAttribute(L"dropoutRate", dropoutRate);
-        BOOST_TEST(abs(zeroCount(forwardFunc(dropout)) - dropoutRate*shape.TotalSize()) < 100);
+        BOOST_TEST(std::abs(zeroCount(forwardFunc(dropout)) - dropoutRate*shape.TotalSize()) < 100);
     }
 
     auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>(shape, -0.5, 0.5, 1, device));
@@ -1051,7 +1051,7 @@ void SetDropoutRate(const DeviceDescriptor& device)
     for (auto dropoutRate : { 0.3, 0.7, 0.2 })
     {
         dropout2->SetAttribute(L"dropoutRate", dropoutRate);
-        BOOST_TEST(abs(zeroCount(forwardFunc(combine)) - dropoutRate*shape.TotalSize()) < 100);
+        BOOST_TEST(std::abs(zeroCount(forwardFunc(combine)) - dropoutRate*shape.TotalSize()) < 100);
     }
 }
 

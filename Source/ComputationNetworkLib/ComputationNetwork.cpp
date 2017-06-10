@@ -1292,7 +1292,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
             {
                 if (item == input)
                 {
-                    Warning("Cyclic dependency on node '%ls'\n", item->GetName().c_str());
+                    fprintf(stderr, "Cyclic dependency on node '%ls'\n", item->GetName().c_str());
                     cyclic = true;
                 }
             }
@@ -1404,7 +1404,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     std::vector<ComputationNodeBasePtr> priorNodes = WhereNode(net->GetAllNodes(), GetAllPriorNodes);
     if (priorNodes.size() != 1)
     {
-        Warning("Could not reliably determine the prior node!");
+        fprintf(stderr,"Could not reliably determine the prior node!");
     }
 
     // =================
@@ -1512,7 +1512,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     }
     else
     {
-        Warning("No priority node(s) found!");
+        fprintf(stderr, "No priority node(s) found!");
     }
     PutTag("EDBN");
 }

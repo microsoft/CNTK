@@ -63,7 +63,7 @@ public:
 
     // Destroy - cleanup and remove this class
     // NOTE: this destroys the object, and it can't be used past this point
-    virtual void Destroy()
+    virtual void Destroy() override
     {
         delete this;
     }
@@ -82,12 +82,12 @@ public:
     {
     }
 
-    virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& /*sections*/)
+    virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& /*sections*/) override
     {
         assert(false);
         NOT_IMPLEMENTED;
     }
-    virtual bool SaveData(size_t /*recordStart*/, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t /*datasetSize*/, size_t /*byteVariableSized*/)
+    virtual bool SaveData(size_t /*recordStart*/, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t /*datasetSize*/, size_t /*byteVariableSized*/) override
     {
         // loop through all the output vectors to copy the data over
         for (auto iter = m_outputs->begin(); iter != m_outputs->end(); ++iter)
@@ -126,8 +126,8 @@ public:
         // return the "done with all records" value
         return (m_currentRecord >= m_recordCount);
     }
-    virtual void SaveMapping(std::wstring saveId, const std::map<typename EvalWriter<ElemType>::LabelIdType, typename EvalWriter<ElemType>::LabelType>& /*labelMapping*/){};
-    virtual bool SupportMultiUtterances() const
+    virtual void SaveMapping(std::wstring saveId, const std::map<typename EvalWriter<ElemType>::LabelIdType, typename EvalWriter<ElemType>::LabelType>& /*labelMapping*/) override{};
+    virtual bool SupportMultiUtterances() const override
     {
         return false;
     };

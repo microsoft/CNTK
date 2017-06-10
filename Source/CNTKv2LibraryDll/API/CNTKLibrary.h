@@ -4641,12 +4641,12 @@ namespace CNTK
             return Update(gradientValues, info);
         }
 
-        virtual void ResetLearningRate(const LearningRateSchedule& learningRateSchedule)
+        virtual void ResetLearningRate(const LearningRateSchedule& learningRateSchedule) override
         {
             m_learner->ResetLearningRate(learningRateSchedule);
         }
 
-        virtual double LearningRate() const
+        virtual double LearningRate() const override
         {
             return m_learner->LearningRate();
         }

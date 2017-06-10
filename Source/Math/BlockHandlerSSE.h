@@ -110,10 +110,12 @@ class MATH_API BlockHandlerSSE
                                                 __m128i* resultStorage);
         static VectorT* PrepareExtraB(const ScalarBT* prepareMe, int k, int n)
         {
-            prepareMe;  k; n; //warning re. unreferenced params
+            (void)prepareMe;  
+            (void)k; 
+            (void)n; //warning re. unreferenced params
             return nullptr;
         }
-        static void FreePreparedB(VectorT* freeMe) { freeMe;  assert(nullptr == freeMe); }
+        static void FreePreparedB(VectorT* freeMe) { (void)freeMe;  assert(nullptr == freeMe); }
 
 };
 
@@ -563,7 +565,7 @@ FORCEINLINE void BlockHandlerSSE::HandleBlock8x4(int currBlock, int startRow, in
         int blockCnt, __m128i* resultStorage)
 {
     //Avoid warning 3861
-    blockCnt;
+    (void)blockCnt;
     int aOffset = RowToColOffsetRewrittenA(startRow, currBlock, 8, 4, k);
     short* currA = &newA[aOffset];
     LOAD_8x4;

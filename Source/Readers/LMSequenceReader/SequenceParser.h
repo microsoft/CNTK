@@ -553,7 +553,7 @@ public:
 
         // TODO: use our File class, so that we get the benefit of popen()
         if (_wfopen_s(&mFile, fileName, L"rt") != 0)    // TODO: What does this warning do? Why not fail?
-            Microsoft::MSR::CNTK::Warning("cannot open file %s", fileName);
+            fprintf(stderr, "cannot open file %ls", fileName);
     }
 
     void ParseReset()

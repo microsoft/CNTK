@@ -282,7 +282,7 @@ public:
     {
     }
     // ConfigValuePtr(const function<ConfigValuePtr()> & f, TextLocation location, const std::wstring & expressionName) : shared_ptr<Object>(make_shared<Thunk>(f, location)), location(location), expressionName(expressionName) { }
-    static ConfigValuePtr MakeThunk(const function<ConfigValuePtr()> &f, const function<void(const std::wstring &)> &failfn, const std::wstring &expressionName)
+    static ConfigValuePtr MakeThunk(const function<ConfigValuePtr(void)> &f, const function<void(const std::wstring &)> &failfn, const std::wstring &expressionName)
     {
         return ConfigValuePtr(make_shared<Thunk>(f, failfn), failfn, expressionName);
     }
@@ -398,7 +398,10 @@ public:
         // const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
         const auto p = dynamic_cast<C *>(get());
         if (p == nullptr) // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
-            Fail(L"config member has wrong type (" + msra::strfun::utf16(typeid(*get()).name()) + L"), expected a " + TypeId<C>());
+        {
+            auto&& obj = *get();
+            Fail(L"config member has wrong type (" + msra::strfun::utf16(typeid(obj).name()) + L"), expected a " + TypeId<C>());
+        }
         return *p;
     }
     template <class C>
@@ -406,8 +409,11 @@ public:
     {
         EnsureIsResolved();
         const auto p = dynamic_pointer_cast<C>(*this);
-        if (!p) // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
-            Fail(L"config member has wrong type (" + msra::strfun::utf16(typeid(*get()).name()) + L"), expected a " + TypeId<C>());
+        if (!p)
+        { // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
+            auto&& obj = *get();
+            Fail(L"config member has wrong type (" + msra::strfun::utf16(typeid(obj).name()) + L"), expected a " + TypeId<C>());
+        }
         return p;
     }
 
@@ -415,7 +421,8 @@ public:
 
     const char *TypeName() const
     {
-        return typeid(*get()).name();
+        auto&& obj{ *get() };
+        return typeid(obj).name();
     }
     const std::wstring &GetExpressionName() const
     {
@@ -727,16 +734,17 @@ public:
         // actualNamedArgs is a filtered version of namedArgs that contains all optional args listed in namedParams,
         // falling back to their default if not given in namedArgs.
         // On the other hand, any name in namedArgs that is not found in namedParams should be rejected.
-        for (const auto &namedParam : namedParams)
+        for (const auto& namedParam : namedParams)
         {
-            const auto &id = namedParam.first;      // id of expected named parameter
+            const auto& id = namedParam.first;      // id of expected named parameter
             const auto valuei = namedArgs.find(id); // was such parameter passed?
             if (valuei == namedArgs.end())          // named parameter not passed
             {                                       // if not given then fall back to default
-                auto f2 = [&namedParam]()            // we pass a lambda that resolves it upon first use, in our original location
+                auto f2 = [&namedParam](void) -> const ConfigValuePtr&  // we pass a lambda that resolves it upon first use, in our original location
                 {
                     return namedParam.second.ResolveValue();
                 };
+                
                 actualNamedArgs[id] = move(ConfigValuePtr::MakeThunk(f2, namedParam.second.GetFailFn(), exprName));
             }
             else                                            // named parameter was passed
@@ -768,7 +776,7 @@ struct CustomConfigRecord : public IConfigRecord // any class that exposes confi
         return *valuep;
     }
 
-    const ConfigValuePtr* /*IConfigRecord::*/ Find(const std::wstring& id) const // returns nullptr if not found
+    const ConfigValuePtr* /*IConfigRecord::*/ Find(const std::wstring& id) const override // returns nullptr if not found
     {
         const auto& mapIter = members.find(id);
         if (mapIter != members.end())
@@ -962,7 +970,7 @@ inline const std::string IConfigRecord::ConfigName() const
         {
             return nullptr;
         }
-        virtual std::vector<std::wstring> GetMemberIds() const
+        virtual std::vector<std::wstring> GetMemberIds() const override
         {
             return std::vector<std::wstring>();
         }

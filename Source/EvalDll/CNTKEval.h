@@ -54,13 +54,13 @@ class CNTKEval : public CNTKEvalBase<ElemType>, public IEvaluateModel<ElemType>
 public:
     CNTKEval() : CNTKEvalBase<ElemType>(), m_reader(nullptr), m_writer(nullptr) {}
 
-    virtual void GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup);
+    virtual void GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup) override;
 
-    virtual void StartEvaluateMinibatchLoop(const std::wstring& outputNodeName);
+    virtual void StartEvaluateMinibatchLoop(const std::wstring& outputNodeName) override;
 
-    virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs);
+    virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs) override;
 
-    virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs);
+    virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& outputs) override;
 
     virtual void Destroy() override;
 

@@ -81,7 +81,7 @@ public:
 
     // Destroy - cleanup and remove this class
     // NOTE: this destroys the object, and it can't be used past this point
-    virtual void Destroy()
+    virtual void Destroy() override
     {
         delete this;
     }
@@ -104,7 +104,7 @@ public:
     // mbSize - [in] size of the minibatch (number of frames, etc.)
     // epoch - [in] epoch number for this loop
     // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
-    virtual void StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t /*requestedEpochSamples=requestDataSize*/)
+    virtual void StartMinibatchLoop(size_t mbSize, size_t /*epoch*/, size_t /*requestedEpochSamples=requestDataSize*/) override
     {
         m_mbSize = min(mbSize, m_recordCount);
     }
@@ -113,7 +113,7 @@ public:
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
     //             [out] each matrix resized if necessary containing data.
     // returns - true if there are more minibatches, false if no more minibatchs remain
-    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices)
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices) override
     {
         // how many records are we reading this time
         size_t recordCount = min(m_mbSize, m_recordCount - m_currentRecord);
@@ -150,12 +150,12 @@ public:
         return true;
     }
 
-    size_t GetNumParallelSequencesForFixingBPTTMode()
+    size_t GetNumParallelSequencesForFixingBPTTMode() override
     {
         return 1;
     }
 
-    void SetNumParallelSequences(const size_t)
+    void SetNumParallelSequences(const size_t) override
     {
     }
     void SetSentenceSegBatch(std::vector<size_t>& sentenceEnd)
@@ -166,7 +166,7 @@ public:
             sentenceEnd[i] = m_switchFrame[i];
         }
     }
-    void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) override
     {
         assert(m_switchFrame.size() == 1);
         pMBLayout->Init(1, m_mbSize);
@@ -212,7 +212,7 @@ public:
 
     // GetLabelMapping - Gets the label mapping from integer index to label type
     // returns - a map from numeric datatype to native label type
-    virtual const std::map<typename EvalReader<ElemType>::LabelIdType, typename EvalReader<ElemType>::LabelType>& GetLabelMapping(const std::wstring& /*sectionName*/)
+    virtual const std::map<typename EvalReader<ElemType>::LabelIdType, typename EvalReader<ElemType>::LabelType>& GetLabelMapping(const std::wstring& /*sectionName*/) override
     {
         static std::map<typename EvalReader<ElemType>::LabelIdType, typename EvalReader<ElemType>::LabelType> labelMap;
         return labelMap;
@@ -221,7 +221,7 @@ public:
     // SetLabelMapping - Sets the label mapping from integer index to label
     // labelMapping - mapping table from label values to IDs (must be 0-n)
     // note: for tasks with labels, the mapping table must be the same between a training run and a testing run
-    virtual void SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename EvalReader<ElemType>::LabelIdType, typename EvalReader<ElemType>::LabelType>& /*labelMapping*/)
+    virtual void SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename EvalReader<ElemType>::LabelIdType, typename EvalReader<ElemType>::LabelType>& /*labelMapping*/) override
     {
     }
 
@@ -233,23 +233,23 @@ public:
     //                  [out] size of buffer filled with data
     // recordStart - record to start reading from, defaults to zero (start of data)
     // returns: true if data remains to be read, false if the end of data was reached
-    virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart=0*/)
+    virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart=0*/) override
     {
         return false;
     }
 
-    virtual bool DataEnd()
+    virtual bool DataEnd() override
     {
         return m_currentRecord < m_recordCount;
     }
 
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& /*latticeinput*/, vector<size_t>& /*uids*/,
-                                 vector<size_t>& /*boundaries*/, vector<size_t>& /*extrauttmap*/)
+                                 vector<size_t>& /*boundaries*/, vector<size_t>& /*extrauttmap*/) override
     {
         return true;
     }
 
-    virtual bool GetHmmData(msra::asr::simplesenonehmm* /*hmm*/)
+    virtual bool GetHmmData(msra::asr::simplesenonehmm* /*hmm*/) override
     {
         return true;
     }

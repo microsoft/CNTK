@@ -140,7 +140,7 @@ public:
 
     virtual  StorageType GetStorageType() override { return StorageType::dense; }
 
-    size_t GetSequenceDataForChunk(size_t numSequences, void* data, std::vector<SequenceDataPtr>& result)
+    size_t GetSequenceDataForChunk(size_t numSequences, void* data, std::vector<SequenceDataPtr>& result) override
     {
         size_t valueSize = SizeOfDataType();
         result.resize(numSequences);
@@ -182,7 +182,7 @@ public:
     //   ElemType[nnz]: the values for the sparse sequences
     //   int32_t[nnz]: the row offsets for the sparse sequences
     //   int32_t[numSamples]: sizes (nnz counts) for each sample in the sequence
-    size_t GetSequenceDataForChunk(size_t numSequences, void* data, std::vector<SequenceDataPtr>& result)
+    size_t GetSequenceDataForChunk(size_t numSequences, void* data, std::vector<SequenceDataPtr>& result) override
     {
         size_t offset = 0;
         result.resize(numSequences);

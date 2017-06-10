@@ -645,10 +645,12 @@ public:
         {
             return type >= 0;
         }
+        /*
         inline operator const coord &() const
         {
             return *this;
         }
+        */
         inline foundcoord(short type, int m, index_t i)
             : type(type), coord(m, i)
         {

@@ -43,7 +43,7 @@ public:
     }
 
     // Gets chunk data given its id.
-    virtual ChunkPtr GetChunk(ChunkIdType chunkId);
+    virtual ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
 private:
     // A map of currently loaded chunks

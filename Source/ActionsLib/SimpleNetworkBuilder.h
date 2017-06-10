@@ -102,7 +102,7 @@ public:
     void Init(const intargvector& layerSizes, const TrainingCriterion trainCriterion, const EvalCriterion evalCriterion,
               DEVICEID_TYPE deviceId,
               int outputLayerSize = -1,
-              const stringargvector nonLinearFunctions = L"Sigmoid",
+              const stringargvector nonLinearFunctions = stringargvector(std::wstring(L"Sigmoid")),
               const bool addDropoutNodes = false,
               const bool uniformInit = true, const ElemType initValueScale = 1.0f,
               const bool applyMeanVarNorm = false, bool needPrior = false)

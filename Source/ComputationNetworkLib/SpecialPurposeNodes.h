@@ -529,7 +529,7 @@ public:
     }
 
     // -sum(left_i * log(softmax_i(right)))
-    virtual void ForwardPropNonLooping()
+    virtual void ForwardPropNonLooping() override
     {
         // Initialize m_gammaCalculator
         // TODO: Would this lend itself to a unique_ptr instead of the init flag?
@@ -604,7 +604,7 @@ public:
     }
 
     // request matrices needed to do node function value evaluation
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
@@ -613,7 +613,7 @@ public:
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
@@ -912,7 +912,7 @@ public:
     }
 
     // request matrices needed to do node function value evaluation
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
@@ -922,7 +922,7 @@ public:
         RequestMatrixFromPool(m_maxValues, matrixPool);
     }
 
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
@@ -1072,7 +1072,7 @@ public:
     }
 
     // request matrices needed to do node function value evaluation
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_result, matrixPool);

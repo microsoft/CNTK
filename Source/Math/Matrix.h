@@ -162,7 +162,7 @@ public:
     MatrixType GetMatrixType() const override;
     MatrixFormat GetFormat() const override;
     bool OwnBuffer() const { return m_baseMatrix->OwnBuffer(); }
-    int GetDeviceId() const; // -1 if CPU, otherwise GPU CUDA device id
+    int GetDeviceId() const override; // -1 if CPU, otherwise GPU CUDA device id
     DEVICEID_TYPE GetPreferredDeviceId() const { return m_preferredDeviceId; }; // -1 if CPU, otherwise GPU CUDA device id
     void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId) { m_preferredDeviceId = preferredDeviceId; }
     // Moves matrix from device id_from to device with id_to.

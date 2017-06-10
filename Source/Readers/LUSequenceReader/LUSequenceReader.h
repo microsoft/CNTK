@@ -168,13 +168,13 @@ protected:
     bool SentenceEnd();
 
 public:
-    void Init(const ConfigParameters&){};
-    void Init(const ScriptableObjects::IConfigRecord&){};
+    void Init(const ConfigParameters&) override {};
+    void Init(const ScriptableObjects::IConfigRecord&) override {};
     void ChangeMaping(const map<LabelType, LabelType>& maplist,
                       const LabelType& unkstr,
                       map<LabelType, LabelIdType>& word4idx);
 
-    void Destroy(){};
+    void Destroy() override {};
 
     LUSequenceReader()
     {
@@ -184,12 +184,12 @@ public:
         m_idx2clsRead = false;
     }
     ~LUSequenceReader(){};
-    void StartMinibatchLoop(size_t, size_t, size_t = requestDataSize){};
+    void StartMinibatchLoop(size_t, size_t, size_t = requestDataSize) override {};
 
-    void SetNumParallelSequences(const size_t /*mz*/){};
+    void SetNumParallelSequences(const size_t /*mz*/) override {};
     void SentenceEnd(std::vector<size_t>& /*sentenceEnd*/){};
 
-    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
+    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0) override;
 
     size_t GetCurrentSamplePosition() override
     {
@@ -298,7 +298,7 @@ public:
 
     // return length of sentences size
     size_t FindNextSentences(size_t numSentences);
-    bool DataEnd();
+    bool DataEnd() override;
     void SetSentenceEnd(int wrd, int pos, int actualMbSize);
     void SetSentenceBegin(int wrd, int pos, int actualMbSize);
     void SetSentenceBegin(int wrd, size_t pos, size_t actualMbSize)
@@ -320,14 +320,14 @@ public:
 
     size_t GetLabelOutput(StreamMinibatchInputs& matrices, LabelInfo& labelInfo, size_t actualmbsize);
 
-    void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    bool TryGetMinibatch(StreamMinibatchInputs& matrices);
+    void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
+    bool TryGetMinibatch(StreamMinibatchInputs& matrices) override;
 
     bool EnsureDataAvailable(size_t mbStartSample);
-    size_t GetNumParallelSequencesForFixingBPTTMode();
-    void SetNumParallelSequences(const size_t mz);
+    size_t GetNumParallelSequencesForFixingBPTTMode() override;
+    void SetNumParallelSequences(const size_t mz) override;
 
-    void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) override;
 
 public:
     void GetClassInfo(LabelInfo& lblInfo);
@@ -341,7 +341,7 @@ public:
 
     template <class ConfigRecordType>
     void LoadWordMapping(const ConfigRecordType& config);
-    bool CanReadFor(wstring nodeName); // return true if this reader can output for a node with name nodeName
+    bool CanReadFor(wstring nodeName) override; // return true if this reader can output for a node with name nodeName
 
     vector<size_t> ReturnToProcessId()
     {
@@ -413,13 +413,13 @@ public:
         }
     };
 
-    bool TryGetMinibatch(StreamMinibatchInputs& matrices);
+    bool TryGetMinibatch(StreamMinibatchInputs& matrices) override;
 
-    void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples);
+    void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples) override;
 
-    void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) override;
 
-    size_t GetNumParallelSequencesForFixingBPTTMode();
+    size_t GetNumParallelSequencesForFixingBPTTMode() override;
 
     template <class ConfigRecordType>
     void InitFromConfig(const ConfigRecordType&);
@@ -437,7 +437,7 @@ public:
 
 public:
     //int GetSentenceEndIdFromOutputLabel();
-    bool DataEnd();
+    bool DataEnd() override;
 
     // create proposals
     void InitProposals(StreamMinibatchInputs& pMat);

@@ -280,7 +280,7 @@ namespace CNTK
         virtual BackPropStatePtr Forward(const std::vector<ValuePtr>& /*inputValues*/,
                                          std::unordered_map<Variable, ValuePtr>& /*outputs*/,
                                          const DeviceDescriptor& /*computeDevice*/,
-                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/)
+                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/) override
         {
             NOT_IMPLEMENTED;
         }

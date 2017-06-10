@@ -704,7 +704,7 @@ double lattice::forwardbackwardlatticesMBR(const std::vector<float> &edgeacscore
     }
     const double totalfwacc = accalphas.back();
 
-    hset; // just for reference
+    (void) hset; // just for reference
 
     // report on ground-truth path
     // TODO: we will later have code that adds this path if needed
@@ -1363,8 +1363,8 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
 
     // score the ground truth  --only if a transcript is provided, which happens if the user provides a language model
     // TODO: no longer used, remove this. 'transcript' parameter is no longer used in this function.
-    transcript;
-    transcriptunigrams;
+    (void) transcript;
+    (void) transcriptunigrams;
 
     // allocate alpha/beta/gamma matrices (all are sharing the same memory in-place)
     std::vector<msra::math::ssematrixbase *> abcs;

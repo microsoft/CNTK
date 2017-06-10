@@ -549,12 +549,12 @@ int wmain(int argc, wchar_t *argv[])
 #endif
 
 // instantiate UCI parsers for supported types
-template class SequenceParser<float, int>;
-template class SequenceParser<float, float>;
-template class SequenceParser<float, std::string>;
-template class SequenceParser<double, int>;
-template class SequenceParser<double, double>;
-template class SequenceParser<double, std::string>;
+//template class SequenceParser<float, int>;
+//template class SequenceParser<float, float>;
+//template class SequenceParser<float, std::string>;
+//template class SequenceParser<double, int>;
+//template class SequenceParser<double, double>;
+//template class SequenceParser<double, std::string>;
 
 //template <typename NumType, typename LabelType>
 //void LMBatchSequenceParser<NumType, LabelType>::ParseInit(LPCWSTR fileName, size_t dimFeatures, size_t dimLabelsIn, size_t dimLabelsOut, std::string beginSequenceIn /*="<s>"*/, std::string endSequenceIn /*="</s>"*/, std::string beginSequenceOut /*="O"*/, std::string endSequenceOut /*="O"*/)

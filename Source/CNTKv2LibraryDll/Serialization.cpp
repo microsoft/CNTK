@@ -605,6 +605,9 @@ namespace CNTK
         case proto::DictionaryValue::NDArrayView:
             dst.m_data.m_ptr = CreateFromProto(src.nd_array_view_value());
             break;
+        default:
+            RuntimeError("Serializer::Copy cannot handle type %d", valueType);
+            break;
         }
     }
 

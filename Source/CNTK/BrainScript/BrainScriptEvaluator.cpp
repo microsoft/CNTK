@@ -477,10 +477,10 @@ static ConfigValuePtr OtherOp(const ExpressionPtr &e, ConfigValuePtr leftVal, Co
     {
         let left  = leftVal.AsPtr<ConfigRecord>();
         let right = rightVal.AsPtr<ConfigRecord>();
-        left;
-        right;
-        scope;
-        exprPath; // TODO: create a composite dictionary
+        (void)left;
+        (void)right;
+        (void)scope;
+        (void)exprPath; // TODO: create a composite dictionary
         NOT_IMPLEMENTED;
         return leftVal;
     }

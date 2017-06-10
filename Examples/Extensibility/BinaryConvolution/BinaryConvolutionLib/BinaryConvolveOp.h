@@ -89,7 +89,9 @@ private:
                   const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                   std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override
     {
-        state; rootGradientValues; backPropagatedGradientValuesForInputs; 
+        (void)state; 
+        (void)rootGradientValues; 
+        (void)backPropagatedGradientValuesForInputs; 
         std::runtime_error("Binary Convolution does not currently support backprop");
     }
 

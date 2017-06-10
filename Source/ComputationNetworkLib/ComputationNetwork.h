@@ -1092,7 +1092,7 @@ public:
     vector<wstring> /*IConfigRecord::*/ GetMemberIds() const override;
 
     // create a somewhat readable representation, aimed at diagnostics/debugging
-    wstring /*HasToString::*/ ToString() const
+    wstring /*HasToString::*/ ToString() const override
     {
         wstring args;
         for (auto& iter : m_nameToNodeMap)
@@ -1139,11 +1139,11 @@ protected:
         }
         virtual void EndBackprop() override;
         virtual void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
-        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
-        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);
-        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
-        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool);
-        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override;
+        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override;
+        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override;
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override;
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override;
         virtual bool IsOutOfDateWrtInputs() const override;
 
     public:
@@ -1198,11 +1198,11 @@ protected:
         virtual void EndBackprop() override {}
 
         virtual void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override;
-        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool);
-        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool);
-        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
-        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool);
-        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
+        virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override;
+        virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override;
+        virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override;
+        virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override;
+        virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override;
 
     public:
         // this special constructor constructs the top-level network node

@@ -992,7 +992,7 @@ bool UCIFastReader<ElemType>::GetMinibatchImpl(StreamMinibatchInputs& matrices)
     m_mbStartSample += actualmbsize;
 
     // if they don't want partial minibatches, skip data transfer and return
-    if (actualmbsize < m_mbSize && !m_partialMinibatch || actualmbsize == 0 || currSubsetSize == 0) // no records found (end of minibatch)
+    if ((actualmbsize < m_mbSize && !m_partialMinibatch) || actualmbsize == 0 || currSubsetSize == 0) // no records found (end of minibatch)
     {
         return false;
     }

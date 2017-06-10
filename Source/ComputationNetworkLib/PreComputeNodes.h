@@ -148,7 +148,7 @@ public:
     }
 
     // this is used by the special-purpose command "convertdbn".
-    virtual void SideLoadFromMatrix(const Matrix<ElemType>& m)
+    virtual void SideLoadFromMatrix(const Matrix<ElemType>& m) override
     {
         Base::SideLoadFromMatrix(m);
         m_numSamples = SIZE_MAX;
@@ -222,7 +222,7 @@ public:
     {
     }
 
-    virtual void /*PreComputedNodeBase::*/ MarkComputed(const bool hasComputed)
+    virtual void /*PreComputedNodeBase::*/ MarkComputed(const bool hasComputed) override
     {
         Base::MarkComputed(hasComputed);
         if (!m_hasComputed) // initialize accumulation

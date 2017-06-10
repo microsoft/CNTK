@@ -83,9 +83,7 @@ __declspec_noreturn static inline void ThrowFormattedVA(const char* format, va_l
 #ifndef _MSC_VER // TODO: what is the correct trigger for gcc?
 template <class E>
 __declspec_noreturn void ThrowFormatted(const char* format, ...) __attribute__((format(printf, 1, 2)));
-#endif
-
-
+#else
 template <class E>
 __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
 {
@@ -94,6 +92,7 @@ __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
     ThrowFormattedVA<E>(format, args);
     va_end(args);
 };
+#endif
 
 // RuntimeError - throw a std::runtime_error with a formatted error string
 #ifndef _MSC_VER // gcc __attribute__((format(printf())) does not percolate through variadic templates; so must go the macro route
@@ -125,6 +124,7 @@ __declspec_noreturn static inline void InvalidArgument(const char* format, _Type
 #endif
 
 // Warning - warn with a formatted error string
+/*
 #pragma warning(push)
 #pragma warning(disable : 4996)
 static inline void Warning(const char* format, ...)
@@ -140,6 +140,7 @@ static inline void Warning(const string& message)
 {
     Warning("%s", message.c_str());
 }
+*/
 
 #ifndef NOT_IMPLEMENTED
 #define NOT_IMPLEMENTED                                                                                                              \

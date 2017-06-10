@@ -555,20 +555,20 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowRepeatValuesOf(const CPUMatrix
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber)
 {
-    a;
-    posNumber;
-    negNumber;
-    shiftNumber;
+    (void)a;
+    (void)posNumber;
+    (void)negNumber;
+    (void)shiftNumber;
     NOT_IMPLEMENTED;
 }
 
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddFoldedPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber)
 {
-    a;
-    posNumber;
-    negNumber;
-    shiftNumber;
+    (void)a;
+    (void)posNumber;
+    (void)negNumber;
+    (void)shiftNumber;
     NOT_IMPLEMENTED;
 }
 
@@ -5538,7 +5538,7 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
     if (m != k || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
-    if ((isColWise && m == 1) || !isColWise && n == 1) // in this case it's equivalent to element-wise product
+    if ((isColWise && m == 1) || (!isColWise && n == 1)) // in this case it's equivalent to element-wise product
     {
         c.AssignElementProductOf(a, b);
     }
@@ -5826,7 +5826,7 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
     if (m != k || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
-    if ((isColWise && m == 1) || !isColWise && n == 1) // in this case it's equivalent to element-wise product
+    if ((isColWise && m == 1) || (!isColWise && n == 1)) // in this case it's equivalent to element-wise product
     {
         InvalidArgument("InnerProduct: Both matrices should be normal ones, not vectors");
         //            c.AssignElementProductOf(a, b);
@@ -6787,6 +6787,8 @@ struct TensorArgOpReduction
             case ElementWiseOperator::opArgmax:
                 update = (aggregate < val);
                 break;
+            default:
+                break;
             }
 
             if (update)
@@ -7245,9 +7247,10 @@ int CPUMatrix<ElemType>::ArgOp(ElementWiseOperator reductionOp) const
         case ElementWiseOperator::opArgmax:
             return Argmax();
             break;
+        default:
+            InvalidArgument("ArgOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");
+            break;
     }
-
-    InvalidArgument("ArgOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");
     return -1;
 }
 

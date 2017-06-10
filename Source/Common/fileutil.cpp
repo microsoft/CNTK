@@ -241,6 +241,7 @@ static const wchar_t* strchr(const wchar_t* s, wchar_t v)
     return wcschr(s, v);
 }
 
+void fsetmode(FILE* f, char type);
 // pathname is "-" -- open stdin or stdout. Changes bin mode if 'b' or 't' given.
 template <class _T>
 FILE* fopenStdHandle(const _T* mode)

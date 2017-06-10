@@ -105,7 +105,7 @@ public:
         }
     }
     // request matrices needed to do node function value evaluation
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_maxIndexes0, matrixPool);
@@ -115,7 +115,7 @@ public:
 
     // release temp matrices that are only used by forward computation
     // don't release matrices that need to be used in the gradient computation
-    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterForwardProp(matrixPool);
         ReleaseMatrixToPool(m_maxIndexes0, matrixPool);
@@ -338,7 +338,7 @@ public:
     }
 
     // request matrices needed to do node function value evaluation
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_urlGain0, matrixPool);
@@ -348,7 +348,7 @@ public:
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_urlGain0, matrixPool);
@@ -549,7 +549,7 @@ public:
     }
 
     //request matrices needed to do node function value evaluation
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_maxIndexes0, matrixPool);
@@ -559,7 +559,7 @@ public:
 
     //release temp matrices that are only used by forward computation
     //don't release matrices that need to be used in the gradient computation
-    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterForwardProp(matrixPool);
         ReleaseMatrixToPool(m_maxIndexes0, matrixPool);

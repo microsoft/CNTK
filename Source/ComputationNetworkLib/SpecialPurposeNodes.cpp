@@ -83,7 +83,8 @@ template <class ElemType>
 template <class ElemType>
 /*virtual*/ void TraceNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
 {
-    assert(inputIndex == 0); inputIndex;
+    assert(inputIndex == 0); 
+    (void)inputIndex;
 
     size_t rank = DetermineElementwiseTensorRank();
     auto sliceOutputGrad =             GradientTensorFor(rank, fr);      // propagate from this one...

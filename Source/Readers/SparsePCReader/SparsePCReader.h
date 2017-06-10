@@ -64,7 +64,7 @@ public:
         m_pMBLayout->SetUniqueAxisName(L"SparsePCReader");
     };
     virtual ~SparsePCReader();
-    virtual void Destroy();
+    virtual void Destroy() override;
     template <class ConfigRecordType>
     void InitFromConfig(const ConfigRecordType&);
     virtual void Init(const ConfigParameters& config) override
@@ -75,24 +75,24 @@ public:
     {
         InitFromConfig(config);
     }
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices) override;
 
-    size_t GetNumParallelSequencesForFixingBPTTMode()
+    size_t GetNumParallelSequencesForFixingBPTTMode() override
     {
         return m_pMBLayout->GetNumParallelSequences();
     }
-    void SetNumParallelSequences(const size_t){};
-    void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
+    void SetNumParallelSequences(const size_t) override{};
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) override
     {
         pMBLayout->CopyFrom(m_pMBLayout);
     }
-    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
-    virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart*/)
+    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName) override;
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping) override;
+    virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart*/) override
     {
         RuntimeError("GetData not supported in SparsePCReader");
     };
-    virtual bool DataEnd();
+    virtual bool DataEnd() override;
 };
 } } }

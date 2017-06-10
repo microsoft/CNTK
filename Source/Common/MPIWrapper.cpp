@@ -160,14 +160,14 @@ public:
     // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
     ~MPIWrapperEmpty();
 
-    size_t NumNodesInUse() const;
-    size_t CurrentNodeRank() const;
-    bool IsMainNode() const;
-    std::wstring CurrentNodeName() const;
-    bool IsIdle() const;
-    bool UsingAllNodes() const;
-    size_t MainNodeRank() const;
-    bool IsMultiHost() const;
+    size_t NumNodesInUse() const override;
+    size_t CurrentNodeRank() const override;
+    bool IsMainNode() const override;
+    std::wstring CurrentNodeName() const override;
+    bool IsIdle() const override;
+    bool UsingAllNodes() const override;
+    size_t MainNodeRank() const override;
+    bool IsMultiHost() const override;
     // Use GPUDirect RDMA
     virtual bool UseGpuGdr() override;
 
@@ -175,76 +175,76 @@ public:
     // data-exchange functions (wrappers around MPI functions)
     // -----------------------------------------------------------------------
 
-    virtual int Finalize(void);
-    virtual int Wait(MPI_Request* request, MPI_Status* status);
-    virtual int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status);
-    virtual int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
-    virtual int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
-    virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
-    virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
-    virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
-    virtual int Abort(int errorcode);
-    virtual int Error_string(int errorcode, char* string, int* resultlen);
+    virtual int Finalize(void) override;
+    virtual int Wait(MPI_Request* request, MPI_Status* status) override;
+    virtual int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status) override;
+    virtual int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]) override;
+    virtual int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request) override;
+    virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status) override;
+    virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request) override;
+    virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request) override;
+    virtual int Abort(int errorcode) override;
+    virtual int Error_string(int errorcode, char* string, int* resultlen) override;
 
     // allreduce of a vector
-    virtual void AllReduce(std::vector<size_t>& accumulator) const;
-    virtual void AllReduce(std::vector<int>& accumulator) const;
-    virtual void AllReduce(std::vector<double>& accumulator) const;
-    virtual void AllReduce(std::vector<float>& accumulator) const;
+    virtual void AllReduce(std::vector<size_t>& accumulator) const override;
+    virtual void AllReduce(std::vector<int>& accumulator) const override;
+    virtual void AllReduce(std::vector<double>& accumulator) const override;
+    virtual void AllReduce(std::vector<float>& accumulator) const override;
 
     // for raw pointer
-    virtual void AllReduce(size_t* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
-    virtual void AllReduce(int* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
-    virtual void AllReduce(double* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
-    virtual void AllReduce(float* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduce(size_t* sendData, size_t numElements, MPI_Op op = MPI_SUM) const override;
+    virtual void AllReduce(int* sendData, size_t numElements, MPI_Op op = MPI_SUM) const override;
+    virtual void AllReduce(double* sendData, size_t numElements, MPI_Op op = MPI_SUM) const override;
+    virtual void AllReduce(float* sendData, size_t numElements, MPI_Op op = MPI_SUM) const override;
 
-    virtual void AllReduce(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
-    virtual void AllReduce(int* sendData, int* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
-    virtual void AllReduce(double* sendData, double* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
-    virtual void AllReduce(float* sendData, float* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduce(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const override;
+    virtual void AllReduce(int* sendData, int* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const override;
+    virtual void AllReduce(double* sendData, double* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const override;
+    virtual void AllReduce(float* sendData, float* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const override;
 
-    virtual void AllReduceAsync(size_t* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
-    virtual void AllReduceAsync(int* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
-    virtual void AllReduceAsync(double* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
-    virtual void AllReduceAsync(float* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduceAsync(size_t* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const override;
+    virtual void AllReduceAsync(int* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const override;
+    virtual void AllReduceAsync(double* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const override;
+    virtual void AllReduceAsync(float* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const override;
 
-    virtual void AllReduceAsync(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
-    virtual void AllReduceAsync(int* sendData, int* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
-    virtual void AllReduceAsync(double* sendData, double* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
-    virtual void AllReduceAsync(float* sendData, float* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduceAsync(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const override;
+    virtual void AllReduceAsync(int* sendData, int* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const override;
+    virtual void AllReduceAsync(double* sendData, double* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const override;
+    virtual void AllReduceAsync(float* sendData, float* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const override;
 
-    virtual void Bcast(size_t* sendData, size_t numElements, size_t srcRank);
-    virtual void Bcast(double* sendData, size_t numElements, size_t srcRank);
-    virtual void Bcast(float* sendData, size_t numElements, size_t srcRank);
-    virtual void Bcast(void* buffer, int count, MPI_Datatype datatype, int root);
+    virtual void Bcast(size_t* sendData, size_t numElements, size_t srcRank) override;
+    virtual void Bcast(double* sendData, size_t numElements, size_t srcRank) override;
+    virtual void Bcast(float* sendData, size_t numElements, size_t srcRank) override;
+    virtual void Bcast(void* buffer, int count, MPI_Datatype datatype, int root) override;
 
-    virtual void AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const;
-    virtual void AllGatherAsync(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, MPI_Request* request) const;
-    virtual void AllGatherAsync(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, MPI_Request* request) const;
-    virtual void AllGatherAsync(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, MPI_Request* request) const;
-    virtual void Allgather(const void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype) const;
+    virtual void AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const override;
+    virtual void AllGatherAsync(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, MPI_Request* request) const override;
+    virtual void AllGatherAsync(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, MPI_Request* request) const override;
+    virtual void AllGatherAsync(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, MPI_Request* request) const override;
+    virtual void Allgather(const void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype) const override;
 
-    virtual void AllGather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements) const;
-    virtual void AllGather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements) const;
-    virtual void AllGather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements) const;
-    virtual void AllGather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements) const;
+    virtual void AllGather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements) const override;
+    virtual void AllGather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements) const override;
+    virtual void AllGather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements) const override;
+    virtual void AllGather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements) const override;
 
-    virtual void Gather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, size_t rootRank) const;
-    virtual void Gather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, size_t rootRank) const;
-    virtual void Gather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, size_t rootRank) const;
-    virtual void Gather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, size_t rootRank) const;
+    virtual void Gather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, size_t rootRank) const override;
+    virtual void Gather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, size_t rootRank) const override;
+    virtual void Gather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, size_t rootRank) const override;
+    virtual void Gather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, size_t rootRank) const override;
 
-    virtual void Gatherv(const size_t *sendData, size_t numSendElements, size_t *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
-    virtual void Gatherv(const char *sendData, size_t numSendElements, char *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
-    virtual void Gatherv(const int *sendData, size_t numSendElements, int *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
-    virtual void Gatherv(const float *sendData, size_t numSendElements, float *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
-    virtual void Gatherv(const double *sendData, size_t numSendElements, double *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
+    virtual void Gatherv(const size_t *sendData, size_t numSendElements, size_t *receiveData, int recvCounts[], int offsets[], size_t rootRank) const override;
+    virtual void Gatherv(const char *sendData, size_t numSendElements, char *receiveData, int recvCounts[], int offsets[], size_t rootRank) const override;
+    virtual void Gatherv(const int *sendData, size_t numSendElements, int *receiveData, int recvCounts[], int offsets[], size_t rootRank) const override;
+    virtual void Gatherv(const float *sendData, size_t numSendElements, float *receiveData, int recvCounts[], int offsets[], size_t rootRank) const override;
+    virtual void Gatherv(const double *sendData, size_t numSendElements, double *receiveData, int recvCounts[], int offsets[], size_t rootRank) const override;
 
     // wait for all ranks to reach here
-    virtual int WaitAll();
-    virtual void WaitAny(MPI_Request* requests, int numRequests, int* index);
-    virtual void Wait(MPI_Request* request);
-    virtual int WaitAll(std::vector<MPI_Request>& requests);
+    virtual int WaitAll() override;
+    virtual void WaitAny(MPI_Request* requests, int numRequests, int* index) override;
+    virtual void Wait(MPI_Request* request) override;
+    virtual int WaitAll(std::vector<MPI_Request>& requests) override;
 };
 
 

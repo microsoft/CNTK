@@ -626,7 +626,7 @@ public:
         auto distanceToStart = (ptrdiff_t) m_distanceToStart(s, t);
 #if 1 // I don't exactly know what this does, so try assert() first
         assert(distanceToStart != -1);
-        distanceToStart;
+        (void)distanceToStart;
 #else
         if (distanceToStart == -1) // indicates a gap
             return false;

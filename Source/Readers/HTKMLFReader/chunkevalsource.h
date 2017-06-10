@@ -71,7 +71,7 @@ private:
             firstframe += n;
         }
         assert(firstframe == framesinblock);
-        framesinblock;
+        (void)framesinblock;
 
         // and we are done --forget the FIFO content & get ready for next chunk
         clear();
@@ -200,7 +200,7 @@ private:
             firstframe += n;
         }
         assert(firstframe == framesinblock);
-        framesinblock;
+        (void)framesinblock;
 
         // and we are done --forget the FIFO content & get ready for next chunk
     }

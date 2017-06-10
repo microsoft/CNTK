@@ -786,9 +786,9 @@ int wmain(int argc, wchar_t *argv[])
 #endif
 
 // instantiate UCI parsers for supported types
-template class UCIParser<float, int>;
-template class UCIParser<float, float>;
-template class UCIParser<float, std::string>;
-template class UCIParser<double, int>;
-template class UCIParser<double, double>;
-template class UCIParser<double, std::string>;
+//template class UCIParser<float, int>;
+//template class UCIParser<float, float>;
+//template class UCIParser<float, std::string>;
+//template class UCIParser<double, int>;
+//template class UCIParser<double, double>;
+//template class UCIParser<double, std::string>;

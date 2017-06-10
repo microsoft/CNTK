@@ -40,7 +40,7 @@ public:
     OptimizedRNNStackNode(DEVICEID_TYPE deviceId, const std::wstring& name, bool bidirectional, size_t numLayers, size_t hiddenSize, const std::wstring& recurrentOp);
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
-    virtual void Save(File& fstream) const;
+    virtual void Save(File& fstream) const override;
     virtual void Load(File& fstream, size_t modelVersion) override;
 
 public:
@@ -49,7 +49,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 
     // request matrices needed to do node function value evaluation
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_transposedInput, matrixPool);
@@ -60,7 +60,7 @@ public:
     }
 
     // request matrices needed to do node derivative value evaluation
-    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_transposedDInput, matrixPool);
@@ -68,7 +68,7 @@ public:
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_transposedInput, matrixPool);
@@ -80,8 +80,8 @@ public:
         ReleaseMatrixToPool(m_packingIndex, matrixPool);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const { return 0 == childIndex; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return 0 == childIndex; }
     RnnAttributes Attributes() const { return m_rnnAttributes; }
 
 protected:

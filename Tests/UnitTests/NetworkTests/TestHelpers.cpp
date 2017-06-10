@@ -70,5 +70,7 @@ void DummyNodeTest<ElemType>::SetMinibatch(size_t minibatchSize, SmallVector<siz
     this->Value().SetValue(minibatchSize, shape.GetNumElements(), this->m_deviceId, data.data());
 }
 
+namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 template class DummyNodeTest<float>;
 template class DummyNodeTest<double>;
+}}}}

@@ -1028,8 +1028,8 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
     size_t n = transposeB ? (int) rhs.GetNumRows() : (int) rhs.GetNumCols();
 
     assert(m > 0 && k > 0 && l > 0 && n > 0);
-    m;
-    n; // converting from size_t to int may cause overflow
+    (void)m;
+    (void)n; // converting from size_t to int may cause overflow
     assert(k == l);
     if (k != l)
     {

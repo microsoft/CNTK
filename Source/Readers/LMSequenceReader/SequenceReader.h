@@ -260,7 +260,7 @@ public:
     void GetInputProb(StreamMinibatchInputs& matrices);
     void GetClassInfo();
 
-    virtual void Destroy();
+    virtual void Destroy() override;
     SequenceReader()
     {
         m_featuresBuffer = NULL;
@@ -281,16 +281,16 @@ public:
         */
     }
     virtual ~SequenceReader();
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
-    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices);
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize) override;
+    virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices) override;
 
     // void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
     // TODO: ^^ should this be   void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
-    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
-    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
+    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName) override;
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping) override;
+    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0) override;
 
-    virtual bool DataEnd();
+    virtual bool DataEnd() override;
 
     size_t GetCurrentSamplePosition() override
     {
@@ -419,7 +419,7 @@ public:
     bool TryGetMinibatch(StreamMinibatchInputs& matrices) override;
     bool DataEnd() override;
 
-    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { assert(mToProcess.size() == m_pMBLayout->GetNumParallelSequences()); pMBLayout->CopyFrom(m_pMBLayout); }
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) override { assert(mToProcess.size() == m_pMBLayout->GetNumParallelSequences()); pMBLayout->CopyFrom(m_pMBLayout); }
     size_t GetNumParallelSequencesForFixingBPTTMode() override { return mToProcess.size(); } // TODO: or get it from MBLayout? Can this ever be called before GetMinibatch()?
 
     // TODO: what are these?

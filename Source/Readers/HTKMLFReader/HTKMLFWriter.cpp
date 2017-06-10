@@ -127,7 +127,7 @@ bool HTKMLFWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std
         wstring outFile = outputFiles[id][outputFileIndex];
 
         assert(outputData.GetNumRows() == dim);
-        dim;
+        (void)dim;
 
         Save(outFile, outputData);
     }

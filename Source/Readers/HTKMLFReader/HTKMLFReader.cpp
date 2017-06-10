@@ -1636,7 +1636,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
 
                 // copy the features over to our array type
                 assert(feat.rows() == dim);
-                dim; // check feature dimension matches what's expected
+                (void)dim; // check feature dimension matches what's expected
 
                 if ((m_featuresBufferMultiIO[id] == nullptr) ||
                     (m_featuresBufferAllocatedMultiIO[id] < (feat.rows() * feat.cols())) /*buffer size changed. can be partial minibatch*/)
@@ -1778,7 +1778,7 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
             for (int k = 0; k < actualmbsizeOri; k++)
             {
                 assert(uids[k] < labelDim);
-                labelDim;
+                (void)labelDim;
                 size_t labelId = uids[k];
                 for (int j = 0; j < dim; j++)
                 {

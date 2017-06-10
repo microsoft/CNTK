@@ -27,13 +27,13 @@ class array_ref
     size_t n;
     inline void check_index(size_t i) const
     {
-        i;
+        (void)i;
         assert(i < n);
     }
     inline void check_ptr() const
     {
-        n;
-        data;
+        (void)n;
+        (void)data;
         assert(n == 0 || data != NULL);
     }
 
@@ -70,7 +70,7 @@ public:
     }
     inline void resize(size_t sz)
     {
-        sz;
+        (void)sz;
         assert(n == sz);
     } // allow compatibility with some functions
     // construct from other vector types
@@ -92,13 +92,13 @@ class const_array_ref
     size_t n;
     inline void check_index(size_t i) const
     {
-        i;
+        (void)i;
         assert(i < n);
     }
     inline void check_ptr() const
     {
-        n;
-        data;
+        (void)n;
+        (void)data;
         assert(n == 0 || data != NULL);
     }
 
@@ -162,12 +162,12 @@ class hardcoded_array
     _T data[_N];
     inline void check_index(size_t i) const
     {
-        i;
+        (void)i;
         assert(i < _N);
     }
     inline void check_size(size_t n) const
     {
-        n;
+        (void)n;
         assert(n == _N);
     }
 

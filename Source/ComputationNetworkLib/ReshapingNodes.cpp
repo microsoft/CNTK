@@ -118,17 +118,24 @@ template <class ElemType>
     case ElementWiseOperator::opArgmax:
         result.DoArgReductionOpOf(input, m_reductionOp);
         break;
-    default:
+    case ElementWiseOperator::opSum:
+    case ElementWiseOperator::opLogSum:
+    case ElementWiseOperator::opMin:
+    case ElementWiseOperator::opMax:
+    case ElementWiseOperator::opElementwiseProduct:
         // the actual operation is a Copy with reduction, where the magic is in the reduction op
         // For "Mean", m_scale is 1/#elements, and 1 otherwise.
         result.DoUnaryOpOf(0, input, m_scale, ElementWiseOperator::opCopy, m_reductionOp);
+        break;
+    default: RuntimeError("Operator code %d is not supported in reductions", m_reductionOp);
     }
 }
 
 template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
 {
-    assert(inputIndex == 0), inputIndex;
+    assert(inputIndex == 0);
+    (void)inputIndex;
 
     if (ReduceSequenceAxis())
     {
@@ -147,6 +154,9 @@ template <class ElemType>
         // gradients are not as simple as passing an op-code, unfortunately
         switch (m_reductionOp)
         {
+        default: 
+            RuntimeError("Operator code %d is not supported in reductions", m_reductionOp);
+            break;
         case ElementWiseOperator::opSum:
             // "Sum":  broadcast the gradient
             // "Mean": same as "Sum" with scaling by 1/#dims
@@ -215,6 +225,7 @@ template <class ElemType>
     case ElementWiseOperator::opElementwiseProduct:    return true;
     case ElementWiseOperator::opArgmin:                return false;
     case ElementWiseOperator::opArgmax:                return false;
+    default: RuntimeError("Operator code %d is not supported in reductions", m_reductionOp);
     }
     LogicError("Should not get here.");
 }
@@ -231,6 +242,7 @@ template <class ElemType>
     case ElementWiseOperator::opElementwiseProduct:    return true;
     case ElementWiseOperator::opArgmin:                return false;
     case ElementWiseOperator::opArgmax:                return false;
+    default: RuntimeError("Operator code %d is not supported in reductions", m_reductionOp);
     }
     LogicError("Should not get here.");
 }

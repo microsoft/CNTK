@@ -125,6 +125,7 @@ void EpochAccumulatorNode<ElemType>::Reset()
     m_accumulator->SetValue(0);
     m_numSamples = 0;
 }
-
+namespace Microsoft { namespace MSR { namespace CNTK {
 template class EpochAccumulatorNode<float>;
 template class EpochAccumulatorNode<double>;
+}}}

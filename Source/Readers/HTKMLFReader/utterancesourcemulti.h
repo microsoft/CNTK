@@ -1375,7 +1375,7 @@ private:
             {
                 auto &uttref = randomizedutterancerefs[i];
                 assert(positionchunkwindows[i].isvalidforthisposition(uttref));
-                uttref;
+                (void)uttref;
             }
 
             // check we got those setup right
@@ -1559,7 +1559,7 @@ private:
     }
 
 public:
-    void setverbosity(int newverbosity)
+    void setverbosity(int newverbosity) override
     {
         verbosity = newverbosity;
     }
@@ -1844,7 +1844,7 @@ public:
                     matrixasvectorofvectors uttframevectors(uttframes); // (wrapper that allows m[.].size() and m[.][.] as required by augmentneighbors())
                     const size_t n = uttframevectors.size();
                     assert(n == uttframes.cols() && chunkdata.numframes(frameref.utteranceindex()) == n);
-                    n;
+                    (void)n;
 
                     // copy frame and class labels
                     const size_t t = frameref.frameindex();
@@ -1890,13 +1890,13 @@ public:
                   const size_t framesrequested, std::vector<msra::dbn::matrix> &feat, std::vector<std::vector<size_t>> &uids,
                   std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
                   std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices2, std::vector<std::vector<size_t>> &sentendmark,
-                  std::vector<std::vector<size_t>> &phoneboundaries2)
+                  std::vector<std::vector<size_t>> &phoneboundaries2) override
     {
         size_t dummy;
         return getbatch(globalts, framesrequested, 0, 1, dummy, feat, uids, transcripts, lattices2, sentendmark, phoneboundaries2);
     }
 
-    double gettimegetbatch()
+    double gettimegetbatch() override
     {
         return timegetbatch;
     }
@@ -1905,7 +1905,7 @@ public:
     bool getbatch(const size_t /*globalts*/,
                   const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/, std::vector<size_t> & /*uids*/,
                   std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & /*transcripts*/,
-                  std::vector<std::shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
+                  std::vector<std::shared_ptr<const latticesource::latticepair>> & /*latticepairs*/) override
     {
         // should never get here
         RuntimeError("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchutterancesource instead\n");
@@ -1916,7 +1916,7 @@ public:
         // return getbatch(globalts, framesrequested, feat[0], uids[0], transcripts, latticepairs);
     }
 
-    size_t totalframes() const
+    size_t totalframes() const override
     {
         return _totalframes;
     }
@@ -1924,7 +1924,7 @@ public:
     // return first valid globalts to ask getbatch() for
     // In utterance mode, the epoch start may fall in the middle of an utterance.
     // We return the end time of that utterance (which, in pathological cases, may in turn be outside the epoch; handle that).
-    /*implement*/ size_t firstvalidglobalts(const size_t globalts)
+    /*implement*/ size_t firstvalidglobalts(const size_t globalts) override
     {
         // update randomization if a new sweep is entered  --this is a complex operation that updates many of the data members used below
         const size_t sweep = lazyrandomization(globalts);
@@ -1933,14 +1933,14 @@ public:
             return globalts;
         // utterance mode
         assert(globalts >= sweep * _totalframes && globalts < (sweep + 1) * _totalframes);
-        sweep;
+        (void)sweep;
         foreach_index (pos, randomizedutterancerefs)
             if (randomizedutterancerefs[pos].globalts >= globalts)
                 return randomizedutterancerefs[pos].globalts; // exact or inexact match
         return randomizedutterancerefs.back().globalte();     // boundary case: requested time falls within the last utterance
     }
 
-    const std::vector<size_t> &unitcounts() const
+    const std::vector<size_t> &unitcounts() const override
     {
         return counts[0];
     }

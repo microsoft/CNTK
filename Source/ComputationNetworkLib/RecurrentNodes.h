@@ -23,7 +23,7 @@ template <class ElemType> class DelayedValueNodeState;
 // -----------------------------------------------------------------------
 
 // TODO: 'direction' is really too general. signOfTimeOffset?
-template <class ElemType, int direction /*-1 for Past/left-to-right or +1 for Future/right-to-left*/ /*, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
+template <class ElemType, int direction /*-1 for Past/left-to-right or +1 for Future/right-to-left, MinibatchPackingFlags SequenceStart_or_End, -Start or -End*/>
 class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrentNode, public ILateAttachingNode, public IStatefulNode
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;

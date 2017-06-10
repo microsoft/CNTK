@@ -210,7 +210,7 @@ public:
         RuntimeError("%ls is a special node only to be used as input to the Input() node.", NodeDescription().c_str());
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&)
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override
     {
         LogicError("%ls is a leaf node. BackpropTo() should never be called.", NodeDescription().c_str());
     }
@@ -298,7 +298,7 @@ protected:
     }
 
 public:
-    virtual const std::wstring GetRequestedDynamicAxis() const { return m_dynamicAxisNodeName; }
+    virtual const std::wstring GetRequestedDynamicAxis() const override { return m_dynamicAxisNodeName; }
 
     virtual void Save(File& fstream) const override
     {
@@ -364,7 +364,7 @@ public:
         // we have been filled by the Reader
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&)
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override
     {
         LogicError("%ls is a leaf node. BackpropTo() should never be called.", NodeName().c_str());
     }
@@ -662,7 +662,7 @@ public:
         SetDims(TensorShape(Input(0)->GetAsMatrixNumRows() * wordsInEachSample), true);
     }
 
-    bool UnitTest()
+    bool UnitTest() override
     {
         try
         {

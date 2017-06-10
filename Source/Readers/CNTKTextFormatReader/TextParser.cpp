@@ -1227,6 +1227,8 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
 
         switch (state)
         {
+        default:
+            break;
         case IntegralPart:
         case Period:
             value = static_cast<ElemType>((negative) ? -number : number);

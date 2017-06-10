@@ -720,6 +720,8 @@ inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second
 
             switch (firstFunctionInput.Kind())
             {
+            default: 
+                break;
             case VariableKind::Parameter:
             case VariableKind::Constant:
                 if ((parameterCloningMethod == ParameterCloningMethod::Share) && (firstFunctionInput != secondFunctionInput))
