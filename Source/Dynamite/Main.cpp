@@ -322,6 +322,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     // force synchronized GPU operation so we can profile more meaningfully
     // better do this externally: set CUDA_LAUNCH_BLOCKING=1
     //DeviceDescriptor::EnableSynchronousGPUKernelExecution();
+    fprintf(stderr, "CUDA_LAUNCH_BLOCKING=%s\n", getenv("CUDA_LAUNCH_BLOCKING"));
 
     // force-ininitialize the GPU system
     // This is a hack for profiling only.
@@ -332,7 +333,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
     auto t3 = make_shared<NDArrayView>(DataType::Float, NDShape({ 13,42 }), device);
     t3->NumericOperation({ t1, t2 }, 1.0, 26/*PrimitiveOpType::Plus*/);
 
-    const size_t minibatchSize = 10;//200;  // use 6 for ~2 sequences/batch
+    const size_t minibatchSize = 200;  // use 10 for ~3 sequences/batch
     for (size_t repeats = 0; true; repeats++)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);

@@ -283,12 +283,15 @@ NDArrayViewPtr Index(NDArrayViewPtr data, size_t i)
     if (startOffset.back() != i || extent.back() != 1)
     {
         startOffset.back() = i;
-        extent.back()      = 1;
+        extent.pop_back(); // missing extend values default to 1 but do not generate an output axis
         data = data->SliceView(startOffset, extent, true); // slice it
         dims = data->Shape().Dimensions();
     }
-    let newShape = NDShape(vector<size_t>(dims.begin(), dims.end() - 1));
-    data = data->AsShape(newShape); // and drop the final dimension
+    else
+    {
+        let newShape = NDShape(vector<size_t>(dims.begin(), dims.end() - 1));
+        data = data->AsShape(newShape); // and drop the final dimension
+    }
     return data;
 }
 

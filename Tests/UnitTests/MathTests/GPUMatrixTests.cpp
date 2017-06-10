@@ -374,13 +374,13 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixColumnSlice, RandomSeedFixture)
     GPUMatrix<float> m0(2, 3, c_deviceIdZero, array.data(), matrixFlagNormal);
     GPUMatrix<float> m1(2, 2, c_deviceIdZero, array.data(), matrixFlagNormal);
 
-    GPUMatrix<float> m2 = m0.ColumnSlice(0, 2);
+    GPUMatrix<float> m2 = m0.ColumnSlice(0, 2, 2);
     BOOST_CHECK(m2.IsEqualTo(m1));
 
     std::array<float, 4> array3 = {array[2], array[3], array[4], array[5]};
     GPUMatrix<float> m3(2, 2, c_deviceIdZero, array3.data(), matrixFlagNormal);
 
-    m2 = m0.ColumnSlice(1, 2);
+    m2 = m0.ColumnSlice(1, 2, 2);
     BOOST_CHECK(m2.IsEqualTo(m3));
 }
 

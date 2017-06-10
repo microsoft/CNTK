@@ -444,11 +444,11 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixColumnSlice, RandomSeedFixture)
     GPUSparseMatrix<float> sparseA(c_deviceIdZero, MatrixFormat::matrixFormatSparseCSC);
     sparseA.SetValue(denseA);
 
-    const GPUMatrix<float> sliceColumn1 = denseA.ColumnSlice(0, 2);
+    const GPUMatrix<float> sliceColumn1 = denseA.ColumnSlice(0, 2, 2);
     const GPUMatrix<float> denseColumn1 = sparseA.ColumnSlice(0, 2).CopyColumnSliceToDense(0, 2);
     BOOST_CHECK(sliceColumn1.IsEqualTo(denseColumn1, c_epsilonFloatE4));
 
-    const GPUMatrix<float> sliceColumn2 = denseA.ColumnSlice(1, 2);
+    const GPUMatrix<float> sliceColumn2 = denseA.ColumnSlice(1, 2, 2);
     const GPUMatrix<float> sparseColumn2 = sparseA.ColumnSlice(1, 2).CopyColumnSliceToDense(0, 2);
     BOOST_CHECK(sliceColumn2.IsEqualTo(sparseColumn2, c_epsilonFloatE4));
 
@@ -463,11 +463,11 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixCopyColumnSliceToDense, RandomSeedFixture
     GPUSparseMatrix<float> sparseA(c_deviceIdZero, MatrixFormat::matrixFormatSparseCSC);
     sparseA.SetValue(denseA);
 
-    const GPUMatrix<float> sliceColumn1 = denseA.ColumnSlice(0, 2);
+    const GPUMatrix<float> sliceColumn1 = denseA.ColumnSlice(0, 2, 2);
     const GPUMatrix<float> denseColumn1 = sparseA.CopyColumnSliceToDense(0, 2);
     BOOST_CHECK(sliceColumn1.IsEqualTo(denseColumn1, c_epsilonFloatE4));
 
-    const GPUMatrix<float> sliceColumn2 = denseA.ColumnSlice(1, 2);
+    const GPUMatrix<float> sliceColumn2 = denseA.ColumnSlice(1, 2, 2);
     const GPUMatrix<float> sparseColumn2 = sparseA.CopyColumnSliceToDense(1, 2);
     BOOST_CHECK(sliceColumn2.IsEqualTo(sparseColumn2, c_epsilonFloatE4));
 

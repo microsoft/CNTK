@@ -20,8 +20,8 @@
 #include <vector>
 #include <string>
 
-#define LOG_DETAILS   // if defined, log all forward and backward operations
-#define LOG_STATS     // if defined, log statistics (#operations)
+//#define LOG_DETAILS   // if defined, log all forward and backward operations
+//#define LOG_STATS     // if defined, log statistics (#operations)
 #undef NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
 using namespace Microsoft::MSR::CNTK;
@@ -269,6 +269,18 @@ class Variable::AutoBatch
             op == PrimitiveOpType::Slice;
     }
 
+    // predicate whether an op just passes through its input
+    // This is used to decide whether we can short-circuit it in Unalias().
+    static bool IsAlias(PrimitiveOpType op)
+    {
+        // if really needed, this can be done as a bit-test
+        return
+            op == PrimitiveOpType::StopGradient ||
+            op == PrimitiveOpType::Pass ||
+            op == PrimitiveOpType::NoOp ||
+            op == PrimitiveOpType::BarrierOp;
+    }
+
     // predicate whether an op's gradient is a no-op (just copies the output gradient)
     // These are short-circuited in backprop.
     static bool IsGradientCopyingOp(PrimitiveOpType op, size_t inputIndex)
@@ -284,12 +296,32 @@ class Variable::AutoBatch
             (op == PrimitiveOpType::Plus && inputIndex == 0);
     }
 
+    // see through no-ops, such as barrier, Pass, or StopGradient
+    // Use this for ANY access to PrimitiveFunction::m_inputs EXCEPT when directly getting the shape.
+    static const Variable& Unalias(const vector<Variable>& inputs, size_t index)
+    {
+        let& input = inputs[index];
+        let& fields = *input.m_dataFields;
+        // lazy index: not an alias
+        if (fields.m_lazyIndex.first)
+            return input;
+        // does not have an owner: not an alias
+        let f = fields.Owner();
+        if (!f)
+            return input;
+        // op is not an alias
+        if (!IsAlias(f->m_op))
+            return input;
+        // it is an alias: see right through
+        return Unalias(f->m_inputs, 0); // (all aliases are unary functions)
+    }
+
     // class to manage the set of ready operations (the schedule)
     class ReadyOps
     {
         NonOwningFunctionListBuilder m_viewOps;
         vector<NonOwningFunctionListBuilder> m_regularOps; // m_regularOps[] is a linked list
-        NonOwningFunctionListBuilder m_barrierOps;
+        NonOwningFunctionListBuilder m_barrierOps; // TODO: currently dead
         // TODO: This must be turned into something hashable.
         // test whether two PrimitiveFunctions can be executed as a single batched operation
         static bool AreBatchable(const PrimitiveFunction* a, const PrimitiveFunction* b)
@@ -302,25 +334,26 @@ class Variable::AutoBatch
             // op codes must match
             if (op != b->m_op)
                 return false;
+            // priority must match (depending on barrier or not)
+            if (a->m_priority != b->m_priority)
+                return false;
             // all input dimensions must match (with exception of a few special cases)
             assert(a->m_inputs.size() == b->m_inputs.size());
             for (size_t i = 0; i < a->m_inputs.size(); i++)
             {
-                let& ia = a->m_inputs[i];
-                let& ib = b->m_inputs[i];
                 // there are a few special cases
                 if (op == PrimitiveOpType::Times && i == 0)
                 {
                     // for Times, the first arg must be the same object, not just the same shape
                     // TODO: a special case is a dot product, which we can write as ReduceSum(ElementTimes(a,b))
                     //       This would require to rewrite the graph though; can we do that?
-                    if (ia.m_dataFields != ib.m_dataFields)
+                    if (Unalias(a->m_inputs, i).m_dataFields != Unalias(b->m_inputs, i).m_dataFields)
                         return false;
                 }
                 else
                 {
                     // shapes must match
-                    if (ia.Shape() != ib.Shape())
+                    if (a->m_inputs[i].Shape() != b->m_inputs[i].Shape())
                         return false;
                 }
                 // another special case is reduction over all axes
@@ -338,11 +371,24 @@ class Variable::AutoBatch
             let op = f->m_op;
             // we manage three ready sets, since two common kinds are very simple
             if (op == PrimitiveOpType::BarrierOp)
+                // BUGBUG: We never get here since we now see through barriers for efficiency...
                 m_barrierOps.push_back(f);
             else if (IsViewOp(op))
                 m_viewOps.push_back(f);
             else
             {
+                // determine the priority. This is for Barriers after short-circuiting NoOps...
+                // This is highly inefficient, always reaching through the Owner pointer. Needs a flag.
+                int pri = 0; // normal
+                for (let& input : f->m_inputs)
+                {
+                    if (input.IsOutput() && input.OutputOwner()->m_op == PrimitiveOpType::BarrierOp)
+                    {
+                        pri = -1;
+                        break;
+                    }
+                }
+                f->m_priority = pri;
                 // this naive implementation just scans linearly
                 // scan through all op sets to see if one is batchable with 'f'
                 for (auto iter = m_regularOps.begin(); iter != m_regularOps.end(); iter++)
@@ -382,7 +428,11 @@ class Variable::AutoBatch
                 auto best = m_regularOps.begin();
                 for (auto iter = best + 1; iter != m_regularOps.end(); iter++)
                 {
-                    if (iter->size() > best->size())
+                    // barrier is realized through priority
+                    int diff = iter->front()->m_priority - best->front()->m_priority;
+                    if (diff == 0)
+                        diff = (int)iter->size() - (int)best->size();
+                    if (diff > 0)
                         best = iter;
                 }
                 // and remove this one from the list
@@ -437,7 +487,7 @@ class Variable::AutoBatch
         let& inputs = f.m_inputs;
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            let& input = inputs[i];
+            let& input = Unalias(inputs, i);
             auto& fields = *input.m_dataFields;
             // recursively traverse
             if (!fields.m_value)
@@ -489,7 +539,7 @@ class Variable::AutoBatch
         fprintf(stderr, "%s%S%S = %S(", prefix, f.Uid().c_str(), outputShape.AsString().c_str(), f.OpName().c_str());
         for (size_t i = 0; i < inputs.size() && i < 4; i++)
         {
-            let& input = inputs[i];
+            let& input = Unalias(inputs, i);
             let& fields = *input.m_dataFields;
             // little helper function to fix up variable names by removing _Output_0
             // TODO: Once we support >1 output, this needs a bit more code.
@@ -522,7 +572,7 @@ class Variable::AutoBatch
         let& inputs = f.m_inputs;
         auto& inputValues = BorrowBuffer(m_inputValuesBuffer, inputs.size());
         for (size_t i = 0; i < inputs.size(); i++)
-            inputValues[i] = LazilyIndexedValue(inputs[i]); // (if this is a lazy slice, then now we must resolve it)\
+            inputValues[i] = LazilyIndexedValue(Unalias(inputs, i)); // (if this is a lazy slice, then now we must resolve it)\
         // allocate the output NDArrayViewPtr in the arena
         let& output = f.m_outputs[0]; // BUGBUG: How to deal with multi-valued functions?
         let& outputShape = output.Shape();
@@ -588,7 +638,7 @@ class Variable::AutoBatch
         let isTimes = (op == PrimitiveOpType::Times); // is special-cased
         let doNaively =
             isFree ||
-            //isTimes && f0.m_inputs[1].m_dataFields->m_value && (f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
+            //(isTimes && f0.m_inputs[1].m_dataFields->m_value && f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
             op == PrimitiveOpType::Splice ||
             batchSize == 1;
         //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
@@ -622,7 +672,7 @@ class Variable::AutoBatch
         //  - a PrimitiveFunction that is the op itself
         //  - m_lazyIndex entries that represent a "virtual" Slice() that is never created as a PrimitiveFunction object to saved mallocs.
         // As for resource management, m_lazyIndex will hold a strong ref to the PrimitiveFunction;
-        // and we will hack its m_inputs[].m_outputComposite to hold a strong reference to the Splice() or Slice().
+        // and we will hack its Unalias(m_inputs,i).m_outputComposite to hold a strong reference to the Splice() or Slice().
         // (This is a little ugly since m_outputComposite is meant to hold a CompositeFunction, but we misuse it
         // to hold a PrimitiveFunction.)
         else
@@ -641,7 +691,7 @@ class Variable::AutoBatch
             }
             bool anyBatchedInputs = false;
             if (i0 == 1) // Times(): matrix must be identical
-                m_batchedInputs[0] = f0.m_inputs[0];
+                m_batchedInputs[0] = Unalias(f0.m_inputs, 0);
             for (size_t i = i0; i < numArgs; i++)
             {
                 // create splice args for this argument
@@ -651,7 +701,7 @@ class Variable::AutoBatch
                 if (spliceInputs.capacity() < batchSize)
                     spliceInputs.reserve(max(batchSize, 2 * spliceInputs.capacity()));
                 // optimization: if all args are consecutive slices, then use a slice view instead
-                let* pfields0 = f0.m_inputs[i].m_dataFields.get();
+                let* pfields0 = Unalias(f0.m_inputs, i).m_dataFields.get();
                 let& lazyIndex0 = pfields0->m_lazyIndex; // for 'allConsecutiveSlices' test
                 let is0LazyIndex = (bool)lazyIndex0.first;
                 // loop over all batched ops
@@ -662,7 +712,7 @@ class Variable::AutoBatch
                 size_t j = 0;
                 for (auto op = ops.begin(); op != ops.end(); ++op, j++) // create the batched tensors
                 {
-                    let& input = op->m_inputs[i];
+                    let& input = Unalias(op->m_inputs, i);
                     let* pfields = input.m_dataFields.get();
                     let& lazyIndex = pfields->m_lazyIndex;
                     // optimization: if all args are the same, then don't batch
@@ -867,7 +917,8 @@ public:
                 (int)m_stats.numDoneOtherOps, (int)m_stats.numDoneSpliceOps, (int)m_stats.numDoneFreeOps, (int)m_stats.numOpNodes, (int)m_stats.numLeafNodes);
         size_t numOpNodes1 = 0;
         Function::PreorderTraverseFunctions(v.OutputOwner(), [&](const FunctionPtr&) { numOpNodes1++; });
-        fail_if(numOpNodes1 != m_stats.numOpNodes, "we did not traverse the graph correctly");
+        if (numOpNodes1 != m_stats.numOpNodes)
+            fprintf(stderr, "BatchedForward: short-circuited %d aliases\n", (int)(numOpNodes1 - m_stats.numOpNodes));
 #endif
         return LazilyIndexedValue(v);
     }
@@ -922,6 +973,23 @@ public:
         return beta;
     }
 
+    // determine the input to backprop a gradient into
+    // Normally that is Unalias(f.m_inputs, index).
+    // However, some gradients are just copies, so we can see through them.
+    // This saves memory and allows easier discovery of optimizable patterns.
+    // Note that every single time one iterates over m_inputs for gradients, this function must be used.
+    // Note: THIS IS NOT LEVERAGED YET, and could be removed if we don't leverage it.
+    const Variable& GetShortCircuitedGradientInput(const PrimitiveFunction& f, size_t index)
+    {
+        let& input = Unalias(f.m_inputs, index);
+#ifndef NO_BATCHED_BACKPROP
+        // if the input is a result of a batched operation, then traverse into that instead
+        if (input.m_dataFields->m_lazyIndex.first)
+            return input.m_dataFields->m_lazyIndex.first->m_outputs[0];
+#endif
+        return input;
+    }
+
     // recursively traverse the tree hanging off a Variable and build the m_consumer fields
     // This propagates in depth-first order like a naive backprop, but only for the purpose
     // of recording consumers of each node.
@@ -942,29 +1010,21 @@ public:
         fail_if(fields.m_varKind == VariableKind::Input || fields.m_varKind == VariableKind::Placeholder, "unexpectedly encountered an Input or a Placeholder??");
 
         // Determine the function that 'var' is an output of.
-        // TODO:
-        // If that function is a no-op, such as Reshape or NoOp, then short-circuit straight into that input.
-        // BUGBUG: Maybe the wrong place here?
-        PrimitiveFunctionPtr fp;
-        auto* varp = &var;
-        {
-            // If 'var' has the m_lazyIndex field set, it means that its value was not
-            // actually computed from its true owner function; but rather a slice into the result of
-            // a batched operation. In that case, we traverse through that batched operation
-            // instead. As a consequence, it is the batched operation that will be recorded as the
-            // consumer of all inputs of the batched operation, rather than the original
-            // unbatched operation. And as a consequence of that, back propagation will use
-            // the same batching that was determined in forward computation.
-            auto& outFields = *varp->m_dataFields;
+        // If 'var' has the m_lazyIndex field set, it means that its value was not
+        // actually computed from its true owner function; but rather a slice into the result of
+        // a batched operation. In that case, we traverse through that batched operation
+        // instead. As a consequence, it is the batched operation that will be recorded as the
+        // consumer of all inputs of the batched operation, rather than the original
+        // unbatched operation. And as a consequence of that, back propagation will use
+        // the same batching that was determined in forward computation.
+        auto& outFields = *var.m_dataFields;
 #ifndef NO_BATCHED_BACKPROP
-            fp = outFields.m_lazyIndex.first       // if var was computed via batched op
-               ? outFields.m_lazyIndex.first       // then backprop into the batched op
-               : outFields.m_ownerFunction.lock(); // otherwise traverse the original op
+        auto&f = outFields.m_lazyIndex.first       // if var was computed via batched op
+              ? *outFields.m_lazyIndex.first       // then backprop into the batched op
+              : *outFields.m_ownerFunction.lock(); // otherwise traverse the original op
 #else
-            fp = outFields.m_ownerFunction.lock();
+        auto&f = outFields.m_ownerFunction.lock();
 #endif
-        }
-        auto&f = *fp;
         // return if we already visited the function
         if (m_visitorTag.Visited(f.m_visitedTag))
             return;
@@ -975,11 +1035,20 @@ public:
         let& inputs = f.m_inputs;
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            let* inputp = &inputs[i];
+#if 1
+            // Note: Using this function may be misleading.
+            // We are not short-circuiting the input here, but rather determine which function
+            // it came from.
+            let& input = GetShortCircuitedGradientInput(f, i);
+#else
+            let* inputp = &Unalias(inputs, i);
+#ifndef NO_BATCHED_BACKPROP
             // if the input is a result of a batched operation, then traverse into that instead
             if (inputp->m_dataFields->m_lazyIndex.first)
                 inputp = &inputp->m_dataFields->m_lazyIndex.first->m_outputs[0];
+#endif
             let& input = *inputp;
+#endif
             auto& fields = *input.m_dataFields;
             if (!fields.m_needsGradient)
                 continue; // skip inputs that receive no gradients
@@ -1006,21 +1075,21 @@ public:
 
     // helper to batch an array of NDArrayViews of the same rank along either the last or into a new axis
     // TODO: do this with a lambda so we can go straight into gatherBatchResultDims
-    NDArrayViewPtr GatherBatchInArena(const vector<NDArrayViewPtr>& inputs, size_t axis, size_t batchDim)
+    NDArrayViewPtr GatherBatchInArena(const vector<NDArrayViewPtr>& inputValues, size_t axis, size_t batchDim)
     {
-        let& input0 = *inputs[0];
-        let& inputShape = input0.Shape().Dimensions();
+        let& inputValue0 = *inputValues[0];
+        let& inputShape = inputValue0.Shape().Dimensions();
         auto& gatherBatchResultDims = BorrowBuffer(m_dimsBuffer, inputShape.size()+1);
         gatherBatchResultDims.assign(inputShape.begin(), inputShape.end());
         fail_if(axis + 1 < gatherBatchResultDims.size(), "axis not trailing??");
         if (axis == gatherBatchResultDims.size())
-            gatherBatchResultDims.push_back(inputs.size());
+            gatherBatchResultDims.push_back(inputValues.size());
         else
             gatherBatchResultDims[axis] = batchDim;
-        auto out = m_arena.NewNDArrayView(gatherBatchResultDims, input0.GetDataType(),
-                                          input0.GetStorageFormat() != StorageFormat::Dense, input0.Device());
+        auto out = m_arena.NewNDArrayView(gatherBatchResultDims, inputValue0.GetDataType(),
+                                          inputValue0.GetStorageFormat() != StorageFormat::Dense, inputValue0.Device());
         m_stats.numBackpropGathers++;
-        return move(NDArrayView::GatherBatch(inputs, (int)axis, move(out)));
+        return move(NDArrayView::GatherBatch(inputValues, (int)axis, move(out)));
     }
 
     // back-propagate f's outputs' m_gradient to a specified input
@@ -1033,7 +1102,7 @@ public:
         LogFunction(*f, "[bb] ", index);
 #endif
         let& inputs =  f->m_inputs;
-        auto& input = inputs[index];
+        auto& input = Unalias(inputs, index);
         auto& fields = *input.m_dataFields;
         fail_if(!fields.m_needsGradient, "function unexpectedly does not need a gradient");
         // get the TensorViews for everything we may compute the gradient from
@@ -1052,7 +1121,7 @@ public:
         auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, numInputs);
         for (size_t i = 0; i < numInputs; i++)
         {
-            let& input1 = inputs[i];
+            let& input1 = Unalias(inputs, i);
             let& fields = *input1.m_dataFields;
             fail_if(!fields.m_value, "unexpectedly ran into a function that has no m_value yet??");
             inputValues[i] = fields.m_value.get();
@@ -1078,7 +1147,7 @@ public:
         // if we pull this a second time, then don't propagate again
         if (m_visitorTag.Visited(f->m_visitedTag))
             return;
-        // fast path: only one input
+        // fast path: only one input (and not Splice, which we do in bulk)
         if (f->m_inputs.size() == 1)
             return BackpropToUnbatched(f, 0);
         // Considerations:
@@ -1116,7 +1185,7 @@ public:
         bool allBetasZero = true;
         for (size_t i = 0; i < numInputs; i++)
         {
-            let& input = inputs[i];
+            let& input = Unalias(inputs, i);
             // create the gradient memory for this input
             let beta = LazilyCreateLazilyIndexedGradient(input);
             let& fields = *input.m_dataFields;
@@ -1127,7 +1196,7 @@ public:
                 // We were running under the assumption that all betas are zero, so we can use beta=0 below.
                 // Now we must run with beta 1, and therefore manually reset all pevious ones.
                 for (size_t i1 = 0; i1 < i; i++) // tehse were all beta=0
-                    inputs[i1].m_dataFields->m_gradient->SetValue(0.0f);
+                    Unalias(inputs, i1).m_dataFields->m_gradient->SetValue(0.0f);
                 allBetasZero = false;
             }
             else if (beta == 0 && !allBetasZero)
@@ -1141,7 +1210,7 @@ public:
         m_stats.numBackpropScatters++;
     }
 
-    // backprop into weight parameter of a Times op (inputs[0])
+    // backprop into weight parameter of a Times op (Unalias(inputs, 0))
     // This can be batched into a single matrix product.
     void BackpropToMatrixWeight(vector<pair<PrimitiveFunction*, size_t>>& consumers)
     {
@@ -1163,14 +1232,14 @@ public:
 #ifdef LOG_DETAILS
         LogFunction(f0, "[bb*] ", 0);
 #endif
-        let& input0 = f0.m_inputs[0];
+        let& input0 = Unalias(f0.m_inputs, 0);
         size_t batchDim = 0;
         for (size_t i = 0; i < numBatchItems; i++)
         {
             let &c = m_matrixWeightConsumers[i];
             fail_if(c.second != 0, "wrong input??");
             let& outGrad = c.first->m_outputs[0].m_dataFields->m_gradient;
-            let& right = c.first->m_inputs[1].m_dataFields->m_value;
+            let& right = Unalias(c.first->m_inputs, 1).m_dataFields->m_value;
             timesOutGrads       [i] = outGrad;
             timesDataRightInputs[i] = right;
             let numItems = outGrad->Shape().Dimensions().back();
@@ -1178,7 +1247,7 @@ public:
             batchDim += numItems;
         }
         auto outGradBatch = GatherBatchInArena(timesOutGrads       , f0.m_outputs[0].Shape().Rank() - 1, batchDim);
-        auto rightBatch   = GatherBatchInArena(timesDataRightInputs, f0.m_inputs[1] .Shape().Rank() - 1, batchDim);
+        auto rightBatch   = GatherBatchInArena(timesDataRightInputs, f0.m_inputs[1]. Shape().Rank() - 1, batchDim);
 
         // backprop into the left input from the batched outGrad and right
         auto& inputValues = BorrowBuffer(m_inputValuesBufferRaw, 2);
@@ -1300,18 +1369,15 @@ public:
         // and this is the only place where a variable's gradient ever gets aggregated.
 
         // create var's m_gradient (may be a slice view)
-        // For Parameters, m_gradient may already exist; for all others, it must not.
-        fail_if(var.Kind() != VariableKind::Parameter && fields.m_gradient, "non-Parameter variable unexpectedly already has a gradient"); // (sanity check; I am not sure actually, maybe too strict)
+        // m_gradient may already exist for Parameters, and when it came through Splice.
+        // Because of the latter, we cannot really test this here, and should just remove this check.
+        //fail_if(var.Kind() != VariableKind::Parameter && fields.m_gradient, "non-Parameter variable unexpectedly already has a gradient"); // (sanity check; I am not sure actually, maybe too strict)
 
         // fast path: only one consumer, nothing to batch
-        if (fields.m_consumers.second.empty())
+        // (with exception of Splice, which has a different optimization)
+        if (fields.m_consumers.second.empty() && fields.m_consumers.first.first->m_op != PrimitiveOpType::Splice)
         {
-#if 0       // crashes with "unexpectedly already has a gradient"
-            if (c.first->m_op == PrimitiveOpType::Splice)
-                BackpropToSplice(c.first);
-            else
-#endif
-                BackpropToUnbatched(c.first, c.second);
+            BackpropToUnbatched(c.first, c.second);
             return;
         }
 
