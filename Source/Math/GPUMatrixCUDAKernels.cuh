@@ -3214,6 +3214,7 @@ __global__ void _columnwiseScaleAndWeightedAdd4CSC(
     }
 }
 
+// update the indices to represent the reshaping operation
 template <class ElemType>
 __global__ void _reshape(
     const int oldNumRows,                       // old row count

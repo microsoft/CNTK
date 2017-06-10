@@ -64,6 +64,10 @@ public:
     using Base::SetFormat;
     using Base::IsEmpty;
 
+private:
+    // caching of NzCount(); see there for explanation
+    static const GPUSPARSE_INDEX_TYPE INVALID_NZ_COUNT = -1;
+    mutable GPUSPARSE_INDEX_TYPE m_cachedNzCount = INVALID_NZ_COUNT;
 
 public:
     GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, DEVICEID_TYPE computeDevice, const MatrixFormat matrixFormat = MatrixFormat::matrixFormatSparseCSR);
@@ -101,18 +105,53 @@ public:
         return Data();
     }
 
-    GPUSPARSE_INDEX_TYPE NzCount() const
+private:
+    // determine the NzCount from the GPU-side arrays
+    // This is a GPU sync, and thus expensive. NzCount() caches this value.
+    GPUSPARSE_INDEX_TYPE FetchNzCount() const
     {
         if (GetFormat() == matrixFormatSparseCSC)
             return SecondaryIndexValueAt(GetNumCols()) - SecondaryIndexValueAt(0);
-        if (GetFormat() == matrixFormatSparseCSR )
+        if (GetFormat() == matrixFormatSparseCSR)
             return SecondaryIndexValueAt(GetNumRows()) - SecondaryIndexValueAt(0);
         else if (GetFormat() == matrixFormatSparseBlockCol)
             return (int)(GetNumRows() * GetBlockSize());
         else
             NOT_IMPLEMENTED;
-
     }
+public:
+    // The non-zero count is used often in CPU-side preparations, and fetching it from the
+    // GPU is expensive; so it is cached.
+    GPUSPARSE_INDEX_TYPE NzCount() const
+    {
+        if (!HasCachedNzCount())
+            m_cachedNzCount = FetchNzCount();
+        return m_cachedNzCount;
+    }
+    // Call this after all GPU-side functions that may update the element set.
+    void InvalidateCachedNzCount() const
+    {
+        m_cachedNzCount = INVALID_NZ_COUNT;
+    }
+    // Call this if you want to copy the value in case it is available.
+    bool HasCachedNzCount() const
+    {
+        return m_cachedNzCount != INVALID_NZ_COUNT;
+    }
+    // Call this when you know the value CPU-side already.
+    void UpdateCachedNzCount(GPUSPARSE_INDEX_TYPE nzCount) const // m_cachedNzCount is mutable
+    {
+        m_cachedNzCount = nzCount;
+        // for now do some safety check (this is a GPU barrier again though, so remove one day)
+        VerifyCachedNzCount(NzCount()); // (to be sure)
+    }
+    // and for diagnostics
+    void VerifyCachedNzCount(GPUSPARSE_INDEX_TYPE nzCount) const
+    {
+        if (FetchNzCount() != nzCount)
+            LogicError("VerifyCachedNzCount: GPU-side NzCount unexpectedly changed/not synced??");
+    }
+
     inline size_t NzSize() const { return sizeof(ElemType) * NzCount(); } // actual number of element bytes in use
 
     inline size_t GetNumNZElements() const { return NzCount(); }
