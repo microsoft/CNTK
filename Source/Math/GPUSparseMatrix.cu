@@ -723,7 +723,6 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
 
                 GPUSPARSE_INDEX_TYPE* secondaryIndexInNewBuffer = majorIndexInNewBuffer + MajorIndexCount(numRows, numCols, numNZElemToReserve, GetFormat());
                 CUDA_CALL(cudaMemcpy(secondaryIndexInNewBuffer, SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
-                InvalidateCachedNzCount();
             }
             TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
         }
@@ -1179,10 +1178,10 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
         }
         else
         {
-            if (beta != 1.0)
-            {
+            if (beta == 0.0)
+                c.SetValue((ElemType)0);
+            else if (beta != 1.0)
                 RuntimeError("Only support c += alpha * a operation");
-            }
 
             int blocksPerGrid = (int) ceil(1.0 * cRows / GridDim::maxThreadsPerBlock);
             SyncGuard syncGuard;
@@ -2668,7 +2667,6 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
             numCols, GetNumCols());
     // allocate
     RequireSizeAndAllocate(numRows, numCols, nz, /*growOnly=*/true, /*keepExistingValues=*/false);
-#if 0
     m_sliceViewOffset = 0;
     auto* outValues     = Data();
     auto* outRowIndices = MajorIndexLocation();
@@ -2676,26 +2674,47 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
     // perform the actual operation
     size_t k = 0; // running output element index (outData, outRowIndices)
     size_t j = 0; // running output column index
+    auto SetColOffsetjTok = [&]()
+    {
+        GPUSPARSE_INDEX_TYPE k1 = (GPUSPARSE_INDEX_TYPE)k;
+        CUDA_CALL(cudaMemcpy(&outColOffsets[j], &k1, sizeof(k1), cudaMemcpyHostToDevice));
+        //outColOffsets[j] = (GPUSPARSE_INDEX_TYPE)k;
+    };
     for (size_t i = 0; i < numInputs; i++)
     {
         let& input = inputs(i);
-        let* inColOffsets = input.SecondaryIndexLocation(); // where val/index items start for first column (a slice view may give an offset view)
         let* inValues     = input.Data();                   // ptr to first value
-        let* inRowIndices = input.MajorIndexLocation();     // and its row index
+        let* inRowIndices = input.MajorIndexLocation();     // and its row index  --BUGBUG: GPU sync here
         let inCols = input.GetNumCols();
+        if (inCols == 0)
+            continue;
+#if 1
+        if (inCols > 1)
+            LogicError("GatherBatch: for now limited to single-column inputs");
+        SetColOffsetjTok();
+        j++;
+#else
+        let* inColOffsets = input.SecondaryIndexLocation(); // where val/index items start for first column (a slice view may give an offset view)
         for (size_t n = 0; n < inCols; n++, j++)
             outColOffsets[j] = inColOffsets[n] - inColOffsets[0] + (GPUSPARSE_INDEX_TYPE)k; // k = start element index of this section
+#endif
         let inNz = input.NzCount();
+#if 1
+        CUDA_CALL(cudaMemcpy(&outValues[k],     inValues,     inNz * sizeof(inValues[0]),     cudaMemcpyHostToDevice));
+        CUDA_CALL(cudaMemcpy(&outRowIndices[k], inRowIndices, inNz * sizeof(inRowIndices[0]), cudaMemcpyHostToDevice));
+        k += inNz;
+#else
         for (size_t n = 0; n < inNz; n++, k++)
         {
             outValues[k]     = inValues[n];
             outRowIndices[k] = inRowIndices[n];
         }
-    }
-    outColOffsets[j] = (GPUSPARSE_INDEX_TYPE)k;
-    if (j != numCols || k != NzCount())
-        LogicError("GatherBatch (sparse): copied incorrect number of elements??");
 #endif
+    }
+    SetColOffsetjTok();
+    //outColOffsets[j] = (GPUSPARSE_INDEX_TYPE)k;
+    if (j != numCols || k != nz)
+        LogicError("GatherBatch (sparse): copied incorrect number of elements??");
     UpdateCachedNzCount(nz);
 }
 
