@@ -353,7 +353,7 @@ vector<vector<Variable>> FromCNTKMB(const vector<ValuePtr>& inputs, const vector
                 assert(data->Shape().Dimensions().back() == 1);
                 data = Index(data, 0); // slice off sample axis (the last in C++)
             }
-#if 1
+#if 0
             // convert sparse, since currently we cannot GatherBatch() sparse data
             if (data->IsSparse())
             {
@@ -363,7 +363,7 @@ vector<vector<Variable>> FromCNTKMB(const vector<ValuePtr>& inputs, const vector
             }
 #endif
             arg[s] = Constant(data);
-            data->GetDataType();
+            //data = data->AsShape(data->Shape()); // (for debugging)
         }
     }
     return res;

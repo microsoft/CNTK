@@ -6833,7 +6833,7 @@ struct TensorOpIteration
     static inline void Loop(ElemType beta, array<ElemType*, N> pointers, ElemType alpha, const OPFN& opfn, const ReductionOp& reductionOp,
                             const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
                             const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides)
-    {
+    {      
         // non-scalar case: still nested result loops left
         array<ptrdiff_t, N> strides;
         for (size_t i = 0; i < N; i++) // N = a small constant, this will be unrolled

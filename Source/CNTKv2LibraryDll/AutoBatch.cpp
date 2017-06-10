@@ -80,20 +80,20 @@ public:
     // allocate an NDArrayView of a given shape, data type, and device
     // The returned memory region is a slice into a much larger NDArrayView; therefore,
     // this operation short-circuits CUDA and is very fast.
-    // TODO: once operators exist that emit sparse outputs, we need sparse support here as well
-    NDArrayViewPtr NewNDArrayView(const NDShape& shape, const CNTK::DataType& dataType, const CNTK::DeviceDescriptor& device)
+    // Sparse objects cannot be arena-allocated.
+    NDArrayViewPtr NewNDArrayView(const NDShape& shape, const DataType& dataType, bool isSparse, const DeviceDescriptor& device)
     {
         let numElements = shape.TotalSize();
-        // if too large then plain alloc
-        if (numElements > ARENASIZE)
-            return make_shared<NDArrayView>(dataType, CNTK::StorageFormat::Dense, shape, device);
+        // if too large, or sparse, then plain alloc
+        if (numElements > ARENASIZE || isSparse)
+            return make_shared<NDArrayView>(dataType, isSparse ? StorageFormat::SparseCSC : StorageFormat::Dense, shape, device);
         // If arena not large enough then waste its remainder and just allocate a fresh one.
         // This abandons the current m_arena. This will not cause a memory leak, however:
         // Since the slices into it that were returned before all hold a ref-count to that arena,
         // it will be deallocated automatically as soon the last slice goes away.
         if (!s_currentArena || numElements > (ARENASIZE - s_currentArenaUsed))
         {
-            s_currentArena = make_shared<NDArrayView>(dataType, CNTK::StorageFormat::Dense, NDShape{ ARENASIZE }, device);
+            s_currentArena = make_shared<NDArrayView>(dataType, StorageFormat::Dense, NDShape{ ARENASIZE }, device);
             s_currentArenaUsed = 0;
         }
         vector<size_t> startOffset{ s_currentArenaUsed };
@@ -530,7 +530,10 @@ class Variable::AutoBatch
 #ifdef LOG_DETAILS
         LogFunction(f, "[bf] ");
 #endif
-        auto outValue = isFree ? nullptr : m_arena.NewNDArrayView(outputShape, inputValues[0]->GetDataType(), inputValues[0]->Device());
+        auto outValue = isFree
+            ? nullptr
+            : m_arena.NewNDArrayView(outputShape, inputValues[0]->GetDataType(),
+                                     inputValues[0]->GetStorageFormat() != StorageFormat::Dense, inputValues[0]->Device());
         // execute it
         output.m_dataFields->m_value = move(PrimitiveFunction::ComputeKnowableValue(f.m_op, inputValues, f.Attributes(), outputShape, move(outValue), f));
         // stats
@@ -585,7 +588,7 @@ class Variable::AutoBatch
         let isTimes = (op == PrimitiveOpType::Times); // is special-cased
         let doNaively =
             isFree ||
-            isTimes && f0.m_inputs[1].m_dataFields->m_value && (f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
+            //isTimes && f0.m_inputs[1].m_dataFields->m_value && (f0.m_inputs[1].m_dataFields->m_value->IsSparse()) || // can't batch sparse
             op == PrimitiveOpType::Splice ||
             batchSize == 1;
         //fprintf(stderr, "%d %sexecuting %d instances of %S -> %S; %d batchable ops pending\n",
@@ -912,7 +915,7 @@ public:
             {
                 // create a new one
                 // TODO: allocate parameters as separate objects; and allow user to pass buffers in
-                fields.m_gradient = m_arena.NewNDArrayView(fields.m_shape, fields.m_dataType, fields.m_value->Device());
+                fields.m_gradient = m_arena.NewNDArrayView(fields.m_shape, fields.m_dataType, fields.m_isSparse, fields.m_value->Device());
                 beta = 0.0; // has not been initialized (random section in arena)
             }
         }
@@ -1014,7 +1017,8 @@ public:
             gatherBatchResultDims.push_back(inputs.size());
         else
             gatherBatchResultDims[axis] = batchDim;
-        auto out = m_arena.NewNDArrayView(gatherBatchResultDims, input0.GetDataType(), input0.Device());
+        auto out = m_arena.NewNDArrayView(gatherBatchResultDims, input0.GetDataType(),
+                                          input0.GetStorageFormat() != StorageFormat::Dense, input0.Device());
         m_stats.numBackpropGathers++;
         return move(NDArrayView::GatherBatch(inputs, (int)axis, move(out)));
     }
@@ -1371,7 +1375,7 @@ public:
         // BUGBUG: we get a [1] here, but should be a scalar. This is a bug outside.
         //if (root.Value()->Shape() != NDShape{})
         //    LogicError("BatchedBackward: root must be a scalar, or root gradient must have been implanted already");
-        root.m_dataFields->m_gradient = m_arena.NewNDArrayView(root.Shape(), root.GetDataType(), root.Value()->Device());
+        root.m_dataFields->m_gradient = m_arena.NewNDArrayView(root.Shape(), root.GetDataType(), false, root.Value()->Device());
         root.m_dataFields->m_gradient->SetValue(1.0f);
         // if user passed NDArrayViewPtrs for the gradients, then keep using them
         // This way, the same buffers can be recycled.

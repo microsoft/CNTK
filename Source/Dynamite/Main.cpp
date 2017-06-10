@@ -297,7 +297,7 @@ void TrainSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabel
 
     // build the graph
     useSparseLabels;
-    auto features = InputVariable({ inputDim },         false/*true*/ /*isSparse*/, DataType::Float, featuresName);
+    auto features = InputVariable({ inputDim },         true/*false*/ /*isSparse*/, DataType::Float, featuresName);
     auto labels   = InputVariable({ numOutputClasses }, false/*useSparseLabels*/,   DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
 
     auto criterion = criterion_fn(features, labels); // this sets the shapes and initializes all parameters
@@ -404,8 +404,8 @@ int main(int argc, char *argv[])
     argc; argv;
     try
     {
-        TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
-        //TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
+        //TrainSequenceClassifier(DeviceDescriptor::GPUDevice(0), true);
+        TrainSequenceClassifier(DeviceDescriptor::CPUDevice(), true);
         // BUGBUG: CPU currently outputs loss=0??
     }
     catch (exception& e)

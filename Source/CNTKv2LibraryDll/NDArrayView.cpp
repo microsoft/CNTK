@@ -302,7 +302,6 @@ namespace CNTK
 
     shared_ptr<MatrixBase> NDArrayView::GetStorageObjectPtr() const
     {
-        shared_ptr<MatrixBase> matrix;
         switch (m_dataType)
         {
         case DataType::Float:

@@ -110,6 +110,8 @@ public:
     CPUMatrix<ElemType> CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
     void AssignColumnSliceToDense(CPUMatrix<ElemType>& slice, size_t startColumn, size_t numCols) const;
 
+    void GatherBatch(size_t numInputs, const std::function<const CPUSparseMatrix<ElemType>&(size_t)>& inputs);
+
     CPUMatrix<ElemType> DiagonalToDense() const;
 
     void SetGaussianRandomValue(const ElemType /*mean*/, const ElemType /*sigma*/, unsigned long /*seed*/)
