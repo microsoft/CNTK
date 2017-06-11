@@ -19,6 +19,7 @@
 #include <iostream> // for cout/cerr
 #include <memory>   // for unique_ptr
 #include <limits.h> // for ULONG_MAX
+#include <boost/asio/ip/host_name.hpp> // for hostname
 
 //#include "CPUMatrix.h"
 //#include "CPUSparseMatrix.h"
@@ -669,20 +670,10 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
     {
         try
         {
-#ifdef _WIN32
-            const char* hostname_var = getenv("COMPUTERNAME");
-            auto len = strlen(hostname);
-            char* hostname = new char[len+1]; 
-            strncpy(hostname, hostname_var, len);
-#else
-            char* hostname = new char[HOST_NAME_MAX];
-            if (gethostname(hostname, HOST_NAME_MAX) != 0)
-                strcpy(hostname, "?");
-#endif
+            auto hostname = boost::asio::ip::host_name();
             int currentCudaDevice;
             cudaGetDevice(&currentCudaDevice);
-            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s%s", libName, (int)retCode, CudaErrString(retCode), currentCudaDevice, 
-                    (hostname != nullptr && hostname[0] != '\0') ? hostname : "?", exprString, msg);
+            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s%s", libName, (int)retCode, CudaErrString(retCode), currentCudaDevice, hostname.c_str(), exprString, msg);
         }
         catch (const std::exception& e) // catch, log, and rethrow since CUDA code sometimes hangs in destruction, so we'd never get to see the error
         {
