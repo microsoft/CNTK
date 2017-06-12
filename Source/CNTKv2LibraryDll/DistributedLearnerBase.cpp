@@ -56,6 +56,7 @@ namespace CNTK
         for (auto g : gradientValues)
         {
             NDArrayViewPtr p = g.second;
+            /*
             // convert sparse gradient to dense for accumulation
             if (p->GetStorageFormat() != StorageFormat::Dense)
             {
@@ -63,6 +64,7 @@ namespace CNTK
                 pDense->CopyFrom(*p);
                 p = pDense;
             }
+            */
             result.push_back(std::make_pair(g.first, p));
         }
 
