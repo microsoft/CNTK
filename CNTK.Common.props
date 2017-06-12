@@ -29,7 +29,8 @@
     <HasJava>false</HasJava>
     <HasJava Condition="Exists('$(JAVA_HOME)\bin\javac.exe')">true</HasJava>
 
-    <CntkComponentVersion>2.0</CntkComponentVersion>
+    <ComponentVersionPath>$(MSBuildThisFileDirectory)\component-version.txt</ComponentVersionPath>
+    <CntkComponentVersion>$([System.IO.File]::ReadAllText($(ComponentVersionPath)).Trim())</CntkComponentVersion>
     <CntkComponentVersion Condition="$(DebugBuild)">$(CntkComponentVersion)d</CntkComponentVersion>
   </PropertyGroup>
   

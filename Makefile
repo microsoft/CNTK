@@ -275,7 +275,11 @@ ORIGINDIR:='$$ORIGIN'
 # Components VERSION info
 ########################################
 
-CNTK_COMPONENT_VERSION := 2.0
+COMPONENT_VERSION = $(shell cat component-version.txt | tr -d '[:space:]' || echo Error)
+
+ifeq ("$(COMPONENT_VERSION)","Error")
+  $(error Could not read component version.)
+endif
 ifeq ("$(BUILDTYPE)","debug")
 CNTK_COMPONENT_VERSION := $(CNTK_COMPONENT_VERSION)d
 endif
@@ -1422,7 +1426,7 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 # will result in the rebuild.
 -include ${DEP}
 
-BUILD_CONFIGURATION := Makefile $(BUILD_TOP)/Config.make
+BUILD_CONFIGURATION := component-version.txt Makefile $(BUILD_TOP)/Config.make
 
 %.pb.cc : %.proto $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
