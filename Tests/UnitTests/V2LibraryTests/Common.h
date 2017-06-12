@@ -344,6 +344,11 @@ inline std::vector<size_t> GenerateSequenceLengths(size_t numSequences, size_t m
     return sequenceLengths;
 }
 
+inline size_t GenerateNumOfAxes(size_t maxNumOfAxes)
+{
+    return (rand() % maxNumOfAxes) + 1;
+}
+
 template <typename ElementType>
 inline std::vector<std::vector<ElementType>> GenerateSequences(const std::vector<size_t>& sequenceLengths, const NDShape& sampleShape)
 {

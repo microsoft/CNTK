@@ -4,6 +4,8 @@
 //
 
 #include "stdafx.h"
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include "CNTKLibrary.h"
 #include "Common.h"
 #include <functional>
@@ -110,8 +112,6 @@ void TestReadonliness(const NDArrayViewPtr aliasView, const NDArrayViewPtr dataV
 template <typename ElementType>
 void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
 {
-    srand(1);
-
     size_t maxDimSize = 15;
     NDShape viewShape(numAxes);
     for (size_t i = 0; i < numAxes; ++i)
@@ -150,8 +150,6 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
 template <typename ElementType>
 void TestSparseCSCArrayView(size_t numAxes, const DeviceDescriptor& device)
 {
-    srand(1);
-
     size_t maxDimSize = 15;
     NDShape viewShape(numAxes);
     for (size_t i = 0; i < numAxes; ++i)
@@ -173,9 +171,10 @@ void TestSparseCSCArrayView(size_t numAxes, const DeviceDescriptor& device)
     std::vector<ElementType> copiedDenseData(viewShape.TotalSize());
     NDArrayView denseCPUTensor(viewShape, copiedDenseData.data(), copiedDenseData.size(), DeviceDescriptor::CPUDevice());
     denseCPUTensor.CopyFrom(sparseCSCArrayView);
-
     BOOST_TEST(copiedDenseData == referenceDenseData, "The contents of the dense vector that the sparse NDArrayView is copied into do not match the expected values");
 
+    // Create an empty sparse CSC NDArrayView and the copy data from a dense NDArrayView on CPU.
+    // Then copy the data in the sparse CSC one into another CPU dense one for checking results.
     NDArrayView emptySparseCSCArrayView(AsDataType<ElementType>(), StorageFormat::SparseCSC, viewShape, device);
     emptySparseCSCArrayView.CopyFrom(denseCPUTensor);
     NDArrayView newDenseCPUTensor(viewShape, copiedDenseData.data(), copiedDenseData.size(), DeviceDescriptor::CPUDevice());
@@ -184,12 +183,84 @@ void TestSparseCSCArrayView(size_t numAxes, const DeviceDescriptor& device)
     BOOST_TEST(copiedDenseData == referenceDenseData, "The contents of the dense vector that the sparse NDArrayView is copied into do not match the expected values");
 }
 
-BOOST_AUTO_TEST_SUITE(NDArrayViewSuite)
+template <typename ElementType>
+void TestSparseCSCDataBuffers(size_t numAxes, const DeviceDescriptor& device)
+{
+    size_t maxDimSize = 15;
+    NDShape viewShape(numAxes);
+    for (size_t i = 0; i < numAxes; ++i)
+        viewShape[i] = (rand() % maxDimSize) + 1;
+
+    size_t numMatrixCols = (numAxes > 0) ? viewShape.SubShape(1).TotalSize() : 1;
+    size_t numMatrixRows = (numAxes > 0) ? viewShape[0] : 1;
+
+    std::vector<ElementType> referenceDenseData;
+    std::vector<SparseIndexType> expectedColsStarts;
+    std::vector<SparseIndexType> expectedRowIndices;
+    std::vector<ElementType> expectedNonZeroValues;
+    size_t expectedNumNonZeroValues;
+    std::tie(referenceDenseData, expectedColsStarts, expectedRowIndices, expectedNonZeroValues, expectedNumNonZeroValues) = GenerateSequenceInCSC<ElementType>(numMatrixRows, numMatrixCols);
+
+    NDArrayView sparseCSCArrayView(viewShape, expectedColsStarts.data(), expectedRowIndices.data(), expectedNonZeroValues.data(), expectedNumNonZeroValues, device, true);
+
+    const ElementType *outputNonZeroData;
+    const SparseIndexType *outputColsStartsData;
+    const SparseIndexType *outputRowIndicesData;
+    size_t outputNumNonZeroData;
+    std::tie(outputNonZeroData, outputColsStartsData, outputRowIndicesData, outputNumNonZeroData) = sparseCSCArrayView.SparseCSCDataBuffers<ElementType>();
+
+    if (expectedNumNonZeroValues != outputNumNonZeroData)
+        ReportFailure("The number of non-zero values does not match. expected: %" PRIu64 ", actual %" PRIu64 "\n", expectedNumNonZeroValues, outputNumNonZeroData);
+    if (expectedNonZeroValues.size() != outputNumNonZeroData)
+        ReportFailure("The number of non-zero values returned does not match that in the non-zero value buffers. expected: %" PRIu64 ", actual %" PRIu64 "\n", expectedNonZeroValues.size(), outputNumNonZeroData);
+
+    if (device.Type() == DeviceKind::CPU)
+    {
+        for (size_t i = 0; i < expectedNonZeroValues.size(); i++)
+            if (expectedNonZeroValues[i] != outputNonZeroData[i])
+                ReportFailure("The non-zero value at position %" PRIu64 " does not match, expected: %f, actual: %f\n", i, expectedNonZeroValues[i] , outputNonZeroData[i]);
+        for (size_t i=0; i < expectedColsStarts.size(); i++)
+            if (expectedColsStarts[i] != outputColsStartsData[i])
+                ReportFailure("The ColsStarts at position %" PRIu64 " does not match, expected: %f, actual: %f\n", i, expectedColsStarts[i], outputColsStartsData[i]);
+        for (size_t i = 0; i < expectedRowIndices.size(); i++)
+            if (expectedRowIndices[i] != outputRowIndicesData[i])
+                ReportFailure("The RowIndices at position %" PRIu64 " does not match, expected: %f, actual: %f\n", i, expectedRowIndices[i], outputRowIndicesData[i]);
+    }
+    else
+    {
+        if (device.Type() != DeviceKind::GPU)
+            ReportFailure("The device type of the NDArrayView is neither CPU nor GPU.");
+
+        // The data buffers returned by SparseCSCDataBuffers() are on GPU, and there is no existing utility functions that compare data buffers between GPU and CPU (without adding
+        // Cuda dependency here), we take a workaround here: first build another NDArrayView using the returned data buffers, copy it to another one on CPU but using dense format,
+        // and then compare the data with the expected one.
+        // Another limitation is here is NDArrayView::DeepClone() does not support the GPUSparseMatrix->CPUSparseMatrix, since Matrix::AssignValuesOf() has not implemented this feature
+        // yet. This prevents from using AreEqual(NDArrayViewPtr, NDArrayViewPtr).
+        NDArrayView viewFromOutput(viewShape, outputColsStartsData, outputRowIndicesData, outputNonZeroData, outputNumNonZeroData, device, true);
+
+        // Copy it out to a dense matrix on the CPU and verify the data
+        std::vector<ElementType> copiedDenseData(viewShape.TotalSize());
+        NDArrayView denseCPUTensor(viewShape, copiedDenseData.data(), copiedDenseData.size(), DeviceDescriptor::CPUDevice());
+        denseCPUTensor.CopyFrom(viewFromOutput);
+        BOOST_TEST(copiedDenseData == referenceDenseData, "The contents of the dense vector that the sparse NDArrayView is copied into do not match the expected values");
+    }
+}
+
+
+struct NDArrayViewFixture
+{
+    NDArrayViewFixture()
+    {
+        srand(1);
+    }
+};
+
+BOOST_FIXTURE_TEST_SUITE(NDArrayViewSuite, NDArrayViewFixture)
 
 BOOST_AUTO_TEST_CASE(CheckFloatNDArrayViewInCpu)
 {
     if (ShouldRunOnCpu())
-        TestNDArrayView<float>(2, DeviceDescriptor::CPUDevice());
+        TestNDArrayView<float>(GenerateNumOfAxes(10), DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(CheckNDArrayViewInGpu)
@@ -197,7 +268,7 @@ BOOST_AUTO_TEST_CASE(CheckNDArrayViewInGpu)
     if (ShouldRunOnGpu())
     {
         TestNDArrayView<float>(0, DeviceDescriptor::GPUDevice(0));
-        TestNDArrayView<double>(4, DeviceDescriptor::GPUDevice(0));
+        TestNDArrayView<double>(GenerateNumOfAxes(6), DeviceDescriptor::GPUDevice(0));
     }
 }
 
@@ -206,14 +277,35 @@ BOOST_AUTO_TEST_CASE(CheckCscArrayViewInGpu)
     if (ShouldRunOnGpu())
     {
         TestSparseCSCArrayView<float>(1, DeviceDescriptor::GPUDevice(0));
-        TestSparseCSCArrayView<double>(4, DeviceDescriptor::GPUDevice(0));
+        TestSparseCSCArrayView<double>(GenerateNumOfAxes(9), DeviceDescriptor::GPUDevice(0));
     }
 }
 
 BOOST_AUTO_TEST_CASE(CheckCscArrayViewInCpu)
 {
     if (ShouldRunOnCpu())
+    {
         TestSparseCSCArrayView<float>(2, DeviceDescriptor::CPUDevice());
+        TestSparseCSCArrayView<float>(GenerateNumOfAxes(15), DeviceDescriptor::CPUDevice());
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CheckSparseCscDataBuffersInGpu)
+{
+    if (ShouldRunOnGpu())
+    {
+        TestSparseCSCDataBuffers<float>(1, DeviceDescriptor::GPUDevice(0));
+        TestSparseCSCDataBuffers<double>(GenerateNumOfAxes(7), DeviceDescriptor::GPUDevice(0));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CheckSparseCscDataBuffersInCpu)
+{
+    if (ShouldRunOnCpu())
+    {
+        TestSparseCSCDataBuffers<float>(2, DeviceDescriptor::CPUDevice());
+        TestSparseCSCDataBuffers<float>(GenerateNumOfAxes(16), DeviceDescriptor::CPUDevice());
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

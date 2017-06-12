@@ -8,6 +8,8 @@
 #include "Utils.h"
 #include "TensorView.h"
 #include "Matrix.h"
+#include "CPUSparseMatrix.h"
+#include "GPUSparseMatrix.h"
 #include <algorithm>
 #include "TensorShape.h"
 
@@ -438,10 +440,10 @@ namespace CNTK
         if(GetStorageFormat() != StorageFormat::SparseCSC)
             InvalidArgument("The SparseDataBuffers() method currently only supports CSC sparse format.");
 
-        auto matrix = GetMatrix<ElementType>();
+        std::shared_ptr<const Matrix<ElementType>> matrix = GetMatrix<ElementType>();
         matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
 
-        if ((matrix->GetMatrixType() != Microsoft::MSR::CNTK::MatrixType::SPARSE) || (matrix->GetMatrixFormat() != Microsoft::MSR::CNTK::MatrixFormat::matrixFormatSparseCSC))
+        if ((matrix->GetMatrixType() != Microsoft::MSR::CNTK::MatrixType::SPARSE) || (matrix->GetFormat() != Microsoft::MSR::CNTK::MatrixFormat::matrixFormatSparseCSC))
             RuntimeError("NDArrayView::SparseDataBuffers: The underlying matrix of 'this' NDArrayView is not in the CSC sparse format.");
 
         size_t numNonZeroValues;
@@ -452,28 +454,28 @@ namespace CNTK
         {
             if (sizeof(CPUSPARSE_INDEX_TYPE) != sizeof(SparseIndexType))
                 LogicError("Inconsistent data type for sparse index in 'this' Value and the underlying matrix on CPU.");
-            shared_ptr<Microsoft::MSR::CNTK::CPUSparseMatrix<ElementType>> sparseMatrix = matrix->m_CPUSparseMatrix;
+            std::shared_ptr<Microsoft::MSR::CNTK::CPUSparseMatrix<ElementType>> sparseMatrix = matrix->m_CPUSparseMatrix;
             numNonZeroValues = sparseMatrix->NzCount();
-            nonZeroValues = static_case<SparseIndexType>(sparseMatrix->NzValues());
-            colStarts = static_case<SparseIndexType>(sparseMatrix->ColLocation());
-            rowIndices = static_case<SparseIndexType>(sparseMatrix->RowLocation());
+            nonZeroValues = static_cast<ElementType *>(sparseMatrix->NzValues());
+            colStarts = static_cast<SparseIndexType *>(sparseMatrix->ColLocation());
+            rowIndices = static_cast<SparseIndexType *>(sparseMatrix->RowLocation());
         }
         else if (m_device.Type() == DeviceKind::GPU)
         {
             if (sizeof(GPUSPARSE_INDEX_TYPE) != sizeof(SparseIndexType))
                 LogicError("Inconsistent data type for sparse index in 'this' Value and the underlying matrix on GPU.");
-            shared_ptr<Microsoft::MSR::CNTK::GPUSparseMatrix<ElementType>> sparseMatrix = matrix->m_GPUSparseMatrix;
+            std::shared_ptr<Microsoft::MSR::CNTK::GPUSparseMatrix<ElementType>> sparseMatrix = matrix->m_GPUSparseMatrix;
             numNonZeroValues = sparseMatrix->NzCount();
-            nonZeroValues = static_case<SparseIndexType>(sparseMatrix->NzValues());
-            colStarts = static_case<SparseIndexType>(sparseMatrix->ColLocation());
-            rowIndices = static_case<SparseIndexType>(sparseMatrix->RowLocation());
+            nonZeroValues = static_cast<ElementType *>(sparseMatrix->NzValues());
+            colStarts = static_cast<SparseIndexType *>(sparseMatrix->ColLocation());
+            rowIndices = static_cast<SparseIndexType *>(sparseMatrix->RowLocation());
         }
         else
         {
-            RuntimeError("NDArrayView::SparseDataBuffers: The device %S is currently not supported.", m_device.DeviceKindName());
+            RuntimeError("NDArrayView::SparseDataBuffers: The device %S is currently not supported.",DeviceKindName(m_device.Type()));
         }
 
-        return std::tuple(nonZeroValues, colStarts, rowIndices, numNonZeroValues);
+        return std::tuple<ElementType *, SparseIndexType *, SparseIndexType *, size_t>(nonZeroValues, colStarts, rowIndices, numNonZeroValues);
     }
 
     void NDArrayView::ChangeDevice(const DeviceDescriptor& device)
@@ -570,6 +572,9 @@ namespace CNTK
 
     template CNTK_API const float* NDArrayView::DataBuffer<float>() const;
     template CNTK_API const double* NDArrayView::DataBuffer<double>() const;
+
+    template CNTK_API std::tuple<const float*, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers<float>() const;
+    template CNTK_API std::tuple<const double*, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers<double>() const;
 
     template CNTK_API float* NDArrayView::WritableDataBuffer<float>();
     template CNTK_API double* NDArrayView::WritableDataBuffer<double>();

@@ -713,7 +713,6 @@ void TestSettingParameterValuesManually(const DeviceDescriptor& device)
 
 void SparseSequenceBatchValueCreationTest(size_t vocabSize, size_t maxAllowedSequenceLength, const DeviceDescriptor& device)
 {
-    srand(1);
     size_t numSequences = 5;
     auto sequenceLengths = GenerateSequenceLengths(numSequences, maxAllowedSequenceLength);
     std::vector<NDArrayViewPtr> denseSequences(numSequences), sparseSequences(numSequences);
