@@ -668,52 +668,17 @@ void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatr
     }
 }
 
-template <size_t N, class ElemType>
-class GatherScatterPointerArray
+
+template <typename ItemType>
+class MaxFixedSizeParameterArray : public FixedSizeParameterArray<((4096-80) / sizeof(ItemType)), ItemType>
 {
-    size_t numElements;
-    ElemType* pointers[N];
-public:
-    // reading out data
-    __device__ __host__ size_t size() const { return (size_t)numElements; }
-    __device__ __host__ const ElemType* operator[](size_t i) const { return pointers[i]; }
-    __device__ __host__       ElemType* operator[](size_t i)       { return pointers[i]; }
-    // cast as a struct with a different template parameter
-    template<size_t Nother>
-    const GatherScatterPointerArray<Nother, ElemType>& AsGatherScatterPointerArrayRef() const
-    {
-        if (size() > Nother)
-            LogicError("GatherScatterPointerArray: Attempted to cast to a templated buffer size that is too small.");
-        return reinterpret_cast<const GatherScatterPointerArray<Nother, ElemType>&>(*this);
-    }
-    // creating the array
-    GatherScatterPointerArray() { clear(); }
-    size_t capacity() const { return N; }
-    void clear() { numElements = 0; }
-    void push_back(ElemType* p)
-    {
-        assert(numElements < (CUDA_LONG)N);
-        pointers[numElements++] = p;
-    }
-    void push_back(const ElemType* p) { push_back(const_cast<ElemType*>(p)); }
 };
-// TODO: do this template abomination the right way
-template<size_t Nother>
-struct AsGatherScatterPointerArrayRef
-{
-    template <size_t N, class ElemType>
-    static const GatherScatterPointerArray<Nother, ElemType>& AsGatherScatterPointerArrayRef1(const GatherScatterPointerArray<N, ElemType>& other)
-    {
-        if (other.size() > Nother)
-            LogicError("GatherScatterPointerArray: Attempted to cast to a templated buffer size that is too small.");
-        return reinterpret_cast<const GatherScatterPointerArray<Nother, ElemType>&>(other);
-    }
-};
+
 // Kernel to copy inputPointers.size() vectors of length numRows into consecutive output locations starting at dstPtr.
 // This kernel expects to be called for NN/GATHER_LOCAL_LOOPS times, and performs GATHER_LOCAL_LOOPS local loops
 // instead. This is to mitigate the overhead of copying those many pointers.
 template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
-__global__ void _gatherMemcpy(ElemType* dstPtr, GatherScatterPointerArray<N, ElemType> inputPointers, const CUDA_LONG numRows)
+__global__ void _gatherMemcpy(ElemType* dstPtr, FixedSizeParameterArray<N, const ElemType*> inputPointers, const CUDA_LONG numRows)
 {
     const CUDA_LONG threadId = blockDim.x * blockIdx.x + threadIdx.x;
     const CUDA_LONG id0 = threadId * GATHER_LOCAL_LOOPS;
@@ -745,10 +710,10 @@ __global__ void _gatherMemcpy(ElemType* dstPtr, GatherScatterPointerArray<N, Ele
 static const size_t maxPtrArgsP2 = (4096 / sizeof(void*)); // max bytes for function args in CUDA 8 is 4k
 static const size_t maxPtrArgs   = maxPtrArgsP2 - 10; // max args: leave some margin
 template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
-static void GatherMemcpy(ElemType* dstPtr, const GatherScatterPointerArray<maxPtrArgs, ElemType>& inputPointersBuffer, size_t numRows)
+static void GatherMemcpy(ElemType* dstPtr, const FixedSizeParameterArray<maxPtrArgs, const ElemType*>& inputPointersBuffer, size_t numRows)
 {
 #if 1
-    let& inputPointersArray = AsGatherScatterPointerArrayRef<N>::AsGatherScatterPointerArrayRef1(inputPointersBuffer);
+    let& inputPointersArray = AsFixedSizeParameterArrayRef<N>::AsFixedSizeParameterArrayRef1(inputPointersBuffer);
     let numElements = inputPointersArray.size() * numRows;
     let NN = CeilDiv(numElements, GATHER_LOCAL_LOOPS); // we do GATHER_LOCAL_LOOPS in each thread launch (thread launches seem expensive)
     GridDim grid(NN);
@@ -766,7 +731,7 @@ template <class ElemType>
 void GPUMatrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::function<const GPUMatrix<ElemType>&(size_t)>& inputs)
 {
     PrepareDevice();
-    GatherScatterPointerArray<maxPtrArgs, ElemType> inputPointerBuffer; // leave some space for extra function args
+    FixedSizeParameterArray<maxPtrArgs, const ElemType*> inputPointerBuffer; // leave some space for extra function args
     // output-batch matrix iterator
     ElemType* dstPtr  = Data();
     size_t    dstLeft = GetNumElements();
@@ -831,7 +796,7 @@ void GPUMatrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const st
 // This kernel expects to be called for NN/GATHER_LOCAL_LOOPS times, and performs GATHER_LOCAL_LOOPS local loops
 // instead. This is to mitigate the overhead of copying those many pointers.
 template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
-__global__ void _scatterMemcpy(ElemType beta, const ElemType* srcPtr, GatherScatterPointerArray<N, ElemType> outputPointers, const CUDA_LONG numRows)
+__global__ void _scatterMemcpy(ElemType beta, const ElemType* srcPtr, FixedSizeParameterArray<N, ElemType*> outputPointers, const CUDA_LONG numRows)
 {
     const CUDA_LONG threadId = blockDim.x * blockIdx.x + threadIdx.x;
     const CUDA_LONG id0 = threadId * GATHER_LOCAL_LOOPS;
@@ -865,12 +830,12 @@ __global__ void _scatterMemcpy(ElemType beta, const ElemType* srcPtr, GatherScat
 
 // helper function template for ScatterBatch() below
 template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
-static void ScatterMemcpy(ElemType beta, const ElemType* srcPtr, const GatherScatterPointerArray<maxPtrArgs, ElemType>& outputPointersBuffer, size_t numRows)
+static void ScatterMemcpy(ElemType beta, const ElemType* srcPtr, const FixedSizeParameterArray<maxPtrArgs, ElemType*>& outputPointersBuffer, size_t numRows)
 {
 #if 1
     if (beta != 0 && beta != 1)
         LogicError("ScatterMemcpy(): Beta != 0 and != 1 currently not implemented."); // ... because not needed and makes atomicAdd harder
-    let& outputPointersArray = AsGatherScatterPointerArrayRef<N>::AsGatherScatterPointerArrayRef1(outputPointersBuffer);
+    let& outputPointersArray = AsFixedSizeParameterArrayRef<N>::AsFixedSizeParameterArrayRef1(outputPointersBuffer);
     let numElements = outputPointersArray.size() * numRows;
     let NN = CeilDiv(numElements, GATHER_LOCAL_LOOPS); // we do GATHER_LOCAL_LOOPS in each thread launch (thread launches seem expensive)
     GridDim grid(NN);
@@ -890,14 +855,14 @@ template <class ElemType>
 void GPUMatrix<ElemType>::ScatterBatch(ElemType beta, size_t numRows, size_t numOutputs, const std::function<GPUMatrix<ElemType>&(size_t)>& outputs) const
 {
     PrepareDevice();
-    GatherScatterPointerArray<maxPtrArgs, ElemType> outputPointerBuffer; // leave some space for extra function args
+    FixedSizeParameterArray<maxPtrArgs, ElemType*> outputPointerBuffer; // leave some space for extra function args
     // input-batch matrix iterator
-    ElemType* srcPtr  = Data();
-    size_t    srcLeft = GetNumElements();
+    const ElemType* srcPtr  = Data();
+    size_t srcLeft = GetNumElements();
     // output-items iterator
-    const ElemType* dstPtr = nullptr; // pointer to the next column in current output to copy to
-    size_t dstLeft = 0;               // #elements left to copy to current output
-    size_t nextOutput = 0; // index of next un-copied output
+    ElemType* dstPtr = nullptr; // pointer to the next column in current output to copy to
+    size_t dstLeft = 0;         // #elements left to copy to current output
+    size_t nextOutput = 0;      // index of next un-copied output
     // go over all inputs and outputs, a complicated dance of iterators...
     outputPointerBuffer.clear();
     while (srcLeft > 0)

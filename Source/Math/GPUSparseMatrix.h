@@ -139,11 +139,12 @@ public:
         return m_cachedNzCount != INVALID_NZ_COUNT;
     }
     // Call this when you know the value CPU-side already.
-    void UpdateCachedNzCount(GPUSPARSE_INDEX_TYPE nzCount) const // m_cachedNzCount is mutable
+    void UpdateCachedNzCount(GPUSPARSE_INDEX_TYPE nzCount, bool shouldVerify=true) const // m_cachedNzCount is mutable
     {
         m_cachedNzCount = nzCount;
         // for now do some safety check (this is a GPU barrier again though, so remove one day)
-        VerifyCachedNzCount(NzCount()); // (to be sure)
+        if (shouldVerify) // (e.g. can't check if transfer was not synchronous)
+            VerifyCachedNzCount(m_cachedNzCount); // (to be sure)
     }
     // and for diagnostics
     void VerifyCachedNzCount(GPUSPARSE_INDEX_TYPE nzCount) const

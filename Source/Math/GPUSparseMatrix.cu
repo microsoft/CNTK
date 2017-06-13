@@ -866,9 +866,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYP
         CUDA_CALL(cudaMemcpy(RowLocation(), pRow, RowSize(), kind));
         CUDA_CALL(cudaMemcpy(ColLocation(), pCol, nz * sizeof(GPUSPARSE_INDEX_TYPE), kind));
     }
-    UpdateCachedNzCount(nz);
-    if (IsOnDevice) // (when coming from CPU, nz was already validated)
-        VerifyCachedNzCount(nz);
+    UpdateCachedNzCount(nz, IsOnDevice); // (when coming from CPU, nz was already validated)
 }
 
 // this function will allocate memory while the caller needs to release it
@@ -982,9 +980,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
             CUDA_CALL(cudaMemcpy(ColLocation(), pCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1), kind));
         }
     }
-    UpdateCachedNzCount(nz);
-    if (IsOnDevice && !transferer) // (when coming from CPU, nz was already validated)
-        VerifyCachedNzCount(nz);
+    UpdateCachedNzCount(nz, IsOnDevice && !transferer); // (when coming from CPU, nz was already validated)
 }
 
 template <class ElemType>

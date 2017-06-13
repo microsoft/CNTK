@@ -192,6 +192,55 @@ private:
 #define UNUSED_FUNCTION_ATTRIBUTE
 #endif
 
+// ---------------------------------------------------------------------------
+// FixedSizeParameterArray -- array of elements to pass by value to kernels
+// ---------------------------------------------------------------------------
+
+template <size_t N, typename ItemType>
+class FixedSizeParameterArray
+{
+    size_t m_numItems;
+    ItemType m_items[N];
+public:
+    // reading out data
+    __device__ __host__ size_t size() const { return (size_t)m_numItems; }
+    __device__ __host__ const ItemType operator[](size_t i) const { return m_items[i]; }
+    __device__ __host__       ItemType operator[](size_t i)       { return m_items[i]; }
+    // cast as a struct with a different template parameter
+    // TODO: This is not working. Use AsFixedSizeParameterArrayRef<> below until I figured out how to do this right.
+    template<size_t Nother>
+    const FixedSizeParameterArray<Nother, ItemType>& AsFixedSizeParameterArrayRef() const
+    {
+        if (size() > Nother)
+            LogicError("FixedSizeParameterArray: Attempted to cast to a templated buffer size that is too small.");
+        return reinterpret_cast<const FixedSizeParameterArray<Nother, ItemType>&>(*this);
+    }
+    // creating the array
+    FixedSizeParameterArray() { clear(); }
+    size_t capacity() const { return N; }
+    void clear() { m_numItems = 0; }
+    void push_back(ItemType p)
+    {
+        assert(m_numItems < (CUDA_LONG)N);
+        m_items[m_numItems++] = p;
+    }
+    //void push_back(const ItemType p) { push_back(const_cast<ItemType>(p)); }
+};
+
+// helper to type-cast a FixedSizeParameterArray to one of a different (smaller) size
+// TODO: this is quite an abomination; find out how to do it the right way
+template<size_t Nother>
+struct AsFixedSizeParameterArrayRef
+{
+    template <size_t N, typename ItemType>
+    static const FixedSizeParameterArray<Nother, ItemType>& AsFixedSizeParameterArrayRef1(const FixedSizeParameterArray<N, ItemType>& other)
+    {
+        if (other.size() > Nother)
+            LogicError("FixedSizeParameterArray: Attempted to cast to a templated buffer size that is too small.");
+        return reinterpret_cast<const FixedSizeParameterArray<Nother, ItemType>&>(other);
+    }
+};
+
 // ===========================================================================
 // CUDA kernels follow, lots of them
 // ===========================================================================
