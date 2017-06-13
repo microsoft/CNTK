@@ -172,8 +172,8 @@ def roiTransformPadScale(rect, w_offset, h_offset, scale = 1.0):
 
 def getCntkRoiCoordsLine(rect, targetw, targeth):
     # Return the absolute coordinate of the ROI in the original image.
-    x, y, x2, y2 = rect
-    return " {} {} {} {}".format(x, y, x2, y2)
+    x1, y1, x2, y2 = rect
+    return " {} {} {} {}".format(x1, y1, x2, y2)
 
 def getCntkRoiLabelsLine(overlaps, thres, nrClasses):
     # get one hot encoding
@@ -270,28 +270,21 @@ def readCntkRoiCoordinates(imgPaths, cntkRoiCoordsPath, nrRois, padWidth, padHei
         imgWidth, imgHeight = imWidthHeight(imgPaths[imgIndex])
         for boxIndex in range(nrRois):
             rect = [float(s) for s in valuesString[boxIndex*4 : (boxIndex+1)*4]]
-            x,y,w,h = rect
+            x1,y1,x2,y2 = rect
             # convert back from padded-rois-co-ordinates to image co-ordinates
-            rect = getAbsoluteROICoordinates([x,y,x+w,y+h], imgWidth, imgHeight, padWidth, padHeight)
+            rect = getAbsoluteROICoordinates([x1,y1,x2,y2], imgWidth, imgHeight, padWidth, padHeight)
             roiCoords[imgIndex].append(rect)
     return roiCoords
 
-# convert roi co-ordinates from CNTK file back to original image co-ordinates
 def getAbsoluteROICoordinates(roi, imgWidth, imgHeight, padWidth, padHeight, resizeMethod = 'padScale'):
+    ''' 
+        The input image are usually padded to a fixed size, this method compute back the original 
+        ROI absolute coordinate before the padding.
+    '''
     if roi == [0,0,0,0]: # if padded roi
         return [0,0,0,0]
 
-    if resizeMethod == "crop":
-        minDim = min(imgWidth, imgHeight)
-        offsetWidth = 0.5 * abs(imgWidth - imgHeight)
-        if (imgWidth >= imgHeight):  # horizontal photo
-            rect = [roi[0] * minDim + offsetWidth, roi[1] * minDim, None, None]
-        else:
-            rect = [roi[0] * minDim, roi[1] * minDim + offsetWidth, None, None]
-        rect[2] = rect[0] + roi[2] * minDim
-        rect[3] = rect[1] + roi[3] * minDim
-
-    elif resizeMethod == "pad" or resizeMethod == "padScale":
+    if resizeMethod == "pad" or resizeMethod == "padScale":
         if resizeMethod == "padScale":
             scale = float(padWidth) / max(imgWidth, imgHeight)
             imgWidthScaled  = int(round(imgWidth * scale))
@@ -305,19 +298,15 @@ def getAbsoluteROICoordinates(roi, imgWidth, imgHeight, padWidth, padHeight, res
         h_offset = float(padHeight - imgHeightScaled) / 2.0
         if resizeMethod == "padScale":
             assert(w_offset == 0 or h_offset == 0)
-        
-        x0 = max(roi[0] * padWidth  - w_offset, 0) 
-        y0 = max(roi[1] * padHeight - h_offset, 0)
-        rect = [x0, y0, 
-                x0 + (roi[2] - roi[0]) * padWidth,
-                y0 + (roi[3] - roi[1]) * padHeight]
+
+        rect = [roi[0] - w_offset, roi[1] - h_offset, roi[2] - w_offset, roi[3] - h_offset]
         rect = [int(round(r / scale)) for r in rect]
     else:
         print ("ERROR: Unknown resize method '%s'" % resizeMethod)
         error
+
     assert(min(rect) >=0 and max(rect[0],rect[2]) <= imgWidth and max(rect[1],rect[3]) <= imgHeight)
     return rect
-
 
 ####################################
 # Classifier training / scoring

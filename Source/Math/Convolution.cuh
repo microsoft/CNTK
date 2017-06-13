@@ -342,7 +342,7 @@ __global__ void kMaxROIPoolingBackward(const int totalIterations,
             // each ROI is 4 elements: (x, y, w, h)
             const ElemType* roiOffset = roiData + roiN * 4;
 
-            // ROI data is relative to original image size
+            // ROI data is absolute pixel value in the original image size
             int roiStartW = (int)(round_(roiOffset[0] * spatialScale));
             int roiStartH = (int)(round_(roiOffset[1] * spatialScale));
             int roiEndW = (int)(round_(roiOffset[2] * spatialScale));
