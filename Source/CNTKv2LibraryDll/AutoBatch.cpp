@@ -21,7 +21,7 @@
 #include <string>
 
 //#define LOG_DETAILS   // if defined, log all forward and backward operations
-#define LOG_STATS     // if defined, log statistics (#operations)
+//#define LOG_STATS     // if defined, log statistics (#operations)
 #undef NO_BATCHED_BACKPROP // if defined, don't do batched backprop
 
 using namespace Microsoft::MSR::CNTK;

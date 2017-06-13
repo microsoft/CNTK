@@ -2696,7 +2696,7 @@ __global__ void _gatherMemcpyCSC(const CSCSlice<ElemType*> outputSlice, const Fi
 }
 
 template <size_t N, class ElemType>
-static void GatherMemcpy(const CSCSlice<ElemType*>& outputSlice, const MaxFixedSizeParameterArray<CSCSlice<const ElemType*>>& inputSliceBuffer)
+static void GatherMemcpyCSC(const CSCSlice<ElemType*>& outputSlice, const MaxFixedSizeParameterArray<CSCSlice<const ElemType*>>& inputSliceBuffer)
 {
     let& inputSliceArray = (const FixedSizeParameterArray<N, CSCSlice<const ElemType*>>&)inputSliceBuffer;
     SyncGuard syncGuard;
@@ -2727,7 +2727,7 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
         if (input.GetNumRows() != numRows)
             InvalidArgument("GatherBatch (sparse): All inputs must have the same number of rows as the output (%d).", (int)numRows);
         let inputCols = input.GetNumCols();
-        nz += input.NzCount(); // TODO: double-check that this does not actually read data from the GPU, that caching works
+        nz += 1;//input.NzCount(); // TODO: double-check that this does not actually read data from the GPU, that caching works
         numCols += inputCols;
     }
     if (numCols != GetNumCols())
@@ -2757,75 +2757,29 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
         if (inputSliceBuffer.size() == inputSliceBuffer.capacity())
         {
             // flush
-            GatherMemcpy<capacity, ElemType>(outputSlice, inputSliceBuffer);
+            GatherMemcpyCSC<capacity, ElemType>(outputSlice, inputSliceBuffer);
             inputSliceBuffer.clear();
             // advance the output range column pointer
             outputSlice.m_firstColumn += outputSlice.m_numColumns;
             outputSlice.m_numColumns = 0;
         }
     }
-    // TODO: the template cascade
-    GatherMemcpy<capacity, ElemType>(outputSlice, inputSliceBuffer);
+    let colsLeft = inputSliceBuffer.size();
+    if      (colsLeft == 0) {}
+    else if (colsLeft <= 1)        GatherMemcpyCSC<       1, ElemType>(outputSlice, inputSliceBuffer);
+    else if (colsLeft <= 2)        GatherMemcpyCSC<       2, ElemType>(outputSlice, inputSliceBuffer);
+    else if (colsLeft <= 4)        GatherMemcpyCSC<       4, ElemType>(outputSlice, inputSliceBuffer);
+    else if (colsLeft <= 8)        GatherMemcpyCSC<       8, ElemType>(outputSlice, inputSliceBuffer);
+    else if (colsLeft <= 16)       GatherMemcpyCSC<      16, ElemType>(outputSlice, inputSliceBuffer);
+    else if (colsLeft <= 24)       GatherMemcpyCSC<      24, ElemType>(outputSlice, inputSliceBuffer);
+    else if (colsLeft <= 32)       GatherMemcpyCSC<      32, ElemType>(outputSlice, inputSliceBuffer);
+    else if (colsLeft <= 48)       GatherMemcpyCSC<      48, ElemType>(outputSlice, inputSliceBuffer);
+    else if (colsLeft <= 64)       GatherMemcpyCSC<      64, ElemType>(outputSlice, inputSliceBuffer);
+    else if (colsLeft <= 96)       GatherMemcpyCSC<      96, ElemType>(outputSlice, inputSliceBuffer);
+    else if (colsLeft <= 128)      GatherMemcpyCSC<     128, ElemType>(outputSlice, inputSliceBuffer);
+    else if (colsLeft <= capacity) GatherMemcpyCSC<capacity, ElemType>(outputSlice, inputSliceBuffer);
+    else LogicError("GatherBatch: We should have flushed inside the loop, but somehow didn't??");
     InvalidateCachedNzCount();
-#if 0
-    auto* outValues     = Buffer();             // using the non-slice-view-offset functions here, since...
-    auto* outRowIndices = MajorIndexLocation(); // ...we know it is 0. Avoids GPU accesses.
-    vector<GPUSPARSE_INDEX_TYPE> outColOffsets(numCols + 1);
-    // perform the actual operation
-    // need to pass to kernel for every input item:
-    //  - pointer to its data
-    //  - #elements allocated
-    //  - slice view offset (first column)
-    //  - #columns in this input
-    // and once for output:
-    //  - pointer to output data
-    //  - #elements allocated
-    //  - firstColumn of this launch
-    //  - #columns in this launch
-    // running a single CUDA kernel since it's so primitive
-    size_t k = 0; // running output element index (outData, outRowIndices)
-    size_t j = 0; // running output-column offset index
-    for (size_t i = 0; i < numInputs; i++)
-    {
-        let& input = inputs(i);
-        let* inValues = input.Data();
-        // ^^ one GPU sync here unless slice-view offset == 0
-        let* inRowIndices = (GPUSPARSE_INDEX_TYPE*)(inValues/*Data()*/ + GetSizeAllocated()); // == input.MajorIndexLocationWithSliceViewOffset();
-        let inCols = input.GetNumCols();
-        if (inCols == 0)
-            continue;
-        // first column has no correction term
-        outColOffsets[j] = (GPUSPARSE_INDEX_TYPE)k;
-        j++;
-        // additional columns need one; avoid unnecessary GPU access
-        if (inCols > 1)
-        {
-            // UNTESTED
-            let inColOffset0 = input.SecondaryIndexValueAt(0);
-            // ^^ one GPU sync here unless slice-view offset == 0
-            for (size_t n = 1; n < inCols; n++, j++)
-            {
-                let k1 = input.SecondaryIndexValueAt(n) - inColOffset0 + (GPUSPARSE_INDEX_TYPE)k; // k = start element index of this section
-                // ^^ one GPU sync here unless slice-view offset == 0
-                outColOffsets[j] = k1;
-            }
-        }
-        let inNz = input.NzCount();
-        CUDA_CALL(cudaMemcpy(&outValues[k],     inValues,     inNz * sizeof(inValues[0]),     cudaMemcpyDeviceToDevice));
-        CUDA_CALL(cudaMemcpy(&outRowIndices[k], inRowIndices, inNz * sizeof(inRowIndices[0]), cudaMemcpyDeviceToDevice));
-        // note: this should not cause a GPU sync (but still incurs lots of CUDA launch overheads)
-        // TOOD: turn this into a kernel
-        k += inNz;
-    }
-    outColOffsets[j] = (GPUSPARSE_INDEX_TYPE)k;
-    if (j != numCols || k != nz)
-        LogicError("GatherBatch (sparse): copied incorrect number of elements??");
-    // move secondary index (item offsets) to GPU
-    CUDA_CALL(cudaMemcpy(SecondaryIndexLocation(), outColOffsets.data(), outColOffsets.size() * sizeof(outColOffsets[0]), cudaMemcpyHostToDevice));
-    // ^^ one GPU sync here (synchronous copy)
-    // TODO: use an array-set kernel
-    UpdateCachedNzCount(nz);
-#endif
 }
 
 // -> dense
