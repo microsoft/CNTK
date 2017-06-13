@@ -668,7 +668,6 @@ void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatr
     }
 }
 
-
 template <typename ItemType>
 class MaxFixedSizeParameterArray : public FixedSizeParameterArray<((4096-80) / sizeof(ItemType)), ItemType>
 {
@@ -707,10 +706,10 @@ __global__ void _gatherMemcpy(ElemType* dstPtr, FixedSizeParameterArray<N, const
 }
 
 // helper function template for GatherBatch() below
-static const size_t maxPtrArgsP2 = (4096 / sizeof(void*)); // max bytes for function args in CUDA 8 is 4k
-static const size_t maxPtrArgs   = maxPtrArgsP2 - 10; // max args: leave some margin
+//static const size_t maxPtrArgsP2 = (4096 / sizeof(void*)); // max bytes for function args in CUDA 8 is 4k
+//static const size_t maxPtrArgs   = maxPtrArgsP2 - 10; // max args: leave some margin
 template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
-static void GatherMemcpy(ElemType* dstPtr, const FixedSizeParameterArray<maxPtrArgs, const ElemType*>& inputPointersBuffer, size_t numRows)
+static void GatherMemcpy(ElemType* dstPtr, const MaxFixedSizeParameterArray<const ElemType*>& inputPointersBuffer, size_t numRows)
 {
 #if 1
     let& inputPointersArray = AsFixedSizeParameterArrayRef<N>::AsFixedSizeParameterArrayRef1(inputPointersBuffer);
@@ -731,7 +730,8 @@ template <class ElemType>
 void GPUMatrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::function<const GPUMatrix<ElemType>&(size_t)>& inputs)
 {
     PrepareDevice();
-    FixedSizeParameterArray<maxPtrArgs, const ElemType*> inputPointerBuffer; // leave some space for extra function args
+    MaxFixedSizeParameterArray<const ElemType*> inputPointerBuffer; // leave some space for extra function args
+    static constexpr size_t capacity = inputPointerBuffer.CAPACITY;
     // output-batch matrix iterator
     ElemType* dstPtr  = Data();
     size_t    dstLeft = GetNumElements();
@@ -765,7 +765,7 @@ void GPUMatrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const st
         if (inputPointerBuffer.size() == inputPointerBuffer.capacity())
         {
             let n = inputPointerBuffer.size() * numRows; // number of elements to copy in this chunk
-            GatherMemcpy<maxPtrArgs, 8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+            GatherMemcpy<capacity, 8, ElemType>(dstPtr, inputPointerBuffer, numRows);
             dstPtr  += n;
             inputPointerBuffer.clear();
         }
@@ -775,20 +775,20 @@ void GPUMatrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const st
     // now do the last chunk. For the last one, we may use smaller chunk size
     let colsLeft = inputPointerBuffer.size();
     if      (colsLeft == 0) {}
-    else if (colsLeft <= 1)          GatherMemcpy<         1,  1, ElemType>(dstPtr, inputPointerBuffer, numRows);
-    else if (colsLeft <= 2)          GatherMemcpy<         2,  2, ElemType>(dstPtr, inputPointerBuffer, numRows);
-    else if (colsLeft <= 4)          GatherMemcpy<         4,  4, ElemType>(dstPtr, inputPointerBuffer, numRows);
-    else if (colsLeft <= 8)          GatherMemcpy<         8,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
-    else if (colsLeft <= 16)         GatherMemcpy<        16,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
-    else if (colsLeft <= 24)         GatherMemcpy<        24,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
-    else if (colsLeft <= 32)         GatherMemcpy<        32,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
-    else if (colsLeft <= 48)         GatherMemcpy<        48,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
-    else if (colsLeft <= 64)         GatherMemcpy<        64,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
-    else if (colsLeft <= 96)         GatherMemcpy<        96,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
-    else if (colsLeft <= 128)        GatherMemcpy<       128,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
-    else if (colsLeft <= 192)        GatherMemcpy<       192,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
-    else if (colsLeft <= 256)        GatherMemcpy<       256,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
-    else if (colsLeft <= maxPtrArgs) GatherMemcpy<maxPtrArgs,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 1)        GatherMemcpy<       1,  1, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 2)        GatherMemcpy<       2,  2, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 4)        GatherMemcpy<       4,  4, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 8)        GatherMemcpy<       8,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 16)       GatherMemcpy<      16,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 24)       GatherMemcpy<      24,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 32)       GatherMemcpy<      32,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 48)       GatherMemcpy<      48,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 64)       GatherMemcpy<      64,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 96)       GatherMemcpy<      96,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 128)      GatherMemcpy<     128,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 192)      GatherMemcpy<     192,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= 256)      GatherMemcpy<     256,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
+    else if (colsLeft <= capacity) GatherMemcpy<capacity,  8, ElemType>(dstPtr, inputPointerBuffer, numRows);
     else LogicError("GatherBatch: We should have flushed inside the loop, but somehow didn't??");
 }
 
@@ -830,7 +830,7 @@ __global__ void _scatterMemcpy(ElemType beta, const ElemType* srcPtr, FixedSizeP
 
 // helper function template for ScatterBatch() below
 template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
-static void ScatterMemcpy(ElemType beta, const ElemType* srcPtr, const FixedSizeParameterArray<maxPtrArgs, ElemType*>& outputPointersBuffer, size_t numRows)
+static void ScatterMemcpy(ElemType beta, const ElemType* srcPtr, const MaxFixedSizeParameterArray<ElemType*>& outputPointersBuffer, size_t numRows)
 {
 #if 1
     if (beta != 0 && beta != 1)
@@ -855,7 +855,8 @@ template <class ElemType>
 void GPUMatrix<ElemType>::ScatterBatch(ElemType beta, size_t numRows, size_t numOutputs, const std::function<GPUMatrix<ElemType>&(size_t)>& outputs) const
 {
     PrepareDevice();
-    FixedSizeParameterArray<maxPtrArgs, ElemType*> outputPointerBuffer; // leave some space for extra function args
+    MaxFixedSizeParameterArray<ElemType*> outputPointerBuffer; // leave some space for extra function args
+    static constexpr size_t capacity = outputPointerBuffer.CAPACITY;
     // input-batch matrix iterator
     const ElemType* srcPtr  = Data();
     size_t srcLeft = GetNumElements();
@@ -891,7 +892,7 @@ void GPUMatrix<ElemType>::ScatterBatch(ElemType beta, size_t numRows, size_t num
         if (outputPointerBuffer.size() == outputPointerBuffer.capacity())
         {
             let n = outputPointerBuffer.size() * numRows; // number of elements to copy in this chunk
-            ScatterMemcpy<maxPtrArgs, 8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+            ScatterMemcpy<capacity, 8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
             srcPtr  += n;
             outputPointerBuffer.clear();
         }
@@ -901,20 +902,20 @@ void GPUMatrix<ElemType>::ScatterBatch(ElemType beta, size_t numRows, size_t num
     // now do the last chunk. For the last one, we may use smaller chunk size
     let colsLeft = outputPointerBuffer.size();
     if      (colsLeft == 0) {}
-    else if (colsLeft <= 1)          ScatterMemcpy<         1,  1, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-    else if (colsLeft <= 2)          ScatterMemcpy<         2,  2, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-    else if (colsLeft <= 4)          ScatterMemcpy<         4,  4, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-    else if (colsLeft <= 8)          ScatterMemcpy<         8,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-    else if (colsLeft <= 16)         ScatterMemcpy<        16,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-    else if (colsLeft <= 24)         ScatterMemcpy<        24,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-    else if (colsLeft <= 32)         ScatterMemcpy<        32,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-    else if (colsLeft <= 48)         ScatterMemcpy<        48,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-    else if (colsLeft <= 64)         ScatterMemcpy<        64,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-    else if (colsLeft <= 96)         ScatterMemcpy<        96,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-    else if (colsLeft <= 128)        ScatterMemcpy<       128,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-    else if (colsLeft <= 192)        ScatterMemcpy<       192,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-    else if (colsLeft <= 256)        ScatterMemcpy<       256,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-    else if (colsLeft <= maxPtrArgs) ScatterMemcpy<maxPtrArgs,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 1)        ScatterMemcpy<       1,  1, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 2)        ScatterMemcpy<       2,  2, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 4)        ScatterMemcpy<       4,  4, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 8)        ScatterMemcpy<       8,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 16)       ScatterMemcpy<      16,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 24)       ScatterMemcpy<      24,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 32)       ScatterMemcpy<      32,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 48)       ScatterMemcpy<      48,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 64)       ScatterMemcpy<      64,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 96)       ScatterMemcpy<      96,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 128)      ScatterMemcpy<     128,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 192)      ScatterMemcpy<     192,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= 256)      ScatterMemcpy<     256,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
+    else if (colsLeft <= capacity) ScatterMemcpy<capacity,  8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
     else LogicError("ScatterBatch: We should have flushed inside the loop, but somehow didn't??");
 }
 

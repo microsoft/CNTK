@@ -217,6 +217,7 @@ public:
     }
     // creating the array
     FixedSizeParameterArray() { clear(); }
+    const static size_t CAPACITY = N;
     size_t capacity() const { return N; }
     void clear() { m_numItems = 0; }
     void push_back(ItemType p)
