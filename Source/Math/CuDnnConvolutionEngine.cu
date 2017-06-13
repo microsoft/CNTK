@@ -496,6 +496,7 @@ private:
             CUDNN_CALL(workspaceSizeFinder()); 
             if (m_forceDeterministicAlgorithms)
             {
+                cudaDeviceSynchronize(); // make sure no in-flight GPU kernels using workspace before release its memory
                 workspace.Resize((algo.DeterministicAlgoWorkspaceSize + sizeof(ElemType) - 1) / sizeof(ElemType), 1, 0, false);
                 CUDNN_CALL(deterministicFinder(calgo, algoPerf));
                 assert(calgo == 1);                                 // only one deterministic algorithm will be returned 
@@ -519,6 +520,7 @@ private:
         if (algo.MBSizeForCurrentWorkspace == 0)    // no workspace memory has been allocated for this node
         {
             size_t curSize = workspace.BufferSize();
+            cudaDeviceSynchronize(); // make sure no in-flight GPU kernels using workspace before release its memory
 
             // To control memory usage. No one seems to be using this flag
             size_t inputSampleSize = m_geometry->InputShape().GetNumElements();
