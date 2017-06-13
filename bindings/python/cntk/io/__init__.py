@@ -419,6 +419,7 @@ class UserMinibatchSource(cntk_py.SwigMinibatchSource):
             num_samples (int): number of samples to return
             number_of_workers (int): number of workers in total
             worker_rank (int): worker for which the data is to be returned
+            device (`DeviceDescriptor`, defaults to `None`): CNTK DeviceDescriptor
 
         Returns:
             mapping of :class:`StreamInformation` to :class:`MinibatchData`
