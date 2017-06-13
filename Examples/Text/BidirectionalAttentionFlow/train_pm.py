@@ -117,6 +117,27 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 
     learner = C.adadelta(z.parameters, lr)
 
+    # def nadagrad(ps, gs):
+    #     tim = C.constant(0, shape=(), dtype=np.float32, name="time")
+    #     new_time = tim + 1
+    #     updates = [C.assign(tim, new_time)]
+    #     for p, g in zip(ps, gs):
+    #         wlt = C.constant(0, p.shape, p.dtype, name="wealth_%s" % p.uid)
+    #         ctr = C.constant(p.value, name="center_%s" %p.uid )
+    #         grd = C.constant(0, p.shape, p.dtype, name="grads_%s" % p.uid)
+    #         bnd = C.constant(1e-6, p.shape, p.dtype, name="bound_%s" % p.uid)
+    #         new_bnd = C.element_max(bnd, C.abs(g))
+    #         new_grd = (bnd*grd - g)/new_bnd
+    #         new_wlt = (bnd*wlt - (p-ctr)*g)/new_bnd
+    #         biased_time = C.element_max(new_time, 500)
+    #         updates.append(C.assign(p, ctr + (1+wlt)*grd/biased_time))
+    #         updates.append(C.assign(grd, new_grd))
+    #         updates.append(C.assign(wlt, new_wlt))
+    #         updates.append(C.assign(bnd, new_bnd))
+    #     return C.combine(updates)
+    #
+    # learner = C.universal(nadagrad, z.parameters)
+
     if C.Communicator.num_workers() > 1:
         learner = C.data_parallel_distributed_learner(learner)
 

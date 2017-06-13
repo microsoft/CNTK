@@ -1,28 +1,8 @@
-import nltk
 import json
 import numpy as np
-import re
 from squad_utils import normalize_answer
+from preprocess_utils import preprocess, tokenize, make_str, trim_empty
 
-def preprocess(s, add_quote=True):
-    rep='"'+(" " if add_quote else "")
-    return s.replace("''", '" ').replace("``", '" ')
-
-def tokenize(s, context_mode=False ):
-    nltk_tokens=[t.replace("''", '"').replace("``", '"') for t in nltk.word_tokenize(s)]
-    additional_separators = (
-             "-", "\u2212", "\u2014", "\u2013", "/", "~", '"', "'", "\u201C", "\u2019", "\u201D", "\u2018", "\u00B0")
-    tokens = []
-    for token in nltk_tokens:
-        # TODO: extra sepatators are only processed for context. It is done to repeat conditions in BiDAF to
-        # use its variable values. However, it does not necessary make sense to do that for trained model
-        # Also empty tokens are preserved for BiDAF compat, should probably be thrown away
-        tokens.extend([t for t in (re.split("([{}])".format("".join(additional_separators)), token)
-                                   if context_mode else [token])])
-    assert(not any([t=='<NULL>' for t in tokens]))
-    assert(not any([' ' in t for t in tokens]))
-    assert (not any(['\t' in t for t in tokens]))
-    return tokens
 
 # map from character offset to token offset
 def c2w_map(s, words):
@@ -38,26 +18,12 @@ def c2w_map(s, words):
             rem=rem[cidx + len(w):]
     return c2w
 
-def make_str(tokens):
-    return ' '.join(['<NULL>' if t=='' else t for t in tokens])
-
-def trim_empty(tokens):
-    trimmed=[]
-    good_len=0
-    for t in tokens:
-        if t =='' and good_len==0:
-            continue
-        trimmed.append(t)
-        if t != '':
-            good_len=len(trimmed)
-    return trimmed[:good_len]
-
 def convert_file(json_file, train_file, val_file=None, train_ratio = 1.0, is_test=False, sort_by_len=False):
     data=json.load(open(json_file,"r", encoding="utf-8"))['data']
     qcount=0
     acount=0
-    no_answer=0
-    no_matches=0
+    no_answer=[]
+    no_matches=[]
     slist=[]
     max_context_size=0
     max_question_size=0
@@ -83,25 +49,28 @@ def convert_file(json_file, train_file, val_file=None, train_ratio = 1.0, is_tes
                     for arec in qrec['answers']:
                         start=int(arec['answer_start'])
                         answer = preprocess(arec['text'])
+                        assert(paragraph['context'][start:start+len(answer)]==answer)
                         atokens = tokenize(answer, context_mode=True)
                         atokens = trim_empty(atokens)
                         if start not in c2w:
-                            #print("Cannot find answer", answer, paragraph['context']==context)
-                            no_answer+=1
+                            #print("ID: {0} Cannot find answer {1}, context modified?: {2}"
+                            #      .format(id, answer, paragraph['context']==context))
+                            no_answer.append(id)
                             continue
                         offset=c2w[start]
                         assert(arec['text']==paragraph['context'][start:start+len(arec['text'])])
                         if not any([(i+offset<len(ctokens) and atoken==ctokens[i+offset]) for i,atoken in enumerate(atokens)]):
-                            #print("Tokens do not match", '<<'+answer+'>>', atokens, ctokens[offset:offset+len(atokens)])
-                            no_matches+=1
+                            #print("ID: {0} Tokens do not match: answer [{1}] answer tokens [{2}] context tokens [{3}]"
+                            #            .format(id, answer, atokens, ctokens[offset:offset+len(atokens)]))
+                            no_matches.append(id)
                             continue
                         assert(ans_str is None)
-                        ans_str=str(offset)+'\t'+str(offset+len(atokens))+'\t'+' '.join(atokens)
+                        ans_str='\t'+str(offset)+'\t'+str(offset+len(atokens))+'\t'+' '.join(atokens)
                 else:
-                    # testing format - can have multiple answers, offsets are not used
-                    ans_str=';'.join([normalize_answer(arec['text']) for arec in qrec['answers']]) + "\t" + context.replace("\n"," ")
+                    ans_str=''
                 if ans_str is not None:
                     slist.append(id + '\t' + title + '\t' + make_str(ctokens) + '\t' + ' '.join(qtokens) + '\t' +
+                        ';'.join([normalize_answer(arec['text']) for arec in qrec['answers']]) + "\t" + context.replace("\n", " ") +
                         ans_str + '\n')
 
     r=np.random.RandomState(2017)
@@ -130,23 +99,18 @@ def convert_file(json_file, train_file, val_file=None, train_ratio = 1.0, is_tes
     with open(train_file, "w", encoding="utf-8") as train:
         train.writelines(train_data)
 
-    print(qcount, "questions", acount, "answers", no_answer, "no answer", no_matches, "no matches")
+    print(qcount, "questions", acount, "answers", len(no_answer), "no answer", len(no_matches), "no matches")
     print("Max context size", max_context_size, "Max question size", max_question_size)
+    #print(no_answer)
+    #print(no_matches)
 
 
-
-
-
-
-#dir="d:/work/data/squad/"
-dir="./"
-
-convert_file(dir+"train-v1.1.json", dir+"full_train.tsv")
-convert_file(dir+"train-v1.1.json", dir+"full_train_sort.tsv", sort_by_len=True)
-convert_file(dir+"train-v1.1.json", dir+"train.tsv", dir+"val.tsv", 0.98)
-convert_file(dir+"train-v1.1.json", dir+"train_sort.tsv", dir+"val_sort.tsv", 0.98, sort_by_len=True)
-convert_file(dir+"dev-v1.1.json", dir+"dev.tsv", is_test=True)
-convert_file(dir+"dev-v1.1.json", dir+"dev_sort.tsv", is_test=True, sort_by_len=True)
-
-
-
+if __name__ == '__main__':
+    #dir="d:/work/data/squad/"
+    dir="./"
+    convert_file(dir+"train-v1.1.json", dir+"full_train.tsv")
+    convert_file(dir+"train-v1.1.json", dir+"full_train_sort.tsv", sort_by_len=True)
+    convert_file(dir+"train-v1.1.json", dir+"train.tsv", dir+"val.tsv", 0.98)
+    convert_file(dir+"train-v1.1.json", dir+"train_sort.tsv", dir+"val_sort.tsv", 0.98, sort_by_len=True)
+    convert_file(dir+"dev-v1.1.json", dir+"dev.tsv", is_test=True)
+    convert_file(dir+"dev-v1.1.json", dir+"dev_sort.tsv", is_test=True, sort_by_len=True)
