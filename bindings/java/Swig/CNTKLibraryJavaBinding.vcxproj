@@ -128,8 +128,8 @@
     <None Include="std_unordered_map.i" />
   </ItemGroup>
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasSwig)" Text="The project requires SWIG to be installed. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#swig for installation instructions." />
-    <Warning Condition="!$(HasJava)" Text="The project requires the Java JDK to be installed. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#optional-java for installation instructions." />
+    <Warning Condition="!$(HasSwig)" Text="The project requires SWIG to be installed. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#swig for installation instructions." />
+    <Warning Condition="!$(HasJava)" Text="The project requires the Java JDK to be installed. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#optional-java for installation instructions." />
   </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="Build" Condition="$(HasSwig) And $(HasJava)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />

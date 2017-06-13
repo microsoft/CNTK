@@ -1808,3 +1808,5 @@ Test module "ReaderTests" has passed with:
     Test case "PackerTests/SequencePackerSmallChunksWithSequences" has passed with:
       1896 assertions out of 1896 passed
 
+    Test case "PackerTests/TestTruncatedBpttPacker" has passed with:
+      1 assertion out of 1 passed

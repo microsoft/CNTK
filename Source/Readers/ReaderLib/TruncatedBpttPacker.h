@@ -30,6 +30,8 @@ public:
 
     virtual void SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) override;
 
+    virtual void Reset() override;
+
 private:
     // Iterates over all (m_parallelNumberOfSequences) slots,
     // pulling in and filling out those slots with new sequence data,

@@ -7065,7 +7065,7 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
         CaseTensorOpWithFnAndReduction(Max);
         CaseTensorOpWithFnAndReduction(ElementwiseProduct);
     default:
-        LogicError("Specified ElementWiseOperator op %d not suported as reduction operation.", (int)reductionOp);
+        LogicError("Specified ElementWiseOperator op %d not supported as reduction operation.", (int)reductionOp);
     }
 }
 

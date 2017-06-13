@@ -95,7 +95,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
      input_rank (int, defaults to `None`): number of inferred axes to add to W (`map_rank` must not be given)
      map_rank (int, defaults to `None`): expand W to leave exactly `map_rank` axes (`input_rank` must not be given)
      bias (bool, optional, defaults to `True`): the layer will have no bias if `False` is passed here
-     init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defualts to 0): initial value of weights `b`
+     init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
      name (str, defaults to ''): the name of the function instance in the network
 
     Returns:
