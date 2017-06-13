@@ -419,8 +419,8 @@ ROIPOOLING_OPERANDS = [
        [8., 9., 9.],
        [8., 9., 9.]]],
      [[[0., 0., 0.],       # (1, 3, 3) expected backward output (gradient input is all 1s)
-       [0., 1., 1.],
-       [0., 1., 1.]]])
+       [0., 1., 2.],
+       [0., 2., 4.]]])
 ]
 
 @pytest.mark.parametrize("input_map, input_rois, expected_fwd, expected_bkwd", ROIPOOLING_OPERANDS)

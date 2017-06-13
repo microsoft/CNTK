@@ -335,8 +335,6 @@ __global__ void kMaxROIPoolingBackward(const int totalIterations,
         int roiMax = (n + 1) * numROIs;
 
         ElemType gradient = 0;
-        int num_of_gradients = 0;
-
         for (int roiN = roiMin; roiN < roiMax; roiN++)
         {
             // each ROI is 4 elements: (x, y, w, h)
@@ -384,14 +382,12 @@ __global__ void kMaxROIPoolingBackward(const int totalIterations,
                     if ((int)offsetArgmax[ph * pooledWidth + pw] == (h * width + w))
                     {
                         gradient += offsetPoolGrad[ph * pooledWidth + pw];
-                        num_of_gradients++;
                     }
                 }
             }
         }
 
-        num_of_gradients = max(num_of_gradients, 1);
-        atomicAdd(&grad[index], gradient / num_of_gradients);
+        atomicAdd(&grad[index], gradient);
     }
 }
 

@@ -4664,7 +4664,6 @@ void CPUMatrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size
                     for (size_t c = 0; c < channels; c++)
                     {
                         ElemType gradient = 0;
-                        int num_of_gradients = 0;
                         // [W x H x C x N]
                         size_t index = w + h*width + c*height*width;
                         // go right up to channel c of the current ROI.
@@ -4678,13 +4677,12 @@ void CPUMatrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size
                                 if ((size_t)offsetArgmax[ph * pooledWidth + pw] == (w + h * width))
                                 {
                                     gradient += offsetPoolGrad[ph * pooledWidth + pw];
-                                    num_of_gradients++;
                                 }
                             }
                         }
 
-                        num_of_gradients = max(num_of_gradients, 1);
-                        grad(index, imgIdx) = gradient / num_of_gradients;
+#pragma omp atomic
+                        grad(index, imgIdx) += gradient;
                     }
                 }
             }
