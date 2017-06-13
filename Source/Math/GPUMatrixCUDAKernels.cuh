@@ -199,11 +199,11 @@ private:
 template <size_t N, typename ItemType>
 class FixedSizeParameterArray
 {
-    size_t m_numItems;
+    CUDA_LONG m_numItems;
     ItemType m_items[N];
 public:
     // reading out data
-    __device__ __host__ size_t size() const { return (size_t)m_numItems; }
+    __device__ __host__ CUDA_LONG size() const { return m_numItems; }
     __device__ __host__ const ItemType operator[](size_t i) const { return m_items[i]; }
     __device__ __host__       ItemType operator[](size_t i)       { return m_items[i]; }
     // cast as a struct with a different template parameter
@@ -225,21 +225,13 @@ public:
         assert(m_numItems < (CUDA_LONG)N);
         m_items[m_numItems++] = p;
     }
-    //void push_back(const ItemType p) { push_back(const_cast<ItemType>(p)); }
 };
 
-// helper to type-cast a FixedSizeParameterArray to one of a different (smaller) size
-// TODO: this is quite an abomination; find out how to do it the right way
-template<size_t Nother>
-struct AsFixedSizeParameterArrayRef
+// version of FixedSizeParameterArray that uses most of the 4k budget for by-value parameters
+// Main code uses this; and final call actually passes a smaller one above after type cast.
+template <typename ItemType>
+class MaxFixedSizeParameterArray : public FixedSizeParameterArray<((4096 - 80) / sizeof(ItemType)), ItemType>
 {
-    template <size_t N, typename ItemType>
-    static const FixedSizeParameterArray<Nother, ItemType>& AsFixedSizeParameterArrayRef1(const FixedSizeParameterArray<N, ItemType>& other)
-    {
-        if (other.size() > Nother)
-            LogicError("FixedSizeParameterArray: Attempted to cast to a templated buffer size that is too small.");
-        return reinterpret_cast<const FixedSizeParameterArray<Nother, ItemType>&>(other);
-    }
 };
 
 // ===========================================================================

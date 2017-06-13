@@ -668,11 +668,6 @@ void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatr
     }
 }
 
-template <typename ItemType>
-class MaxFixedSizeParameterArray : public FixedSizeParameterArray<((4096-80) / sizeof(ItemType)), ItemType>
-{
-};
-
 // Kernel to copy inputPointers.size() vectors of length numRows into consecutive output locations starting at dstPtr.
 // This kernel expects to be called for NN/GATHER_LOCAL_LOOPS times, and performs GATHER_LOCAL_LOOPS local loops
 // instead. This is to mitigate the overhead of copying those many pointers.
@@ -712,7 +707,7 @@ template <size_t N, size_t GATHER_LOCAL_LOOPS, class ElemType>
 static void GatherMemcpy(ElemType* dstPtr, const MaxFixedSizeParameterArray<const ElemType*>& inputPointersBuffer, size_t numRows)
 {
 #if 1
-    let& inputPointersArray = AsFixedSizeParameterArrayRef<N>::AsFixedSizeParameterArrayRef1(inputPointersBuffer);
+    let& inputPointersArray = (const FixedSizeParameterArray<N, const ElemType*>&)inputPointersBuffer;
     let numElements = inputPointersArray.size() * numRows;
     let NN = CeilDiv(numElements, GATHER_LOCAL_LOOPS); // we do GATHER_LOCAL_LOOPS in each thread launch (thread launches seem expensive)
     GridDim grid(NN);
@@ -766,7 +761,7 @@ void GPUMatrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const st
         {
             let n = inputPointerBuffer.size() * numRows; // number of elements to copy in this chunk
             GatherMemcpy<capacity, 8, ElemType>(dstPtr, inputPointerBuffer, numRows);
-            dstPtr  += n;
+            dstPtr += n;
             inputPointerBuffer.clear();
         }
     }
@@ -835,7 +830,7 @@ static void ScatterMemcpy(ElemType beta, const ElemType* srcPtr, const MaxFixedS
 #if 1
     if (beta != 0 && beta != 1)
         LogicError("ScatterMemcpy(): Beta != 0 and != 1 currently not implemented."); // ... because not needed and makes atomicAdd harder
-    let& outputPointersArray = AsFixedSizeParameterArrayRef<N>::AsFixedSizeParameterArrayRef1(outputPointersBuffer);
+    let& outputPointersArray = (const FixedSizeParameterArray<N, ElemType*>&)outputPointersBuffer;
     let numElements = outputPointersArray.size() * numRows;
     let NN = CeilDiv(numElements, GATHER_LOCAL_LOOPS); // we do GATHER_LOCAL_LOOPS in each thread launch (thread launches seem expensive)
     GridDim grid(NN);
@@ -893,7 +888,7 @@ void GPUMatrix<ElemType>::ScatterBatch(ElemType beta, size_t numRows, size_t num
         {
             let n = outputPointerBuffer.size() * numRows; // number of elements to copy in this chunk
             ScatterMemcpy<capacity, 8, ElemType>(beta, srcPtr, outputPointerBuffer, numRows);
-            srcPtr  += n;
+            srcPtr += n;
             outputPointerBuffer.clear();
         }
     }
