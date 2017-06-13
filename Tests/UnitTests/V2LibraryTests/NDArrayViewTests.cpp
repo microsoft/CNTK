@@ -246,6 +246,47 @@ void TestSparseCSCDataBuffers(size_t numAxes, const DeviceDescriptor& device)
     }
 }
 
+template <typename ElementType>
+void TestDataBuffer(size_t numAxes, const DeviceDescriptor& device)
+{
+    size_t maxDimSize = 15;
+    NDShape viewShape(numAxes);
+    for (size_t i = 0; i < numAxes; ++i)
+        viewShape[i] = (rand() % maxDimSize) + 1;
+
+    std::vector<ElementType> data(viewShape.TotalSize());
+    ElementType scale = 12.0;
+    ElementType offset = -3.0;
+    for (size_t i = 0; i < viewShape.TotalSize(); ++i)
+        data[i] = offset + ((((ElementType)rand()) / RAND_MAX) * scale);
+
+    auto cpuDataView = MakeSharedObject<NDArrayView>(viewShape, data.data(), data.size(), DeviceDescriptor::CPUDevice());
+    NDArrayViewPtr dataView;
+    if (device.Type() == DeviceKind::CPU)
+    {
+        dataView = cpuDataView;
+    }
+    else
+    {
+        BOOST_TEST((device.Type() == DeviceKind::GPU), "Device type must be CPU or GPU.");
+        dataView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), viewShape, device);
+        dataView->CopyFrom(*cpuDataView);
+    }
+
+    auto dataBuffer = dataView->template DataBuffer<ElementType>();
+
+    if ((device.Type() == DeviceKind::CPU))
+    {
+        BOOST_TEST(memcmp(dataBuffer, data.data(), data.size()), "DataBuffer of NDArrayView on CPU does not match the source data.");
+    }
+    else
+    {
+        // We cannot directly compare dataBuffer on GPU with the buffer on CPU. Instead, we construct an NDArrayView from the dataBuffer
+        // and compare the views.
+        auto dataViewFromOutput = MakeSharedObject<NDArrayView>(viewShape, dataBuffer, viewShape.TotalSize(), device);
+        BOOST_TEST(AreEqual(dataViewFromOutput, dataView), "DataBuffer of NDArrayView on GPU does not match the source data.");
+    }
+}
 
 struct NDArrayViewFixture
 {
@@ -307,6 +348,22 @@ BOOST_AUTO_TEST_CASE(CheckSparseCscDataBuffersInCpu)
         TestSparseCSCDataBuffers<float>(GenerateNumOfAxes(16), DeviceDescriptor::CPUDevice());
     }
 }
+
+BOOST_AUTO_TEST_CASE(CheckDataBufferInCpu)
+{
+    if (ShouldRunOnCpu())
+        TestDataBuffer<float>(GenerateNumOfAxes(5), DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(CheckDataBufferInGpu)
+{
+    if (ShouldRunOnGpu())
+    {
+        TestDataBuffer<float>(0, DeviceDescriptor::GPUDevice(0));
+        TestDataBuffer<double>(GenerateNumOfAxes(11), DeviceDescriptor::GPUDevice(0));
+    }
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 
