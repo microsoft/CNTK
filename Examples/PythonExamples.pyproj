@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{292ff4ee-d9dd-4ba7-85f7-6a22148d1e01}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>LanguageUnderstanding\ATIS\Python\LanguageUnderstanding.py</StartupFile>
+    <StartupFile>1stSteps\MNIST_Complex_Training.py</StartupFile>
     <SearchPath>..\Tests\EndToEndTests\CNTKv2Python;..\bindings\python;..\bindings\python\doc\;..\bindings\python\doc\test\</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -95,9 +95,18 @@
     <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\transfer_learning_test.py">
       <Link>Tests\EndToEndTests\cntkv2Python\Examples\transfer_learning_test.py</Link>
     </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\VGG16_ImageNet_Distributed_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\VGG16_ImageNet_Distributed_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\VGG19_ImageNet_Distributed_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\VGG19_ImageNet_Distributed_test.py</Link>
+    </Compile>
     <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\word_rnn_test.py">
       <Link>Tests\EndToEndTests\cntkv2Python\Examples\word_rnn_test.py</Link>
     </Compile>
+    <Compile Include="1stSteps\LogisticRegression_FunctionalAPI.py" />
+    <Compile Include="1stSteps\LogisticRegression_GraphAPI.py" />
+    <Compile Include="1stSteps\MNIST_Complex_Training.py" />
     <Compile Include="common\nn.py" />
     <Compile Include="common\__init__.py" />
     <Compile Include="Image\Classification\ConvNet\Python\ConvNetLRN_CIFAR10_DataAug.py" />
@@ -263,15 +272,13 @@
     <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\ucf11_conv3d_test.py">
       <Link>Tests\EndToEndTests\cntkv2Python\Examples\ucf11_conv3d_test.py</Link>
     </Compile>
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\__init__.py">
-      <Link>Tests\EndToEndTests\cntkv2Python\Examples\__init__.py</Link>
-    </Compile>
     <Compile Include="Text\CharacterLM\char_rnn.py" />
     <Compile Include="Text\WordLMWithSampledSoftmax\data_reader.py" />
     <Compile Include="Text\WordLMWithSampledSoftmax\download_data.py" />
     <Compile Include="Text\WordLMWithSampledSoftmax\word_rnn.py" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="1stSteps\" />
     <Folder Include="common\" />
     <Folder Include="Image\" />
     <Folder Include="Image\Classification\" />

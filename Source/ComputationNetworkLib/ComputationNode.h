@@ -57,7 +57,6 @@
 #define CNTK_MODEL_VERSION_25 25 // transpose: allow specifying a permutation
 #define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_25
 
-
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
 // #define TRACK_GAP_NANS
@@ -663,7 +662,9 @@ public:
     bool NeedsGradient() const { return m_needsGradient; }
 
     void MarkNeedsDynamicValidation() { m_needsDynamicValidation = true; }
-    virtual bool NeedsDynamicValidation() const { return m_needsDynamicValidation; }
+    bool NeedsDynamicValidation() const { return m_needsDynamicValidation; }
+
+    virtual bool ForceDynamicValidation() const { return false; }
 
     void SetLearningRateMultiplier(float f) 
     { 

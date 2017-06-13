@@ -1629,7 +1629,8 @@ ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
     ElemType RMS_WGT_MAX,
     ElemType RMS_WGT_DEC,
     ElemType RMS_WGT_MIN,
-    const bool needAveMultiplier)
+    const bool needAveMultiplier,
+    const bool initialized)
 {
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
     {
@@ -1646,7 +1647,7 @@ ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
     if (needAveMultiplier)
         numColsNeeded += GetNumCols();
 
-    if (c.IsEmpty() || c.GetNumCols() < numColsNeeded)
+    if (c.IsEmpty() || c.GetNumCols() < numColsNeeded || !initialized)
     {
         c.RequireSize(GetNumRows(), numColsNeeded);
         c.SetValue(0.0);

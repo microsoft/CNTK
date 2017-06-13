@@ -5,7 +5,7 @@
 # ==============================================================================
 
 '''
-CNTK Layers library
+CNTK Layers library.
 '''
 
 from .blocks import *

@@ -107,4 +107,13 @@ def test_cntk_cudnn():
     ci.assign('cntk_birnn_cudnn', load=True)
     assert ci.compare('cntk_birnn_cudnn_out', compare_name='birnn_out', rtol=1e-4, atol=1e-6)
 
+    # test assign with value
+    num_gates=4
+    ci.assign('cntk_birnn_cudnn', value=cstk.RnnArgs(fw_W=np.random.random((in_dim,num_gates*dim)).astype(np.float32),
+                                                     fw_H=np.random.random((dim,num_gates*dim)).astype(np.float32),
+                                                     fw_b=np.random.random((num_gates*dim,)).astype(np.float32),
+                                                     bw_W=np.random.random((in_dim,num_gates*dim)).astype(np.float32),
+                                                     bw_H=np.random.random((dim,num_gates*dim)).astype(np.float32),
+                                                     bw_b=np.random.random((num_gates*dim,)).astype(np.float32)))
+
     ci.reset()

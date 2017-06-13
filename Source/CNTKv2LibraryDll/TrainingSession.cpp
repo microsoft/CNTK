@@ -109,7 +109,8 @@ namespace CNTK
         m_parallelAfterSamples(0),
         m_workerRank(0),
         m_numberOfWorkers(1),
-        m_test(test)
+        m_test(test),
+        m_mbSizeScaleFactor(1)
     {
         if (!m_trainer)
             InvalidArgument("Trainer must not be null.");
@@ -135,6 +136,7 @@ namespace CNTK
                 m_parallelAfterSamples = std::max(m_parallelAfterSamples, distributed->ParallelizationAfter());
                 m_workerRank = distributed->GetCommunicator()->CurrentWorker().m_globalRank;
                 m_numberOfWorkers = distributed->GetCommunicator()->Workers().size();
+                m_mbSizeScaleFactor = distributed->MinibatchSizeScaleFactor();
             }
         }
 
@@ -303,13 +305,15 @@ namespace CNTK
         size_t workerRank = m_workerRank, numberOfWorkers = m_numberOfWorkers;
 
         // Check if we are operating in distributed mode.
+        size_t scaleFactor = m_mbSizeScaleFactor;
         if (m_parallelAfterSamples > Trainer()->TotalNumberOfSamplesSeen())
         {
             numberOfWorkers = 1;
             workerRank = 0;
+            scaleFactor = 1;
         }
 
-        size_t mbSize = GetMinibatchSize();
+        size_t mbSize = GetMinibatchSize() * scaleFactor;
         mbSize = std::min(mbSize, maxMbSize);
         GetNextMinibatch(m_source, minibatch, m_varToStream, mbSize, workerRank, numberOfWorkers, computeDevice);
     }

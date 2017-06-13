@@ -360,8 +360,15 @@ namespace CNTK
         Deserializer img;
         std::vector<DictionaryValue> actualTransforms;
         std::transform(transforms.begin(), transforms.end(), std::back_inserter(actualTransforms), [](ImageTransform t) { return static_cast<DictionaryValue>(t); });
+
+        // Add the transpose transform by default.
+        Dictionary transposeTransform;
+        transposeTransform[L"type"] = L"Transpose";
+        actualTransforms.push_back(DictionaryValue(transposeTransform));
+
         Dictionary labeldim;
         labeldim[L"labelDim"] = numLabels;
+
         Dictionary xforms;
         xforms[L"transforms"] = actualTransforms;
         Dictionary input;
@@ -490,9 +497,9 @@ namespace CNTK
             }
 
             augmentedConfiguration[L"frameMode"] = configuration.isFrameModeEnabled;
-            augmentedConfiguration[L"multiThreadedDeserialization"] = configuration.isMultithreaded;
             augmentedConfiguration[L"traceLevel"] = static_cast<size_t>(configuration.traceLevel);
 
+            bool defaultMultithreaded = false;
             // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
             // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
             // TODO: This should be done in the same manner for CNTK exe as well.
@@ -508,24 +515,9 @@ namespace CNTK
                 };
 
                 auto deserializerTypeName = deserializerConfig[L"type"].Value<std::wstring>();
-                if (deserializerTypeName == L"ImageDeserializer")
+                if (deserializerTypeName == L"ImageDeserializer" || deserializerTypeName == L"Base64ImageDeserializer")
                 {
-                    // Add a transpose transform since the image data in read in HWC (CWH in column major format) form while 
-                    // the CNTK convolution engive supports WHC (in column-major format)
-                    auto& inputStreamsConfig = deserializerConfig[L"input"].Value<Dictionary>();
-                    for (auto& inputStreamEntry : inputStreamsConfig)
-                    {
-                        auto& inputStreamConfig = inputStreamEntry.second.Value<Dictionary>();
-                        if (inputStreamConfig.Contains(L"transforms"))
-                        {
-                            auto& transforms = inputStreamConfig[L"transforms"].Value<std::vector<DictionaryValue>>();
-
-                            // Add the transpose transform
-                            Dictionary transposeTransform;
-                            transposeTransform[L"type"] = L"Transpose";
-                            transforms.push_back(DictionaryValue(transposeTransform));
-                        }
-                    }
+                    defaultMultithreaded = true;
                 }
 
                 if (deserializerTypeNameToModuleNameMap.find(deserializerTypeName) == deserializerTypeNameToModuleNameMap.end())
@@ -534,6 +526,9 @@ namespace CNTK
                 deserializerConfig[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
                 deserializers.push_back(deserializerConfig);
             }
+
+            augmentedConfiguration[L"multiThreadedDeserialization"] = 
+                (configuration.isMultithreaded.IsInitialized()) ? configuration.isMultithreaded.Get() : defaultMultithreaded;
 
             augmentedConfiguration[L"deserializers"] = deserializers;
 

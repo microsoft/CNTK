@@ -364,7 +364,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     if isinstance(arguments, cntk_py.Value):
         if len(op_arguments) != 1:
             raise ValueError('your graph has %i inputs, but you specified '
-                             'only one' % (len(op_arguments), len(arguments)))
+                             'only one' % len(op_arguments))
 
         arguments = { op_arguments[0]: arguments }
 
@@ -588,6 +588,15 @@ def sanitize_permutation(perm):
     if n != len(set(positive_perm)):
         raise ValueError('duplicate item in permutation')
     return [n-i-1 for i in reversed(positive_perm)]
+
+def sanitize_random_args(shape, dtype):
+    from cntk.default_options import get_default_override
+    shape = sanitize_shape(shape)
+    dtype = get_default_override(None, dtype=dtype)
+    if dtype is None:
+        dtype = np.float32
+    dtype = sanitize_dtype_cntk(dtype)
+    return shape, dtype
 
 # Workaround for Python 2.7 not having functools.lru_cache
 def memoize(func):

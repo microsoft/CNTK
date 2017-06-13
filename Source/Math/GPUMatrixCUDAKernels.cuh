@@ -1692,6 +1692,19 @@ __global__ void _truncated_normal_transform(
 }
 
 template <class ElemType>
+__global__ void _gumbelFromUniform(
+    ElemType* a,
+    const CUDA_LONG N,
+    const ElemType loc,
+    const ElemType scale)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    a[id] = loc - scale * log_(ElemType(1e-40) - log_(a[id])); //a[id] is uniform in (0,1] exactly opposite from every other rng implementation  
+}
+
+template <class ElemType>
 __global__ void _setMaskAndScale(
     ElemType* a,
     const CUDA_LONG N,

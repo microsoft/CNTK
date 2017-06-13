@@ -3,6 +3,10 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+"""
+Tensor operations.
+"""
+
 
 import warnings
 from scipy import sparse
@@ -97,6 +101,13 @@ class TensorOpsMixin(object):
             arg = (arg,)
         r = self
         axis0 = 0
+
+        from cntk.default_options import get_global_option, get_default_override, default_override_or
+
+        keras_mode_flag = get_global_option('align_axis', 0)
+        if keras_mode_flag == 1:
+            if (getattr(self, 'dynamic_axes') is not None and len(self.dynamic_axes) > 0):
+                axis0 = -get_default_override(None, axis_offset=default_override_or(len(self.dynamic_axes)))
 
         for axis, s in enumerate(arg):
             if s is Ellipsis: # ellipsis means index relative to end after this point

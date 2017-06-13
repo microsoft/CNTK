@@ -23,6 +23,12 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// Names of random variable types
+static const wstring RandomDistributionTypeUniform   = L"uniform";
+static const wstring RandomDistributionTypeNormal    = L"normal";
+static const wstring RandomDistributionTypeGumbel    = L"gumbel";
+static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
+
 // -----------------------------------------------------------------------
 // SquareErrorNode (left, right)
 // = SumElements ((left - right) .* (left - right))
@@ -1230,6 +1236,88 @@ protected:
     uint64_t m_rngSeed = 0;
     uint64_t m_rngOffset = 0;
     std::shared_ptr<RNGHandle> m_RNGHandle;
+};
+
+
+// -----------------------------------------------------------------------
+// RandomDistributionNode (/*no input*/)
+// a random variable
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class RandomDistributionNode : public ComputationNode<ElemType>, public RngUser
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"RandomDistribution"; }
+
+    enum RandomDistributionType : unsigned int
+    {
+        Uniform,
+        Normal,
+        Gumbel,
+        Bernoulli
+    };
+
+    RandomDistributionType GetRandomDistributionType(const std::wstring rvType)
+    {
+        if (rvType == RandomDistributionTypeUniform)
+            return RandomDistributionType::Uniform;
+        else if (rvType == RandomDistributionTypeNormal)
+            return RandomDistributionType::Normal;
+        else if (rvType == RandomDistributionTypeGumbel)
+            return RandomDistributionType::Gumbel;
+        else if (rvType == RandomDistributionTypeBernoulli)
+            return RandomDistributionType::Bernoulli;
+        else
+            InvalidArgument("GetRandomDistributionType: Unknown random distribution type '%ls'", rvType.c_str());
+    }
+
+public:
+    RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+        SetRngState(CreateUniqId());
+    }
+
+    RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& rvType, const std::vector<double>& args)
+        : Base(deviceId, name), m_type(GetRandomDistributionType(rvType)) /*, m_shape(TensorShape())*/
+    {
+        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) {return static_cast<ElemType>(d); });
+    }
+
+    RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& rvType, const std::vector<double>& args, const TensorShape& sampleLayout)
+        : Base(deviceId, name), m_type(GetRandomDistributionType(rvType)), m_shape(sampleLayout)
+    {
+        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) {return static_cast<ElemType>(d); });
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override;
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override;
+    virtual bool /*ComputationNodeBase::*/ IsOutOfDateWrtInputs() const override;
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        auto numInputs = GetNumInputs();
+        if (numInputs == 0)
+        {
+            this->m_pMBLayout = nullptr;
+            SetDims(m_shape, /*HasMbLayout=*/ false);
+        }
+        else if (numInputs == 1)
+            ValidateUnaryMap(isFinalValidationPass);
+        else
+            LogicError("%ls %ls RandomDistributionNode::Validate: Operation must either have 0 or 1 inputs", NodeName().c_str(), OperationName().c_str());
+    }
+
+    RNGHandle& GetRNGHandle()
+    {
+        return RngUser::GetRNGHandle(ValuePtr()->GetDeviceId());
+    }
+private:
+    RandomDistributionType m_type;
+    std::vector<ElemType> m_args;
+    TensorShape m_shape;
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
