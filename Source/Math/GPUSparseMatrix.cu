@@ -2632,6 +2632,77 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t sta
     return slice;
 }
 
+template<class ElemTypePtr> // ElemType* or const ElemType*
+struct CSCSlice
+{
+    ElemTypePtr m_buffer;          // pointer to first array
+    CUDA_LONG m_elemSizeAllocated; // pointer delta between the 3 arrays
+    CUDA_LONG m_firstColumn;       // start of slice
+    CUDA_LONG m_numColumns;        // width of slice
+    // note: bad alignment, got 4 extra padding bytes free :(
+};
+
+template <size_t N, class ElemType>
+__global__ void _gatherMemcpyCSC(const CSCSlice<ElemType*> outputSlice, const FixedSizeParameterArray<N, CSCSlice<const ElemType*>> inputSlices)
+{
+    // output data arrays
+    auto* outputBuffer = outputSlice.m_buffer;
+    let outputElemSizeAllocated = outputSlice.m_elemSizeAllocated;
+    auto* outputRowIndices    = (CUDA_LONG*)(outputBuffer + outputElemSizeAllocated);
+    auto* outputColumnOffsets = outputRowIndices          + outputElemSizeAllocated;
+    // adjust for starting point
+    auto* outputData = outputBuffer;
+    auto jo = outputSlice.m_firstColumn;
+    outputColumnOffsets += jo;
+    if (jo == 0) // upon first call, the very first entry has not been initialized yet
+        *outputColumnOffsets = 0;
+    else // otherwise position m_firstColumn must already have been written by previous launch
+    {
+        let firstColumnOffset = *outputColumnOffsets; // was written during last launch
+        outputData       += firstColumnOffset;
+        outputRowIndices += firstColumnOffset;
+    }
+    // ready to write.
+    // loop over input slices
+    for (CUDA_LONG i = 0; i < inputSlices.size(); i++)
+    {
+        // get input pointers for this slice
+        let& inputSlice = inputSlices[i];
+        let* inputData = inputSlice.m_buffer;
+        let inputElemSizeAllocated = inputSlice.m_elemSizeAllocated;
+        let* inputRowIndices    = (CUDA_LONG*)(inputData + inputElemSizeAllocated);
+        let* inputColumnOffsets = inputRowIndices        + inputElemSizeAllocated;
+        let j0 =      inputSlice.m_firstColumn;
+        let j1 = j0 + inputSlice.m_numColumns;
+        auto columnOffset = inputColumnOffsets[j0];
+        inputData       += columnOffset;
+        inputRowIndices += columnOffset;
+        // write column offsets
+        auto* endOutputData = outputData;
+        for (CUDA_LONG j = j0 + 1; j <= j1; j++)
+        {
+            let endColumnOffset = inputColumnOffsets[j];
+            endOutputData += endColumnOffset - columnOffset;
+            *++outputColumnOffsets = endOutputData - outputBuffer;
+            columnOffset = endColumnOffset;
+        }
+        // copy values and row indices
+        while (outputData < endOutputData)
+        {
+            *outputData++       = *inputData++;
+            *outputRowIndices++ = *inputRowIndices++;
+        }
+    }
+}
+
+template <size_t N, class ElemType>
+static void GatherMemcpy(const CSCSlice<ElemType*>& outputSlice, const MaxFixedSizeParameterArray<CSCSlice<const ElemType*>>& inputSliceBuffer)
+{
+    let& inputSliceArray = (const FixedSizeParameterArray<N, CSCSlice<const ElemType*>>&)inputSliceBuffer;
+    SyncGuard syncGuard;
+    _gatherMemcpyCSC<N, ElemType> <<<1, 1, 0, t_stream>>>(outputSlice, inputSliceArray);
+}
+
 // GatherBatch() batches many independent inputs into one output tensor
 // Only supports CSC format. Matrix must already have the output shape and correct type.
 // This current implementation is not efficient for data other than one-hot.
@@ -2647,7 +2718,7 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
     PrepareDevice();
     let numRows = GetNumRows();
     size_t numCols = 0;
-    size_t nz = 0;
+    size_t nz = 0; // TODO: use an upper bound, to avoid GPU sync
     for (size_t i = 0; i < numInputs; i++)
     {
         let& input = inputs(i);
@@ -2664,15 +2735,54 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
                         numCols, GetNumCols());
     // allocate
     RequireSizeAndAllocate(numRows, numCols, nz, /*growOnly=*/true, /*keepExistingValues=*/false);
+    // process all inputs
+    MaxFixedSizeParameterArray<CSCSlice<const ElemType*>> inputSliceBuffer;
+    static constexpr size_t capacity = inputSliceBuffer.CAPACITY;
     m_sliceViewOffset = 0;
+    CSCSlice<ElemType*> outputSlice =
+    {
+        Buffer(), (CUDA_LONG)GetSizeAllocated(), (CUDA_LONG)m_sliceViewOffset, /*numCols=*/0
+    };
+    for (size_t i = 0; i < numInputs; i++)
+    {
+        let& input = inputs(i);
+        let inCols = input.GetNumCols();
+        if (inCols == 0)
+            continue;
+        inputSliceBuffer.push_back(CSCSlice<const ElemType*>
+        {
+            input.Buffer(), (CUDA_LONG)input.GetSizeAllocated(), (CUDA_LONG)input.m_sliceViewOffset, (CUDA_LONG)inCols
+        });
+        outputSlice.m_numColumns += inCols;
+        if (inputSliceBuffer.size() == inputSliceBuffer.capacity())
+        {
+            // flush
+            GatherMemcpy<capacity, ElemType>(outputSlice, inputSliceBuffer);
+            inputSliceBuffer.clear();
+            // advance the output range column pointer
+            outputSlice.m_firstColumn += outputSlice.m_numColumns;
+            outputSlice.m_numColumns = 0;
+        }
+    }
+    // TODO: the template cascade
+    GatherMemcpy<capacity, ElemType>(outputSlice, inputSliceBuffer);
+    InvalidateCachedNzCount();
+#if 0
     auto* outValues     = Buffer();             // using the non-slice-view-offset functions here, since...
     auto* outRowIndices = MajorIndexLocation(); // ...we know it is 0. Avoids GPU accesses.
     vector<GPUSPARSE_INDEX_TYPE> outColOffsets(numCols + 1);
     // perform the actual operation
     // need to pass to kernel for every input item:
     //  - pointer to its data
-    //  - #cols
-    //  - 
+    //  - #elements allocated
+    //  - slice view offset (first column)
+    //  - #columns in this input
+    // and once for output:
+    //  - pointer to output data
+    //  - #elements allocated
+    //  - firstColumn of this launch
+    //  - #columns in this launch
+    // running a single CUDA kernel since it's so primitive
     size_t k = 0; // running output element index (outData, outRowIndices)
     size_t j = 0; // running output-column offset index
     for (size_t i = 0; i < numInputs; i++)
@@ -2691,11 +2801,11 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
         if (inCols > 1)
         {
             // UNTESTED
-            let inColOffset0 = SecondaryIndexValueAt(0);
+            let inColOffset0 = input.SecondaryIndexValueAt(0);
             // ^^ one GPU sync here unless slice-view offset == 0
             for (size_t n = 1; n < inCols; n++, j++)
             {
-                let k1 = SecondaryIndexValueAt(n) - inColOffset0 + (GPUSPARSE_INDEX_TYPE)k; // k = start element index of this section
+                let k1 = input.SecondaryIndexValueAt(n) - inColOffset0 + (GPUSPARSE_INDEX_TYPE)k; // k = start element index of this section
                 // ^^ one GPU sync here unless slice-view offset == 0
                 outColOffsets[j] = k1;
             }
@@ -2715,6 +2825,7 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
     // ^^ one GPU sync here (synchronous copy)
     // TODO: use an array-set kernel
     UpdateCachedNzCount(nz);
+#endif
 }
 
 // -> dense
