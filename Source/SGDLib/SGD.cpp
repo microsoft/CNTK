@@ -884,7 +884,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const int epochNumber,
                                     const size_t epochSize,
                                     IDataReader* trainSetDataReader,
-                                    const double learnRatePerSample,
+                                    double learnRatePerSample,
                                     size_t tunedMBSize,
                                     const std::vector<ComputationNodeBasePtr>& featureNodes,
                                     const std::vector<ComputationNodeBasePtr>& labelNodes,
@@ -1064,6 +1064,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     bool noMoreSamplesToProcess = false;
     bool isFirstMinibatch = true;
+    
     for (;;)
     {
         auto profMinibatch = ProfilerTimeBegin();
@@ -1132,11 +1133,29 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                               dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[0])->Value());
             }
 
+#define SSGD_WARMUP
+#ifdef SSGD_WARMUP
+            if (epochNumber < 5) {
+                int minibatchSize = 256 * 32;
+                int totalSamples = 1281167;
+
+                int totalMBsPerEpoch = totalSamples / minibatchSize;
+
+                double baseLearnRatePerSample = 1.0 / minibatchSize;
+                double learnRateIncrePerEpoch = (learnRatePerSample - baseLearnRatePerSample) / 5; //each epoch each samlpe lr incre value.
+                learnRatePerSample = baseLearnRatePerSample + (learnRateIncrePerEpoch / (double)totalMBsPerEpoch) * numMBsRun;
+            }
+            if(numMBsRun % 10 == 0)
+                fprintf(stderr, "Iters: %d, LearnRate: %f\n", numMBsRun, (float)learnRatePerSample);
+
+#endif // SSGD_WARMUO
+
             // do forward and back propagation
 
             // We optionally break the minibatch into sub-minibatches.
             // This, when enabled, is used when a full minibatch does not fit into GPU RAM.
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
+
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
                 if (actualNumSubminibatches > 1)

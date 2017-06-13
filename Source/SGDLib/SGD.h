@@ -486,7 +486,7 @@ protected:
                          const int epochNumber,
                          const size_t epochSize,
                          IDataReader* trainSetDataReader,
-                         const double learnRatePerSample,
+                         double learnRatePerSample,
                          size_t tunedMBSize,
                          const std::vector<ComputationNodeBasePtr>& featureNodes,
                          const std::vector<ComputationNodeBasePtr>& labelNodes,
