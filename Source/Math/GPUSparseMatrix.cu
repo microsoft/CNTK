@@ -2656,12 +2656,12 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
         if (input.GetNumRows() != numRows)
             InvalidArgument("GatherBatch (sparse): All inputs must have the same number of rows as the output (%d).", (int)numRows);
         let inputCols = input.GetNumCols();
-        nz += input.NzCount();
+        nz += input.NzCount(); // TODO: double-check that this does not actually read data from the GPU, that caching works
         numCols += inputCols;
     }
     if (numCols != GetNumCols())
         InvalidArgument("GatherBatch: Total number of input columns (%d) must be equal to number of output columns (%d).",
-            numCols, GetNumCols());
+                        numCols, GetNumCols());
     // allocate
     RequireSizeAndAllocate(numRows, numCols, nz, /*growOnly=*/true, /*keepExistingValues=*/false);
     m_sliceViewOffset = 0;
@@ -2669,6 +2669,10 @@ void GPUSparseMatrix<ElemType>::GatherBatch(size_t numInputs, const std::functio
     auto* outRowIndices = MajorIndexLocation(); // ...we know it is 0. Avoids GPU accesses.
     vector<GPUSPARSE_INDEX_TYPE> outColOffsets(numCols + 1);
     // perform the actual operation
+    // need to pass to kernel for every input item:
+    //  - pointer to its data
+    //  - #cols
+    //  - 
     size_t k = 0; // running output element index (outData, outRowIndices)
     size_t j = 0; // running output-column offset index
     for (size_t i = 0; i < numInputs; i++)
