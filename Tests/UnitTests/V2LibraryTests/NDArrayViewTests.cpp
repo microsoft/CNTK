@@ -165,22 +165,33 @@ void TestSparseCSCArrayView(size_t numAxes, const DeviceDescriptor& device)
     size_t numNonZeroValues;
     std::tie(referenceDenseData, colsStarts, rowIndices, nonZeroValues, numNonZeroValues) = GenerateSequenceInCSC<ElementType>(numMatrixRows, numMatrixCols);
 
-    NDArrayView sparseCSCArrayView(viewShape, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, device, true);
+    auto cpuView = MakeSharedObject<NDArrayView>(viewShape, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, DeviceDescriptor::CPUDevice(), true);
+    NDArrayViewPtr sparseView;
+    if (device.Type() == DeviceKind::CPU)
+    {
+        sparseView = cpuView;
+    }
+    else
+    {
+        BOOST_TEST((device.Type() == DeviceKind::GPU), "Device type must be CPU or GPU.");
+        sparseView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), StorageFormat::SparseCSC, viewShape, device);
+        sparseView->CopyFrom(*cpuView);
+    }
 
     // Copy it out to a dense matrix on the CPU and verify the data
-    std::vector<ElementType> copiedDenseData(viewShape.TotalSize());
-    NDArrayView denseCPUTensor(viewShape, copiedDenseData.data(), copiedDenseData.size(), DeviceDescriptor::CPUDevice());
-    denseCPUTensor.CopyFrom(sparseCSCArrayView);
-    BOOST_TEST(copiedDenseData == referenceDenseData, "The contents of the dense vector that the sparse NDArrayView is copied into do not match the expected values");
+    std::vector<ElementType> denseBuffer(viewShape.TotalSize());
+    NDArrayView denseCPUView(viewShape, denseBuffer.data(), denseBuffer.size(), DeviceDescriptor::CPUDevice());
+    denseCPUView.CopyFrom(*sparseView);
+    BOOST_TEST(denseBuffer == referenceDenseData, "The dense buffer copied from the sparse NDArrayView does not match the expected one.");
 
-    // Create an empty sparse CSC NDArrayView and the copy data from a dense NDArrayView on CPU.
-    // Then copy the data in the sparse CSC one into another CPU dense one for checking results.
+    // Create an empty sparse CSC NDArrayView on the device and the copy data from a dense NDArrayView on CPU.
     NDArrayView emptySparseCSCArrayView(AsDataType<ElementType>(), StorageFormat::SparseCSC, viewShape, device);
-    emptySparseCSCArrayView.CopyFrom(denseCPUTensor);
-    NDArrayView newDenseCPUTensor(viewShape, copiedDenseData.data(), copiedDenseData.size(), DeviceDescriptor::CPUDevice());
-    newDenseCPUTensor.CopyFrom(emptySparseCSCArrayView);
-
-    BOOST_TEST(copiedDenseData == referenceDenseData, "The contents of the dense vector that the sparse NDArrayView is copied into do not match the expected values");
+    emptySparseCSCArrayView.CopyFrom(denseCPUView);
+    // Then copy the data from the sparse CSC one into another CPU dense one for checking results.
+    std::vector<ElementType> anotherDenseBuffer(viewShape.TotalSize());
+    NDArrayView anotherDenseCPUView(viewShape, anotherDenseBuffer.data(), anotherDenseBuffer.size(), DeviceDescriptor::CPUDevice());
+    anotherDenseCPUView.CopyFrom(emptySparseCSCArrayView);
+    BOOST_TEST(anotherDenseBuffer == referenceDenseData, "The contents of the dense vector that the sparse NDArrayView is copied into do not match the expected values");
 }
 
 template <typename ElementType>
@@ -201,48 +212,49 @@ void TestSparseCSCDataBuffers(size_t numAxes, const DeviceDescriptor& device)
     size_t expectedNumNonZeroValues;
     std::tie(referenceDenseData, expectedColsStarts, expectedRowIndices, expectedNonZeroValues, expectedNumNonZeroValues) = GenerateSequenceInCSC<ElementType>(numMatrixRows, numMatrixCols);
 
-    NDArrayView sparseCSCArrayView(viewShape, expectedColsStarts.data(), expectedRowIndices.data(), expectedNonZeroValues.data(), expectedNumNonZeroValues, device, true);
+    auto cpuView = MakeSharedObject<NDArrayView>(viewShape, expectedColsStarts.data(), expectedRowIndices.data(), expectedNonZeroValues.data(), expectedNumNonZeroValues, DeviceDescriptor::CPUDevice(), true);
+    NDArrayViewPtr sparseView;
+    if (device.Type() == DeviceKind::CPU)
+    {
+        sparseView = cpuView;
+    }
+    else
+    {
+        BOOST_TEST((device.Type() == DeviceKind::GPU), "Device type must be CPU or GPU.");
+        sparseView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), StorageFormat::SparseCSC, viewShape, device);
+        sparseView->CopyFrom(*cpuView);
+    }
 
     const ElementType *outputNonZeroData;
     const SparseIndexType *outputColsStartsData;
     const SparseIndexType *outputRowIndicesData;
     size_t outputNumNonZeroData;
-    std::tie(outputNonZeroData, outputColsStartsData, outputRowIndicesData, outputNumNonZeroData) = sparseCSCArrayView.SparseCSCDataBuffers<ElementType>();
+    // Get sparse matrix related data buffers for test.
+    std::tie(outputNonZeroData, outputColsStartsData, outputRowIndicesData, outputNumNonZeroData) = sparseView->SparseCSCDataBuffers<ElementType>();
 
-    if (expectedNumNonZeroValues != outputNumNonZeroData)
-        ReportFailure("The number of non-zero values does not match. expected: %" PRIu64 ", actual %" PRIu64 "\n", expectedNumNonZeroValues, outputNumNonZeroData);
-    if (expectedNonZeroValues.size() != outputNumNonZeroData)
-        ReportFailure("The number of non-zero values returned does not match that in the non-zero value buffers. expected: %" PRIu64 ", actual %" PRIu64 "\n", expectedNonZeroValues.size(), outputNumNonZeroData);
-
+    BOOST_TEST(expectedNumNonZeroValues == outputNumNonZeroData, "The number of non-zero values does not match");
+    BOOST_TEST(expectedNonZeroValues.size() == outputNumNonZeroData, "The number of non-zero values returned does not match that in the non-zero value buffers");
     if (device.Type() == DeviceKind::CPU)
     {
-        for (size_t i = 0; i < expectedNonZeroValues.size(); i++)
-            if (expectedNonZeroValues[i] != outputNonZeroData[i])
-                ReportFailure("The non-zero value at position %" PRIu64 " does not match, expected: %f, actual: %f\n", i, expectedNonZeroValues[i] , outputNonZeroData[i]);
-        for (size_t i=0; i < expectedColsStarts.size(); i++)
-            if (expectedColsStarts[i] != outputColsStartsData[i])
-                ReportFailure("The ColsStarts at position %" PRIu64 " does not match, expected: %f, actual: %f\n", i, expectedColsStarts[i], outputColsStartsData[i]);
-        for (size_t i = 0; i < expectedRowIndices.size(); i++)
-            if (expectedRowIndices[i] != outputRowIndicesData[i])
-                ReportFailure("The RowIndices at position %" PRIu64 " does not match, expected: %f, actual: %f\n", i, expectedRowIndices[i], outputRowIndicesData[i]);
+        BOOST_TEST(memcmp(expectedNonZeroValues.data(), outputNonZeroData, expectedNonZeroValues.size() * sizeof(ElementType)) == 0, "The non-zero value buffer does not match.");
+        BOOST_TEST(memcmp(expectedColsStarts.data(), outputColsStartsData, expectedColsStarts.size() * sizeof(ElementType)) == 0, "The ColsStarts buffer does not match");
+        BOOST_TEST(memcmp(expectedRowIndices.data(), outputRowIndicesData, expectedRowIndices.size() * sizeof(ElementType)) == 0, "The RowIndices buffer does not match");
     }
     else
     {
-        if (device.Type() != DeviceKind::GPU)
-            ReportFailure("The device type of the NDArrayView is neither CPU nor GPU.");
+        BOOST_TEST((device.Type() == DeviceKind::GPU), "The device type of the NDArrayView is neither CPU nor GPU.");
 
-        // The data buffers returned by SparseCSCDataBuffers() are on GPU, and there is no existing utility functions that compare data buffers between GPU and CPU (without adding
-        // Cuda dependency here), we take a workaround here: first build another NDArrayView using the returned data buffers, copy it to another one on CPU but using dense format,
-        // and then compare the data with the expected one.
-        // Another limitation is here is NDArrayView::DeepClone() does not support the GPUSparseMatrix->CPUSparseMatrix, since Matrix::AssignValuesOf() has not implemented this feature
+        // The data buffers returned by SparseCSCDataBuffers() are on GPU, for testing we first create an NDArrayView using the returned data buffers, 
+        // copy the created one to another one on CPU using dense format, and then compare the data with the expected one.
+        // Another limitation here is NDArrayView::DeepClone() does not support the GPUSparseMatrix->CPUSparseMatrix, since Matrix::AssignValuesOf() has not implemented this feature
         // yet. This prevents from using AreEqual(NDArrayViewPtr, NDArrayViewPtr).
         NDArrayView viewFromOutput(viewShape, outputColsStartsData, outputRowIndicesData, outputNonZeroData, outputNumNonZeroData, device, true);
 
         // Copy it out to a dense matrix on the CPU and verify the data
-        std::vector<ElementType> copiedDenseData(viewShape.TotalSize());
-        NDArrayView denseCPUTensor(viewShape, copiedDenseData.data(), copiedDenseData.size(), DeviceDescriptor::CPUDevice());
-        denseCPUTensor.CopyFrom(viewFromOutput);
-        BOOST_TEST(copiedDenseData == referenceDenseData, "The contents of the dense vector that the sparse NDArrayView is copied into do not match the expected values");
+        std::vector<ElementType> denseBuffer(viewShape.TotalSize());
+        NDArrayView denseCPUView(viewShape, denseBuffer.data(), denseBuffer.size(), DeviceDescriptor::CPUDevice());
+        denseCPUView.CopyFrom(viewFromOutput);
+        BOOST_TEST(denseBuffer == referenceDenseData, "The dense buffer copied from the sparse NDArrayView does not match the expected one.");
     }
 }
 
@@ -273,18 +285,26 @@ void TestDataBuffer(size_t numAxes, const DeviceDescriptor& device)
         dataView->CopyFrom(*cpuDataView);
     }
 
-    auto dataBuffer = dataView->template DataBuffer<ElementType>();
+    // Get DataBuffer for test.
+    const ElementType* dataBuffer = dataView->template DataBuffer<ElementType>();
 
+    // Verify DataBuffer.
     if ((device.Type() == DeviceKind::CPU))
     {
-        BOOST_TEST(memcmp(dataBuffer, data.data(), data.size()), "DataBuffer of NDArrayView on CPU does not match the source data.");
+        BOOST_TEST(memcmp(dataBuffer, data.data(), data.size() * sizeof(ElementType)) == 0, "DataBuffer of NDArrayView on CPU does not match the source data.");
     }
     else
     {
         // We cannot directly compare dataBuffer on GPU with the buffer on CPU. Instead, we construct an NDArrayView from the dataBuffer
         // and compare the views.
         auto dataViewFromOutput = MakeSharedObject<NDArrayView>(viewShape, dataBuffer, viewShape.TotalSize(), device);
-        BOOST_TEST(AreEqual(dataViewFromOutput, dataView), "DataBuffer of NDArrayView on GPU does not match the source data.");
+        BOOST_TEST(AreEqual(dataViewFromOutput, dataView), "The NDArrayView created from DataBuffer on GPU does not match the source one.");
+
+        // Additional test: copy it out to a dense matrix on the CPU and verify the data
+        std::vector<ElementType> anotherDenseBuffer(viewShape.TotalSize());
+        NDArrayView denseCPUView(viewShape, anotherDenseBuffer.data(), anotherDenseBuffer.size(), DeviceDescriptor::CPUDevice());
+        denseCPUView.CopyFrom(*dataViewFromOutput);
+        BOOST_TEST(anotherDenseBuffer == data, "The data in the copied NDArrayView does not match the source data.");
     }
 }
 
@@ -363,7 +383,6 @@ BOOST_AUTO_TEST_CASE(CheckDataBufferInGpu)
         TestDataBuffer<double>(GenerateNumOfAxes(11), DeviceDescriptor::GPUDevice(0));
     }
 }
-
 
 BOOST_AUTO_TEST_SUITE_END()
 

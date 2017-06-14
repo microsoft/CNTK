@@ -2722,14 +2722,17 @@ namespace CNTK
         }
 
         ///
-        /// Copy the data stored in the Value object to the buffers representing a sequence in CSC sparse format..
-        /// The sequence buffer will be resized if ncessary.
+        /// Copy the data stored in 'this' Value object to the buffers representing a sequence in CSC sparse format.
+        /// The sequence buffer will be resized if necessary.
         /// The Value should have the same tensor shape as outputVariable.
+        /// On return, the sequenceLength is set to the length of the sequence stored in 'this' Value,
+        /// and the colStarts, rowIndices and nonZeroValues contain the data of column indexes, row indexes and non-zero values,
+        /// and the numNonZeroValues is set to number of non-zero values contained in 'this' Value.
         ///
         template <typename ElementType>
         void CopyVariableValueTo(const Variable& outputVariable, size_t& sequenceLength, std::vector<SparseIndexType> colStarts, std::vector<SparseIndexType> rowIndices, std::vector<ElementType> nonZeroValues, size_t& numNonZeroValues)
         {
-            std::tie(sequenceLength, numNonZeroValues) = ValidateSparseCSCAndGetIndexBufferSizes(outputVariable);
+            std::tie(sequenceLength, numNonZeroValues) = ValidateSparseCSCAndGetIndexBufferSizes<ElementType>(outputVariable);
 
             // resize output vectors.
             colStarts.resize(sequenceLength + 1);
@@ -2785,10 +2788,10 @@ namespace CNTK
         CNTK_API std::pair<size_t, size_t> GetSequenceAndBatchLength(const Variable& outputVariable);
 
         template <typename ElementType>
-        std::pair<size_t, size_t> ValidateSparseCSCAndGetIndexBufferSizes(const Variable& outputVariable);
+        CNTK_API std::pair<size_t, size_t> ValidateSparseCSCAndGetIndexBufferSizes(const Variable& outputVariable);
 
         template <typename ElementType>
-        void CopyVariableValueToCSCSparse(const Variable& outputVaraible, size_t sequenceLength, std::vector<SparseIndexType> colStarts, std::vector<SparseIndexType> rowIndices, std::vector<ElementType> nonZeroValues, size_t& numNonZeroValues);
+        CNTK_API void CopyVariableValueToCSCSparse(size_t sequenceLength, std::vector<SparseIndexType> colStarts, std::vector<SparseIndexType> rowIndices, std::vector<ElementType> nonZeroValues, size_t& numNonZeroValues);
 
         CNTK_API static void GetSequenceStartsAndLengths(const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths, size_t numDynamicAxes);
 

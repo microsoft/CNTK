@@ -606,12 +606,12 @@ namespace CNTK
         if (MaskedCount() != 0)
             RuntimeError("There should not be any masks for a Value containing only one single sequence.");
 
-        auto numNonZeroValues = std::get<3>(Data()->SparseCSCDataBuffers());
-        return std::pair(maxSequenceLen, numNonZeroValues);
+        auto numNonZeroValues = std::get<3>(Data()->SparseCSCDataBuffers<ElementType>());
+        return std::pair<size_t, size_t>(maxSequenceLen, numNonZeroValues);
     }
 
     template <typename ElementType>
-    void CopyVariableValueToCSCSparse(size_t sequenceLength, std::vector<SparseIndexType> colStarts, std::vector<SparseIndexType> rowIndices, std::vector<ElementType> nonZeroValues, size_t& numNonZeroValues)
+    void Value::CopyVariableValueToCSCSparse(size_t sequenceLength, std::vector<SparseIndexType> colStarts, std::vector<SparseIndexType> rowIndices, std::vector<ElementType> nonZeroValues, size_t& numNonZeroValues)
     {
         // All sanity check has been done in ValidateSparseCSCAndGetIndexSizes().
         NDArrayViewPtr cpuArrayView;
@@ -627,13 +627,12 @@ namespace CNTK
         SparseIndexType* rawColStarts;
         SparseIndexType* rawRowIndices;
 
-        std::tie(rawNonZeroValues, rawColStarts, rawRowIndices, numNonZeroValues) = cpuArrayView->SparseCSCDataBuffers();
+        std::tie(rawNonZeroValues, rawColStarts, rawRowIndices, numNonZeroValues) = cpuArrayView->SparseCSCDataBuffers<ElementType>();
 
         memcpy(nonZeroValues.data(), rawNonZeroValues, numNonZeroValues * sizeof(ElementType));
         memcpy(colStarts.data(), rawColStarts, numNonZeroValues * sizeof(SparseIndexType));
-        memcpy(rowIndices.data(), rawRowIndices, (sequenceLength + 1) * sizeof(SparseIndexType) )
+        memcpy(rowIndices.data(), rawRowIndices, (sequenceLength + 1) * sizeof(SparseIndexType));
     }
-
 
     template <typename ElementType>
     ElementType Value::AsScalar() const
