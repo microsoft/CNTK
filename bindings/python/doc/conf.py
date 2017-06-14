@@ -1,4 +1,6 @@
 import re
+import os
+import sys
 
 try:
     import cntk
@@ -14,14 +16,25 @@ except ImportError:
     raise ImportError("Unable to import sphinx_rtd_theme, please install via "
                       "'pip install sphinx_rtd_theme'")
 
+IS_SPHINX_DOCFX_BUILD = 'SPHINX_DOCFX_BUILD' in os.environ.keys()
+
+if IS_SPHINX_DOCFX_BUILD:
+    sys.path.insert(0, os.path.abspath('.'))
+    sys.path.append(os.path.abspath('.'))
+
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.extlinks',
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
-    'sphinx.ext.todo',
     'sphinx.ext.viewcode',
 ]
+
+if IS_SPHINX_DOCFX_BUILD:
+    extensions.append('docfx_yaml.extension')
+    # TODO todo nodes aren't handled yet
+else:
+    extensions.append('sphinx.ext.todo')
 
 master_doc = 'index'
 
@@ -71,17 +84,20 @@ linkcheck_anchors_ignore = [
   re_exact_match('base64imagedeserializer-options'),
 ]
 
-source_prefix = 'https://github.com/Microsoft/CNTK/blob/'
+# Used by sphinx-docfx-yaml to prefix source paths:
+source_prefix = 'bindings/python'
+
+github_source_prefix = 'https://github.com/Microsoft/CNTK/blob/'
 if module_is_unreleased():
-    source_prefix += 'master'
+    github_source_prefix += 'master'
 else:
     # TODO temporary
-    source_prefix += 'v%s' % (cntk.__version__.replace("rc", ".rc"))
+    github_source_prefix += 'v%s' % (cntk.__version__.replace("rc", ".rc"))
 
 # sphinx.ext.extlinks options
 extlinks = {
-    'cntk': (source_prefix + '/%s', ''),
-    'cntktut': (source_prefix + '/Tutorials/%s.ipynb', ''),
+    'cntk': (github_source_prefix + '/%s', ''),
+    'cntktut': (github_source_prefix + '/Tutorials/%s.ipynb', ''),
     # CNTK Wiki has moved to a new site:
     'cntkwiki': ('https://docs.microsoft.com/en-us/cognitive-toolkit/%s', 'CNTK Doc - ')
 }
@@ -89,6 +105,7 @@ extlinks = {
 # sphinx.ext.napoleon options
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
+napoleon_use_admonition_for_examples = IS_SPHINX_DOCFX_BUILD
 
 # sphinx.ext.todo options
 todo_include_todos = module_is_unreleased()
