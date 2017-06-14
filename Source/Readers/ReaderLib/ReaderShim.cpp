@@ -159,11 +159,15 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     config.m_epochIndex = epoch;
 
     StartEpoch(config, inputs);
+    StartAsyncPrefetching();
 }
 
 template <class ElemType>
 void ReaderShim<ElemType>::SetCurrentSamplePosition(size_t currentSamplePosition)
 {
+    if (m_currentSamplePosition == currentSamplePosition)
+        return;
+
     // Make sure there are no outstanding reads.
     if (m_prefetchTask.valid())
         m_prefetchTask.wait();
@@ -184,7 +188,7 @@ void ReaderShim<ElemType>::SetConfiguration(const ReaderConfiguration& config, c
 {
     // Make sure there are no outstanding reads.
     if (m_prefetchTask.valid())
-        m_prefetchTask.wait();
+        m_prefetchTask.get();
 
     // Let's check that there is no outstanding copies.
     // Wait on all events if there are any pending copy operations in flight.
@@ -193,9 +197,6 @@ void ReaderShim<ElemType>::SetConfiguration(const ReaderConfiguration& config, c
 
     m_reader->SetConfiguration(config, inputDescriptions);
     m_reader->SetCurrentSamplePosition(m_currentSamplePosition);
-
-    // Start prefetch.
-    StartPrefetchTask();
 }
 
 template <class ElemType>
@@ -203,9 +204,7 @@ void ReaderShim<ElemType>::StartEpoch(const EpochConfiguration& config, const st
 {
     // For adaptive minibatch, make sure there are no outstanding reads.
     if (m_prefetchTask.valid())
-    {
-        m_prefetchTask.wait();
-    }
+        m_prefetchTask.get();
 
     // Let's check that there is no outstanding copies.
     // Wait on all events if there are any pending copy operations in flight.
@@ -252,8 +251,25 @@ void ReaderShim<ElemType>::StartEpoch(const EpochConfiguration& config, const st
     m_endOfEpoch = false;
     m_reader->StartEpoch(config, inputDescriptions);
     m_currentSamplePosition = m_reader->GetCurrentSamplePosition();
+}
 
-    StartPrefetchTask();
+template <class ElemType>
+void ReaderShim<ElemType>::StartAsyncPrefetching()
+{
+    // Starting the prefetch task. There is always a single async read in flight.
+    // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
+    // and kick off the new prefetch.
+    auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
+    auto prefetchFunc = [this, localCurrentDataTransferIndex]() { return PrefetchMinibatch(localCurrentDataTransferIndex); };
+    if (m_launchType == std::launch::async)
+    {
+        // use fixed thread pool for async prefetch to avoid thread creation which causes Philly perf drop
+        m_prefetchTask = m_asyncExec->async(prefetchFunc);
+    }
+    else
+    {
+        m_prefetchTask = std::async(m_launchType, prefetchFunc);
+    }
 }
 
 string EnumerateInputs(const unordered_map<wstring, size_t>& nameToStreamId)
@@ -303,8 +319,9 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         }
     }
 
-    // Make sure the prefetch has finished.
-    assert(m_prefetchTask.valid());
+    if (!m_prefetchTask.valid())
+        StartAsyncPrefetching();
+
     auto result = m_prefetchTask.get();
 
     // Ok, prefetch is done.
@@ -372,7 +389,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     // It is time to issue the next prefetch.
     if (!m_endOfEpoch)
     {
-        StartPrefetchTask();
+        StartAsyncPrefetching();
     }
 
     // Let's wait till the previous memcopy has finished.
@@ -380,25 +397,6 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         m_dataTransferers[currentDataTransferIndex]->WaitForCopyCPUToGPU();
 
     return result.m_isDataAvailable;
-}
-
-template <class ElemType>
-void ReaderShim<ElemType>::StartPrefetchTask()
-{
-    // Starting the prefetch task. There is always a single async read in flight.
-    // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
-    // and kick off the new prefetch.
-    auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
-    auto prefetchFunc = [this, localCurrentDataTransferIndex]() { return PrefetchMinibatch(localCurrentDataTransferIndex); };
-    if (m_launchType == std::launch::async)
-    {
-        // use fixed thread pool for async prefetch to avoid thread creation which causes Philly perf drop
-        m_prefetchTask = m_asyncExec->async(prefetchFunc);
-    }
-    else
-    {
-        m_prefetchTask = std::async(m_launchType, prefetchFunc);
-    }
 }
 
 template <class ElemType>

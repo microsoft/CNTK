@@ -99,5 +99,5 @@ void foreach_index_block(size_t n, size_t targetstep, size_t targetalignment, co
                     body(j0, (j0 + nfwd < n) ? j0 + nfwd : n);
                  });
 }
-};
-};
+
+}}

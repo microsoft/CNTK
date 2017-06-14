@@ -258,7 +258,7 @@ public:
     // maxValues (input): values of max elements in label input vectors
     // labels (input): 1-hot vector with frame-level phone labels
     // CTCPosterior (output): CTC posterior
-    // blankTokenId (input): id of the blank token
+    // blankTokenId (input): id of the blank token. If specified as SIZE_MAX, will be replaced with (numberOfLabels - 1)
     // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. This using the original time information to enforce that CTC tokens only get aligned within a time margin.
     //      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
     //      delayConstraint=-1 means no constraint
@@ -284,8 +284,7 @@ public:
         std::vector<size_t> phoneSeq;
         std::vector<size_t> phoneBound;
 
-        ElemType finalScore = 0;
-        if (blankTokenId == INT_MIN)
+        if (blankTokenId == SIZE_MAX)
             blankTokenId = numRows - 1;
 
         size_t mbsize = numCols / numParallelSequences;
@@ -373,8 +372,8 @@ public:
         // compute alpha, beta and CTC scores
         Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
-        CTCPosterior.AssignCTCScore(prob, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, finalScore, uttToChanInd, uttBeginFrame,
-            uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, delayConstraint, /*isColWise=*/true );
+        CTCPosterior.AssignCTCScore(prob, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, totalScore, uttToChanInd, uttBeginFrame,
+            uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, /*isColWise=*/true );
         
         Microsoft::MSR::CNTK::Matrix<ElemType> rowSum(m_deviceid);
         rowSum.Resize(1, numCols);
@@ -382,8 +381,6 @@ public:
         // Normalize the CTC scores
         CTCPosterior.VectorSum(CTCPosterior, rowSum, /*isColWise=*/true);
         CTCPosterior.RowElementDivideBy(rowSum);
-
-        totalScore(0, 0) = -finalScore;
     }
 
 private:

@@ -20,15 +20,23 @@ namespace CNTK
         typedef std::pair<Variable, std::wstring> VariableWithScope;
 
         template<typename Ptr>
-        static const std::wstring& GetName(const Ptr& obj)
+        static std::wstring GetName(const Ptr& obj)
         {
-            return (obj->Name().empty()) ? obj->Uid() : obj->Name();
+            std::wstring result = (obj->Name().empty()) ? obj->Uid() : obj->Name();
+            // TensorBoard cannot properly handle node names containing '.' (the graph is not displayed at all).
+            // Some CNTK node names (especially for the models converted from V1 format) contain that character,
+            // e.g. 'z.x._._.x._._.x._._.x'.
+            // In principle, we could have used '/' as a replacement for '.', since it is used in TensorBoard to
+            // separate parts in a hierarchical name. However, in practice, it makes very hard to visualize the graph,
+            // due to hierarchy becoming very deep. We therefore use a different character '-' instead.
+            std::replace_if(result.begin(), result.end(), [](wchar_t c) { return c == L'.'; }, L'-');
+            return result;
         }
 
         template<typename Ptr>
         static std::wstring GetScopedName(const std::wstring& scope, const Ptr& obj)
         {
-            return (scope.empty()) ? GetName(obj) : scope + L"/" + GetName(obj);
+            return (scope.empty()) ? GetName(obj) : scope + L'/' + GetName(obj);
         }
 
         static tensorflow::DataType GetDataType(DataType dataType)
@@ -91,7 +99,7 @@ namespace CNTK
 
         static void PopulateNodeDef(const std::wstring& scope, const FunctionPtr& src, tensorflow::NodeDef& dst)
         {
-            PopulateNodeDef(GetScopedName(scope, src), src->OpName(), src->Output().GetDataType(), src->Outputs(), dst);
+            PopulateNodeDef(GetScopedName(scope, src), src->OpName(), src->Outputs()[0].GetDataType(), src->Outputs(), dst);
         }
 
         static void PopulateNodeDef(const std::wstring& scope, const Variable& src, tensorflow::NodeDef& dst)
@@ -137,9 +145,9 @@ namespace CNTK
             {
                 result = dst.add_node();
                 PopulateNodeDef(scope, src, *result);
+                variableNodes.emplace(src, result);
             }
 
-            variableNodes.emplace(src, result);
             return result;
         }
 

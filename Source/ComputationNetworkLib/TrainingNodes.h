@@ -23,6 +23,12 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// Names of random variable types
+static const wstring RandomDistributionTypeUniform   = L"uniform";
+static const wstring RandomDistributionTypeNormal    = L"normal";
+static const wstring RandomDistributionTypeGumbel    = L"gumbel";
+static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
+
 // -----------------------------------------------------------------------
 // SquareErrorNode (left, right)
 // = SumElements ((left - right) .* (left - right))
@@ -1232,6 +1238,88 @@ protected:
     std::shared_ptr<RNGHandle> m_RNGHandle;
 };
 
+
+// -----------------------------------------------------------------------
+// RandomDistributionNode (/*no input*/)
+// a random variable
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class RandomDistributionNode : public ComputationNode<ElemType>, public RngUser
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"RandomDistribution"; }
+
+    enum RandomDistributionType : unsigned int
+    {
+        Uniform,
+        Normal,
+        Gumbel,
+        Bernoulli
+    };
+
+    RandomDistributionType GetRandomDistributionType(const std::wstring rvType)
+    {
+        if (rvType == RandomDistributionTypeUniform)
+            return RandomDistributionType::Uniform;
+        else if (rvType == RandomDistributionTypeNormal)
+            return RandomDistributionType::Normal;
+        else if (rvType == RandomDistributionTypeGumbel)
+            return RandomDistributionType::Gumbel;
+        else if (rvType == RandomDistributionTypeBernoulli)
+            return RandomDistributionType::Bernoulli;
+        else
+            InvalidArgument("GetRandomDistributionType: Unknown random distribution type '%ls'", rvType.c_str());
+    }
+
+public:
+    RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+        SetRngState(CreateUniqId());
+    }
+
+    RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& rvType, const std::vector<double>& args)
+        : Base(deviceId, name), m_type(GetRandomDistributionType(rvType)) /*, m_shape(TensorShape())*/
+    {
+        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) {return static_cast<ElemType>(d); });
+    }
+
+    RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& rvType, const std::vector<double>& args, const TensorShape& sampleLayout)
+        : Base(deviceId, name), m_type(GetRandomDistributionType(rvType)), m_shape(sampleLayout)
+    {
+        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) {return static_cast<ElemType>(d); });
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override;
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override;
+    virtual bool /*ComputationNodeBase::*/ IsOutOfDateWrtInputs() const override;
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        auto numInputs = GetNumInputs();
+        if (numInputs == 0)
+        {
+            this->m_pMBLayout = nullptr;
+            SetDims(m_shape, /*HasMbLayout=*/ false);
+        }
+        else if (numInputs == 1)
+            ValidateUnaryMap(isFinalValidationPass);
+        else
+            LogicError("%ls %ls RandomDistributionNode::Validate: Operation must either have 0 or 1 inputs", NodeName().c_str(), OperationName().c_str());
+    }
+
+    RNGHandle& GetRNGHandle()
+    {
+        return RngUser::GetRNGHandle(ValuePtr()->GetDeviceId());
+    }
+private:
+    RandomDistributionType m_type;
+    std::vector<ElemType> m_args;
+    TensorShape m_shape;
+};
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleNodeBase(samplingWeights, sizeOfSampledSet, allowDuplicates): 
 // Base class for RandomSampleNode and RandomSampleInclusionFrequencyNode.
@@ -2108,13 +2196,40 @@ private:
 template class LogisticNode<float>;
 template class LogisticNode<double>;
 
+
+
+// Non-temlate base class for the DropoutNode containing the getter/setter for the dropout rate.
+class DropoutNodeBase 
+{
+public:
+    void SetDropoutRate(double value) 
+    {
+        if (value < 0 || value >= 1)
+            LogicError("DropoutRate must be >= 0 and < 1.");
+        m_dropoutRate = value;
+    }
+
+    bool IsEnabled() const
+    {
+        return m_dropoutRate > 0;
+    }
+
+    double GetDropoutRate() const 
+    {
+        return m_dropoutRate;
+    }
+
+protected:
+    virtual ~DropoutNodeBase() = default;
+    double m_dropoutRate {0};
+};
+
 // -----------------------------------------------------------------------
 // DropoutNode (input) -- perform drop-out
 // Output is scaled such that no post-scaling is necessary.
 // -----------------------------------------------------------------------
-
 template <class ElemType>
-class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>, public RngUser
+class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>, public DropoutNodeBase, public RngUser
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -2126,8 +2241,7 @@ class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>, publi
 public:
     DeclareConstructorFromConfigWithNumInputs(DropoutNode);
     DropoutNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name),
-        m_dropoutRate(0)
+        : Base(deviceId, name)
     {
         SetRngState(CreateUniqId());
     }
@@ -2140,7 +2254,7 @@ public:
         Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-        if (m_dropoutRate > 0)
+        if (IsEnabled())
             sliceInput0Grad.AddElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
         else
             sliceInput0Grad += sliceOutputGrad;
@@ -2153,7 +2267,7 @@ public:
     {
         Base::UpdateFunctionMBSize();
         // resize temporaries to their proper size
-        if (m_dropoutRate > 0)
+        if (IsEnabled())
             m_maskOfDropout->Resize(Input(0)->Value());
     }
 
@@ -2162,7 +2276,7 @@ public:
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        if (Environment().IsInferring() || m_dropoutRate <= 0)
+        if (Environment().IsInferring() || !IsEnabled())
         {
             sliceOutputValue.SetValue(sliceInput0Value);
         }
@@ -2170,7 +2284,7 @@ public:
         {
             // determine drop-out mask for this minibatch
             auto sliceMask = DataFor(*m_maskOfDropout, fr);
-            sliceMask.SetUniformRandomMask((ElemType)m_dropoutRate, (ElemType)(1.0 / (1.0 - m_dropoutRate)) /*pre-scaled*/, GetRNGHandle());
+            sliceMask.SetUniformRandomMask((ElemType)GetDropoutRate(), (ElemType)(1.0 / (1.0 - GetDropoutRate())) /*pre-scaled*/, GetRNGHandle());
             // apply dropout mask
             sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
             UpdateRngOffset(GetRngOffset() + sliceMask.GetNumElements());
@@ -2180,14 +2294,6 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         ValidateUnaryMap(isFinalValidationPass);
-    }
-
-    // special methods for this node type which ComputationNetwork knows about and calls to pass parameters
-    void SetDropoutRate(const double val)
-    {
-        if (val < 0 || val >= 1)
-            LogicError("DropoutRate must be >= 0 and < 1.");
-        m_dropoutRate = val;
     }
 
     RNGHandle& GetRNGHandle()
@@ -2201,7 +2307,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeP);
-            node->m_dropoutRate = m_dropoutRate;
+            node->SetDropoutRate(GetDropoutRate());
             node->SetRngState(GetRngSeed(), GetRngOffset());
             node->m_maskOfDropout = m_maskOfDropout;
         }
@@ -2220,10 +2326,7 @@ public:
         ReleaseMatrixToPool(m_maskOfDropout, matrixPool);
     }
 
-    double GetDropoutRate() const { return m_dropoutRate; }
-
 private:
-    double m_dropoutRate;
     shared_ptr<Matrix<ElemType>> m_maskOfDropout;
 };
 
@@ -2270,7 +2373,7 @@ private:
 // * imageLayout is the image layout. Only cudnn is supported at present.
 // -----------------------------------------------------------------------
 template <class ElemType>
-class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<6>, public IFreezable,
+class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, public IFreezable,
     public IdentityTransformerNodeOnOneInput<0>
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
@@ -2283,15 +2386,14 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
     static const size_t BIAS      = 2;
     static const size_t RUN_MEAN  = 3;
     static const size_t RUN_VAR   = 4;
-    static const size_t RUN_COUNT = 5;
+    static const size_t RUN_COUNT = 5; // note: no such parameter for legacy V1 models that do not share the count correctly
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial = false,
                            double normalizationTimeConstant=0, double blendTimeConstant=0,
                            double epsilon = 0, bool useCntkEngine = true, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
         m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind),
-        m_runCountIsZero(true),
-        m_pre19SampleCount(0),
+        m_runCountUntied(0),
         m_convertRunningVariancePending(false),
         m_one(1, 1, deviceId)
     {
@@ -2303,7 +2405,9 @@ public:
                                configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
                                ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
-        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+        //AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+        // To support legacy models, runCount is optional. Hence, we cannot use NumInputs<>, and must check ourselves in Validation.
+        AttachInputsFromConfig(configp);
     }
 
     void Save(File& fstream) const override
@@ -2314,14 +2418,19 @@ public:
         fstream << m_normTimeConst;
         fstream << m_blendTimeConst;
         fstream << (int32_t)m_imageLayoutKind;
-        fstream << m_runCountIsZero;  // this is only saved for optimizing 0-checks;
+        RunCount();                   // cache m_runCountUntied, so that someone who inspects the file sees something meaningful (as an FYI)
+#if CURRENT_CNTK_MODEL_VERSION == CNTK_MODEL_VERSION_19
+        fstream << (bool)(m_runCountUntied == 0);  // a temp version that saved a flag instead (beta11)
+#else
+        fstream << m_runCountUntied;  // this is really saved as a FYI and for optimizing 0-checks; the primary storage for this value is in the shared Parameter
+#endif
         fstream << m_epsilon;
         fstream << m_useCntkEngine;
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
-        size_t mbCount = 0, runSampleCount = 0;
+        size_t mbCount = 0;
         Base::Load(fstream, modelVersion);
 
         if (modelVersion >= CNTK_MODEL_VERSION_6)
@@ -2330,20 +2439,19 @@ public:
             fstream >> m_normTimeConst;
             fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
-
-            if (modelVersion >= CNTK_MODEL_VERSION_19)
+            if (modelVersion >= CNTK_MODEL_VERSION_13)
             {
-                fstream >> m_runCountIsZero; // the correct count will be loaded into the tied run count paramter.
+                if (modelVersion != CNTK_MODEL_VERSION_19)
+                    fstream >> m_runCountUntied;
+                else // a temp version that saved a flag instead (beta11)
+                {
+                    bool runCountIsZero;
+                    fstream >> runCountIsZero;
+                    m_runCountUntied = runCountIsZero ? 0 : SIZE_MAX; // only used for 0 checks
+                }
             }
-            else if (modelVersion >= CNTK_MODEL_VERSION_13) 
-            {
-                fstream >> runSampleCount;
-            }    
-            else 
-            {
+            else
                 fstream >> mbCount; // converted below
-            }
-
             fstream >> m_epsilon;
             fstream >> m_useCntkEngine;
         }
@@ -2392,29 +2500,20 @@ public:
         {
             // Prior to version 12, and prior to storing counts in a shared Parameter, minibatch count was stored instead of samples seen.
             // Approximate by assuming minibatch size 16, inform about that.
-            runSampleCount = 16 * mbCount;
+            m_runCountUntied = 16 * mbCount;
             fprintf(stderr,
                     "INFO: %ls: loading pre-CuDNNv5 model: approximated mini-batch count of %" PRIu64 " as %" PRIu64 " trained samples.\n"
                     "      Statistics in further training may be biased; consider re-training instead.\n",
-                    NodeName().c_str(), mbCount, runSampleCount);
+                    NodeName().c_str(), mbCount, m_runCountUntied);
 
             // Prior to version 12, running inverse standard deviation was
             // stored in Input 4. Now variance is used. We (approximately)
             // convert it during validation later (and then clear the flag).
             m_convertRunningVariancePending = true;
         }
-
-
-        if (modelVersion < CNTK_MODEL_VERSION_19)
-        {
-            m_runCountIsZero = (runSampleCount == 0);
-            // Cannot call "Input(RUN_COUNT)->Value().SetValue(ElemType(runSampleCount))" right here,
-            // inputs are not yet attached at this point.
-            m_pre19SampleCount = runSampleCount;
-        }
     }
 
-    void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override;
+    //void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override;
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
@@ -2428,40 +2527,48 @@ public:
             node->m_normTimeConst   = m_normTimeConst;
             node->m_blendTimeConst  = m_blendTimeConst;
             node->m_imageLayoutKind = m_imageLayoutKind;
-            node->m_runCountIsZero = m_runCountIsZero;
+            node->m_runCountUntied  = m_runCountUntied;
             node->m_epsilon         = m_epsilon;
             node->m_useCntkEngine   = m_useCntkEngine;
         }
     }
 
 private: // time-constant conversions
-    
+
+    // The case of parameter tying is tricky. The same set of BN parameters can be shared
+    // across multiple instances in a network. This happens if the same BN object is applied
+    // in multiple parts of the network. For example, a DSSM network that compares images,
+    // where the same image-to-vec stack is applied to both a query image and a test image.
+    // In this case, 0-th (count), 1-st (mean), and 2-nd (variance) order statistics are shared
+    // across these instances.
+    // We still keep a non-tied version of the count, for the special purposes of
+    //  - knowing whether the shared accumulator can never be 0, to avoid a GPU sync point
+    //  - replicating the behavior of an old version that did not tie the count at all (incorrect).
+    bool HasTiedRunCount() const { return GetNumInputs() > RUN_COUNT; }
     void ResetRunCount()
     {
-        Input(RUN_COUNT)->Value().SetValue(0);
-        m_runCountIsZero = true;
+        if (HasTiedRunCount())
+            Input(RUN_COUNT)->Value().SetValue(0);
+        m_runCountUntied = 0;
     }
-
     void AggregateRunCount(size_t countToAdd)
     {
-        Input(RUN_COUNT)->Value().AddWithScaleOf(/*alpha=*/(ElemType)countToAdd, m_one); // this += countToAdd * (1)
-        // this is only needed for 0 checks.
-        m_runCountIsZero = m_runCountIsZero && (countToAdd == 0);
+        if (HasTiedRunCount())
+        {
+            Input(RUN_COUNT)->Value().AddWithScaleOf(/*alpha=*/(ElemType)countToAdd, m_one); // this += countToAdd * (1)
+            if (countToAdd != 0)
+                m_runCountUntied = SIZE_MAX; // we only need this for 0 checks, this value says we only know it's not 0
+        }
+        else
+            m_runCountUntied += countToAdd;  // legacy case (non-shared): this is the count accumulator
     }
-
     size_t RunCount() const // const version of above; keep identical
     {
-        auto count = (size_t)Input(RUN_COUNT)->Value().Get00Element();
-        m_runCountIsZero = (count == 0);
-        return count;
+        if (HasTiedRunCount())
+            m_runCountUntied = (size_t)Input(RUN_COUNT)->Value().Get00Element(); // if needed then cache it over
+        return m_runCountUntied;
     }
-    
-    bool IsRunCount0() const 
-    { 
-        // check the flag first to avoid GPU sync 
-        // (when it's false, we know for a fact that the running count is non-zero)
-        return m_runCountIsZero && RunCount() == 0;
-    } 
+    bool IsRunCount0() const { return m_runCountUntied == 0 && RunCount() == 0; } // tied count >= untied one, so we can ask the untied one first to avoid GPU sync
 
     // map time constants to exp avg factor
     // This is the factor for the current MB's estimate (1-factor is used for the previous value of the running stats).
@@ -2470,7 +2577,9 @@ private: // time-constant conversions
         // in inference mode, only use long-term mean and do not update running estimates
         if (!Environment().IsTraining())
         {
-            return 0; // (m_normTimeConst == infinity) no new contribution from current minibatch
+            //if (IsRunCount0())
+            //    RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
+            return 0;                                        // (m_normTimeConst == infinity) no new contribution from current minibatch
         }
 
         double numSamples = (double)GetMBLayout()->GetActualNumSamples();
@@ -2511,7 +2620,9 @@ private: // time-constant conversions
         // in inference mode, only use long-term mean and do not update running estimates
         if (!Environment().IsTraining())
         {
-            return 1.0; // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
+            //if (IsRunCount0())
+            //    RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
+            return 1.0;                 // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
         }
 
         // Initialization case: only use current minibatch.
@@ -2573,7 +2684,6 @@ public:
         m_gradientValid = false;
     }
 
-    // Note: This function assumes that inputIndex=0 is called before the others, unless the DATA input takes no gradient.
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // Must be in training mode.
@@ -2611,6 +2721,7 @@ public:
             double blendFactor = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
 
             // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
+            // TODO: Move this out. Follow the same pattern as the RNN node. But can't without requiring another buffer.
             m_bnEng->Backward(sliceInputValue, sliceOutputGrad, // (in)  input from below, gradient from above
                               sliceInputGrad,                   // (out) gradient for data input goes here  --TODO: Check if cudnn engine adds the gradient, or just overwrites (BUGBUG). CNTK engine is OK.
                               scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
@@ -2622,13 +2733,11 @@ public:
         }
         if (inputIndex == SCALE) // derivative with respect to the scale, precomputed during input derivative computation
         {
-            // Derivative with respect to the scale was precomputed during input derivative computation.
             assert(m_gradientValid);
             Input(SCALE)->Gradient() += *m_dScale;
         }
         else if (inputIndex == BIAS) // derivative with respect to the bias, precomputed during input derivative computation
         {
-            // Derivative with respect to the bias was precomputed during input derivative computation.
             assert(m_gradientValid);
             Input(BIAS)->Gradient() += *m_dBias;
         }
@@ -2678,11 +2787,6 @@ public:
 
         if (isFinalValidationPass)
         {
-            // The current implementation requires that the gradient of the first operand/input be computed
-            // in order to compute gradients for the bias and scale parameters (2nd and 3rd inputs)
-            if (Environment().IsTraining() && ((Input(1)->NeedsGradient() || Input(2)->NeedsGradient()) && !Input(0)->NeedsGradient()))
-                InvalidArgument("%ls %ls currently supports learnable scale and bias parameters only if the first input also needs gradient (i.e. is dependent on at-least one learnable parameter).", NodeName().c_str(), OperationName().c_str());
-
             if (m_convertRunningVariancePending)
             {
                 // Prior to CNTK CuDNN v5 support (and the CNTK engine of the same time), mean and inverse standard deviation
@@ -2716,13 +2820,14 @@ public:
                         InvalidArgument("%ls: Data input cannot broadcast.", NodeDescription().c_str());
 #endif
             }
-            
-            // This must always be a [1] tensor. No inference allowed.
-            size_t i = RUN_COUNT;
-            if (Input(i)->HasMBLayout() || Input(i)->GetSampleLayout() != TensorShape(1))
-                InvalidArgument("%ls: Input[%d] must be a vector of 1 element without dynamic axis.", NodeDescription().c_str(), (int)i);
-            RunCount(); // refresh the zero count flag value, for 0 checks
-
+            if (HasTiedRunCount()) // 0-th order statistics (count) (optional for backcompat with old code which didn't correctly share it)
+            {
+                // This must always be a [1] tensor. No inference allowed.
+                size_t i = RUN_COUNT;
+                if (Input(i)->HasMBLayout() || (Input(i)->GetSampleLayout().GetRank() > 1) || (Input(i)->GetSampleLayout().GetNumElements() != 1))
+                    InvalidArgument("%ls: Input[%d] must be a vector of 1 element without dynamic axis.", NodeDescription().c_str(), (int)i);
+                RunCount(); // cache the shared value into the local cache, for 0 checks
+            }
             if (m_spatial && m_imageLayoutKind != CHW)
             {
                 InvalidArgument(
@@ -2887,14 +2992,18 @@ private:
 
     // --- working variables
 
+    // Cached samples seen count, and legacy count.
+    // Models store the 0-th order stats in an Input like running mean and variance,
+    // in order to do the correct accumulator tying.
+    // We keep a local copy for two reasons:
+    //  - legacy models use this instead of a shared parameter (which is incorrect w.r.t. tying)
     //  - 0 checks test this first, to avoid unnecessary GPU syncs
-    mutable bool m_runCountIsZero;
-    
-    // we use this count to temporarily store the number of samples seen, loaded from a model file
-    // with a version < 19, before the running mean sample count was added as an addition input for
-    // BatchNorm node. The value is copied over into the corresponding input parameter inside the 
-    // AttachInputs() call.
-    size_t m_pre19SampleCount;
+    //    We implement this rule: If this value is > 0 then the shared value cannot be 0;
+    //                            and if the shared value is 0, then this value must be 0.
+    //    This leverages that the count can only increase except when explicitly reset.
+    // This value is not updated unless needed, so it may be out of date during most operation.
+    // It will be updated at start (Validate()) and saving models, and any time the true value is needed.
+    mutable size_t m_runCountUntied; // cached running sample count (mutable since it is a cache)
     Matrix<ElemType> m_one;  // constant [1x1] matrix that contains a 1 (used for updating the shared count)
 
     // Interpolated actual mean/inverse stddev values. Pre-computed on forward pass, also used in gradient computation.

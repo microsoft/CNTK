@@ -8,6 +8,46 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template <class ElemType>
+/*virtual*/ void RandomDistributionNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
+{
+    auto&& result = ValueFor(fr);
+    switch (m_type)
+    {
+    case RandomDistributionType::Uniform:
+        result.SetUniformRandomValue(GetRNGHandle(), m_args[0], m_args[1]);
+        UpdateRngOffset(GetRngOffset() + result.GetNumElements());
+        break;
+    case RandomDistributionType::Normal:
+        result.SetGaussianRandomValue(GetRNGHandle(), m_args[0], m_args[1]);
+        UpdateRngOffset(GetRngOffset() + AsMultipleOf(result.GetNumElements(), 2));
+        break;
+    case RandomDistributionType::Gumbel:
+        result.SetGumbelRandomValue(GetRNGHandle(), m_args[0], m_args[1]);
+        UpdateRngOffset(GetRngOffset() + result.GetNumElements());
+        break;
+    case RandomDistributionType::Bernoulli:
+        result.SetUniformRandomMask(ElemType(1 - m_args[0]), ElemType(1), GetRNGHandle());
+        UpdateRngOffset(GetRngOffset() + result.GetNumElements());
+        break;
+    default:
+        RuntimeError("RandomDistributionNode::ForwardProp: Unkown random distribution type code %d", m_type);
+    }
+}
+
+
+template <class ElemType>
+/*virtual*/ void RandomDistributionNode<ElemType>::BackpropTo(const size_t /*inputIndex*/, const FrameRange&) /*override*/
+{
+    /* Do nothing. The proper fix is for this Node to have it say it does not need gradient. */
+}
+
+template <class ElemType>
+/*virtual*/ bool RandomDistributionNode<ElemType>::IsOutOfDateWrtInputs() const /*override*/ { return true; }
+
+template class RandomDistributionNode<float>;
+template class RandomDistributionNode<double>;
+
 template<class ElemType>
 void RandomSampleNodeBase<ElemType>::Validate(bool isFinalValidationPass)
 {
@@ -278,6 +318,7 @@ void DropoutNode<ElemType>::Load(File& fstream, size_t modelVersion)
     RngUser::Load(fstream, modelVersion);
 }
 
+#if 0 // outdated version
 template<class ElemType>
 void BatchNormalizationNode<ElemType>::AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs)
 {
@@ -291,6 +332,7 @@ void BatchNormalizationNode<ElemType>::AttachInputs(const std::vector<Computatio
         m_pre19SampleCount = 0;
     }
 }
+#endif
 
 template class DropoutNode<float>;
 template class DropoutNode<double>;

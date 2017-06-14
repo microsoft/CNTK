@@ -3,21 +3,28 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+[CmdletBinding()]
+Param([Parameter(Mandatory=$true)] [string]$PyVersion, [string]$WheelBaseUrl)
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
 Set-Location c:\local
-Unblock-File -Path BinaryDrop.zip
 Expand-Archive -Path BinaryDrop.zip
 
-$installCache = '.\BinaryDrop\cntk\Scripts\install\windows\InstallCache'
+$installCache = '.\BinaryDrop\cntk\Scripts\install\windows\ps\InstallCache'
 Move-Item -Path InstallCache -Destination $installCache
 
-.\BinaryDrop\cntk\Scripts\install\windows\install.ps1 -NoConfirm
+Get-ChildItem .\BinaryDrop\cntk\Scripts\install\windows\ps\ -Recurse -File -Include *.ps1, *.psm1 |
+  Add-Content -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3`r`n"
+
+.\BinaryDrop\cntk\Scripts\install\windows\install.bat -NoConfirm -Verbose @PSBoundParameters
+if ($LASTEXITCODE -ne 0) {
+  throw "Fail"
+}
 
 Set-Location BinaryDrop
-..\test-install.bat cntk\scripts\cntkpy35.bat
+..\test-install.bat cntk\scripts\cntkpy$PyVersion.bat
 if ($LASTEXITCODE -ne 0) {
   throw "Fail"
 }

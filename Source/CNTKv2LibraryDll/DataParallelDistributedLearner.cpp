@@ -118,7 +118,7 @@ namespace CNTK
         : DistributedLearnerBase(communicator, learner, distributedAfterSamples)
     {
         if (useAsyncBufferedParameterUpdate)
-            LogicError("Asynchronous parameter update is not yet supported.");
+            LogicError("Asynchronous parameter update is not yet supported for the DataParallelDistributedLearner.");
     }
 
     bool DataParallelDistributedLearner::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& info)
@@ -137,7 +137,7 @@ namespace CNTK
             valuesToAggregate.push_back(info.evalCriterionValue);
             valuesToAggregate.push_back(info.trainingLossValue);
 
-            auto value = MakeSharedObject<NDArrayView>(static_cast<double>(info.numberOfSamples), NDShape{ 1 }, DeviceDescriptor::CPUDevice());
+            auto value = MakeSharedObject<NDArrayView>(static_cast<double>(info.numberOfSamples), NDShape{}, DeviceDescriptor::CPUDevice());
             valuesToAggregate.push_back(value);
 
             m_communicator->AggregateInPlace(valuesToAggregate, m_communicator->Workers());

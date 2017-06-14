@@ -43,7 +43,8 @@ public:
         bool shouldPrefetch,
         bool multithreadedGetNextSequences = false,
         size_t maxNumberOfInvalidSequences = 0, // per worker
-        bool sampleBasedRandomizationWindow = true);
+        bool sampleBasedRandomizationWindow = true,
+        size_t seedOffset = 0);
 
     // Starts a new epoch.
     virtual void StartEpoch(const EpochConfiguration& config) override;
@@ -88,10 +89,9 @@ private:
     // returns at least one sequence description even when its length is greater than the required sample count.
     // Returns a tuple containing "end of sweep", "end of epoch" flags and
     // the total numbers of global and local samples to be processed.
-    std::tuple<bool, bool, size_t, size_t> GetNextSequenceDescriptions(size_t globalSampleCount, 
-                                                                       size_t localSampleCount, 
-                                                                       std::vector<RandomizedSequenceDescription>& result, 
-                                                                       ClosedOpenChunkInterval& windowRange, 
+    std::tuple<bool, bool, size_t, size_t> GetNextSequenceDescriptions(size_t globalSampleCount,
+                                                                       size_t localSampleCount,
+                                                                       ClosedOpenChunkInterval& windowRange,
                                                                        bool atLeastOneSequenceNeeded);
 
     // Prepares a new sweep if needed.
@@ -117,6 +117,9 @@ private:
 
     // Current sweep.
     size_t m_sweep;
+
+    // Offset used together with the current sweep to seed rngs.
+    size_t m_seedOffset;
 
     // Total number of samples in a sweep.
     size_t m_sweepSizeInSamples;

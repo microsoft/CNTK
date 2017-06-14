@@ -18,7 +18,7 @@ void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const M
     assert(in.GetNumCols() == out.GetNumCols());
     assert(std::isfinite(expAvgFactor) && (0 <= expAvgFactor && expAvgFactor <= 1));
     assert(std::isfinite(blendFactor) && (0 <= blendFactor && blendFactor <= 1));
-    // In inference mode, must only use runnig statististics
+    // In inference mode, must only use running statistics
     assert(!inferenceOnly || ((expAvgFactor == 0.0) && (blendFactor == 1.0)));
     assert(std::isfinite(epsilon) && epsilon > 0);
     if (!m_spatial)

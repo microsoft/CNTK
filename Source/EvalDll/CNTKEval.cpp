@@ -148,7 +148,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
 }
 
 // StartEvaluateMinibatchLoop - Prepare network for Evaluate() calls.
-// ouputNodeName - name of node that will be evaluated
+// outputNodeName - name of node that will be evaluated
 template <typename ElemType>
 void CNTKEval<ElemType>::StartEvaluateMinibatchLoop(const std::wstring& outputNodeName)
 {
@@ -354,7 +354,8 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
         }
 
         int numCols = type == MatrixType::DENSE ? buffer.m_buffer.size() / numRows : buffer.m_colIndices.size() - 1;
-        assert(numCols >= 1);
+        if (numCols < 1)
+            RuntimeError("Input: the number of column must be greater than or equal to 1.");
         inputNode->GetMBLayout()->Init(1, numCols);
         
         // SentinelValueIndicatingUnspecifedSequenceBeginIdx is used to specify the lower bound of look-back step of recurrent nodes

@@ -1,10 +1,7 @@
 
-# these are defined outside, but currently this is not implemented (we need the "with" operator)
-DeviceId=0          // auto  This does not work since too many places just pass deviceId as a numeric value. Add a BS function.
-
 precision = float
 command = speechTrain
-deviceId = DeviceId       
+deviceId = $DeviceId$       
 
 parallelTrain = false
 
@@ -48,7 +45,7 @@ speechTrain = [
                 input = [
                     labels = [
                         alias = "l"
-                        dim = 132
+                        dim = 133
                         format = "sparse"
                     ]
                 ]
@@ -98,7 +95,7 @@ speechTrain = [
         // define basic I/O
         baseFeatDim = 33
         featDim = 11 * baseFeatDim
-        labelDim = 132
+        labelDim = 133
 
         // hidden dimensions
         cellDim = 1024
@@ -108,7 +105,7 @@ speechTrain = [
         // features
         features = Input{featDim}
         labels = Input{labelDim}
-        feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, features);      # shift 5 frames right (x_{t+5} -> x_{t} )  // TODO why 5? Where do I see this?
+        feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, features);      # shift 5 frames right (x_{t+5} -> x_{t} ) 
 
         featNorm = MeanVarNorm(feashift)
 

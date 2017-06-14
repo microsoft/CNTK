@@ -6,8 +6,8 @@
 #include "stdafx.h"
 #include "HTKMLFReader.h"
 #include "Config.h"
-#include "HTKDataDeserializer.h"
-#include "MLFDataDeserializer.h"
+#include "HTKDeserializer.h"
+#include "MLFDeserializer.h"
 #include "ConfigHelper.h"
 #include "Bundler.h"
 #include "StringUtil.h"
@@ -43,14 +43,14 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
     // TODO: should we make this explicit configuration parameter
     for (const auto& featureName : featureNames)
     {
-        auto deserializer = std::make_shared<HTKDataDeserializer>(corpus, readerConfig(featureName), featureName, primary);
+        auto deserializer = std::make_shared<HTKDeserializer>(corpus, readerConfig(featureName), featureName, primary);
         primary = false;
         featureDeserializers.push_back(deserializer);
     }
 
     for (const auto& labelName : labelNames)
     {
-        auto deserializer = std::make_shared<MLFDataDeserializer>(corpus, readerConfig(labelName), labelName);
+        auto deserializer = std::make_shared<MLFDeserializer>(corpus, readerConfig(labelName), labelName);
 
         labelDeserializers.push_back(deserializer);
     }
@@ -113,7 +113,12 @@ HTKMLFReader::HTKMLFReader(const ConfigParameters& readerConfig)
     // TODO: this should be bool. Change when config per deserializer is allowed.
     if (AreEqualIgnoreCase(readMethod, std::wstring(L"blockRandomize")))
     {
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, window, bundler, true  /* should Prefetch */);
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, window, bundler, 
+            /*shouldPrefetch =*/ true,
+            /*multithreadedGetNextSequences =*/ false, // default
+            /*maxNumberOfInvalidSequences =*/ 0, // default
+            /*sampleBasedRandomizationWindow =*/ true, // default
+            GetRandomSeed(readerConfig));
     }
     else if (AreEqualIgnoreCase(readMethod, std::wstring(L"none")))
     {

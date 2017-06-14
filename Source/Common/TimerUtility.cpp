@@ -61,4 +61,4 @@ long long Clock::GetTicksPerSecond()
     return TickPeriod::den / TickPeriod::num;
 }
 
-} } }
+}}}

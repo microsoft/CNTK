@@ -3,6 +3,7 @@ dataDir: ../Data
 tags:
     - bvt-e ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
     - nightly-e
+    - weekly-e
 
 testCases:
   CNTK Run must be completed:

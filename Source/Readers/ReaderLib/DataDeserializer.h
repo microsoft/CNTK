@@ -20,16 +20,16 @@ struct KeyType
 {
     KeyType() : m_sequence(0), m_sample(0) {}
 
-    KeyType(size_t sequence, size_t sample) : m_sequence(sequence), m_sample(sample) {}
+    KeyType(size_t sequence, uint32_t sample) : m_sequence(sequence), m_sample(sample) {}
 
     // Possible sequence common prefix.
     // size_t m_prefix;
 
     // Identifies sequence between different deserializers.
-    size_t m_sequence : 40;
+    size_t m_sequence;
 
     // Sample id.
-    size_t m_sample : 24;
+    uint32_t m_sample;
 };
 
 class Chunk;
@@ -61,7 +61,7 @@ typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 // Defines sequence data and its layout.
 // Currently CNTK supports dense and sparse sequences (csc).
 // The storageType in the corresponding stream description identifies what type of SequenceData
-// data deserializer or transformer can provide provides.
+// data deserializer or transformer provides.
 // The layout of samples are described in the sampleLayout.
 // All samples in the sequence should have the same layout.
 // TODO: add type casts (As<T>() or AsRef<>() or AsPtr<>()) to subclasses as members here.

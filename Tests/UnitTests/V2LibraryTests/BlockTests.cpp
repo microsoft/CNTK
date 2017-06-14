@@ -26,7 +26,7 @@ FunctionPtr LinearLayerBlock(Variable input, size_t outputDim, const DeviceDescr
 FunctionPtr SimpleRecurrentBlock(const Variable& prevOutput, const Variable& input, const DeviceDescriptor& device, const std::wstring& outputName = L"")
 {
     assert(prevOutput.Shape().Rank() == 1);
-    assert((prevOutput.Shape() != NDShape::Unknown) && !prevOutput.Shape().HasInferredDimension());
+    assert((prevOutput.Shape() != NDShape::Unknown) && !prevOutput.Shape().HasUnboundDimension());
     auto outputDim = prevOutput.Shape()[0];
 
     auto prevOutputPlaceholder = PlaceholderVariable();
@@ -120,12 +120,13 @@ BOOST_AUTO_TEST_SUITE(BlockSuite)
 
 BOOST_AUTO_TEST_CASE(BlocksWithRecurrence)
 {
-    TestBlocksWithRecurrence(7, 5, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestBlocksWithRecurrence(7, 5, DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(ChangingParameterValuesInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestBlocksWithRecurrence(11, 15, DeviceDescriptor::GPUDevice(0));
 }
 

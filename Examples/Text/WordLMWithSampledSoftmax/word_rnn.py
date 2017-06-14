@@ -8,17 +8,18 @@ import numpy as np
 import os
 import cntk as C
 import timeit
-from cntk import Trainer, Axis
-from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
+from cntk import Axis
+from cntk.train import Trainer
+from cntk.learners import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
+from cntk.ops import sequence
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
 from cntk.ops.functions import load_model
-from cntk.blocks import LSTM, Stabilizer
-from cntk.layers import Recurrence, Dense
-from cntk.models import For, Sequential
-from cntk.utils import log_number_of_parameters, ProgressPrinter
+from cntk.layers import Recurrence, Dense, LSTM, Stabilizer, For, Sequential
+from cntk.logging import log_number_of_parameters, ProgressPrinter
 from data_reader import DataReader
 from math import log, exp
-from cntk.device import set_default_device, cpu, gpu
+from cntk.device import try_set_default_device, cpu, gpu
 
 # Setting global parameters
 use_sampled_softmax = True
@@ -59,10 +60,10 @@ def cross_entropy_with_full_softmax(
     vocab_dim,      # Vocabulary size
     hidden_dim      # Dimension of the hidden vector
     ):
-    bias = C.Parameter(shape = (vocab_dim, 1), init = C.init_bias_default_or_0)
-    weights = C.Parameter(shape = (vocab_dim, hidden_dim), init = C.init_default_or_glorot_uniform)
+    bias = C.Parameter(shape = (vocab_dim, 1), init = 0)
+    weights = C.Parameter(shape = (vocab_dim, hidden_dim), init = C.initializer.glorot_uniform())
 
-    z = C.reshape( C.times_transpose(weights, hidden_vector) + bias, (1,vocab_dim))
+    z = C.reshape(C.times_transpose(weights, hidden_vector) + bias, (1,vocab_dim))
     zT = C.times_transpose(z, target_vector)
     ce = C.reduce_log_sum_exp(z) - zT
     zMax = C.reduce_max(z)
@@ -79,8 +80,8 @@ def cross_entropy_with_sampled_softmax(
     sampling_weights,        # Node providing weights to be used for the weighted sampling
     allow_duplicates = False # Boolean flag to control whether to use sampling with replacement (allow_duplicates == True) or without replacement.
     ):
-    bias = C.Parameter(shape = (vocab_dim, 1), init = C.init_bias_default_or_0)
-    weights = C.Parameter(shape = (vocab_dim, hidden_dim), init = C.init_default_or_glorot_uniform)
+    bias = C.layers.Parameter(shape = (vocab_dim, 1), init = 0)
+    weights = C.layers.Parameter(shape = (vocab_dim, hidden_dim), init = C.initializer.glorot_uniform())
 
     sample_selector_sparse = C.random_sample(sampling_weights, num_samples, allow_duplicates) # sparse matrix [num_samples * vocab_size]
     if use_sparse:
@@ -136,7 +137,7 @@ def average_cross_entropy(full_cross_entropy_node, input_node, label_node, data)
 def create_model(input_sequence, label_sequence, vocab_dim, hidden_dim):
     # Create the rnn that computes the latent representation for the next token.
     rnn_with_latent_output = Sequential([
-        C.Embedding(hidden_dim),   
+        C.layers.Embedding(hidden_dim),   
         For(range(num_layers), lambda: 
             Sequential([Stabilizer(), Recurrence(LSTM(hidden_dim), go_backwards=False)])),
         ])
@@ -159,13 +160,9 @@ def create_model(input_sequence, label_sequence, vocab_dim, hidden_dim):
 
 # Creates model inputs
 def create_inputs(vocab_dim):
-    batch_axis = Axis.default_batch_axis()
     input_seq_axis = Axis('inputAxis')
-
-    input_dynamic_axes = [batch_axis, input_seq_axis]
-
-    input_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes, is_sparse = use_sparse)
-    label_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes, is_sparse = use_sparse)
+    input_sequence = sequence.input_variable(shape=vocab_dim, sequence_axis=input_seq_axis, is_sparse = use_sparse)
+    label_sequence = sequence.input_variable(shape=vocab_dim, sequence_axis=input_seq_axis, is_sparse = use_sparse)
     
     return input_sequence, label_sequence
 
@@ -176,7 +173,7 @@ def print_progress(samples_per_second, average_full_ce, total_samples, total_tim
 
 
 # Creates and trains an rnn language model.
-def train_lm():
+def train_lm(testing=False):
     data = DataReader(token_to_id_path, segment_sepparator)
 
     # Create model nodes for the source and target inputs
@@ -206,7 +203,8 @@ def train_lm():
                             gradient_clipping_threshold_per_sample=clipping_threshold_per_sample,
                             gradient_clipping_with_truncation=gradient_clipping_with_truncation)
     trainer = Trainer(z, (cross_entropy, error), learner)
-  
+
+    last_avg_ce = 0
     for epoch_count in range(num_epochs):
         for features, labels, token_count in data.minibatch_generator(train_file_path, sequence_length, sequences_per_batch):
             arguments = ({input_sequence : features, label_sequence : labels})
@@ -223,14 +221,18 @@ def train_lm():
                 av_ce = average_cross_entropy(full_ce, input_sequence, label_sequence, data)
                 print_progress(samples_per_second, av_ce, num_trained_samples, t_start)
                 num_trained_samples_since_last_report = 0
+                last_avg_ce = av_ce
 
             num_trained_samples += token_count
             num_trained_samples_since_last_report += token_count
 
-        # after each epoch save the model
-        model_filename = "models/lm_epoch%d.dnn" % epoch_count
-        z.save_model(model_filename)
-        print("Saved model to '%s'" % model_filename)
+        if not testing:
+            # after each epoch save the model
+            model_filename = "models/lm_epoch%d.dnn" % epoch_count
+            z.save(model_filename)
+            print("Saved model to '%s'" % model_filename)
+
+    return last_avg_ce
 
 
 if __name__=='__main__':

@@ -10,15 +10,17 @@ Unit tests for kernel operations, tested for the forward and the backward pass
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, _test_unary_op, AA, I, precision, PRECISION_TO_TYPE, constant, cntk_device
+import cntk as C
+from .ops_test_utils import unittest_helper, _test_unary_op, AA, precision, PRECISION_TO_TYPE, constant, cntk_device
 from cntk.ops import AVG_POOLING, MAX_POOLING, MAX_UNPOOLING
-from ...utils import sanitize_dtype_cntk
+from cntk.internal import sanitize_dtype_cntk
 
 CONVOLUTION_OPERANDS = [
     ([[[5., 6.],  # (1, 2, 2) map
        [3., 4.]]],
      [[[1., 2.],  # (1, 2, 2) input operand
-       [7., 8.]]]),
+       [7., 8.]]],
+     True),       # Use input shape with inferred dimension
     ([[[1., 2.],  # (3, 2, 2) map
        [3., 4.]],
       [[1., 2.],
@@ -30,12 +32,13 @@ CONVOLUTION_OPERANDS = [
       [[5., 6.],
        [7., 8.]],
       [[9., 10.],
-       [11., 12.]]])
+       [11., 12.]]],
+      False)      # Do not use input shape with inferred dimension
 ]
 
 
-@pytest.mark.parametrize("convolution_map, convolution_input", CONVOLUTION_OPERANDS)
-def test_op_convolution_without_padding(convolution_map, convolution_input, device_id, precision):
+@pytest.mark.parametrize("convolution_map, convolution_input, use_input_shape_with_inferred_dimension", CONVOLUTION_OPERANDS)
+def test_op_convolution_without_padding(convolution_map, convolution_input, use_input_shape_with_inferred_dimension, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
 
@@ -45,18 +48,21 @@ def test_op_convolution_without_padding(convolution_map, convolution_input, devi
     flipped_conv_map = conv_map[..., ::-1, ::-1]
 
     from scipy import signal
-    expected_forward = AA(
-        [[signal.convolve(flipped_conv_map, conv_input, mode='valid')]])
+    expected_forward = AA([signal.convolve(flipped_conv_map, conv_input, mode='valid')])
 
     backward = AA(conv_map)
 
-    a = I(shape=conv_input.shape,
-        dtype=sanitize_dtype_cntk(precision),
-        needs_gradient=True,
-        name='a')
+    conv_input_shape = conv_input.shape
+    if use_input_shape_with_inferred_dimension:
+        conv_input_shape = tuple(-1 for x in conv_input_shape)
 
-    conv_input.shape = (1,1) + conv_input.shape # adding batch and channel axis
-    conv_map.shape = (1,1) + conv_map.shape
+    a = C.input_variable(shape=conv_input_shape,
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=True,
+                name='a')
+
+    conv_input.shape = (1,) + conv_input.shape # adding batch and channel axis
+    conv_map.shape = (1,) + conv_map.shape
 
     constant_map = constant(value=conv_map, device=dev)
 
@@ -71,7 +77,7 @@ def test_op_convolution_without_padding(convolution_map, convolution_input, devi
 
 
 ASYM_CONVOLUTION_DATA = [
-    ([1, 1, 1, 3, 3], # input_size
+    ([1, 1, 3, 3], # input_size
      [1, 2, 2], # convolution size
      [[[[ 19, 25, 10],
         [ 37, 43, 16],
@@ -79,7 +85,6 @@ ASYM_CONVOLUTION_DATA = [
 ]
 # this test handles convolution with asymmetric padding, in particular, with auto_padding is set to True
 # and the kernel shape is even
-@pytest.mark.skip(reason="Reference model takes too long to run causing timeout, needs further investigation")
 @pytest.mark.parametrize("input_size, conv_size, result", ASYM_CONVOLUTION_DATA)
 def test_asym_convolution(input_size, conv_size, result, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
@@ -91,10 +96,10 @@ def test_asym_convolution(input_size, conv_size, result, device_id, precision):
     x = np.arange(total_size, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = I(shape=input_operand.shape[2:],
-        dtype=sanitize_dtype_cntk(precision),
-        needs_gradient=False,
-        name='a')
+    a = C.input_variable(shape=input_operand.shape[1:],
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=False,
+                name='a')
 
     # do the same for convolution kernel
     total_size = np.prod(conv_size)
@@ -105,29 +110,39 @@ def test_asym_convolution(input_size, conv_size, result, device_id, precision):
     input_op = convolution(conv_map, a, auto_padding=[True])
 
     forward_input = {a: input_operand}
-    expected_forward = AA([result])
+    expected_forward = AA(result)
 
     unittest_helper(input_op, forward_input, expected_forward,
                     None, device_id=device_id, precision=precision)
 
 
 POOLING_GEOMETRY_DATA = [
-    ([1, 1, 1, 6, 6], # input_size
+    ([1, 1, 6, 6], # input_size
      (1, 5, 5), # pooling_window
      (1, 3, 3), # strides
      [True], # padding flag
      [[[[ 21,   23],
-       [ 33,   35]]]]), # result
-    ([1, 1, 1, 8, 8],
+        [ 33,   35]]]], # result
+     True), # Use input shape with inferred dimension
+    ([1, 1, 8, 8],
      (1, 4, 4),
      (1, 5, 5),
      [False],
-     [[[[ 27 ]]]])
+     [[[[ 27 ]]]],
+     False),
+    ([1, 1, 6, 6],
+     (1, 4, 4),
+     (1, 2, 2),
+     [True, False],
+     [[[[ 15, 17],
+        [ 27, 29],
+        [ 33, 35]]]],
+     True)
 ]
 # the pooling geometry test also tests convolution geometry since they go through the same path
 # in the CPU code
-@pytest.mark.parametrize("input_size, pooling_window, strides, padding, result", POOLING_GEOMETRY_DATA)
-def test_op_pooling_geometry(input_size, pooling_window, strides, padding, result, device_id, precision):
+@pytest.mark.parametrize("input_size, pooling_window, strides, padding, result, use_input_shape_with_inferred_dimension", POOLING_GEOMETRY_DATA)
+def test_op_pooling_geometry(input_size, pooling_window, strides, padding, result, use_input_shape_with_inferred_dimension, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
 
     # fill input operand with a sequence 1,2,3,... til total size and then
@@ -136,16 +151,20 @@ def test_op_pooling_geometry(input_size, pooling_window, strides, padding, resul
     x = np.arange(total_size, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = I(shape=input_operand.shape[2:],
-        dtype=sanitize_dtype_cntk(precision),
-        needs_gradient=False,
-        name='a')
+    pool_input_shape = input_operand.shape[1:]
+    if use_input_shape_with_inferred_dimension:
+        pool_input_shape = tuple(-1 for x in pool_input_shape)
+
+    a = C.input_variable(shape=pool_input_shape,
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=False,
+                name='a')
 
     from cntk import pooling
     input_op = pooling(a, MAX_POOLING, pooling_window, strides, auto_padding=padding)
 
     forward_input = {a: input_operand}
-    expected_forward = AA([result])
+    expected_forward = AA(result)
 
     unittest_helper(input_op, forward_input, expected_forward,
                     None, device_id=device_id, precision=precision)
@@ -173,11 +192,11 @@ def test_op_avg_pooling(input_size, pooling_window, strides, result, device_id, 
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = I(shape=input_operand.shape[2:],
-        dtype=sanitize_dtype_cntk(precision),
-        needs_gradient=True,
-        name='a')
-
+    a = C.sequence.input_variable(shape=input_operand.shape[2:],
+                         dtype=sanitize_dtype_cntk(precision),
+                         needs_gradient=True,
+                         name='a')
+                
     backward = (1 / np.prod(pooling_window)) * np.ones_like(input_operand)
 
     from cntk import pooling
@@ -235,10 +254,10 @@ def test_op_max_pooling(input_size, pooling_window, strides, autopad, result, de
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = I(shape=input_operand.shape[2:],
-        dtype=sanitize_dtype_cntk(precision),
-        needs_gradient=True,
-        name='a')
+    a = C.sequence.input_variable(shape=input_operand.shape[2:],
+                         dtype=sanitize_dtype_cntk(precision),
+                         needs_gradient=True,
+                         name='a')
 
     result_array = np.asarray(result, dtype=dt)
     max_elements = result_array.reshape(result_array.size).tolist()
@@ -272,10 +291,10 @@ def test_op_max_unpooling(input_size, pooling_window, strides, autopad, result, 
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    a = I(shape=input_operand.shape[2:],
-        dtype=sanitize_dtype_cntk(precision),
-        needs_gradient=True,
-        name='a')
+    a = C.sequence.input_variable(shape=input_operand.shape[2:],
+                         dtype=sanitize_dtype_cntk(precision),
+                         needs_gradient=True,
+                         name='a')
 
     pooling_result = np.asarray(result, dtype=dt)
     max_elements = pooling_result.reshape(pooling_result.size).tolist()
@@ -299,6 +318,88 @@ def test_op_max_unpooling(input_size, pooling_window, strides, autopad, result, 
                 forward_input, expected_forward, expected_backward,
                 device_id=device_id, precision=precision)
     assert np.allclose(p.eval(forward_input), q.eval(forward_input))
+
+POOLING_CEIL_DATA = [
+    ([1, 1, 8, 8],                   # input_size
+     (2, 2),                            # pooling_window
+     (2, 2),                            # strides
+     [[[[10.,  12.,  14.,  16.],
+        [26.,  28.,  30.,  32.],
+        [42.,  44.,  46.,  48.],
+        [58.,  60.,  62.,  64.]]]]),    # result
+    ([1, 1, 8, 8],
+     (3, 3),
+     (2, 2),
+     [[[[19., 21., 23., 24.],
+        [35., 37., 39., 40.],
+        [51., 53., 55., 56.],
+        [59., 61., 63., 64.]]]]),
+]
+
+
+@pytest.mark.parametrize("input_size, pooling_window, strides, result", POOLING_CEIL_DATA)
+def test_op_pooling_ceil(input_size, pooling_window, strides, result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+
+    # fill input operand with a sequence 1,2,3,... til total size and then
+    # resize to input_size
+    total_size = np.prod(input_size)
+    x = np.arange(1, total_size + 1, 1, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = C.input_variable(shape=input_operand.shape[1:], dtype=sanitize_dtype_cntk(precision), needs_gradient=True, name='a')
+
+    result_array = np.asarray(result, dtype=dt)
+    max_elements = result_array.reshape(result_array.size).tolist()
+
+    # place 1.0s where maximum elements are
+    backward = np.zeros_like(input_operand)
+    for element in max_elements:
+        backward += np.asarray(input_operand == element)
+
+    from cntk import pooling
+    input_op = pooling(a, MAX_POOLING, pooling_window, strides, ceil_out_dim=True)
+
+    forward_input = {a: input_operand}
+
+    expected_forward = AA(result)
+    expected_backward = {a: backward}
+
+    unittest_helper(input_op, forward_input, expected_forward, expected_backward, device_id=device_id,
+                    precision=precision)
+
+POOLING_AVG_INCLUDE_PAD_DATA = [
+    ([1, 1, 7, 7],
+     (3, 3),
+     (3, 3),
+     [[[[20./9, 45./9, 40./9],
+        [135./9, 225./9, 165./9],
+        [160./9, 255./9, 180./9]]]]),
+]
+
+
+@pytest.mark.parametrize("input_size, pooling_window, strides, result", POOLING_AVG_INCLUDE_PAD_DATA)
+def test_op_average_pooling_include_pad(input_size, pooling_window, strides, result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+
+    total_size = np.prod(input_size)
+    x = np.arange(1, total_size + 1, 1, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = C.input_variable(shape=input_operand.shape[1:], dtype=sanitize_dtype_cntk(precision), needs_gradient=True, name='a')
+
+    backward = (1 / np.prod(pooling_window)) * np.ones_like(input_operand)
+
+    from cntk import pooling
+    input_op = pooling(a, AVG_POOLING, pooling_window, strides, auto_padding=[True], include_pad=True)
+
+    forward_input = {a: input_operand}
+
+    expected_forward = AA(result)
+    expected_backward = {a: backward}
+
+    unittest_helper(input_op, forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
 
 # ROI pooling test setup
 # --- forward ---
@@ -333,23 +434,23 @@ def test_op_roipooling(input_map, input_rois, expected_fwd, expected_bkwd, devic
     exp_bkwd_value    = AA(expected_bkwd, dtype=dt)
 
     # adding batch, sequence and roi axis
-    exp_fwd_value.shape  = (1,1,1) + exp_fwd_value.shape
-    exp_bkwd_value.shape = (1,1) + exp_bkwd_value.shape
+    exp_fwd_value.shape  = (1,1) + exp_fwd_value.shape
+    exp_bkwd_value.shape = (1,) + exp_bkwd_value.shape
 
     # I == define cntk input variables
-    a = I(shape=conv_input.shape,
-        dtype=sanitize_dtype_cntk(precision),
-        needs_gradient=True,
-        name='a')
+    a = C.input_variable(shape=conv_input.shape,
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=True,
+                name='a')
 
-    b = I(shape=roi_input.shape,
-        dtype=sanitize_dtype_cntk(precision),
-        needs_gradient=False,
-        name='b')
+    b = C.input_variable(shape=roi_input.shape,
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=False,
+                name='b')
 
     # adding batch and sequence axis
-    conv_input.shape     = (1,1) + conv_input.shape
-    roi_input.shape      = (1,1) + roi_input.shape
+    conv_input.shape     = (1,) + conv_input.shape
+    roi_input.shape      = (1,) + roi_input.shape
 
     from cntk import roipooling
     input_op = roipooling(a, b, (3,3))
@@ -360,3 +461,96 @@ def test_op_roipooling(input_map, input_rois, expected_fwd, expected_bkwd, devic
     unittest_helper(input_op,
                     forward_input, exp_fwd_value, expected_backward,
                     device_id=device_id, precision=precision)
+
+CONVOLUTION_TRANSPOSE_DATA = [
+    ([1, 1, 3, 3], # input_size
+     [1, 2, 2], # convolution size
+     [[[[ 0, 0, 1, 2],
+        [ 0, 5, 11, 11],
+        [ 6, 23, 29, 23],
+        [ 12, 32, 37, 24]]]]) # result
+]
+# this test handles convolution transpose, without specifying output shape
+@pytest.mark.parametrize("input_size, conv_size, result", CONVOLUTION_TRANSPOSE_DATA)
+def test_convolution_transpose(input_size, conv_size, result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    # fill input operand with a sequence 1,2,3,... til total size and then
+    # resize to input_size
+    total_size = np.prod(input_size)
+    x = np.arange(total_size, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = C.input_variable(shape=input_operand.shape[1:],
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=False,
+                name='a')
+
+    # do the same for convolution kernel
+    total_size = np.prod(conv_size)
+    y = np.arange(total_size, dtype=dt)
+    conv_map = constant(value=y.reshape(conv_size), device=dev)
+
+    from cntk import convolution_transpose
+    input_op = convolution_transpose(conv_map, a, auto_padding=[False])
+
+    forward_input = {a: input_operand}
+    expected_forward = AA(result)
+
+    unittest_helper(input_op, forward_input, expected_forward,
+                    None, device_id=device_id, precision=precision)
+
+CONVOLUTION_TRANSPOSE_OUTPUT_DATA = [
+    ([1, 1, 3, 3], # input_size
+     [1, 3, 3], # convolution size
+     [[[[ 0, 3, 4, 11, 8, 10],
+        [ 3, 12, 11, 28, 19, 26],
+        [ 12, 27, 16, 35, 20, 25],
+        [ 27, 60, 35, 76, 43, 56], 
+        [ 24, 51, 28, 59, 32, 40]]]]) # result
+]
+# this test handles convolution transpose, without specifying output shape
+@pytest.mark.parametrize("input_size, conv_size, result", CONVOLUTION_TRANSPOSE_OUTPUT_DATA)
+def test_convolution_transpose_with_output(input_size, conv_size, result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
+
+    # fill input operand with a sequence 1,2,3,... til total size and then
+    # resize to input_size
+    total_size = np.prod(input_size)
+    x = np.arange(total_size, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = C.input_variable(shape=input_operand.shape[1:],
+                dtype=sanitize_dtype_cntk(precision),
+                needs_gradient=False,
+                name='a')
+
+    # do the same for convolution kernel
+    total_size = np.prod(conv_size)
+    y = np.arange(total_size, dtype=dt)
+    conv_map = constant(value=y.reshape(conv_size), device=dev)
+
+    from cntk import convolution_transpose
+    input_op = convolution_transpose(conv_map, a, auto_padding=[True], strides=2, output_shape=(1,5,6))
+
+    forward_input = {a: input_operand}
+    expected_forward = AA(result)
+
+    unittest_helper(input_op, forward_input, expected_forward,
+                    None, device_id=device_id, precision=precision)
+
+
+def test_conv_incorrect_shapes():
+    input = C.input_variable(())    
+    with pytest.raises(ValueError):
+        h = C.layers.Convolution(filter_shape=(5,5), num_filters=8, strides=(1,1), pad=True)(input)
+    with pytest.raises(ValueError):
+        h = C.layers.MaxPooling(filter_shape=(2,2), strides=(2,2))(input)
+
+    input = C.input_variable(28)    
+    with pytest.raises(ValueError):
+        h = C.layers.Convolution(filter_shape=(5,5), num_filters=8, strides=(1,1), pad=True)(input)
+    with pytest.raises(ValueError):
+        h = C.layers.MaxPooling(filter_shape=(2,2), strides=(2,2))(input)

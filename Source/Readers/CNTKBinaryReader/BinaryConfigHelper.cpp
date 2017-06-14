@@ -48,6 +48,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        string precision = config.Find("precision", "float");
+        if (AreEqualIgnoreCase(precision, "double"))
+        {
+            m_elementType = ElementType::tdouble;
+        }
+        else if (AreEqualIgnoreCase(precision, "float"))
+        {
+            m_elementType = ElementType::tfloat;
+        }
+        else
+        {
+            RuntimeError("Not supported precision '%s'. Expected 'double' or 'float'.", precision.c_str());
+        }
+
         m_filepath = msra::strfun::utf16(config(L"file"));
         m_keepDataInMemory = config(L"keepDataInMemory", false);
 

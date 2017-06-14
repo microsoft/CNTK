@@ -39,6 +39,18 @@ public:
     // Checks lables type in the configuration.
     void CheckLabelType();
 
+    // Returns scp root path.
+    std::string GetRootPath();
+
+    // Returns scp file path.
+    std::string GetScpFilePath();
+
+    // Returns scp file dir.
+    std::string GetScpDir();
+
+    // Adjusts utterance path according to the given root path and scp directory.
+    void AdjustUtterancePath(const std::string& rootPath, const string& scpDir, std::string& path);
+
     // Gets names of feature, label, hmm and lattice files from the configuration.
     void GetDataNamesFromConfig(
         std::vector<std::wstring>& features,
@@ -50,7 +62,7 @@ public:
     std::vector<std::wstring> GetMlfPaths() const;
 
     // Gets utterance paths from the configuration.
-    std::vector<std::wstring> GetSequencePaths();
+    std::vector<std::string> GetSequencePaths();
 
     // Gets randomization window.
     size_t GetRandomizationWindow();
@@ -65,7 +77,7 @@ private:
     DISABLE_COPY_AND_MOVE(ConfigHelper);
 
     // Expands ... in the name of the feature path.
-    void ExpandDotDotDot(std::wstring& featPath, const std::wstring& scpPath, std::wstring& scpDirCached);
+    void ExpandDotDotDot(std::string& featPath, const std::string& scpPath, std::string& scpDirCached);
 
     const ConfigParameters& m_config;
 };
