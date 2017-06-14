@@ -18,11 +18,10 @@ model_config = {
 training_config = {
     'minibatch_size'    : 4096,    # in samples when using ctf reader, per worker
     'epoch_size'        : 85540,   # in sequences, when using ctf reader
-    'log_freq'          : 500,     # in minibatchs
+    'log_freq'          : 0,       # in minibatchs
     'max_epochs'        : 300,
-    'lr'                : 0.5,
-    'train_data'        : 'train.ctf',
-    #'train_data'          : 'train.tsv',
+    'lr'                : 2,
+    'train_data'        : 'train.ctf',  # or 'train.tsv'
     'val_data'          : 'val.ctf',
     'val_interval'      : 1,       # interval in epochs to run validation
     'stop_after'        : 3,       # num epochs to stop if no CV improvement

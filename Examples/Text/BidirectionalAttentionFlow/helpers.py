@@ -44,6 +44,21 @@ def seq_loss(logits, y):
     prob = C.sequence.softmax(logits)
     return -C.log(C.sequence.last(C.sequence.gather(prob, y)))
 
+def all_spans_loss(start_logits, start_y, end_logits, end_y):
+    # this works as follows:
+    # let end_logits be A, B, ..., Y, Z
+    # let start_logits be a, b, ..., y, z
+    # the tricky part is computing log sum (i<=j) exp(start_logits[i] + end_logits[j])
+    # we break this problem as follows
+    # x = logsumexp(A, B, ..., Y, Z), logsumexp(B, ..., Y, Z), ..., logsumexp(Y, Z), Z
+    # y = a + logsumexp(A, B, ..., Y, Z), b + logsumexp(B, ..., Y, Z), ..., y + logsumexp(Y, Z), z + Z
+    # now if we exponentiate each element in y we have all the terms we need. We just need to sum those exponentials...
+    # logZ = last(sequence.logsumexp(y))
+    x = C.layers.Recurrence(C.log_add_exp, go_backwards=True, initial_state=-1e+30)(end_logits)
+    y = start_logits + x
+    logZ = C.layers.Fold(C.log_add_exp, initial_state=-1e+30)(y)
+    return logZ - C.sequence.last(C.sequence.gather(start_logits, start_y)) - C.sequence.last(C.sequence.gather(end_logits, end_y))
+
 def seq_hardmax(logits):
     seq_max = C.layers.Fold(C.element_max, initial_state=C.constant(-1e+30, logits.shape))(logits)
     s = C.equal(logits, C.sequence.broadcast_as(seq_max, logits))

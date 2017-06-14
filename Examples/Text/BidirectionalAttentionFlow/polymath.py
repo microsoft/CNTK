@@ -203,4 +203,6 @@ class PolyMath:
         # loss
         start_loss = seq_loss(start_logits, ab)
         end_loss = seq_loss(end_logits, ae)
-        return C.combine([start_logits, end_logits]), start_loss + end_loss
+        #paper_loss = start_loss + end_loss
+        new_loss = all_spans_loss(start_logits, ab, end_logits, ae)
+        return C.combine([start_logits, end_logits]), new_loss

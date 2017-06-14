@@ -30,7 +30,7 @@ def populate_dicts(files):
                 if 'dev' in f:
                     uid, title, context, query, answer, other = line.split('\t')
                 else:
-                    uid, title, context, query, begin_answer, end_answer, answer = line.split('\t')
+                    uid, title, context, query, answer, raw_context, begin_answer, end_answer, raw_answer = line.split('\t')
                 tokens = context.split(' ')+query.split(' ')
                 if 'train' in f:
                     for t in tokens:
@@ -69,7 +69,8 @@ def tsv_iter(line, vocab, chars, is_test=False, misc={}):
         uid, title, context, query, answer, raw = line.split('\t')
         begin_answer, end_answer = '0', '1'
     else:
-        uid, title, context, query, begin_answer, end_answer, answer = line.split('\t')
+        uid, title, context, query, answer, raw_context, begin_answer, end_answer, raw_answer = line.split('\t')
+        #uid, title, context, query, begin_answer, end_answer, answer = line.split('\t')
 
     ctokens = context.split(' ')
 
