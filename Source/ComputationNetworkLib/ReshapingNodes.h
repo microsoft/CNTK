@@ -708,11 +708,11 @@ private:
     // Helper structure to store input/output views which define parts of input and output we work with.
     struct CroppedIOViews
     {
-        CroppedIOViews(CropNode* cropNode, MatrixGetter matrixGetter, TensorShape inputShapeCropped, TensorShape ouputShape) :
+        CroppedIOViews(CropNode* cropNode, MatrixGetter matrixGetter, TensorShape inputShapeCropped, TensorShape outputShape) :
             // Input view is derived from first input.
             inputViewCropped((cropNode->Input(0).get()->*matrixGetter)(), inputShapeCropped),
             // Output view corresponds to single output.
-            outputView((cropNode->*matrixGetter)(), ouputShape)
+            outputView((cropNode->*matrixGetter)(), outputShape)
         {}
 
         TensorView<ElemType> inputViewCropped;

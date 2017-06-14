@@ -1101,7 +1101,7 @@ then
     if test x$boost_path = x
     then
         echo Cannot locate Boost libraries. See
-        echo   https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#boost-library
+        echo   https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Linux#boost-library
         echo for installation instructions.
         exit 1
     else
@@ -1115,7 +1115,7 @@ then
     if test x$protobuf_path = x
     then
         echo Cannot locate Protocol Buffers library. See
-        echo   https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#protobuf
+        echo   https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Linux#protobuf
         echo for installation instructions.
         exit 1
     else
@@ -1129,7 +1129,7 @@ then
     if test x${mpi_path} = x
     then
         echo Cannot locate MPI library. See
-        echo   https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi
+        echo   https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Linux#open-mpi
         echo for installation instructions.
         exit 1
     else

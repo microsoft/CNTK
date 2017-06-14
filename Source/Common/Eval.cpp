@@ -114,7 +114,7 @@ void Eval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimension
 }
 
 // StartEvaluateMinibatchLoop - Prepare network for Evaluate() calls.
-// ouputNodeName - name of node that will be evaluated
+// outputNodeName - name of node that will be evaluated
 template <class ElemType>
 void Eval<ElemType>::StartEvaluateMinibatchLoop(const std::wstring& outputNodeName)
 {

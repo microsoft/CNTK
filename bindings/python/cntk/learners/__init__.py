@@ -3,6 +3,23 @@
 # for full license information.
 # ==============================================================================
 
+'''
+A learner tunes a set of parameters during the training process. One can use
+different learners for different sets of parameters. Currently, CNTK supports
+the following learning algorithms:
+
+- :func:`AdaDelta <adadelta>`
+- :func:`AdaGrad <adagrad>`
+- :func:`FSAdaGrad <fsadagrad>`
+- :func:`Adam <adam>`
+- :func:`MomentumSGD <momentum_sgd>`
+- :func:`Nesterov <nesterov>`
+- :func:`RMSProp <rmsprop>`
+- :func:`SGD <sgd>`
+- :func:`Learner with a customized update function <universal>`
+'''
+
+
 from enum import Enum, unique
 import warnings
 import numpy as np
@@ -33,20 +50,7 @@ class UnitType(Enum):
     '''
 
 
-__doc__ = '''
-Learner tunes a set of parameters during the training process. One can use
-different learners for different sets of parameters. Currently, CNTK supports
-the following learning algorithms:
 
-- AdaDelta
-- AdaGrad
-- FSAdaGrad
-- Adam
-- MomentumSGD
-- Nesterov
-- RMSProp
-- SGD
-'''
 
 
 def default_unit_gain_value():

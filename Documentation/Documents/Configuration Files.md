@@ -232,7 +232,7 @@ stderr=c:\cntk\log\cntk # “_mnistTrain_mnistTest.log” would be appended
 traceLevel=0 # larger values mean more output
 ```
 
-The **traceLevel** parameter is uniformly used by the code in CNTK to specify how much extra output (verbosity) is desired. The default value is 0 (zero) and specifies minimal output, the higher the number the more output can be expected. Currently 0-limited output, 1-medium ouput, 2-verbose output are the only values supported.
+The **traceLevel** parameter is uniformly used by the code in CNTK to specify how much extra output (verbosity) is desired. The default value is 0 (zero) and specifies minimal output, the higher the number the more output can be expected. Currently 0-limited output, 1-medium output, 2-verbose output are the only values supported.
 
 ### Top Level Parameters
 
