@@ -1424,6 +1424,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #endif
             auto smoothedGradientIter = smoothedGradients.begin();
             auto smoothedCountIter = smoothedCounts.begin();
+            int failFlag=0;
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++, smoothedCountIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
@@ -1440,7 +1441,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
                     auto checkMat=dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().DeepClone();
                     
-                    if (!(checkMat.InplaceExp().HasNan("TrainOneEpoch/UpdateWeights(): ")))
+                    if (failFlag==0&&!(checkMat.InplaceExp().HasNan("TrainOneEpoch/UpdateWeights(): ")))
                     {
                     UpdateWeights(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
                                   dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
@@ -1453,6 +1454,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
                         LogicError("%ls %ls operation has NaNs in functionValues after parameter update.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
+                    }
+                    else
+                    {
+                        failFlag=1; // if not update, always not update
                     }
                     node->BumpEvalTimeStamp();
                 }
