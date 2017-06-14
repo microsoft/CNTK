@@ -1336,6 +1336,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             assert(wasDataRead || numSamplesWithLabelOfNetwork == 0);
             // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
             localEpochCriterion.Add(0, numSamplesWithLabelOfNetwork);
+            if (localEpochCriterion.GetCriterion(0).IsNan())
+            {
+                LOGPRINTF(stderr, "Warning: NaN in localEpochCriterion. Just discard currently\n");
+                continue;
+            }
+            
             for (size_t i = 0; i < evaluationNodes.size(); i++)
                 localEpochEvalErrors.Add(i, numSamplesWithLabelOfNetwork);
         }
