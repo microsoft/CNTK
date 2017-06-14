@@ -37,7 +37,7 @@ namespace CNTK
 
     void DistributedLearnerBase::PrepaireZeroGradients(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& info)
     {
-        // Need to intialize gradients to 0 in case when it is an empty minibatch.
+        // Need to initialize gradients to 0 in case when it is an empty minibatch.
         for (auto& g : gradientValues)
         {
             auto weights = g.first.Value();
