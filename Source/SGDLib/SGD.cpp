@@ -1163,6 +1163,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     auto lfMMINodeNegStream = dynamic_cast<LatticeFreeMMINodeNegStream<ElemType>*>(criterionNodes[0].get());
 
     bool isFirstMinibatch = true;
+    int failFlag=0;
     for (;;)
     {
         auto profMinibatch = ProfilerTimeBegin();
@@ -1409,7 +1410,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         ProfilerTimeEnd(profGradientAgg, profilerEvtMainGradient);
         auto profWeights = ProfilerTimeBegin();
 
-        int failFlag=0;
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
@@ -1693,7 +1693,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     // hoist the accumulated criterion value from GPU side to our 'out'  variables
     // (unless we useGradientAggregation, in which case they are accumulated in the 'out' variables directly)
-    if (!useGradientAggregation)
+    if (failFlag==0 && !useGradientAggregation)
     {
         epochCriterion = localEpochCriterion.GetCriterion(0);
         for (size_t i = 0; i < epochEvalErrors.size(); i++)
@@ -1701,7 +1701,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     }
 
     // in case of model averaging, do one more final aggregation of criteria
-    if (useModelAggregation && (m_mpi->NumNodesInUse() > 1))
+    if (failFlag==0 &&useModelAggregation && (m_mpi->NumNodesInUse() > 1))
     {
         // 1. total epoch samples processed by all workers
         size_t totalEpochSamplesOfAllWorkers = totalEpochSamples;
@@ -1733,7 +1733,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         totalEpochSamples = totalEpochSamplesOfAllWorkers;
     }
 
-    if (useGradientAggregation && !evaluationNodesWhichAccumulateResult.empty())
+    if (failFlag==0 && useGradientAggregation && !evaluationNodesWhichAccumulateResult.empty())
     {
         // Each worker contains accumulated values for part of the data set, we have to aggregate accumulated values
         // and recalculate evaluation errors based on accumulators.
