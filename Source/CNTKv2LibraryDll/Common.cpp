@@ -90,14 +90,12 @@ namespace CNTK
 
             static size_t numWorkers = 1, rank = 0;
             static bool initialized = false;
-            if (MPIWrapper::GetTotalNumberOfMPINodes() != 0 && !initialized) 
+            if (MPIWrapper::GetTotalNumberOfMPINodes() > 1 && !initialized) 
             {
                 DistributedCommunicatorPtr communicator = MPICommunicator();
                 numWorkers = communicator->Workers().size();
                 rank = communicator->CurrentWorker().m_globalRank;
-
-                if (numWorkers < 1)
-                    numWorkers = 1;   
+                assert(numWorkers > 1);
             }
 
             initialized = true;

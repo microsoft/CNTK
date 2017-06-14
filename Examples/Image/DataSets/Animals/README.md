@@ -9,4 +9,4 @@ downloaded by cd to this directory, Examples/Image/DataSets/Animals and running 
 
 After running the script, you will see two folders with images (Train and Test). 
 
-The Animals dataset is for example used in the Transfer Learning example, see [here](https://github.com/Microsoft/CNTK/wiki/Build-your-own-image-classifier-using-Transfer-Learning).
+The Animals dataset is for example used in the Transfer Learning example, see [here](https://docs.microsoft.com/en-us/cognitive-toolkit/Build-your-own-image-classifier-using-Transfer-Learning).

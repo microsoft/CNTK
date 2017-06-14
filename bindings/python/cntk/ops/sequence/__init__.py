@@ -2,7 +2,9 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-
+"""
+CNTK operators that are specialized in sequences.  Calling these operators creates nodes in the CNTK computational graph.
+"""
 import numpy as np
 from cntk.internal import typemap, sanitize_input
 from cntk.internal.utils import get_data_type

@@ -148,7 +148,7 @@ public:
     virtual void GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup);
 
     // StartEvaluateMinibatchLoop - Prepare network for Evaluate() calls.
-    // ouputNodeName - name of node that will be evaluated
+    // outputNodeName - name of node that will be evaluated
     virtual void StartEvaluateMinibatchLoop(const std::wstring& outputNodeName);
 
     // Evaluate - Evaluate using the model with the given inputs and outputs
