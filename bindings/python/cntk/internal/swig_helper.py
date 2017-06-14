@@ -6,37 +6,42 @@ from functools import wraps
 from .. import cntk_py
 
 _typemap = None
+
+
 def map_if_possible(obj):
     global _typemap
     if _typemap is None:
         # We can do this only if cntk_py and the cntk classes are already
         # known, which is the case, when map_if_possible is called.
-        from cntk.ops.variables import Variable, Parameter, Constant
-        from cntk.ops.functions import Function
+        from cntk import Value, NDArrayView
+        from cntk.axis import Axis
+        from cntk.device import DeviceDescriptor
+        from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
         from cntk.learners import Learner
+        from cntk.ops.functions import Function
         from cntk.train.trainer import Trainer
         from cntk.train.training_session import TrainingSession
-        from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
-        from cntk.axis import Axis
-        from cntk.train.distributed import WorkerDescriptor, Communicator, DistributedLearner
-        from cntk import Value, NDArrayView
+        from cntk.train.distributed import WorkerDescriptor, Communicator,\
+                                           DistributedLearner
+        from cntk.variables import Variable, Parameter, Constant
         _typemap = {
-                cntk_py.Variable: Variable,
-                cntk_py.Parameter: Parameter,
-                cntk_py.Constant: Constant,
-                cntk_py.Function: Function,
-                cntk_py.Learner: Learner,
-                cntk_py.Value: Value,
-                cntk_py.NDArrayView: NDArrayView,
-                cntk_py.MinibatchSource: MinibatchSource,
-                cntk_py.Trainer: Trainer,
-                cntk_py.TrainingSession: TrainingSession,
-                cntk_py.MinibatchData: MinibatchData,
-                cntk_py.StreamConfiguration: StreamConfiguration,
                 cntk_py.Axis: Axis,
+                cntk_py.Constant: Constant,
+                cntk_py.DeviceDescriptor: DeviceDescriptor,
                 cntk_py.DistributedWorkerDescriptor: WorkerDescriptor,
                 cntk_py.DistributedCommunicator: Communicator,
-                cntk_py.DistributedLearner: DistributedLearner
+                cntk_py.DistributedLearner: DistributedLearner,
+                cntk_py.Function: Function,
+                cntk_py.Learner: Learner,
+                cntk_py.MinibatchData: MinibatchData,
+                cntk_py.MinibatchSource: MinibatchSource,
+                cntk_py.NDArrayView: NDArrayView,
+                cntk_py.Parameter: Parameter,
+                cntk_py.StreamConfiguration: StreamConfiguration,
+                cntk_py.Trainer: Trainer,
+                cntk_py.TrainingSession: TrainingSession,
+                cntk_py.Value: Value,
+                cntk_py.Variable: Variable,
                 }
 
     # Some types like NumPy arrays don't let to set the __class__
@@ -47,9 +52,10 @@ def map_if_possible(obj):
             for o in obj:
                 map_if_possible(o)
         elif isinstance(obj, dict):
-            for k,v in obj.items():
+            for k, v in obj.items():
                 map_if_possible(k)
                 map_if_possible(v)
+
 
 def typemap(f):
     '''

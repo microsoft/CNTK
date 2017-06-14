@@ -25,12 +25,12 @@ public:
         ReadSampleSize(file);
         
         if (precision != ElementType::tfloat && precision != ElementType::tdouble)
-            LogicError("Unsupported precision type %u.", precision);
+            LogicError("Unsupported precision type %u.", (unsigned int)precision);
 
         if ((m_dataType == DataType::tfloat && precision != ElementType::tfloat) ||
             (m_dataType == DataType::tdouble && precision != ElementType::tdouble))
             LogicError("Unsupported combination of the input data type %u and precision %u. "
-                "At the moment, both have to match.", m_dataType, precision);
+                "At the moment, both have to match.", (unsigned int)m_dataType, (unsigned int)precision);
 
         m_precision = precision;
     }
@@ -61,7 +61,7 @@ public:
         if (m_dataType == DataType::tdouble)
             return sizeof(double);
         
-        LogicError("Unsupported input data type %u.", m_dataType);
+        LogicError("Unsupported input data type %u.", (unsigned int)m_dataType);
     }
 
 protected:
@@ -91,7 +91,7 @@ protected:
     {
         CNTKBinaryFileHelper::ReadOrDie(&m_dataType, sizeof(m_dataType), 1, file);
         if (m_dataType> DataType::tdouble)
-            RuntimeError("Unsupported input data type %u.", m_dataType);
+            RuntimeError("Unsupported input data type %u.", (unsigned int)m_dataType);
     }
 
     void ReadSampleSize(FILE* file)

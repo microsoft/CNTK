@@ -137,7 +137,7 @@ namespace CNTK
             valuesToAggregate.push_back(info.evalCriterionValue);
             valuesToAggregate.push_back(info.trainingLossValue);
 
-            auto value = MakeSharedObject<NDArrayView>(static_cast<double>(info.numberOfSamples), NDShape{ 1 }, DeviceDescriptor::CPUDevice());
+            auto value = MakeSharedObject<NDArrayView>(static_cast<double>(info.numberOfSamples), NDShape{}, DeviceDescriptor::CPUDevice());
             valuesToAggregate.push_back(value);
 
             m_communicator->AggregateInPlace(valuesToAggregate, m_communicator->Workers());

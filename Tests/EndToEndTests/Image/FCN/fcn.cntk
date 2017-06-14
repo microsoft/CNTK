@@ -1,0 +1,330 @@
+# This configuration file describes the following workflow:
+# 1) Create and train an FCN8 model
+# 2) Convert the final FCN8 model into an FCN4 model
+# 3) Finetune the FCN4 model
+# 4) Test the final FCN4 model
+
+currentDirectory = "."
+RunDir = "$currentDirectory$"
+ConfigDir = "$RunDir$"
+ModelDir = "$RunDir$/Models"
+FcnDataDir = "$RunDir$/Data"
+
+TrainDataFile = "Train_cntk_fcn_text.txt"
+ValDataFile = "Test_cntk_fcn_text.txt"
+TestDataFile = "Test_cntk_fcn_text.txt"
+
+ClassCount = 2
+
+TrainImageWidth = 28
+TrainImageHeight = 28
+
+TestImageWidth = 28
+TestImageHeight = 28
+
+ImageChannels = 1
+
+TrainFeaturesDim = 784  # = TrainImageWidth * TrainImageHeight * ImageChannels
+TrainLabelsDim = 1568   # = TrainImageWidth * TrainImageHeight * ClassCount
+TrainIgnoreDim = 784    # = TrainImageWidth * TrainImageHeight
+
+TestFeaturesDim = 784  # = TrainImageWidth * TrainImageHeight * ImageChannels
+TestLabelsDim = 1568   # = TrainImageWidth * TrainImageHeight * ClassCount
+TestIgnoreDim = 784    # = TrainImageWidth * TrainImageHeight
+
+FeatureChannels = 16
+Epochs = 2
+MbSize = 16
+LrPerSample = 0.01
+MomentumTimeConstant = 1215
+WeightDecay = 0.00000390625
+
+precision = "float"
+deviceId = "Auto"
+parallelTrain = "true"
+traceLevel = 1
+
+command = TrainFCN8:ConvertFCN8ToFCN4:TrainFCN4:PrepareFCN4ForTest:TestFCN4
+
+numMBsToShowResult = 1
+
+TrainFCN8 = [
+    action = "train"
+    modelPath = "$ModelDir$/FCN8_train"
+    saveBestModelPerCriterion = "true"
+
+    BrainScriptNetworkBuilder = [
+        include "$ConfigDir$/shared.bs"
+
+        classCount = $ClassCount$
+        imageWidth = $TrainImageWidth$
+        imageHeight = $TrainImageHeight$
+        imageChannels = $ImageChannels$
+        featureChannels = $FeatureChannels$
+
+        # Affects computation of running statistics in BN layer.
+        bnTimeConst = 15992
+
+        # Network inputs.
+        features = ImageInput(imageWidth, imageHeight, imageChannels, imageLayout = "cudnn", tag = 'feature')
+        labels = ImageInput(imageWidth, imageHeight, classCount, imageLayout = "cudnn", tag = 'label')
+        ignoreMask = ImageInput(imageWidth, imageHeight, 1, imageLayout = "cudnn", tag = 'feature')
+
+        # Shallow (FCN4) features
+        featuresFCN4 = Sequential(
+            ConvBNReLULayer{featureChannels, /*kernel*/ (7:7), /*stride*/ (2:2), bnTimeConst} :
+            MaxPoolingLayer{(3:3), stride = 2, pad = true})(features)
+
+        # Deep (FCN8) features.
+        featuresFCN8 = Sequential(
+            ResNetBasicInc{featureChannels, /*stride*/ (2:2), bnTimeConst} :
+            ResNetBasic{featureChannels, bnTimeConst})(featuresFCN4)
+
+        # Prediction from deep features.
+        predictionFCN8 = ConvLayer1x1MSRAInit(featuresFCN8, featureChannels, classCount, 1, 1)
+
+        # Upsample 8x.
+        upsampledFCN8 = BilinearUpsamplingLayer{classCount, 16, 8}(predictionFCN8)
+
+        # Crop output of deconvolution to match spatial dimensions of labels.
+        out = CropAutomaticGivenAncestors(upsampledFCN8, labels, features, labels)
+
+        # Loss: cross entropy normalized by number of valid pixels.
+        CE = CrossEntropyWithSoftmaxNDNormalized(labels, out, ignoreMask, axis = 3, tag = 'criterion')
+
+        # Error metrics: pixelwise error and mean IOU error.
+        pixelwiseError = PixelError(labels, out, ignoreMask)
+        miouError = MeanIOUError(labels, out, ignoreMask, classCount = classCount)
+
+        # Define special purpose nodes.
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (CE)
+        evaluationNodes = (pixelwiseError:miouError)
+        outputNodes     = (out)
+    ]
+
+    SGD = [
+        # epochSize is taken to be the whole dataset specified in the "reader" section below.
+        minibatchSize = $MbSize$
+        learningRatesPerSample = $LrPerSample$
+        momentumAsTimeConstant = $MomentumTimeConstant$
+        maxEpochs = $Epochs$
+        gradUpdateType = "None"
+        L2RegWeight = $WeightDecay$
+        dropoutRate = 0
+        minLearningRatePerSample = 1e-15
+
+        disableWkInBatchNormal = "true" # Disable weight decay in batch normalization.
+
+        ParallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = "true"
+            parallelizationStartEpoch = 1
+            DataParallelSGD = [
+                gradientBits = 32
+            ]
+        ]
+    ]
+
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$FcnDataDir$/$TrainDataFile$"
+        input = [
+            features = [
+                dim = $TrainFeaturesDim$
+                format = "dense"
+            ]
+            labels = [
+                dim = $TrainLabelsDim$
+                format = "dense"
+            ]
+            ignoreMask = [
+                dim = $TrainIgnoreDim$
+                format = "dense"
+            ]
+        ]
+    ]
+
+    cvReader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$FcnDataDir$/$ValDataFile$"
+        input = [
+            features = [
+                dim = $TestFeaturesDim$
+                format = "dense"
+            ]
+            labels = [
+                dim = $TestLabelsDim$
+                format = "dense"
+            ]
+            ignoreMask = [
+                dim = $TestIgnoreDim$
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+ConvertFCN8ToFCN4 = [
+    # Here we remove FCN8-specific nodes - 8x upsampling and associated crop.
+    action = "edit"
+    CurModel = "$ModelDir$/FCN8_train"
+    NewModel = "$ModelDir$/FCN4_initial"
+    editPath = "$ConfigDir$/fcn8_to_fcn4.mel"
+]
+
+TrainFCN4 = [
+    action = "train"
+    modelPath = "$ModelDir$/FCN4_train"
+    saveBestModelPerCriterion = "true"
+
+    BrainScriptNetworkBuilder = [
+        include "$ConfigDir$/shared.bs"
+
+        classCount = $ClassCount$
+        featureChannels = $FeatureChannels$
+
+        # Load existing FCN8 model.
+        inModel = BS.Network.Load("$ModelDir$/FCN4_initial")
+
+        # Prediction from FCN4 features.
+        predictionFCN4 = ConvLayer1x1MSRAInit(inModel.featuresFCN4, featureChannels, classCount, 1, 1)
+
+        # 2x upsampling of 1/8x output.
+        upsampledFCN8 = LearnableUpsamplingLayer{classCount, classCount, 4, 2}(inModel.predictionFCN8)
+        
+        # Cropping to 1/4x resolution.
+        cropFCN8 = CropAutomatic(upsampledFCN8, predictionFCN4)
+        
+        # Fusing 1/8x and 1/4x predictions.
+        fusionFCN4 = Plus(cropFCN8, predictionFCN4)
+        
+        # 4x upsampling of 1/4x predictions.
+        upsampledFCN4 = BilinearUpsamplingLayer{classCount, 8, 4}(fusionFCN4)
+
+        # Cropping to resolution of labels.
+        out = CropAutomaticGivenAncestors(upsampledFCN4, inModel.labels, inModel.features, inModel.labels)
+        
+        # Loss: cross entropy normalized by number of valid pixels.
+        CE = CrossEntropyWithSoftmaxNDNormalized(inModel.labels, out, inModel.ignoreMask, axis = 3, tag = 'criterion')
+        
+        # Error metrics: pixelwise error and mean IOU error.
+        pixelwiseError = PixelError(inModel.labels, out, inModel.ignoreMask)
+        miouError = MeanIOUError(inModel.labels, out, inModel.ignoreMask, classCount = classCount)
+        
+        # Define special purpose nodes.
+        featureNodes    = (inModel.features)
+        labelNodes      = (inModel.labels)
+        criterionNodes  = (CE)
+        evaluationNodes = (pixelwiseError:miouError)
+        outputNodes     = (out)
+    ]
+
+    SGD = [
+        # epochSize is taken to be the whole dataset specified in the "reader" section below.
+        minibatchSize = $MbSize$
+        learningRatesPerSample = $LrPerSample$
+        momentumAsTimeConstant= $MomentumTimeConstant$
+        maxEpochs = $Epochs$
+        gradUpdateType = "None"
+        L2RegWeight = $WeightDecay$
+        dropoutRate = 0
+        minLearningRatePerSample = 1e-15
+
+        disableWkInBatchNormal = "true" # Disable weight decay in batch normalization.
+
+        ParallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = "true"
+            parallelizationStartEpoch = 1
+            DataParallelSGD = [
+                gradientBits = 32
+            ]
+        ]
+    ]
+
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$FcnDataDir$/$TrainDataFile$"
+        input = [
+            features = [
+                dim = $TrainFeaturesDim$
+                format = "dense"
+            ]
+            labels = [
+                dim = $TrainLabelsDim$
+                format = "dense"
+            ]
+            ignoreMask = [
+                dim = $TrainIgnoreDim$
+                format = "dense"
+            ]
+        ]
+    ]
+
+    cvReader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$FcnDataDir$/$ValDataFile$"
+        input = [
+            features = [
+                dim = $TestFeaturesDim$
+                format = "dense"
+            ]
+            labels = [
+                dim = $TestLabelsDim$
+                format = "dense"
+            ]
+            ignoreMask = [
+                dim = $TestIgnoreDim$
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+PrepareFCN4ForTest = [
+    # Change input size.
+    action = "edit"
+    CurModel = "$ModelDir$/FCN4_train"
+    NewModel = "$ModelDir$/FCN4_test"
+    editPath = "$ConfigDir$/prepare_for_test.mel"
+    TestImageHeight = $TestImageHeight$
+    TestImageWidth = $TestImageWidth$
+    ImageChannels = $ImageChannels$
+    ClassCount = $ClassCount$
+]
+
+TestFCN4 = [
+    action = test
+    # epochSize should NOT be used in test for error reporting to work.
+    numMBsToShowResult = 20
+    modelPath = "$ModelDir$/FCN4_test"
+    minibatchSize = $MbSize$
+    distributedMBReading = "true" # Has to be explicitly specified for error reporting to work.
+
+    BrainScriptNetworkBuilder = [
+        m = BS.Network.Load("$ModelDir$/FCN4_test")
+        # For some reason, CNTK cannot find evaluation nodes, so we specify them here.
+        evaluationNodes = (m.pixelwiseError:m.miouError)
+    ]
+
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$FcnDataDir$/$TestDataFile$"
+        input = [
+            features = [
+                dim = $TestFeaturesDim$
+                format = "dense"
+            ]
+            labels = [
+                dim = $TestLabelsDim$
+                format = "dense"
+            ]
+            ignoreMask = [
+                dim = $TestIgnoreDim$
+                format = "dense"
+            ]
+        ]
+    ]
+]

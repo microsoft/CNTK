@@ -5,11 +5,14 @@ command = TrainNetwork:BNStatistics:Eval
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = "." ; configDir = "$RootDir$" ; dataDir = "$RootDir$" ;
-outputDir = "$rootDir$/Output" ;
+rootDir = "."
+configDir = "$RootDir$"
+dataDir = "$RootDir$"
+outputDir = "$RootDir$/Output"
+modelDir = "$OutputDir$/Models"
 
-meanDir = "$rootDir$/../../../DataSets/ImageNet"
-modelPath = "$outputDir$/Models/ResNet_152"
+meanDir = "$dataDir$"
+modelPath = "$modelDir$/ResNet_152"
 stderr = "$outputDir$/ResNet_152_BS_out"
 
 parallelTrain = true
@@ -25,11 +28,11 @@ TrainNetwork = {
 
         cMap        = 64:128:256:512:1024:2048  
         numLayers   = 2:7:35:2
-        bnTimeConst = 0
+        bnTimeConst = 4096
 
         # stride in BottleneckInc
-        stride1x1 = (2:2)
-        stride3x3 = (1:1)
+        stride1x1 = (1:1)
+        stride3x3 = (2:2)
 
         model = Sequential(
             # conv1 and max pooling
@@ -56,7 +59,7 @@ TrainNetwork = {
             AveragePoolingLayer {(7: 7), stride = 1} :
 
             # FC
-            LinearLayer {labelDim, init= 'uniform'}
+            LinearLayer {labelDim, init = 'uniform'}
         )
 
         # inputs
@@ -64,19 +67,19 @@ TrainNetwork = {
         labels      = Input {labelDim}
 
         # apply model to features
-        ol          = model (features)
+        z           = model (features)
 
         # loss and error computation
-        ce          = CrossEntropyWithSoftmax   (labels, ol)
-        errs        = ClassificationError       (labels, ol)
-        top5Errs    = ClassificationError       (labels, ol, topN = 5)
+        ce          = CrossEntropyWithSoftmax   (labels, z)
+        errs        = ClassificationError       (labels, z)
+        top5Errs    = ClassificationError       (labels, z, topN = 5)
 
         # declare special nodes
         featureNodes    = (features)
         labelNodes      = (labels)
         criterionNodes  = (ce)
         evaluationNodes = (errs) # top5Errs only used in Eval
-        outputNodes     = (ol)
+        outputNodes     = (z)
     }
 
     SGD = {
@@ -88,7 +91,7 @@ TrainNetwork = {
         gradUpdateType = "None"
         L2RegWeight = 0.0001
         dropoutRate = 0
-        numMBsToShowResult = 500
+        numMBsToShowResult = 100
 
         disableRegInBatchNormalization = true
 
@@ -139,7 +142,8 @@ TrainNetwork = {
     }
 }
 
-
+# Re-statistics the mean and variance of batch normalization layers while other parameters frozen after training
+# more details: https://github.com/Microsoft/CNTK/wiki/Post-Batch-Normalization-Statistics#post-batch-normalization-statistics
 BNStatistics = {
     action = "bnstat"
     modelPath = "$modelPath$"

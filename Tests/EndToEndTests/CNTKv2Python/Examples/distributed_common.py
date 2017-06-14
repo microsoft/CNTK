@@ -13,7 +13,6 @@ import re
 import pytest
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
-from cntk.device import set_default_device
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 example_dir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python")
@@ -23,10 +22,7 @@ sys.path.append(example_dir)
 TOLERANCE_ABSOLUTE = 2E-1
 TIMEOUT_SECONDS = 300
 
-def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error, match_exactly=True, per_minibatch_tolerance=TOLERANCE_ABSOLUTE, error_tolerance=TOLERANCE_ABSOLUTE):
-    if cntk_device(device_id).type() != DeviceKind_GPU:
-       pytest.skip('test only runs on GPU')
-
+def mpiexec_execute(script, mpiexec_params, params):
     cmd = ["mpiexec"] + mpiexec_params + ["python", script] + params
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     if sys.version_info[0] < 3:
@@ -38,6 +34,12 @@ def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error,
             os.kill(p.pid, signal.CTRL_C_EVENT)
             raise RuntimeError('Timeout in mpiexec, possibly hang')
     str_out = out.decode(sys.getdefaultencoding())
+    return str_out
+
+def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error, match_exactly=True, per_minibatch_tolerance=TOLERANCE_ABSOLUTE, error_tolerance=TOLERANCE_ABSOLUTE):
+    if cntk_device(device_id).type() != DeviceKind_GPU:
+       pytest.skip('test only runs on GPU')
+    str_out = mpiexec_execute(script, mpiexec_params, params)
     results = re.findall("Finished Evaluation \[.+?\]: Minibatch\[.+?\]: metric = (.+?)%", str_out)
 
     assert len(results) == 2
@@ -45,6 +47,7 @@ def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error,
     if match_exactly:
         assert results[0] == results[1]
     else:
-        assert np.allclose(float(results[0]), float(results[1]), atol=per_minibatch_tolerance)
-
+        if abs((float(results[0]) - float(results[1]))) > per_minibatch_tolerance:
+            print(str_out)
+            assert False
     assert np.allclose(float(results[0])/100, expected_test_error, atol=error_tolerance)

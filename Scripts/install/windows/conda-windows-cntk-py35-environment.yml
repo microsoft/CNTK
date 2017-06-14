@@ -1,6 +1,11 @@
 name: cntk-py35
+channels:
+- defaults
+# For imageio:
+- conda-forge
 dependencies:
 - h5py=2.6.0=np111py35_2
+- imageio=2.1.1=py35_0
 - jupyter=1.0.0=py35_3
 - matplotlib=1.5.3=np111py35_0
 - numpy=1.11.2=py35_0
@@ -16,9 +21,10 @@ dependencies:
 - six=1.10.0=py35_0
 - wheel=0.29.0=py35_0
 - pip:
+  - psutil==5.2.2
   - pytest==3.0.3
-  - sphinx==1.4.8
-  - sphinx-rtd-theme==0.1.9
+  - sphinx==1.5.4
+  - sphinx-rtd-theme==0.2.4
   - twine==1.8.1
   - gym==0.5.2
   - pydot-ng==1.0.0

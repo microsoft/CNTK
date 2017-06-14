@@ -6,9 +6,8 @@
 import numpy
 import pytest
 
-from cntk.ops import *
-from cntk.utils import *
-from cntk import cntk_py
+from cntk import cntk_py, variables, placeholder, constant, times, functions
+from ..swig_helper import typemap
 
 def _param():
     return cntk_py.Parameter((1,2), cntk_py.DataType_Float, 5.0)
@@ -62,7 +61,7 @@ def test_typemap():
         left_val = [[10,2]]
         right_val = [[2],[3]]
 
-        p = placeholder_variable(shape=(1,2))
+        p = placeholder(shape=(1,2))
         op = times(p, right_val)
         c = constant(left_val)
 

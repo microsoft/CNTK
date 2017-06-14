@@ -11,13 +11,12 @@ import argparse
 import numpy as np
 import cntk
 import _cntk_py
-from cntk.distributed import *
+from cntk.train.distributed import *
 from cntk.io import MinibatchSource, HTKFeatureDeserializer, HTKMLFDeserializer, StreamDef, StreamDefs
-from cntk.layers import Recurrence, Dense, LSTM
-from cntk.learner import *
-from cntk.models import Sequential, For
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
-from cntk.training_session import *
+from cntk.layers import Recurrence, Dense, LSTM, Sequential, For
+from cntk.learners import *
+from cntk import cross_entropy_with_softmax, classification_error, sequence
+from cntk.train.training_session import *
 
 # default Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -40,12 +39,12 @@ def create_mb_source(features_file, labels_file, label_mapping_filem, total_numb
         awesome_labels = StreamDef(shape=num_classes, mlf=labels_file)))
 
     # Enabling BPTT with truncated_length > 0
-    return MinibatchSource([fd,ld], truncation_length=250, epoch_size=total_number_of_samples)
+    return MinibatchSource([fd,ld], truncation_length=250, max_samples=total_number_of_samples)
 
 def create_recurrent_network():
     # Input variables denoting the features and label data
-    features = input_variable(((2*context+1)*feature_dim))
-    labels = input_variable((num_classes))
+    features = sequence.input_variable(((2*context+1)*feature_dim))
+    labels = sequence.input_variable((num_classes))
 
     # create network
     model = Sequential([For(range(3), lambda : Recurrence(LSTM(256))),
@@ -70,11 +69,10 @@ def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_
 
     lr = [0.001]
 
-    local_learner = adam_sgd(network['output'].parameters,
-                    lr=learning_rate_schedule(lr, UnitType.sample, epoch_size),
-                    momentum=momentum_as_time_constant_schedule(1000),
-                    low_memory=True,
-                    gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
+    local_learner = fsadagrad(network['output'].parameters,
+                              lr=learning_rate_schedule(lr, UnitType.sample, epoch_size),
+                              momentum=momentum_as_time_constant_schedule(1000),
+                              gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
     if block_size != None:
         parameter_learner = block_momentum_distributed_learner(local_learner, block_size=block_size)
@@ -94,7 +92,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
     training_session(
         trainer=trainer,
         mb_source = train_source,
-        var_to_stream = input_map,
+        model_inputs_to_streams = input_map,
         mb_size = minibatch_size,
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(frequency = epoch_size,
@@ -106,11 +104,11 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 def htk_lstm_truncated(features_file, labels_file, label_mapping_file, minibatch_size=64, epoch_size=640000, num_quantization_bits=32,
                             block_size=3200, warm_up=0, max_epochs=5, num_mbs_per_log=None, gen_heartbeat=False,log_to_file=None, tensorboard_logdir=None):
 
-    _cntk_py.set_computation_network_trace_level(0)
+    cntk.debugging.set_computation_network_trace_level(0)
 
     network = create_recurrent_network()
 
-    progress_writers = [cntk.utils.ProgressPrinter(
+    progress_writers = [cntk.logging.ProgressPrinter(
         freq=num_mbs_per_log,
         tag='Training',
         log_to_file=log_to_file,
@@ -119,7 +117,7 @@ def htk_lstm_truncated(features_file, labels_file, label_mapping_file, minibatch
         num_epochs=max_epochs)]
 
     if tensorboard_logdir is not None:
-        progress_writers.append(cntk.utils.TensorBoardProgressWriter(
+        progress_writers.append(cntk.logging.TensorBoardProgressWriter(
         freq=num_mbs_per_log,
             log_dir=tensorboard_logdir,
         rank=Communicator.rank(),
@@ -154,7 +152,7 @@ if __name__=='__main__':
     if args['logdir'] is not None:
         log_dir = args['logdir']
     if args['device'] is not None:
-        cntk.device.set_default_device(cntk.device.gpu(args['device']))
+        cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
 
     data_path = args['datadir']
 
@@ -181,4 +179,5 @@ if __name__=='__main__':
                                 tensorboard_logdir=args['tensorboard_logdir'])
     finally:
         os.chdir(abs_path)
-        Communicator.finalize()
+    # Must call MPI finalize when process exit without exceptions
+    Communicator.finalize()

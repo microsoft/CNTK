@@ -10,7 +10,7 @@ ConfigDir = "$RootDir$"
 DataDir = "$ParentDir$/Data"
 OutputDir = "$ParentDir$/Output"
 ModelDir = "$OutputDir$/Models"
-MeanDir = "$ConfigDir$"
+MeanDir = "$DataDir$"
 
 stderr = "$OutputDir$/BN-Inception"
 

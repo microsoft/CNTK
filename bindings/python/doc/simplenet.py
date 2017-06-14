@@ -1,8 +1,8 @@
 from __future__ import print_function
 import numpy as np
 import cntk as C
-from cntk.learner import sgd, learning_rate_schedule, UnitType
-from cntk.utils import ProgressPrinter
+from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk.logging import ProgressPrinter
 from cntk.layers import Dense, Sequential
 
 def generate_random_data(sample_size, feature_dim, num_classes):

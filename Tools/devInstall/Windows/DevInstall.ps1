@@ -37,7 +37,7 @@
 
   .PARAMETER PyVersion
  This is an optional parameter and can be used to specify the Python version used in the CNTK Python environment.
- Supported values for this parameter are 27, 34, or 35. The default values is 35 (for a CNTK Python 35 environment).
+ Supported values for this parameter are 27, 34, 35, or 36. The default values is 35 (for a CNTK Python 35 environment).
 
   .PARAMETER PyEnvironmentName
  This optional parameter allows to specify the name of the environment that will be created during the installation process.
@@ -66,14 +66,14 @@
 
 [CmdletBinding()]
 Param(
-    [parameter(Mandatory=$false)] [switch] $Execute = $true,
-    [parameter(Mandatory=$false)] [string] $localCache = "c:\installCacheCntk",
-    [parameter(Mandatory=$false)] [string] $InstallLocation = "c:\local",
-    [parameter(Mandatory=$false)] [string] $AnacondaBasePath,
-    [parameter(Mandatory=$false)] [switch] $NoConfirm,
-    [parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [ValidateSet("27", "34", "35")] [string] $PyVersion = "35",
-    [parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [string] $PyEnvironmentName = "",
-    [parameter(Mandatory=$true, ParameterSetName = "PythonNoEnvironment")] [switch] $NoPythonEnvironment)
+    [Parameter(Mandatory=$false)] [switch] $Execute = $true,
+    [Parameter(Mandatory=$false)] [string] $localCache = "c:\installCacheCntk",
+    [Parameter(Mandatory=$false)] [string] $InstallLocation = "c:\local",
+    [Parameter(Mandatory=$false)] [string] $AnacondaBasePath,
+    [Parameter(Mandatory=$false)] [switch] $NoConfirm,
+    [Parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [ValidateSet("27", "34", "35", "36")] [string] $PyVersion = "35",
+    [Parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [string] $PyEnvironmentName = "",
+    [Parameter(Mandatory=$true, ParameterSetName = "PythonNoEnvironment")] [switch] $NoPythonEnvironment)
     
 $roboCopyCmd = "robocopy.exe"
 

@@ -1,0 +1,94 @@
+precision = "double"
+command = speechTrain
+deviceId = $DeviceId$
+
+parallelTrain = true
+
+speechTrain = [
+    action = "train"
+    modelPath = "$RunDir$/models/cntkSpeech.dnn"
+    deviceId = $DeviceId$
+    traceLevel = 1
+
+    SimpleNetworkBuilder = [
+        layerSizes = 363:512:512:132
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ClassificationError"
+        layerTypes = "Sigmoid"
+        initValueScale = 1.0
+        applyMeanVarNorm = true
+        uniformInit = true
+        needPrior = true
+    ]
+
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 64:256:1024
+        learningRatesPerMB = 1.0:0.5:0.1
+        numMBsToShowResult = 10
+        momentumPerMB = 0.9:0.656119
+        dropoutRate = 0.0
+        maxEpochs = 15
+        keepCheckPointFiles = true
+        clippingThresholdPerSample = 1#INF
+
+        ParallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = true
+            DataParallelSGD = [
+                gradientBits = 64
+            ]
+        ]
+
+        AutoAdjust = [
+            reduceLearnRateIfImproveLessThan = 0
+            loadBestModel = true
+            increaseLearnRateIfImproveMoreThan = 1000000000
+            learnRateDecreaseFactor = 0.5
+            learnRateIncreaseFactor = 1.382
+            autoAdjustLR = "adjustAfterEpoch"
+        ]
+    ]
+    reader = [
+        readerType = "HTKDeserializers"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        useMersenneTwisterRand=true
+
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "glob_0000.scp"
+        ]
+    
+        labels = [
+            mlfFile = "$DataDir$/glob_0000.mlf"
+            labelMappingFile = "$DataDir$/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+	cvreader = [
+        readerType = "HTKDeserializers"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        useMersenneTwisterRand=true
+
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "glob_0000.cv.scp"
+        ]
+    
+        labels = [
+            mlfFile = "$DataDir$/glob_0000.mlf"
+            labelMappingFile = "$DataDir$/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+]

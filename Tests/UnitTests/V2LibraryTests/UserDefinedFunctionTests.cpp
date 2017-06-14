@@ -161,8 +161,9 @@ void TestTimesAndPlus(size_t inputDim,
                       size_t numSamples,
                       const DeviceDescriptor& device,
                       size_t numIterations,
-                      bool usePreAllocatedOutputs,
-                      bool outputOnSpecifiedDevice)
+                      bool usePreAllocatedOutputs,                      
+                      bool outputOnSpecifiedDevice,
+                      bool useUserDefinedPlus)
 {
     auto timesParamName = L"timesParameters";
     auto plusParamName = L"plusParameters";
@@ -171,7 +172,14 @@ void TestTimesAndPlus(size_t inputDim,
 
     auto inputVarName = L"input";
     auto inputVar = InputVariable({ inputDim }, AsDataType<ElementType>(), inputVarName);
-    auto timesAndPlusFunc = Plus(plusParam, UserDefinedTimesOrPlusFunction::Create(timesParam, inputVar, /* isTimes = */ true));
+    FunctionPtr timesAndPlusFunc;
+    if (useUserDefinedPlus)
+    {
+        auto timesFunc = UserDefinedTimesOrPlusFunction::Create(timesParam, inputVar, /* isTimes = */ true);
+        timesAndPlusFunc = AsComposite(UserDefinedTimesOrPlusFunction::Create(plusParam, timesFunc, /* isTimes = */ false));
+    }
+    else
+        timesAndPlusFunc = Plus(plusParam, UserDefinedTimesOrPlusFunction::Create(timesParam, inputVar, /* isTimes = */ true));
 
     srand(1);
     for (size_t iterIdx = 0; iterIdx < numIterations; ++iterIdx)
@@ -381,15 +389,15 @@ BOOST_AUTO_TEST_CASE(DuplicateVariablesInGPU)
 BOOST_AUTO_TEST_CASE(TimesAndPlusInCPU)
 {
     if (ShouldRunOnCpu())
-        TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true);
+        TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true, true);
 }
 
 BOOST_AUTO_TEST_CASE(TimesAndPlusInGPU)
 {
     if (ShouldRunOnGpu())
     {
-        TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false);
-        TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false);
+        TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false, false);
+        TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false, true);
     }
 }
 

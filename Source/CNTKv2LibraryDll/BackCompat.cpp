@@ -23,6 +23,7 @@
 #include "PreComputeNodes.h"
 #include "DeprecatedNodes.h"
 #include "SpecialPurposeNodes.h"
+#include "SequenceReshapeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -137,6 +138,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Negate;
                 else if (node->OperationName() == OperationNameOf(SigmoidNode))
                     opType = PrimitiveOpType::Sigmoid;
+                else if (node->OperationName() == OperationNameOf(StableSigmoidNode))
+                    opType = PrimitiveOpType::StableSigmoid;
                 else if (node->OperationName() == OperationNameOf(TanhNode))
                     opType = PrimitiveOpType::Tanh;
                 else if (node->OperationName() == OperationNameOf(CosineNode))
@@ -184,10 +187,22 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(SliceNode))
                 {
                     auto sliceNode = node->As<SliceNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsAxis(sliceNode->Axis());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBeginIndex] = (int)sliceNode->BeginIndex();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEndIndex] = (int)sliceNode->EndIndex();
-
+                    auto axis = sliceNode->Axis(); 
+                    auto beginIndex = sliceNode->BeginIndex(); 
+                    auto endIndex = sliceNode->EndIndex(); 
+                    assert(axis.size() > 0 && axis.size() == beginIndex.size() && axis.size() == endIndex.size());
+                    if (axis.size() == 1)
+                    {
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsAxis(axis[0]);
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBeginIndex] = beginIndex[0];
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEndIndex] = endIndex[0];
+                    }
+                    else
+                    {
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(AsAxis(axis));
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBeginIndexVec] = AsDictionaryValueVector(beginIndex);
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEndIndexVec] = AsDictionaryValueVector(endIndex);
+                    }
                     opType = PrimitiveOpType::Slice;
                 }
                 else if (node->OperationName() == OperationNameOf(RandomSampleNode))
@@ -385,6 +400,7 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(poolingNode->LowerPad());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(poolingNode->UpperPad());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameCeilOutDim] = poolingNode->CeilOutDim();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameIncludePad] = poolingNode->PoolIncludePad();
 
                     opType = PrimitiveOpType::Pooling;
                 }
@@ -514,11 +530,31 @@ namespace CNTK
             }
         };
 
+        static const char legacyMarker[] = { 0x42, 0x00, 0x43, 0x00, 0x4e, 0x00, 0x00, 0x00 }; // L"BCN"
+
+        bool IsLegacyModel(std::fstream& stream)
+        {
+            static const auto markerSize = sizeof(legacyMarker);
+            char buffer[markerSize];
+            const auto position = stream.tellg();
+            stream.read(buffer, markerSize);
+            stream.seekg(position);
+            return IsLegacyModel(buffer, markerSize);
+        }
+
+        bool IsLegacyModel(const char *buffer, size_t bufferSize)
+        {
+            static const auto markerSize = sizeof(legacyMarker);
+            if (bufferSize < markerSize)
+                return false;
+            return (strncmp(legacyMarker, buffer, markerSize) == 0);
+        }
+
         FunctionPtr LoadLegacyModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
         {
             ComputationNetworkPtr net = make_shared<ComputationNetwork>(AsCNTKImplDeviceId(computeDevice));
             net->SetTraceLevel(Internal::GetComputationNetworkTraceLevel());
-            net->SetTrackGapNans(Internal::GetComputationNetworkTrackGapNans());
+            net->SetTrackGapNans(GetCheckedMode());
 
             auto dataType = DetectLegacyModelDataType(modelFile);
             switch (dataType)
@@ -577,8 +613,15 @@ namespace CNTK
             if (compositeFunction == nullptr)
                 InvalidArgument("Primitive (i.e. non-composite) Function '%S' instance cannot be saved.", rootFunction->AsString().c_str());
 
-            ComputationNetworkPtr computationNetwork;
-            DataType dataType = rootFunction->Outputs()[0].GetDataType();
+            auto networkInputs = compositeFunction->Inputs();
+            for (const auto& input : networkInputs)
+            {
+                if (input.Shape().HasUnboundDimension())
+                    InvalidArgument("Function '%S': Cannot save as legacy format, a model having inputs with free or inferred static axes.", compositeFunction->AsString().c_str());
+            }
+
+            compositeFunction->UpdateInternalState();
+
             DeviceDescriptor device = DeviceDescriptor::CPUDevice();
             if (compositeFunction->m_computationNetwork == nullptr)
             {
@@ -589,13 +632,20 @@ namespace CNTK
             else
                 device = AsDeviceDescriptor(compositeFunction->m_computationNetwork->GetDeviceId());
 
+            // We create a fresh computation network for the compositeFunction for the save since we want the underlying
+            // computation network to have mangled names for the ComputationNodes such that when the V1 model is deserialized,
+            // we get back the original Uid and Names for the variables in the V2 Function graph.
+            ComputationNetworkPtr computationNetwork;
+            std::unordered_map<Variable, ComputationNodeBasePtr> dummyVariableToNodeMap;
+            DataType dataType = rootFunction->Outputs()[0].GetDataType();
             switch (dataType)
             {
             case DataType::Float:
-                computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {}, {}, {}, false);
+                std::tie(computationNetwork, dummyVariableToNodeMap) = CompositeFunction::CreateComputationNetwork<float>(rootFunction, device, {}, {}, {}, /*useMangledNamesForComputationNodes =*/ true);
                 break;
             case DataType::Double:
-                computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {}, {}, {}, false);
+                std::tie(computationNetwork, dummyVariableToNodeMap) = CompositeFunction::CreateComputationNetwork<double>(rootFunction, device, {}, {}, {}, /*useMangledNamesForComputationNodes =*/ true);
+
                 break;
             default:
                 LogicError("SaveAsLegacyModel: Function '%S' has unknown DataType %s.", rootFunction->AsString().c_str(), DataTypeName(dataType));

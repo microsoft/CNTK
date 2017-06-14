@@ -377,6 +377,8 @@ public:
         InitAsNoSlice();
     }
 
+    inline static TensorShape Scalar(bool isV2Library) { return isV2Library ? TensorShape() : TensorShape(1); }
+
     // boilerplate
     bool operator==(const TensorShape& other) const { return m_dims == other.m_dims; }
     bool operator!=(const TensorShape& other) const { return !operator==(other); } // duh!
@@ -411,12 +413,16 @@ public:
     {
         // format: uint32_t n, dim[0], dim[1], ..., dim[n-1]
         // We are also able to read (but not write) an older format, which stores 3-dimensional tensors as size_t W, H, C
-        uint32_t rank, dim0;
-        fstream >> rank >> dim0;
+        uint32_t rank;
+        uint32_t dim0 = 0;
+        fstream >> rank;
+        if (rank > 0)
+            fstream >> dim0;
         if (!acceptLegacyFormat || dim0 != 0) // heuristic to detect the old format. Old format stores a size_t, i.e. the second uint32_t is 0 (no dimensions are > 4G)
         {
             m_dims.resize(rank);
-            m_dims[0] = dim0;
+            if (rank > 0)
+                m_dims[0] = dim0;
             for (size_t i = 1; i < rank; i++)
             {
                 fstream >> dim0;
@@ -444,7 +450,7 @@ public:
     size_t GetNumElements() const
     {
         if (m_dims.empty())
-            return 0;
+            return 1;
         size_t res = 1;
         for (auto& dim : m_dims)
             res *= dim;
@@ -655,6 +661,7 @@ public:
             NarrowTo(k, (size_t)bounds.first[k], (size_t)bounds.second[k]);
         return *this;
     }
+
     // swap two existing dimensions (implements transposition)
     // This yields the same tensor but index positions are exchanged.
     // This tensor is now no longer stored as column-major.
@@ -664,6 +671,20 @@ public:
             return;
         std::swap(m_dims[i],    m_dims[j]);
         std::swap(m_strides[i], m_strides[j]);
+    }
+
+    // permute existing dimensions (implements generalized transposition)
+    // This tensor is now no longer stored as column-major.
+    void PermuteDimsInPlace(const std::vector<size_t>& permutation)
+    {
+        auto m_dims_copy = m_dims;
+        auto m_strides_copy = m_strides;
+        auto size = permutation.size();
+        for (auto i = 0; i < size; ++i) 
+        {
+            m_dims[i] = m_dims_copy[permutation[i]];
+            m_strides[i] = m_strides_copy[permutation[i]];
+        }
     }
 
     // Flatten a tensor shape into a 2D tensor, where splitPoint is the first index to go into the second dimension
@@ -752,7 +773,7 @@ private:
         m_strides.resize(m_dims.size());
         for (size_t k = 0; k < m_dims.size(); k++)
             m_strides[k] = k > 0 ? m_strides[k - 1] * (ptrdiff_t) m_dims[k - 1] : 1;
-        m_allocation = m_dims.empty() ? 0 : m_dims.back() * (size_t) m_strides.back(); // TODO: Or should an empty shape mean it's a scalar?
+        m_allocation = m_dims.empty() ? 1 : m_dims.back() * (size_t) m_strides.back(); // TODO: Or should an empty shape mean it's a scalar?
     }
 
 private:

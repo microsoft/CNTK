@@ -12,7 +12,7 @@ and have an additional pair of ``()`` to pass construction parameters
 or attributes.
 
 For example, this is the network description for a simple 1-hidden layer
-model using the :class:`~cntk.layers.Dense` layer:
+model using the :func:`~cntk.layers.layers.Dense` layer:
 
 ::
 
@@ -91,7 +91,7 @@ The following options can be overridden with the ``with`` statement:
     - ``initial_state`` (default: ``None``): initial state to use in ``Recurrence()`` :ref:`recurrence`
     - ``use_peepholes`` (default: ``False``): use peephole connections in ``LSTM()`` :ref:`lstm`
 
-The second for allows to set default options on a
+The second form allows to set default options on a
 per-layer type. This is, for example, valuable for the ``pad``
 parameter which enables padding in convolution and pooling, but is not
 always set to the same for these two layer types.
@@ -197,7 +197,7 @@ layer you need is not available, you can always write it yourself or
 write the formula directly as a CNTK expression.
 
 The Python library described here is the equivalent of BrainScript's
-`Layers Library <https://github.com/Microsoft/CNTK/wiki/Layers-Reference>`__.
+:cntkwiki:`Layers Library <BrainScript-Layers-Reference>`.
 
 .. _dense:
 
@@ -225,7 +225,7 @@ Parameters
 -  ``map_rank``: if given, the number of leading dimensions that are not
    transformed by ``Dense()`` (``input_rank`` must not be given)
 -  ``init`` (default: ``glorot_uniform()``): initializer descriptor for
-   the weights. See `here <cntk.html#module-cntk.initializer>`_
+   the weights. See :mod:`cntk.initializer`
    for a full list of random-initialization options.
 -  ``bias``: if ``False``, do not include a bias parameter
 -  ``init_bias`` (default: ``0``): initializer for the bias
@@ -270,7 +270,7 @@ will have the tensor dimensions ``(..., shape[1], shape[0])``.
 CNTK's matrix product will interpret these extra output or input
 dimensions as if they were flattened into a long vector. For more
 details on this, see the documentation of
-`Times() <https://github.com/Microsoft/CNTK/wiki/Times-and-TransposeTimes>`_.
+:cntkwiki:`Times() <Times-and-TransposeTimes>`.
 
 The options ``input_rank`` and ``map_rank``, which are mutually
 exclusive, can specify that not all of the input axes of a tensor should
@@ -324,7 +324,7 @@ Parameters
 -  ``num_filters``: number of output channels (number of filters)
 -  ``activation``: optional non-linearity, e.g. ``activation=relu``
 -  ``init``: initializer descriptor for the weights, e.g.
-   ``glorot_uniform()``. See `here <cntk.html#module-cntk.initializer>`_ for a full
+   ``glorot_uniform()``. See :mod:`cntk.initializer` for a full
    list of random-initialization options.
 -  ``pad``: if ``False`` (default), then the filter will be shifted over
    the "valid" area of input, that is, no value outside the area is
@@ -582,8 +582,8 @@ Parameters
 
 -  ``shape``: the dimension of the desired embedding vector. Must not be
    ``None`` unless ``weights`` are passed
--  ``init``: initializer descriptor for the weights to be learned. `See
-   here <cntk.html#module-cntk.initializer>`__ for a full
+-  ``init``: initializer descriptor for the weights to be learned. See
+   :mod:`cntk.initializer` for a full
    list of initialization options.
 -  ``weights`` (numpy array): if given, embeddings are not learned but
    specified by this array (which could be, e.g., loaded from a file)
@@ -617,10 +617,9 @@ majority of rows would be zero, CNTK implements a specific optimization
 to represent the gradient in "row-sparse" form.
 
 Known issue: The above-mentioned row-sparse gradient form is currently
-not supported by our `1-bit
-SGD <https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#21-data-parallel-training-with-1-bit-sgd>`__
+not supported by our :cntkwiki:`1-bit SGD <Multiple-GPUs-and-machines#21-data-parallel-training-with-1-bit-sgd>`
 parallelization technique. Please use the
-`block-momentum <https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#22-block-momentum-sgd>`__
+:cntkwiki:`block-momentum <Multiple-GPUs-and-machines#22-block-momentum-sgd>`
 technique instead.
 
 Example
@@ -636,7 +635,7 @@ a 300-dimensional vector:
 
 In addition to ``is_sparse=True``, one would also typically read sparse
 data from disk. Here is an example of reading sparse text input with the
-`CNTKTextFormatReader <https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader>`_:
+:cntkwiki:`CNTKTextFormatReader <BrainScript-CNTKTextFormat-Reader>`:
 
 ::
 
@@ -669,7 +668,7 @@ Factory function to create a single-layer or multi-layer recurrence.
     Recurrence(step_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name='')
     RecurrenceFrom(step_function, go_backwards=default_override_or(False), return_full_state=False, name='')
     Fold(folder_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name='')
-    UnfoldFrom(generator_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None, name='')
+    UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name='')
 
 Parameters
 ~~~~~~~~~~
@@ -776,7 +775,7 @@ Parameters
    cell dimension to the output shape.
 -  ``use_peepholes`` (optional): if ``True``, then use peephole
    connections in the LSTM
--  ``init``: initializer descriptor for the weights. See `here <cntk.html#module-cntk.initializer>`_
+-  ``init``: initializer descriptor for the weights. See :mod:`cntk.initializer`
    for a full list of initialization options.
 -  ``enable_self_stabilization`` (optional): if ``True``, insert a
    ``Stabilizer()`` for the hidden state and cell
@@ -866,8 +865,8 @@ end with a zero:
 Notes
 ~~~~~
 
-This layer is a wrapper around the ``past_value()`` and
-``future_value()`` primitives.
+This layer is a wrapper around the ``sequence.past_value()`` and
+``sequence.future_value()`` primitives.
 
 Example
 ~~~~~~~
@@ -937,7 +936,7 @@ Description
 ``BatchNormalization()`` implements the technique described in paper
 `Batch Normalization: Accelerating Deep Network Training by Reducing
 Internal Covariate Shift (Sergey Ioffe, Christian
-Szegedy) <http://arxiv.org/abs/1502.03167>`__. It normalizes its inputs
+Szegedy) <https://arxiv.org/abs/1502.03167>`__. It normalizes its inputs
 for every minibatch by the minibatch mean/variance, and de-normalizes it
 with a learned scaling factor and bias.
 

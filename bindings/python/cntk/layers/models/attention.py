@@ -5,13 +5,18 @@
 # ==============================================================================
 
 '''
-attention -- standard attention model
+Standard attention model.
 '''
 
 from __future__ import division
+import cntk as C
 from cntk.ops.functions import Function
-from ..blocks import _inject_name # helpers
-from .. import *
+from cntk.default_options import default_options, get_default_override, default_override_or
+from cntk.initializer import glorot_uniform
+from ..layers import Dense, Label
+from ..blocks import Stabilizer, _inject_name  # helpers
+from ..sequence import PastValueWindow
+#from .. import *
 
 
 # AttentionModel block
@@ -20,6 +25,8 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
                    go_backwards=default_override_or(False),
                    enable_self_stabilization=default_override_or(True), name=''):
     '''
+    AttentionModel(attention_dim, attention_span=None, attention_axis=None, init=glorot_uniform(), go_backwards=False, enable_self_stabilization=True, name='')
+
     Layer factory function to create a function object that implements an attention model
     as described in Bahdanau, et al., "Neural machine translation by jointly learning to align and translate."
     '''
@@ -31,6 +38,8 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
     # until CNTK can handle multiple nested dynamic loops, we require fixed windows and fake it
     if attention_span is None or attention_axis is None:
         raise NotImplementedError('AttentionModel currently requires a fixed attention_span and a static attention_axis to be specified')
+    if attention_span <= 0:
+        raise ValueError('attention_span must be a positive value')
 
     # model parameters
     with default_options(bias=False): # all the projections have no bias
@@ -48,18 +57,18 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
         (h_enc, h_enc_valid) = PastValueWindow(attention_span, axis=attention_axis, go_backwards=go_backwards)(h_enc).outputs
         h_enc_proj = attn_proj_enc(h_enc)
         # window must be broadcast to every decoder time step
-        h_enc_proj  = sequence.broadcast_as(h_enc_proj,  history_axis)
-        h_enc_valid = sequence.broadcast_as(h_enc_valid, history_axis)
+        h_enc_proj  = C.sequence.broadcast_as(h_enc_proj,  history_axis)
+        h_enc_valid = C.sequence.broadcast_as(h_enc_valid, history_axis)
         # --- decoder state
         # project decoder hidden state
         h_dec_proj = attn_proj_dec(h_dec)
-        tanh_out = tanh(h_dec_proj + h_enc_proj)  # (attention_span, attention_dim)
+        tanh_out = C.tanh(h_dec_proj + h_enc_proj)  # (attention_span, attention_dim)
         u = attn_proj_tanh(tanh_out)              # (attention_span, 1)
         u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator  TODO: use a less arbitrary number than 50
-        attention_weights = softmax(u_masked, axis=attention_axis) #, name='attention_weights')
+        attention_weights = C.softmax(u_masked, axis=attention_axis) #, name='attention_weights')
         attention_weights = Label('attention_weights')(attention_weights)
         # now take weighted sum over the encoder state vectors
-        h_att = reduce_sum(element_times(h_enc_proj, attention_weights), axis=attention_axis)
+        h_att = C.reduce_sum(C.element_times(h_enc_proj, attention_weights), axis=attention_axis)
         h_att = attn_final_stab(h_att)
         return h_att
 

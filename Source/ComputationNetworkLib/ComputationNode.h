@@ -51,7 +51,11 @@
 #define CNTK_MODEL_VERSION_19 19 // batch norm: flag whether running mean count is 0
 #define CNTK_MODEL_VERSION_20 20 // adding output shape to convolution node
 #define CNTK_MODEL_VERSION_21 21 // pooling: add a ceilOutDim to decide whether ceil or floor while computing the output size
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_21
+#define CNTK_MODEL_VERSION_22 22 // Slice and pad accepts multiple axes 
+#define CNTK_MODEL_VERSION_23 23 // pooling: add include pad func for average pooling
+#define CNTK_MODEL_VERSION_24 24 // ReduceElements: add keepDimensions
+#define CNTK_MODEL_VERSION_25 25 // transpose: allow specifying a permutation
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_25
 
 
 // helper mode for debugging
@@ -92,6 +96,10 @@ struct /*interface*/ IComputationNode
     virtual void BeginForwardProp() = 0;             // called beforefirst iteration step of ForwardProp()
     virtual void ForwardProp(const FrameRange&) = 0; // forward prop for one minibatch
     virtual void EndForwardProp() = 0;               // called after last iteration step of ForwardProp()
+
+    virtual void PostForwardAndBackProp() {} // Optional: Post forward and backprop prop for one minibatch, this will be called in a second 
+                                             //           looping on the graph, after the backward pass finish. Or after forward pass in inference
+                                             //           mode.
 
     virtual void BeginBackprop() = 0;                                        // called before first iteration step of ComputeGradient()
     virtual void BackpropTo(const size_t inputIndex, const FrameRange&) = 0; // backprop gradient into one of the inputs
@@ -158,7 +166,7 @@ struct ComputationNetworkOwnedNodeState
     friend class ComputationNetwork;
 
     ComputationNetworkOwnedNodeState()
-        : m_needsGradient(false), m_valueSharable(true), m_parentOverwritesGradient(false)
+        : m_needsGradient(false), m_needsDynamicValidation(false), m_valueSharable(true), m_parentOverwritesGradient(false)
     {
         PurgeStateForFormingRecurrentLoops();
         m_isPartOfLoop = false;
@@ -168,6 +176,7 @@ struct ComputationNetworkOwnedNodeState
     {
         other.m_isPartOfLoop                  = m_isPartOfLoop;
         other.m_needsGradient                 = m_needsGradient;
+        other.m_needsDynamicValidation        = m_needsDynamicValidation;
         other.m_valueSharable                 = m_valueSharable;
         other.m_traceNodeValueReal            = m_traceNodeValueReal;
         other.m_traceNodeValueAsCategoryLabel = m_traceNodeValueAsCategoryLabel;
@@ -200,6 +209,7 @@ struct ComputationNetworkOwnedNodeState
 
 protected:                // TODO: should be fully encapsulated here
     bool m_needsGradient; // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
+    bool m_needsDynamicValidation;
 
     bool m_valueSharable; // a flag is needed for memory share.
                           // If it is false (e.g., LearnableParameters/InputValue and those nodes are solely induced by LearnableParameters),
@@ -306,7 +316,7 @@ public:
 
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
         m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0),
-        m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
+        m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name), m_isValueSparse(false)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
         // we store a unique numeric number for every node that is constructed, as a debugging aid
@@ -652,10 +662,13 @@ public:
 
     bool NeedsGradient() const { return m_needsGradient; }
 
+    void MarkNeedsDynamicValidation() { m_needsDynamicValidation = true; }
+    virtual bool NeedsDynamicValidation() const { return m_needsDynamicValidation; }
+
     void SetLearningRateMultiplier(float f) 
     { 
         if (f < 0)
-            InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are tring to set it to %f.", NodeDescription().c_str(), f);
+            InvalidArgument("%ls: LearningRateMultiplier should be non-negative. You are trying to set it to %f.", NodeDescription().c_str(), f);
         m_learningRateMultiplier = f; 
     }
     float GetLearningRateMultiplier() const { return m_learningRateMultiplier; }
@@ -697,13 +710,18 @@ public:
                 if (child->GetSampleMatrixNumRows() == 0)
                     RuntimeError("%ls: input %ls %ls has 0 elements.", NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
         }
+
+        // By default the only case when the Value of a node is sparse 
+        // is when the node has a single input with sparse Value
+        if ((GetNumInputs() == 1) && m_inputs[0]->IsValueSparse())
+            m_isValueSparse = true;
     }
 
 protected:
 
     // helper functions for common cases
     void ValidateUnaryMap(bool isFinalValidationPass);
-    void ValidateUnaryReduce(bool isFinalValidationPass);
+    void ValidateUnaryReduce(bool isFinalValidationPass, bool keepDimensions = false);
     void ValidateInferBinaryInputDims();
     void ValidateInferNaryInputDims(size_t numInputs);    
     void ValidateBinaryZip(bool isFinalValidationPass, bool allowBroadcast);
@@ -893,6 +911,8 @@ public:
     // Helper that returns [a x b x c], including dynamic axes.
     const std::string ShapeDescription() const;
 
+    bool IsValueSparse() const { return m_isValueSparse; }
+
     // debugging helper
     size_t m_uniqueNumericId; // (a unique handle for debugging)
 protected:
@@ -907,6 +927,8 @@ protected:
 
     // inputs
     std::vector<ComputationNodeBasePtr> m_inputs;
+
+    bool m_isValueSparse;
 
     // dimensions and layout
     // Data is stored as a Matrix object, but often it is interpreted as a tensor.
@@ -1161,6 +1183,33 @@ private:
 struct ITakesDynamicAxis
 {
     virtual const std::wstring GetRequestedDynamicAxis() const = 0;
+};
+
+// =======================================================================
+// Nodes that have multiple outputs must derive from this.
+// =======================================================================
+template <typename ElemType>
+struct MultiOutputNode
+{
+public:
+    MultiOutputNode(size_t numOutputs)
+        : m_numOutputs(numOutputs)
+    {
+        m_outputsShape.resize(m_numOutputs);
+        m_outputsHasNewMBLayout.resize(m_numOutputs);
+        m_outputsMBLayout.resize(m_numOutputs);
+        m_outputsIsValueSparse.resize(m_numOutputs, false);
+        m_outputsValue.resize(m_numOutputs);
+        m_outputsGradient.resize(m_numOutputs);
+    }
+
+    size_t m_numOutputs;
+    std::vector<TensorShape> m_outputsShape;
+    std::vector<bool> m_outputsHasNewMBLayout;
+    std::vector<std::shared_ptr<MBLayout>> m_outputsMBLayout;
+    std::vector<bool> m_outputsIsValueSparse;
+    std::vector<std::shared_ptr<Matrix<ElemType>>> m_outputsValue;
+    std::vector<std::shared_ptr<Matrix<ElemType>>> m_outputsGradient;
 };
 
 // =======================================================================
@@ -1433,17 +1482,18 @@ public:
                                        const MBLayoutPtr& layout,
                                        const std::shared_ptr<Matrix<ElemType>>& unpackedDataStorage,
                                        const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage,
+                                       const std::shared_ptr<Matrix<char>>& tempMaskStorage,
                                        bool batchMajor,
-                                       bool maskGaps);
+                                       const ElemType* gapPadValue);
 
     static TensorView<ElemType> Unpack(const TensorShape& sampleShape,
                                        const Matrix<ElemType>& packedData,
                                        const MBLayoutPtr& layout,
                                        bool batchMajor,
-                                       bool maskGaps)
+                                       const ElemType* gapPadValue)
     {
         auto nullSharedPtr = std::shared_ptr<Matrix<ElemType>>(nullptr);
-        return Unpack(sampleShape, packedData, layout, nullSharedPtr, nullSharedPtr, batchMajor, maskGaps);
+        return Unpack(sampleShape, packedData, layout, nullSharedPtr, nullSharedPtr, std::shared_ptr<Matrix<char>>(nullptr), batchMajor, gapPadValue);
     }
 
     static void BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
@@ -1597,21 +1647,38 @@ public:
 protected:
 
     // determine the size that we should set our Matrix storage to
-    virtual void DetermineDataSize(size_t& rows, size_t& cols) const
+    void DetermineDataSize(size_t& rows, size_t& cols) const
     {
-        if (HasMBLayout())
-        {
-            rows = GetSampleMatrixNumRows();
-            cols = GetSampleMatrixNumCols();
-        }
-        else
+        if (m_isValueSparse && HasMBLayout())
         {
             const auto& shape = GetSampleLayout();
             size_t rank = shape.GetRank();
-            rows = rank > 0 ? shape[0] : 0;
-            cols = rank > 0 ?        1 : 0;
+            rows = rank > 0 ? shape[0] : 1;
+
+            // TODO: TensorShape should have a method to 
+            // easily compute size of subshapes
+            cols = 1;
             for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
                 cols *= shape[k];
+
+            cols *= GetMBLayout()->GetNumCols();
+        }
+        else
+        {
+            if (HasMBLayout())
+            {
+                rows = GetSampleMatrixNumRows();
+                cols = GetSampleMatrixNumCols();
+            }
+            else
+            {
+                const auto& shape = GetSampleLayout();
+                size_t rank = shape.GetRank();
+                rows = rank > 0 ? shape[0] : 1;
+                cols = 1;
+                for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
+                    cols *= shape[k];
+            }
         }
     }
 
@@ -1726,17 +1793,29 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         size_t matrixSize = m_sampleLayout.GetNumElements();
-        if (IsValueSharable())
+        if (IsValueSharable() && !m_isValueSparse)
             RequestMatrixFromPool(m_value, matrixPool, matrixSize, HasMBLayout());
         else
             CreateMatrixIfNull(m_value);
+
+        auto multiOutputNode = dynamic_cast<MultiOutputNode<ElemType>*>(this);
+        if (multiOutputNode)
+        {
+            for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+            {
+                if (IsValueSharable() && !multiOutputNode->m_outputsIsValueSparse[i])
+                    RequestMatrixFromPool(multiOutputNode->m_outputsValue[i], matrixPool, multiOutputNode->m_outputsShape[i].GetNumElements(), multiOutputNode->m_outputsMBLayout[i] != nullptr);
+                else
+                    CreateMatrixIfNull(multiOutputNode->m_outputsValue[i]);
+            }
+        }
     }
 
     // release temp matrices that are only used by forward computation
     // don't release matrices that need to be used in the gradient computation
     virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
     {
-        if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE) && IsValueSharable())
+        if (!IsOutputNeededDuringBackprop() && !m_isValueSparse && IsValueSharable())
             ReleaseMatrixToPool(m_value, matrixPool);
     }
 
@@ -1754,6 +1833,13 @@ public:
     {
         size_t matrixSize = m_sampleLayout.GetNumElements();
         RequestMatrixFromPool(m_gradient, matrixPool, matrixSize, HasMBLayout());
+
+        auto multiOutputNode = dynamic_cast<MultiOutputNode<ElemType>*>(this);
+        if (multiOutputNode)
+        {
+            for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+                RequestMatrixFromPool(multiOutputNode->m_outputsGradient[i], matrixPool, multiOutputNode->m_outputsShape[i].GetNumElements(), multiOutputNode->m_outputsMBLayout[i] != nullptr);
+        }
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1766,8 +1852,21 @@ public:
 
             // Release the Value matrix only if the output value is needed during backprop
             // since in the case it isn't used, we release it during forward prop itself
-            if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE && IsValueSharable())
+            if (IsOutputNeededDuringBackprop() && !m_isValueSparse && IsValueSharable())
                 ReleaseMatrixToPool(m_value, matrixPool);
+
+            auto multiOutputNode = dynamic_cast<MultiOutputNode<ElemType>*>(this);
+            if (multiOutputNode)
+            {
+                for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+                    ReleaseMatrixToPool(multiOutputNode->m_outputsGradient[i], matrixPool);
+
+                for (size_t i = 1; i < multiOutputNode->m_numOutputs; ++i)
+                {
+                    if (IsValueSharable() && !multiOutputNode->m_outputsIsValueSparse[i])
+                        ReleaseMatrixToPool(multiOutputNode->m_outputsValue[i], matrixPool);
+                }
+            }
         }
     }
 
@@ -2142,29 +2241,6 @@ protected: public:                                     // needed in ComputationN
 // To resolve, call AttachInputs()
 // TODO: This is a bit indirect. Can it be done more nicely?
 struct ILateAttachingNode { virtual void LateAttachInputs() = 0; };
-template <class N>
-class LateAttachingNode : public N, public ILateAttachingNode
-{
-    typedef typename N::OurElemType ElemType;
-    function<void(ComputationNode<ElemType>*)> attachInputs;
-
-public:
-    // constructor
-    template <class... _Types>
-    LateAttachingNode(DEVICEID_TYPE deviceId, const wstring& name, const function<void(ComputationNode<ElemType>*)>& attachInputs, _Types&&... _Args)
-        : attachInputs(attachInputs), N(deviceId, name, forward<_Types>(_Args)...)
-    {
-    }
-    // the one member that does the work
-    void /*ILateAttachingNode::*/ LateAttachInputs()
-    {
-        attachInputs(dynamic_cast<N*>(this));
-        attachInputs = [](ComputationNode<ElemType>*)
-        {
-            LogicError("LateAttachingNode::AttachInputs: must only be called once");
-        };
-    }
-};
 
 // =======================================================================
 // IRecurrentNode -- interface implemented by ComputationNodes that can be recurrent

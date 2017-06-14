@@ -25,6 +25,12 @@
 
     <HasSwig>false</HasSwig>
     <HasSwig Condition="Exists('$(SWIG_PATH)\swig.exe')">true</HasSwig>
+
+    <HasJava>false</HasJava>
+    <HasJava Condition="Exists('$(JAVA_HOME)\bin\javac.exe')">true</HasJava>
+
+    <CntkComponentVersion>2.0rc2</CntkComponentVersion>
+    <CntkComponentVersion Condition="$(DebugBuild)">$(CntkComponentVersion)d</CntkComponentVersion>
   </PropertyGroup>
   
 </Project>

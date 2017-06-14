@@ -10,6 +10,7 @@
 #include <functional>
 #include "Sequences.h"
 #include "TensorShape.h"
+#include "ReaderConstants.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -44,6 +45,7 @@ struct ReaderConfiguration
 struct EpochConfiguration : public ReaderConfiguration
 {
     size_t m_totalEpochSizeInSamples;       // Total size of the epoch in samples
+    size_t m_totalEpochSizeInSweeps {g_infinity}; // Total size of the epoch in sweeps (default = no limit).
     size_t m_epochIndex;                    // Current epoch index [0 .. max number of epochs)
 };
 
@@ -76,6 +78,7 @@ struct StreamDescription
     ElementType m_elementType;     // Element type of the stream
     TensorShapePtr m_sampleLayout; // Layout of the sample for the stream
                                    // If not specified - can be specified per sequence
+    bool m_definesMbSize;          // Flag indicating whether the stream is defining the minibatch size
 };
 typedef std::shared_ptr<StreamDescription> StreamDescriptionPtr;
 

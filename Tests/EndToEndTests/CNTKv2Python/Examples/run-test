@@ -2,13 +2,22 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
-python -c "import sys; print('Python: %s'%sys.version)"
-python -c "import numpy; print('NumPy: %s'%numpy.version.full_version)"
-python -c "import scipy; print('SciPy: %s'%scipy.version.full_version)"
-python -c "import pytest; print('PyTest: %s'%pytest.__version__)"
+python -c "import sys; print('Python: %s'%sys.version)" || exit 1
+python -c "import numpy; print('NumPy: %s'%numpy.version.full_version)" || exit 1
+python -c "import scipy; print('SciPy: %s'%scipy.version.full_version)" || exit 1
+python -c "import pytest; print('PyTest: %s'%pytest.__version__)" || exit 1
 
-py.test --verbose --deviceid $TEST_DEVICE --is1bitsgd $TEST_1BIT_SGD
+# We run each example in a separate process. Thus, if you run the full pytest session on your machine,
+# you may see varying behavior, e.g., due effects on CNTK globals, causing later tests to fail.
 
-if [ "$?" -eq "0" ]; then
+ERRORS=0
+# Note: keep pattern below in sync with pytest.ini
+for t in *_test.py; do
+  py.test --verbose --deviceid $TEST_DEVICE --is1bitsgd $TEST_1BIT_SGD "$t"
+  # Allow exit 0 (all run successfully) and 5 (no test to run)
+  (( $? == 0 || $? == 5 )) || ((ERRORS++))
+done
+
+if (( ERRORS == 0 )); then
   echo "__COMPLETED__"
 fi

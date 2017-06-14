@@ -68,15 +68,16 @@ def strip_ext(fn):
 
 if IS_WINDOWS:
     libname_rt_ext = '.dll'
-
-    link_libs = ["CNTKLibrary-2.0"]
+    cntkLibraryName = "Cntk.Core-" + os.environ['CNTK_COMPONENT_VERSION']
+    link_libs = [cntkLibraryName]
 else:
-    link_libs = ["cntklibrary-2.0"]
+    cntkLibraryName = "Cntk.Core-" + os.environ['CNTK_COMPONENT_VERSION']
+    link_libs = [cntkLibraryName]
     libname_rt_ext = '.so'
 
 
 if 'CNTK_LIBRARIES' in os.environ:
-  rt_libs = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split()]
+  rt_libs = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split(';' if IS_WINDOWS else None)]
 else:
   rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
                                                         '*' + libname_rt_ext))]
@@ -149,6 +150,9 @@ cntk_module = Extension(
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
     language="c++",
+    depends = [os.path.join(CNTK_SOURCE_PATH, "Common", "Include", "ExceptionWithCallStack.h")] +
+        [os.path.join(cntkBindingCommon, f) for f in ["CNTKExceptionHandling.i", "CNTKValueExtend.i", "CNTKWarnFilters.i"]] +
+        [os.path.join(cntkV2LibraryInclude, f) for f in ["CNTKLibraryInternals.h", "CNTKLibrary.h"]],
 )
 
 # Do not include examples
@@ -174,7 +178,7 @@ if IS_PY2:
     cntk_install_requires.append('enum34>=1.1.6')
 
 setup(name="cntk",
-      version="2.0.beta15.0",
+      version="2.0rc2",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

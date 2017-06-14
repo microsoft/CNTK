@@ -1,0 +1,6 @@
+#!/bin/bash
+
+. $TEST_DIR/../run-test-common
+
+# due to 3D convolution in LRN, can't set deterministic algorithm to true. 
+cntkrun AlexNet_ImageNet.cntk "forceDeterministicAlgorithms=false traceLevel=0 stderr=- Train=[SGD=[epochSize=4,minibatchSize=2,maxEpochs=2,numMBsToShowResult=1]]"

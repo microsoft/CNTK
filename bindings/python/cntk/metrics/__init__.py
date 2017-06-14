@@ -6,67 +6,8 @@
 
 from __future__ import division
 from __future__ import print_function
-import numpy as np
-from ..ops.functions import CloneMethod, Function, load_model
-from ..ops.variables import Variable, Parameter, Constant
-from ..utils import get_data_type
-from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, typemap
-from ..axis import Axis
-
-@typemap
-def lambda_rank(output, gain, group, name=''):
-    r'''
-    Groups samples according to ``group``, sorts
-    them within each group based on ``output`` and
-    computes the Normalized Discounted Cumulative Gain
-    (NDCG) at infinity for each group. Concretely,
-    the Discounted Cumulative Gain (DCG) at infinity is:
-
-    :math:`\mathrm{DCG_{\infty}}()=\sum_{i=0}^{\infty} \frac{gain_{(i)}}{\log(i+2)}`
-
-    where :math:`gain_{(i)}` means the gain of the :math:`i`-th ranked sample.
-
-    The NDCG is just the DCG  divided by the maximum achievable DCG (obtained
-    by placing the samples with the largest gain at the top of the ranking).
-
-    Samples in the same group must appear in order of decreasing gain.
-
-    It returns 1 minus the average NDCG across all the groups in the minibatch
-    multiplied by 100 times the number of samples in the minibatch.
-
-    In the backward direction it back-propagates LambdaRank gradients.
-
-    Example:
-        >>> group = C.input_variable((1,))
-        >>> score = C.input_variable((1,), needs_gradient=True)
-        >>> gain  = C.input_variable((1,))
-        >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1,1)
-        >>> s = np.array([1, 2, 3, 4], dtype=np.float32).reshape(4,1,1)
-        >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
-        >>> f = C.lambda_rank(score, gain, group)
-        >>> np.round(f.grad({score:s, gain:n, group: g}, wrt=[score]),4)
-        array([[[-0.2121]],
-        <BLANKLINE>
-               [[ 0.2121]],
-        <BLANKLINE>
-               [[-0.1486]],
-        <BLANKLINE>
-               [[ 0.1486]]], dtype=float32)
-
-    Args:
-        output: score of each sample
-        gain: gain of each sample
-        group: group of each sample
-        name (str, optional): the name of the Function instance in the network
-    Returns:
-        :class:`~cntk.ops.functions.Function`
-    '''
-    from cntk.cntk_py import lambda_rank
-    dtype = get_data_type(output, gain, group)
-    output = sanitize_input(output, dtype)
-    gain = sanitize_input(gain, dtype)
-    group = sanitize_input(group, dtype)
-    return lambda_rank(output, gain, group, name)
+from cntk.internal import sanitize_input, sanitize_axis, typemap
+from cntk.internal.utils import get_data_type
 
 
 @typemap
@@ -153,8 +94,9 @@ def classification_error(output_vector, target_vector, axis=-1, topN=1, name='')
     axis = sanitize_axis(axis)
     return classification_error(output_vector, target_vector, topN, axis, name)
 
+
 @typemap
-def edit_distance_error(input_a, input_b, subPen=0, delPen=0, insPen=0, squashInputs=False, tokensToIgnore=[], name=''):
+def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashInputs=False, tokensToIgnore=[], name=''):
     '''
     Edit distance error evaluation node with the option of specifying penalty of substitution, deletion and insertion, as well as squashing the input sequences and ignoring certain samples.
     Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties.
@@ -172,11 +114,11 @@ def edit_distance_error(input_a, input_b, subPen=0, delPen=0, insPen=0, squashIn
 
     Just like ClassificationError and other evaluation nodes, when used as an evaluation criterion, the SGD process will aggregate all values over an epoch and report the average, i.e. the error rate.
     Primary objective of this node is for error evaluation of CTC training, see formula (1) in "Connectionist Temporal Classification: Labelling Unsegmented
-    Sequence Data with Recurrent Neural Networks", http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+    Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 
     Example:
-        i1 = cntk.input_variable(shape=(2,))
-        i2 = cntk.input_variable(shape=(2,))
+        i1 = C.input_variable(shape=(2,))
+        i2 = C.input_variable(shape=(2,))
         arguments = {i1 : [[1, 3], [2, 0]], i2 : [[2, 0], [2, 0]]}
         a = edit_distance_error(i1, i2, 0, 1, 1, True, [1])
         print(a.eval(arguments))
@@ -184,7 +126,9 @@ def edit_distance_error(input_a, input_b, subPen=0, delPen=0, insPen=0, squashIn
     Args:
         input_a: first input sequence
         input_b: second input sequence
-        subPen, delPen, insPen: substitution, deletion and insertion penalties
+        subPen: substitution penalty
+        delPen: deletion penalty
+        insPen: insertion penalty
         squashInputs: whether to merge sequences of identical samples (in both input sequences). If true and tokensToIgnore contains label '-' then
                 given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
         tokensToIgnore: list of samples to ignore during edit distance evaluation (in both sequences)

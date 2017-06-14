@@ -9,11 +9,13 @@ import numpy as np
 import os
 import sys
 from cntk import Trainer, Axis
-from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
+from cntk.learners import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
+from cntk.ops import sequence
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
 from cntk.ops.functions import load_model
 from cntk.layers import LSTM, Stabilizer, Recurrence, Dense, For, Sequential
-from cntk.utils import log_number_of_parameters, ProgressPrinter
+from cntk.logging import log_number_of_parameters, ProgressPrinter
 
 # model hyperparameters
 hidden_dim = 256
@@ -129,12 +131,9 @@ def create_model(output_dim):
 
 # Model inputs
 def create_inputs(vocab_dim):
-    batch_axis = Axis.default_batch_axis()
     input_seq_axis = Axis('inputAxis')
-
-    input_dynamic_axes = [batch_axis, input_seq_axis]
-    input_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes)
-    label_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes)
+    input_sequence = sequence.input_variable(shape=vocab_dim, sequence_axis=input_seq_axis)
+    label_sequence = sequence.input_variable(shape=vocab_dim, sequence_axis=input_seq_axis)
     
     return input_sequence, label_sequence
 
@@ -192,7 +191,7 @@ def train_lm(training_file, epochs, max_num_minibatches):
                 print(sample(z, ix_to_char, vocab_dim, char_to_ix))
 
         model_filename = "models/shakespeare_epoch%d.dnn" % (e+1)
-        z.save_model(model_filename)
+        z.save(model_filename)
         print("Saved model to '%s'" % model_filename)
 
 
@@ -220,7 +219,7 @@ def train_and_eval_char_rnn(epochs=50, max_num_minibatches=sys.maxsize):
 if __name__=='__main__':    
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    #set_default_device(cpu())
+    #try_set_default_device(cpu())
 
     output = train_and_eval_char_rnn()
     ff = open('output.txt', 'w', encoding='utf-8')

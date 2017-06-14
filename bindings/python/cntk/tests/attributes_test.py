@@ -30,6 +30,19 @@ def test_convolution_attributes():
         }
     _check(expected, d)
 
+    f = C.convolution(kernel , x, auto_padding = [False, True])
+    d = f.root_function.attributes
+    expected = {'autoPadding': [False, False, True], 
+        'sharing': [True, True, True], 
+        'strides': (1, 1, 1), 
+        'maxTempMemSizeInSamples': 0, 
+        'upperPad': (0, 0, 0), 
+        'lowerPad': (0, 0, 0),
+        'transpose': False,
+        'outputShape': (0,)
+        }
+    _check(expected, d)
+
 def test_convolution_transpose_attributes():
     x = C.input_variable( (1, 5, 5) )
     filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
@@ -49,9 +62,9 @@ def test_convolution_transpose_attributes():
 
 def test_dropout_attributes():
     x = C.input_variable( (1, 5, 5) )
-    f = C.dropout(x, 0.5)
+    f = C.dropout(x, 0.5, 42)
     d = f.root_function.attributes
-    expected = {'dropoutRate': 0.5}
+    expected = {'dropoutRate': 0.5, 'rngSeed' : 42, 'rngOffset' : 0}
     _check(expected, d)
 
 def test_slice_attributes():
@@ -59,4 +72,8 @@ def test_slice_attributes():
     f = C.slice(x, 0, 1, 2)
     d = f.root_function.attributes
     expected = {'endIndex': 2, 'beginIndex': 1, 'axis': ('ordered', 'static', 1)}
+    _check(expected, d)
+    f = C.slice(x, [0,1], [1,0], [2,2])
+    d = f.root_function.attributes
+    expected = {'endIndexVec': [2,2], 'beginIndexVec': [1,0], 'axisVec': [('ordered', 'static', 1), ('ordered', 'static', 0)]}
     _check(expected, d)

@@ -31,18 +31,20 @@ fi
 # Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
 [ "$TEST_DEVICE" == "cpu" ] && export CUDA_VISIBLE_DEVICES=-1
 
-# Train resnet cifar model and atis model
-python train_models_for_evaluation.py -d $TEST_DEVICE || exit $?
-
 if [ "$TEST_DEVICE" == "cpu" ]; then
-  echo Use pre-trained resnet_20_cifar_10 model in $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY for tests on CPU device.
-  cp $TestDataSourceDir/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn resnet20.dnn
+  echo Use pre-trained resnet_20_cifar_10 model and atis.dnn in $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY for tests on CPU device.
+  # Unzip data only, without training model
+  python train_models_for_evaluation.py -u -d $TEST_DEVICE || exit $?
+  cp $TestDataSourceDir/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn resnet20.dnn || exit $?
+  cp $TestDataSourceDir/PreTrainedModels/EvalModels/atis.dnn atis.dnn || exit $?
 else
   echo Use the on-the-fly trained resnet_20_cifar_10 model for tests on GPU device.
+  # Train resnet cifar model and atis model
+  python train_models_for_evaluation.py -d $TEST_DEVICE || exit $?
   mv resnet20_0.dnn resnet20.dnn || exit $?
+  mv atis_0.dnn atis.dnn || exit $?
 fi
 mv data/train/* . || exit $?
-mv atis_0.dnn atis.dnn || exit $?
 cp $TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript/query.wl . || exit $?
 cp $TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript/slots.wl . || exit $?
 

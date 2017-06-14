@@ -14,6 +14,9 @@
     <NvmlLibPath Condition="'$(CudaVersion)' == '7.5'">"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
     <NvmlLibPath Condition="'$(CudaVersion)' == '8.0'" />
 
+    <NvmlDll>%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml.dll</NvmlDll>
+    <NvmlDll Condition="Exists('c:\local\bindrop\NVSMI\nvml.dll')">c:\local\bindrop\NVSMI\nvml.dll</NvmlDll>
+
     <HasOpenCv>false</HasOpenCv>
     <HasOpenCv Condition="Exists('$(OPENCV_PATH)') Or Exists('$(OPENCV_PATH_V31)')">true</HasOpenCv>
     
@@ -29,9 +32,8 @@
     <HasMultiverso>false</HasMultiverso>
     <HasMultiverso Condition="Exists('$(SolutionDir)\Source\Multiverso\include\multiverso')">true</HasMultiverso>
 
-    <!-- If an executable links ReaderLib.lib, it has dependency on Common.dll, Math.dll and PerformanceProfilerDll.dll -->
-    <ReaderLibs>ReaderLib.lib;Common.lib;Math.lib;PerformanceProfilerDll.lib</ReaderLibs>
-
+    <!-- If an executable links Cntk.Reader-$(CntkComponentVersion).lib, it has dependency on Cntk.Common.dll, Cntk.Math.dll and Cntk.PerformanceProfiler.dll -->
+    <ReaderLibs>Cntk.Reader-$(CntkComponentVersion).lib;Cntk.Common-$(CntkComponentVersion).lib;Cntk.Math-$(CntkComponentVersion).lib;Cntk.PerformanceProfiler-$(CntkComponentVersion).lib</ReaderLibs>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -121,7 +123,7 @@
 
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>HAS_MPI=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)";HAS_MPI=1</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
 

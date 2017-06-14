@@ -114,6 +114,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(ShiftNode))                            return New<ShiftNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
     else if (nodeType == OperationNameOf(SigmoidNode))                          return New<SigmoidNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(StableSigmoidNode))                    return New<StableSigmoidNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SinNode))                              return New<SinNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SliceNode))                            return New<SliceNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SoftmaxNode))                          return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
@@ -278,10 +279,10 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreatePoolingNode(const std::wstring& nodeName, PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
                                                                                              const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad, bool ceilOutDim,
-                                                                                             ImageLayoutKind imageLayout)
+                                                                                             const bool includePad, ImageLayoutKind imageLayout)
 {
     return net.AddNodeToNetWithElemType(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-                                                                   poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, ceilOutDim, imageLayout));
+                                                                   poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, ceilOutDim, includePad, imageLayout));
 }
 
 template <class ElemType>
@@ -358,11 +359,11 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pooling(const ComputationNodePtr inputValues,
                                                                                    PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
                                                                                    const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                                                                   bool ceilOutDim, ImageLayoutKind imageLayout,
+                                                                                   bool ceilOutDim, const bool includePad, ImageLayoutKind imageLayout,
                                                                                    const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-                                                                      poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, ceilOutDim, imageLayout),
+                                                                      poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, ceilOutDim, includePad, imageLayout),
                                                                       { inputValues });
 }
 
@@ -851,7 +852,10 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Futur
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<SliceNode<ElemType>>(net.GetDeviceId(), nodeName, (int)start_index, (int)(start_index + num_rows)), { a });
+    std::vector<int> startIndex, endIndex; 
+    startIndex.push_back((int)start_index); 
+    endIndex.push_back((int)(start_index + num_rows)); 
+    return net.AddNodeToNetAndAttachInputs(New<SliceNode<ElemType>>(net.GetDeviceId(), nodeName, startIndex, endIndex), { a });
 }
 
 template <class ElemType>
