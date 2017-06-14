@@ -1438,7 +1438,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     double momentumPerSample = GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences());
                     // TODO: Check why l2Factor is not applied to L1. Bug?
                     // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
-                    if (!(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().HasNan("TrainOneEpoch/UpdateWeights(): ")))
+                    auto checkMat=dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().DeepClone();
+                    
+                    if (!(checkMat.InplaceExp().HasNan("TrainOneEpoch/UpdateWeights(): ")))
                     {
                     UpdateWeights(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
                                   dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
