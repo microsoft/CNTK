@@ -18,7 +18,7 @@ def find_func_param(func, name=None, shape=None, allow_not_found=False):
         func (:class:`~cntk.ops.functions.Function`): The function to search parameter for
         name (string) : The name of the parameter
         shape (tuple): The shape of the parameter
-        allow_not_found (bool): Set to True to avoid raise exception when not found
+        allow_not_found (bool): Set to True to avoid raising an exception when not found
     
     Returns:
         The :class:`~cntk.variables.Parameter` that is found

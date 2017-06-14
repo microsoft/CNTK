@@ -2,7 +2,7 @@ setlocal enabledelayedexpansion
 
 cd /d "%~dp0"
 if not defined SPHINX_DOCFX_BUILD (
-  @REM Sphinx DocFx build should go against _installed_ module,
+  @REM Sphinx DocFx build should go against the installed CNTK module.
   @REM since otherwise file paths are broken in output.
   set PYTHONPATH=!CD!\..
   set PATH=!CD!\..;!CD!\..\..\..\x64\Release;!PATH!
