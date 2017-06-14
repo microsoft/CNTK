@@ -4,7 +4,7 @@ from helpers import *
 import pickle
 import importlib
 import os
-from cntk.contrib.crosstalk import crosstalk
+from cntk.contrib import crosstalk
 from cntk.contrib.crosstalk import crosstalk_cntk as crct
 _ci = crct.instance
 
@@ -64,16 +64,16 @@ class PolyMath:
         return func
 
     def input_layer(self,cgw,cnw,cc,qgw,qnw,qc):
-        cgw_ph = C.placeholder_variable()
-        cnw_ph = C.placeholder_variable()
-        cc_ph  = C.placeholder_variable()
-        qgw_ph = C.placeholder_variable()
-        qnw_ph = C.placeholder_variable()
-        qc_ph  = C.placeholder_variable()
+        cgw_ph = C.placeholder()
+        cnw_ph = C.placeholder()
+        cc_ph  = C.placeholder()
+        qgw_ph = C.placeholder()
+        qnw_ph = C.placeholder()
+        qc_ph  = C.placeholder()
     
-        input_chars = C.placeholder_variable(shape=(1,self.word_size,self.c_dim))
-        input_glove_words = C.placeholder_variable(shape=(self.wg_dim,))
-        input_nonglove_words = C.placeholder_variable(shape=(self.wn_dim,))
+        input_chars = C.placeholder(shape=(1,self.word_size,self.c_dim))
+        input_glove_words = C.placeholder(shape=(self.wg_dim,))
+        input_nonglove_words = C.placeholder(shape=(self.wn_dim,))
 
         # we need to reshape because GlobalMaxPooling/reduce_max is retaining a trailing singleton dimension
         # todo GlobalPooling/reduce_max should have a keepdims default to False
@@ -100,7 +100,7 @@ class PolyMath:
             if self.vocab[w] >= self.wg_dim:
                 i2w[self.vocab[w] - self.wg_dim] = w
         _ci.watch(processed.find_by_name('charcnn_conv', -1), 'charcnn_conv', var_type=crosstalk.Conv2DAttr,
-                  attr=crosstalk.Conv2DAttr(filter_shape=(5,self.char_emb_dim,), num_filters=self.convs, has_bias=True))
+                  attr=crosstalk.Conv2DAttr(filter_shape=(5,self.char_emb_dim,), num_filters=self.convs)) #, has_bias=True))
         _ci.watch(crct.find_func_param(embedded, name='TrainableE'), 'ng_emb', var_type=crosstalk.EmbedAttr,
                   attr=crosstalk.EmbedAttr(dict=i2w, input_dim=self.wn_dim))
         _ci.watch({n : crct.find_func_param(highway, name='0_'+n) for n in ['WT', 'bT', 'WU', 'bU']}, 'highway0', var_type=crct.DictParameterType)
@@ -115,8 +115,8 @@ class PolyMath:
             'input_layer')
         
     def attention_layer(self, context, query):
-        q_processed = C.placeholder_variable(shape=(2*self.hidden_dim,))
-        c_processed = C.placeholder_variable(shape=(2*self.hidden_dim,))
+        q_processed = C.placeholder(shape=(2*self.hidden_dim,))
+        c_processed = C.placeholder(shape=(2*self.hidden_dim,))
 
         #convert query's sequence axis to static
         qvw, qvw_mask = C.sequence.unpack(q_processed, padding_value=0).outputs
@@ -175,7 +175,7 @@ class PolyMath:
             'attention_layer')
             
     def modeling_layer(self, attention_context):
-        att_context = C.placeholder_variable(shape=(8*self.hidden_dim,))
+        att_context = C.placeholder(shape=(8*self.hidden_dim,))
         #modeling layer
         # todo: use dropout in optimized_rnn_stack from cudnn once API exposes it
         mod_context = C.layers.Sequential([
@@ -196,8 +196,8 @@ class PolyMath:
             'modeling_layer')
     
     def output_layer(self, attention_context, modeling_context):
-        att_context = C.placeholder_variable(shape=(8*self.hidden_dim,))
-        mod_context = C.placeholder_variable(shape=(2*self.hidden_dim,))
+        att_context = C.placeholder(shape=(8*self.hidden_dim,))
+        mod_context = C.placeholder(shape=(2*self.hidden_dim,))
         #output layer
         start_logits = C.layers.Dense(1, name='out_start')(C.dropout(C.splice(mod_context, att_context), self.dropout))
         if self.two_step:
@@ -258,4 +258,6 @@ class PolyMath:
         # loss
         start_loss = seq_loss(start_logits, ab)
         end_loss = seq_loss(end_logits, ae)
-        return C.combine([start_logits, end_logits]), start_loss + end_loss
+        #paper_loss = start_loss + end_loss
+        new_loss = all_spans_loss(start_logits, ab, end_logits, ae)
+        return C.combine([start_logits, end_logits]), new_loss

@@ -18,7 +18,7 @@ def argument_by_name(func, name):
         raise ValueError('multiple matching names in arguments')
     else:
         return found[0]
-        
+
 def create_mb_and_map(func, data_file, polymath, randomize=True, repeat=True):
     mb_source = C.io.MinibatchSource(
         C.io.CTFDeserializer(
@@ -33,7 +33,7 @@ def create_mb_and_map(func, data_file, polymath, randomize=True, repeat=True):
                 context_chars    = C.io.StreamDef('cc',  shape=polymath.word_size,  is_sparse=False),
                 query_chars      = C.io.StreamDef('qc',  shape=polymath.word_size,  is_sparse=False))),
         randomize=randomize,
-        epoch_size=C.io.INFINITELY_REPEAT if repeat else C.io.FULL_DATA_SWEEP)
+        max_sweeps=C.io.INFINITELY_REPEAT if repeat else 1)
 
     input_map = {
         argument_by_name(func, 'cgw'): mb_source.streams.context_g_words,
@@ -52,7 +52,7 @@ def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, misc={}):
         eof = False
         while not eof:
             batch={'cwids':[], 'qwids':[], 'baidx':[], 'eaidx':[], 'ccids':[], 'qcids':[]}
-            
+
             while not eof and len(batch['cwids']) < seqs:
                 line = f.readline()
                 if not line:
@@ -67,7 +67,7 @@ def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, misc={}):
                 batch['eaidx'].append(eaidx)
                 batch['ccids'].append(ccids)
                 batch['qcids'].append(qcids)
-            
+
             if len(batch['cwids']) > 0:
                 context_g_words  = C.Value.one_hot([[C.Value.ONE_HOT_SKIP if i >= polymath.wg_dim else i for i in cwids] for cwids in batch['cwids']], polymath.wg_dim)
                 context_ng_words = C.Value.one_hot([[C.Value.ONE_HOT_SKIP if i < polymath.wg_dim else i - polymath.wg_dim for i in cwids] for cwids in batch['cwids']], polymath.wn_dim)
@@ -77,7 +77,7 @@ def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, misc={}):
                 query_chars   = [np.asarray([[[c for c in qc+[0]*max(0,polymath.word_size-len(qc))]] for qc in qcid], dtype=np.float32) for qcid in batch['qcids']]
                 answer_begin = [np.asarray(ab, dtype=np.float32) for ab in batch['baidx']]
                 answer_end   = [np.asarray(ae, dtype=np.float32) for ae in batch['eaidx']]
-                
+
                 yield { argument_by_name(func, 'cgw'): context_g_words,
                         argument_by_name(func, 'qgw'): query_g_words,
                         argument_by_name(func, 'cnw'): context_ng_words,
@@ -86,13 +86,13 @@ def create_tsv_reader(func, tsv_file, polymath, seqs, is_test=False, misc={}):
                         argument_by_name(func, 'qc' ): query_chars,
                         argument_by_name(func, 'ab' ): answer_begin,
                         argument_by_name(func, 'ae' ): answer_end }
-            
+
 
 def train(data_path, model_path, log_file, config_file, restore=False, profiling=False, gen_heartbeat=False):
     polymath = PolyMath(config_file)
     z, loss = polymath.model()
     training_config = importlib.import_module(config_file).training_config
-    
+
     max_epochs = training_config['max_epochs']
     log_freq = training_config['log_freq']
 
@@ -106,6 +106,15 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 
     C.set_default_use_mean_gradient_value(True)
     lr = C.learning_rate_schedule(training_config['lr'], unit=C.learners.UnitType.sample)
+
+    ema = {}
+    dummies = []
+    for p in z.parameters:
+        ema_p = C.constant(0, shape=p.shape, dtype=p.dtype, name='ema_%s' % p.uid)
+        ema[p.uid] = ema_p
+        dummies.append(C.reduce_sum(C.assign(ema_p, 0.999 * ema_p + 0.001 * p)))
+    dummy = C.combine(dummies)
+
     learner = C.adadelta(z.parameters, lr)
 
     if C.Communicator.num_workers() > 1:
@@ -118,7 +127,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 
     train_data_file = os.path.join(data_path, training_config['train_data'])
     train_data_ext = os.path.splitext(train_data_file)[-1].lower()
-    
+
     model_file = os.path.join(model_path, model_name)
     model = C.combine(list(z.outputs) + [loss.output])
     label_ab = argument_by_name(loss, 'ab')
@@ -127,7 +136,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
         'best_val_err' : 100,
         'best_since'   : 0,
         'val_since'    : 0}
-    
+
     if restore and os.path.isfile(model_file):
         trainer.restore_from_checkpoint(model_file)
         #after restore always re-evaluate
@@ -139,11 +148,16 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 
         if epoch_stat['val_since'] == training_config['val_interval']:
             epoch_stat['val_since'] = 0
+            temp = dict((p.uid, p.value) for p in z.parameters)
+            for p in trainer.model.parameters:
+                p.value = ema[p.uid].value
             val_err = validate_model(os.path.join(data_path, training_config['val_data']), model, polymath)
             if epoch_stat['best_val_err'] > val_err:
                 epoch_stat['best_val_err'] = val_err
                 epoch_stat['best_since'] = 0
                 trainer.save_checkpoint(model_file)
+                for p in trainer.model.parameters:
+                    p.value = temp[p.uid]
             else:
                 epoch_stat['best_since'] += 1
                 if epoch_stat['best_since'] > training_config['stop_after']:
@@ -151,15 +165,15 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 
         if profiling:
             C.debugging.enable_profiler()
-        
+
         return True
-    
+
     if train_data_ext == '.ctf':
         mb_source, input_map = create_mb_and_map(loss, train_data_file, polymath)
 
         minibatch_size = training_config['minibatch_size'] # number of samples
         epoch_size = training_config['epoch_size']
-        
+
         for epoch in range(max_epochs):
             num_seq = 0
             while True:
@@ -167,9 +181,10 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
                     data = mb_source.next_minibatch(minibatch_size*C.Communicator.num_workers(), input_map=input_map, num_data_partitions=C.Communicator.num_workers(), partition_index=C.Communicator.rank())
                 else:
                     data = mb_source.next_minibatch(minibatch_size, input_map=input_map)
-                
+
                 trainer.train_minibatch(data)
                 num_seq += trainer.previous_minibatch_sample_count
+                dummy.eval()
                 if num_seq >= epoch_size:
                     break
             if not post_epoch_work(epoch_stat):
@@ -177,7 +192,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     else:
         if train_data_ext != '.tsv':
             raise Exception("Unsupported format")
-        
+
         minibatch_seqs = training_config['minibatch_seqs'] # number of sequences
 
         for epoch in range(max_epochs):       # loop over epochs
@@ -192,11 +207,11 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 
     if profiling:
         C.debugging.stop_profiler()
-        
+
 def symbolic_best_span(begin, end):
     running_max_begin = C.layers.Recurrence(C.element_max, initial_state=-float("inf"))(begin)
     return C.layers.Fold(C.element_max, initial_state=C.constant(-1e+30))(running_max_begin + end)
-    
+
 def validate_model(test_data, model, polymath):
     begin_logits = model.outputs[0]
     end_logits   = model.outputs[1]
@@ -233,10 +248,10 @@ def validate_model(test_data, model, polymath):
 
     stat_sum = 0
     loss_sum = 0
-    
+
     C.debugging.start_profiler()
     C.debugging.enable_profiler()
-    
+
     while True:
         data = mb_source.next_minibatch(minibatch_size, input_map=input_map)
         if not data or not (begin_label in data) or data[begin_label].num_sequences == 0:
@@ -264,7 +279,7 @@ def validate_model(test_data, model, polymath):
             stat_avg[4],
             stat_avg[5],
             stat_avg[6]))
-            
+
     return loss_avg
 
 # map from token to char offset
@@ -337,7 +352,7 @@ def test(test_data, model_path, model_file, config_file):
             f1_sum += f1
             em_sum += 1 if em else 0
             #print(f1, em, predict_answer.encode('utf-8'), [ans.encode('utf-8') for ans in answer])
-        
+
         num_seq += len(misc['rawctx'])
         misc['rawctx'] = []
         misc['ctoken'] = []
