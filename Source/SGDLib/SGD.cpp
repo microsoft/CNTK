@@ -1368,17 +1368,19 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
             // hoist the criterion into CPU space for all-reduce
             localEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);
+            if (localEpochCriterion.GetCriterion(0).IsNan())
+            {
+                LOGPRINTF(stderr, "Warning: NaN in localEpochCriterion. Just discard currently\n");
+                continue;
+            }
+
             for (size_t i = 0; i < evaluationNodes.size(); i++)
                 localEpochEvalErrors.Assign(i, numSamplesWithLabelOfNetwork);
 
             // copy all values to be aggregated into the header
             m_gradHeader->numSamples = aggregateNumSamples;
             m_gradHeader->criterion           = localEpochCriterion.GetCriterion(0).first;
-            if (localEpochCriterion.GetCriterion(0).IsNan())
-            {
-                LOGPRINTF(stderr, "Warning: NaN in localEpochCriterion. Just discard currently\n");
-                continue;
-            }
+
             m_gradHeader->numSamplesWithLabel = localEpochCriterion.GetCriterion(0).second; // same as aggregateNumSamplesWithLabel
             assert(m_gradHeader->numSamplesWithLabel == aggregateNumSamplesWithLabel);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
