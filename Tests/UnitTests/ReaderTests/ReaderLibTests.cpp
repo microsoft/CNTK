@@ -12,6 +12,7 @@
 #include "CorpusDescriptor.h"
 #include "FramePacker.h"
 #include "SequencePacker.h"
+#include "TruncatedBpttPacker.h"
 #include "CudaMemoryProvider.h"
 #include "HeapMemoryProvider.h"
 #include "MemoryBuffer.h"
@@ -2072,6 +2073,47 @@ BOOST_AUTO_TEST_CASE(SequencePackerSmallChunksWithSequences)
         CheckPackerOnDataSet(packer, noRandomizer, deserializer, 1, sweepNumberOfSamples * 2, 2, sweepNumberOfSamples, 33, false);
         CheckPackerOnDataSet(packer, noRandomizer, deserializer, 3, sweepNumberOfSamples * 2 / 3, 2, sweepNumberOfSamples, 31, false);
     }
+}
+
+BOOST_AUTO_TEST_CASE(TestTruncatedBpttPacker)
+{
+    size_t chunkSizeInSamples = 100;
+    size_t sweepNumberOfSamples = 100;
+    uint32_t maxSequenceLength = 10;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+    auto noRandomizer = make_shared<NoRandomizer>(deserializer, true);
+    auto packer = std::make_shared<TruncatedBPTTPacker>(noRandomizer, deserializer->GetStreamDescriptions());
+    
+    EpochConfiguration config;
+    config.m_allowMinibatchesToCrossSweepBoundaries = true;
+    config.m_numberOfWorkers = 1;
+    config.m_minibatchSizeInSamples = 30;
+    config.m_truncationSize = 3;
+    config.m_totalEpochSizeInSweeps = 3;
+    config.m_epochIndex = 0;
+
+    noRandomizer->StartEpoch(config);
+    packer->SetConfiguration(config, 
+        std::vector<MemoryProviderPtr> { std::make_shared<HeapMemoryProvider>() });
+
+    size_t sampleCount = 0;
+    while (true) {
+        auto mb = packer->ReadMinibatch();
+        
+        if (mb.m_endOfSweep)
+            break;
+
+        BOOST_ASSERT(sampleCount < sweepNumberOfSamples * 10);
+
+        sampleCount += mb.m_data[0]->m_layout->GetActualNumSamples();
+    }
+
+    noRandomizer->SetCurrentSamplePosition(sweepNumberOfSamples);
+    packer->Reset();
+
+    auto mb = packer->ReadMinibatch();
+
+    BOOST_TEST(!mb.m_endOfSweep);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

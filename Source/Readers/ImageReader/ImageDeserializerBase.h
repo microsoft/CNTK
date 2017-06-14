@@ -16,7 +16,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class ImageDeserializerBase : public DataDeserializerBase
     {
     public:
-        // Number of mutlicrop versions to produce.
+        // Number of multicrop versions to produce.
         // Currently the default value of 10 is used as in AlexNet paper,
         // Possibly we should make this configurable.
         const static uint8_t NumMultiViewCopies = 10;

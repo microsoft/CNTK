@@ -72,7 +72,7 @@ namespace CNTKLibraryCSEvalExamples
                 var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
                 inputDataMap.Add(inputVar, inputVal);
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 // Alternatively, create a Value object and add it to the data map.
                 outputDataMap.Add(outputVar, null);
 
@@ -158,7 +158,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Create input data map.
                 inputDataMap.Add(inputVar, inputVal);
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 // Alternatively, create a Value object and add it to the data map.
                 outputDataMap.Add(outputVar, null);
 
@@ -248,7 +248,7 @@ namespace CNTKLibraryCSEvalExamples
                     var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
                     inputDataMap.Add(inputVar, inputVal);
 
-                    // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                    // Create output data map. Using null as Value to indicate using system allocated memory.
                     // Alternatively, create a Value object and add it to the data map.
                     outputDataMap.Add(outputVar, null);
 
@@ -326,7 +326,7 @@ namespace CNTKLibraryCSEvalExamples
                 var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
                 inputDataMap.Add(inputVar, inputVal);
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 // Alternatively, create a Value object and add it to the data map.
                 outputDataMap.Add(outputVar, null);
 
@@ -444,7 +444,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Prepare output
                 Variable outputVar = modelFunc.Output;
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 
@@ -567,7 +567,7 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Prepare output
                 Variable outputVar = modelFunc.Output;
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 
@@ -687,7 +687,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Prepare output
                 Variable outputVar = modelFunc.Output;
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 

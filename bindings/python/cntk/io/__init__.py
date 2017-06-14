@@ -4,6 +4,11 @@
 # for full license information.
 # ==============================================================================
 
+"""
+CNTK IO utilities.
+"""
+
+
 import warnings
 from cntk import cntk_py, Value
 from cntk.tensor import ArrayMixin
