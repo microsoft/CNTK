@@ -1163,7 +1163,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     auto lfMMINodeNegStream = dynamic_cast<LatticeFreeMMINodeNegStream<ElemType>*>(criterionNodes[0].get());
 
     bool isFirstMinibatch = true;
-    int failFlag=0;
     for (;;)
     {
         auto profMinibatch = ProfilerTimeBegin();
@@ -1375,6 +1374,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // copy all values to be aggregated into the header
             m_gradHeader->numSamples = aggregateNumSamples;
             m_gradHeader->criterion           = localEpochCriterion.GetCriterion(0).first;
+            if (localEpochCriterion.GetCriterion(0).IsNan())
+            {
+                LOGPRINTF(stderr, "Warning: NaN in localEpochCriterion. Just discard currently\n");
+                continue;
+            }
             m_gradHeader->numSamplesWithLabel = localEpochCriterion.GetCriterion(0).second; // same as aggregateNumSamplesWithLabel
             assert(m_gradHeader->numSamplesWithLabel == aggregateNumSamplesWithLabel);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
@@ -1411,6 +1415,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         auto profWeights = ProfilerTimeBegin();
 
         // update model parameters
+        int failFlag=0;
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
 #if 1       // BUGBUG: We must skip gaps in our momentum, clipping, regularization etc. criteria.
@@ -1593,7 +1598,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             if (m_traceLevel > 0)
                 fflush(stderr);
 
-            if (failFlag == 0&& epochCriterion.IsNan()) //already fail
+            if (epochCriterion.IsNan()) //already fail
                 RuntimeError("The training criterion is not a number (NAN).");
 
             // reset statistics for differential logging
@@ -1693,7 +1698,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     // hoist the accumulated criterion value from GPU side to our 'out'  variables
     // (unless we useGradientAggregation, in which case they are accumulated in the 'out' variables directly)
-    if (failFlag==0 && !useGradientAggregation)
+    if (!useGradientAggregation)
     {
         epochCriterion = localEpochCriterion.GetCriterion(0);
         for (size_t i = 0; i < epochEvalErrors.size(); i++)
@@ -1701,7 +1706,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     }
 
     // in case of model averaging, do one more final aggregation of criteria
-    if (failFlag==0 &&useModelAggregation && (m_mpi->NumNodesInUse() > 1))
+    if (useModelAggregation && (m_mpi->NumNodesInUse() > 1))
     {
         // 1. total epoch samples processed by all workers
         size_t totalEpochSamplesOfAllWorkers = totalEpochSamples;
@@ -1733,7 +1738,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         totalEpochSamples = totalEpochSamplesOfAllWorkers;
     }
 
-    if (failFlag==0 && useGradientAggregation && !evaluationNodesWhichAccumulateResult.empty())
+    if (useGradientAggregation && !evaluationNodesWhichAccumulateResult.empty())
     {
         // Each worker contains accumulated values for part of the data set, we have to aggregate accumulated values
         // and recalculate evaluation errors based on accumulators.
