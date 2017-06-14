@@ -860,6 +860,8 @@ void Matrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::
         for (size_t i = 0; i < numInputs; i++)
         {
             let& input = inputs(i);
+            if (input.GetMatrixType() != MatrixType::DENSE)
+                InvalidArgument("GatherBatch: All inputs must have the same storage format (dense) as the output.");
             input._transferToDevice(CPUDEVICE, /*isBeingMoved=*/false, /*emptyTransfer=*/false); // make sure the input is actually on the CPU
             let* src = input.m_CPUMatrix->Data(); // copy from here...
             let  num = input.GetNumElements();    // ...this many elements
@@ -880,6 +882,8 @@ void Matrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::
         m_GPUMatrix->GatherBatch(numRows, numInputs, [&](size_t i) -> const GPUMatrix<ElemType>&
         {
             let& input = inputs(i);
+            if (input.GetMatrixType() != MatrixType::DENSE)
+                InvalidArgument("GatherBatch: All inputs must have the same storage format (dense) as the output.");
             input._transferToDevice(outputDeviceId, /*isBeingMoved=*/false, /*emptyTransfer=*/false); // make sure the input is actually on the right GPU
             return *input.m_GPUMatrix;
         });
@@ -888,6 +892,8 @@ void Matrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::
         m_CPUSparseMatrix->GatherBatch(numInputs, [&](size_t i) -> const CPUSparseMatrix<ElemType>&
         {
             let& input = inputs(i);
+            if (input.GetMatrixType() != MatrixType::SPARSE)
+                InvalidArgument("GatherBatch: All inputs must have the same storage format (sparse) as the output.");
             input._transferToDevice(CPUDEVICE, /*isBeingMoved=*/false, /*emptyTransfer=*/false); // make sure the input is actually on the right GPU
             return *input.m_CPUSparseMatrix;
         });
@@ -897,6 +903,8 @@ void Matrix<ElemType>::GatherBatch(size_t numRows, size_t numInputs, const std::
         m_GPUSparseMatrix->GatherBatch(numInputs, [&](size_t i) -> const GPUSparseMatrix<ElemType>&
         {
             let& input = inputs(i);
+            if (input.GetMatrixType() != MatrixType::SPARSE)
+                InvalidArgument("GatherBatch: All inputs must have the same storage format (sparse) as the output.");
             input._transferToDevice(outputDeviceId, /*isBeingMoved=*/false, /*emptyTransfer=*/false); // make sure the input is actually on the right GPU
             return *input.m_GPUSparseMatrix;
         });

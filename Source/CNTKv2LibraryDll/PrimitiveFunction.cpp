@@ -271,12 +271,14 @@ namespace CNTK
         if (m_op == PrimitiveOpType::Combine)
             outputs.assign(m_inputs.begin(), m_inputs.end());
         else if (m_op == PrimitiveOpType::NoOp)
-            outputs.push_back(OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), Name()));
+            outputs.push_back(OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), m_inputs[0].IsSparse(), Name()));
         else
         {
             DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);
             std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, this, m_attributes);
             bool needsGradient = std::any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.NeedsGradient(); });
+            // BUGBUG: This vv is a stop gap and needs to be done right (that is, use operation-specific propagation rules).
+            bool isSparse = std::all_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.IsSparse(); });
 
             NDShape outputShape = NDShape::Unknown;
             bool anyInputShapesUnknown =                          (std::find_if(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return  input.Shape().IsUnknown(); }) != m_inputs.end());
@@ -974,14 +976,14 @@ namespace CNTK
                 }
             }
 
-            auto primaryOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, Name());// .empty() ? L"" : Name());
+            auto primaryOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, isSparse, Name());// .empty() ? L"" : Name());
             outputs.push_back(primaryOutput);
             if (m_op == PrimitiveOpType::UnpackSequence)
             {
                 auto suppressMaskOutput = m_attributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
                 if (!suppressMaskOutput)
                 {
-                    auto maskOutput = OutputVariable({ NDShape::FreeDimension }, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, Name().empty() ? Name() : Name() + L"_UnpackSequenceMask");
+                    auto maskOutput = OutputVariable({ NDShape::FreeDimension }, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, /*isSparse =*/ false, Name().empty() ? Name() : Name() + L"_UnpackSequenceMask");
                     outputs.push_back(maskOutput);
                 }
             }

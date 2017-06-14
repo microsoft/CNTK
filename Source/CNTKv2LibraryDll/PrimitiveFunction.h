@@ -292,6 +292,7 @@ namespace CNTK
             std::vector<Variable> output({
                 OutputVariable(shape, inputs[0].GetDataType(), {},
                                std::any_of(inputs.begin(), inputs.end(), [](const Variable& input) { return input.NeedsGradient(); }),
+                               std::all_of(inputs.begin(), inputs.end(), [](const Variable& input) { return input.IsSparse(); }),
                                std::wstring())
             });
             auto res = MakeSharedObject<PrimitiveFunction>(op, std::move(inputs), std::move(output), std::move(attributes));

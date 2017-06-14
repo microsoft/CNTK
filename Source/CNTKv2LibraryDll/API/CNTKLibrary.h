@@ -2115,6 +2115,14 @@ private:
         return Variable(shape, VariableKind::Output, dataType, nullptr, needsGradient, dynamicAxes, /*isSparse =*/ false, name, std::wstring());// Internal::GenerateUid(VariableKind::Output));
     }
 
+    ///
+    /// Create an 'Output' variable
+    ///
+    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, bool isSparse, const std::wstring& name /*= L""*/)
+    {
+        return Variable(shape, VariableKind::Output, dataType, nullptr, needsGradient, dynamicAxes, isSparse, name, std::wstring());// Internal::GenerateUid(VariableKind::Output));
+    }
+
     static const int SentinelValueForInferParamInitRank = std::numeric_limits<int>::max();
     static const int DefaultParamInitScale = 1;
     static const int DefaultParamInitOutputRank = 1;
@@ -2308,7 +2316,7 @@ private:
 
     private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
-            : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value, false, {}, name, uid)
+            : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value, false, {}, value->GetStorageFormat() != StorageFormat::Dense, name, uid)
         {}
 
         ///
