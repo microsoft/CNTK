@@ -19,7 +19,7 @@ namespace
     struct FeedForwardClassifier
     {
         size_t inputDim;
-        size_t ouputDim;
+        size_t outputDim;
         Variable features;
         Variable labels;
         FunctionPtr output;
@@ -44,7 +44,7 @@ namespace
     {
         return TextFormatMinibatchSource(g_inputFile,
             { { g_featureStreamName, classifier.inputDim },
-              { g_labelsStreamName, classifier.ouputDim } },
+              { g_labelsStreamName, classifier.outputDim } },
             totalNumberOfSamples, true);
     }
 

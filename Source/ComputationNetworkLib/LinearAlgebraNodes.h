@@ -244,7 +244,7 @@ template class MinusNode<double>;
 // -----------------------------------------------------------------------
 // ElementTimesNode (factor1, factor2)
 // This allows broadcasting, and can thus also scale with a row, a column, or a scalar,
-// as well as mutliplying with a diagonal matrix (if represented as a column vector).
+// as well as multiplying with a diagonal matrix (if represented as a column vector).
 // -----------------------------------------------------------------------
 
 template <class ElemType>

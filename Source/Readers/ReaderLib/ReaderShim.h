@@ -107,6 +107,9 @@ public:
     }
 
 private:
+
+    void StartAsyncPrefetching();
+
     struct PrefetchResult
     {
         bool m_isEndOfSweep;
