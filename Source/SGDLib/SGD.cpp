@@ -1409,6 +1409,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         ProfilerTimeEnd(profGradientAgg, profilerEvtMainGradient);
         auto profWeights = ProfilerTimeBegin();
 
+        int failFlag=0;
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
@@ -1424,7 +1425,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #endif
             auto smoothedGradientIter = smoothedGradients.begin();
             auto smoothedCountIter = smoothedCounts.begin();
-            int failFlag=0;
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++, smoothedCountIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
@@ -1466,7 +1466,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
 
         // aggregation by model averaging or block momentum 
-        if (useModelAggregation)
+        if (failFlag==0 && useModelAggregation)
         {
             if (nSamplesSinceLastModelSync >= blockSizePerWorker)
             {
@@ -1484,7 +1484,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
         // using parameter server for parameter update
-        if (useAsyncGradientAggregation && m_mpi->NumNodesInUse() > 1)
+        if (failFlag==0 && useAsyncGradientAggregation && m_mpi->NumNodesInUse() > 1)
         {
             // Determine if any samples were processed across any of the ranks
             if (useDistributedMBReading)
