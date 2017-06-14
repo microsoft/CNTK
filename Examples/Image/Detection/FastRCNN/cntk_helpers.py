@@ -436,7 +436,7 @@ def visualizeResults(imgPath, roiLabels, roiScores, roiRelCoords, padWidth, padH
                     imgDebug = drawText(imgDebug, (rect[0],rect[1]), text, color = (255,255,255), font = font, colorBackground=color)
     return imgDebug
 
-def applyNonMaximaSuppression(nmsThreshold, labels, scores, coords):
+def applyNonMaximaSuppression(nmsThreshold, labels, scores, coords, ignore_background=False):
     # generate input for nms
     allIndices = []
     nmsRects = [[[]] for _ in range(max(labels) + 1)]
@@ -447,7 +447,7 @@ def applyNonMaximaSuppression(nmsThreshold, labels, scores, coords):
         allIndices.append(indices)
 
     # call nms
-    _, nmsKeepIndicesList = apply_nms(nmsRects, nmsThreshold)
+    _, nmsKeepIndicesList = apply_nms(nmsRects, nmsThreshold, ignore_background=ignore_background)
 
     # map back to original roi indices
     nmsKeepIndices = []
@@ -457,7 +457,7 @@ def applyNonMaximaSuppression(nmsThreshold, labels, scores, coords):
     assert (len(nmsKeepIndices) == len(set(nmsKeepIndices)))  # check if no roi indices was added >1 times
     return nmsKeepIndices
 
-def apply_nms(all_boxes, thresh, boUsePythonImpl = True):
+def apply_nms(all_boxes, thresh, ignore_background=False, boUsePythonImpl=True):
     """Apply non-maximum suppression to all predicted boxes output by the test_net method."""
     num_classes = len(all_boxes)
     num_images = len(all_boxes[0])
@@ -466,6 +466,9 @@ def apply_nms(all_boxes, thresh, boUsePythonImpl = True):
     nms_keepIndices = [[[] for _ in range(num_images)]
                  for _ in range(num_classes)]
     for cls_ind in range(num_classes):
+        if ignore_background and (cls_ind == 0):
+            continue
+
         for im_ind in range(num_images):
             dets = all_boxes[cls_ind][im_ind]
             if dets == []:
