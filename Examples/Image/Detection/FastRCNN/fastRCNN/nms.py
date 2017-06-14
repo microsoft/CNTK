@@ -20,7 +20,8 @@ def nms(dets, thresh):
     keep = []
     while order.size > 0:
         i = order[0]
-        keep.append(i)
+        if i not in keep:
+            keep.append(i)
         xx1 = np.maximum(x1[i], x1[order[1:]])
         yy1 = np.maximum(y1[i], y1[order[1:]])
         xx2 = np.minimum(x2[i], x2[order[1:]])
@@ -31,7 +32,7 @@ def nms(dets, thresh):
         inter = w * h
         ovr = inter / (areas[i] + areas[order[1:]] - inter)
 
-        inds = np.where(ovr <= thresh)[0]
-        order = order[inds + 1]
+        inds = np.where(ovr > thresh)[0]
+        order = order[inds]
 
     return keep
