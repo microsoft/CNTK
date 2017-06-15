@@ -4,7 +4,7 @@ from helpers import *
 import pickle
 import importlib
 import os
-from cntk.contrib.crosstalk import crosstalk
+from cntk.contrib import crosstalk
 from cntk.contrib.crosstalk import crosstalk_cntk as crct
 _ci = crct.instance
 
@@ -100,7 +100,7 @@ class PolyMath:
             if self.vocab[w] >= self.wg_dim:
                 i2w[self.vocab[w] - self.wg_dim] = w
         _ci.watch(processed.find_by_name('charcnn_conv', -1), 'charcnn_conv', var_type=crosstalk.Conv2DAttr,
-                  attr=crosstalk.Conv2DAttr(filter_shape=(5,self.char_emb_dim,), num_filters=self.convs, has_bias=True))
+                  attr=crosstalk.Conv2DAttr(filter_shape=(5,self.char_emb_dim,), num_filters=self.convs))
         _ci.watch(crct.find_func_param(embedded, name='TrainableE'), 'ng_emb', var_type=crosstalk.EmbedAttr,
                   attr=crosstalk.EmbedAttr(dict=i2w, input_dim=self.wn_dim))
         _ci.watch({n : crct.find_func_param(highway, name='0_'+n) for n in ['WT', 'bT', 'WU', 'bU']}, 'highway0', var_type=crct.DictParameterType)
@@ -154,14 +154,14 @@ class PolyMath:
 
         def att_ws_setter(pl, raw, attr=None):
             p1, p2, p3 = np.split(raw, 3)
-            crct.parameter_setter(pl[0], p1.reshape(-1,1))
-            crct.parameter_setter(pl[1], p2.reshape(-1,1))
-            crct.parameter_setter(pl[2], p3.reshape(-1))
+            crct._parameter_setter(pl[0], p1.reshape(-1,1))
+            crct._parameter_setter(pl[1], p2.reshape(-1,1))
+            crct._parameter_setter(pl[2], p3.reshape(-1))
 
         def att_ws_getter(pl, attr=None):
-            p1 = crct.parameter_getter(pl[0])
-            p2 = crct.parameter_getter(pl[1])
-            p3 = crct.parameter_getter(pl[2]).reshape((-1,1))
+            p1 = crct._parameter_getter(pl[0])
+            p2 = crct._parameter_getter(pl[1])
+            p3 = crct._parameter_getter(pl[2]).reshape((-1,1))
             return np.concatenate((p1,p2,p3))
 
         _ci.register_funcs('attention_weights', setter=att_ws_setter, getter=att_ws_getter)
@@ -258,4 +258,6 @@ class PolyMath:
         # loss
         start_loss = seq_loss(start_logits, ab)
         end_loss = seq_loss(end_logits, ae)
-        return C.combine([start_logits, end_logits]), start_loss + end_loss
+        #paper_loss = start_loss + end_loss
+        new_loss = all_spans_loss(start_logits, ab, end_logits, ae)
+        return C.combine([start_logits, end_logits]), new_loss

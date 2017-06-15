@@ -11,7 +11,7 @@ model_config = {
     'char_emb_dim'   	: 8,
     'dropout'        	: 0.2,
     'highway_layers' 	: 2,
-    'two_step'          : False,
+    'two_step'          : True,
     'use_cudnn'         : True,
 }
 

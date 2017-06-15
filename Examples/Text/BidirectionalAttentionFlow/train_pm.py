@@ -225,8 +225,8 @@ def validate_model(test_data, model, polymath):
     begin_label = argument_by_name(root, 'ab')
     end_label   = argument_by_name(root, 'ae')
 
-    begin_prediction = C.sequence.input(1, sequence_axis=begin_label.dynamic_axes[1], needs_gradient=True)
-    end_prediction = C.sequence.input(1, sequence_axis=end_label.dynamic_axes[1], needs_gradient=True)
+    begin_prediction = C.sequence.input_variable(1, sequence_axis=begin_label.dynamic_axes[1], needs_gradient=True)
+    end_prediction = C.sequence.input_variable(1, sequence_axis=end_label.dynamic_axes[1], needs_gradient=True)
 
     best_span_score = symbolic_best_span(begin_prediction, end_prediction)
     predicted_span = C.layers.Recurrence(C.plus)(begin_prediction - C.sequence.past_value(end_prediction))
@@ -306,11 +306,13 @@ def get_answer(raw_text, tokens, start, end):
 
 def test(test_data, model_path, model_file, config_file):
     polymath = PolyMath(config_file)
-    model = C.load_model(os.path.join(model_path, model_file if model_file else model_name))
+    loaded_model = C.load_model(os.path.join(model_path, model_file if model_file else model_name))
+    z, loss = polymath.model()
+    model = C.combine(list(z.outputs) + [loss.output])
     begin_logits = model.outputs[0]
     end_logits   = model.outputs[1]
     loss         = C.as_composite(model.outputs[2].owner)
-    begin_prediction = C.sequence.input(1, sequence_axis=begin_logits.dynamic_axes[1], needs_gradient=True)
+    begin_prediction = C.sequence.input_variable(1, sequence_axis=begin_logits.dynamic_axes[1], needs_gradient=True)
     end_prediction = C.sequence.input_variable(1, sequence_axis=end_logits.dynamic_axes[1], needs_gradient=True)
     best_span_score = symbolic_best_span(begin_prediction, end_prediction)
     predicted_span = C.layers.Recurrence(C.plus)(begin_prediction - C.sequence.past_value(end_prediction))
@@ -348,7 +350,7 @@ def test(test_data, model_path, model_file, config_file):
         num_batch += 1
         end_time = time.time()
         print("Tested {} batches ({:.1f} seq / second), F1 {:.4f}, EM {:.4f}".format(num_batch, batch_size / (end_time - start_time), f1_sum / num_seq, em_sum / num_seq))
-    
+
     with open('{}_out.json'.format(model_file), 'w', encoding='utf-8') as out:
         import json
         json.dump(results, out)

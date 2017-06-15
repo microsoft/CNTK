@@ -130,7 +130,7 @@ class PolyMath:
         q2c_out = c_processed * q2c
 
         att_context = C.splice(c_processed, c2q, c_processed * c2q, q2c_out)
-        
+
         return C.as_block(
             att_context,
             [(c_processed, context), (q_processed, query)],
@@ -193,7 +193,7 @@ class PolyMath:
         
         # attention layer
         att_context = self.attention_layer(c_processed, q_processed)
-        
+
         # modeling layer
         mod_context = self.modeling_layer(att_context)
 
