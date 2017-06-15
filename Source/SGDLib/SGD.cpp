@@ -1339,6 +1339,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             if (isNaNLastMini)
             {
                 localEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);    //this will cause problem for discard the previous criteria
+                isNaNLastMini=0;
             }
             else
             {
