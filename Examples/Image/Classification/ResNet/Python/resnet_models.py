@@ -4,9 +4,10 @@
 # for full license information.
 # ==============================================================================
 
-from cntk.initializer import he_normal
-from cntk.layers import AveragePooling, BatchNormalization, Convolution, Dense
+from cntk.initializer import he_normal, uniform
+from cntk.layers import MaxPooling, GlobalAveragePooling, BatchNormalization, Convolution, Dense
 from cntk.ops import element_times, relu
+import numpy as np
 
 #
 # Resnet building blocks
@@ -38,9 +39,33 @@ def resnet_basic_stack(input, num_stack_layers, num_filters):
     l = input 
     for _ in range(num_stack_layers): 
         l = resnet_basic(l, num_filters)
-    return l 
+    return l
 
-#   
+def resnet_bottleneck(input, out_num_filters, inter_out_num_filters):
+    c1 = conv_bn_relu(input, (1,1), inter_out_num_filters)
+    c2 = conv_bn_relu(c1, (3,3), inter_out_num_filters)
+    c3 = conv_bn(c2, (1,1), out_num_filters)
+    p  = c3 + input
+    return relu(p)
+
+def resnet_bottleneck_inc(input, out_num_filters, inter_out_num_filters, stride1x1, stride3x3):
+    c1 = conv_bn_relu(input, (1,1), inter_out_num_filters, strides=stride1x1)
+    c2 = conv_bn_relu(c1, (3,3), inter_out_num_filters, strides=stride3x3)
+    c3 = conv_bn(c2, (1,1), out_num_filters) 
+
+    stride = np.multiply(stride1x1, stride3x3)
+    s  = conv_bn(input, (1,1), out_num_filters, stride)
+    p  = c3 + s
+    return relu(p)
+
+def resnet_bottleneck_stack(input, num_stack_layers, out_num_filters, inter_out_num_filters): 
+    assert (num_stack_layers >= 0)
+    l = input 
+    for _ in range(num_stack_layers): 
+        l = resnet_bottleneck(l, out_num_filters, inter_out_num_filters)
+    return l
+
+#
 # Defines the residual network model for classifying images
 #
 def create_cifar10_model(input, num_stack_layers, num_classes):
@@ -56,6 +81,55 @@ def create_cifar10_model(input, num_stack_layers, num_classes):
     r3_2 = resnet_basic_stack(r3_1, num_stack_layers-1, c_map[2])
 
     # Global average pooling and output
-    pool = AveragePooling(filter_shape=(8,8))(r3_2) 
+    pool = GlobalAveragePooling()(r3_2)
     z = Dense(num_classes)(pool)
+    return z
+
+def create_imagenet_model_s(input, num_stack_layers, num_classes):
+    c_map = [64, 128, 256, 512]
+
+    conv = conv_bn_relu(input, (7,7), c_map[0], strides=(2,2))
+    pool1 = MaxPooling((3,3), strides=(2,2), pad=True)(conv)
+    r1 = resnet_basic_stack(pool1, num_stack_layers[0], c_map[0])
+
+    r2_1 = resnet_basic_inc(r1, c_map[1])
+    r2_2 = resnet_basic_stack(r2_1, num_stack_layers[1], c_map[1])
+
+    r3_1 = resnet_basic_inc(r2_2, c_map[2])
+    r3_2 = resnet_basic_stack(r3_1, num_stack_layers[2], c_map[2])
+
+    r4_1 = resnet_basic_inc(r3_2, c_map[3])
+    r4_2 = resnet_basic_stack(r4_1, num_stack_layers[3], c_map[3])
+
+    # Global average pooling and output
+    pool = GlobalAveragePooling()(r4_2)
+    z = Dense(num_classes, init=uniform(0.05))(pool)
+    return z
+
+def create_imagenet_model(input, num_stack_layers, num_classes, stride1x1, stride3x3):
+    c_map = [64, 128, 256, 512, 1024, 2048]
+
+    # conv1 and max pooling
+    conv1 = conv_bn_relu(input, (7,7), c_map[0], strides=(2,2))
+    pool1 = MaxPooling((3,3), strides=(2,2), pad=True)(conv1)
+
+    # conv2_x
+    r2_1 = resnet_bottleneck_inc(pool1, c_map[2], c_map[0], (1,1), (1,1))
+    r2_2 = resnet_bottleneck_stack(r2_1, num_stack_layers[0], c_map[2], c_map[0])
+
+    # conv3_x
+    r3_1 = resnet_bottleneck_inc(r2_2, c_map[3], c_map[1], stride1x1, stride3x3)
+    r3_2 = resnet_bottleneck_stack(r3_1, num_stack_layers[1], c_map[3], c_map[1])
+
+    # conv4_x
+    r4_1 = resnet_bottleneck_inc(r3_2, c_map[4], c_map[2], stride1x1, stride3x3)
+    r4_2 = resnet_bottleneck_stack(r4_1, num_stack_layers[2], c_map[4], c_map[2])
+
+    # conv5_x
+    r5_1 = resnet_bottleneck_inc(r4_2, c_map[5], c_map[3], stride1x1, stride3x3)
+    r5_2 = resnet_bottleneck_stack(r5_1, num_stack_layers[3], c_map[5], c_map[3])
+
+    # Global average pooling and output
+    pool = GlobalAveragePooling()(r5_2)
+    z = Dense(num_classes, init=uniform(0.05))(pool)
     return z
