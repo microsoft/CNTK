@@ -1762,7 +1762,6 @@ namespace CNTK
     {
 
         int nthread = omp_thread_count();
-        fprintf(stderr, "omp thread num: %d\n", nthread);
         // Validate arguments and outputs
         if (outputs.empty())
             InvalidArgument("At least one output has to be specified when calling Forward method of the Function '%S'.", this->AsString().c_str());
