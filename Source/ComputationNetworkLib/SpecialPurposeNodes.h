@@ -865,6 +865,11 @@ public:
         // compute CTC score
         m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_maxIndexes, *m_maxValues, *m_CTCposterior, InputRef(0).GetMBLayout(), m_blankTokenId, m_delayConstraint);
 
+        if (m_CTCposterior->HasNan("NaN in m_CTCposterior, set it to default falue"))
+        {
+            m_CTCposterior->SetValue(1e-6);
+        }
+
 #if NANCHECK
         functionValues.HasNan("ForwardBackwardNode");
 #endif
