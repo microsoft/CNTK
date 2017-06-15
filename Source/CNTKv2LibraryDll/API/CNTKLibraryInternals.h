@@ -187,7 +187,7 @@ namespace CNTK
         }
         // deallocate: return buffer to the free list
         // User must already have called the destructor, so this is now uninitialized memory.
-        static void Return(T* pt)
+        static void CheckIn(T* pt)
         {
             auto& first = s_first();
             Node* p = (Node*)pt;
@@ -198,7 +198,7 @@ namespace CNTK
         static void Delete(T* ptr)
         {
             ptr->~T();
-            Return(ptr);
+            CheckIn(ptr);
         }
     };
 
