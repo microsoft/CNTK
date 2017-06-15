@@ -144,6 +144,10 @@ private:
             auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
             // Note: If criterion is > [1 x 1] then inverse broadcasting will kick in and aggregate.
             // If count is zero, we lazily consider the numerator as zero as well.
+            if (beta==0)
+            {
+                m_aggregateCriterionValues->SetValue(0.0f); //instead of nan
+            }
             criterionAccumulator.DoCopyOf(m_aggregateSampleCounts[i] ? (float)beta : 0, criterionValue, 1);
         }
         m_aggregateSampleCounts[i] = m_aggregateSampleCounts[i] * beta + numSamples;

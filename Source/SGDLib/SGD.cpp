@@ -1331,29 +1331,46 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         size_t aggregateNumSamples = actualMBSize; // (0 for empty MB)
         size_t aggregateNumSamplesWithLabel = CriterionAccumulator<ElemType>::GetNumSamples(criterionNodes[0], numSamplesWithLabelOfNetwork); // (0 for empty MB)
 
+        int isNaNThisMini=0;
         if (!useGradientAggregation)
         {
             // accumulate criterion values (objective, eval)
             assert(wasDataRead || numSamplesWithLabelOfNetwork == 0);
             // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
-            if (isNaNLastMini)
+            for (size_t i = 0; i < evaluationNodes.size(); i++)
             {
-                localEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);    //this will cause problem for discard the previous criteria
-                isNaNLastMini=0;
+                if (isNaNLastMini)
+                {
+                    localEpochEvalErrors.Assign(i, numSamplesWithLabelOfNetwork);    //this will cause problem for discard the previous criteria
+                }
+                else
+                {
+                    localEpochEvalErrors.Add(i, numSamplesWithLabelOfNetwork);
+                }
+                if (localEpochEvalErrors.GetCriterion(i).IsNan())
+                {
+                    isNaNThisMini=1;
+                }
+            }
+            if (isNaNThisMini)
+            {
+                isNaNLastMini=1;
+                LOGPRINTF(stderr, "Warning: NaN in localEpochEvalErrors. Just discard currently\n");
+                continue; //eval will lost all the previous value, but criterion not
             }
             else
             {
-                localEpochCriterion.Add(0, numSamplesWithLabelOfNetwork);
+                isNaNLastMini=0;
+                localEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);    //this will cause problem for discard the previous criteria
             }
-            if (localEpochCriterion.GetCriterion(0).IsNan())
+
+            if (localEpochCriterion.GetCriterion(0).IsNan()) //wont run into this
             {
                 LOGPRINTF(stderr, "Warning: NaN in localEpochCriterion. Just discard currently\n");
                 isNaNLastMini=1;
                 continue;
             }
             
-            for (size_t i = 0; i < evaluationNodes.size(); i++)
-                localEpochEvalErrors.Add(i, numSamplesWithLabelOfNetwork);
         }
         else
         {
@@ -1383,15 +1400,26 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
 
             // hoist the criterion into CPU space for all-reduce
+            for (size_t i = 0; i < evaluationNodes.size(); i++)
+            {
+                localEpochEvalErrors.Assign(i, numSamplesWithLabelOfNetwork);
+                if (localEpochEvalErrors.GetCriterion(i).IsNan())
+                {
+                    isNaNThisMini=1;
+                }
+            }
+            if (isNaNThisMini)
+            {
+                LOGPRINTF(stderr, "Warning: NaN in localEpochEvalErrors. Just discard currently\n");
+                continue;
+            }
+
             localEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);
-            if (localEpochCriterion.GetCriterion(0).IsNan())
+            if (localEpochCriterion.GetCriterion(0).IsNan()) //wont run into this
             {
                 LOGPRINTF(stderr, "Warning: NaN in localEpochCriterion. Just discard currently\n");
                 continue;
             }
-
-            for (size_t i = 0; i < evaluationNodes.size(); i++)
-                localEpochEvalErrors.Assign(i, numSamplesWithLabelOfNetwork);
 
             // copy all values to be aggregated into the header
             m_gradHeader->numSamples = aggregateNumSamples;
