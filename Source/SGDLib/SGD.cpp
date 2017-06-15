@@ -1163,6 +1163,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     auto lfMMINodeNegStream = dynamic_cast<LatticeFreeMMINodeNegStream<ElemType>*>(criterionNodes[0].get());
 
     bool isFirstMinibatch = true;
+    bool isNaNLastMini=false;
     for (;;)
     {
         auto profMinibatch = ProfilerTimeBegin();
@@ -1335,10 +1336,18 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // accumulate criterion values (objective, eval)
             assert(wasDataRead || numSamplesWithLabelOfNetwork == 0);
             // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
-            localEpochCriterion.Add(0, numSamplesWithLabelOfNetwork);
+            if (isNaNLastMini)
+            {
+                localEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);    //this will cause problem for discard the previous criteria
+            }
+            else
+            {
+                localEpochCriterion.Add(0, numSamplesWithLabelOfNetwork);
+            }
             if (localEpochCriterion.GetCriterion(0).IsNan())
             {
                 LOGPRINTF(stderr, "Warning: NaN in localEpochCriterion. Just discard currently\n");
+                isNaNLastMini=1;
                 continue;
             }
             
