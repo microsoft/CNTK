@@ -1746,6 +1746,14 @@ namespace CNTK
         return currentBackpropRootsTimeStamps;
     }
 
+    int omp_thread_count() {
+        int n = 0;
+#pragma omp parallel reduction(+:n)
+        n += 1;
+        return n;
+    }
+
+
     /*virtual*/ BackPropStatePtr CompositeFunction::Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                                             std::unordered_map<Variable, ValuePtr>& outputs,
                                                             const DeviceDescriptor& computeDevice,
@@ -1753,7 +1761,7 @@ namespace CNTK
                                                             const std::unordered_set<Variable>& inputsToExcludeGradientsFor)
     {
 
-        int nthread = omp_get_num_threads();
+        int nthread = omp_thread_count();
         fprintf(stderr, "omp thread num: %d\n", nthread);
         // Validate arguments and outputs
         if (outputs.empty())
