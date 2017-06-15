@@ -811,7 +811,10 @@ public:
         }
         else
            RuntimeError("ForwardBackwardNode criterion expects only two inputs: labels and network output.");
+        Gradient().InplaceTruncateTop(20.0f);
+        Gradient().InplaceTruncateBottom(-20.0f);
     }
+
 
     void BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
         const Matrix<ElemType>& gradientValues)
@@ -864,11 +867,9 @@ public:
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
         // compute CTC score
         m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_maxIndexes, *m_maxValues, *m_CTCposterior, InputRef(0).GetMBLayout(), m_blankTokenId, m_delayConstraint);
+        m_CTCposterior->InplaceTruncateTop(2.0f);
+        m_CTCposterior->InplaceTruncateBottom(-1.0f);
 
-        if (m_CTCposterior->HasNan("NaN in m_CTCposterior, set it to default falue"))
-        {
-            m_CTCposterior->SetValue(1e-6);
-        }
 
 #if NANCHECK
         functionValues.HasNan("ForwardBackwardNode");
