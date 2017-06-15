@@ -24,6 +24,7 @@
 #include "SpecialPurposeNodes.h"
 #include "SequenceReshapeNodes.h"
 #include "UserDefinedFunction.h"
+#include <omp.h>
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -1751,6 +1752,9 @@ namespace CNTK
                                                             const std::unordered_set<Variable>& outputsToRetainBackwardStateFor,
                                                             const std::unordered_set<Variable>& inputsToExcludeGradientsFor)
     {
+
+        int nthread = omp_get_num_threads();
+        fprintf(stderr, "omp thread num: %d\n", nthread);
         // Validate arguments and outputs
         if (outputs.empty())
             InvalidArgument("At least one output has to be specified when calling Forward method of the Function '%S'.", this->AsString().c_str());
