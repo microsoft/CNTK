@@ -7103,71 +7103,71 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
     if (reductionOp != ElementWiseOperator::opSum)
         InvalidArgument("TensorOp (binary): The only permitted binary reduction operation is opSum.");
 
-    if (reducingOpDims.size() == 0 && a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols() && sizeof(ElemType) == sizeof(float) && beta == 0)
-    {
-        // fast path for no reduction and no broadcasting
-        // note this is a temporary perf fix until we migrate to something else
-        const float* pp0 = (float*)a.Data() + offsets[0];
-        const float* pp1 = (float*)b.Data() + offsets[1];
-        float* pp = (float*)Data() + offsets[2];
+    //if (reducingOpDims.size() == 0 && a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols() && sizeof(ElemType) == sizeof(float) && beta == 0)
+    //{
+    //    // fast path for no reduction and no broadcasting
+    //    // note this is a temporary perf fix until we migrate to something else
+    //    const float* pp0 = (float*)a.Data() + offsets[0];
+    //    const float* pp1 = (float*)b.Data() + offsets[1];
+    //    float* pp = (float*)Data() + offsets[2];
 
-        int total = 1;
-        for(int i = 0; i < regularOpDims.size(); i++) total *= (int)regularOpDims[i];
+    //    int total = 1;
+    //    for(int i = 0; i < regularOpDims.size(); i++) total *= (int)regularOpDims[i];
 
-        // decide how many omp threads to use
-        static const unsigned int L1DataCacheSize = 32 * 1024;
-        unsigned int maxThreads = std::min(std::thread::hardware_concurrency(), 1U);
-        int parallelTotal = (total & ~3);
-        unsigned int numThreads = parallelTotal * sizeof(ElemType) * 3 / L1DataCacheSize; // 3 elements for 2 inputs and 1 outputs
+    //    // decide how many omp threads to use
+    //    static const unsigned int L1DataCacheSize = 32 * 1024;
+    //    unsigned int maxThreads = std::min(std::thread::hardware_concurrency(), 1U);
+    //    int parallelTotal = (total & ~3);
+    //    unsigned int numThreads = parallelTotal * sizeof(ElemType) * 3 / L1DataCacheSize; // 3 elements for 2 inputs and 1 outputs
 
-        class AutoOMPThreadRestore
-        {
-            int m_threads;
+    //    class AutoOMPThreadRestore
+    //    {
+    //        int m_threads;
 
-            public:
-                AutoOMPThreadRestore() { m_threads = omp_get_num_threads(); }
-                ~AutoOMPThreadRestore() { omp_set_num_threads(m_threads); }
-        };
-        AutoOMPThreadRestore restore;
-        omp_set_num_threads(min(maxThreads, numThreads));
-        __m128 valpha = _mm_set_ps1(alpha);
-        __m128 vbeta = _mm_set_ps1(beta);
-        switch (op)
-        {
-            case ElementWiseOperator::opSum:
-            {
-                #pragma omp parallel for
-                for (int i = 0; i < parallelTotal; i += 4)
-                {
-                    __m128 va = _mm_loadu_ps(pp0 + i);
-                    __m128 vb = _mm_loadu_ps(pp1 + i);
-                    __m128 vc = _mm_mul_ps(valpha, _mm_add_ps(va, vb));
-                    _mm_storeu_ps(pp + i, vc);
-                }
+    //        public:
+    //            AutoOMPThreadRestore() { m_threads = omp_get_num_threads(); }
+    //            ~AutoOMPThreadRestore() { omp_set_num_threads(m_threads); }
+    //    };
+    //    AutoOMPThreadRestore restore;
+    //    omp_set_num_threads(min(maxThreads, numThreads));
+    //    __m128 valpha = _mm_set_ps1(alpha);
+    //    __m128 vbeta = _mm_set_ps1(beta);
+    //    switch (op)
+    //    {
+    //        case ElementWiseOperator::opSum:
+    //        {
+    //            #pragma omp parallel for
+    //            for (int i = 0; i < parallelTotal; i += 4)
+    //            {
+    //                __m128 va = _mm_loadu_ps(pp0 + i);
+    //                __m128 vb = _mm_loadu_ps(pp1 + i);
+    //                __m128 vc = _mm_mul_ps(valpha, _mm_add_ps(va, vb));
+    //                _mm_storeu_ps(pp + i, vc);
+    //            }
 
-                for (int i = parallelTotal; i < total; i++)
-                {
-                    pp[i] = pp0[i] + pp1[i];
-                }
-                return;
-            }
-            case ElementWiseOperator::opElementwiseProduct:
-                #pragma omp parallel for
-                for (int i = 0; i < parallelTotal; i += 4)
-                {
-                    __m128 va = _mm_loadu_ps(pp0 + i);
-                    __m128 vb = _mm_loadu_ps(pp1 + i);
-                    __m128 vc = _mm_mul_ps(valpha, _mm_mul_ps(va, vb));
-                    _mm_storeu_ps(pp + i, vc);
-                }
+    //            for (int i = parallelTotal; i < total; i++)
+    //            {
+    //                pp[i] = pp0[i] + pp1[i];
+    //            }
+    //            return;
+    //        }
+    //        case ElementWiseOperator::opElementwiseProduct:
+    //            #pragma omp parallel for
+    //            for (int i = 0; i < parallelTotal; i += 4)
+    //            {
+    //                __m128 va = _mm_loadu_ps(pp0 + i);
+    //                __m128 vb = _mm_loadu_ps(pp1 + i);
+    //                __m128 vc = _mm_mul_ps(valpha, _mm_mul_ps(va, vb));
+    //                _mm_storeu_ps(pp + i, vc);
+    //            }
 
-                for (int i = parallelTotal; i < total; i++)
-                {
-                    pp[i] = pp0[i] * pp1[i];
-                }
-                return;
-        }
-    }
+    //            for (int i = parallelTotal; i < total; i++)
+    //            {
+    //                pp[i] = pp0[i] * pp1[i];
+    //            }
+    //            return;
+    //    }
+    //}
 
 #define CaseBinaryTensorOp(oper)                                                       \
     case ElementWiseOperator::op##oper:                                                \
