@@ -142,13 +142,17 @@ private:
         if (numSamples > 0) // (if MB is empty, we must not look at the matrix)
         {
             auto criterionValue = node->As<ComputationNode<ElemType>>()->ValueTensorFor(SIZE_MAX, fr);
+            auto criterionMat = node->As<ComputationNode<ElemType>>()->ValueFor(fr);
             // Note: If criterion is > [1 x 1] then inverse broadcasting will kick in and aggregate.
             // If count is zero, we lazily consider the numerator as zero as well.
-            if (beta==0)
+            if (!criterionMat.HasNan("NaN in aggregate\n"))
             {
-                m_aggregateCriterionValues->SetValue(0.0f); //instead of nan
+                criterionAccumulator.DoCopyOf(m_aggregateSampleCounts[i] ? (float)beta : 0, criterionValue, 1);
             }
-            criterionAccumulator.DoCopyOf(m_aggregateSampleCounts[i] ? (float)beta : 0, criterionValue, 1);
+            else
+            {
+                return *this;
+            }
         }
         m_aggregateSampleCounts[i] = m_aggregateSampleCounts[i] * beta + numSamples;
         return *this;
