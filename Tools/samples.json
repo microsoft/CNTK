@@ -1,8 +1,26 @@
 [
     {
+        "category": ["GettingStarted"],
+        "name":  "LogisticRegression_FunctionalAPI",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/1stSteps/LogisticRegression_FunctionalAPI.py",
+        "description":  "Introduces basic CNTK usage using logistic regression as an example, using the Functional API.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "5/24/2017"
+    },
+    {
+        "category": ["GettingStarted"],
+        "name":  "LogisticRegression_GraphAPI",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/1stSteps/LogisticRegression_GraphAPI.py",
+        "description":  "Introduces basic CNTK usage using logistic regression as an example, using the Graph API.",
+        "language":  ["Python"],
+        "type":  ["Recipe"],
+	"dateadded": "5/24/2017"
+    },
+    {
         "category": [""],
         "name":  "Model Evaluation on Azure",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/Evaluate-a-model-in-an-Azure-WebApi",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/Evaluate-a-model-in-an-Azure-WebApi",
         "description":  "Host an already trained CNTK model on Azure.",
         "language":  [],
         "type":  ["Tutorial"],
@@ -11,7 +29,7 @@
     {
         "category": [""],
         "name":  "Model Evaluation in C++/C#",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/CNTK-Eval-Examples",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-Eval-Examples",
         "description":  "Evaluation or inference of an already trained CNTK model in C++/C#.",
         "language":  ["C#"],
         "type":  ["Example"],
@@ -83,7 +101,7 @@
     {
         "category": ["Image"],
         "name":  "Fast R-CNN",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN",
         "description":  "Train object detection from images by adapting pre-trained classification models on arbitrarily sized regions of interest using ROI pooling.",
         "language":  ["Python", "BrainScript"],
         "type":  ["Tutorial", "Recipe"],
@@ -274,7 +292,7 @@
         "name":  "Logistic Regression",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_101_LogisticRegression.ipynb",
         "description":  "Classify cancer using simulated data (Logistic Regression).",
-        "language":  ["Python", "BrainScript"],
+        "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"],
 	"dateadded": "4/14/2017"
     },

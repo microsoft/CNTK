@@ -207,15 +207,13 @@ public:
     void NesterovAcceleratedMomentumSGDUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& smoothedGradients, ElemType learnRatePerSample, ElemType momentum, bool unitGainMomentum = true);
 
     ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);
-    void FSAdagradUpdate(size_t mbSize,
-                         Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
-                         const double learnRatePerSample, const double targetAdagradAvDenom,
-                         const double meanMomentum, const double varMomentum, bool unitGainMomentum = true);
+    void FSAdagradUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double targetAdagradAvDenom_x_sqrtAdagradSqrFrames,
+                         const double learnRatePerSample, const double meanMomentum, const double varMomentum, bool unitGainMomentum = true);
 
-    void AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
+    void AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double smoothedCount,
         const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, bool unitGainMomentum = true, bool adamax = false);
 
-    ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
+    ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier, const bool initialized);
 
     void AdaDeltaUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionvalues, ElemType learningRatePerSample, ElemType rho, ElemType epsilon);
 
@@ -292,7 +290,11 @@ public:
     void SetDiagonalValue(const ElemType v);
     void SetDiagonalValue(const Matrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetUniformRandomValue(RNGHandle& rngHandle, const ElemType low, const ElemType high);
+    void SetGaussianRandomValue(RNGHandle& rngHandle, const ElemType mean, const ElemType stdev);
+    void SetGumbelRandomValue(RNGHandle& rngHandle, const ElemType loc, const ElemType scale);
     void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
     void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle);
     void AddGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
     Matrix<ElemType>& AssignNoiseContrastiveEstimation(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias, Matrix<ElemType>& tmp);

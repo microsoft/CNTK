@@ -583,6 +583,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     LOGPRINTF(stderr, "__COMPLETED__\n");
     fflush(stderr);
 
+    // In case of success, finalizing the mpi if necessary.
+    if (mpi)
+        mpi->Finalize();
     return EXIT_SUCCESS;
 }
 
@@ -592,7 +595,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 2.0rc2+ (");
+    fprintf(stderr, "CNTK 2.0+ (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
@@ -761,6 +764,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         fprintf(stderr, "COMPLETED.\n");
     fflush(stderr);
 
+    if (mpi)
+        mpi->Finalize();
     return EXIT_SUCCESS;
 }
 

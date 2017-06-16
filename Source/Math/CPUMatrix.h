@@ -105,7 +105,8 @@ public:
                      ElemType RMS_WGT_MAX,
                      ElemType RMS_WGT_DEC,
                      ElemType RMS_WGT_MIN,
-                     const bool needAveMultiplier);
+                     const bool needAveMultiplier,
+                     const bool initialized);
 
     void AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
 
@@ -154,7 +155,11 @@ public:
     void SetDiagonalValue(const ElemType v);
     void SetDiagonalValue(const CPUMatrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetUniformRandomValue(RNGHandle& rngHandle, const ElemType low, const ElemType high);
+    void SetGaussianRandomValue(RNGHandle& rngHandle, const ElemType mean, const ElemType stdev);
+    void SetGumbelRandomValue(RNGHandle& rngHandle, const ElemType loc, const ElemType scale);
     void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
     void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle);
     void AddGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
 

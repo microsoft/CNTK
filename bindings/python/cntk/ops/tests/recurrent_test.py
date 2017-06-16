@@ -48,7 +48,7 @@ def test_op_future_value(input_size, time_step, initial_state, device_id, precis
 
     expected_forward = AA(expected_forward_list, dtype=dt)
 
-    a = sequence.input(shape=elem_shape,
+    a = sequence.input_variable(shape=elem_shape,
                        dtype=sanitize_dtype_cntk(precision),
                        needs_gradient=True,
                        name='a')
@@ -78,7 +78,7 @@ def test_op_past_value(input_size, time_step, initial_state, device_id, precisio
         expected_forward[seq_idx,0:time_step] = initial_state
 
     elem_shape = input_size[2:]
-    a = sequence.input(shape=elem_shape,
+    a = sequence.input_variable(shape=elem_shape,
                        dtype=sanitize_dtype_cntk(precision),
                        needs_gradient=True,
                        name='a')
@@ -126,12 +126,12 @@ def test_op_delay_with_initial_state(input_size, time_step, initial_state_size, 
         else:
             expected_forward[seq_idx,time_step:] = initial_state[seq_idx,:1 if time_step == -1 else -time_step,...]
 
-    a = sequence.input(shape=input_size[2:],
+    a = sequence.input_variable(shape=input_size[2:],
                        dtype=sanitize_dtype_cntk(precision),
                        needs_gradient=True,
                        name='a')
     from ...axis import Axis
-    i = sequence.input(shape=initial_state_size[2:],
+    i = sequence.input_variable(shape=initial_state_size[2:],
                        dtype=sanitize_dtype_cntk(precision),
                        needs_gradient=True,
                        sequence_axis=Axis('initial_state_axis'),
@@ -150,9 +150,6 @@ def test_op_delay_with_initial_state(input_size, time_step, initial_state_size, 
                 backward[seq_idx,t] = 0.0
                 if t < initial_state_size[1]:
                     initial_state_backward[seq_idx,t] = initial_state_bw_val
-
-    print(initial_state_size)
-    print(initial_state_backward)
 
     expected_backward = {
         a: backward,

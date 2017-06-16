@@ -444,7 +444,7 @@ namespace CNTK
         /// Returns a boolean value indicating if the dimension size for any of the axes of 'this' shape is free or inferred
         /// i.e. (== NDShape::FreeDimension or == NDShape::InferredDimension).
         ///
-        bool HasFreeOrInferredDimension() const
+        bool HasUnboundDimension() const
         {
             return HasFreeDimension() || HasInferredDimension();
         }
@@ -454,7 +454,7 @@ namespace CNTK
         ///
         size_t TotalSize() const
         {
-            if (HasFreeOrInferredDimension())
+            if (HasUnboundDimension())
                 RuntimeError("NDShape::TotalSize: TotalSize cannot be determined for a NDShape '%S' with one or more dimensions being InferredDimension or FreeDimension.", AsString().c_str());
 
             size_t totalSize = 1;
@@ -1531,7 +1531,7 @@ namespace CNTK
             void* m_ptr;
         } m_data;
 
-         static const size_t s_version = 1;
+         static const size_t s_version;
     };
 
     ///
@@ -1615,7 +1615,7 @@ namespace CNTK
 
     private:
         std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
-        static const size_t s_version = 1;
+        static const size_t s_version;
     };
 
     ///
@@ -1797,8 +1797,14 @@ namespace CNTK
         ///
         CNTK_API std::wstring AsString() const;
 
+        ///
+        /// Returns this Variable's timestamp. 
+        /// Timestamps are used to determine if a Variable's value is up to date and, if not, computations that depend on this Variable's value will be re-executed.
+        ///
+        CNTK_API size_t CurrentValueTimeStamp() const;
+
     protected:
-#ifdef SWIG
+#ifdef SWIGPYTHON
     public:
 #endif
         Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name, const std::wstring& uid)
@@ -1810,7 +1816,7 @@ namespace CNTK
         CNTK_API void SetValue(const NDArrayViewPtr& value);
 
     private:
-#ifdef SWIG
+#ifdef SWIGPYTHON
     public:
 #endif
         Variable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes, const std::wstring& uid)
@@ -1843,7 +1849,7 @@ private:
         Variable NonCompositePreservingCopy() const;
 
     private:
-#ifdef SWIGCSHARP
+#if defined(SWIGCSHARP) || defined(SWIGJAVA)
     public:
         // TODO: a better way to get hash value?
         size_t GetHashValue()
@@ -2003,6 +2009,7 @@ private:
     CNTK_API ParameterInitializer HeNormalInitializer(double scale = DefaultParamInitScale, int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
     CNTK_API ParameterInitializer BilinearInitializer(size_t kernelWidth, size_t kernelHeight);
     CNTK_API ParameterInitializer RandomInitializerWithRank(const ParameterInitializer& initializer, int outputRank, int filterRank);
+    CNTK_API ParameterInitializer TruncatedNormalInitializer(double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
 
     ///
     /// Denotes Parameter inputs of a Function.
@@ -2066,13 +2073,11 @@ private:
         /// Copies the contents of the 'value' NDArrayView into the view backing 'this' 
         /// parameter's value. The shapes of both views must be identical.
         ///
-        void SetValue(const NDArrayViewPtr& value)
+        CNTK_API void SetValue(const NDArrayViewPtr& value)
         {
             Variable::SetValue(value);
             RecordValueUpdate();
         }
-
-        CNTK_API size_t CurrentValueTimeStamp() const;
 
         CNTK_API void RecordValueUpdate();
 
@@ -2166,6 +2171,13 @@ private:
         {
             return Variable::Value();
         }
+
+        ///
+        /// Copies the contents of the 'value' NDArrayView into the view backing 'this' 
+        /// Constant's value. The shapes of both views must be identical.
+        ///
+        CNTK_API void SetValue(const NDArrayViewPtr& value);
+        CNTK_API void RecordValueUpdate();
 
     private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
@@ -2749,7 +2761,8 @@ namespace CNTK
         template <typename ValueType, typename DestType>
         void CopyVariableValueToImpl(const Variable& outputVariable, std::vector<std::vector<DestType>>& sequences);
 
-        virtual std::pair<size_t, size_t> GetSequenceAndBatchLength(const Variable& outputVariable);
+    private:
+        CNTK_API std::pair<size_t, size_t> GetSequenceAndBatchLength(const Variable& outputVariable);
 
         CNTK_API static void GetSequenceStartsAndLengths(const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths, size_t numDynamicAxes);
 
@@ -2764,7 +2777,7 @@ namespace CNTK
         void ResizeOutputBuffer(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
             auto shape = outputVariable.Shape();
-            if (shape == NDShape::Unknown || shape.HasFreeOrInferredDimension())
+            if (shape == NDShape::Unknown || shape.HasUnboundDimension())
                 RuntimeError("The outputVariable '%S' shape '%S' is unknown shape, has inferred dimension or free dimension for at least one axis.",
                               outputVariable.AsString().c_str(), shape.AsString().c_str());
 
@@ -2876,6 +2889,23 @@ namespace CNTK
     };
 
     ///
+    /// Defines a signature of the deserialize callback for user defined functions,
+    /// that needs to be provided to Function::Load to inflate user defined functions in the model.
+    /// This callback reconstructs a user defined function given its inputs, name and a dictionary 
+    /// containing its state.
+    ///
+    typedef std::function<FunctionPtr(const std::vector<Variable>& /*inputs*/,
+        const std::wstring& /*name*/,
+        const Dictionary& /*dictionary*/)> UDFDeserializeCallback;
+
+    typedef std::shared_ptr<UDFDeserializeCallback> UDFDeserializeCallbackPtr;
+
+    static auto NoOp = [] (const std::vector<Variable>&, const std::wstring&, const Dictionary&) 
+    {
+        return nullptr;
+    };
+
+    ///
     /// Represents a function (optionally differentiable w.r.t. its inputs)
     /// A Function denotes a symbolic computation with zero or more input arguments and one or more outputs. 
     /// A Function may be primitive or composite (comprised of other Function instances whose inputs and outputs are wired together).
@@ -2892,6 +2922,7 @@ namespace CNTK
         friend class Trainer;
 
         friend Variable GetCorrespondingOutputVariableFromClone(const Variable&, const FunctionPtr&, const FunctionPtr&);
+        friend bool Internal::IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName);
 
     public:
 
@@ -2960,6 +2991,20 @@ namespace CNTK
         ///
         CNTK_API virtual void InferOutputs(std::vector<Variable>& outputs) = 0;
 
+        ///
+        /// Returns the name of the module (dll/so) containing this function. For native functions registered through
+        /// a call to 'RegisterNativeUserFunction', unless overridden, this method return the value of the 'moduleName'
+        /// argument.
+        ///
+        CNTK_API virtual std::wstring ModuleName() const;
+
+        ///
+        /// Returns the name of the method which should be invoked to deserialize this function. For native functions 
+        /// registered through a call to 'RegisterNativeUserFunction', unless overridden, this method return the value 
+        /// of the 'factoryMethodName' argument. If overridden, it must have the same signature as the factory method.
+        ///
+        CNTK_API virtual std::wstring DeserializeMethodName() const;
+
     public:
 
         // Optional overrides
@@ -2982,7 +3027,7 @@ namespace CNTK
         ///
         /// Generates a dictionary that captures the state of the Function graph underlying this Function.
         ///
-        CNTK_API virtual Dictionary Serialize() const override { return Dictionary(); }
+        CNTK_API virtual Dictionary Serialize() const override { return Attributes(); }
 
         /// 
         /// Creates a clone of this Function instance, using the specified 'inputs' that are inputs of the clone to be constructed.
@@ -3037,8 +3082,7 @@ namespace CNTK
         /// if deserializer was omitted). If there are no user defined functions in the model, deserializer is ignored.
         ///
         CNTK_API static FunctionPtr Deserialize(const Dictionary& dictionary, 
-                                                const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), 
-                                                const Internal::UDFDeserializerPtr& deserializer = nullptr);
+                                                const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
     public:
         ///
@@ -3235,32 +3279,38 @@ namespace CNTK
         /// Load a Function from a model file
         ///
         CNTK_API static FunctionPtr Load(const std::wstring& filepath, 
-                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), 
-                                         const Internal::UDFDeserializerPtr& deserializer = nullptr);
+                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Load a Function from a memory buffer
         ///
         CNTK_API static FunctionPtr Load(const char* buffer, size_t length,
-                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
-                                         const Internal::UDFDeserializerPtr& deserializer = nullptr);
+                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Load a Function from an istream. The legacy V1 model is not supported.
         ///
         CNTK_API static FunctionPtr Load(std::istream& inputStream, 
-                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
-                                         const Internal::UDFDeserializerPtr& deserializer = nullptr);
-
-        ///
-        /// Prints the entire graph underlying this Function to stderr
-        ///
-        CNTK_API void PrintGraph() const;
+                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Returns a string representation of this Function
         ///
         CNTK_API std::wstring AsString(bool doNotInferOutputs = true) const;
+
+        /// 
+        /// Allows to change a function attribute. Currently supported:
+        ///
+        /// * 'dropoutRate' with the corresponding float or double value. Modifies the dropout rate 
+        /// of a dropout function (can only be invoked on a function instance returned from
+        /// the Dropout() method or a primitive dropout function returned from FindByName()).
+        ///
+        /// * 'rngSeed' with the corresponding int or size_t value. Modifies the seed of a stateful function, 
+        /// i.e., Dropout, RandomSample or RandomSampleInclusionFrequency (can only be invoked on a
+        /// function instance returned from the Dropout(), RandomSample(), RandomSampleInclusionFrequency() 
+        /// method or a corresponding primitive function returned from FindByName()).
+        ///
+        CNTK_API void SetAttribute(const std::wstring& name, const DictionaryValue& value);
 
         ///
         /// Maximum number of outputs that is currently supported.
@@ -3273,12 +3323,24 @@ namespace CNTK
         /// Registers a native user-defined Function that can be subsequently instantiated using the Function::NativeUserFunction method.
         ///
         // TODO: Do we need an Unregister to unload the module?
-        CNTK_API static void RegisterNativeUserFunction(const std::wstring& uniqueOpName, const std::wstring& moduleName, const std::wstring& factoryMethodName);
+        CNTK_API static void RegisterNativeUserFunction(const std::wstring& uniqueOpId, const std::wstring& moduleName, const std::wstring& factoryMethodName);
 
         ///
         /// Create an instance of a user-defined Function type registered using Function::RegisterNativeUserFunction method.
         ///
-        CNTK_API static FunctionPtr NativeUserFunction(const std::wstring& opName, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName = L"");
+        CNTK_API static FunctionPtr NativeUserFunction(const std::wstring& opId, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName = L"");
+
+        ///
+        /// Register a callback function to be invoked when deserializing a user-defined Function with the corresponding op name.
+        /// When loading a model, CNTK will try to automatically reconstruct user-defined Functions (for native functions, CNTK will 
+        /// invoke the same factory method, the Function op name was registered with). This method allows to override 
+        /// default user-defined Function deserialization behavior by specifying an op name and the corresponding callback that should be invoked
+        /// to inflate the Function object.
+        ///
+        CNTK_API static void RegisterUDFDeserializeCallback(const std::wstring& uniqueOpName, const UDFDeserializeCallback& deserializer);
+
+        static UDFDeserializeCallbackPtr GetUDFDeserializeCallback(const std::wstring& uniqueOpName);
+
 
     protected:
         static bool IsArgument(const Variable& var)
@@ -3287,9 +3349,10 @@ namespace CNTK
         }
 
         ///
-        /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
+        /// Protected constructors for derived user-defined 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
         ///
-        CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
+        CNTK_API Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const std::wstring& name = L"");
+        CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"");
 
         template <typename FunctionType>
         static void PreorderTraverseFunctions(const FunctionPtr& rootFunction, const FunctionType& functor, bool traverseInsideBlockFunction = false)
@@ -3383,14 +3446,11 @@ namespace CNTK
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
-    public:
-        CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"");
-
     private:
         static UserFunctionFactoryPtr s_userFunctionFactory;
 
     private:
-        CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
+        Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
 
         std::vector<Variable> m_inputs;
         std::once_flag m_outputsInitFlag;
@@ -3400,6 +3460,23 @@ namespace CNTK
         std::wstring m_name;
         std::wstring m_uid;
         Dictionary m_attributes;
+        std::unordered_set<std::wstring> m_dirtyAttributes;
+
+#ifdef SWIGPYTHON
+    public:
+        void SetNative(bool native) { m_native = native; }
+#endif
+
+    private:
+        bool IsNative() const { return m_native; }
+
+        bool m_native = true;
+
+        Dictionary SerializeNativeImpl() const;
+
+        static FunctionPtr DeserializeNativeImpl(const std::vector<Variable>& inputs, const std::wstring& name, const Dictionary& dict);
+
+        static const size_t s_serializationVersion = 1;
     };
 
     ///
@@ -3530,6 +3607,46 @@ namespace CNTK
     /// Create an instance of the dropout operation on specified tensor input operand
     ///
     CNTK_API FunctionPtr Dropout(const Variable& operand, double dropoutRate, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a uniform random operation. This produces random numbers with the specified shape (no dynamic axes), uniformly distributed in [low, high)
+    ///
+    CNTK_API FunctionPtr UniformRandom(const NDShape& shape, DataType dataType, double low=0.0, double high=1.0, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a uniform random operation. This produces random numbers with the shape and dynamic axes specified by the operand, uniformly distributed in [low, high)
+    ///
+    CNTK_API FunctionPtr UniformRandomLike(const Variable& operand, double low = 0.0, double high = 1.0, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a normal random operation. This produces random numbers with the specified shape (no dynamic axes), normally distributed with the specified mean and standard deviation (scale)
+    ///
+    CNTK_API FunctionPtr NormalRandom(const NDShape& shape, DataType dataType, double mean = 0.0, double scale = 1.0, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a normal random operation. This produces random numbers with the shape and dynamic axes specified by the operand, normally distributed with the specified mean and standard deviation (scale)
+    ///
+    CNTK_API FunctionPtr NormalRandomLike(const Variable& operand, double mean = 0.0, double scale = 1.0, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a Gumbel random operation. This produces random numbers with the specified shape (no dynamic axes), distributed according to the Gumbel distribution with the specified location and scale
+    ///
+    CNTK_API FunctionPtr GumbelRandom(const NDShape& shape, DataType dataType, double loc = 0.0, double scale = 1.0, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a Gumbel random operation. This produces random numbers with the shape and dynamic axes specified by the operand, distributed according to the Gumbel distribution with the specified location and scale
+    ///
+    CNTK_API FunctionPtr GumbelRandomLike(const Variable& operand, double loc = 0.0, double scale = 1.0, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a Bernoulli random operation. This produces random numbers with the specified shape (no dynamic axes), distributed according to the Bernoulli distribution with the specified success probability
+    ///
+    CNTK_API FunctionPtr BernoulliRandom(const NDShape& shape, DataType dataType, double mean = 0.5, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a Bernoulli random operation. This produces random numbers with the shape and dynamic axes specified by the operand, distributed according to the Bernoulli distribution with the specified success probability
+    ///
+    CNTK_API FunctionPtr BernoulliRandomLike(const Variable& operand, double mean = 0.5, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the reshape operation on specified tensor input operand
@@ -4198,7 +4315,7 @@ namespace CNTK
             : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, U, epochSize)
         { }
 
-#ifdef SWIG // for Python interop (adds indexer)
+#ifdef SWIGPYTHON // for Python interop (adds indexer)
         const T __getitem__(size_t count) const
         {
             return TrainingParameterSchedule<T>::operator[](count);
@@ -4257,7 +4374,7 @@ namespace CNTK
             ConvertToPerSampleValues();
         }
 
-#ifdef SWIG // for Python interop (adds indexer)
+#ifdef SWIGPYTHON // for Python interop (adds indexer)
         const double __getitem__(size_t count) const
         {
             return operator[](count);
@@ -4489,6 +4606,22 @@ namespace CNTK
                                         AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
+    /// A shorthand for the type of a function that takes a Parameter and a Variable as arguments and returns a Function.
+    /// It can be used with UniversalLearner.
+    /// 
+    typedef std::function<FunctionPtr(Parameter, Variable)> ParameterUpdateFunctor;
+
+    ///
+    /// Create an instance of a learner whose update is given by the specified factory which returns a CNTK FunctionPtr.
+    ///
+    CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func);
+
+    ///
+    /// Create an instance of a learner by specifying the parameters , gradients and update function. Return a CNTK FunctionPtr.
+    ///
+    CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
+
+    ///
     /// Distributed Learner.
     ///
     class DistributedLearner : public Learner
@@ -4538,6 +4671,17 @@ namespace CNTK
         // learning has stopped for all of the parameters associated with this learner
         //
         CNTK_API virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& minibatch) = 0;
+
+        //
+        // In distributed mode all built-in minibatch sources return a minibatch decimated by the number of workers.
+        // Some distributed methods (i.e. BlockMomentum) require each worker to run with original/not decimated minibatch size.
+        // This method is used by the training session to adapt minibatch size before asking the minibatch source for data.
+        // The function returns the scale factor for the minibatch size.
+        //
+        virtual size_t MinibatchSizeScaleFactor()
+        {
+            return 1;
+        }
 
     protected:
         DistributedLearner(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
@@ -5057,9 +5201,11 @@ namespace CNTK
         bool isFrameModeEnabled { false };
 
         ///
-        /// Specifies if the deserialization should be done on a single or multiple threads.
+        /// Specifies if the deserialization should be done on a single or multiple threads. 
+        /// Defaults to 'auto' (multhithreading is disabled unless ImageDeserializer is present 
+        /// in the deserializers list). 'false' and 'true' faithfully turn the multithreading off/on.
         ///
-        bool isMultithreaded { false };
+        Internal::Optional<bool> isMultithreaded;
 
         ///
         /// Deserializers to be used in the composite reader.
@@ -5074,20 +5220,21 @@ namespace CNTK
 
     struct StreamConfiguration
     {
-        StreamConfiguration(const std::wstring& streamName, size_t dim, bool isSparse = false, const std::wstring& streamAlias = L"")
-            : m_streamName(streamName), m_dim(dim), m_isSparse(isSparse), m_streamAlias(streamAlias)
+        StreamConfiguration(const std::wstring& streamName, size_t dim, bool isSparse = false, const std::wstring& streamAlias = L"", bool definesMbSize = false)
+            : m_streamName(streamName), m_dim(dim), m_isSparse(isSparse), m_streamAlias(streamAlias), m_definesMbSize(definesMbSize)
         {}
 
         std::wstring m_streamName;
         size_t m_dim;
         bool m_isSparse;
         std::wstring m_streamAlias;
+        bool m_definesMbSize;
     };
 
     struct HTKFeatureConfiguration
     {
-        HTKFeatureConfiguration(const std::wstring& streamName, const std::wstring& scp, size_t dim, size_t left, size_t right, bool broadcast)
-            : m_streamName(streamName), m_dim(dim), m_scp(scp), m_left(left), m_right(right), m_broadcast(broadcast)
+        HTKFeatureConfiguration(const std::wstring& streamName, const std::wstring& scp, size_t dim, size_t left, size_t right, bool broadcast, bool definesMbSize = false)
+            : m_streamName(streamName), m_dim(dim), m_scp(scp), m_left(left), m_right(right), m_broadcast(broadcast), m_definesMbSize(definesMbSize)
         {}
 
         std::wstring m_streamName;
@@ -5096,6 +5243,7 @@ namespace CNTK
         size_t m_left;
         size_t m_right;
         bool m_broadcast;
+        bool m_definesMbSize;
     };
 
     typedef Dictionary ImageTransform;
@@ -5104,8 +5252,11 @@ namespace CNTK
     /// Create a crop transform with the specified options to be used with a reader
     /// 
     CNTK_API ImageTransform ReaderCrop(const wchar_t* cropType = L"center",
-        int cropSize = 0, float sideRatio = 0.0f, float areaRatio = 0.0f,
-        float aspectRatio = 1.0f, const wchar_t* jitterType = L"none");
+        std::pair<int, int> cropSize = std::make_pair(0, 0),
+        std::pair<float, float> sideRatio = std::make_pair(0.0f, 0.0f),
+        std::pair<float, float> areaRatio = std::make_pair(0.0f, 0.0f), 
+        std::pair<float, float> aspectRatio = std::make_pair(1.0f, 1.0f), 
+        const wchar_t* jitterType = L"none");
 
     /// 
     /// Create a scale transform with the specified options to be used with a reader
@@ -5131,7 +5282,12 @@ namespace CNTK
     CNTK_API  Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms = {});
 
     /// 
-    /// Create an CTFDeserializer with the specified options
+    /// Create a Base64ImageDeserializer with the specified options
+    /// 
+    CNTK_API  Deserializer Base64ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms = {});
+
+    /// 
+    /// Create a CTFDeserializer with the specified options
     /// 
     CNTK_API  Deserializer CTFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams);
 
@@ -5308,13 +5464,17 @@ namespace CNTK
         ///
         CNTK_API CrossValidationConfig(const MinibatchSourcePtr& crossValidationSource,
             const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(64),
-            size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max());
+            size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max(),
+            size_t maxSamples = std::numeric_limits<size_t>::max(),
+            const std::unordered_map<Variable, StreamInformation>& inputVarToStream = {});
 
     private:
         friend class TrainingSession;
         const MinibatchSourcePtr m_source;
         const MinibatchSizeSchedule m_mbSize;
         const size_t m_frequency;
+        const size_t m_maxSamples;
+        const std::unordered_map<Variable, StreamInformation> m_varToStream;
     };
 
     ///
@@ -5355,12 +5515,14 @@ namespace CNTK
         /// schedule : a minibatch size schedule
         ///
         CNTK_API TestConfig(const MinibatchSourcePtr& source,
-            const MinibatchSizeSchedule& schedule = MinibatchSizeSchedule(64));
+            const MinibatchSizeSchedule& schedule = MinibatchSizeSchedule(64),
+            const std::unordered_map<Variable, StreamInformation>& inputVarToStream = {});
 
     private:
         friend class TrainingSession;
         const MinibatchSourcePtr m_source;
         const MinibatchSizeSchedule m_mbSize;
+        const std::unordered_map<Variable, StreamInformation> m_varToStream;
     };
 
     ///
@@ -5466,7 +5628,10 @@ namespace CNTK
         TrainingSession(const TrainingSession&) = delete; TrainingSession& operator=(const TrainingSession&) = delete; TrainingSession& operator=(TrainingSession&&) = delete; TrainingSession(TrainingSession&&) = delete;
 
         // Auxilary functions.
-        void GetNextMinibatch(const MinibatchSourcePtr& source, std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, size_t workerRank, size_t numberOfWorkers, const DeviceDescriptor& computeDevice);
+        void GetNextMinibatch(const MinibatchSourcePtr& source,
+            std::unordered_map<Variable, ValuePtr>& minibatch,
+            const std::unordered_map<Variable, StreamInformation>& inputVarToStream,
+            size_t maxMbSize, size_t workerRank, size_t numberOfWorkers, const DeviceDescriptor& computeDevice);
         void GetTrainingMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice);
         void GetCrossValidationMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice);
 
@@ -5481,6 +5646,9 @@ namespace CNTK
         size_t m_parallelAfterSamples;
         size_t m_workerRank;
         size_t m_numberOfWorkers;
+
+        // Scaler for the minibatch size in distributed mode.
+        size_t m_mbSizeScaleFactor;
 
         std::vector<PeriodicAction> m_actions;
 
