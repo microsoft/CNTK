@@ -24,8 +24,8 @@ namespace CNTK
            m_progressWriters(progressWriters.begin(), progressWriters.end())
     {
         // By default we set the number of threads to hardware concurrency.
-        /*if (!Internal::MaxNumCPUThreadsSet())
-            SetMaxNumCPUThreads(std::thread::hardware_concurrency());*/
+        if (!Internal::MaxNumCPUThreadsSet())
+            SetMaxNumCPUThreads(std::thread::hardware_concurrency());
 
         // Nullptr evaluation is only allowed by the derived classes.
         if (!m_evaluationFunction)
