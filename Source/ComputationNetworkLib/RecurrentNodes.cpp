@@ -235,7 +235,7 @@ template<class ElemType, int direction>
         //     - matrix column indices into the initial state
         //        - if initial-state sequence has >1 steps, then index from back
         //        - if 1 step, then broadcast that to all
-        //     - or -1 for non-boundary entires
+        //     - or -1 for non-boundary entries
 
         // our own output MB layout
         let& outMBLayout = GetMBLayout();

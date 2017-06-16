@@ -3262,7 +3262,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 #endif
             m_isAsyncBufferEnabled = configDataParallelASGD(L"UsePipeline", false);
             m_isSimulateMA = configDataParallelASGD(L"SimModelAverage", false); // using parameter server-based version of ModelAveragingSGD
-            if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning")) // adjust learning rate per m_adjustNumInBatch minibatchs until to original one,
+            if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning")) // adjust learning rate per m_adjustNumInBatch minibatches until to original one,
                                                                                  // this option could be used to takcle the unstableness of DataParallelASGD if you get a chance
             {
                 const ConfigRecordType & configAdjustLearningRateAtBeginning(configDataParallelASGD(L"AdjustLearningRateAtBeginning", ConfigRecordType::Record()));
