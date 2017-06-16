@@ -3454,6 +3454,7 @@ namespace CNTK
 
         std::vector<Variable> m_inputs;
         std::once_flag m_outputsInitFlag;
+        std::thread::id m_outputInitializingByThreadId;
         std::vector<Variable> m_outputs;
 
         FunctionPtr m_rootFunction; // nullptr for primitive Function instances

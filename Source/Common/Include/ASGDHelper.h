@@ -14,7 +14,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 //       Providing option for DataParallelASGD training. so that every nodes
 //       could adjust learning rate every minibatch at first N epochs.
 // -----------------------------------------------------------------------
-// TODO: We can removed these options once we can adjust learning rate at minibatchs level
+// TODO: We can removed these options once we can adjust learning rate at minibatches level
 enum class AdjustLearningRateAtBeginning : int
 {
     None = 0,  // default, don't adjust learning rate
