@@ -306,9 +306,7 @@ def get_answer(raw_text, tokens, start, end):
 
 def test(test_data, model_path, model_file, config_file):
     polymath = PolyMath(config_file)
-    loaded_model = C.load_model(os.path.join(model_path, model_file if model_file else model_name))
-    z, loss = polymath.model()
-    model = C.combine(list(z.outputs) + [loss.output])
+    model = C.load_model(os.path.join(model_path, model_file if model_file else model_name))
     begin_logits = model.outputs[0]
     end_logits   = model.outputs[1]
     loss         = C.as_composite(model.outputs[2].owner)
