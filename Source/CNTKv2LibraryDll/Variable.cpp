@@ -255,6 +255,13 @@ namespace CNTK
 
         m_initValueFlag.reset(new std::once_flag());
         m_valueInitializer.reset(new ParameterInitializer(initializationConfig));
+
+        if (m_valueInitializer->Contains(RandomSeedAttributeName)) {
+            auto& seed = m_valueInitializer->operator[](RandomSeedAttributeName);
+            if ((unsigned long)seed.Value<size_t>() == SentinelValueForAutoSelectRandomSeed)
+                seed.Value<size_t>() = Internal::GenerateRandomSeed();
+        }
+
         m_valueInitializationDevice.reset(new DeviceDescriptor(device));
     }
 

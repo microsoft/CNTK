@@ -154,14 +154,14 @@ class PolyMath:
 
         def att_ws_setter(pl, raw, attr=None):
             p1, p2, p3 = np.split(raw, 3)
-            crct.parameter_setter(pl[0], p1.reshape(-1,1))
-            crct.parameter_setter(pl[1], p2.reshape(-1,1))
-            crct.parameter_setter(pl[2], p3.reshape(-1))
+            crct._parameter_setter(pl[0], p1.reshape(-1,1))
+            crct._parameter_setter(pl[1], p2.reshape(-1,1))
+            crct._parameter_setter(pl[2], p3.reshape(-1))
 
         def att_ws_getter(pl, attr=None):
-            p1 = crct.parameter_getter(pl[0])
-            p2 = crct.parameter_getter(pl[1])
-            p3 = crct.parameter_getter(pl[2]).reshape((-1,1))
+            p1 = crct._parameter_getter(pl[0])
+            p2 = crct._parameter_getter(pl[1])
+            p3 = crct._parameter_getter(pl[2]).reshape((-1,1))
             return np.concatenate((p1,p2,p3))
 
         _ci.register_funcs('attention_weights', setter=att_ws_setter, getter=att_ws_getter)
