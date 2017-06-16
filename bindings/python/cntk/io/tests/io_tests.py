@@ -704,6 +704,36 @@ def test_base64_image_deserializer(tmpdir):
             bgrImage = np.transpose(bgrImage, (2, 0, 1))
             assert (bgrImage == results[i][0]).all()
 
+
+# launch with pytest -s cntk\io\tests\io_tests.py::test_randomization
+from cntk import cntk_py
+def test_randomization(tmpdir):
+    ctf_data = str(tmpdir / 'mbdata.txt')
+    with open(ctf_data, 'wb') as f:
+        for i in range(100):
+            v = i * 1.0 / 10
+            #line = str(i).encode('ascii') + b'\t' + b'|index '+str(v).encode('ascii') + b'\n'
+            line = b'|index '+str(v).encode('ascii') + b'\n'
+            f.write(line)
+
+    ctf_deserializer = CTFDeserializer(ctf_data,
+        StreamDefs(index=StreamDef(field='index', shape=1)))
+
+    ctf_deserializer['chunkSizeInBytes'] = cntk_py.DictionaryValue(110)
+
+    mb_source = MinibatchSource(ctf_deserializer, 
+                randomization_window_in_chunks=0,
+                randomization_window_in_samples=41)
+
+    for j in range(100):
+        mb = mb_source.next_minibatch(50)
+
+        index_stream = mb_source.streams['index']
+        index = mb[index_stream].asarray().flatten()
+
+        print(' '.join([str(int(x)) for x in index]))
+
+
 class MyDataSource(UserMinibatchSource):
     def __init__(self, f_dim, l_dim):
         self.f_dim, self.l_dim = f_dim, l_dim
