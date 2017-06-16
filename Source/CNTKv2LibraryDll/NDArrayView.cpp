@@ -435,10 +435,10 @@ namespace CNTK
             InvalidArgument("NDArrayView::SparseDataBuffers: The specified ElementType '%s' does not match this NDArrayView's DataType '%s'.", typeid(ElementType).name(), DataTypeName(m_dataType));
 
         if (!IsSparse())
-            InvalidArgument("The stroage format of 'this' NDArrayView is dense. Please use another DataBuffer().");
+            RuntimeError("The stroage format of 'this' NDArrayView is dense. Please use another DataBuffer().");
 
         if(GetStorageFormat() != StorageFormat::SparseCSC)
-            InvalidArgument("The SparseDataBuffers() method currently only supports CSC sparse format.");
+            RuntimeError("The SparseDataBuffers() method currently only supports CSC sparse format.");
 
         std::shared_ptr<const Matrix<ElementType>> matrix = GetMatrix<ElementType>();
         matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
