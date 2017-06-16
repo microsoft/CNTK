@@ -146,7 +146,7 @@ private:
             // If count is zero, we lazily consider the numerator as zero as well.
             if (beta==0)
             {
-                m_aggregateCriterionValues->SetColumn(0.0f,i); //instead of Nan
+                m_aggregateCriterionValues->InplaceTruncate(1e10); //instead of Nan
             }
             criterionAccumulator.DoCopyOf(m_aggregateSampleCounts[i] ? (float)beta : 0, criterionValue, 1);
         }
