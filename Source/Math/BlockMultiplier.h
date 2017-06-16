@@ -928,7 +928,7 @@ template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::MultiplyMa
                 {
 
 #ifdef OPENMPTHREAD
-#pragma omp parallel for
+//#pragma omp parallel for
 #endif
                     for (int startRow = 0; startRow < m; startRow += 4)
                     {
@@ -950,7 +950,7 @@ template<typename BlockHandlerT> void BlockMultiplier<BlockHandlerT>::MultiplyMa
                 else if (rowsPerBlock == 1)
                 {
 #ifdef OPENMPTHREAD
-#pragma omp parallel for
+//#pragma omp parallel for
 #endif
                     for (int startRow = 0; startRow < m; ++startRow)
                     {

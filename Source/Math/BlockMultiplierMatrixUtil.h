@@ -66,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ScalarT> void Transpose(ScalarT* transposeMe, ScalarT* transposed, int origRows, int origCols)
     {
-#pragma omp parallel for
+//#pragma omp parallel for
         for (int r = 0; r < origRows; ++r)
         {
             for (int c = 0; c < origCols; ++c)

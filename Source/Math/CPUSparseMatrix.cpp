@@ -204,7 +204,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatr
     CPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
     ElemType* data = NzValues();
     ElemType* indices = a.Data();
-#pragma omp parallel for
+//#pragma omp parallel for
     for (long i = 0; i < a.GetNumElements(); i++)
     {
         int block_id = i / item_size;
@@ -374,7 +374,7 @@ void CPUSparseMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsM
         // If we're CSC, we only need to verify that the columns to be zeroed are empty.
         GPUSPARSE_INDEX_TYPE* colVector = SecondaryIndexLocation();
         auto n = columnsMask.GetNumCols();
-#pragma omp parallel for
+//#pragma omp parallel for
         for (long j = 0; j < n; j++)
             for (long k = 0; k < numColsPerMaskEntry; ++k)
                 if (maskedCols[j] == 0 && colVector[(j * numColsPerMaskEntry) + k + 1] != colVector[(j * numColsPerMaskEntry) + k])
@@ -613,7 +613,7 @@ void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType>& sl
 
     if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
     {
-#pragma omp parallel for
+//#pragma omp parallel for
         for (long j = 0; j < numCols; j++)
         {
             long start = (long)SecondaryIndexLocation()[startColumn + j];
@@ -631,7 +631,7 @@ void CPUSparseMatrix<ElemType>::AssignColumnSliceToDense(CPUMatrix<ElemType>& sl
     {
         CPUSparseMatrix<ElemType> sparseSlice = ColumnSlice(startColumn, numCols);
         size_t numColumnsWithNonZeroValues = sparseSlice.GetBlockSize();
-#pragma omp parallel for
+//#pragma omp parallel for
         for (long j = 0; j < numColumnsWithNonZeroValues; j++)
         {
             size_t i = sparseSlice.GetBlockIds()[j] - sparseSlice.GetBlockIdShift();
@@ -666,7 +666,7 @@ CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::DiagonalToDense() const
 
     CPUMatrix<ElemType> diag(1, m_numCols);
 
-#pragma omp parallel for
+//#pragma omp parallel for
     for (long j = 0; j < m_numCols; j++)
     {
         long start = (long) SecondaryIndexLocation()[j];
@@ -907,7 +907,7 @@ public:
             memset(c.Data(), 0, sizeof(ElemType)* c.GetNumElements());
         else if (beta != 1)
         {
-#pragma omp parallel for
+//#pragma omp parallel for
             foreach_coord(i, j, c)
             {
                 c(i, j) = beta * c(i, j);
@@ -1090,7 +1090,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
                 ElemType val = rhs.Buffer()[p];
 
                 ElemType* results = c.Buffer() + col2BlockId[rhsRow] * m;
-                #pragma omp parallel for
+                //#pragma omp parallel for
                 for (int lhsRow = 0; lhsRow < (int)m; lhsRow++)
                 {
                     results[lhsRow] += alpha * lhs((size_t)lhsRow, rhsCol) * val;
@@ -1128,7 +1128,7 @@ void CPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, co
 
     const ElemType* vd = v.Data();
 
-#pragma omp parallel for
+//#pragma omp parallel for
     for (long col = 0; col < (long)a.GetNumCols(); col++)
     {
         auto start = a.SecondaryIndexLocation()[col];
@@ -1212,7 +1212,7 @@ template <class ElemType>
 
     bool result = true;
 
-#pragma omp parallel for
+//#pragma omp parallel for
     foreach_coord (i, j, a)
     {
         if (abs(a(i, j) - b(i, j)) > threshold)
@@ -1245,7 +1245,7 @@ void CPUSparseMatrix<ElemType>::InnerProduct(const CPUSparseMatrix<ElemType>& a,
     {
         c.RequireSize(1, n);
 
-#pragma omp parallel for
+//#pragma omp parallel for
         foreach_column(j, c)
         {
             ElemType sum = 0;
@@ -1261,7 +1261,7 @@ void CPUSparseMatrix<ElemType>::InnerProduct(const CPUSparseMatrix<ElemType>& a,
     {
         c.RequireSize(m, 1);
 
-#pragma omp parallel for
+//#pragma omp parallel for
         foreach_row(i, c)
         {
             ElemType sum = 0;
@@ -1417,7 +1417,7 @@ void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemT
     ElemType* smoothX2 = c.Data() + n;
     ElemType* val = functionValues.Data();
 
-#pragma omp parallel for
+//#pragma omp parallel for
     // TODO: Unroll 4-times for better performance leveraging vectorization
     for (int j = 0; j < (int)GetBlockSize(); j++)
     {
@@ -1447,7 +1447,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateTop(const E
     long m = (long) this->NzCount();
     ElemType* nzValues = NzValues();
 
-#pragma omp parallel for
+//#pragma omp parallel for
     for (long i = 0; i < (m & ~3); i += 4) // four-way unrolling
     {
         if (nzValues[i] > threshold)
@@ -1481,7 +1481,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateBottom(cons
     long m = (long) this->NzCount();
     ElemType* nzValues = NzValues();
 
-#pragma omp parallel for
+//#pragma omp parallel for
     for (long i = 0; i < (m & ~3); i += 4) // four-way unrolling
     {
         if (nzValues[i] < threshold)
@@ -1518,7 +1518,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncate(const Elem
     long m = (long) this->NzCount();
     ElemType* nzValues = NzValues();
 
-#pragma omp parallel for
+//#pragma omp parallel for
     for (long i = 0; i < (m & ~3); i += 4) // four-way unrolling
     {
         if (nzValues[i] > locThresholdPos)
@@ -1562,7 +1562,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceSoftThreshold(const
     long m = (long) this->NzCount();
     ElemType* nzValues = NzValues();
 
-#pragma omp parallel for
+//#pragma omp parallel for
     for (long i = 0; i < (m & ~3); i += 4) // four-way unrolling
     {
         if (nzValues[i] > threshold)
@@ -1618,7 +1618,7 @@ ElemType CPUSparseMatrix<ElemType>::FrobeniusNorm() const
     const ElemType* nzValues = NzValues();
 
 //four-way unrolling
-#pragma omp parallel for reduction(+ : v)
+//#pragma omp parallel for reduction(+ : v)
     for (long i = 0; i < (m & ~3); i += 4)
     {
         v += nzValues[i] * nzValues[i] + nzValues[i + 1] * nzValues[i + 1] + nzValues[i + 2] * nzValues[i + 2] + nzValues[i + 3] * nzValues[i + 3];
@@ -1663,7 +1663,7 @@ ElemType CPUSparseMatrix<ElemType>::SumOfElements() const
     const ElemType* nzValues = NzValues();
 
 //four-way unrolling
-#pragma omp parallel for reduction(+ : sum)
+//#pragma omp parallel for reduction(+ : sum)
     for (long i = 0; i < (m & ~3); i += 4)
     {
         sum += nzValues[i] + nzValues[i + 1] + nzValues[i + 2] + nzValues[i + 3];
