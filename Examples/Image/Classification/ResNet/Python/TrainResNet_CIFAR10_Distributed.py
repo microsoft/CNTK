@@ -27,6 +27,7 @@ from resnet_models import *
 abs_path   = os.path.dirname(os.path.abspath(__file__))
 data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
+profile_path = os.path.join(abs_path, "Profiler")
 
 # For this example we are using the same data source as for conv net - CIFAR
 sys.path.append(os.path.join(abs_path, "..", "..", "ConvNet", "Python"))
@@ -100,7 +101,7 @@ def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, b
     return Trainer(network['output'], (network['ce'], network['pe']), learner, progress_printer)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore, profiling=False):
+def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, epochs, restore, profiling=False, fake_data=False):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -109,23 +110,36 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
     }
 
     if profiling:
-        start_profiler(sync_gpu=True)
-        
-    training_session(
-        trainer=trainer, mb_source = train_source, 
-        mb_size = minibatch_size,
-        model_inputs_to_streams = input_map,
-        checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
-        progress_frequency=epoch_size,
-        test_config = TestConfig(test_source, minibatch_size=16)
-    ).train()
-    
+        start_profiler(sync_gpu=True, dir=profile_path)
+
+    if fake_data:
+        data = train_source.next_minibatch(minibatch_size, input_map=input_map, num_data_partitions=C.Communicator.num_workers(), partition_index=C.Communicator.rank())
+        for e in range(epochs):
+            num_samples = 0
+            while True:
+                trainer.train_minibatch(data)
+                num_samples += trainer.previous_minibatch_sample_count
+                if num_samples >= epoch_size:
+                    break
+            if profiling:
+                enable_profiler()
+            trainer.summarize_training_progress()
+    else:
+        training_session(
+            trainer=trainer, mb_source = train_source, 
+            mb_size = minibatch_size,
+            model_inputs_to_streams = input_map,
+            checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore, frequency=epoch_size),
+            progress_frequency=epoch_size,
+            test_config = TestConfig(test_source, minibatch_size=16)
+        ).train()
+
     if profiling:
         stop_profiler()
 
 # Train and evaluate the network.
 def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, num_quantization_bits=32, block_size=3200, warm_up=0, 
-                   max_epochs=5, restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, scale_up=False, profiling=False):
+                   max_epochs=5, restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, scale_up=False, profiling=False, fake_data=False):
 
     set_computation_network_trace_level(0)
     
@@ -147,7 +161,7 @@ def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, n
     trainer = create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up, progress_printer)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore, profiling)
+    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, max_epochs, restore, profiling, fake_data)
 
 
 if __name__=='__main__':
@@ -155,7 +169,7 @@ if __name__=='__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--network', help='network type, resnet20 or resnet110', required=False, default='resnet20')
-    parser.add_argument('-s', '--scale_up', help='scale up minibatch size with #workers for better parallelism', type=bool, required=False, default='False')
+    parser.add_argument('-s', '--scale_up', help='scale up minibatch size with #workers for better parallelism', action='store_true')
     parser.add_argument('-datadir', '--datadir', help='Data directory where the CIFAR dataset is located', required=False, default=data_path)
     parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False, default=None)
     parser.add_argument('-logdir', '--logdir', help='Log file', required=False, default=None)
@@ -166,7 +180,8 @@ if __name__=='__main__':
     parser.add_argument('-a', '--distributed_after', help='Number of samples to train with before running distributed', type=int, required=False, default='0')
     parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', action='store_true')
     parser.add_argument('-device', '--device', type=int, help="Force to run the script on a specified device", required=False, default=None)
-    parser.add_argument('-profile', '--profile', help="Turn on profiling", action='store_true', default=False)
+    parser.add_argument('-profile', '--profile', help="Turn on profiling", action='store_true')
+    parser.add_argument('-fakedata', '--fakedata', help="Use fake data for benchmarking", action='store_true')
 
     args = vars(parser.parse_args())
 
@@ -180,6 +195,7 @@ if __name__=='__main__':
         epoch_size = args['epoch_size']
 
     data_path = args['datadir']
+    os.chdir(data_path) # in case map files uses relative path
 
     if not os.path.isdir(data_path):
         raise RuntimeError("Directory %s does not exist" % data_path)
@@ -192,7 +208,7 @@ if __name__=='__main__':
     epochs = args['epochs']
     warm_up = args['distributed_after']
     network_name = args['network']
-    scale_up = bool(args['scale_up'])
+    scale_up = args['scale_up']
 
     # Create distributed trainer factory
     print("Start training: quantize_bit = {}, epochs = {}, distributed_after = {}".format(num_quantization_bits, epochs, warm_up))
@@ -207,7 +223,8 @@ if __name__=='__main__':
                    restore=not args['restart'],
                    scale_up=scale_up,
                    log_to_file=args['logdir'],
-                   profiling=args['profile'])
+                   profiling=args['profile'],
+                   fake_data=args['fakedata'])
 
     # Must call MPI finalize when process exit without exceptions
     Communicator.finalize()
