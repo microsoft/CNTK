@@ -638,11 +638,42 @@ struct SparseCSCBuffersForTests
 };
 
 template <typename ElementType>
-bool AreEqualCSCBuffers(SparseCSCBuffersForTests<ElementType> expected, SparseCSCBuffersForTests<ElementType> output)
+void SortCSCBuffers(SparseCSCBuffersForTests<ElementType>& cscBuffers)
+{
+    for (size_t col = 0; col < cscBuffers.m_colsStarts.size() - 1; col++)
+    {
+        size_t colStart = cscBuffers.m_colsStarts[col];
+        size_t colEnd = cscBuffers.m_colsStarts[col + 1];
+        for (size_t i = colStart; i < colEnd; i++)
+        {
+            size_t min = i;
+            for (size_t j = i; j < colEnd; j++)
+            {
+                if (cscBuffers.m_rowIndices[min] > cscBuffers.m_rowIndices[j])
+                {
+                    min = j;
+                }
+            }
+
+            if (min != i)
+            {
+                SparseIndexType temp = cscBuffers.m_rowIndices[i];
+                cscBuffers.m_rowIndices[i] = cscBuffers.m_rowIndices[min];
+                cscBuffers.m_rowIndices[min] = temp;
+                ElementType tempVal = cscBuffers.m_nonZeroValues[i];
+                cscBuffers.m_nonZeroValues[i] = cscBuffers.m_nonZeroValues[min];
+                cscBuffers.m_nonZeroValues[min] = tempVal;
+            }
+        }
+    }
+}
+
+template <typename ElementType>
+bool AreEqualCSCBuffers(SparseCSCBuffersForTests<ElementType>& expected, SparseCSCBuffersForTests<ElementType>& output)
 {
     return ((expected.m_seqLen == output.m_seqLen) && (expected.m_colsStarts == output.m_colsStarts) &&
-           (expected.m_rowIndices == output.m_rowIndices) && (expected.m_nonZeroValues == output.m_nonZeroValues) &&
-           (expected.m_numNonZeroValues == output.m_numNonZeroValues));
+        (expected.m_rowIndices == output.m_rowIndices) && (expected.m_nonZeroValues == output.m_nonZeroValues) &&
+        (expected.m_numNonZeroValues == output.m_numNonZeroValues));
 }
 
 template <typename ElementType>
@@ -657,7 +688,6 @@ void ValueCopyToSparseCSCTest(const DeviceDescriptor& device)
     Variable sampleVariable;
     NDShape sampleShape;
     std::vector<ElementType> referenceDenseData;
-
     SparseCSCBuffersForTests<ElementType> expected, output;
 
     // Check single sample.
@@ -670,16 +700,20 @@ void ValueCopyToSparseCSCTest(const DeviceDescriptor& device)
 
     sampleVariable = CreateVariable<ElementType>(sampleShape, 0, true /* isSparse */);
     sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+    SortCSCBuffers(expected);
+    SortCSCBuffers(output);
     BOOST_TEST(AreEqualCSCBuffers(expected, output), "Single sample: the output data does not match expected.");
 
     // 1 dynamic axis (as batch) for the sampleVariable
     sampleVariable = CreateVariable<ElementType>(sampleShape, 1, true /* isSparse */);
     sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+    SortCSCBuffers(output);
     BOOST_TEST(AreEqualCSCBuffers(expected, output), "Single sample with batch axis: the output data does not match expected.");
 
     // 2 dynamic axes for the sampleVariable
     sampleVariable = CreateVariable<ElementType>(sampleShape, 2, true /* isSparse */);
     sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+    SortCSCBuffers(output);
     BOOST_TEST(AreEqualCSCBuffers(expected, output), "Single sample with batch and sequence axis: the output data does not match expected.");
 
     // Random sequences
@@ -695,6 +729,8 @@ void ValueCopyToSparseCSCTest(const DeviceDescriptor& device)
 
         sampleVariable = CreateVariable<ElementType>(sampleShape, 2, true /* isSparse */);
         sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+        SortCSCBuffers(expected);
+        SortCSCBuffers(output);
         BOOST_TEST(AreEqualCSCBuffers(expected, output), "The output data does not match expected.");
 
         // Using seqStartFlag.
@@ -703,6 +739,7 @@ void ValueCopyToSparseCSCTest(const DeviceDescriptor& device)
 
         sampleVariable = CreateVariable<ElementType>(sampleShape, 2, true /* isSparse */);
         sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+        SortCSCBuffers(output);
         BOOST_TEST(AreEqualCSCBuffers(expected, output), "The output data does not match expected.");
     }
 
@@ -715,6 +752,8 @@ void ValueCopyToSparseCSCTest(const DeviceDescriptor& device)
 
     sampleVariable = CreateVariable<ElementType>(sampleShape, 2, true /* isSparse */);
     sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+    SortCSCBuffers(expected);
+    SortCSCBuffers(output);
     BOOST_TEST(AreEqualCSCBuffers(expected, output), "N-Dimensional shape: the output data does not match expected.");
 
     // exception test: multiple sequences; dense format

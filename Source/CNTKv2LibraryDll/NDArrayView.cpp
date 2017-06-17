@@ -441,8 +441,13 @@ namespace CNTK
             RuntimeError("The SparseDataBuffers() method currently only supports CSC sparse format.");
 
         std::shared_ptr<const Matrix<ElementType>> matrix = GetMatrix<ElementType>();
-        matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
+        auto matrixDims = GetMatrixDimensions(Shape());
+        if (matrix->GetNumRows() != matrixDims.first)
+            LogicError("The number of rows of the underlying matrix does not match the shape.");
+        if (matrix->GetNumCols() != matrixDims.second)
+            LogicError("The number of columns of the underlying matrix does not match the shape.");
 
+        matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
         if ((matrix->GetMatrixType() != Microsoft::MSR::CNTK::MatrixType::SPARSE) || (matrix->GetFormat() != Microsoft::MSR::CNTK::MatrixFormat::matrixFormatSparseCSC))
             RuntimeError("NDArrayView::SparseDataBuffers: The underlying matrix of 'this' NDArrayView is not in the CSC sparse format.");
 

@@ -626,15 +626,16 @@ namespace CNTK
         else
             cpuView = Data();
 
+        auto numOfColsInMatrix = GetMatrixDimensions(cpuView->Shape()).second + 1;
         const ElementType* rawNonZeroValues;
         const SparseIndexType* rawColStarts;
         const SparseIndexType* rawRowIndices;
 
         std::tie(rawNonZeroValues, rawColStarts, rawRowIndices, numNonZeroValues) = cpuView->SparseCSCDataBuffers<ElementType>();
 
+        memcpy(colStarts.data(), rawColStarts, numOfColsInMatrix * sizeof(SparseIndexType));
         memcpy(nonZeroValues.data(), rawNonZeroValues, numNonZeroValues * sizeof(ElementType));
-        memcpy(colStarts.data(), rawColStarts, numNonZeroValues * sizeof(SparseIndexType));
-        memcpy(rowIndices.data(), rawRowIndices, (sequenceLength + 1) * sizeof(SparseIndexType));
+        memcpy(rowIndices.data(), rawRowIndices, numNonZeroValues * sizeof(SparseIndexType));
     }
 
     template <typename ElementType>
