@@ -38,7 +38,7 @@ bool getIdxsFromStr(const wstring& full, const wstring& delim, vector<int> *out)
       const wchar_t *this_str = (split[i].c_str());
       wchar_t *end = NULL;
       int j = 0;
-      j = wcstoll(this_str, &end, 10);
+      j = wcstoll(this_str, &end, (int)10);
       if (end == this_str || *end != L'\0') {
         out->clear();
         return false;
