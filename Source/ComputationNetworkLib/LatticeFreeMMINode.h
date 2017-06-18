@@ -25,6 +25,9 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+bool getIdxsFromStr(const wstring& idxsStr, const char *delim, vector<int> *out);
+
+
 // -----------------------------------------------------------------------
 // LatticeFreeMMINode
 // -----------------------------------------------------------------------
@@ -63,20 +66,21 @@ class LatticeFreeMMINode : public ComputationNodeNonLooping /*ComputationNode*/<
     
 public:
     LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_squashingFactor(1.0), m_alignmentWindow(0), m_ceweight(0), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(0), m_denWeight(1)
+        : Base(deviceId, name), m_squashingFactor(1.0), m_alignmentWindow(0), m_ceweight(0), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(0), m_denWeight(1), m_boostedSil(0), m_silenceSenoStr("")
     {
         InitMatrixes();
     }
 
-    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const int alignmentWindow, const ElemType ceweight, const ElemType boosted, const ElemType denWeight)
-        : Base(deviceId, name), m_squashingFactor(squashingFactor), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(boosted), m_denWeight(denWeight)
+    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const int alignmentWindow, const ElemType ceweight, const ElemType boosted, const ElemType denWeight, const boostedSil, const wstring& silenceSenoStr)
+        : Base(deviceId, name), m_squashingFactor(squashingFactor), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(boosted), m_denWeight(denWeight), m_boostedSil(boostedSil), m_silenceSenoStr(silenceSenoStr)
     {
         InitMatrixes();
         InitializeFromTfstFiles(fstFilePath, smapFilePath);
+        getIdxsFromStr(silenceSenoStr,":", &m_silenceSenos);
     }
 
     LatticeFreeMMINode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"squashingFactor"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"boosted"), configp->Get(L"denWeight"))
+        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"squashingFactor"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"boosted"), configp->Get(L"denWeight"), configp->Get(L"boostedSil"), configp->Get(L"silenceSenoStr"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -276,6 +280,9 @@ public:
             node->m_ceweight = m_ceweight;
             node->m_boosted = m_boosted;            
             node->m_denWeight = m_denWeight;            
+            node->m_silenceSenos = m_silenceSenos; 
+            node->m_silenceSenoStr = m_silenceSenoStr;             
+            node->m_boostedSil = m_boostedSil;             
             node->m_fsa = m_fsa;
             node->m_tmap->SetValue(*m_tmap);
             node->m_smap->SetValue(*m_smap);
@@ -376,6 +383,10 @@ public:
         fstream << m_ceweight;
         fstream << m_boosted;       
         fstream << m_denWeight;       
+        
+        fstream << m_boostedSil;               
+        fstream << m_silenceSenoStr;               
+
         fstream << *m_tmap;
         fstream << *m_smap;
         SaveFsa(fstream);
@@ -398,6 +409,10 @@ public:
         fstream >> m_boosted;
         fstream >> m_denWeight;
 
+        fstream >> m_boostedSil;               
+        fstream >> m_silenceSenoStr;                       
+        getIdxsFromStr(m_silenceSenoStr,":", &m_silenceSenos);
+
         LoadMatrix(fstream, m_tmap);
         LoadMatrix(fstream, m_smap);
         //m_tmapTranspose = make_shared<Matrix<ElemType>>(m_tmap->Transpose(), m_deviceId);
@@ -412,7 +427,7 @@ public:
             Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
             char str[4096];
-            sprintf(str, "squashingFactor=%f alignmentWindow=%d ceweight=%f boosted=%f denWeight=%f", this->m_squashingFactor, this->m_alignmentWindow, this->m_ceweight, this->m_boosted, this->m_denWeight);
+            sprintf(str, "squashingFactor=%f alignmentWindow=%d ceweight=%f boosted=%f denWeight=%f boostedSil=%f", this->m_squashingFactor, this->m_alignmentWindow, this->m_ceweight, this->m_boosted, this->m_denWeight, this->m_boostedSil);
             fstream << string(str);
         }
 
@@ -508,6 +523,10 @@ protected:
     ElemType m_ceweight;
     ElemType m_boosted; 
     ElemType m_denWeight; 
+    vector<int> m_silenceSenos;
+    wstring m_silenceSenoStr;    
+    ElemType m_boostedSil;
+        
     vector<map<int, pair<int, ElemType>>> m_fsa;
     shared_ptr<Matrix<ElemType>> m_tmap;
     shared_ptr<Matrix<ElemType>> m_smap;
@@ -532,6 +551,7 @@ protected:
 
     vector<ElemType> m_labelVector;
     vector<ElemType> m_likelihoodBuffer;
+    vector<ElemType> m_boostedBuffer;    
     vector<SenoneLabel> m_senoneSequence;
     vector<int> m_stateSequence;
     vector<double> m_alphaNums;

@@ -24,6 +24,36 @@
 using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+bool getIdxsFromStr(const wstring& full, const char *delim, vector<int> *out)
+{
+    assert(out != NULL);
+    if (*(full.c_str()) == '\0') {
+      out->clear();
+      return true;
+    }
+    vector<wstring> split = SplitString(full, delim);
+    out->resize(split.size());
+    for (int i = 0; i < split.size(); i++) {
+      const char *this_str = split[i].c_str();
+      char *end = NULL;
+      int j = 0;
+      j = strtoll(this_str, &end, 10);
+      if (end == this_str || *end != '\0') {
+        out->clear();
+        return false;
+      } else {
+        I jI = static_cast<int>(j);
+        if (static_cast<int>(jI) != j) {
+          // output type cannot fit this integer.
+          out->clear();
+          return false;
+        }
+        (*out)[i] = jI;
+      }
+    }
+    return true;
+}
     
 template <class ElemType>
 void LatticeFreeMMINode<ElemType>::Graph2matrixWithSelfLoop(const vector<DataArc> input, size_t maxstate, vector<ElemType>& transVal, vector<CPUSPARSE_INDEX_TYPE>& transRow, vector<CPUSPARSE_INDEX_TYPE>& transCol, size_t &nstates, size_t &transCount, vector<ElemType>& smapVal, vector<CPUSPARSE_INDEX_TYPE>& smapRow, vector<CPUSPARSE_INDEX_TYPE>& smapCol, size_t &smapCount, size_t numSenone, vector<map<int, pair<int, ElemType>>>& fsa)
@@ -291,7 +321,8 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
 
     if (m_boosted != 0)
     {
-        for (int i = 0; i < bufferSize; i++) m_likelihoodBuffer[i] += m_boosted;
+        m_boostedBuffer.resize(bufferSize, m_boosted);
+        //for (int i = 0; i < bufferSize; i++) m_boostedBuffer[i] += m_boosted;
         for (int i = 0+1; i < nf; i++)
         {
            
@@ -301,10 +332,19 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
                 int currentSenone = m_senoneSequence[j].Senone;
                 assert(m_fsa[m_stateSequence[j]][currentSenone].second != 0);
                 assert(m_fsa[m_stateSequence[j - 1]][currentSenone].second != 0);
-                m_likelihoodBuffer[i * nsenones + currentSenone]-=m_boosted;
+                m_boostedBuffer[i * nsenones + currentSenone]-=m_boosted;
+            }
+            if (m_boostedSil)
+            {
+                for (int j = 0; j <= i, j < m_silenceSenos.size(); j++)
+                {
+                    int currentSenone = m_silenceSenos[j];
+                    m_boostedBuffer[i * nsenones + currentSenone]=m_boostedSil;
+                }
             }
         }
-        for (int i = 0; i < bufferSize; i++) m_likelihoodBuffer[i] = exp(m_likelihoodBuffer[i]);
+        //m_likelihoodBuffer+=m_boostedBuffer;
+        for (int i = 0; i < bufferSize; i++) m_likelihoodBuffer[i] = exp(m_likelihoodBuffer[i]+m_boostedBuffer[i]);
         m_likelihoods->SetValue(nsenones, nf, m_deviceId, &m_likelihoodBuffer[0]);
     }
     
