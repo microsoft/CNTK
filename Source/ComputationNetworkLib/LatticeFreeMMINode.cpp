@@ -25,25 +25,25 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-bool getIdxsFromStr(const wstring& full, const char *delim, vector<int> *out)
+bool getIdxsFromStr(const wstring& full, const wstring& delim, vector<int> *out)
 {
     assert(out != NULL);
-    if (*(full.c_str()) == '\0') {
+    if (*(full.c_str()) == L'\0') {
       out->clear();
       return true;
     }
     vector<wstring> split = SplitString(full, delim);
     out->resize(split.size());
     for (int i = 0; i < split.size(); i++) {
-      const char *this_str = split[i].c_str();
-      char *end = NULL;
+      const wchar_t *this_str = (split[i].c_str());
+      wchar_t *end = NULL;
       int j = 0;
-      j = strtoll(this_str, &end, 10);
-      if (end == this_str || *end != '\0') {
+      j = wcstoll(this_str, &end, 10);
+      if (end == this_str || *end != L'\0') {
         out->clear();
         return false;
       } else {
-        I jI = static_cast<int>(j);
+        int jI = static_cast<int>(j);
         if (static_cast<int>(jI) != j) {
           // output type cannot fit this integer.
           out->clear();

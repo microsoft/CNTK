@@ -25,7 +25,7 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-bool getIdxsFromStr(const wstring& idxsStr, const char *delim, vector<int> *out);
+bool getIdxsFromStr(const wstring& full, const wstring& delim, vector<int> *out);
 
 
 // -----------------------------------------------------------------------
@@ -66,17 +66,18 @@ class LatticeFreeMMINode : public ComputationNodeNonLooping /*ComputationNode*/<
     
 public:
     LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_squashingFactor(1.0), m_alignmentWindow(0), m_ceweight(0), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(0), m_denWeight(1), m_boostedSil(0), m_silenceSenoStr("")
+        : Base(deviceId, name), m_squashingFactor(1.0), m_alignmentWindow(0), m_ceweight(0), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(0), m_denWeight(1), m_boostedSil(0)
     {
+        m_silenceSenoStr=L"";
         InitMatrixes();
     }
 
-    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const int alignmentWindow, const ElemType ceweight, const ElemType boosted, const ElemType denWeight, const boostedSil, const wstring& silenceSenoStr)
+    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const int alignmentWindow, const ElemType ceweight, const ElemType boosted, const ElemType denWeight, const ElemType boostedSil, const wstring& silenceSenoStr)
         : Base(deviceId, name), m_squashingFactor(squashingFactor), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_totalFrameNumberOfCurrentMinibatch(0), m_boosted(boosted), m_denWeight(denWeight), m_boostedSil(boostedSil), m_silenceSenoStr(silenceSenoStr)
     {
         InitMatrixes();
         InitializeFromTfstFiles(fstFilePath, smapFilePath);
-        getIdxsFromStr(silenceSenoStr,":", &m_silenceSenos);
+        getIdxsFromStr(silenceSenoStr,L":", &m_silenceSenos);
     }
 
     LatticeFreeMMINode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -411,7 +412,7 @@ public:
 
         fstream >> m_boostedSil;               
         fstream >> m_silenceSenoStr;                       
-        getIdxsFromStr(m_silenceSenoStr,":", &m_silenceSenos);
+        getIdxsFromStr(m_silenceSenoStr,L":", &m_silenceSenos);
 
         LoadMatrix(fstream, m_tmap);
         LoadMatrix(fstream, m_smap);
