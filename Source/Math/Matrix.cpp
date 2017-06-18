@@ -1786,6 +1786,11 @@ void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>&
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 
+
+///
+// Implement Hinton's RMSprop, an unpublished adaptive learning rate method proposed by Geoff Hinton in Lecture 6e of his Coursera Class.
+// Ref: Lecture 6e of Hinton's Coursera Class, http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf
+///
 template <class ElemType>
 void Matrix<ElemType>::RmsPropUpdate(Matrix<ElemType>& gradients, 
                                    Matrix<ElemType>& functionValues, 

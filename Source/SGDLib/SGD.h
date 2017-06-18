@@ -76,18 +76,12 @@ enum class ParallelizationMethod : int
 struct RMSPropInfo
 {
     double gamma;
-    double inc;
-    double dec;
-    double max;
-    double min;
+    double epsilon;
 
     RMSPropInfo()
     {
-        gamma = 0.99;
-        inc = 1.2;
-        dec = 0.75;
-        max = 10.0;
-        min = 0.1;
+        gamma = 0.9;
+        epsilon = 1.0;
     }
 };
 

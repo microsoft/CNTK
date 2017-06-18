@@ -1311,7 +1311,7 @@ void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
                                   ElemType RMS_GAMMA,
                                   bool unitGainMomentum)
 {
-    const ElemType floor = 1.0;
+    const ElemType epsilon = 1.0;
     const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
 
     size_t n = gradients.GetNumElements();
@@ -1322,12 +1322,6 @@ void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
     {
         RequireSize(gradients.GetNumRows(), gradients.GetNumCols() * 2);
         SetValue(0.0);
-
-        //ElemType* avars = Data();         // accumulated variances for RMS scaling
-
-        //// initialize moving average of gradient-squared
-        //for (long i = 0; i < n; i++)
-        //    avars[i] = curr_grad[i] * curr_grad[i];
     }
 
     ElemType* avars = Data();         // accumulated variances for RMS scaling

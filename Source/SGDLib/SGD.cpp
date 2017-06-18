@@ -39,11 +39,6 @@
 #include <map>
 #include <set>
 
-// For debug
-#define OPEN_DUMP 0
-static int __iteration_index = 0;
-static int __count = 0;
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
@@ -1371,9 +1366,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         ProfilerTimeEnd(profGradientAgg, profilerEvtMainGradient);
         auto profWeights = ProfilerTimeBegin();
 
-        __count = 0;
-        __iteration_index++;
-
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
@@ -2363,24 +2355,6 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     smoothedGradientValues.Print("Smoothed Gradient Input");
 #endif
 
-#if OPEN_DUMP
-    FILE *dumpFile = nullptr;
-    bool isDump = false;
-    isDump = __count < 1;
-
-    //printf("%s\n", isDump ? "true" : "false");
-    if (isDump)
-    {
-        char dumpFileName[100];
-        sprintf(dumpFileName, "dump_iter%06d_buf%06d.txt", __iteration_index, __count++);
-        dumpFile = fopen(dumpFileName, "w+");
-        LOGPRINTF(dumpFile, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%llu\n",
-            learnRatePerSample, momentum, actualMBSize);
-        LOGPRINTF(dumpFile, "GradUpdateType()=%d, GradientUpdateNoiseStd()=%0.8f\n",
-            GradUpdateType(), GradientUpdateNoiseStd());
-    }
-#endif
-
     // make actualMBSize is a valid value
     assert(actualMBSize > 0);
 
@@ -2408,15 +2382,6 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 
     if (adpType == GradientsUpdateType::None)
     {
-#if OPEN_DUMP
-        if (isDump)
-        {
-            gradientValues.DumpToFile(dumpFile, "Accumulated Gradient Input", 0, 20);
-            functionValues.DumpToFile(dumpFile, "Before-Calc Weight Input", 0, 20);
-            smoothedGradientValues.DumpToFile(dumpFile, "Before-Calc Momentum", 0, 20);
-        }
-#endif
-
         // even if momentum is 0.0, still need to call a momentum-based update to store 
         // [learning rate * current gradient values] in the smoothed gradients, in case
         // the momentum value for the next epoch is non-zero.
@@ -2430,14 +2395,6 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
             functionValues.NesterovAcceleratedMomentumSGDUpdate(gradientValues, smoothedGradientValues, 
                                                                 ElemType(learnRatePerSample), ElemType(momentum));
         }
-
-#if OPEN_DUMP
-        if (isDump)
-        {
-            functionValues.DumpToFile(dumpFile, "After-Calc Weight Input", 0, 20);
-            smoothedGradientValues.DumpToFile(dumpFile, "After-Calc Momentum", 0, 20);
-        }
-#endif
     }
     else if (adpType == GradientsUpdateType::AdaGrad)
     {
@@ -2458,31 +2415,12 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {
-#if OPEN_DUMP
-        auto n = gradientValues.GetNumElements();
-        if (isDump)
-        {
-            gradientValues.DumpToFile(dumpFile, "Accumulated Gradient Input", 0, 20);
-            functionValues.DumpToFile(dumpFile, "Before-Calc Weight Input", 0, 20);
-            smoothedGradientValues.DumpToFile(dumpFile, "Before-Calc Accumulated Variances", 0, 20);
-            smoothedGradientValues.DumpToFile(dumpFile, "Before-Calc Momentum", n, n + 20);
-        }
-#endif
-
         auto learningRate = learnRatePerSample * actualMBSize;
+
+        // Using mean gradient for update
         Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
         smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learningRate,
-                                         momentum, (ElemType) m_rpi.gamma, needAveMultiplier);
-
-#if OPEN_DUMP
-        if (isDump)
-        {
-            gradientValues.DumpToFile(dumpFile, "Mean Gradient Input", 0, 20);
-            functionValues.DumpToFile(dumpFile, "After-Calc Weight Input", 0, 20);
-            smoothedGradientValues.DumpToFile(dumpFile, "After-Calc Accumulated Variances", 0, 20);
-            smoothedGradientValues.DumpToFile(dumpFile, "After-Calc Momentum", n, n + 20);
-        }
-#endif
+                                         momentum, (ElemType) m_rpi.gamma);
     }
 
     if (noiseStd > 0)
