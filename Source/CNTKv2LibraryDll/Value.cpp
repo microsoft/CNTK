@@ -585,7 +585,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    std::pair<size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes(const Variable& outputVariable)
+    std::tuple<size_t, size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes(const Variable& outputVariable)
     {
         auto varShape = outputVariable.Shape();
         if (varShape == NDShape::Unknown || varShape.HasInferredDimension())
@@ -607,7 +607,8 @@ namespace CNTK
             RuntimeError("There should not be any masks for a Value containing only one single sequence.");
 
         auto numNonZeroValues = std::get<3>(Data()->SparseCSCDataBuffers<ElementType>());
-        return std::pair<size_t, size_t>(maxSequenceLen, numNonZeroValues);
+        auto numOfColsInMatrix = GetMatrixDimensions(Shape()).second + 1;
+        return std::tuple<size_t, size_t, size_t>(maxSequenceLen, numOfColsInMatrix, numNonZeroValues);
     }
 
     template <typename ElementType>
@@ -765,8 +766,8 @@ namespace CNTK
     template CNTK_API void Value::CopyVariableValueToVector<double>(const Variable& outputVariable, std::vector<std::vector<double>>& sequences);
     template CNTK_API void Value::CopyVariableValueToVector<float>(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences);
     template CNTK_API void Value::CopyVariableValueToVector<double>(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences);
-    template CNTK_API std::pair<size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes<float>(const Variable& outputVariable);
-    template CNTK_API std::pair<size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes<double>(const Variable& outputVariable);
+    template CNTK_API std::tuple<size_t, size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes<float>(const Variable& outputVariable);
+    template CNTK_API std::tuple<size_t, size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes<double>(const Variable& outputVariable);
     template CNTK_API void Value::CopyVariableValueToCSCSparse<float>(size_t sequenceLength, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<float>& nonZeroValues, size_t& numNonZeroValues);
     template CNTK_API void Value::CopyVariableValueToCSCSparse<double>(size_t sequenceLength, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<double>& nonZeroValues, size_t& numNonZeroValues);
     template float Value::AsScalar<float>() const;

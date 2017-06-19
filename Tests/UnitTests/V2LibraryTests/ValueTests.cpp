@@ -679,10 +679,10 @@ bool AreEqualCSCBuffers(SparseCSCBuffersForTests<ElementType>& expected, SparseC
 template <typename ElementType>
 void ValueCopyToSparseCSCTest(const DeviceDescriptor& device)
 {
-    size_t maxDimSize = 80;
+    size_t maxDimSize = 10;
     std::default_random_engine dimSizeGenerator;
     std::uniform_int_distribution<size_t> dimSizeDistribution(1, maxDimSize);
-    size_t maxSequenceLen = 150;
+    size_t maxSequenceLen = 15;
     size_t dimSize;
     ValuePtr sparseValue;
     Variable sampleVariable;
@@ -1125,10 +1125,10 @@ void CheckSparseValueEqualToDenseValue(ValuePtr sparseValue, ValuePtr denseValue
 template <typename ElementType>
 void CreateSequenceTestSparse(const DeviceDescriptor device, bool readOnly)
 {
-    size_t maxDimSize = 110;
+    size_t maxDimSize = 11;
     std::default_random_engine dimSizeGenerator;
     std::uniform_int_distribution<size_t> dimSizeDistribution(1, maxDimSize);
-    size_t maxSequenceLen = 50;
+    size_t maxSequenceLen = 20;
 
     std::vector<ElementType> referenceDenseData;
     std::vector<SparseIndexType> colsStarts;

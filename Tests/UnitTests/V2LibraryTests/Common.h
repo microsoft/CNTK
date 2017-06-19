@@ -483,7 +483,7 @@ std::tuple<std::vector<ElementType>, std::vector<SparseIndexType>, std::vector<S
             int rowIndex = rand() % numMatrixRows;
             if (rowsWrittenTo.insert(rowIndex).second)
             {
-                ElementType value = ((ElementType)rand()) / RAND_MAX;
+                ElementType value = (ElementType)(rand() / RAND_MAX + 0.5);
                 nonZeroValues[nnzIndex] = value;
                 referenceDenseData[(j * numMatrixRows) + rowIndex] = value;
                 rowIndices[nnzIndex] = rowIndex;
