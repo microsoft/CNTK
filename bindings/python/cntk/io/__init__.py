@@ -1093,6 +1093,9 @@ class UserChunk(cntk_py.SwigChunk):
     def __init__(self):
         super(UserChunk, self).__init__()
 
+    def _get_sequence(self, chunkId):
+        return self.get_sequence(chunkId)
+
     def get_sequence(self, chunkId):
         raise NotImplementedError
 
@@ -1105,10 +1108,18 @@ class UserDeserializer(cntk_py.SwigDataDeserializer):
     def stream_infos(self):
         raise NotImplementedError
 
-    def _stream_infos(self, sinfos=None):
+    def _stream_infos(self, infos=None):
         # sinfos is a list of stream information, which we need to fill in
         # place, # because Swig demands it that way.
-        sinfos.extend(self.stream_infos())
+        infos.extend(self.stream_infos())
+
+    def _chunk_infos(self, infos=None):
+        # sinfos is a list of stream information, which we need to fill in
+        # place, # because Swig demands it that way.
+        infos.extend(self.chunk_infos())
+
+    def _get_chunk(self, chunkId):
+        return self.get_chunk(chunkId)
 
     def chunk_infos(self):
         raise NotImplementedError

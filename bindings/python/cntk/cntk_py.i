@@ -46,10 +46,10 @@
 %rename(base64_image_deserializer) CNTK::Base64ImageDeserializer;
 %rename(_none) CNTK::DictionaryValue::Type::None;
 
-%rename(_get_stream_infos) CNTK::SwigDataDeserializer::_GetStreamInfos(PyObject*);
-%rename(_get_chunk_infos) CNTK::SwigDataDeserializer::_GetChunkInfos(size_t index, PyObject*);
+%rename(_stream_infos) CNTK::SwigDataDeserializer::_GetStreamInfos(PyObject*);
+%rename(_chunk_infos) CNTK::SwigDataDeserializer::_GetChunkInfos(PyObject*);
 %rename(_get_chunk) CNTK::SwigDataDeserializer::GetChunk;
-%rename(_get_sequence) CNTK::SwigChunk::_GetSequence(size_t index, PyObject*);
+%rename(_get_sequence) CNTK::SwigChunk::_GetSequence;
 
 %include "CNTKWarnFilters.i"
 
@@ -1799,7 +1799,7 @@ namespace CNTK
         }
     };
 
-    DataDeserializerPtr CreateUserDeserializer()
+    std::shared_ptr<SwigDataDeserializer> CreateUserDeserializer()
     {
         return std::make_shared<SwigDataDeserializer>();
     }

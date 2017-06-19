@@ -100,9 +100,7 @@ struct Minibatch
 class Reader
 {
 public:
-    // Describes the streams this reader produces.
-    virtual std::vector<StreamInformation> GetStreamDescriptions() = 0;
-
+    // Configuration
     // Starts a new epoch with the provided configuration
     // TODO: should be deprecated, SetConfiguration should be used instead.
     virtual void StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& inputDescriptions) = 0;
@@ -110,17 +108,21 @@ public:
     // Sets a new configuration for the reader.
     virtual void SetConfiguration(const ReaderConfiguration& config, const std::map<std::wstring, int>& inputDescriptions) = 0;
 
+
+    // Describes the streams this reader produces.
+    virtual std::vector<StreamInformation> GetStreamDescriptions() = 0;
+
+    // Reads a minibatch that contains data across all streams.
+    virtual Minibatch ReadMinibatch() = 0;
+
     // Returns current position in the global timeline. The returned value is in samples.
-    // TODO: Currently in case of sequence to sequence training, 
-    // TODO: the logical sequence size in samples = max(constitutuing sequences among all streams)
-    // TODO: This will change in the future.
+    // Currently in case of sequence to sequence training, 
+    // the logical sequence size in samples = max(constitutuing sequences among all streams)
+    // This will probably change in the future.
     virtual size_t GetCurrentSamplePosition() = 0;
 
     // Set current global position
     virtual void SetCurrentSamplePosition(size_t currentSamplePosition) = 0;
-
-    // Reads a minibatch that contains data across all streams.
-    virtual Minibatch ReadMinibatch() = 0;
 
     virtual ~Reader() {};
 };
