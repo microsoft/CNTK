@@ -27,7 +27,7 @@ num_classes = 132
 context = 2
 
 # Create a minibatch source.
-def create_mb_source(features_file, labels_file, label_mapping_filem, total_number_of_samples):
+def create_mb_source(features_file, labels_file, label_mapping_file, total_number_of_samples):
     for file_name in [features_file, labels_file, label_mapping_file]:
         if not os.path.exists(file_name):
             raise RuntimeError("File '%s' does not exist. Please check that datadir argument is set correctly." % (file_name))
@@ -83,7 +83,7 @@ def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_
     return cntk.Trainer(network['output'], (network['ce'], network['errs']), parameter_learner, progress_writers)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size):
+def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore=False, model_path=model_path):
     input_map = {
         network['feature']: train_source.streams.amazing_features,
         network['label']: train_source.streams.awesome_labels
@@ -97,12 +97,14 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(frequency = epoch_size,
                                              filename = os.path.join(model_path, "HTK_LSTM_Truncated"),
-                                             restore = False),
+                                             restore = restore),
         cv_config = CrossValidationConfig(test_source, minibatch_size=minibatch_size)
     ).train()
 
-def htk_lstm_truncated(features_file, labels_file, label_mapping_file, minibatch_size=64, epoch_size=640000, num_quantization_bits=32,
-                            block_size=3200, warm_up=0, max_epochs=5, num_mbs_per_log=None, gen_heartbeat=False,log_to_file=None, tensorboard_logdir=None):
+def htk_lstm_truncated(features_file, labels_file, label_mapping_file, minibatch_size=64, epoch_size=640000, 
+                       num_quantization_bits=32, block_size=3200, warm_up=0, max_epochs=5, num_mbs_per_log=None, 
+                       gen_heartbeat=False,log_to_file=None, tensorboard_logdir=None, restore = False,
+                       model_path = model_path):
 
     cntk.debugging.set_computation_network_trace_level(0)
 
@@ -127,7 +129,7 @@ def htk_lstm_truncated(features_file, labels_file, label_mapping_file, minibatch
     train_source = create_mb_source(features_file, labels_file, label_mapping_file, total_number_of_samples=max_epochs * epoch_size)
     # Testing with training data, just for testing purposes
     test_source = create_mb_source(features_file, labels_file, label_mapping_file, total_number_of_samples=max_epochs * epoch_size)
-    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size)
+    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore, model_path)
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()

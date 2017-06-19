@@ -42,7 +42,7 @@ An Output folder will be created in the `Image/GettingStarted` folder, which is 
 
 ## Details
 
-There are five cntk configuration files in the current folder. These cntk configuration files use BrainScript, a custom script language for CNTK. To learn more about BrainScript, please follow the introduction of [BrainScript Basic Concepts](https://github.com/Microsoft/CNTK/wiki/BS-Basic-concepts).
+There are five cntk configuration files in the current folder. These cntk configuration files use BrainScript, a custom script language for CNTK. To learn more about BrainScript, please follow the introduction of [BrainScript Basic Concepts](https://docs.microsoft.com/en-us/cognitive-toolkit/Brainscript-Basic-concepts).
 
 ### 01_OneHidden.cntk
 
@@ -54,9 +54,9 @@ To run this example, use the following command:
 
 In this example, the MNIST images are first normalized to the range `[0,1)`, followed by a single dense hidden layer with 200 nodes. A [rectified linear unit (ReLU)](http://machinelearning.wustl.edu/mlpapers/paper_files/icml2010_NairH10.pdf) activation function is added for nonlinearity. Afterwards, another dense linear layer is added to generate the output label. The training adopts cross entropy as the cost function after softmax.
 
-In the `SGD` block, `learningRatesPerSample = 0.01*5:0.005` indicates using 0.01 as learning rate per sample for 5 epochs and then 0.005 for the rest. More details about the SGD block are explained [here](https://github.com/Microsoft/CNTK/wiki/SGD-Block).
+In the `SGD` block, `learningRatesPerSample = 0.01*5:0.005` indicates using 0.01 as learning rate per sample for 5 epochs and then 0.005 for the rest. More details about the SGD block are explained [here](https://docs.microsoft.com/en-us/cognitive-toolkit/Brainscript-SGD-Block).
 
-The MNIST data is loaded with a simple CNTK text format reader. The train and test datasets are converted by running the Python script in [DataSets/MNIST](../DataSets/MNIST). For more information on the reader block, please refer [here](https://github.com/Microsoft/CNTK/wiki/Reader-block).
+The MNIST data is loaded with a simple CNTK text format reader. The train and test datasets are converted by running the Python script in [DataSets/MNIST](../DataSets/MNIST). For more information on the reader block, please refer [here](https://docs.microsoft.com/en-us/cognitive-toolkit/Brainscript-Reader-block).
 
 ### 02_OneConv.cntk
 
@@ -107,7 +107,7 @@ In the sixth example, we show how to train CNTK with multiple process(GPUs) for 
 
 `mpiexec -n 2 cntk configFile=06_OneConvRegrMultiNode.cntk parallelTrain=True parallelizationMethod=DataParallelSGD`
 
-You can change the parallelizationMethod to other three options. To see more detailed guide on multiple GPUs and machines tasks, please refer to [Multiple GPUs and machines](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines).
+You can change the parallelizationMethod to other three options. To see more detailed guide on multiple GPUs and machines tasks, please refer to [Multiple GPUs and machines](https://docs.microsoft.com/en-us/cognitive-toolkit/Multiple-GPUs-and-machines).
 
 ### 07_Deconvolution.cntk
 

@@ -10,7 +10,7 @@ Run the example from the current folder using:
 
 `python VGG16_ImageNet_Distributed.py`
 
-To run it in a distributed manner, please check [here](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#32-python). For example, the command for distributed training on the same machine (with multiple GPUs) with Windows is:
+To run it in a distributed manner, please check [here](https://docs.microsoft.com/en-us/cognitive-toolkit/Multiple-GPUs-and-machines#42-running-parallel-training-with-python). For example, the command for distributed training on the same machine (with multiple GPUs) with Windows is:
 
 `mpiexec -n <#workers> python VGG16_ImageNet_Distributed.py`
 
@@ -22,6 +22,6 @@ Run the example from the current folder using:
 
 `python VGG19_ImageNet_Distributed.py`
 
-To run it in a distributed manner, please check [here](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#32-python). For example, the command for distributed training on the same machine (with multiple GPUs) with Windows is:
+To run it in a distributed manner, please check [here](https://docs.microsoft.com/en-us/cognitive-toolkit/Multiple-GPUs-and-machines#42-running-parallel-training-with-python). For example, the command for distributed training on the same machine (with multiple GPUs) with Windows is:
 
 `mpiexec -n <#workers> python VGG19_ImageNet_Distributed.py`

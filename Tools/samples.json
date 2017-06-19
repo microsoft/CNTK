@@ -20,7 +20,7 @@
     {
         "category": [""],
         "name":  "Model Evaluation on Azure",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/Evaluate-a-model-in-an-Azure-WebApi",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/Evaluate-a-model-in-an-Azure-WebApi",
         "description":  "Host an already trained CNTK model on Azure.",
         "language":  [],
         "type":  ["Tutorial"],
@@ -29,7 +29,7 @@
     {
         "category": [""],
         "name":  "Model Evaluation in C++/C#",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/CNTK-Eval-Examples",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-Eval-Examples",
         "description":  "Evaluation or inference of an already trained CNTK model in C++/C#.",
         "language":  ["C#"],
         "type":  ["Example"],
@@ -101,7 +101,7 @@
     {
         "category": ["Image"],
         "name":  "Fast R-CNN",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN",
+        "url":  "https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN",
         "description":  "Train object detection from images by adapting pre-trained classification models on arbitrarily sized regions of interest using ROI pooling.",
         "language":  ["Python", "BrainScript"],
         "type":  ["Tutorial", "Recipe"],

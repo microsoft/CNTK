@@ -173,7 +173,7 @@ def print_progress(samples_per_second, average_full_ce, total_samples, total_tim
 
 
 # Creates and trains an rnn language model.
-def train_lm():
+def train_lm(testing=False):
     data = DataReader(token_to_id_path, segment_sepparator)
 
     # Create model nodes for the source and target inputs
@@ -203,7 +203,8 @@ def train_lm():
                             gradient_clipping_threshold_per_sample=clipping_threshold_per_sample,
                             gradient_clipping_with_truncation=gradient_clipping_with_truncation)
     trainer = Trainer(z, (cross_entropy, error), learner)
-  
+
+    last_avg_ce = 0
     for epoch_count in range(num_epochs):
         for features, labels, token_count in data.minibatch_generator(train_file_path, sequence_length, sequences_per_batch):
             arguments = ({input_sequence : features, label_sequence : labels})
@@ -220,14 +221,18 @@ def train_lm():
                 av_ce = average_cross_entropy(full_ce, input_sequence, label_sequence, data)
                 print_progress(samples_per_second, av_ce, num_trained_samples, t_start)
                 num_trained_samples_since_last_report = 0
+                last_avg_ce = av_ce
 
             num_trained_samples += token_count
             num_trained_samples_since_last_report += token_count
 
-        # after each epoch save the model
-        model_filename = "models/lm_epoch%d.dnn" % epoch_count
-        z.save(model_filename)
-        print("Saved model to '%s'" % model_filename)
+        if not testing:
+            # after each epoch save the model
+            model_filename = "models/lm_epoch%d.dnn" % epoch_count
+            z.save(model_filename)
+            print("Saved model to '%s'" % model_filename)
+
+    return last_avg_ce
 
 
 if __name__=='__main__':
