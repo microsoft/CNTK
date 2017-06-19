@@ -693,7 +693,7 @@ void ValueCopyToSparseCSCTest(const DeviceDescriptor& device)
     // Check single sample.
     // No dynamic axis for the sampleVariable.
     dimSize = dimSizeDistribution(dimSizeGenerator);
-    sampleShape = NDShape {dimSize};
+    sampleShape = NDShape{ dimSize };
     expected.m_seqLen = 1;
     std::tie(referenceDenseData, expected.m_colsStarts, expected.m_rowIndices, expected.m_nonZeroValues, expected.m_numNonZeroValues) = GenerateSequenceInCSC<ElementType>(dimSize, expected.m_seqLen);
     sparseValue = Value::CreateSequence<ElementType>(sampleShape, expected.m_seqLen, expected.m_colsStarts.data(), expected.m_rowIndices.data(), expected.m_nonZeroValues.data(), expected.m_numNonZeroValues, device);
@@ -757,6 +757,25 @@ void ValueCopyToSparseCSCTest(const DeviceDescriptor& device)
     BOOST_TEST(AreEqualCSCBuffers(expected, output), "N-Dimensional shape: the output data does not match expected.");
 
     // exception test: multiple sequences; dense format
+    // The variable is using the dense format.
+    sampleVariable = CreateVariable<ElementType>(sampleShape, 2);
+    VerifyException([&sparseValue, &sampleVariable, &output]() {
+        sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+    }, "The expected exception has not been caught: The outputVariable must be in the sparse format.");
+
+    // The Value contains multiple sequences.
+    dimSize = dimSizeDistribution(dimSizeGenerator);
+    sampleShape = NDShape{ dimSize };
+    size_t numSequences = 2;
+    auto sequenceLengths = GenerateSequenceLengths(numSequences, maxSequenceLen);
+    std::vector<NDArrayViewPtr> denseSequences(numSequences), sparseSequences(numSequences);
+    for (size_t i = 0; i < numSequences; ++i)
+        std::tie(denseSequences[i], sparseSequences[i]) = GenerateSparseSequence<float>(dimSize, sequenceLengths[i], 5);
+    sparseValue = Value::Create({ dimSize }, sparseSequences, device);
+    sampleVariable = CreateVariable<ElementType>(sampleShape, 2, true /* isSparse */);
+    VerifyException([&sparseValue, &sampleVariable, &output]() {
+        sparseValue->CopyVariableValueTo<ElementType>(sampleVariable, output.m_seqLen, output.m_colsStarts, output.m_rowIndices, output.m_nonZeroValues, output.m_numNonZeroValues);
+    }, "The expected exception has not been caught: The Value cannot be copied to buffers in sparse format, since it contains multiple sequences. Only single sequence is supported now.");
 }
 
 void ValueCopyToExceptionsTest(const DeviceDescriptor& device)

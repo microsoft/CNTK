@@ -261,7 +261,7 @@ void TestSparseCSCDataBuffers(size_t numAxes, const DeviceDescriptor& device)
 template <typename ElementType>
 void TestDataBuffer(size_t numAxes, const DeviceDescriptor& device)
 {
-    size_t maxDimSize = 15;
+    size_t maxDimSize = 7;
     NDShape viewShape(numAxes);
     for (size_t i = 0; i < numAxes; ++i)
         viewShape[i] = (rand() % maxDimSize) + 1;
@@ -365,7 +365,7 @@ BOOST_AUTO_TEST_CASE(CheckSparseCscDataBuffersInCpu)
     if (ShouldRunOnCpu())
     {
         TestSparseCSCDataBuffers<float>(2, DeviceDescriptor::CPUDevice());
-        TestSparseCSCDataBuffers<float>(GenerateNumOfAxes(16), DeviceDescriptor::CPUDevice());
+        TestSparseCSCDataBuffers<float>(GenerateNumOfAxes(6), DeviceDescriptor::CPUDevice());
     }
 }
 
@@ -379,8 +379,8 @@ BOOST_AUTO_TEST_CASE(CheckDataBufferInGpu)
 {
     if (ShouldRunOnGpu())
     {
-        TestDataBuffer<float>(0, DeviceDescriptor::GPUDevice(0));
-        TestDataBuffer<double>(GenerateNumOfAxes(11), DeviceDescriptor::GPUDevice(0));
+        TestDataBuffer<float>(1, DeviceDescriptor::GPUDevice(0));
+        TestDataBuffer<double>(GenerateNumOfAxes(7), DeviceDescriptor::GPUDevice(0));
     }
 }
 

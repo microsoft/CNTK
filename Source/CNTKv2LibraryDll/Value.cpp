@@ -589,7 +589,7 @@ namespace CNTK
     {
         auto varShape = outputVariable.Shape();
         if (varShape == NDShape::Unknown || varShape.HasInferredDimension())
-            InvalidArgument("The outputVariable '%S' shape '%S' is unknown shape or has inferred dimension for at least one axis.",
+            InvalidArgument("The outputVariable '%S' shape '%S' is of unknown shape or has inferred dimension for at least one axis.",
                 outputVariable.AsString().c_str(), varShape.AsString().c_str());
 
         if (!outputVariable.IsSparse())
@@ -601,7 +601,7 @@ namespace CNTK
 
         // Only support sequence without batch
         if (numOfSequences != 1)
-            InvalidArgument("The Value cannot be copied to buffers in sparse format, since it contains multiple sequences. Only single sequence is supported now");
+            InvalidArgument("The Value cannot be copied to buffers in sparse format, since it contains multiple sequences. Only a single sequence is supported.");
 
         if (MaskedCount() != 0)
             RuntimeError("There should not be any masks for a Value containing only one single sequence.");
@@ -619,6 +619,7 @@ namespace CNTK
         if (Device().Type() == DeviceKind::GPU)
         {
             // Todo: GPUSparseMatrix to CPUSparseMatrix is not implemented in matrix, as a workaround the dense matrix is used as intermediate presentation.
+            // However, it is possible that data value very close to 0 could treated as 0 after transformation between dense and sparse.
             auto cpuDenseView = MakeSharedObject<NDArrayView>(GetDataType(), StorageFormat::Dense, Shape(), DeviceDescriptor::CPUDevice());
             cpuDenseView->CopyFrom(*Data());
             cpuView = MakeSharedObject<NDArrayView>(GetDataType(), GetStorageFormat(), Shape(), DeviceDescriptor::CPUDevice());
