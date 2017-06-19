@@ -127,7 +127,7 @@ public:
         m_streams.push_back(si);
     };
 
-    vector<StreamInformation> GetStreamDescriptions() const override
+    vector<StreamInformation> GetStreamDescriptions() override
     {
         return m_streams;
     }

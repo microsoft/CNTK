@@ -166,7 +166,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
     @staticmethod
     def _serialize(deserializer):
-        import pdb; pdb.set_trace()
         import uuid
         from cntk.internal import _DeserializerFactory
 
@@ -191,8 +190,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
         frame_mode=False,
         truncation_length=0,
         randomize=True):
-
-        import pdb; pdb.set_trace()
 
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [ deserializers ]
@@ -1089,6 +1086,22 @@ def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
 
     return '\n'.join(lines)
 
+class ChunkInformation(cntk_py.ChunkDescription):
+    '''
+    Chunk information container that is used to describe a single chunk
+    exposed from the user deserializer :class:`UserDeserializer`.
+
+    Args:
+        id (int): unique id of the chunk
+        number_of_samples (int): number of samples in the chunk
+        number_of_sequences (int): number of sequences in the chunk
+    '''
+    def __init__(self, id, number_of_samples, number_of_sequences):
+        super(ChunkInformation, self).__init__()
+        self.m_id = id
+        self.m_number_of_sequences = number_of_sequences
+        self.m_number_of_samples = number_of_samples
+
 class UserChunk(cntk_py.SwigChunk):
     def __init__(self):
         super(UserChunk, self).__init__()
@@ -1101,25 +1114,19 @@ class UserChunk(cntk_py.SwigChunk):
 
 class UserDeserializer(cntk_py.SwigDataDeserializer):
     def __init__(self):
-        import pdb; pdb.set_trace()
-        source = cntk_py.create_user_deserializer()
-        self.__dict__ = source.__dict__
-
-    def stream_infos(self):
-        raise NotImplementedError
+        super(UserDeserializer, self).__init__()
 
     def _stream_infos(self, infos=None):
-        # sinfos is a list of stream information, which we need to fill in
-        # place, # because Swig demands it that way.
         infos.extend(self.stream_infos())
 
     def _chunk_infos(self, infos=None):
-        # sinfos is a list of stream information, which we need to fill in
-        # place, # because Swig demands it that way.
         infos.extend(self.chunk_infos())
 
     def _get_chunk(self, chunkId):
         return self.get_chunk(chunkId)
+
+    def stream_infos(self):
+        raise NotImplementedError
 
     def chunk_infos(self):
         raise NotImplementedError
@@ -1213,7 +1220,7 @@ class FromData(UserDeserializer):
     Returns:
      An implementation of a :class:`cntk.io.UserDeserializer` that can passed to the minibatch source.
     '''
-    def __init__(self, data_streams, max_samples = INFINITELY_REPEAT):
+    def __init__(self, data_streams):
         super(FromData, self).__init__()
 
         from cntk import Variable
@@ -1223,7 +1230,6 @@ class FromData(UserDeserializer):
         self._types = dict()        # [name] -> Variable._Type
         self._is_sequence = dict()  # [name] -> bool
         self._vars = dict()         # [name] -> Variable
-        self._max_samples = max_samples
 
         # get the data and types from the input, and form streams array
         self._num_samples = -1  # total number of samples --must be the same for all args
@@ -1266,10 +1272,6 @@ class FromData(UserDeserializer):
             self._types[name] = type
             self._is_sequence[name] = is_sequence
 
-        self._cursor = 0            # current position
-        self._total_num_samples = 0 # total count; once the limit is reached, we stop returning data
-        super(FromData, self).__init__()
-
     @staticmethod
     def _get_len(value): # helper to determine the length of the corpus
         try:
@@ -1278,12 +1280,14 @@ class FromData(UserDeserializer):
             return value.shape[0] # if input is csr_matrix
 
     def stream_infos(self):
+        import pdb; pdb.set_trace()
         return [StreamInformation(name, i, ['dense', 'sparse'][getattr(self._types[name], 'is_sparse', False)], 
                                   self._types[name].dtype, self._types[name].shape)
                 for i, name in enumerate(self._data.keys())]
 
     def chunk_infos(self):
-        return [ChunkInformation(0, self._num_samples,)]
+        import pdb; pdb.set_trace()
+        return [ChunkInformation(id=0, number_of_samples=self._num_samples, number_of_sequences=self._num_samples)]
 
     def get_chunk(self, chunk_id):        
         for si in self.streams.values():

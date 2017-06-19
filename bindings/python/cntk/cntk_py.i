@@ -1468,11 +1468,11 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
     class SwigMinibatchSource;
     typedef std::shared_ptr<SwigMinibatchSource> SwigMinibatchSourcePtr;
 
-//    class SwigDataDeserializer;
-//    typedef std::shared_ptr<SwigDataDeserializer> SwigDataDeserializerPtr;
+    class SwigDataDeserializer;
+    typedef std::shared_ptr<SwigDataDeserializer> SwigDataDeserializerPtr;
 
-//    class SwigChunk;
-//    typedef std::shared_ptr<SwigChunk> SwigChunkPtr;
+    class SwigChunk;
+    typedef std::shared_ptr<SwigChunk> SwigChunkPtr;
 %}
 
 %shared_ptr(CNTK::SwigMinibatchSource)
@@ -1689,12 +1689,12 @@ namespace CNTK
         mutable std::once_flag m_chunkInfosInitFlag;
 
     public:
-        virtual void _GetStreamInfos(PyObject*) const { NOT_IMPLEMENTED; }
+        virtual void _GetStreamInfos(PyObject*) { NOT_IMPLEMENTED; }
         virtual void _GetChunkInfos(PyObject*) { NOT_IMPLEMENTED; }
 
         SwigDataDeserializer() { }
 
-        std::vector<StreamInformation> GetStreamDescriptions() const override
+        std::vector<StreamInformation> GetStreamDescriptions() override
         {
             std::call_once(m_streamInfosInitFlag, [this]() {
                 PyObject *pylist = PyList_New(0);

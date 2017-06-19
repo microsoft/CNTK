@@ -22,7 +22,7 @@ public:
 
     ChunkCache(DataDeserializerPtr deserializer) : m_deserializer(deserializer) { }
 
-    virtual std::vector<StreamInformation> GetStreamDescriptions() const override
+    virtual std::vector<StreamInformation> GetStreamDescriptions() override
     {
         return m_deserializer->GetStreamDescriptions();
     }

@@ -165,7 +165,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             return m_chunks;
         }
 
-        vector<StreamInformation> GetStreamDescriptions() const override
+        vector<StreamInformation> GetStreamDescriptions() override
         {
             StreamInformation si;
             si.m_name = L"input";
