@@ -19,6 +19,10 @@ def force_deterministic(seed):
         seed (int): set the random seed for all random ops in the graph and readers.  
     '''
     from _cntk_py import set_fixed_random_seed, force_deterministic_algorithms
+    import warnings
+    
+    warnings.warn("pooling nodes and RNN based nodes don't run deterministically yet.", Warning)
+
     set_fixed_random_seed(seed)
     force_deterministic_algorithms()
 
