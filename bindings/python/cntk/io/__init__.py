@@ -165,11 +165,18 @@ class MinibatchSource(cntk_py.MinibatchSource):
         return MinibatchSource._runtime_deserializer_table[id]
 
     @staticmethod
+    def _free_globals():
+        globals().clear()
+
+    @staticmethod
     def _serialize(deserializer):
         import uuid
         from cntk.internal import _DeserializerFactory
 
         if MinibatchSource._deserializer_factory is None:
+            import atexit
+            atexit.register(MinibatchSource._free_globals)
+
             MinibatchSource._deserializer_factory = _DeserializerFactory(MinibatchSource._create_deserializer)
             cntk_py._register_deserializer_factory(MinibatchSource._deserializer_factory)
 
@@ -231,6 +238,10 @@ class MinibatchSource(cntk_py.MinibatchSource):
             A list of instances of :class:`StreamInformation`
         '''
         return super(MinibatchSource, self).stream_infos()
+
+#    def __del__(self):
+#        print("I am here")
+#        import pdb; pdb.set_trace()
 
     @property
     def streams(self):
@@ -1123,8 +1134,8 @@ class SequenceInformation(cntk_py.SequenceDescription):
 
 class UserChunk(cntk_py.SwigChunk):
     def __init__(self, data, stream_infos):
-        import pdb; pdb.set_trace()
         super(UserChunk, self).__init__()
+        self.__disown__()
         self._data = data
         self._stream_infos = stream_infos
 

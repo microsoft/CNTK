@@ -1,12 +1,16 @@
 %module(directors="1") cntk_py
 
-// Make sure all code inside this file (inner of swig) does not block
-// the main thread.
-%exception {
+%feature("except") *::GetNextMinibatch %{
     Py_BEGIN_ALLOW_THREADS
     $action
     Py_END_ALLOW_THREADS
-}
+%}
+
+%feature("except") ~MinibatchSource %{
+    Py_BEGIN_ALLOW_THREADS
+    $action
+    Py_END_ALLOW_THREADS
+%}
 
 %include "stl.i"
 %include "std_wstring.i"
@@ -55,7 +59,7 @@
 %rename(_stream_infos) CNTK::SwigDataDeserializer::_GetStreamInfos(PyObject*);
 %rename(_chunk_infos) CNTK::SwigDataDeserializer::_GetChunkInfos(PyObject*);
 %rename(_get_sequences_for_chunk) CNTK::SwigDataDeserializer::_GetSequencesForChunk(size_t id, PyObject*);
-%rename(_get_chunk) CNTK::SwigDataDeserializer::GetChunk;
+%rename(_get_chunk) CNTK::SwigDataDeserializer::_GetChunk;
 %rename(_get_sequence) CNTK::SwigChunk::_GetSequence;
 
 %include "CNTKWarnFilters.i"
@@ -680,6 +684,7 @@ public:
 %feature("nodirector") CNTK::SwigDataDeserializer::GetChunkDescriptions;
 %feature("nodirector") CNTK::SwigDataDeserializer::GetSequencesForChunk;
 %feature("nodirector") CNTK::SwigDataDeserializer::GetSequenceDescription;
+%feature("nodirector") CNTK::SwigDataDeserializer::GetChunk;
 
 %feature("director") CNTK::SwigChunk;
 %feature("nodirector") CNTK::SwigChunk::GetSequence;
@@ -1739,6 +1744,7 @@ namespace CNTK
         virtual void _GetStreamInfos(PyObject*) { NOT_IMPLEMENTED; }
         virtual void _GetChunkInfos(PyObject*) { NOT_IMPLEMENTED; }
         virtual void _GetSequencesForChunk(size_t id, PyObject*) { NOT_IMPLEMENTED; }
+        virtual ChunkPtr _GetChunk(ChunkIdType chunkId) { NOT_IMPLEMENTED;  }
 
         SwigDataDeserializer() { }
 
@@ -1875,7 +1881,10 @@ namespace CNTK
 
         ChunkPtr GetChunk(ChunkIdType chunkId)
         {
-            NOT_IMPLEMENTED;
+            PyGILState_STATE state = PyGILState_Ensure();
+            auto result = _GetChunk(chunkId);
+            PyGILState_Release(state);
+            return result;
         }
 
         bool GetSequenceDescription(const SequenceDescription& primary, SequenceDescription& description) override
