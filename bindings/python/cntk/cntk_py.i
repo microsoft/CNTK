@@ -1,6 +1,12 @@
 %module(directors="1") cntk_py
-//%feature("autodoc", "1");
 
+// Make sure all code inside this file (inner of swig) does not block
+// the main thread.
+%exception {
+    Py_BEGIN_ALLOW_THREADS
+    $action
+    Py_END_ALLOW_THREADS
+}
 
 %include "stl.i"
 %include "std_wstring.i"
@@ -48,6 +54,7 @@
 
 %rename(_stream_infos) CNTK::SwigDataDeserializer::_GetStreamInfos(PyObject*);
 %rename(_chunk_infos) CNTK::SwigDataDeserializer::_GetChunkInfos(PyObject*);
+%rename(_get_sequences_for_chunk) CNTK::SwigDataDeserializer::_GetSequencesForChunk(size_t id, PyObject*);
 %rename(_get_chunk) CNTK::SwigDataDeserializer::GetChunk;
 %rename(_get_sequence) CNTK::SwigChunk::_GetSequence;
 
@@ -1417,6 +1424,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::Learner)
 %shared_ptr(CNTK::MinibatchSource)
 %shared_ptr(CNTK::DataDeserializer)
+%shared_ptr(CNTK::Chunk)
 %shared_ptr(CNTK::DistributedCommunicator)
 %shared_ptr(CNTK::QuantizedDistributedCommunicator)
 %shared_ptr(CNTK::DistributedLearner)
@@ -1477,6 +1485,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 
 %shared_ptr(CNTK::SwigMinibatchSource)
 %shared_ptr(CNTK::SwigDataDeserializer)
+%shared_ptr(CNTK::SwigChunk)
 
 %inline %{
 
@@ -1631,22 +1640,44 @@ namespace CNTK
         std::unordered_set<StreamInformation> m_streamInfos;
         std::once_flag m_streamInfosInitFlag;
 
-    public:
-        void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
+        struct SwigDenseData : DenseSequenceData
         {
-            PyObject *numpyArrayObject = _GetSequence(sequenceIndex);
+            PyArrayObject* m_object;
 
-            if (!PyArray_Check((PyArrayObject*)numpyArrayObject))
+            SwigDenseData(PyArrayObject* object) : m_object(object)
             {
-                // Note that in contrast to numpy.i's implementation we demand NumPy arrays
-                // and do not accept arbitrary sequences, which would needed to be copied around.
-                throw std::logic_error("NumPy array expected");
+                Py_INCREF(m_object);
             }
 
-            PyArrayObject* array = (PyArrayObject*)numpyArrayObject;
+            virtual ~SwigDenseData()
+            {
+                PyGILState_STATE state = PyGILState_Ensure();
+                Py_DECREF(m_object);
+                PyGILState_Release(state);
+            };
+
+            virtual const void* GetDataBuffer()
+            {
+                PyGILState_STATE state = PyGILState_Ensure();
+                auto* result = PyArray_DATA(m_object);
+                PyGILState_Release(state);
+                return result;
+            }
+
+            virtual const NDShape& GetSampleShape()
+            {
+                throw std::runtime_error("Sample shape should be specified on the stream.");
+            }
+        };
+
+        SequenceDataPtr FromNumPy(PyObject* object)
+        {
+            if (!PyArray_Check((PyArrayObject*)object))
+                throw std::logic_error("NumPy array expected");
+
+            PyArrayObject* array = (PyArrayObject*)object;
 
             int rank = PyArray_NDIM(array);
-
             npy_intp* np_shape = PyArray_SHAPE(array);
             std::vector<size_t> shape(rank);
 
@@ -1655,29 +1686,45 @@ namespace CNTK
             // CNTK uses column major, thus we reverse the shape
             for (int i = 0; i < rank; i++)
             {
-                shape[rank-i-1] = np_shape[i];
+                shape[rank - i - 1] = np_shape[i];
                 num_elements *= np_shape[i];
             }
 
             int typecode = PyArray_TYPE(array);
 
-            if (typecode == NPY_FLOAT)
-            {
-                NOT_IMPLEMENTED;
-                //view = new NDArrayView(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
-            }
-            else if (typecode == NPY_DOUBLE)
-            {
-                NOT_IMPLEMENTED;
-                //view = new NDArrayView(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
-            }
-            else
-            {
-                throw std::logic_error("NumPy array of type float32 or float64 expected");
-            }
+            SequenceDataPtr result = std::make_shared<SwigDenseData>(array);
+            result->m_numberOfSamples = static_cast<uint32_t>(np_shape[0]);
+            return result;
         }
 
-        virtual PyObject* _GetSequence(size_t index) { NOT_IMPLEMENTED; }
+    public:
+        void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
+        {
+            PyGILState_STATE state = PyGILState_Ensure();
+            PyObject *pylist = PyList_New(0);
+            Py_INCREF(pylist);
+
+            _GetSequence(sequenceIndex, pylist);
+
+            PyObject *item = nullptr;
+            PyObject *iterator = PyObject_GetIter(pylist);
+            if (!iterator)
+                SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::StreamInformation");
+
+            while ((item = PyIter_Next(iterator)))
+            {
+                auto sequence = FromNumPy(item);
+                result.push_back(sequence);
+                Py_DECREF(item);
+            }
+
+        fail:
+            Py_DECREF(iterator);
+            Py_DECREF(pylist);
+            PyGILState_Release(state);
+        }
+
+        virtual void _GetSequence(size_t index, PyObject*) { NOT_IMPLEMENTED; }
     };
 
     class SwigDataDeserializer final : public CNTK::DataDeserializer
@@ -1691,12 +1738,14 @@ namespace CNTK
     public:
         virtual void _GetStreamInfos(PyObject*) { NOT_IMPLEMENTED; }
         virtual void _GetChunkInfos(PyObject*) { NOT_IMPLEMENTED; }
+        virtual void _GetSequencesForChunk(size_t id, PyObject*) { NOT_IMPLEMENTED; }
 
         SwigDataDeserializer() { }
 
         std::vector<StreamInformation> GetStreamDescriptions() override
         {
             std::call_once(m_streamInfosInitFlag, [this]() {
+                PyGILState_STATE state = PyGILState_Ensure();
                 PyObject *pylist = PyList_New(0);
 
                 // Necassary due to SWIG convention, it seems the reference is stolen by the function,
@@ -1724,14 +1773,16 @@ namespace CNTK
                     Py_DECREF(item);
                 }
 
-                Py_DECREF(iterator);
-                Py_DECREF(pylist);
+                Py_XDECREF(iterator);
+                Py_XDECREF(pylist);
+                PyGILState_Release(state);
                 return m_streamInfos;
 
-            fail:
+             fail:
                 Py_XDECREF(iterator);
                 Py_XDECREF(pylist);
                 m_streamInfos.clear();
+                PyGILState_Release(state);
                 return m_streamInfos;
             });
 
@@ -1741,6 +1792,7 @@ namespace CNTK
         ChunkDescriptions GetChunkDescriptions() override
         {
             std::call_once(m_chunkInfosInitFlag, [this]() {
+                PyGILState_STATE state = PyGILState_Ensure();
                 PyObject *pylist = PyList_New(0);
 
                 // Necassary due to SWIG convention, it seems the reference is stolen by the function,
@@ -1770,22 +1822,55 @@ namespace CNTK
 
                 Py_DECREF(iterator);
                 Py_DECREF(pylist);
+                PyGILState_Release(state);
                 return m_chunkInfos;
 
             fail:
                 Py_XDECREF(iterator);
                 Py_XDECREF(pylist);
                 m_chunkInfos.clear();
+                PyGILState_Release(state);
                 return m_chunkInfos;
             });
 
             return m_chunkInfos;
         }
 
-        void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& descriptions) override
+        void GetSequencesForChunk(ChunkIdType chunkId, std::vector<CNTK::SequenceDescription>& descriptions) override
         {
-            auto chunk = GetChunk(chunkId);
-            NOT_IMPLEMENTED;
+            PyGILState_STATE state = PyGILState_Ensure();
+            PyObject *pylist = PyList_New(0);
+
+            // Necassary due to SWIG convention, it seems the reference is stolen by the function,
+            // though I could not find any explicit confirmation for this.
+            Py_INCREF(pylist);
+
+            // Actually calling the python side.
+            _GetSequencesForChunk(chunkId, pylist);
+
+            PyObject *item = nullptr;
+            PyObject *iterator = PyObject_GetIter(pylist);
+            if (!iterator)
+                SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::ChunkDescription");
+
+            while ((item = PyIter_Next(iterator)))
+            {
+                SequenceDescription* var = nullptr;
+                int res = SWIG_ConvertPtr(item, (void**)&var, SWIGTYPE_p_CNTK__SequenceDescription,  SWIG_POINTER_IMPLICIT_CONV);
+                if (!SWIG_IsOK(res))
+                    SWIG_exception_fail(SWIG_ArgError(res), "cannot convert list element to CNTK::SequenceDescription");
+                if (!var)
+                    SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::SequenceDescription");
+
+                descriptions.push_back(*var);
+                Py_DECREF(item);
+            }
+
+         fail:
+            Py_XDECREF(iterator);
+            Py_XDECREF(pylist);
+            PyGILState_Release(state);
+            return;
         }
 
         ChunkPtr GetChunk(ChunkIdType chunkId)
@@ -1798,11 +1883,6 @@ namespace CNTK
             NOT_IMPLEMENTED;
         }
     };
-
-    std::shared_ptr<SwigDataDeserializer> CreateUserDeserializer()
-    {
-        return std::make_shared<SwigDataDeserializer>();
-    }
 
     class DeserializerFactory
     {

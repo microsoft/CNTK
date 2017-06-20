@@ -1102,28 +1102,57 @@ class ChunkInformation(cntk_py.ChunkDescription):
         self.m_number_of_sequences = number_of_sequences
         self.m_number_of_samples = number_of_samples
 
+
+class SequenceInformation(cntk_py.SequenceDescription):
+    '''
+    Sequence information container that is used to describe a single chunk
+    exposed from the user deserializer :class:`UserDeserializer`.
+
+    Args:
+        id (int): unique id of the chunk
+        number_of_samples (int): number of samples in the chunk
+        number_of_sequences (int): number of sequences in the chunk
+    '''
+    def __init__(self, index_in_chunk, number_of_samples, chunk_id, key):
+        super(SequenceInformation, self).__init__()
+        self.m_index_in_chunk = index_in_chunk 
+        self.m_number_of_samples = number_of_samples
+        self.m_chunk_id = chunk_id
+        self.m_key.m_sequence = key
+        self.m_key.m_sample = 0
+
 class UserChunk(cntk_py.SwigChunk):
-    def __init__(self):
+    def __init__(self, data, stream_infos):
+        import pdb; pdb.set_trace()
         super(UserChunk, self).__init__()
+        self._data = data
+        self._stream_infos = stream_infos
 
-    def _get_sequence(self, chunkId):
-        return self.get_sequence(chunkId)
+    def _get_sequence(self, sequenceId, sequences):
+        for stream in self._stream_infos:
+            sequences.append(self._data[stream.name][sequenceId])
 
-    def get_sequence(self, chunkId):
-        raise NotImplementedError
+#    def get_sequence(self, sequenceId):
+#        raise NotImplementedError
 
 class UserDeserializer(cntk_py.SwigDataDeserializer):
     def __init__(self):
         super(UserDeserializer, self).__init__()
 
     def _stream_infos(self, infos=None):
-        infos.extend(self.stream_infos())
+        inner = self.stream_infos()
+        infos.extend(inner)
+        streams = {si.m_name: si for si in inner}
+        self.streams = Record(**streams)
 
     def _chunk_infos(self, infos=None):
         infos.extend(self.chunk_infos())
 
     def _get_chunk(self, chunkId):
-        return self.get_chunk(chunkId)
+        return UserChunk(self.get_chunk(chunkId), self.stream_infos())
+
+    def _get_sequences_for_chunk(self, chunkId, sequences):
+        sequences.extend(self.sequence_infos_for_chunk(chunkId))
 
     def stream_infos(self):
         raise NotImplementedError
@@ -1280,17 +1309,30 @@ class FromData(UserDeserializer):
             return value.shape[0] # if input is csr_matrix
 
     def stream_infos(self):
-        import pdb; pdb.set_trace()
         return [StreamInformation(name, i, ['dense', 'sparse'][getattr(self._types[name], 'is_sparse', False)], 
                                   self._types[name].dtype, self._types[name].shape)
                 for i, name in enumerate(self._data.keys())]
 
     def chunk_infos(self):
-        import pdb; pdb.set_trace()
         return [ChunkInformation(id=0, number_of_samples=self._num_samples, number_of_sequences=self._num_samples)]
 
-    def get_chunk(self, chunk_id):        
+    def sequence_infos_for_chunk(self, chunkId):
+        # return the sequence information for the chunk based on the first stream only 
+        stream_name = self.stream_infos()[0].name
+        result = []
+        if self._is_sequence[stream_name]:
+            for i, s in enumerate(self._data[stream_name]):
+                result.append(SequenceInformation(i, len(s), 0, i))
+        else:
+            i = 0
+            while i < self._data[stream_name].shape[0]:
+                result.append(SequenceInformation(i, 1, 0, i))
+                i += 1
+        return result
+
+    def get_chunk(self, chunk_id):
+        result = {}
         for si in self.streams.values():
             arg = self._data[si.name]
-            mb_data = arg
-        return mb_data
+            result[si.name] = arg
+        return result
