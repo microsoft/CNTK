@@ -239,10 +239,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
         '''
         return super(MinibatchSource, self).stream_infos()
 
-#    def __del__(self):
-#        print("I am here")
-#        import pdb; pdb.set_trace()
-
     @property
     def streams(self):
         '''
@@ -1140,11 +1136,9 @@ class UserChunk(cntk_py.SwigChunk):
         self._stream_infos = stream_infos
 
     def _get_sequence(self, sequenceId, sequences):
+        import numpy as np
         for stream in self._stream_infos:
-            sequences.append(self._data[stream.name][sequenceId])
-
-#    def get_sequence(self, sequenceId):
-#        raise NotImplementedError
+            sequences.append(np.expand_dims(self._data[stream.name][sequenceId], axis=0))
 
 class UserDeserializer(cntk_py.SwigDataDeserializer):
     def __init__(self):
