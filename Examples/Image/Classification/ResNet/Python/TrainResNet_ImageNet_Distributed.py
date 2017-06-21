@@ -213,7 +213,7 @@ if __name__=='__main__':
 
     args = vars(parser.parse_args())
 
-    epoch_size = 1024
+    epoch_size = 102400
     if args['outputdir'] != None:
         model_path = args['outputdir'] + "/models"
     if args['device'] != None:
