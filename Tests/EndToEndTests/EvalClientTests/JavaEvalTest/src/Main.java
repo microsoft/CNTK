@@ -4,6 +4,7 @@
 import com.microsoft.CNTK.*;
 
 import javax.imageio.ImageIO;
+import java.util.HashMap;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -49,12 +50,11 @@ public class Main {
         bImg.getGraphics().drawImage(resized, 0, 0, null);
 
 
-        int[] resizedCHW = new int[imageSize];
+        float[] resizedCHW = new float[imageSize];
 
-        int i = 0;
-        for (int c = 0; c < imageChannels; c++) {
+        for (int c = 0, i = 0; c < imageChannels; c++) {
             for (int h = 0; h < bImg.getHeight(); h++) {
-                for (int w = 0; w < bImg.getWidth(); w++) {
+                for (int w = 0; w < bImg.getWidth(); w++, i++) {
                     Color color = new Color(bImg.getRGB(w, h));
                     if (c == 0) {
                         resizedCHW[i] = color.getBlue();
@@ -63,33 +63,24 @@ public class Main {
                     } else {
                         resizedCHW[i] = color.getRed();
                     }
-                    i++;
                 }
             }
         }
 
-        FloatVector floatVec = new FloatVector();
-        for (int intensity : resizedCHW) {
-            floatVec.add(((float) intensity));
-        }
-        FloatVectorVector floatVecVec = new FloatVectorVector();
-        floatVecVec.add(floatVec);
-        // Create input data map
-        Value inputVal = Value.createDenseFloat(inputShape, floatVecVec, device);
-        UnorderedMapVariableValuePtr inputDataMap = new UnorderedMapVariableValuePtr();
-        inputDataMap.add(inputVar, inputVal);
+        Value inputVal = Value.createBatch(inputShape, resizedCHW, device);
+        HashMap<Variable, Value> inputDataMap = new HashMap<>();
+        inputDataMap.put(inputVar, inputVal);
 
         // Create output data map. Using null as Value to indicate using system allocated memory.
         // Alternatively, create a Value object and add it to the data map.
-        UnorderedMapVariableValuePtr outputDataMap = new UnorderedMapVariableValuePtr();
-        outputDataMap.add(outputVar, null);
+        HashMap<Variable, Value> outputDataMap = new HashMap<>();
+        outputDataMap.put(outputVar, null);
 
         // Start evaluation on the device
         modelFunc.evaluate(inputDataMap, outputDataMap, device);
 
         // get evaluate result as dense output
-        FloatVectorVector outputBuffer = new FloatVectorVector();
-        outputDataMap.getitem(outputVar).copyVariableValueToFloat(outputVar, outputBuffer);
+        float[][] outputBuffer = outputDataMap.get(outputVar).getDenseDataFloat(outputVar);
 
 
         float[] expectedResults = {
@@ -104,10 +95,10 @@ public class Main {
                 3.721258f,
                 -5.6161685f};
 
-        FloatVector results = outputBuffer.get(0);
-        for (int j = 0; j < results.size(); j++) {
-            System.out.println(results.get(j) + " ");
-            if (!equals(expectedResults[j], results.get(j))) {
+        float[] results = outputBuffer[0];
+        for (int j = 0; j < results.length; j++) {
+            System.out.println(results[j] + " ");
+            if (!equals(expectedResults[j], results[j])) {
                 throw new RuntimeException("Test Failed on output " + j);
             }
         }

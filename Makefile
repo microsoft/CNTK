@@ -1457,8 +1457,7 @@ JAVA_DEP_SO_NAMES_GPU:=libcublas.so libcudart.so libcurand.so libcusparse.so
 java: $(JAVA_LIBS)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
-	rm -rf $(GENERATED_JAVA_DIR)
-	mkdir -p $(GENERATED_JAVA_DIR)
+	rm -f $(GENERATED_JAVA_DIR)/*.class
 	$(SWIG_PATH)/swig -c++ -java -package com.microsoft.CNTK $(INCLUDEPATH:%=-I%) -I$(BINDINGS_DIR)/common -outdir $(GENERATED_JAVA_DIR) $(JAVA_SWIG_DIR)/cntk_java.i
 	$(CXX) $(LDFLAGS) -shared $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) $(JDK_INCLUDE_PATH:%=-I%) $(patsubst %,$(RPATH)%, $(ORIGINDIR)) -L$(LIBDIR) $(JAVA_SWIG_DIR)/cntk_java_wrap.cxx -l$(CNTKMATH) -l$(CNTKLIBRARY) -o $(JAVA_SO_NAME)
 	mkdir -p $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux
