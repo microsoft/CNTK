@@ -167,6 +167,8 @@ class MinibatchSource(cntk_py.MinibatchSource):
     @staticmethod
     def _free_globals():
         globals().clear()
+        import gc
+        gc.collect()
 
     @staticmethod
     def _serialize(deserializer):
@@ -1093,9 +1095,10 @@ def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
 
     return '\n'.join(lines)
 
+
 class ChunkInformation(cntk_py.ChunkDescription):
     '''
-    Chunk information container that is used to describe a single chunk
+    Chunk meta information is used to describe a single chunk
     exposed from the user deserializer :class:`UserDeserializer`.
 
     Args:
@@ -1109,38 +1112,51 @@ class ChunkInformation(cntk_py.ChunkDescription):
         self.m_number_of_sequences = number_of_sequences
         self.m_number_of_samples = number_of_samples
 
-
 class SequenceInformation(cntk_py.SequenceDescription):
     '''
-    Sequence information container that is used to describe a single chunk
-    exposed from the user deserializer :class:`UserDeserializer`.
+    Sequence meta information is used to describe a single sequence
+    exposed from the data chunk :class:`ChunkInformation`.
 
     Args:
-        id (int): unique id of the chunk
-        number_of_samples (int): number of samples in the chunk
-        number_of_sequences (int): number of sequences in the chunk
+        index_in_chunk (int): index in the chunk
+        number_of_samples (int): number of samples in the sequence
+        chunk_id (int): id of the chunk this sequence belongs to
+        id: numeric id of the sequence
     '''
-    def __init__(self, index_in_chunk, number_of_samples, chunk_id, key):
+    def __init__(self, index_in_chunk, number_of_samples, chunk_id, id):
         super(SequenceInformation, self).__init__()
         self.m_index_in_chunk = index_in_chunk 
         self.m_number_of_samples = number_of_samples
         self.m_chunk_id = chunk_id
-        self.m_key.m_sequence = key
+        self.m_key.m_sequence = id
         self.m_key.m_sample = 0
 
 class UserChunk(cntk_py.SwigChunk):
-    def __init__(self, data, stream_infos):
+    '''
+    User chunk represents a data in a single chunk. Its meta data should be exposed
+    from the deserializer using :class:`ChunkInformation`.
+    In case of parallel training each and every worker has access to information about all chunks (:class:`ChunkInformation`),
+    but a particular worker accesses only a subset of data chunks (:class:`UserChunk`) it is responsible for. 
+
+    Args:
+        data (numpy array or csr matrix): actual data of the chunk
+        stream_infos (array of dict(info: :class:`StreamInformation`, is_sequence: bool)): information about streams of the corresponding deserializer
+    '''
+    def __init__(self):
         super(UserChunk, self).__init__()
         self.__disown__()
-        self._data = data
-        self._stream_infos = stream_infos
 
-    def _get_sequence(self, sequenceId, sequences):
-        import numpy as np
-        for stream in self._stream_infos:
-            sequences.append(np.expand_dims(self._data[stream.name][sequenceId], axis=0))
+    def _get_sequence(self, sequence_id, sequences):
+        sequences.extend(self.get_sequence(sequence_id))
+
+    def get_sequence(sequence_id):
+        raise NotImplementedError
 
 class UserDeserializer(cntk_py.SwigDataDeserializer):
+    '''
+    User deserializer is a base class for all user defined deserializers.
+    The user has to implement the public methods of this class.
+    '''
     def __init__(self):
         super(UserDeserializer, self).__init__()
 
@@ -1154,43 +1170,78 @@ class UserDeserializer(cntk_py.SwigDataDeserializer):
         infos.extend(self.chunk_infos())
 
     def _get_chunk(self, chunkId):
-        return UserChunk(self.get_chunk(chunkId), self.stream_infos())
+        return self.get_chunk(chunkId)
 
     def _get_sequences_for_chunk(self, chunkId, sequences):
         sequences.extend(self.sequence_infos_for_chunk(chunkId))
 
     def stream_infos(self):
+        '''
+        Should return a list of stream meta information :class:`StreamInformation`
+        for all streams exposed by the deserializer.
+        '''
         raise NotImplementedError
 
     def chunk_infos(self):
+        '''
+        Should return a list of chunk  meta information :class:`ChunkInformation`
+        exposed by the deserializer.
+        '''
         raise NotImplementedError
+
+    def sequence_infos_for_chunk(self, chunkId):
+        '''
+        Should return a list of sequence meta informationchunk :class:`SequenceInformation`
+        exposed by the chunk with chunk_id.
+        '''
+        raise NotImplementedError 
 
     def get_chunk(self, chunkId):
+        '''
+        Should return an instance of the :class:`UserChunk`.
+        '''
         raise NotImplementedError
 
+
+class InMemoryChunk(UserChunk):
+    '''
+    Simple chunk that has an in memory data
+
+    Args:
+        data (numpy array or csr matrix): actual data of the chunk
+        stream_infos (array of tuple(:class:`StreamInformation`, isSequence)): information about streams of the corresponding deserializer
+    '''
+    def __init__(self, data, stream_infos):
+        super(InMemoryChunk, self).__init__()
+        self._data = data
+        self._stream_infos = stream_infos
+
+    def get_sequence(self, sequence_id):
+        return [self._data[s.name][sequence_id] for s in self._stream_infos]
 
 class FromData(UserDeserializer):
     '''
     This wraps in-memory data as a CNTK deserializer.
     Use this if your data is small enough to be loaded into RAM in its entirety.
-    The data is not copied, so if you want to modify the data while being read through a `MinibatchSourceFromData`,
+    The data is not copied, so if you want to modify the data while being read through this deserializer,
     please pass a copy.
 
     Example:
      >>> N = 5
-     >>> X = np.arange(3*N).reshape(N,3).astype(np.float32) # 6 rows of 3 values
-     >>> s = C.io.MinibatchSource([FromData(dict(x=X), max_samples=len(X))])
+     >>> X = np.arange(3*N).reshape(N,3).astype(np.float32) # 5 rows of 3 values
+     >>> s = C.io.MinibatchSource([FromData(dict(x=X), max_samples=len(X))], randomize=False)
      >>> mb = s.next_minibatch(3) # get a minibatch of 3
      >>> d = mb[s.streams['x']]
      >>> d.data.asarray()
-     array([[ 0.,  1.,  2.],
-            [ 3.,  4.,  5.],
-            [ 6.,  7.,  8.]], dtype=float32)
-     >>> mb = s.next_minibatch(3) # note: only 2 left
+     array([[[ 0.,  1.,  2.]],
+            [[ 3.,  4.,  5.]],
+            [[ 6.,  7.,  8.]]], dtype=float32)
+     >>> mb = s.next_minibatch(3) # note: the sweep is crossed
      >>> d = mb[s.streams['x']]
      >>> d.data.asarray()
-     array([[  9.,  10.,  11.],
-            [ 12.,  13.,  14.]], dtype=float32)
+     array([[[  9.,  10.,  11.]],
+            [[ 12.,  13.,  14.]],
+            [[ 0.,   1.,   2.]]], dtype=float32)
      >>> mb = s.next_minibatch(3)
      >>> mb
      {}
@@ -1329,15 +1380,9 @@ class FromData(UserDeserializer):
             for i, s in enumerate(self._data[stream_name]):
                 result.append(SequenceInformation(i, len(s), 0, i))
         else:
-            i = 0
-            while i < self._data[stream_name].shape[0]:
+            for i in range(0, self._data[stream_name].shape[0]):
                 result.append(SequenceInformation(i, 1, 0, i))
-                i += 1
         return result
 
     def get_chunk(self, chunk_id):
-        result = {}
-        for si in self.streams.values():
-            arg = self._data[si.name]
-            result[si.name] = arg
-        return result
+        return InMemoryChunk(self._data, self.stream_infos())
