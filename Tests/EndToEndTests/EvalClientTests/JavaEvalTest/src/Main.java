@@ -4,6 +4,7 @@
 import com.microsoft.CNTK.*;
 
 import javax.imageio.ImageIO;
+import java.util.HashMap;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -49,7 +50,7 @@ public class Main {
         bImg.getGraphics().drawImage(resized, 0, 0, null);
 
 
-        int[] resizedCHW = new int[imageSize];
+        float[] resizedCHW = new float[imageSize];
 
         int i = 0;
         for (int c = 0; c < imageChannels; c++) {
@@ -68,28 +69,21 @@ public class Main {
             }
         }
 
-        FloatVector floatVec = new FloatVector();
-        for (int intensity : resizedCHW) {
-            floatVec.add(((float) intensity));
-        }
-        FloatVectorVector floatVecVec = new FloatVectorVector();
-        floatVecVec.add(floatVec);
-        // Create input data map
-        Value inputVal = Value.createDenseFloat(inputShape, floatVecVec, device);
-        UnorderedMapVariableValuePtr inputDataMap = new UnorderedMapVariableValuePtr();
-        inputDataMap.add(inputVar, inputVal);
+        Value inputVal = Value.createBatch(inputShape, resizedCHW, device);
+        HashMap<Variable, Value> inputDataMap = new HashMap<>();
+        inputDataMap.put(inputVar, inputVal);
 
         // Create output data map. Using null as Value to indicate using system allocated memory.
         // Alternatively, create a Value object and add it to the data map.
-        UnorderedMapVariableValuePtr outputDataMap = new UnorderedMapVariableValuePtr();
-        outputDataMap.add(outputVar, null);
+        HashMap<Variable, Value> outputDataMap = new HashMap<>();
+        outputDataMap.put(outputVar, null);
 
         // Start evaluation on the device
         modelFunc.evaluate(inputDataMap, outputDataMap, device);
 
         // get evaluate result as dense output
         FloatVectorVector outputBuffer = new FloatVectorVector();
-        outputDataMap.getitem(outputVar).copyVariableValueToFloat(outputVar, outputBuffer);
+        outputDataMap.get(outputVar).copyVariableValueToFloat(outputVar, outputBuffer);
 
 
         float[] expectedResults = {

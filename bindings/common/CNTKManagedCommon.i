@@ -443,14 +443,13 @@ MAKE_GETTER(CNTK::DeviceDescriptor, Id);
 MAKE_GETTER(CNTK::DeviceDescriptor, CPUDevice);
 MAKE_GETTER(CNTK::DeviceDescriptor, Type);
 RENAME_AND_MAKE_PRIVATE(CNTK::DeviceDescriptor, AllDevices);
+RENAME_AND_MAKE_PRIVATE(CNTK::DeviceDescriptor, SetExcludedDevices);
 
 #ifdef SWIGCSHARP
-RENAME_AND_MAKE_PRIVATE(CNTK::DeviceDescriptor, SetExcludedDevices);
 RENAME_AND_MAKE_PRIVATE(CNTK::DeviceDescriptor, GPUDevice);
 #endif
 
 #ifdef SWIGJAVA
-%rename (setExcludedDevices) CNTK::DeviceDescriptor::SetExcludedDevices;
 %rename (isLocked) CNTK::DeviceDescriptor::IsLocked;
 %rename (getGPUDevice) CNTK::DeviceDescriptor::GPUDevice;
 %rename (useDefaultDevice) CNTK::DeviceDescriptor::UseDefaultDevice;
@@ -507,6 +506,7 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Function, Inputs);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, Outputs);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, Arguments);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, FindAllWithName);
+RENAME_AND_MAKE_PRIVATE(CNTK::Function, Evaluate);
 
 #ifdef SWIGCSHARP
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, IsComposite);
@@ -514,7 +514,6 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Function, IsPrimitive);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, IsBlock);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, Load);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, Clone);
-RENAME_AND_MAKE_PRIVATE(CNTK::Function, Evaluate);
 RENAME_AND_MAKE_PRIVATE(CNTK::Function, FindByName);
 #endif // SWIGCSHARP
 
@@ -531,7 +530,6 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Function, FindByName);
 %rename (isBlock) CNTK::Function::IsBlock;
 %rename (load) CNTK::Function::Load;
 %rename (clone) CNTK::Function::Clone;
-%rename (evaluate) CNTK::Function::Evaluate;
 %rename (findByName) CNTK::Function::FindByName;
 %rename (setName) CNTK::Function::SetName;
 %rename (combine) CNTK::Function::Combine;
@@ -570,7 +568,7 @@ MAKE_GETTER(CNTK::Variable, Name);
 MAKE_GETTER(CNTK::Variable, Uid);
 MAKE_GETTER(CNTK::Variable, Kind);
 MAKE_GETTER(CNTK::Variable, Owner);
-MAKE_GETTER(CNTK::Variable, DynamicAxes);
+RENAME_AND_MAKE_PRIVATE(CNTK::Variable, DynamicAxes);
 
 RENAME_AND_MAKE_PRIVATE(CNTK::Variable, GetHashValue);
 
@@ -643,15 +641,11 @@ IGNORE_FUNCTION CNTK::NDMask::DataBuffer;
 MAKE_GETTER(CNTK::NDMask, MaskedCount);
 MAKE_GETTER(CNTK::NDMask, Device);
 MAKE_GETTER(CNTK::NDMask, Shape);
-
-#ifdef SWIGCSHARP
-RENAME_AND_MAKE_PRIVATE(CNTK::NDMask, InvalidateSection);
 RENAME_AND_MAKE_PRIVATE(CNTK::NDMask, MarkSequenceBegin);
-#endif
+RENAME_AND_MAKE_PRIVATE(CNTK::NDMask, InvalidateSection);
+
 
 #ifdef SWIGJAVA
-%rename (invalidateSection) CNTK::NDMask::InvalidateSection;
-%rename (markSequenceBegin) CNTK::NDMask::MarkSequenceBegin;
 %rename (clear) CNTK::NDMask::Clear;
 %rename (deepClone) CNTK::NDMask::DeepClone;
 %rename (alias) CNTK::NDMask::Alias;
@@ -664,6 +658,14 @@ MAKE_GETTER(CNTK::Value, Shape);
 MAKE_GETTER(CNTK::Value, Data);
 MAKE_GETTER(CNTK::Value, Mask);
 MAKE_GETTER(CNTK::Value, MaskedCount);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateBatchFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateBatchDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateSequenceFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateSequenceDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateDenseFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateDenseDouble);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateOneHotFloat);
+RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateOneHotDouble);
 
 // TODO: make the following methods also private in Java, after CreateBatch/CreateSequence/... methods are implemented there.
 #ifdef SWIGCSHARP
@@ -674,14 +676,6 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, Alias);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, Create);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, GetDataType);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, GetStorageFormat);
-RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateDenseFloat);
-RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateDenseDouble);
-RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateBatchFloat);
-RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateBatchDouble);
-RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateSequenceFloat);
-RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateSequenceDouble);
-RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateOneHotFloat);
-RENAME_AND_MAKE_PRIVATE(CNTK::Value, CreateOneHotDouble);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueTo);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToFloat);
 RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
@@ -707,14 +701,6 @@ RENAME_AND_MAKE_PRIVATE(CNTK::Value, CopyVariableValueToDouble);
 %rename (deepClone) CNTK::Value::DeepClone;
 %rename (copyFrom) CNTK::Value::CopyFrom;
 %rename (erase) CNTK::Value::Erase;
-%rename (createDenseFloat) CNTK::Value::CreateDenseFloat;
-%rename (createDenseDouble) CNTK::Value::CreateDenseDouble;
-%rename (createBatchFloat) CNTK::Value::CreateBatchFloat;
-%rename (createBatchDouble) CNTK::Value::CreateBatchDouble;
-%rename (createSequenceFloat) CNTK::Value::CreateSequenceFloat;
-%rename (createSequenceDouble) CNTK::Value::CreateSequenceDouble;
-%rename (createOneHotFloat) CNTK::Value::CreateOneHotFloat;
-%rename (createOneHotDouble) CNTK::Value::CreateOneHotDouble;
 %rename (copyVariableValueTo) CNTK::Value::CopyVariableValueTo;
 %rename (copyVariableValueToFloat) CNTK::Value::CopyVariableValueToFloat;
 %rename (copyVariableValueToDouble) CNTK::Value::CopyVariableValueToDouble;

@@ -1398,7 +1398,7 @@ java: $(JAVA_LIBS)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	mkdir -p $(GENERATED_JAVA_DIR)
-	rm -f $(GENERATED_JAVA_DIR)/*.java $(GENERATED_JAVA_DIR)/*.class
+	rm -f $(GENERATED_JAVA_DIR)/*.class
 	$(SWIG_PATH)/swig -c++ -java -package com.microsoft.CNTK $(INCLUDEPATH:%=-I%) -I$(BINDINGS_DIR)/common -outdir $(GENERATED_JAVA_DIR) $(JAVA_SWIG_DIR)/cntk_java.i
 	$(JDK_BIN_PATH)/javac $(GENERATED_JAVA_DIR)/*.java
 	mkdir -p $(LIBDIR)/java

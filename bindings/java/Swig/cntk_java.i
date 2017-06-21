@@ -1,6 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+// Licensed under the MIT license. See LICENSE.md file : the project root for full license information.
 //
 // cntk_java.i -- SWIG Interface file for Java
 //
@@ -62,9 +62,24 @@
     public int hashCode() {
         return getType().hashCode();
     }
+
+    // Set devices to be excluded.
+    public static void setExcludedDevices(java.util.ArrayList<DeviceDescriptor> excluded) {
+        DeviceDescriptorVector excludeVector = new DeviceDescriptorVector();
+        for (DeviceDescriptor element : excluded)
+        {
+            excludeVector.add(element);
+        }
+        _SetExcludedDevices(excludeVector);
+    }
 %}
 
 %typemap(javacode) CNTK::Axis %{
+
+    private AxisVector avRef;
+    public void addReference(AxisVector av) {
+        avRef = av;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -88,6 +103,7 @@
             return this.getStaticAxisIndex();
         }
     }
+
 %}
 
 
@@ -97,20 +113,8 @@
         ref = fpv;
     }
 
-    public static Function load(byte[] modelBuffer, DeviceDescriptor computeDevice)
-    {
+    public static Function load(byte[] modelBuffer, DeviceDescriptor computeDevice) {
         return load(modelBuffer, (long)modelBuffer.length, computeDevice);
-    }
-
-    public java.util.List<Variable> getInputs() {
-        VariableVector inputVector = _Inputs();
-        java.util.ArrayList<Variable> inputList = new java.util.ArrayList<Variable>((int)inputVector.size());
-        for (int i = 0; i < inputVector.size(); ++i){
-            Variable var = inputVector.get(i);
-            var.addReference(inputVector);
-            inputList.add(var);
-        }
-        return inputList;
     }
 
     public java.util.List<Variable> getOutputs() {
@@ -135,6 +139,17 @@
         return argumentList;
     }
 
+    public java.util.List<Variable> getInputs() {
+        VariableVector inputVector = _Inputs();
+        java.util.ArrayList<Variable> inputList = new java.util.ArrayList<Variable>((int)inputVector.size());
+        for (int i = 0; i < inputVector.size(); ++i){
+            Variable var = inputVector.get(i);
+            var.addReference(inputVector);
+            inputList.add(var);
+        }
+        return inputList;
+    }
+
     public java.util.List<Function> findAllWithName(String x) {
         FunctionPtrVector functionVector = _FindAllWithName(x);
         java.util.ArrayList<Function> functionList = new java.util.ArrayList<Function>((int)functionVector.size());
@@ -146,20 +161,72 @@
         return functionList;
     }
 
+
+    // Evaluates the Function using provided inputs.
+    public void evaluate(java.util.Map<Variable, Value> inputs, java.util.Map<Variable, Value> outputs, DeviceDescriptor computeDevice) {
+        // Evaluate the rootFunction.
+        UnorderedMapVariableValuePtr inMap = new UnorderedMapVariableValuePtr();
+        UnorderedMapVariableValuePtr outMap = new UnorderedMapVariableValuePtr();
+
+        for (java.util.Map.Entry<Variable, Value> p : inputs.entrySet()) {
+            inMap.put(p.getKey(), p.getValue());
+        }
+
+        for (java.util.Map.Entry<Variable, Value> p : outputs.entrySet()) {
+            outMap.put(p.getKey(), p.getValue());
+        }
+
+        _Evaluate(inMap, outMap, computeDevice);
+
+        for (java.util.Map.Entry<Variable, Value> p : outMap.entrySet()) {
+            outputs.put(p.getKey(), p.getValue());
+        }
+    }
+
+    // Creates a new Function from specified operands.
     public static Function combine(java.util.ArrayList<Variable> outputVariable) {
         VariableVector varVect = new VariableVector();
-        for (int i = 0; i < outputVariable.size(); ++i)
-        {
+        for (int i = 0; i < outputVariable.size(); ++i) {
             varVect.add(varVect.get(i));
         }
         return CNTKLib.Combine(varVect);
     }
+
+    // Creates a composite function from the rootFunction.
+    public static Function asComposite(Function rootFunction, String name) {
+        return CNTKLib.AsComposite(rootFunction, name);
+    }
+
+    public static Function asComposite(Function rootFunction) {
+        return CNTKLib.AsComposite(rootFunction, "");
+    }
+
+    // Create a new Function which is the alias of operand.
+    public static Function alias(Variable operand, String name) {
+        return CNTKLib.Alias(operand, name);
+    }
+
+    public static Function alias(Variable operand) {
+        return CNTKLib.Alias(operand, "");
+    }
 %}
 
 %typemap(javacode) CNTK::Variable %{
-    private VariableVector ref;
+    private VariableVector vvRef;
     public void addReference(VariableVector vv) {
-        ref = vv;
+        vvRef = vv;
+    }
+
+    // Property DynamicAxes.
+    public java.util.List<Axis> getDynamicAxes() {
+        AxisVector axisVector = _DynamicAxes();
+        java.util.ArrayList<Axis> axisList = new java.util.ArrayList<Axis>((int)axisVector.size());
+        for (int i = 0; i < axisVector.size(); ++i){
+            Axis axis = axisVector.get(i);
+            axis.addReference(axisVector);
+            axisList.add(axis);
+        }
+        return axisList;
     }
 
     @Override
@@ -193,6 +260,18 @@
         return ret;
     }
 
+    // Creates a new NDShape.
+    public static NDShape createNDShape(long[] dimensions) {
+        SizeTVector dimVector = new SizeTVector();
+        for (long element : dimensions) {
+            if (element < 0) {
+                throw new java.lang.IllegalArgumentException("The parameter dimensions cannot contain a negative value");
+            }
+            dimVector.add(element);
+        }
+        return new NDShape(dimVector);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -212,6 +291,34 @@
         return _Dimensions().hashCode();
     }
 %}
+
+%typemap(javacode) CNTK::NDMask %{
+
+    // Invidates a section of a NDShape.
+    public void InvalidateSection(long[] sectionOffset, NDShape sectionShape) {
+        SizeTVector offsetVector = Helper.AsSizeTVector(sectionOffset);
+        _InvalidateSection(offsetVector, sectionShape);
+    }
+
+    // Marks sequence begin.
+    public void MarkSequenceBegin(long[] offset) {
+        SizeTVector offsetVector = Helper.AsSizeTVector(offset);
+        _MarkSequenceBegin(offsetVector);
+    }
+
+    // Marks sequence begins : a NDShape.
+    public void MarkSequenceBegin(long[] offset, NDShape sectionShape) {
+        SizeTVector offsetVector = Helper.AsSizeTVector(offset);
+        _MarkSequenceBegin(offsetVector, sectionShape);
+    }
+%}
+
+%typemap(javacode) CNTK::Value %{
+%}
+
+%typemap(javacode) CNTK::NDArrayView %{
+%}
+
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"

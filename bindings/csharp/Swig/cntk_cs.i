@@ -520,7 +520,7 @@
     {
         if (numAxes < 0 || dimension < 0)
         {
-            throw new System.ArgumentException("The paraemter numAxes or dimension should not be a negative value");
+            throw new System.ArgumentException("The parameter numAxes or dimension should not be a negative value");
         }
     }
 
@@ -528,7 +528,7 @@
     {
         if (numAxes < 0)
         {
-            throw new System.ArgumentException("The paraemter numAxes should not be a negative value");
+            throw new System.ArgumentException("The parameter numAxes should not be a negative value");
         }
     }
 
