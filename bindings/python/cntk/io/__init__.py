@@ -1142,8 +1142,8 @@ class UserChunk(cntk_py.SwigChunk):
         data (numpy array or csr matrix): actual data of the chunk
         stream_infos (array of dict(info: :class:`StreamInformation`, is_sequence: bool)): information about streams of the corresponding deserializer
     '''
-    def __init__(self):
-        super(UserChunk, self).__init__()
+    def __init__(self, stream_infos):
+        super(UserChunk, self).__init__(stream_infos)
         self.__disown__()
 
     def _get_sequence(self, sequence_id, sequences):
@@ -1212,11 +1212,11 @@ class InMemoryChunk(UserChunk):
         stream_infos (array of tuple(:class:`StreamInformation`, isSequence)): information about streams of the corresponding deserializer
     '''
     def __init__(self, data, stream_infos):
-        super(InMemoryChunk, self).__init__()
+        super(InMemoryChunk, self).__init__(stream_infos)
         self._data = data
         self._stream_infos = stream_infos
 
-    def get_sequence(self, sequence_id):
+    def get_sequence(self, sequence_id):     
         return [self._data[s.name][sequence_id] for s in self._stream_infos]
 
 class FromData(UserDeserializer):

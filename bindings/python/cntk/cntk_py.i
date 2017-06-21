@@ -1642,8 +1642,7 @@ namespace CNTK
 
     class SwigChunk final : public CNTK::Chunk
     {
-        std::unordered_set<StreamInformation> m_streamInfos;
-        std::once_flag m_streamInfosInitFlag;
+        std::vector<CNTK::StreamInformation> m_streamInfos;
 
         struct SwigDenseData : DenseSequenceData
         {
@@ -1675,34 +1674,28 @@ namespace CNTK
             }
         };
 
-        SequenceDataPtr FromNumPy(PyObject* object)
+        SequenceDataPtr FromNumPy(PyObject* object, size_t index)
         {
             if (!PyArray_Check((PyArrayObject*)object))
                 throw std::logic_error("NumPy array expected");
 
             PyArrayObject* array = (PyArrayObject*)object;
-
             int rank = PyArray_NDIM(array);
             npy_intp* np_shape = PyArray_SHAPE(array);
-            std::vector<size_t> shape(rank);
 
-            npy_intp num_elements = 1;
-
-            // CNTK uses column major, thus we reverse the shape
-            for (int i = 0; i < rank; i++)
-            {
-                shape[rank - i - 1] = np_shape[i];
-                num_elements *= np_shape[i];
-            }
-
+            const auto& info = m_streamInfos[index];
+            uint32_t numSamples = info.m_sampleLayout.Rank() == rank ? 1 : static_cast<uint32_t>(np_shape[0]);
             int typecode = PyArray_TYPE(array);
 
             SequenceDataPtr result = std::make_shared<SwigDenseData>(array);
-            result->m_numberOfSamples = static_cast<uint32_t>(np_shape[0]);
+            result->m_numberOfSamples = numSamples;
             return result;
         }
 
     public:
+        SwigChunk(const std::vector<StreamInformation>& streamInfos) : m_streamInfos(streamInfos)
+        {}
+
         void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
         {
             PyGILState_STATE state = PyGILState_Ensure();
@@ -1716,9 +1709,10 @@ namespace CNTK
             if (!iterator)
                 SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::StreamInformation");
 
+            size_t i = 0;
             while ((item = PyIter_Next(iterator)))
             {
-                auto sequence = FromNumPy(item);
+                auto sequence = FromNumPy(item, i++);
                 result.push_back(sequence);
                 Py_DECREF(item);
             }
