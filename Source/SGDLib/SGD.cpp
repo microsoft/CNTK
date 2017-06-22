@@ -1136,7 +1136,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #define SSGD_WARMUP
 #ifdef SSGD_WARMUP
             if (epochNumber < 5) {
-                int minibatchSize = 256 * 32;
+                int minibatchSize = 16 * 32;
                 int totalSamples = 1281167;
 
                 int totalMBsPerEpoch = totalSamples / minibatchSize + 1;
