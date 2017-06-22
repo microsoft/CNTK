@@ -1674,6 +1674,62 @@ namespace CNTK
             }
         };
 
+        struct SwigSparseData : SparseSequenceData
+        {
+            PyObject* m_object;
+            PyArrayObject* m_pyData;
+            PyArrayObject* m_pyIndptr;
+            PyArrayObject* m_pyIndices;
+
+            SwigSparseData(PyObject* object, PyArrayObject* data, PyArrayObject* indices, PyArrayObject* indptr)
+                : m_object(object), m_pyData(data), m_pyIndptr(indptr), m_pyIndices(indices)
+            {
+                Py_INCREF(m_object);
+                Py_INCREF(m_pyData);
+                Py_INCREF(m_pyIndptr);
+                Py_INCREF(m_pyIndices);
+
+                m_indices = (SparseIndexType*)PyArray_DATA(m_pyIndices);
+                m_totalNnzCount = static_cast<SparseIndexType>(PyArray_SIZE(m_pyData));
+                auto nnzCountsSize = PyArray_SIZE(m_pyIndptr);
+                m_nnzCounts.resize(nnzCountsSize);
+                auto type = PyArray_TYPE(m_pyIndptr);
+                auto indPtr = PyArray_DATA(m_pyIndptr);
+                if (type == NPY_LONG)
+                {
+                    memcpy(&m_nnzCounts[0], indPtr, nnzCountsSize * NPY_SIZEOF_LONG);
+                    for(size_t i = 0; i < m_nnzCounts.size() - 1; ++i)
+                        m_nnzCounts[i] = m_nnzCounts[i + 1] - m_nnzCounts[i];
+                    m_nnzCounts.resize(m_nnzCounts.size() - 1);
+                }
+                else
+                    RuntimeError("Unsupported index type");
+            }
+
+            virtual ~SwigSparseData()
+            {
+                PyGILState_STATE state = PyGILState_Ensure();
+                Py_DECREF(m_object);
+                Py_DECREF(m_pyData);
+                Py_DECREF(m_pyIndptr);
+                Py_DECREF(m_pyIndices);
+                PyGILState_Release(state);
+            };
+
+            virtual const void* GetDataBuffer()
+            {
+                PyGILState_STATE state = PyGILState_Ensure();
+                auto* result = PyArray_DATA(m_pyData);
+                PyGILState_Release(state);
+                return result;
+            }
+
+            virtual const NDShape& GetSampleShape()
+            {
+                throw std::runtime_error("Sample shape should be specified on the stream.");
+            }
+        };
+
         SequenceDataPtr FromNumPy(PyObject* object, size_t index)
         {
             if (!PyArray_Check((PyArrayObject*)object))
@@ -1689,6 +1745,20 @@ namespace CNTK
 
             SequenceDataPtr result = std::make_shared<SwigDenseData>(array);
             result->m_numberOfSamples = numSamples;
+            return result;
+        }
+
+        SequenceDataPtr FromCSR(PyObject* object, size_t index)
+        {
+            auto data = (PyArrayObject*)PyObject_GetAttrString(object, "data");
+            auto indptr = (PyArrayObject*)PyObject_GetAttrString(object, "indptr");
+            auto indices = (PyArrayObject*)PyObject_GetAttrString(object, "indices");
+
+            auto shape = PyObject_GetAttrString(object, "shape");
+            auto numElements = PyTuple_GET_ITEM(shape, 0);
+
+            SequenceDataPtr result = std::make_shared<SwigSparseData>(object, data, indices, indptr);
+            result->m_numberOfSamples = static_cast<uint32_t>(PyLong_AsSize_t(numElements));
             return result;
         }
 
@@ -1712,8 +1782,16 @@ namespace CNTK
             size_t i = 0;
             while ((item = PyIter_Next(iterator)))
             {
-                auto sequence = FromNumPy(item, i++);
-                result.push_back(sequence);
+                if (PyArray_Check(item))
+                {
+                    auto sequence = FromNumPy(item, i++);
+                    result.push_back(sequence);
+                }
+                else if(item->ob_type->tp_name == std::string("csr_matrix"))
+                {
+                    auto sequence = FromCSR(item, i++);
+                    result.push_back(sequence);
+                }
                 Py_DECREF(item);
             }
 

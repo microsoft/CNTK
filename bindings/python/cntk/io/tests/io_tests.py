@@ -14,7 +14,7 @@ from cntk.io import MinibatchSource, CTFDeserializer, StreamDefs, StreamDef, \
     FULL_DATA_SWEEP, INFINITELY_REPEAT, \
     DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS, \
     sequence_to_cntk_text_format, UserMinibatchSource, StreamInformation, \
-    MinibatchData
+    MinibatchData, FromData
 from cntk.logging import TraceLevel
 import cntk.io.transforms as xforms
 from cntk.cntk_py import to_dictionary, MinibatchSourceConfig
@@ -1038,3 +1038,58 @@ def test_base64_is_equal_image(tmpdir):
         images2_stream = mb_source.streams['images2']
         images2 = mb[images2_stream].asarray()
         assert(images1 == images2).all()
+
+def test_inmemory_deserializer_dense():
+    N = 5
+    X = np.arange(3*N).reshape(N,3).astype(np.float32) # 5 rows of 3 values
+    s = MinibatchSource([FromData(dict(x=X))], max_sweeps=1, randomize=False)
+
+    mb = s.next_minibatch(3) # get a minibatch of 3
+    data = mb[s.streams['x']].data.asarray()
+    assert (data == np.array([[[ 0.,  1.,  2.]],
+                              [[ 3.,  4.,  5.]],
+                              [[ 6.,  7.,  8.]]],
+                             dtype=np.float32)).all()
+
+    mb = s.next_minibatch(3) # the sweep is crossed, 2 samples left
+    data = mb[s.streams['x']].data.asarray()
+    assert (data == np.array([[[  9.,  10.,  11.]],
+                              [[ 12.,  13.,  14.]]],
+                             dtype=np.float32)).all()
+
+    mb = s.next_minibatch(3) # no more data
+    assert mb == {}
+
+def test_inmemory_deserializer_sparse():
+    import pdb; pdb.set_trace()
+
+    import scipy.sparse
+    N = 5
+    X = np.arange(3*N).reshape(N,3).astype(np.float32) # 5 rows of 3 values
+    Y = scipy.sparse.csr_matrix(np.array([[1, 0, 0], [0, 2, 0], [0, 0, 3], [4, 0, 0], [0, 5, 0]])).astype(np.float32)
+
+    s = MinibatchSource([FromData(dict(x=X, y=Y))], randomize=False) # also not setting max_samples -> will repeat
+    mb = s.next_minibatch(3)
+
+    #d = mb[s.streams['y']].data.reshape(3*3, 1).asarray().todense()
+
+    label = C.input_variable(shape=(3,))
+    result = (label + 0).eval({ label : mb[s.streams['y']].data })
+    result = C.times(label, np.eye(3)).eval({ label : mb[s.streams['y']] })
+
+
+    assert (d == np.array([[ 0.,  1.],
+                           [ 1.,  0.],
+                           [ 1.,  0.]], dtype=float32)).all()
+
+    mb = s.next_minibatch(3) # at end only 2 sequences
+    d = mb[s.streams['y']].data.asarray().todense()
+    assert(d == np.array([[ 0.,  1.],
+                          [ 1.,  0.]], dtype=float32)).all()
+
+    # if we do not set max_samples, then it will start over once the end is hit
+    mb = s.next_minibatch(3)
+    d = mb[s.streams['y']].data.asarray().todense()
+    assert(d == np.array([[ 0.,  1.],
+                          [ 1.,  0.],
+                          [ 1.,  0.]], dtype=float32)).all()

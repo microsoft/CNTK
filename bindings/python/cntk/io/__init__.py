@@ -1229,7 +1229,7 @@ class FromData(UserDeserializer):
     Example:
      >>> N = 5
      >>> X = np.arange(3*N).reshape(N,3).astype(np.float32) # 5 rows of 3 values
-     >>> s = C.io.MinibatchSource([FromData(dict(x=X), max_samples=len(X))], randomize=False)
+     >>> s = C.io.MinibatchSource([FromData(dict(x=X))], max_sweeps=1, randomize=False)
      >>> mb = s.next_minibatch(3) # get a minibatch of 3
      >>> d = mb[s.streams['x']]
      >>> d.data.asarray()
@@ -1311,10 +1311,10 @@ class FromData(UserDeserializer):
         from cntk import Variable
         if not data_streams:
             raise(ValueError('at least one stream must be specified, in the form name=data or name=(data, type)'))
+
         self._data = dict()         # [name] -> numpy.array or scipy.sparse.csr_matrix
         self._types = dict()        # [name] -> Variable._Type
         self._is_sequence = dict()  # [name] -> bool
-        self._vars = dict()         # [name] -> Variable
 
         # get the data and types from the input, and form streams array
         self._num_samples = -1  # total number of samples --must be the same for all args
@@ -1331,7 +1331,7 @@ class FromData(UserDeserializer):
                 value = arg
                 is_sequence = False  # data without type cannot have a dynamic axis
                 type = Variable._Type(is_sparse=isinstance(value, sparse.csr_matrix)) # shape implanted below
-            if not isinstance(value[0] if isinstance(value, list) else value, (np.ndarray, sparse.csr_matrix, Value)):
+            if not isinstance(value[0] if isinstance(value, list) else value, (np.ndarray, sparse.csr_matrix)):
                 raise TypeError('data must be a numpy.array or scipy.sparse.csr_matrix, or a list of those')
             sample_shape = value[0].shape[1:] if is_sequence else value.shape[1:]
             if not type.shape_is_known:
@@ -1359,10 +1359,7 @@ class FromData(UserDeserializer):
 
     @staticmethod
     def _get_len(value): # helper to determine the length of the corpus
-        try:
-            return len(value) # if input is list
-        except:
-            return value.shape[0] # if input is csr_matrix
+        return len(value) if isinstance(value, list) else value.shape[0]
 
     def stream_infos(self):
         return [StreamInformation(name, i, ['dense', 'sparse'][getattr(self._types[name], 'is_sparse', False)], 
@@ -1372,7 +1369,7 @@ class FromData(UserDeserializer):
     def chunk_infos(self):
         return [ChunkInformation(id=0, number_of_samples=self._num_samples, number_of_sequences=self._num_samples)]
 
-    def sequence_infos_for_chunk(self, chunkId):
+    def sequence_infos_for_chunk(self, chunkId):        
         # return the sequence information for the chunk based on the first stream only 
         stream_name = self.stream_infos()[0].name
         result = []
