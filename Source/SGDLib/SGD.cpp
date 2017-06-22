@@ -1145,7 +1145,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 double learnRateIncrePerEpoch = (learnRatePerSample - baseLearnRatePerSample) / 5; //each epoch each samlpe lr incre value.
                 learnRatePerSample = baseLearnRatePerSample + (learnRateIncrePerEpoch / (double)totalMBsPerEpoch) * numMBsRun;
                 if (numMBsRun % 100 == 0)
-                    fprintf(stderr, "Iters: %d, LearnRate: %f\n", numMBsRun, (float)learnRatePerSample);
+                    fprintf(stderr, "Iters: %d, LearnRate: %.10f\n", numMBsRun, (float)learnRatePerSample);
             }
 
 
