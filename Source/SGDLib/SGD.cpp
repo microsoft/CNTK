@@ -1136,7 +1136,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #define SSGD_WARMUP
 #ifdef SSGD_WARMUP
             if (epochNumber < 5) {
-                int minibatchSize = 256 * 32;
+                int minibatchSize = 16 * 32;
                 int totalSamples = 1281167;
 
                 int totalMBsPerEpoch = totalSamples / minibatchSize + 1;
@@ -1145,7 +1145,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 double learnRateIncrePerEpoch = (0.00390625 - baseLearnRatePerSample) / 5.0; //each epoch each samlpe lr incre value.
                 learnRatePerSample = baseLearnRatePerSample + (learnRateIncrePerEpoch / (double)totalMBsPerEpoch) * numMBsRun;
                 if (numMBsRun % 10 == 0)
-                    fprintf(stderr, "Iters: %d, LearnRate: %f\n", numMBsRun, (float)learnRatePerSample);
+                    fprintf(stderr, "Iters: %d, LearnRate: %.9f\n", numMBsRun, (float)learnRatePerSample);
             }
 
 
