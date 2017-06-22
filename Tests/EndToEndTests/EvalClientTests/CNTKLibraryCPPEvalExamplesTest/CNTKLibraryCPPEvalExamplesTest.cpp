@@ -7,22 +7,23 @@
 
 #include <stdio.h>
 
-void MultiThreadsEvaluation(bool);
+void MultiThreadsEvaluation(const wchar_t* modelFileName, bool);
 bool ShouldRunOnCpu();
 bool ShouldRunOnGpu();
 
 int main()
 {
+    const wchar_t* modelFileName = L"01_OneHidden";
     if (ShouldRunOnGpu())
     {
         fprintf(stderr, "\n##### Test CNTKLibraryCPPEvalExamples on GPU device. #####\n");
-        MultiThreadsEvaluation(true);
+        MultiThreadsEvaluation(modelFileName, true);
     }
 
     if (ShouldRunOnCpu())
     {
         fprintf(stderr, "\n##### Test CNTKLibraryCPPEvalExamples on CPU device. #####\n");
-        MultiThreadsEvaluation(false);
+        MultiThreadsEvaluation(modelFileName, false);
     }
 
     fprintf(stderr, "Evaluation complete.\n");

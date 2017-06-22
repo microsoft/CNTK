@@ -166,7 +166,9 @@ namespace CNTK
                                                size_t workerRank,
                                                const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/) /*override*/
     {
+#ifndef  CNTK_UWP
         auto profGetMinibatch = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainGetMinibatch);
+#endif
 
         m_minibatchData.clear();
 

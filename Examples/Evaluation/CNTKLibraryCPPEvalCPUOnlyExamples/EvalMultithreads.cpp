@@ -132,10 +132,10 @@ void MultiThreadsEvaluationWithClone(const DeviceDescriptor& device, const int t
 /// to train the model is described in Examples\Image\GettingStarted\README.md. 
 /// The pre-trained model file 01_OneHidden needs to be in the current directory.  
 /// </description>
-void MultiThreadsEvaluationWithLoadModel(const DeviceDescriptor& device, const int threadCount)
+void MultiThreadsEvaluationWithLoadModel(const DeviceDescriptor& device, const wchar_t* modelFileName, const int threadCount)
 {
     // The model file will be trained and copied to the current runtime directory first.
-    auto modelFuncPtr = CNTK::Function::Load(L"01_OneHidden", device);
+    auto modelFuncPtr = CNTK::Function::Load(modelFileName, device);
 
     OutputFunctionInfo(modelFuncPtr);
     fprintf(stderr, "MultiThreadsEvaluationWithLoadModel on device=%d\n", device.Id());
@@ -454,7 +454,7 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
     }
 }
 
-void MultiThreadsEvaluation(bool isGPUAvailable)
+void MultiThreadsEvaluation(const wchar_t* modelFileName, bool isGPUAvailable)
 {
     // The number of threads running evaluation in parallel.
     const int numOfThreads = 2;
@@ -481,11 +481,11 @@ void MultiThreadsEvaluation(bool isGPUAvailable)
 
     // test multi-threads evaluation with loading existing models
     fprintf(stderr, "\n##### Run evaluation using pre-trained model on CPU. #####\n");
-    MultiThreadsEvaluationWithLoadModel(DeviceDescriptor::CPUDevice(), numOfThreads);
+    MultiThreadsEvaluationWithLoadModel(DeviceDescriptor::CPUDevice(), modelFileName, numOfThreads);
     if (isGPUAvailable)
     {
         fprintf(stderr, "\n##### Run evaluation using pre-trained model on GPU. #####\n");
-        MultiThreadsEvaluationWithLoadModel(DeviceDescriptor::GPUDevice(0), numOfThreads);
+        MultiThreadsEvaluationWithLoadModel(DeviceDescriptor::GPUDevice(0), modelFileName, numOfThreads);
     }
 
     fflush(stderr);

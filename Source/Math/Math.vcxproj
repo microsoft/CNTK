@@ -21,6 +21,14 @@
       <Configuration>Release_CpuOnly</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_UWP|x64">
+      <Configuration>Debug_UWP</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_UWP|x64">
+      <Configuration>Release_UWP</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}</ProjectGuid>
@@ -49,15 +57,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <TargetName>Cntk.Math-$(CntkComponentVersion)</TargetName>
+    <TargetName>Cntk.Math$(OutputSuffix)-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="$(IsUWP)">
+    <ClCompile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(MathIncludePath);$(BOOST_INCLUDE_PATH);$(SolutionDir)Source\Common\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(MathLibraryPath);$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MathLibraryPath);$(SolutionDir)$(Platform)\$(Configuration);</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
@@ -76,13 +89,17 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(MathLinkLibrary);Cntk.Common-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(MathLinkLibrary);Cntk.Common$(OutputSuffix)-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>$(MathDelayLoad); $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"</Command>
       <Message>Copying $(MathLibraryName) DLLs</Message>
+      <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"
+        if "$(IsUWP)"=="true" xcopy /D /I /Y "$(TargetDir)$(TargetName).lib" "$(TargetDir).."
+        if "$(IsUWP)"=="true" xcopy /D /I /Y "$(TargetPath)" "$(TargetDir).."
+        if "$(IsUWP)"=="true" xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(TargetDir).."
+      </Command>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -113,13 +130,17 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(MathLinkLibrary);Cntk.Common-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(MathLinkLibrary);Cntk.Common$(OutputSuffix)-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>$(MathDelayLoad); $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"</Command>
       <Message>Copying $(MathLibraryName) DLLs</Message>
+      <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"
+         if "$(IsUWP)"=="true" xcopy /D /I /Y "$(TargetDir)$(TargetName).lib" "$(TargetDir).."
+         if "$(IsUWP)"=="true" xcopy /D /I /Y "$(TargetPath)" "$(TargetDir).."
+         if "$(IsUWP)"=="true" xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(TargetDir).."
+      </Command>
     </PostBuildEvent>
     <CudaCompile>
       <FastMath>true</FastMath>
@@ -231,6 +252,8 @@
   <Target Name="CheckDependencies">
     <Error Condition="'$(MathLibrary)' == 'MKL' And '$(CNTK_MKL_PATH)' == ''" Text="CNTK custom MKL location not specified, see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#mkl for instructions." />
     <Error Condition="'$(MathLibrary)' == 'MKL' And !Exists('$(CNTKCustomMKLPath)')" Text="CNTK custom MKL version $(CNTKCustomMKLVersion) not found. See https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#mkl for instructions." />
+    <Error Condition="'$(MathLibrary)' == 'OpenBLAS' And '$(CNTK_OPENBLAS_PATH)' == ''" Text="CNTK custom OpenBLAS location not specified, see https://docs.microsoft.com/cognitive-toolkit/Setup-UWP-Build-on-Windows for instructions." />
+    <Error Condition="'$(MathLibrary)' == 'OpenBLAS' And !Exists('$(CNTKCustomOpenBLASPath)')" Text="CNTK custom OpenBLAS version $(CNTKCustomOpenBLASVersion) not found. See https://docs.microsoft.com/cognitive-toolkit/Setup-UWP-Build-on-Windows for instructions." />
     <Error Condition="!$(HasBoost)" Text="The Boost library is required to build. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
 </Project>

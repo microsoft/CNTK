@@ -1,0 +1,31 @@
+CPU info:
+    CPU Model Name: Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
+    Hardware threads: 8
+    Total Memory: 33417320 kB
+-------------------------------------------------------------------
++ '[' Windows_NT '!=' Windows_NT ']'
++ [[ C:\CNTKTestData == '' ]]
++ [[ ! -d C:\CNTKTestData ]]
+++ cygpath -au 'C:\CNTKTestData'
++ TEST_DATA_DIR=/cygdrive/c/CNTKTestData
+++ cygpath -au 'C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\Tools\\..\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe'
++ VSTEST_CONSOLE='/cygdrive/c/Program Files (x86)/Microsoft Visual Studio 14.0/Common7/IDE/CommonExtensions/Microsoft/TestWindow/vstest.console.exe'
++ test -x '/cygdrive/c/Program Files (x86)/Microsoft Visual Studio 14.0/Common7/IDE/CommonExtensions/Microsoft/TestWindow/vstest.console.exe'
++ '[' cpu == cpu ']'
++ export CUDA_VISIBLE_DEVICES=-1
++ CUDA_VISIBLE_DEVICES=-1
+++ cygpath -aw /cygdrive/c/repos/cntk/x64/release_UWP/CNTKLibraryCPPUWPEvalExamplesTests/CNTKLibraryCPPUWPEvalExamplesTests_1.0.1.0_x64_Release_UWP.appx
++ '/cygdrive/c/Program Files (x86)/Microsoft Visual Studio 14.0/Common7/IDE/CommonExtensions/Microsoft/TestWindow/vstest.console.exe' /inIsolation /Platform:x64 'C:\repos\cntk\x64\release_UWP\CNTKLibraryCPPUWPEvalExamplesTests\CNTKLibraryCPPUWPEvalExamplesTests_1.0.1.0_x64_Release_UWP.appx'
+Microsoft (R) Test Execution Command Line Tool Version 14.0.25420.1
+Copyright (c) Microsoft Corporation.  All rights reserved.
+
+Starting test execution, please wait...
+Passed   TestSanity
+Passed   TestModelLoad
+Passed   TestEval
+
+Total tests: 3. Passed: 3. Failed: 0. Skipped: 0.
+Test Run Successful.
+Test execution time: 6.6162 Seconds
++ rm -rf /01_OneHidden
++ exit 0

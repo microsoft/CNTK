@@ -19,7 +19,6 @@
 #include "ReaderShim.h"
 #include "DataTransferer.h"
 #include "PerformanceProfiler.h"
-#include "Reader.h"
 
 namespace CNTK {
 

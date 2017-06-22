@@ -24,6 +24,8 @@ build/
 .run-*
 lib/
 bin/
+Generated Files/
+buildinfo.h$$
 
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
@@ -40,6 +42,7 @@ bin/
 *.obj
 *.pch
 *.pdb
+*.idb
 *.pgc
 *.pgd
 *.rsp
@@ -50,6 +53,7 @@ bin/
 *.tmp
 *.tmp_proj
 *.log
+*.tlog
 *.vspscc
 *.vssscc
 .builds
@@ -59,6 +63,8 @@ bin/
 *.dep
 *.o
 *.d
+*.intermediate
+*.resfiles
 
 # Visual C++ cache files
 ipch/

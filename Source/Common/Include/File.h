@@ -10,7 +10,9 @@
 #include <vector>
 #include <stdint.h>
 #ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif // NOMINMAX
 #include "Windows.h"
 #endif
 #ifdef __unix__

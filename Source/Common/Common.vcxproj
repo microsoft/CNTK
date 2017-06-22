@@ -21,6 +21,14 @@
       <Configuration>Release_CpuOnly</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_UWP|x64">
+      <Configuration>Debug_UWP</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_UWP|x64">
+      <Configuration>Release_UWP</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{86883653-8A61-4038-81A0-2379FAE4200A}</ProjectGuid>
@@ -41,7 +49,7 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup>
-    <TargetName>Cntk.Common-$(CntkComponentVersion)</TargetName>
+    <TargetName>Cntk.Common$(OutputSuffix)-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -74,6 +82,13 @@
     <ClCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);CPUONLY</PreprocessorDefinitions>
     </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="$(IsUWP)">
+    <PostBuildEvent>
+      <Command>
+        xcopy /D /I /Y "$(TargetDir)$(TargetName).lib" "$(TargetDir).."
+      </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Math\NcclComm.cpp" />

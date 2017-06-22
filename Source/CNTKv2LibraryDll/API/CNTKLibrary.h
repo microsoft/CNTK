@@ -350,7 +350,7 @@ namespace CNTK
 
     typedef int SparseIndexType;
 
-    static const unsigned long SentinelValueForAutoSelectRandomSeed = std::numeric_limits<unsigned long>::max() - 2; // An arbitrary choice of sentinel value
+    static const unsigned long SentinelValueForAutoSelectRandomSeed = (std::numeric_limits<unsigned long>::max)() - 2; // An arbitrary choice of sentinel value
 
     ///
     /// Describes an input stream: its name, element type, storage, etc.
@@ -2040,7 +2040,7 @@ private:
         return Variable(shape, VariableKind::Output, dataType, nullptr, needsGradient, dynamicAxes, /*isSparse =*/ false, name, Internal::GenerateUid(VariableKind::Output));
     }
 
-    static const int SentinelValueForInferParamInitRank = std::numeric_limits<int>::max();
+    static const int SentinelValueForInferParamInitRank = (std::numeric_limits<int>::max)();
     static const int DefaultParamInitScale = 1;
     static const int DefaultParamInitOutputRank = 1;
     static const int DefaultParamInitFilterRank = 0;
@@ -5568,8 +5568,8 @@ namespace CNTK
         ///
         CNTK_API CrossValidationConfig(const MinibatchSourcePtr& crossValidationSource,
             const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(64),
-            size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max(),
-            size_t maxSamples = std::numeric_limits<size_t>::max(),
+            size_t crossValidationFrequencyInSamples = (std::numeric_limits<size_t>::max)(),
+            size_t maxSamples = (std::numeric_limits<size_t>::max)(),
             const std::unordered_map<Variable, StreamInformation>& inputVarToStream = {});
 
     private:
@@ -5596,7 +5596,7 @@ namespace CNTK
         ///
         CNTK_API CheckpointConfig(
             const std::wstring& checkPointFileName,
-            size_t checkpointFrequencyInSamples = std::numeric_limits<size_t>::max(),
+            size_t checkpointFrequencyInSamples = (std::numeric_limits<size_t>::max)(),
             bool restoreFromCheckpointIfExists = true,
             bool preserveAllCheckpoints = false);
 
