@@ -32,18 +32,24 @@ public:
         if (hostname.empty())
         {
 #ifdef _WIN32
+#ifndef CNTK_UWP
             WSADATA wsaData;
             if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
             {
                 return;
             }
 #endif
+#endif
             char hostnamebuf[1024];
-            strcpy_s(hostnamebuf, 1024, "localhost"); // in case it goes wrong
+            strcpy_s(hostnamebuf, 1024, "localhost"); // in case it goes wrong, or for UWP
+#ifndef CNTK_UWP
             ::gethostname(&hostnamebuf[0], sizeof(hostnamebuf) / sizeof(*hostnamebuf));
+#endif
             hostname = hostnamebuf;
 #ifdef _WIN32
+#ifndef CNTK_UWP
             WSACleanup();
+#endif
 #endif
         }
         assign(hostname);

@@ -8,7 +8,9 @@
 
 #include "CNTKLibrary.h"
 #include "fileutil.h"
+#ifndef CNTK_UWP
 #include "PerformanceProfiler.h"
+#endif
 
 namespace CNTK
 {
@@ -148,7 +150,9 @@ namespace CNTK
                     SaveCheckpoint(currentIndex);
                     // enable profiler after the first checkpoint
                     // This has effect only if the profiler is globally enabled by StartProfiler()
+#ifndef CNTK_UWP
                     Microsoft::MSR::CNTK::ProfilerEnable(true);
+#endif
                     return true;
                 } });
 
@@ -195,7 +199,9 @@ namespace CNTK
             shouldTrain = Trainer()->TrainMinibatch(minibatch, computeDevice);
             earlyExit |= !OnMinibatchEnd(); // If the callback wants to have early exit - we stop training.
 
+#ifndef CNTK_UWP
             auto profMisc = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainPost);
+#endif
 
             // Peform actions if required.
             size_t totalNumberOfSamples = Trainer()->TotalNumberOfSamplesSeen();
@@ -252,7 +258,7 @@ namespace CNTK
             while (shouldCV)
             {
                 size_t samplesLeft = m_cv.m_maxSamples <= totalNumberOfSamples ? 0 : m_cv.m_maxSamples - totalNumberOfSamples;
-                GetCrossValidationMinibatch(minibatch, std::min(m_cv.m_mbSize[totalNumberOfSamples], samplesLeft), computeDevice);                
+                GetCrossValidationMinibatch(minibatch, (std::min)(m_cv.m_mbSize[totalNumberOfSamples], samplesLeft), computeDevice);                
 
                 // TODO: it may be slow to rely on TestMinibatch to return error each time, since it may require transfer
                 // of error from the GPU each time, accumulatedError can be allocated on GPU
@@ -314,7 +320,7 @@ namespace CNTK
         }
 
         size_t mbSize = GetMinibatchSize() * scaleFactor;
-        mbSize = std::min(mbSize, maxMbSize);
+        mbSize = (std::min)(mbSize, maxMbSize);
         GetNextMinibatch(m_source, minibatch, m_varToStream, mbSize, workerRank, numberOfWorkers, computeDevice);
     }
 

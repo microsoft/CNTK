@@ -10,7 +10,9 @@
 
 #include "Basics.h"
 #ifdef __WINDOWS__
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif // NOMINMAX
 #include "Windows.h" // for mmreg.h and FILETIME
 #include <mmreg.h>
 #endif

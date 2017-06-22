@@ -35,7 +35,9 @@
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
+#ifndef CNTK_UWP
 #include "PerformanceProfiler.h"
+#endif
 #include "CNTKLibrary.h"
 
 #include <string>

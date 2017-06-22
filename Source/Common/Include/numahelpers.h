@@ -29,10 +29,14 @@ static inline void overridenode(int n = -1)
 // get the number of NUMA nodes we would like to distinguish
 static inline size_t getnumnodes()
 {
+#ifdef CNTK_UWP
+	return 1;
+#else
     ULONG n;
     if (!GetNumaHighestNodeNumber(&n))
         return 1;
     return n + 1;
+#endif
 }
 
 // execute body (node, i, n), i in [0,n) on all NUMA nodes in small chunks
@@ -95,6 +99,9 @@ static void foreach_node_single_threaded(const FUNCTION &f)
 // get the current NUMA node
 static inline size_t getcurrentnode()
 {
+#ifdef CNTK_UWP
+	return 0;
+#else
     // we can force it to be a certain node, for use in initializations
     if (node_override >= 0)
         return (size_t) node_override;
@@ -106,13 +113,14 @@ static inline size_t getcurrentnode()
     if (n == 0xff)
         LogicError("GetNumaProcessorNode() failed to determine NUMA node for GetCurrentProcessorNumber()??");
     return n;
+#endif
 }
 
 // allocate memory
 // Allocation seems to be at least on a 512-byte boundary. We nevertheless verify alignment requirements.
 typedef LPVOID(WINAPI *VirtualAllocExNuma_t)(HANDLE, LPVOID, SIZE_T, DWORD, DWORD, DWORD);
 static VirtualAllocExNuma_t VirtualAllocExNuma = (VirtualAllocExNuma_t) -1;
-
+#ifndef CNTK_UWP
 static inline void *malloc(size_t n, size_t align)
 {
     // VirtualAllocExNuma() only exists on Vista+, so go through an explicit function pointer
@@ -150,10 +158,12 @@ static inline void free(void *p)
     if (!VirtualFree(p, 0, MEM_RELEASE))
         LogicError("VirtualFreeEx failure");
 }
+#endif // CNTK_UWP
 
 // dump memory allocation
 static inline void showavailablememory(const char *what)
 {
+#ifndef CNTK_UWP
     size_t n = getnumnodes();
     for (size_t i = 0; i < n; i++)
     {
@@ -165,11 +175,15 @@ static inline void showavailablememory(const char *what)
         else
             fprintf(stderr, "%s: error for getting available memory on NUMA node %lu\n", what, (unsigned long)i);
     }
+#endif
 }
 
 // determine NUMA node with most memory available
 static inline size_t getmostspaciousnumanode()
 {
+#ifdef CNTK_UWP
+    return 0;
+#else
     size_t n = getnumnodes();
     size_t bestnode = 0;
     ULONGLONG bestavailbytes = 0;
@@ -184,6 +198,7 @@ static inline size_t getmostspaciousnumanode()
         }
     }
     return bestnode;
+#endif
 }
 
 #if 0 // this is no longer used (we now parallelize the big matrix products directly)

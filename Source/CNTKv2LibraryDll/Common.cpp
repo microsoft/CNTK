@@ -14,7 +14,9 @@
 #include <thread>
 #include "GPUMatrix.h"
 #include "Globals.h"
+#ifndef CNTK_UWP
 #include "PerformanceProfiler.h"
+#endif // CNTK_UWP
 #include "MPIWrapper.h"
 #include "Basics.h"
 #include "ProgressTracing.h"
@@ -168,6 +170,7 @@ namespace CNTK
 
         void StartProfiler(const wstring& profilerDir, bool profilerSyncGpu, size_t profilerBufferSize)
         {
+#ifndef CNTK_UWP
             std::wstring logSuffix = L"";
             auto mpi = Microsoft::MSR::CNTK::MPIWrapper::GetInstance();
             if (mpi)
@@ -180,21 +183,28 @@ namespace CNTK
                 profilerBufferSize,
                 logSuffix,
                 profilerSyncGpu);
+#endif
         }
 
         void EnableProfiler()
         {
+#ifndef CNTK_UWP
             Microsoft::MSR::CNTK::ProfilerEnable(true);
+#endif
         }
 
         void DisableProfiler()
         {
+#ifndef CNTK_UWP
             Microsoft::MSR::CNTK::ProfilerEnable(false);
+#endif
         }
 
         void StopProfiler()
         {
+#ifndef CNTK_UWP
             Microsoft::MSR::CNTK::ProfilerClose();
+#endif
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)

@@ -33,17 +33,20 @@
     <HasMultiverso Condition="Exists('$(SolutionDir)\Source\Multiverso\include\multiverso')">true</HasMultiverso>
 
     <!-- If an executable links Cntk.Reader-$(CntkComponentVersion).lib, it has dependency on Cntk.Common.dll, Cntk.Math.dll and Cntk.PerformanceProfiler.dll -->
-    <ReaderLibs>Cntk.Reader-$(CntkComponentVersion).lib;Cntk.Common-$(CntkComponentVersion).lib;Cntk.Math-$(CntkComponentVersion).lib;Cntk.PerformanceProfiler-$(CntkComponentVersion).lib</ReaderLibs>
+    <ReaderLibs>Cntk.Reader$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.Common$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).lib;</ReaderLibs>
+
+    <!-- UWP does not consume PerformanceProfiler -->
+    <ReaderLibs Condition="'$(IsUWP)'!='true'">Cntk.PerformanceProfiler-$(CntkComponentVersion).lib;$(ReaderLibs)</ReaderLibs>
   </PropertyGroup>
 
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(IsUWP)'!='true'">
     <MathLibrary>MKL</MathLibrary>
     <CNTKCustomMKLVersion>3</CNTKCustomMKLVersion>
     <CNTKCustomMKLPath>$(CNTK_MKL_PATH)\$(CNTKCustomMKLVersion)</CNTKCustomMKLPath>
     <MathIncludePath>$(CNTKCustomMKLPath)\include</MathIncludePath>
     <MathDefine>USE_MKL</MathDefine>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(CNTK_MKL_SEQUENTIAL)' != '1'">
+  <PropertyGroup Condition="'$(IsUWP)'!='true' And '$(CNTK_MKL_SEQUENTIAL)' != '1'">
     <MathLibraryName>CNTK custom MKL Parallel (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
     <MathLibraryPath>$(CNTKCustomMKLPath)\x64\parallel</MathLibraryPath>
     <MathLinkLibrary>mkl_cntk_p.lib</MathLinkLibrary>
@@ -51,13 +54,24 @@
     <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
     <UnitTestDlls>$(OutDir)mkl_cntk_p.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(CNTK_MKL_SEQUENTIAL)' == '1'">
+  <PropertyGroup Condition="'$(IsUWP)'!='true' And '$(CNTK_MKL_SEQUENTIAL)' == '1'">
     <MathLibraryName>CNTK custom MKL Sequential (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
     <MathLibraryPath>$(CNTKCustomMKLPath)\x64\sequential</MathLibraryPath>
     <MathLinkLibrary>mkl_cntk_s.lib</MathLinkLibrary>
     <MathDelayLoad>mkl_cntk_s.dll</MathDelayLoad>
     <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
     <UnitTestDlls>$(OutDir)mkl_cntk_s.dll;</UnitTestDlls>
+  </PropertyGroup> 
+
+  <PropertyGroup Condition="'$(IsUWP)'=='true'">
+    <MathLibrary>OpenBLAS</MathLibrary>
+    <MathIncludePath>$(OpenBLASPath)</MathIncludePath>
+    <MathLibraryName>OpenBLAS library name</MathLibraryName>
+    <MathLibraryPath>$(OpenBLASPath)\lib\x64\RELEASE</MathLibraryPath>
+    <MathDefine>USE_OPENBLAS;OS_WINNT;ARCH_X86_64;C_MSVC</MathDefine>
+    <MathLinkLibrary>libopenblas.lib</MathLinkLibrary>
+    <MathDelayLoad>libopenblas.dll</MathDelayLoad>
+    <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(UseZip)">
@@ -138,7 +152,9 @@
 
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)";HAS_MPI=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)"</PreprocessorDefinitions>
+      <!-- UWP does not use MPI -->
+      <PreprocessorDefinitions Condition="'$(IsUWP)'!='true'">%(PreprocessorDefinitions);HAS_MPI=1</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
 

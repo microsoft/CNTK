@@ -652,8 +652,13 @@ void renameOrDie(const std::string& from, const std::string& to)
     if (fexists(to.c_str()) && !DeleteFileA(to.c_str()))
         RuntimeError("error deleting file: '%s': %d", to.c_str(), GetLastError());
 
+#if CNTK_UWP
+    from; to;
+    RuntimeError("Not supported in UWP");
+#else
     if (!MoveFileA(from.c_str(), to.c_str()))
         RuntimeError("error renaming file '%s': %d", from.c_str(), GetLastError());
+#endif
 #else
     // Delete destination file if it exists
     // WORKAROUND: "rename" should do this but this is a workaround
@@ -673,9 +678,13 @@ void renameOrDie(const std::wstring& from, const std::wstring& to)
     // deleting destination file if exits (to match Linux semantic)
     if (fexists(to.c_str()) && !DeleteFileW(to.c_str()))
         RuntimeError("error deleting file '%ls': %d", to.c_str(), GetLastError());
-
+#if CNTK_UWP
+    from; to;
+    RuntimeError("Not supported in UWP");
+#else
     if (!MoveFileW(from.c_str(), to.c_str()))
         RuntimeError("error renaming file '%ls': %d", from.c_str(), GetLastError());
+#endif
 #else
     renameOrDie(wtocharpath(from.c_str()).c_str(), wtocharpath(to.c_str()).c_str());
 #endif
@@ -695,9 +704,14 @@ void copyOrDie(const wstring& from, const wstring& to)
 {
     const wstring tempTo = to + L".tmp";
 #ifdef _WIN32
+#ifdef CNTK_UWP
+    from; to;
+    RuntimeError("Not supported in UWP");
+#else
     const BOOL succeeded = CopyFile(from.c_str(), tempTo.c_str(), FALSE);
     if (!succeeded)
         RuntimeError("error copying file '%ls' to '%ls': %d", from.c_str(), tempTo.c_str(), GetLastError());
+#endif // CNTK_UWP
 #else
     FILE* fromFile = fopenOrDie(from, L"rb");
     FILE* tempToFile = fopenOrDie(tempTo, L"wb");
