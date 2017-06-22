@@ -24,6 +24,7 @@
 // Forward declarations
 namespace CNTK
 {
+    class NDArrayView;
     class Value;
 }
 
@@ -69,6 +70,7 @@ typedef std::shared_ptr<MatrixBase> MatrixBasePtr;
 template <class ElemType>
 class MATH_API Matrix : public MatrixBase
 {
+    friend class ::CNTK::NDArrayView;
     friend class ::CNTK::Value;
 
     typedef MatrixBase Base;
