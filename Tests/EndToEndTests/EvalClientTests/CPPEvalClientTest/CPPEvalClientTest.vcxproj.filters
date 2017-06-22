@@ -18,5 +18,8 @@
     <ClCompile Include="..\..\..\..\Examples\Evaluation\CPPEvalClient\CPPEvalClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="upgrade_to_cntk_20.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

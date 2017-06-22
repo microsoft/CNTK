@@ -19,6 +19,8 @@ using GetEvalProc = void(*)(IEvaluateModel<ElemType>**);
 typedef std::pair<std::wstring, std::vector<float>*> MapEntry;
 typedef std::map<std::wstring, std::vector<float>*> Layer;
 
+void TestModel3();
+
 /// <summary>
 /// Program for demonstrating how to run model evaluations using the native evaluation interface
 /// </summary>
@@ -40,6 +42,8 @@ int main(int argc, char* argv[])
     IEvaluateModel<float> *model;
     size_t pos;
     int ret;
+
+    TestModel3();
 
 #ifdef _WIN32
     pos = app.rfind("\\");
