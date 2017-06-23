@@ -30,7 +30,7 @@ static inline void overridenode(int n = -1)
 static inline size_t getnumnodes()
 {
 #ifdef CNTK_UWP
-	return 1;
+    return 1;
 #else
     ULONG n;
     if (!GetNumaHighestNodeNumber(&n))
@@ -100,7 +100,7 @@ static void foreach_node_single_threaded(const FUNCTION &f)
 static inline size_t getcurrentnode()
 {
 #ifdef CNTK_UWP
-	return 0;
+    return 0;
 #else
     // we can force it to be a certain node, for use in initializations
     if (node_override >= 0)

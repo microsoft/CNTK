@@ -231,8 +231,7 @@
     <Exec Command="$(PROTOBUF_PATH)\bin\protoc --proto_path=$(ProjectDir)%(Proto.RelativeDir) --cpp_out=$(ProjectDir)%(Proto.RelativeDir) %(Proto.FullPath)" WorkingDirectory="$(ProjectDir)" />
   </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Target Name="Build" Condition="$(HasProtobuf)" Outputs="$(TargetPath)" DependsOnTargets="ProtoGen;$(BuildDependsOn)">
-  </Target>
+  <Target Name="Build" Condition="$(HasProtobuf)" Outputs="$(TargetPath)" DependsOnTargets="ProtoGen;$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
     <Warning Condition="!$(HasProtobuf)" Text="CNTKv2LibraryDll requires Protocol Buffers to build. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#protobuf for installation instructions." />

@@ -5014,7 +5014,7 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
         dgesvd("All", "All", &m, &n, reinterpret_cast<double*>(A.Data()), &lda, reinterpret_cast<double*>(SIGMA.Data()), reinterpret_cast<double*>(U.Data()), &ldu, reinterpret_cast<double*>(VT.Data()), &ldvt, reinterpret_cast<double*>(W.Data()), &lwork, &info);
 #else
 #if CNTK_UWP
-        throw "error, dgesvd not supported";
+        RuntimeError("Error, LAPACKE_dgesvd is not supported for UWP.\n");
 #else
         std::vector<double> superb(std::max(std::min(m, n) - 1, 1));
         info = LAPACKE_dgesvd((int) MatrixOrder::ColMajor, 'A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.Data()), (int) lda, reinterpret_cast<double*>(SIGMA.Data()),
@@ -5033,7 +5033,7 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
         sgesvd("All", "All", &m, &n, reinterpret_cast<float*>(A.Data()), &lda, reinterpret_cast<float*>(SIGMA.Data()), reinterpret_cast<float*>(U.Data()), &ldu, reinterpret_cast<float*>(VT.Data()), &ldvt, reinterpret_cast<float*>(W.Data()), &lwork, &info);
 #else
 #if CNTK_UWP
-        throw "error, dgesvd not supported";
+        RuntimeError("Error, LAPACKE_sgesvd is not supported for UWP.\n");
 #else
         std::vector<float> superb(std::max(std::min(m, n) - 1, 1));
         info = LAPACKE_sgesvd((int) MatrixOrder::ColMajor, 'A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.Data()), (int) lda, reinterpret_cast<float*>(SIGMA.Data()),
