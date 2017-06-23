@@ -596,7 +596,7 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import broadcast_as
-    operand = sanitize_input(operand, get_data_type(operand))
+    operand = sanitize_input(operand, get_data_type(operand, broadcast_as_operand))
     broadcast_as_operand = sanitize_input(
         broadcast_as_operand, get_data_type(broadcast_as_operand))
     return broadcast_as(operand, broadcast_as_operand, name)
