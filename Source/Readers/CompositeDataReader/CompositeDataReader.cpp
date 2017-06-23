@@ -295,7 +295,7 @@ void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerC
         ConfigParameters input = inputs[i](inputSections.front());
         std::wstring inputName = msra::strfun::utf16(input.ConfigName());
 
-        // Read tranformers in order and appending them to the transformer pipeline.
+        // Read transformers in order and appending them to the transformer pipeline.
         argvector<ConfigParameters> transforms = input("transforms");
         for (size_t j = 0; j < transforms.size(); ++j)
         {

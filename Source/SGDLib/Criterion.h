@@ -46,7 +46,7 @@ struct EpochCriterion : public std::pair<double, size_t>
     // main way of reading this out: compute the actual average criterion value from the aggregate and sample count
     double Average() const { return second > 0 ? first / second : 0.0; } // compute the epoch-average
 
-    // a few more handy operations that occured multiple times
+    // a few more handy operations that occurred multiple times
     bool IsNan() const { return std::isnan(first); }
     EpochCriterion operator-(const EpochCriterion& other) const { return EpochCriterion(first - other.first, second - other.second); }
     void operator+=(const EpochCriterion& other) { first += other.first; second += other.second; }

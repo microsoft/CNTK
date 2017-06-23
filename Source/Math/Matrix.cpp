@@ -231,7 +231,7 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
     //       -> FORBIDDEN to write into
     //     - CPU or GPU -> BOTH: current state is CPU or GPU
     //       and a view onto it is put into BOTH state
-    //       -> OK but inefficent to read, since this is likely happening over again; but we cannot put all views into BOTH state
+    //       -> OK but inefficient to read, since this is likely happening over again; but we cannot put all views into BOTH state
     //     - BOTH -> BOTH:
     //        - read case: OK
     //        - write case: forbidden to call this function in this way

@@ -1449,7 +1449,7 @@ public:
 private:
     // Approximates the expected number of occurences of a class in the sampled set.
     // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
-    // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
+    // the probability that a specific class in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
     // The estimate can be quite a bit off but should be better than nothing. Better alternatives?
     double EstimateInSampleFrequency(double p, double estimatedNumTries) const;
 

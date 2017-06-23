@@ -564,7 +564,7 @@ class MinibatchSourceFromData(UserMinibatchSource):
         data_streams: name-value pairs
         max_samples (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of samples
           the reader can produce. If inputs are sequences, and the different streams have different
-          lengths, then each sequence counts with the the maximum length.
+          lengths, then each sequence counts with the maximum length.
           After this number has been reached, the reader
           returns empty minibatches on subsequent calls to :meth:`next_minibatch`.
           **Important:**
