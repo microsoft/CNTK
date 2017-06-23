@@ -1,0 +1,315 @@
+import sys
+
+import numpy as np
+from cntk.layers import Dense
+from cntk.learners import (UnitType, adam, learning_rate_schedule,
+                           momentum_schedule)
+from cntk.losses import cross_entropy_with_softmax, squared_error
+from cntk.ops import combine, input_variable, softmax
+from cntk.train.trainer import Trainer
+
+import ast
+
+from .agent import AgentBaseClass
+from .shared import preprocessing as sp
+from .shared.cntk_utils import negative_of_entropy
+from .shared.customized_models import CustomizedModels
+from .shared.models import Models
+from .shared.policy_gradient_parameters import PolicyGradientParameters
+
+
+class ActorCritic(AgentBaseClass):
+    """Actor-Critic Policy Gradient."""
+
+    def __init__(self, config_filename, o_space, a_space):
+        """Constructor for policy gradient."""
+        super(ActorCritic, self).__init__(o_space, a_space)
+
+        self._parameters = PolicyGradientParameters(config_filename)
+
+        # Create preprocessor.
+        if self._parameters.preprocessing:
+            preproc = getattr(sp, self._parameters.preprocessing)
+            self._preprocessor = preproc(
+                self._shape_of_inputs,
+                *ast.literal_eval(self._parameters.preprocessing_args))
+
+        self._set_up_policy_network_and_value_network()
+
+        self._trajectory_states = []
+        self._trajectory_actions = []
+        self._trajectory_rewards = []
+
+        # Training data for the policy and value networks. Note they share the
+        # same input.
+        self._input_buffer = []
+        self._value_network_output_buffer = []
+        self._policy_network_output_buffer = []
+        self._policy_network_weight_buffer = []
+
+        self.episode_count = 0
+        self.step_count = 0
+
+    def start(self, state):
+        """Start a new episode."""
+        # Call _process_accumulated_trajectory() to process unused trajectory
+        # data from previous episode.
+        self._process_accumulated_trajectory(False)
+
+        # Reset preprocessor.
+        if self._preprocessor is not None:
+            self._preprocessor.reset()
+
+        # Append new state and action
+        o = self._preprocess(state)
+        action, _ = self._choose_action(o)
+        self._trajectory_states.append(o)
+        self._trajectory_actions.append(action)
+
+        self.episode_count += 1
+
+        return action, {}
+
+    def step(self, reward, next_state):
+        """Observe one transition and choose an action."""
+        o = self._preprocess(next_state)
+        self._trajectory_rewards.append(reward)
+        self._trajectory_states.append(o)
+        self.step_count += 1
+
+        # Update every self._parameters.update_frequency
+        if self.step_count % self._parameters.update_frequency == 0:
+            self._process_accumulated_trajectory(True)
+            self._update_networks()
+
+        action, _ = self._choose_action(o)
+        self._trajectory_actions.append(action)
+        return action, {}
+
+    def end(self, reward, next_state):
+        """Last observed reward/state of the episode (which then terminates)."""
+        self._trajectory_rewards.append(reward)
+        self.step_count += 1
+
+        # Update every self._parameters.update_frequency
+        if self.step_count % self._parameters.update_frequency == 0:
+            self._process_accumulated_trajectory(False)
+            self._update_networks()
+
+    def set_as_best_model(self):
+        """Copy current model to best model."""
+        self._best_model = self._policy_network.clone('clone')
+
+    def _set_up_policy_network_and_value_network(self):
+        shape_of_inputs = self._shape_of_inputs if self._preprocessor is None \
+            else self._preprocessor.output_shape()
+        self._input_variables = \
+            input_variable(shape=shape_of_inputs, dtype=np.float32)
+
+        # Set up policy network.
+        if self._parameters.policy_representation == 'nn':
+            model = Models.feedforward_network(
+                shape_of_inputs,
+                self._num_actions,
+                self._parameters.policy_network_hidden_layers,
+                cross_entropy_with_softmax,
+                use_placeholder_for_input=True)
+        else:
+            try:
+                model_definition_function = getattr(
+                    CustomizedModels,
+                    self._parameters.policy_representation)
+                model = model_definition_function(
+                    shape_of_inputs,
+                    self._num_actions,
+                    cross_entropy_with_softmax,
+                    use_placeholder_for_input=True)
+            except AttributeError:
+                raise ValueError(
+                    'Unknown representation for policy: "{0}"'
+                    '\n'.format(self._parameters.policy_representation))
+
+        self._policy_network = model['f']
+        self._policy_network.replace_placeholder(self._input_variables)
+        self._policy_network_output_variables = model['outputs']
+        # The weight is computed as part of the Actor-Critic algorithm.
+        self._policy_network_weight_variables = \
+            input_variable(shape=(1,), dtype=np.float32)
+        self._policy_network_loss = \
+            model['loss'] * self._policy_network_weight_variables
+
+        # Initialized from a saved model.
+        if self._parameters.initial_policy_network:
+            self._policy_network.restore(
+                self._parameters.initial_policy_network)
+
+        print("Parameterized the agent's policy using neural networks "
+              '"{0}" with {1} actions.\n'
+              ''.format(self._parameters.policy_representation,
+                        self._num_actions))
+
+        # Set up value network.
+        if self._parameters.shared_representation:
+            # For shared representation, policy pi and value function V share
+            # all non-output layers. To use cross_entropy_with_softmax loss
+            # from cntk, _policy_network defined here doesn't include softmax
+            # output layer. Therefore _value_network becomes _policy_network
+            # plus one additional linear output layer.
+            self._value_network = Dense(1, activation=None)(self._policy_network)
+            self._value_network_output_variables = input_variable(
+                shape=(1,), dtype=np.float32)
+            self._value_network_loss = squared_error(
+                self._value_network, self._value_network_output_variables)
+        else:
+            if self._parameters.value_function_representation == 'nn':
+                model = Models.feedforward_network(
+                    shape_of_inputs,
+                    1,  # value network outputs a scalar
+                    self._parameters.value_network_hidden_layers,
+                    use_placeholder_for_input=True)
+            else:
+                try:
+                    model_definition_function = getattr(
+                        CustomizedModels,
+                        self._parameters.value_function_representation)
+                    model = model_definition_function(
+                        shape_of_inputs,
+                        1,  # value network outputs a scalar
+                        use_placeholder_for_input=True)
+                except AttributeError:
+                    raise ValueError(
+                        'Unknown representation for value function: "{0}"'
+                        '\n'.format(self._parameters.value_function_representation))
+
+            self._value_network = model['f']
+            self._value_network.replace_placeholder(self._input_variables)
+            self._value_network_output_variables = model['outputs']
+            self._value_network_loss = model['loss']  # squared_error by default
+
+        combined_networks = combine([self._policy_network, self._value_network])
+        combined_loss = self._policy_network_loss + \
+            self._parameters.regularization_weight * negative_of_entropy(
+                softmax(self._policy_network)) + \
+            self._parameters.relative_step_size * self._value_network_loss
+
+        # The learning rate will be updated later before each minibatch
+        # training.
+        self._trainer = Trainer(
+            combined_networks,
+            (combined_loss, None),
+            adam(
+                combined_networks.parameters,
+                learning_rate_schedule(
+                    self._parameters.initial_eta,
+                    UnitType.sample),
+                momentum=momentum_schedule(self._parameters.momentum),
+                variance_momentum=momentum_schedule(0.999),
+                use_mean_gradient=True))
+
+        print("Parameterized the agent's value function using neural network "
+              '"{0}".\n'.format(
+                self._parameters.policy_representation
+                if self._parameters.shared_representation
+                else self._parameters.value_function_representation))
+
+    def _adjust_learning_rate(self):
+        if self._parameters.initial_eta != self._parameters.eta_minimum:
+            eta = self._parameters.eta_minimum + max(
+                    0,
+                    (self._parameters.initial_eta - self._parameters.eta_minimum) *
+                    (1 - float(self.step_count)/self._parameters.eta_decay_step_count))
+            self._trainer.parameter_learners[0].reset_learning_rate(
+                learning_rate_schedule(eta, UnitType.sample))
+
+    def _choose_action(self, state):
+        """Choose an action according to policy."""
+        action_probs = \
+            softmax(self._evaluate_model(self._policy_network, state)).eval()
+        return np.random.choice(self._num_actions, p=action_probs), action_probs
+
+    def save(self, filename):
+        """Save model to file."""
+        self._best_model.save(filename)
+
+    def save_parameter_settings(self, filename):
+        """Save parameter settings to file."""
+        self._parameters.save(filename)
+
+    def _evaluate_model(self, model, state):
+        r"""Evaluate log of pi(\cdot|state) or v(state)."""
+        return np.squeeze(model.eval({model.arguments[0]: [state]}))
+
+    def _process_accumulated_trajectory(self, keep_last):
+        """Process accumulated trajectory to generate training data.
+
+        Last state/action without reward will be kept if keep_last is True.
+        """
+        if not self._trajectory_states:
+            return
+
+        # If trajectory hasn't terminated, we have _trajectory_states
+        # and sometimes _trajectory_actions having one more item than
+        # _trajectory_rewards.
+        if len(self._trajectory_states) == len(self._trajectory_rewards):
+            initial_r = 0
+        else:
+            # Bootstrap from last state
+            initial_r = np.asscalar(self._evaluate_model(
+                self._value_network, self._trajectory_states[-1]))
+            last_state = self._trajectory_states.pop()
+            if len(self._trajectory_actions) != len(self._trajectory_rewards):
+                # This will only happen when agent calls start() to begin
+                # a new episode without calling end() before to terminate the
+                # prevous episode. The last action thus can be discarded.
+                self._trajectory_actions.pop()
+
+        if len(self._trajectory_states) != len(self._trajectory_rewards) or \
+           len(self._trajectory_actions) != len(self._trajectory_rewards):
+            raise RuntimeError("Can't pair (state, action, reward)")
+
+        for transition in zip(
+                self._trajectory_states,
+                self._trajectory_actions,
+                self._discount_rewards(initial_r)):
+            self._input_buffer.append(transition[0])
+            self._value_network_output_buffer.append([transition[2]])
+            self._policy_network_output_buffer.append(
+                self._index_to_vector(transition[1], self._num_actions))
+            self._policy_network_weight_buffer.append([transition[2]
+                - self._evaluate_model(self._value_network, transition[0])])
+
+        # Clear the trajectory history.
+        self._trajectory_states = []
+        self._trajectory_actions = []
+        self._trajectory_rewards = []
+        if keep_last:
+            self._trajectory_states.append(last_state)
+
+    def _update_networks(self):
+        self._adjust_learning_rate()
+
+        # Train the policy network on one minibatch.
+        self._trainer.train_minibatch(
+            {
+                self._input_variables: self._input_buffer,
+                self._policy_network_output_variables:
+                    self._policy_network_output_buffer,
+                self._policy_network_weight_variables:
+                    self._policy_network_weight_buffer,
+                self._value_network_output_variables:
+                    self._value_network_output_buffer
+            })
+
+        # Clear training data.
+        self._input_buffer = []
+        self._value_network_output_buffer = []
+        self._policy_network_output_buffer = []
+        self._policy_network_weight_buffer = []
+
+    def _discount_rewards(self, initial_r):
+        discounted_rewards = [0] * len(self._trajectory_rewards)
+        r = initial_r
+        for t in reversed(range(len(self._trajectory_rewards))):
+            r = r * self._parameters.gamma + self._trajectory_rewards[t]
+            discounted_rewards[t] = r
+        return discounted_rewards
