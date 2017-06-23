@@ -8,21 +8,22 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/noncopyable.hpp>
 
-#include "Indexer.h"
+#include "IndexBuilder.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    class MLFIndexer : boost::noncopyable
+    class MLFIndexBuilder : public IndexBuilder, boost::noncopyable
     {
     public:
-        MLFIndexer(FILE* file, bool frameMode, size_t chunkSize = 64 * 1024 * 1024, size_t bufferSize = 64 * 1024 * 1024);
+        MLFIndexBuilder(const std::wstring& filename, FILE* file, CorpusDescriptorPtr corpus);
 
-        void Build(CorpusDescriptorPtr corpus);
-
-        // Returns input data index (chunk and sequence metadata)
-        const Index& GetIndex() const { return m_index; }
+        MLFIndexBuilder& SetFrameMode(bool frameMode) { m_frameMode = frameMode; return *this; }
 
     private:
+
+        virtual std::wstring GetCacheFilename() override;
+        virtual void Populate(shared_ptr<Index>& index) override;
+
         enum class State
         {
             Header,
@@ -30,27 +31,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             UtteranceFrames
         };
 
-        FILE* m_file;  // MLF file descriptor
+
         bool m_done;   // true, when all input was processed
 
-        const size_t m_maxBufferSize;             // Max allowed buffer size.
+        bool m_frameMode;
+
         std::vector<char> m_buffer;               // Buffer for data.
+        std::vector<boost::iterator_range<char*>> m_lines; 
         int64_t m_fileOffsetStart;                // Current start offset in file that is mapped to m_buffer.
         std::string m_lastPartialLineInBuffer;    // Partial string from the previous read of m_buffer.
-
-        Index m_index;
-
         std::string m_lastNonEmptyLine;           // Last non empty estring, used for parsing sequence length.
+        
+
+
 
         // fills up the buffer with data from file, all previously buffered data
         // will be overwritten.
         void RefillBuffer();
 
         // Read lines from the buffer.
-        void ReadLines(vector<char>& buffer, vector<boost::iterator_range<char*>>& lines);
+        void ReadLines();
         bool TryParseSequenceKey(const boost::iterator_range<char*>& line, size_t& id, std::function<size_t(const std::string&)> keyToId);
     };
-
-    typedef std::shared_ptr<MLFIndexer> MLFIndexerPtr;
 
 }}} // namespace

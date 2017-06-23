@@ -31,25 +31,19 @@ class CorpusDescriptor
     }
 
 public:
-    CorpusDescriptor(const std::wstring& file, bool numericSequenceKeys, bool useHash = false) : CorpusDescriptor(numericSequenceKeys, useHash)
-    {
-        m_includeAll = false;
-
-        // Add all sequence ids.
-        for (msra::files::textreader r(file); r;)
-        {
-            m_sequenceIds.insert(KeyToId(r.getline()));
-        }
-    }
-
     bool IsNumericSequenceKeys() const
     {
         return m_numericSequenceKeys;
     }
 
+    bool IsHashingEnabled() const
+    {
+        return m_useHash;
+    }
+
     // By default include all sequences.
     CorpusDescriptor(bool numericSequenceKeys, bool useHash = false)
-        : m_includeAll(true), m_numericSequenceKeys(numericSequenceKeys), m_useHash(useHash)
+        : m_numericSequenceKeys(numericSequenceKeys), m_useHash(useHash)
     {
         if (numericSequenceKeys)
         {
@@ -95,35 +89,13 @@ public:
         }
     }
 
-    // Checks if the specified sequence key should be used for reading.
-    bool IsIncluded(const std::string& sequenceKey)
-    {
-        if (m_includeAll)
-        {
-            return true;
-        }
-
-        size_t id = 0;
-        if (m_numericSequenceKeys)
-            id = KeyToId(sequenceKey);
-        else
-        {
-            if (!m_keyToIdMap.TryGet(sequenceKey, id))
-                return false;
-        }
-        return m_sequenceIds.find(id) != m_sequenceIds.end();
-    }
-
     std::function<size_t(const std::string&)> KeyToId;
     std::function<std::string(size_t)> IdToKey;
 
 private:
     DISABLE_COPY_AND_MOVE(CorpusDescriptor);
     bool m_numericSequenceKeys;
-    bool m_includeAll;
     bool m_useHash;
-
-    std::set<size_t> m_sequenceIds;
 
     StringToIdMap m_keyToIdMap;
 };

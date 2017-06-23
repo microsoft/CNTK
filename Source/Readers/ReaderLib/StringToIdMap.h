@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include <deque>
 #include "Basics.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
