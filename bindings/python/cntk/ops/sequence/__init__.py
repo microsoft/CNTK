@@ -148,7 +148,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
     from cntk.cntk_py import future_value
 
     if initial_state is None:
-        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+        initial_state = Constant.scalar(sanitize_dtype_cntk(x.dtype), 0.0)
 
     x = sanitize_input(x)
     return future_value(x, initial_state, time_step, name)
@@ -247,7 +247,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     from cntk.cntk_py import Constant, past_value
 
     if initial_state is None:
-        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+        initial_state = Constant.scalar(sanitize_dtype_cntk(x.dtype), 0.0)
     else:
         initial_state = sanitize_input(initial_state)
 
