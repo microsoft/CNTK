@@ -12,7 +12,7 @@ using System.IO;
 using System.Drawing;
 
 
-namespace CNTKAzureTutorial01.Controllers
+namespace EvalDll_AzureTutorial01.Controllers
 {
     public class ValuesController : ApiController
     {

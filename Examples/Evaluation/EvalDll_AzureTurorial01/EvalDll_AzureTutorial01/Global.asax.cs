@@ -5,7 +5,7 @@ using System.Web;
 using System.Web.Http;
 using System.Web.Routing;
 
-namespace CNTKAzureTutorial01
+namespace EvalDll_AzureTutorial01
 {
     public class WebApiApplication : System.Web.HttpApplication
     {
