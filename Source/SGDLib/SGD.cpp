@@ -1133,7 +1133,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                               dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[0])->Value());
             }
 
-#define SSGD_WARMUP
+//#define SSGD_WARMUP
 #ifdef SSGD_WARMUP
             if (epochNumber < 5) {
                 int minibatchSize = 16 * 32;
