@@ -335,6 +335,12 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         InvalidArgument("'Truncated' cannot be 'true' in frameMode (i.e. when 'frameMode' is 'true')");
     }
 
+    m_rightSplice = readerConfig(L"rightSplice", 0);
+    if (!m_truncated && m_rightSplice > 0) {
+        InvalidArgument("rightSplice only used in latency control blstm batch "
+                        "training, so it should be 0 when Truncated is not true");
+    }
+
     // determine if we partial minibatches are desired
     wstring minibatchMode(readerConfig(L"minibatchMode", L"partial"));
     m_partialMinibatch = EqualCI(minibatchMode, L"partial");
@@ -1178,7 +1184,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
             size_t numOfLabel = m_labelsBufferMultiIO.size();
 
             // create the feature matrix
-            m_pMBLayout->Init(m_numSeqsPerMB, m_mbNumTimeSteps);
+            m_pMBLayout->Init(m_numSeqsPerMB, m_mbNumTimeSteps, m_rightSplice);
 
             vector<size_t> actualmbsize(m_numSeqsPerMB, 0);
             for (size_t i = 0; i < m_numSeqsPerMB; i++)
@@ -1193,7 +1199,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                     m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, i, -(ptrdiff_t)startFr, m_numFramesToProcess[i] - startFr);
                 }
 
-                if (startFr + m_mbNumTimeSteps < m_numFramesToProcess[i]) // end of this minibatch does not reach until end of utterance
+                if (startFr + m_mbNumTimeSteps - m_rightSplice < m_numFramesToProcess[i]) // end of this minibatch does not reach until end of utterance
                 {
                     // we return the next 'm_mbNumTimeSteps' frames, filling all time steps
                     if (startFr > 0) // not the beginning of the utterance
@@ -1206,7 +1212,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                         m_sentenceEnd[i] = true;
                         m_switchFrame[i] = 0;
                     }
-                    actualmbsize[i] = m_mbNumTimeSteps;
+                    actualmbsize[i] = min(m_mbNumTimeSteps, m_numFramesToProcess[i] - startFr);
                     const size_t endFr = startFr + actualmbsize[i]; // actual end frame index of this segment
                     for (auto iter3 = matrices.begin(); iter3 != matrices.end(); iter3++)
                     {
@@ -1270,7 +1276,11 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                             }
                         }
                     }
-                    m_processedFrame[i] += m_mbNumTimeSteps;
+                    // for latency control
+                    if (actualmbsize[i] != m_mbNumTimeSteps) { // end of one sentence
+                        m_pMBLayout->AddGap(i, endFr - startFr, m_mbNumTimeSteps);
+                    }
+                    m_processedFrame[i] += (m_mbNumTimeSteps - m_rightSplice);
                 }
                 else // if (startFr + m_mbNumTimeSteps < m_numFramesToProcess[i])   (in this else branch, utterance ends inside this minibatch)
                 {
@@ -1346,6 +1356,10 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                     m_processedFrame[i] += (endFr - startFr);               // advance the cursor
                     assert(m_processedFrame[i] == m_numFramesToProcess[i]); // we must be at the end
                     m_switchFrame[i] = actualmbsize[i];
+                    // for latency control blstm, just append gap frames
+                    if (m_rightSplice != 0) {
+                        m_pMBLayout->AddGap(i, endFr - startFr, m_mbNumTimeSteps);
+                    }
                     // if (actualmbsize[i] != 0)
                     //    m_pMBLayout->Set(i, actualmbsize[i] - 1, MinibatchPackingFlags::SequenceEnd); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
                     // at this point, we completed an utterance--fill the rest with the next utterance
@@ -1353,7 +1367,7 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                     // BUGBUG: We should fill in a loop until we fill the minibatch for the case where just one ReNew is not sufficient
                     // to fill up the remaining slots in the minibatch
                     bool reNewSucc = ReNewBufferForMultiIO(i);
-                    if (actualmbsize[i] < m_mbNumTimeSteps) // we actually have space
+                    if (actualmbsize[i] < m_mbNumTimeSteps && m_rightSplice == 0) // we actually have space
                     {
                         if (reNewSucc) // we actually have another utterance to start here
                         {

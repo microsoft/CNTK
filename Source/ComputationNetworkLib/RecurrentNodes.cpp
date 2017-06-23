@@ -332,6 +332,7 @@ template<class ElemType, int direction>
     size_t rank = DetermineElementwiseTensorRank();
     TensorView<ElemType> src;
     int t_delayed = (int)(fr.t() + direction * m_timeStep); // this might end up outside the current window
+    int latency = direction * m_pMBLayout->RightSplice();
     if (t_delayed < 0) // handle special case of truncated BPTT
     {
         if (!m_inputAnySeqValid[fr.t()])
@@ -341,7 +342,7 @@ template<class ElemType, int direction>
             // truncated BPTT carry-over
             size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : 0; // (note: should never happen in full-sequence mode)
             auto tensorShape = GetTensorShape(rank);
-            auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), FrameRange(m_delayedActivationMBLayout, t_delayed/*<0*/ + T_delayedActivation), m_delayedActivationMBLayout);
+            auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), FrameRange(m_delayedActivationMBLayout, t_delayed/*<0*/ + latency + T_delayedActivation), m_delayedActivationMBLayout);
             tensorShape.NarrowTo(slice);
             src = TensorView<ElemType>(m_delayedValue, tensorShape);
         }
@@ -350,10 +351,13 @@ template<class ElemType, int direction>
     }
     else if (t_delayed >= GetNumTimeSteps())
     {
+        //fprintf(stderr, "%d %zu\n", direction, fr.t());
         if (!m_inputAnySeqValid[fr.t()])
             ; // none valid: leave it uninitialized
         else  // truncated BPTT goes left-to-right only
-            LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
+            // LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
+            // init using inititalMatrix zero init for latency control blstm
+            src = TensorView<ElemType>(m_zeroMatrix, TensorShape(1));
     }
     else // regular case
         src = InputRef(0).ValueTensorFor(rank, frDelayed);
@@ -365,7 +369,6 @@ template<class ElemType, int direction>
     auto init = GetNumInputs() == 1 || InputRef(1).HasMBLayout()
         ? TensorView<ElemType>(m_initialStateValueMatrix, TensorShape(1)) // old form or per-sequence: initial state given as C++ constant
         : InputRef(1).ValueTensorFor(rank, FrameRange());                 // initial state given as a tensor
-
     // now perform the copy operation
     // In case of per-sequence state, we first pretend we have a constant init value of 0,
     // and then add over it the actual per-sequence state in a Gather operation with beta=1.

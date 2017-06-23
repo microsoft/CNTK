@@ -109,7 +109,8 @@ struct MBLayout
     // -------------------------------------------------------------------
 
     MBLayout(size_t numParallelSequences, size_t numTimeSteps, const std::wstring &name)
-        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE)
+        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE),
+        m_rightSplice(0)
     {
         Init(numParallelSequences, numTimeSteps);
         SetUniqueAxisName(name != L"" ? name : L"DynamicAxis");
@@ -141,6 +142,7 @@ struct MBLayout
 
         m_columnsValidityMask.SetValue(other->m_columnsValidityMask);
         m_writable = other->m_writable;
+        m_rightSplice = other->m_rightSplice;
 
         if (!keepName)
             m_axisName = other->m_axisName;
@@ -169,6 +171,7 @@ struct MBLayout
         m_writable = other->m_writable;
 
         m_axisName = std::move(other->m_axisName);
+        m_rightSplice = other->m_rightSplice;
     }
 
     MBLayout(const MBLayout&) = delete;
@@ -176,7 +179,7 @@ struct MBLayout
 
 public:
     // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
-    void Init(size_t numParallelSequences, size_t numTimeSteps)
+    void Init(size_t numParallelSequences, size_t numTimeSteps, size_t rightSplice = 0)
     {
         // remember the dimensions
         m_numParallelSequences = numParallelSequences;
@@ -192,6 +195,9 @@ public:
         m_numGapFrames = 0;
         m_sequences.clear();
         m_writable = true;
+        m_rightSplice = rightSplice;
+        if (numTimeSteps < rightSplice)
+            LogicError("MBLayout Init: rightSplice should less than numTimeSteps");
     }
 
     // packing algorithm
@@ -479,6 +485,10 @@ public:
     // -------------------------------------------------------------------
 
     bool HasGaps() const;
+    bool HasRightSplice() const {
+        return m_rightSplice > 0;
+    }
+    size_t RightSplice() const { return m_rightSplice; }
     bool HasGaps(const FrameRange &fr) const;
 
     // test boundary flags for a specific condition
@@ -569,6 +579,9 @@ private:
 
     // all sequences that live inside this minibatch
     vector<SequenceInfo> m_sequences;
+
+    // right splice for latency control blstm
+    size_t m_rightSplice;
 
 private:
     // -------------------------------------------------------------------
@@ -895,7 +908,7 @@ inline bool MBLayout::IsBeyondStartOrEnd(const FrameRange &fr) const
 }
 
 // TODO: Remove this version (with sanity checks) after this has been tested. Then the function can be inlined above.
-inline size_t MBLayout::GetActualNumSamples() const { return m_numFramesDeclared - m_numGapFrames; }
+inline size_t MBLayout::GetActualNumSamples() const { return m_numFramesDeclared - m_numGapFrames - m_numParallelSequences * m_rightSplice; }
 
 // return m_columnsValidityMask(,), which is lazily created here upon first call
 // only called from MaskMissingColumnsTo()
@@ -907,7 +920,7 @@ inline const Matrix<char>& MBLayout::GetColumnsValidityMask(DEVICEID_TYPE device
     // lazily compute the validity mask
     if (m_columnsValidityMask.IsEmpty())
     {
-        assert(HasGaps()); // must only be called if there are gaps
+        assert(HasGaps() || m_rightSplice != 0); // must only be called if there are gaps
         Lock();
 
         // Determine indices of all invalid columns in the minibatch
@@ -930,6 +943,11 @@ inline const Matrix<char>& MBLayout::GetColumnsValidityMask(DEVICEID_TYPE device
                         gapsFound++;
                     }
                 }
+            }
+            if (t >= nT - m_rightSplice) 
+            {
+                for (size_t s = 0; s < nS; s++)
+                    columnsValidityMask[(t * nS) + s] = 0;
             }
         }
         assert(gapsFound == m_numGapFrames); // sanity check
@@ -1190,7 +1208,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
 template <class ElemType>
 static inline void MaskMissingColumnsTo(Matrix<ElemType>& matrixToMask, const MBLayoutPtr& pMBLayout, const FrameRange& fr, ElemType val)
 {
-    if (pMBLayout && pMBLayout->HasGaps(fr))
+    if (pMBLayout && (pMBLayout->HasGaps(fr) || pMBLayout->HasRightSplice()))
     {
         const auto& maskMatrix = pMBLayout->GetColumnsValidityMask(matrixToMask.GetDeviceId());
 

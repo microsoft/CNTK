@@ -88,6 +88,9 @@ private:
     std::map<std::wstring, size_t> m_featureNameToDimMap;
     std::map<std::wstring, size_t> m_labelNameToDimMap;
 
+    // right splice for latency control blstm
+    size_t m_rightSplice;
+
     // for writing outputs to files (standard single input/output network) - deprecate eventually
     bool m_checkDictionaryKeys;
     bool m_convertLabelsToTargets;

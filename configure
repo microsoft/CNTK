@@ -46,6 +46,7 @@ protobuf_check=lib/libprotobuf.a
 # MPI library
 mpi_path=
 mpi_check=include/mpi.h
+#mpi_check=mpi.h
 
 # Cuda-aware MPI
 # OPENMPI can auto-detect but not MVAPICH2
@@ -336,13 +337,14 @@ function find_jdk ()
 
 function default_use_java ()
 {
-    jdk_path=$(find_jdk)
-    if test x$jdk_path = x
-    then
-        echo no
-    else
-        echo yes
-    fi
+    #jdk_path=$(find_jdk)
+    #if test x$jdk_path = x
+    #then
+    #    echo no
+    #else
+    #    echo yes
+    #fi
+    echo no
 }
 enable_java=$(default_use_java)
 
@@ -948,11 +950,11 @@ then
         mathlib=mkl
     fi
 fi
-
 # If no cuda library specified, search for one
 if test x$enable_cuda = xyes && test x$cuda_path = x
 then
     cuda_path=$(find_cuda)
+    echo $cuda_path 
     if test x$cuda_path = x ; then
         echo Cannot locate a cuda directory
         echo GPU will be disabled
