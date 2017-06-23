@@ -162,11 +162,13 @@ template <typename ElemType>
 void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)
 {
     size_t minibatchSize = this->m_config(L"minibatchSize", (size_t) 10240);
+    size_t rightSplice = this->m_config(L"rightSplice", (size_t)0);
     // get the evaluation names from the output string
     vector<wstring> outNodeNames;
 
     ConfigParameters config;
-    // config["deviceId"] = to_string(this->m_net->GetDeviceId());
+    //config["deviceId"] = to_string(this->m_net->GetDeviceId());
+    config["rightSplice"] = to_string(rightSplice);
 
     // create the reader if necessary
     if (m_reader == nullptr)
@@ -190,7 +192,10 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
 
     // call the evaluator
     SimpleOutputWriter<ElemType> eval(this->m_net);
-    eval.WriteOutput(*m_reader, minibatchSize, *m_writer, outNodeNames);
+    //eval.WriteOutput(*m_reader, minibatchSize, *m_writer, outNodeNames);
+    // Here requestDataSize = ((size_t) -1) >> 2
+    eval.WriteOutput(*m_reader, minibatchSize, *m_writer, outNodeNames, 
+                     requestDataSize, false, rightSplice);
 }
 
 // Evaluate - Evalute using the model with the given inputs and outputs

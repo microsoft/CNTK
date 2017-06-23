@@ -21,6 +21,7 @@ class EvalReader : public DataReaderBase
     size_t m_mbSize;
     vector<size_t> m_switchFrame;
     size_t m_oldSig;
+    size_t m_rightSplice; // for latency control blstm
 
 public:
     // Method to setup the data for the reader
@@ -72,8 +73,9 @@ public:
         }
     }
 
-    virtual void Init(const ConfigParameters& /*config*/) override
+    virtual void Init(const ConfigParameters& config) override
     {
+        m_rightSplice = config(L"rightSplice", (size_t)0);
     }
     virtual void Init(const ScriptableObjects::IConfigRecord& /*config*/) override
     {
@@ -118,6 +120,9 @@ public:
         // how many records are we reading this time
         size_t recordCount = min(m_mbSize, m_recordCount - m_currentRecord);
 
+        // for latency control, overlap read
+        size_t chunkSize = m_mbSize - m_rightSplice;
+
         // check to see if we are out of records in this current dataset
         if (m_currentRecord >= m_recordCount)
             return false;
@@ -142,7 +147,10 @@ public:
             ElemType* dataPtr = data->data() + (m_currentRecord * rows);
             matrix.SetValue(rows, recordCount, matrix.GetDeviceId(), dataPtr, matrixFlagNormal);
         }
-
+        
+        // for latency control, overlap read
+        if (recordCount > chunkSize) // still some data on the right of current minibatch 
+            recordCount = chunkSize;
         // increment our record pointer
         m_currentRecord += recordCount;
 

@@ -35,8 +35,15 @@ public:
     {
     }
 
-    void WriteOutput(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false)
+    void WriteOutput(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, 
+            const std::vector<std::wstring>& outputNodeNames, 
+            size_t numOutputSamples = requestDataSize, 
+            bool doWriterUnitTest = false,
+            int rightSplice = 0)
     {
+        // for latency control blstm
+        assert(rightSplice < mbSize);
+        size_t nc = mbSize - rightSplice;
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
         if (outputNodeNames.size() == 0 && m_verbosity > 0)
@@ -64,6 +71,7 @@ public:
         size_t actualMBSize;
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr))
         {
+            size_t chunkSize = min(actualMBSize, nc);
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
             m_net->ForwardProp(outputNodes);
 
@@ -75,12 +83,13 @@ public:
                 std::map<std::wstring, void*, nocase_compare> inputMatricesUnitTest;
                 for (auto& iter : inputMatrices)
                     inputMatricesUnitTest[iter.first] = (void*) iter.second.matrix.get();  // BUGBUG: void* are evil
-                dataWriter.SaveData(0, inputMatricesUnitTest, actualMBSize, actualMBSize, 0);
+                dataWriter.SaveData(0, inputMatricesUnitTest, chunkSize, actualMBSize, 0);
             }
             else
-                dataWriter.SaveData(0, outputMatrices, actualMBSize, actualMBSize, 0);
+                dataWriter.SaveData(0, outputMatrices, chunkSize, actualMBSize, 0);
 
-            totalEpochSamples += actualMBSize;
+            //totalEpochSamples += actualMBSize;
+            totalEpochSamples += chunkSize;
 
             numItersSinceLastPrintOfProgress = ProgressTracing::TraceFakeProgress(numIterationsBeforePrintingProgress, numItersSinceLastPrintOfProgress);
 
