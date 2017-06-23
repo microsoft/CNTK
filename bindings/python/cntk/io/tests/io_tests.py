@@ -1039,7 +1039,7 @@ def test_base64_is_equal_image(tmpdir):
         images2 = mb[images2_stream].asarray()
         assert(images1 == images2).all()
 
-def test_inmemory_deserializer_dense():
+def test_inmemory_deserializer_dense_sample():
     N = 5
     X = np.arange(3*N).reshape(N,3).astype(np.float32) # 5 rows of 3 values
     s = MinibatchSource([FromData(dict(x=X))], max_sweeps=1, randomize=False)
@@ -1060,36 +1060,45 @@ def test_inmemory_deserializer_dense():
     mb = s.next_minibatch(3) # no more data
     assert mb == {}
 
-def test_inmemory_deserializer_sparse():
-    import pdb; pdb.set_trace()
-
+def test_inmemory_deserializer_sparse_sample():
     import scipy.sparse
     N = 5
-    X = np.arange(3*N).reshape(N,3).astype(np.float32) # 5 rows of 3 values
-    Y = scipy.sparse.csr_matrix(np.array([[1, 0, 0], [0, 2, 0], [0, 0, 3], [4, 0, 0], [0, 5, 0]])).astype(np.float32)
+    X = np.arange(3*N).reshape(N,3).astype(np.float32)
+    Y = scipy.sparse.csr_matrix(np.array([[1, 0, 0], 
+                                          [0, 2, 0], 
+                                          [0, 0, 3], 
+                                          [4, 0, 0], 
+                                          [0, 5, 0]], dtype=np.float32))
 
-    s = MinibatchSource([FromData(dict(x=X, y=Y))], randomize=False) # also not setting max_samples -> will repeat
+    s = MinibatchSource([FromData(dict(x=X, y=Y))], randomize=False)
     mb = s.next_minibatch(3)
+    result = mb[s.streams['y']].data.asarray()
+    assert (result == np.array([[[ 1, 0, 0]],
+                                [[ 0, 2, 0]],
+                                [[ 0, 0, 3]]], dtype=np.float32)).all()
 
-    #d = mb[s.streams['y']].data.reshape(3*3, 1).asarray().todense()
-
-    label = C.input_variable(shape=(3,))
-    result = (label + 0).eval({ label : mb[s.streams['y']].data })
-    result = C.times(label, np.eye(3)).eval({ label : mb[s.streams['y']] })
-
-
-    assert (d == np.array([[ 0.,  1.],
-                           [ 1.,  0.],
-                           [ 1.,  0.]], dtype=float32)).all()
-
-    mb = s.next_minibatch(3) # at end only 2 sequences
-    d = mb[s.streams['y']].data.asarray().todense()
-    assert(d == np.array([[ 0.,  1.],
-                          [ 1.,  0.]], dtype=float32)).all()
-
-    # if we do not set max_samples, then it will start over once the end is hit
     mb = s.next_minibatch(3)
-    d = mb[s.streams['y']].data.asarray().todense()
-    assert(d == np.array([[ 0.,  1.],
-                          [ 1.,  0.],
-                          [ 1.,  0.]], dtype=float32)).all()
+    result = mb[s.streams['y']].data.asarray()
+    assert (result == np.array([[[ 4, 0, 0]],
+                                [[ 0, 5, 0]],
+                                [[ 1, 0, 0]]], dtype=np.float32)).all()
+
+    mb = s.next_minibatch(2)
+    result = mb[s.streams['y']].data.asarray()
+    assert (result == np.array([[[ 0, 2, 0]],
+                                [[ 0, 0, 3]]], dtype=np.float32)).all()
+
+def test_inmemory_deserializer_sequences():
+    import cntk.layers.typing as Ct
+    import scipy.sparse as sp
+
+    XX = [np.array([1,3,2], np.float32), np.array([4,1], np.float32)]  # 2 sequences
+    YY = [sp.csr_matrix(np.array([[0,1],[1,0],[1,0]], np.float32)), sp.csr_matrix(np.array([[1,0],[1,0]], np.float32))]
+
+    s = MinibatchSource([FromData(dict(xx=(XX, Ct.Sequence[Ct.tensor]), yy=(YY, Ct.Sequence[Ct.tensor])))], randomize=False)
+    mb = s.next_minibatch(3)
+    result = mb[s.streams['xx']].data.asarray()
+    assert (result == np.array([[ 1, 3, 2 ]], dtype=np.float32)).all()
+
+    result = mb[s.streams['yy']].data.asarray()
+    assert (result == np.array([[[ 0, 1 ], [ 1, 0], [1, 0]]], dtype=np.float32)).all()

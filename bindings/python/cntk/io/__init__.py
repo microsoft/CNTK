@@ -1327,6 +1327,8 @@ class FromData(UserDeserializer):
                 is_sequence = dynamic_axes and len(dynamic_axes) > 1
                 if not isinstance(type, Variable._Type):
                     raise ValueError('type must be a CNTK variable type, e.g. Tensor[13]')
+                if isinstance(value[0], sparse.csr_matrix):
+                    type['is_sparse'] = True
             else:
                 value = arg
                 is_sequence = False  # data without type cannot have a dynamic axis
@@ -1346,7 +1348,7 @@ class FromData(UserDeserializer):
                 type.dtype
             except:
                 type = type.updated_with(dtype=dtype) # implant the dtype
-            num_samples = FromData._get_len(value)
+            num_samples = FromData._len(value)
             if self._num_samples == -1:
                 if num_samples == 0:
                     raise(ValueError('data is empty'))
@@ -1358,7 +1360,7 @@ class FromData(UserDeserializer):
             self._is_sequence[name] = is_sequence
 
     @staticmethod
-    def _get_len(value): # helper to determine the length of the corpus
+    def _len(value): # helper to determine the length of the corpus
         return len(value) if isinstance(value, list) else value.shape[0]
 
     def stream_infos(self):
@@ -1369,17 +1371,16 @@ class FromData(UserDeserializer):
     def chunk_infos(self):
         return [ChunkInformation(id=0, number_of_samples=self._num_samples, number_of_sequences=self._num_samples)]
 
-    def sequence_infos_for_chunk(self, chunkId):        
-        # return the sequence information for the chunk based on the first stream only 
-        stream_name = self.stream_infos()[0].name
-        result = []
-        if self._is_sequence[stream_name]:
-            for i, s in enumerate(self._data[stream_name]):
-                result.append(SequenceInformation(i, len(s), 0, i))
-        else:
-            for i in range(0, self._data[stream_name].shape[0]):
-                result.append(SequenceInformation(i, 1, 0, i))
-        return result
+    def sequence_infos_for_chunk(self, chunkId):
+        # prefill result with sequence information from the first stream.
+        s = self.stream_infos()[0]
+        r = [SequenceInformation(i, 1, 0, i) for i in range(FromData._len(self._data[s.name]))]
+
+        # update number of samples
+        for s in self.stream_infos()[1:]:
+            for i in range(FromData._len(self._data[s.name])):
+                r[i].m_number_of_samples = max(r[i].m_number_of_samples, self._data[s.name][i].shape[0])
+        return r
 
     def get_chunk(self, chunk_id):
         return InMemoryChunk(self._data, self.stream_infos())
