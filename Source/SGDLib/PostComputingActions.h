@@ -38,7 +38,7 @@ public:
 
     // This function is used for evaluating the mean and variance of all batch normalization nodes after training. 
     // Details will link to the wiki https://docs.microsoft.com/en-us/cognitive-toolkit/Post-Batch-Normalization-Statistics
-    // The reason why put it into evalute is the action take place after trainning and non-backprop processing, which makes me believe 
+    // The reason why put it into evalute is the action take place after training and non-backprop processing, which makes me believe 
     // this function is like a kind of evaluate function.
     // In this function,  
     // 1. since all other weights are fix except the un-pbn nodes, I set the networkoperationMode into inferring.
