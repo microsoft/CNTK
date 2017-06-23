@@ -320,8 +320,15 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding,
                                  output_shape, max_temp_mem_size_in_samples, name)
 
+from cntk.cntk_py import PoolingType_Max, PoolingType_Average
+MAX_POOLING = PoolingType_Max
+'''int: constant used to specify maximum pooling'''
+
+AVG_POOLING = PoolingType_Average
+'''int: constant used to specify average pooling'''
+
 @typemap
-def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
+def roipooling(operand, rois, pooling_type, roi_output_shape, spatial_scale, name=''):
     '''
     The ROI (Region of Interest) pooling operation pools over sub-regions of an input volume and produces
     a fixed sized output volume regardless of the ROI size. It is used for example for object detection.
@@ -331,26 +338,23 @@ def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
     pooling layer of an image classification network (as presented in Fast R-CNN and others).
 
     Args:
-        conv_feature_map: a convolutional feature map as the input volume ([W x H x C x N]).
-        rois: the coordinates of the ROIs per image ([4 x roisPerImage x N]), each ROI is (x, y, w, h) relative to original image size.
+        operand: a convolutional feature map as the input volume ([W x H x C x N]).
+        pooling_type: only :const:`~cntk.ops.MAX_POOLING`
+        rois: the coordinates of the ROIs per image ([4 x roisPerImage x N]), each ROI is (x1, y1, x2, y2) absolute to original image size.
         roi_output_shape: dimensions (width x height) of the ROI pooling output shape
+        spatial_scale: the scale of operand from the original image size.
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import roipooling
-    conv_feature_map = sanitize_input(conv_feature_map)
+    if pooling_type != MAX_POOLING:
+        raise ValueError('Unsupported pooling type, ROIPooling support only MAX pooling.')
+
+    operand = sanitize_input(operand)
     rois = sanitize_input(rois)
     roi_output_shape = sanitize_shape(roi_output_shape)
-    return roipooling(conv_feature_map, rois, roi_output_shape, name)
-
-
-from cntk.cntk_py import PoolingType_Max, PoolingType_Average
-MAX_POOLING = PoolingType_Max
-'''int: constant used to specify maximum pooling'''
-
-AVG_POOLING = PoolingType_Average
-'''int: constant used to specify average pooling'''
+    return roipooling(operand, rois, pooling_type, roi_output_shape, spatial_scale, name)
 
 @typemap
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],

@@ -4596,31 +4596,31 @@ void Matrix<ElemType>::MaxPoolingBackward(const Matrix<ElemType>& out, const Mat
 }
 
 template <class ElemType>
-void Matrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                         const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& output, 
-                                         Matrix<ElemType>& argmax) const
+void Matrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                           const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& output, 
+                                           Matrix<ElemType>& argmax, double spatialScale) const
 {
     DecideAndMoveToRightDevice(*this, output);
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->ROIPoolingForward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_CPUMatrix), *(output.m_CPUMatrix), *(argmax.m_CPUMatrix)),
-                            m_GPUMatrix->ROIPoolingForward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_GPUMatrix), *(output.m_GPUMatrix), *(argmax.m_GPUMatrix)),
+                            m_CPUMatrix->MaxROIPoolingForward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_CPUMatrix), *(output.m_CPUMatrix), *(argmax.m_CPUMatrix), spatialScale),
+                            m_GPUMatrix->MaxROIPoolingForward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_GPUMatrix), *(output.m_GPUMatrix), *(argmax.m_GPUMatrix), spatialScale),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
 
 template <class ElemType>
-void Matrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                          const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& grad, 
-                                          Matrix<ElemType>& argmax) const
+void Matrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                             const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& grad, 
+                                             Matrix<ElemType>& argmax, double spatialScale) const
 {
     DecideAndMoveToRightDevice(*this, grad);
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->ROIPoolingBackward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_CPUMatrix), *(grad.m_CPUMatrix), *(argmax.m_CPUMatrix)),
-                            m_GPUMatrix->ROIPoolingBackward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_GPUMatrix), *(grad.m_GPUMatrix), *(argmax.m_GPUMatrix)),
+                            m_CPUMatrix->MaxROIPoolingBackward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_CPUMatrix), *(grad.m_CPUMatrix), *(argmax.m_CPUMatrix), spatialScale),
+                            m_GPUMatrix->MaxROIPoolingBackward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_GPUMatrix), *(grad.m_GPUMatrix), *(argmax.m_GPUMatrix), spatialScale),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
