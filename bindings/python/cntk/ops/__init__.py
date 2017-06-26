@@ -1858,7 +1858,7 @@ def swapaxes(x, axis1=0, axis2=1, name=''):
     return transpose_axes(x, axis1, axis2, name)
 
 @typemap
-def slice(x, axis, begin_index, end_index, name=''):
+def slice(x, axis, begin_index, end_index, stride=1, name=''):
     '''
     Slice the input along one or multiple axes.
 
@@ -1927,7 +1927,7 @@ def slice(x, axis, begin_index, end_index, name=''):
     axis = sanitize_axis_list(axis)
     begin_index = sanitize_shape(begin_index)
     end_index = sanitize_shape(end_index)
-    return slice(x, axis, begin_index, end_index, name)
+    return slice(x, axis, begin_index, end_index, (stride,), name)
 
 # TODO: enable when it is exposed in c++
 

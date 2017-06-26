@@ -103,6 +103,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput = L"sequenceUnpackSuppressMaskOutput";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionType = L"randomDistributionType";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRandomDistributionArgs = L"randomDistributionArgs";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSliceStrides = L"sliceStrides";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSliceStridesVec = L"sliceStridesVec";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -475,10 +477,11 @@ namespace CNTK
                             assert(m_inputs.size() == 1);
 
                             std::vector<Axis> axis;
-                            std::vector<int> beginIndex, endIndex; 
+                            std::vector<int> beginIndex, endIndex, strides; 
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) &&
-                                m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndexVec))
+                                m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndexVec) && 
+                                m_attributes.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
                             {
                                 auto &axisDictionary = m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
                                 for (auto& value : axisDictionary)
@@ -486,14 +489,17 @@ namespace CNTK
 
                                 beginIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameBeginIndexVec].Value<std::vector<DictionaryValue>>());
                                 endIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameEndIndexVec].Value<std::vector<DictionaryValue>>());
+                                strides = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameSliceStridesVec].Value<std::vector<DictionaryValue>>());
                             }
                             else if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxis) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndex) &&
-                                m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndex))
+                                m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndex) &&
+                                m_attributes.Contains(PrimitiveFunction::AttributeNameSliceStrides))
                             {
                                 axis.push_back(NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape()));
                                 beginIndex.push_back(m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
                                 endIndex.push_back(m_attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>());
+                                strides.push_back(m_attributes[PrimitiveFunction::AttributeNameSliceStrides].Value<int>());
                             }
                             else
                             {
@@ -511,6 +517,8 @@ namespace CNTK
                                 size_t sliceAxisDim = m_inputs[0].Shape()[ax.StaticAxisIndex()];
                                 int realBeginIndex = (beginIndex[i] >= 0) ? beginIndex[i] : beginIndex[i] + sliceAxisDim;
                                 int realEndIndex = (endIndex[i] > 0) ? endIndex[i] : endIndex[i] + sliceAxisDim;
+                                bool reverse = strides[i] < 0;
+                                size_t realStride = std::abs(strides[i]);
                                 if ((sliceAxisDim < realEndIndex) || (realEndIndex < realBeginIndex) || (realBeginIndex < 0))
                                     RuntimeError("Function '%S': Slice operation index range [%d,%d), interpreted as [%d,%d), is invalid for input '%S' shape '%S'.",
                                         AsString().c_str(),
@@ -526,7 +534,7 @@ namespace CNTK
                                 if ((((sliceAxisDim != NDShape::FreeDimension) && (sliceAxisDim != NDShape::InferredDimension)) || (((beginIndex[i] >= 0) && (endIndex[i] > 0)) || ((beginIndex[i] < 0) && (endIndex[i] <= 0)))) &&
                                     ((ax.StaticAxisIndex() < (int)outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim)))
                                 {
-                                    outputTensorShape.NarrowTo(ax.StaticAxisIndex(), realBeginIndex, realEndIndex);
+                                    outputTensorShape.NarrowTo(ax.StaticAxisIndex(), realBeginIndex, realEndIndex, realStride, reverse);
                                 }
                             }
                             outputShape = AsNDShape(outputTensorShape, /*allowNonFlattenableTensorShapes = */ true);

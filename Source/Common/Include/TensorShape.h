@@ -641,14 +641,18 @@ public:
         return TensorShape(*this).AppendInPlace(rank, newDim);
     }
     // narrow a dimension k to given bounds [begin, end), done in-place
-    TensorShape& NarrowTo(size_t k, size_t begin, size_t end)
+    TensorShape& NarrowTo(size_t k, size_t begin, size_t end, size_t strides = 1, bool reverse=false)
     {
         if (k >= size())
             LogicError("NarrowTo: Index out of bounds.");
         if (end <= begin || end > m_dims[k])
             LogicError("NarrowTo: Invalid bounds parameter, dimensions must be at least one.");
-        m_offset += m_strides[k] * begin;
-        m_dims[k] = end - begin;
+        size_t start = reverse ? (end - 1) : begin;
+        m_offset += m_strides[k] * start;
+        m_dims[k] = (end - begin) / strides;
+        m_strides[k] *= strides;
+        if (reverse)
+            m_strides[k] *= -1;
         return *this;
     }
     // narrow all dimensions to two given bounds vectors, done in-place
