@@ -17,9 +17,6 @@ Highlights:
 See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_0_Release_Notes).
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
 
-***2017-05-24.* CNTK 2.0 Release Candidate 3**
-Release Candidate 3 is the final preview of Cognitive Toolkit v.2.0.
-
 See [all news](https://docs.microsoft.com/en-us/cognitive-toolkit/news).
 
 # What is The Microsoft Cognitive Toolkit
