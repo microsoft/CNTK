@@ -643,7 +643,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			int count = m_smbCachedGradient.size();
 			while (count > 1)
 			{
-				for (int i = 0, j = 0; i < count; i += 2, ++j)
+				int j = 0;
+				for (int i = 0; i < count; i += 2)
 				{
 					if (i + 1 >= m_smbCachedGradient.size())
 						continue;
@@ -665,6 +666,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 							lSMB[iter->first]->SetValue(0);
 						}
 					}
+					j++;
 				}
 				count = j;
 			}

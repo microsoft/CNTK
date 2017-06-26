@@ -1185,8 +1185,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 if (actualNumSubminibatches > 1)
                     smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
             }                                                        // end sub-minibatch loop
-            if (actualNumSubminibatches > 1)
-                smbDispatcher.DoneWithCurrentMinibatch();
+			if (actualNumSubminibatches > 1)
+			{
+				smbDispatcher.SumSubMB();
+				smbDispatcher.DoneWithCurrentMinibatch();
+			}
         } // if (actualMBSize > 0)
         // WARNING: If actualMBSize == 0, then criterion nodes have NOT been updated, and contain garbage (last MB's) values.
 
