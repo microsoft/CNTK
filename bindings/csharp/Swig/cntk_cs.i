@@ -16,7 +16,7 @@
 
     public DeviceKind Type
     {
-        get { return GetDeviceType(); }
+        get { return _Type(); }
     }
 
     public static DeviceDescriptor CPUDevice
@@ -35,7 +35,7 @@
 
     public static System.Collections.Generic.IList<DeviceDescriptor> AllDevices()
     {
-        var deviceVector = GetAllDevices();
+        var deviceVector = _AllDevices();
         // The CopyTo is to ensure the elements in the deviceVector can live beyond deviceVector itself.
         var deviceArray = new DeviceDescriptor[deviceVector.Count];
         deviceVector.CopyTo(deviceArray);
@@ -76,7 +76,7 @@
 
     public override int GetHashCode()
     {
-        return this.GetDeviceType().GetHashCode();
+        return this._Type().GetHashCode();
     }
 
     public static void SetExcludedDevices(System.Collections.Generic.IEnumerable<DeviceDescriptor> excluded)
@@ -120,7 +120,7 @@
     {
         get 
         {
-            return IsOrderedAxis();
+            return _IsOrdered();
         }
     }
 
@@ -163,7 +163,7 @@
         }
         else
         {
-            return this.StaticAxisIndex().GetHashCode();
+            return this.GetStaticAxisIndex().GetHashCode();
         }
     }
 %}
@@ -198,7 +198,7 @@
     public System.Collections.Generic.IList<Variable> Outputs
     {
         get {
-            var varVector = GetOutputs();
+            var varVector = _Outputs();
             var varArray = new Variable[varVector.Count];
             // The CopyTo is to ensure that elements in varVector live beyond the lifecycle of varVector.
             varVector.CopyTo(varArray);
@@ -235,7 +235,7 @@
     public System.Collections.Generic.IList<Variable> Arguments
     {
         get {
-            var varVector = GetArguments();
+            var varVector = _Arguments();
             var varArray = new Variable[varVector.Count];
             // The CopyTo is to ensure that elements in varVector live beyond the lifecycle of varVector.
             varVector.CopyTo(varArray);
@@ -247,7 +247,7 @@
     public System.Collections.Generic.IList<Variable> Inputs
     {
         get {
-            var varVector = GetInputs();
+            var varVector = _Inputs();
             var varArray = new Variable[varVector.Count];
             // The CopyTo is to ensure that elements in varVector live beyond the lifecycle of varVector.
             varVector.CopyTo(varArray);
@@ -344,7 +344,7 @@
 
     public VariableKind Kind
     {
-        get { return GetVariableKind(); }
+        get { return GetKind(); }
     }
 
     public DataType DataType
@@ -355,7 +355,7 @@
     public System.Collections.Generic.IList<Axis> DynamicAxes
     {
         get {
-            var axisVector = GetDynamicAxes();
+            var axisVector = _DynamicAxes();
             // The CopyTo is to ensure that elements in axisVector live beyond the lifecycle of axisVector.
             var axisArray = new Axis[axisVector.Count];
             axisVector.CopyTo(axisArray);
@@ -463,7 +463,7 @@
     {
         get
         {
-            var dimList = GetDimensions();
+            var dimList = _Dimensions();
             var retList = new System.Collections.Generic.List<int>(dimList.Count);
             foreach (var element in dimList)
             {
@@ -495,7 +495,7 @@
 
     public int this[int key]
     {
-        get { return (int)GetDimensionSize((uint)key); }
+        get { return (int)_DimensionSize((uint)key); }
     }
 
     public NDShape SubShape(int beginAxisId, int endAxisId)
@@ -564,7 +564,7 @@
     public override int GetHashCode()
     {
         //Todo: another hash function??
-        return this.GetDimensions().GetHashCode();
+        return this._Dimensions().GetHashCode();
     }
 
     public static readonly int InferredDimension = -1;

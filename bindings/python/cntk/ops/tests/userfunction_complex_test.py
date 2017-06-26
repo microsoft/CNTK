@@ -160,7 +160,7 @@ def mem_leak_check(nonlinearity, num_hidden_layers, device_id,
     MEM_INCREASE_FRACTION_TOLERANCE = 0.01
     # Set a maximum allowed memory increase. This is required because the
     # pytest process involves some memory fluctuations.
-    MEM_INCREASE_TOLERANCE = 100*1024
+    MEM_INCREASE_TOLERANCE = 1024*1024
 
     dev = cntk_device(device_id)
     i = 0

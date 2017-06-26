@@ -216,33 +216,9 @@ public:
                 }
                 else
                 {
-                    auto argumentVariables = m_externalFunction->Arguments();
-                    size_t j = 0;
-                    auto numInputs = GetNumInputs();
-                    for (size_t k = 0; k < numInputs; ++k)
-                    {
-                        auto& input = InputRef(k);
-                        if (input.template Is<LearnableParameter<ElemType>>())
-                            continue;
-
-                        auto argumentVar = argumentVariables[j];
-                        if (argumentVar.DynamicAxes() == outputDynamicAxes)
-                        {
-                            this->m_outputsMBLayout[i] = input.GetMBLayout();
-                            break;
-                        }
-
-                        j++;
-                    }
-
-                    if (!this->m_outputsMBLayout[i])
-                    {
-                        this->m_outputsMBLayout[i] = make_shared<MBLayout>(); // this generates a new layout
-                        this->m_outputsMBLayout[i]->SetUniqueAxisName(InternalDynamicAxisNameFromDynamicAxes(output.DynamicAxes()));
-                        this->m_outputsHasNewMBLayout[i] = true;
-                    }
-                    else
-                        this->m_outputsHasNewMBLayout[i] = false;
+                    this->m_outputsMBLayout[i] = make_shared<MBLayout>(); // this generates a new layout
+                    this->m_outputsMBLayout[i]->SetUniqueAxisName(InternalDynamicAxisNameFromDynamicAxes(output.DynamicAxes()));
+                    this->m_outputsHasNewMBLayout[i] = true;
                 }
             }
 

@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+﻿# Copyright (c) Microsoft. All rights reserved.
 
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
@@ -10,11 +10,11 @@ from cntk import *
 from cntk.initializer import glorot_uniform
 from cntk.io import MinibatchSource, ImageDeserializer, CTFDeserializer, StreamDefs, StreamDef
 from cntk.io.transforms import scale
-from cntk.layers import placeholder, constant
+from cntk.layers import placeholder, Constant
 from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule
 from cntk.logging import log_number_of_parameters, ProgressPrinter
 from cntk.logging.graph import find_by_name, plot
-from PARAMETERS import *
+import PARAMETERS
 import numpy as np
 import os, sys
 
@@ -33,18 +33,18 @@ features_stream_name = 'features'
 roi_stream_name = 'rois'
 label_stream_name = 'roiLabels'
 
-# from PARAMETERS.py
-base_path = cntkFilesDir
+p = PARAMETERS.get_parameters_for_dataset()
+base_path = p.cntkFilesDir
 num_channels = 3
-image_height = cntk_padHeight
-image_width = cntk_padWidth
-num_classes = nrClasses
-num_rois = cntk_nrRois
-epoch_size = cntk_num_train_images
-num_test_images = cntk_num_test_images
-mb_size = cntk_mb_size
-max_epochs = cntk_max_epochs
-momentum_time_constant = cntk_momentum_time_constant
+image_height = p.cntk_padHeight
+image_width = p.cntk_padWidth
+num_classes = p.nrClasses
+num_rois = p.cntk_nrRois
+epoch_size = p.cntk_num_train_images
+num_test_images = p.cntk_num_test_images
+mb_size = p.cntk_mb_size
+max_epochs = p.cntk_max_epochs
+momentum_time_constant = p.cntk_momentum_time_constant
 
 # model specific variables (only AlexNet for now)
 base_model = "AlexNet"
@@ -97,9 +97,10 @@ def create_mb_source(img_height, img_width, img_channels, n_classes, n_rois, dat
 
 
 # Defines the Fast R-CNN network model for detecting objects in images
-def frcn_predictor(features, rois, n_classes):
+def frcn_predictor(features, rois, n_classes, model_path):
     # Load the pretrained classification net and find nodes
-    loaded_model = load_model(model_file)
+
+    loaded_model = load_model(model_path)
     feature_node = find_by_name(loaded_model, feature_node_name)
     conv_node    = find_by_name(loaded_model, last_conv_node_name)
     pool_node    = find_by_name(loaded_model, pool_node_name)
@@ -124,7 +125,7 @@ def frcn_predictor(features, rois, n_classes):
 
 
 # Trains a Fast R-CNN model
-def train_fast_rcnn(debug_output=False):
+def train_fast_rcnn(debug_output=False, model_path=model_file):
     if debug_output:
         print("Storing graphs and intermediate models to %s." % os.path.join(abs_path, "Output"))
 
@@ -145,7 +146,7 @@ def train_fast_rcnn(debug_output=False):
     }
 
     # Instantiate the Fast R-CNN prediction model and loss function
-    frcn_output = frcn_predictor(image_input, roi_input, num_classes)
+    frcn_output = frcn_predictor(image_input, roi_input, num_classes, model_path)
     ce = cross_entropy_with_softmax(frcn_output, label_input, axis=1)
     pe = classification_error(frcn_output, label_input, axis=1)
     if debug_output:
@@ -179,8 +180,8 @@ def train_fast_rcnn(debug_output=False):
     return frcn_output
 
 
-# Tests a Fast R-CNN model
-def test_fast_rcnn(model):
+# Evaluate a Fast R-CNN model
+def evaluate_fast_rcnn(model):
     test_minibatch_source = create_mb_source(image_height, image_width, num_channels,
                                              num_classes, num_rois, base_path, "test")
     input_map = {
@@ -190,7 +191,7 @@ def test_fast_rcnn(model):
 
     # evaluate test images and write netwrok output to file
     print("Evaluating Fast R-CNN model for %s images." % num_test_images)
-    results_file_path = base_path + "test.z"
+    results_file_path = os.path.join(base_path, "test.z")
     with open(results_file_path, 'wb') as results_file:
         for i in range(0, num_test_images):
             data = test_minibatch_source.next_minibatch(1, input_map=input_map)
@@ -200,7 +201,7 @@ def test_fast_rcnn(model):
             if (i+1) % 100 == 0:
                 print("Evaluated %s images.." % (i+1))
 
-    return
+    return True
 
 
 # The main method trains and evaluates a Fast R-CNN model.
@@ -219,5 +220,4 @@ if __name__ == '__main__':
         print("Stored trained model at %s" % model_path)
 
     # Evaluate the test set
-    test_fast_rcnn(trained_model)
-    
+    evaluate_fast_rcnn(trained_model)
