@@ -2,9 +2,9 @@
 Give us feedback through these [channels](https://docs.microsoft.com/en-us/cognitive-toolkit/Feedback-Channels).
 
 # Latest news 
-***2017-06-26.* A great class for getting started with both Deep Learning and CNTK, [Deep Learning Explained](https://www.edx.org/course/deep-learning-explained-microsoft-dat236x) is now available on edX.**
+***2017-06-26.*** A great class for getting started with both Deep Learning and CNTK, [Deep Learning Explained](https://www.edx.org/course/deep-learning-explained-microsoft-dat236x) is now available on edX.
 
-***2017-06-01.* CNTK 2.0 is released**
+***2017-06-01.* CNTK 2.0 is released.**
 The first production release of Cognitive Toolkit v.2. See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_0_Release_Notes), and get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
 
 See [all news](https://docs.microsoft.com/en-us/cognitive-toolkit/news)
