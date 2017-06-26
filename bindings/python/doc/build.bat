@@ -26,7 +26,10 @@ sphinx-apidoc.exe ..\cntk --module-first --separate --no-toc --output-dir=. --fo
 
 if errorlevel 1 exit /b 1
 
-.\make.bat html
+call .\make.bat html
+if errorlevel 1 exit /b 1
+
+if defined SPHINX_DOCFX_BUILD python postprocess_toc_yml.py
 if errorlevel 1 exit /b 1
 
 echo start _build\html\index.html
