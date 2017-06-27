@@ -40,6 +40,10 @@
 #include <set>
 #include <boost/crc.hpp>
 
+
+int k_TestRunMBNum = 2;
+bool k_KeepCheckPoint = true;
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
@@ -102,7 +106,12 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
     bool networkLoadedFromCheckpoint = false;
     if (startEpoch >= 0)
     {
+#ifdef TEST_RUN_MB
+        fprintf(stderr, "epoch: %d, mb: %d\n", (int)startEpoch, k_TestRunMBNum);
+        wstring modelFileName = GetModelNameForEpoch(int(startEpoch), k_TestRunMBNum);
+#else
         wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
+#endif
         LOGPRINTF(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
         net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
         networkLoadedFromCheckpoint = true;
@@ -385,7 +394,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                      smoothedGradients,
                                                      smoothedCounts,
                                                      /*out*/ prevCriterion,
-                                                     /*out*/ m_prevChosenMinibatchSize);
+                                                     /*out*/ m_prevChosenMinibatchSize,
+                                                     k_TestRunMBNum);
         if (learnRateInitialized)
             prevLearnRates[startEpoch % m_numPrevLearnRates] = learnRatePerSample;
     }
@@ -592,7 +602,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                       inputMatrices,
                                       learnableNodes, smoothedGradients, smoothedCounts,
                                       epochCriterion, epochEvalErrors,
-                                      "", SIZE_MAX, totalMBsSeen, tensorBoardWriter);
+                                      "", SIZE_MAX, totalMBsSeen, tensorBoardWriter, 
+                                      totalTrainingSamplesSeen, prevCriterion);
         totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
 
         timer.Stop();
@@ -812,7 +823,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 if (m_traceLevel > 0)
                     LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
                 net->Save(modelName);
-                if (!m_keepCheckPointFiles)
+
+#ifdef SaveCheckPoint
+				m_keepCheckPointFiles = k_KeepCheckPoint;		// for test
+#endif
+				if (!m_keepCheckPointFiles)
                 {
                     // delete previous checkpoint file to save space
                     if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_loadBestModel)
@@ -899,10 +914,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const std::string& prefixMsg,
                                     const size_t maxNumberOfSamples,
                                     const size_t totalMBsSeenBefore,
-                                    ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter)
+                                    ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter,
+                                    const size_t totalTrainingSamplesSeen,
+                                    const double prevCriterion)
 {
     PROFILE_SCOPE(profilerEvtMainEpoch);
-
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
 
     // bring our 'out' values into consistent state
@@ -1158,7 +1174,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // This, when enabled, is used when a full minibatch does not fit into GPU RAM.
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
 
-#define INPUT_CRC
 #ifdef INPUT_CRC
 			if (numMBsRun % 1 == 0)
 			{
@@ -1191,6 +1206,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 					outFile << epochNumber << ":" << numMBsRun << ":" << checkSum << "\n";
 					outFile.close();
 				}
+
+				delete[] mbData;
+
+				for (vector<Matrix<ElemType>*>::iterator iter = iMats.begin(); iter != iMats.end(); iter++)
+					delete (*iter);
+				iMats.clear();
 			}
 #endif
 
@@ -1332,7 +1353,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         ProfilerTimeEnd(profGradientAgg, profilerEvtMainGradient);
         auto profWeights = ProfilerTimeBegin();
 
-#define GRADIENT_CRC
 #ifdef GRADIENT_CRC
 
 		if (m_mpi->IsMainNode() && numMBsRun % 1 == 0)
@@ -1610,6 +1630,18 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         ProfilerTimeEnd(profPost, profilerEvtMainPost);
         ProfilerTimeEnd(profMinibatch, profilerEvtMainMinibatch);
+
+#ifdef MBMODEL_SAVE
+        if (numMBsRun % 1 == 0)
+        {
+            if ((m_mpi == nullptr) || m_mpi->IsMainNode())
+            {
+                SaveCheckPointInfo(epochNumber, totalTrainingSamplesSeen + tunedMBSize * numMBsRun, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, tunedMBSize, numMBsRun);
+                net->Save(GetModelNameForEpoch(epochNumber, numMBsRun));
+            }
+        }
+#endif
+
     }
 
     // --- END MAIN MINIBATCH LOOP
@@ -2452,13 +2484,14 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
                                        const std::list<Matrix<ElemType>>& smoothedGradients,
                                        const std::vector<double>& smoothedCounts,
                                        const double prevCriterion,
-                                       const size_t minibatchSize)
+                                       const size_t minibatchSize,
+                                       const int curMB)
 {
     // In case of parallel training only the main node should we saving the checkpoint to prevent
     // the parallel training nodes from colliding to write the same file
     if ((m_mpi == nullptr) || m_mpi->IsMainNode())
     {
-        wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epoch));
+        wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epoch), curMB);
         // Saving into temporary file and then renaming it to the checkPointFileName
         // This is a standard trick to avoid havign corrupted checkpoints files if process dies during writing
         wstring tempFileName = checkPointFileName + L".tmp";
@@ -2516,12 +2549,13 @@ bool SGD<ElemType>::TryLoadCheckPointInfo(const size_t epochNumber,
                                           std::list<Matrix<ElemType>>& smoothedGradients,
                                           std::vector<double>& smoothedCounts,
                                           /*out*/ double& prevCriterion,
-                                          /*out*/ size_t& minibatchSize)
+                                          /*out*/ size_t& minibatchSize,
+                                          const int curMB)
 {
     // gracefully handle if a checkpoint file is missing
     // This means a user wanted to continue training from an older model, but that model had no checkpoint info anymore.
     // This is valid, we just don't get the features that require previous models, such as LR or MBSize control.
-    let checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    let checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber), curMB);
     if (!fexists(checkPointFileName.c_str()))
     {
         // initialize as if nothing
@@ -2534,7 +2568,7 @@ bool SGD<ElemType>::TryLoadCheckPointInfo(const size_t epochNumber,
         return false;
     }
 
-    LoadCheckPointInfo(epochNumber, totalSamplesSeen, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, minibatchSize);
+    LoadCheckPointInfo(epochNumber, totalSamplesSeen, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, minibatchSize, curMB);
     return true;
 }
 
@@ -2545,9 +2579,10 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
                                        std::list<Matrix<ElemType>>& smoothedGradients,
                                        std::vector<double>& smoothedCounts,
                                        /*out*/ double& prevCriterion,
-                                       /*out*/ size_t& minibatchSize)
+                                       /*out*/ size_t& minibatchSize,
+                                       const int curMB)
 {
-    let checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    let checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber), curMB);
     //fprintf(stderr, "Loading checkpoint info from %ls\n", checkPointFileName.c_str());
     File fstream(checkPointFileName,
                  FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
@@ -2605,38 +2640,32 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
 }
 
 template <class ElemType>
-wstring SGD<ElemType>::GetCheckPointFileNameForEpoch(const int epoch)
+wstring SGD<ElemType>::GetCheckPointFileNameForEpoch(const int epoch, const int mb)
 {
-    return GetModelNameForEpoch(epoch) + L".ckp";
+    return GetModelNameForEpoch(epoch, mb) + L".ckp";
 }
 
 template <class ElemType>
-wstring SGD <ElemType>::GetCheckPointFileNameForEpochAndMB(const int epoch, const int mb)
-{
-	return GetModelNameForEpochAndMB(epoch, mb) + L".ckp";
-}
-
-template <class ElemType>
-wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel)
+wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, const int mb, bool bLastModel)
 {
     int epoch1Base = epoch + 1;
-    if (epoch1Base == m_maxEpochs || bLastModel)
+    if (mb == -1)
     {
-        return m_modelPath;
+        if (epoch1Base == m_maxEpochs || bLastModel)
+        {
+            return m_modelPath;
+        } 
+        else
+        {
+            wstring w = msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int)epoch1Base);
+            return w;
+        }
     }
     else
     {
-        wstring w = msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
+        wstring w = msra::strfun::wstrprintf(L"%ls.%d.%d", m_modelPath.c_str(), (int)epoch1Base, (int)mb);
         return w;
     }
-}
-
-template <class ElemType>
-wstring SGD<ElemType>::GetModelNameForEpochAndMB(const int epoch, const int mb, bool bLastModel)
-{
-	int epochBase = epoch + 1;
-	wstring w = msra::strfun::wstrprintf(L"%ls.%d_%d", m_modelPath.c_str(), (int)epochBase, (int)mb);
-	return w;
 }
 
 // return -1 if nothing exists

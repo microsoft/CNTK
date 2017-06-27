@@ -20,6 +20,16 @@
 #include "Profiler.h"
 #include "MASGD.h"
 #include "ASGDHelper.h"
+
+#define SaveCheckPoint
+#define INPUT_CRC
+#define GRADIENT_CRC
+#define MBMODEL_SAVE
+#define TEST_RUN_MB
+
+extern int k_TestRunMBNum;
+extern bool k_KeepCheckPoint;
+
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
 #define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
@@ -500,7 +510,9 @@ protected:
                          const std::string& prefixMsg = "",
                          const size_t maxNumberOfSamples = SIZE_MAX,
                          const size_t totalMBsSeenBefore = 0,
-                         ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter = nullptr);
+                         ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter = nullptr,
+                         const size_t totalTrainingSamplesSeen = 0,
+                         const double prevCriterion = 0);
 
     void InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
@@ -516,8 +528,7 @@ public:
     // return -1 if nothing exists
     int DetermineStartEpoch(const bool makeMode);
 
-    wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false);
-	wstring GetModelNameForEpochAndMB(const int epoch, const int mb, bool bLastModel = false);
+    wstring GetModelNameForEpoch(const int epoch, const int mb = -1, bool bLastModel = false);
 
 protected:
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
@@ -527,7 +538,8 @@ protected:
                             const std::list<Matrix<ElemType>>& smoothedGradients,
                             const std::vector<double>& smoothedCounts,
                             const double prevCriterion,
-                            const size_t minibatchSize);
+                            const size_t minibatchSize,
+                            const int curMB = -1);
 
     bool TryLoadCheckPointInfo(const size_t epochNumber,
                                /*out*/ size_t& totalSamplesSeen,
@@ -535,17 +547,18 @@ protected:
                                std::list<Matrix<ElemType>>& smoothedGradients,
                                std::vector<double>& smoothedCounts,
                                /*out*/ double& prevCriterion,
-                               /*out*/ size_t& minibatchSize);
+                               /*out*/ size_t& minibatchSize,
+                               const int curMB = -1);
     void LoadCheckPointInfo(const size_t epochNumber,
                             /*out*/ size_t& totalSamplesSeen,
                             /*out*/ double& learnRatePerSample,
                             std::list<Matrix<ElemType>>& smoothedGradients,
                             std::vector<double>& smoothedCounts,
                             /*out*/ double& prevCriterion,
-                            /*out*/ size_t& minibatchSize);
+                            /*out*/ size_t& minibatchSize,
+                            const int curMB = -1);
 
-    wstring GetCheckPointFileNameForEpoch(const int epoch);
-	wstring GetCheckPointFileNameForEpochAndMB(const int epoch, const int mb);
+    wstring GetCheckPointFileNameForEpoch(const int epoch, const int mb = -1);
 
     GradientsUpdateType GradUpdateType() const
     {

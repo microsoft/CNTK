@@ -99,8 +99,12 @@ void DoTrain(const ConfigRecordType& config)
         LOGPRINTF(stderr, "No further training is necessary.\n");
         return;
     }
-
+#ifdef TEST_RUN_MB
+    fprintf(stderr, "epoch: %d, mb: %d\n", (int)startEpoch, k_TestRunMBNum);
+    wstring modelFileName = optimizer->GetModelNameForEpoch(int(startEpoch), k_TestRunMBNum);
+#else
     wstring modelFileName = optimizer->GetModelNameForEpoch(int(startEpoch) - 1);
+#endif
     bool loadNetworkFromCheckpoint = startEpoch >= 0;
     if (loadNetworkFromCheckpoint)
         LOGPRINTF(stderr, "\nStarting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
