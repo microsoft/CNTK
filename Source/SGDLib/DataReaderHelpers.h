@@ -560,6 +560,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+		template <class ElemType>
+		void GetMBInputs(StreamMinibatchInputs& inputMatrices, vector<Matrix<ElemType>*>& iMats)
+		{	
+			iMats.clear();
+			for (auto& inputMatrix : inputMatrices)
+			{
+				const wstring& name = inputMatrix.first;
+				if (name == L"features")
+				{
+					const auto& input = inputMatrix.second;
+					auto& M = input.GetMatrix<ElemType>();
+					Matrix<ElemType>* mat = new Matrix<ElemType>(M, M.GetDeviceId());
+					iMats.push_back(mat);
+				}
+			}
+		}
+
         void GetSubMinibatchToNet(size_t iSubminibatch)
         {
             Matrices decimatedMatrices;

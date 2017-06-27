@@ -38,6 +38,7 @@
 
 #include <map>
 #include <set>
+#include <boost/crc.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -1157,6 +1158,42 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // This, when enabled, is used when a full minibatch does not fit into GPU RAM.
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
 
+#define INPUT_CRC
+#ifdef INPUT_CRC
+			if (numMBsRun % 1 == 0)
+			{
+				vector<Matrix<ElemType>*> iMats;
+				smbDispatcher.GetMBInputs(*inputMatrices, iMats);
+
+				Matrix<ElemType>* featureInput = iMats[0];
+				ElemType* mbData = featureInput->CopyToArray();
+
+				size_t cols = featureInput->GetNumCols();
+				size_t rows = featureInput->GetNumRows();
+				size_t samplePerSMB = cols / actualNumSubminibatches;
+				size_t smbSize = rows * samplePerSMB;
+
+				for (int smbId = 0; smbId < actualNumSubminibatches; smbId++)
+				{
+					size_t mbOffset = smbSize * smbId;
+					ElemType* smbPtr = mbData + mbOffset;
+					unsigned int checkSum = CrcCheck1(smbPtr, smbSize);
+					std::string uniqueTag = std::to_string(m_mpi->CurrentNodeRank()) + "_" + std::to_string(smbId);
+					string outPathB = "C:/Data/v-zhke/workspace/cntk_smb_test/test_script/Output/InputHash-Binary_" + uniqueTag + ".txt";
+					string outPathS = "C:/Data/v-zhke/workspace/cntk_smb_test/test_script/Output/InputHash-String_" + uniqueTag + ".txt";
+
+					ofstream outFile;
+					outFile.open(outPathB, ios::app | ios::binary);
+					outFile.write((char*)&checkSum, sizeof(unsigned int));
+					outFile.close();
+
+					outFile.open(outPathS, ios::app);
+					outFile << epochNumber << ":" << numMBsRun << ":" << checkSum << "\n";
+					outFile.close();
+				}
+			}
+#endif
+
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
                 if (actualNumSubminibatches > 1)
@@ -1294,6 +1331,28 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         ProfilerTimeEnd(profGradientAgg, profilerEvtMainGradient);
         auto profWeights = ProfilerTimeBegin();
+
+#define GRADIENT_CRC
+#ifdef GRADIENT_CRC
+
+		if (m_mpi->IsMainNode() && numMBsRun % 1 == 0)
+		{
+			unsigned int checkSum = CrcCheck(learnParamsGradients);
+
+			string outPathB = "C:/Data/v-zhke/workspace/cntk_smb_test/test_script/Output/TmpHash-Binary_"+std::to_string(m_numSubminiBatches)+".txt";
+			string outPathS = "C:/Data/v-zhke/workspace/cntk_smb_test/test_script/Output/TmpHash-String_"+std::to_string(m_numSubminiBatches)+".txt";
+
+			ofstream outFile;
+			outFile.open(outPathB, ios::app | ios::binary);
+			outFile.write((char*)&checkSum, sizeof(unsigned int));
+			outFile.close();
+			
+			outFile.open(outPathS, ios::app);
+			outFile << epochNumber << ":" << numMBsRun << ":" << checkSum << "\n";
+			outFile.close();
+		}
+
+#endif
 
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
@@ -2552,6 +2611,12 @@ wstring SGD<ElemType>::GetCheckPointFileNameForEpoch(const int epoch)
 }
 
 template <class ElemType>
+wstring SGD <ElemType>::GetCheckPointFileNameForEpochAndMB(const int epoch, const int mb)
+{
+	return GetModelNameForEpochAndMB(epoch, mb) + L".ckp";
+}
+
+template <class ElemType>
 wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel)
 {
     int epoch1Base = epoch + 1;
@@ -2564,6 +2629,14 @@ wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel)
         wstring w = msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
         return w;
     }
+}
+
+template <class ElemType>
+wstring SGD<ElemType>::GetModelNameForEpochAndMB(const int epoch, const int mb, bool bLastModel)
+{
+	int epochBase = epoch + 1;
+	wstring w = msra::strfun::wstrprintf(L"%ls.%d_%d", m_modelPath.c_str(), (int)epochBase, (int)mb);
+	return w;
 }
 
 // return -1 if nothing exists
@@ -3214,5 +3287,48 @@ void SGDParams::InitializeAndCheckBlockMomentumSGDParameters()
 
 // register SGD<> with the ScriptableObject system
 ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<SGD<float>, SGD<double>> registerSGDOptimizer(L"SGDOptimizer");
+
+
+template<class ElemType>
+unsigned int CrcCheck(std::vector<Matrix<ElemType>*>& matrices)
+{
+	size_t totalSize = 0;
+	for (std::vector<Matrix<ElemType>*>::iterator iter = matrices.begin(); iter != matrices.end(); iter++)
+		totalSize += (*iter)->GetNumElements();
+
+	shared_ptr<Matrix<ElemType>> matrixDataPtr;
+	matrixDataPtr.reset(new Matrix<ElemType>(1, totalSize, matrices[0]->GetDeviceId()));
+
+	size_t offset = 0;
+	for (std::vector<Matrix<ElemType>*>::iterator iter = matrices.begin(); iter != matrices.end(); iter++)
+	{
+		size_t matrixElements = (*iter)->GetNumElements();
+		matrixDataPtr->ColumnSlice(offset, matrixElements).AssignValuesOf((*iter)->Reshaped(1, matrixElements));
+		offset += matrixElements;
+	}
+
+	ElemType* matrixArr = matrixDataPtr->CopyToArray();
+	unsigned char* calcData = (unsigned char*)matrixArr;
+	size_t calcSize = matrixDataPtr->GetNumElements() * sizeof(ElemType);
+
+	boost::crc_32_type crcChecker;
+	crcChecker.process_block(calcData, calcData + calcSize);
+	unsigned int checkSum = crcChecker.checksum();
+
+	delete[] matrixArr;
+	matrixDataPtr.reset();
+	return checkSum;
+}
+
+template<class ElemType>
+unsigned int CrcCheck1(ElemType* data, size_t size)
+{
+	unsigned char* calcData = (unsigned char*)data;
+
+	boost::crc_32_type crcChecker;
+	crcChecker.process_block(calcData, calcData + size);
+	unsigned int checkSum = crcChecker.checksum();
+	return checkSum;
+}
 
 }}}

@@ -517,6 +517,7 @@ public:
     int DetermineStartEpoch(const bool makeMode);
 
     wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false);
+	wstring GetModelNameForEpochAndMB(const int epoch, const int mb, bool bLastModel = false);
 
 protected:
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
@@ -544,6 +545,7 @@ protected:
                             /*out*/ size_t& minibatchSize);
 
     wstring GetCheckPointFileNameForEpoch(const int epoch);
+	wstring GetCheckPointFileNameForEpochAndMB(const int epoch, const int mb);
 
     GradientsUpdateType GradUpdateType() const
     {
