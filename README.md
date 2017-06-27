@@ -18,7 +18,7 @@ The Microsoft Cognitive Toolkit (https://cntk.ai), is a unified deep-learning to
 * [CNTK backend for Keras](https://docs.microsoft.com/en-us/cognitive-toolkit/using-cntk-with-keras)
 * [Setup CNTK development environment](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-development-environment) 
     * Windows [Script-driven](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-with-script-on-windows) / [Manual](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-on-windows) 
-    * Linux [Manul](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-on-linux)
+    * Linux [Manual](https://docs.microsoft.com/en-us/cognitive-toolkit/setup-cntk-on-linux)
 
 ## Learning CNTK 
 
