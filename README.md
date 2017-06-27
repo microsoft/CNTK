@@ -36,7 +36,7 @@ You may learn more about CNTK with the following resources:
 
 ## More information 
 
-* [Reasons to switch from TesnorFlow to CNTK](https://docs.microsoft.com/en-us/cognitive-toolkit/reasons-to-switch-from-tensorflow-to-cntk) 
+* [Reasons to switch from TensorFlow to CNTK](https://docs.microsoft.com/en-us/cognitive-toolkit/reasons-to-switch-from-tensorflow-to-cntk) 
 * [Contribute to CNTK](https://docs.microsoft.com/en-us/cognitive-toolkit/Contributing-to-CNTK)
 * [FAQ](https://docs.microsoft.com/en-us/cognitive-toolkit/CNTK-FAQ)
 * [Feedback](https://docs.microsoft.com/en-us/cognitive-toolkit/Feedback-Channels)
