@@ -2,6 +2,10 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+"""
+Initializers of parameters.
+"""
+
 
 from . import cntk_py
 from .cntk_py import default_param_init_scale as DefaultParamInitScale,\

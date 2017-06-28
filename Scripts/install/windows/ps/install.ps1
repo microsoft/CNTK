@@ -93,7 +93,7 @@ function VerifyInstallationContent(
     Write-Verbose "[VerifyInstallationContent]: [$path] result [$structureCorrect]"
 
     if (-not $structureCorrect) {
-        throw "`nFatal Error: Files from the CNTK binary download package are missing!`nThe install script must be run out of the unpacked binary CNTK package. For help see: https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Binary-Script"
+        throw "`nFatal Error: Files from the CNTK binary download package are missing!`nThe install script must be run out of the unpacked binary CNTK package. For help see: https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-Windows-Binary-Script"
     }
 }
 

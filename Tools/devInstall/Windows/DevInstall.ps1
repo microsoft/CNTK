@@ -5,7 +5,7 @@
 <#
   .SYNOPSIS
  Use this cmdlet to install a CNTK development environment on your machine.
- A detailed description can be found here: https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-with-script-on-Windows
+ A detailed description can be found here: https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-with-script-on-Windows
  
  .DESCRIPTION
  The script will download and install the files necessary to create a CNTK development environment on your system. 
@@ -15,7 +15,7 @@
  Repeated operation of this script will reuse already downloaded components.
  
  Before you can run this machine you should have read the instructions at 
-     https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-with-script-on-Windows
+     https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-with-script-on-Windows
  
  .PARAMETER Execute
  You can set this switch to false to prevent devInstall from performing any physical changes to the machine.

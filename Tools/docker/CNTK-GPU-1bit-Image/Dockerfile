@@ -7,7 +7,7 @@ RUN test "$ENABLE_1BIT_SGD" = "true" ||  ( echo "\033[0;31m\
 You are attempting to build an image of CNTK with 1-bit Stochastic Gradient\n\
 Descent (1bit-SGD) enabled. Before proceeding further please ensure you     \n\ 
 understand the license difference between CNTK and 1bit-SGD. See            \n\
-https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD#license-difference-between-cntk-and-1bit-sgd\n\
+https://docs.microsoft.com/en-us/cognitive-toolkit/Enabling-1bit-SGD#license-difference-between-cntk-and-1bit-sgd \n\
 \n\
 To build the image pass the following parameter to Docker:\n\
 \n\

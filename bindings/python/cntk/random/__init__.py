@@ -2,6 +2,10 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+"""
+Functions that generate random numbers with respect to designated distributions.
+"""
+
 
 from __future__ import division
 from __future__ import print_function
@@ -91,7 +95,7 @@ def gumbel(shape, dtype=default_override_or(np.float32), loc=0.0, scale=1.0, see
 
     See also:
         `The Gumbel-Max Trick
-        <https://hips.seas.harvard.edu/blog/2013/04/06/the-gumbel-max-trick-for-discrete-distributions/>`_.
+        <https://hips.seas.harvard.edu/blog/2013/04/06/the-gumbel-max-trick-for-discrete-distributions/>`__.
     """
     from cntk.cntk_py import gumbel_random
     shape, dtype = sanitize_random_args(shape, dtype)
@@ -215,7 +219,7 @@ def gumbel_like(x, loc=0.0, scale=1.0, seed=auto_select, name=''):
 
     See also:
         `The Gumbel-Max Trick
-        <https://hips.seas.harvard.edu/blog/2013/04/06/the-gumbel-max-trick-for-discrete-distributions/>`_.
+        <https://hips.seas.harvard.edu/blog/2013/04/06/the-gumbel-max-trick-for-discrete-distributions/>`__.
     """
     from cntk.cntk_py import gumbel_random_like
     x = sanitize_input(x)

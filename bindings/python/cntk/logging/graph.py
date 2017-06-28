@@ -141,9 +141,9 @@ def plot(root, filename=None):
 
     Requirements:
 
-     * for DOT output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_
-     * for PNG, PDF, and SVG output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_ 
-       and `graphviz <http://graphviz.org>`_ (GraphViz executable has to be in the system's PATH).
+     * for DOT output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`__
+     * for PNG, PDF, and SVG output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`__
+       and `graphviz <http://graphviz.org>`__ (GraphViz executable has to be in the system's PATH).
 
     Args:
         node (graph node): the node to start the journey from

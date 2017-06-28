@@ -668,13 +668,15 @@ class ROIPoolingNode : public ComputationNode<ElemType>, public NumInputs<2>
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"ROIPooling"; }
+
 public:
-    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& roiOutputShape = TensorShape())
-        : Base(deviceId, name), m_roiOutputShape(roiOutputShape), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
+    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, PoolKind poolKind = PoolKind::Max, const TensorShape& roiOutputShape = TensorShape(), double spatialScale = 1.0/16.0)
+        : Base(deviceId, name), m_poolKind(poolKind), m_roiOutputShape(roiOutputShape), m_spatialScale(spatialScale), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
     {
     }
+
     ROIPoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"roiOutputShape"))
+        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", PoolKindFrom(configp->Get(L"pool")), configp->Get(L"roiOutputShape"), configp->Get(L"featureScale"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
@@ -734,20 +736,68 @@ public:
         size_t outH = m_roiOutputShape[1];
 
         m_tempMatrix->Resize(outW * outH * numChannels * roisPerImage, inputSlice.GetNumCols());
-        inputSlice.ROIPoolingForward(roisPerImage, inputSlice.GetNumCols(), 
-            numChannels, inputW, inputH, outW, outH, ROIs, outputSlice, *m_tempMatrix);
+        if (m_poolKind == PoolKind::Max)
+            inputSlice.MaxROIPoolingForward(roisPerImage, inputSlice.GetNumCols(), 
+                numChannels, inputW, inputH, outW, outH, ROIs, outputSlice, *m_tempMatrix, m_spatialScale);
+        else
+            LogicError("Average ROI pooling is not supported.");
+    }
+
+    // similar to usual MaxPooling backpropagation. Send gradients
+    // back through to the locations that were used as the "max." Only
+    // difference: needs to sum gradients over all the ROIs that may
+    // have used that location. One image location could be in
+    // multiple ROIs--in that case each ROI may contribute a gradient term.
+    void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    {
+        auto inputShape = GetInputSampleLayout(0);
+        Matrix<ElemType> inputSlice = Input(0)->ValueFor(fr);
+
+        int inputW = inputShape[0];
+        int inputH = inputShape[1];
+        int numChannels = inputShape[2];
+
+        auto inputGrad = Input(0)->GradientFor(fr);
+        auto pooledGrad = GradientFor(fr);
+
+        int roisPerImage = GetInputSampleLayout(1)[1];
+        auto roiData = Input(1)->ValueFor(fr);
+
+        if (m_poolKind == PoolKind::Max)
+            pooledGrad.MaxROIPoolingBackward(roisPerImage, inputSlice.GetNumCols(), numChannels,
+                inputW, inputH, m_roiOutputShape[0], m_roiOutputShape[1], roiData, inputGrad, *m_tempMatrix, m_spatialScale);
+        else
+            LogicError("Average ROI pooling is not supported.");
     }
 
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
         m_roiOutputShape.Save(fstream);
+        fstream << (int32_t)m_poolKind;
+        fstream << m_spatialScale;
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
         m_roiOutputShape.Load(fstream);
+
+        if (modelVersion < CNTK_MODEL_VERSION_26)
+        {
+            // There are 2 problems here:
+            //    1. m_spatialScale value depends on your location in the network, for current R-CNN and its family it is 1/16.
+            //    2. roiData format also has changed from ratio to absolute values and those are given as input.
+            m_poolKind = PoolKind::Max;
+            m_spatialScale = 1.0/16.0;
+        }
+        else
+        {
+            int32_t k;
+            fstream >> k;
+            m_poolKind = (PoolKind)k;
+            fstream >> m_spatialScale;
+        }
     }
 
     void Validate(bool isFinalValidationPass) override
@@ -777,44 +827,26 @@ public:
         SetDims(TensorShape(m_roiOutputShape[0], m_roiOutputShape[1], inShape[2], roiShape[1]), HasMBLayout());
     }
 
-    // similar to usual MaxPooling backpropagation. Send gradients
-    // back through to the locations that were used as the "max." Only
-    // difference: needs to sum gradients over all the ROIs that may
-    // have used that location. One image location could be in
-    // multiple ROIs--in that case each ROI may contribute a gradient term.
-    void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
-    {
-        auto inputShape = GetInputSampleLayout(0);
-        Matrix<ElemType> inputSlice = Input(0)->ValueFor(fr);
-
-        int inputW = inputShape[0];
-        int inputH = inputShape[1];
-        int numChannels = inputShape[2];
-
-        auto inputGrad = Input(0)->GradientFor(fr);
-        auto pooledGrad = GradientFor(fr);
-
-        int roisPerImage = GetInputSampleLayout(1)[1];
-        auto roiData = Input(1)->ValueFor(fr);
-
-        pooledGrad.ROIPoolingBackward(roisPerImage, inputSlice.GetNumCols(), numChannels, 
-            inputW, inputH, m_roiOutputShape[0], m_roiOutputShape[1], roiData, inputGrad, *m_tempMatrix);
-    }
-
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<ROIPoolingNode<ElemType>>(nodeP);
+            node->m_poolKind = m_poolKind;
             node->m_roiOutputShape = m_roiOutputShape;
+            node->m_spatialScale = m_spatialScale;
         }
     }
 
+    PoolKind PoolingKind() const { return m_poolKind; }
     TensorShape ROIOutputShape() const { return m_roiOutputShape; }
+    double SpatialScale() const { return m_spatialScale; }
 
 protected:
+    PoolKind m_poolKind;
     TensorShape m_roiOutputShape;
+    double m_spatialScale;
     shared_ptr<Matrix<ElemType>> m_tempMatrix;
     Matrix<ElemType> m_argmaxData;
 };

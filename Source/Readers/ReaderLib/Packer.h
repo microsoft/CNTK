@@ -17,6 +17,9 @@ public:
     // Sets current epoch configuration.
     virtual void SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) = 0;
 
+    // Flushes the internal state of the packer.
+    virtual void Reset() {};
+
     virtual Minibatch ReadMinibatch() = 0;
     virtual ~Packer() {}
 };

@@ -232,7 +232,7 @@ stderr=c:\cntk\log\cntk # “_mnistTrain_mnistTest.log” would be appended
 traceLevel=0 # larger values mean more output
 ```
 
-The **traceLevel** parameter is uniformly used by the code in CNTK to specify how much extra output (verbosity) is desired. The default value is 0 (zero) and specifies minimal output, the higher the number the more output can be expected. Currently 0-limited output, 1-medium ouput, 2-verbose output are the only values supported.
+The **traceLevel** parameter is uniformly used by the code in CNTK to specify how much extra output (verbosity) is desired. The default value is 0 (zero) and specifies minimal output, the higher the number the more output can be expected. Currently 0-limited output, 1-medium output, 2-verbose output are the only values supported.
 
 ### Top Level Parameters
 
@@ -685,7 +685,7 @@ The following parameters can be used to customize the behavior of the reader:
 
 -   **randomize** – \[{Auto}, None, \#\] the randomization range (number of records to randomize across) for randomizing the input. This needs to be an integral factor of the epochSize and an integral multiple of minibatch size. Setting it to Auto will let CNTK find something that works.
 
--   **minibatchMode** – \[{Partial},Full\] the mode for minibatchs when the end of the epoch is reached. In partial minibatch mode, if the remaining records are less than a full minibatch, only those read will be returned (a partial minibatch). I Full minibatch mode, no partial minibatches will be returned, instead those records will be skipped.
+-   **minibatchMode** – \[{Partial},Full\] the mode for minibatches when the end of the epoch is reached. In partial minibatch mode, if the remaining records are less than a full minibatch, only those read will be returned (a partial minibatch). I Full minibatch mode, no partial minibatches will be returned, instead those records will be skipped.
 
 Each of the data record sub-sections have the following parameters:
 
@@ -717,7 +717,7 @@ For training and evaluation the following need to be defined:
 
 -   **framemode** – \[{true}, false\] is the reader reading frames, or utterances
 
--   **minibatchMode** – \[{Partial},Full\] the mode for minibatchs when the end of the epoch is reached. In partial minibatch mode, if the remaining records are less than a full minibatch, only those read will be returned (a partial minibatch). I Full minibatch mode, no partial minibatches will be returned, instead those records will be skipped.
+-   **minibatchMode** – \[{Partial},Full\] the mode for minibatches when the end of the epoch is reached. In partial minibatch mode, if the remaining records are less than a full minibatch, only those read will be returned (a partial minibatch). I Full minibatch mode, no partial minibatches will be returned, instead those records will be skipped.
 
 -   **readAhead** – \[true,{false}\] have the reader read ahead in another thread. NOTE: some known issues with this feature
 
@@ -893,7 +893,7 @@ The parameters used for the binary reader are quite simple as most of the requir
 
 The following parameters can be used to customize the behavior of the reader:
 
--   **minibatchMode** – \[{Partial},Full\] the mode for minibatchs when the end of the epoch is reached. In partial minibatch mode, if the remaining records are less than a full minibatch, only those read will be returned (a partial minibatch). I Full minibatch mode, no partial minibatches will be returned, instead those records will be skipped.
+-   **minibatchMode** – \[{Partial},Full\] the mode for minibatches when the end of the epoch is reached. In partial minibatch mode, if the remaining records are less than a full minibatch, only those read will be returned (a partial minibatch). I Full minibatch mode, no partial minibatches will be returned, instead those records will be skipped.
 
 -   **file** – array of files paths to load. Each file may contain one or more datasets. The dataset names used when the file was created will be used when the file is read.
 

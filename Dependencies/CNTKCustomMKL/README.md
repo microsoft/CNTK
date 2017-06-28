@@ -6,8 +6,8 @@ for usage by CNTK ("CNTK custom MKL" for short).
 By default, a CNTK binary with Intel® MKL support includes a prebuilt CNTK
 custom MKL.
 If you want to build CNTK with Intel® MKL support yourself, you can install a
-prebuilt CNTK custom MKL, available for download from the [CNTK web site](https://www.cntk.ai/mkl).
-See [CNTK's setup instructions](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine)
+prebuilt CNTK custom MKL, available for download from the [here](https://www.microsoft.com/en-us/cognitive-toolkit/download-math-kernel-library/).
+See [CNTK's setup instructions](https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-your-machine)
 for more details.
 
 If you want to add new Intel® MKL functions to be used by CNTK you will have to

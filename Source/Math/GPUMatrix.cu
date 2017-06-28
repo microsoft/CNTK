@@ -3251,7 +3251,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignMaxPoolingResult(const GPUMatrix
 }
 
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignMaxPoolingResultCDSSM(const GPUMatrix<ElemType>& inputBatch,
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignMaxPoolingResultCDSSM(GPUMatrix<ElemType>& numberOfWordsPerSample, const GPUMatrix<ElemType>& inputBatch,
                                                                       const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
                                                                       const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample)
 {
@@ -3263,17 +3263,17 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignMaxPoolingResultCDSSM(const GPUM
 
     PrepareDevice();
 
-    size_t* dev_numberOfWindowsPerSample = 0;
-    CUDA_CALL(cudaMalloc((void **)&dev_numberOfWindowsPerSample, batchSize * sizeof(size_t)));
+    //int* dev_numberOfWindowsPerSample = 0;
+    //CUDA_CALL(cudaMalloc((void **)&dev_numberOfWindowsPerSample, batchSize * sizeof(int)));
     SyncGuard syncGuard;
-    _getNumberOfWindowsPerSample << <1, batchSize >> > (inputBatch.Data(), dev_numberOfWindowsPerSample, inputWidth, inputHeight, inputSizePerSample);
+    _getNumberOfWindowsPerSample << <1, batchSize >> > (batchSize, inputBatch.Data(), numberOfWordsPerSample.Data(), inputWidth, inputHeight, inputSizePerSample);
     _assignMaxPoolingResultCDSSM << <blocksPerGrid, numThreadPerBlock, 0, t_stream >> >(inputBatch.Data(), batchSize, 
                                                                                         Data(),
-                                                                                        dev_numberOfWindowsPerSample,
+                                                                                        numberOfWordsPerSample.Data(),
                                                                                         inputWidth, inputHeight, inputSizePerSample,
                                                                                         outputWidth, outputHeight, outputSizePerSample);
 
-    CUDA_CALL(cudaFree(dev_numberOfWindowsPerSample));
+    //CUDA_CALL(cudaFree(dev_numberOfWindowsPerSample));
 
     return *this;
 }
@@ -3438,9 +3438,9 @@ void GPUMatrix<ElemType>::MaxPoolingBackward(const GPUMatrix<ElemType>& out, con
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                            const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, 
-                                            GPUMatrix<ElemType>& argmax) const
+void GPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                               const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, 
+                                               GPUMatrix<ElemType>& argmax, double spatialScale) const
 {
     PrepareDevice();
     SyncGuard syncGuard;
@@ -3448,14 +3448,14 @@ void GPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
     int count = numRois * numImg * channels * pooledHeight * pooledWidth;
     const int blockSize = GridDim::maxThreadsPerBlock;
     auto numThreads = dim3((int)floor((double)(count + blockSize - 1) / blockSize));
-    kROIPoolingForward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
-                                                               pooledWidth, pooledHeight, Data(), roiData.Data(), output.Data(), argmax.Data());
+    kMaxROIPoolingForward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
+                                                                  pooledWidth, pooledHeight, Data(), roiData.Data(), output.Data(), argmax.Data(), spatialScale);
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                             const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, 
-                                             GPUMatrix<ElemType>& argmax) const
+void GPUMatrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                                const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, 
+                                                GPUMatrix<ElemType>& argmax, double spatialScale) const
 {
     PrepareDevice();
     SyncGuard syncGuard;
@@ -3463,8 +3463,8 @@ void GPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t 
     int count = numImg * channels * height * width;
     const int blockSize = GridDim::maxThreadsPerBlock;
     auto numThreads = dim3((int)floor((double)(count + blockSize - 1) / blockSize));
-    kROIPoolingBackward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
-                                                                pooledWidth, pooledHeight, Data(), roiData.Data(), grad.Data(), argmax.Data());
+    kMaxROIPoolingBackward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
+                                                                   pooledWidth, pooledHeight, Data(), roiData.Data(), grad.Data(), argmax.Data(), spatialScale);
 }
 
 template <class ElemType>

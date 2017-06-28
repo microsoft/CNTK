@@ -231,7 +231,7 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
     //       -> FORBIDDEN to write into
     //     - CPU or GPU -> BOTH: current state is CPU or GPU
     //       and a view onto it is put into BOTH state
-    //       -> OK but inefficent to read, since this is likely happening over again; but we cannot put all views into BOTH state
+    //       -> OK but inefficient to read, since this is likely happening over again; but we cannot put all views into BOTH state
     //     - BOTH -> BOTH:
     //        - read case: OK
     //        - write case: forbidden to call this function in this way
@@ -4305,7 +4305,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignMaxPoolingResult(const Matrix<ElemType
 }
 
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::AssignMaxPoolingResultCDSSM(const Matrix<ElemType>& inputBatch, const size_t channels,
+Matrix<ElemType>& Matrix<ElemType>::AssignMaxPoolingResultCDSSM(Matrix<ElemType>& numberOfWordsPerSample, const Matrix<ElemType>& inputBatch, const size_t channels,
                                                                 const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
                                                                 const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
                                                                 const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample)
@@ -4319,7 +4319,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignMaxPoolingResultCDSSM(const Matrix<Ele
             inputWidth, inputHeight, inputSizePerSample,
             outputWidth, outputHeight, outputSizePerSample,
             windowWidth, windowHeight, horizontalSubsample, verticalSubsample),
-        m_GPUMatrix->AssignMaxPoolingResultCDSSM(*(inputBatch.m_GPUMatrix),
+        m_GPUMatrix->AssignMaxPoolingResultCDSSM(*(numberOfWordsPerSample.m_GPUMatrix), *(inputBatch.m_GPUMatrix),
             inputWidth, inputHeight, inputSizePerSample,
             outputWidth, outputHeight, outputSizePerSample),
         NOT_IMPLEMENTED,
@@ -4683,31 +4683,31 @@ void Matrix<ElemType>::MaxPoolingBackward(const Matrix<ElemType>& out, const Mat
 }
 
 template <class ElemType>
-void Matrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                         const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& output, 
-                                         Matrix<ElemType>& argmax) const
+void Matrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                           const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& output, 
+                                           Matrix<ElemType>& argmax, double spatialScale) const
 {
     DecideAndMoveToRightDevice(*this, output);
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->ROIPoolingForward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_CPUMatrix), *(output.m_CPUMatrix), *(argmax.m_CPUMatrix)),
-                            m_GPUMatrix->ROIPoolingForward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_GPUMatrix), *(output.m_GPUMatrix), *(argmax.m_GPUMatrix)),
+                            m_CPUMatrix->MaxROIPoolingForward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_CPUMatrix), *(output.m_CPUMatrix), *(argmax.m_CPUMatrix), spatialScale),
+                            m_GPUMatrix->MaxROIPoolingForward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_GPUMatrix), *(output.m_GPUMatrix), *(argmax.m_GPUMatrix), spatialScale),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
 
 template <class ElemType>
-void Matrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                          const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& grad, 
-                                          Matrix<ElemType>& argmax) const
+void Matrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                             const size_t pooledWidth, const size_t pooledHeight, const Matrix<ElemType>& roiData, Matrix<ElemType>& grad, 
+                                             Matrix<ElemType>& argmax, double spatialScale) const
 {
     DecideAndMoveToRightDevice(*this, grad);
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->ROIPoolingBackward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_CPUMatrix), *(grad.m_CPUMatrix), *(argmax.m_CPUMatrix)),
-                            m_GPUMatrix->ROIPoolingBackward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_GPUMatrix), *(grad.m_GPUMatrix), *(argmax.m_GPUMatrix)),
+                            m_CPUMatrix->MaxROIPoolingBackward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_CPUMatrix), *(grad.m_CPUMatrix), *(argmax.m_CPUMatrix), spatialScale),
+                            m_GPUMatrix->MaxROIPoolingBackward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_GPUMatrix), *(grad.m_GPUMatrix), *(argmax.m_GPUMatrix), spatialScale),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
@@ -5133,6 +5133,38 @@ void Matrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemT
     if (c.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::DENSE && b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE)
     {
         GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, beta, *c.m_GPUMatrix, numChannels, horizontalSubsample, padding, channelwise);
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
+void Matrix<ElemType>::ConvolveAndAddCDSSM(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b2, const Matrix<ElemType>& b, const bool transposeB,
+    ElemType beta, Matrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
+{
+    DecideAndMoveToRightDevice(a, b, c);
+
+    if (c.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::DENSE && b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE)
+    {
+        GPUSparseMatrix<ElemType>::ConvolveAndAddCDSSM(alpha, *a.m_GPUMatrix, transposeA, *b2.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, transposeB, beta, *c.m_GPUMatrix, numChannels, horizontalSubsample, padding, channelwise);
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
+void Matrix<ElemType>::ConvolveSparseCDSSM(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
+    ElemType beta, Matrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
+{
+    DecideAndMoveToRightDevice(a, b, c);
+
+    if (c.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::DENSE && b.GetMatrixType() == MatrixType::SPARSE && c.GetMatrixType() == MatrixType::DENSE)
+    {
+        GPUSparseMatrix<ElemType>::ConvolveSparseCDSSM(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUSparseMatrix, transposeB, beta, *c.m_GPUMatrix, numChannels, horizontalSubsample, padding, channelwise);
     }
     else
     {

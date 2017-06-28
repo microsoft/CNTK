@@ -2,7 +2,9 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-
+"""
+Axis for CNTK variables on data binding.
+"""
 from . import cntk_py
 from cntk.internal.swig_helper import typemap
 

@@ -316,10 +316,12 @@ protected:
 
         m_cdssm = m_inT.h() == 1 && m_kernelT.h() == 1 && m_strideT.w() == 1;
 
+        m_cdssmSparse = m_cdssm && in.GetMatrixType() == MatrixType::SPARSE;
+
         out.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
 
         // Reshaping is only necessary if we are going to use the unpacking trick
-        if (m_gpuSparseOpt)
+        if (m_gpuSparseOpt || m_cdssmSparse)
             out.Reshape(m_outT.c() * m_outT.w(), m_outT.h() * batchSize);
         else
             out.Reshape(m_outT.c(), outputSizePerChannel * batchSize);
@@ -345,13 +347,25 @@ protected:
 
             if (m_cdssm)
             {
-                inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
-                workspace.AssignPackedConvolutionInputCDSSM(inputSubBatch, m_inT.w(), m_inT.c(), m_outT.w(), m_outT.c(), m_kernelT.w(), m_padding);
-                Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
+                if (m_cdssmSparse)
+                {
+                    if (m_kernelT.w() * m_inT.c() != kernel.GetNumCols())
+                        LogicError("Kernel width and weight matrix dimensions don't match.");
 
-                // workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
-                // BUGBUG: This ^^ destroys the content of the matrix. Also it seems not to change the size. Does it? Should this be a Reshape()?
-                Mat::Multiply(kernel, false, workspace, false, outputSubBatch);
+                    inputSubBatch.Reshape(m_inT.c() * m_inT.w(), m_inT.h() * smallBatchSize);
+                    Mat outputSubBatch = out.ColumnSlice(startSampleId, m_outT.h() * smallBatchSize);
+                    Mat::ConvolveSparseCDSSM(1, kernel, false, inputSubBatch, false, 0, outputSubBatch,
+                        static_cast<int>(m_inT.c()), m_strideT.w(), m_padding, true);
+                }
+                else {
+                    inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
+                    workspace.AssignPackedConvolutionInputCDSSM(inputSubBatch, m_inT.w(), m_inT.c(), m_outT.w(), m_outT.c(), m_kernelT.w(), m_padding);
+                    Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
+
+                    // workspace.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+                    // BUGBUG: This ^^ destroys the content of the matrix. Also it seems not to change the size. Does it? Should this be a Reshape()?
+                    Mat::Multiply(kernel, false, workspace, false, outputSubBatch);
+                }
             }
             else if (m_gpuSparseOpt)
             {
@@ -447,7 +461,7 @@ protected:
         size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
         size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
 
-        if (numSubBatches == 1 && allowReuse && !m_gpuSparseOpt) // reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
+        if (numSubBatches == 1 && allowReuse && !m_gpuSparseOpt && !m_cdssmSparse) // reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
             // REVIEW alexeyk: the following makes an assumption that data in workspace was filled by Forward call and remained unchanged. Find way to enforce/verify that.
             Matrix<ElemType>::MultiplyAndAdd(srcGradTmp, false, workspace, true, kernelGrad);
         else
@@ -459,23 +473,35 @@ protected:
                 size_t smallBatchSize = endSampleID - startSampleID;
                 Matrix<ElemType> outputGradientSubBatch = srcGradTmp.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
 
+                if (m_cdssmSparse)
+                {
+                    Matrix<ElemType> inputSubBatch2(in.GetDeviceId());
+                    inputSubBatch2.SetValue(in.ColumnSlice(startSampleID, smallBatchSize));
+                    Matrix<ElemType> inputSubBatch(in.GetDeviceId());
+                    inputSubBatch.SetValue(in.ColumnSlice(startSampleID, smallBatchSize));
+                    inputSubBatch.Reshape(m_inT.c(), smallBatchSize * m_inT.w() * m_inT.h());
+                    Matrix<ElemType> inputSubBatchSparseReordered(inputSubBatch.GetNumCols(), inputSubBatch.GetNumRows(), inputSubBatch.GetDeviceId(), MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
+                    Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, inputSubBatch.Transpose(), 1, m_inT.w(), 1, smallBatchSize * m_inT.h(), m_inT.c(), 1.0f, inputSubBatchSparseReordered, inputSubBatchSparseReordered);
+                    Matrix<ElemType>::ConvolveAndAddCDSSM(1, outputGradientSubBatch, false, inputSubBatch2, inputSubBatchSparseReordered, false, 1, kernelGrad, 49292, 1, true, false);
+                    inputSubBatch.ReleaseMemory();
+                    inputSubBatch2.ReleaseMemory();
+                }
+
                 // We optimize for three different scenarios here by handling them slightly differently.
                 // [Scenario 1] Dense: Unroll using AssignPackedConvolutionInput and multiply.
                 // [Scenario 2] Sparse 1-D convolution on GPU: for text scenarios we have a specific kernel.
                 // [Scenario 3] Sparse all others: convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
-                if (m_gpuSparseOpt)
+                else if (m_gpuSparseOpt)
                 {
                     Matrix<ElemType> inputSubBatch(in.GetDeviceId());
                     inputSubBatch.SetValue(in.ColumnSlice(startSampleID, smallBatchSize));
                     inputSubBatch.Reshape(m_inT.c(), smallBatchSize * m_inT.w() * m_inT.h());
                     Matrix<ElemType> inputSubBatchSparseReordered(inputSubBatch.GetNumCols(), inputSubBatch.GetNumRows(), inputSubBatch.GetDeviceId(), MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC);
                     Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, inputSubBatch.Transpose(), 1, m_inT.w(), 1, smallBatchSize * m_inT.h(), m_inT.c(), 1.0f, inputSubBatchSparseReordered, inputSubBatchSparseReordered);
-
                     Matrix<ElemType> outputGradientSubBatchReordered = Matrix<ElemType>::Zeros(smallBatchSize * m_outT.h() * m_outT.w(), m_outT.c(), outputGradientSubBatch.GetDeviceId());
                     Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, outputGradientSubBatch.Transpose(), 1, m_outT.w(), 1, smallBatchSize * m_outT.h(), m_outT.c(), 1.0f, outputGradientSubBatchReordered, outputGradientSubBatchReordered);
-
                     kernelGrad.Reshape(m_outT.c() * m_kernelT.w(), m_inT.c());
-                    Matrix<ElemType>::ConvolveAndWeightedAdd(1, outputGradientSubBatchReordered, true, inputSubBatchSparseReordered, false, 1, kernelGrad, smallBatchSize * m_inT.h(), m_strideT.w(), m_padding, false);
+                    Matrix<ElemType>::ConvolveAndWeightedAdd(1, outputGradientSubBatchReordered, true, inputSubBatchSparseReordered, false, 1, kernelGrad, smallBatchSize * m_inT.h(), m_strideT.w(), false , false);
                     kernelGrad.Reshape(m_outT.c(), m_inT.c() * m_kernelT.w());
                 }
                 else
@@ -513,9 +539,11 @@ protected:
 
             if (m_cdssm)
             {
-                out.AssignMaxPoolingResultCDSSM(in, m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
+                Matrix<ElemType> numberOfWordsPerSample(1, 1024, in.GetDeviceId());
+                out.AssignMaxPoolingResultCDSSM(numberOfWordsPerSample, in, m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
                     m_outT.w(), m_outT.h(), m_outT.w() * m_outT.h() * m_outT.c(),
                     m_kernelT.w(), m_kernelT.h(), m_strideT.w(), m_strideT.h());
+                numberOfWordsPerSample.ReleaseMemory();
             }
             else {
                 out.AssignMaxPoolingResult(in, m_inT.c(), m_inT.w(), m_inT.h(), m_inT.w() * m_inT.h() * m_inT.c(),
@@ -582,6 +610,7 @@ private:
     bool m_gpuSparse1D;
 
     bool m_cdssm;
+    bool m_cdssmSparse;
 };
 
 //------------------------------------------------------------------
