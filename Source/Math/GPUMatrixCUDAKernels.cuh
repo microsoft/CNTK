@@ -2048,16 +2048,21 @@ __global__ void _unpackConvolutionInput(const ElemType* packedMatrix, ElemType* 
 }
 
 template <class ElemType>
-__global__ void _getNumberOfWindowsPerSample(const ElemType in[], size_t *out,
+__global__ void _getNumberOfWindowsPerSample(size_t batchSize, const ElemType in[], ElemType *out,
     const size_t inputWidth  /* 288 */, const size_t inputHeight /* 10 */, const size_t inputSizePerSample /* 2880 */)
 {
-    size_t i = threadIdx.x;
-    for (size_t inputRowIndex = 0; inputRowIndex < inputHeight; inputRowIndex++)
+    int i = threadIdx.x;
+    if (i >= batchSize)
+    {
+        return;
+    }
+
+    for (int inputRowIndex = 0; inputRowIndex < inputHeight; inputRowIndex++)
     {
         bool allZero = true;
-        for (size_t inputColIndex = 0; inputColIndex < inputWidth; inputColIndex++)
+        for (int inputColIndex = 0; inputColIndex < inputWidth; inputColIndex++)
         {
-            size_t inputIndex = i * inputSizePerSample + inputRowIndex * inputWidth + inputColIndex;
+            int inputIndex = i * inputSizePerSample + inputRowIndex * inputWidth + inputColIndex;
             if (abs(in[inputIndex]) > 0.00000001)
             {
                 allZero = false;
@@ -2076,7 +2081,7 @@ __global__ void _getNumberOfWindowsPerSample(const ElemType in[], size_t *out,
 template <class ElemType>
 __global__ void _assignMaxPoolingResultCDSSM(const ElemType in[], const size_t cols,
                                              ElemType out[],
-                                             const size_t numberOfWindowsPerSample[],
+                                             const ElemType numberOfWindowsPerSample[],
                                              const size_t inputWidth  /* 288 */, const size_t inputHeight /* 10 */, const size_t inputSizePerSample /* 2880 */,
                                              const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample)
 {
@@ -2157,7 +2162,7 @@ __global__ void _addMaxPoolingGradientCDSSM(ElemType* inputGradientBatch, const 
     }
 
     const CUDA_LONG inputIndexWithinSample = inputIndex % inputSizePerSample;
-    const CUDA_LONG inputRowIndex = inputIndexWithinSample / inputWidth;
+    //const CUDA_LONG inputRowIndex = inputIndexWithinSample / inputWidth;
     const CUDA_LONG inputColIndex = inputIndexWithinSample % inputWidth;
 
     const CUDA_LONG outputIndex = outputSizePerSample * sampleId + inputColIndex;
@@ -3183,6 +3188,164 @@ __global__ void _shiftColCSCIndexFromSliceViewToAbsolute(
 
     if (id == cols - 1)
         colCSCIndex[cols] = nz;
+}
+
+template <class ElemType>
+__global__ void _convolveSparseCDSSM(const size_t samples,
+    const size_t maxOfWindows,
+    const size_t kernelSize,
+    const size_t hDims,
+    const ElemType * lhs /* 2 x 9 */,
+    const ElemType * bnzValues /* 492920 x 64  */,
+    const GPUSPARSE_INDEX_TYPE *rowIndices,
+    const GPUSPARSE_INDEX_TYPE *colCSCIndices,
+    ElemType *output /* 2304 x 64 */, /*  */
+    size_t numberOfChannels /* 49292 */,
+    const bool padding)
+{
+    size_t id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id > samples * hDims * maxOfWindows)
+    {
+        return;
+    }
+
+    size_t height = hDims * maxOfWindows;
+    size_t sampleId = id / height;
+    size_t rowIndex = id % height;
+    size_t hDimIndex = rowIndex % hDims;
+    int windowIndex = rowIndex / hDims;
+
+    size_t sampleStart = colCSCIndices[sampleId];
+    size_t sampleEnd = colCSCIndices[sampleId + 1];
+    size_t numberOfWords = rowIndices[sampleEnd - 1] / numberOfChannels + 1;
+
+    size_t numberOfWindows = padding ? numberOfWords : numberOfWords - kernelSize + 1;
+    if (numberOfWindows < 1)
+    {
+        numberOfWindows = 1;
+    }
+
+    if (!padding && (windowIndex > numberOfWords - kernelSize || windowIndex > 0 && kernelSize >= numberOfWords) ||
+        padding && (windowIndex + 1 > numberOfWords))
+    {
+        output[id] = 0.0;
+        return;
+    }
+
+    ElemType sum = 0;
+
+    // Reset column index to sample start.
+    size_t colCSCIndex = sampleStart;
+    size_t halfKernel = kernelSize >> 1;
+    for (int windowOffset = 0; windowOffset < kernelSize; windowOffset++)
+    {
+        int wordIndex = windowIndex + windowOffset;
+        if (padding)
+        {
+            wordIndex = wordIndex - halfKernel;
+        }
+
+        if (wordIndex >= 0 && wordIndex < numberOfWords)
+        {
+            // Move to the current word.
+            for (; rowIndices[colCSCIndex] < wordIndex * numberOfChannels && colCSCIndex < sampleEnd; colCSCIndex++) {}
+
+            if (colCSCIndex >= sampleEnd) { break; }
+
+            for (; rowIndices[colCSCIndex] < (wordIndex + 1) * numberOfChannels && colCSCIndex < sampleEnd; colCSCIndex++)
+            {
+                size_t rowIndex = rowIndices[colCSCIndex];
+                size_t channelIndex = rowIndex - numberOfChannels * wordIndex;
+                size_t weightIndex = channelIndex * kernelSize + windowOffset;
+                //size_t weightIndex = windowOffset * numberOfChannels + channelIndex;
+                // lhs
+                sum += bnzValues[colCSCIndex] * lhs[weightIndex * hDims + hDimIndex];
+            }
+        }
+    }
+
+    output[id] = sum;
+}
+
+template <class ElemType>
+__global__ void _convolveAndAddCDSSM(
+    const size_t samples,
+    const size_t maxOfWindows,
+    const size_t kernelSize,
+    const size_t hDims,
+    ElemType * kernelGrads,
+    const ElemType * bnzValues,
+    const GPUSPARSE_INDEX_TYPE *rowIndices,
+    const GPUSPARSE_INDEX_TYPE *colCSCIndices,
+    const GPUSPARSE_INDEX_TYPE *rowIndicesOriginal,
+    const GPUSPARSE_INDEX_TYPE *colCSCIndicesOriginal,
+    const ElemType *outputGrads,
+    size_t numberOfChannels,
+    bool padding)
+{
+    size_t id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id > kernelSize * hDims * numberOfChannels)
+    {
+        return;
+    }
+
+    int temp = id / hDims;
+    int channelIndex = temp / kernelSize;
+    int channelStart = colCSCIndices[channelIndex];
+    int channelEnd = colCSCIndices[channelIndex + 1];
+    ElemType sum = 0;
+    if (channelEnd > channelStart)
+    {
+        int indexInWindow = temp % kernelSize;
+        int hDimIndex = id % hDims;
+        //int indexInDim = indexInWindow * numberOfChannels + channelIndex;
+
+        for (int sampleId = 0; sampleId < samples; sampleId++)
+        {
+            //int sampleStart = colCSCIndicesOriginal[sampleId];
+            int sampleEnd = colCSCIndicesOriginal[sampleId + 1];
+            int numberOfWords = rowIndicesOriginal[sampleEnd - 1] / numberOfChannels + 1;
+
+            int numberOfWindows = padding ? numberOfWords : numberOfWords - kernelSize + 1;
+            if (numberOfWindows < 1)
+            {
+                numberOfWindows = 1;
+            }
+
+            for (int windowIndex = 0; windowIndex < numberOfWindows; windowIndex++)
+            {
+                // Move out of the range.
+                if (!padding && (windowIndex > numberOfWords - kernelSize || windowIndex > 0 && kernelSize >= numberOfWords) ||
+                    padding && (windowIndex + 1 > numberOfWords))
+                {
+                    break;
+                }
+
+                // Reset column index to channel start.
+                int colCSCIndex = channelStart;
+                int halfKernel = kernelSize >> 1;
+                int wordIndex = windowIndex + indexInWindow;
+
+                if (padding)
+                {
+                    wordIndex = wordIndex - halfKernel;
+                }
+
+                int startInChannel = wordIndex * samples;
+                for (; colCSCIndex < channelEnd; colCSCIndex++)
+                {
+                    if (rowIndices[colCSCIndex] - startInChannel == sampleId)
+                    {
+                        ElemType grad = outputGrads[sampleId * maxOfWindows * hDims + windowIndex * hDims + hDimIndex];
+                        sum += grad * bnzValues[colCSCIndex];
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    kernelGrads[id] = sum;
 }
 
 //c = alpha * op(a) * op(b) + beta*c

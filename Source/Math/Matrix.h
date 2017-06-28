@@ -505,7 +505,7 @@ public:
                                              const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
                                              const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
                                              const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
-    Matrix<ElemType>& AssignMaxPoolingResultCDSSM(const Matrix<ElemType>& inputBatch, const size_t channels,
+    Matrix<ElemType>& AssignMaxPoolingResultCDSSM(Matrix<ElemType>& numberOfWordsPerSample, const Matrix<ElemType>& inputBatch, const size_t channels,
                                                   const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
                                                   const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample,
                                                   const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
@@ -587,6 +587,8 @@ public:
     static void Multiply(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
     static void Multiply1x1AndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c);
     static void ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, ElemType beta, Matrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
+    static void ConvolveAndAddCDSSM(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b2, const Matrix<ElemType>& b, const bool transposeB, ElemType beta, Matrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
+    static void ConvolveSparseCDSSM(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, ElemType beta, Matrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise);
 
     static void ColumnwiseScaleAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& v, ElemType beta, Matrix<ElemType>& c);
 

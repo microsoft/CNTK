@@ -43,6 +43,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Constructors and Destructor
 
+template<typename T>
+T * CopyToArray2(const T* dev_pArray, size_t length)
+{
+    if (length != 0)
+    {
+        //PrepareDevice();
+        T* pArray = new T[length];
+        CUDA_CALL(cudaMemcpy(pArray, dev_pArray, sizeof(T) * length, cudaMemcpyDeviceToHost));
+        return pArray;
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
 template <class ElemType>
 GPUSPARSE_INDEX_TYPE GPUSparseMatrix<ElemType>::SecondaryIndexValueAt(size_t idx) const
 {
@@ -1095,6 +1111,231 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
 
 // dense X sparse = dense
 template <class ElemType>
+void GPUSparseMatrix<ElemType>::ConvolveSparseCDSSM(ElemType /*alpha*/, const GPUMatrix<ElemType>& lhs, const bool transposeA,
+    const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta,
+    GPUMatrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool /*channelwise*/)
+{
+    if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
+        RuntimeError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd: All matrices must be on the same GPU");
+
+    if (lhs.IsEmpty() || rhs.IsEmpty())
+        LogicError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd:  one of the input matrix is empty.");
+
+    int m = transposeA ? (int)lhs.GetNumCols() : (int)lhs.GetNumRows();
+    int k = transposeA ? (int)lhs.GetNumRows() : (int)lhs.GetNumCols();
+    int l = transposeB ? (int)rhs.GetNumCols() : (int)rhs.GetNumRows();
+    int n = transposeB ? (int)rhs.GetNumRows() : (int)rhs.GetNumCols();
+
+    assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
+
+    int numSteps = 0;
+    if (padding)
+        numSteps = (int)ceil(1.0 * l / (horizontalSubsample * numChannels));
+    else if (l >= k)
+        numSteps = 1 + (l - k) / (horizontalSubsample * numChannels);
+
+    if (numSteps == 0)
+        LogicError("ConvolveAndWeightedAdd: number of steps is zero. Matrix dimensions are incorrect or set padding to true.");
+
+    int cRows = m * numSteps;
+    int cCols = n;
+
+    if (beta == 0)
+        c.RequireSize(cRows, cCols);
+    else
+        c.VerifySize(cRows, cCols); // Can't resize if beta != 0
+
+    c.PrepareDevice();
+
+    /*std::unique_ptr<ElemType[]> refI(lhs.CopyToArray());
+    for (int ii = 0; ii < 10; ii++)
+    {
+        printf("%f %f %f\r\n", refI[ii], refI[ii + 288], refI[ii + 288 + 288]);
+    }
+
+    printf("\r\n");*/
+
+    /*
+
+    0.017703 0.016749 0.022436
+    0.037207 -0.016925 -0.048103
+    -0.048891 0.022897 0.007805
+    -0.028114 -0.007471 -0.039701
+    -0.021349 0.026893 -0.034671
+    -0.011190 0.030858 -0.012403
+    -0.015031 0.001436 -0.026193
+    0.046473 0.030238 -0.007372
+    -0.046859 0.028511 0.030184
+    -0.024307 0.011073 -0.020345
+     */
+
+    /*ElemType* refrhs = CopyToArray2(rhs.Buffer(), 16);
+    for (int i = 0; i < 16; i++)
+    {
+        printf("%f\r\n", (float) refrhs[i]);
+    }
+    delete[] refrhs;
+
+
+    printf("\r\n");
+
+    int* refRow = CopyToArray2(rhs.RowLocation(), 16);
+    for (int i = 0; i < 16; i++)
+    {
+        int index = refRow[i];
+        int word = index / 49292;
+        int tri = index % 49292;
+        printf("%d:%d\r\n", word, tri);
+    }
+
+    delete[] refRow;
+
+    printf("\r\n");
+
+    int* refCol = CopyToArray2(rhs.ColLocation(), 16);
+    for (int i = 0; i < 16; i++)
+    {
+        printf("%d\r\n", refCol[i]);
+    }
+
+    delete[] refCol;
+
+    printf("\r\n");*/
+
+    if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+    {
+        if (transposeB)
+        {
+            NOT_IMPLEMENTED;
+        }
+        else {
+            int blocksPerGrid = (int)ceil(1.0 * cRows * cCols / GridDim::maxThreadsPerBlock);
+            SyncGuard syncGuard;
+
+            _convolveSparseCDSSM<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >
+                (
+                    n,
+                    10,
+                    3,
+                    m,
+                    reinterpret_cast<const ElemType*>(lhs.Data()), // dense
+                    reinterpret_cast<const ElemType*>(rhs.Buffer()), // sparse nz values. Note that because of the offsets we use the array
+                    rhs.RowLocation(),
+                    rhs.ColLocation(),
+                    reinterpret_cast<ElemType*>(c.Data()), // dense target
+                    numChannels,
+                    padding);
+        }
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::ConvolveAndAddCDSSM(
+    ElemType /*alpha*/, const GPUMatrix<ElemType>& lhs, const bool transposeA,
+    const GPUSparseMatrix<ElemType>& rhs2, const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType /*beta*/,
+    GPUMatrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool /*channelwise*/)
+{
+
+    //ElemType* refrhs = CopyToArray2(rhs.Buffer(), 16);
+    //for (int i = 0; i < 16; i++)
+    //{
+    //    printf("%f\r\n", (float) refrhs[i]);
+    //}
+    //delete[] refrhs;
+
+
+    //printf("\r\n");
+
+    //int* refRow = CopyToArray2(rhs.RowLocation(), 450);
+    //for (int i = 398; i < 405; i++)
+    //{
+    //    printf("%d\r\n", refRow[i]);
+    //}
+
+    //delete[] refRow;
+
+    //printf("\r\n");
+
+    //int* refCol = CopyToArray2(rhs.ColLocation(), 600);
+    //for (int i = 550; i < 550 + 16; i++)
+    //{
+    //    printf("%d: %d\r\n", i, refCol[i]);
+    //}
+
+    //delete[] refCol;
+
+    //printf("\r\n");
+
+
+
+    if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
+        RuntimeError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd: All matrices must be on the same GPU");
+
+    if (lhs.IsEmpty() || rhs.IsEmpty())
+        LogicError("GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd:  one of the input matrix is empty.");
+
+    int m = transposeA ? (int)lhs.GetNumCols() : (int)lhs.GetNumRows(); /* 288 */
+    int k = transposeA ? (int)lhs.GetNumRows() : (int)lhs.GetNumCols(); /* 640 */
+    int l = transposeB ? (int)rhs2.GetNumCols() : (int)rhs2.GetNumRows(); /*rh2 492920 rhs 640 */
+    int n = transposeB ? (int)rhs2.GetNumRows() : (int)rhs2.GetNumCols(); /*rhs2 64 rhs 49292 */
+
+    assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
+
+    int numSteps = 0; /* 10 */
+    if (padding)
+        numSteps = (int)ceil(1.0 * l / (horizontalSubsample * numChannels));
+    else if (l >= k)
+        numSteps = 3;// 1 + (l - k) / (horizontalSubsample * numChannels);
+
+    if (numSteps == 0)
+        LogicError("ConvolveAndWeightedAdd: number of steps is zero. Matrix dimensions are incorrect or set padding to true.");
+
+    int cRows = c.GetNumRows(); /* 288 */
+    int cCols = c.GetNumCols(); /* 147876 */
+
+
+    c.PrepareDevice();
+    if (rhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+    {
+        if (!transposeB)
+        {
+            int blocksPerGrid = (int)ceil(1.0 * cRows * cCols / GridDim::maxThreadsPerBlock);
+            SyncGuard syncGuard;
+            _convolveAndAddCDSSM<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >
+                ( 
+                    n,
+                    numSteps,
+                    3,
+                    m,
+                    reinterpret_cast<ElemType*>(c.Data()), // dense target
+                    reinterpret_cast<const ElemType*>(rhs.Buffer()), // sparse nz values. Note that because of the offsets we use the array
+                    rhs.RowLocation(),
+                    rhs.ColLocation(),
+                    rhs2.RowLocation(),
+                    rhs2.ColLocation(),
+                    reinterpret_cast<const ElemType*>(lhs.Data()), // dense
+                    numChannels,
+                    padding
+                    );
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+// dense X sparse = dense
+template <class ElemType>
 void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
                                                        const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta,
                                                        GPUMatrix<ElemType>& c, size_t numChannels, size_t horizontalSubsample, bool padding, bool channelwise)
@@ -1114,9 +1355,9 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
 
     int numSteps = 0;
     if (padding)
-        numSteps = (int) ceil(1.0 * l / (horizontalSubsample * numChannels));
+        numSteps = (int)ceil(1.0 * l / (horizontalSubsample * numChannels));
     else if (l >= k)
-        numSteps = 1 + (l - k) / (horizontalSubsample * numChannels);
+        numSteps = 3;// 1 + (l - k) / (horizontalSubsample * numChannels);
 
     if (numSteps == 0)
         LogicError("ConvolveAndWeightedAdd: number of steps is zero. Matrix dimensions are incorrect or set padding to true.");

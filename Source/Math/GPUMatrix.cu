@@ -3249,7 +3249,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignMaxPoolingResult(const GPUMatrix
 }
 
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignMaxPoolingResultCDSSM(const GPUMatrix<ElemType>& inputBatch,
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignMaxPoolingResultCDSSM(GPUMatrix<ElemType>& numberOfWordsPerSample, const GPUMatrix<ElemType>& inputBatch,
                                                                       const size_t inputWidth, const size_t inputHeight, const size_t inputSizePerSample,
                                                                       const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample)
 {
@@ -3261,17 +3261,17 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignMaxPoolingResultCDSSM(const GPUM
 
     PrepareDevice();
 
-    size_t* dev_numberOfWindowsPerSample = 0;
-    CUDA_CALL(cudaMalloc((void **)&dev_numberOfWindowsPerSample, batchSize * sizeof(size_t)));
+    //int* dev_numberOfWindowsPerSample = 0;
+    //CUDA_CALL(cudaMalloc((void **)&dev_numberOfWindowsPerSample, batchSize * sizeof(int)));
     SyncGuard syncGuard;
-    _getNumberOfWindowsPerSample << <1, batchSize >> > (inputBatch.Data(), dev_numberOfWindowsPerSample, inputWidth, inputHeight, inputSizePerSample);
+    _getNumberOfWindowsPerSample << <1, batchSize >> > (batchSize, inputBatch.Data(), numberOfWordsPerSample.Data(), inputWidth, inputHeight, inputSizePerSample);
     _assignMaxPoolingResultCDSSM << <blocksPerGrid, numThreadPerBlock, 0, t_stream >> >(inputBatch.Data(), batchSize, 
                                                                                         Data(),
-                                                                                        dev_numberOfWindowsPerSample,
+                                                                                        numberOfWordsPerSample.Data(),
                                                                                         inputWidth, inputHeight, inputSizePerSample,
                                                                                         outputWidth, outputHeight, outputSizePerSample);
 
-    CUDA_CALL(cudaFree(dev_numberOfWindowsPerSample));
+    //CUDA_CALL(cudaFree(dev_numberOfWindowsPerSample));
 
     return *this;
 }
