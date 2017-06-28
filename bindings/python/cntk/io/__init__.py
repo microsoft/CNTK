@@ -16,6 +16,7 @@ from cntk.internal import typemap, sanitize_dtype_cntk, is_string
 from cntk.device import use_default_device
 from cntk.logging import TraceLevel, get_trace_level
 from cntk.variables import Record
+from cntk.internal.utils import _py_dict_to_cntk_dict
 import cntk.io.transforms
 
 import numpy as np
@@ -309,9 +310,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Gets the checkpoint state of the MinibatchSource.
 
         Returns:
-            cntk.cntk_py.Dictionary:
-            A :class:`~cntk.cntk_py.Dictionary` that has the checkpoint state
-            of the MinibatchSource
+            A dict that has the checkpoint state of the MinibatchSource
         '''
         return super(MinibatchSource, self).get_checkpoint_state()
 
@@ -320,9 +319,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Restores the MinibatchSource state from the specified checkpoint.
 
         Args:
-            checkpoint (:class:`~cntk.cntk_py.Dictionary`): checkpoint to restore from
+            checkpoint (dict): checkpoint to restore from
         '''
-        super(MinibatchSource, self).restore_from_checkpoint(checkpoint)
+        super(MinibatchSource, self).restore_from_checkpoint(_py_dict_to_cntk_dict(checkpoint))
 
     @property
     def is_distributed(self):

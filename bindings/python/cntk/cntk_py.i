@@ -533,6 +533,10 @@ fail:
     $result = DictionaryToPy($1);
 }
 
+%typemap(out, fragment="DictionaryToPy") CNTK::Dictionary GetCheckpointState {
+    $result = DictionaryToPy($1);
+}
+
 %define %eq_for(DATA_TYPE, EQ)
 %rename(EQ) operator==(const DATA_TYPE&, const DATA_TYPE&);
 %enddef
