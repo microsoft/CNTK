@@ -112,7 +112,7 @@ def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashIn
 
     will be represented as the vector of labels (indices) as [1, 0, 0, 1], on which edit distance will be evaluated.
 
-    The function allows to squash sequences of repeating labels and ignore certain labels. For example, if `squashInputs` is `true` and `tokensToIgnore` contains label '-' then
+    The function allows to squash sequences of repeating labels and ignore certain labels. For example, if `squashInputs` is `true` and `tokensToIgnore` contains index of label '-' then
     given first input sequence as `s1="1-12-"` and second as `s2="-11--122"` the edit distance will be computed against `s1' = "112" and s2' = "112"`.
 
     Just like `classification_error`and other evaluation nodes, when used as an evaluation criterion, the Trainer will aggregate all values over an epoch and report the average, i.e. the error rate.
@@ -121,11 +121,12 @@ def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashIn
 
 
     Example:
-        >>> i1 = cntk.input(shape=(2,))
-        >>> i2 = cntk.input(shape=(2,))
+        >>> i1 = C.input(shape=(2,))
+        >>> i2 = C.input(shape=(2,))
         >>> arguments = {i1 : [[1, 3], [2, 0]], i2 : [[2, 0], [2, 0]]}
-        >>> a = edit_distance_error(i1, i2, 0, 1, 1, True, [1])
-        >>> print(a.eval(arguments))
+        >>> a = C.edit_distance_error(i1, i2, 0, 1, 1, True, [1])
+        >>> a.eval(arguments)
+        array(1.0, dtype=float32)
 
     Args:
         input_a: first input sequence
@@ -135,7 +136,7 @@ def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashIn
         insPen: insertion penalty
         squashInputs: whether to merge sequences of identical samples (in both input sequences). If true and tokensToIgnore contains label '-' then
                 given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
-        tokensToIgnore: list of samples to ignore during edit distance evaluation (in both sequences)
+        tokensToIgnore: list of indices of samples to ignore during edit distance evaluation (in both sequences)
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`

@@ -26,8 +26,6 @@ BOOST_AUTO_TEST_CASE(ComputeEditDistanceErrorTest)
     MBLayoutPtr pMBLayout = make_shared<MBLayout>(1, seqSize, L"X");
     pMBLayout->AddSequence(0, 0, 0, seqSize);
     unique_ptr<EditDistanceErrorNode<float>> pEDNode(new EditDistanceErrorNode<float>(-1, L"ednode"));
-    ComputationEnvironmentPtr pEnvironment(new ComputationEnvironment());
-    pEDNode->SetEnvironment(pEnvironment);
 
     float ed = pEDNode->ComputeEditDistanceError(firstSeq, secondSeq, pMBLayout, 1, 1, 1, true, tokensToIgnore);
     assert((int)ed == 2);
