@@ -247,7 +247,7 @@ double RandomSampleInclusionFrequencyNode<ElemType>::EstimateNumberOfTries()
     return totalTries / (double)numExperiments;
 }
 
-// Estimates the expected number of occurences of each class in the sampled set.
+// Estimates the expected number of occurrences of each class in the sampled set.
 // For sampling without replacement we use estimate using average number of tries. (Inspired by TensorFlow)
 // BUGBUG: Consider to reimplement using a less biased estimate as proposed by Nikos.
 template<class ElemType>

@@ -35,7 +35,7 @@ namespace CNTK
 {
     ///
     /// Checked mode enables additional runtime verification such as:
-    /// - Tracking NaN occurences in sequence gaps.
+    /// - Tracking NaN occurrences in sequence gaps.
     /// - Function graph verification after binding of free static axes to actual values at runtime
     /// 
     /// Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.

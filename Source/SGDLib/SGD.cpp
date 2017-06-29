@@ -1283,7 +1283,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // independent of their actual content (which is considered outdated).
 
         // Sum of actualMBSize across all nodes when using parallel training
-        // 'aggregate' here means accross-worker aggregate for this one minibatch.
+        // 'aggregate' here means across-worker aggregate for this one minibatch.
         size_t aggregateNumSamples = actualMBSize; // (0 for empty MB)
         size_t aggregateNumSamplesWithLabel = CriterionAccumulator<ElemType>::GetNumSamples(criterionNodes[0], numSamplesWithLabelOfNetwork); // (0 for empty MB)
 
