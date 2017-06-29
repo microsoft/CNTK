@@ -21,11 +21,13 @@
 #include "MASGD.h"
 #include "ASGDHelper.h"
 
-#define SaveCheckPoint
+//#define SSGD_WARMUP
+
 #define INPUT_CRC
 #define GRADIENT_CRC
-#define MBMODEL_SAVE
-#define TEST_RUN_MB
+//#define MBMODEL_SAVE
+//#define TEST_RUN_MB
+#define SaveCheckPoint
 
 extern int k_TestRunMBNum;
 extern bool k_KeepCheckPoint;

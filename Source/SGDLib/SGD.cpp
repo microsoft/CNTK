@@ -41,7 +41,7 @@
 #include <boost/crc.hpp>
 
 
-int k_TestRunMBNum = 2;
+int k_TestRunMBNum = -1;
 bool k_KeepCheckPoint = true;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -825,7 +825,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 net->Save(modelName);
 
 #ifdef SaveCheckPoint
-				m_keepCheckPointFiles = k_KeepCheckPoint;		// for test
+                m_keepCheckPointFiles = k_KeepCheckPoint;
 #endif
 				if (!m_keepCheckPointFiles)
                 {
@@ -1150,7 +1150,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                               dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[0])->Value());
             }
 
-//#define SSGD_WARMUP
 #ifdef SSGD_WARMUP
             if (epochNumber < 5) {
                 int minibatchSize = 16 * 32;
@@ -1164,9 +1163,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 if (numMBsRun % 100 == 0)
                     fprintf(stderr, "Iters: %d, LearnRate: %.9f\n", numMBsRun, (float)learnRatePerSample);
             }
-
-
-#endif // SSGD_WARMUO
+#endif // SSGD_WARMUP
 
             // do forward and back propagation
 
@@ -1354,7 +1351,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         auto profWeights = ProfilerTimeBegin();
 
 #ifdef GRADIENT_CRC
-
 		if (m_mpi->IsMainNode() && numMBsRun % 1 == 0)
 		{
 			unsigned int checkSum = CrcCheck(learnParamsGradients);
@@ -1371,7 +1367,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 			outFile << epochNumber << ":" << numMBsRun << ":" << checkSum << "\n";
 			outFile.close();
 		}
-
 #endif
 
         // update model parameters
@@ -1632,7 +1627,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         ProfilerTimeEnd(profMinibatch, profilerEvtMainMinibatch);
 
 #ifdef MBMODEL_SAVE
-        if (numMBsRun % 1 == 0)
+        if (numMBsRun % 100 == 0)
         {
             if ((m_mpi == nullptr) || m_mpi->IsMainNode())
             {
@@ -2663,7 +2658,7 @@ wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, const int mb, bool 
     }
     else
     {
-        wstring w = msra::strfun::wstrprintf(L"%ls.%d.%d", m_modelPath.c_str(), (int)epoch1Base, (int)mb);
+        wstring w = msra::strfun::wstrprintf(L"%ls.%d_%d", m_modelPath.c_str(), (int)epoch1Base, (int)mb);
         return w;
     }
 }
