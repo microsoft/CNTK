@@ -2467,7 +2467,7 @@ def random_sample_inclusion_frequency(
     name=''):
     '''
     For weighted sampling with the specifed sample size (`num_samples`)
-    this operation computes the expected number of occurences of each class
+    this operation computes the expected number of occurrences of each class
     in the sampled set. In case of sampling without replacement
     the result is only an estimate which might be quite rough in the
     case of small sample sizes.

@@ -27,7 +27,7 @@ static inline size_t rand(const size_t begin, const size_t end)
 
 // Rand based on Mersenne Twister.
 // We use our own distribution in order to match baselines between different operating systems,
-// because uniform_distribution is not guranteed to provide the same numbers on different platforms.
+// because uniform_distribution is not guaranteed to provide the same numbers on different platforms.
 // TODO: Switching to Boost would eliminate this problem.
 static inline size_t RandMT(const size_t begin, const size_t end, std::mt19937_64& rng)
 {
