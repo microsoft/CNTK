@@ -30,28 +30,11 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Debug_UWP'">
-    <IsUWP>true</IsUWP>
-    <OutputSuffix>_app</OutputSuffix>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Release_UWP'">
-    <IsUWP>true</IsUWP>
-    <OutputSuffix>_app</OutputSuffix>
-  </PropertyGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{86883653-8A61-4038-81A0-2379FAE4200A}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CNTK</RootNamespace>
     <ProjectName>Common</ProjectName>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(IsUWP)'=='true'">
-    <Keyword>DynamicLibrary</Keyword>
-    <AppContainerApplication>true</AppContainerApplication>
-    <ApplicationType>Windows Store</ApplicationType>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
-    <WindowsTargetPlatformMinVersion>10.0.10586.0</WindowsTargetPlatformMinVersion>
-    <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
-    <DefaultLanguage>en-US</DefaultLanguage>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -68,12 +51,6 @@
   <PropertyGroup>
     <TargetName>Cntk.Common$(OutputSuffix)-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(IsUWP)'=='true'">
-    <ClCompile>
-      <CompileAsWinRT>false</CompileAsWinRT>
-      <PreprocessorDefinitions>CNTK_UWP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -125,7 +102,4 @@
   <ImportGroup Condition="$(GpuBuild)" Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).targets" />
   </ImportGroup>
-  <Target Name="AfterBuild">
-    <Copy SourceFiles="$(OutputFile)" DestinationFolder="$(OutDir).."/>
-  </Target>
 </Project>

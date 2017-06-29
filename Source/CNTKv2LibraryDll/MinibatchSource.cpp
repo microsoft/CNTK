@@ -14,9 +14,7 @@
 #include <tuple>
 #include "Value.h"
 #include "MPIWrapper.h"
-#ifndef CNTK_UWP
 #include "PerformanceProfiler.h"
-#endif
 
 using namespace Microsoft::MSR::CNTK;
 

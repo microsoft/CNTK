@@ -8,9 +8,7 @@
 
 #include "CNTKLibrary.h"
 #include "fileutil.h"
-#ifndef CNTK_UWP
 #include "PerformanceProfiler.h"
-#endif
 
 namespace CNTK
 {

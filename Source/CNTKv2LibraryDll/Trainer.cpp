@@ -7,9 +7,7 @@
 #include "CNTKLibrary.h"
 #include "Utils.h"
 #include "Learner.h"
-#ifndef CNTK_UWP
 #include "PerformanceProfiler.h"
-#endif
 #include "CompositeFunction.h"
 #include "Serialization.h"
 

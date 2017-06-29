@@ -32,21 +32,45 @@
     <HasMultiverso>false</HasMultiverso>
     <HasMultiverso Condition="Exists('$(SolutionDir)\Source\Multiverso\include\multiverso')">true</HasMultiverso>
 
-    <!-- If an executable links Cntk.Reader-$(CntkComponentVersion).lib, it has dependency on Cntk.Common.dll, Cntk.Math.dll and Cntk.PerformanceProfiler.dll -->
-    <ReaderLibs>Cntk.Reader$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.Common$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).lib;</ReaderLibs>
+    <IsUWP>false</IsUWP>
+    <IsUWP Condition="'$(Configuration)'=='Debug_UWP' Or '$(Configuration)'=='Release_UWP'">true</IsUWP>
 
-    <!-- UWP does not consume PerformanceProfiler -->
-    <ReaderLibs Condition="'$(IsUWP)'!='true'">Cntk.PerformanceProfiler-$(CntkComponentVersion).lib;$(ReaderLibs)</ReaderLibs>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(IsUWP)'!='true'">
+  <PropertyGroup Condition="$(IsUWP)">
+    <MathLibrary>OpenBLAS</MathLibrary>
+    <MathIncludePath>$(OPENBLASPATH)</MathIncludePath>
+    <MathLibraryName>OpenBLAS library name</MathLibraryName>
+    <MathLibraryPath>$(OPENBLASPATH)\lib\x64\RELEASE</MathLibraryPath>
+    <MathDefine>USE_OPENBLAS;OS_WINNT;ARCH_X86_64;C_MSVC</MathDefine>
+    <MathLinkLibrary>libopenblas.lib</MathLinkLibrary>
+    <MathDelayLoad>libopenblas.dll</MathDelayLoad>
+    <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
+    <OutputSuffix>_app</OutputSuffix>
+    <AppContainerApplication>true</AppContainerApplication>
+    <ApplicationType>Windows Store</ApplicationType>
+    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.10586.0</WindowsTargetPlatformMinVersion>
+    <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
+    <DefaultLanguage>en-US</DefaultLanguage>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- If an executable links Cntk.Reader-$(CntkComponentVersion).lib, it has dependency on Cntk.Common.dll, Cntk.Math.dll and Cntk.PerformanceProfiler.dll -->
+    <ReaderLibs>Cntk.Reader$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.Common$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).lib;</ReaderLibs>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="!$(IsUWP)">
     <MathLibrary>MKL</MathLibrary>
     <CNTKCustomMKLVersion>3</CNTKCustomMKLVersion>
     <CNTKCustomMKLPath>$(CNTK_MKL_PATH)\$(CNTKCustomMKLVersion)</CNTKCustomMKLPath>
     <MathIncludePath>$(CNTKCustomMKLPath)\include</MathIncludePath>
     <MathDefine>USE_MKL</MathDefine>
+    <!-- Only non-UWP configurations consume PerformanceProfiler -->
+    <ReaderLibs>Cntk.PerformanceProfiler-$(CntkComponentVersion).lib;$(ReaderLibs)</ReaderLibs>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(IsUWP)'!='true' And '$(CNTK_MKL_SEQUENTIAL)' != '1'">
+
+  <PropertyGroup Condition="!$(IsUWP) And '$(CNTK_MKL_SEQUENTIAL)' != '1'">
     <MathLibraryName>CNTK custom MKL Parallel (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
     <MathLibraryPath>$(CNTKCustomMKLPath)\x64\parallel</MathLibraryPath>
     <MathLinkLibrary>mkl_cntk_p.lib</MathLinkLibrary>
@@ -54,7 +78,7 @@
     <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
     <UnitTestDlls>$(OutDir)mkl_cntk_p.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(IsUWP)'!='true' And '$(CNTK_MKL_SEQUENTIAL)' == '1'">
+  <PropertyGroup Condition="!$(IsUWP) And '$(CNTK_MKL_SEQUENTIAL)' == '1'">
     <MathLibraryName>CNTK custom MKL Sequential (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
     <MathLibraryPath>$(CNTKCustomMKLPath)\x64\sequential</MathLibraryPath>
     <MathLinkLibrary>mkl_cntk_s.lib</MathLinkLibrary>
@@ -62,17 +86,6 @@
     <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
     <UnitTestDlls>$(OutDir)mkl_cntk_s.dll;</UnitTestDlls>
   </PropertyGroup> 
-
-  <PropertyGroup Condition="'$(IsUWP)'=='true'">
-    <MathLibrary>OpenBLAS</MathLibrary>
-    <MathIncludePath>$(OpenBLASPath)</MathIncludePath>
-    <MathLibraryName>OpenBLAS library name</MathLibraryName>
-    <MathLibraryPath>$(OpenBLASPath)\lib\x64\RELEASE</MathLibraryPath>
-    <MathDefine>USE_OPENBLAS;OS_WINNT;ARCH_X86_64;C_MSVC</MathDefine>
-    <MathLinkLibrary>libopenblas.lib</MathLinkLibrary>
-    <MathDelayLoad>libopenblas.dll</MathDelayLoad>
-    <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
-  </PropertyGroup>
 
   <PropertyGroup Condition="$(UseZip)">
     <ZipInclude>$(ZLIB_PATH)\include;$(ZLIB_PATH)\lib\libzip\include;</ZipInclude>
@@ -154,8 +167,25 @@
     <ClCompile>
       <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)"</PreprocessorDefinitions>
       <!-- UWP does not use MPI -->
-      <PreprocessorDefinitions Condition="'$(IsUWP)'!='true'">%(PreprocessorDefinitions);HAS_MPI=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="!$(IsUWP)">%(PreprocessorDefinitions);HAS_MPI=1</PreprocessorDefinitions>
     </ClCompile>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="$(IsUWP)">
+    <ClCompile>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <PreprocessorDefinitions>CNTK_UWP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link Condition="$(ReleaseBuild)">
+      <AdditionalOptions>/nodefaultlib:vccorlib /nodefaultlib:msvcrt vccorlib.lib msvcrt.lib %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <Link Condition="$(DebugBuild)">
+      <AdditionalOptions>/nodefaultlib:vccorlibd /nodefaultlib:msvcrtd vccorlibd.lib msvcrtd.lib %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <!-- This is necessary because UWP build puts binaries into individual subfolders, ignoring OutDir settings -->
+    <PostBuildEvent>
+      <Command>xcopy /D /I /Y "$(TargetPath)" "$(TargetDir)\.."</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
 
   <ItemDefinitionGroup Condition="'$(ConfigurationType)' == 'StaticLibrary'">

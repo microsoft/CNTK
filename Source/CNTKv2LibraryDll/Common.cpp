@@ -14,9 +14,7 @@
 #include <thread>
 #include "GPUMatrix.h"
 #include "Globals.h"
-#ifndef CNTK_UWP
 #include "PerformanceProfiler.h"
-#endif // CNTK_UWP
 #include "MPIWrapper.h"
 #include "Basics.h"
 #include "ProgressTracing.h"

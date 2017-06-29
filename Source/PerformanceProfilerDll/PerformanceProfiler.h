@@ -34,6 +34,12 @@
 
 #pragma once
 
+#ifdef CNTK_UWP // UWP does not support performance profiler
+
+#define PROFILE_SCOPE(eventId)      /*nothing*/
+
+#else
+
 #include <string>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -175,3 +181,5 @@ private:
 #define THROUGHPUT_SCOPE(eventId, bytes)    ScopeThroughput __st##eventId(eventId, bytes);
 
 }}}
+
+#endif // CNTK_UWP

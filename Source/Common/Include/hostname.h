@@ -28,30 +28,28 @@ class GetHostName : public std::string
 public:
     GetHostName()
     {
+#ifdef CNTK_UWP
+        assign("localhost"); // This is only used for diag messages in code that today is unreachable in UWP
+#else
         static std::string hostname; // it's costly, so we cache the name
         if (hostname.empty())
         {
 #ifdef _WIN32
-#ifndef CNTK_UWP
             WSADATA wsaData;
             if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
             {
                 return;
             }
 #endif
-#endif
             char hostnamebuf[1024];
-            strcpy_s(hostnamebuf, 1024, "localhost"); // in case it goes wrong, or for UWP
-#ifndef CNTK_UWP
+            strcpy_s(hostnamebuf, 1024, "localhost"); // in case it goes wrong
             ::gethostname(&hostnamebuf[0], sizeof(hostnamebuf) / sizeof(*hostnamebuf));
-#endif
             hostname = hostnamebuf;
 #ifdef _WIN32
-#ifndef CNTK_UWP
             WSACleanup();
-#endif
 #endif
         }
         assign(hostname);
+#endif // CNTK_UWP
     }
 };

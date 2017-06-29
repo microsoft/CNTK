@@ -21,6 +21,14 @@
       <Configuration>Release_CpuOnly</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_UWP|x64">
+      <Configuration>Debug_UWP</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_UWP|x64">
+      <Configuration>Release_UWP</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{EB2BE26F-6BD4-4274-971F-86D080779DD1}</ProjectGuid>
@@ -40,7 +48,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <TargetName>Cntk.Actions-$(CntkComponentVersion)</TargetName>
+    <TargetName>Cntk.Actions$(OutputSuffix)-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

@@ -653,8 +653,8 @@ void renameOrDie(const std::string& from, const std::string& to)
         RuntimeError("error deleting file: '%s': %d", to.c_str(), GetLastError());
 
 #if CNTK_UWP
-    from; to;
-    RuntimeError("Not supported in UWP");
+    to;
+    RuntimeError("error renaming file '%s': Not supported in UWP", from.c_str());
 #else
     if (!MoveFileA(from.c_str(), to.c_str()))
         RuntimeError("error renaming file '%s': %d", from.c_str(), GetLastError());
@@ -679,8 +679,8 @@ void renameOrDie(const std::wstring& from, const std::wstring& to)
     if (fexists(to.c_str()) && !DeleteFileW(to.c_str()))
         RuntimeError("error deleting file '%ls': %d", to.c_str(), GetLastError());
 #if CNTK_UWP
-    from; to;
-    RuntimeError("Not supported in UWP");
+    to;
+    RuntimeError("error renaming file '%ls': Not supported in UWP", from.c_str());
 #else
     if (!MoveFileW(from.c_str(), to.c_str()))
         RuntimeError("error renaming file '%ls': %d", from.c_str(), GetLastError());
@@ -705,8 +705,8 @@ void copyOrDie(const wstring& from, const wstring& to)
     const wstring tempTo = to + L".tmp";
 #ifdef _WIN32
 #ifdef CNTK_UWP
-    from; to;
-    RuntimeError("Not supported in UWP");
+    to;
+    RuntimeError("error copying file 'l%s' to '%ls' : Not supported in UWP", from.c_str(), tempTo.c_str());
 #else
     const BOOL succeeded = CopyFile(from.c_str(), tempTo.c_str(), FALSE);
     if (!succeeded)

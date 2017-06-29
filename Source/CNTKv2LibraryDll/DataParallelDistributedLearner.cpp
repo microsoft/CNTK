@@ -7,9 +7,7 @@
 #include "DataParallelDistributedLearner.h"
 #include "DistributedCommunicator.h"
 #include "Learner.h"
-#ifndef CNTK_UWP
 #include "PerformanceProfiler.h"
-#endif
 
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 #include "QuantizedDistributedCommunicator.h"

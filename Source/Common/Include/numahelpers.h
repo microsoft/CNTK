@@ -163,7 +163,9 @@ static inline void free(void *p)
 // dump memory allocation
 static inline void showavailablememory(const char *what)
 {
-#ifndef CNTK_UWP
+#ifdef CNTK_UWP
+    what;
+#else
     size_t n = getnumnodes();
     for (size_t i = 0; i < n; i++)
     {

@@ -30,28 +30,11 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Debug_UWP'">
-    <IsUWP>true</IsUWP>
-    <OutputSuffix>_app</OutputSuffix>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Release_UWP'">
-    <IsUWP>true</IsUWP>
-    <OutputSuffix>_app</OutputSuffix>
-  </PropertyGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Math</RootNamespace>
     <ProjectName>Math</ProjectName>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(IsUWP)'=='true'">
-    <Keyword>DynamicLibrary</Keyword>
-    <AppContainerApplication>true</AppContainerApplication>
-    <ApplicationType>Windows Store</ApplicationType>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
-    <WindowsTargetPlatformMinVersion>10.0.10586.0</WindowsTargetPlatformMinVersion>
-    <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
-    <DefaultLanguage>en-US</DefaultLanguage>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -76,11 +59,9 @@
   <PropertyGroup>
     <TargetName>Cntk.Math$(OutputSuffix)-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(IsUWP)'=='true'">
+  <ItemDefinitionGroup Condition="$(IsUWP)">
     <ClCompile>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
-      <CompileAsWinRT>false</CompileAsWinRT>
-      <PreprocessorDefinitions>CNTK_UWP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup>
@@ -89,9 +70,7 @@
       <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(MathLibraryPath);$(OutDir)</AdditionalLibraryDirectories>
-      <!-- UWP build puts the Common lib in the 'Common' subfolder, hence additional AdditionalLibraryDirectories -->
-      <AdditionalLibraryDirectories Condition="'$(IsUWP)'=='true'">%(AdditionalLibraryDirectories);$(SolutionDir)$(Platform)\$(Configuration)\Common;</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MathLibraryPath);$(SolutionDir)$(Platform)\$(Configuration);</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
@@ -113,11 +92,12 @@
       <AdditionalDependencies>$(MathLinkLibrary);Cntk.Common$(OutputSuffix)-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>$(MathDelayLoad); $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
       <Profile>true</Profile>
-      <AdditionalOptions Condition="'$(IsUWP)'=='true'">/nodefaultlib:vccorlibd /nodefaultlib:msvcrtd vccorlibd.lib msvcrtd.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"</Command>
       <Message>Copying $(MathLibraryName) DLLs</Message>
+      <Command Condition="$(IsUWP)">xcopy /D /I /Y "$(TargetDir)$(TargetName).lib" "$(TargetDir).."</Command>
+      <Command Condition="$(IsUWP)">xcopy /D /I /Y "$(TargetPath)" "$(TargetDir)\.."</Command>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -151,11 +131,12 @@
       <AdditionalDependencies>$(MathLinkLibrary);Cntk.Common$(OutputSuffix)-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>$(MathDelayLoad); $(CudaDlls); %(DelayLoadDLLs)</DelayLoadDLLs>
       <Profile>true</Profile>
-      <AdditionalOptions Condition="'$(IsUWP)'=='true'">/nodefaultlib:vccorlib /nodefaultlib:msvcrt vccorlib.lib msvcrt.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /D /I /Y "$(MathPostBuildCopyPattern)" "$(OutDir)"</Command>
       <Message>Copying $(MathLibraryName) DLLs</Message>
+      <Command Condition="$(IsUWP)">xcopy /D /I /Y "$(TargetDir)$(TargetName).lib" "$(TargetDir).."</Command>
+      <Command Condition="$(IsUWP)">xcopy /D /I /Y "$(TargetPath)" "$(TargetDir)\.."</Command>
     </PostBuildEvent>
     <CudaCompile>
       <FastMath>true</FastMath>
