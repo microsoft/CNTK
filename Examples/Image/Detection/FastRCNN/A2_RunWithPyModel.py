@@ -18,6 +18,9 @@ import PARAMETERS
 import numpy as np
 import os, sys
 
+USE_HIERARCHICAL_CLASSIFIER = True
+if USE_HIERARCHICAL_CLASSIFIER:
+    import hierarchical_classification_tool as HCT
 ###############################################################
 ###############################################################
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -120,6 +123,8 @@ def frcn_predictor(features, rois, n_classes, model_path):
 
     return z
 
+
+
 # Trains a Fast R-CNN model
 def train_fast_rcnn(debug_output=False, model_path=model_file):
     if debug_output:
@@ -142,15 +147,39 @@ def train_fast_rcnn(debug_output=False, model_path=model_file):
     }
 
     # Instantiate the Fast R-CNN prediction model and loss function
-    frcn_output = frcn_predictor(image_input, roi_input, num_classes, model_path)
-    ce = cross_entropy_with_softmax(frcn_output, label_input, axis=1)
-    pe = classification_error(frcn_output, label_input, axis=1)
+    def cross_entropy(output, target):
+        return -reduce_sum(target * log(output))
+
+    if USE_HIERARCHICAL_CLASSIFIER:
+        num_neurons = HCT.tree_map.get_nr_of_required_neurons()
+        target = user_function(HCT.Target_Creator(label_input))
+        frcn_output = frcn_predictor(image_input, roi_input, num_neurons, model_path)
+        softmaxed = HCT.tree_map.tree_softmax(frcn_output, axis=1, offset=0)
+        #weigthts = np.ones((2000,HCT.tree_map.get_nr_of_required_neurons()))
+        #import ipdb;ipdb.set_trace()
+
+        #weigthts[:,0]=.1
+        #weigthts=constant(weigthts, dtype=np.float32)
+        ce = cross_entropy(softmaxed, target)
+        error = softmaxed- target
+        pe = reduce_sum( error*error)
+        frcn_output=softmaxed
+        C.logging.plot(frcn_output, "model.pdf");print("plotted!")
+    else:
+        frcn_output = frcn_predictor(image_input, roi_input, num_classes, model_path)
+        softmaxed = softmax(frcn_output, axis=1)
+        #ce = cross_entropy_with_softmax(frcn_output, label_input, axis=1)
+        ce = cross_entropy(softmaxed, label_input)
+        pe = classification_error(frcn_output, label_input, axis=1)
+        frcn_output=softmaxed
     if debug_output:
         plot(frcn_output, os.path.join(abs_path, "Output", "graph_frcn.png"))
 
     # Set learning parameters
     l2_reg_weight = 0.0005
     lr_per_sample = [0.00001] * 10 + [0.000001] * 5 + [0.0000001]
+    lr_multiplier = .51
+    lr_per_sample = [0.00001*lr_multiplier] * 10 + [0.000001*lr_multiplier] * 5 + [0.0000001*lr_multiplier]
     lr_schedule = learning_rate_schedule(lr_per_sample, unit=UnitType.sample)
     mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
 
@@ -191,6 +220,13 @@ def evaluate_fast_rcnn(model):
         for i in range(0, num_test_images):
             data = test_minibatch_source.next_minibatch(1, input_map=input_map)
             output = model.eval(data)
+            #import ipdb;ipdb.set_trace()
+            if USE_HIERARCHICAL_CLASSIFIER: output = HCT.to_non_hierarchical_output(output)
+            #else: output = softmax(output).eval()
+            print("----------")
+            min_index = np.argmin(output[0,:,0])
+            print("index minumum background: " + str(min_index))
+            print("vector: " + str(output[0,min_index]))
             out_values = output[0].flatten()
             np.savetxt(results_file, out_values[np.newaxis], fmt="%.6f")
             if (i+1) % 100 == 0:
@@ -216,3 +252,4 @@ if __name__ == '__main__':
 
     # Evaluate the test set
     evaluate_fast_rcnn(trained_model)
+    #import ipdb;ipdb.set_trace()

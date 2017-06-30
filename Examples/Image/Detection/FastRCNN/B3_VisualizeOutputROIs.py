@@ -37,7 +37,7 @@ def visualize_output_rois(testing=False):
         # remove the zero-padded rois
         scores = scores[:len(imdb.roidb[imgIndex]['boxes'])]
         labels = labels[:len(imdb.roidb[imgIndex]['boxes'])]
-
+        import ipdb;ipdb.set_trace()
         # perform non-maxima surpression. note that the detected classes in the image is not affected by this.
         nmsKeepIndices = []
         if boUseNonMaximaSurpression:
