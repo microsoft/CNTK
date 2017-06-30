@@ -26,7 +26,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_index = 0;
         m_fileOffset += m_size;
 
-        size_t bytesRead = fread(m_buffer.get(), 1, m_maxSize, m_file);
+        size_t bytesRead = fread(m_buffer, 1, m_maxSize, m_file);
 
         if (bytesRead != m_maxSize && !feof(m_file))
             RuntimeError("Error reading file: %s.", strerror(errno));
@@ -35,32 +35,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_done = (m_size == 0);
     }
 
-    bool BufferedFileReader::TryGetNext(char& c)
+    bool BufferedFileReader::TryMoveToNextLine()
     {
-        if (Pop())
+        for (;!m_done; Refill())
         {
-            c = Peek();
-            return true;
+            auto start = m_buffer + m_index;
+            auto found = (char*)memchr(start, g_eol, m_size - m_index);
+            if (found)
+            {
+                m_index = (found - m_buffer);
+                // At this point, m_index points to the end of line, try moving it to the next line.
+                return Pop();
+            }
         }
 
         return false;
     }
 
-    bool BufferedFileReader::TryMoveToNextLine()
+    bool BufferedFileReader::TryReadLine(string& str)
     {
-        while (!m_done) 
+        str.resize(0);
+        bool result = false;
+        for (; !m_done; Refill())
         {
-            auto start = m_buffer.get() + m_index;
+            auto start = m_buffer + m_index;
             auto found = (char*)memchr(start, g_eol, m_size - m_index);
             if (found)
             {
-                m_index = (found - m_buffer.get());
+                m_index = (found - m_buffer);
+                str.append(start, found-start);
                 // At this point, m_index points to the end of line, try moving it to the next line.
-                return Pop();
+                Pop();
+                return true;
             }
-            Refill();
+            
+            if (m_index < m_size) 
+            {
+                str.append(start, m_size - m_index);
+                result = true;
+            }
         }
 
-        return false;
+        return result;
     }
 }}}

@@ -401,9 +401,7 @@ void MLFDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus, co
         {
             auto file = shared_ptr<FILE>(fopenOrDie(path, L"rbS"), [](FILE *f) { if (f) fclose(f); });
             MLFIndexBuilder builder(path, file.get(), corpus);
-            builder.SetFrameMode(m_frameMode)
-                   .SetBufferSize(g_64MB)
-                   .SetChunkSize(g_64MB);
+            builder.SetChunkSize(m_chunkSizeBytes);
             m_indices.emplace_back(builder.Build());
         });
 

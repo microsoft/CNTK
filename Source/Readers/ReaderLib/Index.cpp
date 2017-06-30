@@ -32,26 +32,32 @@ void Index::AddSequence(const IndexedSequence& sequence)
     if (sequence.size == 0)
         RuntimeError("Invalid sequence: size in bytes == 0");
 
+    m_sizeInBytes += sequence.size;
+    m_numberOfSamples += sequence.numberOfSamples;
+    m_numberOfSequences++;
+
     auto currentChunkSize = m_chunks.empty() ? 0 : m_chunks.back().SizeInBytes();
 
+    // TODO: the sum of sizes does not account for a possible gap before the sequence offset.
     if (currentChunkSize == 0 || currentChunkSize + sequence.size > m_maxChunkSize)
     {
+        if (!m_chunks.empty()) // The previous chunk is done, finalize it.
+            m_chunks.back().m_sequences.shrink_to_fit();
+
         m_chunks.push_back(ChunkDescriptor(sequence.offset));
 
         if (std::numeric_limits<ChunkIdType>::max() < m_chunks.size())
             RuntimeError("Maximum number of chunks exceeded.");
+
+        // reserve the space for sequences up-front, using the average sequence size to 
+        // estimate the number of sequences in a chunk. 
+        auto numSequencesPerChunk = m_sizeInBytes / m_numberOfSequences;
+        m_chunks.back().m_sequences.reserve(numSequencesPerChunk);
     }
 
     auto& currentChunk = m_chunks.back();
 
     currentChunk.AddSequence(sequence);
-
-    if (currentChunk.SizeInBytes() >= m_maxChunkSize) // Last one, finalizing.
-        currentChunk.m_sequences.shrink_to_fit();
-
-    m_sizeInBytes += sequence.size;
-    m_numberOfSamples += sequence.numberOfSamples;
-    m_numberOfSequences++;
 }
 
 void Index::MapSequenceKeyToLocation()

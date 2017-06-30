@@ -11,6 +11,7 @@
 #include "Index.h"
 #include "Platform.h"
 #include "IndexBuilder.h"
+#include "ReaderUtil.h"
 #include <boost/algorithm/string/replace.hpp>
 
 using namespace Microsoft::MSR::CNTK;
@@ -68,6 +69,34 @@ void PeekAndPop(const std::string& content, const std::vector<size_t>& bufferSiz
     }
 }
 
+void TryGetNext(const std::string& content, const std::vector<size_t>& bufferSizes)
+{
+    CreateTestFile(content);
+    auto testFileSize = content.size();
+
+    for (size_t i : bufferSizes)
+    {
+        auto f = OpenOrDie(L"test.tmp", L"rb");
+        BOOST_REQUIRE_EQUAL(testFileSize, filesize(f.get()));
+
+        BufferedFileReader reader(i, f.get());
+        size_t charCount = 0, lineCount = 0;
+        for (auto ch : content)
+        {
+            BOOST_REQUIRE(!reader.Empty());
+            BOOST_REQUIRE_EQUAL(lineCount, reader.CurrentLineNumber());
+            if (ch == g_eol) lineCount++;
+            char c; 
+            BOOST_REQUIRE(reader.TryGetNext(c));
+            BOOST_REQUIRE_EQUAL(c, ch);
+            BOOST_REQUIRE_EQUAL(++charCount, reader.GetFileOffset());
+        }
+        BOOST_REQUIRE_EQUAL(lineCount, reader.CurrentLineNumber());
+        BOOST_REQUIRE_EQUAL(charCount, reader.GetFileOffset());
+        BOOST_REQUIRE(reader.Empty());
+    }
+}
+
 void SkipLines(const std::string& content, const std::vector<size_t>& bufferSizes)
 {
     CreateTestFile(content);
@@ -106,6 +135,45 @@ void SkipLines(const std::string& content, const std::vector<size_t>& bufferSize
     }
 }
 
+
+void ReadLines(const std::string& content, const std::vector<size_t>& bufferSizes)
+{
+    CreateTestFile(content);
+    auto testFileSize = content.size();
+
+    DelimiterHash({ '\n' });
+
+    const static std::vector<bool> delim = DelimiterHash({ '\n' });
+    vector<boost::iterator_range<char*>> lines;
+    Split(const_cast<char*>(content.data()), const_cast<char*>(content.data()+content.size()), delim, lines);
+
+    for (size_t i : bufferSizes)
+    {
+        auto f = OpenOrDie(L"test.tmp", L"rb");
+        BOOST_REQUIRE_EQUAL(testFileSize, filesize(f.get()));
+
+        BufferedFileReader reader(i, f.get());
+        
+        BOOST_REQUIRE(!reader.Empty() || content.size() == 0);
+
+        size_t lineCount = 0;
+        BOOST_REQUIRE_EQUAL(lineCount, reader.CurrentLineNumber());
+
+        for (string line; reader.TryReadLine(line);)
+        {
+            if (line != string(lines[lineCount].begin(), lines[lineCount].end()))
+                break;
+            BOOST_REQUIRE_EQUAL(line, string(lines[lineCount].begin(), lines[lineCount].end()));
+            lineCount++;
+        }
+
+        BOOST_REQUIRE_EQUAL(reader.CurrentLineNumber() + 1, lines.size());
+        
+        BOOST_REQUIRE_EQUAL(content.size(), reader.GetFileOffset());
+        BOOST_REQUIRE(reader.Empty());
+    }
+}
+
 BOOST_AUTO_TEST_CASE(Test_peek_and_pop)
 {
     for (const auto& str : { "a", "ab", "abc", "abcdefg", "ab cd ef ghi  j",
@@ -120,6 +188,19 @@ BOOST_AUTO_TEST_CASE(Test_peek_and_pop)
 }
 
 
+BOOST_AUTO_TEST_CASE(Test_get_next_char)
+{
+    for (const auto& str : { "a", "ab", "abc", "abcdefg", "ab cd ef ghi  j",
+        "0\t|a 1 1\t|b 1 1\n1\t|b 10 10 10 10 10" })
+        TryGetNext(str, { 1, 2, 3, 10, 30, 100 });
+
+    for (const auto& str : { "", "\n", "\n\n", "\na\r\n", "ab\rcdef \n123456 \r\n\nA",
+        "\na\nb\nc defg\n", "\nab cd e\nf \n\n\ngh\ni  j" })
+        TryGetNext(str, { 1, 2, 3, 10, 30, 100 });
+
+    PeekAndPop(s_textData, { 1, 2, 3, 7, 19, 33, 71, 139, 144, 145, 146, 147, 150, 300, 1024, g_1MB, g_32MB });
+}
+
 BOOST_AUTO_TEST_CASE(Test_line_skipping)
 {
     for (const auto& str : { "a","a\n", "\na", "\na\n", "a\nb", "\na\nb", "\n\nabc\n\n", "a\n\nb\nc\nd\ne\nf\ng",
@@ -131,6 +212,19 @@ BOOST_AUTO_TEST_CASE(Test_line_skipping)
         SkipLines(str, { 1, 2, 3, 10, 20 });
 
     SkipLines(s_textData, { 1, 2, 3, 7, 19, 33, 71, 139, 144, 145, 146, 147, 150, 300, 1024, g_1MB, g_32MB });
+}
+
+BOOST_AUTO_TEST_CASE(Test_line_reading)
+{
+    for (const auto& str : { "a","a\n", "\na", "\na\n", "a\nb", "\na\nb", "\n\nabc\n\n", "a\n\nb\nc\nd\ne\nf\ng",
+        "0\t|a 1 1\t|b 1 1\n1\t|b 10 10 10 10 10" })
+        ReadLines(str, { 1, 2, 3, 4, 5, 10, 30, 100 });
+
+    for (const auto& str : { "", "\n", "\n\n", "\n\n\n", "\t\r\n\r",  "\na\r\n", "ab\rcdef \n123456 \r\n\nA",
+        "\na\nb\nc defg\n", "\nab cd e\nf \n\n\ngh\ni  j" })
+        ReadLines(str, { 1, 2, 3, 10, 20 });
+
+    ReadLines(s_textData, { 1, 2, 3, 7, 19, 33, 71, 139, 144, 145, 146, 147, 150, 300, 1024, g_1MB, g_32MB });
 }
 
 BOOST_AUTO_TEST_SUITE_END()

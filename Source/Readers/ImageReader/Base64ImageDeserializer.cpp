@@ -163,8 +163,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // In case of multi crop the deserializer provides the same sequence NumMultiViewCopies times.
         size_t sequencesPerInitialSequence = m_multiViewCrop ? ImageDeserializerBase::NumMultiViewCopies : 1;
         ChunkDescriptions result;
-        result.reserve(m_index->Chunks().size() * sequencesPerInitialSequence);
-        for(uint32_t i = 0; i < m_index->Chunks().size(); ++i)
+        result.reserve(m_index->NumberOfChunks() * sequencesPerInitialSequence);
+        for(uint32_t i = 0; i < m_index->NumberOfChunks(); ++i)
         {
             const auto& chunk = m_index->Chunks()[i];
             auto c = std::make_shared<ChunkDescription>();
@@ -184,7 +184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t currentId = 0;
         for (uint32_t indexInChunk = 0; indexInChunk < chunk.NumberOfSequences(); ++indexInChunk)
         {
-            auto const& s = chunk.Sequences()[indexInChunk];
+            auto const& s = chunk[indexInChunk];
             assert(currentId / sequenceCopies == indexInChunk);
             for (size_t i = 0; i < sequenceCopies; ++i)
             {

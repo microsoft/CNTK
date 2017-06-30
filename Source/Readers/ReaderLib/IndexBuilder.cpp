@@ -105,6 +105,8 @@ void IndexBuilder::WriteIndexCacheAsync(shared_ptr<Index>& index)
     }).detach();
 }
 
+const static size_t s_sequenceSize = sizeof(IndexedSequence);
+const static size_t s_numSequencesToBuffer = (g_1MB >> 1) / s_sequenceSize;
 
 /*static*/ shared_ptr<Index> IndexBuilder::TryLoadFromCache(const std::wstring& cacheFilename, size_t chunkSize)
 {
@@ -118,13 +120,19 @@ void IndexBuilder::WriteIndexCacheAsync(shared_ptr<Index>& index)
         return nullptr;
 
     auto index = make_shared<Index>(chunkSize);
-    for (uint64_t i = 0; i < prefix.totalNumberOfSequences; i++)
+
+    char buffer[s_numSequencesToBuffer * s_sequenceSize];
+    for (uint64_t i = 0; i < prefix.totalNumberOfSequences; )
     {
-        IndexedSequence sequence;
-        if (!TryRead(sequence, cache))
+        auto numSequencesToRead = std::min(s_numSequencesToBuffer, prefix.totalNumberOfSequences - i);
+
+        if (!TryRead(buffer, s_sequenceSize, numSequencesToRead, cache))
             return nullptr;
 
-        index->AddSequence(sequence);
+        for (int j = 0; j < numSequencesToRead; j++) 
+            index->AddSequence(*reinterpret_cast<IndexedSequence*>(buffer + j * s_sequenceSize));
+        
+        i += numSequencesToRead;
     }
 
     return index;
@@ -320,10 +328,8 @@ inline bool TextInputIndexBuilder::FindMainStream()
     auto length = m_nfa->pattern.size();
 
     int i = 0;
-    for (; !m_reader->Empty(); m_reader->Pop()) {
-        
-        char c = m_reader->Peek(); 
-
+    for (char c; m_reader->TryGetNext(c);) 
+    {
         if (i == length)
         {
             // we found a match, check to see if it's followed by either a space, 
@@ -359,21 +365,16 @@ inline bool TextInputIndexBuilder::TryGetNumericSequenceId(size_t& id)
 {
     bool found = false;
     id = 0;
-    for (; !m_reader->Empty(); m_reader->Pop())
+    for (char c; m_reader->TryGetNext(c);)
     {
-        char c = m_reader->Peek();
         if (!isdigit(c))
-        {
             // Stop as soon as there's a non-digit character
             return found;
-        }
 
         size_t temp = id;
         id = id * 10 + (c - '0');
         if (temp > id)
-        {
             RuntimeError("Overflow while reading a numeric sequence id (%zu-bit value).", sizeof(id));
-        }
         
         found = true;
     }
@@ -389,9 +390,8 @@ inline bool TextInputIndexBuilder::TryGetSymbolicSequenceId(size_t& id, std::fun
     id = 0;
     std::string key;
     key.reserve(256);
-    for (; !m_reader->Empty(); m_reader->Pop())
+    for (char c; m_reader->TryGetNext(c);)
     {
-        char c = m_reader->Peek();
         if (isspace(c))
         {
             if (found)
