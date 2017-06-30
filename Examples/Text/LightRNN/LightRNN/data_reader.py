@@ -70,11 +70,11 @@ class DataSource(UserMinibatchSource):
         return [self.input1, self.input2, self.label1, self.label2, self.word1, self.word2]
 
     def parse_word(self, word):
-        '''Parse token to id'''
+        # Parse token to id
         return self.word_index[word] if word in self.word_index else self.word_index[UNK]
 
     def make_minibatch(self, samples):
-        '''Make the next minibatch'''
+        # Make the next minibatch
         source = [sample[0] for sample in samples]
         target = [sample[1] for sample in samples]
 
@@ -116,6 +116,7 @@ class DataSource(UserMinibatchSource):
             samples.append((curr_word, next_word))
 
         batchsize = len(samples) / self.seqlength
+        # Divide batch into every gpu
         batchrange = list(map(int, [
                 (batchsize // number_of_workers) * worker_rank,
                 min((batchsize // number_of_workers) * (worker_rank + 1), batchsize)

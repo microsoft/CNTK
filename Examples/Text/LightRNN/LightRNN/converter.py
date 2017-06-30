@@ -17,7 +17,7 @@ UNK = '<unk>'
 
 
 def load_vocab_from_file(vocab_file):
-    '''Load vocabulary table from file'''
+    # Load vocabulary table from file
     vocab = {}
     with codecs.open(vocab_file, 'r', encoding=TEXT_ENCODING) as input_file:
         for line in input_file:
@@ -27,7 +27,7 @@ def load_vocab_from_file(vocab_file):
 
 
 def load_vocab_location_from_file(location_file):
-    '''Load vocabulary table location from file'''
+    # Load vocabulary table location from file
     location = {}
     with codecs.open(location_file, 'r', encoding=TEXT_ENCODING) as input_file:
         row_id = 0
@@ -41,7 +41,7 @@ def load_vocab_location_from_file(location_file):
 
 
 def read_line(line, word_count):
-    '''Count word and frequency by one line'''
+    # Count word and frequency by one line
     words = line.split()
     for word in words:
         if word not in word_count:
@@ -50,7 +50,7 @@ def read_line(line, word_count):
 
 
 def generate_vocab_from_source_file(input_dir, freq=None):
-    '''Generate the vocabulary table from the files of the input dir'''
+    # Generate the vocabulary table from the files of the input dir
     files = glob.glob(input_dir + '/*.txt')
     word_index = {}
     word_count = {}
@@ -77,7 +77,7 @@ def generate_vocab_from_source_file(input_dir, freq=None):
 
 
 def init_location(word_index):
-    '''Init the word table location'''
+    # Init the word table location
     vocab_size = len(word_index)
     base_size = ceil(sqrt(vocab_size))
     random_locations = [i for i in range(vocab_size)]
@@ -92,14 +92,14 @@ def init_location(word_index):
 
 
 def save_to_vocab_file(word_index, vocab_file):
-    '''save the word table to file'''
+    # save the word table to file
     with codecs.open(vocab_file, 'w', encoding=TEXT_ENCODING) as input_file:
         for word in word_index:
             input_file.write(word + '\n')
 
 
 def save_to_vocab_location_file(word_location, vocab_location_file):
-    '''save the word location table to file'''
+    # save the word location table to file
     vocab_size = len(word_location)
     sqrt_length = int(ceil(sqrt(vocab_size)))
     locations = {}

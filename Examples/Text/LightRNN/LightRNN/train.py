@@ -5,27 +5,16 @@
 # ==============================================================================
 import ctypes
 import numpy as np
+import cntk as C
 import argparse
 import os
 import datetime
 import platform
 
-from cntk import Trainer
-from cntk.losses import cross_entropy_with_softmax
-from cntk.metrics import classification_error
-from cntk.ops import combine, log, softmax
-from cntk.ops import splice, slice
-from cntk.learners import sgd, adam, adagrad
-from cntk.learners import UnitType, learning_rate_schedule
-from cntk.learners import momentum_as_time_constant_schedule
-
 from cntk.train.distributed import Communicator
 from cntk.train.distributed import data_parallel_distributed_learner
 
-from cntk.layers import sequence
-from cntk.layers.higher_order_layers import Sequential, For
-from cntk.layers.blocks import Stabilizer
-from cntk.layers.layers import Embedding, Dense, Dropout
+from cntk.layers import sequence, Stabilizer, Embedding, Dense, Dropout, Sequential, For
 from cntk.logging import log_number_of_parameters
 
 from lightrnn import lightlstm
@@ -179,11 +168,11 @@ def create_model(input_dim):
     rowh = Sequential([Embedding(opt.embed), Stabilizer(), Dropout(opt.dropout)])(row)
     colh = Sequential([Embedding(opt.embed), Stabilizer(), Dropout(opt.dropout)])(col)
 
-    x = splice(rowh, colh, axis=-1)
+    x = C.splice(rowh, colh, axis=-1)
     x = lightlstm(opt.embed, opt.nhid)(x)
     x = For(range(opt.layer-1), lambda: lightlstm(opt.nhid, opt.nhid))(x)
-    rowh = slice(x, -1, opt.nhid * 0, opt.nhid * 1)
-    colh = slice(x, -1, opt.nhid * 1, opt.nhid * 2)
+    rowh = C.slice(x, -1, opt.nhid * 0, opt.nhid * 1)
+    colh = C.slice(x, -1, opt.nhid * 1, opt.nhid * 2)
 
     row_predict = Sequential([Dropout(opt.dropout), Dense(input_dim)])(rowh)
     col_predict = Sequential([Dropout(opt.dropout), Dense(input_dim)])(colh)
@@ -191,7 +180,7 @@ def create_model(input_dim):
     # variable : row label and col label
     row_label = sequence.input_variable(shape=input_dim)
     col_label = sequence.input_variable(shape=input_dim)
-    model = combine([row_predict, col_predict])
+    model = C.combine([row_predict, col_predict])
 
     return {'row':       row,
             'col':       col,
@@ -208,10 +197,10 @@ def create_model(input_dim):
 def create_criterion(network):
     '''Create the criterion for model'''
     model, label1, label2 = network['model'], network['row_label'], network['col_label']
-    label1_ce = cross_entropy_with_softmax(model.outputs[0], label1)
-    label2_ce = cross_entropy_with_softmax(model.outputs[1], label2)
-    label1_pe = classification_error(model.outputs[0], label1)
-    label2_pe = classification_error(model.outputs[1], label2)
+    label1_ce = C.cross_entropy_with_softmax(model.outputs[0], label1)
+    label2_ce = C.cross_entropy_with_softmax(model.outputs[1], label2)
+    label1_pe = C.classification_error(model.outputs[0], label1)
+    label2_pe = C.classification_error(model.outputs[1], label2)
     label_ce = label1_ce + label2_ce
     label_pe = label1_pe + label2_pe
     return (label_ce, label_pe)
@@ -225,14 +214,14 @@ def create_criterion(network):
 # return: learners: [sgd, adam, adagrad]
 def create_learner(model):
     '''Create the optimized method'''
-    lr_per_sample = learning_rate_schedule(opt.lr, UnitType.minibatch)
-    momentum_time_constant = momentum_as_time_constant_schedule(1100)
+    lr_per_sample = C.learning_rate_schedule(opt.lr, C.UnitType.minibatch)
+    momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
     if opt.optim == 'sgd':
-        return sgd(model.parameters, lr=lr_per_sample)
+        return C.sgd(model.parameters, lr=lr_per_sample)
     elif opt.optim == 'adam':
-        return adam(model.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
+        return C.adam(model.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
     elif opt.optim == 'adagrad':
-        return adagrad(model.parameters, lr=lr_per_sample)
+        return C.adagrad(model.parameters, lr=lr_per_sample)
     else:
         raise RuntimeError("Invalid optim method: " + opt.optim)
 
@@ -274,9 +263,9 @@ def calculate_loss_vector(network, path, location_path, communicator):
                         opt.seqlength, opt.batchsize)
     # the curr row -> the curr col
     # the curr col -> the next row
-    row_loss = log(softmax(network['model'].outputs[0]))
-    col_loss = log(softmax(network['model'].outputs[1]))
-    loss = combine([row_loss, col_loss])
+    row_loss = C.log(C.softmax(network['model'].outputs[0]))
+    col_loss = C.log(C.softmax(network['model'].outputs[1]))
+    loss = C.combine([row_loss, col_loss])
     row_loss_vector = np.zeros((opt.vocabsize, vocab_sqrt))
     col_loss_vector = np.zeros((opt.vocabsize, vocab_sqrt))
 
@@ -319,7 +308,7 @@ def train(network, location_path, id):
     learner = create_learner(network['model'])
     learner = data_parallel_distributed_learner(learner)
     communicator = learner.communicator()
-    trainer = Trainer(network['model'], (ce, pe), learner)
+    trainer = C.Trainer(network['model'], (ce, pe), learner)
 
     # loop over epoch
     for epoch in range(opt.epochs[id]):
@@ -365,16 +354,19 @@ def train(network, location_path, id):
     # word allocate action
     row_loss, col_loss = calculate_loss_vector(network, train_path, location_path, communicator)
     if Communicator.num_workers() > 1:
-        from mpi4py import MPI
-        comm = MPI.COMM_WORLD
-        if communicator.is_main():
-            for i in range(1, Communicator.num_workers()):
-                row_loss_i, col_loss_i = comm.recv(source=i)
-                row_loss += row_loss_i
-                col_loss += col_loss_i
-        else:
-            data_send = [row_loss, col_loss]
-            comm.send(data_send, 0)
+        try:
+            from mpi4py import MPI
+            comm = MPI.COMM_WORLD
+            if communicator.is_main():
+                for i in range(1, Communicator.num_workers()):
+                    row_loss_i, col_loss_i = comm.recv(source=i)
+                    row_loss += row_loss_i
+                    col_loss += col_loss_i
+            else:
+                data_send = [row_loss, col_loss]
+                comm.send(data_send, 0)
+        except:
+            raise RuntimeError("Please install mpi4py if uses multi gpus!")
         communicator.barrier()
     if communicator.is_main():
         allocate_table(row_loss, col_loss,
@@ -399,6 +391,7 @@ def main():
         train(network, location_path, i)
         location_path = get_k_round_location_path(i + 1)
     Communicator.finalize()
+
 
 if __name__ == "__main__":
     main()

@@ -32,11 +32,15 @@ opt = parser.parse_args()
 
 
 def preprocess():
-    random.seed(opt.seed)
     # Generate the vocabulary and location
+    random.seed(opt.seed)
+    # make vocabuary from the files under the datadir
     vocab = generate_vocab_from_source_file(opt.datadir, opt.vocabsize)
+    # save vocabulary 
     save_to_vocab_file(vocab, os.path.join(opt.outputdir, opt.vocab_file))
+    # make a random word allocation
     location = init_location(vocab)
+    # save word allocation
     save_to_vocab_location_file(location, os.path.join(opt.outputdir, opt.alloc_file))
 
 

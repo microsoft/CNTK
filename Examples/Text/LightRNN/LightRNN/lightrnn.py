@@ -6,61 +6,61 @@
 
 from __future__ import division
 
+import cntk as C
+
 from cntk.ops.sequence import past_value
-from cntk.ops import parameter, placeholder
-from cntk.ops import times, sigmoid, tanh, slice, splice
 from cntk.initializer import glorot_uniform
 
 
 def lightlstm(input_dim, cell_dim):
-    x = placeholder(name='x')
-    dh = placeholder(name='dh')
-    dc = placeholder(name='dc')
-    x1 = slice(x, -1, input_dim * 0, input_dim * 1)
-    x2 = slice(x, -1, input_dim * 1, input_dim * 2)
+    x = C.placeholder(name='x')
+    dh = C.placeholder(name='dh')
+    dc = C.placeholder(name='dc')
+    x1 = C.slice(x, -1, input_dim * 0, input_dim * 1)
+    x2 = C.slice(x, -1, input_dim * 1, input_dim * 2)
 
     def LSTMCell(x, y, dh, dc):
-        '''The based LightLSTM Cell'''
+        '''LightLSTM Cell'''
 
-        b = parameter(shape=(4 * cell_dim), init=0)
-        W = parameter(shape=(input_dim, 4 * cell_dim), init=glorot_uniform())
-        H = parameter(shape=(cell_dim, 4 * cell_dim), init=glorot_uniform())
+        b = C.parameter(shape=(4 * cell_dim), init=0)
+        W = C.parameter(shape=(input_dim, 4 * cell_dim), init=glorot_uniform())
+        H = C.parameter(shape=(cell_dim, 4 * cell_dim), init=glorot_uniform())
 
         # projected contribution from input x, hidden, and bias
-        proj4 = b + times(x, W) + times(dh, H)
+        proj4 = b + C.times(x, W) + C.times(dh, H)
 
-        it_proj = slice(proj4, -1, 0 * cell_dim, 1 * cell_dim)
-        bit_proj = slice(proj4, -1, 1 * cell_dim, 2 * cell_dim)
-        ft_proj = slice(proj4, -1, 2 * cell_dim, 3 * cell_dim)
-        ot_proj = slice(proj4, -1, 3 * cell_dim, 4 * cell_dim)
+        it_proj = C.slice(proj4, -1, 0 * cell_dim, 1 * cell_dim)
+        bit_proj = C.slice(proj4, -1, 1 * cell_dim, 2 * cell_dim)
+        ft_proj = C.slice(proj4, -1, 2 * cell_dim, 3 * cell_dim)
+        ot_proj = C.slice(proj4, -1, 3 * cell_dim, 4 * cell_dim)
 
-        it = sigmoid(it_proj)  # input gate
-        bit = it * tanh(bit_proj)
+        it = C.sigmoid(it_proj)  # input gate
+        bit = it * C.tanh(bit_proj)
 
-        ft = sigmoid(ft_proj)  # forget gate
+        ft = C.sigmoid(ft_proj)  # forget gate
         bft = ft * dc
 
         ct = bft + bit
-        ot = sigmoid(ot_proj)  # output gate
-        ht = ot * tanh(ct)
+        ot = C.sigmoid(ot_proj)  # output gate
+        ht = ot * C.tanh(ct)
 
         # projected contribution from input y, hidden, and bias
-        proj4_2 = b + times(y, W) + times(ht, H)
+        proj4_2 = b + C.times(y, W) + C.times(ht, H)
 
-        it_proj_2 = slice(proj4_2, -1, 0 * cell_dim, 1 * cell_dim)
-        bit_proj_2 = slice(proj4_2, -1, 1 * cell_dim, 2 * cell_dim)
-        ft_proj_2 = slice(proj4_2, -1, 2 * cell_dim, 3 * cell_dim)
-        ot_proj_2 = slice(proj4_2, -1, 3 * cell_dim, 4 * cell_dim)
+        it_proj_2 = C.slice(proj4_2, -1, 0 * cell_dim, 1 * cell_dim)
+        bit_proj_2 = C.slice(proj4_2, -1, 1 * cell_dim, 2 * cell_dim)
+        ft_proj_2 = C.slice(proj4_2, -1, 2 * cell_dim, 3 * cell_dim)
+        ot_proj_2 = C.slice(proj4_2, -1, 3 * cell_dim, 4 * cell_dim)
 
-        it_2 = sigmoid(it_proj_2)  # input gate
-        bit_2 = it_2 * tanh(bit_proj_2)
+        it_2 = C.sigmoid(it_proj_2)  # input gate
+        bit_2 = it_2 * C.tanh(bit_proj_2)
 
-        ft_2 = sigmoid(ft_proj_2)  # forget gate
+        ft_2 = C.sigmoid(ft_proj_2)  # forget gate
         bft_2 = ft_2 * ct
 
         ct2 = bft_2 + bit_2
-        ot_2 = sigmoid(ot_proj_2)  # output gate
-        ht2 = ot_2 * tanh(ct2)
+        ot_2 = C.sigmoid(ot_proj_2)  # output gate
+        ht2 = ot_2 * C.tanh(ct2)
         return (ht, ct, ht2, ct2)
 
     Cell = LSTMCell(x1, x2, dh, dc)
@@ -70,4 +70,4 @@ def lightlstm(input_dim, cell_dim):
 
     Cell[0].replace_placeholders(
         {dh: actualDh.output, dc: actualDc.output})
-    return splice(Cell[0], Cell[2], axis=-1)
+    return C.splice(Cell[0], Cell[2], axis=-1)

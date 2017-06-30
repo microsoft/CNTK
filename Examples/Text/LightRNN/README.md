@@ -2,11 +2,10 @@
 
 This is the official implementation for [LightRNN: Memory and Computation-Efficient Recurrent Neural Networks](https://arxiv.org/abs/1610.09893) in CNTK.
     
-## Overview
-|Data:     |The PTB Dataset (http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz)
-|:---------|:---
-|Purpose   |Demonstration of LightRNN (https://arxiv.org/abs/1610.09893) training for language modeling based on CNTK.
-|Network   |LightRNN
+## LightRNN: Memory and Computation-Efficient Recurrent Neural Networks
+To address the both model size and running time, especially for text corpora with large vocabularies, the author proposed to use 2-Component (2C) shared embedding for word representations. They allocate every word in the vocabulary into a table, each row of which is associated with a vector, and each column associated with another vector. Depending on its position in the table, a word is jointly represented by two components: a row vector and a column vector. Since the words in the same row share the row vector and the words in the same column share the column vector, we only need 2 \sqrt(V) vectors to represent a vocabulary of |V| unique words, which are far less than the |V| vectors required by existing approaches. The LightRNN algorithm significantly reduces the model size and speeds up the training process, without sacrifice of accuracy (it achieves similar, if not better, perplexity as compared to state-of-the-art language models).
+
+More details please refer the [LightRNN paper](https://arxiv.org/abs/1610.09893)
 
 ## Requirements
 
@@ -115,7 +114,7 @@ The ACLW French corpus contains about 56M tokens, with a vocabulary of 136912 wo
 
 __Valid/Test PPL__
 
-<img src='Doc/ACLWFR.png' width='500'>
+<img src='ACLWFR.png' width='500'>
 
 ### [One Billion Words](http://tiny.cc/1billionLM)
 The One Billion Words corpus contains about 799M tokens, with a vocabulary of 793471 words. We parsed the corpus as 32-token sequences, and used one GPU `GeForce GTX Titan x` for training. 
@@ -157,7 +156,7 @@ We achieve a training speed of 77873 tokens/s with 4 GPUs. It takes 630 hours (2
 
 __Train-Valid loss__
 
-<img src='Doc/ClueWeb09_loss.png' width='500'>
+<img src='ClueWeb09_loss.png' width='500'>
 
 ### Citation
 If you find LightRNN useful in your work, you can cite the paper as below:
@@ -170,4 +169,6 @@ If you find LightRNN useful in your work, you can cite the paper as below:
     }
 
 ### Release Notes
-You need to ensure the version of openmpi correspond to the mpi which used to build mpi4py. We recommend you to build mpi4py from source.
+1. You need to ensure the version of openmpi correspond to the mpi which mpi4py uses. We recommend you to build mpi4py from source.
+2. We provide two word allocation alogrithm code which implemented by python and c++. If you don't use a c++ dynamix library, the program will use a python implentation. Besides, we has compared the perfermance between the c++ and python. The python version will be 5 times or more slower than c++. We recommend you use a c++ implemenation.
+3. We provide two dynamic libraries under [LightRNN](LightRNN/) for Ununtu and Windows. If you find these library are not useful(eg. MAC User), we suggest you install g++, and the program can generate it by self.
