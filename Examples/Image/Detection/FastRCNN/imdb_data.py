@@ -254,7 +254,7 @@ class imdb_data(fastRCNN.imdb):
     def _voc_computePrecisionRecallAp(self, class_recs, confidence, image_ids, BB, ovthresh=0.5, use_07_metric=False):
         # sort by confidence
         sorted_ind = np.argsort(-confidence)
-        BB = BB[sorted_ind, :]
+        if len(BB) >0: BB = BB[sorted_ind, :]
         image_ids = [image_ids[x] for x in sorted_ind]
 
         # go down dets and mark TPs and FPs

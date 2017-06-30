@@ -810,9 +810,11 @@ def softmax(vec):
     return outVec
 
 def softmax2D(w):
-    e = np.exp(w)
-    dist = e / np.sum(e, axis=1)[:, np.newaxis]
-    return dist
+    #import ipdb;ipdb.set_trace()
+    #e = np.exp(w)
+    #dist = e / np.sum(e, axis=1)[:, np.newaxis]
+    #return dist
+    return w
 
 def getDictionary(keys, values, boConvertValueToInt = True):
     dictionary = {}

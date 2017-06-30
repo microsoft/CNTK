@@ -17,7 +17,7 @@ class Parameters():
     def __init__(self, datasetName):
         # cntk params
         self.datasetName = datasetName
-        self.cntk_nrRois = 100      # how many ROIs to zero-pad. Use 100 to get quick result. Use 2000 to get good results.
+        self.cntk_nrRois = 2000      # how many ROIs to zero-pad. Use 100 to get quick result. Use 2000 to get good results.
         self.cntk_padWidth = 1000
         self.cntk_padHeight = 1000
 
@@ -77,7 +77,7 @@ class GroceryParameters(Parameters):
         self.cntk_num_train_images = 25
         self.cntk_num_test_images = 5
         self.cntk_mb_size = 5
-        self.cntk_max_epochs = 20
+        self.cntk_max_epochs = 25
         self.cntk_momentum_time_constant = 10
 
         # postprocessing
