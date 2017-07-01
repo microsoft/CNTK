@@ -1242,7 +1242,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }                                                        // end sub-minibatch loop
 			if (actualNumSubminibatches > 1)
 			{
+#ifdef USE_CPU_SMB_SUM
+                smbDispatcher.SumSubMBCPU();
+#else
 				smbDispatcher.SumSubMB();
+#endif
 				smbDispatcher.DoneWithCurrentMinibatch();
 			}
         } // if (actualMBSize > 0)

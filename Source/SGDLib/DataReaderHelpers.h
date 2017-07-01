@@ -13,6 +13,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+#define USE_CPU_SMB_SUM
+
 /*static*/ struct DataReaderHelpers
 {
     template <class ElemType>
@@ -293,6 +295,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef std::vector<size_t>* BoundariesPtr;
         typedef StreamMinibatchInputs Matrices;
 		typedef map<std::wstring, shared_ptr<Matrix<ElemType>>> SMBCache;
+        typedef map<std::wstring, ElemType*> SMBCPUCache;
 
         // member variables served as caching space
         Matrices m_inputMatricesCache;
@@ -308,6 +311,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrices m_cachedGradient;
 		vector<SMBCache> m_smbCachedGradient;
+        vector<SMBCPUCache> m_smbCPUCachedGradient;
+        std::map<wstring, size_t> m_gradMatSize;
         // we also need to remember where to put into the net
         MBLayoutPtr m_netMBLayoutPtr;
         std::map<wstring, shared_ptr<ComputationNode<ElemType>>> m_LearnableNodePtr;
@@ -459,7 +464,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t actualnumSubminibatches = requestedSubminibatches > nParallelSequences ? nParallelSequences : requestedSubminibatches;
 			
 			size_t smbCacheSize = (size_t)ceil(actualnumSubminibatches / 2.0);
-			if (m_smbCachedGradient.size() != smbCacheSize)
+#ifdef USE_CPU_SMB_SUM
+            if (m_smbCPUCachedGradient.size() != smbCacheSize)
+            {
+                for (int i = 0; i < m_smbCPUCachedGradient.size(); i++)
+                {
+                    SMBCPUCache& oldCache = m_smbCPUCachedGradient[i];
+                    for (SMBCPUCache::iterator iter = oldCache.begin(); iter != oldCache.end(); iter)
+                        delete[](iter->second);
+                    oldCache.clear();
+                }
+                m_smbCPUCachedGradient.clear();
+
+                for (int i = 0; i < smbCacheSize; i++)
+                {
+                    SMBCPUCache smbCPUCache;
+                    m_smbCPUCachedGradient.push_back(smbCPUCache);
+                }
+            }
+#else
+            if (m_smbCachedGradient.size() != smbCacheSize)
 			{
 				for (int i = 0; i < m_smbCachedGradient.size(); i++)
 				{
@@ -476,7 +500,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 					m_smbCachedGradient.push_back(smbCache);
 				}
 			}
-
+#endif
 
             // 4. third, allocate space for accumulated gradient
             for (auto& n : m_LearnableNodePtr)
@@ -497,6 +521,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_cachedGradient.AddInput(nodeName, matrixp, pLearnableNode->GetMBLayout()/*null*/, pLearnableNode->GetSampleLayout());
                     }
 
+#ifdef USE_CPU_SMB_SUM
+                    m_gradMatSize[nodeName] = funvalue.GetNumElements();
+
+                    for (int i = 0; i < m_smbCPUCachedGradient.size(); i++)
+                    {
+                        SMBCPUCache& smbCPUCache = m_smbCPUCachedGradient[i];
+                        if (smbCPUCache.find(nodeName) == smbCPUCache.end())
+                            smbCPUCache[nodeName] = new ElemType[funvalue.GetNumElements()];
+                    }
+#else
 					for (int i = 0; i < m_smbCachedGradient.size(); i++)
 					{
 						SMBCache& smbCache = m_smbCachedGradient[i];
@@ -507,6 +541,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 							smbCache[nodeName] = cacheMatrixp;
 						}
 					}
+#endif
                 }
             }
             // 5. for stateful node
@@ -619,6 +654,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
 			size_t curCacheId = (size_t)floor(iSubminibatch / 2.0);
 
+#ifdef USE_CPU_SMB_SUM
+            vector<Matrix<ElemType>*> smbGradients;         //TODO: use to create crc for each smb
+#endif
+
             // accumulate gradient here
             for (auto x : m_cachedGradient)
             {
@@ -628,7 +667,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     RuntimeError("ERROR: in DoneWithCurrentSubMinibatch: node %ls not found in LeanrableNode", nodename.c_str());
                 }
                 shared_ptr<ComputationNode<ElemType>> pNode = m_LearnableNodePtr[nodename];
+#ifdef USE_CPU_SMB_SUM
+                Matrix<ElemType>& nodeGrad = pNode->Gradient();
+                smbGradients.push_back(&nodeGrad);
+
+                ElemType* curArr = nodeGrad.CopyToArray();
+                ElemType* cacheArr = m_smbCPUCachedGradient[curCacheId][nodename];
+#pragma omp parallel for
+                for (int i = 0; i < m_gradMatSize[nodename]; i++)
+                    *(cacheArr + i) += *(curArr + i);
+#else
 				*m_smbCachedGradient[curCacheId][nodename] += pNode->Gradient();
+#endif
                 //m_cachedGradient.GetInputMatrix<ElemType>(nodename) += pNode->Gradient();
                 pNode->Gradient().SetValue(0);
             }
@@ -652,6 +702,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 const wstring& name = x.first;
                 m_netStates[name][iSubminibatch] = x.second->ExportState();
+            }
+        }
+
+        void SumSubMBCPU()
+        {
+            int count = m_smbCPUCachedGradient.size();
+            while (count > 1)
+            {
+                int j = 0;
+                for (int i = 0; i < count; i += 2)
+                {
+                    if (i + 1 >= m_smbCPUCachedGradient.size())
+                        continue;
+
+                    SMBCPUCache& lSMB = m_smbCPUCachedGradient[i];
+                    SMBCPUCache& rSMB = m_smbCPUCachedGradient[i + 1];
+                    SMBCPUCache& oSMB = m_smbCPUCachedGradient[j];
+                    for (SMBCPUCache::iterator iter = lSMB.begin(); iter != lSMB.end(); iter++)
+                    {
+                        ElemType* lSMBPtr = iter->second;
+                        ElemType* rSMBPtr = rSMB[iter->first];
+#pragma omp parallel for
+                        for (int idx = 0; idx < m_gradMatSize[iter->first]; idx++)
+                        {
+                            *(lSMBPtr + idx) += *(rSMBPtr + idx);
+                            *(rSMBPtr + idx) = 0.0;
+                        }
+                    }
+                    if (i != j)
+                    {
+                        for (SMBCPUCache::iterator iter = oSMB.begin(); iter != oSMB.end(); iter++)
+                        {
+                            size_t matSize = m_gradMatSize[iter->first];
+                            ElemType* oSMBPtr = iter->second;
+                            ElemType* lSMBPtr = lSMB[iter->first];
+                            memset(oSMBPtr, 0, sizeof(ElemType) * matSize);
+#pragma omp parallel for
+                            for (int idx = 0; idx < matSize; idx++)
+                            {
+                                *(oSMBPtr + idx) = *(lSMBPtr + idx);
+                                *(lSMBPtr + idx) = 0.0;
+                            }
+                        }
+                    }
+                    j++;
+                }
+                count = j;
             }
         }
 
@@ -691,8 +788,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void DoneWithCurrentMinibatch()
         {
+#ifdef USE_CPU_SMB_SUM
+            SMBCPUCache& smbSum = m_smbCPUCachedGradient[0];
+#else
 			SMBCache& smbSum = m_smbCachedGradient[0];
-
+#endif
             for (auto& x : m_cachedGradient)
             {
                 const wstring& name  = x.first;
@@ -700,8 +800,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (m_LearnableNodePtr.find(name) == m_LearnableNodePtr.end())
                     LogicError("DoneWithCurrentSubMinibatch: Node '%ls' not found in LearnableNode set.", name.c_str());
+#ifdef USE_CPU_SMB_SUM
+                size_t rows = m_LearnableNodePtr[name]->Gradient().GetNumRows();
+                size_t cols = m_LearnableNodePtr[name]->Gradient().GetNumCols();
+                size_t matSize = m_LearnableNodePtr[name]->Gradient().GetNumElements();
+                int deviceId = m_LearnableNodePtr[name]->Gradient().GetDeviceId();
+                m_LearnableNodePtr[name]->Gradient().SetValue(rows, cols, deviceId, smbSum[name]);
+
+                memset(smbSum[name], 0, sizeof(ElemType) * matSize);
+#else
 				m_LearnableNodePtr[name]->Gradient().SetValue(*smbSum[name]);
 				smbSum[name]->SetValue(0);
+#endif
                 //m_LearnableNodePtr[name]->Gradient().SetValue(accumulategrad);
                 //accumulategrad.SetValue(0);
             }
