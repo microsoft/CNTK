@@ -4149,6 +4149,11 @@ namespace CNTK
     CNTK_API FunctionPtr ELU(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in elementwise scaled exponential linear unit operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr SELU(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise leaky linear rectifier operation with the specified input operand.
     ///
     CNTK_API FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name = L"");

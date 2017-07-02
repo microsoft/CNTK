@@ -168,6 +168,30 @@ DECL ElemType ExponentialLinearUnitDerivative(ElemType z)
 }
 
 template <class ElemType>
+DECL ElemType ScaledExponentialLinearUnit(ElemType z)
+{
+    ElemType scale = 1.0507009873554804934193349852946;
+    ElemType scale_alpha = 1.7580993408473768599402175208123;
+    return z >= 0 ? scale * z : scale_alpha * (exp_(z) - (ElemType)1);
+}
+
+template <class ElemType>
+DECL ElemType ScaledExponentialLinearUnitDerivative(ElemType z)
+{
+    ElemType scale = 1.0507009873554804934193349852946;
+    ElemType scale_alpha = 1.7580993408473768599402175208123;
+    return z >= 0 ? scale : scale_alpha * exp_(z);
+}
+
+template <class ElemType>
+DECL ElemType ScaledExponentialLinearUnitDerivativeFromOutput(ElemType output, ElemType grad)
+{
+    ElemType scale = 1.0507009873554804934193349852946;
+    ElemType scale_alpha = 1.7580993408473768599402175208123;
+    return output >= 0 ? scale * grad : (output + scale_alpha) * grad;
+}
+
+template <class ElemType>
 DECL ElemType Sgn(ElemType z)
 {
     if (z > 0.0) return 1.0;
@@ -270,6 +294,7 @@ DefUnaryOp(Cosine, cos_(a));
 DefUnaryOp(Sin, sin_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
 DefUnaryOp(ExponentialLinearUnit, a >= 0 ? a : (exp_(a)-1));
+DefUnaryOp(ScaledExponentialLinearUnit, ScaledExponentialLinearUnit(a));
 DefUnaryOp(StableSigmoid, StableSigmoid(a));
 #pragma pop_macro("DefUnaryOp")
 
@@ -312,6 +337,7 @@ DefBinaryOp(ElementwiseProductWithReciprocalDerivative, a * -Sqr(b)); // b = out
 DefBinaryOp(ElementwiseProductWithSqrtDerivative, a / (2 * b)); // b = output; d/dx sqrt(x) = 1/(2 * sqrt(x)) --> note this is the same as ElementwiseQuotient w a constant; if more show up like this we should add more template params
 DefBinaryOp(SqrOfDifference, Sqr(a - b));
 DefBinaryOp(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, b >= 0 ? a : a*(1+b)); // b = output;
+DefBinaryOp(ElementwiseProductWithScaledExponentialLinearUnitDerivativeFromOutput, ScaledExponentialLinearUnitDerivativeFromOutput(b, a)); // b = output;
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
 #pragma pop_macro("DefBinaryOp")
