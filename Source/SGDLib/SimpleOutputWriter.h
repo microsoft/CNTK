@@ -65,6 +65,10 @@ public:
 
         size_t totalEpochSamples = 0;
         std::map<std::wstring, void*, nocase_compare> outputMatrices;
+        std::map<std::wstring, void*, nocase_compare> outputMatricesForWrite;
+        std::vector<Matrix<ElemType> *> outputSliceVec;
+        for (int i = 0; i < outputNodes.size(); i++) 
+            outputSliceVec.push_back(new Matrix<ElemType>(-1));
 
         const size_t numIterationsBeforePrintingProgress = 100;
         size_t numItersSinceLastPrintOfProgress = 0;
@@ -72,21 +76,33 @@ public:
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr))
         {
             size_t chunkSize = min(actualMBSize, nc);
+            if (numOutputSamples - totalEpochSamples < chunkSize) 
+                chunkSize = numOutputSamples - totalEpochSamples;
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
             m_net->ForwardProp(outputNodes);
 
             for (int i = 0; i < outputNodes.size(); i++)
                 outputMatrices[outputNodes[i]->NodeName()] = (void*) (&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value());
 
+            for (int i = 0; i < outputNodes.size(); i++) 
+            {
+                *outputSliceVec[i] = dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value().ColumnSlice(0, chunkSize);
+                outputMatricesForWrite[outputNodes[i]->NodeName()] = (void*)(outputSliceVec[i]);
+            }
+
             if (doWriterUnitTest)
             {
                 std::map<std::wstring, void*, nocase_compare> inputMatricesUnitTest;
                 for (auto& iter : inputMatrices)
                     inputMatricesUnitTest[iter.first] = (void*) iter.second.matrix.get();  // BUGBUG: void* are evil
-                dataWriter.SaveData(0, inputMatricesUnitTest, chunkSize, actualMBSize, 0);
+                assert(chunkSize != actualMBSize);
+                dataWriter.SaveData(0, inputMatricesUnitTest, actualMBSize, actualMBSize, 0);
             }
-            else
-                dataWriter.SaveData(0, outputMatrices, chunkSize, actualMBSize, 0);
+            else 
+            {
+                dataWriter.SaveData(0, outputMatricesForWrite, chunkSize, chunkSize, 0);
+                //dataWriter.SaveData(0, outputMatrices, actualMBSize, actualMBSize, 0);
+            }
 
             //totalEpochSamples += actualMBSize;
             totalEpochSamples += chunkSize;
@@ -97,6 +113,9 @@ public:
             // reader specific process if sentence ending is reached
             dataReader.DataEnd();
         }
+
+        for (int i = 0; i < outputSliceVec.size(); i++)
+            delete outputSliceVec[i];
 
         if (m_verbosity > 0)
             fprintf(stderr, "Total Samples Evaluated = %lu\n", (unsigned long)totalEpochSamples);

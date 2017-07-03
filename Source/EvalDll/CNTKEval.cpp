@@ -193,9 +193,8 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
     // call the evaluator
     SimpleOutputWriter<ElemType> eval(this->m_net);
     //eval.WriteOutput(*m_reader, minibatchSize, *m_writer, outNodeNames);
-    // Here requestDataSize = ((size_t) -1) >> 2
     eval.WriteOutput(*m_reader, minibatchSize, *m_writer, outNodeNames, 
-                     requestDataSize, false, rightSplice);
+                     m_reader->RecordCount(), false, rightSplice);
 }
 
 // Evaluate - Evalute using the model with the given inputs and outputs

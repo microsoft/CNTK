@@ -22,8 +22,10 @@ class EvalReader : public DataReaderBase
     vector<size_t> m_switchFrame;
     size_t m_oldSig;
     size_t m_rightSplice; // for latency control blstm
+    size_t m_start; // for latency control blstm
 
 public:
+    size_t RecordCount() const { return m_recordCount; }
     // Method to setup the data for the reader
     void SetData(std::map<std::wstring, std::vector<ElemType>*>* inputs, std::map<std::wstring, size_t>* dimensions)
     {
@@ -31,6 +33,7 @@ public:
         m_dimensions = dimensions;
         m_currentRecord = 0;
         m_recordCount = 0;
+        m_start = 0;
         for (auto iter = inputs->begin(); iter != inputs->end(); ++iter)
         {
             // figure out the dimension of the data
@@ -94,6 +97,7 @@ public:
     EvalReader(const ConfigRecordType& config)
     {
         m_recordCount = m_currentRecord = 0;
+        m_start = 0;
         Init(config);
     }
 
@@ -117,6 +121,7 @@ public:
     // returns - true if there are more minibatches, false if no more minibatchs remain
     virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices)
     {
+        m_start = m_currentRecord;
         // how many records are we reading this time
         size_t recordCount = min(m_mbSize, m_recordCount - m_currentRecord);
 
@@ -145,7 +150,18 @@ public:
             // copy over the data
             std::vector<ElemType>* data = iter->second;
             ElemType* dataPtr = data->data() + (m_currentRecord * rows);
-            matrix.SetValue(rows, recordCount, matrix.GetDeviceId(), dataPtr, matrixFlagNormal);
+            if (m_currentRecord == 0 || matrix.GetNumCols() == recordCount) 
+                matrix.SetValue(rows, recordCount, matrix.GetDeviceId(), dataPtr, matrixFlagNormal);
+            else // last minibatch, partial
+            {
+                assert(matrix.GetNumCols() > recordCount); 
+                std::vector<ElemType> new_data(rows * matrix.GetNumCols());
+                std::copy(data->data() + (m_currentRecord * rows),
+                          data->data() + (m_currentRecord + recordCount) * rows,
+                          new_data.begin());
+                matrix.SetValue(rows, matrix.GetNumCols(), matrix.GetDeviceId(), 
+                                new_data.data(), matrixFlagNormal);
+            }
         }
         
         // for latency control, overlap read
@@ -177,7 +193,7 @@ public:
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
     {
         assert(m_switchFrame.size() == 1);
-        pMBLayout->Init(1, m_mbSize);
+        pMBLayout->Init(1, m_mbSize, m_rightSplice);
 
         // BUGBUG: The following code is somewhat broken in that the structure of this module only keeps track of new sentence starts,
         //         but not of ends. But end markers are now required by the MBLayout. So we must fake the end markers.
@@ -187,22 +203,31 @@ public:
         //         The correct solution is to rewrite this entire module to be more direct; no Reader needed, we can call ForwardProp() directly.
         // BUGBUG: The module also does not keep track of the actual start in the past. So we fake the start, too.
         //         There are boundary cases where this will be incorrect for models with a delay of >1 step.
-        if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch */
+        if (m_rightSplice > 0) // for latency control blstm decoding
         {
-            // finish the current sequence
-            if (m_switchFrame[0] > 0) // BUGBUG: gonna miss the previous end flag if starting on frame [0], see above.
-                pMBLayout->AddSequence(0, 0, -1, m_switchFrame[0] - 1);
-            // start the new sequence
-            // We use a fake end of 1 frame beyond the actual end of the minibatch.
-            pMBLayout->AddSequence(0, 0, m_switchFrame[0], m_mbSize + 1);
-            // pMBLayout->Set(0, m_switchFrame[0], MinibatchPackingFlags::SequenceStart);
-            // if (m_switchFrame[0] > 0)
-            //    pMBLayout->Set(0, m_switchFrame[0] - 1, MinibatchPackingFlags::SequenceEnd);   // TODO: can't we use Set()?
+            pMBLayout->AddSequence(0, 0, -static_cast<ptrdiff_t>(m_start), m_recordCount - m_start);
+            if (m_start + m_mbSize > m_recordCount) // fill the left with gap
+                pMBLayout->AddGap(0, m_recordCount - m_start, m_mbSize);
         }
-        else // all frames in this MB belong to the same utterance
+        else 
         {
-            // no boundary inide the MB: fake a sequence that spans 1 frame on each side.  BUGBUG: That's wrong for delays of > 1 step, see above.
-            pMBLayout->AddSequence(0, 0, -1, m_mbSize + 1); // BUGBUG: gonna miss the end flag if it ends at end of this MB, see above
+            if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch */
+            {
+                // finish the current sequence
+                if (m_switchFrame[0] > 0) // BUGBUG: gonna miss the previous end flag if starting on frame [0], see above.
+                    pMBLayout->AddSequence(0, 0, -1, m_switchFrame[0] - 1);
+                // start the new sequence
+                // We use a fake end of 1 frame beyond the actual end of the minibatch.
+                pMBLayout->AddSequence(0, 0, m_switchFrame[0], m_mbSize + 1);
+                // pMBLayout->Set(0, m_switchFrame[0], MinibatchPackingFlags::SequenceStart);
+                // if (m_switchFrame[0] > 0)
+                //    pMBLayout->Set(0, m_switchFrame[0] - 1, MinibatchPackingFlags::SequenceEnd);   // TODO: can't we use Set()?
+            }
+            else // all frames in this MB belong to the same utterance
+            {
+                // no boundary inide the MB: fake a sequence that spans 1 frame on each side.  BUGBUG: That's wrong for delays of > 1 step, see above.
+                pMBLayout->AddSequence(0, 0, -1, m_mbSize + 1); // BUGBUG: gonna miss the end flag if it ends at end of this MB, see above
+            }
         }
     }
 
