@@ -23,7 +23,7 @@ parser.add_argument('-vocab_file', '--vocab_file', default='vocab.txt',
                     help='The file name of vocab file')
 parser.add_argument('-alloc_file', '--alloc_file', default='word-0.location',
                     help='The file name of word allocation table')
-parser.add_argument('-vocabsize', '--vocabsize', default=10000, type=int,
+parser.add_argument('-vocabsize', '--vocabsize', default=None, type=int,
                     help='The vocab size')
 parser.add_argument('-seed', '--seed', default=0, type=int,
                     help='The random seed')

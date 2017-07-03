@@ -7,6 +7,7 @@
 import cntk
 import numpy as np
 import codecs
+import os
 
 from cntk.io import UserMinibatchSource, StreamInformation, MinibatchData
 from math import ceil, sqrt
@@ -22,10 +23,12 @@ class FileReader(object):
     def __init__(self, path):
         self.input_file = codecs.open(path, 'r', encoding=TEXT_ENCODING)
         self.pointer = self.generator()
+        self.mask = None
 
     def reset(self):
         self.input_file.seek(0)
         self.pointer = self.generator()
+        self.mask = None
 
     def generator(self):
         '''Get next (feature, label)'''
@@ -39,10 +42,24 @@ class FileReader(object):
 
     def next(self):
         try:
-            sample = next(self.pointer)
+            if self.mask is not None:
+                sample = self.mask
+                self.mask = None
+            else:
+                sample = next(self.pointer)
         except StopIteration:
             return None
         return sample
+    
+    def hasnext(self):
+        if self.mask is not None:
+            return True
+        else:
+            self.mask = self.next()
+            if self.mask is not None:
+                return True
+            else:
+                return False
 
 
 # Provides a override-MinibatchSource for parsing the text to a stream-to-data mapping
@@ -114,7 +131,6 @@ class DataSource(UserMinibatchSource):
             curr_word = self.parse_word(feature)
             next_word = self.parse_word(label)
             samples.append((curr_word, next_word))
-
         batchsize = len(samples) / self.seqlength
         # Divide batch into every gpu
         batchrange = list(map(int, [
@@ -123,7 +139,6 @@ class DataSource(UserMinibatchSource):
             ]))
 
         samples = samples[batchrange[0] * self.seqlength: batchrange[1] * self.seqlength]
-
         minibatch = self.make_minibatch(samples)
         sample_count = len(samples)
         num_seq = len(minibatch[0])
