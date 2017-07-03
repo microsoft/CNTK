@@ -13,7 +13,7 @@ sys.path.append(os.path.join(abs_path, "..", "Tutorials"))
 
 from nb_helper import get_output_stream_from_cell
 
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Manual", "How_to_train_using_declarative_and_imperative_API.ipynb")
+notebook = os.path.join(abs_path, "..", "..", "..", "..", "Manual", "Manual_How_to_train_using_declarative_and_imperative_API.ipynb")
 
 def test_cntk_how_to_train_no_errors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell
