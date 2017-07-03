@@ -470,8 +470,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int i = 0; i < m_smbCPUCachedGradient.size(); i++)
                 {
                     SMBCPUCache& oldCache = m_smbCPUCachedGradient[i];
-                    for (SMBCPUCache::iterator iter = oldCache.begin(); iter != oldCache.end(); iter)
-                        delete[](iter->second);
+                    for (SMBCPUCache::iterator iter = oldCache.begin(); iter != oldCache.end(); iter++)
+                        delete [](iter->second);
                     oldCache.clear();
                 }
                 m_smbCPUCachedGradient.clear();
@@ -529,6 +529,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         SMBCPUCache& smbCPUCache = m_smbCPUCachedGradient[i];
                         if (smbCPUCache.find(nodeName) == smbCPUCache.end())
                             smbCPUCache[nodeName] = new ElemType[funvalue.GetNumElements()];
+                        
+                        memset(smbCPUCache[nodeName], 0, sizeof(ElemType) * m_gradMatSize[nodeName]);
                     }
 #else
 					for (int i = 0; i < m_smbCachedGradient.size(); i++)
@@ -676,6 +678,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma omp parallel for
                 for (int i = 0; i < m_gradMatSize[nodename]; i++)
                     *(cacheArr + i) += *(curArr + i);
+                delete []curArr;
 #else
 				*m_smbCachedGradient[curCacheId][nodename] += pNode->Gradient();
 #endif
@@ -727,7 +730,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         for (int idx = 0; idx < m_gradMatSize[iter->first]; idx++)
                         {
                             *(lSMBPtr + idx) += *(rSMBPtr + idx);
-                            *(rSMBPtr + idx) = 0.0;
+                            *(rSMBPtr + idx) = 0;
                         }
                     }
                     if (i != j)
@@ -742,7 +745,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             for (int idx = 0; idx < matSize; idx++)
                             {
                                 *(oSMBPtr + idx) = *(lSMBPtr + idx);
-                                *(lSMBPtr + idx) = 0.0;
+                                *(lSMBPtr + idx) = 0;
                             }
                         }
                     }

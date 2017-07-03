@@ -1190,9 +1190,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 					size_t mbOffset = smbSize * smbId;
 					ElemType* smbPtr = mbData + mbOffset;
 					unsigned int checkSum = CrcCheck1(smbPtr, smbSize);
-					std::string uniqueTag = std::to_string(m_mpi->CurrentNodeRank()) + "_" + std::to_string(smbId);
-					string outPathB = "C:/Data/v-zhke/workspace/cntk_smb_test/test_script/Output/InputHash-Binary_" + uniqueTag + ".txt";
-					string outPathS = "C:/Data/v-zhke/workspace/cntk_smb_test/test_script/Output/InputHash-String_" + uniqueTag + ".txt";
+					std::string uniqueTag = std::to_string(m_mpi->CurrentNodeRank()) + "_" + std::to_string(smbId) + "_" + std::to_string(m_numSubminiBatches);
+					string outPathB = "C:/Data/v-zhke/workspace/cntk_smb_test/7.2/cpu_tmp_out/InputHash-Binary_" + uniqueTag + ".txt";
+					string outPathS = "C:/Data/v-zhke/workspace/cntk_smb_test/7.2/cpu_tmp_out/InputHash-String_" + uniqueTag + ".txt";
 
 					ofstream outFile;
 					outFile.open(outPathB, ios::app | ios::binary);
@@ -1359,8 +1359,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 		{
 			unsigned int checkSum = CrcCheck(learnParamsGradients);
 
-			string outPathB = "C:/Data/v-zhke/workspace/cntk_smb_test/test_script/Output/TmpHash-Binary_"+std::to_string(m_numSubminiBatches)+".txt";
-			string outPathS = "C:/Data/v-zhke/workspace/cntk_smb_test/test_script/Output/TmpHash-String_"+std::to_string(m_numSubminiBatches)+".txt";
+			string outPathB = "C:/Data/v-zhke/workspace/cntk_smb_test/7.2/cpu_tmp_out/TmpHash-Binary_"+std::to_string(m_numSubminiBatches)+".txt";
+			string outPathS = "C:/Data/v-zhke/workspace/cntk_smb_test/7.2/cpu_tmp_out/TmpHash-String_"+std::to_string(m_numSubminiBatches)+".txt";
 
 			ofstream outFile;
 			outFile.open(outPathB, ios::app | ios::binary);
