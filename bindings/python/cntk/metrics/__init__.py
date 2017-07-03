@@ -100,46 +100,6 @@ def classification_error(output_vector, target_vector, axis=-1, topN=1, name='')
 @typemap
 def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashInputs=False, tokensToIgnore=[], name=''):
     '''
-    Edit distance error evaluation function with the option of specifying penalty of substitution, deletion and insertion, as well as squashing the input sequences and ignoring certain samples.
-    Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties.
-
-    Each sequence in the inputs is expected to be a matrix. Prior to computation of the edit distance, the function extracts the indices of maximum element in each column.
-    For example, a sequence matrix
-
-    1 2 9 1
-
-    3 0 3 2
-
-    will be represented as the vector of labels (indices) as [1, 0, 0, 1], on which edit distance will be evaluated.
-
-    The function allows to squash sequences of repeating labels and ignore certain labels. For example, if `squashInputs` is `true` and `tokensToIgnore` contains index of label '-' then
-    given first input sequence as `s1="1-12-"` and second as `s2="-11--122"` the edit distance will be computed against `s1' = "112" and s2' = "112"`.
-
-    Just like `classification_error`and other evaluation nodes, when used as an evaluation criterion, the Trainer will aggregate all values over an epoch and report the average, i.e. the error rate.
-    Primary objective of this node is for error evaluation of CTC training, see formula (1) in "Connectionist Temporal Classification: Labelling Unsegmented
-    Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
-
-
-    Example:
-        >>> i1 = C.input(shape=(2,))
-        >>> i2 = C.input(shape=(2,))
-        >>> arguments = {i1 : [[1, 3], [2, 0]], i2 : [[2, 0], [2, 0]]}
-        >>> a = C.edit_distance_error(i1, i2, 0, 1, 1, True, [1])
-        >>> a.eval(arguments)
-        array(1.0, dtype=float32)
-
-    Args:
-        input_a: first input sequence
-        input_b: second input sequence
-        subPen: substitution penalty
-        delPen: deletion penalty
-        insPen: insertion penalty
-        squashInputs: whether to merge sequences of identical samples (in both input sequences). If true and tokensToIgnore contains label '-' then
-                given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
-        tokensToIgnore: list of indices of samples to ignore during edit distance evaluation (in both sequences)
-        name (str, optional): the name of the Function instance in the network
-    Returns:
-        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import edit_distance_error
     dtype = get_data_type(input_a, input_b)
