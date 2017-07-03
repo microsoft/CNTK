@@ -1,12 +1,5 @@
 layers <- reticulate::import("cntk.layers")
 
-to_int = function(num) {
-	if (is.null(num)) {
-		return(NULL)
-	}
-	as.integer(num)
-}
-
 #' @export
 activation_identity <- function(keep) {
     layers$identity(keep)

@@ -21,7 +21,6 @@ constant <- function(value = NULL, shape = NULL, name = '') {
 		name = name
 	)
 }
-constant <- ops$constant
 
 #' @export
 sigmoid <- ops$sigmoid
