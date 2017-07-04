@@ -159,6 +159,20 @@ protected:
         return pow(m_momentumParam[epoch], 1.0 / FixUpEffectiveMBSize(m_momentumSpecifiedForMBSize[epoch], numParallelSequences));
     }
 
+    double GetWarmupLearningRate(size_t curEpoch, size_t curMB, size_t numParallelSequences) const
+    {
+        if (m_warmupEpochs == 0 || curEpoch >= m_warmupEpochs)
+            return -1.0;
+
+        double startLearnRatePerSample = m_startLearnRatePerMB / FixUpEffectiveMBSize(m_learningRatesSpecifiedForMBSize[curEpoch], numParallelSequences);
+        double endLearnRatePerSample = m_endLearnRatePerMB / FixUpEffectiveMBSize(m_learningRatesSpecifiedForMBSize[curEpoch], numParallelSequences);
+        if (startLearnRatePerSample > endLearnRatePerSample)
+            InvalidArgument("While use warmup, start lr cannot smaller than end lr.");
+
+        double learnRateIncrePerEpoch = (endLearnRatePerSample - startLearnRatePerSample) / (double)m_warmupEpochs;
+        return (startLearnRatePerSample + learnRateIncrePerEpoch * curEpoch + (learnRateIncrePerEpoch / (double)m_mbNumsPerEpoch) * curMB);
+    }
+
     ParallelizationMethod GetParallelizationMethod() const
     {
         if (m_mpi == nullptr)
@@ -198,6 +212,12 @@ protected:
 
     // the total number of epochs to run.
     size_t m_maxEpochs;
+
+    // parameters for large scale warmup
+    size_t m_warmupEpochs;
+    int m_mbNumsPerEpoch;
+    double m_startLearnRatePerMB;
+    double m_endLearnRatePerMB;
 
     bool m_gradientClippingWithTruncation;
     double m_clippingThresholdPerSample;
@@ -486,7 +506,7 @@ protected:
                          const int epochNumber,
                          const size_t epochSize,
                          IDataReader* trainSetDataReader,
-                         const double learnRatePerSample,
+                         double learnRatePerSample,
                          size_t tunedMBSize,
                          const std::vector<ComputationNodeBasePtr>& featureNodes,
                          const std::vector<ComputationNodeBasePtr>& labelNodes,
