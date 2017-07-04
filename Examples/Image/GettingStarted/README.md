@@ -123,4 +123,4 @@ The rmse values for training and testing are 0.225 and 0.223 respectively. To vi
 
 `python 07_Deconvolution_Visualizer.py`
 
-The script uses by default the BrainScript model, set `use_brain_script_model=False` to use the Python model for visualization. The visualizations will be stored in the `Output` folder together with a text representation of the encoder and the decoder output.
+The script allows you to specify the type of model you used for training with the argument `-t`, i.e. add `-t Python` to generate the visualization with the Python trained model or `-t BrainScript` for the Brainscript model. The visualizations will be stored in the `Output` folder together with a text representation of the encoder and the decoder output.

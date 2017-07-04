@@ -6,16 +6,18 @@
 
 import os, sys
 import numpy as np
+import subprocess
 from cntk.device import try_set_default_device, gpu
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "GettingStarted"))
+getting_started_path = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "GettingStarted")
+sys.path.append(getting_started_path)
 autoEncoder = __import__("07_Deconvolution_PY")
 visualizer = __import__("07_Deconvolution_Visualizer")
 
 TOLERANCE_ABSOLUTE = 5E-1
 
-def test_simple_mnist_error(device_id):
+def test_simple_mnist_py_error(device_id):
     from cntk.ops.tests.ops_test_utils import cntk_device
     try_set_default_device(cntk_device(device_id))
 
@@ -27,3 +29,17 @@ def test_simple_mnist_error(device_id):
 
     # check that it doesn't break
     visualizer.generate_visualization(use_brain_script_model=False, testing=True)
+
+def test_simple_mnist_bs_error(device_id):
+    from cntk.ops.tests.ops_test_utils import cntk_device
+    try_set_default_device(cntk_device(device_id))
+
+    cmdStr = "cntk configFile=07_Deconvolution_BS.cntk"
+
+    pid = subprocess.Popen(cmdStr.split(" "), cwd=getting_started_path)
+    pid.wait()
+
+    assert pid.returncode == 0, "ERROR: cntk ended with exit code {}".format(pid.returncode)
+
+    # check that it doesn't break
+    visualizer.generate_visualization(use_brain_script_model=True, testing=True)
