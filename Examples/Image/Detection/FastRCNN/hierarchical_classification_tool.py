@@ -1,13 +1,14 @@
 
 from tools.hierarchy.Tree_Creator import TreeMap
 from tools.ClassMap import ClassMap
-import sys, path
+import sys, path, os
 import PARAMETERS as par
 import numpy as np
 from cntk.ops.functions import UserFunction
 from cntk import *
 
-cls_maps = [ClassMap(r"D:\local\CNTK-2-0-rc1\cntk\Examples\Image\DataSets\Grocery\Class_map.txt")]
+my_path = os.path.dirname(os.path.realpath(__file__))
+cls_maps = [ClassMap(my_path + r"/../../DataSets/Grocery/Class_map.txt")]
 tree_map = TreeMap(cls_maps, use_background=True, only_valid_leafs=True, reduce_graph=True, use_multiply_with_parent=False)
 params = par.get_parameters_for_dataset()
 
