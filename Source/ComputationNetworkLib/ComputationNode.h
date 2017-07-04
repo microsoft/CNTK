@@ -1791,7 +1791,7 @@ public:
     }
 
     // request matrices needed to do node function value evaluation
-    // for memory pool utilization optimizaiton, the requested pointer is not immediately useable until the entire network has gone through all requests 
+    // for memory pool utilization optimization, the requested pointer is not immediately useable until the entire network has gone through all requests 
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         size_t matrixSize = m_sampleLayout.GetNumElements();
