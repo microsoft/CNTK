@@ -113,12 +113,15 @@ def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashIn
     Just like ClassificationError and other evaluation nodes, when used as an evaluation criterion, the SGD process will aggregate all values over an epoch and report the average, i.e. the error rate.
     Primary objective of this node is for error evaluation of CTC training, see formula (1) in "Connectionist Temporal Classification: Labelling Unsegmented
     Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
+
     Example:
-        i1 = C.input_variable(shape=(2,))
-        i2 = C.input_variable(shape=(2,))
-        arguments = {i1 : [[1, 3], [2, 0]], i2 : [[2, 0], [2, 0]]}
-        a = edit_distance_error(i1, i2, 0, 1, 1, True, [1])
-        print(a.eval(arguments))
+        >>> i1 = C.input(shape=(2,))
+        >>> i2 = C.input(shape=(2,))
+        >>> arguments = {i1 : [[1, 3], [2, 0]], i2 : [[2, 0], [2, 0]]}
+        >>> a = C.edit_distance_error(i1, i2, 0, 1, 1, True, [1])
+        >>> a.eval(arguments)
+        array(1.0, dtype=float32)
+
     Args:
         input_a: first input sequence
         input_b: second input sequence
