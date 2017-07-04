@@ -268,31 +268,37 @@ class TreeMap():
         return Output_Mapper(self)
 
 class Output_Mapper():
-
-
     all_classes = []
 
     def __init__(self, tree_map):
         self.use_background = tree_map.use_background
         self.input_is_absolut = tree_map.use_multiply_with_parent
 
-        self.keep_indicies=np.where(tree_map.as_in_network[1:]!=None)[0]+1
-
+        in_net_array = np.asarray(tree_map.as_in_network)
+        self.keep_indicies=np.where( np.not_equal( in_net_array[1:],[None]))
+        #import ipdb;ipdb.set_trace()
+        print(type(self.keep_indicies[0]))
+        tmp = self.keep_indicies[0]
+        tmp+=1 # stupid workaround since direct modification inside of tuples is not allowed ...
+        print(self.keep_indicies)
         self.all_classes=[]
         if self.use_background: self.all_classes.append("__background__")
-        entries=tree_map.as_in_network[np.where(tree_map.as_in_network!=None)]
-        for i in len(entries):
+        entries=in_net_array[self.keep_indicies]
+        for i in range(len(entries)):
             if entries[i].strings:
-                self.all_classes.append(entries[i].strings)
+                self.all_classes.append(entries[i].strings[0])
             else:
                 self.all_classes.append(str(entries[i].syn))
 
+        if self.use_background:
+            self.keep_indicies = (np.append([0], self.keep_indicies[0]),)
 
     def get_all_classes(self):
         return self.all_classes.copy()
 
     def get_prediciton_vector(self, network_output):
         return network_output[self.keep_indicies]
+
 
 
 
