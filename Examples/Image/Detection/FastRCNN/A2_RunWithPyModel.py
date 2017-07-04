@@ -155,11 +155,7 @@ def train_fast_rcnn(debug_output=False, model_path=model_file):
         target = user_function(HCT.Target_Creator(label_input))
         frcn_output = frcn_predictor(image_input, roi_input, num_neurons, model_path)
         softmaxed = HCT.tree_map.tree_softmax(frcn_output, axis=1, offset=0)
-        #weigthts = np.ones((2000,HCT.tree_map.get_nr_of_required_neurons()))
-        #import ipdb;ipdb.set_trace()
 
-        #weigthts[:,0]=.1
-        #weigthts=constant(weigthts, dtype=np.float32)
         ce = cross_entropy(softmaxed, target)
         error = softmaxed- target
         pe = reduce_sum( error*error)
@@ -220,13 +216,13 @@ def evaluate_fast_rcnn(model):
         for i in range(0, num_test_images):
             data = test_minibatch_source.next_minibatch(1, input_map=input_map)
             output = model.eval(data)
-            #import ipdb;ipdb.set_trace()
+
             if USE_HIERARCHICAL_CLASSIFIER: output = HCT.to_non_hierarchical_output(output)
-            #else: output = softmax(output).eval()
             print("----------")
             min_index = np.argmin(output[0,:,0])
             print("index minumum background: " + str(min_index))
             print("vector: " + str(output[0,min_index]))
+
             out_values = output[0].flatten()
             np.savetxt(results_file, out_values[np.newaxis], fmt="%.6f")
             if (i+1) % 100 == 0:
