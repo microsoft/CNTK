@@ -1064,6 +1064,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     bool noMoreSamplesToProcess = false;
     bool isFirstMinibatch = true;
+    
     for (;;)
     {
         auto profMinibatch = ProfilerTimeBegin();
@@ -1132,8 +1133,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                               dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[0])->Value());
             }
 
-             double warmupLr = GetWarmupLearningRate(epochNumber, numMBsRun, trainSetDataReader->GetNumParallelSequencesForFixingBPTTMode());
-             learnRatePerSample = warmupLr == -1 ? learnRatePerSample : warmupLr;
+
+            double warmupLr = GetWarmupLearningRate(epochNumber, numMBsRun, trainSetDataReader->GetNumParallelSequencesForFixingBPTTMode());
+            learnRatePerSample = warmupLr == -1 ? learnRatePerSample : warmupLr;
             // for debug
             if (numMBsRun % 100 == 0)
                 fprintf(stderr, "Epoch: %d, Iters: %d, LearnRate: %.9f\n", epochNumber + 1, numMBsRun, learnRatePerSample);
@@ -1143,6 +1145,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // We optionally break the minibatch into sub-minibatches.
             // This, when enabled, is used when a full minibatch does not fit into GPU RAM.
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
+
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
                 if (actualNumSubminibatches > 1)
