@@ -34,8 +34,8 @@ class Trainer(cntk_py.Trainer):
         (in this order). Alternatively, a tuple(loss Function, evaluation Function) is also
         accepted.
        parameter_learners (list): list of learners from :mod:`cntk.learners`
-        progress_writers (progress writer or list of them): optionally, list of
-        progress writers from :mod:`cntk.utils` to automatically track training
+       progress_writers (progress writer or list of them): optionally, list of
+        progress writers from :mod:`cntk.logging` to automatically track training
         progress.
 
     Todo:
@@ -232,6 +232,7 @@ class Trainer(cntk_py.Trainer):
 
         Args:
             filename (str): filename to store the checkpoint.
+            external_state (dict): additional external state, default is empty.
         '''
 
         super(Trainer, self).save_checkpoint(filename, _py_dict_to_cntk_dict(external_state))
@@ -245,7 +246,7 @@ class Trainer(cntk_py.Trainer):
             filename (str): filename to restore the checkpoint from
         '''
 
-        super(Trainer, self).restore_from_checkpoint(filename)
+        return super(Trainer, self).restore_from_checkpoint(filename)
 
     @property
     @typemap

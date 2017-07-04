@@ -26,7 +26,9 @@ script_under_test = os.path.join(example_dir, "BN_Inception_CIFAR10.py")
 
 from BN_Inception_CIFAR10 import bn_inception_train_and_eval
 
-TOLERANCE_ABSOLUTE = 1e-1
+# TODO this needs to be tightened, expected_error may need to be fixed, too.
+#      We've seen errors of 0.754, 0.776, 0.778 on different cards / OS.
+TOLERANCE_ABSOLUTE = 0.15
 
 def test_bn_inception_cifar(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:

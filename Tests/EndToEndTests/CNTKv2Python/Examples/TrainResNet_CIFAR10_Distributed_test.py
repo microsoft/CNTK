@@ -31,6 +31,7 @@ def test_cifar_resnet_distributed(device_id):
                "-datadir", base_path,
                "-q", "32",
                "-es", "512",
+               "-r",
                "-device", str(device_id) ]
     mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.86, False, 3)
 
@@ -39,6 +40,7 @@ def test_cifar_resnet_distributed_1bitsgd(device_id):
                "-datadir", base_path,
                "-q", "1",
                "-es", "512",
+               "-r",
                "-device", str(device_id) ]
     mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.86, False, 3)
 
@@ -47,5 +49,6 @@ def test_cifar_resnet_distributed_block_momentum(device_id):
                "-datadir", base_path,
                "-b", "3200",
                "-es", "512",
+               "-r",
                "-device", str(device_id) ]
     mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.89, False, 5)

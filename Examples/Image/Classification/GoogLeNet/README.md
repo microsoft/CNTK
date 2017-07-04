@@ -33,7 +33,7 @@ Models pre-trained with CNTK scripts.
 |CNTK model download path | https://www.cntk.ai/Models/CNTK_Pretrained/InceptionV3_ImageNet_CNTK.model
 |:---------|:---
 |Training script | [InceptionV3.cntk](./InceptionV3/BrainScript/InceptionV3.cntk)
-|Single crop top 1 / top 5 error | 21.878% / 5.972%
+|Single crop top 1 / top 5 error | 21.620% / 5.810%
 
 ### Caffe-Converted
 

@@ -112,6 +112,13 @@ class DistributedLearner(cntk_py.DistributedLearner):
         '''
         return super(DistributedLearner, self).get_communicator()
 
+    @property
+    def total_number_of_samples_seen(self):
+        '''
+        The number of samples seen by the distributed learner.
+        '''
+        return super(DistributedLearner, self).total_number_of_samples_seen()
+
 @typemap
 def data_parallel_distributed_learner(learner, distributed_after=0, num_quantization_bits=32, use_async_buffered_parameter_update=False):
     '''

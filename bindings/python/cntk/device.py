@@ -3,7 +3,9 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-
+"""
+Utilities to specify device on which CNTK computation can be executed. 
+"""
 from enum import Enum, unique
 from . import cntk_py
 from cntk.internal import typemap
@@ -110,17 +112,6 @@ def use_default_device():
         default device
     '''
     return cntk_py.DeviceDescriptor.use_default_device()
-
-
-def set_default_device(new_default_device):
-    '''
-    See :func:`try_set_default_device`
-    '''
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-                  'DeviceDescriptor.try_set_default_device() instead.',
-                  DeprecationWarning)
-    return try_set_default_device(new_default_device, False)
 
 
 def try_set_default_device(new_default_device, acquire_device_lock=False):

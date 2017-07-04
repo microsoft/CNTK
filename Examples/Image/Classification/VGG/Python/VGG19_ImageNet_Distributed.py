@@ -11,12 +11,13 @@ import argparse
 import numpy as np
 import cntk as C
 import _cntk_py
+import cntk.io.transforms as xforms
 
 from cntk.logging import *
-from cntk.ops import *
-from cntk.distributed import data_parallel_distributed_learner, Communicator
+from cntk.ops import placeholder, minus, constant, relu
+from cntk.train.distributed import data_parallel_distributed_learner, Communicator
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
-from cntk.layers import Placeholder, Block, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential, For
+from cntk.layers import Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential, For
 from cntk.initializer import normal
 from cntk.train.training_session import *
 
@@ -42,15 +43,15 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
     transforms = []
     if is_training:
         transforms += [
-            ImageDeserializer.crop(crop_type='randomside', side_ratio='0.4375:0.875', jitter_type='uniratio') # train uses jitter
+            xforms.crop(crop_type='randomside', side_ratio=(0.4375, 0.875), jitter_type='uniratio') # train uses jitter
         ]
     else:
         transforms += [
-            ImageDeserializer.crop(crop_type='center', side_ratio=0.5833333) # test has no jitter
+            xforms.crop(crop_type='center', side_ratio=0.5833333) # test has no jitter
         ]
 
     transforms += [
-        ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
+        xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
     ]
 
     # deserializer
@@ -116,9 +117,9 @@ def create_vgg19():
             ])(input)
 
     # loss and metric
-    ce = cross_entropy_with_softmax(z, label_var)
-    pe = classification_error(z, label_var)
-    pe5 = classification_error(z, label_var, topN=5)
+    ce = C.cross_entropy_with_softmax(z, label_var)
+    pe = C.classification_error(z, label_var)
+    pe5 = C.classification_error(z, label_var, topN=5)
 
     log_number_of_parameters(z) ; print()
 
@@ -135,12 +136,12 @@ def create_vgg19():
 def create_trainer(network, epoch_size, num_quantization_bits, progress_printer):
     # Set learning parameters
     lr_per_mb         = [0.01]*20 + [0.001]*20 + [0.0001]*20 + [0.00001]*10 + [0.000001]
-    lr_schedule       = C.learning_rate_schedule(lr_per_mb, unit=C.learner.UnitType.minibatch, epoch_size=epoch_size)
-    mm_schedule       = C.learner.momentum_schedule(0.9)
+    lr_schedule       = C.learning_rate_schedule(lr_per_mb, unit=C.learners.UnitType.minibatch, epoch_size=epoch_size)
+    mm_schedule       = C.learners.momentum_schedule(0.9)
     l2_reg_weight     = 0.0005 # CNTK L2 regularization is per sample, thus same as Caffe
 
     # Create learner
-    local_learner = C.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=l2_reg_weight)
+    local_learner = C.learners.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=l2_reg_weight)
     # Since we reuse parameter settings (learning rate, momentum) from Caffe, we set unit_gain to False to ensure consistency
     parameter_learner = data_parallel_distributed_learner(
         local_learner,
@@ -166,12 +167,12 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         mb_size = minibatch_size,
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
-        test_config = TestConfig(source=test_source, mb_size=minibatch_size)
+        test_config = TestConfig(minibatch_source=test_source, minibatch_size=minibatch_size)
     ).train()
 
 # Train and evaluate the network.
 def vgg19_train_and_eval(train_data, test_data, num_quantization_bits=32, minibatch_size=128, epoch_size = 1281167, max_epochs=80,
-                         restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False):
+                         restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, testing=False):
     _cntk_py.set_computation_network_trace_level(0)
 
     progress_printer = ProgressPrinter(
@@ -185,7 +186,14 @@ def vgg19_train_and_eval(train_data, test_data, num_quantization_bits=32, miniba
     network = create_vgg19()
     trainer = create_trainer(network, epoch_size, num_quantization_bits, progress_printer)
     train_source = create_image_mb_source(train_data, True, total_number_of_samples=max_epochs * epoch_size)
-    test_source = create_image_mb_source(test_data, False, total_number_of_samples=FULL_DATA_SWEEP)
+
+    if testing:
+        # reduce number of samples for validation when testing
+        num_of_validation_samples = max_epochs * epoch_size * 10
+    else:
+        num_of_validation_samples = FULL_DATA_SWEEP
+
+    test_source = create_image_mb_source(test_data, False, total_number_of_samples=num_of_validation_samples)
     train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore)
 
 
@@ -202,6 +210,7 @@ if __name__=='__main__':
     parser.add_argument('-q', '--quantized_bits', help='Number of quantized bits used for gradient aggregation', type=int, required=False, default='32')
     parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', action='store_true')
     parser.add_argument('-device', '--device', type=int, help="Force to run the script on a specified device", required=False, default=None)
+    parser.add_argument('-testing', '--testing', help='Indicate if running for testing purposes (validation only done in a portion of the test dataset)', action='store_true')
 
     args = vars(parser.parse_args())
 
@@ -212,7 +221,13 @@ if __name__=='__main__':
     if args['logdir'] is not None:
         log_dir = args['logdir']
     if args['device'] is not None:
-        C.device.try_set_default_device(C.device.gpu(args['device']))
+        if args['device'] == -1:
+            C.device.try_set_default_device(C.device.cpu())
+        else:
+            C.device.try_set_default_device(C.device.gpu(args['device']))
+
+    if not os.path.isdir(data_path):
+        raise RuntimeError("Directory %s does not exist" % data_path)
 
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'val_map.txt')
@@ -225,6 +240,8 @@ if __name__=='__main__':
                          restore=not args['restart'],
                          log_to_file=args['logdir'],
                          num_mbs_per_log=200,
-                         gen_heartbeat=True)
+                         gen_heartbeat=True,
+                         testing=args['testing'])
+
     # Must call MPI finalize when process exit without exceptions
-    cntk.distributed.Communicator.finalize()
+    Communicator.finalize()

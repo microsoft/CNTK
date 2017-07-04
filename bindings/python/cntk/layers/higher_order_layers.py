@@ -164,14 +164,6 @@ def For(what_range, constructor, name=''):
     return _inject_name(sequential, name)
 
 
-# legacy name for For()
-def LayerStack(N, constructor):
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-                  'For(...) instead', DeprecationWarning)
-    return For(range(N), constructor)
-
-
 def SequentialClique(functions, name=''):
     '''
     SequentialClique(functions, name='')

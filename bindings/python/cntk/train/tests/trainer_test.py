@@ -5,6 +5,7 @@
 # ==============================================================================
 
 import warnings
+import math
 import numpy as np
 from cntk import Value, Function, sequence, as_block, times, parameter, plus, reduce_sum
 from cntk.ops.tests.ops_test_utils import cntk_device
@@ -37,8 +38,11 @@ def test_trainer(tmpdir, no_eval_function):
     updated, var_map = trainer.train_minibatch(arguments, outputs=[z_output])
 
     p = str(tmpdir / 'checkpoint.dat')
-    trainer.save_checkpoint(p)
-    trainer.restore_from_checkpoint(p)
+    external_state = {"additional external state":math.pi, "nested dict":{"a":"b"}, "list":[1,2,3]}
+    trainer.save_checkpoint(p, external_state)
+    restored_state = trainer.restore_from_checkpoint(p)
+
+    assert external_state == restored_state
 
     assert trainer.model.name == 'z'
 

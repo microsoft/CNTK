@@ -1379,13 +1379,13 @@ BOOST_FIXTURE_TEST_CASE(MatrixFSAdagradUpdate_WithAndWithout_UnitGain, RandomSee
 
         for (; lr > 0.01; lr = lr / 2)
         {
-            size_t mbSize = 100;
             double smoothedCount = 10 / lr;
             double targetAdagradAvDenom = 1.0;
             double varMomentum = 1.0 - lr;
+            double targetAdagradAvDenom_x_sqrtAdagradSqrFrames = targetAdagradAvDenom * sqrt(smoothedCount);
 
-            sg1.FSAdagradUpdate(mbSize, g1, p1, smoothedCount, lr, targetAdagradAvDenom, 0.0, varMomentum, true);
-            sg2.FSAdagradUpdate(mbSize, g2, p2, smoothedCount, lr, targetAdagradAvDenom, 0.0, varMomentum, true /*false*/);
+            sg1.FSAdagradUpdate(g1, p1, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr, 0.0, varMomentum, true);
+            sg2.FSAdagradUpdate(g2, p2, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr, 0.0, varMomentum, true /*false*/);
             // BUGBUG: at the moment this fails even with identical arguments.
             // BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }
@@ -1395,13 +1395,13 @@ BOOST_FIXTURE_TEST_CASE(MatrixFSAdagradUpdate_WithAndWithout_UnitGain, RandomSee
 
         for (lr = 1.0; lr > 0.03; lr = lr / 2)
         {
-            size_t mbSize = 100;
             double smoothedCount = 10 / lr;
             double targetAdagradAvDenom = 1.0;
             double varMomentum = 1.0 - lr;
+            double targetAdagradAvDenom_x_sqrtAdagradSqrFrames = targetAdagradAvDenom * sqrt(smoothedCount);
 
-            sg1.FSAdagradUpdate(mbSize, g1, p1, smoothedCount, lr, targetAdagradAvDenom, 0.5, varMomentum, true);
-            sg2.FSAdagradUpdate(mbSize, g2, p2, smoothedCount, lr /*lr/2*/, targetAdagradAvDenom, 0.5, varMomentum, true /*false*/);
+            sg1.FSAdagradUpdate(g1, p1, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr, 0.5, varMomentum, true);
+            sg2.FSAdagradUpdate(g2, p2, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, lr /*lr/2*/, 0.5, varMomentum, true /*false*/);
             // BUGBUG: at the moment this fails even with identical arguments.
             // BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }

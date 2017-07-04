@@ -116,7 +116,7 @@ class SparseConverter(Converter):
                 raise ValueError("Invalid sample dimension for input {0}. Max {1}, given {2}"
                         .format(self.name, self.sample_dim, index))
 
-        byte_size = len(pairs) * (8 if self.is_float() else 12) + 4
+        byte_size = len(list(pairs)) * (8 if self.is_float() else 12) + 4
 
         if(len(self.sequences) == 0):
             self.sequences.append([])
@@ -137,9 +137,9 @@ class SparseConverter(Converter):
             indices = []
             sizes = []
             for sample in sequence:
-                sizes.append(len(sample))
-                sample.sort(key=lambda x: x[0])
-                for (index, value) in sample:
+                sizes.append(len(list(sample)))
+                ssample = sorted(sample, key=lambda x: x[0])
+                for (index, value) in ssample:
                     indices.append(index)
                     values.append(value)
 

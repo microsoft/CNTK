@@ -2,7 +2,9 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-
+"""
+Axis for CNTK variables on data binding.
+"""
 from . import cntk_py
 from cntk.internal.swig_helper import typemap
 
@@ -146,22 +148,6 @@ class Axis(cntk_py.Axis):
             :class:`Axis`: new unique dynamic axis
         '''
         return cntk_py.Axis.new_unique_dynamic_axis(name)
-
-    @staticmethod
-    @typemap
-    def end_static_axis():
-        '''
-        DEPRECATED.
-
-        Creates an Axis object representing a new leading static axis.
-
-        Returns:
-            :class:`Axis`: axis object representing a new leading static axis.
-        '''
-        import warnings
-        warnings.warn('This will be removed in future versions. Please use '
-                'Axis.new_leading_axis() instead.', DeprecationWarning)
-        return cntk_py.Axis.end_static_axis()
 
     @staticmethod
     @typemap

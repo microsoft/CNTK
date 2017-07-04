@@ -126,55 +126,66 @@ def test_depth_first_search(depth):
 @pytest.mark.parametrize("depth,prefix_count", [
     (0, {
             "Input('image'":1,
-            "Dense:":1,
-            "MaxPooling:":1,
-            "Convolution:":1,
-            "Parameter('W'":2,
-            "Parameter('b'":2,
-            }),
-     (-1, {
-            "Input('image'":1,
-            "Dense:":1,
-            "MaxPooling:":1,
-            "Convolution:":1,
-            "Parameter('W'":2,
-            "Parameter('b'":2,
-            # in addition to depth=0...
-            "Plus:":1,
-            "Times":1,
+            "blocked_dense:":1,
+            "Dense(":1,
+            "MaxPooling(":1,
+            "Convolution(":1,
+            "Parameter('W'":3,
+            "Parameter('b'":3,
             }),
      (1, {
             "Input('image'":1,
-            "Dense:":1,
-            "MaxPooling:":1,
-            "Convolution:":1,
-            "Parameter('W'":2,
-            "Parameter('b'":2,
-            "Plus:":1,
-            "Times":1,
+            "blocked_dense:":1,
+            "Dense(":2,
+            "MaxPooling(":1,
+            "Convolution(":1,
+            "Parameter('W'":3,
+            "Parameter('b'":3,
             }),
      (2, {
             "Input('image'":1,
-            "Dense:":1,
-            "MaxPooling:":1,
-            "Convolution:":1,
-            "Parameter('W'":2,
-            "Parameter('b'":2,
-            "Plus:":1,
-            "Times":1,
+            "blocked_dense:":1,
+            "Dense(":2,
+            "MaxPooling(":1,
+            "Convolution(":1,
+            "Parameter('W'":3,
+            "Parameter('b'":3,
             # in addition to depth=1...
-            "Pooling: Placeholder(": 1,
+            "Plus(":2,
+            "Times(":2,
+            }),
+     (-1, {
+            "Input('image'":1,
+            "blocked_dense:":1,
+            "Dense(":2,
+            "MaxPooling(":1,
+            "Convolution(":2,
+            "Parameter('W'":3,
+            "Parameter('b'":3,
+            "Times(":2,
+            # in addition to depth=2...
+            "Plus(":3,
+            "ReLU(":1,
+            "Pooling(Tensor":1,
             }),
      ])
 def test_depth_first_search_blocks(depth, prefix_count):
     from cntk.layers import Sequential, Convolution, MaxPooling, Dense
     from cntk.default_options import default_options
+    
+    def Blocked_Dense(dim, activation=None):
+        dense = Dense(dim, activation=activation)
+        @C.layers.BlockFunction('blocked_dense', 'blocked_dense')
+        def func(x):
+            return dense(x)
+        return func
 
     with default_options(activation=C.relu):
         image_to_vec = Sequential ([
             Convolution((5,5), 32, pad=True),
             MaxPooling((3,3), strides=(2,2)),
-            Dense(10, activation=None)
+            Dense(10, activation=None),
+            Blocked_Dense(10)
             ]
         )
 
@@ -183,7 +194,7 @@ def test_depth_first_search_blocks(depth, prefix_count):
 
     found = C.logging.graph.depth_first_search(img, lambda x: True, depth=depth)
     found_str = [str(v) for v in found]
-
+    
     assert len(found) == sum(prefix_count.values())
     for prefix, count in prefix_count.items():
         assert sum(f.startswith(prefix) for f in found_str) == count

@@ -5,6 +5,8 @@
 # ==============================================================================
 
 from __future__ import print_function
+from __future__ import division
+
 import os
 import math
 import argparse
@@ -221,7 +223,7 @@ if __name__=='__main__':
     if args['profilerdir'] is not None:
         profiler_dir = args['profilerdir']
     if args['device'] is not None:
-        cntk.device.set_default_device(cntk.device.gpu(args['device']))
+        cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
 
     data_path = args['datadir']
     

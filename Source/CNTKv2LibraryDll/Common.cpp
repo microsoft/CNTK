@@ -75,7 +75,7 @@ namespace CNTK
 
         // This is used to generate a default seed value for random parameter initializer and also 
         // for stateful nodes (dropout, and both flavors of random sample). The 'perWorkerLocalValue' flag
-        // indicates if the generated value should be identical accross individual workers in distributed 
+        // indicates if the generated value should be identical across individual workers in distributed 
         // setting or if each worker should get a different seed value.        
         size_t GenerateRandomSeed(bool perWorkerLocalValue /*= false*/)
         {
@@ -90,14 +90,12 @@ namespace CNTK
 
             static size_t numWorkers = 1, rank = 0;
             static bool initialized = false;
-            if (MPIWrapper::GetTotalNumberOfMPINodes() != 0 && !initialized) 
+            if (MPIWrapper::GetTotalNumberOfMPINodes() > 1 && !initialized) 
             {
                 DistributedCommunicatorPtr communicator = MPICommunicator();
                 numWorkers = communicator->Workers().size();
                 rank = communicator->CurrentWorker().m_globalRank;
-
-                if (numWorkers < 1)
-                    numWorkers = 1;   
+                assert(numWorkers > 1);
             }
 
             initialized = true;

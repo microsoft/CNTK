@@ -35,7 +35,7 @@ namespace CNTK
 {
     ///
     /// Checked mode enables additional runtime verification such as:
-    /// - Tracking NaN occurences in sequence gaps.
+    /// - Tracking NaN occurrences in sequence gaps.
     /// - Function graph verification after binding of free static axes to actual values at runtime
     /// 
     /// Enabling checked mode incurs additional runtime costs and is meant to be used as a debugging aid.
@@ -563,6 +563,7 @@ namespace CNTK
         ///
         CNTK_API NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
 
+        ///
         /// Construct a read-only NDArrayView with the specified 'dataBuffer' as the backing storage.
         /// The 'dataBuffer' must have been allocated on the specified 'device', must be at least
         /// as large as the total size of the specified 'viewShape' and must outlive the created NDArrayView object.
@@ -573,7 +574,7 @@ namespace CNTK
 
         ///
         /// Construct a NDArrayView with newly allocated sparse storage in SparseCSC format on the specified 'device' and initialize its contents
-        // with the specified Sparse CSC format data.
+        /// with the specified Sparse CSC format data.
         ///
         template <typename ElementType>
         CNTK_API NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false);
@@ -686,6 +687,12 @@ namespace CNTK
         /// 
         template <typename ElementType>
         CNTK_API const ElementType* DataBuffer() const;
+
+        ///
+        /// Returns a read-only pointer to the data buffer in sparse CSC format underlying 'this' view
+        /// 
+        template <typename ElementType>
+        CNTK_API std::tuple<const ElementType *, const SparseIndexType*, const SparseIndexType*, size_t> SparseCSCDataBuffers() const;
 
         ///
         /// Returns the descriptor of the device that 'this' view resides on
@@ -1531,7 +1538,7 @@ namespace CNTK
             void* m_ptr;
         } m_data;
 
-         static const size_t s_version = 1;
+         static const size_t s_version;
     };
 
     ///
@@ -1615,7 +1622,7 @@ namespace CNTK
 
     private:
         std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
-        static const size_t s_version = 1;
+        static const size_t s_version;
     };
 
     ///
@@ -2177,6 +2184,7 @@ private:
         /// Constant's value. The shapes of both views must be identical.
         ///
         CNTK_API void SetValue(const NDArrayViewPtr& value);
+        CNTK_API void RecordValueUpdate();
 
     private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
@@ -2187,14 +2195,12 @@ private:
         /// Construct a constant of specified shape whose contents are initialized using the specified initializer
         ///
         CNTK_API Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"");
-
-        void RecordValueUpdate();
     };
 
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 
     // However we have a couple of derivatives of the type to extend the base interface and thus we ensure that the derived types do not have additional fields.
     // This check is weak in that the derives types may sneak in some additional fields if the base type had some padding at the end, without changing the object size
-    // but it should be good enough for catching any accidental addiiton of fields.
+    // but it should be good enough for catching any accidental addition of fields.
     static_assert(sizeof(Constant) == sizeof(Variable), "The Constant type should not have any data fields beyond what its base type 'Variable' has.");
 }
 
@@ -2690,9 +2696,6 @@ namespace CNTK
         template <typename ElementType>
         void CopyVariableValueTo(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
-            if (outputVariable.GetDataType() != GetDataType())
-                InvalidArgument("The outputVariable '%S' has a different data type than the Value object.", outputVariable.AsString().c_str());
-
             ResizeOutputBuffer(outputVariable, sequences);
             CopyVariableValueToVector<ElementType>(outputVariable, sequences);
         }
@@ -2706,8 +2709,6 @@ namespace CNTK
         void CopyVariableValueTo(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences)
         {
             auto dataType = GetDataType();
-            if (outputVariable.GetDataType() != dataType)
-                InvalidArgument("The outputVariable '%S' has a different data type than the Value object.", outputVariable.AsString().c_str());
 
             ResizeOutputBuffer(outputVariable, sequences);
             if (dataType == DataType::Float)
@@ -2718,6 +2719,28 @@ namespace CNTK
             {
                 CopyVariableValueToVector<double>(outputVariable, sequences);
             }
+        }
+
+        ///
+        /// Copy the data stored in 'this' Value object to the buffers representing a sequence in CSC sparse format.
+        /// The sequence buffer will be resized if necessary.
+        /// The Value should have the same tensor shape as outputVariable.
+        /// On return, the sequenceLength is set to the length of the sequence stored in 'this' Value,
+        /// and the colStarts, rowIndices and nonZeroValues contain the data of column indexes, row indexes and non-zero values,
+        /// and the numNonZeroValues is set to number of non-zero values contained in 'this' Value.
+        ///
+        template <typename ElementType>
+        void CopyVariableValueTo(const Variable& outputVariable, size_t& sequenceLength, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<ElementType>& nonZeroValues, size_t& numNonZeroValues)
+        {
+            size_t numColsInMatrix;
+            std::tie(sequenceLength, numColsInMatrix, numNonZeroValues) = ValidateSparseCSCAndGetIndexBufferSizes<ElementType>(outputVariable);
+
+            // resize output vectors.
+            colStarts.resize(numColsInMatrix);
+            rowIndices.resize(numNonZeroValues);
+            nonZeroValues.resize(numNonZeroValues);
+
+            CopyVariableValueToCSCSparse(sequenceLength, colStarts, rowIndices, nonZeroValues, numNonZeroValues);
         }
 
         ///
@@ -2764,6 +2787,12 @@ namespace CNTK
 
     private:
         CNTK_API std::pair<size_t, size_t> GetSequenceAndBatchLength(const Variable& outputVariable);
+
+        template <typename ElementType>
+        CNTK_API std::tuple<size_t, size_t, size_t> ValidateSparseCSCAndGetIndexBufferSizes(const Variable& outputVariable);
+
+        template <typename ElementType>
+        CNTK_API void CopyVariableValueToCSCSparse(size_t sequenceLength, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<ElementType>& nonZeroValues, size_t& numNonZeroValues);
 
         CNTK_API static void GetSequenceStartsAndLengths(const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths, size_t numDynamicAxes);
 
@@ -3455,6 +3484,7 @@ namespace CNTK
 
         std::vector<Variable> m_inputs;
         std::once_flag m_outputsInitFlag;
+        std::thread::id m_outputInitializingByThreadId;
         std::vector<Variable> m_outputs;
 
         FunctionPtr m_rootFunction; // nullptr for primitive Function instances
@@ -3608,6 +3638,46 @@ namespace CNTK
     /// Create an instance of the dropout operation on specified tensor input operand
     ///
     CNTK_API FunctionPtr Dropout(const Variable& operand, double dropoutRate, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a uniform random operation. This produces random numbers with the specified shape (no dynamic axes), uniformly distributed in [low, high)
+    ///
+    CNTK_API FunctionPtr UniformRandom(const NDShape& shape, DataType dataType, double low=0.0, double high=1.0, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a uniform random operation. This produces random numbers with the shape and dynamic axes specified by the operand, uniformly distributed in [low, high)
+    ///
+    CNTK_API FunctionPtr UniformRandomLike(const Variable& operand, double low = 0.0, double high = 1.0, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a normal random operation. This produces random numbers with the specified shape (no dynamic axes), normally distributed with the specified mean and standard deviation (scale)
+    ///
+    CNTK_API FunctionPtr NormalRandom(const NDShape& shape, DataType dataType, double mean = 0.0, double scale = 1.0, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a normal random operation. This produces random numbers with the shape and dynamic axes specified by the operand, normally distributed with the specified mean and standard deviation (scale)
+    ///
+    CNTK_API FunctionPtr NormalRandomLike(const Variable& operand, double mean = 0.0, double scale = 1.0, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a Gumbel random operation. This produces random numbers with the specified shape (no dynamic axes), distributed according to the Gumbel distribution with the specified location and scale
+    ///
+    CNTK_API FunctionPtr GumbelRandom(const NDShape& shape, DataType dataType, double loc = 0.0, double scale = 1.0, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a Gumbel random operation. This produces random numbers with the shape and dynamic axes specified by the operand, distributed according to the Gumbel distribution with the specified location and scale
+    ///
+    CNTK_API FunctionPtr GumbelRandomLike(const Variable& operand, double loc = 0.0, double scale = 1.0, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a Bernoulli random operation. This produces random numbers with the specified shape (no dynamic axes), distributed according to the Bernoulli distribution with the specified success probability
+    ///
+    CNTK_API FunctionPtr BernoulliRandom(const NDShape& shape, DataType dataType, double mean = 0.5, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of a Bernoulli random operation. This produces random numbers with the shape and dynamic axes specified by the operand, distributed according to the Bernoulli distribution with the specified success probability
+    ///
+    CNTK_API FunctionPtr BernoulliRandomLike(const Variable& operand, double mean = 0.5, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the reshape operation on specified tensor input operand
@@ -3955,11 +4025,6 @@ namespace CNTK
         const std::wstring& name = L"");
 
     ///
-    /// Create an instance of the CNTK built-in ROI pooling operation on specified tensor input operands with the specified output shape
-    ///
-    CNTK_API FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name = L"");
-
-    ///
     /// TODO:
     ///
     enum class PoolingType
@@ -3967,6 +4032,16 @@ namespace CNTK
         Max,
         Average,
     };
+
+    ///
+    /// Create an instance of the CNTK built-in ROI pooling operation on specified tensor input operands with the specified output shape
+    ///
+    CNTK_API FunctionPtr ROIPooling(const Variable& operand, 
+                                    const Variable& rois, 
+                                    PoolingType poolingType, 
+                                    const NDShape& roiOutputShape, 
+                                    double spatialScale, 
+                                    const std::wstring& name/* = L""*/);
 
     ///
     /// TODO:
@@ -4578,6 +4653,11 @@ namespace CNTK
     CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func);
 
     ///
+    /// Create an instance of a learner by specifying the parameters , gradients and update function. Return a CNTK FunctionPtr.
+    ///
+    CNTK_API LearnerPtr UniversalLearner(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
+
+    ///
     /// Distributed Learner.
     ///
     class DistributedLearner : public Learner
@@ -4627,6 +4707,17 @@ namespace CNTK
         // learning has stopped for all of the parameters associated with this learner
         //
         CNTK_API virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& minibatch) = 0;
+
+        //
+        // In distributed mode all built-in minibatch sources return a minibatch decimated by the number of workers.
+        // Some distributed methods (i.e. BlockMomentum) require each worker to run with original/not decimated minibatch size.
+        // This method is used by the training session to adapt minibatch size before asking the minibatch source for data.
+        // The function returns the scale factor for the minibatch size.
+        //
+        virtual size_t MinibatchSizeScaleFactor()
+        {
+            return 1;
+        }
 
     protected:
         DistributedLearner(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
@@ -4872,7 +4963,7 @@ namespace CNTK
         CNTK_API const std::vector<LearnerPtr>& ParameterLearners() const;
 
         ///
-        /// Total number of samples seen from the begining of the training.
+        /// Total number of samples seen from the beginning of the training.
         ///
         CNTK_API size_t TotalNumberOfSamplesSeen() const;
 
@@ -5146,9 +5237,11 @@ namespace CNTK
         bool isFrameModeEnabled { false };
 
         ///
-        /// Specifies if the deserialization should be done on a single or multiple threads.
+        /// Specifies if the deserialization should be done on a single or multiple threads. 
+        /// Defaults to 'auto' (multhithreading is disabled unless ImageDeserializer is present 
+        /// in the deserializers list). 'false' and 'true' faithfully turn the multithreading off/on.
         ///
-        bool isMultithreaded { true };
+        Internal::Optional<bool> isMultithreaded;
 
         ///
         /// Deserializers to be used in the composite reader.
@@ -5195,8 +5288,11 @@ namespace CNTK
     /// Create a crop transform with the specified options to be used with a reader
     /// 
     CNTK_API ImageTransform ReaderCrop(const wchar_t* cropType = L"center",
-        int cropSize = 0, float sideRatio = 0.0f, float areaRatio = 0.0f,
-        float aspectRatio = 1.0f, const wchar_t* jitterType = L"none");
+        std::pair<int, int> cropSize = std::make_pair(0, 0),
+        std::pair<float, float> sideRatio = std::make_pair(0.0f, 0.0f),
+        std::pair<float, float> areaRatio = std::make_pair(0.0f, 0.0f), 
+        std::pair<float, float> aspectRatio = std::make_pair(1.0f, 1.0f), 
+        const wchar_t* jitterType = L"none");
 
     /// 
     /// Create a scale transform with the specified options to be used with a reader
@@ -5405,8 +5501,8 @@ namespace CNTK
         CNTK_API CrossValidationConfig(const MinibatchSourcePtr& crossValidationSource,
             const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(64),
             size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max(),
-            size_t maxSamples = std::numeric_limits<size_t>::max()
-            );
+            size_t maxSamples = std::numeric_limits<size_t>::max(),
+            const std::unordered_map<Variable, StreamInformation>& inputVarToStream = {});
 
     private:
         friend class TrainingSession;
@@ -5414,6 +5510,7 @@ namespace CNTK
         const MinibatchSizeSchedule m_mbSize;
         const size_t m_frequency;
         const size_t m_maxSamples;
+        const std::unordered_map<Variable, StreamInformation> m_varToStream;
     };
 
     ///
@@ -5454,12 +5551,14 @@ namespace CNTK
         /// schedule : a minibatch size schedule
         ///
         CNTK_API TestConfig(const MinibatchSourcePtr& source,
-            const MinibatchSizeSchedule& schedule = MinibatchSizeSchedule(64));
+            const MinibatchSizeSchedule& schedule = MinibatchSizeSchedule(64),
+            const std::unordered_map<Variable, StreamInformation>& inputVarToStream = {});
 
     private:
         friend class TrainingSession;
         const MinibatchSourcePtr m_source;
         const MinibatchSizeSchedule m_mbSize;
+        const std::unordered_map<Variable, StreamInformation> m_varToStream;
     };
 
     ///
@@ -5565,7 +5664,10 @@ namespace CNTK
         TrainingSession(const TrainingSession&) = delete; TrainingSession& operator=(const TrainingSession&) = delete; TrainingSession& operator=(TrainingSession&&) = delete; TrainingSession(TrainingSession&&) = delete;
 
         // Auxilary functions.
-        void GetNextMinibatch(const MinibatchSourcePtr& source, std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, size_t workerRank, size_t numberOfWorkers, const DeviceDescriptor& computeDevice);
+        void GetNextMinibatch(const MinibatchSourcePtr& source,
+            std::unordered_map<Variable, ValuePtr>& minibatch,
+            const std::unordered_map<Variable, StreamInformation>& inputVarToStream,
+            size_t maxMbSize, size_t workerRank, size_t numberOfWorkers, const DeviceDescriptor& computeDevice);
         void GetTrainingMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice);
         void GetCrossValidationMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice);
 
@@ -5580,6 +5682,9 @@ namespace CNTK
         size_t m_parallelAfterSamples;
         size_t m_workerRank;
         size_t m_numberOfWorkers;
+
+        // Scaler for the minibatch size in distributed mode.
+        size_t m_mbSizeScaleFactor;
 
         std::vector<PeriodicAction> m_actions;
 

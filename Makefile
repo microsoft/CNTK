@@ -61,7 +61,7 @@ endif
 ifneq ("$(wildcard $(BUILD_TOP)/Config.make)","")
   include $(BUILD_TOP)/Config.make
 else
-  $(error Cannot find $(BUILD_TOP)/Config.make.  Please see CNTK Wiki at https://github.com/Microsoft/cntk/wiki for configuration instructions.)
+  $(error Cannot find $(BUILD_TOP)/Config.make.  Please see the CNTK documentation at https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Linux for configuration instructions.)
 endif
 
 ifndef BUILDTYPE
@@ -275,7 +275,7 @@ ORIGINDIR:='$$ORIGIN'
 # Components VERSION info
 ########################################
 
-CNTK_COMPONENT_VERSION := 2.0rc2
+CNTK_COMPONENT_VERSION := 2.0
 ifeq ("$(BUILDTYPE)","debug")
 CNTK_COMPONENT_VERSION := $(CNTK_COMPONENT_VERSION)d
 endif
@@ -540,6 +540,27 @@ $(CPP_EXTENSIBILITY_EXAMPLES_LIB): $(CPP_EXTENSIBILITY_EXAMPLES_LIBRARY_OBJ) | $
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY)
+
+
+##############################################
+# Binary convolution example library
+##############################################
+
+BINARY_CONVOLUTION_EXAMPLE_LIBRARY_SRC =\
+	$(SOURCEDIR)/../Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/BinaryConvolutionLib.cpp \
+
+BINARY_CONVOLUTION_EXAMPLE_LIBRARY_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(BINARY_CONVOLUTION_EXAMPLE_LIBRARY_SRC))
+
+BINARY_CONVOLUTION_EXAMPLE_LIB:= $(LIBDIR)/Cntk.BinaryConvolutionExample-$(CNTK_COMPONENT_VERSION).so
+ALL_LIBS += $(BINARY_CONVOLUTION_EXAMPLE_LIB)
+PYTHON_LIBS += $(BINARY_CONVOLUTION_EXAMPLE_LIB)
+SRC += $(BINARY_CONVOLUTION_EXAMPLE_LIBRARY_SRC)
+
+$(BINARY_CONVOLUTION_EXAMPLE_LIB): $(BINARY_CONVOLUTION_EXAMPLE_LIBRARY_OBJ) | $(CNTKLIBRARY_LIB)
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
+	@mkdir -p $(dir $@)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR)) $(patsubst %,$(RPATH)%, $(LIBDIR) $(ORIGINDIR)) -o $@ $^ -l$(CNTKLIBRARY) $(SOURCEDIR)/../Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve_nofeatures.a
 
 
 ########################################
@@ -954,7 +975,7 @@ endif
 ifeq ("$(CNTK_ENABLE_1BitSGD)","true")
 
 ifeq (,$(wildcard Source/1BitSGD/*.h))
-  $(error Build with 1bit-SGD was requested but cannot find the code. Please check https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD for instructions)
+  $(error Build with 1bit-SGD was requested but cannot find the code. Please check https://docs.microsoft.com/en-us/cognitive-toolkit/Enabling-1bit-SGD for instructions)
 endif
 
   INCLUDEPATH += $(SOURCEDIR)/1BitSGD 
@@ -972,7 +993,7 @@ endif
 ifeq ("$(CNTK_ENABLE_ASGD)","true")
 
 ifeq (,$(wildcard Source/Multiverso/include/multiverso/*.h))
-  $(error Build with Multiverso was requested but cannot find the code. Please check https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#24-data-parallel-asgd to learn more.)
+  $(error Build with Multiverso was requested but cannot find the code. Please check https://docs.microsoft.com/en-us/cognitive-toolkit/Multiple-GPUs-and-machines#8-data-parallel-training-with-parameter-server to learn more.)
 endif
 
 lMULTIVERSO:=-lmultiverso

@@ -18,15 +18,15 @@ namespace CNTK
     class LearnerBase : public Learner
     {
     public:
-        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override final;
+        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override;
 
-        virtual Dictionary CreateCheckpoint() override final;
+        virtual Dictionary CreateCheckpoint() override;
 
         virtual size_t CurrentVersion() const override final { return s_serializationVersion; }
 
-        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override final;
+        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
 
-        virtual void ResetSmoothedGradients() override final;
+        virtual void ResetSmoothedGradients() override;
 
     protected:
         // allocateSmoothGradients flag specifies whether NDArrayViews for smoothed gradients can be allocated 
@@ -39,6 +39,9 @@ namespace CNTK
             bool allocateSmoothGradients = true);
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const = 0;
+
+        // Allows derived class may override this to perform per-minibatch update actions
+        virtual void UpdateOnMinibatch(size_t /*trainingSampleCount*/) {}
 
         std::string LearnerType() const;
 
@@ -244,15 +247,23 @@ namespace CNTK
                          const MomentumSchedule& varianceMomentumSchedule,
                          AdditionalLearningOptions additionalOptions);
 
+        virtual Dictionary CreateCheckpoint() override;
+
+        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
+
+        virtual void ResetSmoothedGradients() override;
+
     protected:
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void UpdateOnMinibatch(size_t trainingSampleCount) override;
 
         template <typename ElementType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
 
     private:
         static const double s_targetAdagradAvDenom;
+        double m_targetAdagradAvDenom_x_sqrtAdagradSqrFrames;
 
         // returns current per-minibatch variance momentum value.
         double VarianceMomentumValueForMB(size_t minibatchSize) const
@@ -260,7 +271,7 @@ namespace CNTK
             return MomentumValueForMB(m_varianceMomentumSchedule, minibatchSize);
         }
 
-        mutable std::unordered_map<Parameter, double> m_smoothedCounts;
+        double m_smoothedCount;
         MomentumSchedule m_varianceMomentumSchedule;
     };
 
@@ -277,9 +288,16 @@ namespace CNTK
             bool adamax,
             AdditionalLearningOptions additionalOptions);
 
+        virtual Dictionary CreateCheckpoint() override;
+
+        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
+
+        virtual void ResetSmoothedGradients() override;
+
     protected:
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void UpdateOnMinibatch(size_t trainingSampleCount) override;
 
         template <typename ElementType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
@@ -292,7 +310,7 @@ namespace CNTK
             return MomentumValueForMB(m_varianceMomentumSchedule, minibatchSize);
         }
 
-        mutable std::unordered_map<Parameter, double> m_smoothedCounts;
+        double m_smoothedCount;
         MomentumSchedule m_varianceMomentumSchedule;
         double m_epsilon;
         bool m_adamax;
@@ -308,6 +326,12 @@ namespace CNTK
                        bool needAveMultiplier,
                        AdditionalLearningOptions additionalOptions);
 
+        virtual Dictionary CreateCheckpoint() override;
+
+        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
+
+        virtual void ResetSmoothedGradients() override;
+
     protected:
 
         double m_gamma;
@@ -316,8 +340,10 @@ namespace CNTK
         double m_max;
         double m_min;
         bool m_needAveMultiplier;
+        double m_smoothedCount;
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+        virtual void UpdateOnMinibatch(size_t trainingSampleCount) override;
 
         template <typename ElementType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
@@ -326,13 +352,16 @@ namespace CNTK
 
     class LearnerUniversal : public LearnerBase
     {
-        std::unordered_map<Parameter, std::pair<Variable, FunctionPtr> > m_updateFunctions;
+        std::unordered_map<Parameter, Variable> m_parameter_gradient_map;
+        FunctionPtr m_update_func;
 
     public:
         LearnerUniversal(const std::vector<Parameter>& parameters, const ParameterUpdateFunctor& func);
 
-        LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<std::pair<Variable, FunctionPtr> >& updateFunctions);
+        LearnerUniversal(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
     
+        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) override;
+
     private:
         void AllocateDummySmoothedGradients(const std::vector<Parameter>& parameters)
         {
@@ -342,12 +371,11 @@ namespace CNTK
             }
         }
 
+        void ValidateInput(const std::vector<Parameter>& parameters, const std::vector<Variable>& gradients, FunctionPtr updateFunc);
+
 
     protected:
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
-
-        template <typename ElementType>
-        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
     };
 }

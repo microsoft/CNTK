@@ -292,6 +292,9 @@ Examples/Video/DataSets/UCF11/action_youtube_naudio/
 Examples/Video/DataSets/UCF11/test_map.csv
 Examples/Video/DataSets/UCF11/train_map.csv
 Tutorials/zip
+Manual/*.tmp
+Manual/*.ckp
+Manual/.ipynb_checkpoints
 
 # other
 /packages
