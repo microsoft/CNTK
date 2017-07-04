@@ -264,6 +264,37 @@ class TreeMap():
     def get_prediction(self):
         return NotImplemented
 
+    def get_output_mapper(self):
+        return Output_Mapper(self)
+
+class Output_Mapper():
+
+
+    all_classes = []
+
+    def __init__(self, tree_map):
+        self.use_background = tree_map.use_background
+        self.input_is_absolut = tree_map.use_multiply_with_parent
+
+        self.keep_indicies=np.where(tree_map.as_in_network[1:]!=None)[0]+1
+
+        self.all_classes=[]
+        if self.use_background: self.all_classes.append("__background__")
+        entries=tree_map.as_in_network[np.where(tree_map.as_in_network!=None)]
+        for i in len(entries):
+            if entries[i].strings:
+                self.all_classes.append(entries[i].strings)
+            else:
+                self.all_classes.append(str(entries[i].syn))
+
+
+    def get_all_classes(self):
+        return self.all_classes.copy()
+
+    def get_prediciton_vector(self, network_output):
+        return network_output[self.keep_indicies]
+
+
 
 
 

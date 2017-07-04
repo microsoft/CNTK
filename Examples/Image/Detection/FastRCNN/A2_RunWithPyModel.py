@@ -164,7 +164,7 @@ def train_fast_rcnn(debug_output=False, model_path=model_file):
         error = softmaxed- target
         pe = reduce_sum( error*error)
         frcn_output=softmaxed
-        C.logging.plot(frcn_output, "model.pdf");print("plotted!")
+        #C.logging.plot(frcn_output, "model.pdf");print("plotted!")
     else:
         frcn_output = frcn_predictor(image_input, roi_input, num_classes, model_path)
         softmaxed = softmax(frcn_output, axis=1)
