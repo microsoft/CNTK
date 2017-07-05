@@ -39,7 +39,7 @@ For more parameter definitions, please use `-h` command to see the help text:
 
 This example is python implementation of BN-Inception model, which is described in [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167).
 
-We use a fixed crop ratio of `0.85` and scale the cropped image down to `224x224` pixels for training. Run the example from the current folder using:
+We use random crop ratio, ranged from `0.46666` to `0.85`, and scale the cropped image down to `224x224` pixels for training. Run the example from the current folder using:
 
 `python BN_Inception_ImageNet.py`
 
