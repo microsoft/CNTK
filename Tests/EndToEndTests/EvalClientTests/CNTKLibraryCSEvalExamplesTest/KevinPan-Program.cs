@@ -5,11 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using CNTK;
+using System.Collections.Concurrent;
 
 namespace NewsInsightEvaluation
 {
     class KevinProgram
     {
+
         public static void KevinMain()
         {
 
@@ -46,17 +48,52 @@ namespace NewsInsightEvaluation
             v.Validate(without_attention);
 #endif
 
-            Data.Init(@"E:\CNTKMisc\KevinPan-Memory\trained_model\src.l3g.txt");
+            //Data.Init(@"E:\CNTKMisc\KevinPan-Memory\trained_model\src.l3g.txt");
 
-            var self_attention_version = new ModelEvaluation
+            //var self_attention_version = new ModelEvaluation
+            //{
+            //    model_file = @"E:\CNTKMisc\KevinPan-Memory\trained_model\cntk_2_0_6_layer_self_attention_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_01_model_batch_600000_38951002.dnn",
+            //    name = "cntk_2_0_6_layer_self_attention_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_01_model_batch_600000_38951002"
+            //};
+            //self_attention_version.Init();
+            //Console.WriteLine("complete loading model: {0}", self_attention_version.name);
+
+            var model_file = @"E:\CNTKMisc\KevinPan-Memory\trained_model\cntk_2_0_6_layer_self_attention_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_01_model_batch_600000_38951002.dnn";
+            var modelFunc = Function.Load(model_file, DeviceDescriptor.CPUDevice);
+
+            var parallel_model_list_1 = new BlockingCollection<Function>();
+            // var parallel_model_list = new List<ModelEvaluation>();
+            for (int i = 0; i < 5; i++)
             {
-                model_file = @"E:\CNTKMisc\KevinPan-Memory\trained_model\cntk_2_0_6_layer_self_attention_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_01_model_batch_600000_38951002.dnn",
-                name = "cntk_2_0_6_layer_self_attention_hinge_loss_batch_1024_2016-01-01_2017-05-31_2017_06_23_03_37_01_model_batch_600000_38951002"
-            };
-            self_attention_version.Init();
-            Console.WriteLine("complete loading model: {0}", self_attention_version.name);
+                // parallel_model_list.Add(model.CloneByFile());
 
-            
+                parallel_model_list_1.Add(modelFunc.Clone(ParameterCloningMethod.Share));  //CloneByFile()); // model.Clone());
+            }
+
+            int validate_sample_count = 0;
+            var samples = new List<int>(50);
+            for (int i = 0; i < 50; i++)
+                samples.Add(i);
+            Parallel.ForEach(samples, new ParallelOptions() { MaxDegreeOfParallelism = samples.Count }, (sample) =>
+            // Parallel.ForEach(validation_samples, new ParallelOptions() { MaxDegreeOfParallelism = validation_samples.Count }, (sample) =>
+            {
+                var m = parallel_model_list_1.Take();
+                try
+                {
+                    CosineDistance(m, "24 hours of le mans", "live stream for one of motorsport s biggest events ground to a halt by cyberattacks");
+
+                    // sample.Validate(m);
+                    //sample.RecordPositiveDocument(positive_record);
+                    //sample.RecordNegativeDocument(negative_record);
+                    System.Threading.Interlocked.Increment(ref validate_sample_count);
+                    Console.WriteLine(string.Format("...validated {0} sample...", validate_sample_count));
+                }
+                finally
+                {
+                    parallel_model_list_1.Add(m);
+                }
+            });
+
 
             Validation v = new Validation
             {
@@ -67,7 +104,7 @@ namespace NewsInsightEvaluation
             };
             // v.BuildSamples();
 
-            v.Validate(self_attention_version);
+            // v.Validate(self_attention_version);
 
             var without_attention = new ModelEvaluation
             {
@@ -91,6 +128,76 @@ namespace NewsInsightEvaluation
             //    Console.WriteLine("negative = {0}", self_attention_version.CosineDistance(nq, nd));
 
             //}
+        }
+
+        public static float CosineDistance(Function modelFunc, string query, string document)
+        {
+            var cosine_distance = modelFunc.FindByName("query_positive_document_cosine_distance");
+            var queryRecurrenceOutput = cosine_distance.Arguments[0];
+            var positiveDocumentRecurrenceOutput = cosine_distance.Arguments[1];
+            var queryDocumentCosineDistance = cosine_distance.Output;
+
+            var queryInput = modelFunc.Arguments.Where(variable => string.Equals(variable.Name, "query")).Single();
+            var documentInput = modelFunc.Arguments.Where(variable => string.Equals(variable.Name, "positive_document")).Single();
+
+            var queryInputShape = queryInput.Shape;
+            var documentInputShape = documentInput.Shape;
+
+            var intputs = new Dictionary<Variable, Value>();
+            var queryInputValue = CreateSequenceInput(queryInputShape, query);
+            var documentInputValue = CreateSequenceInput(documentInputShape, document);
+            intputs.Add(queryInput, queryInputValue);
+            intputs.Add(documentInput, documentInputValue);
+
+            var outputs = new Dictionary<Variable, Value>();
+            var evalFunc = Function.Combine(new[] { queryRecurrenceOutput, positiveDocumentRecurrenceOutput, queryDocumentCosineDistance });
+
+            var queryRecurrenceOutput1 = evalFunc.Outputs[0];
+            var positiveDocumentRecurrenceOutput1 = evalFunc.Outputs[1];
+            var queryDocumentCosineDistance1 = evalFunc.Outputs[2];
+            outputs.Add(queryRecurrenceOutput1, null);
+            outputs.Add(positiveDocumentRecurrenceOutput1, null);
+            outputs.Add(queryDocumentCosineDistance1, null);
+
+            {
+                evalFunc.Evaluate(intputs, outputs, DeviceDescriptor.CPUDevice);
+            }
+
+            var queryEmbeddingValue = outputs[queryRecurrenceOutput1];
+            var documentEmbeddingValue = outputs[positiveDocumentRecurrenceOutput1];
+            var queryDocumentCosineDistanceValue = outputs[queryDocumentCosineDistance1];
+
+            var queryEmbeddingOutput = queryEmbeddingValue.GetDenseData<float>(queryRecurrenceOutput1);
+            var documentEmbeddingOutput = documentEmbeddingValue.GetDenseData<float>(positiveDocumentRecurrenceOutput1);
+            var queryDocumentCosineDistanceOutput = queryDocumentCosineDistanceValue.GetDenseData<float>(queryDocumentCosineDistance1);
+
+            var d = Utils.Cosine(queryEmbeddingOutput[0].ToArray(), documentEmbeddingOutput[0].ToArray());
+
+            //Console.WriteLine("queryDocumentCosineDistanceOutput = {0}", queryDocumentCosineDistanceOutput[0][0]);
+
+            return d;
+        }
+
+        public static Value CreateSequenceInput(NDShape sampleShape, string rawText)
+        {
+            List<float> sequence = new List<float>();
+            string s = TextUtils.N1Normalize(rawText);
+            var words = s.Split(' ');
+            for (int i = 0; i < words.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(words[i]))
+                {
+                    float[] v = new float[49293];
+                    var encode = TextUtils.EncodeWord2Letter3Gram(words[i], Data.Vocabulary);
+                    foreach (var e in encode)
+                    {
+                        v[e.Key] = e.Value;
+                    }
+                    sequence.AddRange(v);
+                }
+            }
+
+            return Value.CreateSequence<float>(sampleShape, sequence, DeviceDescriptor.CPUDevice);
         }
     }
 }
