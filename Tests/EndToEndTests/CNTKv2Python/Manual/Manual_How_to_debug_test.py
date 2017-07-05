@@ -11,6 +11,7 @@ import numpy as np
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Manual", "Manual_How_to_debug.ipynb")
+notebook_deviceIdsToRun = [0]
 
 #Note: Given this is a manual for debugging, we check only for functional correctness of API.
 
