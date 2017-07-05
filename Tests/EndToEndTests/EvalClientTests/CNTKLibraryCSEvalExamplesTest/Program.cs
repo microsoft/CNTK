@@ -17,6 +17,8 @@ namespace CNTKLibraryCSEvalExamples
             // Todo: move to a separate unit test.
             Console.WriteLine("Test Utils");
 
+            NewsInsightEvaluation.KevinProgram.KevinMain();
+
             int maxThreads = Utils.GetMaxNumCPUThreads();
             Utils.SetMaxNumCPUThreads(2);
             Console.WriteLine("MaxNumCPUThreads: before: " + maxThreads + ", after " + Utils.GetMaxNumCPUThreads());

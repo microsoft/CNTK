@@ -62,9 +62,18 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data.cs" />
+    <Compile Include="KevinPan-Program.cs" />
     <Compile Include="MemoryTests.cs" />
+    <Compile Include="ModelEvaluation.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="QueryFilter.cs" />
+    <Compile Include="Sample.cs" />
     <Compile Include="SetupMemoryTests.cs" />
+    <Compile Include="TextUtils.cs" />
+    <Compile Include="Utils.cs" />
+    <Compile Include="Validation.cs" />
+    <Compile Include="Vocabulary.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
