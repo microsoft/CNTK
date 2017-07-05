@@ -3,7 +3,9 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-
+"""
+Utilities to specify device on which CNTK computation can be executed. 
+"""
 from enum import Enum, unique
 from . import cntk_py
 from cntk.internal import typemap
@@ -31,7 +33,7 @@ class DeviceKind(Enum):
 
 class DeviceDescriptor(cntk_py.DeviceDescriptor):
     '''
-    Describes a device by an unique id and its type. If the device corresponds
+    Describes a device by a unique id and its type. If the device corresponds
     to a GPU its type is 1, otherwise, it is 0
     '''
 
@@ -40,7 +42,7 @@ class DeviceDescriptor(cntk_py.DeviceDescriptor):
         Returns id of device descriptor
 
         Returns:
-            `int`: id
+            int: id
         '''
         return super(DeviceDescriptor, self).id()
 
@@ -49,16 +51,9 @@ class DeviceDescriptor(cntk_py.DeviceDescriptor):
         Returns type of device descriptor. 1 if it is a GPU device or 0 if CPU.
 
         Returns:
-            `int`: type
+            int: type
         '''
         return super(DeviceDescriptor, self).type()
-
-    def __str__(self):
-        if self.type() == DeviceKind.GPU:
-            details = 'GPU %i' % self.id()
-        else:
-            details = 'CPU'
-        return details
 
     def is_locked(self):
         '''
@@ -119,17 +114,6 @@ def use_default_device():
     return cntk_py.DeviceDescriptor.use_default_device()
 
 
-def set_default_device(new_default_device):
-    '''
-    See :func:`try_set_default_device`
-    '''
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-                  'DeviceDescriptor.try_set_default_device() instead.',
-                  DeprecationWarning)
-    return try_set_default_device(new_default_device, False)
-
-
 def try_set_default_device(new_default_device, acquire_device_lock=False):
     '''
     Tries to set the specified device as the globally default, optionally
@@ -145,16 +129,20 @@ def try_set_default_device(new_default_device, acquire_device_lock=False):
     The default device can only be changed if it has not yet been frozen by
     being implicitly used in any previous CNTK operation.
 
-    CNTK uses a cooperative synchronization for the device access, whereby only
-    a single process can acquire a device lock. However, if exclusivity is not
-    required, the same device can still be accessed without acquiring any locks
-    (in which case, any existing lock corresponding to the device will be
-    ignored).
+    CNTK uses cooperative locking for the device access, whereby only a single
+    process can acquire a device lock. This locking mechanism allows CNTK
+    processes to avoid device oversubscription only if they collectively
+    choose so. In other words, the device locked by one CNTK process, can
+    still be accessed by another CNTK process without acquiring any locks
+    (i.e, the existing device lock can be ignored by other CNTK processes).
+    This cooperative locking mechanism does not guarantee any kind of
+    exclusive access to the device. The proper way to ensure exclusivity  is
+    to use tools provided by NVIDIA (nvidia smi).
 
     Returns: `False` if
         * the specified device appears in the list of excluded devices;
         * `acquire_device_lock` is `True` and another process already holds a lock on the device;
-        * `acquire_device_lock` is `True` and `new_default_device` corresponds to a CPU device 
+        * `acquire_device_lock` is `True` and `new_default_device` corresponds to a CPU device
           (which cannot be locked).
     '''
     return cntk_py.DeviceDescriptor.try_set_default_device(new_default_device,

@@ -8,14 +8,59 @@
 #include "PrimitiveFunction.h"
 #include "CompositeFunction.h"
 #include "BlockFunction.h"
+#include "Utils.h"
+#include "UserFunctionFactory.h"
+#include "TrainingNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    /*static*/ UserFunctionFactoryPtr Function::s_userFunctionFactory = std::make_shared<UserFunctionFactory>();
+
+    /*static*/ void Function::RegisterNativeUserFunction(const std::wstring& uniqueOpName, const std::wstring& moduleName, const std::wstring& factoryMethodName)
+    {
+        s_userFunctionFactory->Register(uniqueOpName, moduleName, factoryMethodName);
+    }
+
+    /*static*/ FunctionPtr Function::NativeUserFunction(const std::wstring& opId, const std::vector<Variable>& operands, const Dictionary& functionConfig, const std::wstring& userFunctionInstanceName)
+    {
+        return AsComposite(s_userFunctionFactory->CreateInstance(opId, operands, functionConfig, userFunctionInstanceName), userFunctionInstanceName);
+    }
+
+    bool Internal::IsNativeUserFunctionRegistered(const std::wstring& uniqueOpName)
+    {
+        return Function::s_userFunctionFactory->IsRegistered(uniqueOpName);
+    }
+
+    static std::unordered_map<std::wstring, UDFDeserializeCallbackPtr> udfCallbackMap;
+    static std::mutex udfCallbackMapMutex;
+
+    /*static*/ void Function::RegisterUDFDeserializeCallback(const std::wstring& uniqueOpName, const UDFDeserializeCallback& deserializer)
+    {
+        std::unique_lock<std::mutex> lock(udfCallbackMapMutex);
+        auto result = udfCallbackMap.insert({ uniqueOpName, make_shared<UDFDeserializeCallback>(deserializer) });
+        if (!result.second)
+            InvalidArgument("A callback for the UserFunction with op name '%S' has already been registered.", uniqueOpName.c_str());
+    }
+
+    /*static*/ UDFDeserializeCallbackPtr Function::GetUDFDeserializeCallback(const std::wstring& uniqueOpName)
+    {
+        std::unique_lock<std::mutex> lock(udfCallbackMapMutex);
+        if (udfCallbackMap.find(uniqueOpName) == udfCallbackMap.end())
+            return nullptr;
+        return udfCallbackMap.at(uniqueOpName);
+    }
+
     std::vector<Variable>& Function::InitOutputs()
     {
+        if (std::this_thread::get_id() == m_outputInitializingByThreadId)
+        {
+            // std::call_once may deadlock when re-entering from the same thread that's running the lambda, early exit
+            RuntimeError("Re-enter Function::InitOutputs() from Function::InitOutputs(), outputs are not initialized yet");
+        }
         std::call_once(m_outputsInitFlag, [this]() {
+            m_outputInitializingByThreadId = std::this_thread::get_id();
             std::vector<Variable> outputs;
             outputs.reserve(Function::MaxNumOutputs);
             InferOutputs(outputs);
@@ -37,6 +82,7 @@ namespace CNTK
                     m_outputs.back().m_outputComposite = nullptr;
                 }
             }
+            m_outputInitializingByThreadId = std::thread::id();
         });
 
         return m_outputs;
@@ -71,10 +117,6 @@ namespace CNTK
         return std::shared_ptr<std::vector<Variable>>(new std::vector<Variable>(std::move(inputs)), [](std::vector<Variable>* ptr) { delete ptr; });
     }
 
-    Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name, const std::wstring& uid)
-        : Function(inputs, std::move(functionConfig), nullptr, name, uid)
-    {}
-
     std::shared_ptr<std::vector<Variable>> Function::OutputsImpl() const
     {
         std::vector<Variable> outputs;
@@ -85,11 +127,7 @@ namespace CNTK
         return std::shared_ptr<std::vector<Variable>>(new std::vector<Variable>(std::move(outputs)), [](std::vector<Variable>* ptr) { delete ptr; });
     }
 
-    Function::Function(const std::vector<Variable>& inputs, const std::wstring& name, const std::wstring& uid)
-        : Function(inputs, Dictionary(), name, uid)
-    {}
-
-    Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid)
+    Function::Function(const std::vector<Variable>& inputs, const Dictionary& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid)
         : m_rootFunction(rootFunction), m_name(name), m_uid(uid), m_attributes(std::move(functionConfig))
     {
         for (auto inputVar : inputs)
@@ -165,16 +203,25 @@ namespace CNTK
                              std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
                              const DeviceDescriptor& computeDevice)
     {
+        auto gradientRoot = Output();
+        Gradients(arguments, gradientRoot, gradients, outputsToEvaluate, computeDevice);
+    }
+
+    void Function::Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
+                             Variable& gradientRoot,
+                             std::unordered_map<Variable, ValuePtr>& gradients,
+                             std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
+                             const DeviceDescriptor& computeDevice)
+    {
         if (!this->IsComposite())
             LogicError("Function '%S': Currently 'Gradients' method is only supported for composite Functions.", AsString().c_str());
 
-        auto gradientRoot = Output();
         auto outputs = outputsToEvaluate;
         if (outputsToEvaluate.find(gradientRoot) == outputsToEvaluate.end())
-            outputs.insert({ gradientRoot , nullptr });
+            outputs.insert({gradientRoot , nullptr});
 
         // TODO: Exclude inputs not belonging to 'gradients' from the gradient computation
-        auto backPropState = this->Forward(arguments, outputs, computeDevice, { gradientRoot });
+        auto backPropState = this->Forward(arguments, outputs, computeDevice, {gradientRoot});
 
         for (auto outputVarValuePair : outputsToEvaluate)
             outputsToEvaluate[outputVarValuePair.first] = outputs[outputVarValuePair.first];
@@ -183,7 +230,7 @@ namespace CNTK
         auto rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(gradientRoot.GetDataType(), gradientRootOutputValue->Shape(), computeDevice), gradientRootOutputValue->Mask());
         rootGradientValue->Data()->SetValue(1.0f);
 
-        this->Backward(backPropState, { { gradientRoot, rootGradientValue } }, gradients);
+        this->Backward(backPropState, {{gradientRoot, rootGradientValue}}, gradients);
     }
 
     void Function::SetName(const std::wstring& name)
@@ -341,6 +388,31 @@ namespace CNTK
         return updated;
     }
 
+    void Function::ValidateOrUpdateOutputs()
+    {
+        // Validate/update the output shapes, data types etc. to reflect any changes
+        // in inputs due to placeholder replacements
+        std::unordered_map<const Function*, size_t> functionVisitCounts;
+
+        // An arbitrary cap on changing output shape of recurrent nodes, to detect infinite inference loops
+        const size_t maxNumValidationPassesAllowed = 128;
+        bool recurrentNodeOutputModified = false;
+        size_t numValidationPasses = 0;
+        std::vector<Variable> outputVarBuffer;
+        outputVarBuffer.reserve(Function::MaxNumOutputs);
+        do
+        {
+            recurrentNodeOutputModified = false;
+            functionVisitCounts.clear();
+            RootFunction()->ValidateOrUpdateOutputs(functionVisitCounts, recurrentNodeOutputModified, outputVarBuffer);
+            numValidationPasses++;
+        } while (recurrentNodeOutputModified && (numValidationPasses < maxNumValidationPassesAllowed));
+
+        if (numValidationPasses >= maxNumValidationPassesAllowed)
+            LogicError("Function '%S' ReplacePlaceholders: A recurrent node output shape change happened in max allowed (%d) successive validation passes "
+                "indicating a potential infinite inference loop.", AsString().c_str(), (int)numValidationPasses);
+    }
+
     void Function::ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified, std::vector<Variable>& outputsUsingNewInputs)
     {
         assert(visitedFunctions.find(this) == visitedFunctions.end());
@@ -383,17 +455,17 @@ namespace CNTK
         Forward(arguments, outputs, computeDevice, {});
     }
 
-    void Function::SaveModel(const std::wstring& modelFilePath)
+    void Function::Save(const std::wstring& filepath)
     {
         Dictionary model = Serialize();
-        auto stream = GetFstream(modelFilePath, false);
+        auto stream = GetFstream(filepath, false);
         *stream << model;
         stream->flush();
     }
 
-    /*static*/ FunctionPtr Function::LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice)
+    /*static*/ FunctionPtr Function::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice)
     {
-        auto stream = GetFstream(modelFile, true);
+        auto stream = GetFstream(filepath, true);
         if (!Internal::IsLegacyModel(*stream))
         {
             Dictionary model;
@@ -402,45 +474,45 @@ namespace CNTK
         }
         else
         {
-            return Internal::LoadLegacyModel(modelFile, computeDevice);
+            return Internal::LoadLegacyModel(filepath, computeDevice); // throw an exception if deserializer != nullptr?
         }
     }
 
-    /*static*/ FunctionPtr Function::LoadModel(char *modelBuffer, size_t modelBufferLength, const DeviceDescriptor& computeDevice)
+    /*static*/ FunctionPtr Function::Load(const char *buffer, size_t length, const DeviceDescriptor& computeDevice)
     {
-        // Considering that std::streambuf::setg() requires char *, and we want to avoid
-        // data copy, modelbuffer is defined as "char *" , instead of "const char *".
-        if ((modelBuffer == nullptr) || (modelBufferLength <= 0))
+        if ((buffer == nullptr) || (length <= 0))
             InvalidArgument("The model buffer should not be null and its length should be greater than 0");
 
         struct modelStreamBuffer : std::streambuf
         {
-            modelStreamBuffer(char* start, size_t size) {
-                this->setg(start, start, start + size);
+            modelStreamBuffer(const char* start, size_t size) {
+                // std::streambuf::setg() requires char *
+                char* first = const_cast<char*>(start);
+                this->setg(first, first, first + size);
             }
         };
 
-        if (Internal::IsLegacyModel(modelBuffer, modelBufferLength))
+        if (Internal::IsLegacyModel(buffer, length))
             InvalidArgument("Loading a legacy model from byte array is not supported.");
         else
         {
-            modelStreamBuffer buf(modelBuffer, modelBufferLength);
+            modelStreamBuffer buf(buffer, length);
             std::istream modelStream(&buf);
 
-            return LoadModel(modelStream, computeDevice);
+            return Load(modelStream, computeDevice);
         }
     }
 
-    /*static*/ FunctionPtr Function::LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice)
+    /*static*/ FunctionPtr Function::Load(std::istream& inputStream, const DeviceDescriptor& computeDevice)
     {
         Dictionary model;
         inputStream >> model;
         return Function::Deserialize(model, computeDevice);
     }
 
-    void Function::RestoreModel(const std::wstring& modelFilePath)
+    void Function::Restore(const std::wstring& filepath)
     {
-        auto stream = GetFstream(modelFilePath, true);
+        auto stream = GetFstream(filepath, true);
         if (!Internal::IsLegacyModel(*stream))
         {
             Dictionary model;
@@ -449,77 +521,76 @@ namespace CNTK
             return;
         }
 
-        auto loadedModelFunction = Internal::LoadLegacyModel(modelFilePath, DeviceDescriptor::CPUDevice());
-
-        // TODO: Make sure that the loaded model is the same as the trainer's model through UID matching in the V2 format
-        // TODO: For V1 format models make sure that the loaded model is isomorphic to the trainer's model
+        auto loadedModelFunction = Internal::LoadLegacyModel(filepath, DeviceDescriptor::CPUDevice());
+            // TODO: Make sure that the loaded model is the same as the trainer's model through UID matching in the V2 format
+            // TODO: For V1 format models make sure that the loaded model is isomorphic to the trainer's model
         auto loadedModelLeafVariables = loadedModelFunction->Inputs();
-        auto trainerModelLeafVariables = Inputs();
-        if (trainerModelLeafVariables.size() != loadedModelLeafVariables.size())
-            InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
+            auto trainerModelLeafVariables = Inputs();
+            if (trainerModelLeafVariables.size() != loadedModelLeafVariables.size())
+                InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
                             loadedModelFunction->AsString().c_str(), this->AsString().c_str());
 
-        std::map<std::wstring, Variable> loadedModelLeafVariablesMap;
-        for (auto leafVar : loadedModelLeafVariables)
-            loadedModelLeafVariablesMap[leafVar.Uid()] = leafVar;
+            std::map<std::wstring, Variable> loadedModelLeafVariablesMap;
+            for (auto leafVar : loadedModelLeafVariables)
+                loadedModelLeafVariablesMap[leafVar.Uid()] = leafVar;
 
-        std::map<std::wstring, Variable> trainerModelLeafVariablesMap;
-        for (auto leafVar : trainerModelLeafVariables)
-            trainerModelLeafVariablesMap[leafVar.Uid()] = leafVar;
+            std::map<std::wstring, Variable> trainerModelLeafVariablesMap;
+            for (auto leafVar : trainerModelLeafVariables)
+                trainerModelLeafVariablesMap[leafVar.Uid()] = leafVar;
 
-        // Remove the initial state inputs of PastValue and FutureValue functions from the maps if they are a scalar constant
-        // since these are not part of the internal CNTK serialized computation graph
-        std::function<void(const std::unordered_set<FunctionPtr>&, std::map<std::wstring, Variable>&)> RemovePastAndFutureValueInitialStateScalarConstants;
-        RemovePastAndFutureValueInitialStateScalarConstants = [&RemovePastAndFutureValueInitialStateScalarConstants](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
-            for (auto funcPtr : allPrimitiveFunctions)
-            {
-                auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
-                if ((primitiveFunction->OpType() == PrimitiveOpType::PastValue) || (primitiveFunction->OpType() == PrimitiveOpType::FutureValue))
+            // Remove the initial state inputs of PastValue and FutureValue functions from the maps if they are a scalar constant
+            // since these are not part of the internal CNTK serialized computation graph
+            std::function<void(const std::unordered_set<FunctionPtr>&, std::map<std::wstring, Variable>&)> RemovePastAndFutureValueInitialStateScalarConstants;
+            RemovePastAndFutureValueInitialStateScalarConstants = [&RemovePastAndFutureValueInitialStateScalarConstants](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
+                for (auto funcPtr : allPrimitiveFunctions)
                 {
-                    auto initialStateInput = primitiveFunction->Inputs()[1];
-                    if (initialStateInput.IsConstant() && (initialStateInput.Shape().TotalSize() == 1))
-                        modelLeafVariableMap.erase(initialStateInput.Uid());
+                    auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
+                    if ((primitiveFunction->OpType() == PrimitiveOpType::PastValue) || (primitiveFunction->OpType() == PrimitiveOpType::FutureValue))
+                    {
+                        auto initialStateInput = primitiveFunction->Inputs()[1];
+                        if (initialStateInput.IsConstant() && (initialStateInput.Shape().TotalSize() == 1))
+                            modelLeafVariableMap.erase(initialStateInput.Uid());
+                    }
+                    else if (primitiveFunction->OpType() == PrimitiveOpType::Block)
+                    {
+                        auto blockFunction = dynamic_cast<const BlockFunction*>(primitiveFunction);
+                        auto blockComposite = dynamic_cast<const CompositeFunction*>(blockFunction->Composite().get());
+                        RemovePastAndFutureValueInitialStateScalarConstants(blockComposite->m_allPrimitiveFunctions, modelLeafVariableMap);
+                    }
                 }
-                else if (primitiveFunction->OpType() == PrimitiveOpType::Block)
-                {
-                    auto blockFunction = dynamic_cast<const BlockFunction*>(primitiveFunction);
-                    auto blockComposite = dynamic_cast<const CompositeFunction*>(blockFunction->Composite().get());
-                    RemovePastAndFutureValueInitialStateScalarConstants(blockComposite->m_allPrimitiveFunctions, modelLeafVariableMap);
-                }
-            }
-        };
-
-        auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
-        RemovePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
-
-        auto trainerModelCompositeFunction = dynamic_cast<CompositeFunction*>(this);
-        RemovePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctions, trainerModelLeafVariablesMap);
-
-        // Now update the trainer's model parameters and constants with those from the loaded model
-        for (auto nameVarPair : trainerModelLeafVariablesMap)
-        {
-            auto trainerModelLeafVar = nameVarPair.second;
-
-            auto areVariablesEquivalent = [](const Variable& left, const Variable& right) {
-                return Internal::AreEquivalent(left, right) && (left.Uid() == right.Uid());
             };
 
-            auto correspondingLoadedModelVar = loadedModelLeafVariablesMap.at(trainerModelLeafVar.Uid());
+        auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
+            RemovePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
 
-            if (!areVariablesEquivalent(correspondingLoadedModelVar, trainerModelLeafVar))
-                InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
+            auto trainerModelCompositeFunction = dynamic_cast<CompositeFunction*>(this);
+            RemovePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctions, trainerModelLeafVariablesMap);
+
+            // Now update the trainer's model parameters and constants with those from the loaded model
+            for (auto nameVarPair : trainerModelLeafVariablesMap)
+            {
+                auto trainerModelLeafVar = nameVarPair.second;
+
+                auto areVariablesEquivalent = [](const Variable& left, const Variable& right) {
+                    return Internal::AreEquivalent(left, right) && (left.Uid() == right.Uid());
+                };
+
+                auto correspondingLoadedModelVar = loadedModelLeafVariablesMap.at(trainerModelLeafVar.Uid());
+
+                if (!areVariablesEquivalent(correspondingLoadedModelVar, trainerModelLeafVar))
+                    InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
                                 loadedModelFunction->AsString().c_str(), this->AsString().c_str());
 
-            if ((trainerModelLeafVar.IsConstant() && !Constant(trainerModelLeafVar).Value()->IsReadOnly()) || trainerModelLeafVar.IsParameter())
-            {
-                auto trainerModelVarValue = trainerModelLeafVar.IsConstant() ? Constant(trainerModelLeafVar).Value() : Parameter(trainerModelLeafVar).Value();
-                auto loadedModelVarValue = correspondingLoadedModelVar.IsConstant() ? Constant(correspondingLoadedModelVar).Value() : Parameter(correspondingLoadedModelVar).Value();
-                trainerModelVarValue->CopyFrom(*loadedModelVarValue);
+                if ((trainerModelLeafVar.IsConstant() && !Constant(trainerModelLeafVar).Value()->IsReadOnly()) || trainerModelLeafVar.IsParameter())
+                {
+                    auto trainerModelVarValue = trainerModelLeafVar.IsConstant() ? Constant(trainerModelLeafVar).Value() : Parameter(trainerModelLeafVar).Value();
+                    auto loadedModelVarValue = correspondingLoadedModelVar.IsConstant() ? Constant(correspondingLoadedModelVar).Value() : Parameter(correspondingLoadedModelVar).Value();
+                    trainerModelVarValue->CopyFrom(*loadedModelVarValue);
+                }
             }
-        }
 
-        trainerModelCompositeFunction->CopyState(*loadedModelCompositeFunction);
-    }
+            trainerModelCompositeFunction->CopyState(*loadedModelCompositeFunction);
+        }
 
     Variable GetCorrespondingOutputVariableFromClone(const Variable& cloneeOutput, const FunctionPtr& cloneeFunction, const FunctionPtr& clonedFunction)
     {
@@ -554,27 +625,8 @@ namespace CNTK
         std::unordered_set<Variable> replacedPlaceholders;
         ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
 
-        // Validate/update the output shapes, data types etc. to reflect any changes
-        // in inputs due to placeholder replacements
-        std::unordered_map<const Function*, size_t> functionVisitCounts;
-
-        // An arbitrary cap on changing output shape of recurrent nodes, to detect infinite inference loops
-        const size_t maxNumValidationPassesAllowed = 128;
-        bool recurrentNodeOutputModified = false;
-        size_t numValidationPasses = 0;
-        std::vector<Variable> outputVarBuffer;
-        outputVarBuffer.reserve(Function::MaxNumOutputs);
-        do
-        {
-            recurrentNodeOutputModified = false;
-            functionVisitCounts.clear();
-            RootFunction()->ValidateOrUpdateOutputs(functionVisitCounts, recurrentNodeOutputModified, outputVarBuffer);
-            numValidationPasses++;
-        } while (recurrentNodeOutputModified && (numValidationPasses < maxNumValidationPassesAllowed));
-
-        if (numValidationPasses >= maxNumValidationPassesAllowed)
-            LogicError("Function '%S' ReplacePlaceholders: A recurrent node output shape change happened in max allowed (%d) successive validation passes "
-                       "indicating a potential infinite inference loop.", AsString().c_str(), (int)numValidationPasses);
+        // Validate/update the output shapes, data types etc. to reflect any changes in inputs due to placeholder replacements
+        RootFunction()->ValidateOrUpdateOutputs();
 
         for (auto replacementPair : placeholderReplacements)
         {
@@ -606,8 +658,9 @@ namespace CNTK
             Variable clonedInput;
             if (replacements.find(cloneeInput) != replacements.end())
             {
-                clonedInput = PlaceholderLike(cloneeInput);
-                placeholderReplacements[clonedInput] = replacements.at(cloneeInput);
+                auto replacement = replacements.at(cloneeInput);
+                clonedInput = PlaceholderLike(replacement);
+                placeholderReplacements[clonedInput] = replacement;
             }
             else
             {
@@ -666,7 +719,7 @@ namespace CNTK
 
                             if (existingPlaceholderReplacement == placeholderReplacements.end())
                             {
-                                clonedInput = PlaceholderLike(cloneeInput);
+                                clonedInput = PlaceholderVariable();
                                 placeholderReplacements[clonedInput] = cloneeInput;
                             }
                             else
@@ -696,6 +749,15 @@ namespace CNTK
             std::unordered_map<Variable, Variable> cloneeCompositeReplacements;
             std::vector<std::pair<Variable, Variable>> clonedBlockCompositeArgumentsMap;
 
+            // Create blank placeholders in the cloned block's composite to prevent carrying over any old
+            // type information. The type information of the block's placeholders should be derived
+            // afresh from the mappings
+            for (auto cloneeCompositeInput : cloneeCompositeInputs)
+            {
+                if (IsArgument(cloneeCompositeInput))
+                    cloneeCompositeReplacements.insert({ cloneeCompositeInput, PlaceholderVariable() });
+            }
+
             // When cloning the block, we need to replace any Parameter/Constants inside the block with
             // the correspondind replacements if any
             for (size_t i = 0; i < inputs.size(); ++i)
@@ -711,7 +773,7 @@ namespace CNTK
                         Variable replacement = clonedInput;
                         if (IsArgument(replacement))
                         {
-                            replacement = PlaceholderLike(cloneeCompositeInput);
+                            replacement = PlaceholderLike(inputs[i]);
                             clonedBlockCompositeArgumentsMap.push_back({ replacement, inputs[i] });
                         }
 
@@ -855,7 +917,6 @@ namespace CNTK
             InvalidArgument("Primitive Function '%S' instance cannot be restored from a checkpoint.", this->AsString().c_str());
 
         auto restoredFunction = Function::Deserialize(modelDictionary, DeviceDescriptor::CPUDevice());
-
         //TODO (backcompat): when loading a stale model we can still pass this test
         // by patching up restored functions on the fly during deserialization (e.g., by 
         // inserting an extra input for the sample count in case of BatchNorm).
@@ -883,12 +944,6 @@ namespace CNTK
         return CompositeFunction::Deserialize(modelDictionary, device);
     }
 
-    void Function::PrintGraph() const
-    {
-        CompositeFunction::PreorderTraverseFunctions(RootFunction(), [](const FunctionPtr& function) {
-        });
-    }
-
     std::wstring Function::AsString(bool doNotInferOutputs) const
     {
         wstringstream wss;
@@ -913,6 +968,50 @@ namespace CNTK
         return wss.str();
     }
 
+
+    void Function::SetAttribute(const std::wstring& name, const DictionaryValue& value)
+    {
+        Function* functionPtr = !(this->IsComposite()) ? this : this->RootFunction().get();
+        PrimitiveFunction* primitiveFunctionPtr = dynamic_cast<PrimitiveFunction*>(functionPtr);
+
+        if (primitiveFunctionPtr == nullptr) 
+        {
+            // Possibly, a udf...
+            LogicError("SetAttribute cannot be invoked on an instance of function '%S'.", AsString().c_str());
+        }
+
+        if (name == PrimitiveFunction::AttributeNameDropoutRate) 
+        {
+            double dropout;
+            if (value.ValueType() == DictionaryValue::Type::Float)
+                dropout = value.Value<float>();
+            else
+                dropout = value.Value<double>();
+            
+            primitiveFunctionPtr->SetDropoutRate(dropout);
+        }
+        else if (name == PrimitiveFunction::AttributeNameRngSeed)
+        {
+            size_t seed;
+            if (value.ValueType() == DictionaryValue::Type::Int)
+                seed = value.Value<int>();
+            else
+                seed = value.Value<size_t>();
+
+            primitiveFunctionPtr->SetRandomSeed(seed);
+        }
+        else 
+        {
+            LogicError("SetAttribute: '%S' is not supported (this attribute cannot be updated).", name.c_str());
+        }
+    }
+
+    FunctionPtr NullaryOp(PrimitiveOpType op, Dictionary&& opConfig, const std::wstring& name)
+    {
+        std::vector<Variable> operands{};
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
+    }
+
     FunctionPtr UnaryOp(PrimitiveOpType op, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
     {
         std::vector<Variable> operands = { operand };
@@ -926,7 +1025,7 @@ namespace CNTK
 
     FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name)
     {
-        return UnaryOp(PrimitiveOpType::Sigmoid, operand, Dictionary(), name);
+        return UnaryOp(PrimitiveOpType::StableSigmoid, operand, Dictionary(), name);
     }
 
     FunctionPtr Tanh(const Variable& operand, const std::wstring& name)
@@ -1012,6 +1111,17 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::TransposeAxes, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr Transpose(const Variable& operand, const std::vector<Axis>& permutation, const std::wstring& name)
+    {
+        //Check all the axes
+        if (!std::all_of(permutation.begin(), permutation.end(), [](const Axis& a) { return a.IsStaticAxis(); }))
+            LogicError("Transpose: Permutation vector must only contain static axes.");
+
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(permutation);
+        return UnaryOp(PrimitiveOpType::TransposeAxes, operand, std::move(additionalProperties), name);
+    }
+
     FunctionPtr Transpose(const Variable& operand, const std::wstring& name)
     {
         if (operand.Shape().Rank() <= 2)
@@ -1037,30 +1147,135 @@ namespace CNTK
         LogicError("Slice: Invalid axis argument provided. Slice along the dynamic batch axis is currently unsupported. To slice a sequence along its ordered dynamic axis use Sequence::Slice.");
     }
 
-    FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name)
+    FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, unsigned long seed, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameNumSamples] = numSamples;
         additionalProperties[PrimitiveFunction::AttributeNameAllowDuplicates] = allowDuplicates;
+
+        if (seed == SentinelValueForAutoSelectRandomSeed)
+            seed = Internal::GenerateRandomSeed(true);
+
+        additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
+        additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
 
         return UnaryOp(PrimitiveOpType::RandomSample, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr RandomSampleInclusionFrequency(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name)
+    FunctionPtr RandomSampleInclusionFrequency(const Variable& operand, size_t numSamples, bool allowDuplicates, unsigned long seed, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameNumSamples] = numSamples;
         additionalProperties[PrimitiveFunction::AttributeNameAllowDuplicates] = allowDuplicates;
 
+        if (seed == SentinelValueForAutoSelectRandomSeed)
+            seed = Internal::GenerateRandomSeed(true);
+
+        additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
+        additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
+
         return UnaryOp(PrimitiveOpType::RandomSampleInclusionFrequency, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr Dropout(const Variable& operand, double dropoutRate, const std::wstring& name)
+    FunctionPtr Dropout(const Variable& operand, double dropoutRate, unsigned long seed, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameDropoutRate] = dropoutRate;
 
+        if (seed == SentinelValueForAutoSelectRandomSeed)
+            seed = Internal::GenerateRandomSeed(true);
+
+        additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
+        additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
+
         return UnaryOp(PrimitiveOpType::Dropout, operand, std::move(additionalProperties), name);
+    } 
+
+    Dictionary CreateRandomDistributionAttributes(const wstring& type, const std::vector<double>& args, unsigned long seed) 
+    {
+        auto additionalProperties = Dictionary();
+
+        if (seed == SentinelValueForAutoSelectRandomSeed)
+            seed = Internal::GenerateRandomSeed(true);
+        additionalProperties.Add(
+            PrimitiveFunction::AttributeNameRandomDistributionType, type,
+            PrimitiveFunction::AttributeNameRandomDistributionArgs, AsDictionaryValueVector(args),
+            PrimitiveFunction::AttributeNameRngSeed, size_t(seed),
+            PrimitiveFunction::AttributeNameRngOffset, size_t(0));
+        return additionalProperties;
+    }
+
+    Dictionary CreateRandomDistributionAttributes(const wstring& type, const std::vector<double>& args, unsigned long seed, const NDShape& shape, DataType dataType)
+    {
+        auto additionalProperties = CreateRandomDistributionAttributes(type, args, seed);
+        additionalProperties.Add(
+            PrimitiveFunction::AttributeNameNewShape, shape,
+            PrimitiveFunction::AttributeNameNewDataType, static_cast<int>(dataType));
+        return additionalProperties;
+    }
+
+    FunctionPtr UniformRandom(const NDShape& shape, DataType dataType, double low, double high, unsigned long seed, const std::wstring& name)
+    {
+        if (low >= high)
+            LogicError("UniformRandom: low end of the range (%g) must be < high end of the range (%g)", low, high);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeUniform, { low, high }, seed, shape, dataType);
+        return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr UniformRandomLike(const Variable& operand, double low, double high, unsigned long seed, const std::wstring& name)
+    {
+        if (low >= high)
+            LogicError("UniformRandomLike: low end of the range (%g) must be < high end of the range (%g)", low, high);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeUniform, { low, high }, seed);
+        return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr NormalRandom(const NDShape& shape, DataType dataType, double mean, double stdev, unsigned long seed, const std::wstring& name)
+    {
+        if (stdev < 0)
+            LogicError("NormalRandom: standard deviation (%g) must be non-negative", stdev);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeNormal, { mean, stdev }, seed, shape, dataType);
+        return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr NormalRandomLike(const Variable& operand, double mean, double stdev, unsigned long seed, const std::wstring& name)
+    {
+        if (stdev < 0)
+            LogicError("NormalRandomLike: standard deviation (%g) must be non-negative", stdev);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeNormal, { mean, stdev }, seed);
+        return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr GumbelRandom(const NDShape& shape, DataType dataType, double loc, double scale, unsigned long seed, const std::wstring& name)
+    {
+        if (scale < 0)
+            LogicError("GumbelRandom: scale (%g) must be non-negative", scale);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeGumbel, { loc, scale }, seed, shape, dataType);
+        return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr GumbelRandomLike(const Variable& operand, double loc, double scale, unsigned long seed, const std::wstring& name)
+    {
+        if (scale < 0)
+            LogicError("GumbelRandomLike: scale (%g) must be non-negative", scale);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeGumbel, { loc, scale }, seed);
+        return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr BernoulliRandom(const NDShape& shape, DataType dataType, double mean, unsigned long seed, const std::wstring& name)
+    {
+        if (mean < 0 || mean > 1)
+            LogicError("BernoulliRandom: mean (%g) must be between 0 and 1", mean);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeBernoulli, { mean }, seed, shape, dataType);
+        return NullaryOp(PrimitiveOpType::RandomDistribution, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr BernoulliRandomLike(const Variable& operand, double mean, unsigned long seed, const std::wstring& name)
+    {
+        if (mean < 0 || mean > 1)
+            LogicError("BernoulliRandomLike: mean (%g) must be between 0 and 1", mean);
+        Dictionary additionalProperties = CreateRandomDistributionAttributes(Microsoft::MSR::CNTK::RandomDistributionTypeBernoulli, { mean }, seed);
+        return UnaryOp(PrimitiveOpType::RandomDistribution, operand, std::move(additionalProperties), name);
     }
 
     FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name)
@@ -1090,6 +1305,11 @@ namespace CNTK
     FunctionPtr LogAddExp(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::LogPlus, leftOperand, rightOperand, Dictionary(), name);
+    }
+
+    FunctionPtr Pow(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
+    {
+        return BinaryOp(PrimitiveOpType::Pow, leftOperand, rightOperand, Dictionary(), name);
     }
 
     FunctionPtr Minus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
@@ -1165,8 +1385,13 @@ namespace CNTK
 
     FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name)
     {
-        std::vector<Variable> operands = { prediction, targets };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Logistic, operands, Dictionary(), name), name);
+        auto predictionPlaceholder = PlaceholderVariable(L"prediction");
+        auto labelPlaceholder = PlaceholderVariable(L"targets");
+        Constant onePlusEps = Constant::Scalar(1.0f+1e-6f);
+        Constant one = Constant::Scalar(1.0f);
+        Constant eps = Constant::Scalar(1e-6f);
+        auto compositeBinaryCrossEntropy = Negate(Plus(ElementTimes(labelPlaceholder,Log(eps + predictionPlaceholder)), ElementTimes(Minus(one, labelPlaceholder), Log(Minus(onePlusEps, predictionPlaceholder)))));
+        return AsBlock(std::move(compositeBinaryCrossEntropy), { { predictionPlaceholder, prediction },{ labelPlaceholder, targets } }, L"BinaryCrossEntropy", name);
     }
 
     FunctionPtr WeightedBinaryCrossEntropy(const Variable& prediction, const Variable& targets, const Variable& weights, const std::wstring& name)
@@ -1296,9 +1521,9 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::OneHot, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)
+    FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const std::wstring& name)
     {
-        return UnaryOp(PrimitiveOpType::SumAll, operand, Dictionary(), name);
+        return BinaryOp(PrimitiveOpType::Gather, indices, reference, Dictionary(), name);
     }
 
     FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name)
@@ -1331,13 +1556,12 @@ namespace CNTK
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalProdReductionOpName, axis, name);
     }
 
-    FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name)
+    FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const Variable& mean, const Variable& invStdDev, const std::wstring& name)
     {
         auto operandPlaceholder = PlaceholderVariable(L"operand");
-        Constant meanVar(mean);
-        Constant invStdDevVar(invStdDev);
-
-        return AsBlock(std::move(ElementTimes(Minus(operandPlaceholder, meanVar), invStdDevVar)), { { operandPlaceholder, operand } }, L"PerDimMeanVarianceNormalize", name);
+        auto meanPlaceholder = PlaceholderVariable(L"mean");
+        auto invStdDevPlaceholder = PlaceholderVariable(L"invStdDev");
+        return AsBlock(std::move(ElementTimes(Minus(operandPlaceholder, meanPlaceholder), invStdDevPlaceholder)), { { operandPlaceholder, operand }, { meanPlaceholder, mean }, { invStdDevPlaceholder, invStdDev } }, L"PerDimMeanVarianceNormalize", name);
     }
 
     FunctionPtr Convolution(const Variable& convolutionMap,
@@ -1379,11 +1603,18 @@ namespace CNTK
             name);
     }
 
-    FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name/* = L""*/)
+    FunctionPtr ROIPooling(const Variable& operand, 
+                           const Variable& rois, 
+                           PoolingType poolingType, 
+                           const NDShape& roiOutputShape, 
+                           double spatialScale, 
+                           const std::wstring& name/* = L""*/)
     {
         auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)poolingType;
         additionalProperties[PrimitiveFunction::AttributeNameROIOutputShape] = roiOutputShape;
-        return BinaryOp(PrimitiveOpType::ROIPooling, convolutionMap, rois, std::move(additionalProperties), name);
+        additionalProperties[PrimitiveFunction::AttributeNameSpatialScale] = spatialScale;
+        return BinaryOp(PrimitiveOpType::ROIPooling, operand, rois, std::move(additionalProperties), name);
     }
 
     FunctionPtr Pooling(const Variable& operand,
@@ -1562,6 +1793,38 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::StopGradient, operand, Dictionary(), name);
     }
 
+    FunctionPtr Assign(Variable& refOperand, const Variable& operand, const std::wstring& name)
+    {
+        return BinaryOp(PrimitiveOpType::Assign, refOperand, operand, Dictionary(), name);
+    }
+
+    FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name)
+    {
+        // TODO: In V1 graph generation, ReconcileDynamicAxis() should be treated like a no-op if the axis is known to be the same.
+        //       E.g. used for seq2seq.
+        return BinaryOp(PrimitiveOpType::ReconcileDynamicAxis, operand, axesAsOperand, Dictionary(), name);
+    }
+
+    FunctionPtr ToSequence(const Variable& operand, const std::wstring& sequenceAxisNamePrefix, const std::wstring& name)
+    {
+        Dictionary additionalAttributes;
+        additionalAttributes[PrimitiveFunction::AttributeNameSequenceAxisNamePrefix] = sequenceAxisNamePrefix;
+        return UnaryOp(PrimitiveOpType::ToSequence, operand, std::move(additionalAttributes), name);
+    }
+
+    FunctionPtr ToSequence(const Variable& operand, const Variable& sequenceLengths, const std::wstring& sequenceAxisNamePrefix, const std::wstring& name)
+    {
+        Dictionary additionalAttributes;
+        additionalAttributes[PrimitiveFunction::AttributeNameSequenceAxisNamePrefix] = sequenceAxisNamePrefix;
+        return BinaryOp(PrimitiveOpType::ToSequence, operand, sequenceLengths, std::move(additionalAttributes), name);
+    }
+
+    const static std::wstring DefaultToSequenceSequenceAxisNamePrefix = L"ToSequence_";
+    FunctionPtr ToSequenceLike(const Variable& operand, const Variable& dynamicAxesLike, const std::wstring& name)
+    {
+        return BinaryOp(PrimitiveOpType::ToSequenceLike, operand, dynamicAxesLike, Dictionary(), name);
+    }
+
     namespace Sequence
     {
         void VerifyIsSequence(const Variable& operand)
@@ -1662,36 +1925,42 @@ namespace CNTK
         {
             auto operandPlaceholder = PlaceholderVariable(L"operand");
             auto broadcastAsPlaceholder = PlaceholderVariable(L"broadcastAs");
-            return AsBlock(Internal::ReconcileDynamicAxes(operandPlaceholder, broadcastAsPlaceholder), { { operandPlaceholder, operand },{ broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
+            return AsBlock(ReconcileDynamicAxes(operandPlaceholder, broadcastAsPlaceholder), { { operandPlaceholder, operand }, { broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
         }
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::wstring& name)
         {
-            if (reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
-                return Internal::ReduceElements(operand, reductionOpName, Axis::OperandSequenceAxis(), name);
-            
-            using namespace std::placeholders;
-
-            std::function<FunctionPtr(const Variable& leftOperand, const Variable& rightOperand)> reductionFunctor;
-            if (reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
-                reductionFunctor = std::bind(Plus, _1, _2, L"");
-            else
-                LogicError("ReduceElements: operand '%S'; %S reduction op is currently unsupported along dynamic axis.", operand.AsString().c_str(), reductionOpName.c_str());
-
             auto operandPlaceholder = PlaceholderVariable(L"operand");
+            auto unpackedSequence = Unpack(operandPlaceholder, ReductionIdentityValue(PrimitiveFunction::InternalSumReductionOpName), /*suppressMaskOutput =*/ true, name);
+            auto reductionResult = Internal::ReduceElements(unpackedSequence, reductionOpName, Axis(-1), /*keepReducedDimensions =*/ false);
 
-            // We are reducing over a dynamic axis which is currently implemented using recurrence
-            auto cumulativeSumFunctionPlaceholder = PlaceholderVariable(operand.Shape());
-            auto prevAccumulatedValuesFunction = PastValue(cumulativeSumFunctionPlaceholder);
-            auto cumulativeSumFunction = reductionFunctor(prevAccumulatedValuesFunction, operandPlaceholder);
-            cumulativeSumFunction->ReplacePlaceholders({ { cumulativeSumFunctionPlaceholder, cumulativeSumFunction } });
-
-            return AsBlock(Sequence::Slice(cumulativeSumFunction, -1, 0), { { operandPlaceholder, operand} }, L"Sequence::ReduceElements", name);
+            return AsBlock(std::move(reductionResult), { { operandPlaceholder, operand } }, L"Sequence::ReduceElements", name);
         }
 
         FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)
         {
             return ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, name);
+        }
+
+        FunctionPtr ReduceMax(const Variable& operand, const std::wstring& name)
+        {
+            return ReduceElements(operand, PrimitiveFunction::InternalMaxReductionOpName, name);
+        }
+
+        FunctionPtr Softmax(const Variable& operand, const std::wstring& name)
+        {
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+            auto reducedLogSumExp = ReduceElements(operandPlaceholder, PrimitiveFunction::InternalLogSumReductionOpName, name);
+            auto logZ = BroadcastAs(reducedLogSumExp, operandPlaceholder);
+            return AsBlock(Exp(operandPlaceholder - logZ), { { operandPlaceholder, operand } }, L"Sequence::Softmax", name);
+        }
+
+        FunctionPtr Unpack(const Variable& operand, double paddingValue, bool supressMaskOutput, const std::wstring& name)
+        {
+            Dictionary additionalAttributes;
+            additionalAttributes[PrimitiveFunction::AttributeNameSequenceUnpackPaddingValue] = paddingValue;
+            additionalAttributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput] = supressMaskOutput;
+            return UnaryOp(PrimitiveOpType::UnpackSequence, operand, std::move(additionalAttributes), name);
         }
     }
 
@@ -1726,16 +1995,9 @@ namespace CNTK
             return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ScatterPacked, operands, Dictionary(), name), name);
         }
 
-        FunctionPtr ReconcileDynamicAxis(const Variable& operand, const Variable& layout, const std::wstring& name)
-        {
-            // TODO: In V1 graph generation, ReconcileDynamicAxis() should be treated like a no-op if the axis is know to be the same.
-            //       E.g. used for seq2seq.
-            return BinaryOp(PrimitiveOpType::ReconcileDynamicAxis, operand, layout, Dictionary(), name);
-        }
-
         FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand)
         {
-            return Internal::ReconcileDynamicAxes(Constant::Scalar(0.0f), operand/*acts as layout input*/);
+            return ReconcileDynamicAxes(Constant::Scalar(0.0f), operand/*acts as layout input*/);
         }
 
         FunctionPtr Where(const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name)
@@ -1786,19 +2048,18 @@ namespace CNTK
             return UnaryOp(PrimitiveOpType::Slice, operand, std::move(additionalProperties), name);
         }
 
-        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name)
+        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, bool keepReducedDimensions, const std::wstring& name)
         {
-            if (axis == Axis::DefaultBatchAxis())
-                LogicError("ReduceElements: operand %S; Reduction along the batch axis alone is currently unsupported.", operand.AsString().c_str());
-
             if (axis.IsStaticAxis() ||
                 (axis == Axis::AllStaticAxes()) ||
                 (axis == Axis::AllAxes()) ||
+                (axis == Axis::DefaultBatchAxis()) ||
                 ((reductionOpName == PrimitiveFunction::InternalSumReductionOpName) && (axis == Axis::OperandSequenceAxis())))
             {
                 auto additionalProperties = Dictionary();
                 additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
                 additionalProperties[PrimitiveFunction::AttributeNameReductionOpName] = reductionOpName;
+                additionalProperties[PrimitiveFunction::AttributeNameReductionKeepDimensions] = keepReducedDimensions;
                 return UnaryOp(PrimitiveOpType::ReduceElements, operand, std::move(additionalProperties), name);
             }
 
@@ -1806,11 +2067,13 @@ namespace CNTK
                        operand.AsString().c_str());
         }
 
-        FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name)
+        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name)
         {
-            // TODO: In V1 graph generation, ReconcileDynamicAxis() should be treated like a no-op if the axis is known to be the same.
-            //       E.g. used for seq2seq.
-            return BinaryOp(PrimitiveOpType::ReconcileDynamicAxis, operand, axesAsOperand, Dictionary(), name);
+            bool keepReducedDimensions = true;
+            if (axis == Axis::AllStaticAxes() || axis == Axis::AllAxes())
+                keepReducedDimensions = false;
+
+            return ReduceElements(operand, reductionOpName, axis, keepReducedDimensions, name);
         }
 
         FunctionPtr Convolution(const Variable& convolutionMap,
@@ -1841,6 +2104,5 @@ namespace CNTK
 
             return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
         }
-
     }
 }

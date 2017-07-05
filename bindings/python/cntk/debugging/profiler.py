@@ -10,8 +10,7 @@ def start_profiler(dir='profiler', sync_gpu=True, reserve_mem=cntk_py.default_pr
     '''
     Start profiler to prepare performance statistics gathering. Note that
     the profiler is not enabled after start
-    (`example
-    <https://github.com/Microsoft/CNTK/wiki/Performance-Profiler#for-python>`_).
+    (:cntkwiki:`example <BrainScript-and-Python-Performance-Profiler#for-python>`).
 
     Args:
         dir: directory for profiler output

@@ -120,6 +120,8 @@ public:
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
                                 const size_t nz, const size_t numRows, const size_t numCols);
 
+    void SetMatrixFromSBCFormat(const size_t* blockIds, const ElemType* val, const size_t numBlocks, const size_t numRows, const size_t numCols);
+
     // Dense * Sparse -> Dense
     static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
                                        const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c);
@@ -164,7 +166,7 @@ public:
 
 
     // Allocate actually allocates the storage space for numNZElemToReserve elements. This is different than resizing, which changes the dimensions of the underlying matrix.
-    // Unfortunately numRows/numCols need to be passed in in the case of various matrix formats (e.g., SparseCSC), because some of the dimensions allocated depend on the
+    // Unfortunately numRows/numCols need to be passed in the case of various matrix formats (e.g., SparseCSC), because some of the dimensions allocated depend on the
     // dimensions of the matrix.
     void Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, const bool growOnly = true, bool keepExistingValues = false); // matrix format will affect the size to allocate
     // RequireSizeAndAllocate is required by SpasreMatrix since resizing the dimensions and allocating storage are different operations. Since a Resize can entail changing
@@ -229,7 +231,7 @@ public:
 public:
     void NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum, bool unitGainMomentum = true);
     ElemType Adagrad(CPUMatrix<ElemType>& c, const bool needAveMultiplier);
-    void AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon);
+    void AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
 
 public:
     CPUSparseMatrix<ElemType>& InplaceTruncateTop(const ElemType threshold);

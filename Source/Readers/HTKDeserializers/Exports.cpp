@@ -14,8 +14,8 @@
 #include "ReaderShim.h"
 #include "HTKMLFReader.h"
 #include "HeapMemoryProvider.h"
-#include "HTKDataDeserializer.h"
-#include "MLFDataDeserializer.h"
+#include "HTKDeserializer.h"
+#include "MLFDeserializer.h"
 #include "StringUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -56,11 +56,11 @@ extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializ
 {
     if (type == L"HTKFeatureDeserializer")
     {
-        *deserializer = new HTKDataDeserializer(corpus, deserializerConfig, primary);
+        *deserializer = new HTKDeserializer(corpus, deserializerConfig, primary);
     }
     else if (type == L"HTKMLFDeserializer")
     {
-        *deserializer = new MLFDataDeserializer(corpus, deserializerConfig, primary);
+        *deserializer = new MLFDeserializer(corpus, deserializerConfig, primary);
     }
     else
     {

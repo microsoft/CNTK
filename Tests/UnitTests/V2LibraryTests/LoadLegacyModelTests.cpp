@@ -18,7 +18,7 @@ void TestLoadLegacyModelWithPrecompute(const DeviceDescriptor& device)
     const size_t baseFeaturesDim = 363;
     const size_t numOutputClasses = 132;
 
-    auto modelFuncPtr = Function::LoadModel(L"cntkSpeechFF.dnn", device);
+    auto modelFuncPtr = Function::Load(L"cntkSpeechFF.dnn", device);
 
     auto FindVariableByName = [](const std::vector<Variable>& variables, const std::wstring& name) {
         for (size_t i = 0; i < variables.size(); ++i)

@@ -200,12 +200,58 @@ class ReduceElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
     static const std::wstring TypeName() { return L"ReduceElements"; }
 
     void ValidateOp();
+
+    static bool DefaultKeepDimensionsSetting(int axis)
+    {
+        return !((axis == CNTKInternalIdxValueForAllStaticAxes) || (axis == CNTKInternalIdxValueForAllAxes));
+    }
+
 public:
-    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation = std::wstring(), int axis = CNTKInternalIdxValueForAllStaticAxes) :
-        Base(deviceId, name), m_operation(operation), m_axis(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/)
+    //----------------------------------------------------------------------------
+    // For reductions we need the neutral elements of the corresponding binary ops
+    //----------------------------------------------------------------------------
+    static ElemType NeutralValue(ElementWiseOperator op)
+    {
+        switch (op)
+        {
+        case ElementWiseOperator::opSum:                return  0;
+        case ElementWiseOperator::opLogSum:             return -std::numeric_limits<ElemType>::infinity();
+        case ElementWiseOperator::opMin:                return  std::numeric_limits<ElemType>::infinity();
+        case ElementWiseOperator::opMax:                return -std::numeric_limits<ElemType>::infinity();
+        case ElementWiseOperator::opElementwiseProduct: return 1;
+        default:
+            InvalidArgument("ReduceElementsNode::NeutralValue: Invalid operation code; allowed are: 'opSum', 'opMax', 'opMin', 'opElementwiseProduct', 'opLogSum'.");
+        }
+    }
+
+    // map the operation specified as a string to an ElementWiseOperator value.
+    static ElementWiseOperator ReductionOpEnumValue(const std::wstring& opName)
+    {
+        if      (opName == L"Plus")   return ElementWiseOperator::opSum;
+        else if (opName == L"Sum")    return ElementWiseOperator::opSum;
+        else if (opName == L"Mean")   return ElementWiseOperator::opSum;
+        else if (opName == L"LogSum") return ElementWiseOperator::opLogSum;
+        else if (opName == L"Min")    return ElementWiseOperator::opMin;
+        else if (opName == L"Max")    return ElementWiseOperator::opMax;
+        else if (opName == L"Prod")   return ElementWiseOperator::opElementwiseProduct;
+        else if (opName == L"Argmin") return ElementWiseOperator::opArgmin;
+        else if (opName == L"Argmax") return ElementWiseOperator::opArgmax;
+
+        // more here
+        else InvalidArgument("Invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min', 'Prod', 'Argmax', 'Argmin'.", opName.c_str());
+    }
+
+public:
+    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation, int axis, bool keepDimensions) :
+        Base(deviceId, name), m_operation(operation), m_axis(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/), m_keepDimensions(keepDimensions)
     {
         if (!m_operation.empty()) // verify validity already here out of courtesy (would otherwise be caught in Validate())
             ValidateOp();
+    }
+
+    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation = std::wstring(), int axis = CNTKInternalIdxValueForAllStaticAxes) :
+        ReduceElementsNode(deviceId, name, operation, axis, DefaultKeepDimensionsSetting(axis))
+    {
     }
 
     ReduceElementsNode(const ScriptableObjects::IConfigRecordPtr configp) :
@@ -226,8 +272,9 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_tempScatterIndices, matrixPool);
-        RequestMatrixFromPool(m_tempUnpackedData, matrixPool);
+        m_tempMask = std::make_shared<Matrix<char>>(Base::m_deviceId);
+        RequestMatrixFromPool(m_tempScatterIndices, matrixPool, 1, HasMBLayout());
+        RequestMatrixFromPool(m_tempUnpackedData, matrixPool, GetSampleLayout().GetNumElements(), HasMBLayout());
     }
 
     void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
@@ -240,7 +287,7 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_tempGatherIndices, matrixPool);
+        RequestMatrixFromPool(m_tempGatherIndices, matrixPool, 1, InputRef(0).HasMBLayout());
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
@@ -255,23 +302,27 @@ public:
     static const int  CNTKInternalIdxValueForAllStaticAxes = 0;
     static const int  CNTKInternalIdxValueForAllAxes = -1;
     static const int  CNTKInternalIdxValueForSequenceAxis = -2;
+    static const int  CNTKInternalIdxValueForBatchAxis = -3;
 
 private:
     bool IsMean() const { return (m_operation == L"Mean"); }
     bool ReduceAllStaticAxes() const { return m_axis == CNTKInternalIdxValueForAllStaticAxes; }
     bool ReduceAllAxes() const { return m_axis == CNTKInternalIdxValueForAllAxes; }
     bool ReduceSequenceAxis() const { return m_axis == CNTKInternalIdxValueForSequenceAxis; }
+    bool ReduceBatchAxis() const { return m_axis == CNTKInternalIdxValueForBatchAxis; }
 
 private:
     // operation attributes
     int m_axis;
     std::wstring m_operation;          // the operation as a string, e.g. "Sum", see ValidateOp()
+    bool m_keepDimensions;
 
     // things cached during validation
     ElementWiseOperator m_reductionOp; // the reduction operation mapped to our internal opCode
     ElemType m_scale;                  // 1 or, for Mean, 1/number of elements we are reducing over
 
     shared_ptr<Matrix<ElemType>> m_tempGatherIndices;
+    shared_ptr<Matrix<char>> m_tempMask;
     shared_ptr<Matrix<ElemType>> m_tempScatterIndices;
     shared_ptr<Matrix<ElemType>> m_tempUnpackedData;
 };
@@ -356,7 +407,8 @@ public:
                 if (!fr.IsAllFrames())
                     InvalidArgument("%ls %ls operation does not support broadcasting the left operand to the right operand's dynamic axis, inside a recurrent loop.", NodeName().c_str(), OperationName().c_str());
 
-                gradient = ComputationNode<ElemType>::Unpack(GetSampleLayout(), GradientFor(fr), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, /*batchMajor=*/ true, /*maskGaps=*/ true);
+                ElemType gapPadValue = 0;
+                gradient = ComputationNode<ElemType>::Unpack(GetSampleLayout(), GradientFor(fr), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, std::shared_ptr<Matrix<char>>(nullptr), /*batchMajor=*/ true, &gapPadValue);
                 inputGradient = Input(inputIndex)->GradientTensorFor(rank, FrameRange(InputRef(inputIndex).GetMBLayout(), 0));
             }
 
@@ -385,7 +437,7 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_tempGatherIndices, matrixPool);
+        RequestMatrixFromPool(m_tempGatherIndices, matrixPool, 1, HasMBLayout());
     }
 
     void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
@@ -397,8 +449,8 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_tempScatterIndices, matrixPool);
-        RequestMatrixFromPool(m_tempUnpackedData, matrixPool);
+        RequestMatrixFromPool(m_tempScatterIndices, matrixPool, 1, HasMBLayout());
+        RequestMatrixFromPool(m_tempUnpackedData, matrixPool, GetSampleLayout().GetNumElements(), HasMBLayout());
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
@@ -656,11 +708,11 @@ private:
     // Helper structure to store input/output views which define parts of input and output we work with.
     struct CroppedIOViews
     {
-        CroppedIOViews(CropNode* cropNode, MatrixGetter matrixGetter, TensorShape inputShapeCropped, TensorShape ouputShape) :
+        CroppedIOViews(CropNode* cropNode, MatrixGetter matrixGetter, TensorShape inputShapeCropped, TensorShape outputShape) :
             // Input view is derived from first input.
             inputViewCropped((cropNode->Input(0).get()->*matrixGetter)(), inputShapeCropped),
             // Output view corresponds to single output.
-            outputView((cropNode->*matrixGetter)(), ouputShape)
+            outputView((cropNode->*matrixGetter)(), outputShape)
         {}
 
         TensorView<ElemType> inputViewCropped;
@@ -1574,6 +1626,110 @@ private:
 
 template class LegacyReshapeNode<float>;
 template class LegacyReshapeNode<double>;
+
+
+template <class ElemType>
+class GatherNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"Gather";
+    }
+
+public:
+    GatherNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name)
+    {
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        auto& indices = InputRef(0);
+        auto& target = InputRef(1);
+        const auto& targetSampleLayout = Input(1)->GetSampleLayout();
+        const auto& targetDims = targetSampleLayout.GetDims();
+        if (targetDims.size() == 0)
+        {
+            LogicError("%ls operation's right operand must have at least 1 dim", OperationName().c_str());
+        }
+
+        size_t row_elements = 1;
+        for (int i = 0; i < targetDims.size() - 1; i++)
+        {
+            row_elements *= targetDims[i];
+        }
+
+        auto& output = Value();
+        output.GatherFromTarget(indices.Value(), target.Value(), row_elements);
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        if (inputIndex == 1) //only right operand need calculate gradient
+        {
+            let&  indices = InputRef(0).Value();
+            auto& sourceGradient = InputRef(1).Gradient();
+            auto& outputGradient = Gradient();
+            const auto& sampleLayout = InputRef(1).GetSampleLayout();
+            const auto& dims = sampleLayout.GetDims();
+
+            if (dims.size() == 0)
+            {
+                LogicError("%ls operation's right operand must have at least 1 dim", OperationName().c_str());
+            }
+
+            size_t row_elements = 1;
+            for (int i = 0; i < dims.size() - 1; i++)
+            {
+                row_elements *= dims[i];
+            }
+
+            sourceGradient.ScatterToIndices(outputGradient, indices, row_elements);
+        }
+        else
+        {
+            LogicError("%ls operation doesn't expect gradient on left operand", OperationName().c_str());
+        }
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override {
+        return false;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        if (Input(1)->HasMBLayout())
+        {
+            LogicError("%ls operation's right operand doesn't expect to have dynamic axis", OperationName().c_str());
+        }
+
+        m_pMBLayout = Input(0)->GetMBLayout();
+
+        const auto& inputSampleLayout1 = Input(0)->GetSampleLayout();
+        const auto& inputDims1 = inputSampleLayout1.GetDims();
+
+        const auto& inputSampleLayout2 = Input(1)->GetSampleLayout();
+        const auto& inputDims2 = inputSampleLayout2.GetDims();
+
+        SmallVector<size_t> dims;
+        dims.append(inputDims2.begin(), inputDims2.end() - 1);//pop the last dim of right operand
+        dims.append(inputDims1.begin(), inputDims1.end());
+        auto sampleLayout = TensorShape(dims);
+
+        SetDims(sampleLayout, HasMBLayout());
+    }
+
+protected:
+};
+
+template class GatherNode<float>;
+template class GatherNode<double>;
 
 /*
 

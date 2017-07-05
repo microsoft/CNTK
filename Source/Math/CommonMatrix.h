@@ -85,11 +85,11 @@ enum ElementWiseOperator
     // unary (or binary with constant parameter)
     opCopy,
     opNegate, opNot, opAbs, opFloor, opReciprocal,
-    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opExponentialLinearUnit,
+    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opExponentialLinearUnit, opStableSigmoid,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
-    opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative,
+    opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative, opStableSigmoidDerivative,
     // binary
-    opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum,
+    opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum, opPow,
     opMax, opMin, opArgmax, opArgmin,
     opLess, opEqual, opGreater, opGreaterEqual, opNotEqual, opLessEqual, // Note: must obey this order: (sgn(a-b) == -1, 0, +1), (sgn(a-b) != -1, 0, +1)
     opAnd, opOr, opXor, opMaskNegative,
@@ -108,6 +108,8 @@ enum ElementWiseOperator
     opCopyIfEqual,
     opElementwiseProductWithExpOfDiff, /* a * exp(b - c) */
     opElementwiseProductWithQuotient, /* a * (b / c) */
+    opElementwiseProductWithPowExponentDerivative, /* a * b * log(c) */
+    opElementwiseProductWithPowBaseDerivative,  /* a * c * pow(b, c-1) */
     // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
 };
 
@@ -131,7 +133,8 @@ enum ElementWiseOperator
     Macro(LinearRectifier);       \
     Macro(Cosine);                \
     Macro(Sin);                   \
-    Macro(ExponentialLinearUnit);
+    Macro(ExponentialLinearUnit); \
+    Macro(StableSigmoid);
 
 #define ForAllBinaryOps(Macro)                                               \
     Macro(CopyIf);                                                           \
@@ -141,6 +144,7 @@ enum ElementWiseOperator
     Macro(ElementwiseProduct);                                               \
     Macro(ElementwiseQuotient);                                              \
     Macro(LogSum);                                                           \
+    Macro(Pow);                                                              \
     Macro(Max);                                                              \
     Macro(Min);                                                              \
     Macro(Equal);                                                            \
@@ -172,7 +176,9 @@ enum ElementWiseOperator
     Macro(Clip);                                        \
     Macro(ElementwiseProductWithLogSumDerivative);      \
     Macro(ElementwiseProductWithExpOfDiff);             \
-    Macro(ElementwiseProductWithQuotient);
+    Macro(ElementwiseProductWithQuotient);              \
+    Macro(ElementwiseProductWithPowExponentDerivative); \
+    Macro(ElementwiseProductWithPowBaseDerivative);
 
 // -----------------------------------------------------------------------
 // various enums to describe

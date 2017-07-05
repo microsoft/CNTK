@@ -4,7 +4,7 @@
 # for full license information.
 # ==============================================================================
 [CmdletBinding()]
-Param([string]$WheelBaseUrl)
+Param([Parameter(Mandatory=$true)] [string]$PyVersion, [string]$WheelBaseUrl)
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -12,21 +12,19 @@ $ProgressPreference = 'SilentlyContinue'
 Set-Location c:\local
 Expand-Archive -Path BinaryDrop.zip
 
-$installCache = '.\BinaryDrop\cntk\Scripts\install\windows\InstallCache'
+$installCache = '.\BinaryDrop\cntk\Scripts\install\windows\ps\InstallCache'
 Move-Item -Path InstallCache -Destination $installCache
 
-$fileList = get-childitem .\BinaryDrop\cntk\Scripts\install\windows\ps\ -recurse -file -include *.ps1, *.psm1
-foreach ($fileItem in $fileList) {
-  Add-Content $fileItem -Stream Zone.Identifier "[ZoneTransfer]`r`nZoneId=3`r`n"
-}
+Get-ChildItem .\BinaryDrop\cntk\Scripts\install\windows\ps\ -Recurse -File -Include *.ps1, *.psm1 |
+  Add-Content -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3`r`n"
 
-.\BinaryDrop\cntk\Scripts\install\windows\install.bat -NoConfirm @PSBoundParameters
+.\BinaryDrop\cntk\Scripts\install\windows\install.bat -NoConfirm -Verbose @PSBoundParameters
 if ($LASTEXITCODE -ne 0) {
   throw "Fail"
 }
 
 Set-Location BinaryDrop
-..\test-install.bat cntk\scripts\cntkpy35.bat
+..\test-install.bat cntk\scripts\cntkpy$PyVersion.bat
 if ($LASTEXITCODE -ne 0) {
   throw "Fail"
 }

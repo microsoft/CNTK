@@ -7,12 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Drawing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-// Re-use the Resize method defined in the CSEvalClientTest.exe assembly. 
-// Strictly speaking, those extensions should live in an assembly of their own.
-using Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient;
 using System.Drawing.Imaging;
 
 namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests

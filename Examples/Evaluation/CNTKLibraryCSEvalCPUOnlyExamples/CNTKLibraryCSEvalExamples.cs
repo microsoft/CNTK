@@ -38,7 +38,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
                 string modelFilePath = "resnet20.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
-                Function modelFunc = Function.LoadModel(modelFilePath, device);
+                Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Get input variable. The model has only one single input.
                 // The same way described above for output variable can be used here to get input variable by name.
@@ -72,7 +72,7 @@ namespace CNTKLibraryCSEvalExamples
                 var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
                 inputDataMap.Add(inputVar, inputVal);
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 // Alternatively, create a Value object and add it to the data map.
                 outputDataMap.Add(outputVar, null);
 
@@ -120,7 +120,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Load the model.
                 // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
-                Function modelFunc = Function.LoadModel(modelFilePath, device);
+                Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Get input variable. The model has only one single input.
                 // The same way described above for output variable can be used here to get input variable by name.
@@ -158,7 +158,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Create input data map.
                 inputDataMap.Add(inputVar, inputVal);
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 // Alternatively, create a Value object and add it to the data map.
                 outputDataMap.Add(outputVar, null);
 
@@ -205,7 +205,7 @@ namespace CNTKLibraryCSEvalExamples
             // Load and clone the model.
             // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
             // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
-            var rootFunc = Function.LoadModel(modelFilePath, device);
+            var rootFunc = Function.Load(modelFilePath, device);
             Models.Add(rootFunc);
 
             // It is not thread-safe to perform concurrent evaluation requests using the same model function.
@@ -248,7 +248,7 @@ namespace CNTKLibraryCSEvalExamples
                     var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
                     inputDataMap.Add(inputVar, inputVal);
 
-                    // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                    // Create output data map. Using null as Value to indicate using system allocated memory.
                     // Alternatively, create a Value object and add it to the data map.
                     outputDataMap.Add(outputVar, null);
 
@@ -292,7 +292,7 @@ namespace CNTKLibraryCSEvalExamples
                 var modelBuffer = File.ReadAllBytes(modelFilePath);
 
                 // Load model from memroy buffer
-                Function modelFunc = Function.LoadModel(modelBuffer, device);
+                Function modelFunc = Function.Load(modelBuffer, device);
 
                 // Get input variable. The model has only one single input.
                 // The same way described above for output variable can be used here to get input variable by name.
@@ -326,7 +326,7 @@ namespace CNTKLibraryCSEvalExamples
                 var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
                 inputDataMap.Add(inputVar, inputVal);
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 // Alternatively, create a Value object and add it to the data map.
                 outputDataMap.Add(outputVar, null);
 
@@ -352,7 +352,7 @@ namespace CNTKLibraryCSEvalExamples
         /// <typeparam name="T">The data value type</typeparam>
         /// <param name="sampleSize">The size of each sample.</param>
         /// <param name="outputBuffer">The evaluation result data.</param>
-        private static void PrintOutput<T>(int sampleSize, IList<IList<T>> outputBuffer)
+        internal static void PrintOutput<T>(int sampleSize, IList<IList<T>> outputBuffer)
         {
             Console.WriteLine("The number of sequences in the batch: " + outputBuffer.Count);
             int seqNo = 0;
@@ -406,7 +406,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Please see README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS about how to train the model.
                 string modelFilePath = "atis.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS to create the model.", modelFilePath));
-                Function modelFunc = Function.LoadModel(modelFilePath, device);
+                Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Read word and slot index files.
                 string vocabFile = "query.wl";
@@ -444,7 +444,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Prepare output
                 Variable outputVar = modelFunc.Output;
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 
@@ -514,7 +514,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Please see README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS about how to train the model.
                 string modelFilePath = "atis.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS to create the model.", modelFilePath));
-                Function modelFunc = Function.LoadModel(modelFilePath, device);
+                Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Read word and slot index files.
                 string vocabFile = "query.wl";
@@ -567,7 +567,7 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Prepare output
                 Variable outputVar = modelFunc.Output;
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 
@@ -640,7 +640,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Please see README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS about how to train the model.
                 string modelFilePath = "atis.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS to create the model.", modelFilePath));
-                Function modelFunc = Function.LoadModel(modelFilePath, device);
+                Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Read word and slot index files.
                 string vocabFile = "query.wl";
@@ -687,7 +687,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Prepare output
                 Variable outputVar = modelFunc.Output;
 
-                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Create output data map. Using null as Value to indicate using system allocated memory.
                 var outputDataMap = new Dictionary<Variable, Value>();
                 outputDataMap.Add(outputVar, null);
 

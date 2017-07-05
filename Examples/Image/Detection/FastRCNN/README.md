@@ -11,7 +11,7 @@
 
 ## Tutorial
 
-Check out the CNTK Tutorial on [Object Detection using Fast R-CNN](https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN).
+Check out the CNTK Tutorial on [Object Detection using Fast R-CNN](https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN).
 
 ## Introduction
 
@@ -98,7 +98,7 @@ It shows that up to threashold `0.70`, we have `100%` recall on the ground truth
 
 Now you can start a full training of Fast R-CNN on the grocery data by running:
 
-`python A2_RunCntk.py`
+`python A2_RunWithBSModel.py`
 
 This python code will start training Fast R-CNN using the [fastrcnn.cntk](./fastrcnn.cntk) configuration file (in BrainScript).
 
@@ -116,4 +116,4 @@ to parse and evaluate the output accuracy. You should see mean average precision
 
 ## Running Fast R-CNN on other data sets
 
-To learn more about CNTK Fast R-CNN, e.g. how to run it on Pascal VOC data or on your own data set, please go to the CNTK tutorial on [Object Detection using Fast R-CNN](https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN).
+To learn more about CNTK Fast R-CNN, e.g. how to run it on Pascal VOC data or on your own data set, please go to the CNTK tutorial on [Object Detection using Fast R-CNN](https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN).

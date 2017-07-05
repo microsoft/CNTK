@@ -26,7 +26,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
     /// There are four cases shown in this program related to model loading, network creation and evaluation.
     /// 
     /// To run this program from the CNTK binary drop, you must add the NuGet package for model evaluation first.
-    /// Refer to <see cref="https://github.com/Microsoft/CNTK/wiki/NuGet-Package"/> for information regarding the NuGet package for model evaluation.
+    /// Refer to <see cref="https://docs.microsoft.com/en-us/cognitive-toolkit/NuGet-Package"/> for information regarding the NuGet package for model evaluation.
     /// 
     /// EvaluateModelSingleLayer and EvaluateModelMultipleLayers
     /// --------------------------------------------------------
@@ -333,10 +333,10 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             // Specifies the number of times to iterate through the test file (epochs)
             int numRounds = 1;
 
-            // Counts the number of evaluations accross all models
+            // Counts the number of evaluations across all models
             int count = 0;
 
-            // Counts the number of failed evaluations (output != expected) accross all models
+            // Counts the number of failed evaluations (output != expected) across all models
             int errorCount = 0;
 
             // The examples assume the executable is running from the data folder
@@ -367,7 +367,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     {
                         Interlocked.Increment(ref count);
 
-                        // The file format correspond to the CNTK Text Format Reader format (https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader)
+                        // The file format correspond to the CNTK Text Format Reader format (https://docs.microsoft.com/en-us/cognitive-toolkit/Brainscript-CNTKTextFormat-Reader)
                         var sets = line.Split('|');
                         var labels = sets[1].Trim().Split(' ').Skip(1);
                         var features = sets[2].Trim().Split(' ').Skip(1);

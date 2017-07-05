@@ -71,6 +71,9 @@ public:
     size_t MainNodeRank() const;
     bool IsMultiHost() const;
 
+    // Use GPUDirect RDMA support
+    virtual bool UseGpuGdr() override;
+
     // -----------------------------------------------------------------------
     // data-exchange functions (wrappers around MPI functions)
     // -----------------------------------------------------------------------
@@ -165,6 +168,8 @@ public:
     bool UsingAllNodes() const;
     size_t MainNodeRank() const;
     bool IsMultiHost() const;
+    // Use GPUDirect RDMA
+    virtual bool UseGpuGdr() override;
 
     // -----------------------------------------------------------------------
     // data-exchange functions (wrappers around MPI functions)
@@ -454,8 +459,6 @@ MPIWrapperMpi::~MPIWrapperMpi()
     if (GetMathLibTraceLevel() > 0)
         fprintf(stderr, "~MPIWrapperMpi\n");
 
-    // Do not finalize in event of an exception since calling MPI_Finalize without
-    // all pending communications being finished results in a hang
     int rc = fflush(stderr);
     if (!std::uncaught_exception())
     {
@@ -467,8 +470,6 @@ MPIWrapperMpi::~MPIWrapperMpi()
             RuntimeError("MPIWrapperMpi: Failed to flush stderr, %d", errno);
 #endif
         }
-
-        Finalize();
     }
 }
 
@@ -679,6 +680,16 @@ int MPIWrapperMpi::Abort(int errorcode)
 int MPIWrapperMpi::Error_string(int errorcode, char* str, int* resultlen)
 {
     return MPI_Error_string(errorcode, str, resultlen);
+}
+
+bool MPIWrapperMpi::UseGpuGdr()
+{
+    // Only support GPUDirect RDMA on Unix and built with GDR
+#if defined(USE_CUDA_GDR) && defined(__unix__)
+    return true;
+#else
+    return false;
+#endif
 }
 
 size_t MPIWrapperMpi::NumNodesInUse() const
@@ -983,6 +994,11 @@ MPIWrapperEmpty::~MPIWrapperEmpty()
 }
 
 bool MPIWrapperEmpty::IsMultiHost() const
+{
+    return false;
+}
+
+bool MPIWrapperEmpty::UseGpuGdr()
 {
     return false;
 }

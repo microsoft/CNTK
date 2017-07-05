@@ -29,13 +29,15 @@ We give examples for both Python and BrainScript.
 ### Caffe-Converted
 
 #### VGG16
-|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/VGG16_ImageNet.model
+|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/VGG16_ImageNet_Caffe.model
 |:---------|:---
+|Last updated | April, 28th, 2017
 |Source Caffe model website | http://www.robots.ox.ac.uk/~vgg/research/very_deep/
 |Single crop top 5 error | 10.11%
 
 #### VGG19
-|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/VGG19_ImageNet.model
+|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/VGG19_ImageNet_Caffe.model
 |:---------|:---
+|Last updated | April, 28th, 2017
 |Source Caffe model website | http://www.robots.ox.ac.uk/~vgg/research/very_deep/ 
 |Single crop top 5 error | 10.18%

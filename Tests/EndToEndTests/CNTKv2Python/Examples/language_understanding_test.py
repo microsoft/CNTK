@@ -75,10 +75,11 @@ def test_language_understanding(device_id):
     from cntk.ops.tests.ops_test_utils import cntk_device
     DeviceDescriptor.try_set_default_device(cntk_device(device_id))
 
-    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed
+    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     #set_computation_network_trace_level(1)
     set_fixed_random_seed(1) # to become invariant to initialization order, which is a valid change
     # BUGBUG: This ^^ currently seems to have no impact; the two BN models below should be identical in training
+    force_deterministic_algorithms()
 
     if device_id >= 0: # BatchNormalization currently does not run on CPU
         # change to intent classifier   --moved up here since this fails, as repro
@@ -237,12 +238,12 @@ def test_language_understanding(device_id):
 
     # test of the example itself
     # this emulates the main code in the PY file
-    if device_id >= 0: # sparse Adam currently does not run on CPU
+    if device_id >= 0: # sparse FSAdagrad currently does not run on CPU  --TODO: fix this test once it does
         reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
         model = create_model_function()
-        #loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
-        #expected_avg = [0.15570838301766451, 0.7846451368305728]
-        #assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+        loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
+        expected_avg = [0.09698114255561419, 0.5290531086061565]
+        assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
         # test
         reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)

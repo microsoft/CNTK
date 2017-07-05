@@ -82,7 +82,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>Cntk.Core-$(CntkComponentVersion).lib;Cntk.Actions-$(CntkComponentVersion).lib; Cntk.SGD-$(CntkComponentVersion).lib; Cntk.ComputationNetwork-$(CntkComponentVersion).lib; Cntk.Math-$(CntkComponentVersion).lib; Cntk.Common-$(CntkComponentVersion).lib; kernel32.lib; user32.lib; shell32.lib; Cntk.SequenceTrainingLib-$(CntkComponentVersion).lib; Cntk.PerformanceProfiler-$(CntkComponentVersion).lib; %(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>Cntk.Math-$(CntkComponentVersion).dll; msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
-      <StackReserveSize>100000000</StackReserveSize>
+      <StackReserveSize>200000000</StackReserveSize>
     </Link>
     <PreBuildEvent>
       <Command>
@@ -111,7 +111,7 @@
       <AdditionalDependencies>Cntk.Core-$(CntkComponentVersion).lib;Cntk.Actions-$(CntkComponentVersion).lib; Cntk.SGD-$(CntkComponentVersion).lib; Cntk.ComputationNetwork-$(CntkComponentVersion).lib; Cntk.Math-$(CntkComponentVersion).lib; Cntk.Common-$(CntkComponentVersion).lib; kernel32.lib; user32.lib; shell32.lib; Cntk.SequenceTrainingLib-$(CntkComponentVersion).lib; Cntk.PerformanceProfiler-$(CntkComponentVersion).lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
       <DelayLoadDLLs>Cntk.Math-$(CntkComponentVersion).dll; msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
-      <StackReserveSize>100000000</StackReserveSize>
+      <StackReserveSize>200000000</StackReserveSize>
     </Link>
     <PreBuildEvent>
       <Command>

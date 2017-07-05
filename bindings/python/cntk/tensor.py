@@ -3,6 +3,10 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+"""
+Tensor operations.
+"""
+
 
 import warnings
 from scipy import sparse
@@ -98,6 +102,13 @@ class TensorOpsMixin(object):
         r = self
         axis0 = 0
 
+        from cntk.default_options import get_global_option, get_default_override, default_override_or
+
+        keras_mode_flag = get_global_option('align_axis', 0)
+        if keras_mode_flag == 1:
+            if (getattr(self, 'dynamic_axes') is not None and len(self.dynamic_axes) > 0):
+                axis0 = -get_default_override(None, axis_offset=default_override_or(len(self.dynamic_axes)))
+
         for axis, s in enumerate(arg):
             if s is Ellipsis: # ellipsis means index relative to end after this point
                 axis0 = -len(arg)
@@ -176,7 +187,9 @@ class ArrayMixin(object):
 
         elif isinstance(self, (cntk.cntk_py.NDArrayView, cntk.cntk_py.NDMask)):
             ndav = self
-            if isinstance(self, cntk.cntk_py.NDArrayView):
+            if isinstance(self, cntk.NDArrayView):
+                is_sparse = ndav.is_sparse
+            elif isinstance(self, cntk.cntk_py.NDArrayView):
                 is_sparse = ndav.is_sparse()
             else:
                 is_sparse = False
@@ -192,12 +205,12 @@ class ArrayMixin(object):
             else:
                 value = self
 
-            is_sparse = value.is_sparse()
-
             if isinstance(value, cntk.Value):
+                is_sparse = value.is_sparse
                 has_mask = super(cntk.Value, value).mask() is not None
                 ndav = value.data
-            elif isinstance(value, cntk.cntk_py.Value):
+            else:
+                is_sparse = value.is_sparse()
                 has_mask = value.mask() is not None
                 ndav = value.data()
 
@@ -208,15 +221,27 @@ class ArrayMixin(object):
 
         if is_sparse:
             from cntk.internal.sanitize import _sparse_to_dense_network_cache
-            network = _sparse_to_dense_network_cache((ndav.shape[-1],))
 
+            device = ndav.device
+            if callable(device):
+                device = device()
+
+            network = _sparse_to_dense_network_cache(ndav.shape[1:], False,
+                                                     device)
             warnings.warn('converting Value object to CSR format might be slow')
 
-            dense_data = network.eval(self, device=self.device())
+            dense_data = network.eval(self, device=device)
+
+            def to_csr(dense_data):
+                if len(dense_data.shape) > 2:
+                    raise ValueError('Cannot convert a sparse NDArrayView or Value object '
+                                     'with shape %s of rank > 2 to a scipy.csr matrix.' % str(dense_data.shape))
+                return sparse.csr_matrix(dense_data)
+
             if isinstance(dense_data, list):
-                result = [sparse.csr_matrix(d) for d in dense_data]
+                result = [to_csr(d) for d in dense_data]
             else:
-                result = sparse.csr_matrix(dense_data)
+                result = to_csr(dense_data)
 
         else:
             result = ndav.to_ndarray()

@@ -8,11 +8,21 @@
 #include "Utils.h"
 #include "Learner.h"
 #include "PerformanceProfiler.h"
+#include "CompositeFunction.h"
+#include "Serialization.h"
 
 namespace
 {
+    const std::wstring versionPropertyName = L"Version";
     const std::wstring learnersPropertyName = L"Learners";
     const std::wstring externalStatePropertyName = L"ExternalState";
+    const std::wstring distributedStatePropertyName = L"DistributedState";
+
+    // Version history:
+    // 0 -- a version number before the versioning was introduced for the trainer's checkpoints.
+    // 1 -- initial version: added a key-value pair for the checkpoint version info, added
+    //      distributed state key to save all local state collected from distributed workers.
+    static const size_t trainerCheckpointVersion = 1;
 }
 
 namespace CNTK
@@ -43,15 +53,48 @@ namespace CNTK
         combinedFunctionArgs.push_back(m_lossFunction);
         if (!m_lossFunction->Output().DynamicAxes().empty())
         {
-            m_aggregatedLossFunction = ReduceSum(lossFunction);
+            m_aggregatedLossFunction = ReduceSum(lossFunction, Axis::AllAxes(), L"aggregateLoss");
             combinedFunctionArgs.push_back(m_aggregatedLossFunction);
             m_trainingSampleCountVar = m_lossFunction;
         }
         else
         {
             m_aggregatedLossFunction = m_lossFunction;
-            m_trainingSampleCountVar = m_lossFunction->RootFunction()->Inputs()[0];
-            if (model->Output() != m_trainingSampleCountVar)
+
+            std::function<std::pair<Variable, bool>(const FunctionPtr& root)> FindTrainingSampleCountVar;
+            FindTrainingSampleCountVar = [&FindTrainingSampleCountVar](const FunctionPtr& root) -> std::pair<Variable, bool> {
+                const auto& outputs = root->Outputs();
+                auto firstOutputWithDynamicAxes = std::find_if(outputs.begin(), outputs.end(), [](const Variable& var) { return !var.DynamicAxes().empty(); });
+                if (firstOutputWithDynamicAxes != outputs.end())
+                    return std::make_pair(*firstOutputWithDynamicAxes, true);
+
+                const auto& inputs = root->Inputs();
+                for (const auto& input : inputs)
+                {
+                    if (!input.DynamicAxes().empty())
+                        return std::make_pair(input, true);
+
+                    if (input.IsOutput())
+                    {
+                        auto retVal = FindTrainingSampleCountVar(input.Owner());
+                        if (retVal.second)
+                            return retVal;
+                    }
+                }
+
+                return std::make_pair(Variable(), false);
+            };
+
+            auto findTrainingSampleCountVarRetVal = FindTrainingSampleCountVar(m_lossFunction->RootFunction());
+            if (!findTrainingSampleCountVarRetVal.second)
+                InvalidArgument("Trainer: Failed to find a variable underlying the graph rooted at specified loss function '%S', from which the training sample count can be determined.", m_lossFunction->RootFunction()->AsString().c_str());
+
+            m_trainingSampleCountVar = findTrainingSampleCountVarRetVal.first;
+            if (GetTraceLevel() >= TraceLevel::Info)
+                fprintf(stderr, "Info: Trainer loss Function '%S' output does not have a batch axis; the first Variable '%S' with a batch axis found in the graph underlying the scalar "
+                                "loss Function will be used to determine minibatch training sample count.\n", m_lossFunction->AsString().c_str(), m_trainingSampleCountVar.AsString().c_str());
+
+            if (std::find(combinedFunctionArgs.begin(), combinedFunctionArgs.end(), m_trainingSampleCountVar) == combinedFunctionArgs.end())
                 combinedFunctionArgs.push_back(m_trainingSampleCountVar);
         }
 
@@ -62,6 +105,9 @@ namespace CNTK
 
             m_aggregatedTrainingEvalCriterionValue = std::make_shared<Accumulator>();
         }
+
+        // create a default eval value in case there's no criterion
+        m_prevMinibatchAggregateEvalCriterionValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(0, m_aggregatedLossFunction->Output().GetDataType(), NDShape{}, DeviceDescriptor::CPUDevice()));
 
         m_combinedTrainingFunction = Combine(combinedFunctionArgs);
         SetCombinedEvalFunction(m_combinedTrainingFunction);
@@ -90,6 +136,11 @@ namespace CNTK
             fprintf(stderr, "[Note:] Trainer ctor: %d of the model parameters are not covered by any of the specified Learners; these parameters will not be learned\n", (int)m_modelParametersNotCoveredByLearners.size());
 
         m_distributed = m_parameterLearners->IsDistributed();
+
+        for (auto& learner : m_parameterLearners->ParameterLearners())
+        {
+            learner->AddProgressWriters(progressWriters);
+        }
     }
 
     static bool IsAtSweepEnd(const std::unordered_map<Variable, MinibatchData>& arguments)
@@ -253,6 +304,10 @@ namespace CNTK
 
     void Trainer::AddProgressWriters(const std::vector<ProgressWriterPtr>& progressWriters)
     {
+        for (auto& learner : m_parameterLearners->ParameterLearners()) 
+        {
+            learner->AddProgressWriters(progressWriters);
+        }
         m_progressWriters.insert(progressWriters.begin(), progressWriters.end());
     }
 
@@ -307,15 +362,22 @@ namespace CNTK
     void Trainer::SaveCheckpoint(const std::wstring& modelFilePath, Dictionary externalState)
     {
         auto learnersState = m_parameterLearners->CreateCheckpoint();
+
         if (!m_distributed)
             return Save(modelFilePath, learnersState, externalState);
+
+        auto compositeFunction = dynamic_cast<CompositeFunction*>(m_combinedTrainingFunction.get());
+
+        Dictionary state;
+        state[internalWorkerStateKey] = compositeFunction->GetInternalState(); // this is the local worker's state.
+        state[externalWorkerStateKey] = externalState;
 
         // Collect distrbuted external state.
         DistributedCommunicatorPtr communicator = MPICommunicator();
         communicator->Barrier();
 
         std::vector<DictionaryPtr> remoteState;
-        communicator->Gather(externalState, remoteState, communicator->Workers());
+        communicator->Gather(state, remoteState, communicator->Workers());
 
         Dictionary aggregatedState;
         for (const auto& w : communicator->Workers())
@@ -324,21 +386,23 @@ namespace CNTK
         }
 
         if (communicator->CurrentWorker().IsMain())
-            Save(modelFilePath, learnersState, aggregatedState);
+            Save(modelFilePath, learnersState, externalState, aggregatedState);
 
         // all workers need to sync up after saving model to avoid read-after-write hazard
         // i.e. one worker is in the middle of write while another tries to read
         communicator->Barrier();
     }
 
-    void Trainer::Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState)
+    void Trainer::Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState, const Dictionary& distributedState)
     {
         std::wstring tempModelFile = modelFilePath + L".tmp";
         Dictionary state;
+        state[versionPropertyName] = trainerCheckpointVersion;
         state[learnersPropertyName] = learnerState;
         state[externalStatePropertyName] = externalState;
+        state[distributedStatePropertyName] = distributedState;
 
-        m_combinedTrainingFunction->SaveModel(tempModelFile);
+        m_combinedTrainingFunction->Save(tempModelFile);
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
         std::wstring tempCheckpointFile = trainerStateCheckpointFilePath + L".tmp";
 
@@ -355,29 +419,61 @@ namespace CNTK
     Dictionary Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
     {
         // Restore the model's parameters
-        m_combinedTrainingFunction->RestoreModel(modelFilePath);
+        m_combinedTrainingFunction->Restore(modelFilePath);
 
         Dictionary checkpoint = Dictionary::Load(GetTrainerStateCheckpointFilePath(modelFilePath));
 
+        size_t version = 0;
+
+        if (checkpoint.Contains(versionPropertyName))
+            version = checkpoint[versionPropertyName].Value<size_t>();
+        
         auto learnerState = checkpoint[learnersPropertyName].Value<std::vector<DictionaryValue>>();
         auto externalState = checkpoint[externalStatePropertyName].Value<Dictionary>();
 
+        m_parameterLearners->RestoreFromCheckpoint(learnerState);
+
         if (!m_distributed)
         {
-            m_parameterLearners->RestoreFromCheckpoint(learnerState);
             return externalState;
         }
 
-        m_parameterLearners->RestoreFromCheckpoint(learnerState);
+        // this ensures that nobody will start writing to the model/checkpoint files, until
+        // everybody is done reading them.
         DistributedCommunicatorPtr communicator = MPICommunicator();
         communicator->Barrier();
 
-        auto key = std::to_wstring(communicator->CurrentWorker().m_globalRank);
+        auto mainWorkerId = std::to_wstring(0);
+        auto localWorkerId = std::to_wstring(communicator->CurrentWorker().m_globalRank);
 
-        if (externalState.Contains(key))
+        // before version 1, there was no distributed state per se. Instead, the external state
+        // contained a dictionary of worker-specific external states.
+        if (version == 0)
+        {
+            auto key = externalState.Contains(localWorkerId) ? localWorkerId : mainWorkerId;
             return externalState[key].Value<Dictionary>();
-        else
-            return externalState[std::to_wstring(0)].Value<Dictionary>();
+        }
+
+        Dictionary distributedState = checkpoint[distributedStatePropertyName].Value<Dictionary>();
+
+        if (communicator->CurrentWorker().IsMain() || !distributedState.Contains(localWorkerId))
+        {
+            return externalState;
+        }
+        
+        // the checkpoint contains internal state for this worker.
+        Dictionary localState = distributedState[localWorkerId].Value<Dictionary>();
+
+        auto internalState = localState[internalWorkerStateKey].Value<Dictionary>();
+        auto compositeFunction = std::dynamic_pointer_cast<CompositeFunction>(m_combinedTrainingFunction);
+        if (compositeFunction == nullptr)
+            RuntimeError("Combined training function is not a CompositeFunction.");
+            
+        // this assumes the compositeFunction (restored form a checkpoint made by the main node) and 
+        // the internal worker state both have identical UIDs.
+        compositeFunction->SetInternalState(internalState);
+        
+        return localState[externalWorkerStateKey].Value<Dictionary>();
     }
 
     double Trainer::PreviousMinibatchLossAverage() const

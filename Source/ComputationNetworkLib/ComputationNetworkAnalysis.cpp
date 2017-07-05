@@ -43,7 +43,7 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
     const list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
 
     // initialize the node state owned by us
-    // TODO: Verify that the other call to this function is unecessary, then inline this function here.
+    // TODO: Verify that the other call to this function is unnecessary, then inline this function here.
     for (auto& node : nodes)
         node->PurgeStateForFormingRecurrentLoops();
 

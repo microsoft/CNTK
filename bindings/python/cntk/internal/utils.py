@@ -6,6 +6,8 @@
 
 from .. import cntk_py
 import numpy as np
+from cntk import NDArrayView
+from ..cntk_py import DictionaryValueFromDict, DictionaryValue, Dictionary, DictionaryValueFromNDArrayView
 
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
 
@@ -37,7 +39,10 @@ def get_data_type(*args):
                 cntk_dtypes.add(np.float64)
             elif cntk_py.DataType_Float == arg.get_data_type():
                 cntk_dtypes.add(np.float32)
-        elif isinstance(arg, np.ndarray):
+        elif isinstance(arg, (np.ndarray, np.inexact)):
+            # https://docs.scipy.org/doc/numpy/reference/arrays.scalars.html
+            # integer are not np.inexact -> np.float32
+            # only accepts numpy types
             if arg.dtype not in (np.float32, np.float64):
                 raise ValueError(
                     'NumPy type "%s" is not supported' % arg.dtype)
@@ -193,3 +198,37 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
         state, forward_output = op.forward(
             arguments, op.outputs, None, device=device)
         return forward_output, None
+
+def _to_cntk_dict_value(py_value):
+    if isinstance(py_value, dict):
+        return DictionaryValueFromDict(_py_dict_to_cntk_dict(py_value))
+
+    if isinstance(py_value, list):
+        py_list = list(map(_to_cntk_dict_value, py_value))
+        return DictionaryValue(py_list)
+
+    if isinstance(py_value, np.ndarray):
+        py_value = NDArrayView.from_dense(py_value)
+        return DictionaryValueFromNDArrayView(py_value)
+    
+    if py_value is None:
+        return DictionaryValue()
+
+    return DictionaryValue(py_value)
+
+def _py_dict_to_cntk_dict(py_dict):
+    '''
+    Recursively converts a Python dictionary into a CNTK Dictionary 
+    whose values are CNTK DictionaryValue instances.
+
+    Args:
+        py_dict (dict): a dictionary to be converted.
+
+    Returns:
+        cntk_py.Dictionary:
+        A :class:`~cntk.cntk_py.Dictionary` that has been converted from the input `dict`
+    '''
+    res = Dictionary()
+    for k, v in py_dict.items():
+        res[k] = _to_cntk_dict_value(v)
+    return res

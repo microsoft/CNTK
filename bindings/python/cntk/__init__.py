@@ -3,7 +3,7 @@
 # for full license information.
 # ==============================================================================
 
-__version__ = '2.0.beta15.0+'
+__version__ = '2.0+'
 
 import numpy as np
 
@@ -22,13 +22,17 @@ from .learners import *
 from .losses import *
 from .metrics import *
 from .initializer import *
+from .default_options import *
 
 from . import debugging
 from . import logging
 from . import io
 from . import layers
+from . import misc
+from . import random
 
 from .sample_installer import install_samples
 
 DATATYPE = np.float32
 InferredDimension = cntk_py.InferredDimension
+FreeDimension = cntk_py.FreeDimension

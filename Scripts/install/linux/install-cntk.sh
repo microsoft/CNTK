@@ -14,7 +14,7 @@ PARSED_ARGS=$(getopt -o '' --long py-version:,anaconda-basepath:,wheel-base-url:
 function die {
   set +x
   echo -e $1
-  echo Go to https://github.com/Microsoft/CNTK/wiki/Setup-Linux-Binary-Script for help.
+  echo Go to https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-Linux-Binary-Script for help.
   exit 1
 }
 
@@ -30,11 +30,11 @@ while true; do
   case "$1" in
     --py-version)
       case "$2" in
-        27 | 34 | 35)
+        27 | 34 | 35 | 36)
           PY_VERSION="$2"
           ;;
         *)
-          die "Invalid value for --py-version option, please specify 27, 34, or 35."
+          die "Invalid value for --py-version option, please specify 27, 34, 35, or 36."
           ;;
       esac
       shift 2

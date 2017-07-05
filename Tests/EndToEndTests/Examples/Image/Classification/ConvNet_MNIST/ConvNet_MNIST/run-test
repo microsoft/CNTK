@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. $TEST_DIR/../run-test-common
+
+cntkrun ConvNet_MNIST.cntk "forceDeterministicAlgorithms=true stderr=- trainNetwork=[SGD=[epochSize=2048,maxEpochs=3,numMBsToShowResult=16]]"

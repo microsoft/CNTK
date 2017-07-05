@@ -14,6 +14,7 @@
 #include "Utils.h"
 #include "Value.h"
 #include "Matrix.h"
+#include "CommonMatrix.h"
 #include "CPUSparseMatrix.h"
 #include "RecurrentNodes.h"
 
@@ -41,44 +42,6 @@ namespace CNTK
                                 Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "leading" : "trailing",
                                 dataShape.AsString().c_str(), maskShape.AsString().c_str());
         }
-    }
-
-    static NDMaskPtr CreateMask(const std::vector<size_t>& sequenceLengths, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device)
-    {
-        size_t numSequences = sequenceLengths.size();
-
-        if (!sequenceStartFlags.empty() && (sequenceStartFlags.size() != numSequences))
-            InvalidArgument("Value::Create:: The number (%zu) of sequence start flags does not match the number (%zu) of sequences,",
-                            sequenceStartFlags.size(), numSequences);
-
-        std::vector<bool> actualStarts = sequenceStartFlags;
-        if (actualStarts.empty())
-            actualStarts.resize(numSequences, true);
-
-        size_t maxSequenceLength = 0;
-        for (size_t i = 0; i < numSequences; ++i)
-            maxSequenceLength = std::max(maxSequenceLength, sequenceLengths[i]);
-
-        bool needsMask = (std::find(actualStarts.begin(), actualStarts.end(), false) != actualStarts.end());
-        needsMask = needsMask || (std::find_if(sequenceLengths.begin(), sequenceLengths.end(), [maxSequenceLength](const size_t& currentSequenceLength) {
-            return (currentSequenceLength != maxSequenceLength);
-        }) != sequenceLengths.end());
-
-        // If needed, create a mask to account for variability in lengths of specified sequences
-        NDMaskPtr deviceValueMask;
-        if (needsMask)
-        {
-            NDShape valueMaskShape = { maxSequenceLength, numSequences };
-            deviceValueMask = MakeSharedObject<NDMask>(valueMaskShape, device);
-            for (size_t i = 0; i < numSequences; ++i)
-            {
-                if (actualStarts[i])
-                    deviceValueMask->MarkSequenceBegin({ 0, i });
-                deviceValueMask->InvalidateSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
-            }
-        }
-
-        return deviceValueMask;
     }
 
     //
@@ -150,10 +113,10 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    /*static*/ void Value::AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLength)
+    /*static*/ void Value::AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLengthInCols)
     {
         size_t existingNumNonZeroValues = nonZeroValues.size() / sizeof(ElementType);
-        std::vector<SparseIndexType> currentSequencePaddedColStarts(maxSequenceLength);
+        std::vector<SparseIndexType> currentSequencePaddedColStarts(maxSequenceLengthInCols);
 
         auto matrix = sequenceData->GetMatrix<ElementType>();
         matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(DeviceDescriptor::CPUDevice()), true);
@@ -167,7 +130,7 @@ namespace CNTK
         for (size_t j = 0; j < currentSequenceNumCols; ++j)
             currentSequencePaddedColStarts[j] = existingNumNonZeroValues + (currentSequenceColStarts[j] - currentSequenceColStarts[0]);
 
-        for (size_t j = currentSequenceNumCols; j < maxSequenceLength; ++j)
+        for (size_t j = currentSequenceNumCols; j < maxSequenceLengthInCols; ++j)
             currentSequencePaddedColStarts[j] = existingNumNonZeroValues + currentSequenceNumNonZeroValues;
 
         std::copy(currentSequencePaddedColStarts.begin(), currentSequencePaddedColStarts.end(), std::back_inserter(colStarts));
@@ -183,6 +146,7 @@ namespace CNTK
         size_t maxSequenceLength = 0;
         auto dataType = sequences[0]->GetDataType();
         auto storageFormat = sequences[0]->GetStorageFormat();
+        NDShape fullyDefinedSampleShape = sampleShape;
         for (size_t i = 0; i < numSequences; ++i)
         {
             auto currentSequenceData = sequences[i];
@@ -199,25 +163,33 @@ namespace CNTK
 
             // Since scalar samples can be rank=1 with dim=1, we automatically pad the sequence data shape with a leading axis 
             // of dim=1 if the sequence data shape's leading axis's dimensionality is not 1
-            if ((sampleShape.Rank() == 1) && (sampleShape.TotalSize() == 1) && (currentSequenceDataShape.Rank() > 0) && (currentSequenceDataShape[0] != 1))
+            if ((fullyDefinedSampleShape.Rank() == 1) && !fullyDefinedSampleShape.HasUnboundDimension() && (fullyDefinedSampleShape.TotalSize() == 1) && (currentSequenceDataShape.Rank() > 0) && (currentSequenceDataShape[0] != 1))
                 currentSequenceDataShape = NDShape(1, 1).AppendShape(currentSequenceDataShape);
 
-            if ((currentSequenceDataShape.Rank() < sampleShape.Rank()) || (currentSequenceDataShape.Rank() > (sampleShape.Rank() + 1)) || (currentSequenceDataShape.SubShape(0, sampleShape.Rank()) != sampleShape))
-                InvalidArgument("Value::Create: The shape '%S' of the sequence %zu is not compatible with the sample shape '%S'", currentSequenceData->Shape().AsString().c_str(), i, sampleShape.AsString().c_str());
+            if ((currentSequenceDataShape.Rank() < fullyDefinedSampleShape.Rank()) || (currentSequenceDataShape.Rank() > (fullyDefinedSampleShape.Rank() + 1)))
+                InvalidArgument("Value::Create: The shape '%S' of sequence #%zu is not compatible with the sample shape '%S'.", currentSequenceData->Shape().AsString().c_str(), i, sampleShape.AsString().c_str());
 
-            sequenceLengths[i] = currentSequenceDataShape.SubShape(sampleShape.Rank()).TotalSize();
+            auto sequenceValueVarSubshape = currentSequenceDataShape.SubShape(0, fullyDefinedSampleShape.Rank());
+            if (sequenceValueVarSubshape != fullyDefinedSampleShape)
+            {
+                for (size_t k = 0; k < fullyDefinedSampleShape.Rank(); ++k)
+                {
+                    if (fullyDefinedSampleShape[k] == NDShape::FreeDimension)
+                        fullyDefinedSampleShape[k] = sequenceValueVarSubshape[k];
+                    else if (fullyDefinedSampleShape[k] != sequenceValueVarSubshape[k])
+                        InvalidArgument("Value::Create: The shape '%S' of sequence #%zu is not compatible with the sample shape '%S'.", currentSequenceData->Shape().AsString().c_str(), i, sampleShape.AsString().c_str());
+                }
+            }
+
+            sequenceLengths[i] = currentSequenceDataShape.SubShape(fullyDefinedSampleShape.Rank()).TotalSize();
             maxSequenceLength = std::max(maxSequenceLength, sequenceLengths[i]);
         }
 
         bool isDataSparse = sequences[0]->IsSparse();
-        if (isDataSparse && (sampleShape[0] != sampleShape.TotalSize()))
-            InvalidArgument("Value::Create: For sparse data, the sample shape '%S' %s axis dimensionality must equal the total size (%zu) of the sample.",
-                            sampleShape.AsString().c_str(), Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading", sampleShape.TotalSize());
-
         NDMaskPtr deviceValueMask = CreateMask(sequenceLengths, sequenceStartFlags, DeviceDescriptor::CPUDevice());
 
         NDArrayViewPtr valueData;
-        NDShape valueDataShape = sampleShape.AppendShape({ maxSequenceLength, numSequences });
+        NDShape valueDataShape = fullyDefinedSampleShape.AppendShape({ maxSequenceLength, numSequences });
         if (numSequences == 1)
         {
             if (createNewCopy)
@@ -235,6 +207,7 @@ namespace CNTK
                 if (storageFormat != StorageFormat::SparseCSC)
                     LogicError("Value::Create currently only SparseCSC format sparse data is supported");
 
+                auto numColsPerSample = fullyDefinedSampleShape.SubShape(ShapeRowColSplitPoint(fullyDefinedSampleShape, isDataSparse, /*noDynamicAxes =*/ false)).TotalSize();
                 std::vector<SparseIndexType> colStarts;
                 std::vector<SparseIndexType> rowIndices;
                 std::vector<char> nonZeroValues;
@@ -243,10 +216,10 @@ namespace CNTK
                     switch (dataType)
                     {
                     case DataType::Float:
-                        AppendSparseSequenceData<float>(sequences[i], colStarts, rowIndices, nonZeroValues, maxSequenceLength);
+                        AppendSparseSequenceData<float>(sequences[i], colStarts, rowIndices, nonZeroValues, maxSequenceLength * numColsPerSample);
                         break;
                     case DataType::Double:
-                        AppendSparseSequenceData<double>(sequences[i], colStarts, rowIndices, nonZeroValues, maxSequenceLength);
+                        AppendSparseSequenceData<double>(sequences[i], colStarts, rowIndices, nonZeroValues, maxSequenceLength * numColsPerSample);
                         break;
                     default:
                         NOT_IMPLEMENTED;
@@ -272,7 +245,7 @@ namespace CNTK
             else
             {
                 valueData = MakeSharedObject<NDArrayView>(dataType, valueDataShape, DeviceDescriptor::CPUDevice());
-                auto maxSequenceSizeInElements = sampleShape.TotalSize() * maxSequenceLength;
+                auto maxSequenceSizeInElements = fullyDefinedSampleShape.TotalSize() * maxSequenceLength;
                 switch (dataType)
                 {
                 case DataType::Float:
@@ -351,7 +324,7 @@ namespace CNTK
         std::vector<NDArrayViewPtr> sequencesView(numOfSequences);
         for (size_t i = 0; i < numOfSequences; i++)
         {
-            // Sequence lenght is 1.
+            // Sequence length is 1.
             auto sequenceDataShape = sampleShape.AppendShape({ 1 });
             sequencesView[i] = MakeSharedObject<NDArrayView>(sequenceDataShape, batchData.data() + i * shapeSize, shapeSize, DeviceDescriptor::CPUDevice());
         }
@@ -407,8 +380,22 @@ namespace CNTK
     {
     }
 
+    /*virtual*/ void Value::Erase()
+    {
+        m_data = nullptr;
+        m_mask = nullptr;
+    }
+
     /*virtual*/ NDArrayViewPtr Value::Data() const
     {
+        if (!m_data)
+        {
+            RuntimeError("This Value object is invalid and can no longer be accessed. This usually happens when a temporary Value object returned by the CNTK library"
+                          " is not cloned and accessed later after it has been erased by the library. The Value objects created inside and returned by the library from APIs "
+                          "like Forward, Backward etc. are temporary and are only guaranteed to be valid until the next Forward/Backward call. If you want to access the Values "
+                          "later, you must explicitly clone them.");
+        }
+
         // TODO: Check if this is a derived type and throw an exception in that case
         return m_data;
     }
@@ -598,12 +585,83 @@ namespace CNTK
     }
 
     template <typename ElementType>
+    std::tuple<size_t, size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes(const Variable& outputVariable)
+    {
+        auto varShape = outputVariable.Shape();
+        if (varShape == NDShape::Unknown || varShape.HasInferredDimension())
+            InvalidArgument("The outputVariable '%S' shape '%S' is of unknown shape or has inferred dimension for at least one axis.",
+                outputVariable.AsString().c_str(), varShape.AsString().c_str());
+
+        if (!outputVariable.IsSparse())
+            InvalidArgument("The outputVariable '%S' must be in the sparse format.", outputVariable.AsString().c_str());
+
+        size_t numOfSequences;
+        size_t maxSequenceLen;
+        std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(outputVariable);
+
+        // Only support sequence without batch
+        if (numOfSequences != 1)
+            InvalidArgument("The Value cannot be copied to buffers in sparse format, since it contains multiple sequences. Only a single sequence is supported.");
+
+        if (MaskedCount() != 0)
+            RuntimeError("There should not be any masks for a Value containing only one single sequence.");
+
+        auto numNonZeroValues = std::get<3>(Data()->SparseCSCDataBuffers<ElementType>());
+        auto numOfColsInMatrix = GetMatrixDimensions(Shape()).second + 1;
+        return std::tuple<size_t, size_t, size_t>(maxSequenceLen, numOfColsInMatrix, numNonZeroValues);
+    }
+
+    template <typename ElementType>
+    void Value::CopyVariableValueToCSCSparse(size_t sequenceLength, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<ElementType>& nonZeroValues, size_t& numNonZeroValues)
+    {
+        // All sanity check has been done in ValidateSparseCSCAndGetIndexSizes().
+        NDArrayViewPtr cpuView;
+        if (Device().Type() == DeviceKind::GPU)
+        {
+            // Todo: GPUSparseMatrix to CPUSparseMatrix is not implemented in matrix, as a workaround the dense matrix is used as intermediate presentation.
+            // However, it is possible that data value very close to 0 could treated as 0 after transformation between dense and sparse.
+            auto cpuDenseView = MakeSharedObject<NDArrayView>(GetDataType(), StorageFormat::Dense, Shape(), DeviceDescriptor::CPUDevice());
+            cpuDenseView->CopyFrom(*Data());
+            cpuView = MakeSharedObject<NDArrayView>(GetDataType(), GetStorageFormat(), Shape(), DeviceDescriptor::CPUDevice());
+            cpuView->CopyFrom(*cpuDenseView);
+        }
+        else
+            cpuView = Data();
+
+        auto numOfColsInMatrix = GetMatrixDimensions(cpuView->Shape()).second + 1;
+        const ElementType* rawNonZeroValues;
+        const SparseIndexType* rawColStarts;
+        const SparseIndexType* rawRowIndices;
+
+        std::tie(rawNonZeroValues, rawColStarts, rawRowIndices, numNonZeroValues) = cpuView->SparseCSCDataBuffers<ElementType>();
+
+        memcpy(colStarts.data(), rawColStarts, numOfColsInMatrix * sizeof(SparseIndexType));
+        memcpy(nonZeroValues.data(), rawNonZeroValues, numNonZeroValues * sizeof(ElementType));
+        memcpy(rowIndices.data(), rawRowIndices, numNonZeroValues * sizeof(SparseIndexType));
+    }
+
+    template <typename ElementType>
     ElementType Value::AsScalar() const
     {
         if (Mask())
             LogicError("Value::AsScalar: Scalar Value object must not have an associated mask");
 
         return Data()->AsScalar<ElementType>();
+    }
+
+    /* virtual */ bool Value::IsValid() const
+    {
+        return !!m_data;
+    }
+
+    std::wstring Value::AsString() const
+    {
+        wstringstream wss;
+        if (IsValid())
+            wss << L"Value(" << Shape().AsString() << ", " << DeviceKindName(Device().Type()) << L")";
+        else
+            wss << L"Value(###)";
+        return wss.str();
     }
 
     void PackedValue::Unpack() const
@@ -709,6 +767,10 @@ namespace CNTK
     template CNTK_API void Value::CopyVariableValueToVector<double>(const Variable& outputVariable, std::vector<std::vector<double>>& sequences);
     template CNTK_API void Value::CopyVariableValueToVector<float>(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences);
     template CNTK_API void Value::CopyVariableValueToVector<double>(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences);
+    template CNTK_API std::tuple<size_t, size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes<float>(const Variable& outputVariable);
+    template CNTK_API std::tuple<size_t, size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes<double>(const Variable& outputVariable);
+    template CNTK_API void Value::CopyVariableValueToCSCSparse<float>(size_t sequenceLength, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<float>& nonZeroValues, size_t& numNonZeroValues);
+    template CNTK_API void Value::CopyVariableValueToCSCSparse<double>(size_t sequenceLength, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<double>& nonZeroValues, size_t& numNonZeroValues);
     template float Value::AsScalar<float>() const;
     template double Value::AsScalar<double>() const;
 }

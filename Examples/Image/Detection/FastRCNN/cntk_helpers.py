@@ -1,3 +1,9 @@
+# Copyright (c) Microsoft. All rights reserved.
+
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+
 from __future__ import print_function
 from builtins import str
 import pdb, sys, os, time
@@ -6,6 +12,10 @@ import selectivesearch
 from easydict import EasyDict
 from fastRCNN.nms import nms as nmsPython
 from builtins import range
+
+import cv2, copy, textwrap
+from PIL import Image, ImageFont, ImageDraw
+from PIL.ExifTags import TAGS
 
 available_font = "arial.ttf"
 try:
@@ -161,17 +171,9 @@ def roiTransformPadScale(rect, w_offset, h_offset, scale = 1.0):
     return rect
 
 def getCntkRoiCoordsLine(rect, targetw, targeth):
-    # convert from absolute to relative co-ordinates
-    x, y, x2, y2 = rect
-    xrel = float(x) / (1.0 * targetw)
-    yrel = float(y) / (1.0 * targeth)
-    wrel = float(x2 - x) / (1.0 * targetw)
-    hrel = float(y2 - y) / (1.0 * targeth)
-    assert xrel <= 1.0, "Error: xrel should be <= 1 but is " + str(xrel)
-    assert yrel <= 1.0, "Error: yrel should be <= 1 but is " + str(yrel)
-    assert wrel >= 0.0, "Error: wrel should be >= 0 but is " + str(wrel)
-    assert hrel >= 0.0, "Error: hrel should be >= 0 but is " + str(hrel)
-    return " {} {} {} {}".format(xrel, yrel, wrel, hrel)
+    # Return the absolute coordinate of the ROI in the original image.
+    x1, y1, x2, y2 = rect
+    return " {} {} {} {}".format(x1, y1, x2, y2)
 
 def getCntkRoiLabelsLine(overlaps, thres, nrClasses):
     # get one hot encoding
@@ -230,7 +232,7 @@ def parseCntkOutput(cntkImgsListPath, cntkOutputPath, outParsedDir, cntkNrRois, 
 
             # save
             data = np.array(data, np.float32)
-            outPath = outParsedDir + str(imgIndex) + ".dat"
+            outPath = os.path.join(outParsedDir, str(imgIndex) + ".dat")
             if saveCompressed:
                 np.savez_compressed(outPath, data)
             else:
@@ -268,28 +270,21 @@ def readCntkRoiCoordinates(imgPaths, cntkRoiCoordsPath, nrRois, padWidth, padHei
         imgWidth, imgHeight = imWidthHeight(imgPaths[imgIndex])
         for boxIndex in range(nrRois):
             rect = [float(s) for s in valuesString[boxIndex*4 : (boxIndex+1)*4]]
-            x,y,w,h = rect
+            x1,y1,x2,y2 = rect
             # convert back from padded-rois-co-ordinates to image co-ordinates
-            rect = getAbsoluteROICoordinates([x,y,x+w,y+h], imgWidth, imgHeight, padWidth, padHeight)
+            rect = getAbsoluteROICoordinates([x1,y1,x2,y2], imgWidth, imgHeight, padWidth, padHeight)
             roiCoords[imgIndex].append(rect)
     return roiCoords
 
-# convert roi co-ordinates from CNTK file back to original image co-ordinates
 def getAbsoluteROICoordinates(roi, imgWidth, imgHeight, padWidth, padHeight, resizeMethod = 'padScale'):
+    ''' 
+        The input image are usually padded to a fixed size, this method compute back the original 
+        ROI absolute coordinate before the padding.
+    '''
     if roi == [0,0,0,0]: # if padded roi
         return [0,0,0,0]
 
-    if resizeMethod == "crop":
-        minDim = min(imgWidth, imgHeight)
-        offsetWidth = 0.5 * abs(imgWidth - imgHeight)
-        if (imgWidth >= imgHeight):  # horizontal photo
-            rect = [roi[0] * minDim + offsetWidth, roi[1] * minDim, None, None]
-        else:
-            rect = [roi[0] * minDim, roi[1] * minDim + offsetWidth, None, None]
-        rect[2] = rect[0] + roi[2] * minDim
-        rect[3] = rect[1] + roi[3] * minDim
-
-    elif resizeMethod == "pad" or resizeMethod == "padScale":
+    if resizeMethod == "pad" or resizeMethod == "padScale":
         if resizeMethod == "padScale":
             scale = float(padWidth) / max(imgWidth, imgHeight)
             imgWidthScaled  = int(round(imgWidth * scale))
@@ -303,19 +298,15 @@ def getAbsoluteROICoordinates(roi, imgWidth, imgHeight, padWidth, padHeight, res
         h_offset = float(padHeight - imgHeightScaled) / 2.0
         if resizeMethod == "padScale":
             assert(w_offset == 0 or h_offset == 0)
-        
-        x0 = max(roi[0] * padWidth  - w_offset, 0) 
-        y0 = max(roi[1] * padHeight - h_offset, 0)
-        rect = [x0, y0, 
-                x0 + (roi[2] - roi[0]) * padWidth,
-                y0 + (roi[3] - roi[1]) * padHeight]
+
+        rect = [roi[0] - w_offset, roi[1] - h_offset, roi[2] - w_offset, roi[3] - h_offset]
         rect = [int(round(r / scale)) for r in rect]
     else:
         print ("ERROR: Unknown resize method '%s'" % resizeMethod)
         error
+
     assert(min(rect) >=0 and max(rect[0],rect[2]) <= imgWidth and max(rect[1],rect[3]) <= imgHeight)
     return rect
-
 
 ####################################
 # Classifier training / scoring
@@ -435,14 +426,17 @@ def visualizeResults(imgPath, roiLabels, roiScores, roiRelCoords, padWidth, padH
                 drawRectangles(imgDebug, [rect], color=color, thickness=thickness)
             elif iter == 2 and label > 0:
                 if not nmsKeepIndices or (roiIndex in nmsKeepIndices):
-                    font = ImageFont.truetype("arial.ttf", 18)
+                    try:
+                        font = ImageFont.truetype(available_font, 18)
+                    except:
+                        font = ImageFont.load_default()
                     text = classes[label]
                     if roiScores:
                         text += "(" + str(round(score, 2)) + ")"
                     imgDebug = drawText(imgDebug, (rect[0],rect[1]), text, color = (255,255,255), font = font, colorBackground=color)
     return imgDebug
 
-def applyNonMaximaSuppression(nmsThreshold, labels, scores, coords):
+def applyNonMaximaSuppression(nmsThreshold, labels, scores, coords, ignore_background=False):
     # generate input for nms
     allIndices = []
     nmsRects = [[[]] for _ in range(max(labels) + 1)]
@@ -453,7 +447,7 @@ def applyNonMaximaSuppression(nmsThreshold, labels, scores, coords):
         allIndices.append(indices)
 
     # call nms
-    _, nmsKeepIndicesList = apply_nms(nmsRects, nmsThreshold)
+    _, nmsKeepIndicesList = apply_nms(nmsRects, nmsThreshold, ignore_background=ignore_background)
 
     # map back to original roi indices
     nmsKeepIndices = []
@@ -463,7 +457,7 @@ def applyNonMaximaSuppression(nmsThreshold, labels, scores, coords):
     assert (len(nmsKeepIndices) == len(set(nmsKeepIndices)))  # check if no roi indices was added >1 times
     return nmsKeepIndices
 
-def apply_nms(all_boxes, thresh, boUsePythonImpl = True):
+def apply_nms(all_boxes, thresh, ignore_background=False, boUsePythonImpl=True):
     """Apply non-maximum suppression to all predicted boxes output by the test_net method."""
     num_classes = len(all_boxes)
     num_images = len(all_boxes[0])
@@ -472,6 +466,9 @@ def apply_nms(all_boxes, thresh, boUsePythonImpl = True):
     nms_keepIndices = [[[] for _ in range(num_images)]
                  for _ in range(num_classes)]
     for cls_ind in range(num_classes):
+        if ignore_background and (cls_ind == 0):
+            continue
+
         for im_ind in range(num_images):
             dets = all_boxes[cls_ind][im_ind]
             if dets == []:
@@ -555,10 +552,6 @@ def im_detect(net, im, boxes, feature_scale=None, bboxIndices=None, boReturnClas
 #    slotName      = e.g. "movie" in: play <movie> terminator </movie>
 #    slot          = e.g. "<movie> terminator </movie>" in: play <movie> terminator </movie>
 
-import cv2, copy, textwrap
-from PIL import Image, ImageFont, ImageDraw
-from PIL.ExifTags import TAGS
-
 def makeDirectory(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -617,7 +610,7 @@ def deleteAllFilesInDirectory(directory, fileEndswithString, boPromptUser = Fals
             exit()
     for filename in getFilesInDirectory(directory):
         if fileEndswithString == None or filename.lower().endswith(fileEndswithString):
-            deleteFile(directory + "/" + filename)
+            deleteFile(os.path.join(directory, filename))
 
 def removeLineEndCharacters(line):
     if line.endswith(b'\r\n'):
@@ -755,12 +748,20 @@ def ptClip(pt, maxWidth, maxHeight):
     pt[1] = min(pt[1], maxHeight)
     return pt
 
-def drawText(img, pt, text, textWidth=None, color = (255,255,255), colorBackground = None, font = ImageFont.truetype("arial.ttf", 16)):
+def drawText(img, pt, text, textWidth=None, color = (255,255,255), colorBackground = None, font = None):
+    # loading default value in function call so the script won't cause errors in system where 
+    # "arial.ttf" cannot be found
+    if font == None:
+        font = ImageFont.truetype("arial.ttf", 16)
     pilImg = imconvertCv2Pil(img)
     pilImg = pilDrawText(pilImg,  pt, text, textWidth, color, colorBackground, font)
     return imconvertPil2Cv(pilImg)
 
-def pilDrawText(pilImg, pt, text, textWidth=None, color = (255,255,255), colorBackground = None, font = ImageFont.truetype("arial.ttf", 16)):
+def pilDrawText(pilImg, pt, text, textWidth=None, color = (255,255,255), colorBackground = None, font = None):
+    # loading default value in function call so the script won't cause errors in system where 
+    # "arial.ttf" cannot be found
+    if font == None:
+        font = ImageFont.truetype("arial.ttf", 16)
     textY = pt[1]
     draw = ImageDraw.Draw(pilImg)
     if textWidth == None:

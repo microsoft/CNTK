@@ -212,12 +212,10 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 {
 }
 
-#if 0
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t*, const ElemType*, const size_t, const size_t, const size_t)
 {
 }
-#endif
 
 // forward pass from feature to hidden layer
 template <class ElemType>
@@ -267,18 +265,18 @@ void GPUSparseMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>&, GPUMatrix<ElemTy
 }
 
 template<class ElemType>
-void GPUSparseMatrix<ElemType>::Adam(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+void GPUSparseMatrix<ElemType>::Adam(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
 {
 }
 
 template<class ElemType>
-ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType, ElemType, const bool)
+ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType, ElemType, const bool, const bool)
 {
     return 1;
 }
 
 template<class ElemType>
-void GPUSparseMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>&c, GPUMatrix<ElemType>&functionValues, ElemType rho, ElemType epsilon)
+void GPUSparseMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>&c, GPUMatrix<ElemType>&functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
 {
 }
 
@@ -1007,6 +1005,18 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
 }
 
 template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::GatherFromTarget(const GPUMatrix<ElemType>& indices, const GPUMatrix<ElemType>& target, size_t row_elements)
+{
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::ScatterToIndices(const GPUMatrix<ElemType>& values, const GPUMatrix<ElemType>& indices, size_t row_elements)
+{
+    return *this;
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::SetValue(const ElemType v)
 {
 }
@@ -1076,7 +1086,27 @@ void GPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemTy
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::SetUniformRandomValue(RNGHandle& rngHandle, const ElemType low, const ElemType high)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::SetGaussianRandomValue(RNGHandle& rngHandle, const ElemType mean, const ElemType stdev)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::SetGumbelRandomValue(RNGHandle& rngHandle, const ElemType loc, const ElemType scale)
+{
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
 {
 }
 
@@ -1100,19 +1130,19 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<El
 
 template <class ElemType>
 void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-    ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, bool unitGainMomentum, bool adamax)
 {
 
 }
 
 template <class ElemType>
-ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier)
+ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier, const bool initialized)
 {
     return 0;
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon)
+void GPUMatrix<ElemType>::AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon)
 {
 }
 
@@ -1415,7 +1445,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsm
 
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
-    const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBound, ElemType &totalScore, const std::vector<size_t>& uttMap, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
+    const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBound, GPUMatrix<ElemType> & totalScore, const std::vector<size_t>& uttMap, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
     const std::vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
 {
     return *this;
@@ -1862,14 +1892,14 @@ void GPUMatrix<ElemType>::ConvolutionBackwardKernel(const GPUMatrix<ElemType>& i
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height, 
-    const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, GPUMatrix<ElemType>& argmax) const
+void GPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height, 
+    const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, GPUMatrix<ElemType>& argmax, double spatialScale) const
 {
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-    const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, GPUMatrix<ElemType>& argmax) const
+void GPUMatrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+    const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, GPUMatrix<ElemType>& argmax, double spatialScale) const
 {
 }
 

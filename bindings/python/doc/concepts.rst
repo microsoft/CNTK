@@ -71,7 +71,7 @@ introduced, overloaded operators can be applied to them to form an operator grap
   import cntk as C
 
   # Create an input with the shape (2,3,*)
-  >>> x = C.sequence.input((2,3), name='features')
+  >>> x = C.sequence.input_variable((2,3), name='features')
 
   # Create a constant scalar with value 2
   >>> c = C.constant(value=2)

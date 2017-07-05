@@ -245,7 +245,7 @@ public:
             return currentLine[cursor.charPos];
     }
 
-    // we chan also return the address of the current character, e.g. for passing it to a C stdlib funcion such as wcstod()
+    // we chan also return the address of the current character, e.g. for passing it to a C stdlib function such as wcstod()
     const wchar_t* GotCharPtr() const
     {
         return currentLine + cursor.charPos;
