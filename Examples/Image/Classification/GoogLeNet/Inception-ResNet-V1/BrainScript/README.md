@@ -4,7 +4,7 @@
 
 ### Inception-ResNet-V1.cntk
 
-The Inception-ResNet-V1 model is implemented according to the model described in [Inception-v4, Inception-ResNet and the Impact of Residual Connections on Learning](https://arxiv.org/abs/1602.07261) with changes from TensorFlow implementation.
+The Inception-ResNet-V1 model is implemented according to the model described in [Inception-v4, Inception-ResNet and the Impact of Residual Connections on Learning](https://arxiv.org/abs/1602.07261).
 
 This implementation achieves `78.210%` Top-1 accuracy and `93.848%` Top-5 accuracy in validation set.
 
