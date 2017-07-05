@@ -3001,10 +3001,6 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_gradType.targetAdagradAvDenom = configSGD(L"fsAdagradTargetAvDenom", 1.0); // TODO: deprecated parameter kept for back compat (set to 0.0025 inconjunction with reenabling the static bug)
 
     // extract RMSProp parameters from config, if they exist. Default to reasonable values.
-    m_rpi.dec = configSGD(L"rms_wgt_dec", 0.75);
-    m_rpi.inc = configSGD(L"rms_wgt_inc", 1.2);
-    m_rpi.min = configSGD(L"rms_wgt_min", 0.1);
-    m_rpi.max = configSGD(L"rms_wgt_max", 10.0);
     m_rpi.gamma = configSGD(L"rms_gamma", 0.99);
 
     m_needAveMultiplier = configSGD(L"normWithAveMultiplier", true);

@@ -482,10 +482,6 @@ public:
 
     void Print(const char* matrixName, ptrdiff_t rowFirst, ptrdiff_t rowLast, ptrdiff_t colFirst, ptrdiff_t colLast) const;
     void Print(const char* matrixName = nullptr) const; // print whole matrix. can be expensive
-    void DumpToFile(FILE* fd, const char* matrixName, ptrdiff_t rowFirst, ptrdiff_t rowLast, ptrdiff_t colFirst, ptrdiff_t colLast) const;
-    void DumpToFile(FILE* fd, const char* matrixName, ptrdiff_t posStart, ptrdiff_t posEnd) const;
-    void DumpToFile(FILE* fd, const char* matrixName = nullptr) const; // print whole matrix. can be expensive
-
 
     Matrix<ElemType>& AssignPackedConvolutionInput(const Matrix<ElemType>& inputSubBatch,
                                                    const size_t inputWidth, const size_t inputHeight, const size_t inputChannels,

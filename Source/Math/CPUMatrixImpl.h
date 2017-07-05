@@ -1312,7 +1312,7 @@ void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
                                   bool unitGainMomentum)
 {
     const ElemType epsilon = 1.0;
-    const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
+    const ElemType unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
 
     size_t n = gradients.GetNumElements();
     ElemType* mean_grad = gradients.Data();
@@ -3764,92 +3764,6 @@ template <class ElemType>
 void CPUMatrix<ElemType>::Print(const char* matrixName /*=nullptr*/) const
 {
     Print(matrixName, 0, GetNumRows() - 1, 0, GetNumCols() - 1);
-}
-
-template <class ElemType>
-void CPUMatrix<ElemType>::DumpToFile(FILE* fd, const char* matrixName, ptrdiff_t rowFirst, ptrdiff_t rowLast, ptrdiff_t colFirst, ptrdiff_t colLast) const
-{
-    fprintf(fd, "\n###### ");
-    if (matrixName != nullptr)
-        fprintf(fd, "%s ", matrixName);
-    fprintf(fd, "(%lu, %lu)", (unsigned long)GetNumRows(), (unsigned long)GetNumCols());
-    if (rowFirst != 0 || colFirst != 0 || (size_t)(rowLast + 1) != GetNumRows() || (size_t)(colLast + 1) != GetNumCols())
-        fprintf(fd, " [%ld:%ld, %ld:%ld]", (long)rowFirst, (long)rowLast, (long)colFirst, (long)colLast);
-    fprintf(fd, " ######\n\n");
-
-    if (IsEmpty())
-    {
-        fprintf(fd, "(empty)\n");
-        return;
-    }
-
-    PrintRange rowRange(rowFirst, rowLast, GetNumRows());
-    PrintRange colRange(colFirst, colLast, GetNumCols());
-
-    if (rowRange.IsEmpty() || colRange.IsEmpty())
-    {
-        fprintf(fd, "(empty)\n");
-        return;
-    }
-
-    const auto& us = *this;
-    if (rowRange.begin > 0)
-        fprintf(fd, "...\n");
-    for (size_t i = rowRange.begin; i < rowRange.end; i++)
-    {
-        if (i == rowRange.skipBegin)        // insert ... between the two blocks if any
-        {
-            fprintf(fd, "...\n");
-            i = rowRange.skipEnd;
-        }
-        if (colRange.begin > 0)             // ... at line start
-            fprintf(fd, "...\t");
-        for (size_t j = colRange.begin; j < colRange.end; j++)
-        {
-            if (j == colRange.skipBegin)
-            {
-                fprintf(fd, "...\t");
-                j = colRange.skipEnd;
-            }
-            fprintf(fd, "%.10f\t", us(i, j));
-        }
-        if (colRange.end < GetNumCols())    // ... at line end
-            fprintf(fd, "...");
-        fprintf(fd, "\n");
-    }
-    if (rowRange.end < GetNumRows())
-        fprintf(fd, "...\n");
-}
-
-template <class ElemType>
-void CPUMatrix<ElemType>::DumpToFile(FILE* fd, const char* matrixName, ptrdiff_t posStart, ptrdiff_t posEnd) const
-{
-    fprintf(fd, "\n###### ");
-    if (matrixName != nullptr)
-        fprintf(fd, "%s ", matrixName);
-    fprintf(fd, "(%lu, %lu)", (unsigned long)GetNumRows(), (unsigned long)GetNumCols());
-    fprintf(fd, " [%ld:%ld]", (long)posStart, (long)posEnd);
-    fprintf(fd, " ######\n\n");
-
-    if (IsEmpty())
-    {
-        fprintf(fd, "(empty)\n");
-        return;
-    }
-
-    ElemType* ptr = Data();
-    fprintf(fd, "\n");
-    for (size_t pos = (size_t)posStart; pos < (size_t)posEnd; pos++)
-    {
-        fprintf(fd, "%.10f\t", ptr[pos]);
-    }
-    fprintf(fd, "\n\n");
-}
-
-template <class ElemType>
-void CPUMatrix<ElemType>::DumpToFile(FILE* fd, const char* matrixName /*=nullptr*/) const
-{
-    DumpToFile(fd, matrixName, 0, GetNumRows() - 1, 0, GetNumCols() - 1);
 }
 
 // file I/O
