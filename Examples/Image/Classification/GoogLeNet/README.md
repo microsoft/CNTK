@@ -25,6 +25,8 @@ We currently offer the BN-Inception (https://arxiv.org/abs/1502.03167) and Incep
 
 ### [Inception V3](./InceptionV3)
 
+### [Inception-ResNet-V1](./Inception-ResNet-V1)
+
 ## Pre-trained Models
 
 ### CNTK Pre-trained
