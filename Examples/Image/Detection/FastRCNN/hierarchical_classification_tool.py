@@ -12,11 +12,73 @@ cls_maps = [ClassMap(my_path + r"/../../DataSets/Grocery/Class_map.txt")]
 tree_map = TreeMap(cls_maps, use_background=True, only_valid_leafs=True, reduce_graph=True, use_multiply_with_parent=False)
 params = par.get_parameters_for_dataset()
 
-len(params.classes)
+tree_map.root_node.print()
+#len(params.classes)
 
 def get_vectors_for_label(label):
     index = np.argmax(label)
     return tree_map.get_train_softmax_vectors(to_Set=[(cls_maps[0], index)], scale_value=1)
+
+
+
+
+
+def top_down_eval(vector):
+    out_vec = np.zeros(vector.shape, dtype=np.float32)
+
+    start = 0
+    multiplier = 1
+
+    # switch to tree descending to get log(N) instead of n
+    for region in tree_map.softmax_regions:
+        if start < region[0]: continue
+
+        node_index = np.argmax(vector[region[0]:region[1]], axis=0) + region[0]
+        #if np.add.reduce(out_vec)==0 and np.argmax(vector[0:3])!=0: import ipdb;ipdb.set_trace()
+        node = tree_map.as_in_network[node_index]
+        if node is None:#background
+            if node_index == 0:#first bg
+                out_vec[0] = vector[0]
+                assert (out_vec[0]!=0 or vector[0]==0)
+            break
+        if not node.next:#leaf
+            assert np.add.reduce(out_vec) > 0
+            break
+
+        if tree_map.use_background:
+            bg_value = vector[region[0]]
+            bg_removal_factor = 1/(1-bg_value)
+            multiplier *= bg_removal_factor
+
+        multiplier *= vector[node_index]
+
+        out_vec[node_index]=multiplier
+        #import ipdb;ipdb.set_trace()
+        start = node.next[0]._index_in_network
+
+    if np.add.reduce(out_vec)==0: import ipdb;ipdb.set_trace()
+    return out_vec
+
+    labels = []
+    start = -1
+    # switch to tree descending to get log(N) instead of n
+    for region in tree_map.softmax_regions:
+        if start > region[0]: continue
+
+        node_index = np.argmax(vector[region[0]:region[1]], axis=0) + region[0]
+
+        node = tree_map.as_in_network[node_index]
+        if node is None:
+            if node_index == 0:
+                labels.append(node_index)
+            break
+        if not node.next:
+            break
+
+        labels.append(node_index)
+
+        start = node.next[0]
+
 
 def to_non_hierarchical_output(output):
     output = output.copy()
