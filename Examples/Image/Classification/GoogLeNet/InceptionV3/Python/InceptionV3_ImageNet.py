@@ -50,7 +50,7 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
     transforms = []
     if is_training:
         transforms += [
-            xforms.crop(crop_type='randomarea', area_ratio=(0.05, 1.0), aspect_ratio=(0.75,1.0), jitter_type='uniratio'), # train uses jitter
+            xforms.crop(crop_type='randomarea', area_ratio=(0.05, 1.0), aspect_ratio=(0.75, 1.0), jitter_type='uniratio'), # train uses jitter
             xforms.scale(width=IMAGE_WIDTH, height=IMAGE_HEIGHT, channels=NUM_CHANNELS, interpolations='linear'),
             xforms.color(brightness_radius=0.125, contrast_radius=0.5, saturation_radius=0.5)
         ]
