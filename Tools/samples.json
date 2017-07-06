@@ -139,7 +139,7 @@
         "name":  "GoogLeNet (Inception V3)",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/InceptionV3#cntk-examples-imageclassificationgooglenetinceptionv3",
         "description":  "GoogLeNet (Inception V3) network for image classification.",
-        "language":  ["BrainScript"],
+        "language":  ["Python", "BrainScript"],
         "type":  ["Recipe"],
 	"dateadded": "4/14/2017"
     },
