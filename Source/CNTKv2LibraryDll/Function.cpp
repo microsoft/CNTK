@@ -1134,8 +1134,10 @@ namespace CNTK
                 break;
             }
         }
+
+        std::vector<int> strides(axis.size(), 1);
         if (bAllStaticAxis)
-            return Internal::Slice(operand, axis, beginIndex, endIndex, {1}, name);
+            return Internal::Slice(operand, axis, beginIndex, endIndex, strides, name);
 
         LogicError("Slice: Invalid axis argument provided. Slice along the dynamic batch axis is currently unsupported. To slice a sequence along its ordered dynamic axis use Sequence::Slice.");
     }
@@ -2030,27 +2032,7 @@ namespace CNTK
         {
             return Internal::ScatterPacked(operand, Internal::PackedIndex(/*layout of*/ condition, Where(condition, newDerivedSequenceAxisScalingAndAdditiveFactor)), /*layout of*/ condition, name);
         }
-
-        FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name)
-        {
-            auto additionalProperties = Dictionary();
-
-            assert(axis.size() > 0 && axis.size() == beginIndex.size() && axis.size() == endIndex.size() && strides.size() == axis.size());
-            if (axis.size() == 1)
-            {
-                additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis[0];
-                additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = beginIndex[0];
-                additionalProperties[PrimitiveFunction::AttributeNameEndIndex] = endIndex[0];
-            }
-            else
-            {
-                additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axis);
-                additionalProperties[PrimitiveFunction::AttributeNameBeginIndexVec] = AsDictionaryValueVector(beginIndex);
-                additionalProperties[PrimitiveFunction::AttributeNameEndIndexVec] = AsDictionaryValueVector(endIndex);
-            }
-            return UnaryOp(PrimitiveOpType::Slice, operand, std::move(additionalProperties), name);
-        }
-
+        
         FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::vector<int>& strides, const std::wstring& name)
         {
             auto additionalProperties = Dictionary();

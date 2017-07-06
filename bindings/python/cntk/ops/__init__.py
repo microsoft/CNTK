@@ -1858,7 +1858,7 @@ def swapaxes(x, axis1=0, axis2=1, name=''):
     return transpose_axes(x, axis1, axis2, name)
 
 @typemap
-def slice(x, axis, begin_index, end_index, stride=1, name=''):
+def slice(x, axis, begin_index, end_index, strides=None, name=''):
     '''
     Slice the input along one or multiple axes.
 
@@ -1876,6 +1876,17 @@ def slice(x, axis, begin_index, end_index, stride=1, name=''):
         ...                                             [4, 5, 6]]],dtype=np.float32)})
         array([[[ 1.],
                 [ 4.]]], dtype=float32)
+        >>> # slice with strides
+        >>> C.slice(x1, 0, 0, 2, 2).eval({x1: np.asarray([[[1,2,-3],
+        ...                                             [4, 5, 6]]],dtype=np.float32)})
+        array([[[ 1.,  2., -3.]]], dtype=float32)
+        <BLANKLINE>
+        >>> # reverse
+        >>> C.slice(x1, 0, 0, 2, -1).eval({x1: np.asarray([[[1,2,-3],
+        ...                                             [4, 5, 6]]],dtype=np.float32)})
+        array([[[ 4.,  5.,  6.],
+        [ 1.,  2., -3.]]], dtype=float32)
+        <BLANKLINE>
         >>> # slice along multiple axes
         >>> C.slice(x1, [0,1], [1,0], [2,1]).eval({x1: np.asarray([[[1, 2, -3],
         ...                                                         [4, 5, 6]]],dtype=np.float32)})
@@ -1915,6 +1926,7 @@ def slice(x, axis, begin_index, end_index, stride=1, name=''):
         begin_index (int): the index along axis where the slicing starts
         end_index (int): the index along axis where the slicing ends
         name (str, optional): the name of the Function instance in the network
+		strides(int): strides when apply slice, negative value means in reverse order
 
     See also:
         Indexing in NumPy: https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
@@ -1927,7 +1939,11 @@ def slice(x, axis, begin_index, end_index, stride=1, name=''):
     axis = sanitize_axis_list(axis)
     begin_index = sanitize_shape(begin_index)
     end_index = sanitize_shape(end_index)
-    return slice(x, axis, begin_index, end_index, (stride,), name)
+    if strides is None:
+        strides = [1 for _ in axis]
+    elif not type(strides) in (list, tuple):
+        strides = [strides]
+    return slice(x, axis, begin_index, end_index, strides, name)
 
 # TODO: enable when it is exposed in c++
 
